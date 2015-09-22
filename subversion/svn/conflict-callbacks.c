@@ -334,15 +334,16 @@ show_prop_conflict(const svn_string_t *base_propval,
 static svn_error_t *
 open_editor(svn_boolean_t *performed_edit,
             const char *merged_abspath,
-            svn_cl__interactive_conflict_baton_t *b,
+            const char *editor_cmd,
+            apr_hash_t *config,
             apr_pool_t *pool)
 {
   svn_error_t *err;
 
   if (merged_abspath)
     {
-      err = svn_cmdline__edit_file_externally(merged_abspath, b->editor_cmd,
-                                              b->config, pool);
+      err = svn_cmdline__edit_file_externally(merged_abspath, editor_cmd,
+                                              config, pool);
       if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR ||
                   err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
         {
@@ -376,7 +377,9 @@ edit_prop_conflict(const svn_string_t **merged_propval,
                    const svn_string_t *base_propval,
                    const svn_string_t *my_propval,
                    const svn_string_t *their_propval,
-                   svn_cl__interactive_conflict_baton_t *b,
+                   const char *editor_cmd,
+                   apr_hash_t *config,
+                   svn_cmdline_prompt_baton_t *pb,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
@@ -392,12 +395,13 @@ edit_prop_conflict(const svn_string_t **merged_propval,
                                          scratch_pool);
   SVN_ERR(merge_prop_conflict(merged_prop, base_propval, my_propval,
                               their_propval, NULL,
-                              b->pb->cancel_func,
-                              b->pb->cancel_baton,
+                              pb->cancel_func,
+                              pb->cancel_baton,
                               scratch_pool));
   SVN_ERR(svn_stream_close(merged_prop));
   SVN_ERR(svn_io_file_flush(file, scratch_pool));
-  SVN_ERR(open_editor(&performed_edit, file_path, b, scratch_pool));
+  SVN_ERR(open_editor(&performed_edit, file_path, editor_cmd,
+                      config, scratch_pool));
   if (performed_edit && merged_propval)
     {
       svn_stringbuf_t *buf;
@@ -708,8 +712,13 @@ prompt_user(const resolver_option_t **opt,
 static svn_error_t *
 handle_text_conflict(svn_client_conflict_option_id_t *option_id,
                      svn_boolean_t *save_merged,
+                     svn_cl__accept_t *accept_which,
+                     svn_boolean_t *quit,
                      const svn_client_conflict_t *conflict,
-                     svn_cl__interactive_conflict_baton_t *b,
+                     const char *path_prefix,
+                     svn_cmdline_prompt_baton_t *pb,
+                     const char *editor_cmd,
+                     apr_hash_t *config,
                      apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -736,7 +745,7 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
                                                 conflict, scratch_pool,
                                                 scratch_pool));
 
-  local_relpath = svn_cl__local_style_skip_ancestor(b->path_prefix,
+  local_relpath = svn_cl__local_style_skip_ancestor(path_prefix,
                                                     local_abspath,
                                                     scratch_pool);
 
@@ -810,15 +819,15 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
       *next_option++ = "s";
       *next_option++ = NULL;
 
-      SVN_ERR(prompt_user(&opt, conflict_options, options, b->pb, iterpool));
+      SVN_ERR(prompt_user(&opt, conflict_options, options, pb, iterpool));
       if (! opt)
         continue;
 
       if (strcmp(opt->code, "q") == 0)
         {
           *option_id = opt->choice;
-          b->accept_which = svn_cl__accept_postpone;
-          b->quit = TRUE;
+          *accept_which = svn_cl__accept_postpone;
+          *quit = TRUE;
           break;
         }
       else if (strcmp(opt->code, "s") == 0)
@@ -845,8 +854,8 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
               continue;
             }
           SVN_ERR(show_conflicts(conflict,
-                                 b->pb->cancel_func,
-                                 b->pb->cancel_baton,
+                                 pb->cancel_func,
+                                 pb->cancel_baton,
                                  iterpool));
           knows_something = TRUE;
         }
@@ -861,14 +870,15 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
               continue;
             }
 
-          SVN_ERR(show_diff(conflict, merged_abspath, b->path_prefix,
-                            b->pb->cancel_func, b->pb->cancel_baton,
+          SVN_ERR(show_diff(conflict, merged_abspath, path_prefix,
+                            pb->cancel_func, pb->cancel_baton,
                             iterpool));
           knows_something = TRUE;
         }
       else if (strcmp(opt->code, "e") == 0 || strcmp(opt->code, ":-E") == 0)
         {
-          SVN_ERR(open_editor(&performed_edit, merged_abspath, b, iterpool));
+          SVN_ERR(open_editor(&performed_edit, merged_abspath, editor_cmd,
+                              config, iterpool));
           if (performed_edit)
             knows_something = TRUE;
         }
@@ -890,7 +900,7 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
                                               their_abspath,
                                               my_abspath,
                                               merged_abspath,
-                                              local_abspath, b->config,
+                                              local_abspath, config,
                                               NULL, iterpool);
           if (err)
             {
@@ -906,11 +916,11 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
                                              my_abspath,
                                              merged_abspath,
                                              local_abspath,
-                                             b->path_prefix,
-                                             b->editor_cmd,
-                                             b->config,
-                                             b->pb->cancel_func,
-                                             b->pb->cancel_baton,
+                                             path_prefix,
+                                             editor_cmd,
+                                             config,
+                                             pb->cancel_func,
+                                             pb->cancel_baton,
                                              iterpool));
                   knows_something = !remains_in_conflict;
                 }
@@ -955,7 +965,7 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
                                                   my_abspath,
                                                   merged_abspath,
                                                   local_abspath,
-                                                  b->config, NULL, iterpool);
+                                                  config, NULL, iterpool);
               if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL ||
                           err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
                 {
@@ -986,11 +996,11 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
                                      my_abspath,
                                      merged_abspath,
                                      local_abspath,
-                                     b->path_prefix,
-                                     b->editor_cmd,
-                                     b->config,
-                                     b->pb->cancel_func,
-                                     b->pb->cancel_baton,
+                                     path_prefix,
+                                     editor_cmd,
+                                     config,
+                                     pb->cancel_func,
+                                     pb->cancel_baton,
                                      iterpool));
 
           if (!remains_in_conflict)
@@ -1040,8 +1050,13 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
 static svn_error_t *
 handle_prop_conflict(svn_client_conflict_option_id_t *option_id,
                      const svn_string_t **merged_value,
+                     svn_cl__accept_t *accept_which,
+                     svn_boolean_t *quit,
+                     const char *path_prefix,
+                     svn_cmdline_prompt_baton_t *pb,
+                     const char *editor_cmd,
+                     apr_hash_t *config,
                      const svn_client_conflict_t *conflict,
-                     svn_cl__interactive_conflict_baton_t *b,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
@@ -1062,7 +1077,7 @@ handle_prop_conflict(svn_client_conflict_option_id_t *option_id,
                                 " on '%s'.\n"),
                               svn_client_conflict_prop_get_propname(conflict),
                               svn_cl__local_style_skip_ancestor(
-                                b->path_prefix,
+                                path_prefix,
                                 svn_client_conflict_get_local_abspath(conflict),
                                 scratch_pool)));
 
@@ -1091,7 +1106,7 @@ handle_prop_conflict(svn_client_conflict_option_id_t *option_id,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(prompt_user(&opt, prop_conflict_options, options, b->pb,
+      SVN_ERR(prompt_user(&opt, prop_conflict_options, options, pb,
                           iterpool));
       if (! opt)
         continue;
@@ -1099,22 +1114,23 @@ handle_prop_conflict(svn_client_conflict_option_id_t *option_id,
       if (strcmp(opt->code, "q") == 0)
         {
           *option_id = opt->choice;
-          b->accept_which = svn_cl__accept_postpone;
-          b->quit = TRUE;
+          *accept_which = svn_cl__accept_postpone;
+          *quit = TRUE;
           break;
         }
       else if (strcmp(opt->code, "dc") == 0)
         {
           SVN_ERR(show_prop_conflict(base_propval, my_propval, their_propval,
                                      merged_propval,
-                                     b->pb->cancel_func, b->pb->cancel_baton,
+                                     pb->cancel_func, pb->cancel_baton,
                                      scratch_pool));
         }
       else if (strcmp(opt->code, "e") == 0)
         {
           SVN_ERR(edit_prop_conflict(&merged_propval,
                                      base_propval, my_propval, their_propval,
-                                     b, result_pool, scratch_pool));
+                                     editor_cmd, config, pb,
+                                     result_pool, scratch_pool));
           resolved_allowed = (merged_propval != NULL);
         }
       else if (strcmp(opt->code, "r") == 0)
@@ -1148,8 +1164,11 @@ handle_prop_conflict(svn_client_conflict_option_id_t *option_id,
  * SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
 handle_tree_conflict(svn_client_conflict_option_id_t *option_id,
+                     svn_cl__accept_t *accept_which,
+                     svn_boolean_t *quit,
                      const svn_client_conflict_t *conflict,
-                     svn_cl__interactive_conflict_baton_t *b,
+                     const char *path_prefix,
+                     svn_cmdline_prompt_baton_t *pb,
                      apr_pool_t *scratch_pool)
 {
   const char *readable_desc;
@@ -1166,7 +1185,7 @@ handle_tree_conflict(svn_client_conflict_option_id_t *option_id,
   SVN_ERR(svn_cmdline_fprintf(
                stderr, scratch_pool,
                _("Tree conflict on '%s'\n   > %s\n"),
-               svn_cl__local_style_skip_ancestor(b->path_prefix,
+               svn_cl__local_style_skip_ancestor(path_prefix,
                  svn_client_conflict_get_local_abspath(conflict), scratch_pool),
                readable_desc));
 
@@ -1231,15 +1250,15 @@ handle_tree_conflict(svn_client_conflict_option_id_t *option_id,
             }
         }
 
-      SVN_ERR(prompt_user(&opt, tc_opts, NULL, b->pb, iterpool));
+      SVN_ERR(prompt_user(&opt, tc_opts, NULL, pb, iterpool));
       if (! opt)
         continue;
 
       if (strcmp(opt->code, "q") == 0)
         {
           *option_id = opt->choice;
-          b->accept_which = svn_cl__accept_postpone;
-          b->quit = TRUE;
+          *accept_which = svn_cl__accept_postpone;
+          *quit = TRUE;
           break;
         }
       else if (opt->choice != svn_client_conflict_option_undefined)
@@ -1258,12 +1277,19 @@ static svn_error_t *
 conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
                           svn_boolean_t *save_merged,
                           const svn_string_t **merged_propval,
+                          svn_cl__accept_t *accept_which, 
+                          svn_boolean_t *quit,
+                          svn_boolean_t *external_failed,
+                          svn_boolean_t *printed_summary,
                           const svn_client_conflict_t *conflict,
-                          void *baton,
+                          const char *editor_cmd,
+                          apr_hash_t *config,
+                          const char *path_prefix,
+                          svn_cmdline_prompt_baton_t *pb,
+                          svn_cl__conflict_stats_t *conflict_stats,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_cl__interactive_conflict_baton_t *b = baton;
   svn_error_t *err;
   const char *base_abspath = NULL;
   const char *my_abspath = NULL;
@@ -1280,7 +1306,7 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
   /* Start out assuming we're going to postpone the conflict. */
   *option_id = svn_client_conflict_option_postpone;
 
-  switch (b->accept_which)
+  switch (*accept_which)
     {
     case svn_cl__accept_invalid:
     case svn_cl__accept_unspecified:
@@ -1310,14 +1336,14 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
     case svn_cl__accept_edit:
       if (merged_abspath)
         {
-          if (b->external_failed)
+          if (*external_failed)
             {
               *option_id = svn_client_conflict_option_postpone;
               return SVN_NO_ERROR;
             }
 
           err = svn_cmdline__edit_file_externally(merged_abspath,
-                                                  b->editor_cmd, b->config,
+                                                  editor_cmd, config,
                                                   scratch_pool);
           if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR ||
                       err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
@@ -1329,7 +1355,7 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
               SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
                                           message));
               svn_error_clear(err);
-              b->external_failed = TRUE;
+              *external_failed = TRUE;
             }
           else if (err)
             return svn_error_trace(err);
@@ -1344,7 +1370,7 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
           svn_boolean_t remains_in_conflict;
           const char *local_abspath;
 
-          if (b->external_failed)
+          if (*external_failed)
             {
               *option_id = svn_client_conflict_option_postpone;
               return SVN_NO_ERROR;
@@ -1356,7 +1382,7 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
                                               my_abspath,
                                               merged_abspath,
                                               local_abspath,
-                                              b->config,
+                                              config,
                                               &remains_in_conflict,
                                               scratch_pool);
           if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL ||
@@ -1368,7 +1394,7 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
               message = svn_err_best_message(err, buf, sizeof(buf));
               SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n",
                                           message));
-              b->external_failed = TRUE;
+              *external_failed = TRUE;
               return svn_error_trace(err);
             }
           else if (err)
@@ -1385,10 +1411,10 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
     }
 
   /* Print a summary of conflicts before starting interactive resolution */
-  if (! b->printed_summary)
+  if (! *printed_summary)
     {
-      SVN_ERR(svn_cl__print_conflict_stats(b->conflict_stats, scratch_pool));
-      b->printed_summary = TRUE;
+      SVN_ERR(svn_cl__print_conflict_stats(conflict_stats, scratch_pool));
+      *printed_summary = TRUE;
     }
 
   /* We're in interactive mode and either the user gave no --accept
@@ -1404,14 +1430,19 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
            svn_wc_conflict_action_edit)
        && (svn_client_conflict_get_local_change(conflict) ==
            svn_wc_conflict_reason_edited)))
-    SVN_ERR(handle_text_conflict(option_id, save_merged, conflict, b,
-                                 scratch_pool));
+    SVN_ERR(handle_text_conflict(option_id, save_merged, accept_which,
+                                 quit, conflict, path_prefix, pb,
+                                 editor_cmd, config, scratch_pool));
   else if (svn_client_conflict_get_kind(conflict) ==
            svn_wc_conflict_kind_property)
-    SVN_ERR(handle_prop_conflict(option_id, merged_propval, conflict, b,
+    SVN_ERR(handle_prop_conflict(option_id, merged_propval, accept_which,
+                                 quit, path_prefix, pb,
+                                 editor_cmd, config, conflict,
                                  result_pool, scratch_pool));
   else if (svn_client_conflict_get_kind(conflict) == svn_wc_conflict_kind_tree)
-    SVN_ERR(handle_tree_conflict(option_id, conflict, b, scratch_pool));
+    SVN_ERR(handle_tree_conflict(option_id, accept_which, quit,
+                                 conflict, path_prefix, pb,
+                                 scratch_pool));
 
   else /* other types of conflicts -- do nothing about them. */
     {
@@ -1486,14 +1517,17 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
   *result = svn_wc_create_conflict_result(svn_client_conflict_option_postpone,
                                           NULL, result_pool);
   SVN_ERR(conflict_func_interactive(&option_id, &save_merged, &merged_propval,
-                                    conflict, baton,
+                                    &b->accept_which, &b->quit,
+                                    &b->external_failed, &b->printed_summary,
+                                    conflict, b->editor_cmd, b->config,
+                                    b->path_prefix, b->pb, b->conflict_stats,
                                     result_pool, scratch_pool));
   (*result)->choice = conflict_option_id_to_wc_conflict_choice(option_id);
   (*result)->save_merged = save_merged;
   (*result)->merged_value = merged_propval;
 
   /* If we are resolving a conflict, adjust the summary of conflicts. */
-  if ((*result)->choice != svn_client_conflict_option_postpone)
+  if (option_id != svn_client_conflict_option_postpone)
     {
       const char *local_path
         = svn_cl__local_style_skip_ancestor(
@@ -1508,29 +1542,36 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
 
 svn_error_t *
 svn_cl__resolve_conflict(svn_boolean_t *resolved,
-                          svn_client_conflict_t *conflict,
-                          svn_client_ctx_t *ctx,
-                          svn_wc_conflict_choice_t conflict_choice,
-                          apr_pool_t *scratch_pool)
+                         svn_cl__accept_t *accept_which,
+                         svn_boolean_t *quit,
+                         svn_boolean_t *external_failed,
+                         svn_boolean_t *printed_summary,
+                         svn_client_conflict_t *conflict,
+                         const char *editor_cmd,
+                         apr_hash_t *config,
+                         const char *path_prefix,
+                         svn_cmdline_prompt_baton_t *pb,
+                         svn_cl__conflict_stats_t *conflict_stats,
+                         svn_client_conflict_option_id_t option_id,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool)
 {
-  svn_cl__interactive_conflict_baton_t *b = ctx->conflict_baton2;
+  if (option_id == svn_client_conflict_option_unspecified)
+    SVN_ERR(conflict_func_interactive(&option_id, NULL, NULL,
+                                      accept_which, quit,
+                                      external_failed, printed_summary,
+                                      conflict, editor_cmd, config,
+                                      path_prefix, pb, conflict_stats,
+                                      scratch_pool, scratch_pool));
 
-  if (conflict_choice == svn_wc_conflict_choose_unspecified)
-    {
-      svn_client_conflict_option_id_t option_id;
-
-      SVN_ERR(conflict_func_interactive(&option_id, NULL, NULL, conflict, b,
-                                        scratch_pool, scratch_pool));
-
-      conflict_choice = conflict_option_id_to_wc_conflict_choice(option_id);
-    }
+  SVN_ERR_ASSERT(option_id != svn_client_conflict_option_unspecified);
 
   /* If we are resolving a conflict, adjust the summary of conflicts. */
-  if (conflict_choice != svn_wc_conflict_choose_postpone)
+  if (option_id != svn_client_conflict_option_postpone)
     {
       const char *local_relpath
         = svn_cl__local_style_skip_ancestor(
-            b->path_prefix, svn_client_conflict_get_local_abspath(conflict),
+            path_prefix, svn_client_conflict_get_local_abspath(conflict),
             scratch_pool);
       svn_wc_conflict_kind_t conflict_kind;
       const char *local_abspath;
@@ -1552,7 +1593,7 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
               conflict_kind == svn_wc_conflict_kind_text,
               conflict_kind == svn_wc_conflict_kind_property ? "" : NULL,
               conflict_kind == svn_wc_conflict_kind_tree,
-              conflict_choice,
+              conflict_option_id_to_wc_conflict_choice(option_id),
               ctx->cancel_func, ctx->cancel_baton,
               ctx->notify_func2, ctx->notify_baton2,
               scratch_pool);
@@ -1564,7 +1605,7 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
 
       SVN_ERR(err);
     
-      svn_cl__conflict_stats_resolved(b->conflict_stats, local_relpath,
+      svn_cl__conflict_stats_resolved(conflict_stats, local_relpath,
                                       svn_client_conflict_get_kind(conflict));
       *resolved = TRUE;
     }

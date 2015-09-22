@@ -1594,6 +1594,11 @@ SVN_ERROR_START
              SVN_ERR_DIFF_CATEGORY_START + 0,
              "Diff data source modified unexpectedly")
 
+  /** @since New in 1.10 */
+  SVN_ERRDEF(SVN_ERR_DIFF_UNEXPECTED_DATA,
+             SVN_ERR_DIFF_CATEGORY_START + 1,
+             "Diff data unexpected")
+
   /* libsvn_ra_serf errors */
   /** @since New in 1.5.
       @deprecated SSPI now handled by serf rather than libsvn_ra_serf. */
