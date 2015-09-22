@@ -489,6 +489,8 @@ resolve_target_path(patch_target_t *target,
       SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
                                           wc_ctx, target->local_abspath,
                                           result_pool, scratch_pool));
+      /* ### BUG: moved_to_abspath contains the target where the op-root was
+         ### moved to... not the target itself! */
       if (moved_to_abspath)
         {
           target->local_abspath = moved_to_abspath;

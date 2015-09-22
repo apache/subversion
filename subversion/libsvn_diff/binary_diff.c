@@ -255,8 +255,8 @@ svn_diff_output_binary(svn_stream_t *output_stream,
   SVN_ERR(svn_stream_puts(output_stream, "GIT binary patch" APR_EOL_STR));
 
   /* ### git would first calculate if a git-delta latest->original would be
-  shorter than the zipped data. For now lets assume that it is not
-  and just dump the literal data */
+         shorter than the zipped data. For now lets assume that it is not
+         and just dump the literal data */
   SVN_ERR(write_literal(latest_full,
                         svn_stream_from_aprfile2(latest_apr, FALSE, subpool),
                         output_stream,
@@ -266,8 +266,8 @@ svn_diff_output_binary(svn_stream_t *output_stream,
   SVN_ERR(svn_stream_puts(output_stream, APR_EOL_STR));
 
   /* ### git would first calculate if a git-delta original->latest would be
-  shorter than the zipped data. For now lets assume that it is not
-  and just dump the literal data */
+         shorter than the zipped data. For now lets assume that it is not
+         and just dump the literal data */
   SVN_ERR(write_literal(original_full,
                         svn_stream_from_aprfile2(original_apr, FALSE, subpool),
                         output_stream,
