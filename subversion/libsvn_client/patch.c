@@ -371,9 +371,9 @@ obtain_eol_and_keywords_for_file(apr_hash_t **keywords,
  * Indicate in TARGET->SKIPPED whether the target should be skipped.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
- * PROP_CHANGES_ONLY specifies whether the target path is allowed to have
- * only property changes, and no content changes (in which case the target
- * must be a directory).
+ * HAS_TEXT_CHANGES specifies whether the target path will have some text
+ * changes applied, implying that the target should be a file and not a
+ * directory.
  * Use RESULT_POOL for allocations of fields in TARGET.
  * Use SCRATCH_POOL for all other allocations. */
 static svn_error_t *
@@ -381,7 +381,7 @@ resolve_target_path(patch_target_t *target,
                     const char *path_from_patchfile,
                     const char *wcroot_abspath,
                     int strip_count,
-                    svn_boolean_t prop_changes_only,
+                    svn_boolean_t has_text_changes,
                     svn_wc_context_t *wc_ctx,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
@@ -394,8 +394,8 @@ resolve_target_path(patch_target_t *target,
   target->canon_path_from_patchfile = svn_dirent_internal_style(
                                         path_from_patchfile, result_pool);
 
-  /* We allow properties to be set on the wc root dir. */
-  if (! prop_changes_only && target->canon_path_from_patchfile[0] == '\0')
+  /* We can't handle text changes on the patch root dir. */
+  if (has_text_changes && target->canon_path_from_patchfile[0] == '\0')
     {
       /* An empty patch target path? What gives? Skip this. */
       target->skipped = TRUE;
@@ -419,7 +419,7 @@ resolve_target_path(patch_target_t *target,
       if (! target->local_relpath)
         {
           /* The target path is either outside of the working copy
-           * or it is the working copy itself. Skip it. */
+           * or it is the patch root itself. Skip it. */
           target->skipped = TRUE;
           target->local_abspath = NULL;
           target->local_relpath = stripped_path;
@@ -981,8 +981,8 @@ init_patch_target(patch_target_t **patch_target,
 {
   patch_target_t *target;
   target_content_t *content;
+  svn_boolean_t has_text_changes = FALSE;
   svn_boolean_t has_prop_changes = FALSE;
-  svn_boolean_t prop_changes_only = FALSE;
 
   {
     apr_hash_index_t *hi;
@@ -999,7 +999,8 @@ init_patch_target(patch_target_t **patch_target,
       }
   }
 
-  prop_changes_only = has_prop_changes && patch->hunks->nelts == 0;
+  has_text_changes = ((patch->hunks && patch->hunks->nelts > 0)
+                      || patch->binary_patch);
 
   content = apr_pcalloc(result_pool, sizeof(*content));
 
@@ -1019,7 +1020,7 @@ init_patch_target(patch_target_t **patch_target,
   target->prop_targets = apr_hash_make(result_pool);
 
   SVN_ERR(resolve_target_path(target, choose_target_filename(patch),
-                              wcroot_abspath, strip_count, prop_changes_only,
+                              wcroot_abspath, strip_count, has_text_changes,
                               wc_ctx, result_pool, scratch_pool));
   *patch_target = target;
   if (! target->skipped)
@@ -2262,6 +2263,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   static const svn_linenum_t MAX_FUZZ = 2;
   apr_hash_index_t *hash_index;
   svn_linenum_t previous_offset = 0;
+  svn_boolean_t has_text_changes = FALSE;
+  svn_boolean_t has_prop_changes = FALSE;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
                             remove_tempfiles, result_pool, scratch_pool));
@@ -2285,77 +2288,137 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
     }
 
   iterpool = svn_pool_create(scratch_pool);
-  /* Match hunks. */
-  for (i = 0; i < patch->hunks->nelts; i++)
+
+  if (patch->hunks && patch->hunks->nelts)
     {
-      svn_diff_hunk_t *hunk;
-      hunk_info_t *hi;
-      svn_linenum_t fuzz = 0;
-
-      svn_pool_clear(iterpool);
-
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
-
-      hunk = APR_ARRAY_IDX(patch->hunks, i, svn_diff_hunk_t *);
-
-      /* Determine the line the hunk should be applied at.
-       * If no match is found initially, try with fuzz. */
-      do
+      /* Match hunks. */
+      for (i = 0; i < patch->hunks->nelts; i++)
         {
-          SVN_ERR(get_hunk_info(&hi, target, target->content, hunk, fuzz,
-                                previous_offset,
-                                ignore_whitespace,
-                                FALSE /* is_prop_hunk */,
-                                cancel_func, cancel_baton,
-                                result_pool, iterpool));
-          fuzz++;
+          svn_diff_hunk_t *hunk;
+          hunk_info_t *hi;
+          svn_linenum_t fuzz = 0;
+
+          svn_pool_clear(iterpool);
+
+          if (cancel_func)
+            SVN_ERR(cancel_func(cancel_baton));
+
+          hunk = APR_ARRAY_IDX(patch->hunks, i, svn_diff_hunk_t *);
+
+          /* Determine the line the hunk should be applied at.
+           * If no match is found initially, try with fuzz. */
+          do
+            {
+              SVN_ERR(get_hunk_info(&hi, target, target->content, hunk, fuzz,
+                                    previous_offset,
+                                    ignore_whitespace,
+                                    FALSE /* is_prop_hunk */,
+                                    cancel_func, cancel_baton,
+                                    result_pool, iterpool));
+              fuzz++;
+            }
+          while (hi->rejected && fuzz <= MAX_FUZZ && ! hi->already_applied);
+
+          if (hi->matched_line)
+            previous_offset
+              = hi->matched_line - svn_diff_hunk_get_original_start(hunk);
+
+          APR_ARRAY_PUSH(target->content->hunks, hunk_info_t *) = hi;
         }
-      while (hi->rejected && fuzz <= MAX_FUZZ && ! hi->already_applied);
 
-      if (hi->matched_line)
-        previous_offset
-          = hi->matched_line - svn_diff_hunk_get_original_start(hunk);
+      /* Hunks are applied in the order determined by the matched line and
+         this may be different from the order of the original lines. */
+      svn_sort__array(target->content->hunks, sort_matched_hunks);
 
-      APR_ARRAY_PUSH(target->content->hunks, hunk_info_t *) = hi;
-    }
-
-  /* Hunks are applied in the order determined by the matched line and
-     this may be different from the order of the original lines. */
-  svn_sort__array(target->content->hunks, sort_matched_hunks);
-
-  /* Apply or reject hunks. */
-  for (i = 0; i < target->content->hunks->nelts; i++)
-    {
-      hunk_info_t *hi;
-
-      svn_pool_clear(iterpool);
-
-      if (cancel_func)
-        SVN_ERR(cancel_func(cancel_baton));
-
-      hi = APR_ARRAY_IDX(target->content->hunks, i, hunk_info_t *);
-      if (hi->already_applied)
-        continue;
-      else if (hi->rejected)
-        SVN_ERR(reject_hunk(target, target->content, hi->hunk,
-                            NULL /* prop_name */,
-                            iterpool));
-      else
-        SVN_ERR(apply_hunk(target, target->content, hi,
-                           NULL /* prop_name */,  iterpool));
-    }
-
-  if (target->kind_on_disk == svn_node_file)
-    {
-      /* Copy any remaining lines to target. */
-      SVN_ERR(copy_lines_to_target(target->content, 0, scratch_pool));
-      if (! target->content->eof)
+      /* Apply or reject hunks. */
+      for (i = 0; i < target->content->hunks->nelts; i++)
         {
-          /* We could not copy the entire target file to the temporary file,
-           * and would truncate the target if we copied the temporary file
-           * on top of it. Skip this target. */
-          target->skipped = TRUE;
+          hunk_info_t *hi;
+
+          svn_pool_clear(iterpool);
+
+          if (cancel_func)
+            SVN_ERR(cancel_func(cancel_baton));
+
+          hi = APR_ARRAY_IDX(target->content->hunks, i, hunk_info_t *);
+          if (hi->already_applied)
+            continue;
+          else if (hi->rejected)
+            SVN_ERR(reject_hunk(target, target->content, hi->hunk,
+                                NULL /* prop_name */,
+                                iterpool));
+          else
+            SVN_ERR(apply_hunk(target, target->content, hi,
+                               NULL /* prop_name */,  iterpool));
+        }
+
+      if (target->kind_on_disk == svn_node_file)
+        {
+          /* Copy any remaining lines to target. */
+          SVN_ERR(copy_lines_to_target(target->content, 0, scratch_pool));
+          if (! target->content->eof)
+            {
+              /* We could not copy the entire target file to the temporary
+               * file, and would truncate the target if we copied the
+               * temporary file on top of it. Skip this target. */
+              target->skipped = TRUE;
+            }
+        }
+      has_text_changes = TRUE;
+    }
+  else if (patch->binary_patch)
+    {
+#ifdef SVN_DEBUG
+      svn_stream_t *tmp;
+
+      /* ### Dummy code that just reads the two streams in the patch file */
+      tmp = svn_diff_get_binary_diff_result_stream(patch->binary_patch,
+                                                   iterpool);
+
+      SVN_ERR(svn_stream_copy3(tmp, svn_stream_empty(iterpool),
+                               NULL, NULL,
+                               iterpool));
+
+      tmp = svn_diff_get_binary_diff_original_stream(patch->binary_patch,
+                                                     iterpool);
+
+      SVN_ERR(svn_stream_copy3(tmp, svn_stream_empty(iterpool),
+                               NULL, NULL,
+                               iterpool));
+
+      /* ### TODO:
+          - write the patched version and set has_text_changes = TRUE;
+          - or: write+notify rejection
+          - or: set skip (which also skips property changes)
+
+         Doing nothing just ignores the patchset (<= 1.9.x behaviour)
+       */
+#endif
+    }
+  else if (target->move_target_abspath)
+    {
+      /* ### Why do we do this?
+             BH: I don't know, but if we don't do this some tests
+                 on git style patches break.
+
+         ### It would be much better to really move the actual file instead
+             of copying to a temporary file; move that to target and then
+             delete the original file
+
+         ### BH: I have absolutely no idea if moving directories would work.
+       */
+      if (target->kind_on_disk == svn_node_file)
+        {
+          /* Copy any remaining lines to target. (read: all lines) */
+          SVN_ERR(copy_lines_to_target(target->content, 0, scratch_pool));
+          if (!target->content->eof)
+          {
+            /* We could not copy the entire target file to the temporary
+            * file, and would truncate the target if we copied the
+            * temporary file on top of it. Skip this target. */
+            target->skipped = TRUE;
+          }
+          has_text_changes = TRUE;
         }
     }
 
@@ -2373,6 +2436,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
       if (! strcmp(prop_name, SVN_PROP_SPECIAL))
         target->is_special = TRUE;
+
+      has_prop_changes = TRUE;
 
       /* We'll store matched hunks in prop_content. */
       prop_target = svn_hash_gets(target->prop_targets, prop_name);
@@ -2484,13 +2549,14 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
       if (patched_file.size == 0 && working_file.size > 0)
         {
-          /* If a unidiff removes all lines from a file, that usually
-           * means deletion, so we can confidently schedule the target
-           * for deletion. In the rare case where the unidiff was really
-           * meant to replace a file with an empty one, this may not
-           * be desirable. But the deletion can easily be reverted and
+          /* If a unidiff or a binary patch removes all lines from a file,
+           * that usually means deletion, so we can confidently schedule
+           * the target for deletion. In the rare case where the unidiff
+           * was really meant to replace a file with an empty one, this may
+           * not be desirable. But the deletion can easily be reverted and
            * creating an empty file manually is not exactly hard either. */
-          target->deleted = (target->db_kind == svn_node_file);
+          if (has_text_changes)
+            target->deleted = (target->db_kind == svn_node_file);
         }
       else if (patched_file.size == 0 && working_file.size == 0)
         {
