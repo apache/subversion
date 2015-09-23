@@ -992,22 +992,6 @@ init_patch_target(patch_target_t **patch_target,
   patch_target_t *target;
   target_content_t *content;
   svn_boolean_t has_text_changes = FALSE;
-  svn_boolean_t has_prop_changes = FALSE;
-
-  {
-    apr_hash_index_t *hi;
-
-    for (hi = apr_hash_first(scratch_pool, patch->prop_patches);
-         hi;
-         hi = apr_hash_next(hi))
-      {
-        svn_prop_patch_t *prop_patch = apr_hash_this_val(hi);
-        if (! has_prop_changes)
-          has_prop_changes = prop_patch->hunks->nelts > 0;
-        else
-          break;
-      }
-  }
 
   has_text_changes = ((patch->hunks && patch->hunks->nelts > 0)
                       || patch->binary_patch);
@@ -2274,7 +2258,6 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   apr_hash_index_t *hash_index;
   svn_linenum_t previous_offset = 0;
   svn_boolean_t has_text_changes = FALSE;
-  svn_boolean_t has_prop_changes = FALSE;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
                             remove_tempfiles, result_pool, scratch_pool));
@@ -2463,8 +2446,6 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
       if (! strcmp(prop_name, SVN_PROP_SPECIAL))
         target->is_special = TRUE;
-
-      has_prop_changes = TRUE;
 
       /* We'll store matched hunks in prop_content. */
       prop_target = svn_hash_gets(target->prop_targets, prop_name);
