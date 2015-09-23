@@ -5687,6 +5687,83 @@ def patch_binary_file(sbox):
                                        expected_status, expected_skip,
                                        [], False, True, '--reverse-diff')
 
+def patch_delete_nodes(sbox):
+  "apply deletes via patch"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('A', 'B', 'A/B/E/alpha')
+  sbox.simple_append('A/mu', '\0')
+  sbox.simple_propset('svn:mime-type', 'application/nonsense', 'A/mu')
+
+  sbox.simple_commit() # r2
+  sbox.simple_update()
+
+  expected_skip = wc.State('', { })
+
+  original_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  original_disk = svntest.main.greek_state.copy()
+  original_disk.tweak('A/mu',
+                      props={'svn:mime-type':'application/nonsense'},
+                      contents = 'This is the file \'mu\'.\n\0')
+  original_disk.tweak('A/B/E/alpha', props={'A':'B'})
+  svntest.actions.run_and_verify_status(wc_dir, original_status)
+  svntest.actions.verify_disk(wc_dir, original_disk, True)
+
+  sbox.simple_rm('A/B/E/alpha', 'A/B/E/beta', 'A/mu')
+
+  _, diff, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                  'diff', '--git', wc_dir)
+
+  patch = sbox.get_tempname('patch')
+  svntest.main.file_write(patch, ''.join(diff))
+
+  deleted_status = original_status.copy()
+  deleted_disk = original_disk.copy()
+  deleted_disk.remove('A/B/E/alpha', 'A/B/E/beta', 'A/mu')
+  deleted_status.tweak('A/B/E/alpha', 'A/B/E/beta', 'A/mu', status='D ')
+
+
+  svntest.actions.run_and_verify_status(wc_dir, deleted_status)
+  svntest.actions.verify_disk(wc_dir, deleted_disk, True)
+
+  # And now apply the patch from the clean state
+  sbox.simple_revert('A/B/E/alpha', 'A/B/E/beta', 'A/mu')
+
+  # Expect that the hint 'empty dir? -> delete dir' deletes 'E'
+  # ### A smarter diff format might change this in a future version
+  deleted_disk.remove('A/B/E')
+  deleted_status.tweak('A/B/E', status='D ')
+  expected_output = wc.State(wc_dir, {
+    'A/mu'              : Item(status='D '),
+    'A/B/E'             : Item(status='D '),
+    'A/B/E/beta'        : Item(status='D '),
+    'A/B/E/alpha'       : Item(status='D '),
+  })
+
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, deleted_disk,
+                                       deleted_status, expected_skip,
+                                       [], False, True)
+
+  # And let's see if we can apply the reverse version of the patch
+  expected_output = wc.State(wc_dir, {
+    'A/mu'              : Item(status='A '),
+    'A/B/E'             : Item(status='A '),
+    'A/B/E/beta'        : Item(status='A '),
+    'A/B/E/alpha'       : Item(status='A '),
+  })
+  original_status.tweak('A/mu', status='RM') # New file
+  original_status.tweak('A/B/E', status='R ') # New dir
+  original_status.tweak('A/B/E/alpha', 'A/B/E/beta',
+                        status='A ', wc_rev='-',
+                        entry_status='R ', entry_rev='2')
+
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, original_disk,
+                                       original_status, expected_skip,
+                                       [], True, True, '--reverse-diff')
 
 ########################################################################
 #Run the tests
@@ -5750,6 +5827,7 @@ test_list = [ None,
               patch_symlink_traversal,
               patch_obstructing_symlink_traversal,
               patch_binary_file,
+              patch_delete_nodes,
             ]
 
 if __name__ == '__main__':

@@ -1076,14 +1076,16 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
               SVN_ERR(parse_prop_name(prop_name, line->data, "Added: ",
                                       result_pool));
               if (*prop_name)
-                *prop_operation = svn_diff_op_added;
+                *prop_operation = (patch->reverse ? svn_diff_op_deleted
+                                                  : svn_diff_op_added);
             }
           else if (starts_with(line->data, "Deleted: "))
             {
               SVN_ERR(parse_prop_name(prop_name, line->data, "Deleted: ",
                                       result_pool));
               if (*prop_name)
-                *prop_operation = svn_diff_op_deleted;
+                *prop_operation = (patch->reverse ? svn_diff_op_added
+                                                  : svn_diff_op_deleted);
             }
           else if (starts_with(line->data, "Modified: "))
             {
@@ -1739,6 +1741,7 @@ static struct transition transitions[] =
   {"deleted file ",     state_git_diff_seen,    git_deleted_file},
 
   {"GIT binary patch",  state_git_diff_seen,    binary_patch_start},
+  {"GIT binary patch",  state_git_tree_seen,    binary_patch_start},
 };
 
 svn_error_t *
