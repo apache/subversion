@@ -53,9 +53,9 @@ HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
 #define LOGFILE_PREFIX "svn-crash-log"
 
 #if defined(_M_IX86)
-#define FORMAT_PTR "0x%08x"
+#define FORMAT_PTR "0x%08Ix"
 #elif defined(_M_X64)
-#define FORMAT_PTR "0x%016I64x"
+#define FORMAT_PTR "0x%016Ix"
 #endif
 
 /*** Code. ***/
@@ -171,7 +171,7 @@ write_module_info_callback(void *data,
       MINIDUMP_MODULE_CALLBACK module = callback_input->Module;
 
       char *buf = convert_wbcs_to_ansi(module.FullPath);
-      fprintf(log_file, FORMAT_PTR, module.BaseOfImage);
+      fprintf(log_file, FORMAT_PTR, (INT_PTR)module.BaseOfImage);
       fprintf(log_file, "  %s", buf);
       free(buf);
 
@@ -302,7 +302,7 @@ format_basic_type(char *buf, DWORD basic_type, DWORD64 length, void *address)
         break;
       default:
         sprintf(buf, "[unhandled type 0x%08x of length " FORMAT_PTR "]",
-                     basic_type, length);
+                     basic_type, (INT_PTR)length);
         break;
     }
 }
@@ -341,7 +341,7 @@ format_value(char *value_str, DWORD64 mod_base, DWORD type, void *value_addr)
 
               if (ptr == 0)
                 sprintf(value_str, "(%s) " FORMAT_PTR,
-                        type_name, (DWORD_PTR *)value_addr);
+                        type_name, (INT_PTR)(DWORD_PTR *)value_addr);
               else if (ptr == 1)
                 sprintf(value_str, "(%s *) " FORMAT_PTR,
                         type_name, *(DWORD_PTR *)value_addr);
