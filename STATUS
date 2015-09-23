@@ -68,6 +68,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1704847
+   Report both built- and run-time versions of libserf, like we do for
+   everything else.
+   Justification:
+     Easier debugging.	Consistency with version-reporting of other runtime
+     dependencies.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
