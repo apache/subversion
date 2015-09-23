@@ -1628,7 +1628,7 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
           char c = line->data[0];
 
           /* 66 = len byte + (52/4*5) chars */
-          if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') 
+          if (((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
               && line->len <= 66
               && !strchr(line->data, ':')
               && !strchr(line->data, ' '))
