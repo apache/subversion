@@ -2596,6 +2596,9 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 /* Try to create missing parent directories for TARGET in the working copy
  * rooted at ABS_WC_PATH, and add the parents to version control.
  * If the parents cannot be created, mark the target as skipped.
+ *
+ * In dry run mode record missing parents in ALREADY_ADDED
+ *
  * Use client context CTX. If DRY_RUN is true, do not create missing
  * parents but issue notifications only.
  * Use SCRATCH_POOL for temporary allocations. */
@@ -2604,6 +2607,7 @@ create_missing_parents(patch_target_t *target,
                        const char *abs_wc_path,
                        svn_client_ctx_t *ctx,
                        svn_boolean_t dry_run,
+                       apr_hash_t *already_added,
                        apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
@@ -2692,17 +2696,25 @@ create_missing_parents(patch_target_t *target,
                                           scratch_pool);
           if (dry_run)
             {
-              if (ctx->notify_func2)
+              if (!svn_hash_gets(already_added, local_abspath))
                 {
-                  /* Just do notification. */
-                  svn_wc_notify_t *notify;
-                  notify = svn_wc_create_notify(local_abspath,
-                                                svn_wc_notify_add,
-                                                iterpool);
-                  notify->kind = svn_node_dir;
-                  ctx->notify_func2(ctx->notify_baton2, notify,
-                                    iterpool);
-                }
+                  svn_hash_sets(already_added,
+                                apr_pstrdup(apr_hash_pool_get(already_added),
+                                            local_abspath),
+                                "");
+
+                  if (ctx->notify_func2)
+                    {
+                      /* Just do notification. */
+                      svn_wc_notify_t *notify;
+                      notify = svn_wc_create_notify(local_abspath,
+                                                    svn_wc_notify_add,
+                                                    iterpool);
+                      notify->kind = svn_node_dir;
+                      ctx->notify_func2(ctx->notify_baton2, notify,
+                                        iterpool);
+                    }
+              }
             }
           else
             {
@@ -2729,12 +2741,17 @@ create_missing_parents(patch_target_t *target,
 
 /* Install a patched TARGET into the working copy at ABS_WC_PATH.
  * Use client context CTX to retrieve WC_CTX, and possibly doing
- * notifications. If DRY_RUN is TRUE, don't modify the working copy.
+ * notifications.
+ *
+ * Pass on ALREADY_ADDED to allow recording already added ancestors
+ * in dry-run mode.
+ *
+ * If DRY_RUN is TRUE, don't modify the working copy.
  * Do temporary allocations in POOL. */
 static svn_error_t *
 install_patched_target(patch_target_t *target, const char *abs_wc_path,
                        svn_client_ctx_t *ctx, svn_boolean_t dry_run,
-                       apr_pool_t *pool)
+                       apr_hash_t *already_added, apr_pool_t *pool)
 {
   if (target->deleted)
     {
@@ -2783,7 +2800,7 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
             }
           else
             SVN_ERR(create_missing_parents(target, abs_wc_path, ctx,
-                                           dry_run, pool));
+                                           dry_run, already_added, pool));
 
         }
       else
@@ -3203,6 +3220,7 @@ apply_patches(/* The path to the patch file. */
   apr_pool_t *iterpool;
   svn_patch_file_t *patch_file;
   apr_array_header_t *targets_info;
+  apr_hash_t *already_added = apr_hash_make(scratch_pool);
 
   /* Try to open the patch file. */
   SVN_ERR(svn_diff_open_patch_file(&patch_file, patch_abspath, scratch_pool));
@@ -3250,13 +3268,20 @@ apply_patches(/* The path to the patch file. */
                       || target->move_target_abspath
                       || target->deleted)
                     SVN_ERR(install_patched_target(target, root_abspath,
-                                                   ctx, dry_run, iterpool));
+                                                   ctx, dry_run,
+                                                   already_added, iterpool));
 
                   if (target->has_prop_changes && (!target->deleted))
                     SVN_ERR(install_patched_prop_targets(target, ctx,
                                                          dry_run, iterpool));
 
                   SVN_ERR(write_out_rejected_hunks(target, dry_run, iterpool));
+
+                  if (target->added)
+                    svn_hash_sets(already_added,
+                                  apr_pstrdup(scratch_pool,
+                                              target->local_abspath),
+                                  "");
                 }
               SVN_ERR(send_patch_notification(target, ctx, iterpool));
 
