@@ -1851,6 +1851,22 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
       temp = patch->old_filename;
       patch->old_filename = patch->new_filename;
       patch->new_filename = temp;
+
+      switch (patch->operation)
+        {
+          case svn_diff_op_added:
+            patch->operation = svn_diff_op_deleted;
+            break;
+          case svn_diff_op_deleted:
+            patch->operation = svn_diff_op_added;
+            break;
+
+          /* ### case svn_diff_op_copied:
+             ### case svn_diff_op_moved:*/
+
+          case svn_diff_op_modified:
+            break; /* Stays modify */
+        }
     }
 
   if (patch->old_filename == NULL || patch->new_filename == NULL)
