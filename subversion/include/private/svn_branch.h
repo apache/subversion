@@ -553,8 +553,10 @@ svn_branch_purge_r(svn_branch_state_t *branch,
  * Also branch the subbranches in FROM_SUBTREE, creating corresponding new
  * subbranches in TO_BRANCH, recursively.
  *
- * NEW_PARENT_EID MUST be an existing element in TO_BRANCH. It may be the
- * root element of TO_BRANCH.
+ * If FROM_SUBTREE.root_eid is the same as TO_BRANCH.root_eid, then
+ * (NEW_PARENT_EID, NEW_NAME) must be (-1, ""); otherwise, NEW_PARENT_EID
+ * must be an existing element (it may be the root element) of TO_BRANCH and
+ * NEW_NAME must not be not "".
  */
 svn_error_t *
 svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
@@ -571,7 +573,7 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
  * specified in FROM_SUBTREE, recursively.
  *
  * If TO_OUTER_BRANCH is NULL, create a top-level branch with a new top-level
- * branch number, ignoring TO_OUTER_EID. Otherise, create a branch that claims
+ * branch number, ignoring TO_OUTER_EID. Otherwise, create a branch that claims
  * to be nested under TO_OUTER_BRANCH:TO_OUTER_EID, but do not require that
  * a subbranch root element exists there, nor create one.
  *
