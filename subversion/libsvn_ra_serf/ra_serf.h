@@ -1558,7 +1558,7 @@ svn_ra_serf__create_bucket_with_eagain(const char *data,
 svn_error_t *
 svn_ra_serf__uri_parse(apr_uri_t *uri,
                        const char *url_str,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 
 #if defined(SVN_DEBUG)
