@@ -3647,7 +3647,7 @@ def patch_lacking_trailing_eol(sbox):
 
   # Expect a newline to be appended
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('iota', contents=iota_contents + "Some more bytes")
+  expected_disk.tweak('iota', contents=iota_contents + "Some more bytes\n")
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', status='M ')
@@ -4559,7 +4559,6 @@ def patch_apply_no_fuz(sbox):
   if not filecmp.cmp(sbox.ospath('test.txt'), sbox.ospath('test_v2.txt')):
     raise svntest.Failure("Patch result not identical")
 
-@XFail()
 def patch_lacking_trailing_eol_on_context(sbox):
   "patch file lacking trailing eol on context"
 

@@ -84,6 +84,9 @@ struct svn_diff_hunk_t {
   /* Number of lines of leading and trailing hunk context. */
   svn_linenum_t leading_context;
   svn_linenum_t trailing_context;
+
+  /* Did we see a 'file does not end with eol' marker in this hunk? */
+  svn_boolean_t no_final_eol;
 };
 
 struct svn_diff_binary_patch_t {
@@ -512,7 +515,8 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
  * Leading unidiff symbols ('+', '-', and ' ') are removed from the line,
  * Any lines commencing with the VERBOTEN character are discarded.
  * VERBOTEN should be '+' or '-', depending on which form of hunk text
- * is being read.
+ * is being read. NO_FINAL_EOL declares if the hunk contains a no final
+ * EOL marker.
  *
  * All other parameters are as in svn_diff_hunk_readline_original_text()
  * and svn_diff_hunk_readline_modified_text().
@@ -524,6 +528,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
                                    const char **eol,
                                    svn_boolean_t *eof,
                                    char verboten,
+                                   svn_boolean_t no_final_eol,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool)
 {
@@ -568,10 +573,35 @@ hunk_readline_original_or_modified(apr_file_t *file,
     }
   else
     {
-      /* Return the line as-is. */
+      /* Return the line as-is. Handle as a chopped leading spaces */
       *stringbuf = svn_stringbuf_dup(str, result_pool);
     }
 
+  if (!filtered)
+    {
+      if (eol && *eof && !*eol && !no_final_eol)
+        {
+          /* Ok, we miss a final EOL in the patch file, but didn't see a
+             no eol marker line.
+
+             We should report that we had an EOL or the patch code will
+             misbehave (and it knows nothing about no eol markers)
+
+             Lets pick the first eol we find in our patch file */
+          apr_off_t start = 0;
+
+          SVN_ERR(svn_io_file_seek(file, APR_SET, &start, scratch_pool));
+
+          SVN_ERR(svn_io_file_readline(file, &str, eol, NULL, APR_SIZE_MAX,
+                                       scratch_pool, scratch_pool));
+
+          /* Every patch file that has hunks has at least one EOL*/
+          SVN_ERR_ASSERT(*eol != NULL);
+          *eol = apr_pstrdup(result_pool, *eol);
+
+          /* Fall through to seek to the right location */
+        }
+    }
   SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -592,6 +622,7 @@ svn_diff_hunk_readline_original_text(svn_diff_hunk_t *hunk,
                                          &hunk->original_text_range,
                                        stringbuf, eol, eof,
                                        hunk->patch->reverse ? '-' : '+',
+                                       hunk->no_final_eol,
                                        result_pool, scratch_pool));
 }
 
@@ -610,6 +641,7 @@ svn_diff_hunk_readline_modified_text(svn_diff_hunk_t *hunk,
                                          &hunk->modified_text_range,
                                        stringbuf, eol, eof,
                                        hunk->patch->reverse ? '+' : '-',
+                                       hunk->no_final_eol,
                                        result_pool, scratch_pool));
 }
 
@@ -852,6 +884,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   apr_off_t start, end;
   apr_off_t original_end;
   apr_off_t modified_end;
+  svn_boolean_t no_final_eol;
   svn_linenum_t original_lines;
   svn_linenum_t modified_lines;
   svn_linenum_t leading_context;
@@ -885,6 +918,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   changed_line_seen = FALSE;
   original_end = 0;
   modified_end = 0;
+  no_final_eol = FALSE;
   *hunk = apr_pcalloc(result_pool, sizeof(**hunk));
 
   /* Get current seek position -- APR has no ftell() :( */
@@ -949,6 +983,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
 
               SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &pos, iterpool));
             }
+          no_final_eol = TRUE;
 
           continue;
         }
@@ -1126,6 +1161,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
       (*hunk)->modified_text_range.start = start;
       (*hunk)->modified_text_range.current = start;
       (*hunk)->modified_text_range.end = modified_end;
+      (*hunk)->no_final_eol = no_final_eol;
     }
   else
     /* Something went wrong, just discard the result. */
