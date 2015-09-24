@@ -5834,6 +5834,112 @@ def patch_delete_missing_eol(sbox):
                                        expected_status, expected_skip,
                                        [], False, True, '--reverse-diff')
 
+def patch_final_eol(sbox):
+  "patch the final eol"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  delete_patch = [
+   'Index: iota\n',
+   '===================================================================\n',
+   '--- iota\t(revision 1)\n',
+   '+++ iota\t(working copy)\n',
+   '@@ -1 +1 @@\n',
+   '-This is the file \'iota\'.\n',
+   '+This is the file \'iota\'.\n',
+   '\ No newline at end of file' # Missing EOL
+  ]
+
+  patch = sbox.get_tempname('patch')
+  # We explicitly use wb here as this is the eol type added later in the test
+  svntest.main.file_write(patch, ''.join(delete_patch), mode='wb')
+
+  expected_output = wc.State(wc_dir, {
+    'iota'        : Item(status='U '),
+  })
+  expected_skip = wc.State(wc_dir, {})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='M ')
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents="This is the file 'iota'.")
+
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], False, True)
+
+  # And again
+  expected_output.tweak('iota', status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], False, True)
+
+  # Reverse
+  expected_disk.tweak('iota', contents="This is the file 'iota'.\n")
+  expected_status.tweak('iota', status='  ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], False, True, '--reverse-diff')
+
+  # And once more
+  expected_output.tweak('iota', status='U ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], False, True, '--reverse-diff')
+
+  # Change the unmodified form
+  sbox.simple_append('iota', 'This is the file \'iota\'.', truncate=True)
+  sbox.simple_commit()
+  expected_status.tweak('iota', wc_rev='2')
+
+  add_patch = [
+    'Index: iota\n',
+    '===================================================================\n',
+    '--- iota\t(revision 2)\n',
+    '+++ iota\t(working copy)\n',
+    '@@ -1 +1 @@\n',
+    '-This is the file \'iota\'.\n',
+    '\ No newline at end of file\n',
+    '+This is the file \'iota\'.' # Missing eol
+  ]
+
+  #sbox.simple_append('iota', 'This is the file \'iota\'.\n', truncate=True)
+  svntest.main.file_write(patch, ''.join(add_patch), mode='wb')
+
+  # Apply the patch
+  expected_output.tweak('iota', status='U ')
+  expected_disk.tweak('iota', contents="This is the file 'iota'.\n")
+  expected_status.tweak('iota', status='M ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], False, True)
+
+  # And again
+  expected_output.tweak('iota', status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], False, True)
+
+  # And in reverse
+  expected_disk.tweak('iota', contents="This is the file 'iota'.")
+  expected_status.tweak('iota', status='  ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], False, True, '--reverse-diff')
+
+  # And again
+  expected_output.tweak('iota', status='U ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], False, True, '--reverse-diff')
 
 ########################################################################
 #Run the tests
@@ -5899,6 +6005,7 @@ test_list = [ None,
               patch_binary_file,
               patch_delete_nodes,
               patch_delete_missing_eol,
+              patch_final_eol,
             ]
 
 if __name__ == '__main__':

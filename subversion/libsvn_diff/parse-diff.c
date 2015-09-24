@@ -86,7 +86,8 @@ struct svn_diff_hunk_t {
   svn_linenum_t trailing_context;
 
   /* Did we see a 'file does not end with eol' marker in this hunk? */
-  svn_boolean_t no_final_eol;
+  svn_boolean_t original_no_final_eol;
+  svn_boolean_t modified_no_final_eol;
 };
 
 struct svn_diff_binary_patch_t {
@@ -625,7 +626,9 @@ svn_diff_hunk_readline_original_text(svn_diff_hunk_t *hunk,
                                          &hunk->original_text_range,
                                        stringbuf, eol, eof,
                                        hunk->patch->reverse ? '-' : '+',
-                                       hunk->no_final_eol,
+                                       hunk->patch->reverse
+                                          ? hunk->modified_no_final_eol
+                                          : hunk->original_no_final_eol,
                                        result_pool, scratch_pool));
 }
 
@@ -644,7 +647,9 @@ svn_diff_hunk_readline_modified_text(svn_diff_hunk_t *hunk,
                                          &hunk->modified_text_range,
                                        stringbuf, eol, eof,
                                        hunk->patch->reverse ? '+' : '-',
-                                       hunk->no_final_eol,
+                                       hunk->patch->reverse
+                                          ? hunk->original_no_final_eol
+                                          : hunk->modified_no_final_eol,
                                        result_pool, scratch_pool));
 }
 
@@ -685,7 +690,7 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
   SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_CUR,
                            &hunk->diff_text_range.current, scratch_pool));
 
-  if (*eof && !*eol && !hunk->no_final_eol && *line->data)
+  if (*eof && !*eol && *line->data)
     {
       /* Ok, we miss a final EOL in the patch file, but didn't see a
           no eol marker line.
@@ -921,7 +926,8 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   apr_off_t start, end;
   apr_off_t original_end;
   apr_off_t modified_end;
-  svn_boolean_t no_final_eol;
+  svn_boolean_t original_no_final_eol = FALSE;
+  svn_boolean_t modified_no_final_eol = FALSE;
   svn_linenum_t original_lines;
   svn_linenum_t modified_lines;
   svn_linenum_t leading_context;
@@ -955,7 +961,6 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   changed_line_seen = FALSE;
   original_end = 0;
   modified_end = 0;
-  no_final_eol = FALSE;
   *hunk = apr_pcalloc(result_pool, sizeof(**hunk));
 
   /* Get current seek position -- APR has no ftell() :( */
@@ -1020,7 +1025,11 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
 
               SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &pos, iterpool));
             }
-          no_final_eol = TRUE;
+          /* Set for the type and context by using != the other type */
+          if (last_line_type != modified_line)
+            original_no_final_eol = TRUE;
+          if (last_line_type != original_line)
+            modified_no_final_eol = TRUE;
 
           continue;
         }
@@ -1198,7 +1207,8 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
       (*hunk)->modified_text_range.start = start;
       (*hunk)->modified_text_range.current = start;
       (*hunk)->modified_text_range.end = modified_end;
-      (*hunk)->no_final_eol = no_final_eol;
+      (*hunk)->original_no_final_eol = original_no_final_eol;
+      (*hunk)->modified_no_final_eol = modified_no_final_eol;
     }
   else
     /* Something went wrong, just discard the result. */
