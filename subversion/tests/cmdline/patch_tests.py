@@ -5841,6 +5841,14 @@ def patch_final_eol(sbox):
   wc_dir = sbox.wc_dir
 
   delete_patch = [
+   'Index: A/mu\n',
+   '===================================================================\n',
+   '--- A/mu\t(revision 1)\n',
+   '+++ A/mu\t(working copy)\n',
+   '@@ -1 +1 @@\n',
+   '-This is the file \'mu\'.\n',
+   '+This is the file \'mu\'.\n',
+   '\ No newline at end of file\n',
    'Index: iota\n',
    '===================================================================\n',
    '--- iota\t(revision 1)\n',
@@ -5856,13 +5864,15 @@ def patch_final_eol(sbox):
   svntest.main.file_write(patch, ''.join(delete_patch), mode='wb')
 
   expected_output = wc.State(wc_dir, {
+    'A/mu'        : Item(status='U '),
     'iota'        : Item(status='U '),
   })
   expected_skip = wc.State(wc_dir, {})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', status='M ')
+  expected_status.tweak('iota', 'A/mu', status='M ')
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota', contents="This is the file 'iota'.")
+  expected_disk.tweak('A/mu', contents="This is the file 'mu'.")
 
   svntest.actions.run_and_verify_patch(wc_dir, patch,
                                        expected_output, expected_disk,
@@ -5870,7 +5880,7 @@ def patch_final_eol(sbox):
                                        [], False, True)
 
   # And again
-  expected_output.tweak('iota', status='G ')
+  expected_output.tweak('iota', 'A/mu', status='G ')
   svntest.actions.run_and_verify_patch(wc_dir, patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
@@ -5878,14 +5888,15 @@ def patch_final_eol(sbox):
 
   # Reverse
   expected_disk.tweak('iota', contents="This is the file 'iota'.\n")
-  expected_status.tweak('iota', status='  ')
+  expected_disk.tweak('A/mu', contents="This is the file 'mu'.\n")
+  expected_status.tweak('iota', 'A/mu', status='  ')
   svntest.actions.run_and_verify_patch(wc_dir, patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        [], False, True, '--reverse-diff')
 
   # And once more
-  expected_output.tweak('iota', status='U ')
+  expected_output.tweak('iota', 'A/mu', status='U ')
   svntest.actions.run_and_verify_patch(wc_dir, patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
@@ -5893,10 +5904,19 @@ def patch_final_eol(sbox):
 
   # Change the unmodified form
   sbox.simple_append('iota', 'This is the file \'iota\'.', truncate=True)
+  sbox.simple_append('A/mu', 'This is the file \'mu\'.', truncate=True)
   sbox.simple_commit()
-  expected_status.tweak('iota', wc_rev='2')
+  expected_status.tweak('iota', 'A/mu', wc_rev='2')
 
   add_patch = [
+    'Index: A/mu\n',
+    '===================================================================\n',
+    '--- A/mu\t(revision 2)\n',
+    '+++ A/mu\t(working copy)\n',
+    '@@ -1 +1 @@\n',
+    '-This is the file \'mu\'.\n',
+    '\ No newline at end of file\n',
+    '+This is the file \'mu\'.\n',
     'Index: iota\n',
     '===================================================================\n',
     '--- iota\t(revision 2)\n',
@@ -5907,20 +5927,20 @@ def patch_final_eol(sbox):
     '+This is the file \'iota\'.' # Missing eol
   ]
 
-  #sbox.simple_append('iota', 'This is the file \'iota\'.\n', truncate=True)
   svntest.main.file_write(patch, ''.join(add_patch), mode='wb')
 
   # Apply the patch
-  expected_output.tweak('iota', status='U ')
+  expected_output.tweak('iota', 'A/mu', status='U ')
   expected_disk.tweak('iota', contents="This is the file 'iota'.\n")
-  expected_status.tweak('iota', status='M ')
+  expected_disk.tweak('A/mu', contents="This is the file 'mu'.\n")
+  expected_status.tweak('iota', 'A/mu', status='M ')
   svntest.actions.run_and_verify_patch(wc_dir, patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        [], False, True)
 
   # And again
-  expected_output.tweak('iota', status='G ')
+  expected_output.tweak('iota', 'A/mu', status='G ')
   svntest.actions.run_and_verify_patch(wc_dir, patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
@@ -5928,14 +5948,15 @@ def patch_final_eol(sbox):
 
   # And in reverse
   expected_disk.tweak('iota', contents="This is the file 'iota'.")
-  expected_status.tweak('iota', status='  ')
+  expected_disk.tweak('A/mu', contents="This is the file 'mu'.")
+  expected_status.tweak('iota', 'A/mu', status='  ')
   svntest.actions.run_and_verify_patch(wc_dir, patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        [], False, True, '--reverse-diff')
 
   # And again
-  expected_output.tweak('iota', status='U ')
+  expected_output.tweak('iota', 'A/mu', status='U ')
   svntest.actions.run_and_verify_patch(wc_dir, patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
