@@ -734,18 +734,15 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
 
   new_sess->repos_root_str = apr_pstrdup(result_pool,
                                          new_sess->repos_root_str);
-  status = apr_uri_parse(result_pool, new_sess->repos_root_str,
-                         &new_sess->repos_root);
-  if (status)
-    return svn_ra_serf__wrap_err(status, NULL);
+  SVN_ERR(svn_ra_serf__uri_parse(&new_sess->repos_root,
+                                 new_sess->repos_root_str,
+                                 result_pool));
 
   new_sess->session_url_str = apr_pstrdup(result_pool, new_session_url);
 
-  status = apr_uri_parse(result_pool, new_sess->session_url_str,
-                         &new_sess->session_url);
-
-  if (status)
-    return svn_ra_serf__wrap_err(status, NULL);
+  SVN_ERR(svn_ra_serf__uri_parse(&new_sess->session_url,
+                                 new_sess->session_url_str,
+                                 result_pool));
 
   /* svn_boolean_t supports_inline_props */
   /* supports_rev_rsrc_replay */
