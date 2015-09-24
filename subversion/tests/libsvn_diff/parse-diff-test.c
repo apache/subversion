@@ -303,6 +303,24 @@ create_patch_file(svn_patch_file_t **patch_file,
   return SVN_NO_ERROR;
 }
 
+/* svn_stream_readline() with hunk reader semantics */
+static svn_error_t *
+stream_readline_diff(svn_stream_t *stream,
+                     svn_stringbuf_t **buf,
+                     const char *eol,
+                     svn_boolean_t *eof,
+                     apr_pool_t *result_pool)
+{
+  SVN_ERR(svn_stream_readline(stream, buf, eol, eof, result_pool));
+
+  /* Hunks are only at EOF after they are completely read, even if
+     they don't have a final EOL in the text */
+  if (*eof && (*buf)->len)
+    *eof = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
 /* Check that reading a line from HUNK equals what's inside EXPECTED.
  * If ORIGINAL is TRUE, read the original hunk text; else, read the
  * modified hunk text. */
@@ -321,7 +339,7 @@ check_content(svn_diff_hunk_t *hunk, svn_boolean_t original,
 
   while (TRUE)
   {
-    SVN_ERR(svn_stream_readline(exp, &exp_buf, NL, &exp_eof, pool));
+    SVN_ERR(stream_readline_diff(exp, &exp_buf, NL, &exp_eof, pool));
     if (original)
       SVN_ERR(svn_diff_hunk_readline_original_text(hunk, &hunk_buf, NULL,
                                                    &hunk_eof, pool, pool));
