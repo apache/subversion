@@ -536,13 +536,16 @@ hunk_readline_original_or_modified(apr_file_t *file,
   svn_boolean_t filtered;
   apr_off_t pos;
   svn_stringbuf_t *str;
+  const char *eol_p;
+
+  if (!eol)
+    eol = &eol_p;
 
   if (range->current >= range->end)
     {
       /* We're past the range. Indicate that no bytes can be read. */
       *eof = TRUE;
-      if (eol)
-        *eol = NULL;
+      *eol = NULL;
       *stringbuf = svn_stringbuf_create_empty(result_pool);
       return SVN_NO_ERROR;
     }
@@ -565,6 +568,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
     {
       /* EOF, return an empty string. */
       *stringbuf = svn_stringbuf_create_ensure(0, result_pool);
+      *eol = NULL;
     }
   else if (str->data[0] == '+' || str->data[0] == '-' || str->data[0] == ' ')
     {
@@ -579,7 +583,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
 
   if (!filtered)
     {
-      if (eol && *eof && !*eol && !no_final_eol)
+      if (*eof && !*eol && !no_final_eol && *str->data)
         {
           /* Ok, we miss a final EOL in the patch file, but didn't see a
              no eol marker line.
@@ -598,8 +602,9 @@ hunk_readline_original_or_modified(apr_file_t *file,
           /* Every patch file that has hunks has at least one EOL*/
           SVN_ERR_ASSERT(*eol != NULL);
           *eol = apr_pstrdup(result_pool, *eol);
+          *eof = FALSE;
 
-          /* Fall through to seek to the right location */
+          /* Fall through to seek back to the right location */
         }
     }
   SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
