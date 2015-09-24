@@ -794,7 +794,6 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_uri_t new_url;
-  apr_status_t status;
 
   /* If it's the URL we already have, wave our hands and do nothing. */
   if (strcmp(session->session_url_str, url) == 0)
