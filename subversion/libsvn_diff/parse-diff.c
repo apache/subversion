@@ -581,17 +581,16 @@ hunk_readline_original_or_modified(apr_file_t *file,
       *stringbuf = svn_stringbuf_dup(str, result_pool);
     }
 
-  if (!filtered)
+  if (!filtered && *eof && !*eol && !no_final_eol && *str->data)
     {
-      if (*eof && !*eol && !no_final_eol && *str->data)
+      /* Ok, we miss a final EOL in the patch file, but didn't see a
+         no eol marker line.
+
+         We should report that we had an EOL or the patch code will
+         misbehave (and it knows nothing about no eol markers) */
+
+      if (eol != &eol_p)
         {
-          /* Ok, we miss a final EOL in the patch file, but didn't see a
-             no eol marker line.
-
-             We should report that we had an EOL or the patch code will
-             misbehave (and it knows nothing about no eol markers)
-
-             Lets pick the first eol we find in our patch file */
           apr_off_t start = 0;
 
           SVN_ERR(svn_io_file_seek(file, APR_SET, &start, scratch_pool));
@@ -601,11 +600,10 @@ hunk_readline_original_or_modified(apr_file_t *file,
 
           /* Every patch file that has hunks has at least one EOL*/
           SVN_ERR_ASSERT(*eol != NULL);
-          *eol = apr_pstrdup(result_pool, *eol);
-          *eof = FALSE;
-
-          /* Fall through to seek back to the right location */
         }
+
+      *eof = FALSE;
+      /* Fall through to seek back to the right location */
     }
   SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
 
@@ -661,13 +659,16 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
   svn_stringbuf_t *line;
   apr_size_t max_len;
   apr_off_t pos;
+  const char *eol_p;
+
+  if (!eol)
+    eol = &eol_p;
 
   if (hunk->diff_text_range.current >= hunk->diff_text_range.end)
     {
       /* We're past the range. Indicate that no bytes can be read. */
       *eof = TRUE;
-      if (eol)
-        *eol = NULL;
+      *eol = NULL;
       *stringbuf = svn_stringbuf_create_empty(result_pool);
       return SVN_NO_ERROR;
     }
@@ -683,6 +684,37 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
   hunk->diff_text_range.current = 0;
   SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_CUR,
                            &hunk->diff_text_range.current, scratch_pool));
+
+  if (*eof && !*eol && !hunk->no_final_eol && *line->data)
+    {
+      /* Ok, we miss a final EOL in the patch file, but didn't see a
+          no eol marker line.
+
+          We should report that we had an EOL or the patch code will
+          misbehave (and it knows nothing about no eol markers) */
+
+      if (eol != &eol_p)
+        {
+          /* Lets pick the first eol we find in our patch file */
+          apr_off_t start = 0;
+          svn_stringbuf_t *str;
+
+          SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_SET, &start,
+                                   scratch_pool));
+
+          SVN_ERR(svn_io_file_readline(hunk->apr_file, &str, eol, NULL,
+                                       APR_SIZE_MAX,
+                                       scratch_pool, scratch_pool));
+
+          /* Every patch file that has hunks has at least one EOL*/
+          SVN_ERR_ASSERT(*eol != NULL);
+        }
+
+      *eof = FALSE;
+
+      /* Fall through to seek back to the right location */
+    }
+
   SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_SET, &pos, scratch_pool));
 
   if (hunk->patch->reverse)
