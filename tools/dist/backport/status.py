@@ -157,13 +157,24 @@ class Paragraph:
 class StatusFile:
   "Encapsulates the STATUS file."
 
-  TRUNK = '^/subversion/trunk'
-  BRANCHES = '^/subversion/branches'
-
   def __init__(self, status_fp):
     "Constructor.  STATUS_FP is an open file-like object to parse."
     self._parse(status_fp)
     self.validate_unique_entry_ids() # Use-case for making this optional?
+    self._project_root_url = '^/subversion'
+
+  def branch_url(self, branch_basename):
+    """Return the URL of a branch with a given basename, of 'Branch:' headers
+    that specify a basename only.
+
+    The returned URL may be an ^/foo short URL."""
+    return (self._project_root_url + "/branches/" + branch_basename)
+
+  def trunk_url(self):
+    """Return the URL to trunk.  Trunk is used as the default merge source.
+
+    The returned URL may be an ^/foo short URL."""
+    return self._project_root_url + '/trunk'
 
   def _parse(self, status_fp):
     "Parse self.status_fp into self.paragraphs."
