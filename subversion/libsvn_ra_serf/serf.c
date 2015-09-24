@@ -513,19 +513,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
                                        serf_sess->pool));
 
 
-  status = apr_uri_parse(serf_sess->pool, session_URL, &url);
-  if (status)
-    {
-      return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                               _("Illegal URL '%s'"),
-                               session_URL);
-    }
-  /* Depending the version of apr-util in use, for root paths url.path
-     will be NULL or "", where serf requires "/". */
-  if (url.path == NULL || url.path[0] == '\0')
-    {
-      url.path = apr_pstrdup(serf_sess->pool, "/");
-    }
+  SVN_ERR(svn_ra_serf__uri_parse(&url, session_URL, serf_sess->pool));
+
   if (!url.port)
     {
       url.port = apr_uri_port_of_scheme(url.scheme);
@@ -827,25 +816,11 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
             "URL '%s'"), url, session->repos_root_str);
     }
 
-  status = apr_uri_parse(pool, url, &new_url);
-  if (status)
-    {
-      return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                               _("Illegal repository URL '%s'"), url);
-    }
+  SVN_ERR(svn_ra_serf__uri_parse(&new_url, url, pool));
 
-  /* Depending the version of apr-util in use, for root paths url.path
-     will be NULL or "", where serf requires "/". */
   /* ### Maybe we should use a string buffer for these strings so we
      ### don't allocate memory in the session on every reparent? */
-  if (new_url.path == NULL || new_url.path[0] == '\0')
-    {
-      session->session_url.path = apr_pstrdup(session->pool, "/");
-    }
-  else
-    {
-      session->session_url.path = apr_pstrdup(session->pool, new_url.path);
-    }
+  session->session_url.path = apr_pstrdup(session->pool, new_url.path);
   session->session_url_str = apr_pstrdup(session->pool, url);
 
   return SVN_NO_ERROR;
