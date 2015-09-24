@@ -2422,12 +2422,12 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           /* Copy any remaining lines to target. (read: all lines) */
           SVN_ERR(copy_lines_to_target(target->content, 0, scratch_pool));
           if (!target->content->eof)
-          {
-            /* We could not copy the entire target file to the temporary
-            * file, and would truncate the target if we copied the
-            * temporary file on top of it. Skip this target. */
-            target->skipped = TRUE;
-          }
+            {
+              /* We could not copy the entire target file to the temporary
+               * file, and would truncate the target if we copied the
+               * temporary file on top of it. Skip this target. */
+              target->skipped = TRUE;
+            }
           has_text_changes = TRUE;
         }
     }
