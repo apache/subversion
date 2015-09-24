@@ -1954,11 +1954,11 @@ svn_ra_serf__create_handler(svn_ra_serf__session_t *session,
 svn_error_t *
 svn_ra_serf__uri_parse(apr_uri_t *uri,
                        const char *url_str,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool)
 {
   apr_status_t status;
 
-  status = apr_uri_parse(pool, url_str, uri);
+  status = apr_uri_parse(result_pool, url_str, uri);
   if (status)
     {
       /* Do not use returned error status in error message because currently
@@ -1972,7 +1972,7 @@ svn_ra_serf__uri_parse(apr_uri_t *uri,
      will be NULL or "", where serf requires "/". */
   if (uri->path == NULL || uri->path[0] == '\0')
     {
-      uri->path = apr_pstrdup(pool, "/");
+      uri->path = apr_pstrdup(result_pool, "/");
     }
 
   return SVN_NO_ERROR;
