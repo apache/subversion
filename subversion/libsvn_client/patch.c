@@ -727,70 +727,14 @@ readline_file(void *baton, svn_stringbuf_t **line, const char **eol_str,
               apr_pool_t *scratch_pool)
 {
   apr_file_t *file = baton;
-  svn_stringbuf_t *str = NULL;
-  apr_size_t numbytes;
-  char c;
-  svn_boolean_t found_eof;
 
-  /* Read bytes into STR up to and including, but not storing,
-   * the next EOL sequence. */
-  *eol_str = NULL;
-  numbytes = 1;
-  found_eof = FALSE;
-  while (!found_eof)
-    {
-      SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
-                                     &found_eof, scratch_pool));
-      if (numbytes != 1)
-        {
-          found_eof = TRUE;
-          break;
-        }
+  SVN_ERR(svn_io_file_readline(file, line, eol_str, eof, APR_SIZE_MAX,
+                               result_pool, scratch_pool));
 
-      if (c == '\n')
-        {
-          *eol_str = "\n";
-        }
-      else if (c == '\r')
-        {
-          *eol_str = "\r";
-
-          if (!found_eof)
-            {
-              apr_off_t pos;
-
-              /* Check for "\r\n" by peeking at the next byte. */
-              pos = 0;
-              SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
-              SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
-                                             &found_eof, scratch_pool));
-              if (numbytes == 1 && c == '\n')
-                {
-                  *eol_str = "\r\n";
-                }
-              else
-                {
-                  /* Pretend we never peeked. */
-                  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
-                  found_eof = FALSE;
-                  numbytes = 1;
-                }
-            }
-        }
-      else
-        {
-          if (str == NULL)
-            str = svn_stringbuf_create_ensure(80, result_pool);
-          svn_stringbuf_appendbyte(str, c);
-        }
-
-      if (*eol_str)
-        break;
-    }
-
-  if (eof)
-    *eof = found_eof;
-  *line = str;
+  if (!(*line)->len)
+    *line = NULL;
+  else
+    *eof = FALSE;
 
   return SVN_NO_ERROR;
 }
