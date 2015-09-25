@@ -868,7 +868,7 @@ lock_body(void *baton,
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Until we implement directory locks someday, we only allow locks
-     on files or non-existent paths. */
+     on files. */
   /* Use fs->vtable->foo instead of svn_fs_foo to avoid circular
      library dependencies, which are not portable. */
   SVN_ERR(lb->fs->vtable->youngest_rev(&youngest, lb->fs, pool));
