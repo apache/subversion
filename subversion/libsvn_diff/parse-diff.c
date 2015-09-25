@@ -1896,7 +1896,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
           /* We have a valid diff header, yay! */
           break;
         }
-      else if (state == state_git_tree_seen && line_after_tree_header_read)
+      else if (state == state_git_tree_seen && line_after_tree_header_read
+               && !valid_header_line)
         {
           /* git patches can contain an index line after the file mode line */
           if (!starts_with(line->data, "index "))
