@@ -77,6 +77,17 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1705060, r1705062, r1705064, r1705088
+   Resolve segfault in 'svn diff' when repository is on server root.
+   Justification:
+     Segfault. User reported. Regression from 1.8.x.
+   Notes:
+     r1705064 is the actual fix, other revisions are refactoring to
+     reuse common code. There are other suspecious usage of apr_uri_parse()
+     in ra_serf, but I'm going to resolve them separately.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
