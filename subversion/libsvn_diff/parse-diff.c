@@ -1261,16 +1261,18 @@ compare_hunks(const void *a, const void *b)
 /* Possible states of the diff header parser. */
 enum parse_state
 {
-   state_start,           /* initial */
-   state_git_diff_seen,   /* diff --git */
-   state_git_tree_seen,   /* a tree operation, rather than content change */
-   state_git_minus_seen,  /* --- /dev/null; or --- a/ */
-   state_git_plus_seen,   /* +++ /dev/null; or +++ a/ */
-   state_move_from_seen,  /* rename from foo.c */
-   state_copy_from_seen,  /* copy from foo.c */
-   state_minus_seen,      /* --- foo.c */
-   state_unidiff_found,   /* valid start of a regular unidiff header */
-   state_git_header_found /* valid start of a --git diff header */
+   state_start,             /* initial */
+   state_git_diff_seen,     /* diff --git */
+   state_git_tree_seen,     /* a tree operation, rather than content change */
+   state_git_minus_seen,    /* --- /dev/null; or --- a/ */
+   state_git_plus_seen,     /* +++ /dev/null; or +++ a/ */
+   state_old_mode_seen,     /* old mode 100644 */
+   state_move_from_seen,    /* rename from foo.c */
+   state_copy_from_seen,    /* copy from foo.c */
+   state_minus_seen,        /* --- foo.c */
+   state_unidiff_found,     /* valid start of a regular unidiff header */
+   state_git_header_found,  /* valid start of a --git diff header */
+   state_binary_patch_found /* valid start of binary patch */
 };
 
 /* Data type describing a valid state transition of the parser. */
