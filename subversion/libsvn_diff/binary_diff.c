@@ -115,7 +115,7 @@ svn_diff__base85_decode_line(char *output_data,
                              apr_pool_t *scratch_pool)
 {
   {
-    apr_size_t expected_data = (output_len + 3) / 4 * 5;
+    apr_ssize_t expected_data = (output_len + 3) / 4 * 5;
 
     if (base85_len != expected_data)
       return svn_error_create(SVN_ERR_DIFF_UNEXPECTED_DATA, NULL,

@@ -85,6 +85,10 @@ struct svn_diff_hunk_t {
   /* Number of lines of leading and trailing hunk context. */
   svn_linenum_t leading_context;
   svn_linenum_t trailing_context;
+
+  /* Did we see a 'file does not end with eol' marker in this hunk? */
+  svn_boolean_t original_no_final_eol;
+  svn_boolean_t modified_no_final_eol;
 };
 
 struct svn_diff_binary_patch_t {
@@ -623,7 +627,8 @@ parse_hunk_header(const char *header, svn_diff_hunk_t *hunk,
  * Leading unidiff symbols ('+', '-', and ' ') are removed from the line,
  * Any lines commencing with the VERBOTEN character are discarded.
  * VERBOTEN should be '+' or '-', depending on which form of hunk text
- * is being read.
+ * is being read. NO_FINAL_EOL declares if the hunk contains a no final
+ * EOL marker.
  *
  * All other parameters are as in svn_diff_hunk_readline_original_text()
  * and svn_diff_hunk_readline_modified_text().
@@ -635,6 +640,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
                                    const char **eol,
                                    svn_boolean_t *eof,
                                    char verboten,
+                                   svn_boolean_t no_final_eol,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool)
 {
@@ -642,13 +648,16 @@ hunk_readline_original_or_modified(apr_file_t *file,
   svn_boolean_t filtered;
   apr_off_t pos;
   svn_stringbuf_t *str;
+  const char *eol_p;
+
+  if (!eol)
+    eol = &eol_p;
 
   if (range->current >= range->end)
     {
       /* We're past the range. Indicate that no bytes can be read. */
       *eof = TRUE;
-      if (eol)
-        *eol = NULL;
+      *eol = NULL;
       *stringbuf = svn_stringbuf_create_empty(result_pool);
       return SVN_NO_ERROR;
     }
@@ -671,6 +680,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
     {
       /* EOF, return an empty string. */
       *stringbuf = svn_stringbuf_create_ensure(0, result_pool);
+      *eol = NULL;
     }
   else if (str->data[0] == '+' || str->data[0] == '-' || str->data[0] == ' ')
     {
@@ -679,10 +689,34 @@ hunk_readline_original_or_modified(apr_file_t *file,
     }
   else
     {
-      /* Return the line as-is. */
+      /* Return the line as-is. Handle as a chopped leading spaces */
       *stringbuf = svn_stringbuf_dup(str, result_pool);
     }
 
+  if (!filtered && *eof && !*eol && !no_final_eol && *str->data)
+    {
+      /* Ok, we miss a final EOL in the patch file, but didn't see a
+         no eol marker line.
+
+         We should report that we had an EOL or the patch code will
+         misbehave (and it knows nothing about no eol markers) */
+
+      if (eol != &eol_p)
+        {
+          apr_off_t start = 0;
+
+          SVN_ERR(svn_io_file_seek(file, APR_SET, &start, scratch_pool));
+
+          SVN_ERR(svn_io_file_readline(file, &str, eol, NULL, APR_SIZE_MAX,
+                                       scratch_pool, scratch_pool));
+
+          /* Every patch file that has hunks has at least one EOL*/
+          SVN_ERR_ASSERT(*eol != NULL);
+        }
+
+      *eof = FALSE;
+      /* Fall through to seek back to the right location */
+    }
   SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -703,6 +737,9 @@ svn_diff_hunk_readline_original_text(svn_diff_hunk_t *hunk,
                                          &hunk->original_text_range,
                                        stringbuf, eol, eof,
                                        hunk->patch->reverse ? '-' : '+',
+                                       hunk->patch->reverse
+                                          ? hunk->modified_no_final_eol
+                                          : hunk->original_no_final_eol,
                                        result_pool, scratch_pool));
 }
 
@@ -721,6 +758,9 @@ svn_diff_hunk_readline_modified_text(svn_diff_hunk_t *hunk,
                                          &hunk->modified_text_range,
                                        stringbuf, eol, eof,
                                        hunk->patch->reverse ? '+' : '-',
+                                       hunk->patch->reverse
+                                          ? hunk->original_no_final_eol
+                                          : hunk->modified_no_final_eol,
                                        result_pool, scratch_pool));
 }
 
@@ -735,13 +775,16 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
   svn_stringbuf_t *line;
   apr_size_t max_len;
   apr_off_t pos;
+  const char *eol_p;
+
+  if (!eol)
+    eol = &eol_p;
 
   if (hunk->diff_text_range.current >= hunk->diff_text_range.end)
     {
       /* We're past the range. Indicate that no bytes can be read. */
       *eof = TRUE;
-      if (eol)
-        *eol = NULL;
+      *eol = NULL;
       *stringbuf = svn_stringbuf_create_empty(result_pool);
       return SVN_NO_ERROR;
     }
@@ -757,6 +800,37 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
   hunk->diff_text_range.current = 0;
   SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_CUR,
                            &hunk->diff_text_range.current, scratch_pool));
+
+  if (*eof && !*eol && *line->data)
+    {
+      /* Ok, we miss a final EOL in the patch file, but didn't see a
+          no eol marker line.
+
+          We should report that we had an EOL or the patch code will
+          misbehave (and it knows nothing about no eol markers) */
+
+      if (eol != &eol_p)
+        {
+          /* Lets pick the first eol we find in our patch file */
+          apr_off_t start = 0;
+          svn_stringbuf_t *str;
+
+          SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_SET, &start,
+                                   scratch_pool));
+
+          SVN_ERR(svn_io_file_readline(hunk->apr_file, &str, eol, NULL,
+                                       APR_SIZE_MAX,
+                                       scratch_pool, scratch_pool));
+
+          /* Every patch file that has hunks has at least one EOL*/
+          SVN_ERR_ASSERT(*eol != NULL);
+        }
+
+      *eof = FALSE;
+
+      /* Fall through to seek back to the right location */
+    }
+
   SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_SET, &pos, scratch_pool));
 
   if (hunk->patch->reverse)
@@ -963,6 +1037,8 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   apr_off_t start, end;
   apr_off_t original_end;
   apr_off_t modified_end;
+  svn_boolean_t original_no_final_eol = FALSE;
+  svn_boolean_t modified_no_final_eol = FALSE;
   svn_linenum_t original_lines;
   svn_linenum_t modified_lines;
   svn_linenum_t leading_context;
@@ -1060,6 +1136,11 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
 
               SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &pos, iterpool));
             }
+          /* Set for the type and context by using != the other type */
+          if (last_line_type != modified_line)
+            original_no_final_eol = TRUE;
+          if (last_line_type != original_line)
+            modified_no_final_eol = TRUE;
 
           continue;
         }
@@ -1187,14 +1268,16 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
               SVN_ERR(parse_prop_name(prop_name, line->data, "Added: ",
                                       result_pool));
               if (*prop_name)
-                *prop_operation = svn_diff_op_added;
+                *prop_operation = (patch->reverse ? svn_diff_op_deleted
+                                                  : svn_diff_op_added);
             }
           else if (starts_with(line->data, "Deleted: "))
             {
               SVN_ERR(parse_prop_name(prop_name, line->data, "Deleted: ",
                                       result_pool));
               if (*prop_name)
-                *prop_operation = svn_diff_op_deleted;
+                *prop_operation = (patch->reverse ? svn_diff_op_added
+                                                  : svn_diff_op_deleted);
             }
           else if (starts_with(line->data, "Modified: "))
             {
@@ -1235,6 +1318,8 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
       (*hunk)->modified_text_range.start = start;
       (*hunk)->modified_text_range.current = start;
       (*hunk)->modified_text_range.end = modified_end;
+      (*hunk)->original_no_final_eol = original_no_final_eol;
+      (*hunk)->modified_no_final_eol = modified_no_final_eol;
     }
   else
     /* Something went wrong, just discard the result. */
@@ -1793,6 +1878,7 @@ parse_hunks(svn_patch_t *patch, apr_file_t *apr_file,
 
 static svn_error_t *
 parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
+                   svn_boolean_t reverse,
                    apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1826,7 +1912,7 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
           char c = line->data[0];
 
           /* 66 = len byte + (52/4*5) chars */
-          if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') 
+          if (((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'))
               && line->len <= 66
               && !strchr(line->data, ':')
               && !strchr(line->data, ' '))
@@ -1893,6 +1979,22 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
       patch->binary_patch = bpatch; /* SUCCESS */
     }
 
+  /* Reverse patch if requested */
+  if (reverse && patch->binary_patch)
+    {
+      apr_off_t tmp_start = bpatch->src_start;
+      apr_off_t tmp_end = bpatch->src_end;
+      svn_filesize_t tmp_filesize = bpatch->src_filesize;
+
+      bpatch->src_start = bpatch->dst_start;
+      bpatch->src_end = bpatch->dst_end;
+      bpatch->src_filesize = bpatch->dst_filesize;
+
+      bpatch->dst_start = tmp_start;
+      bpatch->dst_end = tmp_end;
+      bpatch->dst_filesize = tmp_filesize;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1924,6 +2026,7 @@ static struct transition transitions[] =
   {"deleted file ",     state_git_diff_seen,    git_deleted_file},
 
   {"GIT binary patch",  state_git_diff_seen,    binary_patch_start},
+  {"GIT binary patch",  state_git_tree_seen,    binary_patch_start},
 };
 
 svn_error_t *
@@ -2038,6 +2141,22 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
       temp = patch->old_filename;
       patch->old_filename = patch->new_filename;
       patch->new_filename = temp;
+
+      switch (patch->operation)
+        {
+          case svn_diff_op_added:
+            patch->operation = svn_diff_op_deleted;
+            break;
+          case svn_diff_op_deleted:
+            patch->operation = svn_diff_op_added;
+            break;
+
+          /* ### case svn_diff_op_copied:
+             ### case svn_diff_op_moved:*/
+
+          case svn_diff_op_modified:
+            break; /* Stays modify */
+        }
     }
 
   if (patch->old_filename == NULL || patch->new_filename == NULL)
@@ -2049,7 +2168,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
     {
       if (state == state_binary_patch_found)
         {
-          SVN_ERR(parse_binary_patch(patch, patch_file->apr_file,
+          SVN_ERR(parse_binary_patch(patch, patch_file->apr_file, reverse,
                                      result_pool, iterpool));
           /* And fall through in property parsing */
         }

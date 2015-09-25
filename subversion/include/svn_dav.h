@@ -386,6 +386,15 @@ extern "C" {
 #define SVN_DAV_NS_DAV_SVN_REVERSE_FILE_REVS\
             SVN_DAV_PROP_NS_DAV "svn/reverse-file-revs"
 
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to handle
+ * svndiff1 format encoding.
+ *
+ * @since New in 1.10.
+ */
+#define SVN_DAV_NS_DAV_SVN_SVNDIFF1\
+            SVN_DAV_PROP_NS_DAV "svn/svndiff1"
+
 
 /** @} */
 
