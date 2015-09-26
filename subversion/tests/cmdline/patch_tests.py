@@ -5962,6 +5962,189 @@ def patch_final_eol(sbox):
                                        expected_status, expected_skip,
                                        [], False, True, '--reverse-diff')
 
+def patch_adds_executability_nocontents(sbox):
+  """patch adds svn:executable, without contents"""
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  unidiff_patch = (
+    "diff --git a/iota b/iota\n"
+    "old mode 100644\n"
+    "new mode 100755\n"
+    )
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, unidiff_patch)
+
+  expected_output = [
+    ' U        %s\n' % sbox.ospath('iota'),
+  ]
+  expected_disk = svntest.main.greek_state.copy()
+  # "*" is SVN_PROP_EXECUTABLE_VALUE aka SVN_PROP_BOOLEAN_TRUE
+  expected_disk.tweak('iota', props={'svn:executable': '*'})
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status=' M')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       check_props=True)
+
+def patch_adds_executability_yescontents(sbox):
+  """patch adds svn:executable, with contents"""
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  mu_new_contents = (
+    "This is the file 'mu'.\n"
+    "with text mods too\n"
+    )
+
+  unidiff_patch = (
+    "diff --git a/A/mu b/A/mu\n"
+    "old mode 100644\n"
+    "new mode 100755\n"
+    "index 8a0f01c..dfad3ac\n"
+    "--- a/A/mu\n"
+    "+++ b/A/mu\n"
+    "@@ -1 +1,2 @@\n"
+    " This is the file 'mu'.\n"
+    "+with text mods too\n"
+    )
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, unidiff_patch)
+
+  expected_output = [
+    'UU        %s\n' % sbox.ospath('A/mu'),
+  ]
+  expected_disk = svntest.main.greek_state.copy()
+  # "*" is SVN_PROP_EXECUTABLE_VALUE aka SVN_PROP_BOOLEAN_TRUE
+  expected_disk.tweak('A/mu', props={'svn:executable': '*'})
+  expected_disk.tweak('A/mu', contents=mu_new_contents)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='MM')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       check_props=True)
+
+def patch_deletes_executability(sbox):
+  """patch deletes svn:executable"""
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  ## Set up the basic state.
+  sbox.simple_propset('svn:executable', 'yes', 'iota')
+  #sbox.simple_commit(target='iota', message="Make 'iota' executable.")
+
+  unidiff_patch = (
+    "diff --git a/iota b/iota\n"
+    "old mode 100755\n"
+    "new mode 100644\n"
+    )
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, unidiff_patch)
+
+  expected_output = [
+    ' U        %s\n' % sbox.ospath('iota'),
+  ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota') # props=None by default
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='  ')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       check_props=True)
+
+def patch_ambiguous_executability_contradiction(sbox):
+  """patch ambiguous svn:executable, bad"""
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  unidiff_patch = (
+    "Index: iota\n"
+    "===================================================================\n"
+    "diff --git a/iota b/iota\n"
+    "old mode 100755\n"
+    "new mode 100644\n"
+    "Property changes on: iota\n"
+    "-------------------------------------------------------------------\n"
+    "Added: svn:executable\n"
+    "## -0,0 +1 ##\n"
+    "+*\n"
+    )
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, unidiff_patch)
+
+  expected_output = []
+
+  expected_disk = svntest.main.greek_state.copy()
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  expected_skip = wc.State('', { })
+
+  error_re_string = r'.*Invalid patch:.*contradicting.*mode.*svn:executable'
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       error_re_string=error_re_string,
+                                       check_props=True)
+
+def patch_ambiguous_executability_consistent(sbox):
+  """patch ambiguous svn:executable, good"""
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  unidiff_patch = (
+    "Index: iota\n"
+    "===================================================================\n"
+    "diff --git a/iota b/iota\n"
+    "old mode 100644\n"
+    "new mode 100755\n"
+    "Property changes on: iota\n"
+    "-------------------------------------------------------------------\n"
+    "Added: svn:executable\n"
+    "## -0,0 +1 ##\n"
+    "+*\n"
+    )
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, unidiff_patch)
+
+  expected_output = [
+    ' U        %s\n' % sbox.ospath('iota'),
+  ]
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', props={'svn:executable': '*'})
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status=' M')
+
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       error_re_string=None,
+                                       check_props=True)
+ 
 ########################################################################
 #Run the tests
 
@@ -6027,6 +6210,11 @@ test_list = [ None,
               patch_delete_nodes,
               patch_delete_missing_eol,
               patch_final_eol,
+              patch_adds_executability_nocontents,
+              patch_adds_executability_yescontents,
+              patch_deletes_executability,
+              patch_ambiguous_executability_contradiction,
+              patch_ambiguous_executability_consistent,
             ]
 
 if __name__ == '__main__':

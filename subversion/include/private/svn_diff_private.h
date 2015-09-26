@@ -113,6 +113,33 @@ svn_diff__display_prop_diffs(svn_stream_t *outstream,
                              void *cancel_baton,
                              apr_pool_t *scratch_pool);
 
+/** Create a hunk object that adds a single line.  Return the new object
+ * in @a *hunk.
+ *
+ * @a line is the added text, without a trailing newline.
+ *
+ * The hunk will be associated with @a patch.
+ */
+svn_error_t *
+svn_diff_hunk__create_adds_single_line(svn_diff_hunk_t **hunk,
+                                       const char *line,
+                                       svn_patch_t *patch,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool);
+
+/** Create a hunk object that deletes a single line.  Return the new object
+ * in @a *hunk.
+ *
+ * @a line is the deleted text, without a trailing newline.
+ *
+ * The hunk will be associated with @a patch.
+ */
+svn_error_t *
+svn_diff_hunk__create_deletes_single_line(svn_diff_hunk_t **hunk,
+                                          const char *line,
+                                          svn_patch_t *patch,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

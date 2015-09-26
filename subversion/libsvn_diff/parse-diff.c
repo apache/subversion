@@ -40,6 +40,7 @@
 
 #include "private/svn_eol_private.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_diff_private.h"
 #include "private/svn_sorts_private.h"
 
 #include "diff.h"
@@ -107,6 +108,116 @@ struct svn_diff_binary_patch_t {
   apr_off_t dst_end;
   svn_filesize_t dst_filesize; /* Expanded/final size */
 };
+
+/* Common guts of svn_diff_hunk__create_adds_single_line() and
+ * svn_diff_hunk__create_deletes_single_line().
+ *
+ * ADD is TRUE if adding and FALSE if deleting.
+ */
+static svn_error_t *
+add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
+                          const char *line,
+                          svn_patch_t *patch,
+                          svn_boolean_t add,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  svn_diff_hunk_t *hunk = apr_palloc(result_pool, sizeof(*hunk));
+  static const char *hunk_header[] = { "@@ -1 +0,0 @@\n", "@@ -0,0 +1 @@\n" };
+  const unsigned len = strlen(line);
+  /* The +1 is for the 'plus' start-of-line character. */
+  const apr_off_t end = STRLEN_LITERAL(hunk_header[add]) + (1 + len);
+  /* The +1 is for the second \n. */
+  svn_stringbuf_t *buf = svn_stringbuf_create_ensure(end + 1, scratch_pool);
+
+  hunk->patch = patch;
+
+  /* hunk->apr_file is created below. */
+
+  hunk->diff_text_range.start = STRLEN_LITERAL(hunk_header[add]);
+  hunk->diff_text_range.current = STRLEN_LITERAL(hunk_header[add]);
+  hunk->diff_text_range.end = end;
+
+  if (add)
+    {
+      hunk->original_text_range.start = 0; /* There's no "original" text. */
+      hunk->original_text_range.current = 0;
+      hunk->original_text_range.end = 0;
+
+      hunk->modified_text_range.start = STRLEN_LITERAL(hunk_header[add]);
+      hunk->modified_text_range.current = STRLEN_LITERAL(hunk_header[add]);
+      hunk->modified_text_range.end = end;
+
+      hunk->original_start = 0;
+      hunk->original_length = 0;
+
+      hunk->modified_start = 1;
+      hunk->modified_length = 1;
+    }
+  else /* delete */
+    {
+      hunk->original_text_range.start = STRLEN_LITERAL(hunk_header[add]);
+      hunk->original_text_range.current = STRLEN_LITERAL(hunk_header[add]);
+      hunk->original_text_range.end = end;
+
+      hunk->modified_text_range.start = 0; /* There's no "original" text. */
+      hunk->modified_text_range.current = 0;
+      hunk->modified_text_range.end = 0;
+
+      hunk->original_start = 1;
+      hunk->original_length = 1;
+
+      hunk->modified_start = 0;
+      hunk->modified_length = 0; /* setting to '1' works too */
+    }
+
+  hunk->leading_context = 0;
+  hunk->trailing_context = 0;
+
+  /* Create APR_FILE and put just a hunk in it (without a diff header).
+   * Save the offset of the last byte of the diff line. */
+  svn_stringbuf_appendbytes(buf, hunk_header[add],
+                            STRLEN_LITERAL(hunk_header[add]));
+  svn_stringbuf_appendbyte(buf, add ? '+' : '-');
+  svn_stringbuf_appendbytes(buf, line, len);
+  svn_stringbuf_appendbyte(buf, '\n');
+
+  SVN_ERR(svn_io_open_unique_file3(&hunk->apr_file, NULL /* filename */,
+                                   NULL /* system tempdir */,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   result_pool, scratch_pool));
+  SVN_ERR(svn_io_file_write_full(hunk->apr_file,
+                                 buf->data, buf->len,
+                                 NULL, scratch_pool));
+  /* No need to seek. */
+
+  *hunk_out = hunk;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff_hunk__create_adds_single_line(svn_diff_hunk_t **hunk_out,
+                                       const char *line,
+                                       svn_patch_t *patch,
+                                       apr_pool_t *result_pool,
+                                       apr_pool_t *scratch_pool)
+{
+  SVN_ERR(add_or_delete_single_line(hunk_out, line, patch, TRUE,
+                                    result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff_hunk__create_deletes_single_line(svn_diff_hunk_t **hunk_out,
+                                          const char *line,
+                                          svn_patch_t *patch,
+                                          apr_pool_t *result_pool,
+                                          apr_pool_t *scratch_pool)
+{
+  SVN_ERR(add_or_delete_single_line(hunk_out, line, patch, FALSE,
+                                    result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
 
 void
 svn_diff_hunk_reset_diff_text(svn_diff_hunk_t *hunk)
@@ -1240,6 +1351,8 @@ enum parse_state
    state_git_tree_seen,     /* a tree operation, rather than content change */
    state_git_minus_seen,    /* --- /dev/null; or --- a/ */
    state_git_plus_seen,     /* +++ /dev/null; or +++ a/ */
+   state_old_mode_seen,     /* old mode 100644 */
+   state_git_mode_seen,     /* new mode 100644 */
    state_move_from_seen,    /* rename from foo.c */
    state_copy_from_seen,    /* copy from foo.c */
    state_minus_seen,        /* --- foo.c */
@@ -1472,6 +1585,85 @@ git_plus(enum parse_state *new_state, char *line, svn_patch_t *patch,
   return SVN_NO_ERROR;
 }
 
+/* Helper for git_old_mode() and git_new_mode().  Translate the git
+ * file mode MODE_STR into a binary "executable?" notion EXECUTABLE_P. */
+static svn_error_t *
+parse_bits_into_executability(svn_tristate_t *executable_p,
+                              const char *mode_str)
+{
+  apr_uint64_t mode;
+  SVN_ERR(svn_cstring_strtoui64(&mode, mode_str,
+                                0 /* min */,
+                                0777777 /* max: six octal digits */,
+                                010 /* radix (octal) */));
+
+  /* Note: 0644 and 0755 are the only modes that can occur for plain files.
+   * We deliberately choose to parse only those values: we are strict in what
+   * we accept _and_ in what we produce.
+   *
+   * (Having said that, though, we could consider relaxing the parser to also
+   * map
+   *     (mode & 0111) == 0000 -> svn_tristate_false
+   *     (mode & 0111) == 0111 -> svn_tristate_true
+   *        [anything else]    -> svn_tristate_unknown
+   * .)
+   */
+
+  switch (mode & 0777)
+    {
+      case 0644:
+        *executable_p = svn_tristate_false;
+        break;
+
+      case 0755:
+        *executable_p = svn_tristate_true;
+        break;
+
+      default:
+        /* Ignore unknown values. */
+        *executable_p = svn_tristate_unknown;
+        break;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Parse the 'old mode ' line of a git extended unidiff. */
+static svn_error_t *
+git_old_mode(enum parse_state *new_state, char *line, svn_patch_t *patch,
+             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(parse_bits_into_executability(&patch->old_executable_p,
+                                        line + STRLEN_LITERAL("old mode ")));
+
+#ifdef SVN_DEBUG
+  /* If this assert trips, the "old mode" is neither ...644 nor ...755 . */
+  SVN_ERR_ASSERT(patch->old_executable_p != svn_tristate_unknown);
+#endif
+
+  *new_state = state_old_mode_seen;
+  return SVN_NO_ERROR;
+}
+
+/* Parse the 'new mode ' line of a git extended unidiff. */
+static svn_error_t *
+git_new_mode(enum parse_state *new_state, char *line, svn_patch_t *patch,
+             apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  SVN_ERR(parse_bits_into_executability(&patch->new_executable_p,
+                                        line + STRLEN_LITERAL("new mode ")));
+
+#ifdef SVN_DEBUG
+  /* If this assert trips, the "old mode" is neither ...644 nor ...755 . */
+  SVN_ERR_ASSERT(patch->new_executable_p != svn_tristate_unknown);
+#endif
+
+  /* Don't touch patch->operation. */
+
+  *new_state = state_git_mode_seen;
+  return SVN_NO_ERROR;
+}
+
 /* Parse the 'rename from ' line of a git extended unidiff. */
 static svn_error_t *
 git_move_from(enum parse_state *new_state, char *line, svn_patch_t *patch,
@@ -1532,6 +1724,10 @@ static svn_error_t *
 git_new_file(enum parse_state *new_state, char *line, svn_patch_t *patch,
              apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
+  SVN_ERR(
+    parse_bits_into_executability(&patch->new_executable_p,
+                                  line + STRLEN_LITERAL("new file mode ")));
+
   patch->operation = svn_diff_op_added;
 
   /* Filename already retrieved from diff --git header. */
@@ -1545,6 +1741,10 @@ static svn_error_t *
 git_deleted_file(enum parse_state *new_state, char *line, svn_patch_t *patch,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
+  SVN_ERR(
+    parse_bits_into_executability(&patch->old_executable_p,
+                                  line + STRLEN_LITERAL("deleted file mode ")));
+
   patch->operation = svn_diff_op_deleted;
 
   /* Filename already retrieved from diff --git header. */
@@ -1808,15 +2008,22 @@ static struct transition transitions[] =
 
   {"diff --git",        state_start,            git_start},
   {"--- a/",            state_git_diff_seen,    git_minus},
+  {"--- a/",            state_git_mode_seen,    git_minus},
   {"--- a/",            state_git_tree_seen,    git_minus},
+  {"--- /dev/null",     state_git_mode_seen,    git_minus},
   {"--- /dev/null",     state_git_tree_seen,    git_minus},
   {"+++ b/",            state_git_minus_seen,   git_plus},
   {"+++ /dev/null",     state_git_minus_seen,   git_plus},
 
+  {"old mode ",         state_git_diff_seen,    git_old_mode},
+  {"new mode ",         state_old_mode_seen,    git_new_mode},
+
   {"rename from ",      state_git_diff_seen,    git_move_from},
+  {"rename from ",      state_git_mode_seen,    git_move_from},
   {"rename to ",        state_move_from_seen,   git_move_to},
 
   {"copy from ",        state_git_diff_seen,    git_copy_from},
+  {"copy from ",        state_git_mode_seen,    git_copy_from},
   {"copy to ",          state_copy_from_seen,   git_copy_to},
 
   {"new file ",         state_git_diff_seen,    git_new_file},
@@ -1850,6 +2057,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
     }
 
   patch = apr_pcalloc(result_pool, sizeof(*patch));
+  patch->old_executable_p = svn_tristate_unknown;
+  patch->new_executable_p = svn_tristate_unknown;
 
   pos = patch_file->next_patch_offset;
   SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &pos, scratch_pool));
@@ -1896,7 +2105,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
           /* We have a valid diff header, yay! */
           break;
         }
-      else if (state == state_git_tree_seen && line_after_tree_header_read
+      else if ((state == state_git_tree_seen || state == state_git_mode_seen)
+               && line_after_tree_header_read
                && !valid_header_line)
         {
           /* git patches can contain an index line after the file mode line */
@@ -1911,7 +2121,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
             break;
           }
         }
-      else if (state == state_git_tree_seen)
+      else if (state == state_git_tree_seen
+               || state == state_git_mode_seen)
         {
           line_after_tree_header_read = TRUE;
         }
