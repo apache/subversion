@@ -1352,6 +1352,7 @@ enum parse_state
    state_git_minus_seen,    /* --- /dev/null; or --- a/ */
    state_git_plus_seen,     /* +++ /dev/null; or +++ a/ */
    state_old_mode_seen,     /* old mode 100644 */
+   state_git_mode_seen,     /* new mode 100644 */
    state_move_from_seen,    /* rename from foo.c */
    state_copy_from_seen,    /* copy from foo.c */
    state_minus_seen,        /* --- foo.c */
@@ -1659,7 +1660,7 @@ git_new_mode(enum parse_state *new_state, char *line, svn_patch_t *patch,
 
   /* Don't touch patch->operation. */
 
-  *new_state = state_git_tree_seen;
+  *new_state = state_git_mode_seen;
   return SVN_NO_ERROR;
 }
 
@@ -2007,7 +2008,9 @@ static struct transition transitions[] =
 
   {"diff --git",        state_start,            git_start},
   {"--- a/",            state_git_diff_seen,    git_minus},
+  {"--- a/",            state_git_mode_seen,    git_minus},
   {"--- a/",            state_git_tree_seen,    git_minus},
+  {"--- /dev/null",     state_git_mode_seen,    git_minus},
   {"--- /dev/null",     state_git_tree_seen,    git_minus},
   {"+++ b/",            state_git_minus_seen,   git_plus},
   {"+++ /dev/null",     state_git_minus_seen,   git_plus},
@@ -2016,9 +2019,11 @@ static struct transition transitions[] =
   {"new mode ",         state_old_mode_seen,    git_new_mode},
 
   {"rename from ",      state_git_diff_seen,    git_move_from},
+  {"rename from ",      state_git_mode_seen,    git_move_from},
   {"rename to ",        state_move_from_seen,   git_move_to},
 
   {"copy from ",        state_git_diff_seen,    git_copy_from},
+  {"copy from ",        state_git_mode_seen,    git_copy_from},
   {"copy to ",          state_copy_from_seen,   git_copy_to},
 
   {"new file ",         state_git_diff_seen,    git_new_file},
@@ -2100,7 +2105,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
           /* We have a valid diff header, yay! */
           break;
         }
-      else if (state == state_git_tree_seen && line_after_tree_header_read
+      else if ((state == state_git_tree_seen || state == state_git_mode_seen)
+               && line_after_tree_header_read
                && !valid_header_line)
         {
           /* git patches can contain an index line after the file mode line */
@@ -2115,7 +2121,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
             break;
           }
         }
-      else if (state == state_git_tree_seen)
+      else if (state == state_git_tree_seen
+               || state == state_git_mode_seen)
         {
           line_after_tree_header_read = TRUE;
         }

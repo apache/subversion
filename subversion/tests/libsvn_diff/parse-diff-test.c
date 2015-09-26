@@ -88,6 +88,8 @@ static const char *git_tree_and_text_unidiff =
   "Index: iota.copied"                                                  NL
   "===================================================================" NL
   "diff --git a/iota b/iota.copied"                                     NL
+  "old mode 100644"                                                     NL
+  "new mode 100755"                                                     NL
   "copy from iota"                                                      NL
   "copy to iota.copied"                                                 NL
   "--- a/iota\t(revision 2)"                                            NL
@@ -98,6 +100,8 @@ static const char *git_tree_and_text_unidiff =
   "Index: A/mu.moved"                                                   NL
   "===================================================================" NL
   "diff --git a/A/mu b/A/mu.moved"                                      NL
+  "old mode 100644"                                                     NL
+  "new mode 100755"                                                     NL
   "rename from A/mu"                                                    NL
   "rename to A/mu.moved"                                                NL
   "--- a/A/mu\t(revision 2)"                                            NL
@@ -531,6 +535,8 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch);
   SVN_TEST_STRING_ASSERT(patch->old_filename, "iota");
   SVN_TEST_STRING_ASSERT(patch->new_filename, "iota.copied");
+  SVN_TEST_ASSERT(patch->old_executable_p = svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_executable_p = svn_tristate_true);
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_copied);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
@@ -553,6 +559,8 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch);
   SVN_TEST_STRING_ASSERT(patch->old_filename, "A/mu");
   SVN_TEST_STRING_ASSERT(patch->new_filename, "A/mu.moved");
+  SVN_TEST_ASSERT(patch->old_executable_p = svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_executable_p = svn_tristate_true);
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_moved);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
