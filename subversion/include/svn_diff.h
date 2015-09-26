@@ -1288,6 +1288,24 @@ typedef struct svn_patch_t {
    * to apply it as parsed from the file.
    * @since New in 1.10. */
   svn_diff_binary_patch_t *binary_patch;
+
+  /** The old and new executability bits, as retrieved from the patch file.
+   *
+   * A patch may specify an executability change via @a old_executable_p and
+   * / @a new_executable_p, via a #SVN_PROP_EXECUTABLE propchange hunk, or both
+   * ways; however, if both ways are used, they must specify the same semantic
+   * change.
+   *
+   * #svn_tristate_unknown indicates the patch does not specify the
+   * corresponding bit.
+   *
+   * @since New in 1.10.
+   */
+  /* ### This is currently not parsed out of "index" lines (where it
+   * ### serves as an assertion of the executability state, without
+   * ### changing it).  */
+  svn_tristate_t old_executable_p; 
+  svn_tristate_t new_executable_p; 
 } svn_patch_t;
 
 /** An opaque type representing an open patch file.

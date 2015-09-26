@@ -46,6 +46,7 @@
 #include "private/svn_eol_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_diff_private.h"
 #include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_sorts_private.h"
@@ -914,6 +915,41 @@ choose_target_filename(const svn_patch_t *patch)
   return (old < new) ? patch->old_filename : patch->new_filename;
 }
 
+/* Return whether the svn:executable proppatch and the out-of-band
+ * executability metadata contradict each other, assuming both are present.
+ */
+static svn_boolean_t
+contradictory_executability(const svn_patch_t *patch,
+                            const prop_patch_target_t *target)
+{
+  switch (target->operation)
+    {
+      case svn_diff_op_added:
+        return patch->new_executable_p == svn_tristate_false;
+
+      case svn_diff_op_deleted:
+        return patch->new_executable_p == svn_tristate_true;
+
+      case svn_diff_op_unchanged:
+        /* ### Can this happen? */
+        return (patch->old_executable_p != svn_tristate_unknown
+                && patch->new_executable_p != svn_tristate_unknown
+                && patch->old_executable_p != patch->new_executable_p);
+
+      case svn_diff_op_modified:
+        /* Can't happen: the property should only ever be added or deleted,
+         * but never modified from one valid value to another. */
+        return (patch->old_executable_p != svn_tristate_unknown
+                && patch->new_executable_p != svn_tristate_unknown
+                && patch->old_executable_p == patch->new_executable_p);
+
+      default:
+        /* Can't happen: the proppatch parser never generates other values. */
+        SVN_ERR_MALFUNCTION_NO_RETURN();
+    }
+}
+
+
 /* Attempt to initialize a *PATCH_TARGET structure for a target file
  * described by PATCH. Use working copy context WC_CTX.
  * STRIP_COUNT specifies the number of leading path components
@@ -956,6 +992,9 @@ init_patch_target(patch_target_t **patch_target,
   target->kind_on_disk = svn_node_none;
   target->content = content;
   target->prop_targets = apr_hash_make(result_pool);
+  if (patch->new_executable_p != svn_tristate_unknown)
+    /* May also be set by apply_hunk(). */
+    target->has_prop_changes = TRUE;
 
   SVN_ERR(resolve_target_path(target, choose_target_filename(patch),
                               root_abspath, strip_count, has_text_changes,
@@ -1129,6 +1168,7 @@ init_patch_target(patch_target_t **patch_target,
       if (! target->skipped)
         {
           apr_hash_index_t *hi;
+          prop_patch_target_t *prop_executable_target;
 
           for (hi = apr_hash_first(result_pool, patch->prop_patches);
                hi;
@@ -1144,6 +1184,99 @@ init_patch_target(patch_target_t **patch_target,
                                        wc_ctx, target->local_abspath,
                                        result_pool, scratch_pool));
               svn_hash_sets(target->prop_targets, prop_name, prop_target);
+            }
+
+          /* Now, check for an out-of-band mode change and convert it to
+           * an svn:executable property patch. */
+          prop_executable_target = svn_hash_gets(target->prop_targets,
+                                                 SVN_PROP_EXECUTABLE);
+          if (patch->new_executable_p != svn_tristate_unknown
+              && prop_executable_target)
+            {
+              if (contradictory_executability(patch, prop_executable_target))
+                /* Invalid input: specifies both git-like "new mode" lines and
+                 * svn-like addition/removal of svn:executable.
+                 *
+                 * If this were merely a hunk that didn't apply, we'd reject it
+                 * and move on.  However, this is a self-contradictory hunk;
+                 * it has no unambiguous interpretation.  Therefore: */
+                return svn_error_createf(SVN_ERR_INVALID_INPUT, NULL,
+                                         _("Invalid patch: specifies "
+                                           "contradicting mode changes and "
+                                           "%s changes (for '%s')"),
+                                         SVN_PROP_EXECUTABLE,
+                                         target->local_abspath);
+              else
+                /* We have two representations of the same change.
+                 *
+                 * In the caller, there will be two hunk_info_t's for the
+                 * patch: one generated from the property diff and one
+                 * generated from the out-of-band mode change.  Both hunks will
+                 * be processed, but the output will be as though there was
+                 * just one hunk.
+                 *
+                 * The reason there will be only a single notification is not
+                 * specific to SVN_PROP_EXECUTABLE but generic to all property
+                 * patches: if a patch file contains two identical property
+                 * hunks (e.g., 
+                 *  svn ps k v iota; svn diff iota >patch; svn diff iota >>patch
+                 * ), applying the patch file will only produce a single ' U'
+                 * notification.
+                 *
+                 * In contrast, the same for file-content hunks will result in
+                 * a 'U' notification followed by a 'G' notification.  (The 'U'
+                 * for the first copy of the hunk; the 'G' for the second.)
+                 */
+                ;
+            }
+          else if (patch->new_executable_p != svn_tristate_unknown
+                   && !prop_executable_target)
+            {
+              svn_diff_operation_kind_t operation;
+              svn_boolean_t nothing_to_do = FALSE;
+              prop_patch_target_t *prop_target;
+
+              if (patch->old_executable_p == patch->new_executable_p)
+                {
+                    /* Noop change. */
+                    operation = svn_diff_op_unchanged;
+                }
+              else switch (patch->old_executable_p)
+                {
+                  case svn_tristate_false:
+                    /* Made executable. */
+                    operation = svn_diff_op_added;
+                    break;
+
+                  case svn_tristate_true:
+                    /* Made non-executable. */
+                    operation = svn_diff_op_deleted;
+                    break;
+
+                  case svn_tristate_unknown:
+                    if (patch->new_executable_p == svn_tristate_true)
+                      /* New, executable file. */
+                      operation = svn_diff_op_added;
+                    else
+                      /* New, non-executable file. That's not a change. */
+                      nothing_to_do = TRUE;
+                    break;
+
+                  default:
+                    /* NOTREACHED */
+                    SVN_ERR_MALFUNCTION();
+                }
+
+              if (! nothing_to_do)
+                {
+                  SVN_ERR(init_prop_target(&prop_target,
+                                           SVN_PROP_EXECUTABLE,
+                                           operation,
+                                           wc_ctx, target->local_abspath,
+                                           result_pool, scratch_pool));
+                  svn_hash_sets(target->prop_targets, SVN_PROP_EXECUTABLE,
+                                prop_target);
+                }
             }
         }
     }
@@ -2423,6 +2556,50 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
           APR_ARRAY_PUSH(prop_target->content->hunks, hunk_info_t *) = hi;
         }
+    }
+
+  /* Match implied property hunks. */
+  if (patch->new_executable_p != svn_tristate_unknown
+      && svn_hash_gets(target->prop_targets, SVN_PROP_EXECUTABLE))
+    {
+      hunk_info_t *hi;
+      svn_diff_hunk_t *hunk;
+      prop_patch_target_t *prop_target = svn_hash_gets(target->prop_targets,
+                                                       SVN_PROP_EXECUTABLE);
+      const char *const value = SVN_PROP_EXECUTABLE_VALUE;
+
+      switch (prop_target->operation)
+        {
+          case svn_diff_op_added:
+            SVN_ERR(svn_diff_hunk__create_adds_single_line(&hunk, value, patch,
+                                                           result_pool,
+                                                           iterpool));
+            break;
+
+          case svn_diff_op_deleted:
+            SVN_ERR(svn_diff_hunk__create_deletes_single_line(&hunk, value,
+                                                              patch,
+                                                              result_pool,
+                                                              iterpool));
+            break;
+
+          case svn_diff_op_unchanged:
+            /* ### What to do? */
+            break;
+
+          default:
+            SVN_ERR_MALFUNCTION();
+        }
+
+      /* Derive a hunk_info from hunk. */
+      SVN_ERR(get_hunk_info(&hi, target, prop_target->content,
+                            hunk, 0 /* fuzz */, 0 /* previous_offset */,
+                            ignore_whitespace,
+                            TRUE /* is_prop_hunk */,
+                            cancel_func, cancel_baton,
+                            result_pool, iterpool));
+      if (! hi->already_applied)
+        APR_ARRAY_PUSH(prop_target->content->hunks, hunk_info_t *) = hi;
     }
 
   /* Apply or reject property hunks. */
