@@ -3451,6 +3451,7 @@ def patch_add_symlink(sbox):
     "Added: svn:special\n",
     "## -0,0 +1 ##\n",
     "+*\n",
+    "+\\ No newline at end of property\n"
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
