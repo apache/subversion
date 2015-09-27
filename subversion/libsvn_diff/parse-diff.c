@@ -174,6 +174,9 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
   hunk->leading_context = 0;
   hunk->trailing_context = 0;
 
+  hunk->original_no_final_eol = FALSE;
+  hunk->modified_no_final_eol = FALSE;
+
   /* Create APR_FILE and put just a hunk in it (without a diff header).
    * Save the offset of the last byte of the diff line. */
   svn_stringbuf_appendbytes(buf, hunk_header[add],
