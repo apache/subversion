@@ -124,18 +124,17 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
 {
   svn_diff_hunk_t *hunk = apr_palloc(result_pool, sizeof(*hunk));
   static const char *hunk_header[] = { "@@ -1 +0,0 @@\n", "@@ -0,0 +1 @@\n" };
-  const unsigned len = strlen(line);
-  /* The +1 is for the 'plus' start-of-line character. */
-  const apr_off_t end = STRLEN_LITERAL(hunk_header[add]) + (1 + len);
-  /* The +1 is for the second \n. */
+  const apr_size_t header_len = strlen(hunk_header[add]);
+  const apr_size_t len = strlen(line);
+  const apr_size_t end = header_len + (1 + len); /* The +1 is for the \n. */
   svn_stringbuf_t *buf = svn_stringbuf_create_ensure(end + 1, scratch_pool);
 
   hunk->patch = patch;
 
   /* hunk->apr_file is created below. */
 
-  hunk->diff_text_range.start = STRLEN_LITERAL(hunk_header[add]);
-  hunk->diff_text_range.current = STRLEN_LITERAL(hunk_header[add]);
+  hunk->diff_text_range.start = header_len;
+  hunk->diff_text_range.current = header_len;
 
   if (add)
     {
@@ -144,8 +143,8 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
       hunk->original_text_range.end = 0;
       hunk->original_no_final_eol = FALSE;
 
-      hunk->modified_text_range.start = STRLEN_LITERAL(hunk_header[add]);
-      hunk->modified_text_range.current = STRLEN_LITERAL(hunk_header[add]);
+      hunk->modified_text_range.start = header_len;
+      hunk->modified_text_range.current = header_len;
       hunk->modified_text_range.end = end;
       hunk->modified_no_final_eol = TRUE;
 
@@ -157,8 +156,8 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
     }
   else /* delete */
     {
-      hunk->original_text_range.start = STRLEN_LITERAL(hunk_header[add]);
-      hunk->original_text_range.current = STRLEN_LITERAL(hunk_header[add]);
+      hunk->original_text_range.start = header_len;
+      hunk->original_text_range.current = header_len;
       hunk->original_text_range.end = end;
       hunk->original_no_final_eol = TRUE;
 
@@ -179,8 +178,7 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
 
   /* Create APR_FILE and put just a hunk in it (without a diff header).
    * Save the offset of the last byte of the diff line. */
-  svn_stringbuf_appendbytes(buf, hunk_header[add],
-                            STRLEN_LITERAL(hunk_header[add]));
+  svn_stringbuf_appendbytes(buf, hunk_header[add], header_len);
   svn_stringbuf_appendbyte(buf, add ? '+' : '-');
   svn_stringbuf_appendbytes(buf, line, len);
   svn_stringbuf_appendbyte(buf, '\n');
