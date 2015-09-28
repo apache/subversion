@@ -70,8 +70,9 @@ typedef enum rep_kind_t
  */
 typedef struct rep_stats_t
 {
-  /* absolute offset in the file */
-  apr_off_t offset;
+  /* offset in the revision file (phys. addressing) /
+   * item index within REVISION (log. addressing) */
+  apr_uint64_t item_index;
 
   /* item length in bytes */
   apr_uint64_t size;
@@ -328,13 +329,13 @@ add_change(svn_fs_fs__stats_t *stats,
 
 /* Comparator used for binary search comparing the absolute file offset
  * of a representation to some other offset. DATA is a *rep_stats_t,
- * KEY is a pointer to an apr_off_t.
+ * KEY is a pointer to an apr_uint64_t.
  */
 static int
-compare_representation_offsets(const void *data, const void *key)
+compare_representation_item_index(const void *data, const void *key)
 {
-  apr_off_t lhs = (*(const rep_stats_t *const *)data)->offset;
-  apr_off_t rhs = *(const apr_off_t *)key;
+  apr_uint64_t lhs = (*(const rep_stats_t *const *)data)->item_index;
+  apr_uint64_t rhs = *(const apr_uint64_t *)key;
 
   if (lhs < rhs)
     return -1;
@@ -345,7 +346,7 @@ compare_representation_offsets(const void *data, const void *key)
  * return it in *REVISION_INFO. For performance reasons, we skip the
  * lookup if the info is already provided.
  *
- * In that revision, look for the rep_stats_t object for offset OFFSET.
+ * In that revision, look for the rep_stats_t object for item ITEM_INDEX.
  * If it already exists, set *IDX to its index in *REVISION_INFO's
  * representations list and return the representation object. Otherwise,
  * set the index to where it must be inserted and return NULL.
@@ -355,7 +356,7 @@ find_representation(int *idx,
                     query_t *query,
                     revision_info_t **revision_info,
                     svn_revnum_t revision,
-                    apr_off_t offset)
+                    apr_uint64_t item_index)
 {
   revision_info_t *info;
   *idx = -1;
@@ -375,14 +376,14 @@ find_representation(int *idx,
 
   /* look for the representation */
   *idx = svn_sort__bsearch_lower_bound(info->representations,
-                                       &offset,
-                                       compare_representation_offsets);
+                                       &item_index,
+                                       compare_representation_item_index);
   if (*idx < info->representations->nelts)
     {
       /* return the representation, if this is the one we were looking for */
       rep_stats_t *result
         = APR_ARRAY_IDX(info->representations, *idx, rep_stats_t *);
-      if (result->offset == offset)
+      if (result->item_index == item_index)
         return result;
     }
 
@@ -411,7 +412,7 @@ parse_representation(rep_stats_t **representation,
 
   /* look it up */
   result = find_representation(&idx, query, &revision_info, rep->revision,
-                               (apr_off_t)rep->item_index);
+                               rep->item_index);
   if (!result)
     {
       /* not parsed, yet (probably a rep in the same revision).
@@ -420,7 +421,7 @@ parse_representation(rep_stats_t **representation,
       result = apr_pcalloc(result_pool, sizeof(*result));
       result->revision = rep->revision;
       result->expanded_size = rep->expanded_size;
-      result->offset = (apr_off_t)rep->item_index;
+      result->item_index = rep->item_index;
       result->size = rep->size;
 
       /* In phys. addressing mode, follow link to the actual representation.
@@ -429,7 +430,8 @@ parse_representation(rep_stats_t **representation,
       if (!svn_fs_fs__use_log_addressing(query->fs))
         {
           svn_fs_fs__rep_header_t *header;
-          apr_off_t offset = revision_info->offset + result->offset;
+          apr_off_t offset = revision_info->offset
+                           + (apr_off_t)rep->item_index;
 
           SVN_ERR_ASSERT(revision_info->rev_file);
           SVN_ERR(svn_io_file_seek(revision_info->rev_file->file, APR_SET,
