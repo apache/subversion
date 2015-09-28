@@ -6198,7 +6198,144 @@ def patch_ambiguous_executability_consistent(sbox):
                                        expected_status, expected_skip,
                                        error_re_string=None,
                                        check_props=True)
- 
+
+def patch_prop_madness(sbox):
+  "patch property madness"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('mod_s', 'value\n',
+                      'iota', 'A/mu')
+
+  sbox.simple_propset('mod_s_n', 'no-eol',
+                      'iota', 'A/mu')
+
+  sbox.simple_propset('mod_l', 'this\nis\na\nvery\nvery\nlong\nvalue.\n',
+                      'iota', 'A/mu')
+
+  sbox.simple_propset('mod_l_n', 'this\nis\na\nvery\nvery\nlong\nvalue.\n'
+                      'without\neol', # No eol at end
+                      'iota', 'A/mu')
+
+  sbox.simple_propset('del', 'value\n',
+                      'iota', 'A/mu')
+
+  sbox.simple_propset('del_n', 'no-eol',
+                      'iota', 'A/mu')
+
+  sbox.simple_commit()
+
+  sbox.simple_propset('mod_s', 'other\n',
+                      'iota', 'A/mu')
+
+  sbox.simple_propset('mod_s_n', 'still no eol',
+                      'iota', 'A/mu')
+
+  sbox.simple_propset('mod_l', 'this\nis\na\nsomewhat\nlong\nvalue.\n',
+                      'iota', 'A/mu')
+
+  sbox.simple_propset('mod_l_n', 'this\nis\na\nanother\n..\nlong\nvalue.\n'
+                      'without\neol', # No eol at end
+                      'iota', 'A/mu')
+
+  sbox.simple_propdel('del', 'iota', 'A/mu')
+
+  sbox.simple_propdel('del_n', 'iota', 'A/mu')
+
+  sbox.simple_propset('add_s', 'new-value\n',
+                      'iota', 'A/mu')
+
+  sbox.simple_propset('add_s_n', 'new other no eol',
+                      'iota', 'A/mu')
+
+  sbox.simple_propset('add_l', 'this\nis\nsomething\n',
+                      'iota', 'A/mu')
+
+  sbox.simple_propset('add_l_n', 'this\nhas\nno\neol', # No eol at end
+                      'iota', 'A/mu')
+
+  _, output, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                    'diff', wc_dir)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  new_props = props={
+    'mod_s'       : 'other\n',
+    'mod_s_n'     : 'still no eol',
+    'mod_l'       : 'this\nis\na\nsomewhat\nlong\nvalue.\n',
+    'mod_l_n'     : 'this\nis\na\nanother\n..\nlong\nvalue.\nwithout\neol',
+    'add_s'       : 'new-value\n',
+    'add_s_n'     : 'new other no eol',
+    'add_l'       : 'this\nis\nsomething\n',
+    'add_l_n'     : 'this\nhas\nno\neol'
+  }
+
+  expected_status.tweak('iota', 'A/mu', status=' M', wc_rev='2')
+  expected_disk.tweak('iota', 'A/mu', props=props)
+
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
+  #svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'revert', wc_dir, '-R')
+
+  patch = sbox.get_tempname('patch')
+  svntest.main.file_write(patch, ''.join(output), mode='wb')
+
+  expected_output = wc.State(wc_dir, {
+    'A/mu' : Item(status=' U'),
+    'iota' : Item(status=' U'),
+  })
+  expected_skip= wc.State(wc_dir, {
+  })
+
+  strip_count = wc_dir.count(os.path.sep)+1
+
+  # Patch once
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count)
+
+  # Patch again
+  expected_output.tweak('A/mu', 'iota', status=' G')
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count)
+
+  # Reverse
+  expected_output.tweak('A/mu', 'iota', status=' U')
+  props = {
+   'mod_l_n' : 'this\nis\na\nvery\nvery\nlong\nvalue.\nwithout\neol',
+   'mod_l'   : 'this\nis\na\nvery\nvery\nlong\nvalue.\n',
+   'mod_s'   : 'value\n',
+   'mod_s_n' : 'no-eol',
+   'del'     : 'value\n',
+   'del_n'   : 'no-eol',
+  }
+  expected_disk.tweak('A/mu', 'iota', props=props)
+  expected_status.tweak('A/mu', 'iota', status='  ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff',
+                                       '--strip', strip_count)
+
+  # And repeat
+  expected_output.tweak('A/mu', 'iota', status=' G')
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff',
+                                       '--strip', strip_count)
+
 ########################################################################
 #Run the tests
 
@@ -6270,6 +6407,7 @@ test_list = [ None,
               patch_deletes_executability,
               patch_ambiguous_executability_contradiction,
               patch_ambiguous_executability_consistent,
+              patch_prop_madness,
             ]
 
 if __name__ == '__main__':
