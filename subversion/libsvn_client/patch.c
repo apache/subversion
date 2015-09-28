@@ -2262,8 +2262,9 @@ send_patch_notification(const patch_target_t *target,
                                  hunk_info_t *);
 
               /* Don't notify on the hunk level for added or deleted props. */
-              if (prop_target->operation != svn_diff_op_added &&
+              if ((prop_target->operation != svn_diff_op_added &&
                   prop_target->operation != svn_diff_op_deleted)
+                  || hi->rejected || hi->already_applied)
                 SVN_ERR(send_hunk_notification(hi, target, prop_target->name,
                                                ctx, iterpool));
             }
