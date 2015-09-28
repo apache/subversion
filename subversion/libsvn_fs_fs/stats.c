@@ -93,7 +93,35 @@ typedef struct rep_stats_t
   /* classification of the representation. values of rep_kind_t */
   char kind;
 
+  /* length of the delta chain, including this representation,
+   * saturated to 255 - if need be */
+  apr_byte_t chain_length;
 } rep_stats_t;
+
+/* Represents a link in the rep delta chain.  REVISION + ITEM_INDEX points
+ * to BASE_REVISION + BASE_ITEM_INDEX.  We collect this info while scanning
+ * a f7 repo in a single pass and resolve it afterwards. */
+typedef struct rep_ref_t
+{
+  /* Revision that contains this representation. */
+  svn_revnum_t revision;
+
+  /* Item index of this rep within REVISION. */
+  apr_uint64_t item_index;
+
+  /* Revision of the representation we deltified against.
+   * -1 if this representation is either PLAIN or a self-delta. */
+  svn_revnum_t base_revision;
+
+  /* Item index of that rep within BASE_REVISION. */
+  apr_uint64_t base_item_index;
+
+  /* Length of the PLAIN / DELTA line in the source file in bytes.
+   * We use this to update the info in the rep stats after scanning the
+   * whole file. */
+  apr_uint16_t header_size;
+
+} rep_ref_t;
 
 /* Represents a single revision.
  * There will be only one instance per revision. */
@@ -441,6 +469,23 @@ parse_representation(rep_stats_t **representation,
                                              scratch_pool, scratch_pool));
 
           result->header_size = header->header_size;
+
+          /* Determine length of the delta chain. */
+          if (header->type == svn_fs_fs__rep_delta)
+            {
+              int base_idx;
+              rep_stats_t *base_rep
+                = find_representation(&base_idx, query, NULL,
+                                      header->base_revision,
+                                      header->base_item_index);
+
+              result->chain_length = 1 + MIN(base_rep->chain_length,
+                                             (apr_byte_t)0xfe);
+            }
+          else
+            {
+              result->chain_length = 1;
+            }
         }
 
       svn_sort__array_insert(revision_info->representations, &result, idx);
@@ -869,6 +914,70 @@ read_item(svn_stringbuf_t **contents,
   return SVN_NO_ERROR;
 }
 
+/* Predicate comparing the two rep_ref_t** LHS and RHS by the respective
+ * representation's revision.
+ */
+static int
+compare_representation_refs(const void *lhs, const void *rhs)
+{
+  svn_revnum_t lhs_rev = (*(const rep_ref_t *const *)lhs)->revision;
+  svn_revnum_t rhs_rev = (*(const rep_ref_t *const *)rhs)->revision;
+
+  if (lhs_rev < rhs_rev)
+    return -1;
+  return (lhs_rev > rhs_rev ? 1 : 0);
+}
+
+/* Given all the presentations found in a single rev / pack file as
+ * rep_ref_t * in REP_REFS, update the delta chain lengths in QUERY.
+ * REP_REFS and its contents can then be discarded.
+ */
+static svn_error_t *
+resolve_representation_refs(query_t *query,
+                            apr_array_header_t *rep_refs)
+{
+  int i;
+
+  /* Because delta chains can only point to previous revs, after sorting
+   * REP_REFS, all base refs have already been updated. */
+  svn_sort__array(rep_refs, compare_representation_refs);
+
+  /* Build up the CHAIN_LENGTH values. */
+  for (i = 0; i < rep_refs->nelts; ++i)
+    {
+      int idx;
+      rep_ref_t *ref = APR_ARRAY_IDX(rep_refs, i, rep_ref_t *);
+      rep_stats_t *rep = find_representation(&idx, query, NULL,
+                                             ref->revision, ref->item_index);
+
+      /* No dangling pointers and all base reps have been processed. */
+      SVN_ERR_ASSERT(rep);
+      SVN_ERR_ASSERT(!rep->chain_length);
+
+      /* Set the HEADER_SIZE as we found it during the scan. */
+      rep->header_size = ref->header_size;
+
+      /* The delta chain got 1 element longer. */
+      if (ref->base_revision == SVN_INVALID_REVNUM)
+        {
+          rep->chain_length = 1;
+        }
+      else
+        {
+          rep_stats_t *base;
+
+          base = find_representation(&idx, query, NULL, ref->base_revision,
+                                     ref->base_item_index);
+          SVN_ERR_ASSERT(base);
+          SVN_ERR_ASSERT(base->chain_length);
+
+          rep->chain_length = 1 + MIN(base->chain_length, (apr_byte_t)0xfe);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Process the logically addressed revision contents of revisions BASE to
  * BASE + COUNT - 1 in QUERY.
  *
@@ -888,6 +997,12 @@ read_log_rev_or_packfile(query_t *query,
   apr_off_t offset = 0;
   int i;
   svn_fs_fs__revision_file_t *rev_file;
+
+  /* We collect the delta chain links as we scan the file.  Afterwards,
+   * we determine the lengths of those delta chains and throw this
+   * temporary container away. */
+  apr_array_header_t *rep_refs = apr_array_make(scratch_pool, 64,
+                                                sizeof(rep_ref_t *));
 
   /* we will process every revision in the rev / pack file */
   for (i = 0; i < count; ++i)
@@ -960,11 +1075,48 @@ read_log_rev_or_packfile(query_t *query,
                 = get_log_change_count(item->data + 0, item->len);
               info->changes_len += entry->size;
             }
+          else if (   (entry->type == SVN_FS_FS__ITEM_TYPE_FILE_REP)
+                   || (entry->type == SVN_FS_FS__ITEM_TYPE_DIR_REP)
+                   || (entry->type == SVN_FS_FS__ITEM_TYPE_FILE_PROPS)
+                   || (entry->type == SVN_FS_FS__ITEM_TYPE_DIR_PROPS))
+            {
+              /* Collect the delta chain link. */
+              svn_fs_fs__rep_header_t *header;
+              rep_ref_t *ref = apr_pcalloc(scratch_pool, sizeof(*ref));
+
+              SVN_ERR(svn_io_file_aligned_seek(rev_file->file,
+                                               rev_file->block_size,
+                                               NULL, entry->offset,
+                                               iterpool));
+              SVN_ERR(svn_fs_fs__read_rep_header(&header,
+                                                 rev_file->stream,
+                                                 iterpool, iterpool));
+
+              ref->header_size = header->header_size;
+              ref->revision = entry->item.revision;
+              ref->item_index = entry->item.number;
+
+              if (header->type == svn_fs_fs__rep_delta)
+                {
+                  ref->base_item_index = header->base_item_index;
+                  ref->base_revision = header->base_revision;
+                }
+              else
+                {
+                  ref->base_item_index = SVN_FS_FS__ITEM_INDEX_UNUSED;
+                  ref->base_revision = SVN_INVALID_REVNUM;
+                }
+
+              APR_ARRAY_PUSH(rep_refs, rep_ref_t *) = ref;
+            }
 
           /* advance offset */
           offset += entry->size;
         }
     }
+
+  /* Resolve the delta chain links. */
+  SVN_ERR(resolve_representation_refs(query, rep_refs));
 
   /* clean up and close file handles */
   svn_pool_destroy(iterpool);
@@ -1092,6 +1244,7 @@ add_rep_stats(svn_fs_fs__representation_stats_t *stats,
 
   stats->references += rep->ref_count;
   stats->expanded_size += rep->ref_count * rep->expanded_size;
+  stats->chain_len += rep->chain_length;
 }
 
 /* Aggregate the info the in revision_info_t * array REVISIONS into the

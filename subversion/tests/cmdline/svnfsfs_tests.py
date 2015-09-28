@@ -182,6 +182,7 @@ def test_stats(sbox):
                            '.*\d+ bytes in .*\d+ representations of added file nodes',
                            '.*\d+ bytes in .*\d+ directory property representations',
                            '.*\d+ bytes in .*\d+ file property representations',
+                           '.*\d+ average delta chain length',
                            '.*\d+ bytes in header & footer overhead' ],
     '.* representation statistics:' : 
                           ['.*\d+ bytes in .*\d+ reps',
@@ -189,7 +190,8 @@ def test_stats(sbox):
                            '.*\d+ bytes expanded size',
                            '.*\d+ bytes expanded shared size',
                            '.*\d+ bytes with rep-sharing off',
-                           '.*\d+ shared references' ],
+                           '.*\d+ shared references',
+                           '.*\d+ average delta chain length'],
     'Largest.*:'        : ['.*\d+ r\d+ */\S*'],
     'Extensions by number .*:' :
                           ['.*\d+ \( ?\d+%\) representations'],

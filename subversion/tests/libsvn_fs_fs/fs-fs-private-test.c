@@ -105,6 +105,10 @@ verify_representation_stats(const svn_fs_fs__representation_stats_t *stats,
   SVN_TEST_ASSERT(stats->references == stats->total.count);
   SVN_TEST_ASSERT(stats->expanded_size == stats->total.expanded_size);
 
+  /* Reasonable delta chain lengths */
+  SVN_TEST_ASSERT(   stats->chain_len >= stats->total.count
+                  && stats->chain_len <= 5 * stats->total.count);
+
   return SVN_NO_ERROR;
 }
 
