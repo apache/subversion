@@ -285,16 +285,7 @@ class SVNTreeNode:
     if self.props:
       if comma:
         line += ", "
-      line += "props={"
-      comma = False
-
-      for name in self.props:
-        if comma:
-          line += ", "
-        line += "'%s':'%s'" % (name, self.props[name])
-        comma = True
-
-      line += "}"
+      line += ("props=%s" % self.props)
       comma = True
 
     for name in self.atts:
