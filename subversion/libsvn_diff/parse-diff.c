@@ -186,7 +186,7 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
   svn_stringbuf_appendbyte(buf, '\n');
   svn_stringbuf_appendcstr(buf, "\\ No newline at end of hunk\n");
 
-  hunk->diff_text_range.end = buf->size;
+  hunk->diff_text_range.end = buf->len;
 
   SVN_ERR(svn_io_open_unique_file3(&hunk->apr_file, NULL /* filename */,
                                    NULL /* system tempdir */,
