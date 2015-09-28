@@ -931,6 +931,8 @@ read_log_rev_or_packfile(query_t *query,
       /* process all entries (and later continue with the next block) */
       for (i = 0; i < entries->nelts; ++i)
         {
+          svn_stringbuf_t *item;
+          revision_info_t *info;
           svn_fs_fs__p2l_entry_t *entry
             = &APR_ARRAY_IDX(entries, i, svn_fs_fs__p2l_entry_t);
 
@@ -943,21 +945,16 @@ read_log_rev_or_packfile(query_t *query,
             continue;
 
           /* read and process interesting items */
+          info = APR_ARRAY_IDX(query->revisions, entry->item.revision,
+                               revision_info_t*);
+
           if (entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV)
             {
-              svn_stringbuf_t *item;
-              revision_info_t *info = APR_ARRAY_IDX(query->revisions,
-                                                    entry->item.revision,
-                                                    revision_info_t*);
               SVN_ERR(read_item(&item, rev_file, entry, iterpool, iterpool));
               SVN_ERR(read_noderev(query, item, info, result_pool, iterpool));
             }
           else if (entry->type == SVN_FS_FS__ITEM_TYPE_CHANGES)
             {
-              svn_stringbuf_t *item;
-              revision_info_t *info = APR_ARRAY_IDX(query->revisions,
-                                                    entry->item.revision,
-                                                    revision_info_t*);
               SVN_ERR(read_item(&item, rev_file, entry, iterpool, iterpool));
               info->change_count
                 = get_log_change_count(item->data + 0, item->len);
