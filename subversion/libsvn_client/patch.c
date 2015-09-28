@@ -153,6 +153,9 @@ typedef struct prop_patch_target_t {
    * ### Should we use flags instead since we're not using all enum values? */
   svn_diff_operation_kind_t operation;
 
+  /* When true the property change won't be applied */
+  svn_boolean_t skipped;
+
   /* ### Here we'll add flags telling if the prop was added, deleted,
    * ### had_rejects, had_local_mods prior to patching and so on. */
 } prop_patch_target_t;
@@ -2622,8 +2625,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                             TRUE /* is_prop_hunk */,
                             cancel_func, cancel_baton,
                             result_pool, iterpool));
-      if (! hi->already_applied)
-        APR_ARRAY_PUSH(prop_target->content->hunks, hunk_info_t *) = hi;
+      APR_ARRAY_PUSH(prop_target->content->hunks, hunk_info_t *) = hi;
     }
 
   /* Apply or reject property hunks. */
@@ -2632,6 +2634,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
        hash_index = apr_hash_next(hash_index))
     {
       prop_patch_target_t *prop_target;
+      svn_boolean_t applied_one = FALSE;
 
       prop_target = apr_hash_this_val(hash_index);
 
@@ -2653,24 +2656,30 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                                 prop_target->name,
                                 iterpool));
           else
-            SVN_ERR(apply_hunk(target, prop_target->content, hi,
-                               prop_target->name,
-                               iterpool));
+            {
+              SVN_ERR(apply_hunk(target, prop_target->content, hi,
+                                 prop_target->name,
+                                 iterpool));
+              applied_one = TRUE;
+            }
         }
 
-        if (prop_target->content->existed)
-          {
-            /* Copy any remaining lines to target. */
-            SVN_ERR(copy_lines_to_target(prop_target->content, 0,
-                                         scratch_pool));
-            if (! prop_target->content->eof)
-              {
-                /* We could not copy the entire target property to the
-                 * temporary file, and would truncate the target if we
-                 * copied the temporary file on top of it. Skip this target.  */
-                target->skipped = TRUE;
-              }
-          }
+      if (!applied_one)
+        prop_target->skipped = TRUE;
+
+      if (applied_one && prop_target->content->existed)
+        {
+          /* Copy any remaining lines to target. */
+          SVN_ERR(copy_lines_to_target(prop_target->content, 0,
+                                       scratch_pool));
+          if (! prop_target->content->eof)
+            {
+              /* We could not copy the entire target property to the
+               * temporary file, and would truncate the target if we
+               * copied the temporary file on top of it. Skip this target.  */
+              target->skipped = TRUE;
+            }
+        }
       }
 
   svn_pool_destroy(iterpool);
@@ -3101,6 +3110,9 @@ install_patched_prop_targets(patch_target_t *target,
 
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
+      if (prop_target->skipped)
+        continue;
 
       /* For a deleted prop we only set the value to NULL. */
       if (prop_target->operation == svn_diff_op_deleted)
