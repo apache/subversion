@@ -219,6 +219,12 @@ typedef struct patch_target_t {
   /* True if at least one property hunk was rejected. */
   svn_boolean_t had_prop_rejects;
 
+  /* True if at least one hunk was handled as already applied */
+  svn_boolean_t had_already_applied;
+
+  /* True if at least one property hunk was handled as already applied */
+  svn_boolean_t had_prop_already_applied;
+
   /* True if the target file had local modifications before the
    * patch was applied to it. */
   svn_boolean_t local_mods;
@@ -1879,9 +1885,15 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
 
       SVN_ERR(seek_to_line(content, saved_line, scratch_pool));
     }
+  else if (!content->existed && svn_diff_hunk_get_modified_start(hunk) == 0)
+    {
+      /* The hunk wants to delete a file or property which doesn't exist. */
+      matched_line = 0;
+      already_applied = TRUE;
+    }
   else
     {
-      /* The hunk wants to modify a file which doesn't exist. */
+      /* The hunk wants to modify a file or property which doesn't exist. */
       matched_line = 0;
     }
 
@@ -2196,11 +2208,19 @@ send_patch_notification(const patch_target_t *target,
         notify->content_state = svn_wc_notify_state_merged;
       else if (target->has_text_changes)
         notify->content_state = svn_wc_notify_state_changed;
+      else if (target->had_already_applied)
+        notify->content_state = svn_wc_notify_state_merged;
+      else
+        notify->content_state = svn_wc_notify_state_unchanged;
 
       if (target->had_prop_rejects)
         notify->prop_state = svn_wc_notify_state_conflicted;
       else if (target->has_prop_changes)
         notify->prop_state = svn_wc_notify_state_changed;
+      else if (target->had_prop_already_applied)
+        notify->prop_state = svn_wc_notify_state_merged;
+      else
+        notify->prop_state = svn_wc_notify_state_unchanged;
     }
 
   ctx->notify_func2(ctx->notify_baton2, notify, pool);
@@ -2412,7 +2432,10 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
           hi = APR_ARRAY_IDX(target->content->hunks, i, hunk_info_t *);
           if (hi->already_applied)
-            continue;
+            {
+              target->had_already_applied = TRUE;;
+              continue;
+            }
           else if (hi->rejected)
             SVN_ERR(reject_hunk(target, target->content, hi->hunk,
                                 NULL /* prop_name */,
@@ -2620,7 +2643,10 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           hi = APR_ARRAY_IDX(prop_target->content->hunks, i,
                              hunk_info_t *);
           if (hi->already_applied)
-            continue;
+            {
+              target->had_prop_already_applied = TRUE;
+              continue;
+            }
           else if (hi->rejected)
             SVN_ERR(reject_hunk(target, prop_target->content, hi->hunk,
                                 prop_target->name,

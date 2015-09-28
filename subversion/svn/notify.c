@@ -415,8 +415,10 @@ notify_body(struct notify_baton *nb,
             store_path(nb, nb->conflict_stats->prop_conflicts, path_local);
             statchar_buf[1] = 'C';
           }
+        else if (n->prop_state == svn_wc_notify_state_merged)
+          statchar_buf[1] = 'G';
         else if (n->prop_state == svn_wc_notify_state_changed)
-              statchar_buf[1] = 'U';
+          statchar_buf[1] = 'U';
 
         if (statchar_buf[0] != ' ' || statchar_buf[1] != ' ')
           {
