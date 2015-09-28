@@ -1494,8 +1494,8 @@ svn_fs_fs__prop_rep_equal(svn_boolean_t *equal,
         }
 
       /* Known different content? MD5 must be given. */
-      if (!memcmp(rep_a->md5_digest, rep_b->md5_digest,
-                  sizeof(rep_a->md5_digest)))
+      if (memcmp(rep_a->md5_digest, rep_b->md5_digest,
+                 sizeof(rep_a->md5_digest)))
         {
           *equal = FALSE;
           return SVN_NO_ERROR;
