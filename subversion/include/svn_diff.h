@@ -1215,8 +1215,34 @@ typedef struct svn_prop_patch_t {
  * A binary patch representation. This basically describes replacing one
  * exact binary representation with another one.
  *
- * @since new in 1.10. */
+ * @since New in 1.10. */
 typedef struct svn_diff_binary_patch_t svn_diff_binary_patch_t;
+
+/**
+ * Creates a stream allocated in @a result_pool from which the original
+ * (pre-patch-application) version of the binary patched file can be read.
+ *
+ * @note Like many svn_diff_get functions over patches, this is implemented
+ * as reading from the backing patch file. Therefore it is recommended to
+ * read the whole stream before using other functions on the same patch file.
+ *
+ * @since New in 1.10 */
+svn_stream_t *
+svn_diff_get_binary_diff_original_stream(const svn_diff_binary_patch_t *bpatch,
+                                         apr_pool_t *result_pool);
+
+/**
+ * Creates a stream allocated in @a result_pool from which the resulting
+ * (post-patch-application) version of the binary patched file can be read.
+ *
+ * @note Like many svn_diff_get functions over patches, this is implemented
+ * as reading from the backing patch file. Therefore it is recommended to
+ * read the whole stream before using other functions on the same patch file.
+ *
+ * @since New in 1.10 */
+svn_stream_t *
+svn_diff_get_binary_diff_result_stream(const svn_diff_binary_patch_t *bpatch,
+                                       apr_pool_t *result_pool);
 
 /**
  * Data type to manage parsing of patches.
@@ -1262,6 +1288,24 @@ typedef struct svn_patch_t {
    * to apply it as parsed from the file.
    * @since New in 1.10. */
   svn_diff_binary_patch_t *binary_patch;
+
+  /** The old and new executability bits, as retrieved from the patch file.
+   *
+   * A patch may specify an executability change via @a old_executable_p and
+   * / @a new_executable_p, via a #SVN_PROP_EXECUTABLE propchange hunk, or both
+   * ways; however, if both ways are used, they must specify the same semantic
+   * change.
+   *
+   * #svn_tristate_unknown indicates the patch does not specify the
+   * corresponding bit.
+   *
+   * @since New in 1.10.
+   */
+  /* ### This is currently not parsed out of "index" lines (where it
+   * ### serves as an assertion of the executability state, without
+   * ### changing it).  */
+  svn_tristate_t old_executable_p; 
+  svn_tristate_t new_executable_p; 
 } svn_patch_t;
 
 /** An opaque type representing an open patch file.

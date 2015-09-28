@@ -610,9 +610,6 @@ compare_dir_entries_format7(const svn_sort__item_t *a,
   const svn_fs_dirent_t *lhs = (const svn_fs_dirent_t *) a->value;
   const svn_fs_dirent_t *rhs = (const svn_fs_dirent_t *) b->value;
 
-  if (lhs->kind != rhs->kind)
-    return lhs->kind == svn_node_dir ? -1 : 1;
-
   return strcmp(lhs->name, rhs->name);
 }
 
@@ -810,15 +807,6 @@ compare_ref_to_item(const reference_t * const * lhs_p,
   return svn_fs_fs__id_part_compare(&(*lhs_p)->from, rhs_p);
 }
 
-/* implements compare_fn_t.  Finds the DIR / FILE boundary.
- */
-static int
-compare_is_dir(const path_order_t * const * lhs_p,
-               const void *unused)
-{
-  return (*lhs_p)->is_dir ? -1 : 0;
-}
-
 /* Look for the least significant bit set in VALUE and return the smallest
  * number with the same property, i.e. the largest power of 2 that is a
  * factor in VALUE. */
@@ -966,7 +954,7 @@ sort_reps(pack_context_t *context)
 {
   apr_pool_t *temp_pool;
   const path_order_t **temp, **path_order;
-  int i, count, dir_count;
+  int i, count;
 
   /* We will later assume that there is at least one node / path.
    */
@@ -991,13 +979,8 @@ sort_reps(pack_context_t *context)
   temp = apr_pcalloc(temp_pool, count * sizeof(*temp));
   path_order = (void *)context->path_order->elts;
 
-  /* Find the boundary between DIR and FILE section. */
-  dir_count = svn_sort__bsearch_lower_bound(context->path_order, NULL,
-                     (int (*)(const void *, const void *))compare_is_dir);
-
   /* Sort those sub-sections separately. */
-  sort_reps_range(context, path_order, temp, 0, dir_count);
-  sort_reps_range(context, path_order, temp, dir_count, count);
+  sort_reps_range(context, path_order, temp, 0, count);
 
   /* We now know the final ordering. */
   for (i = 0; i < count; ++i)
