@@ -5977,9 +5977,9 @@ def patch_adds_executability_nocontents(sbox):
   patch_file_path = make_patch_path(sbox)
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
-  expected_output = [
-    ' U        %s\n' % sbox.ospath('iota'),
-  ]
+  expected_output = wc.State(wc_dir, {
+    'iota' : Item(status=' U')
+  })
   expected_disk = svntest.main.greek_state.copy()
   # "*" is SVN_PROP_EXECUTABLE_VALUE aka SVN_PROP_BOOLEAN_TRUE
   expected_disk.tweak('iota', props={'svn:executable': '*'})
@@ -5987,12 +5987,34 @@ def patch_adds_executability_nocontents(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', status=' M')
 
-  expected_skip = wc.State('', { })
+  expected_skip = wc.State(wc_dir, { })
 
   svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        check_props=True)
+
+  # And try it again
+  # This may produce different output but must have the same result
+  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       check_props=True)
+
+  # And then try it in reverse
+  expected_disk.tweak('iota', props={})
+  expected_status.tweak('iota', status='  ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True, '--reverse-diff')
+
+  # And try it again
+  # This may produce different output but must have the same result
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True, '--reverse-diff')
 
 def patch_adds_executability_yescontents(sbox):
   """patch adds svn:executable, with contents"""

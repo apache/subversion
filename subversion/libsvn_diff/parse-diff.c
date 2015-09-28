@@ -136,17 +136,18 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
 
   hunk->diff_text_range.start = STRLEN_LITERAL(hunk_header[add]);
   hunk->diff_text_range.current = STRLEN_LITERAL(hunk_header[add]);
-  hunk->diff_text_range.end = end;
 
   if (add)
     {
       hunk->original_text_range.start = 0; /* There's no "original" text. */
       hunk->original_text_range.current = 0;
       hunk->original_text_range.end = 0;
+      hunk->original_no_final_eol = FALSE;
 
       hunk->modified_text_range.start = STRLEN_LITERAL(hunk_header[add]);
       hunk->modified_text_range.current = STRLEN_LITERAL(hunk_header[add]);
       hunk->modified_text_range.end = end;
+      hunk->modified_no_final_eol = TRUE;
 
       hunk->original_start = 0;
       hunk->original_length = 0;
@@ -159,10 +160,12 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
       hunk->original_text_range.start = STRLEN_LITERAL(hunk_header[add]);
       hunk->original_text_range.current = STRLEN_LITERAL(hunk_header[add]);
       hunk->original_text_range.end = end;
+      hunk->original_no_final_eol = TRUE;
 
       hunk->modified_text_range.start = 0; /* There's no "original" text. */
       hunk->modified_text_range.current = 0;
       hunk->modified_text_range.end = 0;
+      hunk->modified_no_final_eol = FALSE;
 
       hunk->original_start = 1;
       hunk->original_length = 1;
@@ -174,9 +177,6 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
   hunk->leading_context = 0;
   hunk->trailing_context = 0;
 
-  hunk->original_no_final_eol = FALSE;
-  hunk->modified_no_final_eol = FALSE;
-
   /* Create APR_FILE and put just a hunk in it (without a diff header).
    * Save the offset of the last byte of the diff line. */
   svn_stringbuf_appendbytes(buf, hunk_header[add],
@@ -184,6 +184,9 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
   svn_stringbuf_appendbyte(buf, add ? '+' : '-');
   svn_stringbuf_appendbytes(buf, line, len);
   svn_stringbuf_appendbyte(buf, '\n');
+  svn_stringbuf_appendcstr(buf, "\\ No newline at end of hunk\n");
+
+  hunk->diff_text_range.end = buf->size;
 
   SVN_ERR(svn_io_open_unique_file3(&hunk->apr_file, NULL /* filename */,
                                    NULL /* system tempdir */,
@@ -2149,6 +2152,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
   if (reverse)
     {
       const char *temp;
+      svn_tristate_t ts_tmp;
+
       temp = patch->old_filename;
       patch->old_filename = patch->new_filename;
       patch->new_filename = temp;
@@ -2168,6 +2173,10 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
           case svn_diff_op_modified:
             break; /* Stays modify */
         }
+
+      ts_tmp = patch->old_executable_p;
+      patch->old_executable_p = patch->new_executable_p;
+      patch->new_executable_p = ts_tmp;
     }
 
   if (patch->old_filename == NULL || patch->new_filename == NULL)
