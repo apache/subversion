@@ -1633,14 +1633,14 @@ match_existing_target(svn_boolean_t *match,
           *match = FALSE;
           return SVN_NO_ERROR;
         }
-      }
-    while (lines_matched && ! content->eof && ! hunk_eof);
-    svn_pool_destroy(iterpool);
+    }
+  while (lines_matched && ! content->eof && ! hunk_eof);
+  svn_pool_destroy(iterpool);
 
-    *match = (lines_matched && content->eof == hunk_eof);
-    SVN_ERR(seek_to_line(content, saved_line, scratch_pool));
+  *match = (lines_matched && content->eof == hunk_eof);
+  SVN_ERR(seek_to_line(content, saved_line, scratch_pool));
 
-    return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
 }
 
 /* Determine the line at which a HUNK applies to CONTENT of the TARGET
