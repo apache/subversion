@@ -2534,6 +2534,7 @@ def patch_dir_properties(sbox):
   expected_output = [
     ' U        %s\n' % wc_dir,
     ' C        %s\n' % sbox.ospath('A/B'),
+    '>         rejected hunk ## -0,0 +1,1 ## (svn:executable)\n',
   ] + svntest.main.summary_of_conflicts(prop_conflicts=1)
 
   expected_disk = svntest.main.greek_state.copy()
@@ -6261,7 +6262,7 @@ def patch_prop_madness(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
 
-  new_props = props={
+  new_props = {
     'mod_s'       : 'other\n',
     'mod_s_n'     : 'still no eol',
     'mod_l'       : 'this\nis\na\nsomewhat\nlong\nvalue.\n',
@@ -6273,7 +6274,7 @@ def patch_prop_madness(sbox):
   }
 
   expected_status.tweak('iota', 'A/mu', status=' M', wc_rev='2')
-  expected_disk.tweak('iota', 'A/mu', props=props)
+  expected_disk.tweak('iota', 'A/mu', props=new_props)
 
   svntest.actions.verify_disk(wc_dir, expected_disk, True)
   #svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -6334,6 +6335,21 @@ def patch_prop_madness(sbox):
                                        expected_status, expected_skip,
                                        [], True, True,
                                        '--reverse-diff',
+                                       '--strip', strip_count)
+
+  # Ok, and now introduce some conflicts
+
+  sbox.simple_propset('del', 'value', 'iota') # Wrong EOL
+  sbox.simple_propset('del', 'waarde', 'A/mu') # Wrong EOL+value
+
+  sbox.simple_propset('del_n', 'no-eol\n', 'iota') # Wrong EOL
+  sbox.simple_propset('del_n', 'regeleinde\n', 'iota') # Wrong EOL+value
+
+  expected_output.tweak('A/mu', 'iota', status=' C')
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
                                        '--strip', strip_count)
 
 ########################################################################
