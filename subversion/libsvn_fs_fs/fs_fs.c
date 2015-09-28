@@ -1485,14 +1485,27 @@ svn_fs_fs__prop_rep_equal(svn_boolean_t *equal,
       && !svn_fs_fs__id_txn_used(&rep_a->txn_id)
       && !svn_fs_fs__id_txn_used(&rep_b->txn_id))
     {
-      /* MD5 must be given. Having the same checksum is good enough for
-         accepting the prop lists as equal. */
-      *equal = memcmp(rep_a->md5_digest, rep_b->md5_digest,
-                      sizeof(rep_a->md5_digest)) == 0;
-      return SVN_NO_ERROR;
+      /* Same representation? */
+      if (   (rep_a->revision == rep_b->revision)
+          && (rep_a->item_index == rep_b->item_index))
+        {
+          *equal = TRUE;
+          return SVN_NO_ERROR;
+        }
+
+      /* Known different content? MD5 must be given. */
+      if (!memcmp(rep_a->md5_digest, rep_b->md5_digest,
+                  sizeof(rep_a->md5_digest)))
+        {
+          *equal = FALSE;
+          return SVN_NO_ERROR;
+        }
     }
 
-  /* Same path in same txn? */
+  /* Same path in same txn?
+   *
+   * For committed reps, IDs cannot be the same here b/c we already know
+   * that they point to different representations. */
   if (svn_fs_fs__id_eq(a->id, b->id))
     {
       *equal = TRUE;
