@@ -1072,9 +1072,13 @@ svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
    EXPAND_KEYWORDS operates as per the EXPAND argument to
    svn_subst_stream_translated, which see.  If NORMALIZE_EOLS is TRUE and
    LOCAL_ABSPATH requires translation, then normalize the line endings in
-   *NORMAL_STREAM.
+   *NORMAL_STREAM to "\n" if the stream has svn:eol-style set.
 
-   Uses SCRATCH_POOL for temporary allocations. */
+   Note that this IS NOT the repository normal form of the stream as that
+   would use "\r\n" if set to CRLF and "\r" if set to CR.
+
+   The stream is allocated in RESULT_POOL and temporary SCRATCH_POOL is
+   used for temporary allocations. */
 svn_error_t *
 svn_client__get_normalized_stream(svn_stream_t **normal_stream,
                                   svn_wc_context_t *wc_ctx,

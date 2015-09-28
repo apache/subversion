@@ -226,6 +226,12 @@ capabilities_headers_iterator_callback(void *baton,
         {
           session->supports_rev_rsrc_replay = TRUE;
         }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_SVNDIFF1, vals))
+        {
+          /* Use compressed svndiff1 format for servers that properly
+             advertise this capability (Subversion 1.10 and greater). */
+          session->supports_svndiff1 = TRUE;
+        }
     }
 
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */
@@ -243,7 +249,8 @@ capabilities_headers_iterator_callback(void *baton,
           apr_hash_set(session->supported_posts, "create-txn", 10, (void *)1);
         }
 
-      /* Use compressed svndiff1 format for servers that speak HTTPv2.
+      /* Use compressed svndiff1 format for servers that speak HTTPv2,
+         in addition to servers that send SVN_DAV_NS_DAV_SVN_SVNDIFF1.
 
          Apache HTTPd + mod_dav_svn servers support svndiff1, beginning
          from Subversion 1.4, but they do not advertise this capability.

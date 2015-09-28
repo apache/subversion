@@ -28,6 +28,10 @@
 #include "svn_diff.h"
 #include "svn_types.h"
 
+#include "diff.h"
+
+#include "svn_private_config.h"
+
 /* Copies the data from ORIGINAL_STREAM to a temporary file, returning both
    the original and compressed size. */
 static svn_error_t *
@@ -89,6 +93,64 @@ static const char b85str[] =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz"
     "!#$%&()*+-;<=>?@^_`{|}~";
+
+/* Helper function for svn_diff__base85_decode_line */
+static svn_error_t *
+base85_value(int *value, char c)
+{
+  const char *p = strchr(b85str, c);
+  if (!p)
+    return svn_error_create(SVN_ERR_DIFF_UNEXPECTED_DATA, NULL,
+                            _("Invalid base85 value"));
+
+  *value = (p - b85str);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_diff__base85_decode_line(char *output_data,
+                             apr_ssize_t output_len,
+                             const char *base85_data,
+                             apr_ssize_t base85_len,
+                             apr_pool_t *scratch_pool)
+{
+  {
+    apr_ssize_t expected_data = (output_len + 3) / 4 * 5;
+
+    if (base85_len != expected_data)
+      return svn_error_create(SVN_ERR_DIFF_UNEXPECTED_DATA, NULL,
+                              _("Unexpected base85 line length"));
+  }
+
+  while (base85_len)
+    {
+      unsigned info = 0;
+      apr_ssize_t i, n;
+
+      for (i = 0; i < 5; i++)
+        {
+          int value;
+
+          SVN_ERR(base85_value(&value, base85_data[i]));
+          info *= 85;
+          info += value;
+        }
+
+      for (i = 0, n=24; i < 4; i++, n-=8)
+        {
+          if (i < output_len)
+            output_data[i] = (info >> n) & 0xFF;
+        }
+
+      base85_data += 5;
+      base85_len -= 5;
+      output_data += 4;
+      output_len -= 4;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Git length encoding table for write_literal */
 static const char b85lenstr[] =
@@ -193,8 +255,8 @@ svn_diff_output_binary(svn_stream_t *output_stream,
   SVN_ERR(svn_stream_puts(output_stream, "GIT binary patch" APR_EOL_STR));
 
   /* ### git would first calculate if a git-delta latest->original would be
-  shorter than the zipped data. For now lets assume that it is not
-  and just dump the literal data */
+         shorter than the zipped data. For now lets assume that it is not
+         and just dump the literal data */
   SVN_ERR(write_literal(latest_full,
                         svn_stream_from_aprfile2(latest_apr, FALSE, subpool),
                         output_stream,
@@ -204,8 +266,8 @@ svn_diff_output_binary(svn_stream_t *output_stream,
   SVN_ERR(svn_stream_puts(output_stream, APR_EOL_STR));
 
   /* ### git would first calculate if a git-delta original->latest would be
-  shorter than the zipped data. For now lets assume that it is not
-  and just dump the literal data */
+         shorter than the zipped data. For now lets assume that it is not
+         and just dump the literal data */
   SVN_ERR(write_literal(original_full,
                         svn_stream_from_aprfile2(original_apr, FALSE, subpool),
                         output_stream,

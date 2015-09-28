@@ -161,7 +161,7 @@ def merge(entry, expected_stderr=None, *, commit=False):
   # Prepare mergeargs and logmsg.
   logmsg = ""
   if entry.branch:
-    branch_url = "%s/%s" % (sf.BRANCHES, entry.branch)
+    branch_url = sf.branch_url(entry.branch)
     if svn_version() >= (1, 8):
       mergeargs = ['--', branch_url]
       logmsg = "Merge {}:\n".format(entry.noun())
@@ -181,7 +181,7 @@ def merge(entry, expected_stderr=None, *, commit=False):
       logmsg += "Merge {} from trunk:\n".format(entry.noun())
     logmsg += "\n"
     mergeargs.extend('-c' + str(revision) for revision in entry.revisions)
-    mergeargs.extend(['--', sf.TRUNK])
+    mergeargs.extend(['--', sf.trunk_url()])
   logmsg += entry.raw
 
   # TODO(interactive mode): exclude STATUS from reverts
@@ -237,9 +237,9 @@ def validate_branch_contains_named_revisions(entry):
     return # skip check
 
   sf = entry.status_file
-  branch_url = "%s/%s" % (sf.BRANCHES, entry.branch)
+  branch_url = sf.branch_url(entry.branch)
   present_str = (
-    run_svn(['mergeinfo', '--show-revs=merged', '--', sf.TRUNK, branch_url])[1]
+    run_svn(['mergeinfo', '--show-revs=merged', '--', sf.trunk_url(), branch_url])[1]
     +
     run_svn(['mergeinfo', '--show-revs=eligible', '--', branch_url])[1]
   )
