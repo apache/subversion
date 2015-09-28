@@ -6016,6 +6016,37 @@ def patch_adds_executability_nocontents(sbox):
                                        expected_status, expected_skip,
                                        [], True, True, '--reverse-diff')
 
+@XFail()
+def patch_adds_executability_nocontents2(sbox):
+  "patch adds svn:executable, without contents 2"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  unidiff_patch = (
+    "diff --git a/new b/new\n"
+    "old mode 100644\n"
+    "new mode 100755\n"
+    )
+  patch_file_path = make_patch_path(sbox)
+  svntest.main.file_write(patch_file_path, unidiff_patch)
+
+  expected_output = wc.State(wc_dir, {
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status=' M')
+
+  expected_skip = wc.State(wc_dir, {
+    'new' : Item(verb='Skipped')
+  })
+
+  # This creates 'new', while a skip or reject is expected
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+
 def patch_adds_executability_yescontents(sbox):
   """patch adds svn:executable, with contents"""
 
@@ -6234,6 +6265,7 @@ test_list = [ None,
               patch_delete_missing_eol,
               patch_final_eol,
               patch_adds_executability_nocontents,
+              patch_adds_executability_nocontents2,
               patch_adds_executability_yescontents,
               patch_deletes_executability,
               patch_ambiguous_executability_contradiction,
