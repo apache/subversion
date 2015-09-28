@@ -64,7 +64,7 @@ struct svn_diff__hunk_range {
 
 struct svn_diff_hunk_t {
   /* The patch this hunk belongs to. */
-  svn_patch_t *patch;
+  const svn_patch_t *patch;
 
   /* APR file handle to the patch file this hunk came from. */
   apr_file_t *apr_file;
@@ -93,7 +93,7 @@ struct svn_diff_hunk_t {
 
 struct svn_diff_binary_patch_t {
   /* The patch this hunk belongs to. */
-  svn_patch_t *patch;
+  const svn_patch_t *patch;
 
   /* APR file handle to the patch file this hunk came from. */
   apr_file_t *apr_file;
@@ -117,7 +117,7 @@ struct svn_diff_binary_patch_t {
 static svn_error_t *
 add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
                           const char *line,
-                          svn_patch_t *patch,
+                          const svn_patch_t *patch,
                           svn_boolean_t add,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
@@ -202,11 +202,12 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
 svn_error_t *
 svn_diff_hunk__create_adds_single_line(svn_diff_hunk_t **hunk_out,
                                        const char *line,
-                                       svn_patch_t *patch,
+                                       const svn_patch_t *patch,
                                        apr_pool_t *result_pool,
                                        apr_pool_t *scratch_pool)
 {
-  SVN_ERR(add_or_delete_single_line(hunk_out, line, patch, TRUE,
+  SVN_ERR(add_or_delete_single_line(hunk_out, line, patch, 
+                                    (!patch->reverse),
                                     result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -214,11 +215,12 @@ svn_diff_hunk__create_adds_single_line(svn_diff_hunk_t **hunk_out,
 svn_error_t *
 svn_diff_hunk__create_deletes_single_line(svn_diff_hunk_t **hunk_out,
                                           const char *line,
-                                          svn_patch_t *patch,
+                                          const svn_patch_t *patch,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool)
 {
-  SVN_ERR(add_or_delete_single_line(hunk_out, line, patch, FALSE,
+  SVN_ERR(add_or_delete_single_line(hunk_out, line, patch,
+                                    patch->reverse,
                                     result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }

@@ -6227,6 +6227,17 @@ def patch_prop_madness(sbox):
 
   sbox.simple_commit()
 
+  r2_props = {
+   'mod_l_n' : 'this\nis\na\nvery\nvery\nlong\nvalue.\nwithout\neol',
+   'mod_l'   : 'this\nis\na\nvery\nvery\nlong\nvalue.\n',
+   'mod_s'   : 'value\n',
+   'mod_s_n' : 'no-eol',
+   'del'     : 'value\n',
+   'del_n'   : 'no-eol',
+  }
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', 'A/mu', props=r2_props)
+
   sbox.simple_propset('mod_s', 'other\n',
                       'iota', 'A/mu')
 
@@ -6259,7 +6270,6 @@ def patch_prop_madness(sbox):
   _, output, _ = svntest.actions.run_and_verify_svn(None, [],
                                                     'diff', wc_dir)
 
-  expected_disk = svntest.main.greek_state.copy()
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
 
   new_props = {
@@ -6311,15 +6321,7 @@ def patch_prop_madness(sbox):
 
   # Reverse
   expected_output.tweak('A/mu', 'iota', status=' U')
-  props = {
-   'mod_l_n' : 'this\nis\na\nvery\nvery\nlong\nvalue.\nwithout\neol',
-   'mod_l'   : 'this\nis\na\nvery\nvery\nlong\nvalue.\n',
-   'mod_s'   : 'value\n',
-   'mod_s_n' : 'no-eol',
-   'del'     : 'value\n',
-   'del_n'   : 'no-eol',
-  }
-  expected_disk.tweak('A/mu', 'iota', props=props)
+  expected_disk.tweak('A/mu', 'iota', props=r2_props)
   expected_status.tweak('A/mu', 'iota', status='  ')
   svntest.actions.run_and_verify_patch(wc_dir, patch,
                                        expected_output, expected_disk,
@@ -6340,12 +6342,39 @@ def patch_prop_madness(sbox):
   # Ok, and now introduce some conflicts
 
   sbox.simple_propset('del', 'value', 'iota') # Wrong EOL
-  sbox.simple_propset('del', 'waarde', 'A/mu') # Wrong EOL+value
-
-  sbox.simple_propset('del_n', 'no-eol\n', 'iota') # Wrong EOL
   sbox.simple_propset('del_n', 'regeleinde\n', 'iota') # Wrong EOL+value
 
+  sbox.simple_propset('del', 'waarde', 'A/mu') # Wrong EOL+value
+  sbox.simple_propset('del_n', 'no-eol\n', 'A/mu') # Wrong EOL
+
   expected_output.tweak('A/mu', 'iota', status=' C')
+  expected_status.tweak('iota', 'A/mu', status=' M')
+
+  iota_props = new_props.copy()
+  iota_props['del_n'] = 'regeleinde\n'
+  mu_props = new_props.copy()
+  mu_props['del'] = 'waarde'
+  expected_disk.tweak('iota', props=iota_props)
+  expected_disk.tweak('A/mu', props=mu_props)
+
+  expected_disk.add({
+   'A/mu.svnpatch.rej' : Item(contents="--- %s\n"
+                                       "+++ %s\n"
+                                       "Property: del\n"
+                                       "## -1,1 +0,0 ##\n"
+                                       "-value\n"
+                                       % (sbox.path('A/mu'),
+                                          sbox.path('A/mu'))),
+   'iota.svnpatch.rej' : Item(contents="--- %s\n"
+                                       "+++ %s\n"
+                                       "Property: del_n\n"
+                                       "## -1,1 +0,0 ##\n"
+                                       "-no-eol\n"
+                                       "\ No newline at end of property\n"
+                                       % (sbox.path('iota'),
+                                          sbox.path('iota'))),
+  })
+
   svntest.actions.run_and_verify_patch(wc_dir, patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
