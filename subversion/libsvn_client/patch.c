@@ -2190,7 +2190,7 @@ send_patch_notification(const patch_target_t *target,
 
   if (target->skipped)
     action = svn_wc_notify_skip;
-  else if (target->deleted)
+  else if (target->deleted && !target->locally_deleted)
     action = svn_wc_notify_delete;
   else if (target->added || target->replaced || target->move_target_abspath)
     action = svn_wc_notify_add;
@@ -2945,7 +2945,9 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
            * notify about what we did before aborting. */
           SVN_ERR(svn_wc_delete4(ctx->wc_ctx, target->local_abspath,
                                  FALSE /* keep_local */, FALSE,
-                                 NULL, NULL, NULL, NULL, pool));
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 NULL, NULL /* notify */,
+                                 pool));
         }
     }
   else
@@ -3074,7 +3076,8 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                                     target->move_target_abspath,
                                     TRUE, /* metadata_only */
                                     FALSE, /* allow_mixed_revisions */
-                                    NULL, NULL, NULL, NULL,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    NULL, NULL,
                                     pool));
 
               /* Delete the patch target's old location from disk. */
