@@ -2448,10 +2448,9 @@ def patch_same_twice(sbox):
     'G         %s\n' % sbox.ospath('A/mu'),
     '>         hunk @@ -6,6 +6,9 @@ already applied\n',
     '>         hunk @@ -14,11 +17,8 @@ already applied\n',
-    'Skipped \'%s\'\n' % beta_path,
-  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
-
-  expected_skip = wc.State('', {beta_path : Item(verb='Skipped')})
+    'G         %s\n' % sbox.ospath('A/B/E/beta'),
+    '>         hunk @@ -1,1 +0,0 @@ already applied\n',
+  ]
 
   # See above comment about the iota patch being applied twice.
   iota_contents += "Some more bytes\n"
@@ -5146,13 +5145,11 @@ def patch_delete_modified(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
-  # Second application skips
+  # Second application notifies already applied
   expected_output = [
-    'Skipped \'%s\'\n' % sbox.ospath('A/B/E/beta'),
-  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
-  expected_skip = wc.State('', {
-    sbox.ospath('A/B/E/beta') :  Item(verb='Skipped'),
-  })
+    'G         %s\n' % sbox.ospath('A/B/E/beta'),
+    '>         hunk @@ -1,1 +0,0 @@ already applied\n',
+  ]
   svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
@@ -5800,12 +5797,9 @@ def patch_delete_missing_eol(sbox):
                                        expected_status, expected_skip,
                                        [], False, True)
 
-  # Try again? -> Skip... Why not some already applied notification?
-  #                       -> There is nothing to compare to
+  # Try again? -> Merged
   expected_output = wc.State(wc_dir, {
-  })
-  expected_skip = wc.State(wc_dir, {
-    'A/B/E/beta'        : Item(verb='Skipped'),
+    'A/B/E/beta'        : Item(status='G '),
   })
   svntest.actions.run_and_verify_patch(wc_dir, patch,
                                        expected_output, expected_disk,
@@ -6436,6 +6430,13 @@ def patch_empty_vs_delete(sbox):
                                        expected_status, expected_skip,
                                        [], True, True)
 
+  # Retry
+  expected_output.tweak('iota', status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, empty_git_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
   svntest.actions.run_and_verify_svn(None, [],
                                      'revert', sbox.ospath('iota'))
 
@@ -6452,10 +6453,19 @@ def patch_empty_vs_delete(sbox):
                                        [], True, True,
                                        '--strip', strip_count)
 
+  # Retry
+  expected_output.tweak('iota', status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, empty_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count)
+
   svntest.actions.run_and_verify_svn(None, [],
                                      'revert', sbox.ospath('iota'))
 
   # Ordinary diff to deleted
+  expected_output.tweak('iota', status='D ')
   svntest.actions.run_and_verify_patch(wc_dir, del_patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
