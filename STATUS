@@ -88,6 +88,16 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1705328
+   Resolve a possible segfault in authentication credentials cache caused by
+   storing key in APR hashtable without copying to long-life pool. I don't know
+   exact reproduction script, but it's obvious bug and crash reported via
+   TortoiseSVN crash dump service multiple times.
+   Justification:
+     Segfault. User reported.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
