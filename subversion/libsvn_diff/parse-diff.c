@@ -1764,8 +1764,6 @@ static svn_error_t *
 binary_patch_start(enum parse_state *new_state, char *line, svn_patch_t *patch,
              apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  patch->operation = svn_diff_op_modified;
-
   *new_state = state_binary_patch_found;
   return SVN_NO_ERROR;
 }
@@ -1898,7 +1896,6 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
 
   bpatch->apr_file = apr_file;
 
-  patch->operation = svn_diff_op_modified;
   patch->prop_patches = apr_hash_make(result_pool);
 
   pos = 0;
