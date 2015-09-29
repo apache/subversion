@@ -76,7 +76,7 @@ svn_element_payload_invariants(const svn_element_payload_t *payload)
   if (payload->kind == svn_node_unknown)
     if (SVN_IS_VALID_REVNUM(payload->branch_ref.rev)
         && payload->branch_ref.branch_id
-        && payload->branch_ref.eid >= 0)
+        && payload->branch_ref.eid != -1)
       return TRUE;
   if ((payload->kind == svn_node_dir
        || payload->kind == svn_node_file

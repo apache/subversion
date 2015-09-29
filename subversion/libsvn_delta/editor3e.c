@@ -172,7 +172,7 @@ check_cancel(svn_editor3_t *editor)
  */
 
 #define VALID_NODE_KIND(kind) ((kind) != svn_node_unknown && (kind) != svn_node_none)
-#define VALID_EID(eid) ((eid) >= 0)
+#define VALID_EID(eid) ((eid) != -1)
 #define VALID_NAME(name) ((name) && (name)[0] && svn_relpath_is_canonical(name))
 #define VALID_PAYLOAD(payload) svn_element_payload_invariants(payload)
 #define VALID_EL_REV_ID(el_rev) (el_rev && el_rev->branch && VALID_EID(el_rev->eid))

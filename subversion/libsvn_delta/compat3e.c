@@ -1143,7 +1143,7 @@ editor3_new_eid(void *baton,
                 apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
-  int eid = svn_branch_revision_root_new_eid(eb->edited_rev_root);
+  int eid = svn_branch_txn_new_eid(eb->edited_rev_root);
 
   *eid_p = eid;
   return SVN_NO_ERROR;
@@ -1201,9 +1201,9 @@ editor3_alter(void *baton,
   /* ### Ensure the requested EIDs are allocated... This is not the
          right way to do it. Instead the Editor should map 'to be
          created' EIDs to new EIDs? See BRANCH-README. */
-  while (eid >= eb->edited_rev_root->next_eid
-         || (new_parent_eid >= eb->edited_rev_root->next_eid))
-    svn_branch_revision_root_new_eid(eb->edited_rev_root);
+  while (eid < eb->edited_rev_root->first_eid
+         || (new_parent_eid < eb->edited_rev_root->first_eid))
+    svn_branch_txn_new_eid(eb->edited_rev_root);
 
   if (new_payload)
     {
@@ -1869,7 +1869,9 @@ editor3_complete(void *baton,
   ev3_from_delta_baton_t *eb = baton;
   svn_error_t *err;
 
+  /* Convert the transaction to a revision */
   SVN_ERR(editor3_sequence_point(baton, scratch_pool));
+  SVN_ERR(svn_branch_txn_finalize_eids(eb->edited_rev_root, scratch_pool));
 
   err = drive_changes(eb, scratch_pool);
 

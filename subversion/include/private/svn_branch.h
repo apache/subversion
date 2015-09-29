@@ -137,6 +137,8 @@ typedef struct svn_branch_revision_root_t
   svn_revnum_t base_rev;
 
   /* The range of element ids assigned. */
+  /* EIDs local to the txn are negative, assigned by decrementing FIRST_EID
+   * (skipping -1). */
   int first_eid, next_eid;
 
   /* The root branches, indexed by top-level branch id (0...N). */
@@ -188,10 +190,19 @@ svn_branch_revision_root_get_branch_by_id(const svn_branch_revision_root_t *rev_
                                           const char *branch_id,
                                           apr_pool_t *scratch_pool);
 
-/* Assign a new element id in REV_ROOT.
+/* Assign a new txn-scope element id in REV_ROOT.
  */
 int
-svn_branch_revision_root_new_eid(svn_branch_revision_root_t *rev_root);
+svn_branch_txn_new_eid(svn_branch_revision_root_t *rev_root);
+
+/* Change txn-local EIDs (negative integers) in TXN to revision EIDs, by
+ * assigning a new revision-EID (positive integer) for each one.
+ *
+ * Rewrite TXN->first_eid and TXN->next_eid accordingly.
+ */
+svn_error_t *
+svn_branch_txn_finalize_eids(svn_branch_revision_root_t *txn,
+                             apr_pool_t *scratch_pool);
 
 /* Often, branches have the same root element. For example,
  * branching /trunk to /branches/br1 results in:
