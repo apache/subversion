@@ -6381,6 +6381,97 @@ def patch_prop_madness(sbox):
                                        [], True, True,
                                        '--strip', strip_count)
 
+def patch_empty_vs_delete(sbox):
+  "patch empty vs delete"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  strip_count = wc_dir.count(os.path.sep)+1
+
+  sbox.simple_append('iota', '', truncate=True)
+
+  _, empty_diff, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                        'diff', wc_dir)
+
+  _, empty_git, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                       'diff', wc_dir, '--git')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'rm', '--force', sbox.ospath('iota'))
+
+  _, del_diff, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                      'diff', wc_dir)
+
+  _, del_git, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                     'diff', wc_dir, '--git')
+
+  empty_patch = sbox.get_tempname('empty.patch')
+  svntest.main.file_write(empty_patch, ''.join(empty_diff), mode='wb')
+
+  empty_git_patch = sbox.get_tempname('git.empty.patch')
+  svntest.main.file_write(empty_git_patch, ''.join(empty_git), mode='wb')
+
+  del_patch = sbox.get_tempname('del.patch')
+  svntest.main.file_write(del_patch, ''.join(del_diff), mode='wb')
+
+  del_git_patch = sbox.get_tempname('git.del.patch')
+  svntest.main.file_write(del_git_patch, ''.join(del_git), mode='wb')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'revert', sbox.ospath('iota'))
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_skip = svntest.wc.State(wc_dir, {})
+
+
+  # Git diff to empty file - Expect empty file
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='U ')
+  })
+  expected_disk.tweak('iota', contents='')
+  expected_status.tweak('iota', status='M ')
+  svntest.actions.run_and_verify_patch(wc_dir, empty_git_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'revert', sbox.ospath('iota'))
+
+  # Ordinary (unified) diff to empty file - Expect deleted
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='D ')
+  })
+  expected_disk.remove('iota')
+  expected_status.tweak('iota', status='D ')
+
+  svntest.actions.run_and_verify_patch(wc_dir, empty_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count)
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'revert', sbox.ospath('iota'))
+
+  # Ordinary diff to deleted
+  svntest.actions.run_and_verify_patch(wc_dir, del_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count)
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'revert', sbox.ospath('iota'))
+
+  # Git diff to deleted
+  # Ordinary diff to deleted
+  svntest.actions.run_and_verify_patch(wc_dir, del_git_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
 ########################################################################
 #Run the tests
 
@@ -6453,6 +6544,7 @@ test_list = [ None,
               patch_ambiguous_executability_contradiction,
               patch_ambiguous_executability_consistent,
               patch_prop_madness,
+              patch_empty_vs_delete,
             ]
 
 if __name__ == '__main__':

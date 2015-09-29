@@ -2719,9 +2719,16 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
            * the target for deletion. In the rare case where the unidiff
            * was really meant to replace a file with an empty one, this may
            * not be desirable. But the deletion can easily be reverted and
-           * creating an empty file manually is not exactly hard either. */
-          if (has_text_changes)
-            target->deleted = (target->db_kind == svn_node_file);
+           * creating an empty file manually is not exactly hard either.
+           *
+           * But if we have a git style diff we can properly use the
+           * change type we found to do the right thing
+           */
+          if (has_text_changes && !target->deleted
+              && patch->operation == svn_diff_op_unchanged)
+            {
+              target->deleted = (target->db_kind == svn_node_file);
+            }
         }
       else if (patched_file.size == 0 && working_file.size == 0)
         {
