@@ -72,11 +72,81 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
 }
 
 int
-svn_branch_revision_root_new_eid(svn_branch_revision_root_t *rev_root)
+svn_branch_txn_new_eid(svn_branch_revision_root_t *rev_root)
 {
-  int eid = rev_root->next_eid++;
+  int eid = (rev_root->first_eid < 0) ? rev_root->first_eid - 1 : -2;
 
+  rev_root->first_eid = eid;
   return eid;
+}
+
+/* Change txn-local EIDs (negative integers) in BRANCH to revision EIDs, by
+ * assigning a new revision-EID (positive integer) for each one.
+ */
+static svn_error_t *
+branch_finalize_eids(svn_branch_state_t *branch,
+                     int mapping_offset,
+                     apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  if (branch->root_eid < -1)
+    {
+      branch->root_eid = mapping_offset - branch->root_eid;
+    }
+
+  if (branch->outer_eid < -1)
+    {
+      branch->outer_eid = mapping_offset - branch->outer_eid;
+    }
+
+  for (hi = apr_hash_first(scratch_pool, branch->e_map);
+       hi; hi = apr_hash_next(hi))
+    {
+      int old_eid = svn_int_hash_this_key(hi);
+      svn_branch_el_rev_content_t *element = apr_hash_this_val(hi);
+
+      if (old_eid < -1)
+        {
+          int new_eid = mapping_offset - old_eid;
+
+          svn_int_hash_set(branch->e_map, old_eid, NULL);
+          svn_int_hash_set(branch->e_map, new_eid, element);
+        }
+      if (element->parent_eid < -1)
+        {
+          element->parent_eid = mapping_offset - element->parent_eid;
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_branch_txn_finalize_eids(svn_branch_revision_root_t *txn,
+                             apr_pool_t *scratch_pool)
+{
+  int n_txn_eids = (-1) - txn->first_eid;
+  int mapping_offset;
+  int i;
+
+  if (txn->first_eid == 0)
+    return SVN_NO_ERROR;
+
+  /* mapping from txn-local (negative) EID to committed (positive) EID is:
+       txn_local_eid == -2  =>  committed_eid := (txn.next_eid + 0)
+       txn_local_eid == -3  =>  committed_eid := (txn.next_eid + 1) ... */
+  mapping_offset = txn->next_eid - 2;
+
+  for (i = 0; i < txn->branches->nelts; i++)
+    {
+      svn_branch_state_t *b = APR_ARRAY_IDX(txn->branches, i, void *);
+
+      SVN_ERR(branch_finalize_eids(b, mapping_offset, scratch_pool));
+    }
+
+  txn->next_eid += n_txn_eids;
+  txn->first_eid = 0;
+  return SVN_NO_ERROR;
 }
 
 svn_branch_state_t *
@@ -688,7 +758,7 @@ svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
   /* Get a new EID for the root element, if not given. */
   if (to_eid == -1)
     {
-      to_eid = svn_branch_revision_root_new_eid(to_branch->rev_root);
+      to_eid = svn_branch_txn_new_eid(to_branch->rev_root);
     }
 
   /* Create the new subtree root element */

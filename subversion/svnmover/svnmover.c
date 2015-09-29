@@ -2354,7 +2354,7 @@ do_branch(svn_branch_state_t **new_branch_p,
 
   /* assign new eid to root element (outer branch) */
   to_outer_eid
-    = svn_branch_revision_root_new_eid(to_outer_branch->rev_root);
+    = svn_branch_txn_new_eid(to_outer_branch->rev_root);
   svn_branch_update_subbranch_root_element(to_outer_branch, to_outer_eid,
                                            to_outer_parent_eid, new_name);
 
