@@ -1109,15 +1109,10 @@ def patch_remove_empty_dirs(sbox):
                        'A/B/F')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({'A/D/H/chi' : Item(status='! ', wc_rev=1)})
-  expected_status.add({'A/D/H/omega' : Item(status='D ', wc_rev=1)})
-  expected_status.add({'A/D/H/psi' : Item(status='D ', wc_rev=1)})
-  expected_status.add({'A/B' : Item(status='D ', wc_rev=1)})
-  expected_status.add({'A/B/E' : Item(status='D ', wc_rev=1)})
-  expected_status.add({'A/B/E/beta' : Item(status='D ', wc_rev=1)})
-  expected_status.add({'A/B/E/alpha' : Item(status='D ', wc_rev=1)})
-  expected_status.add({'A/B/lambda' : Item(status='D ', wc_rev=1)})
-  expected_status.add({'A/B/F' : Item(status='D ', wc_rev=1)})
+  expected_status.tweak('A/D/H/chi', status='! ')
+  expected_status.tweak('A/D/H/omega', 'A/D/H/psi', 'A/B', 'A/B/E',
+                        'A/B/E/beta', 'A/B/E/alpha', 'A/B/lambda',
+                        'A/B/F', status='D ')
 
   expected_skip = wc.State('', { })
 
