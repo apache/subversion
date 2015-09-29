@@ -6472,11 +6472,26 @@ def patch_empty_vs_delete(sbox):
                                        [], True, True,
                                        '--strip', strip_count)
 
+  # Retry
+  expected_output.tweak('iota', status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, del_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count)
+
   svntest.actions.run_and_verify_svn(None, [],
                                      'revert', sbox.ospath('iota'))
 
   # Git diff to deleted
-  # Ordinary diff to deleted
+  expected_output.tweak('iota', status='D ')
+  svntest.actions.run_and_verify_patch(wc_dir, del_git_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # Retry
+  expected_output.tweak('iota', status='G ')
   svntest.actions.run_and_verify_patch(wc_dir, del_git_patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
