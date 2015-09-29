@@ -100,39 +100,6 @@ Work on this branch:
       to trace from a current branch back past branching points to a
       historical version in a branch it was branched from.
 
-      "Replay" API: convert committed changes to an edit drive
-
-        * A txn must keep track of which EIDs in it were previously
-          known and which are new in that txn.
-
-        * The 'replay' function must tell the driven editor which EIDs
-          are previously known and which are to be considered as new.
-
-        * Possible ways to achieve this are:
-
-          - EIDs created within a txn are allocated from a txn-local id-space
-            (e.g. negative integers, if committed EIDs are positive integers)
-            and on commit converted to committed EIDs, and this conversion
-            communicated back to the client if the client wants to know it.
-
-          - Each EID includes the txn-id of the txn in which it was created,
-            and txn-id is unique.
-
-        * The editor API must accept "new" EIDs in all EID contexts:
-          including as a parent-eid, or as a subtree-root eid, not only
-          as the primary EID of the element the method is operating on.
-          That will allow the operations on elements to come in truly
-          independent order: it will not be necessary to 'create' a
-          directory before any other operation can refer to that
-          directory's new EID as a parent-eid, for example.
-
-        * The editor must translate incoming 'new' EIDs if they are not
-          already unique between the edit driver and edit receiver. For
-          example, if the driver knows EIDs [0..60] are pre-existing, and
-          chooses to use EIDs [61...] for 'new' elements, and the
-          receiver's txn already uses EIDs [0..70] then it must translate
-          incoming EIDs [61..70] to some other range.
-
       heuristic conversion of old repositories:
         synthesize element tracking info (instead of aborting) when reading
         a revision that was committed by a non-move-tracking client
