@@ -2327,6 +2327,7 @@ mk_branch(const char **new_branch_id_p,
  */
 static svn_error_t *
 do_branch(svn_branch_state_t **new_branch_p,
+          svn_editor3_t *editor,
           svn_branch_state_t *from_branch,
           int from_eid,
           svn_branch_state_t *to_outer_branch,
@@ -2334,6 +2335,8 @@ do_branch(svn_branch_state_t **new_branch_p,
           const char *new_name,
           apr_pool_t *scratch_pool)
 {
+  const char *to_outer_branch_id
+    = to_outer_branch ? svn_branch_get_id(to_outer_branch, scratch_pool) : NULL;
   svn_branch_subtree_t *from_subtree;
   int to_outer_eid;
 
@@ -2353,10 +2356,10 @@ do_branch(svn_branch_state_t **new_branch_p,
   from_subtree = svn_branch_get_subtree(from_branch, from_eid, scratch_pool);
 
   /* assign new eid to root element (outer branch) */
-  to_outer_eid
-    = svn_branch_txn_new_eid(to_outer_branch->rev_root);
-  svn_branch_update_subbranch_root_element(to_outer_branch, to_outer_eid,
-                                           to_outer_parent_eid, new_name);
+  SVN_ERR(svn_editor3_new_eid(editor, &to_outer_eid));
+  SVN_ERR(svn_editor3_alter(editor,
+                            to_outer_branch_id, to_outer_eid,
+                            to_outer_parent_eid, new_name, NULL));
 
   SVN_ERR(svn_branch_branch_subtree(new_branch_p,
                                     *from_subtree,
@@ -2485,7 +2488,7 @@ do_branch_and_delete(svn_editor3_t *editor,
 
   SVN_ERR_ASSERT(! is_branch_root_element(el_rev->branch, el_rev->eid));
 
-  SVN_ERR(do_branch(&new_branch, el_rev->branch, el_rev->eid,
+  SVN_ERR(do_branch(&new_branch, editor, el_rev->branch, el_rev->eid,
                     to_outer_branch, to_outer_parent_eid, to_name,
                     scratch_pool));
 
@@ -3145,7 +3148,7 @@ execute(svnmover_wc_t *wc,
           {
             svn_branch_state_t *new_branch;
 
-            SVN_ERR(do_branch(&new_branch,
+            SVN_ERR(do_branch(&new_branch, editor,
                               arg[0]->el_rev->branch, arg[0]->el_rev->eid,
                               arg[1]->el_rev->branch, arg[1]->parent_el_rev->eid,
                               arg[1]->path_name,
