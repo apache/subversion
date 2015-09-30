@@ -482,6 +482,9 @@ resolve_target_path(patch_target_t *target,
       target->locally_deleted = TRUE;
     }
 
+  if (status->text_status != svn_wc_status_normal)
+    target->local_mods = TRUE;
+
   if (status && (status->kind != svn_node_unknown))
     target->db_kind = status->kind;
   else
@@ -1032,9 +1035,6 @@ init_patch_target(patch_target_t **patch_target,
           SVN_ERR(svn_io_file_open(&target->file, target->local_abspath,
                                    APR_READ | APR_BUFFERED,
                                    APR_OS_DEFAULT, result_pool));
-          SVN_ERR(svn_wc_text_modified_p2(&target->local_mods, wc_ctx,
-                                          target->local_abspath, FALSE,
-                                          scratch_pool));
           SVN_ERR(svn_io_is_file_executable(&target->executable,
                                             target->local_abspath,
                                             scratch_pool));
