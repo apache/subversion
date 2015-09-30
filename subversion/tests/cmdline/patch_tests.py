@@ -6572,6 +6572,107 @@ def patch_empty_vs_delete(sbox):
                                        [], True, True,
                                        '--reverse-diff')
 
+def patch_add_remove_executable(sbox):
+  "add and remove executable file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  eicar_data = 'X5O!P%@AP[4\PZX54(P^)7CC)7}$' \
+               'EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*\0'
+  other_data = 'X5O!P%@AP[4\PZX54(P^)7CC)7}$' \
+               'SOME-LESS-INTERESTING-OTHER-TEXT!!!$H+H*\0'
+
+  # Write out an actual MS-DOS program
+  sbox.simple_add_text(eicar_data, 'eicar.com')
+  sbox.simple_propset('svn:executable', 'x', 'eicar.com')
+
+  _, diff_add, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                      'diff', '--git', wc_dir)
+
+  sbox.simple_commit()
+
+  sbox.simple_append('eicar.com', other_data, truncate=True)
+  sbox.simple_propdel('svn:executable', 'eicar.com')
+
+  _, diff_edit, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                       'diff', '--git', wc_dir)
+
+  sbox.simple_commit()
+  sbox.simple_rm('eicar.com')
+
+  _, diff_rm, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                     'diff', '--git', wc_dir)
+
+  add_patch = sbox.get_tempname('add.patch')
+  svntest.main.file_write(add_patch, ''.join(diff_add), mode='wb')
+
+  edit_patch = sbox.get_tempname('edit.patch')
+  svntest.main.file_write(edit_patch, ''.join(diff_edit), mode='wb')
+
+  rm_patch = sbox.get_tempname('rm.patch')
+  svntest.main.file_write(rm_patch, ''.join(diff_rm), mode='wb')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'eicar.com' : Item(status='RM', wc_rev=3)
+  })
+  expected_output = svntest.wc.State(wc_dir, {
+    'eicar.com' : Item(status='A ')
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'eicar.com' : Item(contents=eicar_data,
+                       props={'svn:mime-type': 'application/octet-stream',
+                              'svn:executable': '*'}),
+  })
+  expected_skip = svntest.wc.State(wc_dir, {})
+  svntest.actions.run_and_verify_patch(wc_dir, add_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # And repeat
+  expected_output.tweak('eicar.com', status='GG')
+  #svntest.actions.run_and_verify_patch(wc_dir, add_patch,
+  #                                     expected_output, expected_disk,
+  #                                     expected_status, expected_skip,
+  #                                     [], True, True)
+
+  # Now apply the edit
+  expected_output.tweak('eicar.com', status='GU')
+  expected_disk.tweak('eicar.com',
+                      props={'svn:mime-type': 'application/octet-stream'},
+                      contents=other_data)
+  svntest.actions.run_and_verify_patch(wc_dir, edit_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # And repeat
+  expected_output.tweak('eicar.com', status='GG')
+  #svntest.actions.run_and_verify_patch(wc_dir, edit_patch,
+  #                                     expected_output, expected_disk,
+  #                                     expected_status, expected_skip,
+  #                                     [], True, True)
+
+  # Now apply the edit
+  expected_output.tweak('eicar.com', status='D ')
+  expected_disk.remove('eicar.com')
+  expected_status.tweak('eicar.com', status='D ')
+  svntest.actions.run_and_verify_patch(wc_dir, rm_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # And repeat
+  expected_output.tweak('eicar.com', status='G ')
+  #svntest.actions.run_and_verify_patch(wc_dir, rm_patch,
+  #                                     expected_output, expected_disk,
+  #                                     expected_status, expected_skip,
+  #                                     [], True, True)
+
+
 ########################################################################
 #Run the tests
 
@@ -6645,6 +6746,7 @@ test_list = [ None,
               patch_ambiguous_executability_consistent,
               patch_prop_madness,
               patch_empty_vs_delete,
+              patch_add_remove_executable,
             ]
 
 if __name__ == '__main__':

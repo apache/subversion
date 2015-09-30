@@ -2043,6 +2043,7 @@ static struct transition transitions[] =
 
   {"GIT binary patch",  state_git_diff_seen,    binary_patch_start},
   {"GIT binary patch",  state_git_tree_seen,    binary_patch_start},
+  {"GIT binary patch",  state_git_mode_seen,    binary_patch_start},
 };
 
 svn_error_t *
