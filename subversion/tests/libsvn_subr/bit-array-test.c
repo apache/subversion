@@ -71,7 +71,12 @@ test_get_set(apr_pool_t *pool)
 
   /* Verify pattern */
   for (i = min; i < max; ++i)
-    SVN_TEST_ASSERT(svn_bit_array__get(array, i) == i % 2);
+    {
+      if (i % 2)
+        SVN_TEST_ASSERT(svn_bit_array__get(array, i) == TRUE);
+      else
+        SVN_TEST_ASSERT(svn_bit_array__get(array, i) == FALSE);
+    }
 
   /* Zero the zeros in the pattern -> should be no change. */
   for (i = min; i < max; ++i)
@@ -80,18 +85,36 @@ test_get_set(apr_pool_t *pool)
 
   /* Verify pattern */
   for (i = min; i < max; ++i)
-    SVN_TEST_ASSERT(svn_bit_array__get(array, i) == i % 2);
+    {
+      if (i % 2)
+        SVN_TEST_ASSERT(svn_bit_array__get(array, i) == TRUE);
+      else
+        SVN_TEST_ASSERT(svn_bit_array__get(array, i) == FALSE);
+    }
 
   /* Write an inverted pattern while verifying the old one. */
   for (i = min; i < max; ++i)
     {
-      SVN_TEST_ASSERT(svn_bit_array__get(array, i) == i % 2);
-      svn_bit_array__set(array, i, 1 - (i % 2));
+      if (i % 2)
+        {
+          SVN_TEST_ASSERT(svn_bit_array__get(array, i) == TRUE);
+          svn_bit_array__set(array, i, FALSE);
+        }
+      else
+        {
+          SVN_TEST_ASSERT(svn_bit_array__get(array, i) == FALSE);
+          svn_bit_array__set(array, i, TRUE);
+        }
     }
 
   /* Verify pattern */
   for (i = min; i < max; ++i)
-    SVN_TEST_ASSERT(svn_bit_array__get(array, i) == 1 - (i % 2));
+    {
+      if (i % 2)
+        SVN_TEST_ASSERT(svn_bit_array__get(array, i) == FALSE);
+      else
+        SVN_TEST_ASSERT(svn_bit_array__get(array, i) == TRUE);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -116,7 +139,12 @@ test_sparse(apr_pool_t *pool)
   /* Verify pattern */
   for (i = 0; i < 15; ++i)
     for (k = i * SCALE + min; k < i * SCALE +  max; ++k)
-      SVN_TEST_ASSERT(svn_bit_array__get(array, k) == k % 2);
+      {
+        if (k % 2)
+          SVN_TEST_ASSERT(svn_bit_array__get(array, k) == TRUE);
+        else
+          SVN_TEST_ASSERT(svn_bit_array__get(array, k) == FALSE);
+      }
 
   return SVN_NO_ERROR;
 }
