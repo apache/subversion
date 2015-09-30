@@ -1034,6 +1034,31 @@ storage_pathrev_from_branch_ref(svn_pathrev_t *storage_pathrev_p,
  */
 
 /*  */
+static svn_error_t *
+branch_in_rev_or_txn(svn_branch_state_t **src_branch,
+                     const svn_branch_rev_bid_eid_t *src_el_rev,
+                     ev3_from_delta_baton_t *eb,
+                     apr_pool_t *result_pool)
+{
+  if (SVN_IS_VALID_REVNUM(src_el_rev->rev))
+    {
+      SVN_ERR(svn_branch_repos_get_branch_by_id(src_branch,
+                                                eb->edited_rev_root->repos,
+                                                src_el_rev->rev,
+                                                src_el_rev->bid,
+                                                result_pool));
+    }
+  else
+    {
+      *src_branch
+        = svn_branch_revision_root_get_branch_by_id(
+            eb->edited_rev_root, src_el_rev->bid, result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/*  */
 #define PAYLOAD_IS_ONLY_BY_REFERENCE(payload) \
     ((payload)->kind == svn_node_unknown)
 
@@ -1185,6 +1210,49 @@ editor3_open_branch(void *baton,
 
 /* An #svn_editor3_t method. */
 static svn_error_t *
+editor3_branch(void *baton,
+               const char **new_branch_id_p,
+               svn_branch_rev_bid_eid_t *from,
+               const char *outer_branch_id,
+               int outer_eid,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
+{
+  ev3_from_delta_baton_t *eb = baton;
+  svn_branch_state_t *new_branch;
+  svn_branch_state_t *outer_branch = NULL;
+  svn_branch_state_t *from_branch;
+  svn_branch_subtree_t *from_subtree;
+
+  SVN_ERR(branch_in_rev_or_txn(&from_branch, from, eb, scratch_pool));
+  from_subtree = svn_branch_get_subtree(from_branch, from->eid, scratch_pool);
+
+  /* Source element must exist */
+  if (! from_subtree)
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("Cannot branch from r%ld %s e%d: "
+                                 "does not exist"),
+                               from->rev, from->bid, from->eid);
+    }
+
+  if (outer_branch_id)
+    outer_branch = svn_branch_revision_root_get_branch_by_id(
+                     eb->edited_rev_root, outer_branch_id, scratch_pool);
+  new_branch = svn_branch_add_new_branch(eb->edited_rev_root,
+                                         outer_branch, outer_eid,
+                                         from->eid, scratch_pool);
+
+  /* Populate the mapping from the 'from' source */
+  SVN_ERR(svn_branch_instantiate_subtree(new_branch, -1, "", *from_subtree,
+                                         scratch_pool));
+
+  *new_branch_id_p = svn_branch_get_id(new_branch, result_pool);
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_editor3_t method. */
+static svn_error_t *
 editor3_alter(void *baton,
               const char *branch_id,
               svn_branch_eid_t eid,
@@ -1306,20 +1374,7 @@ editor3_copy_tree(void *baton,
   SVN_DBG(("copy_tree(e%d -> e%d/%s)",
            src_el_rev->eid, new_parent_eid, new_name));
 
-  if (SVN_IS_VALID_REVNUM(src_el_rev->rev))
-    {
-      SVN_ERR(svn_branch_repos_get_branch_by_id(&src_branch,
-                                                eb->edited_rev_root->repos,
-                                                src_el_rev->rev,
-                                                src_el_rev->bid,
-                                                scratch_pool));
-    }
-  else
-    {
-      src_branch
-        = svn_branch_revision_root_get_branch_by_id(
-            eb->edited_rev_root, src_el_rev->bid, scratch_pool);
-    }
+  SVN_ERR(branch_in_rev_or_txn(&src_branch, src_el_rev, eb, scratch_pool));
   from_el_rev = svn_branch_el_rev_id_create(src_branch, src_el_rev->eid,
                                             src_el_rev->rev, scratch_pool);
   SVN_ERR(copy_subtree(from_el_rev,
@@ -1974,6 +2029,7 @@ svn_editor3_in_memory(svn_editor3_t **editor_p,
   static const svn_editor3_cb_funcs_t editor_funcs = {
     editor3_new_eid,
     editor3_open_branch,
+    editor3_branch,
     editor3_alter,
     editor3_copy_one,
     editor3_copy_tree,
@@ -2017,6 +2073,7 @@ svn_editor3__ev3_from_delta_for_commit(
   static const svn_editor3_cb_funcs_t editor_funcs = {
     editor3_new_eid,
     editor3_open_branch,
+    editor3_branch,
     editor3_alter,
     editor3_copy_one,
     editor3_copy_tree,
