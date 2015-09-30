@@ -2490,6 +2490,37 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
              the patch... So we can write the result stream; no fuzz,
              just a 100% match */
 
+          has_text_changes = TRUE;
+          target->has_text_changes = TRUE;
+        }
+      else
+        {
+          /* Perhaps the file is identical to the resulting version, implying
+             that the patch has already been applied */
+          if (target->file)
+            {
+              apr_off_t start = 0;
+
+              SVN_ERR(svn_io_file_seek(target->file, APR_SET, &start, iterpool));
+
+              orig_stream = svn_stream_from_aprfile2(target->file, TRUE, iterpool);
+            }
+          else
+            orig_stream = svn_stream_empty(iterpool);
+
+          SVN_ERR(svn_stream_contents_same2(
+                    &same, orig_stream,
+                    svn_diff_get_binary_diff_result_stream(patch->binary_patch,
+                                                           iterpool),
+                    iterpool));
+          svn_pool_clear(iterpool);
+
+          if (same)
+            target->had_already_applied = TRUE;
+        }
+
+      if (same)
+        {
           SVN_ERR(svn_stream_copy3(
                 svn_diff_get_binary_diff_result_stream(patch->binary_patch,
                                                        iterpool),
@@ -2497,9 +2528,6 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                                          iterpool),
                 cancel_func, cancel_baton,
                 iterpool));
-
-          has_text_changes = TRUE;
-          target->has_text_changes = TRUE;
         }
       else
         {
