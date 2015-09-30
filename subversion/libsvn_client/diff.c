@@ -247,19 +247,25 @@ diff_label(const char *path,
   return label;
 }
 
+/* Standard modes produced in git style diffs */
+#define EXEC_BIT     "100755"
+#define NO_EXEC_BIT  "100644"
+
 /* Print a git diff header for an addition within a diff between PATH1 and
  * PATH2 to the stream OS using HEADER_ENCODING.
  * All allocations are done in RESULT_POOL. */
 static svn_error_t *
 print_git_diff_header_added(svn_stream_t *os, const char *header_encoding,
                             const char *path1, const char *path2,
+                            svn_boolean_t exec_bit,
                             apr_pool_t *result_pool)
 {
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
                                       "diff --git a/%s b/%s%s",
                                       path1, path2, APR_EOL_STR));
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "new file mode 100644" APR_EOL_STR));
+                                      "new file mode %s" APR_EOL_STR,
+                                      exec_bit ? EXEC_BIT : NO_EXEC_BIT));
   return SVN_NO_ERROR;
 }
 
@@ -269,14 +275,15 @@ print_git_diff_header_added(svn_stream_t *os, const char *header_encoding,
 static svn_error_t *
 print_git_diff_header_deleted(svn_stream_t *os, const char *header_encoding,
                               const char *path1, const char *path2,
+                              svn_boolean_t exec_bit,
                               apr_pool_t *result_pool)
 {
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
                                       "diff --git a/%s b/%s%s",
                                       path1, path2, APR_EOL_STR));
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
-                                      "deleted file mode 100644"
-                                      APR_EOL_STR));
+                                      "deleted file mode %s" APR_EOL_STR,
+                                      exec_bit ? EXEC_BIT : NO_EXEC_BIT));
   return SVN_NO_ERROR;
 }
 
@@ -337,6 +344,26 @@ print_git_diff_header_modified(svn_stream_t *os, const char *header_encoding,
   return SVN_NO_ERROR;
 }
 
+/* Helper function for print_git_diff_header */
+static svn_error_t *
+maybe_print_mode_change(svn_stream_t *os,
+                        const char *header_encoding,
+                        svn_boolean_t exec_bit1,
+                        svn_boolean_t exec_bit2,
+                        apr_pool_t *scratch_pool)
+{
+  if ((!exec_bit1) == (!exec_bit2))
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
+                                      "old mode %s" APR_EOL_STR,
+                                      exec_bit1 ? EXEC_BIT : NO_EXEC_BIT));
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
+                                      "new mode %s" APR_EOL_STR,
+                                      exec_bit2 ? EXEC_BIT : NO_EXEC_BIT));
+  return SVN_NO_ERROR;
+}
+
 /* Print a git diff header showing the OPERATION to the stream OS using
  * HEADER_ENCODING. Return suitable diff labels for the git diff in *LABEL1
  * and *LABEL2. REPOS_RELPATH1 and REPOS_RELPATH2 are relative to reposroot.
@@ -354,6 +381,8 @@ print_git_diff_header(svn_stream_t *os,
                       svn_revnum_t rev2,
                       const char *copyfrom_path,
                       svn_revnum_t copyfrom_rev,
+                      svn_boolean_t exec_bit1,
+                      svn_boolean_t exec_bit2,
                       const char *header_encoding,
                       apr_pool_t *scratch_pool)
 {
@@ -361,6 +390,7 @@ print_git_diff_header(svn_stream_t *os,
     {
       SVN_ERR(print_git_diff_header_deleted(os, header_encoding,
                                             repos_relpath1, repos_relpath2,
+                                            exec_bit1,
                                             scratch_pool));
       *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", repos_relpath1),
                            rev1, scratch_pool);
@@ -377,11 +407,14 @@ print_git_diff_header(svn_stream_t *os,
                            rev1, scratch_pool);
       *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
                            rev2, scratch_pool);
+      SVN_ERR(maybe_print_mode_change(os, header_encoding,
+                                      exec_bit1, exec_bit2, scratch_pool));
     }
   else if (operation == svn_diff_op_added)
     {
       SVN_ERR(print_git_diff_header_added(os, header_encoding,
                                           repos_relpath1, repos_relpath2,
+                                          exec_bit2,
                                           scratch_pool));
       *label1 = diff_label("/dev/null", rev1, scratch_pool);
       *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
@@ -396,6 +429,8 @@ print_git_diff_header(svn_stream_t *os,
                            rev1, scratch_pool);
       *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
                            rev2, scratch_pool);
+      SVN_ERR(maybe_print_mode_change(os, header_encoding,
+                                      exec_bit1, exec_bit2, scratch_pool));
     }
   else if (operation == svn_diff_op_moved)
     {
@@ -406,6 +441,8 @@ print_git_diff_header(svn_stream_t *os,
                            rev1, scratch_pool);
       *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
                            rev2, scratch_pool);
+      SVN_ERR(maybe_print_mode_change(os, header_encoding,
+                                      exec_bit1, exec_bit2, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -425,7 +462,8 @@ print_git_diff_header(svn_stream_t *os,
    ANCHOR is the local path where the diff editor is anchored. */
 static svn_error_t *
 display_prop_diffs(const apr_array_header_t *propchanges,
-                   apr_hash_t *original_props,
+                   apr_hash_t *left_props,
+                   apr_hash_t *right_props,
                    const char *diff_relpath,
                    const char *anchor,
                    const char *orig_path1,
@@ -487,6 +525,12 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                                       repos_relpath1, repos_relpath2,
                                       rev1, rev2, NULL,
                                       SVN_INVALID_REVNUM,
+                                      (NULL != svn_prop_get_value(
+                                                    left_props,
+                                                    SVN_PROP_EXECUTABLE)),
+                                      (NULL != svn_prop_get_value(
+                                                    right_props,
+                                                    SVN_PROP_EXECUTABLE)),
                                       encoding, scratch_pool));
 
       /* --- label1
@@ -507,7 +551,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                                       SVN_DIFF__UNDER_STRING APR_EOL_STR));
 
   SVN_ERR(svn_diff__display_prop_diffs(
-            outstream, encoding, propchanges, original_props,
+            outstream, encoding, propchanges, left_props,
             TRUE /* pretty_print_mergeinfo */,
             -1 /* context_size */,
             cancel_func, cancel_baton, scratch_pool));
@@ -606,7 +650,8 @@ diff_props_changed(const char *diff_relpath,
                    svn_revnum_t rev1,
                    svn_revnum_t rev2,
                    const apr_array_header_t *propchanges,
-                   apr_hash_t *original_props,
+                   apr_hash_t *left_props,
+                   apr_hash_t *right_props,
                    svn_boolean_t show_diff_header,
                    diff_writer_info_t *dwi,
                    apr_pool_t *scratch_pool)
@@ -625,7 +670,7 @@ diff_props_changed(const char *diff_relpath,
       /* We're using the revnums from the dwi since there's
        * no revision argument to the svn_wc_diff_callback_t
        * dir_props_changed(). */
-      SVN_ERR(display_prop_diffs(props, original_props,
+      SVN_ERR(display_prop_diffs(props, left_props, right_props,
                                  diff_relpath,
                                  dwi->ddi.anchor,
                                  dwi->ddi.orig_path_1,
@@ -662,8 +707,8 @@ diff_content_changed(svn_boolean_t *wrote_header,
                      const char *tmpfile2,
                      svn_revnum_t rev1,
                      svn_revnum_t rev2,
-                     const char *mimetype1,
-                     const char *mimetype2,
+                     apr_hash_t *left_props,
+                     apr_hash_t *right_props,
                      svn_diff_operation_kind_t operation,
                      svn_boolean_t force_diff,
                      const char *copyfrom_path,
@@ -678,6 +723,8 @@ diff_content_changed(svn_boolean_t *wrote_header,
   const char *index_path = diff_relpath;
   const char *path1 = dwi->ddi.orig_path_1;
   const char *path2 = dwi->ddi.orig_path_2;
+  const char *mimetype1 = svn_prop_get_value(left_props, SVN_PROP_MIME_TYPE);
+  const char *mimetype2 = svn_prop_get_value(right_props, SVN_PROP_MIME_TYPE);
 
   /* If only property differences are shown, there's nothing to do. */
   if (dwi->properties_only)
@@ -737,6 +784,12 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                         rev1, rev2,
                                         copyfrom_path,
                                         copyfrom_rev,
+                                        (NULL != svn_prop_get_value(
+                                                      left_props,
+                                                      SVN_PROP_EXECUTABLE)),
+                                        (NULL != svn_prop_get_value(
+                                                      right_props,
+                                                      SVN_PROP_EXECUTABLE)),
                                         dwi->header_encoding,
                                         scratch_pool));
 
@@ -898,6 +951,12 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                             rev1, rev2,
                                             copyfrom_path,
                                             copyfrom_rev,
+                                            (NULL != svn_prop_get_value(
+                                                        left_props,
+                                                        SVN_PROP_EXECUTABLE)),
+                                            (NULL != svn_prop_get_value(
+                                                        right_props,
+                                                        SVN_PROP_EXECUTABLE)),
                                             dwi->header_encoding,
                                             scratch_pool));
             }
@@ -948,10 +1007,7 @@ diff_file_changed(const char *relpath,
                                  left_file, right_file,
                                  left_source->revision,
                                  right_source->revision,
-                                 svn_prop_get_value(left_props,
-                                                    SVN_PROP_MIME_TYPE),
-                                 svn_prop_get_value(right_props,
-                                                    SVN_PROP_MIME_TYPE),
+                                 left_props, right_props,
                                  svn_diff_op_modified, FALSE,
                                  NULL,
                                  SVN_INVALID_REVNUM, dwi,
@@ -960,7 +1016,7 @@ diff_file_changed(const char *relpath,
     SVN_ERR(diff_props_changed(relpath,
                                left_source->revision,
                                right_source->revision, prop_changes,
-                               left_props, !wrote_header,
+                               left_props, right_props, !wrote_header,
                                dwi, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -1033,10 +1089,7 @@ diff_file_added(const char *relpath,
                                  left_file, right_file,
                                  copyfrom_source->revision,
                                  right_source->revision,
-                                 svn_prop_get_value(left_props,
-                                                    SVN_PROP_MIME_TYPE),
-                                 svn_prop_get_value(right_props,
-                                                    SVN_PROP_MIME_TYPE),
+                                 left_props, right_props,
                                  svn_diff_op_copied,
                                  TRUE /* force diff output */,
                                  copyfrom_source->repos_relpath,
@@ -1047,10 +1100,7 @@ diff_file_added(const char *relpath,
                                  left_file, right_file,
                                  DIFF_REVNUM_NONEXISTENT,
                                  right_source->revision,
-                                 svn_prop_get_value(left_props,
-                                                    SVN_PROP_MIME_TYPE),
-                                 svn_prop_get_value(right_props,
-                                                    SVN_PROP_MIME_TYPE),
+                                 left_props, right_props,
                                  svn_diff_op_added,
                                  TRUE /* force diff output */,
                                  NULL, SVN_INVALID_REVNUM,
@@ -1062,8 +1112,8 @@ diff_file_added(const char *relpath,
                                                : DIFF_REVNUM_NONEXISTENT,
                                right_source->revision,
                                prop_changes,
-                               left_props, ! wrote_header,
-                               dwi, scratch_pool));
+                               left_props, right_props,
+                               ! wrote_header, dwi, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1108,8 +1158,7 @@ diff_file_deleted(const char *relpath,
                                      left_file, dwi->empty_file,
                                      left_source->revision,
                                      DIFF_REVNUM_NONEXISTENT,
-                                     svn_prop_get_value(left_props,
-                                                        SVN_PROP_MIME_TYPE),
+                                     left_props,
                                      NULL,
                                      svn_diff_op_deleted, FALSE,
                                      NULL, SVN_INVALID_REVNUM,
@@ -1127,8 +1176,8 @@ diff_file_deleted(const char *relpath,
                                      left_source->revision,
                                      DIFF_REVNUM_NONEXISTENT,
                                      prop_changes,
-                                     left_props, ! wrote_header,
-                                     dwi, scratch_pool));
+                                     left_props, NULL,
+                                     ! wrote_header, dwi, scratch_pool));
         }
     }
 
@@ -1153,7 +1202,7 @@ diff_dir_changed(const char *relpath,
                              left_source->revision,
                              right_source->revision,
                              prop_changes,
-                             left_props,
+                             left_props, right_props,
                              TRUE /* show_diff_header */,
                              dwi,
                              scratch_pool));
@@ -1198,7 +1247,7 @@ diff_dir_added(const char *relpath,
                                                             : DIFF_REVNUM_NONEXISTENT,
                                             right_source->revision,
                                             prop_changes,
-                                            left_props,
+                                            left_props, right_props,
                                             TRUE /* show_diff_header */,
                                             dwi,
                                             scratch_pool));
@@ -1215,19 +1264,20 @@ diff_dir_deleted(const char *relpath,
 {
   diff_writer_info_t *dwi = processor->baton;
   apr_array_header_t *prop_changes;
+  apr_hash_t *right_props;
 
   if (dwi->no_diff_deleted)
     return SVN_NO_ERROR;
 
-
-  SVN_ERR(svn_prop_diffs(&prop_changes, apr_hash_make(scratch_pool),
+  right_props = apr_hash_make(scratch_pool);
+  SVN_ERR(svn_prop_diffs(&prop_changes, right_props,
                          left_props, scratch_pool));
 
   SVN_ERR(diff_props_changed(relpath,
                              left_source->revision,
                              DIFF_REVNUM_NONEXISTENT,
                              prop_changes,
-                             left_props,
+                             left_props, right_props,
                              TRUE /* show_diff_header */,
                              dwi,
                              scratch_pool));
