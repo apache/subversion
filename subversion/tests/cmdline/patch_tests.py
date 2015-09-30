@@ -5986,6 +5986,7 @@ def patch_adds_executability_nocontents(sbox):
 
   # And try it again
   # This may produce different output but must have the same result
+  expected_output.tweak('iota', status=' G')
   svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
@@ -5994,6 +5995,7 @@ def patch_adds_executability_nocontents(sbox):
   # And then try it in reverse
   expected_disk.tweak('iota', props={})
   expected_status.tweak('iota', status='  ')
+  expected_output.tweak('iota', status=' U')
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
@@ -6001,6 +6003,7 @@ def patch_adds_executability_nocontents(sbox):
 
   # And try it again
   # This may produce different output but must have the same result
+  expected_output.tweak('iota', status=' G')
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
@@ -6535,6 +6538,39 @@ def patch_empty_vs_delete(sbox):
 
   svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '--force', sbox.ospath('iota'))
+
+  expected_output.tweak('iota', status='A ')
+  svntest.actions.run_and_verify_patch(wc_dir, del_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count,
+                                       '--reverse-diff')
+  # And retry
+  expected_output.tweak('iota', status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, del_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count,
+                                       '--reverse-diff')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'rm', '--force', sbox.ospath('iota'))
+
+  expected_output.tweak('iota', status='A ')
+  svntest.actions.run_and_verify_patch(wc_dir, del_git_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+  # And retry
+  expected_output.tweak('iota', status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, del_git_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
 
 ########################################################################
 #Run the tests

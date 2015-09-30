@@ -242,10 +242,6 @@ typedef struct patch_target_t {
   /* True if the target ended up being deleted by the patch. */
   svn_boolean_t deleted;
 
-  /* True if the target ended up being replaced by the patch
-   * (i.e. a new file was added on top locally deleted node). */
-  svn_boolean_t replaced;
-
   /* Set if the target is supposed to be moved by the patch.
    * This applies to --git diffs which carry "rename from/to" headers. */
    const char *move_target_abspath;
@@ -1005,11 +1001,6 @@ init_patch_target(patch_target_t **patch_target,
   target->content = content;
   target->prop_targets = apr_hash_make(result_pool);
   target->operation = patch->operation;
-
-  if (patch->new_executable_p != svn_tristate_unknown
-      && patch->new_executable_p != patch->old_executable_p)
-    /* May also be set by apply_hunk(). */
-    target->has_prop_changes = TRUE;
 
   SVN_ERR(resolve_target_path(target, choose_target_filename(patch),
                               root_abspath, strip_count, has_text_changes,
@@ -2192,7 +2183,7 @@ send_patch_notification(const patch_target_t *target,
     action = svn_wc_notify_skip;
   else if (target->deleted && !target->locally_deleted)
     action = svn_wc_notify_delete;
-  else if (target->added || target->replaced || target->move_target_abspath)
+  else if (target->added || target->move_target_abspath)
     action = svn_wc_notify_add;
   else
     action = svn_wc_notify_patch;
@@ -2713,6 +2704,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
     {
       apr_finfo_t working_file;
       apr_finfo_t patched_file;
+      svn_boolean_t ensure_exists = FALSE;
 
       /* Get sizes of the patched temporary file and the working file.
        * We'll need those to figure out whether we should delete the
@@ -2759,14 +2751,49 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
             target->skipped = TRUE;
           }
         }
-      else if (patched_file.size > 0 && working_file.size == 0
-               && patch->operation == svn_diff_op_unchanged)
+      else if (patched_file.size > 0 && working_file.size == 0)
         {
           /* The patch has created a file. */
-          if (target->locally_deleted)
-            target->replaced = TRUE;
-          else if (target->db_kind == svn_node_none)
-            target->added = TRUE;
+          ensure_exists = TRUE;
+        }
+      else if (target->operation == svn_diff_op_added)
+        {
+          /* Can't add something that is already there.
+             Report node as merged or conflict */
+          target->added = FALSE;
+        }
+
+      if (!ensure_exists
+          && !target->skipped
+          && target->has_prop_changes)
+        {
+          for (hash_index = apr_hash_first(scratch_pool, target->prop_targets);
+               hash_index;
+               hash_index = apr_hash_next(hash_index))
+            {
+              prop_patch_target_t *prop_target = apr_hash_this_val(hash_index);
+
+              if (prop_target->operation != svn_diff_op_deleted)
+              {
+                ensure_exists = TRUE;
+              }
+            }
+        }
+
+      if (ensure_exists)
+        {
+          if (patch->operation == svn_diff_op_unchanged
+              || patch->operation == svn_diff_op_added)
+            {
+              if (target->locally_deleted || target->db_kind == svn_node_none)
+                target->added = TRUE;
+            }
+          else if (target->locally_deleted
+                   || target->kind_on_disk == svn_node_none)
+            {
+              /* Can't modify something that isn't there */
+              target->skipped = TRUE;
+            }
         }
     }
 
@@ -2954,7 +2981,7 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
   else
     {
       svn_node_kind_t parent_db_kind;
-      if (target->added || target->replaced)
+      if (target->added)
         {
           const char *parent_abspath;
 
@@ -3043,7 +3070,7 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
                         ctx->cancel_func, ctx->cancel_baton, pool));
             }
 
-          if (target->added || target->replaced)
+          if (target->added)
             {
               /* The target file didn't exist previously,
                * so add it to version control.
@@ -3154,50 +3181,6 @@ install_patched_prop_targets(patch_target_t *target,
                                      NULL, NULL /* notification */,
                                      iterpool));
           continue;
-        }
-
-
-      /* If the patch target doesn't exist yet, the patch wants to add an
-       * empty file with properties set on it. So create an empty file and
-       * add it to version control. But if the patch was in the 'git format'
-       * then the file has already been added.
-       *
-       * We only do this if the patch file didn't set an explicit operation.
-       *
-       * If there are text changes then we already handled these cases when
-       * constructing the patched file.
-       */
-      if (target->operation == svn_diff_op_unchanged
-          && !target->has_text_changes)
-        {
-          if (target->kind_on_disk == svn_node_none
-              && ! target->added
-              && ! target->replaced)
-            {
-              if (! dry_run)
-                {
-                  SVN_ERR(svn_io_file_create_empty(target->local_abspath,
-                                                   scratch_pool));
-                  SVN_ERR(svn_wc_add_from_disk3(ctx->wc_ctx, target->local_abspath,
-                                                NULL /*props*/,
-                                                FALSE /* skip checks */,
-                                                /* suppress notification */
-                                                NULL, NULL,
-                                                iterpool));
-                }
-              if (target->locally_deleted)
-                target->replaced = TRUE;
-              else
-                target->added = TRUE;
-            }
-        }
-      
-      if (target->kind_on_disk == svn_node_none
-          && !target->added
-          && !target->replaced)
-        {
-          target->skipped = TRUE;
-          break;
         }
 
       /* Attempt to set the property, and reject all hunks if this
