@@ -2619,36 +2619,29 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
   /* Match implied property hunks. */
   if (patch->new_executable_p != svn_tristate_unknown
-      && svn_hash_gets(target->prop_targets, SVN_PROP_EXECUTABLE))
+      && patch->new_executable_p != patch->old_executable_p
+      && svn_hash_gets(target->prop_targets, SVN_PROP_EXECUTABLE)
+      && !svn_hash_gets(patch->prop_patches, SVN_PROP_EXECUTABLE))
     {
       hunk_info_t *hi;
       svn_diff_hunk_t *hunk;
       prop_patch_target_t *prop_target = svn_hash_gets(target->prop_targets,
                                                        SVN_PROP_EXECUTABLE);
-      const char *const value = SVN_PROP_EXECUTABLE_VALUE;
 
-      switch (prop_target->operation)
-        {
-          case svn_diff_op_added:
-            SVN_ERR(svn_diff_hunk__create_adds_single_line(&hunk, value, patch,
-                                                           result_pool,
-                                                           iterpool));
-            break;
-
-          case svn_diff_op_deleted:
-            SVN_ERR(svn_diff_hunk__create_deletes_single_line(&hunk, value,
-                                                              patch,
-                                                              result_pool,
-                                                              iterpool));
-            break;
-
-          case svn_diff_op_unchanged:
-            /* ### What to do? */
-            break;
-
-          default:
-            SVN_ERR_MALFUNCTION();
-        }
+      if (patch->new_executable_p == svn_tristate_true)
+        SVN_ERR(svn_diff_hunk__create_adds_single_line(
+                                            &hunk,
+                                            SVN_PROP_EXECUTABLE_VALUE,
+                                            patch,
+                                            result_pool,
+                                            iterpool));
+      else
+        SVN_ERR(svn_diff_hunk__create_deletes_single_line(
+                                            &hunk,
+                                            SVN_PROP_EXECUTABLE_VALUE,
+                                            patch,
+                                            result_pool,
+                                            iterpool));
 
       /* Derive a hunk_info from hunk. */
       SVN_ERR(get_hunk_info(&hi, target, prop_target->content,
