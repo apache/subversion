@@ -230,19 +230,19 @@ adjust_paths_for_diff_labels(const char **index_path,
 /* Generate a label for the diff output for file PATH at revision REVNUM.
    If REVNUM is invalid then it is assumed to be the current working
    copy.  Assumes the paths are already in the desired style (local
-   vs internal).  Allocate the label in POOL. */
+   vs internal).  Allocate the label in RESULT-POOL. */
 static const char *
 diff_label(const char *path,
            svn_revnum_t revnum,
-           apr_pool_t *pool)
+           apr_pool_t *result_pool)
 {
   const char *label;
   if (revnum >= 0)
-    label = apr_psprintf(pool, _("%s\t(revision %ld)"), path, revnum);
+    label = apr_psprintf(result_pool, _("%s\t(revision %ld)"), path, revnum);
   else if (revnum == DIFF_REVNUM_NONEXISTENT)
-    label = apr_psprintf(pool, _("%s\t(nonexistent)"), path);
+    label = apr_psprintf(result_pool, _("%s\t(nonexistent)"), path);
   else /* SVN_INVALID_REVNUM */
-    label = apr_psprintf(pool, _("%s\t(working copy)"), path);
+    label = apr_psprintf(result_pool, _("%s\t(working copy)"), path);
 
   return label;
 }
@@ -252,93 +252,90 @@ diff_label(const char *path,
 #define NO_EXEC_BIT  "100644"
 
 /* Print a git diff header for an addition within a diff between PATH1 and
- * PATH2 to the stream OS using HEADER_ENCODING.
- * All allocations are done in RESULT_POOL. */
+ * PATH2 to the stream OS using HEADER_ENCODING. */
 static svn_error_t *
 print_git_diff_header_added(svn_stream_t *os, const char *header_encoding,
                             const char *path1, const char *path2,
                             svn_boolean_t exec_bit,
-                            apr_pool_t *result_pool)
+                            apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                       "diff --git a/%s b/%s%s",
                                       path1, path2, APR_EOL_STR));
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                       "new file mode %s" APR_EOL_STR,
                                       exec_bit ? EXEC_BIT : NO_EXEC_BIT));
   return SVN_NO_ERROR;
 }
 
 /* Print a git diff header for a deletion within a diff between PATH1 and
- * PATH2 to the stream OS using HEADER_ENCODING.
- * All allocations are done in RESULT_POOL. */
+ * PATH2 to the stream OS using HEADER_ENCODING. */
 static svn_error_t *
 print_git_diff_header_deleted(svn_stream_t *os, const char *header_encoding,
                               const char *path1, const char *path2,
                               svn_boolean_t exec_bit,
-                              apr_pool_t *result_pool)
+                              apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                       "diff --git a/%s b/%s%s",
                                       path1, path2, APR_EOL_STR));
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                       "deleted file mode %s" APR_EOL_STR,
                                       exec_bit ? EXEC_BIT : NO_EXEC_BIT));
   return SVN_NO_ERROR;
 }
 
 /* Print a git diff header for a copy from COPYFROM_PATH to PATH to the stream
- * OS using HEADER_ENCODING. All allocations are done in RESULT_POOL. */
+ * OS using HEADER_ENCODING. */
 static svn_error_t *
 print_git_diff_header_copied(svn_stream_t *os, const char *header_encoding,
                              const char *copyfrom_path,
                              svn_revnum_t copyfrom_rev,
                              const char *path,
-                             apr_pool_t *result_pool)
+                             apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                       "diff --git a/%s b/%s%s",
                                       copyfrom_path, path, APR_EOL_STR));
   if (copyfrom_rev != SVN_INVALID_REVNUM)
-    SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+    SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                         "copy from %s@%ld%s", copyfrom_path,
                                         copyfrom_rev, APR_EOL_STR));
   else
-    SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+    SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                         "copy from %s%s", copyfrom_path,
                                         APR_EOL_STR));
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                       "copy to %s%s", path, APR_EOL_STR));
   return SVN_NO_ERROR;
 }
 
 /* Print a git diff header for a rename from COPYFROM_PATH to PATH to the
- * stream OS using HEADER_ENCODING. All allocations are done in RESULT_POOL. */
+ * stream OS using HEADER_ENCODING. */
 static svn_error_t *
 print_git_diff_header_renamed(svn_stream_t *os, const char *header_encoding,
                               const char *copyfrom_path, const char *path,
-                              apr_pool_t *result_pool)
+                              apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                       "diff --git a/%s b/%s%s",
                                       copyfrom_path, path, APR_EOL_STR));
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                       "rename from %s%s", copyfrom_path,
                                       APR_EOL_STR));
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                       "rename to %s%s", path, APR_EOL_STR));
   return SVN_NO_ERROR;
 }
 
 /* Print a git diff header for a modification within a diff between PATH1 and
- * PATH2 to the stream OS using HEADER_ENCODING.
- * All allocations are done in RESULT_POOL. */
+ * PATH2 to the stream OS using HEADER_ENCODING. */
 static svn_error_t *
 print_git_diff_header_modified(svn_stream_t *os, const char *header_encoding,
                                const char *path1, const char *path2,
-                               apr_pool_t *result_pool)
+                               apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, result_pool,
+  SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                       "diff --git a/%s b/%s%s",
                                       path1, path2, APR_EOL_STR));
   return SVN_NO_ERROR;
