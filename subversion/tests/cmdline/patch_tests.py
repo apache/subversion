@@ -6006,7 +6006,6 @@ def patch_adds_executability_nocontents(sbox):
                                        expected_status, expected_skip,
                                        [], True, True, '--reverse-diff')
 
-@XFail()
 def patch_adds_executability_nocontents2(sbox):
   "patch adds svn:executable, without contents 2"
 
@@ -6025,10 +6024,9 @@ def patch_adds_executability_nocontents2(sbox):
   })
   expected_disk = svntest.main.greek_state.copy()
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', status=' M')
 
   expected_skip = wc.State(wc_dir, {
-    'new' : Item(verb='Skipped')
+    'new' : Item(verb='Skipped missing target')
   })
 
   # This creates 'new', while a skip or reject is expected
@@ -6491,6 +6489,52 @@ def patch_empty_vs_delete(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        [], True, True)
+
+  # # Not needed. Result of previous test
+  #svntest.actions.run_and_verify_svn(None, [],
+  #                                   'rm', '--force', sbox.ospath('iota'))
+
+  # Ok, and now let's check what happens on reverse diffs with nothing
+  # there
+
+  # Git empty patch -> skip... target not found
+  expect_no_output = svntest.wc.State(wc_dir, {})
+  expect_skip_iota = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Skipped')
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, empty_git_patch,
+                                       expect_no_output, expected_disk,
+                                       expected_status, expect_skip_iota,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # # Not needed. Result of previous test
+  #svntest.actions.run_and_verify_svn(None, [],
+  #                                   'rm', '--force', sbox.ospath('iota'))
+
+  # Unified empty patch -> Create iota
+  expected_output.tweak('iota', status='A ')
+  expected_status.tweak('iota', status='R ')
+  expected_disk.add({
+    'iota' : Item(contents="This is the file 'iota'.\n")
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, empty_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count,
+                                       '--reverse-diff')
+  # And retry
+  expected_output.tweak('iota', status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, empty_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count,
+                                       '--reverse-diff')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'rm', '--force', sbox.ospath('iota'))
 
 ########################################################################
 #Run the tests
