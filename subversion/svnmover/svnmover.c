@@ -452,6 +452,13 @@ static svn_error_t *
 display_diff_of_commit(const commit_callback_baton_t *ccbb,
                        apr_pool_t *scratch_pool);
 
+static svn_error_t *
+do_topbranch(const char **new_branch_id_p,
+             svn_editor3_t *editor,
+             svn_branch_rev_bid_eid_t *from,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool);
+
 /* Commit the changes from WC into the repository.
  *
  * Open a new commit txn to the repo. Replay the changes from WC into it.
@@ -525,15 +532,15 @@ wc_commit(svn_revnum_t *new_rev_p,
     {
       /* Create a new top-level branch in the edited state. (It will have
          an independent new top-level branch number.) */
-      SVN_ERR(svn_branch_branch_subtree(&edit_root_branch,
-                                        *svn_branch_get_subtree(
-                                          wc->base->branch,
-                                          wc->base->branch->root_eid,
-                                          scratch_pool),
-                                        commit_txn,
-                                        NULL, 0, /*outer_branch,outer_eid*/
-                                        scratch_pool));
-      edit_root_branch_id = svn_branch_get_id(edit_root_branch, scratch_pool);
+      svn_branch_rev_bid_eid_t *from
+        = svn_branch_rev_bid_eid_create(wc->base->revision, wc->base->branch_id,
+                                        wc->base->branch->root_eid,
+                                        scratch_pool);
+
+      SVN_ERR(do_topbranch(&edit_root_branch_id, commit_editor,
+                           from, scratch_pool, scratch_pool));
+      edit_root_branch = svn_branch_revision_root_get_branch_by_id(
+                           commit_txn, edit_root_branch_id, scratch_pool);
     }
   SVN_ERR(replay(commit_editor,
                  edit_root_branch_id,
