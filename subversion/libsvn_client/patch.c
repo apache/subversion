@@ -2759,7 +2759,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
             target->skipped = TRUE;
           }
         }
-      else if (patched_file.size > 0 && working_file.size == 0)
+      else if (patched_file.size > 0 && working_file.size == 0
+               && patch->operation == svn_diff_op_unchanged)
         {
           /* The patch has created a file. */
           if (target->locally_deleted)
@@ -3155,29 +3156,48 @@ install_patched_prop_targets(patch_target_t *target,
           continue;
         }
 
+
       /* If the patch target doesn't exist yet, the patch wants to add an
        * empty file with properties set on it. So create an empty file and
        * add it to version control. But if the patch was in the 'git format'
        * then the file has already been added.
        *
-       * ### How can we tell whether the patch really wanted to create
-       * ### an empty directory? */
-      if (! target->has_text_changes
-          && target->kind_on_disk == svn_node_none
-          && ! target->added)
+       * We only do this if the patch file didn't set an explicit operation.
+       *
+       * If there are text changes then we already handled these cases when
+       * constructing the patched file.
+       */
+      if (target->operation == svn_diff_op_unchanged
+          && !target->has_text_changes)
         {
-          if (! dry_run)
+          if (target->kind_on_disk == svn_node_none
+              && ! target->added
+              && ! target->replaced)
             {
-              SVN_ERR(svn_io_file_create_empty(target->local_abspath,
-                                               scratch_pool));
-              SVN_ERR(svn_wc_add_from_disk3(ctx->wc_ctx, target->local_abspath,
-                                            NULL /*props*/,
-                                            FALSE /* skip checks */,
-                                            /* suppress notification */
-                                            NULL, NULL,
-                                            iterpool));
+              if (! dry_run)
+                {
+                  SVN_ERR(svn_io_file_create_empty(target->local_abspath,
+                                                   scratch_pool));
+                  SVN_ERR(svn_wc_add_from_disk3(ctx->wc_ctx, target->local_abspath,
+                                                NULL /*props*/,
+                                                FALSE /* skip checks */,
+                                                /* suppress notification */
+                                                NULL, NULL,
+                                                iterpool));
+                }
+              if (target->locally_deleted)
+                target->replaced = TRUE;
+              else
+                target->added = TRUE;
             }
-          target->added = TRUE;
+        }
+      
+      if (target->kind_on_disk == svn_node_none
+          && !target->added
+          && !target->replaced)
+        {
+          target->skipped = TRUE;
+          break;
         }
 
       /* Attempt to set the property, and reject all hunks if this
