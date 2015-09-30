@@ -6634,10 +6634,10 @@ def patch_add_remove_executable(sbox):
 
   # And repeat
   expected_output.tweak('eicar.com', status='GG')
-  #svntest.actions.run_and_verify_patch(wc_dir, add_patch,
-  #                                     expected_output, expected_disk,
-  #                                     expected_status, expected_skip,
-  #                                     [], True, True)
+  svntest.actions.run_and_verify_patch(wc_dir, add_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
 
   # Now apply the edit
   expected_output.tweak('eicar.com', status='GU')
@@ -6651,10 +6651,10 @@ def patch_add_remove_executable(sbox):
 
   # And repeat
   expected_output.tweak('eicar.com', status='GG')
-  #svntest.actions.run_and_verify_patch(wc_dir, edit_patch,
-  #                                     expected_output, expected_disk,
-  #                                     expected_status, expected_skip,
-  #                                     [], True, True)
+  svntest.actions.run_and_verify_patch(wc_dir, edit_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
 
   # Now apply the edit
   expected_output.tweak('eicar.com', status='D ')
@@ -6666,12 +6666,68 @@ def patch_add_remove_executable(sbox):
                                        [], True, True)
 
   # And repeat
-  expected_output.tweak('eicar.com', status='G ')
-  #svntest.actions.run_and_verify_patch(wc_dir, rm_patch,
-  #                                     expected_output, expected_disk,
-  #                                     expected_status, expected_skip,
-  #                                     [], True, True)
+  expected_output.tweak('eicar.com', status='GG')
+  svntest.actions.run_and_verify_patch(wc_dir, rm_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
 
+  #And reverse
+  expected_output.tweak('eicar.com', status='A ')
+  expected_disk.add({
+    'eicar.com' : Item(contents=other_data,
+                       props={'svn:mime-type': 'application/octet-stream'}),
+  })
+  expected_status.tweak('eicar.com', status='RM')
+  svntest.actions.run_and_verify_patch(wc_dir, rm_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # Repeat
+  expected_output.tweak('eicar.com', status='GG')
+  svntest.actions.run_and_verify_patch(wc_dir, rm_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # And reverse the edit
+  expected_output.tweak('eicar.com', status='GU')
+  expected_disk.tweak('eicar.com', contents=eicar_data,
+                      props={'svn:mime-type': 'application/octet-stream',
+                              'svn:executable': '*'})
+  svntest.actions.run_and_verify_patch(wc_dir, edit_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+  # Repeat
+  expected_output.tweak('eicar.com', status='GG')
+  svntest.actions.run_and_verify_patch(wc_dir, edit_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # And the add
+  expected_output.tweak('eicar.com', status='D ')
+  expected_disk.remove('eicar.com')
+  expected_status.tweak('eicar.com', status='D ')
+  svntest.actions.run_and_verify_patch(wc_dir, add_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # And a final repeat
+  expected_output.tweak('eicar.com', status='GG')
+  svntest.actions.run_and_verify_patch(wc_dir, add_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
 
 ########################################################################
 #Run the tests
