@@ -6581,7 +6581,8 @@ def patch_add_remove_executable(sbox):
   eicar_data = 'X5O!P%@AP[4\PZX54(P^)7CC)7}$' \
                'EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*\0'
   other_data = 'X5O!P%@AP[4\PZX54(P^)7CC)7}$' \
-               'SOME-LESS-INTERESTING-OTHER-TEXT!!!$H+H*\0'
+               'SOME-LESS-INTERESTING-OTHER-TEXT!!!$H+H*\0' \
+               '\0\0\0\0\0\0\0\0'
 
   # Write out an actual MS-DOS program
   sbox.simple_add_text(eicar_data, 'eicar.com')
