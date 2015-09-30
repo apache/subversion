@@ -655,6 +655,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
   apr_off_t pos;
   svn_stringbuf_t *str;
   const char *eol_p;
+  apr_pool_t *last_pool;
 
   if (!eol)
     eol = &eol_p;
@@ -671,13 +672,19 @@ hunk_readline_original_or_modified(apr_file_t *file,
   pos = 0;
   SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos,  scratch_pool));
   SVN_ERR(svn_io_file_seek(file, APR_SET, &range->current, scratch_pool));
+
+  /* It's not ITERPOOL because we use data allocated in LAST_POOL out
+     of the loop. */
+  last_pool = svn_pool_create(scratch_pool);
   do
     {
+      svn_pool_clear(last_pool);
+
       max_len = range->end - range->current;
       SVN_ERR(svn_io_file_readline(file, &str, eol, eof, max_len,
-                                   result_pool, scratch_pool));
+                                   last_pool, last_pool));
       range->current = 0;
-      SVN_ERR(svn_io_file_seek(file, APR_CUR, &range->current, scratch_pool));
+      SVN_ERR(svn_io_file_seek(file, APR_CUR, &range->current, last_pool));
       filtered = (str->data[0] == verboten || str->data[0] == '\\');
     }
   while (filtered && ! *eof);
@@ -725,6 +732,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
     }
   SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
 
+  svn_pool_destroy(last_pool);
   return SVN_NO_ERROR;
 }
 
