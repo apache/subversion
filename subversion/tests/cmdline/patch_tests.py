@@ -5657,21 +5657,14 @@ def patch_binary_file(sbox):
   sbox.simple_revert('iota')
 
   tmp = sbox.get_tempname()
-  patch = diff_output[:]
-  patch[3:3] = [
-    "old mode 100644\n",
-    "new mode 100755\n",
-    #"index ...\n",
-  ]
-  svntest.main.file_write(tmp, ''.join(patch))
+  svntest.main.file_write(tmp, ''.join(diff_output))
 
   expected_output = wc.State(wc_dir, {
     'iota'              : Item(status='UU'),
   })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('iota',
-                      props={'svn:mime-type':'application/binary',
-                             'svn:executable': '*'},
+                      props={'svn:mime-type':'application/binary'},
                       contents =
                       'This is the file \'iota\'.\n'
                       '\0\202\203\204\205\206\207nsomething\nelse\xFF')
