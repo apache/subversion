@@ -1213,27 +1213,12 @@ init_patch_target(patch_target_t **patch_target,
                                          SVN_PROP_EXECUTABLE,
                                          target->local_abspath);
               else
-                /* We have two representations of the same change.
-                 *
-                 * In the caller, there will be two hunk_info_t's for the
-                 * patch: one generated from the property diff and one
-                 * generated from the out-of-band mode change.  Both hunks will
-                 * be processed, but the output will be as though there was
-                 * just one hunk.
-                 *
-                 * The reason there will be only a single notification is not
-                 * specific to SVN_PROP_EXECUTABLE but generic to all property
-                 * patches: if a patch file contains two identical property
-                 * hunks (e.g., 
-                 *  svn ps k v iota; svn diff iota >patch; svn diff iota >>patch
-                 * ), applying the patch file will only produce a single ' U'
-                 * notification.
-                 *
-                 * In contrast, the same for file-content hunks will result in
-                 * a 'U' notification followed by a 'G' notification.  (The 'U'
-                 * for the first copy of the hunk; the 'G' for the second.)
-                 */
-                ;
+                {
+                  /* We have two representations of the same change. This will
+                   * be detected where the svn:executable hunk would otherwise
+                   * be created.
+                   */
+                }
             }
           else if (patch->new_executable_p != svn_tristate_unknown
                    && !prop_executable_target)
