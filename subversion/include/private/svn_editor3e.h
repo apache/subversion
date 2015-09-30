@@ -617,6 +617,13 @@ svn_editor3_open_branch(svn_editor3_t *editor,
                         int outer_eid,
                         int root_eid,
                         apr_pool_t *result_pool);
+svn_error_t *
+svn_editor3_branch(svn_editor3_t *editor,
+                   const char **new_branch_id_p,
+                   svn_branch_rev_bid_eid_t *from,
+                   const char *outer_branch_id,
+                   int outer_eid,
+                   apr_pool_t *result_pool);
 
 /** Specify the tree position and payload of the element of @a branch_id
  * identified by @a eid.
@@ -864,6 +871,17 @@ typedef svn_error_t *(*svn_editor3_cb_open_branch_t)(
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
+/** @see svn_editor3_branch(), #svn_editor3_t
+ */
+typedef svn_error_t *(*svn_editor3_cb_branch_t)(
+  void *baton,
+  const char **new_branch_id_p,
+  svn_branch_rev_bid_eid_t *from,
+  const char *outer_branch_id,
+  int outer_eid,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
 /** @see svn_editor3_alter(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_alter_t)(
@@ -949,6 +967,7 @@ typedef struct svn_editor3_cb_funcs_t
 {
   svn_editor3_cb_new_eid_t cb_new_eid;
   svn_editor3_cb_open_branch_t cb_open_branch;
+  svn_editor3_cb_branch_t cb_branch;
   svn_editor3_cb_alter_t cb_alter;
   svn_editor3_cb_copy_one_t cb_copy_one;
   svn_editor3_cb_copy_tree_t cb_copy_tree;

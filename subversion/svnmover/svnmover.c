@@ -2326,82 +2326,52 @@ mk_branch(const char **new_branch_id_p,
  * and NEW_NAME must be nonexistent in that directory.
  */
 static svn_error_t *
-do_branch(svn_branch_state_t **new_branch_p,
+do_branch(const char **new_branch_id_p,
           svn_editor3_t *editor,
-          svn_branch_state_t *from_branch,
-          int from_eid,
+          svn_branch_rev_bid_eid_t *from,
           svn_branch_state_t *to_outer_branch,
           svn_branch_eid_t to_outer_parent_eid,
           const char *new_name,
+          apr_pool_t *result_pool,
           apr_pool_t *scratch_pool)
 {
   const char *to_outer_branch_id
     = to_outer_branch ? svn_branch_get_id(to_outer_branch, scratch_pool) : NULL;
-  svn_branch_subtree_t *from_subtree;
   int to_outer_eid;
-
-  /* Source element must exist */
-  if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
-    {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("Cannot branch from %s e%d: "
-                                 "does not exist"),
-                               svn_branch_get_id(
-                                 from_branch, scratch_pool), from_eid);
-    }
-
-  /* Fetch the subtree to be branched before creating the new subbranch root
-     element, as we don't want to recurse (endlessly) into that in the case
-     where it is an immediate subbranch of FROM_BRANCH. */
-  from_subtree = svn_branch_get_subtree(from_branch, from_eid, scratch_pool);
 
   /* assign new eid to root element (outer branch) */
   SVN_ERR(svn_editor3_new_eid(editor, &to_outer_eid));
+
+  SVN_ERR(svn_editor3_branch(editor, new_branch_id_p,
+                             from, to_outer_branch_id, to_outer_eid,
+                             result_pool));
+
   SVN_ERR(svn_editor3_alter(editor,
                             to_outer_branch_id, to_outer_eid,
                             to_outer_parent_eid, new_name, NULL));
 
-  SVN_ERR(svn_branch_branch_subtree(new_branch_p,
-                                    *from_subtree,
-                                    to_outer_branch->rev_root,
-                                    to_outer_branch, to_outer_eid,
-                                    scratch_pool));
-  notify_v("A+   %s%s",
+  notify_v("A+   %s (branch %s)",
            svn_branch_get_path_by_eid(to_outer_branch, to_outer_eid,
                                       scratch_pool),
-           branch_str(*new_branch_p, scratch_pool));
+           *new_branch_id_p);
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-do_topbranch(svn_branch_state_t **new_branch_p,
-             svn_branch_revision_root_t *rev_root,
-             svn_branch_state_t *from_branch,
-             int from_eid,
+do_topbranch(const char **new_branch_id_p,
+             svn_editor3_t *editor,
+             svn_branch_rev_bid_eid_t *from,
+             apr_pool_t *result_pool,
              apr_pool_t *scratch_pool)
 {
-  svn_branch_subtree_t *from_subtree;
+  SVN_ERR(svn_editor3_branch(editor, new_branch_id_p,
+                             from,
+                             NULL, 0, /*outer_branch,outer_eid*/
+                             result_pool));
 
-  /* Source element must exist */
-  if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
-    {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("Cannot branch from %s e%d: "
-                                 "does not exist"),
-                               svn_branch_get_id(
-                                 from_branch, scratch_pool), from_eid);
-    }
-
-  from_subtree = svn_branch_get_subtree(from_branch, from_eid, scratch_pool);
-
-  SVN_ERR(svn_branch_branch_subtree(new_branch_p,
-                                    *from_subtree,
-                                    rev_root,
-                                    NULL, 0, /*outer_branch,outer_eid*/
-                                    scratch_pool));
-  notify_v("A+  %s",
-           branch_str(*new_branch_p, scratch_pool));
+  notify_v("A+   (branch %s)",
+           *new_branch_id_p);
 
   return SVN_NO_ERROR;
 }
@@ -2484,13 +2454,18 @@ do_branch_and_delete(svn_editor3_t *editor,
                      const char *to_name,
                      apr_pool_t *scratch_pool)
 {
-  svn_branch_state_t *new_branch;
+  const char *from_branch_id = svn_branch_get_id(el_rev->branch,
+                                                 scratch_pool);
+  svn_branch_rev_bid_eid_t *from
+    = svn_branch_rev_bid_eid_create(el_rev->rev, from_branch_id,
+                                    el_rev->eid, scratch_pool);
+  const char *new_branch_id;
 
   SVN_ERR_ASSERT(! is_branch_root_element(el_rev->branch, el_rev->eid));
 
-  SVN_ERR(do_branch(&new_branch, editor, el_rev->branch, el_rev->eid,
+  SVN_ERR(do_branch(&new_branch_id, editor, from,
                     to_outer_branch, to_outer_parent_eid, to_name,
-                    scratch_pool));
+                    scratch_pool, scratch_pool));
 
   SVN_ERR(do_delete(editor, el_rev->branch, el_rev->eid, scratch_pool));
 
@@ -3128,15 +3103,21 @@ execute(svnmover_wc_t *wc,
         case ACTION_TBRANCH:
           VERIFY_EID_EXISTS("tbranch", 0);
           {
-            svn_branch_state_t *new_branch;
+            const char *from_branch_id = svn_branch_get_id(arg[0]->el_rev->branch,
+                                                           iterpool);
+            svn_branch_rev_bid_eid_t *from
+              = svn_branch_rev_bid_eid_create(arg[0]->el_rev->rev, from_branch_id,
+                                              arg[0]->el_rev->eid, iterpool);
+            const char *new_branch_id;
 
-            SVN_ERR(do_topbranch(&new_branch,
-                                 wc->working->branch->rev_root,
-                                 arg[0]->el_rev->branch, arg[0]->el_rev->eid,
-                                 iterpool));
+            SVN_ERR(do_topbranch(&new_branch_id, editor,
+                                 from,
+                                 iterpool, iterpool));
             /* Switch the WC working state to this new branch */
-            wc->working->branch_id = svn_branch_get_id(new_branch, wc->pool);
-            wc->working->branch = new_branch;
+            wc->working->branch_id = new_branch_id;
+            wc->working->branch
+              = svn_branch_revision_root_get_branch_by_id(
+                  wc->working->branch->rev_root, new_branch_id, iterpool);
           }
           break;
 
@@ -3146,13 +3127,18 @@ execute(svnmover_wc_t *wc,
           VERIFY_EID_NONEXISTENT("branch", 1);
           VERIFY_PARENT_EID_EXISTS("branch", 1);
           {
-            svn_branch_state_t *new_branch;
+            const char *from_branch_id = svn_branch_get_id(arg[0]->el_rev->branch,
+                                                           iterpool);
+            svn_branch_rev_bid_eid_t *from
+              = svn_branch_rev_bid_eid_create(arg[0]->el_rev->rev, from_branch_id,
+                                              arg[0]->el_rev->eid, iterpool);
+            const char *new_branch_id;
 
-            SVN_ERR(do_branch(&new_branch, editor,
-                              arg[0]->el_rev->branch, arg[0]->el_rev->eid,
+            SVN_ERR(do_branch(&new_branch_id, editor,
+                              from,
                               arg[1]->el_rev->branch, arg[1]->parent_el_rev->eid,
                               arg[1]->path_name,
-                              iterpool));
+                              iterpool, iterpool));
           }
           break;
 

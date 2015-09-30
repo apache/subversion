@@ -222,6 +222,23 @@ svn_editor3_open_branch(svn_editor3_t *editor,
 }
 
 svn_error_t *
+svn_editor3_branch(svn_editor3_t *editor,
+                   const char **new_branch_id_p,
+                   svn_branch_rev_bid_eid_t *from,
+                   const char *outer_branch_id,
+                   int outer_eid,
+                   apr_pool_t *result_pool)
+{
+  SVN_ERR_ASSERT(VALID_EID(outer_eid));
+
+  DO_CALLBACK(editor, cb_branch,
+              5(new_branch_id_p, from, outer_branch_id, outer_eid,
+                result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_editor3_alter(svn_editor3_t *editor,
                   const char *branch_id,
                   svn_branch_eid_t eid,
@@ -448,6 +465,26 @@ wrap_open_branch(void *baton,
 }
 
 static svn_error_t *
+wrap_branch(void *baton,
+            const char **new_branch_id_p,
+            svn_branch_rev_bid_eid_t *from,
+            const char *outer_branch_id,
+            int outer_eid,
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
+{
+  wrapper_baton_t *eb = baton;
+
+  /*dbg(eb, scratch_pool, "%s : open_branch(...)",
+      eid_str(eid, scratch_pool), ...);*/
+  SVN_ERR(svn_editor3_branch(eb->wrapped_editor,
+                             new_branch_id_p,
+                             from, outer_branch_id, outer_eid,
+                             result_pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 wrap_alter(void *baton,
            const char *branch_id,
            svn_branch_eid_t eid,
@@ -578,6 +615,7 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
   static const svn_editor3_cb_funcs_t wrapper_funcs = {
     wrap_new_eid,
     wrap_open_branch,
+    wrap_branch,
     wrap_alter,
     wrap_copy_one,
     wrap_copy_tree,
@@ -651,6 +689,24 @@ change_detection_open_branch(void *baton,
                                   new_branch_id_p,
                                   outer_branch_id, outer_eid, root_eid,
                                   result_pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+change_detection_branch(void *baton,
+                        const char **new_branch_id_p,
+                        svn_branch_rev_bid_eid_t *from,
+                        const char *outer_branch_id,
+                        int outer_eid,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  change_detection_baton_t *eb = baton;
+
+  SVN_ERR(svn_editor3_branch(eb->wrapped_editor,
+                             new_branch_id_p,
+                             from, outer_branch_id, outer_eid,
+                             result_pool));
   return SVN_NO_ERROR;
 }
 
@@ -774,6 +830,7 @@ svn_editor3__change_detection_editor(svn_editor3_t **editor_p,
   static const svn_editor3_cb_funcs_t wrapper_funcs = {
     change_detection_new_eid,
     change_detection_open_branch,
+    change_detection_branch,
     change_detection_alter,
     change_detection_copy_one,
     change_detection_copy_tree,
