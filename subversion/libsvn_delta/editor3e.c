@@ -206,6 +206,7 @@ svn_editor3_new_eid(svn_editor3_t *editor,
 svn_error_t *
 svn_editor3_open_branch(svn_editor3_t *editor,
                         const char **new_branch_id_p,
+                        svn_branch_rev_bid_t *predecessor,
                         const char *outer_branch_id,
                         int outer_eid,
                         int root_eid,
@@ -217,7 +218,8 @@ svn_editor3_open_branch(svn_editor3_t *editor,
   SVN_ERR_ASSERT(VALID_EID(root_eid));
 
   DO_CALLBACK(editor, cb_open_branch,
-              5(&new_branch_id, outer_branch_id, outer_eid, root_eid,
+              6(&new_branch_id,
+                predecessor, outer_branch_id, outer_eid, root_eid,
                 result_pool));
 
   /* We allow the output pointer to be null, here, so that implementations
@@ -461,6 +463,7 @@ wrap_new_eid(void *baton,
 static svn_error_t *
 wrap_open_branch(void *baton,
                  const char **new_branch_id_p,
+                 svn_branch_rev_bid_t *predecessor,
                  const char *outer_branch_id,
                  int outer_eid,
                  int root_eid,
@@ -472,9 +475,10 @@ wrap_open_branch(void *baton,
   /*dbg(eb, scratch_pool, "%s : open_branch(...)",
       eid_str(eid, scratch_pool), ...);*/
   SVN_ERR(svn_editor3_open_branch(eb->wrapped_editor,
-                                     new_branch_id_p,
-                                     outer_branch_id, outer_eid, root_eid,
-                                     result_pool));
+                                  new_branch_id_p,
+                                  predecessor,
+                                  outer_branch_id, outer_eid, root_eid,
+                                  result_pool));
   return SVN_NO_ERROR;
 }
 
@@ -691,6 +695,7 @@ change_detection_new_eid(void *baton,
 static svn_error_t *
 change_detection_open_branch(void *baton,
                              const char **new_branch_id_p,
+                             svn_branch_rev_bid_t *predecessor,
                              const char *outer_branch_id,
                              int outer_eid,
                              int root_eid,
@@ -701,6 +706,7 @@ change_detection_open_branch(void *baton,
 
   SVN_ERR(svn_editor3_open_branch(eb->wrapped_editor,
                                   new_branch_id_p,
+                                  predecessor,
                                   outer_branch_id, outer_eid, root_eid,
                                   result_pool));
   return SVN_NO_ERROR;

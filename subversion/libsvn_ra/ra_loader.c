@@ -769,14 +769,33 @@ svn_branch_get_mutable_state(svn_branch_revision_root_t **rev_root_p,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
+  svn_branch_revision_root_t *txn;
+  int i;
+
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(base_revision));
 
-  SVN_ERR(svn_branch_revision_fetch_info(rev_root_p,
+  SVN_ERR(svn_branch_revision_fetch_info(&txn,
                                          repos, ra_session, branch_info_dir,
                                          base_revision,
                                          result_pool, scratch_pool));
-  (*rev_root_p)->base_rev = (*rev_root_p)->rev;
-  (*rev_root_p)->rev = SVN_INVALID_REVNUM;
+  SVN_ERR_ASSERT(txn->rev == base_revision);
+
+  /* Update all the 'predecessor' info to point to the BASE_REVISION instead
+     of to that revision's predecessor. */
+  txn->base_rev = base_revision;
+  txn->rev = SVN_INVALID_REVNUM;
+
+  for (i = 0; i < txn->branches->nelts; i++)
+    {
+      svn_branch_state_t *b = APR_ARRAY_IDX(txn->branches, i, void *);
+
+      b->predecessor
+        = svn_branch_rev_bid_create(base_revision,
+                                    svn_branch_get_id(b, scratch_pool),
+                                    result_pool);
+    }
+
+  *rev_root_p = txn;
   return SVN_NO_ERROR;
 }
 
