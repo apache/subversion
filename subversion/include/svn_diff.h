@@ -1289,23 +1289,38 @@ typedef struct svn_patch_t {
    * @since New in 1.10. */
   svn_diff_binary_patch_t *binary_patch;
 
-  /** The old and new executability bits, as retrieved from the patch file.
+  /** The old and new executability bits, as retrieved from the patch file, from
+   * the git-like mode headers.
    *
-   * A patch may specify an executability change via @a old_executable_p and
-   * / @a new_executable_p, via a #SVN_PROP_EXECUTABLE propchange hunk, or both
-   * ways; however, if both ways are used, they must specify the same semantic
-   * change.
+   * A patch may specify an executability change via @a old_executable_bit and
+   * @a new_executable_bit, via a #SVN_PROP_EXECUTABLE propchange hunk, or both
+   * ways. It is upto caller how to decide how conflicting information is
+   * handled.
    *
    * #svn_tristate_unknown indicates the patch does not specify the
    * corresponding bit.
    *
    * @since New in 1.10.
    */
-  /* ### This is currently not parsed out of "index" lines (where it
-   * ### serves as an assertion of the executability state, without
-   * ### changing it).  */
-  svn_tristate_t old_executable_p; 
-  svn_tristate_t new_executable_p; 
+  svn_tristate_t old_executable_bit;
+  svn_tristate_t new_executable_bit;
+
+  /** The old and new symlink bits, as retrieved from the patch file, from
+  * the git-like mode headers.
+  *
+  * A patch may specify a symlink change via @a old_executable_bit and
+  * @a new_executable_bit, via a #SVN_PROP_SPECIAL propchange hunk, or both
+  * ways. It is upto caller how to decide how conflicting information is
+  * handled. Most implementations will currently just describe a replacement
+  * of the file though.
+  *
+  * #svn_tristate_unknown indicates the patch does not specify the
+  * corresponding bit.
+  *
+  * @since New in 1.10.
+  */
+  svn_tristate_t old_symlink_bit;
+  svn_tristate_t new_symlink_bit;
 } svn_patch_t;
 
 /** An opaque type representing an open patch file.

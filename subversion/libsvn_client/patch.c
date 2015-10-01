@@ -995,23 +995,23 @@ contradictory_executability(const svn_patch_t *patch,
   switch (target->operation)
     {
       case svn_diff_op_added:
-        return patch->new_executable_p == svn_tristate_false;
+        return patch->new_executable_bit == svn_tristate_false;
 
       case svn_diff_op_deleted:
-        return patch->new_executable_p == svn_tristate_true;
+        return patch->new_executable_bit == svn_tristate_true;
 
       case svn_diff_op_unchanged:
         /* ### Can this happen? */
-        return (patch->old_executable_p != svn_tristate_unknown
-                && patch->new_executable_p != svn_tristate_unknown
-                && patch->old_executable_p != patch->new_executable_p);
+        return (patch->old_executable_bit != svn_tristate_unknown
+                && patch->new_executable_bit != svn_tristate_unknown
+                && patch->old_executable_bit != patch->new_executable_bit);
 
       case svn_diff_op_modified:
         /* Can't happen: the property should only ever be added or deleted,
          * but never modified from one valid value to another. */
-        return (patch->old_executable_p != svn_tristate_unknown
-                && patch->new_executable_p != svn_tristate_unknown
-                && patch->old_executable_p == patch->new_executable_p);
+        return (patch->old_executable_bit != svn_tristate_unknown
+                && patch->new_executable_bit != svn_tristate_unknown
+                && patch->old_executable_bit == patch->new_executable_bit);
 
       default:
         /* Can't happen: the proppatch parser never generates other values. */
@@ -1256,7 +1256,8 @@ init_patch_target(patch_target_t **patch_target,
            * an svn:executable property patch. */
           prop_executable_target = svn_hash_gets(target->prop_targets,
                                                  SVN_PROP_EXECUTABLE);
-          if (patch->new_executable_p != svn_tristate_unknown
+          if (patch->new_executable_bit != svn_tristate_unknown
+              && patch->new_executable_bit != patch->old_executable_bit
               && prop_executable_target)
             {
               if (contradictory_executability(patch, prop_executable_target))
@@ -1280,19 +1281,19 @@ init_patch_target(patch_target_t **patch_target,
                    */
                 }
             }
-          else if (patch->new_executable_p != svn_tristate_unknown
+          else if (patch->new_executable_bit != svn_tristate_unknown
                    && !prop_executable_target)
             {
               svn_diff_operation_kind_t operation;
               svn_boolean_t nothing_to_do = FALSE;
               prop_patch_target_t *prop_target;
 
-              if (patch->old_executable_p == patch->new_executable_p)
+              if (patch->old_executable_bit == patch->new_executable_bit)
                 {
                     /* Noop change. */
                     operation = svn_diff_op_unchanged;
                 }
-              else switch (patch->old_executable_p)
+              else switch (patch->old_executable_bit)
                 {
                   case svn_tristate_false:
                     /* Made executable. */
@@ -1305,7 +1306,7 @@ init_patch_target(patch_target_t **patch_target,
                     break;
 
                   case svn_tristate_unknown:
-                    if (patch->new_executable_p == svn_tristate_true)
+                    if (patch->new_executable_bit == svn_tristate_true)
                       /* New, executable file. */
                       operation = svn_diff_op_added;
                     else
@@ -2663,8 +2664,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
     }
 
   /* Match implied property hunks. */
-  if (patch->new_executable_p != svn_tristate_unknown
-      && patch->new_executable_p != patch->old_executable_p
+  if (patch->new_executable_bit != svn_tristate_unknown
+      && patch->new_executable_bit != patch->old_executable_bit
       && svn_hash_gets(target->prop_targets, SVN_PROP_EXECUTABLE)
       && !svn_hash_gets(patch->prop_patches, SVN_PROP_EXECUTABLE))
     {
@@ -2673,7 +2674,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       prop_patch_target_t *prop_target = svn_hash_gets(target->prop_targets,
                                                        SVN_PROP_EXECUTABLE);
 
-      if (patch->new_executable_p == svn_tristate_true)
+      if (patch->new_executable_bit == svn_tristate_true)
         SVN_ERR(svn_diff_hunk__create_adds_single_line(
                                             &hunk,
                                             SVN_PROP_EXECUTABLE_VALUE,

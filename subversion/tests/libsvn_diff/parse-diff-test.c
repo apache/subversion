@@ -471,8 +471,10 @@ test_parse_git_diff(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(patch->new_filename, "A/C/gamma");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_modified);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
-  SVN_TEST_ASSERT(patch->old_executable_p = svn_tristate_false);
-  SVN_TEST_ASSERT(patch->new_executable_p = svn_tristate_true);
+  SVN_TEST_ASSERT(patch->old_executable_bit = svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_executable_bit = svn_tristate_true);
+  SVN_TEST_ASSERT(patch->old_symlink_bit = svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_symlink_bit = svn_tristate_false);
 
   hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
 
@@ -508,8 +510,10 @@ test_parse_git_diff(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(patch->new_filename, "new");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
-  SVN_TEST_ASSERT(patch->old_executable_p = svn_tristate_unknown);
-  SVN_TEST_ASSERT(patch->new_executable_p = svn_tristate_false);
+  SVN_TEST_ASSERT(patch->old_executable_bit = svn_tristate_unknown);
+  SVN_TEST_ASSERT(patch->new_executable_bit = svn_tristate_false);
+  SVN_TEST_ASSERT(patch->old_symlink_bit = svn_tristate_unknown);
+  SVN_TEST_ASSERT(patch->new_symlink_bit = svn_tristate_false);
 
   SVN_ERR(svn_diff_close_patch_file(patch_file, pool));
 
@@ -535,8 +539,10 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch);
   SVN_TEST_STRING_ASSERT(patch->old_filename, "iota");
   SVN_TEST_STRING_ASSERT(patch->new_filename, "iota.copied");
-  SVN_TEST_ASSERT(patch->old_executable_p = svn_tristate_false);
-  SVN_TEST_ASSERT(patch->new_executable_p = svn_tristate_true);
+  SVN_TEST_ASSERT(patch->old_executable_bit = svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_executable_bit = svn_tristate_true);
+  SVN_TEST_ASSERT(patch->old_symlink_bit = svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_symlink_bit = svn_tristate_false);
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_copied);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
@@ -559,8 +565,10 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch);
   SVN_TEST_STRING_ASSERT(patch->old_filename, "A/mu");
   SVN_TEST_STRING_ASSERT(patch->new_filename, "A/mu.moved");
-  SVN_TEST_ASSERT(patch->old_executable_p = svn_tristate_false);
-  SVN_TEST_ASSERT(patch->new_executable_p = svn_tristate_true);
+  SVN_TEST_ASSERT(patch->old_executable_bit = svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_executable_bit = svn_tristate_true);
+  SVN_TEST_ASSERT(patch->old_symlink_bit = svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_symlink_bit = svn_tristate_false);
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_moved);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
@@ -604,8 +612,10 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(patch->new_filename, "/dev/null");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_deleted);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
-  SVN_TEST_ASSERT(patch->old_executable_p = svn_tristate_true);
-  SVN_TEST_ASSERT(patch->new_executable_p = svn_tristate_unknown);
+  SVN_TEST_ASSERT(patch->old_executable_bit = svn_tristate_true);
+  SVN_TEST_ASSERT(patch->new_executable_bit = svn_tristate_unknown);
+  SVN_TEST_ASSERT(patch->old_symlink_bit = svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_symlink_bit = svn_tristate_unknown);
 
   hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
 
