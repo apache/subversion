@@ -6837,11 +6837,20 @@ def patch_git_symlink(sbox):
                                        expected_status, expected_skip,
                                        [], True, True)
 
-  # And again
-  # svntest.actions.run_and_verify_patch(wc_dir, to_file_patch,
-  #                                      expected_output, expected_disk,
-  #                                      expected_status, expected_skip,
-  #                                      [], True, True)
+  # And again - Delete can't be applied
+  expected_output.tweak('link-to-iota', status='G ', prev_status='C ')
+  expected_disk.add({
+    'link-to-iota.svnpatch.rej': Item(
+                     contents='--- link-to-iota\n'
+                              '+++ link-to-iota\n'
+                              '@@ -1,1 +0,0 @@\n'
+                              '-A/mu\n'
+                              '\\ No newline at end of file\n'),
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, to_file_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
 
 ########################################################################
 #Run the tests

@@ -2783,6 +2783,13 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       else
         working_file.size = 0;
 
+      if (patch->operation == svn_diff_op_deleted
+          && target->had_rejects)
+        {
+          /* No match -> No delete! */
+          target->deleted = FALSE;
+        }
+
       if (patched_file.size == 0 && working_file.size > 0)
         {
           /* If a unidiff or a binary patch removes all lines from a file,
@@ -3504,7 +3511,7 @@ apply_patches(/* The path to the patch file. */
           patch_target_t *target;
 
           SVN_ERR(apply_one_patch(&target, patch, root_abspath,
-                                  ctx->wc_ctx, strip_count,
+                                  ctx->wc_ctx, strip_count, dry_run,
                                   ignore_whitespace, remove_tempfiles,
                                   targets_info,
                                   patch_func, patch_baton,
