@@ -3511,7 +3511,7 @@ apply_patches(/* The path to the patch file. */
           patch_target_t *target;
 
           SVN_ERR(apply_one_patch(&target, patch, root_abspath,
-                                  ctx->wc_ctx, strip_count, dry_run,
+                                  ctx->wc_ctx, strip_count,
                                   ignore_whitespace, remove_tempfiles,
                                   targets_info,
                                   patch_func, patch_baton,
