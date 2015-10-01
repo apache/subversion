@@ -442,9 +442,6 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
 
               item->message = apr_pstrdup(server_error->pool, item->message);
             }
-          else
-            item->message = apr_pstrdup(server_error->pool,
-                                        svn_hash_gets(attrs, "description"));
 
 
           APR_ARRAY_PUSH(server_error->items, error_item_t *) = item;
