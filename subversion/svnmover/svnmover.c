@@ -2234,26 +2234,41 @@ do_cat(svn_editor3_t *editor,
   return SVN_NO_ERROR;
 }
 
-/*  */
+/* Set *NEW_EL_REV_P to the location where OLD_EL_REV was in the previous
+ * revision. Branching is followed.
+ *
+ * If the same EID...
+ */
 static svn_error_t *
 svn_branch_find_predecessor_el_rev(svn_branch_el_rev_id_t **new_el_rev_p,
                                    svn_branch_el_rev_id_t *old_el_rev,
                                    apr_pool_t *result_pool)
 {
   const svn_branch_repos_t *repos = old_el_rev->branch->rev_root->repos;
-  const char *branch_id;
+  svn_branch_rev_bid_t *predecessor = old_el_rev->branch->predecessor;
+  svn_branch_state_t *branch;
 
-  if (old_el_rev->rev <= 0)
+  if (! predecessor)
     {
       *new_el_rev_p = NULL;
       return SVN_NO_ERROR;
     }
 
-  branch_id = svn_branch_get_id(old_el_rev->branch, result_pool);
-  SVN_ERR(svn_branch_repos_find_el_rev_by_id(new_el_rev_p,
-                                             repos, old_el_rev->rev - 1,
-                                             branch_id, old_el_rev->eid,
-                                             result_pool, result_pool));
+  /* A predecessor can point at another branch within the same revision.
+     We don't want that result, so iterate until we find another revision. */
+  while (predecessor->rev == old_el_rev->rev)
+    {
+      branch = svn_branch_revision_root_get_branch_by_id(
+                 old_el_rev->branch->rev_root, predecessor->bid, result_pool);
+      predecessor = branch->predecessor;
+    }
+
+  SVN_ERR(svn_branch_repos_get_branch_by_id(&branch,
+                                            repos, predecessor->rev,
+                                            predecessor->bid, result_pool));
+  *new_el_rev_p = svn_branch_el_rev_id_create(branch, old_el_rev->eid,
+                                              predecessor->rev, result_pool);
+
   return SVN_NO_ERROR;
 }
 
@@ -2267,16 +2282,16 @@ svn_branch_log(svn_editor3_t *editor,
                svn_branch_el_rev_id_t *right,
                apr_pool_t *scratch_pool)
 {
-  svn_revnum_t first_rev = left->rev, rev;
+  svn_revnum_t first_rev = left->rev;
 
-  for (rev = right->rev; rev > first_rev; rev--)
+  while (right->rev > first_rev)
     {
       svn_branch_el_rev_id_t *el_rev_left;
 
       SVN_ERR(svn_branch_find_predecessor_el_rev(&el_rev_left, right, scratch_pool));
 
       notify(SVN_CL__LOG_SEP_STRING "r%ld | ...",
-             rev);
+             right->rev);
       notify("Changed elements:");
       SVN_ERR(branch_diff_r(editor,
                                 el_rev_left, right,
