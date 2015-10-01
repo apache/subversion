@@ -604,26 +604,18 @@ void
 svn_branch_purge_r(svn_branch_state_t *branch,
                    apr_pool_t *scratch_pool);
 
-/* Instantiate a subtree.
+/* Instantiate elements in a branch.
  *
  * In TO_BRANCH, instantiate (or alter, if existing) each element of
- * FROM_SUBTREE, with the given tree structure and payload. Set the subtree
- * root element's parent to NEW_PARENT_EID and name to NEW_NAME.
+ * ELEMENTS, each with its given tree structure (parent, name) and payload.
  *
- * Also branch the subbranches in FROM_SUBTREE, creating corresponding new
+ * Also branch the subbranches in ELEMENTS, creating corresponding new
  * subbranches in TO_BRANCH, recursively.
- *
- * If FROM_SUBTREE.root_eid is the same as TO_BRANCH.root_eid, then
- * (NEW_PARENT_EID, NEW_NAME) must be (-1, ""); otherwise, NEW_PARENT_EID
- * must be an existing element (it may be the root element) of TO_BRANCH and
- * NEW_NAME must not be not "".
  */
 svn_error_t *
-svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
-                               svn_branch_eid_t new_parent_eid,
-                               const char *new_name,
-                               svn_branch_subtree_t from_subtree,
-                               apr_pool_t *scratch_pool);
+svn_branch_instantiate_elements(svn_branch_state_t *to_branch,
+                                svn_branch_subtree_t elements,
+                                apr_pool_t *scratch_pool);
 
 /* Create a copy of NEW_SUBTREE in TO_BRANCH.
  *

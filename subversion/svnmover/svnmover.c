@@ -2433,6 +2433,7 @@ do_branch_into(svn_branch_state_t *from_branch,
                apr_pool_t *scratch_pool)
 {
   svn_branch_subtree_t *from_subtree;
+  svn_branch_el_rev_content_t *new_root_content;
 
   /* Source element must exist */
   if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
@@ -2446,9 +2447,18 @@ do_branch_into(svn_branch_state_t *from_branch,
 
   from_subtree = svn_branch_get_subtree(from_branch, from_eid, scratch_pool);
 
+  /* Change this subtree's root element to TO_PARENT_EID/NEW_NAME. */
+  new_root_content
+    = svn_int_hash_get(from_subtree->e_map, from_subtree->root_eid);
+  new_root_content
+    = svn_branch_el_rev_content_create(to_parent_eid, new_name,
+                                       new_root_content->payload, scratch_pool);
+  svn_int_hash_set(from_subtree->e_map, from_subtree->root_eid,
+                   new_root_content);
+
   /* Populate the new branch mapping */
-  SVN_ERR(svn_branch_instantiate_subtree(to_branch, to_parent_eid, new_name,
-                                         *from_subtree, scratch_pool));
+  SVN_ERR(svn_branch_instantiate_elements(to_branch, *from_subtree,
+                                          scratch_pool));
   notify_v("A+   %s (subtree)",
            svn_branch_get_path_by_eid(to_branch, from_eid, scratch_pool));
 
