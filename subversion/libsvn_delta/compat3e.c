@@ -1178,6 +1178,7 @@ editor3_new_eid(void *baton,
 static svn_error_t *
 editor3_open_branch(void *baton,
                     const char **new_branch_id_p,
+                    svn_branch_rev_bid_t *predecessor,
                     const char *outer_branch_id,
                     int outer_eid,
                     int root_eid,
@@ -1196,12 +1197,18 @@ editor3_open_branch(void *baton,
                                                 *new_branch_id_p,
                                                 scratch_pool);
   if (new_branch)
-    return SVN_NO_ERROR;
+    {
+      SVN_ERR_ASSERT(predecessor->rev == new_branch->predecessor->rev);
+      SVN_ERR_ASSERT(strcmp(predecessor->bid, new_branch->predecessor->bid) == 0);
+      SVN_ERR_ASSERT(root_eid == new_branch->root_eid);
+      return SVN_NO_ERROR;
+    }
 
   if (outer_branch_id)
     outer_branch = svn_branch_revision_root_get_branch_by_id(
                      eb->edited_rev_root, outer_branch_id, scratch_pool);
   new_branch = svn_branch_add_new_branch(eb->edited_rev_root,
+                                         predecessor,
                                          outer_branch, outer_eid,
                                          root_eid, scratch_pool);
   *new_branch_id_p = svn_branch_get_id(new_branch, result_pool);
@@ -1219,6 +1226,7 @@ editor3_branch(void *baton,
                apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
+  svn_branch_rev_bid_t *predecessor;
   svn_branch_state_t *new_branch;
   svn_branch_state_t *outer_branch = NULL;
   svn_branch_state_t *from_branch;
@@ -1239,7 +1247,9 @@ editor3_branch(void *baton,
   if (outer_branch_id)
     outer_branch = svn_branch_revision_root_get_branch_by_id(
                      eb->edited_rev_root, outer_branch_id, scratch_pool);
+  predecessor = svn_branch_rev_bid_create(from->rev, from->bid, scratch_pool);
   new_branch = svn_branch_add_new_branch(eb->edited_rev_root,
+                                         predecessor,
                                          outer_branch, outer_eid,
                                          from->eid, scratch_pool);
 

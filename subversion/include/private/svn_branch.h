@@ -115,6 +115,8 @@ typedef struct svn_branch_el_rev_id_t svn_branch_el_rev_id_t;
 
 typedef struct svn_branch_rev_bid_eid_t svn_branch_rev_bid_eid_t;
 
+typedef struct svn_branch_rev_bid_t svn_branch_rev_bid_t;
+
 typedef struct svn_branch_state_t svn_branch_state_t;
 
 /* Per-repository branching info.
@@ -235,6 +237,10 @@ struct svn_branch_state_t
 {
   /* --- Identity of this object --- */
 
+  /* The previous location in the lifeline of this branch. */
+  /* (REV = -1 means "in this txn") */
+  svn_branch_rev_bid_t *predecessor;
+
   /* The EID of its pathwise root element. */
   int root_eid;
 
@@ -264,7 +270,8 @@ struct svn_branch_state_t
  * element).
  */
 svn_branch_state_t *
-svn_branch_state_create(int root_eid,
+svn_branch_state_create(svn_branch_rev_bid_t *predecessor,
+                        int root_eid,
                         svn_branch_revision_root_t *rev_root,
                         svn_branch_state_t *outer_branch,
                         int outer_eid,
@@ -329,6 +336,7 @@ svn_branch_id_unnest(const char **outer_bid,
  */
 svn_branch_state_t *
 svn_branch_add_new_branch(svn_branch_revision_root_t *rev_root,
+                          svn_branch_rev_bid_t *predecessor,
                           svn_branch_state_t *outer_branch,
                           int outer_eid,
                           int root_eid,
@@ -393,6 +401,16 @@ struct svn_branch_rev_bid_eid_t
 
 };
 
+/* Revision-branch id. */
+struct svn_branch_rev_bid_t
+{
+  /* Revision. SVN_INVALID_REVNUM means 'in this transaction', not 'head'. */
+  svn_revnum_t rev;
+  /* The branch id in revision REV. */
+  const char *bid;
+
+};
+
 /* Return a new el_rev_id object constructed with *shallow* copies of BRANCH,
  * EID and REV, allocated in RESULT_POOL.
  */
@@ -410,12 +428,19 @@ svn_branch_rev_bid_eid_create(svn_revnum_t rev,
                               const char *branch_id,
                               int eid,
                               apr_pool_t *result_pool);
+svn_branch_rev_bid_t *
+svn_branch_rev_bid_create(svn_revnum_t rev,
+                          const char *branch_id,
+                          apr_pool_t *result_pool);
 
 /* Return a new id object constructed with a deep copy of OLD_ID,
  * allocated in RESULT_POOL. */
 svn_branch_rev_bid_eid_t *
 svn_branch_rev_bid_eid_dup(const svn_branch_rev_bid_eid_t *old_id,
                            apr_pool_t *result_pool);
+svn_branch_rev_bid_t *
+svn_branch_rev_bid_dup(const svn_branch_rev_bid_t *old_id,
+                       apr_pool_t *result_pool);
 
 /* The content (parent, name and payload) of an element-revision.
  * In other words, an el-rev node in a (mixed-rev) directory-tree.
@@ -474,6 +499,8 @@ svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
  */
 typedef struct svn_branch_subtree_t
 {
+  svn_branch_rev_bid_t *predecessor;
+
   /* EID -> svn_branch_el_rev_content_t mapping. */
   apr_hash_t *e_map;
 

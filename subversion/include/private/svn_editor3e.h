@@ -595,6 +595,9 @@ svn_editor3_new_eid(svn_editor3_t *editor,
  * this method conceptually returns a "branch editor" for the designated
  * branch.
  *
+ * When adding a new branch, PREDECESSOR and ROOT_EID are used; when
+ * finding an existing branch they must match it (else throw an error).
+ *
  * ### Should we take a single branch-id parameter instead of taking
  *     (outer-bid, outer-eid) and returning the new branch-id?
  *
@@ -605,14 +608,11 @@ svn_editor3_new_eid(svn_editor3_t *editor,
  *     outer-branch-id conceptually identifies "this branch" that we're
  *     editing and could be represented instead by a different value of
  *     the "editor" parameter; and the subbranch must be an immediate child.
- *
- * ### Only the 'add' case needs the subbranch root EID.
- *     In the 'add' case will we want to take a 'branched from' param,
- *     and can we have that in the combined method too?
  */
 svn_error_t *
 svn_editor3_open_branch(svn_editor3_t *editor,
                         const char **new_branch_id_p,
+                        svn_branch_rev_bid_t *predecessor,
                         const char *outer_branch_id,
                         int outer_eid,
                         int root_eid,
@@ -865,6 +865,7 @@ typedef svn_error_t *(*svn_editor3_cb_new_eid_t)(
 typedef svn_error_t *(*svn_editor3_cb_open_branch_t)(
   void *baton,
   const char **new_branch_id_p,
+  svn_branch_rev_bid_t *predecessor,
   const char *outer_branch_id,
   int outer_eid,
   int root_eid,

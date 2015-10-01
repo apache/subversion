@@ -388,6 +388,7 @@ svn_branch_replay(svn_editor3_t *editor,
           if (this_s_right)
             {
               SVN_ERR(svn_editor3_open_branch(editor, &edit_subbranch_id,
+                                              this_s_right->predecessor,
                                               edit_branch_id, this_eid,
                                               this_s_right->root_eid,
                                               scratch_pool));
@@ -2312,6 +2313,7 @@ mk_branch(const char **new_branch_id_p,
 
   SVN_ERR(svn_editor3_new_eid(editor, &new_inner_eid));
   SVN_ERR(svn_editor3_open_branch(editor, &new_branch_id,
+                                  NULL /*predecessor*/,
                                   outer_branch_id, new_outer_eid,
                                   new_inner_eid, scratch_pool));
   SVN_ERR(svn_editor3_alter(editor,
