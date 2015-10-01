@@ -72,7 +72,7 @@ Candidate changes:
    Report both built- and run-time versions of libserf, like we do for
    everything else.
    Justification:
-     Easier debugging.	Consistency with version-reporting of other runtime
+     Easier debugging. Consistency with version-reporting of other runtime
      dependencies.
    Votes:
      +1: danielsh
@@ -86,7 +86,7 @@ Candidate changes:
      reuse common code. There are other suspecious usage of apr_uri_parse()
      in ra_serf, but I'm going to resolve them separately.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
  * r1705328
    Resolve a possible segfault in authentication credentials cache caused by
@@ -96,7 +96,14 @@ Candidate changes:
    Justification:
      Segfault. User reported.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
+
+ * r1706241
+   Resolve unneeded memory growth during pristine cleanup
+   Justification:
+     Simple iterpool reduces memory usage on applying deletes.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
