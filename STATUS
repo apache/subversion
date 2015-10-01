@@ -93,7 +93,7 @@ Candidate changes:
    Justification:
      Simple iterpool reduces memory usage on applying deletes.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, kotkov
 
  * r1706323, r1706324
    Fix a crash in libsvn_ra_serf's multistatus parser caused by dereferencing
