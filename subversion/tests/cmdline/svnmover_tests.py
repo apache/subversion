@@ -538,10 +538,10 @@ def reported_element_add_line(rpath, branch_text=''):
   return 'A   ' + re.escape(rpath) + branch_text
 
 def reported_branch_del_line(subbranch_fullpath):
-  return r'--- deleted branch B[0-9.]+ at /%s' % (re.escape(subbranch_fullpath),)
+  return r'--- deleted branch [reB:0-9.]+ at /%s' % (re.escape(subbranch_fullpath),)
 
 def reported_branch_add_line(subbranch_fullpath):
-  return r'--- added branch B[0-9.]+ at /%s' % (re.escape(subbranch_fullpath),)
+  return r'--- added branch [rBe:0-9.]+ at /%s' % (re.escape(subbranch_fullpath),)
 
 def reported_br_params(path1, path2):
   """Return (SUBBRANCH_RPATH, SUBBRANCH_FULLPATH).
@@ -567,8 +567,8 @@ def reported_br_diff(path1, path2=None):
      paths are expected to be *different* on each side.
   """
   if path2 is None:
-    return [r'--- diff branch B[0-9.]+ at /%s' % (re.escape(path1),)]
-  return [r'--- diff branch B[0-9.]+ at /%s : B[0-9.]+ at /%s' % (
+    return [r'--- diff branch [rBe:0-9.]+ at /%s' % (re.escape(path1),)]
+  return [r'--- diff branch [rBe:0-9.]+ at /%s : [rBe:0-9.]+ at /%s' % (
            re.escape(path1), re.escape(path2))]
 
 def reported_del(one_path=None, paths=[], branches=[]):
