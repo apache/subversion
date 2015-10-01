@@ -706,7 +706,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
       *stringbuf = svn_stringbuf_dup(str, result_pool);
     }
 
-  if (!filtered && *eof && !*eol && !no_final_eol && *str->data)
+  if (!filtered && *eof && !*eol && *str->data)
     {
       /* Ok, we miss a final EOL in the patch file, but didn't see a
          no eol marker line.
@@ -714,7 +714,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
          We should report that we had an EOL or the patch code will
          misbehave (and it knows nothing about no eol markers) */
 
-      if (eol != &eol_p)
+      if (!no_final_eol && eol != &eol_p)
         {
           apr_off_t start = 0;
 
