@@ -1308,8 +1308,8 @@ typedef struct svn_patch_t {
   /** The old and new symlink bits, as retrieved from the patch file, from
   * the git-like mode headers.
   *
-  * A patch may specify a symlink change via @a old_executable_bit and
-  * @a new_executable_bit, via a #SVN_PROP_SPECIAL propchange hunk, or both
+  * A patch may specify a symlink change via @a old_symlink_bit and
+  * @a new_symlink_bit, via a #SVN_PROP_SPECIAL propchange hunk, or both
   * ways. It is upto caller how to decide how conflicting information is
   * handled. Most implementations will currently just describe a replacement
   * of the file though.
