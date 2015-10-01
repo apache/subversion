@@ -267,8 +267,12 @@ svn_branch_rev_bid_eid_t *
 svn_branch_rev_bid_eid_dup(const svn_branch_rev_bid_eid_t *old_id,
                            apr_pool_t *result_pool)
 {
-  svn_branch_rev_bid_eid_t *id = apr_pmemdup(result_pool, old_id, sizeof(*id));
+  svn_branch_rev_bid_eid_t *id;
 
+  if (! old_id)
+    return NULL;
+
+  id = apr_pmemdup(result_pool, old_id, sizeof(*id));
   id->bid = apr_pstrdup(result_pool, old_id->bid);
   return id;
 }
@@ -848,41 +852,19 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
       {
         int this_outer_eid = svn_int_hash_this_key(bi->apr_hi);
         svn_branch_subtree_t *this_subtree = bi->val;
+        svn_branch_state_t *new_branch;
 
         /* branch this subbranch into NEW_BRANCH (recursing) */
-        SVN_ERR(svn_branch_branch_subtree(NULL,
-                                          *this_subtree,
-                                          to_branch->rev_root,
-                                          to_branch, this_outer_eid,
-                                          bi->iterpool));
+        new_branch = svn_branch_add_new_branch(to_branch->rev_root,
+                                               to_branch, this_outer_eid,
+                                               this_subtree->root_eid,
+                                               bi->iterpool);
+
+        SVN_ERR(svn_branch_instantiate_subtree(new_branch, -1, "", *this_subtree,
+                                               bi->iterpool));
       }
   }
 
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_branch_branch_subtree(svn_branch_state_t **new_branch_p,
-                          svn_branch_subtree_t from_subtree,
-                          svn_branch_revision_root_t *rev_root,
-                          svn_branch_state_t *to_outer_branch,
-                          svn_branch_eid_t to_outer_eid,
-                          apr_pool_t *scratch_pool)
-{
-  svn_branch_state_t *new_branch;
-
-  /* create new branch */
-  new_branch = svn_branch_add_new_branch(rev_root,
-                                         to_outer_branch, to_outer_eid,
-                                         from_subtree.root_eid,
-                                         scratch_pool);
-
-  /* Populate the new branch mapping */
-  SVN_ERR(svn_branch_instantiate_subtree(new_branch, -1, "", from_subtree,
-                                         scratch_pool));
-
-  if (new_branch_p)
-    *new_branch_p = new_branch;
   return SVN_NO_ERROR;
 }
 
@@ -1080,17 +1062,22 @@ parse_element_line(int *eid_p,
   return SVN_NO_ERROR;
 }
 
-/* Set *OUTER_BID to the outer branch's id and *OUTER_EID to this branch's
- * outer EID.
- *
- * For a top-level branch, set *OUTER_BID to NULL and *OUTER_EID to the
- * top-level branch number.
- */
+const char *
+svn_branch_id_nest(const char *outer_bid,
+                   int outer_eid,
+                   apr_pool_t *result_pool)
+{
+  if (!outer_bid)
+    return apr_psprintf(result_pool, "B%d", outer_eid);
+
+  return apr_psprintf(result_pool, "%s.%d", outer_bid, outer_eid);
+}
+
 void
-svn_branch_id_split(const char **outer_bid,
-                    int *outer_eid,
-                    const char *bid,
-                    apr_pool_t *result_pool)
+svn_branch_id_unnest(const char **outer_bid,
+                     int *outer_eid,
+                     const char *bid,
+                     apr_pool_t *result_pool)
 {
   char *last_dot = strrchr(bid, '.');
 
@@ -1130,7 +1117,7 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
   {
     const char *outer_bid;
 
-    svn_branch_id_split(&outer_bid, &outer_eid, bid, scratch_pool);
+    svn_branch_id_unnest(&outer_bid, &outer_eid, bid, scratch_pool);
     if (outer_bid)
       {
         outer_branch

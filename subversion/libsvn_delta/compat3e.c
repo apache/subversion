@@ -1190,7 +1190,7 @@ editor3_open_branch(void *baton,
 
   /* if the subbranch already exists, just return its bid */
   *new_branch_id_p
-    = apr_psprintf(result_pool, "%s.%d", outer_branch_id, outer_eid);
+    = svn_branch_id_nest(outer_branch_id, outer_eid, result_pool);
   new_branch
     = svn_branch_revision_root_get_branch_by_id(eb->edited_rev_root,
                                                 *new_branch_id_p,
