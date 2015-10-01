@@ -91,14 +91,7 @@ Work on this branch:
 
       "rmtbranch" -- remove a top-level branch
 
-      Instead of an empty log message, set the log message to the 'svnmover'
-      command line(s) that produced the commit.
-
     Bigger things to do:
-
-      Concept of a "branch" as having ancestry. It should be possible
-      to trace from a current branch back past branching points to a
-      historical version in a branch it was branched from.
 
       heuristic conversion of old repositories:
         synthesize element tracking info (instead of aborting) when reading
