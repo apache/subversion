@@ -792,7 +792,8 @@ subtree_subbranch_str(svn_branch_subtree_t *subtree,
 
   if (subbranch)
     return apr_psprintf(result_pool,
-                        " (branch %s.%d)", bid, eid);
+                        " (branch %s)",
+                        svn_branch_id_nest(bid, eid, result_pool));
   return "";
 }
 
@@ -1358,16 +1359,16 @@ merge_subbranch(svn_editor3_t *editor,
     }
   else if (subbr_src)  /* added on source branch */
     {
-      svn_branch_subtree_t *from_subtree
-        = svn_branch_get_subtree(src_subbranch,
-                                     src_subbranch->root_eid,
-                                     scratch_pool);
+      svn_branch_rev_bid_eid_t *from
+        = svn_branch_rev_bid_eid_create(src_subbranch->rev_root->rev,
+                                        svn_branch_get_id(src_subbranch,
+                                                          scratch_pool),
+                                        src_subbranch->root_eid,
+                                        scratch_pool);
 
-      SVN_ERR(svn_branch_branch_subtree(NULL,
-                *from_subtree,
-                tgt->branch->rev_root,
-                tgt->branch, eid,
-                scratch_pool));
+      SVN_ERR(svn_editor3_branch(editor, NULL /*new_branch_id_p*/, from,
+                                 svn_branch_get_id(tgt->branch, scratch_pool),
+                                 eid, scratch_pool));
     }
   else if (subbr_tgt)  /* added on target branch */
     {
@@ -1515,7 +1516,9 @@ branch_merge_subtree_r(svn_editor3_t *editor,
          TGT, YCA) exists, but we choose to skip it when SRC == YCA. */
       if (! e_yca_src)
         {
-          /* Still need to merge subbranch */
+          /* Still need to merge any subbranch linked to this element.
+             There were no changes to the link element but that doesn't
+             mean there were no changes to the linked branch. */
           SVN_ERR(merge_subbranch(editor, src, tgt, yca, eid, iterpool));
 
           continue;
@@ -1553,6 +1556,10 @@ branch_merge_subtree_r(svn_editor3_t *editor,
                    eid, e_yca->name,
                    subbranch_str(yca->branch, eid, iterpool));
           SVN_ERR(svn_editor3_delete(editor, tgt_branch_id, eid));
+
+          /* ### If this is a subbranch-root element being deleted, shouldn't
+             we see if there were any changes to be merged in the subbranch,
+             and raise a delete-vs-edit conflict if so? */
         }
       else if (result)
         {
@@ -1990,7 +1997,7 @@ subtree_diff_r(svn_editor3_t *editor,
               const char *relpath
                 = svn_branch_subtree_get_path_by_eid(left, e, scratch_pool);
 
-              sub_left_bid = apr_psprintf(scratch_pool, "%s.%d", left_bid, e);
+              sub_left_bid = svn_branch_id_nest(left_bid, e, scratch_pool);
               sub_left_rrpath = svn_relpath_join(left_rrpath, relpath,
                                                  scratch_pool);
             }
@@ -2004,7 +2011,7 @@ subtree_diff_r(svn_editor3_t *editor,
               const char *relpath
                 = svn_branch_subtree_get_path_by_eid(right, e, scratch_pool);
 
-              sub_right_bid = apr_psprintf(scratch_pool, "%s.%d", right_bid, e);
+              sub_right_bid = svn_branch_id_nest(right_bid, e, scratch_pool);
               sub_right_rrpath = svn_relpath_join(right_rrpath, relpath,
                                                   scratch_pool);
             }

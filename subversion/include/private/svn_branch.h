@@ -285,13 +285,35 @@ const char *
 svn_branch_get_id(svn_branch_state_t *branch,
                   apr_pool_t *result_pool);
 
-/*
+/* Return the id of the branch nested in OUTER_BID at element OUTER_EID.
+ *
+ * For a top-level branch, OUTER_BID is null and OUTER_EID is the
+ * top-level branch number.
+ *
+ * (Such branches need not exist. This works purely with ids, making use
+ * of the fact that nested branch ids are predictable based on the nesting
+ * element id.)
+ */
+const char *
+svn_branch_id_nest(const char *outer_bid,
+                   int outer_eid,
+                   apr_pool_t *result_pool);
+
+/* Given a nested branch id BID, set *OUTER_BID to the outer branch's id
+ * and *OUTER_EID to the nesting element in the outer branch.
+ *
+ * For a top-level branch, set *OUTER_BID to NULL and *OUTER_EID to the
+ * top-level branch number.
+ *
+ * (Such branches need not exist. This works purely with ids, making use
+ * of the fact that nested branch ids are predictable based on the nesting
+ * element id.)
  */
 void
-svn_branch_id_split(const char **outer_bid,
-                    int *outer_eid,
-                    const char *bid,
-                    apr_pool_t *result_pool);
+svn_branch_id_unnest(const char **outer_bid,
+                     int *outer_eid,
+                     const char *bid,
+                     apr_pool_t *result_pool);
 
 /* Create a new branch at OUTER_BRANCH:OUTER_EID, with no elements
  * (not even a root element).
@@ -575,28 +597,6 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
                                const char *new_name,
                                svn_branch_subtree_t from_subtree,
                                apr_pool_t *scratch_pool);
-
-/* Create a new branch of a given subtree.
- *
- * Create a new branch object. Register its existence in REV_ROOT.
- * Instantiate the subtree FROM_SUBTREE in this new branch. In the new
- * branch, create new subbranches corresponding to any subbranches
- * specified in FROM_SUBTREE, recursively.
- *
- * If TO_OUTER_BRANCH is NULL, create a top-level branch with a new top-level
- * branch number, ignoring TO_OUTER_EID. Otherwise, create a branch that claims
- * to be nested under TO_OUTER_BRANCH:TO_OUTER_EID, but do not require that
- * a subbranch root element exists there, nor create one.
- *
- * Set *NEW_BRANCH_P to the new branch (the one at TO_OUTER_BRANCH:TO_OUTER_EID).
- */
-svn_error_t *
-svn_branch_branch_subtree(svn_branch_state_t **new_branch_p,
-                          svn_branch_subtree_t from_subtree,
-                          svn_branch_revision_root_t *rev_root,
-                          svn_branch_state_t *to_outer_branch,
-                          svn_branch_eid_t to_outer_eid,
-                          apr_pool_t *scratch_pool);
 
 /* Create a copy of NEW_SUBTREE in TO_BRANCH.
  *

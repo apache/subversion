@@ -211,12 +211,19 @@ svn_editor3_open_branch(svn_editor3_t *editor,
                         int root_eid,
                         apr_pool_t *result_pool)
 {
+  const char *new_branch_id;
+
   SVN_ERR_ASSERT(VALID_EID(outer_eid));
   SVN_ERR_ASSERT(VALID_EID(root_eid));
 
   DO_CALLBACK(editor, cb_open_branch,
-              5(new_branch_id_p, outer_branch_id, outer_eid, root_eid,
+              5(&new_branch_id, outer_branch_id, outer_eid, root_eid,
                 result_pool));
+
+  /* We allow the output pointer to be null, here, so that implementations
+     may assume their output pointer is non-null. */
+  if (new_branch_id_p)
+    *new_branch_id_p = new_branch_id;
 
   return SVN_NO_ERROR;
 }
@@ -229,11 +236,18 @@ svn_editor3_branch(svn_editor3_t *editor,
                    int outer_eid,
                    apr_pool_t *result_pool)
 {
+  const char *new_branch_id;
+
   SVN_ERR_ASSERT(VALID_EID(outer_eid));
 
   DO_CALLBACK(editor, cb_branch,
-              5(new_branch_id_p, from, outer_branch_id, outer_eid,
+              5(&new_branch_id, from, outer_branch_id, outer_eid,
                 result_pool));
+
+  /* We allow the output pointer to be null, here, so that implementations
+     may assume their output pointer is non-null. */
+  if (new_branch_id_p)
+    *new_branch_id_p = new_branch_id;
 
   return SVN_NO_ERROR;
 }
