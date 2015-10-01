@@ -1254,8 +1254,8 @@ editor3_branch(void *baton,
                                          from->eid, scratch_pool);
 
   /* Populate the mapping from the 'from' source */
-  SVN_ERR(svn_branch_instantiate_subtree(new_branch, -1, "", *from_subtree,
-                                         scratch_pool));
+  SVN_ERR(svn_branch_instantiate_elements(new_branch, *from_subtree,
+                                          scratch_pool));
 
   *new_branch_id_p = svn_branch_get_id(new_branch, result_pool);
   return SVN_NO_ERROR;

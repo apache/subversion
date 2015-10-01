@@ -831,54 +831,29 @@ svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
 }
 
 svn_error_t *
-svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
-                               svn_branch_eid_t new_parent_eid,
-                               const char *new_name,
-                               svn_branch_subtree_t new_subtree,
-                               apr_pool_t *scratch_pool)
+svn_branch_instantiate_elements(svn_branch_state_t *to_branch,
+                                svn_branch_subtree_t elements,
+                                apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
-  svn_branch_el_rev_content_t *new_root_content;
 
-  /* Source element must not be the same as the target parent element */
-  if (new_subtree.root_eid == new_parent_eid)
-    {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("Cannot branch from e%d to %s e%d/%s: "
-                                 "target element cannot be its own parent"),
-                               new_subtree.root_eid,
-                               svn_branch_get_id(to_branch, scratch_pool),
-                               new_parent_eid, new_name);
-    }
-
-  /* Instantiate the root element of NEW_SUBTREE */
-  new_root_content = svn_int_hash_get(new_subtree.e_map, new_subtree.root_eid);
-  if (new_root_content->payload)
-    svn_branch_update_element(to_branch, new_subtree.root_eid,
-                              new_parent_eid, new_name,
-                              new_root_content->payload);
-  else
-    svn_branch_update_subbranch_root_element(to_branch, new_subtree.root_eid,
-                                             new_parent_eid, new_name);
-
-  /* Instantiate all the children of NEW_SUBTREE */
-  for (hi = apr_hash_first(scratch_pool, new_subtree.e_map);
+  /* Instantiate all the elements of NEW_SUBTREE */
+  for (hi = apr_hash_first(scratch_pool, elements.e_map);
        hi; hi = apr_hash_next(hi))
     {
       int this_eid = svn_int_hash_this_key(hi);
       svn_branch_el_rev_content_t *this_element = apr_hash_this_val(hi);
 
-      if (this_eid != new_subtree.root_eid)
-        {
-          branch_map_set(to_branch, this_eid, this_element);
-        }
+      branch_map_set(to_branch, this_eid,
+                     svn_branch_el_rev_content_dup(
+                       this_element, apr_hash_pool_get(to_branch->e_map)));
     }
 
   /* branch any subbranches */
   {
     SVN_ITER_T(svn_branch_subtree_t) *bi;
 
-    for (SVN_HASH_ITER(bi, scratch_pool, new_subtree.subbranches))
+    for (SVN_HASH_ITER(bi, scratch_pool, elements.subbranches))
       {
         int this_outer_eid = svn_int_hash_this_key(bi->apr_hi);
         svn_branch_subtree_t *this_subtree = bi->val;
@@ -891,8 +866,8 @@ svn_branch_instantiate_subtree(svn_branch_state_t *to_branch,
                                                this_subtree->root_eid,
                                                bi->iterpool);
 
-        SVN_ERR(svn_branch_instantiate_subtree(new_branch, -1, "", *this_subtree,
-                                               bi->iterpool));
+        SVN_ERR(svn_branch_instantiate_elements(new_branch, *this_subtree,
+                                                bi->iterpool));
       }
   }
 
