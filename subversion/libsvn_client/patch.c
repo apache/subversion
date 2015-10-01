@@ -273,7 +273,57 @@ typedef struct patch_target_t {
 typedef struct patch_target_info_t {
   const char *local_abspath;
   svn_boolean_t deleted;
+  svn_boolean_t added;
 } patch_target_info_t;
+
+/* Check if LOCAL_ABSPATH is recorded as added in TARGETS_INFO */
+static svn_boolean_t
+target_is_added(const apr_array_header_t *targets_info,
+                const char *local_abspath,
+                apr_pool_t *scratch_pool)
+{
+  int i;
+
+  for (i = targets_info->nelts - 1; i >= 0; i--)
+  {
+    const patch_target_info_t *target_info =
+      APR_ARRAY_IDX(targets_info, i, const patch_target_info_t *);
+
+    const char *info = svn_dirent_skip_ancestor(target_info->local_abspath,
+                                                local_abspath);
+
+    if (info && !*info)
+      return target_info->added;
+    else if (info)
+      return FALSE;
+  }
+
+  return FALSE;
+}
+
+/* Check if LOCAL_ABSPATH or an ancestor is recorded as deleted in
+   TARGETS_INFO */
+static svn_boolean_t
+target_is_deleted(const apr_array_header_t *targets_info,
+                  const char *local_abspath,
+                  apr_pool_t *scratch_pool)
+{
+  int i;
+
+  for (i = targets_info->nelts - 1; i >= 0; i--)
+  {
+    const patch_target_info_t *target_info =
+      APR_ARRAY_IDX(targets_info, i, const patch_target_info_t *);
+
+    const char *info = svn_dirent_skip_ancestor(target_info->local_abspath,
+                                                local_abspath);
+
+    if (info)
+      return target_info->deleted;
+  }
+
+  return FALSE;
+}
 
 
 /* Strip STRIP_COUNT components from the front of PATH, returning
@@ -392,6 +442,7 @@ resolve_target_path(patch_target_t *target,
                     int strip_count,
                     svn_boolean_t has_text_changes,
                     svn_wc_context_t *wc_ctx,
+                    const apr_array_header_t *targets_info,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
@@ -451,6 +502,13 @@ resolve_target_path(patch_target_t *target,
       /* The target path is outside of the working copy. Skip it. */
       target->skipped = TRUE;
       target->local_abspath = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  if (target_is_deleted(targets_info, target->local_abspath, scratch_pool))
+    {
+      target->locally_deleted = TRUE;
+      target->db_kind = svn_node_none;
       return SVN_NO_ERROR;
     }
 
@@ -979,6 +1037,7 @@ init_patch_target(patch_target_t **patch_target,
                   const char *root_abspath,
                   svn_wc_context_t *wc_ctx, int strip_count,
                   svn_boolean_t remove_tempfiles,
+                  const apr_array_header_t *targets_info,
                   apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   patch_target_t *target;
@@ -1008,7 +1067,7 @@ init_patch_target(patch_target_t **patch_target,
 
   SVN_ERR(resolve_target_path(target, choose_target_filename(patch),
                               root_abspath, strip_count, has_text_changes,
-                              wc_ctx, result_pool, scratch_pool));
+                              wc_ctx, targets_info, result_pool, scratch_pool));
   *patch_target = target;
   if (! target->skipped)
     {
@@ -2334,6 +2393,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                 int strip_count,
                 svn_boolean_t ignore_whitespace,
                 svn_boolean_t remove_tempfiles,
+                const apr_array_header_t *targets_info,
                 svn_client_patch_func_t patch_func,
                 void *patch_baton,
                 svn_cancel_func_t cancel_func,
@@ -2349,7 +2409,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   svn_boolean_t has_text_changes = FALSE;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
-                            remove_tempfiles, result_pool, scratch_pool));
+                            remove_tempfiles, targets_info,
+                            result_pool, scratch_pool));
   if (target->skipped)
     {
       *patch_target = target;
@@ -2821,7 +2882,7 @@ create_missing_parents(patch_target_t *target,
                        const char *abs_wc_path,
                        svn_client_ctx_t *ctx,
                        svn_boolean_t dry_run,
-                       apr_hash_t *already_added,
+                       apr_array_header_t *targets_info,
                        apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
@@ -2902,33 +2963,41 @@ create_missing_parents(patch_target_t *target,
       for (i = present_components; i < components->nelts - 1; i++)
         {
           const char *component;
+          patch_target_info_t *pti;
 
           svn_pool_clear(iterpool);
 
+          if (ctx->cancel_func)
+            SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
           component = APR_ARRAY_IDX(components, i, const char *);
           local_abspath = svn_dirent_join(local_abspath, component,
-                                          scratch_pool);
+                                          iterpool);
+
+          if (target_is_added(targets_info, local_abspath, iterpool))
+            continue;
+
+          pti = apr_pcalloc(targets_info->pool, sizeof(*pti));
+
+          pti->local_abspath = apr_pstrdup(targets_info->pool,
+                                           local_abspath);
+          pti->added = TRUE;
+
+          APR_ARRAY_PUSH(targets_info, patch_target_info_t *) = pti;
+
           if (dry_run)
             {
-              if (!svn_hash_gets(already_added, local_abspath))
+              if (ctx->notify_func2)
                 {
-                  svn_hash_sets(already_added,
-                                apr_pstrdup(apr_hash_pool_get(already_added),
-                                            local_abspath),
-                                "");
-
-                  if (ctx->notify_func2)
-                    {
-                      /* Just do notification. */
-                      svn_wc_notify_t *notify;
-                      notify = svn_wc_create_notify(local_abspath,
-                                                    svn_wc_notify_add,
-                                                    iterpool);
-                      notify->kind = svn_node_dir;
-                      ctx->notify_func2(ctx->notify_baton2, notify,
-                                        iterpool);
-                    }
-              }
+                  /* Just do notification. */
+                  svn_wc_notify_t *notify;
+                  notify = svn_wc_create_notify(local_abspath,
+                                                svn_wc_notify_add,
+                                                iterpool);
+                  notify->kind = svn_node_dir;
+                  ctx->notify_func2(ctx->notify_baton2, notify,
+                                    iterpool);
+                }
             }
           else
             {
@@ -2936,10 +3005,6 @@ create_missing_parents(patch_target_t *target,
                * to version control. Allow cancellation since we
                * have not modified the working copy yet for this
                * target. */
-
-              if (ctx->cancel_func)
-                SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
-
               SVN_ERR(svn_wc_add_from_disk3(ctx->wc_ctx, local_abspath,
                                             NULL /*props*/,
                                             FALSE /* skip checks */,
@@ -2965,7 +3030,8 @@ create_missing_parents(patch_target_t *target,
 static svn_error_t *
 install_patched_target(patch_target_t *target, const char *abs_wc_path,
                        svn_client_ctx_t *ctx, svn_boolean_t dry_run,
-                       apr_hash_t *already_added, apr_pool_t *pool)
+                       apr_array_header_t *targets_info,
+                       apr_pool_t *pool)
 {
   if (target->deleted)
     {
@@ -3016,7 +3082,7 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
             }
           else
             SVN_ERR(create_missing_parents(target, abs_wc_path, ctx,
-                                           dry_run, already_added, pool));
+                                           dry_run, targets_info, pool));
 
         }
       else
@@ -3415,7 +3481,6 @@ apply_patches(/* The path to the patch file. */
   apr_pool_t *iterpool;
   svn_patch_file_t *patch_file;
   apr_array_header_t *targets_info;
-  apr_hash_t *already_added = apr_hash_make(scratch_pool);
 
   /* Try to open the patch file. */
   SVN_ERR(svn_diff_open_patch_file(&patch_file, patch_abspath, scratch_pool));
@@ -3441,6 +3506,7 @@ apply_patches(/* The path to the patch file. */
           SVN_ERR(apply_one_patch(&target, patch, root_abspath,
                                   ctx->wc_ctx, strip_count,
                                   ignore_whitespace, remove_tempfiles,
+                                  targets_info,
                                   patch_func, patch_baton,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   iterpool, iterpool));
@@ -3452,19 +3518,17 @@ apply_patches(/* The path to the patch file. */
               target_info->local_abspath = apr_pstrdup(scratch_pool,
                                                        target->local_abspath);
               target_info->deleted = target->deleted;
+              target_info->added = target->added;
 
               if (! target->skipped)
                 {
-                  APR_ARRAY_PUSH(targets_info,
-                                 patch_target_info_t *) = target_info;
-
                   if (target->has_text_changes
                       || target->added
                       || target->move_target_abspath
                       || target->deleted)
                     SVN_ERR(install_patched_target(target, root_abspath,
                                                    ctx, dry_run,
-                                                   already_added, iterpool));
+                                                   targets_info, iterpool));
 
                   if (target->has_prop_changes && (!target->deleted))
                     SVN_ERR(install_patched_prop_targets(target, ctx,
@@ -3472,12 +3536,9 @@ apply_patches(/* The path to the patch file. */
 
                   SVN_ERR(write_out_rejected_hunks(target, dry_run, iterpool));
 
-                  if (target->added)
-                    svn_hash_sets(already_added,
-                                  apr_pstrdup(scratch_pool,
-                                              target->local_abspath),
-                                  "");
-                }
+                  APR_ARRAY_PUSH(targets_info,
+                                 patch_target_info_t *) = target_info;
+              }
               SVN_ERR(send_patch_notification(target, ctx, iterpool));
 
               if (target->deleted && !target->skipped)
