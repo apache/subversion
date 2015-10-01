@@ -1918,9 +1918,11 @@ svn_branch_diff_func_t(svn_editor3_t *editor,
 static svn_error_t *
 subtree_diff_r(svn_editor3_t *editor,
                svn_branch_subtree_t *left,
+               svn_revnum_t left_rev,
                const char *left_bid,
                const char *left_rrpath,
                svn_branch_subtree_t *right,
+               svn_revnum_t right_rev,
                const char *right_bid,
                const char *right_rrpath,
                svn_branch_diff_func_t diff_func,
@@ -1928,10 +1930,12 @@ subtree_diff_r(svn_editor3_t *editor,
                apr_pool_t *scratch_pool)
 {
   const char *left_str
-    = left ? apr_psprintf(scratch_pool, "%s at /%s", left_bid, left_rrpath)
+    = left ? apr_psprintf(scratch_pool, "r%ld:%s:e%d at /%s",
+                          left_rev, left_bid, left->root_eid, left_rrpath)
            : NULL;
   const char *right_str
-    = right ? apr_psprintf(scratch_pool, "%s at /%s", right_bid, right_rrpath)
+    = right ? apr_psprintf(scratch_pool, "r%ld:%s:e%d at /%s",
+                           right_rev, right_bid, right->root_eid, right_rrpath)
             : NULL;
   const char *header;
   apr_hash_t *subbranches_l, *subbranches_r, *subbranches_all;
@@ -2018,8 +2022,8 @@ subtree_diff_r(svn_editor3_t *editor,
             }
         }
       SVN_ERR(subtree_diff_r(editor,
-                             sub_left, sub_left_bid, sub_left_rrpath,
-                             sub_right, sub_right_bid, sub_right_rrpath,
+                             sub_left, left_rev, sub_left_bid, sub_left_rrpath,
+                             sub_right, right_rev, sub_right_bid, sub_right_rrpath,
                              diff_func, prefix, scratch_pool));
     }
   return SVN_NO_ERROR;
@@ -2043,13 +2047,15 @@ branch_diff_r(svn_editor3_t *editor,
     = svn_branch_get_subtree(right->branch, right->eid, scratch_pool);
 
   SVN_ERR(subtree_diff_r(editor,
-                        s_left,
-                        svn_branch_get_id(left->branch, scratch_pool),
-                        svn_branch_get_root_rrpath(left->branch, scratch_pool),
-                        s_right,
-                        svn_branch_get_id(right->branch, scratch_pool),
-                        svn_branch_get_root_rrpath(right->branch, scratch_pool),
-                        diff_func, prefix, scratch_pool));
+                         s_left,
+                         left->rev,
+                         svn_branch_get_id(left->branch, scratch_pool),
+                         svn_branch_get_root_rrpath(left->branch, scratch_pool),
+                         s_right,
+                         right->rev,
+                         svn_branch_get_id(right->branch, scratch_pool),
+                         svn_branch_get_root_rrpath(right->branch, scratch_pool),
+                         diff_func, prefix, scratch_pool));
   return SVN_NO_ERROR;
 }
 
