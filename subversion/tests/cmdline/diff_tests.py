@@ -5077,6 +5077,7 @@ def diff_symlinks(sbox):
     'Index: %s\n' % sbox.path('to-iota'),
     '===================================================================\n',
     'diff --git a/to-iota b/to-iota\n',
+    'index 3ef26e44..9930f9a0 120644\n',
     '--- a/to-iota\t(revision 2)\n',
     '+++ b/to-iota\t(working copy)\n',
     '@@ -1 +1 @@\n',

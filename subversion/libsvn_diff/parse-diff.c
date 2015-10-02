@@ -1149,12 +1149,12 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                 }
 
               SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &pos, iterpool));
+              /* Set for the type and context by using != the other type */
+              if (last_line_type != modified_line)
+                original_no_final_eol = TRUE;
+              if (last_line_type != original_line)
+                modified_no_final_eol = TRUE;
             }
-          /* Set for the type and context by using != the other type */
-          if (last_line_type != modified_line)
-            original_no_final_eol = TRUE;
-          if (last_line_type != original_line)
-            modified_no_final_eol = TRUE;
 
           continue;
         }
@@ -1699,6 +1699,39 @@ git_new_mode(enum parse_state *new_state, char *line, svn_patch_t *patch,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+git_index(enum parse_state *new_state, char *line, svn_patch_t *patch,
+          apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  /* We either have something like "index 33e5b38..0000000" (which we just
+     ignore as we are not interested in git specific shas) or something like
+     "index 33e5b38..0000000 120000" which tells us the mode, that isn't
+     changed by applying this patch.
+
+     If the mode would have changed then we would see 'old mode' and 'new mode'
+     lines.
+  */
+  line = strchr(line + STRLEN_LITERAL("index "), ' ');
+
+  if (line && patch->new_executable_bit == svn_tristate_unknown
+           && patch->new_symlink_bit == svn_tristate_unknown
+           && patch->operation != svn_diff_op_added
+           && patch->operation != svn_diff_op_deleted)
+    {
+      SVN_ERR(parse_git_mode_bits(&patch->new_executable_bit,
+                                  &patch->new_symlink_bit,
+                                  line + 1));
+
+      /* There is no change.. so set the old values to the new values */
+      patch->old_executable_bit = patch->new_executable_bit;
+      patch->old_symlink_bit = patch->new_symlink_bit;
+    }
+
+  /* This function doesn't change the state! */
+  /* *new_state = *new_state */
+  return SVN_NO_ERROR;
+}
+
 /* Parse the 'rename from ' line of a git extended unidiff. */
 static svn_error_t *
 git_move_from(enum parse_state *new_state, char *line, svn_patch_t *patch,
@@ -2062,6 +2095,10 @@ static struct transition transitions[] =
 
   {"deleted file ",     state_git_diff_seen,    git_deleted_file},
 
+  {"index ",            state_git_diff_seen,    git_index},
+  {"index ",            state_git_tree_seen,    git_index},
+  {"index ",            state_git_mode_seen,    git_index},
+
   {"GIT binary patch",  state_git_diff_seen,    binary_patch_start},
   {"GIT binary patch",  state_git_tree_seen,    binary_patch_start},
   {"GIT binary patch",  state_git_mode_seen,    binary_patch_start},
@@ -2144,17 +2181,13 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
                && line_after_tree_header_read
                && !valid_header_line)
         {
-          /* git patches can contain an index line after the file mode line */
-          if (!starts_with(line->data, "index "))
-          {
-            /* We have a valid diff header for a patch with only tree changes.
-             * Rewind to the start of the line just read, so subsequent calls
-             * to this function don't end up skipping the line -- it may
-             * contain a patch. */
-            SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &last_line,
-                    scratch_pool));
-            break;
-          }
+          /* We have a valid diff header for a patch with only tree changes.
+           * Rewind to the start of the line just read, so subsequent calls
+           * to this function don't end up skipping the line -- it may
+           * contain a patch. */
+          SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &last_line,
+                                   scratch_pool));
+          break;
         }
       else if (state == state_git_tree_seen
                || state == state_git_mode_seen)
@@ -2162,8 +2195,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
           line_after_tree_header_read = TRUE;
         }
       else if (! valid_header_line && state != state_start
-               && state != state_git_diff_seen
-               && !starts_with(line->data, "index "))
+               && state != state_git_diff_seen)
         {
           /* We've encountered an invalid diff header.
            *

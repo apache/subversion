@@ -359,6 +359,7 @@ maybe_print_mode_change(svn_stream_t *os,
                         svn_boolean_t exec_bit2,
                         svn_boolean_t symlink_bit1,
                         svn_boolean_t symlink_bit2,
+                        const char *git_index_shas,
                         apr_pool_t *scratch_pool)
 {
   int old_mode = (exec_bit1 ? exec_mode : noexec_mode)
@@ -366,7 +367,13 @@ maybe_print_mode_change(svn_stream_t *os,
   int new_mode = (exec_bit2 ? exec_mode : noexec_mode)
                  | (symlink_bit2 ? kind_symlink_mode : kind_file_mode);
   if (old_mode == new_mode)
-    return SVN_NO_ERROR;
+    {
+      if (git_index_shas)
+        SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
+                                            "index %s %06o" APR_EOL_STR,
+                                            git_index_shas, old_mode));
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                       "old mode %06o" APR_EOL_STR, old_mode));
@@ -394,6 +401,7 @@ print_git_diff_header(svn_stream_t *os,
                       svn_revnum_t copyfrom_rev,
                       apr_hash_t *left_props,
                       apr_hash_t *right_props,
+                      const char *git_index_shas,
                       const char *header_encoding,
                       apr_pool_t *scratch_pool)
 {
@@ -430,6 +438,7 @@ print_git_diff_header(svn_stream_t *os,
       SVN_ERR(maybe_print_mode_change(os, header_encoding,
                                       exec_bit1, exec_bit2,
                                       symlink_bit1, symlink_bit2,
+                                      git_index_shas,
                                       scratch_pool));
     }
   else if (operation == svn_diff_op_added)
@@ -454,6 +463,7 @@ print_git_diff_header(svn_stream_t *os,
       SVN_ERR(maybe_print_mode_change(os, header_encoding,
                                       exec_bit1, exec_bit2,
                                       symlink_bit1, symlink_bit2,
+                                      git_index_shas,
                                       scratch_pool));
     }
   else if (operation == svn_diff_op_moved)
@@ -468,6 +478,7 @@ print_git_diff_header(svn_stream_t *os,
       SVN_ERR(maybe_print_mode_change(os, header_encoding,
                                       exec_bit1, exec_bit2,
                                       symlink_bit1, symlink_bit2,
+                                      git_index_shas,
                                       scratch_pool));
     }
 
@@ -553,6 +564,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                                       SVN_INVALID_REVNUM,
                                       left_props,
                                       right_props,
+                                      NULL,
                                       encoding, scratch_pool));
 
       /* --- label1
@@ -718,6 +730,7 @@ diff_props_changed(const char *diff_relpath,
    as long as RESULT_POOL, containing the git-like represention of TMPFILE */
 static svn_error_t *
 transform_link_to_git(const char **new_tmpfile,
+                      const char **git_sha1,
                       const char *tmpfile,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
@@ -725,6 +738,8 @@ transform_link_to_git(const char **new_tmpfile,
   apr_file_t *orig;
   apr_file_t *gitlike;
   svn_stringbuf_t *line;
+
+  *git_sha1 = NULL;
 
   SVN_ERR(svn_io_file_open(&orig, tmpfile, APR_READ, APR_OS_DEFAULT,
                            scratch_pool));
@@ -737,8 +752,23 @@ transform_link_to_git(const char **new_tmpfile,
 
   if (line->len > 5 && !strncmp(line->data, "link ", 5))
     {
-      SVN_ERR(svn_io_file_write_full(gitlike, line->data + 5, line->len - 5,
+      const char *sz_str;
+      svn_checksum_t *checksum;
+
+      svn_stringbuf_remove(line, 0, 5);
+
+      SVN_ERR(svn_io_file_write_full(gitlike, line->data, line->len,
                                      NULL, scratch_pool));
+
+      /* git calculates the sha over "blob X\0" + the actual data,
+         where X is the decimal size of the blob. */
+      sz_str = apr_psprintf(scratch_pool, "blob %u", line->len);
+      svn_stringbuf_insert(line, 0, sz_str, strlen(sz_str) + 1);
+
+      SVN_ERR(svn_checksum(&checksum, svn_checksum_sha1,
+                           line->data, line->len, scratch_pool));
+
+      *git_sha1 = svn_checksum_to_cstring(checksum, result_pool);
     }
   else
     {
@@ -784,6 +814,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
   const char *path2 = dwi->ddi.orig_path_2;
   const char *mimetype1 = svn_prop_get_value(left_props, SVN_PROP_MIME_TYPE);
   const char *mimetype2 = svn_prop_get_value(right_props, SVN_PROP_MIME_TYPE);
+  const char *index_shas = NULL;
 
   /* If only property differences are shown, there's nothing to do. */
   if (dwi->properties_only)
@@ -807,13 +838,29 @@ diff_content_changed(svn_boolean_t *wrote_header,
 
   if (dwi->use_git_diff_format)
     {
+      const char *l_hash = NULL;
+      const char *r_hash = NULL;
+
       /* Change symlinks to their 'git like' plain format */
       if (svn_prop_get_value(left_props, SVN_PROP_SPECIAL))
-        SVN_ERR(transform_link_to_git(&tmpfile1, tmpfile1,
+        SVN_ERR(transform_link_to_git(&tmpfile1, &l_hash, tmpfile1,
                                       scratch_pool, scratch_pool));
       if (svn_prop_get_value(right_props, SVN_PROP_SPECIAL))
-        SVN_ERR(transform_link_to_git(&tmpfile2, tmpfile2,
+        SVN_ERR(transform_link_to_git(&tmpfile2, &r_hash, tmpfile2,
                                       scratch_pool, scratch_pool));
+
+      if (l_hash && r_hash)
+        {
+          /* The symlink has changed. But we can't tell the user of the
+             diff whether we are writing git diffs or svn diffs of the
+             symlink... except when we add a git-like index line */
+
+          l_hash = apr_pstrndup(scratch_pool, l_hash, 8);
+          r_hash = apr_pstrndup(scratch_pool, r_hash, 8);
+
+          index_shas = apr_psprintf(scratch_pool, "%8s..%8s",
+                                    l_hash, r_hash);
+        }
     }
 
   if (! dwi->force_binary && (mt1_binary || mt2_binary))
@@ -856,6 +903,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                         copyfrom_rev,
                                         left_props,
                                         right_props,
+                                        index_shas,
                                         dwi->header_encoding,
                                         scratch_pool));
 
@@ -1019,6 +1067,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                             copyfrom_rev,
                                             left_props,
                                             right_props,
+                                            index_shas,
                                             dwi->header_encoding,
                                             scratch_pool));
             }
