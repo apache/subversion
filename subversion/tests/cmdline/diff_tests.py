@@ -5059,7 +5059,7 @@ def diff_symlinks(sbox):
 
   sbox.simple_commit()
   os.remove(sbox.ospath('to-iota'))
-  sbox.simple_symlink('A/mu', 'to-iota')
+  sbox.simple_symlink('A/B/E/alpha', 'to-iota')
 
   svntest.actions.run_and_verify_svn([
     'Index: %s\n' % sbox.path('to-iota'),
@@ -5069,7 +5069,7 @@ def diff_symlinks(sbox):
     '@@ -1 +1 @@\n',
     '-link iota\n',
     '\ No newline at end of file\n',
-    '+link A/mu\n',
+    '+link A/B/E/alpha\n',
     '\ No newline at end of file\n',
   ], [], 'diff', wc_dir)
 
@@ -5082,7 +5082,7 @@ def diff_symlinks(sbox):
     '@@ -1 +1 @@\n',
     '-iota\n',
     '\ No newline at end of file\n',
-    '+A/mu\n',
+    '+A/B/E/alpha\n',
     '\ No newline at end of file\n',
   ], [], 'diff', wc_dir, '--git')
 
