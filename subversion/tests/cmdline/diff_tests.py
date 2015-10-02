@@ -5013,6 +5013,80 @@ def diff_incomplete_props(sbox):
   svntest.verify.compare_and_display_lines('base vs after', 'local diff',
                                            out1, out3)
 
+def diff_symlinks(sbox):
+  "diff some symlinks"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_add_symlink('iota', 'to-iota')
+
+  svntest.actions.run_and_verify_svn([
+    'Index: %s\n' % sbox.path('to-iota'),
+    '===================================================================\n',
+    '--- %s\t(nonexistent)\n' % sbox.path('to-iota'),
+    '+++ %s\t(working copy)\n' % sbox.path('to-iota'),
+    '@@ -0,0 +1 @@\n',
+    '+link iota\n',
+    '\ No newline at end of file\n',
+    '\n',
+    'Property changes on: %s\n' % sbox.path('to-iota'),
+    '___________________________________________________________________\n',
+    'Added: svn:special\n',
+    '## -0,0 +1 ##\n',
+    '+*\n',
+    '\ No newline at end of property\n',
+  ], [], 'diff', wc_dir)
+
+  svntest.actions.run_and_verify_svn([
+    'Index: %s\n' % sbox.path('to-iota'),
+    '===================================================================\n',
+    'diff --git a/to-iota b/to-iota\n',
+    'new file mode 120644\n',
+    '--- /dev/null\t(nonexistent)\n',
+    '+++ b/to-iota\t(working copy)\n',
+    '@@ -0,0 +1 @@\n',
+    '+iota\n',
+    '\ No newline at end of file\n',
+    '\n',
+    'Property changes on: to-iota\n',
+    '___________________________________________________________________\n',
+    'Added: svn:special\n',
+    '## -0,0 +1 ##\n',
+    '+*\n',
+    '\ No newline at end of property\n',
+  ], [], 'diff', wc_dir, '--git')
+
+  sbox.simple_commit()
+  os.remove(sbox.ospath('to-iota'))
+  sbox.simple_symlink('A/mu', 'to-iota')
+
+  svntest.actions.run_and_verify_svn([
+    'Index: %s\n' % sbox.path('to-iota'),
+    '===================================================================\n',
+    '--- %s\t(revision 2)\n' % sbox.path('to-iota'),
+    '+++ %s\t(working copy)\n' % sbox.path('to-iota'),
+    '@@ -1 +1 @@\n',
+    '-link iota\n',
+    '\ No newline at end of file\n',
+    '+link A/mu\n',
+    '\ No newline at end of file\n',
+  ], [], 'diff', wc_dir)
+
+  svntest.actions.run_and_verify_svn([
+    'Index: %s\n' % sbox.path('to-iota'),
+    '===================================================================\n',
+    'diff --git a/to-iota b/to-iota\n',
+    '--- a/to-iota\t(revision 2)\n',
+    '+++ b/to-iota\t(working copy)\n',
+    '@@ -1 +1 @@\n',
+    '-iota\n',
+    '\ No newline at end of file\n',
+    '+A/mu\n',
+    '\ No newline at end of file\n',
+  ], [], 'diff', wc_dir, '--git')
+
+
 ########################################################################
 #Run the tests
 
@@ -5106,6 +5180,7 @@ test_list = [ None,
               diff_summarize_ignore_properties,
               diff_incomplete,
               diff_incomplete_props,
+              diff_symlinks,
               ]
 
 if __name__ == '__main__':
