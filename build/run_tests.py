@@ -214,7 +214,7 @@ class TestHarness:
       else:
         cmdline.append('--parallel-instances=%d' % self.opts.parallel)
     if self.opts.svn_bin is not None:
-      cmdline.append('--bin=%s', self.opts.svn_bin)
+      cmdline.append('--bin=%s' % self.opts.svn_bin)
     if self.opts.url is not None:
       cmdline.append('--url=%s' % self.opts.url)
     if self.opts.fs_type is not None:
