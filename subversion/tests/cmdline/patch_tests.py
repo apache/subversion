@@ -6999,8 +6999,8 @@ def patch_like_git_symlink(sbox):
                                        expected_status, expected_skip,
                                        [], True, True)
 
-def patch_symlink_madness(sbox):
-  "patch symlink madness"
+def patch_symlink_changes(sbox):
+  "patch symlink changes"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -7018,23 +7018,14 @@ def patch_symlink_madness(sbox):
 
   sbox.simple_commit()
 
-  #os.remove(sbox.ospath('iota'))
-  #sbox.simple_symlink('A/B/E/alpha', 'iota')
-  #
-  #_, diff_changelink, _ = svntest.actions.run_and_verify_svn(None, [],
-  #                                                          'diff', wc_dir)
-  #
-  #_, git_changelink, _ = svntest.actions.run_and_verify_svn(None, [],
-  #                                                          'diff', wc_dir, '--git')
-  #
-  #sbox.simple_commit()
-  #sbox.simple_propdel('svn:special', 'iota')
-  #
-  #_, diff_nolink, _ = svntest.actions.run_and_verify_svn(None, [],
-  #                                                       'diff', wc_dir)
-  #
-  #_, git_nolink, _ = svntest.actions.run_and_verify_svn(None, [],
-  #                                                      'diff', wc_dir, '--git')
+  os.remove(sbox.ospath('iota'))
+  sbox.simple_symlink('A/B/E/alpha', 'iota')
+
+  _, diff_changelink, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                            'diff', wc_dir)
+
+  _, git_changelink, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                            'diff', wc_dir, '--git')
 
   tolink_patch = sbox.get_tempname('tolink.patch')
   svntest.main.file_write(tolink_patch, ''.join(diff_tolink), mode='wb')
@@ -7042,17 +7033,11 @@ def patch_symlink_madness(sbox):
   git_tolink_patch = sbox.get_tempname('git_tolink.patch')
   svntest.main.file_write(git_tolink_patch, ''.join(git_tolink), mode='wb')
 
-  #changelink_patch = sbox.get_tempname('changelink.patch')
-  #svntest.main.file_write(changelink_patch, ''.join(diff_changelink), mode='wb')
-  #
-  #git_changelink_patch = sbox.get_tempname('git_changelink.patch')
-  #svntest.main.file_write(git_changelink_patch, ''.join(git_changelink), mode='wb')
-  #
-  #nolink_patch = sbox.get_tempname('nolink.patch')
-  #svntest.main.file_write(nolink_patch, ''.join(diff_nolink), mode='wb')
-  #
-  #git_nolink_patch = sbox.get_tempname('git_nolink.patch')
-  #svntest.main.file_write(git_nolink_patch, ''.join(git_nolink), mode='wb')
+  changelink_patch = sbox.get_tempname('changelink.patch')
+  svntest.main.file_write(changelink_patch, ''.join(diff_changelink), mode='wb')
+
+  git_changelink_patch = sbox.get_tempname('git_changelink.patch')
+  svntest.main.file_write(git_changelink_patch, ''.join(git_changelink), mode='wb')
 
   sbox.simple_revert('iota')
   sbox.simple_update('', 1)
@@ -7119,6 +7104,55 @@ def patch_symlink_madness(sbox):
                                        [], True, True,
                                        '--reverse-diff')
 
+  # Retry
+  expected_output.tweak('iota', status='GG')
+  svntest.actions.run_and_verify_patch(wc_dir, tolink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count,
+                                       '--reverse-diff')
+  svntest.actions.run_and_verify_patch(wc_dir, git_tolink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # And now just tweak the link
+  expected_output.tweak('iota', status='U ')
+  expected_disk.tweak('iota', props={'svn:special': '*'})
+  expected_status.tweak('iota', status='M ')
+
+  if svntest.main.is_posix_os():
+    expected_disk.tweak('iota', contents="This is the file 'alpha'.\n")
+  else:
+    expected_disk.tweak('iota', contents="link A/B/E/alpha")
+
+  sbox.simple_revert('iota')
+  svntest.actions.run_and_verify_patch(wc_dir, changelink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count)
+
+  # And in git style
+  sbox.simple_revert('iota')
+  svntest.actions.run_and_verify_patch(wc_dir, git_changelink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # Retry
+  expected_output.tweak('iota', status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, changelink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count)
+  svntest.actions.run_and_verify_patch(wc_dir, git_changelink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
 
 ########################################################################
 #Run the tests
@@ -7196,7 +7230,7 @@ test_list = [ None,
               patch_add_remove_executable,
               patch_git_symlink,
               patch_like_git_symlink,
-              patch_symlink_madness,
+              patch_symlink_changes,
             ]
 
 if __name__ == '__main__':
