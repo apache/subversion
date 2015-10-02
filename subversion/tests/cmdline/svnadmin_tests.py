@@ -3232,10 +3232,17 @@ def dump_no_op_change(sbox):
   # reconstructed repositories.  This used to fail as described in the
   # Issue 4598 (https://issues.apache.org/jira/browse/SVN-4598), at least
   # around r1706415.
+  #
+  # Test svn log -v for r2:
   _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
                                                       '-r2', sbox.repo_url)
   svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
                                      '-r2', sbox2.repo_url)
+  # Test svn log -v for /bar:
+  _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
+                                                      sbox.repo_url + '/bar')
+  svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
+                                     sbox2.repo_url + '/bar')
 
 ########################################################################
 # Run the tests
