@@ -2597,6 +2597,9 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
         }
     }
 
+  /* Assume nothing changed. Will be updated via property hunks */
+  target->is_special = target->is_symlink;
+
   /* Match property hunks. */
   for (hash_index = apr_hash_first(scratch_pool, patch->prop_patches);
        hash_index;
@@ -2609,8 +2612,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       prop_name = apr_hash_this_key(hash_index);
       prop_patch = apr_hash_this_val(hash_index);
 
-      if (! strcmp(prop_name, SVN_PROP_SPECIAL))
-        target->is_special = TRUE;
+      if (!strcmp(prop_name, SVN_PROP_SPECIAL))
+        target->is_special = (prop_patch->operation != svn_diff_op_deleted);
 
       /* We'll store matched hunks in prop_content. */
       prop_target = svn_hash_gets(target->prop_targets, prop_name);
@@ -2704,12 +2707,15 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           target->is_special = TRUE;
         }
       else
-        SVN_ERR(svn_diff_hunk__create_deletes_single_line(
+        {
+          SVN_ERR(svn_diff_hunk__create_deletes_single_line(
                                             &hunk,
                                             SVN_PROP_SPECIAL_VALUE,
                                             patch,
                                             result_pool,
                                             iterpool));
+          target->is_special = FALSE;
+        }
 
       /* Derive a hunk_info from hunk. */
       SVN_ERR(get_hunk_info(&hi, target, prop_target->content,
@@ -3133,8 +3139,7 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
 
       if (! dry_run && ! target->skipped)
         {
-          /* ### Are these properly reset? */
-          if (target->is_special || target->is_symlink)
+          if (target->is_special)
             {
               svn_stream_t *stream;
               svn_stream_t *patched_stream;
