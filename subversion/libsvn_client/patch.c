@@ -588,6 +588,22 @@ resolve_target_path(patch_target_t *target,
         }
     }
 
+#ifndef HAVE_SYMLINK
+  if (target->kind_on_disk == svn_node_file
+      && !target->is_symlink
+      && !target->locally_deleted
+      && status->prop_status != svn_wc_status_none)
+    {
+      const svn_string_t *value;
+
+      SVN_ERR(svn_wc_prop_get2(&value, wc_ctx, target->local_abspath,
+                               SVN_PROP_SPECIAL, scratch_pool, scratch_pool));
+
+      if (value)
+        target->is_symlink = TRUE;
+    }
+#endif
+
   return SVN_NO_ERROR;
 }
 
