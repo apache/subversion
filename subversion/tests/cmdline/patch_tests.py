@@ -50,11 +50,6 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = svntest.wc.StateItem
 
-def make_patch_path(sbox, name='my.patch'):
-  dir = sbox.add_wc_path('patches')
-  os.mkdir(dir)
-  return os.path.abspath(os.path.join(dir, name))
-
 ########################################################################
 #Tests
 
@@ -64,7 +59,7 @@ def patch(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
@@ -218,7 +213,7 @@ def patch(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -234,7 +229,7 @@ def patch_absolute_paths(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = os.path.abspath(sbox.get_tempname('my.patch'))
 
   os.chdir(wc_dir)
 
@@ -280,7 +275,7 @@ def patch_absolute_paths(sbox):
     lambda_path:  Item(verb='Skipped missing target'),
   })
 
-  svntest.actions.run_and_verify_patch('', os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch('', patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -295,7 +290,7 @@ def patch_offset(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = os.path.abspath(sbox.get_tempname('my.patch'))
   mu_path = sbox.ospath('A/mu')
   iota_path = sbox.ospath('iota')
 
@@ -493,7 +488,7 @@ def patch_offset(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch('', os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch('', patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -508,7 +503,7 @@ def patch_chopped_leading_spaces(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
@@ -662,7 +657,7 @@ def patch_chopped_leading_spaces(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -678,7 +673,7 @@ def patch_strip1(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
@@ -832,7 +827,7 @@ def patch_strip1(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -848,7 +843,7 @@ def patch_no_index_line(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   gamma_path = sbox.ospath('A/D/gamma')
   iota_path = sbox.ospath('iota')
 
@@ -919,7 +914,7 @@ def patch_no_index_line(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -934,7 +929,7 @@ def patch_add_new_dir(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
 
   # The first diff is adding 'new' with two missing dirs. The second is
   # adding 'new' with one missing dir to a 'A/B/E' that is locally deleted
@@ -1015,7 +1010,7 @@ def patch_add_new_dir(sbox):
      A_C_new_path     : Item(verb='Skipped missing target')})
 
   svntest.actions.run_and_verify_patch(wc_dir,
-                                       os.path.abspath(patch_file_path),
+                                       patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -1029,7 +1024,7 @@ def patch_remove_empty_dirs(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
 
   # Contents of B:
   # A/B/lamba
@@ -1117,7 +1112,7 @@ def patch_remove_empty_dirs(sbox):
   expected_skip = wc.State('', { })
 
   svntest.actions.run_and_verify_patch(wc_dir,
-                                       os.path.abspath(patch_file_path),
+                                       patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -1145,7 +1140,7 @@ def patch_reject(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status)
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
 
   # Apply patch
 
@@ -1186,7 +1181,7 @@ def patch_reject(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -1216,7 +1211,7 @@ def patch_keywords(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status)
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
 
   # Apply patch
 
@@ -1247,7 +1242,7 @@ def patch_keywords(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -1261,7 +1256,7 @@ def patch_with_fuzz(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
 
   mu_path = sbox.ospath('A/mu')
 
@@ -1386,7 +1381,7 @@ def patch_with_fuzz(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -1401,7 +1396,7 @@ def patch_reverse(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
@@ -1555,7 +1550,7 @@ def patch_reverse(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -1571,7 +1566,7 @@ def patch_no_svn_eol_style(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
   # CRLF is a string that will match a CRLF sequence read from a text file.
@@ -1658,7 +1653,7 @@ def patch_no_svn_eol_style(sbox):
       expected_skip = wc.State('', { })
 
       svntest.actions.run_and_verify_patch(wc_dir,
-                                           os.path.abspath(patch_file_path),
+                                           patch_file_path,
                                            expected_output,
                                            expected_disk,
                                            expected_status,
@@ -1676,7 +1671,7 @@ def patch_with_svn_eol_style(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
   # CRLF is a string that will match a CRLF sequence read from a text file.
@@ -1773,7 +1768,7 @@ def patch_with_svn_eol_style(sbox):
       expected_skip = wc.State('', { })
 
       svntest.actions.run_and_verify_patch(wc_dir,
-                                           os.path.abspath(patch_file_path),
+                                           patch_file_path,
                                            expected_output,
                                            expected_disk,
                                            expected_status,
@@ -1791,7 +1786,7 @@ def patch_with_svn_eol_style_uncommitted(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
   # CRLF is a string that will match a CRLF sequence read from a text file.
@@ -1882,7 +1877,7 @@ def patch_with_svn_eol_style_uncommitted(sbox):
       expected_skip = wc.State('', { })
 
       svntest.actions.run_and_verify_patch(wc_dir,
-                                           os.path.abspath(patch_file_path),
+                                           patch_file_path,
                                            expected_output,
                                            expected_disk,
                                            expected_status,
@@ -1900,7 +1895,7 @@ def patch_with_ignore_whitespace(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
@@ -2018,7 +2013,7 @@ def patch_with_ignore_whitespace(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -2034,7 +2029,7 @@ def patch_replace_locally_deleted_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
@@ -2103,7 +2098,7 @@ def patch_replace_locally_deleted_file(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -2118,7 +2113,7 @@ def patch_no_eol_at_eof(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   iota_path = sbox.ospath('iota')
 
   iota_contents = [
@@ -2176,7 +2171,7 @@ def patch_no_eol_at_eof(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -2191,7 +2186,7 @@ def patch_with_properties(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   iota_path = sbox.ospath('iota')
 
   modified_prop_contents = "This is the property 'modified'.\n"
@@ -2247,7 +2242,7 @@ def patch_with_properties(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -2262,7 +2257,7 @@ def patch_same_twice(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
   beta_path = sbox.ospath('A/B/E/beta')
 
@@ -2417,7 +2412,7 @@ def patch_same_twice(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -2451,7 +2446,7 @@ def patch_same_twice(sbox):
   iota_contents += "Some more bytes\n"
   expected_disk.tweak('iota', contents=iota_contents)
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -2466,7 +2461,7 @@ def patch_dir_properties(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   B_path = sbox.ospath('A/B')
 
   modified_prop_contents = "This is the property 'modified'.\n"
@@ -2546,7 +2541,7 @@ def patch_dir_properties(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -2561,7 +2556,7 @@ def patch_add_path_with_props(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   iota_path = sbox.ospath('iota')
 
   # Apply patch that adds two files, one of which is empty.
@@ -2612,7 +2607,7 @@ def patch_add_path_with_props(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -2627,7 +2622,7 @@ def patch_prop_offset(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = os.path.abspath(sbox.get_tempname('my.patch'))
   iota_path = sbox.ospath('iota')
 
   prop1_content = ''.join([
@@ -2826,7 +2821,7 @@ def patch_prop_offset(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch('', os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch('', patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -2840,7 +2835,7 @@ def patch_prop_with_fuzz(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
 
   mu_path = sbox.ospath('A/mu')
 
@@ -2969,7 +2964,7 @@ def patch_prop_with_fuzz(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -2983,7 +2978,7 @@ def patch_git_empty_files(sbox):
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
 
   new_path = sbox.ospath('new')
 
@@ -3014,7 +3009,7 @@ def patch_git_empty_files(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3029,7 +3024,7 @@ def patch_old_target_names(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
@@ -3140,7 +3135,7 @@ def patch_old_target_names(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3155,7 +3150,7 @@ def patch_reverse_revert(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
   mu_contents_pre_patch = [
@@ -3309,7 +3304,7 @@ def patch_reverse_revert(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3337,7 +3332,7 @@ def patch_reverse_revert(sbox):
   ### instead of causing a replacement.
   expected_status.tweak('A/B/E/beta', status='R ')
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3354,7 +3349,7 @@ def patch_one_property(sbox, trailing_eol):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
   # Apply patch
@@ -3395,7 +3390,7 @@ def patch_one_property(sbox, trailing_eol):
 
   expected_skip = wc.State('.', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3429,7 +3424,7 @@ def patch_add_symlink(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
 
   # Apply patch
 
@@ -3463,7 +3458,7 @@ def patch_add_symlink(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3478,7 +3473,7 @@ def patch_moved_away(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
   mu_contents = [
@@ -3596,7 +3591,7 @@ def patch_moved_away(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3612,7 +3607,7 @@ def patch_lacking_trailing_eol(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   iota_path = sbox.ospath('iota')
   mu_path = sbox.ospath('A/mu')
 
@@ -3650,7 +3645,7 @@ def patch_lacking_trailing_eol(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3666,7 +3661,7 @@ def patch_deletes_prop(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   iota_path = sbox.ospath('iota')
 
   svntest.main.run_svn(None, 'propset', 'propname', 'propvalue',
@@ -3704,7 +3699,7 @@ def patch_deletes_prop(sbox):
   expected_output = [
     ' U        %s\n' % sbox.ospath('iota'),
   ]
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3732,7 +3727,7 @@ def patch_deletes_prop(sbox):
     ]
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3748,7 +3743,7 @@ def patch_reversed_add_with_props(sbox):
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
 
   # Add a new file which also has props set on it.
   newfile_path = sbox.ospath('newfile')
@@ -3781,7 +3776,7 @@ def patch_reversed_add_with_props(sbox):
   expected_output = [
     'D         %s\n' % newfile_path,
   ]
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3797,7 +3792,7 @@ def patch_reversed_add_with_props2(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
 
   # Add a new file which also has props set on it.
   newfile_path = sbox.ospath('newfile')
@@ -3836,7 +3831,7 @@ def patch_reversed_add_with_props2(sbox):
   expected_output = [
     'D         %s\n' % newfile_path,
   ]
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3852,7 +3847,7 @@ def patch_dev_null(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
 
   # Git (and maybe other tools) use '/dev/null' as the old path for
   # newly added files, and as the new path for deleted files.
@@ -3892,7 +3887,7 @@ def patch_dev_null(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3908,7 +3903,7 @@ def patch_delete_and_skip(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = os.path.abspath(sbox.get_tempname('my.patch'))
 
   os.chdir(wc_dir)
 
@@ -3970,7 +3965,7 @@ def patch_delete_and_skip(sbox):
     '',
     {skipped_path: Item(verb='Skipped missing target')})
 
-  svntest.actions.run_and_verify_patch('', os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch('', patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3985,7 +3980,7 @@ def patch_target_no_eol_at_eof(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   iota_path = sbox.ospath('iota')
   mu_path = sbox.ospath('A/mu')
 
@@ -4074,7 +4069,7 @@ def patch_target_no_eol_at_eof(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -4088,7 +4083,7 @@ def patch_add_and_delete(sbox):
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
 
   unidiff_patch = [
     "Index: foo\n",
@@ -4127,7 +4122,7 @@ def patch_add_and_delete(sbox):
 
   # Failed with "The node 'P' was not found" when erroneously checking
   # whether 'P/Q' should be deleted.
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -4142,7 +4137,7 @@ def patch_git_with_index_line(sbox):
 
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
 
   unidiff_patch = [
     "diff --git a/src/tools/ConsoleRunner/hi.txt b/src/tools/ConsoleRunner/hi.txt\n",
@@ -4182,7 +4177,7 @@ def patch_git_with_index_line(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -4197,7 +4192,7 @@ def patch_change_symlink_target(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, '\n'.join([
     "Index: link",
     "===================================================================",
@@ -4258,7 +4253,7 @@ def patch_replace_dir_with_file_and_vv(sbox):
   "replace dir with file and file with dir"
   sbox.build(read_only=True)
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join([
   # Delete all files in D and descendants to delete D itself
     "Index: A/D/G/pi\n",
@@ -4359,7 +4354,7 @@ def single_line_mismatch(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join([
     "Index: test\n",
     "===================================================================\n",
@@ -4394,7 +4389,7 @@ def patch_empty_file(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join([
   # patch a file containing just '\n' to 'replacement\n'
     "Index: lf.txt\n",
@@ -4568,7 +4563,7 @@ def patch_lacking_trailing_eol_on_context(sbox):
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
 
   # Prepare
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -4595,7 +4590,7 @@ def patch_lacking_trailing_eol_on_context(sbox):
   expected_disk.tweak('iota', contents="Some more bytes\n" + iota_contents)
   expected_status.tweak('iota', status='M ')
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -4605,7 +4600,7 @@ def patch_lacking_trailing_eol_on_context(sbox):
   expected_disk.tweak('iota', contents="Some more bytes\n" + iota_contents +
                                        "Another line.\n")
   expected_output = [ 'G         %s\n' % sbox.ospath('iota') ]
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -4635,7 +4630,7 @@ def patch_with_custom_keywords(sbox):
     " ZZ\n"
     ]
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [ 'U         %s\n' % sbox.ospath('A/mu') ]
@@ -4645,7 +4640,7 @@ def patch_with_custom_keywords(sbox):
   expected_status.tweak('A/mu', wc_rev=2)
   expected_status.tweak('A/mu', status='M ')
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -4663,7 +4658,7 @@ def patch_git_rename(sbox):
     "rename to iota2\n",
   ]
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [ 'A         %s\n' % sbox.ospath('iota2'),
@@ -4677,7 +4672,7 @@ def patch_git_rename(sbox):
   })
   expected_status.tweak('iota', status='D ', wc_rev=1, moved_to='iota2')
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -4726,7 +4721,7 @@ def patch_hunk_avoid_reorder(sbox):
     " YY\n",
     ]
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
@@ -4749,7 +4744,7 @@ def patch_hunk_avoid_reorder(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', status='M ', wc_rev=2)
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -4780,7 +4775,7 @@ def patch_hunk_avoid_reorder(sbox):
     " YY\n",
     ]
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
@@ -4803,7 +4798,7 @@ def patch_hunk_avoid_reorder(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', status='M ', wc_rev=2)
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -4855,7 +4850,7 @@ def patch_hunk_avoid_reorder2(sbox):
     " YY\n",
     ]
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
@@ -4878,7 +4873,7 @@ def patch_hunk_avoid_reorder2(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', status='M ', wc_rev=2)
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -4919,7 +4914,7 @@ def patch_hunk_reorder(sbox):
     " GG\n",
     ]
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
@@ -4934,7 +4929,7 @@ def patch_hunk_reorder(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', status='M ', wc_rev=2)
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -4978,7 +4973,7 @@ def patch_hunk_reorder(sbox):
     " 6\n",
     ]
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
@@ -4998,7 +4993,7 @@ def patch_hunk_reorder(sbox):
 
   expected_status.tweak('A/mu', status='M ', wc_rev=3)
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
   sbox.simple_revert('A/mu')
@@ -5030,7 +5025,7 @@ def patch_hunk_reorder(sbox):
     " 6\n",
     ]
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
@@ -5050,7 +5045,7 @@ def patch_hunk_reorder(sbox):
 
   expected_status.tweak('A/mu', status='M ', wc_rev=3)
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -5090,7 +5085,7 @@ def patch_hunk_overlap(sbox):
     " II\n",
     ]
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   expected_output = [
@@ -5104,7 +5099,7 @@ def patch_hunk_overlap(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', status='M ', wc_rev=2)
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -5124,7 +5119,7 @@ def patch_delete_modified(sbox):
     "-This is the file 'beta'.\n",
     ]
 
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   # First application deletes beta
@@ -5136,7 +5131,7 @@ def patch_delete_modified(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E/beta', status='D ')
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -5145,7 +5140,7 @@ def patch_delete_modified(sbox):
     'G         %s\n' % sbox.ospath('A/B/E/beta'),
     '>         hunk @@ -1,1 +0,0 @@ already applied\n',
   ]
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -5158,7 +5153,7 @@ def patch_delete_modified(sbox):
   expected_skip = wc.State('', {
     sbox.ospath('A/B/E/beta') :  Item(verb='Skipped'),
   })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -5181,7 +5176,7 @@ def patch_delete_modified(sbox):
                      : Item(contents=''.join(reject_file_contents))
                      })
   expected_status.tweak('A/B/E/beta', status='M ')
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -5224,7 +5219,7 @@ def patch_closest(sbox):
     " 5\n",
     " 6\n",
     ]
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   # Previous offset for hunk3 is +4, hunk3 matches at relative offsets
@@ -5274,7 +5269,7 @@ def patch_closest(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', status='M ', wc_rev=2)
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -5312,7 +5307,7 @@ def patch_closest(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', status='M ', wc_rev=3)
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -5350,7 +5345,7 @@ def patch_closest(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', status='M ', wc_rev=4)
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -5388,7 +5383,7 @@ def patch_closest(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', status='M ', wc_rev=5)
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -5426,7 +5421,7 @@ def patch_closest(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', status='M ', wc_rev=6)
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -5463,7 +5458,7 @@ def patch_symlink_traversal(sbox):
     " This is the file 'alpha'.\n"
     "+xx\n"
     )
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
   expected_output = [
@@ -5480,7 +5475,7 @@ def patch_symlink_traversal(sbox):
   expected_skip = wc.State('', {
     sbox.ospath('A/B/E/unversioned') : Item(verb='Skipped missing target'),
   })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
   svntest.actions.run_and_verify_status(wc_dir, prepatch_status)
@@ -5495,7 +5490,7 @@ def patch_symlink_traversal(sbox):
     " This is the file 'alpha'.\n"
     "+xx\n"
     )
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, unidiff_patch)
   reject_contents = (
     "--- A/B/E/versioned\n"
@@ -5512,7 +5507,7 @@ def patch_symlink_traversal(sbox):
   expected_disk.add({'A/B/E/versioned.svnpatch.rej'
                      : Item(contents=reject_contents)})
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
   os.remove(sbox.ospath('A/B/E/versioned.svnpatch.rej'))
@@ -5529,7 +5524,7 @@ def patch_symlink_traversal(sbox):
     " This is the file 'alpha'.\n"
     "+xx\n"
     )
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
   expected_output = [
@@ -5538,7 +5533,7 @@ def patch_symlink_traversal(sbox):
   expected_skip = wc.State('', {
     sbox.ospath('A/B/unversioned/alpha') : Item(verb='Skipped missing target'),
   })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
   svntest.actions.run_and_verify_status(wc_dir, prepatch_status)
@@ -5553,7 +5548,7 @@ def patch_symlink_traversal(sbox):
     " This is the file 'alpha'.\n"
     "+xx\n"
     )
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
   expected_output = [
@@ -5562,7 +5557,7 @@ def patch_symlink_traversal(sbox):
   expected_skip = wc.State('', {
     sbox.ospath('A/B/versioned/alpha') :  Item(verb='Skipped missing target'),
   })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
   svntest.actions.run_and_verify_status(wc_dir, prepatch_status)
@@ -5593,7 +5588,7 @@ def patch_obstructing_symlink_traversal(sbox):
     " This is the file 'alpha'.\n"
     "+xx\n"
     )
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
   ### Patch applies through the unversioned symlink
@@ -5609,7 +5604,7 @@ def patch_obstructing_symlink_traversal(sbox):
   expected_status.tweak('A/B/E/alpha', 'A/B/F/alpha', status='M ')
   expected_status.tweak('A/B/E/beta', status='! ')
   expected_skip = wc.State('', { })
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
@@ -5964,7 +5959,7 @@ def patch_adds_executability_nocontents(sbox):
     "old mode 100644\n"
     "new mode 100755\n"
     )
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
   expected_output = wc.State(wc_dir, {
@@ -5979,7 +5974,7 @@ def patch_adds_executability_nocontents(sbox):
 
   expected_skip = wc.State(wc_dir, { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        check_props=True)
@@ -5987,7 +5982,7 @@ def patch_adds_executability_nocontents(sbox):
   # And try it again
   # This may produce different output but must have the same result
   expected_output.tweak('iota', status=' G')
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        check_props=True)
@@ -6020,7 +6015,7 @@ def patch_adds_executability_nocontents2(sbox):
     "old mode 100644\n"
     "new mode 100755\n"
     )
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
   expected_output = wc.State(wc_dir, {
@@ -6060,7 +6055,7 @@ def patch_adds_executability_yescontents(sbox):
     " This is the file 'mu'.\n"
     "+with text mods too\n"
     )
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
   expected_output = [
@@ -6076,7 +6071,7 @@ def patch_adds_executability_yescontents(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        check_props=True)
@@ -6096,7 +6091,7 @@ def patch_deletes_executability(sbox):
     "old mode 100755\n"
     "new mode 100644\n"
     )
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
   expected_output = [
@@ -6110,7 +6105,7 @@ def patch_deletes_executability(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        check_props=True)
@@ -6133,7 +6128,7 @@ def patch_ambiguous_executability_contradiction(sbox):
     "## -0,0 +1 ##\n"
     "+*\n"
     )
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
   expected_output = []
@@ -6145,7 +6140,7 @@ def patch_ambiguous_executability_contradiction(sbox):
   expected_skip = wc.State('', { })
 
   error_re_string = r'.*Invalid patch:.*contradicting.*mode.*svn:executable'
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        error_re_string=error_re_string,
@@ -6169,7 +6164,7 @@ def patch_ambiguous_executability_consistent(sbox):
     "## -0,0 +1 ##\n"
     "+*\n"
     )
-  patch_file_path = make_patch_path(sbox)
+  patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
   expected_output = [
@@ -6184,7 +6179,7 @@ def patch_ambiguous_executability_consistent(sbox):
 
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_patch(wc_dir, os.path.abspath(patch_file_path),
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        error_re_string=None,
