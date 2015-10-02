@@ -1088,10 +1088,6 @@ diff_content_changed(svn_boolean_t *wrote_header,
         }
     }
 
-  /* ### todo: someday we'll need to worry about whether we're going
-     to need to write a diff plug-in mechanism that makes use of the
-     two paths, instead of just blindly running SVN_CLIENT_DIFF.  */
-
   return SVN_NO_ERROR;
 }
 
