@@ -248,8 +248,11 @@ diff_label(const char *path,
 }
 
 /* Standard modes produced in git style diffs */
-#define EXEC_BIT     "100755"
-#define NO_EXEC_BIT  "100644"
+static const int exec_mode =                 0755;
+static const int noexec_mode =               0644;
+static const int kind_file_mode =         0100000;
+/*static const kind_dir_mode =            0040000;*/
+static const int kind_symlink_mode =      0120000;
 
 /* Print a git diff header for an addition within a diff between PATH1 and
  * PATH2 to the stream OS using HEADER_ENCODING. */
@@ -257,14 +260,18 @@ static svn_error_t *
 print_git_diff_header_added(svn_stream_t *os, const char *header_encoding,
                             const char *path1, const char *path2,
                             svn_boolean_t exec_bit,
+                            svn_boolean_t symlink_bit,
                             apr_pool_t *scratch_pool)
 {
+  int new_mode = (exec_bit ? exec_mode : noexec_mode)
+                 | (symlink_bit ? kind_symlink_mode : kind_file_mode);
+
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                       "diff --git a/%s b/%s%s",
                                       path1, path2, APR_EOL_STR));
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
-                                      "new file mode %s" APR_EOL_STR,
-                                      exec_bit ? EXEC_BIT : NO_EXEC_BIT));
+                                      "new file mode %06o" APR_EOL_STR,
+                                      new_mode));
   return SVN_NO_ERROR;
 }
 
@@ -274,14 +281,17 @@ static svn_error_t *
 print_git_diff_header_deleted(svn_stream_t *os, const char *header_encoding,
                               const char *path1, const char *path2,
                               svn_boolean_t exec_bit,
+                              svn_boolean_t symlink_bit,
                               apr_pool_t *scratch_pool)
 {
+  int old_mode = (exec_bit ? exec_mode : noexec_mode)
+                 | (symlink_bit ? kind_symlink_mode : kind_file_mode);
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
                                       "diff --git a/%s b/%s%s",
                                       path1, path2, APR_EOL_STR));
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
-                                      "deleted file mode %s" APR_EOL_STR,
-                                      exec_bit ? EXEC_BIT : NO_EXEC_BIT));
+                                      "deleted file mode %06o" APR_EOL_STR,
+                                      old_mode));
   return SVN_NO_ERROR;
 }
 
@@ -347,17 +357,21 @@ maybe_print_mode_change(svn_stream_t *os,
                         const char *header_encoding,
                         svn_boolean_t exec_bit1,
                         svn_boolean_t exec_bit2,
+                        svn_boolean_t symlink_bit1,
+                        svn_boolean_t symlink_bit2,
                         apr_pool_t *scratch_pool)
 {
-  if ((!exec_bit1) == (!exec_bit2))
+  int old_mode = (exec_bit1 ? exec_mode : noexec_mode)
+                 | (symlink_bit1 ? kind_symlink_mode : kind_file_mode);
+  int new_mode = (exec_bit2 ? exec_mode : noexec_mode)
+                 | (symlink_bit2 ? kind_symlink_mode : kind_file_mode);
+  if (old_mode == new_mode)
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
-                                      "old mode %s" APR_EOL_STR,
-                                      exec_bit1 ? EXEC_BIT : NO_EXEC_BIT));
+                                      "old mode %06o" APR_EOL_STR, old_mode));
   SVN_ERR(svn_stream_printf_from_utf8(os, header_encoding, scratch_pool,
-                                      "new mode %s" APR_EOL_STR,
-                                      exec_bit2 ? EXEC_BIT : NO_EXEC_BIT));
+                                      "new mode %06o" APR_EOL_STR, new_mode));
   return SVN_NO_ERROR;
 }
 
@@ -378,16 +392,25 @@ print_git_diff_header(svn_stream_t *os,
                       svn_revnum_t rev2,
                       const char *copyfrom_path,
                       svn_revnum_t copyfrom_rev,
-                      svn_boolean_t exec_bit1,
-                      svn_boolean_t exec_bit2,
+                      apr_hash_t *left_props,
+                      apr_hash_t *right_props,
                       const char *header_encoding,
                       apr_pool_t *scratch_pool)
 {
+  svn_boolean_t exec_bit1 = (svn_prop_get_value(left_props,
+                                                SVN_PROP_EXECUTABLE) != NULL);
+  svn_boolean_t exec_bit2 = (svn_prop_get_value(right_props,
+                                                SVN_PROP_EXECUTABLE) != NULL);
+  svn_boolean_t symlink_bit1 = (svn_prop_get_value(left_props,
+                                                   SVN_PROP_SPECIAL) != NULL);
+  svn_boolean_t symlink_bit2 = (svn_prop_get_value(right_props,
+                                                   SVN_PROP_SPECIAL) != NULL);
+
   if (operation == svn_diff_op_deleted)
     {
       SVN_ERR(print_git_diff_header_deleted(os, header_encoding,
                                             repos_relpath1, repos_relpath2,
-                                            exec_bit1,
+                                            exec_bit1, symlink_bit1,
                                             scratch_pool));
       *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", repos_relpath1),
                            rev1, scratch_pool);
@@ -405,13 +428,15 @@ print_git_diff_header(svn_stream_t *os,
       *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
                            rev2, scratch_pool);
       SVN_ERR(maybe_print_mode_change(os, header_encoding,
-                                      exec_bit1, exec_bit2, scratch_pool));
+                                      exec_bit1, exec_bit2,
+                                      symlink_bit1, symlink_bit2,
+                                      scratch_pool));
     }
   else if (operation == svn_diff_op_added)
     {
       SVN_ERR(print_git_diff_header_added(os, header_encoding,
                                           repos_relpath1, repos_relpath2,
-                                          exec_bit2,
+                                          exec_bit2, symlink_bit2,
                                           scratch_pool));
       *label1 = diff_label("/dev/null", rev1, scratch_pool);
       *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
@@ -427,7 +452,9 @@ print_git_diff_header(svn_stream_t *os,
       *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
                            rev2, scratch_pool);
       SVN_ERR(maybe_print_mode_change(os, header_encoding,
-                                      exec_bit1, exec_bit2, scratch_pool));
+                                      exec_bit1, exec_bit2,
+                                      symlink_bit1, symlink_bit2,
+                                      scratch_pool));
     }
   else if (operation == svn_diff_op_moved)
     {
@@ -439,7 +466,9 @@ print_git_diff_header(svn_stream_t *os,
       *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
                            rev2, scratch_pool);
       SVN_ERR(maybe_print_mode_change(os, header_encoding,
-                                      exec_bit1, exec_bit2, scratch_pool));
+                                      exec_bit1, exec_bit2,
+                                      symlink_bit1, symlink_bit2,
+                                      scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -522,12 +551,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                                       repos_relpath1, repos_relpath2,
                                       rev1, rev2, NULL,
                                       SVN_INVALID_REVNUM,
-                                      (NULL != svn_prop_get_value(
-                                                    left_props,
-                                                    SVN_PROP_EXECUTABLE)),
-                                      (NULL != svn_prop_get_value(
-                                                    right_props,
-                                                    SVN_PROP_EXECUTABLE)),
+                                      left_props,
+                                      right_props,
                                       encoding, scratch_pool));
 
       /* --- label1
@@ -689,6 +714,43 @@ diff_props_changed(const char *diff_relpath,
   return SVN_NO_ERROR;
 }
 
+/* Given a file TMPFILE, return a path to a temporary file that lives at least
+   as long as RESULT_POOL, containing the git-like represention of TMPFILE */
+static svn_error_t *
+transform_link_to_git(const char **new_tmpfile,
+                      const char *tmpfile,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  apr_file_t *orig;
+  apr_file_t *gitlike;
+  svn_stringbuf_t *line;
+
+  SVN_ERR(svn_io_file_open(&orig, tmpfile, APR_READ, APR_OS_DEFAULT,
+                           scratch_pool));
+  SVN_ERR(svn_io_open_unique_file3(&gitlike, new_tmpfile, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   result_pool, scratch_pool));
+
+  SVN_ERR(svn_io_file_readline(orig, &line, NULL, NULL, 2 * APR_PATH_MAX + 2,
+                               scratch_pool, scratch_pool));
+
+  if (line->len > 5 && !strncmp(line->data, "link ", 5))
+    {
+      SVN_ERR(svn_io_file_write_full(gitlike, line->data + 5, line->len - 5,
+                                     NULL, scratch_pool));
+    }
+  else
+    {
+      /* Not a link... so can't convert */
+      *new_tmpfile = apr_pstrdup(result_pool, tmpfile);
+    }
+
+  SVN_ERR(svn_io_file_close(orig, scratch_pool));
+  SVN_ERR(svn_io_file_close(gitlike, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 /* Show differences between TMPFILE1 and TMPFILE2. DIFF_RELPATH, REV1, and
    REV2 are used in the headers to indicate the file and revisions.  If either
    MIMETYPE1 or MIMETYPE2 indicate binary content, don't show a diff,
@@ -743,6 +805,17 @@ diff_content_changed(svn_boolean_t *wrote_header,
   if (mimetype2)
     mt2_binary = svn_mime_type_is_binary(mimetype2);
 
+  if (dwi->use_git_diff_format)
+    {
+      /* Change symlinks to their 'git like' plain format */
+      if (svn_prop_get_value(left_props, SVN_PROP_SPECIAL))
+        SVN_ERR(transform_link_to_git(&tmpfile1, tmpfile1,
+                                      scratch_pool, scratch_pool));
+      if (svn_prop_get_value(right_props, SVN_PROP_SPECIAL))
+        SVN_ERR(transform_link_to_git(&tmpfile2, tmpfile2,
+                                      scratch_pool, scratch_pool));
+    }
+
   if (! dwi->force_binary && (mt1_binary || mt2_binary))
     {
       /* Print out the diff header. */
@@ -781,12 +854,8 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                         rev1, rev2,
                                         copyfrom_path,
                                         copyfrom_rev,
-                                        (NULL != svn_prop_get_value(
-                                                      left_props,
-                                                      SVN_PROP_EXECUTABLE)),
-                                        (NULL != svn_prop_get_value(
-                                                      right_props,
-                                                      SVN_PROP_EXECUTABLE)),
+                                        left_props,
+                                        right_props,
                                         dwi->header_encoding,
                                         scratch_pool));
 
@@ -948,12 +1017,8 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                             rev1, rev2,
                                             copyfrom_path,
                                             copyfrom_rev,
-                                            (NULL != svn_prop_get_value(
-                                                        left_props,
-                                                        SVN_PROP_EXECUTABLE)),
-                                            (NULL != svn_prop_get_value(
-                                                        right_props,
-                                                        SVN_PROP_EXECUTABLE)),
+                                            left_props,
+                                            right_props,
                                             dwi->header_encoding,
                                             scratch_pool));
             }
