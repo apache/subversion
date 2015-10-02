@@ -52,6 +52,7 @@
 #include "ra_loader.h"
 #include "deprecated.h"
 
+#include "private/svn_auth_private.h"
 #include "private/svn_ra_private.h"
 #include "svn_private_config.h"
 
@@ -142,7 +143,7 @@ load_ra_module(svn_ra__init_func_t *func,
     const char *compat_funcname;
     apr_status_t status;
 
-    libname = apr_psprintf(pool, "libsvn_ra_%s-%d.so.%d",
+    libname = apr_psprintf(pool, "libsvn_ra_%s-" SVN_DSO_SUFFIX_FMT,
                            ra_name, SVN_VER_MAJOR, SVN_SOVERSION);
     funcname = apr_psprintf(pool, "svn_ra_%s__init", ra_name);
     compat_funcname = apr_psprintf(pool, "svn_ra_%s_init", ra_name);
@@ -231,6 +232,11 @@ check_ra_version(const svn_version_t *ra_version, const char *scheme)
 
 svn_error_t *svn_ra_initialize(apr_pool_t *pool)
 {
+#if defined(SVN_USE_DSO) && APR_HAS_DSO
+  /* Ensure that DSO subsystem is initialized early as possible if
+     we're going to use it. */
+  SVN_ERR(svn_dso_initialize2());
+#endif
   return SVN_NO_ERROR;
 }
 
@@ -260,26 +266,17 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
                           apr_pool_t *pool)
 {
   apr_pool_t *sesspool = svn_pool_create(pool);
+  apr_pool_t *scratch_pool = svn_pool_create(sesspool);
   svn_ra_session_t *session;
   const struct ra_lib_defn *defn;
   const svn_ra__vtable_t *vtable = NULL;
-  svn_config_t *servers = NULL;
-  const char *server_group = NULL;
   apr_uri_t repos_URI;
   apr_status_t apr_err;
   svn_error_t *err;
 #ifdef CHOOSABLE_DAV_MODULE
   const char *http_library = DEFAULT_HTTP_LIBRARY;
 #endif
-  /* Auth caching parameters. */
-  svn_boolean_t store_passwords = SVN_CONFIG_DEFAULT_OPTION_STORE_PASSWORDS;
-  svn_boolean_t store_auth_creds = SVN_CONFIG_DEFAULT_OPTION_STORE_AUTH_CREDS;
-  const char *store_plaintext_passwords
-    = SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS;
-  svn_boolean_t store_pp = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP;
-  const char *store_pp_plaintext
-    = SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT;
-  const char *corrected_url;
+  svn_auth_baton_t *auth_baton;
 
   /* Initialize the return variable. */
   *session_p = NULL;
@@ -295,63 +292,24 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
                              repos_URL);
 
   if (callbacks->auth_baton)
-    {
-      /* The 'store-passwords' and 'store-auth-creds' parameters used to
-       * live in SVN_CONFIG_CATEGORY_CONFIG. For backward compatibility,
-       * if values for these parameters have already been set by our
-       * callers, we use those values as defaults.
-       *
-       * Note that we can only catch the case where users explicitly set
-       * "store-passwords = no" or 'store-auth-creds = no".
-       *
-       * However, since the default value for both these options is
-       * currently (and has always been) "yes", users won't know
-       * the difference if they set "store-passwords = yes" or
-       * "store-auth-creds = yes" -- they'll get the expected behaviour.
-       */
+    SVN_ERR(svn_auth__make_session_auth(&auth_baton,
+                                        callbacks->auth_baton, config,
+                                        repos_URI.hostname,
+                                        sesspool, scratch_pool));
+  else
+    auth_baton = NULL;
 
-      if (svn_auth_get_parameter(callbacks->auth_baton,
-                                 SVN_AUTH_PARAM_DONT_STORE_PASSWORDS) != NULL)
-        store_passwords = FALSE;
-
-      if (svn_auth_get_parameter(callbacks->auth_baton,
-                                 SVN_AUTH_PARAM_NO_AUTH_CACHE) != NULL)
-        store_auth_creds = FALSE;
-    }
-
+#ifdef CHOOSABLE_DAV_MODULE
   if (config)
     {
+      svn_config_t *servers = NULL;
+      const char *server_group = NULL;
+
       /* Grab the 'servers' config. */
       servers = svn_hash_gets(config, SVN_CONFIG_CATEGORY_SERVERS);
       if (servers)
         {
           /* First, look in the global section. */
-
-          SVN_ERR(svn_config_get_bool
-            (servers, &store_passwords, SVN_CONFIG_SECTION_GLOBAL,
-             SVN_CONFIG_OPTION_STORE_PASSWORDS,
-             store_passwords));
-
-          SVN_ERR(svn_config_get_yes_no_ask
-            (servers, &store_plaintext_passwords, SVN_CONFIG_SECTION_GLOBAL,
-             SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
-             SVN_CONFIG_DEFAULT_OPTION_STORE_PLAINTEXT_PASSWORDS));
-
-          SVN_ERR(svn_config_get_bool
-            (servers, &store_pp, SVN_CONFIG_SECTION_GLOBAL,
-             SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP,
-             store_pp));
-
-          SVN_ERR(svn_config_get_yes_no_ask
-            (servers, &store_pp_plaintext,
-             SVN_CONFIG_SECTION_GLOBAL,
-             SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
-             SVN_CONFIG_DEFAULT_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT));
-
-          SVN_ERR(svn_config_get_bool
-            (servers, &store_auth_creds, SVN_CONFIG_SECTION_GLOBAL,
-              SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
-              store_auth_creds));
 
           /* Find out where we're about to connect to, and
            * try to pick a server group based on the destination. */
@@ -359,36 +317,6 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
                                                SVN_CONFIG_SECTION_GROUPS,
                                                sesspool);
 
-          if (server_group)
-            {
-              /* Override global auth caching parameters with the ones
-               * for the server group, if any. */
-              SVN_ERR(svn_config_get_bool(servers, &store_auth_creds,
-                                          server_group,
-                                          SVN_CONFIG_OPTION_STORE_AUTH_CREDS,
-                                          store_auth_creds));
-
-              SVN_ERR(svn_config_get_bool(servers, &store_passwords,
-                                          server_group,
-                                          SVN_CONFIG_OPTION_STORE_PASSWORDS,
-                                          store_passwords));
-
-              SVN_ERR(svn_config_get_yes_no_ask
-                (servers, &store_plaintext_passwords, server_group,
-                 SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS,
-                 store_plaintext_passwords));
-
-              SVN_ERR(svn_config_get_bool
-                (servers, &store_pp,
-                 server_group, SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP,
-                 store_pp));
-
-              SVN_ERR(svn_config_get_yes_no_ask
-                (servers, &store_pp_plaintext, server_group,
-                 SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
-                 store_pp_plaintext));
-            }
-#ifdef CHOOSABLE_DAV_MODULE
           /* Now, which DAV-based RA method do we want to use today? */
           http_library
             = svn_config_get_server_setting(servers,
@@ -401,38 +329,9 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
                                      _("Invalid config: unknown HTTP library "
                                        "'%s'"),
                                      http_library);
-#endif
         }
     }
-
-  if (callbacks->auth_baton)
-    {
-      /* Save auth caching parameters in the auth parameter hash. */
-      if (! store_passwords)
-        svn_auth_set_parameter(callbacks->auth_baton,
-                               SVN_AUTH_PARAM_DONT_STORE_PASSWORDS, "");
-
-      svn_auth_set_parameter(callbacks->auth_baton,
-                             SVN_AUTH_PARAM_STORE_PLAINTEXT_PASSWORDS,
-                             store_plaintext_passwords);
-
-      if (! store_pp)
-        svn_auth_set_parameter(callbacks->auth_baton,
-                               SVN_AUTH_PARAM_DONT_STORE_SSL_CLIENT_CERT_PP,
-                               "");
-
-      svn_auth_set_parameter(callbacks->auth_baton,
-                             SVN_AUTH_PARAM_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT,
-                             store_pp_plaintext);
-
-      if (! store_auth_creds)
-        svn_auth_set_parameter(callbacks->auth_baton,
-                               SVN_AUTH_PARAM_NO_AUTH_CACHE, "");
-
-      if (server_group)
-        svn_auth_set_parameter(callbacks->auth_baton,
-                               SVN_AUTH_PARAM_SERVER_GROUP, server_group);
-    }
+#endif
 
   /* Find the library. */
   for (defn = ra_libraries; defn->ra_name != NULL; ++defn)
@@ -451,16 +350,16 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
 
           if (! initfunc)
             SVN_ERR(load_ra_module(&initfunc, NULL, defn->ra_name,
-                                   sesspool));
+                                   scratch_pool));
           if (! initfunc)
             /* Library not found. */
             continue;
 
-          SVN_ERR(initfunc(svn_ra_version(), &vtable, sesspool));
+          SVN_ERR(initfunc(svn_ra_version(), &vtable, scratch_pool));
 
           SVN_ERR(check_ra_version(vtable->get_version(), scheme));
 
-          if (! has_scheme_of(vtable->get_schemes(sesspool), repos_URL))
+          if (! has_scheme_of(vtable->get_schemes(scratch_pool), repos_URL))
             /* Library doesn't support the scheme at runtime. */
             continue;
 
@@ -482,35 +381,32 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
   session->pool = sesspool;
 
   /* Ask the library to open the session. */
-  err = vtable->open_session(session, &corrected_url, repos_URL,
-                             callbacks, callback_baton, config, sesspool);
+  err = vtable->open_session(session, corrected_url_p,
+                             repos_URL,
+                             callbacks, callback_baton, auth_baton,
+                             config, sesspool, scratch_pool);
 
   if (err)
-    return svn_error_createf(
+    {
+      svn_pool_destroy(sesspool); /* Includes scratch_pool */
+      if (err->apr_err == SVN_ERR_RA_SESSION_URL_MISMATCH)
+        return svn_error_trace(err);
+
+      return svn_error_createf(
                 SVN_ERR_RA_CANNOT_CREATE_SESSION, err,
                 _("Unable to connect to a repository at URL '%s'"),
                 repos_URL);
+    }
 
   /* If the session open stuff detected a server-provided URL
      correction (a 301 or 302 redirect response during the initial
      OPTIONS request), then kill the session so the caller can decide
      what to do. */
-  if (corrected_url_p && corrected_url)
+  if (corrected_url_p && *corrected_url_p)
     {
-      if (! svn_path_is_url(corrected_url))
-        {
-          /* RFC1945 and RFC2616 state that the Location header's
-             value (from whence this CORRECTED_URL ultimately comes),
-             if present, must be an absolute URI.  But some Apache
-             versions (those older than 2.2.11, it seems) transmit
-             only the path portion of the URI.  See issue #3775 for
-             details. */
-          apr_uri_t corrected_URI = repos_URI;
-          corrected_URI.path = (char *)corrected_url;
-          corrected_url = apr_uri_unparse(pool, &corrected_URI, 0);
-        }
-      *corrected_url_p = svn_uri_canonicalize(corrected_url, pool);
-      svn_pool_destroy(sesspool);
+      /* *session_p = NULL; */
+      *corrected_url_p = apr_pstrdup(pool, *corrected_url_p);
+      svn_pool_destroy(sesspool); /* Includes scratch_pool */
       return SVN_NO_ERROR;
     }
 
@@ -524,7 +420,7 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
         {
           /* Duplicate the uuid as it is allocated in sesspool */
           repository_uuid = apr_pstrdup(pool, repository_uuid);
-          svn_pool_destroy(sesspool);
+          svn_pool_destroy(sesspool); /* includes scratch_pool */
           return svn_error_createf(SVN_ERR_RA_UUID_MISMATCH, NULL,
                                    _("Repository UUID '%s' doesn't match "
                                      "expected UUID '%s'"),
@@ -532,16 +428,17 @@ svn_error_t *svn_ra_open4(svn_ra_session_t **session_p,
         }
     }
 
+  svn_pool_destroy(scratch_pool);
   *session_p = session;
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_ra_dup_session(svn_ra_session_t **new_session,
-                   svn_ra_session_t *old_session,
-                   const char *session_url,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
+svn_ra__dup_session(svn_ra_session_t **new_session,
+                    svn_ra_session_t *old_session,
+                    const char *session_url,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
   svn_ra_session_t *session;
 
@@ -699,61 +596,6 @@ svn_error_t *svn_ra_rev_prop(svn_ra_session_t *session,
   return session->vtable->rev_prop(session, rev, name, value, pool);
 }
 
-struct ccw_baton
-{
-  svn_commit_callback2_t original_callback;
-  void *original_baton;
-
-  svn_ra_session_t *session;
-};
-
-/* Wrapper which populates the repos_root field of the commit_info struct */
-static svn_error_t *
-commit_callback_wrapper(const svn_commit_info_t *commit_info,
-                        void *baton,
-                        apr_pool_t *pool)
-{
-  struct ccw_baton *ccwb = baton;
-  svn_commit_info_t *ci = svn_commit_info_dup(commit_info, pool);
-
-  SVN_ERR(svn_ra_get_repos_root2(ccwb->session, &ci->repos_root, pool));
-
-  return ccwb->original_callback(ci, ccwb->original_baton, pool);
-}
-
-
-/* Some RA layers do not correctly fill in REPOS_ROOT in commit_info, or
-   they are third-party layers conforming to an older commit_info structure.
-   Interpose a utility function to ensure the field is valid.  */
-static void
-remap_commit_callback(svn_commit_callback2_t *callback,
-                      void **callback_baton,
-                      svn_ra_session_t *session,
-                      svn_commit_callback2_t original_callback,
-                      void *original_baton,
-                      apr_pool_t *result_pool)
-{
-  if (original_callback == NULL)
-    {
-      *callback = NULL;
-      *callback_baton = NULL;
-    }
-  else
-    {
-      /* Allocate this in RESULT_POOL, since the callback will be called
-         long after this function has returned. */
-      struct ccw_baton *ccwb = apr_palloc(result_pool, sizeof(*ccwb));
-
-      ccwb->session = session;
-      ccwb->original_callback = original_callback;
-      ccwb->original_baton = original_baton;
-
-      *callback = commit_callback_wrapper;
-      *callback_baton = ccwb;
-    }
-}
-
-
 svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
@@ -764,10 +606,6 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
                                        svn_boolean_t keep_locks,
                                        apr_pool_t *pool)
 {
-  remap_commit_callback(&commit_callback, &commit_baton,
-                        session, commit_callback, commit_baton,
-                        pool);
-
   return session->vtable->get_commit_editor(session, editor, edit_baton,
                                             revprop_table,
                                             commit_callback, commit_baton,
@@ -1016,8 +854,8 @@ svn_error_t *svn_ra_stat(svn_ra_session_t *session,
               svn_uri_split(&parent_url, &base_name, session_url,
                             scratch_pool);
 
-              SVN_ERR(svn_ra_dup_session(&parent_session, session, parent_url,
-                                         scratch_pool, scratch_pool));
+              SVN_ERR(svn_ra__dup_session(&parent_session, session, parent_url,
+                                          scratch_pool, scratch_pool));
 
               /* Get all parent's entries, no props. */
               SVN_ERR(svn_ra_get_dir2(parent_session, &parent_ents, NULL,
@@ -1115,6 +953,7 @@ svn_error_t *svn_ra_get_locations(svn_ra_session_t *session,
 {
   svn_error_t *err;
 
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(peg_revision));
   SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
   err = session->vtable->get_locations(session, locations, path,
                                        peg_revision, location_revisions, pool);
@@ -1175,7 +1014,7 @@ svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
   if (include_merged_revisions)
     SVN_ERR(svn_ra__assert_mergeinfo_capable_server(session, NULL, pool));
 
-  if (start > end)
+  if (start > end || !SVN_IS_VALID_REVNUM(start))
     SVN_ERR(
      svn_ra__assert_capable_server(session,
                                    SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
@@ -1185,7 +1024,8 @@ svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
   err = session->vtable->get_file_revs(session, path, start, end,
                                        include_merged_revisions,
                                        handler, handler_baton, pool);
-  if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED))
+  if (err && (err->apr_err == SVN_ERR_RA_NOT_IMPLEMENTED)
+      && !include_merged_revisions)
     {
       svn_error_clear(err);
 
@@ -1193,7 +1033,7 @@ svn_error_t *svn_ra_get_file_revs2(svn_ra_session_t *session,
       err = svn_ra__file_revs_from_log(session, path, start, end,
                                        handler, handler_baton, pool);
     }
-  return err;
+  return svn_error_trace(err);
 }
 
 svn_error_t *svn_ra_lock(svn_ra_session_t *session,
@@ -1281,6 +1121,8 @@ svn_error_t *svn_ra_replay(svn_ra_session_t *session,
                            void *edit_baton,
                            apr_pool_t *pool)
 {
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision)
+                 && SVN_IS_VALID_REVNUM(low_water_mark));
   return session->vtable->replay(session, revision, low_water_mark,
                                  text_deltas, editor, edit_baton, pool);
 }
@@ -1348,7 +1190,14 @@ svn_ra_replay_range(svn_ra_session_t *session,
                     void *replay_baton,
                     apr_pool_t *pool)
 {
-  svn_error_t *err =
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(start_revision)
+                 && SVN_IS_VALID_REVNUM(end_revision)
+                 && start_revision <= end_revision
+                 && SVN_IS_VALID_REVNUM(low_water_mark));
+
+  err =
     session->vtable->replay_range(session, start_revision, end_revision,
                                   low_water_mark, text_deltas,
                                   revstart_func, revfinish_func,
@@ -1506,11 +1355,6 @@ svn_ra__get_commit_ev2(svn_editor_t **editor,
     {
       /* The specific RA layer does not have an implementation. Use our
          default shim over the normal commit editor.  */
-
-      /* Remap for RA layers exposing Ev1.  */
-      remap_commit_callback(&commit_callback, &commit_baton,
-                            session, commit_callback, commit_baton,
-                            result_pool);
 
       return svn_error_trace(svn_ra__use_commit_shim(
                                editor,

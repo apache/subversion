@@ -212,39 +212,112 @@ svn_test__create_fs(svn_fs_t **fs_p,
 }
 
 svn_error_t *
-svn_test__create_repos(svn_repos_t **repos_p,
-                       const char *name,
-                       const svn_test_opts_t *opts,
-                       apr_pool_t *pool)
+svn_test__create_repos2(svn_repos_t **repos_p,
+                        const char **repos_url,
+                        const char **repos_dirent,
+                        const char *name,
+                        const svn_test_opts_t *opts,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   svn_repos_t *repos;
   svn_boolean_t must_reopen;
+  const char *repos_abspath;
+  apr_pool_t *repos_pool = repos_p ? result_pool : scratch_pool;
+  svn_boolean_t init_svnserve = FALSE;
   apr_hash_t *fs_config = make_fs_config(opts->fs_type,
-                                         opts->server_minor_version, pool);
+                                         opts->server_minor_version,
+                                         repos_pool);
+
+  if (repos_url && opts->repos_dir && opts->repos_url)
+    {
+      name = apr_psprintf(scratch_pool, "%s-%s", opts->prog_name,
+                          svn_dirent_basename(name, NULL));
+
+      repos_abspath = svn_dirent_join(opts->repos_dir, name, scratch_pool);
+
+      SVN_ERR(svn_dirent_get_absolute(&repos_abspath, repos_abspath,
+                                      scratch_pool));
+
+      SVN_ERR(svn_io_make_dir_recursively(repos_abspath, scratch_pool));
+
+      *repos_url = svn_path_url_add_component2(opts->repos_url, name,
+                                               result_pool);
+
+      if (strstr(opts->repos_url, "svn://"))
+        init_svnserve = TRUE;
+    }
+  else
+    {
+      SVN_ERR(svn_dirent_get_absolute(&repos_abspath, name, scratch_pool));
+
+      if (repos_url)
+        SVN_ERR(svn_uri_get_file_url_from_dirent(repos_url, repos_abspath,
+                                                 result_pool));
+    }
 
   /* If there's already a repository named NAME, delete it.  Doing
      things this way means that repositories stick around after a
      failure for postmortem analysis, but also that tests can be
      re-run without cleaning out the repositories created by prior
      runs.  */
-  SVN_ERR(svn_io_remove_dir2(name, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_remove_dir2(repos_abspath, TRUE, NULL, NULL, scratch_pool));
 
-  SVN_ERR(svn_repos_create(&repos, name, NULL, NULL, NULL,
-                           fs_config, pool));
+  SVN_ERR(svn_repos_create(&repos, repos_abspath, NULL, NULL, NULL,
+                           fs_config, repos_pool));
 
   /* Register this repo for cleanup. */
-  svn_test_add_dir_cleanup(name);
+  svn_test_add_dir_cleanup(repos_abspath);
 
   SVN_ERR(maybe_install_fs_conf(svn_repos_fs(repos), opts, &must_reopen,
-                                pool));
+                                scratch_pool));
   if (must_reopen)
     {
-      SVN_ERR(svn_repos_open3(&repos, name, NULL, pool, pool));
-      svn_fs_set_warning_func(svn_repos_fs(repos), fs_warning_handler, NULL);
+      SVN_ERR(svn_repos_open3(&repos, repos_abspath, NULL, repos_pool,
+                              scratch_pool));
     }
 
-  *repos_p = repos;
+  svn_fs_set_warning_func(svn_repos_fs(repos), fs_warning_handler, NULL);
+
+  if (init_svnserve)
+    {
+      const char *cfg;
+      const char *pwd;
+
+      cfg = svn_dirent_join(repos_abspath, "conf/svnserve.conf", scratch_pool);
+      SVN_ERR(svn_io_remove_file2(cfg, FALSE, scratch_pool));
+      SVN_ERR(svn_io_file_create(cfg,
+                                 "[general]\n"
+                                 "auth-access = write\n"
+                                 "password-db = passwd\n",
+                                 scratch_pool));
+
+      pwd = svn_dirent_join(repos_abspath, "conf/passwd", scratch_pool);
+      SVN_ERR(svn_io_remove_file2(pwd, FALSE, scratch_pool));
+      SVN_ERR(svn_io_file_create(pwd,
+                                 "[users]\n"
+                                 "jrandom = rayjandom\n"
+                                 "jconstant = rayjandom\n",
+                                 scratch_pool));
+    }
+
+  if (repos_p)
+    *repos_p = repos;
+  if (repos_dirent)
+    *repos_dirent = apr_pstrdup(result_pool, repos_abspath);
+
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_test__create_repos(svn_repos_t **repos_p,
+                       const char *name,
+                       const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  return svn_error_trace(
+            svn_test__create_repos2(repos_p, NULL, NULL, name,
+                                    opts, pool, pool));
 }
 
 svn_error_t *
@@ -326,27 +399,30 @@ static svn_error_t *
 get_dir_entries(apr_hash_t *tree_entries,
                 svn_fs_root_t *root,
                 const char *path,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *result_pool = apr_hash_pool_get(tree_entries);
 
-  SVN_ERR(svn_fs_dir_entries(&entries, root, path, pool));
+  SVN_ERR(svn_fs_dir_entries(&entries, root, path, scratch_pool));
 
   /* Copy this list to the master list with the path prepended to the
      names */
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
     {
       void *val;
       svn_fs_dirent_t *dirent;
       const char *full_path;
+      svn_pool_clear(iterpool);
 
       apr_hash_this(hi, NULL, NULL, &val);
       dirent = val;
 
       /* Calculate the full path of this entry (by appending the name
          to the path thus far) */
-      full_path = svn_path_join(path, dirent->name, pool);
+      full_path = svn_path_join(path, dirent->name, result_pool);
 
       /* Now, copy this dirent to the master hash, but this time, use
          the full path for the key */
@@ -354,7 +430,7 @@ get_dir_entries(apr_hash_t *tree_entries,
 
       /* If this entry is a directory, recurse into the tree. */
       if (dirent->kind == svn_node_dir)
-        SVN_ERR(get_dir_entries(tree_entries, root, full_path, pool));
+        SVN_ERR(get_dir_entries(tree_entries, root, full_path, iterpool));
     }
 
   return SVN_NO_ERROR;
@@ -427,6 +503,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
 {
   apr_hash_t *tree_entries, *expected_entries;
   apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   svn_stringbuf_t *extra_entries = NULL;
   svn_stringbuf_t *missing_entries = NULL;
   svn_stringbuf_t *corrupt_entries = NULL;
@@ -436,6 +513,13 @@ svn_test__validate_tree(svn_fs_root_t *root,
   /* There should be no entry with this name. */
   const char *na_name = "es-vee-en";
 
+  /* Create our master hash for storing the entries */
+  tree_entries = apr_hash_make(subpool);
+
+  /* Recursively get the whole tree */
+  SVN_ERR(get_dir_entries(tree_entries, root, "", iterpool));
+  svn_pool_clear(iterpool);
+
   /* Create a hash for storing our expected entries */
   expected_entries = apr_hash_make(subpool);
 
@@ -443,12 +527,6 @@ svn_test__validate_tree(svn_fs_root_t *root,
   for (i = 0; i < num_entries; i++)
     apr_hash_set(expected_entries, entries[i].path,
                  APR_HASH_KEY_STRING, &(entries[i]));
-
-  /* Create our master hash for storing the entries */
-  tree_entries = apr_hash_make(pool);
-
-  /* Begin the recursive directory entry dig */
-  SVN_ERR(get_dir_entries(tree_entries, root, "", subpool));
 
   /* For each entry in our EXPECTED_ENTRIES hash, try to find that
      entry in the TREE_ENTRIES hash given us by the FS.  If we find
@@ -463,6 +541,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
       void *val;
       svn_test__tree_entry_t *entry;
 
+      svn_pool_clear(iterpool);
       apr_hash_this(hi, &key, &keylen, &val);
       entry = val;
 
@@ -473,7 +552,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
           svn_error_t *err;
 
           if ((err = validate_tree_entry(root, entry->path,
-                                         entry->contents, subpool)))
+                                         entry->contents, iterpool)))
             {
               /* If we don't have a corrupt entries string, make one. */
               if (! corrupt_entries)
@@ -554,6 +633,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
          extra_entries ? extra_entries->data : "");
     }
 
+  svn_pool_destroy(iterpool);
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
@@ -602,6 +682,7 @@ svn_test__txn_script_exec(svn_fs_root_t *txn_root,
                           apr_pool_t *pool)
 {
   int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Run through the list of edits, making the appropriate edit on
      that entry in the TXN_ROOT. */
@@ -612,18 +693,19 @@ svn_test__txn_script_exec(svn_fs_root_t *txn_root,
       int cmd = script[i].cmd;
       svn_boolean_t is_dir = (param1 == 0);
 
+      svn_pool_clear(iterpool);
       switch (cmd)
         {
         case 'a':
           if (is_dir)
             {
-              SVN_ERR(svn_fs_make_dir(txn_root, path, pool));
+              SVN_ERR(svn_fs_make_dir(txn_root, path, iterpool));
             }
           else
             {
-              SVN_ERR(svn_fs_make_file(txn_root, path, pool));
+              SVN_ERR(svn_fs_make_file(txn_root, path, iterpool));
               SVN_ERR(svn_test__set_file_contents(txn_root, path,
-                                                  param1, pool));
+                                                  param1, iterpool));
             }
           break;
 
@@ -633,21 +715,21 @@ svn_test__txn_script_exec(svn_fs_root_t *txn_root,
             svn_fs_root_t *rev_root;
             svn_fs_t *fs = svn_fs_root_fs(txn_root);
 
-            SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
-            SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest, pool));
-            SVN_ERR(svn_fs_copy(rev_root, path, txn_root, param1, pool));
+            SVN_ERR(svn_fs_youngest_rev(&youngest, fs, iterpool));
+            SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest, iterpool));
+            SVN_ERR(svn_fs_copy(rev_root, path, txn_root, param1, iterpool));
           }
           break;
 
         case 'd':
-          SVN_ERR(svn_fs_delete(txn_root, path, pool));
+          SVN_ERR(svn_fs_delete(txn_root, path, iterpool));
           break;
 
         case 'e':
           if (! is_dir)
             {
               SVN_ERR(svn_test__set_file_contents(txn_root, path,
-                                                  param1, pool));
+                                                  param1, iterpool));
             }
           break;
 
@@ -656,6 +738,7 @@ svn_test__txn_script_exec(svn_fs_root_t *txn_root,
         }
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -692,21 +775,26 @@ svn_test__check_greek_tree(svn_fs_root_t *root,
   svn_stringbuf_t *rstring;
   svn_stringbuf_t *content;
   const struct svn_test__tree_entry_t *node;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Loop through the list of files, checking for matching content. */
   for (node = svn_test__greek_tree_nodes; node->path; node++)
     {
       if (node->contents)
         {
-          SVN_ERR(svn_fs_file_contents(&rstream, root, node->path, pool));
-          SVN_ERR(svn_test__stream_to_string(&rstring, rstream, pool));
-          content = svn_stringbuf_create(node->contents, pool);
+          svn_pool_clear(iterpool);
+
+          SVN_ERR(svn_fs_file_contents(&rstream, root, node->path, iterpool));
+          SVN_ERR(svn_test__stream_to_string(&rstring, rstream, iterpool));
+          content = svn_stringbuf_create(node->contents, iterpool);
           if (! svn_stringbuf_compare(rstring, content))
             return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
                                      "data read != data written in file '%s'.",
                                      node->path);
         }
     }
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -716,22 +804,28 @@ svn_test__create_greek_tree_at(svn_fs_root_t *txn_root,
                                apr_pool_t *pool)
 {
   const struct svn_test__tree_entry_t *node;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   for (node = svn_test__greek_tree_nodes; node->path; node++)
     {
-      const char *path = svn_relpath_join(root_dir, node->path, pool);
+      const char *path;
+      svn_pool_clear(iterpool);
+
+      path = svn_relpath_join(root_dir, node->path, iterpool);
 
       if (node->contents)
         {
-          SVN_ERR(svn_fs_make_file(txn_root, path, pool));
+          SVN_ERR(svn_fs_make_file(txn_root, path, iterpool));
           SVN_ERR(svn_test__set_file_contents(txn_root, path, node->contents,
-                                              pool));
+                                              iterpool));
         }
       else
         {
-          SVN_ERR(svn_fs_make_dir(txn_root, path, pool));
+          SVN_ERR(svn_fs_make_dir(txn_root, path, iterpool));
         }
     }
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 

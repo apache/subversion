@@ -112,14 +112,6 @@ static const svn_ra_serf__xml_transition_t replay_ttable[] = {
   { 0 }
 };
 
-/*
- * An incredibly simple list.
- */
-typedef struct ra_serf_list_t {
-  void *data;
-  struct ra_serf_list_t *next;
-} svn_ra_serf__list_t;
-
 /* Per directory/file state */
 typedef struct replay_node_t {
   apr_pool_t *pool; /* pool allocating this node's data */
@@ -141,8 +133,7 @@ typedef struct revision_report_t {
   /* Are we done fetching this file?
      Handles book-keeping in multi-report case */
   svn_boolean_t *done;
-  svn_ra_serf__list_t **done_list;
-  svn_ra_serf__list_t done_item;
+  int *replay_reports; /* NULL or number of outstanding reports */
 
   /* callback to get an editor */
   svn_ra_replay_revstart_callback_t revstart_func;
@@ -169,12 +160,11 @@ typedef struct revision_report_t {
   svn_revnum_t revprop_rev;
 
   /* Revision properties for this revision. */
-  apr_hash_t *revs_props;
-  apr_hash_t *props;
+  apr_hash_t *rev_props;
 
   /* Handlers for the PROPFIND and REPORT for the current revision. */
   svn_ra_serf__handler_t *propfind_handler;
-  svn_ra_serf__handler_t *report_handler;
+  svn_ra_serf__handler_t *report_handler; /* For done handler */
 
 } revision_report_t;
 
@@ -193,19 +183,13 @@ replay_opened(svn_ra_serf__xml_estate_t *xes,
       /* Before we can continue, we need the revision properties. */
       SVN_ERR_ASSERT(!ctx->propfind_handler || ctx->propfind_handler->done);
 
-      /* Create a pool for the commit editor. */
-      SVN_ERR(svn_ra_serf__select_revprops(&ctx->props,
-                                           ctx->revprop_target,
-                                           ctx->revprop_rev,
-                                           ctx->revs_props,
-                                           ctx->pool,
-                                           scratch_pool));
+      svn_ra_serf__keep_only_regular_props(ctx->rev_props, scratch_pool);
 
       if (ctx->revstart_func)
         {
           SVN_ERR(ctx->revstart_func(ctx->revision, ctx->replay_baton,
                                      &ctx->editor, &ctx->editor_baton,
-                                     ctx->props,
+                                     ctx->rev_props,
                                      ctx->pool));
         }
     }
@@ -261,8 +245,7 @@ replay_closed(svn_ra_serf__xml_estate_t *xes,
         {
           SVN_ERR(ctx->revfinish_func(ctx->revision, ctx->replay_baton,
                                       ctx->editor, ctx->editor_baton,
-                                      ctx->props,
-                                      scratch_pool));
+                                      ctx->rev_props, scratch_pool));
         }
     }
   else if (leaving_state == REPLAY_TARGET_REVISION)
@@ -444,10 +427,11 @@ replay_closed(svn_ra_serf__xml_estate_t *xes,
     {
       struct replay_node_t *node = ctx->current_node;
 
-      if (! node || ! node->file || ! node->stream)
+      if (! node || ! node->file)
         return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
 
-      SVN_ERR(svn_stream_close(node->stream));
+      if (node->stream)
+        SVN_ERR(svn_stream_close(node->stream));
 
       node->stream = NULL;
     }
@@ -486,35 +470,13 @@ replay_cdata(svn_ra_serf__xml_estate_t *xes,
   return SVN_NO_ERROR;
 }
 
-/* Conforms to svn_ra_serf__response_done_delegate_t  */
-static svn_error_t *
-replay_done(serf_request_t *request,
-            void *baton,
-            apr_pool_t *scratch_pool)
-{
-  struct revision_report_t *ctx = baton;
-  svn_ra_serf__handler_t *handler = ctx->report_handler;
-
-  if (handler->server_error)
-    return svn_ra_serf__server_error_create(handler, scratch_pool);
-  else if (handler->sline.code != 200)
-    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
-
-  *ctx->done = TRUE; /* Breaks out svn_ra_serf__context_run_wait */
-
-  ctx->done_item.data = ctx;
-  ctx->done_item.next = *ctx->done_list;
-  *ctx->done_list = &ctx->done_item;
-
-  return SVN_NO_ERROR;
-}
-
 /* Implements svn_ra_serf__request_body_delegate_t */
 static svn_error_t *
 create_replay_body(serf_bucket_t **bkt,
                    void *baton,
                    serf_bucket_alloc_t *alloc,
-                   apr_pool_t *pool)
+                   apr_pool_t *pool /* request pool */,
+                   apr_pool_t *scratch_pool)
 {
   struct revision_report_t *ctx = baton;
   serf_bucket_t *body_bkt;
@@ -573,7 +535,7 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   svn_ra_serf__xml_context_t *xmlctx;
   const char *report_target;
 
-  SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL,
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, session,
                                        scratch_pool));
 
   ctx.pool = svn_pool_create(scratch_pool);
@@ -583,7 +545,7 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   ctx.revision = revision;
   ctx.low_water_mark = low_water_mark;
   ctx.send_deltas = send_deltas;
-  ctx.revs_props = apr_hash_make(scratch_pool);
+  ctx.rev_props = apr_hash_make(scratch_pool);
 
   xmlctx = svn_ra_serf__xml_context_create(replay_ttable,
                                            replay_opened, replay_closed,
@@ -591,26 +553,23 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
                                            &ctx,
                                            scratch_pool);
 
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, scratch_pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL,
+                                              scratch_pool);
 
   handler->method = "REPORT";
   handler->path = session->session_url.path;
   handler->body_delegate = create_replay_body;
   handler->body_delegate_baton = &ctx;
   handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
 
   /* Not setting up done handler as we don't use a global context */
 
-  ctx.report_handler = handler; /* unused */
-
   SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
-  return svn_error_trace(
-              svn_ra_serf__error_on_status(handler->sline,
-                                           handler->path,
-                                           handler->location));
+  if (handler->sline.code != 200)
+    SVN_ERR(svn_ra_serf__unexpected_status(handler));
+
+  return SVN_NO_ERROR;
 }
 
 /* The maximum number of outstanding requests at any time. When this
@@ -644,6 +603,33 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
  */
 #define MAX_OUTSTANDING_REQUESTS 50
 
+/* Implements svn_ra_serf__response_done_delegate_t for svn_ra_serf__replay_range */
+static svn_error_t *
+replay_done(serf_request_t *request,
+            void *baton,
+            apr_pool_t *scratch_pool)
+{
+  struct revision_report_t *ctx = baton;
+  svn_ra_serf__handler_t *handler = ctx->report_handler;
+
+  if (handler->server_error)
+    return svn_ra_serf__server_error_create(handler, scratch_pool);
+  else if (handler->sline.code != 200)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
+
+  *ctx->done = TRUE; /* Breaks out svn_ra_serf__context_run_wait */
+
+  /* Are re replaying multiple revisions? */
+  if (ctx->replay_reports)
+    {
+      (*ctx->replay_reports)--;
+    }
+
+  svn_pool_destroy(ctx->pool); /* Destroys handler and request! */
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
                           svn_revnum_t start_revision,
@@ -653,7 +639,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
                           svn_ra_replay_revstart_callback_t revstart_func,
                           svn_ra_replay_revfinish_callback_t revfinish_func,
                           void *replay_baton,
-                          apr_pool_t *pool)
+                          apr_pool_t *scratch_pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_revnum_t rev = start_revision;
@@ -661,9 +647,10 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
   int active_reports = 0;
   const char *include_path;
   svn_boolean_t done;
-  svn_ra_serf__list_t *done_reports = NULL;
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, session,
+                                       subpool));
 
   /* Prior to 1.8, mod_dav_svn expect to get replay REPORT requests
      aimed at the session URL.  But that's incorrect -- these reports
@@ -686,8 +673,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
     {
       SVN_ERR(svn_ra_serf__get_relative_path(&include_path,
                                              session->session_url.path,
-                                             session, session->conns[0],
-                                             pool));
+                                             session, subpool));
     }
   else
     {
@@ -703,55 +689,56 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
          requests to MAX_OUTSTANDING_REQUESTS. */
       if (rev <= end_revision  && active_reports < MAX_OUTSTANDING_REQUESTS)
         {
-          struct revision_report_t *replay_ctx;
+          struct revision_report_t *rev_ctx;
           svn_ra_serf__handler_t *handler;
-          apr_pool_t *ctx_pool = svn_pool_create(pool);
+          apr_pool_t *rev_pool = svn_pool_create(subpool);
           svn_ra_serf__xml_context_t *xmlctx;
           const char *replay_target;
 
-          replay_ctx = apr_pcalloc(ctx_pool, sizeof(*replay_ctx));
-          replay_ctx->pool = ctx_pool;
-          replay_ctx->revstart_func = revstart_func;
-          replay_ctx->revfinish_func = revfinish_func;
-          replay_ctx->replay_baton = replay_baton;
-          replay_ctx->done = &done;
-          replay_ctx->done_list = &done_reports;
-          replay_ctx->include_path = include_path;
-          replay_ctx->revision = rev;
-          replay_ctx->low_water_mark = low_water_mark;
-          replay_ctx->send_deltas = send_deltas;
-          replay_ctx->done_item.data = replay_ctx;
+          rev_ctx = apr_pcalloc(rev_pool, sizeof(*rev_ctx));
+          rev_ctx->pool = rev_pool;
+          rev_ctx->revstart_func = revstart_func;
+          rev_ctx->revfinish_func = revfinish_func;
+          rev_ctx->replay_baton = replay_baton;
+          rev_ctx->done = &done;
+          rev_ctx->replay_reports = &active_reports;
+          rev_ctx->include_path = include_path;
+          rev_ctx->revision = rev;
+          rev_ctx->low_water_mark = low_water_mark;
+          rev_ctx->send_deltas = send_deltas;
 
           /* Request all properties of a certain revision. */
-          replay_ctx->revs_props = apr_hash_make(replay_ctx->pool);
+          rev_ctx->rev_props = apr_hash_make(rev_ctx->pool);
 
           if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
             {
-              replay_ctx->revprop_target = apr_psprintf(pool, "%s/%ld",
-                                                        session->rev_stub, rev);
-              replay_ctx->revprop_rev = SVN_INVALID_REVNUM;
+              rev_ctx->revprop_target = apr_psprintf(rev_pool, "%s/%ld",
+                                                     session->rev_stub, rev);
+              rev_ctx->revprop_rev = SVN_INVALID_REVNUM;
             }
           else
             {
-              replay_ctx->revprop_target = report_target;
-              replay_ctx->revprop_rev = rev;
+              rev_ctx->revprop_target = report_target;
+              rev_ctx->revprop_rev = rev;
             }
 
-          SVN_ERR(svn_ra_serf__deliver_props(&replay_ctx->propfind_handler,
-                                             replay_ctx->revs_props, session,
-                                             session->conns[0],
-                                             replay_ctx->revprop_target,
-                                             replay_ctx->revprop_rev,
-                                             "0", all_props,
-                                             replay_ctx->pool));
+          SVN_ERR(svn_ra_serf__create_propfind_handler(
+                                              &rev_ctx->propfind_handler,
+                                              session,
+                                              rev_ctx->revprop_target,
+                                              rev_ctx->revprop_rev,
+                                              "0", all_props,
+                                              svn_ra_serf__deliver_svn_props,
+                                              rev_ctx->rev_props,
+                                              rev_pool));
 
           /* Spin up the serf request for the PROPFIND.  */
-          svn_ra_serf__request_create(replay_ctx->propfind_handler);
+          svn_ra_serf__request_create(rev_ctx->propfind_handler);
 
           /* Send the replay REPORT request. */
           if (session->supports_rev_rsrc_replay)
             {
-              replay_target = apr_psprintf(pool, "%s/%ld",
+              replay_target = apr_psprintf(rev_pool, "%s/%ld",
                                            session->rev_stub, rev);
             }
           else
@@ -761,23 +748,21 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
 
           xmlctx = svn_ra_serf__xml_context_create(replay_ttable,
                                            replay_opened, replay_closed,
-                                           replay_cdata,
-                                           replay_ctx,
-                                           ctx_pool);
+                                           replay_cdata, rev_ctx,
+                                           rev_pool);
 
-          handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, ctx_pool);
+          handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL,
+                                                      rev_pool);
 
           handler->method = "REPORT";
           handler->path = replay_target;
           handler->body_delegate = create_replay_body;
-          handler->body_delegate_baton = replay_ctx;
-          handler->conn = session->conns[0];
-          handler->session = session;
+          handler->body_delegate_baton = rev_ctx;
 
           handler->done_delegate = replay_done;
-          handler->done_delegate_baton = replay_ctx;
+          handler->done_delegate_baton = rev_ctx;
 
-          replay_ctx->report_handler = handler;
+          rev_ctx->report_handler = handler;
           svn_ra_serf__request_create(handler);
 
           rev++;
@@ -785,34 +770,24 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
         }
 
       /* Run the serf loop. */
-      SVN_ERR(svn_ra_serf__context_run_wait(&done, session, pool));
-
-      /* Substract the number of completely handled responses from our
-         total nr. of open requests', so we'll know when to stop this loop.
-         Since the message is completely handled, we can destroy its pool. */
+      done = FALSE;
       {
-        svn_ra_serf__list_t *done_list;
+        svn_error_t *err = svn_ra_serf__context_run_wait(&done, session,
+                                                         subpool);
 
-        done_list = done_reports;
-
-        done = FALSE;
-        done_reports = NULL;
-
-        while (done_list)
+        if (err)
           {
-            revision_report_t *ctx = (revision_report_t *)done_list->data;
-            svn_ra_serf__handler_t *done_handler = ctx->report_handler;
-
-            done_list = done_list->next;
-            SVN_ERR(svn_ra_serf__error_on_status(done_handler->sline,
-                                                 done_handler->path,
-                                                 done_handler->location));
-            svn_pool_clear(ctx->pool);
-            active_reports--;
+            svn_pool_destroy(subpool); /* Unregister all requests! */
+            return svn_error_trace(err);
           }
       }
+
+      /* The done handler of reports decrements active_reports when a report
+         is done. This same handler reports (fatal) report errors, so we can
+         just loop here. */
     }
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 #undef MAX_OUTSTANDING_REQUESTS

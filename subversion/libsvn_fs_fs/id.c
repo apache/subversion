@@ -232,7 +232,7 @@ svn_fs_fs__id_txn_unparse(const svn_fs_fs__id_part_t *txn_id,
 {
   char string[2 * SVN_INT64_BUFFER_SIZE + 1];
   char *p = string;
-  
+
   p += svn__i64toa(p, txn_id->revision);
   *(p++) = '-';
   p += svn__ui64tobase36(p, txn_id->number);
@@ -365,14 +365,21 @@ svn_fs_fs__id_check_related(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  /* If both node_ids start with _ and they have differing transaction
-     IDs, then it is impossible for them to be related. */
-  if (id_a->private_id.node_id.revision == SVN_INVALID_REVNUM)
+  /* If both node_ids have been created within _different_ transactions
+     (and are still uncommitted), then it is impossible for them to be
+     related.
+
+     Due to our txn-local temporary IDs, however, they might have been
+     given the same temporary node ID.  We need to detect that case.
+   */
+  if (   id_a->private_id.node_id.revision == SVN_INVALID_REVNUM
+      && id_b->private_id.node_id.revision == SVN_INVALID_REVNUM)
     {
-      if (   !svn_fs_fs__id_part_eq(&id_a->private_id.txn_id,
-                                    &id_b->private_id.txn_id)
-          || !svn_fs_fs__id_txn_used(&id_a->private_id.txn_id))
+      if (!svn_fs_fs__id_part_eq(&id_a->private_id.txn_id,
+                                 &id_b->private_id.txn_id))
         return FALSE;
+
+      /* At this point, matching node_ids implies relatedness. */
     }
 
   return svn_fs_fs__id_part_eq(&id_a->private_id.node_id,
@@ -385,7 +392,7 @@ svn_fs_fs__id_compare(const svn_fs_id_t *a,
                       const svn_fs_id_t *b)
 {
   if (svn_fs_fs__id_eq(a, b))
-    return svn_fs_node_same;
+    return svn_fs_node_unchanged;
   return (svn_fs_fs__id_check_related(a, b) ? svn_fs_node_common_ancestor
                                             : svn_fs_node_unrelated);
 }
@@ -418,7 +425,7 @@ svn_fs_fs__id_txn_create_root(const svn_fs_fs__id_part_t *txn_id,
   fs_fs__id_t *id = apr_pcalloc(pool, sizeof(*id));
 
   /* node ID and copy ID are "0" */
-  
+
   id->private_id.txn_id = *txn_id;
   id->private_id.rev_item.revision = SVN_INVALID_REVNUM;
 
@@ -598,12 +605,14 @@ svn_fs_fs__id_serialize(svn_temp_serializer__context_t *context,
                         const svn_fs_id_t * const *in)
 {
   const fs_fs__id_t *id = (const fs_fs__id_t *)*in;
-  
+
   /* nothing to do for NULL ids */
   if (id == NULL)
     return;
 
-  /* serialize the id data struct itself */
+  /* Serialize the id data struct itself.
+   * Note that the structure behind IN is actually larger than a mere
+   * svn_fs_id_t . */
   svn_temp_serializer__add_leaf(context,
                                 (const void * const *)in,
                                 sizeof(fs_fs__id_t));

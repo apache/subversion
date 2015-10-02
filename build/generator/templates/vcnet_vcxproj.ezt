@@ -20,7 +20,7 @@
 ]<?xml version="1.0" encoding="utf-8"?>
 [format "xml"]<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-[for configs][for platforms]    <ProjectConfiguration Include="[configs.name]|[platforms]">
+[for platforms][for configs]    <ProjectConfiguration Include="[configs.name]|[platforms]">
       <Configuration>[configs.name]</Configuration>
       <Platform>[platforms]</Platform>
     </ProjectConfiguration>
@@ -38,8 +38,10 @@
 [end][end]  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
   </ImportGroup>
-[for platforms][for configs]  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+[for platforms][for configs]  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
 [end][end]  <PropertyGroup Label="UserMacros" />
 [for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">
@@ -62,13 +64,18 @@
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <ProgramDataBaseFileName>$(OutDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <DisableSpecificWarnings>4100;4127;4206;4512;4701;4706;4800;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <TreatSpecificWarningsAsErrors>4002;4003;4013;4020;4022;4024;4028;4029;4030;4031;4033;4047;4089;4113;4115;4204;4715;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
+      <TreatSpecificWarningsAsErrors>4002;4003;4013;4020;4022;4024;4028;4029;4030;4031;4033;4047;4089;4113;4115;4133;4204;4700;4715;4789;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
 [if-any configs.forced_include_files]      <ForcedIncludeFiles>[for configs.forced_include_files][configs.forced_include_files];[end]%(ForcedIncludeFiles)</ForcedIncludeFiles>
 [end]    </ClCompile>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>[for configs.includes][configs.includes];[end]%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is platforms "x64"]WIN64;[end][for configs.defines][configs.defines];[end]%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
 [is config_type "Application"]    <Link>
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <DelayLoadDLLs>[for depends][if-any depends.delayload][depends.delayload];[end][end]</DelayLoadDLLs>
       <SubSystem>Console</SubSystem>
       <EnableUAC>true</EnableUAC>
       <OptimizeReferences>true</OptimizeReferences>
@@ -79,6 +86,7 @@
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>[for configs.libdirs][configs.libdirs];[end]%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <DelayLoadDLLs>[for depends][if-any depends.delayload][depends.delayload];[end][end]</DelayLoadDLLs>
       <IgnoreSpecificDefaultLibraries>[is configs.name "Debug"]msvcrt.lib[end][is configs.name "Release"]msvcrtd.lib[end]</IgnoreSpecificDefaultLibraries>
 [if-any def_file]      <ModuleDefinitionFile>[def_file]</ModuleDefinitionFile>
 [end]    </Link>
@@ -88,10 +96,7 @@
 [end]    </Lib>
 [end][end][end]  </ItemDefinitionGroup>
 [end][end][if-any target.desc]  <ItemGroup>
-    <ResourceCompile Include="..\svn.rc">
-[for configs][for platforms]      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">[for configs.includes][configs.includes];[end]%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is configs.name "Debug"]_DEBUG[else]NDEBUG[end];%(PreprocessorDefinitions)</PreprocessorDefinitions>
-[end][end]    </ResourceCompile>
+    <ResourceCompile Include="..\svn.rc" />
   </ItemGroup>
 [end]  <ItemGroup>
 [for sources][is sources.extension ".h"][else][is sources.extension ".hpp"][else][if-any sources.custom_build]    <CustomBuild Include="[sources.path]">

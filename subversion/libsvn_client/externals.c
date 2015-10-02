@@ -120,7 +120,7 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
 
           /* And if it is no longer a working copy, we should just rename
              it */
-          err = svn_io_file_rename(local_abspath, new_path, scratch_pool);
+          err = svn_io_file_rename2(local_abspath, new_path, FALSE, scratch_pool);
         }
 
       /* ### TODO: We should notify the user about the rename */
@@ -146,6 +146,7 @@ relegate_dir_external(svn_wc_context_t *wc_ctx,
 static svn_error_t *
 switch_dir_external(const char *local_abspath,
                     const char *url,
+                    const char *url_from_externals_definition,
                     const svn_opt_revision_t *peg_revision,
                     const svn_opt_revision_t *revision,
                     const char *defining_abspath,
@@ -170,7 +171,7 @@ switch_dir_external(const char *local_abspath,
   if (revision->kind == svn_opt_revision_number)
     external_rev = revision->value.number;
 
-  /* 
+  /*
    * The code below assumes existing versioned paths are *not* part of
    * the external's defining working copy.
    * The working copy library does not support registering externals
@@ -197,7 +198,16 @@ switch_dir_external(const char *local_abspath,
       SVN_ERR(svn_wc__get_wcroot(&defining_wcroot_abspath, ctx->wc_ctx,
                                  defining_abspath, pool, pool));
       if (strcmp(wcroot_abspath, defining_wcroot_abspath) == 0)
-        return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL, NULL);
+        return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                                 _("The external '%s' defined in %s at '%s' "
+                                   "cannot be checked out because '%s' is "
+                                   "already a versioned path."),
+                                   url_from_externals_definition,
+                                   SVN_PROP_EXTERNALS,
+                                   svn_dirent_local_style(defining_abspath,
+                                                          pool),
+                                   svn_dirent_local_style(local_abspath,
+                                                          pool));
     }
 
   /* If path is a directory, try to update/switch to the correct URL
@@ -221,6 +231,40 @@ switch_dir_external(const char *local_abspath,
 
       if (node_url)
         {
+          svn_boolean_t is_wcroot;
+
+          SVN_ERR(svn_wc__is_wcroot(&is_wcroot, ctx->wc_ctx, local_abspath,
+                                    pool));
+
+          if (! is_wcroot)
+          {
+            /* This can't be a directory external! */
+
+            err = svn_wc__external_remove(ctx->wc_ctx, defining_abspath,
+                                          local_abspath,
+                                          TRUE /* declaration_only */,
+                                          ctx->cancel_func, ctx->cancel_baton,
+                                          pool);
+
+            if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+              {
+                /* New external... No problem that we can't remove it */
+                svn_error_clear(err);
+                err = NULL;
+              }
+
+            return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, err,
+                                     _("The external '%s' defined in %s at '%s' "
+                                       "cannot be checked out because '%s' is "
+                                       "already a versioned path."),
+                                     url_from_externals_definition,
+                                     SVN_PROP_EXTERNALS,
+                                     svn_dirent_local_style(defining_abspath,
+                                                            pool),
+                                     svn_dirent_local_style(local_abspath,
+                                                            pool));
+          }
+
           /* If we have what appears to be a version controlled
              subdir, and its top-level URL matches that of our
              externals definition, perform an update. */
@@ -232,6 +276,20 @@ switch_dir_external(const char *local_abspath,
                                                   FALSE, FALSE, FALSE, TRUE,
                                                   FALSE, TRUE,
                                                   ra_session, ctx, subpool));
+
+              /* We just decided that this existing directory is an external,
+                 so update the external registry with this information, like
+                 when checking out an external */
+              SVN_ERR(svn_wc__external_register(ctx->wc_ctx,
+                                    defining_abspath,
+                                    local_abspath, svn_node_dir,
+                                    repos_root_url, repos_uuid,
+                                    svn_uri_skip_ancestor(repos_root_url,
+                                                          url, pool),
+                                    external_peg_rev,
+                                    external_rev,
+                                    pool));
+
               svn_pool_destroy(subpool);
               goto cleanup;
             }
@@ -514,6 +572,8 @@ switch_file_external(const char *local_abspath,
                                              record_url,
                                              record_peg_revision,
                                              record_revision,
+                                             ctx->conflict_func2,
+                                             ctx->conflict_baton2,
                                              ctx->cancel_func,
                                              ctx->cancel_baton,
                                              ctx->notify_func2,
@@ -792,6 +852,7 @@ handle_external_item_change(svn_client_ctx_t *ctx,
     {
       case svn_node_dir:
         SVN_ERR(switch_dir_external(local_abspath, new_loc->url,
+                                    new_item->url,
                                     &(new_item->peg_revision),
                                     &(new_item->revision),
                                     parent_dir_abspath,
@@ -1185,6 +1246,17 @@ svn_client__export_externals(apr_hash_t *externals,
           SVN_ERR(svn_io_make_dir_recursively(svn_dirent_dirname(item_abspath,
                                                                  sub_iterpool),
                                               sub_iterpool));
+
+          /* First notify that we're about to handle an external. */
+          if (ctx->notify_func2)
+            {
+              ctx->notify_func2(
+                       ctx->notify_baton2,
+                       svn_wc_create_notify(item_abspath,
+                                            svn_wc_notify_update_external,
+                                            sub_iterpool),
+                       sub_iterpool);
+            }
 
           SVN_ERR(wrap_external_error(
                           ctx, item_abspath,

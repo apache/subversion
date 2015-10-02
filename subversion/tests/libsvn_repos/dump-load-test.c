@@ -76,8 +76,8 @@ test_dump_bad_props(svn_stringbuf_t **dump_data_p,
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
 
   /* Test that a dump completes without error. */
-  SVN_ERR(svn_repos_dump_fs3(repos, stream, start_rev, end_rev,
-                             FALSE, FALSE,
+  SVN_ERR(svn_repos_dump_fs4(repos, stream, start_rev, end_rev,
+                             FALSE, FALSE, TRUE, TRUE,
                              notify_func, notify_baton,
                              NULL, NULL,
                              pool));

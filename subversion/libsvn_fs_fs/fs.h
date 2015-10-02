@@ -82,8 +82,6 @@ extern "C" {
 /* Names of special files and file extensions for transactions */
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
 #define PATH_TXN_PROPS     "props"         /* Transaction properties */
-#define PATH_TXN_PROPS_FINAL "props-final" /* Final transaction properties
-                                              before moving to revprops */
 #define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
 #define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
 #define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
@@ -527,7 +525,14 @@ typedef struct representation_t
   svn_filesize_t size;
 
   /* The size of the fulltext of the representation. If this is 0,
-   * the fulltext size is equal to representation size in the rev file, */
+   * for a plain rep, the real fulltext size is equal to the SIZE field.
+   * For a delta rep, this field is always the real fulltext size.
+   *
+   * Note that svn_fs_fs__fixup_expanded_size() checks for these special
+   * cases and ensures that this field contains the actual value.  We call
+   * it early after reading a representation struct, so most code does not
+   * have to worry about it.
+   */
   svn_filesize_t expanded_size;
 
   /* Is this a representation (still) within a transaction? */
@@ -615,6 +620,18 @@ typedef struct change_t
   /* API compatible change description */
   svn_fs_path_change2_t info;
 } change_t;
+
+
+/*** Directory (only used at the cache interface) ***/
+typedef struct svn_fs_fs__dir_data_t
+{
+  /* Contents, i.e. all directory entries, sorted by name. */
+  apr_array_header_t *entries;
+
+  /* SVN_INVALID_FILESIZE for committed data, otherwise the length of the
+   * in-txn on-disk representation of that directory. */
+  svn_filesize_t txn_filesize;
+} svn_fs_fs__dir_data_t;
 
 
 #ifdef __cplusplus

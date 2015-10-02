@@ -285,16 +285,7 @@ class SVNTreeNode:
     if self.props:
       if comma:
         line += ", "
-      line += "props={"
-      comma = False
-
-      for name in self.props:
-        if comma:
-          line += ", "
-        line += "'%s':'%s'" % (name, self.props[name])
-        comma = True
-
-      line += "}"
+      line += ("props=%s" % self.props)
       comma = True
 
     for name in self.atts:
@@ -609,6 +600,11 @@ def detect_conflict_files(node, extra_files):
     logger.warn(msg)
     logger.warn(str(node))
     raise SVNTreeUnequal(msg)
+
+def detect_conflict_files_done(extra_files):
+   """Done handler for detect_conflict_files"""
+   if len(extra_files):
+    raise SVNTreeError("Not all extra reject files have been accounted for")
 
 ###########################################################################
 ###########################################################################

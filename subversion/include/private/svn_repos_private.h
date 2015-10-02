@@ -166,7 +166,7 @@ typedef struct svn_repos__config_pool_t svn_repos__config_pool_t;
 
 /* Create a new configuration pool object with a lifetime determined by
  * POOL and return it in *CONFIG_POOL.
- * 
+ *
  * The THREAD_SAFE flag indicates whether the pool actually needs to be
  * thread-safe and POOL must be also be thread-safe if this flag is set.
  */
@@ -261,6 +261,128 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
                           apr_pool_t *pool);
 
 /** @} */
+
+/* Adjust mergeinfo paths and revisions in ways that are useful when loading
+ * a dump stream.
+ *
+ * Set *NEW_VALUE_P to an adjusted version of the mergeinfo property value
+ * supplied in OLD_VALUE, with the following adjustments.
+ *
+ *   - Normalize line endings: if all CRLF, change to LF; but error if
+ *     mixed. If this normalization is performed, send a notification type
+ *     svn_repos_notify_load_normalized_mergeinfo to NOTIFY_FUNC/NOTIFY_BATON.
+ *
+ *   - Prefix all the merge source paths with PARENT_DIR, if not null.
+ *
+ *   - Adjust any mergeinfo revisions not older than OLDEST_DUMPSTREAM_REV
+ *     by using REV_MAP which maps (svn_revnum_t) old rev to (svn_revnum_t)
+ *     new rev.
+ *
+ *   - Adjust any mergeinfo revisions older than OLDEST_DUMPSTREAM_REV by
+ *     (-OLDER_REVS_OFFSET), dropping any revisions that become <= 0.
+ *
+ * Allocate *NEW_VALUE_P in RESULT_POOL.
+ */
+svn_error_t *
+svn_repos__adjust_mergeinfo_property(svn_string_t **new_value_p,
+                                     const svn_string_t *old_value,
+                                     const char *parent_dir,
+                                     apr_hash_t *rev_map,
+                                     svn_revnum_t oldest_dumpstream_rev,
+                                     apr_int32_t older_revs_offset,
+                                     svn_repos_notify_func_t notify_func,
+                                     void *notify_baton,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
+
+/* A (nearly) opaque representation of an ordered list of header lines.
+ */
+typedef struct apr_array_header_t svn_repos__dumpfile_headers_t;
+
+/* Create an empty set of headers.
+ */
+svn_repos__dumpfile_headers_t *
+svn_repos__dumpfile_headers_create(apr_pool_t *pool);
+
+/* Push the header (KEY, VAL) onto HEADERS.
+ *
+ * Duplicate the key and value into HEADERS's pool.
+ */
+void
+svn_repos__dumpfile_header_push(svn_repos__dumpfile_headers_t *headers,
+                                const char *key,
+                                const char *val);
+
+/* Push the header (KEY, val = VAL_FMT ...) onto HEADERS.
+ *
+ * Duplicate the key and value into HEADERS's pool.
+ */
+void
+svn_repos__dumpfile_header_pushf(svn_repos__dumpfile_headers_t *headers,
+                                 const char *key,
+                                 const char *val_fmt,
+                                 ...)
+        __attribute__((format(printf, 3, 4)));
+
+/* Write to STREAM the headers in HEADERS followed by a blank line.
+ */
+svn_error_t *
+svn_repos__dump_headers(svn_stream_t *stream,
+                        svn_repos__dumpfile_headers_t *headers,
+                        apr_pool_t *scratch_pool);
+
+/* Write a revision record to DUMP_STREAM for revision REVISION with revision
+ * properies REVPROPS, creating appropriate headers.
+ *
+ * Include all of the headers in EXTRA_HEADERS (if non-null), ignoring
+ * the revision number header and the three content length headers (which
+ * will be recreated as needed). EXTRA_HEADERS maps (char *) key to
+ * (char *) value.
+ *
+ * REVPROPS maps (char *) key to (svn_string_t *) value.
+ *
+ * Iff PROPS_SECTION_ALWAYS is true, include a prop content section (and
+ * corresponding header) even when REVPROPS is empty. This option exists
+ * to support a historical difference between svndumpfilter and svnadmin
+ * dump.
+ *
+ * Finally write another blank line.
+ */
+svn_error_t *
+svn_repos__dump_revision_record(svn_stream_t *dump_stream,
+                                svn_revnum_t revision,
+                                apr_hash_t *extra_headers,
+                                apr_hash_t *revprops,
+                                svn_boolean_t props_section_always,
+                                apr_pool_t *scratch_pool);
+
+/* Output node headers and props.
+ *
+ * Output HEADERS, content length headers, blank line, and
+ * then PROPS_STR (if non-null) to DUMP_STREAM.
+ *
+ * HEADERS is an array of headers as struct {const char *key, *val;}.
+ * Write them all in the given order.
+ *
+ * PROPS_STR is the property content block, including a terminating
+ * 'PROPS_END\n' line. Iff PROPS_STR is non-null, write a
+ * Prop-content-length header and the prop content block.
+ *
+ * Iff HAS_TEXT is true, write a Text-content length, using the value
+ * TEXT_CONTENT_LENGTH.
+ *
+ * Write a Content-length header, its value being the sum of the
+ * Prop- and Text- content length headers, if props and/or text are present
+ * or if CONTENT_LENGTH_ALWAYS is true.
+ */
+svn_error_t *
+svn_repos__dump_node_record(svn_stream_t *dump_stream,
+                            svn_repos__dumpfile_headers_t *headers,
+                            svn_stringbuf_t *props_str,
+                            svn_boolean_t has_text,
+                            svn_filesize_t text_content_length,
+                            svn_boolean_t content_length_always,
+                            apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

@@ -171,6 +171,26 @@ svn_error_t*
 svn_io__utf8_to_unicode_longpath(const WCHAR **result,
                                  const char *source,
                                  apr_pool_t *result_pool);
+
+/* This Windows-specific function marks the file to be deleted on close using
+   an existing file handle. It can be used to avoid having to reopen the file
+   as part of the delete handling. Return SVN_ERR_UNSUPPORTED_FEATURE if
+   delete on close operation is not supported by OS. */
+svn_error_t *
+svn_io__win_delete_file_on_close(apr_file_t *file,
+                                 const char *path,
+                                 apr_pool_t *pool);
+
+/* This Windows-specific function renames the file using an existing file
+   handle. It can be used to avoid having to reopen the file as part of the
+   rename operation. Return SVN_ERR_UNSUPPORTED_FEATURE if renaming open
+   file is not supported by OS.*/
+svn_error_t *
+svn_io__win_rename_open_file(apr_file_t *file,
+                             const char *from_path,
+                             const char *to_path,
+                             apr_pool_t *pool);
+
 #endif /* WIN32 */
 
 #ifdef __cplusplus

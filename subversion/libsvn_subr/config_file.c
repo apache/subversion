@@ -1143,7 +1143,6 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                              HTTP operation."                   NL
         "###   http-chunked-requests      Whether to use chunked transfer"   NL
         "###                              encoding for HTTP requests body."  NL
-        "###   neon-debug-mask            Debug mask for Neon HTTP library"  NL
         "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL
         "###   ssl-trust-default-ca       Trust the system 'default' CAs"    NL
@@ -1236,7 +1235,6 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### Most users will not need to explicitly set the http-library"    NL
         "### option, but valid values for the option include:"               NL
         "###    'serf': Serf-based module (Subversion 1.5 - present)"        NL
-        "###    'neon': Neon-based module (Subversion 1.0 - 1.7)"            NL
         "### Availability of these modules may depend on your specific"      NL
         "### Subversion distribution."                                       NL
         "###"                                                                NL
@@ -1261,7 +1259,6 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# http-proxy-username = blah"                                       NL
         "# http-proxy-password = doubleblah"                                 NL
         "# http-timeout = 60"                                                NL
-        "# neon-debug-mask = 130"                                            NL
 #ifndef SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE
         "# store-plaintext-passwords = no"                                   NL
 #endif
@@ -1302,7 +1299,6 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# http-proxy-password = defaultpassword"                            NL
         "# http-compression = no"                                            NL
         "# No http-timeout, so just use the builtin default."                NL
-        "# No neon-debug-mask, so neon debugging is disabled."               NL
         "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"   NL
         "#"                                                                  NL
         "# Password / passphrase caching parameters:"                        NL
@@ -1614,7 +1610,7 @@ svn_config_get_user_config_path(const char **path,
     if (! homedir)
       return SVN_NO_ERROR;
     *path = svn_dirent_join_many(pool,
-                               svn_dirent_canonicalize(homedir, pool),
+                                 homedir,
                                SVN_CONFIG__USR_DIRECTORY, fname, SVN_VA_NULL);
   }
 #endif /* WIN32 */

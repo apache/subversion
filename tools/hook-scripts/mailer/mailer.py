@@ -241,7 +241,7 @@ class MailedOutput(OutputBase):
     # characters), encoding (per RFC2047) each token as necessary, and
     # slapping 'em back to together again.
     from email.Header import Header
-    
+
     def _maybe_encode_header(hdr_token):
       try:
         hdr_token.encode('ascii')

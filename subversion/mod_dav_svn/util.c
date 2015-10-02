@@ -40,11 +40,13 @@
 
 #include "dav_svn.h"
 #include "private/svn_fspath.h"
+#include "private/svn_string_private.h"
 
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
                    int status,
                    int error_id,
+                   apr_status_t aprerr,
                    const char *desc)
 {
   if (error_id == 0)
@@ -58,10 +60,10 @@ dav_svn__new_error(apr_pool_t *pool,
  * > 2.2 below perpetuates this.
  */
 #if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
-  return dav_new_error(pool, status, error_id, 0, desc);
+  return dav_new_error(pool, status, error_id, aprerr, desc);
 #else
 
-  errno = 0; /* For the same reason as in dav_svn__new_error_svn */
+  errno = aprerr; /* For the same reason as in dav_svn__new_error_svn */
 
   return dav_new_error(pool, status, error_id, desc);
 #endif
@@ -71,20 +73,22 @@ dav_error *
 dav_svn__new_error_svn(apr_pool_t *pool,
                        int status,
                        int error_id,
+                       apr_status_t aprerr,
                        const char *desc)
 {
   if (error_id == 0)
     error_id = SVN_ERR_RA_DAV_REQUEST_FAILED;
 
 #if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
-  return dav_new_error_tag(pool, status, error_id, 0,
+  return dav_new_error_tag(pool, status, error_id, aprerr,
                            desc, SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
 #else
-  /* dav_new_error_tag will record errno but Subversion makes no attempt
-     to ensure that it is valid.  We reset it to avoid putting incorrect
-     information into the error log, at the expense of possibly removing
-     valid information. */
-  errno = 0;
+  /* dav_new_error_tag will record errno so we use it to pass aprerr.
+     This overrwites any existing errno value but since Subversion
+     makes no attempt to avoid system calls after a failed system call
+     there is no guarantee that any existing errno represents a
+     relevant error. */
+  errno = aprerr;
 
   return dav_new_error_tag(pool, status, error_id, desc,
                            SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
@@ -100,7 +104,7 @@ build_error_chain(apr_pool_t *pool, svn_error_t *err, int status)
   char buffer[128];
   const char *msg = svn_err_best_message(err, buffer, sizeof(buffer));
 
-  dav_error *derr = dav_svn__new_error_svn(pool, status, err->apr_err,
+  dav_error *derr = dav_svn__new_error_svn(pool, status, err->apr_err, 0,
                                            apr_pstrdup(pool, msg));
 
   if (err->child)
@@ -116,51 +120,52 @@ dav_svn__convert_err(svn_error_t *serr,
                      const char *message,
                      apr_pool_t *pool)
 {
-    dav_error *derr;
+  dav_error *derr;
 
-    /* Remove the trace-only error chain links.  We need predictable
-       protocol behavior regardless of whether or not we're in a
-       debugging build. */
-    svn_error_t *purged_serr = svn_error_purge_tracing(serr);
+  /* Remove the trace-only error chain links.  We need predictable
+     protocol behavior regardless of whether or not we're in a
+     debugging build. */
+  svn_error_t *purged_serr = svn_error_purge_tracing(serr);
 
-    /* ### someday mod_dav_svn will send back 'rich' error tags, much
-       finer grained than plain old svn_error_t's.  But for now, all
-       svn_error_t's are marshalled to the client via the single
-       generic <svn:error/> tag nestled within a <D:error> block. */
+  /* ### someday mod_dav_svn will send back 'rich' error tags, much
+     finer grained than plain old svn_error_t's.  But for now, all
+     svn_error_t's are marshalled to the client via the single
+     generic <svn:error/> tag nestled within a <D:error> block. */
 
-    /* Examine the Subverion error code, and select the most
-       appropriate HTTP status code.  If no more appropriate HTTP
-       status code maps to the Subversion error code, use the one
-       suggested status provided by the caller. */
-    switch (purged_serr->apr_err)
-      {
-      case SVN_ERR_FS_NOT_FOUND:
-        status = HTTP_NOT_FOUND;
-        break;
-      case SVN_ERR_UNSUPPORTED_FEATURE:
-        status = HTTP_NOT_IMPLEMENTED;
-        break;
-      case SVN_ERR_FS_LOCK_OWNER_MISMATCH:
-      case SVN_ERR_FS_PATH_ALREADY_LOCKED:
-        status = HTTP_LOCKED;
-        break;
-      case SVN_ERR_FS_PROP_BASEVALUE_MISMATCH:
-        status = HTTP_PRECONDITION_FAILED;
-        break;
-        /* add other mappings here */
-      }
+  /* Examine the Subverion error code, and select the most
+     appropriate HTTP status code.  If no more appropriate HTTP
+     status code maps to the Subversion error code, use the one
+     suggested status provided by the caller. */
+  switch (purged_serr->apr_err)
+    {
+    case SVN_ERR_FS_NOT_FOUND:
+    case SVN_ERR_FS_NO_SUCH_REVISION:
+      status = HTTP_NOT_FOUND;
+      break;
+    case SVN_ERR_UNSUPPORTED_FEATURE:
+      status = HTTP_NOT_IMPLEMENTED;
+      break;
+    case SVN_ERR_FS_LOCK_OWNER_MISMATCH:
+    case SVN_ERR_FS_PATH_ALREADY_LOCKED:
+      status = HTTP_LOCKED;
+      break;
+    case SVN_ERR_FS_PROP_BASEVALUE_MISMATCH:
+      status = HTTP_PRECONDITION_FAILED;
+      break;
+      /* add other mappings here */
+    }
 
-    derr = build_error_chain(pool, purged_serr, status);
-    if (message != NULL
-        && !svn_error_find_cause(purged_serr, SVN_ERR_REPOS_HOOK_FAILURE))
-      /* Don't hide hook failures; we might hide the error text */
-      derr = dav_push_error(pool, status, purged_serr->apr_err,
-                            message, derr);
+  derr = build_error_chain(pool, purged_serr, status);
+  if (message != NULL
+      && !svn_error_find_cause(purged_serr, SVN_ERR_REPOS_HOOK_FAILURE))
+    /* Don't hide hook failures; we might hide the error text */
+    derr = dav_push_error(pool, status, purged_serr->apr_err,
+                          message, derr);
 
-    /* Now, destroy the Subversion error. */
-    svn_error_clear(serr);
+  /* Now, destroy the Subversion error. */
+  svn_error_clear(serr);
 
-    return derr;
+  return derr;
 }
 
 
@@ -216,7 +221,7 @@ dav_svn__get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
       return revision;
     }
 
-  if (node_relation == svn_fs_node_same)
+  if (node_relation == svn_fs_node_unchanged)
     return history_rev;  /* the history rev is safe!  the same node
                             exists at the same path in both revisions. */
 
@@ -538,7 +543,7 @@ dav_svn__test_canonical(const char *path, apr_pool_t *pool)
 
   /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */
   return dav_svn__new_error_svn(
-     pool, HTTP_BAD_REQUEST, 0,
+     pool, HTTP_BAD_REQUEST, 0, 0,
      apr_psprintf(pool,
                   "Path '%s' is not canonicalized; "
                   "there is a problem with the client.", path));
@@ -571,11 +576,12 @@ dav_svn__sanitize_error(svn_error_t *serr,
                         "%s", purged_serr->message);
         }
 
-        svn_error_clear(serr);
-      }
-    return dav_svn__convert_err(safe_err, http_status,
-                                apr_psprintf(r->pool, "%s", safe_err->message),
-                                r->pool);
+      svn_error_clear(serr);
+    }
+
+  return dav_svn__convert_err(safe_err, http_status,
+                              apr_psprintf(r->pool, "%s", safe_err->message),
+                              r->pool);
 }
 
 
@@ -655,7 +661,7 @@ dav_svn__final_flush_or_error(request_rec *r,
     {
       apr_status_t apr_err = ap_fflush(output, bb);
       if (apr_err && (! derr))
-        derr = dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+        derr = dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0, apr_err,
                                   "Error flushing brigade.");
     }
   return derr;
@@ -740,7 +746,7 @@ request_body_to_string(svn_string_t **request_str,
   int seen_eos;
   apr_status_t status;
   apr_off_t total_read = 0;
-  apr_off_t limit_req_body = ap_get_limit_req_body(r);
+  apr_off_t limit_req_body = ap_get_limit_xml_body(r);
   int result = HTTP_BAD_REQUEST;
   const char *content_length_str;
   char *endp;
@@ -818,7 +824,7 @@ request_body_to_string(svn_string_t **request_str,
             {
               ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
                             "Request body is larger than the configured "
-                            "limit of %lu", (unsigned long)limit_req_body);
+                            "limit of %" APR_OFF_T_FMT, limit_req_body);
               result = HTTP_REQUEST_ENTITY_TOO_LARGE;
               goto cleanup;
             }
@@ -833,9 +839,7 @@ request_body_to_string(svn_string_t **request_str,
   apr_brigade_destroy(brigade);
 
   /* Make an svn_string_t from our svn_stringbuf_t. */
-  *request_str = svn_string_create_empty(pool);
-  (*request_str)->data = buf->data;
-  (*request_str)->len = buf->len;
+  *request_str = svn_stringbuf__morph_into_string(buf);
   return OK;
 
  cleanup:
@@ -856,7 +860,7 @@ dav_svn__parse_request_skel(svn_skel_t **skel,
   *skel = NULL;
   status = request_body_to_string(&skel_str, r, pool);
   if (status != OK)
-    return OK;
+    return status;
 
   *skel = svn_skel__parse(skel_str->data, skel_str->len, pool);
   return OK;

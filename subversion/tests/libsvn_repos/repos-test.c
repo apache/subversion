@@ -37,8 +37,10 @@
 #include "svn_delta.h"
 #include "svn_config.h"
 #include "svn_props.h"
+#include "svn_sorts.h"
 #include "svn_version.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_dep_compat.h"
 
 /* be able to look into svn_config_t */
 #include "../../libsvn_subr/config_impl.h"
@@ -49,13 +51,6 @@
 
 /* Used to terminate lines in large multi-line string literals. */
 #define NL APR_EOL_STR
-
-#ifndef MAX
-#define MAX(a,b) (((a)>(b))?(a):(b))
-#endif
-#ifndef MIN
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#endif
 
 /* Compare strings, like strcmp but either or both may be NULL which
  * compares equal to NULL and not equal to any non-NULL string. */
@@ -752,8 +747,7 @@ check_locations_info(apr_hash_t *locations, const struct locations_info *info)
   unsigned int i;
   for (i = 0; info->rev != 0; ++i, ++info)
     {
-      const char *p = apr_hash_get(locations, &info->rev, sizeof
-                                   (svn_revnum_t));
+      const char *p = apr_hash_get(locations, &info->rev, sizeof(info->rev));
       if (!p)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "Missing path for revision %ld", info->rev);
@@ -3072,7 +3066,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t rev,
 {
   apr_hash_t *ht = baton;
   const char *author;
-  file_revs_t *file_rev = apr_hash_get(ht, &rev, sizeof(svn_revnum_t));
+  file_revs_t *file_rev = apr_hash_get(ht, &rev, sizeof(rev));
 
   if (!file_rev)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -3090,7 +3084,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t rev,
 
   /* Remove this revision from this list so we'll be able to verify that we
      have seen all expected revisions. */
-  apr_hash_set(ht, &rev, sizeof(svn_revnum_t), NULL);
+  apr_hash_set(ht, &rev, sizeof(rev), NULL);
 
   return SVN_NO_ERROR;
 }
@@ -3128,16 +3122,16 @@ test_get_file_revs(const svn_test_opts_t *opts,
 
   for (i = 0; i < sizeof(trunk_results) / sizeof(trunk_results[0]); i++)
     apr_hash_set(ht_trunk_results, &trunk_results[i].rev,
-                 sizeof(svn_revnum_t), &trunk_results[i]);
+                 sizeof(trunk_results[i].rev), &trunk_results[i]);
 
   for (i = 0; i < sizeof(branch_results) / sizeof(branch_results[0]); i++)
     apr_hash_set(ht_branch_results, &branch_results[i].rev,
-                 sizeof(svn_revnum_t), &branch_results[i]);
+                 sizeof(branch_results[i].rev), &branch_results[i]);
 
   for (i = 0; i < sizeof(trunk_results) / sizeof(trunk_results[0]); i++)
     if (!trunk_results[i].result_of_merge)
       apr_hash_set(ht_reverse_results, &trunk_results[i].rev,
-                   sizeof(svn_revnum_t), &trunk_results[i]);
+                   sizeof(trunk_results[i].rev), &trunk_results[i]);
 
   /* Check for feature support */
   if (opts->server_minor_version && (opts->server_minor_version < 5))
@@ -3454,26 +3448,26 @@ test_config_pool(const svn_test_opts_t *opts,
   svn_stringbuf_appendcstr(cfg_buffer2, "\n[more]\nU=\"X\"\n");
 
   /* write them to 2x2 files */
-  SVN_ERR(svn_io_write_atomic(svn_dirent_join(wrk_dir,
-                                              "config-pool-test1.cfg",
-                                              pool),
-                              cfg_buffer1->data, cfg_buffer1->len, NULL,
-                              pool));
-  SVN_ERR(svn_io_write_atomic(svn_dirent_join(wrk_dir,
-                                              "config-pool-test2.cfg",
-                                              pool),
-                              cfg_buffer1->data, cfg_buffer1->len, NULL,
-                              pool));
-  SVN_ERR(svn_io_write_atomic(svn_dirent_join(wrk_dir,
-                                              "config-pool-test3.cfg",
-                                              pool),
-                              cfg_buffer2->data, cfg_buffer2->len, NULL,
-                              pool));
-  SVN_ERR(svn_io_write_atomic(svn_dirent_join(wrk_dir,
-                                              "config-pool-test4.cfg",
-                                              pool),
-                              cfg_buffer2->data, cfg_buffer2->len, NULL,
-                              pool));
+  SVN_ERR(svn_io_write_atomic2(svn_dirent_join(wrk_dir,
+                                               "config-pool-test1.cfg",
+                                               pool),
+                               cfg_buffer1->data, cfg_buffer1->len, NULL,
+                               FALSE, pool));
+  SVN_ERR(svn_io_write_atomic2(svn_dirent_join(wrk_dir,
+                                               "config-pool-test2.cfg",
+                                               pool),
+                               cfg_buffer1->data, cfg_buffer1->len, NULL,
+                               FALSE, pool));
+  SVN_ERR(svn_io_write_atomic2(svn_dirent_join(wrk_dir,
+                                               "config-pool-test3.cfg",
+                                               pool),
+                               cfg_buffer2->data, cfg_buffer2->len, NULL,
+                               FALSE, pool));
+  SVN_ERR(svn_io_write_atomic2(svn_dirent_join(wrk_dir,
+                                               "config-pool-test4.cfg",
+                                               pool),
+                               cfg_buffer2->data, cfg_buffer2->len, NULL,
+                               FALSE, pool));
 
   /* requesting a config over and over again should return the same
      (even though it is not being referenced) */
@@ -3635,6 +3629,291 @@ test_repos_fs_type(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+deprecated_access_context_api(const svn_test_opts_t *opts,
+                              apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_access_t *access;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  const char *conflict;
+  svn_revnum_t new_rev;
+  const char *hook;
+
+  /* Create test repository. */
+  SVN_ERR(svn_test__create_repos(&repos,
+                                 "test-repo-deprecated-access-context-api",
+                                 opts, pool));
+
+  /* Set an empty pre-commit hook. */
+#ifdef WIN32
+  hook = apr_pstrcat(pool, svn_repos_pre_commit_hook(repos, pool), ".bat",
+                     SVN_VA_NULL);
+  SVN_ERR(svn_io_file_create(hook,
+                             "exit 0" APR_EOL_STR,
+                             pool));
+#else
+  hook = svn_repos_pre_commit_hook(repos, pool);
+  SVN_ERR(svn_io_file_create(hook,
+                             "#!/bin/sh" APR_EOL_STR "exit 0" APR_EOL_STR,
+                             pool));
+  SVN_ERR(svn_io_set_file_executable(hook, TRUE, FALSE, pool));
+#endif
+
+  /* Set some access context using svn_fs_access_add_lock_token(). */
+  SVN_ERR(svn_fs_create_access(&access, "jrandom", pool));
+  SVN_ERR(svn_fs_access_add_lock_token(access, "opaquelocktoken:abc"));
+  SVN_ERR(svn_fs_set_access(svn_repos_fs(repos), access));
+
+  /* Commit a new revision. */
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit2(&txn, repos, 0,
+                                             apr_hash_make(pool), pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(root, "/whatever", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(&conflict, repos, &new_rev, txn, pool));
+
+  SVN_TEST_STRING_ASSERT(conflict, NULL);
+  SVN_TEST_ASSERT(new_rev == 1);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+mkdir_delete_copy(svn_repos_t *repos,
+                  const char *src,
+                  const char *dst,
+                  apr_pool_t *pool)
+{
+  svn_fs_t *fs = svn_repos_fs(repos);
+  svn_revnum_t youngest_rev;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+
+  SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, pool));
+  
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "A/T", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_delete(txn_root, "A/T", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev - 1, pool));
+  SVN_ERR(svn_fs_copy(rev_root, src, txn_root, dst, pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  return SVN_NO_ERROR;
+}
+
+struct authz_read_baton_t {
+  apr_hash_t *paths;
+  apr_pool_t *pool;
+  const char *deny;
+};
+
+static svn_error_t *
+authz_read_func(svn_boolean_t *allowed,
+                svn_fs_root_t *root,
+                const char *path,
+                void *baton,
+                apr_pool_t *pool)
+{
+  struct authz_read_baton_t *b = baton;
+
+  if (b->deny && !strcmp(b->deny, path))
+    *allowed = FALSE;
+  else
+    *allowed = TRUE;
+
+  svn_hash_sets(b->paths, apr_pstrdup(b->pool, path), (void*)1);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+verify_locations(apr_hash_t *actual,
+                 apr_hash_t *expected,
+                 apr_hash_t *checked,
+                 apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, expected); hi; hi = apr_hash_next(hi))
+    {
+      const svn_revnum_t *rev = apr_hash_this_key(hi);
+      const char *path = apr_hash_get(actual, rev, sizeof(*rev));
+
+      if (!path)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "expected %s for %d found (null)",
+                                 (char*)apr_hash_this_val(hi), (int)*rev);
+      else if (strcmp(path, apr_hash_this_val(hi)))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "expected %s for %d found %s",
+                                 (char*)apr_hash_this_val(hi), (int)*rev, path);
+
+    }
+
+  for (hi = apr_hash_first(pool, actual); hi; hi = apr_hash_next(hi))
+    {
+      const svn_revnum_t *rev = apr_hash_this_key(hi);
+      const char *path = apr_hash_get(expected, rev, sizeof(*rev));
+
+      if (!path)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "found %s for %d expected (null)",
+                                 (char*)apr_hash_this_val(hi), (int)*rev);
+      else if (strcmp(path, apr_hash_this_val(hi)))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "found %s for %d expected %s",
+                                 (char*)apr_hash_this_val(hi), (int)*rev, path);
+
+      if (!svn_hash_gets(checked, path))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "did not check %s", path);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static void
+set_expected(apr_hash_t *expected,
+             svn_revnum_t rev,
+             const char *path,
+             apr_pool_t *pool)
+{
+  svn_revnum_t *rp = apr_palloc(pool, sizeof(svn_revnum_t));
+  *rp = rev;
+  apr_hash_set(expected, rp, sizeof(*rp), path);
+}
+
+static svn_error_t *
+trace_node_locations_authz(const svn_test_opts_t *opts,
+                           apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_revnum_t youngest_rev = 0;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  struct authz_read_baton_t arb;
+  apr_array_header_t *revs = apr_array_make(pool, 10, sizeof(svn_revnum_t));
+  apr_hash_t *locations;
+  apr_hash_t *expected = apr_hash_make(pool);
+  int i;
+
+  /* Create test repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-trace-node-locations-authz",
+                                 opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* r1 create A */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "A", pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "A/f", pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "A/f", "foobar", pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+
+  /* r4 copy A to B */
+  SVN_ERR(mkdir_delete_copy(repos, "A", "B", pool));
+
+  /* r7 copy B to C */
+  SVN_ERR(mkdir_delete_copy(repos, "B", "C", pool));
+
+  /* r10 copy C to D */
+  SVN_ERR(mkdir_delete_copy(repos, "C", "D", pool));
+
+  SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, pool));
+  SVN_ERR_ASSERT(youngest_rev == 10);
+
+  arb.paths = apr_hash_make(pool);
+  arb.pool = pool;
+  arb.deny = NULL;
+
+  apr_array_clear(revs);
+  for (i = 0; i <= youngest_rev; ++i)
+    APR_ARRAY_PUSH(revs, svn_revnum_t) = i;
+  set_expected(expected, 10, "/D/f", pool);
+  set_expected(expected, 8, "/C/f", pool);
+  set_expected(expected, 7, "/C/f", pool);
+  set_expected(expected, 5, "/B/f", pool);
+  set_expected(expected, 4, "/B/f", pool);
+  set_expected(expected, 2, "/A/f", pool);
+  set_expected(expected, 1, "/A/f", pool);
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  apr_array_clear(revs);
+  for (i = 1; i <= youngest_rev; ++i)
+    APR_ARRAY_PUSH(revs, svn_revnum_t) = i;
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  apr_array_clear(revs);
+  for (i = 2; i <= youngest_rev; ++i)
+    APR_ARRAY_PUSH(revs, svn_revnum_t) = i;
+  set_expected(expected, 1, NULL, pool);
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  apr_array_clear(revs);
+  for (i = 3; i <= youngest_rev; ++i)
+    APR_ARRAY_PUSH(revs, svn_revnum_t) = i;
+  set_expected(expected, 2, NULL, pool);
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  apr_array_clear(revs);
+  for (i = 6; i <= youngest_rev; ++i)
+    APR_ARRAY_PUSH(revs, svn_revnum_t) = i;
+  set_expected(expected, 5, NULL, pool);
+  set_expected(expected, 4, NULL, pool);
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  arb.deny = "/B/f";
+  apr_array_clear(revs);
+  for (i = 0; i <= youngest_rev; ++i)
+    APR_ARRAY_PUSH(revs, svn_revnum_t) = i;
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  apr_array_clear(revs);
+  for (i = 6; i <= youngest_rev; ++i)
+    APR_ARRAY_PUSH(revs, svn_revnum_t) = i;
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  APR_ARRAY_PUSH(revs, svn_revnum_t) = 0;
+  apr_hash_clear(arb.paths);
+  SVN_ERR(svn_repos_trace_node_locations(fs, &locations, "D/f", 10, revs,
+                                         authz_read_func, &arb, pool));
+  SVN_ERR(verify_locations(locations, expected, arb.paths, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 static int max_threads = 4;
@@ -3688,6 +3967,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_repos__config_pool_*"),
     SVN_TEST_OPTS_PASS(test_repos_fs_type,
                        "test test_repos_fs_type"),
+    SVN_TEST_OPTS_PASS(deprecated_access_context_api,
+                       "test deprecated access context api"),
+    SVN_TEST_OPTS_PASS(trace_node_locations_authz,
+                       "authz for svn_repos_trace_node_locations"),
     SVN_TEST_NULL
   };
 

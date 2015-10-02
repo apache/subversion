@@ -26,6 +26,7 @@
 
 #include "svn_private_config.h"
 
+#include "svn_checksum.h"
 #include "svn_hash.h"
 #include "svn_props.h"
 #include "svn_time.h"
@@ -400,7 +401,7 @@ svn_fs_fs__with_all_locks(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
 
   /* Be sure to use the correct lock ordering as documented in
-     fs_fs_shared_data_t.  The lock chain is being created in 
+     fs_fs_shared_data_t.  The lock chain is being created in
      innermost (last to acquire) -> outermost (first to acquire) order. */
   with_lock_baton_t *lock_baton
     = create_lock_baton(fs, write_lock, body, baton, pool);
@@ -621,8 +622,8 @@ svn_fs_fs__write_format(svn_fs_t *fs,
     }
   else
     {
-      SVN_ERR(svn_io_write_atomic(path, sb->data, sb->len,
-                                  NULL /* copy_perms_path */, pool));
+      SVN_ERR(svn_io_write_atomic2(path, sb->data, sb->len,
+                                   NULL /* copy_perms_path */, TRUE, pool));
     }
 
   /* And set the perms to make it read only */
@@ -1125,7 +1126,9 @@ svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   /* Global configuration options. */
   SVN_ERR(read_global_config(fs));
 
-  return get_youngest(&(ffd->youngest_rev_cache), fs, pool);
+  ffd->youngest_rev_cache = 0;
+
+  return SVN_NO_ERROR;
 }
 
 /* Wrapper around svn_io_file_create which ignores EEXIST. */
@@ -1143,7 +1146,7 @@ create_file_ignore_eexist(const char *file,
   return svn_error_trace(err);
 }
 
-/* Baton type bridging svn_fs_fs__upgrade and upgrade_body carrying 
+/* Baton type bridging svn_fs_fs__upgrade and upgrade_body carrying
  * parameters over between them. */
 struct upgrade_baton_t
 {
@@ -1286,7 +1289,7 @@ svn_fs_fs__upgrade(svn_fs_t *fs,
   baton.notify_baton = notify_baton;
   baton.cancel_func = cancel_func;
   baton.cancel_baton = cancel_baton;
-  
+
   return svn_fs_fs__with_all_locks(fs, upgrade_body, (void *)&baton, pool);
 }
 
@@ -1370,10 +1373,16 @@ svn_fs_fs__file_length(svn_filesize_t *length,
                        node_revision_t *noderev,
                        apr_pool_t *pool)
 {
-  if (noderev->data_rep)
-    *length = noderev->data_rep->expanded_size;
+  representation_t *data_rep = noderev->data_rep;
+  if (!data_rep)
+    {
+      /* Treat "no representation" as "empty file". */
+      *length = 0;
+    }
   else
-    *length = 0;
+    {
+      *length = data_rep->expanded_size;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1476,14 +1485,27 @@ svn_fs_fs__prop_rep_equal(svn_boolean_t *equal,
       && !svn_fs_fs__id_txn_used(&rep_a->txn_id)
       && !svn_fs_fs__id_txn_used(&rep_b->txn_id))
     {
-      /* MD5 must be given. Having the same checksum is good enough for
-         accepting the prop lists as equal. */
-      *equal = memcmp(rep_a->md5_digest, rep_b->md5_digest,
-                      sizeof(rep_a->md5_digest)) == 0;
-      return SVN_NO_ERROR;
+      /* Same representation? */
+      if (   (rep_a->revision == rep_b->revision)
+          && (rep_a->item_index == rep_b->item_index))
+        {
+          *equal = TRUE;
+          return SVN_NO_ERROR;
+        }
+
+      /* Known different content? MD5 must be given. */
+      if (memcmp(rep_a->md5_digest, rep_b->md5_digest,
+                 sizeof(rep_a->md5_digest)))
+        {
+          *equal = FALSE;
+          return SVN_NO_ERROR;
+        }
     }
 
-  /* Same path in same txn? */
+  /* Same path in same txn?
+   *
+   * For committed reps, IDs cannot be the same here b/c we already know
+   * that they point to different representations. */
   if (svn_fs_fs__id_eq(a->id, b->id))
     {
       *equal = TRUE;
@@ -1520,7 +1542,7 @@ svn_fs_fs__file_checksum(svn_checksum_t **checksum,
     {
       svn_checksum_t temp;
       temp.kind = kind;
-      
+
       switch(kind)
         {
           case svn_checksum_md5:
@@ -1848,9 +1870,9 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
 
   /* We use the permissions of the 'current' file, because the 'uuid'
      file does not exist during repository creation. */
-  SVN_ERR(svn_io_write_atomic(uuid_path, contents->data, contents->len,
-                              svn_fs_fs__path_current(fs, pool) /* perms */,
-                              pool));
+  SVN_ERR(svn_io_write_atomic2(uuid_path, contents->data, contents->len,
+                               svn_fs_fs__path_current(fs, pool) /* perms */,
+                               TRUE, pool));
 
   fs->uuid = apr_pstrdup(fs->pool, uuid);
 
@@ -1908,7 +1930,10 @@ get_node_origins_from_file(svn_fs_t *fs,
 
   stream = svn_stream_from_aprfile2(fd, FALSE, pool);
   *node_origins = apr_hash_make(pool);
-  SVN_ERR(svn_hash_read2(*node_origins, stream, SVN_HASH_TERMINATOR, pool));
+  err = svn_hash_read2(*node_origins, stream, SVN_HASH_TERMINATOR, pool);
+  if (err)
+    return svn_error_quick_wrapf(err, _("malformed node origin data in '%s'"),
+                                 node_origins_file);
   return svn_stream_close(stream);
 }
 
@@ -1998,7 +2023,7 @@ set_node_origins_for_file(svn_fs_t *fs,
   SVN_ERR(svn_stream_close(stream));
 
   /* Rename the temp file as the real destination */
-  return svn_io_file_rename(path_tmp, node_origins_path, pool);
+  return svn_io_file_rename2(path_tmp, node_origins_path, FALSE, pool);
 }
 
 
@@ -2063,13 +2088,14 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
 {
   struct change_rev_prop_baton *cb = baton;
   apr_hash_t *table;
+  const svn_string_t *present_value;
 
   SVN_ERR(svn_fs_fs__get_revision_proplist(&table, cb->fs, cb->rev, pool));
+  present_value = svn_hash_gets(table, cb->name);
 
   if (cb->old_value_p)
     {
       const svn_string_t *wanted_value = *cb->old_value_p;
-      const svn_string_t *present_value = svn_hash_gets(table, cb->name);
       if ((!wanted_value != !present_value)
           || (wanted_value && present_value
               && !svn_string_compare(wanted_value, present_value)))
@@ -2082,6 +2108,13 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
         }
       /* Fall through. */
     }
+
+  /* If the prop-set is a no-op, skip the actual write. */
+  if ((!present_value && !cb->value)
+      || (present_value && cb->value
+          && svn_string_compare(present_value, cb->value)))
+    return SVN_NO_ERROR;
+
   svn_hash_sets(table, cb->name, cb->value);
 
   return svn_fs_fs__set_revision_proplist(cb->fs, cb->rev, table, pool);

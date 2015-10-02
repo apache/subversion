@@ -115,7 +115,7 @@ def run_cs_command(state, config, repository, prefix, args):
 
   # Display the operation
   repo_title = repository.replace('nonpacked', 'nopack')
-  print state, "\t", repo_title, "\t", prefix, "\t", config, "\t", 
+  print state, "\t", repo_title, "\t", prefix, "\t", config, "\t",
   sys.stdout.flush()
 
   # Execute the command and show the execution times
@@ -146,18 +146,18 @@ def run_test_cs_sequence(config, repository, run, prefix, command, args):
   run_cs_command("Cold", config, repository, prefix, args)
   stop_server(prefix)
 
-  # OS caches are quite hot now. 
+  # OS caches are quite hot now.
   # Run operation from hot OS caches but cold SVN caches.
   start_server(prefix, config)
   run_cs_command("WarmOS", config, repository, prefix, args)
   stop_server(prefix)
 
-  # OS caches may be even hotter now. 
+  # OS caches may be even hotter now.
   # Run operation from hot OS caches but cold SVN caches.
   start_server(prefix, config)
   run_cs_command("HotOS", config, repository, prefix, args)
 
-  # Keep server process and thus the warmed up SVN caches. 
+  # Keep server process and thus the warmed up SVN caches.
   # Run operation from hot OS and SVN caches.
   run_cs_command("WrmSVN", config, repository, prefix, args)
   run_cs_command("HotSVN", config, repository, prefix, args)
@@ -215,7 +215,7 @@ def run_admin_command(state, config, repository, args):
   else:
     extra = []
 
-  print state, "\t", repository, "\t", config, "\t", 
+  print state, "\t", repository, "\t", config, "\t",
   sys.stdout.flush()
   subprocess.call(["TimeWin.exe", exe] + args + extra)
 

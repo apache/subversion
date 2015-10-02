@@ -73,7 +73,7 @@ struct edit_baton
   svn_repos_t *repos;
 
   /* URL to the root of the open repository. */
-  const char *repos_url;
+  const char *repos_url_decoded;
 
   /* The name of the repository (here for convenience). */
   const char *repos_name;
@@ -124,6 +124,7 @@ struct dir_baton
   svn_revnum_t base_rev;        /* the revision I'm based on  */
   svn_boolean_t was_copied; /* was this directory added with history? */
   apr_pool_t *pool; /* my personal pool, in which I am allocated. */
+  svn_boolean_t checked_write; /* TRUE after successfull write check */
 };
 
 
@@ -131,6 +132,7 @@ struct file_baton
 {
   struct edit_baton *edit_baton;
   const char *path; /* the -absolute- path to this file in the fs */
+  svn_boolean_t checked_write; /* TRUE after successfull write check */
 };
 
 
@@ -171,6 +173,30 @@ out_of_date(const char *path, svn_node_kind_t kind)
                            path);
 }
 
+/* Perform an out of date check for base_rev against created rev,
+   and a sanity check of base_rev. */
+static svn_error_t *
+check_out_of_date(struct edit_baton *eb,
+                  const char *path,
+                  svn_node_kind_t kind,
+                  svn_revnum_t base_rev,
+                  svn_revnum_t created_rev)
+{
+  if (base_rev < created_rev)
+    {
+      return out_of_date(path, kind);
+    }
+  else if (base_rev > created_rev)
+    {
+      if (base_rev > svn_fs_txn_base_revision(eb->txn))
+        return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL, 
+                                 _("No such revision %ld"),
+                                 base_rev);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 invoke_commit_cb(svn_commit_callback2_t commit_cb,
@@ -201,6 +227,7 @@ invoke_commit_cb(svn_commit_callback2_t commit_cb,
   commit_info->date = date ? date->data : NULL;
   commit_info->author = author ? author->data : NULL;
   commit_info->post_commit_err = post_commit_errstr;
+  /* commit_info->repos_root is not set by the repos layer, only by RA layers */
 
   return svn_error_trace(commit_cb(commit_info, commit_baton, scratch_pool));
 }
@@ -262,7 +289,9 @@ make_dir_baton(struct edit_baton *edit_baton,
 /* This function is the shared guts of add_file() and add_directory(),
    which see for the meanings of the parameters.  The only extra
    parameter here is IS_DIR, which is TRUE when adding a directory,
-   and FALSE when adding a file.  */
+   and FALSE when adding a file.
+
+   COPY_PATH must be a full URL, not a relative path. */
 static svn_error_t *
 add_file_or_directory(const char *path,
                       void *parent_baton,
@@ -317,8 +346,8 @@ add_file_or_directory(const char *path,
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
       copy_path = svn_path_uri_decode(copy_path, subpool);
-      repos_url_len = strlen(eb->repos_url);
-      if (strncmp(copy_path, eb->repos_url, repos_url_len) != 0)
+      repos_url_len = strlen(eb->repos_url_decoded);
+      if (strncmp(copy_path, eb->repos_url_decoded, repos_url_len) != 0)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
            _("Source url '%s' is from different repository"), copy_path);
@@ -361,14 +390,18 @@ add_file_or_directory(const char *path,
   /* Build a new child baton. */
   if (is_dir)
     {
-      *return_baton = make_dir_baton(eb, pb, full_path, was_copied,
-                                     SVN_INVALID_REVNUM, pool);
+      struct dir_baton *new_db = make_dir_baton(eb, pb, full_path, was_copied,
+                                                SVN_INVALID_REVNUM, pool);
+
+      new_db->checked_write = TRUE; /* Just created */
+      *return_baton = new_db;
     }
   else
     {
       struct file_baton *new_fb = apr_pcalloc(pool, sizeof(*new_fb));
       new_fb->edit_baton = eb;
       new_fb->path = full_path;
+      new_fb->checked_write = TRUE; /* Just created */
       *return_baton = new_fb;
     }
 
@@ -389,10 +422,15 @@ open_root(void *edit_baton,
   struct edit_baton *eb = edit_baton;
   svn_revnum_t youngest;
 
-  /* Ignore BASE_REVISION.  We always build our transaction against
-     HEAD.  However, we will keep it in our dir baton for out of
-     dateness checks.  */
+  /* We always build our transaction against HEAD.  However, we will
+     sanity-check BASE_REVISION and keep it in our dir baton for out
+     of dateness checks.  */
   SVN_ERR(svn_fs_youngest_rev(&youngest, eb->fs, eb->pool));
+
+  if (base_revision > youngest)
+    return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                             _("No such revision %ld (HEAD is %ld)"),
+                             base_revision, youngest);
 
   /* Unless we've been instructed to use a specific transaction, we'll
      make our own. */
@@ -440,7 +478,6 @@ delete_entry(const char *path,
   struct dir_baton *parent = parent_baton;
   struct edit_baton *eb = parent->edit_baton;
   svn_node_kind_t kind;
-  svn_revnum_t cr_rev;
   svn_repos_authz_access_t required = svn_authz_write;
   const char *full_path;
 
@@ -465,14 +502,18 @@ delete_entry(const char *path,
 
   /* Now, make sure we're deleting the node we *think* we're
      deleting, else return an out-of-dateness error. */
-  SVN_ERR(svn_fs_node_created_rev(&cr_rev, eb->txn_root, full_path, pool));
-  if (SVN_IS_VALID_REVNUM(revision) && (revision < cr_rev))
-    return svn_error_trace(out_of_date(full_path, kind));
+  if (SVN_IS_VALID_REVNUM(revision))
+    {
+      svn_revnum_t cr_rev;
+
+      SVN_ERR(svn_fs_node_created_rev(&cr_rev, eb->txn_root, full_path, pool));
+      SVN_ERR(check_out_of_date(eb, full_path, kind, revision, cr_rev));
+    }
 
   /* This routine is a mindless wrapper.  We call svn_fs_delete()
      because that will delete files and recursively delete
      directories.  */
-  return svn_fs_delete(eb->txn_root, full_path, pool);
+  return svn_error_trace(svn_fs_delete(eb->txn_root, full_path, pool));
 }
 
 
@@ -527,18 +568,23 @@ apply_textdelta(void *file_baton,
                 void **handler_baton)
 {
   struct file_baton *fb = file_baton;
+  struct edit_baton *eb = fb->edit_baton;
 
-  /* Check for write authorization. */
-  SVN_ERR(check_authz(fb->edit_baton, fb->path,
-                      fb->edit_baton->txn_root,
-                      svn_authz_write, pool));
+  if (!fb->checked_write)
+    {
+      /* Check for write authorization. */
+      SVN_ERR(check_authz(eb, fb->path, eb->txn_root,
+                          svn_authz_write, pool));
+      fb->checked_write = TRUE;
+    }
 
-  return svn_fs_apply_textdelta(handler, handler_baton,
-                                fb->edit_baton->txn_root,
-                                fb->path,
-                                base_checksum,
-                                NULL,
-                                pool);
+  return svn_error_trace(
+          svn_fs_apply_textdelta(handler, handler_baton,
+                                 eb->txn_root,
+                                 fb->path,
+                                 base_checksum,
+                                 NULL,
+                                 pool));
 }
 
 
@@ -582,8 +628,9 @@ open_file(const char *path,
 
   /* If the node our caller has is an older revision number than the
      one in our transaction, return an out-of-dateness error. */
-  if (SVN_IS_VALID_REVNUM(base_revision) && (base_revision < cr_rev))
-    return svn_error_trace(out_of_date(full_path, svn_node_file));
+  if (SVN_IS_VALID_REVNUM(base_revision))
+    SVN_ERR(check_out_of_date(eb, full_path, svn_node_file,
+                              base_revision, cr_rev));
 
   /* Build a new file baton */
   new_fb = apr_pcalloc(pool, sizeof(*new_fb));
@@ -608,9 +655,13 @@ change_file_prop(void *file_baton,
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
 
-  /* Check for write authorization. */
-  SVN_ERR(check_authz(eb, fb->path, eb->txn_root,
-                      svn_authz_write, pool));
+  if (!fb->checked_write)
+    {
+      /* Check for write authorization. */
+      SVN_ERR(check_authz(eb, fb->path, eb->txn_root,
+                          svn_authz_write, pool));
+      fb->checked_write = TRUE;
+    }
 
   return svn_repos_fs_change_node_prop(eb->txn_root, fb->path,
                                        name, value, pool);
@@ -655,19 +706,24 @@ change_dir_prop(void *dir_baton,
   struct edit_baton *eb = db->edit_baton;
 
   /* Check for write authorization. */
-  SVN_ERR(check_authz(eb, db->path, eb->txn_root,
-                      svn_authz_write, pool));
-
-  if (SVN_IS_VALID_REVNUM(db->base_rev))
+  if (!db->checked_write)
     {
-      /* Subversion rule:  propchanges can only happen on a directory
-         which is up-to-date. */
-      svn_revnum_t created_rev;
-      SVN_ERR(svn_fs_node_created_rev(&created_rev,
-                                      eb->txn_root, db->path, pool));
+      SVN_ERR(check_authz(eb, db->path, eb->txn_root,
+                          svn_authz_write, pool));
 
-      if (db->base_rev < created_rev)
-        return svn_error_trace(out_of_date(db->path, svn_node_dir));
+      if (SVN_IS_VALID_REVNUM(db->base_rev))
+        {
+          /* Subversion rule:  propchanges can only happen on a directory
+             which is up-to-date. */
+          svn_revnum_t created_rev;
+          SVN_ERR(svn_fs_node_created_rev(&created_rev,
+                                          eb->txn_root, db->path, pool));
+
+          SVN_ERR(check_out_of_date(eb, db->path, svn_node_dir,
+                                    db->base_rev, created_rev));
+        }
+
+      db->checked_write = TRUE; /* Skip on further prop changes */
     }
 
   return svn_repos_fs_change_node_prop(eb->txn_root, db->path,
@@ -777,6 +833,13 @@ close_edit(void *edit_baton,
           post_commit_err = svn_repos__post_commit_error_str(err, pool);
           svn_error_clear(err);
         }
+
+      /* Make sure a future abort doesn't perform
+         any work. This may occur if the commit
+         callback returns an error! */
+
+      eb->txn = NULL;
+      eb->txn_root = NULL;
     }
   else
     {
@@ -932,7 +995,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
                              void **edit_baton,
                              svn_repos_t *repos,
                              svn_fs_txn_t *txn,
-                             const char *repos_url,
+                             const char *repos_url_decoded,
                              const char *base_path,
                              apr_hash_t *revprop_table,
                              svn_commit_callback2_t commit_callback,
@@ -946,6 +1009,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   struct edit_baton *eb;
   svn_delta_shim_callbacks_t *shim_callbacks =
                                     svn_delta_shim_callbacks_default(pool);
+  const char *repos_url = svn_path_uri_encode(repos_url_decoded, pool);
 
   /* Do a global authz access lookup.  Users with no write access
      whatsoever to the repository don't get a commit editor. */
@@ -987,7 +1051,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   eb->authz_baton = authz_baton;
   eb->base_path = svn_fspath__canonicalize(base_path, subpool);
   eb->repos = repos;
-  eb->repos_url = repos_url;
+  eb->repos_url_decoded = repos_url_decoded;
   eb->repos_name = svn_dirent_basename(svn_repos_path(repos, subpool),
                                        subpool);
   eb->fs = svn_repos_fs(repos);
@@ -1003,7 +1067,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   shim_callbacks->fetch_baton = eb;
 
   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                   eb->repos_url, eb->base_path,
+                                   repos_url, eb->base_path,
                                    shim_callbacks, pool, pool));
 
   return SVN_NO_ERROR;

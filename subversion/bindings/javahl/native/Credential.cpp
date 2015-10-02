@@ -29,17 +29,17 @@ namespace JavaHL {
 
 // Class JavaHL::Credential
 const char* const Credential::m_class_name =
-  JAVA_PACKAGE"/SVNUtil$Credential";
+  JAVAHL_CLASS("/SVNUtil$Credential");
 
 Credential::ClassImpl::ClassImpl(::Java::Env env, jclass cls)
   : ::Java::Object::ClassImpl(env, cls),
     m_mid_ctor(
         env.GetMethodID(cls, "<init>",
-                        "(L"JAVA_PACKAGE"/SVNUtil$Credential$Kind;"
+                        "(" JAVAHL_ARG("/SVNUtil$Credential$Kind;")
                         "Ljava/lang/String;Ljava/lang/String;"
                         "Ljava/lang/String;Ljava/lang/String;"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback$SSLServerCertInfo;"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback$SSLServerCertFailures;"
+                        JAVAHL_ARG("/callback/AuthnCallback$SSLServerCertInfo;")
+                        JAVAHL_ARG("/callback/AuthnCallback$SSLServerCertFailures;")
                         "Ljava/lang/String;)V"))
 {}
 
@@ -62,14 +62,14 @@ Credential::Credential(::Java::Env env, jobject kind,
 
 // Enum JavaHL::Credential::Kind
 const char* const Credential::Kind::m_class_name =
-  JAVA_PACKAGE"/SVNUtil$Credential$Kind";
+  JAVAHL_CLASS("/SVNUtil$Credential$Kind");
 
 Credential::Kind::ClassImpl::ClassImpl(::Java::Env env, jclass cls)
   : ::Java::Object::ClassImpl(env, cls),
     m_static_mid_from_string(
         env.GetStaticMethodID(cls, "fromString",
                               "(Ljava/lang/String;)"
-                              "L"JAVA_PACKAGE"/SVNUtil$Credential$Kind;"))
+                              JAVAHL_ARG("/SVNUtil$Credential$Kind;")))
 {}
 
 Credential::Kind::ClassImpl::~ClassImpl() {}

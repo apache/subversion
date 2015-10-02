@@ -27,7 +27,6 @@
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
-#include <apr_thread_mutex.h>
 
 #include "svn_fs.h"
 #include "svn_delta.h"
@@ -135,6 +134,18 @@ fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__initialize_shared_data(svn_fs_t *fs,
+                                  svn_mutex__t *common_pool_lock,
+                                  apr_pool_t *pool,
+                                  apr_pool_t *common_pool)
+{
+  SVN_MUTEX__WITH_LOCK(common_pool_lock,
+                       fs_serialized_init(fs, common_pool, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* This function is provided for Subversion 1.0.x compatibility.  It
@@ -163,9 +174,11 @@ fs_freeze_body(void *baton,
 
   SVN_ERR(svn_fs_fs__exists_rep_cache(&exists, b->fs, pool));
   if (exists)
-    SVN_ERR(svn_fs_fs__lock_rep_cache(b->fs, pool));
-
-  SVN_ERR(b->freeze_func(b->freeze_baton, pool));
+    SVN_ERR(svn_fs_fs__with_rep_cache_lock(b->fs,
+                                           b->freeze_func, b->freeze_baton,
+                                           pool));
+  else
+    SVN_ERR(b->freeze_func(b->freeze_baton, pool));
 
   return SVN_NO_ERROR;
 }
@@ -479,28 +492,19 @@ fs_hotcopy(svn_fs_t *src_fs,
            apr_pool_t *pool,
            apr_pool_t *common_pool)
 {
-  /* Open the source repo as usual. */
   SVN_ERR(fs_open(src_fs, src_path, common_pool_lock, pool, common_pool));
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
 
-  /* Test target repo when in INCREMENTAL mode, initialize it when not.
-   * For this, we need our FS internal data structures to be temporarily
-   * available. */
+  SVN_ERR(svn_fs__check_fs(dst_fs, FALSE));
   SVN_ERR(initialize_fs_struct(dst_fs));
-  SVN_ERR(svn_fs_fs__hotcopy_prepare_target(src_fs, dst_fs, dst_path,
-                                            incremental, pool));
-  uninitialize_fs_struct(dst_fs);
 
-  /* Now, the destination repo should open just fine. */
-  SVN_ERR(fs_open(dst_fs, dst_path, common_pool_lock, pool, common_pool));
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
-
-  /* Now, we may copy data as needed ... */
-  return svn_fs_fs__hotcopy(src_fs, dst_fs, incremental,
-                            notify_func, notify_baton,
-                            cancel_func, cancel_baton, pool);
+  /* In INCREMENTAL mode, svn_fs_fs__hotcopy() will open DST_FS.
+     Otherwise, it's not an FS yet --- possibly just an empty dir --- so
+     can't be opened.
+   */
+  return svn_fs_fs__hotcopy(src_fs, dst_fs, src_path, dst_path,
+                            incremental, notify_func, notify_baton,
+                            cancel_func, cancel_baton, common_pool_lock,
+                            pool, common_pool);
 }
 
 
@@ -597,6 +601,7 @@ svn_fs_fs__init(const svn_version_t *loader_version,
     {
       { "svn_subr",  svn_subr_version },
       { "svn_delta", svn_delta_version },
+      { "svn_fs_util", svn_fs_util__version },
       { NULL, NULL }
     };
 

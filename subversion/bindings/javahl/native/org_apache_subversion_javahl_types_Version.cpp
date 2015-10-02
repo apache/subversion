@@ -28,12 +28,19 @@
 #include "JNIStackElement.h"
 #include "svn_version.h"
 
+namespace {
+const svn_version_t* javahl_version()
+{
+  SVN_VERSION_BODY;
+}
+} //anonymous namespace
+
 JNIEXPORT jint JNICALL
 Java_org_apache_subversion_javahl_types_Version_getMajor(JNIEnv *env,
  jobject jthis)
 {
   JNIEntry(Version, getMajor);
-  return SVN_VER_MAJOR;
+  return javahl_version()->major;
 }
 
 JNIEXPORT jint JNICALL
@@ -41,7 +48,7 @@ Java_org_apache_subversion_javahl_types_Version_getMinor(JNIEnv *env,
  jobject jthis)
 {
   JNIEntry(Version, getMinor);
-  return SVN_VER_MINOR;
+  return javahl_version()->minor;
 }
 
 JNIEXPORT jint JNICALL
@@ -49,7 +56,7 @@ Java_org_apache_subversion_javahl_types_Version_getPatch(JNIEnv *env,
  jobject jthis)
 {
   JNIEntry(Version, getPatch);
-  return SVN_VER_PATCH;
+  return javahl_version()->patch;
 }
 
 JNIEXPORT jstring JNICALL

@@ -198,9 +198,9 @@ Shard packing:
     (i.e. same min packed revision)
 
 Addressing:
-  Format 1-6: Physical addressing; uses fixed positions within a rev file
+  Format 1+: Physical addressing; uses fixed positions within a rev file
   Format 7+:  Logical addressing; uses item index that will be translated
-    on-the-fly to the actual rev / pack file location
+    on-the-fly to the actual rev / pack file location (default for 7+ created)
 
 Repository IDs:
   Format 1+:  The first line of db/uuid contains the repository UUID
@@ -525,6 +525,7 @@ A revision file contains a concatenation of various kinds of data:
   * Text and property representations
   * Node-revisions
   * The changed-path data
+  * Two offsets at the very end (physical addressing only)
   * Index data (logical addressing only)
   * Revision / pack file footer (logical addressing only)
 
@@ -560,8 +561,7 @@ defined:
   props     "<rev> <item_index> <length> <size> <digest>" for props rep
             <rev> and <item_index> give location of rep
             <length> gives length of rep, sans header and trailer
-            <size> gives size of expanded rep; for props only, it may be 0
-             if equal to the length
+            <size> gives size of expanded rep (*)
             <digest> gives hex MD5 digest of expanded rep
             ### in formats >=4, also present:
             <sha1-digest> gives hex SHA1 digest of expanded rep
@@ -572,6 +572,16 @@ defined:
   minfo-cnt The number of nodes under (and including) this node
              which have svn:mergeinfo.
   minfo-here Exists if this node itself has svn:mergeinfo.
+
+(*) Earlier versions of this document would state that <size> may be 0
+    if the actual value matches <length>.  This is only true for property
+    and directory representations and should be avoided in general.  File
+    representations may not be handled correctly by SVN before 1.7.20,
+    1.8.12 and 1.9.0, if they have 0 <size> fields for non-empty contents.
+    Releases 1.8.0 through 1.8.11 may have falsely created instances of
+    that (see issue #4554).  Finally, 0 <size> fields are only ever legal
+    for DELTA representations if the reconstructed full-text is actually
+    empty.
 
 The predecessor of a node-rev crosses both soft and true copies;
 together with the count field, it allows efficient determination of
@@ -747,6 +757,9 @@ Index Data
 Format 7 introduces logical addressing that requires item indexes
 to be translated / mapped to physical rev / pack file offsets.
 These indexes are appended to the respective rev / pack file.
+
+The indexes map (revision number, item-index) pairs to absolute file offsets
+and absolute file offsets to (revision number, item-index, item metadata).
 
 Details of the binary format used by these index files can be
 found in structure-indexes.

@@ -325,14 +325,7 @@ svn_error_t *Prompter::dispatch_ssl_server_trust_prompt(
       authn.ssl_server_trust_prompt(
           ::Java::String(env, realm),
           ::JavaHL::AuthnCallback::SSLServerCertFailures(env, jint(failures)),
-          ::JavaHL::AuthnCallback::SSLServerCertInfo(
-              env,
-              ::Java::String(env, cert_info->hostname),
-              ::Java::String(env, cert_info->fingerprint),
-              ::Java::String(env, cert_info->valid_from),
-              ::Java::String(env, cert_info->valid_until),
-              ::Java::String(env, cert_info->issuer_dname),
-              ::Java::String(env, cert_info->ascii_cert)),
+          ::JavaHL::AuthnCallback::SSLServerCertInfo(env, cert_info->ascii_cert),
           may_save));
   if (!result.get())
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,

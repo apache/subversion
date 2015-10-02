@@ -170,7 +170,7 @@ svn_repos__authz_pool_get(svn_authz_t **authz_p,
       have_all_keys &= authz_ref->groups_key != NULL;
     }
 
-  /* fall back to standard implementation in case we don't have all the 
+  /* fall back to standard implementation in case we don't have all the
    * facts (i.e. keys). */
   if (!have_all_keys)
     return svn_error_trace(svn_repos_authz_read2(authz_p, path, groups_path,

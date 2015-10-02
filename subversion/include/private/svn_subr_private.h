@@ -306,7 +306,7 @@ svn__fnv1a_32(const void *input, apr_size_t len);
 /**
  * Return a 32 bit modified FNV-1a checksum for the first @a len bytes in
  * @a input.
- * 
+ *
  * @note This is a proprietary checksumming algorithm based FNV-1a with
  *       approximately the same strength.  It is up to 4 times faster
  *       than plain FNV-1a for longer data blocks.
@@ -416,7 +416,7 @@ typedef struct svn_hash__entry_t
 /** Reads a single key-value pair from @a stream and returns it in the
  * caller-provided @a *entry (members don't need to be pre-initialized).
  * @a pool is used to allocate members of @a *entry and for tempoaries.
- * 
+ *
  * @see #svn_hash_read2 for more details.
  *
  * @since New in 1.9.
@@ -537,20 +537,21 @@ svn__decode_uint(apr_uint64_t *val,
                  const unsigned char *p,
                  const unsigned char *end);
 
-/* Get the data from IN, compress it according to the specified
- * COMPRESSION_METHOD and write the result to OUT.
+/* Compress the data from DATA with length LEN, it according to the
+ * specified COMPRESSION_METHOD and write the result to OUT.
  * SVN__COMPRESSION_NONE is valid for COMPRESSION_METHOD.
  */
 svn_error_t *
-svn__compress(svn_stringbuf_t *in,
+svn__compress(const void *data, apr_size_t len,
               svn_stringbuf_t *out,
               int compression_method);
 
-/* Get the compressed data from IN, decompress it and write the result to
- * OUT.  Return an error if the decompressed size is larger than LIMIT.
+/* Decompress the compressed data from DATA with length LEN and write the
+ * result to OUT.  Return an error if the decompressed size is larger than
+ * LIMIT.
  */
 svn_error_t *
-svn__decompress(svn_stringbuf_t *in,
+svn__decompress(const void *data, apr_size_t len,
                 svn_stringbuf_t *out,
                 apr_size_t limit);
 
@@ -652,7 +653,7 @@ svn_config__get_default_config(apr_hash_t **cfg_hash,
  */
 
 /* This opaque data struct is an alternative to an INT->VOID hash.
- * 
+ *
  * Technically, it is an automatically growing packed bit array.
  * All indexes not previously set are implicitly 0 and setting it will
  * grow the array as needed.
@@ -681,7 +682,25 @@ svn_boolean_t
 svn_bit_array__get(svn_bit_array__t *array,
                    apr_size_t idx);
 
+/* Return the global pool used by the DSO loader, this may be NULL if
+   no DSOs have been loaded. */
+apr_pool_t *
+svn_dso__pool(void);
+
 /** @} */
+
+
+/* Return the xml (expat) version we compiled against. */
+const char *svn_xml__compiled_version(void);
+
+/* Return the xml (expat) version we run against. */
+const char *svn_xml__runtime_version(void);
+
+/* Return the zlib version we compiled against. */
+const char *svn_zlib__compiled_version(void);
+
+/* Return the zlib version we run against. */
+const char *svn_zlib__runtime_version(void);
 
 #ifdef __cplusplus
 }

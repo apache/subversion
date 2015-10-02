@@ -36,6 +36,7 @@
 #include "svn_time.h"
 #include "svn_dav.h"
 #include "svn_props.h"
+#include "svn_ctype.h"
 
 #include "private/svn_dav_protocol.h"
 
@@ -238,7 +239,7 @@ get_last_modified_time(const char **datestring,
     }
 
   if (timeval)
-    memcpy(timeval, &timeval_tmp, sizeof(*timeval));
+    *timeval = timeval_tmp;
 
   if (! datestring)
     return 0;
@@ -422,7 +423,43 @@ insert_prop_internal(const dav_resource *resource,
         if (last_author == NULL)
           return DAV_PROP_INSERT_NOTDEF;
 
-        value = apr_xml_quote_string(scratch_pool, last_author->data, 1);
+        if (svn_xml_is_xml_safe(last_author->data, last_author->len)
+            || !resource->info->repos->is_svn_client)
+          value = apr_xml_quote_string(scratch_pool, last_author->data, 1);
+        else
+          {
+            /* We are talking to a Subversion client, which will (like any proper
+               xml parser) error out if we produce control characters in XML.
+
+               However Subversion clients process both the generic
+               <creator-displayname /> as the custom element for svn:author.
+
+               Let's skip outputting the invalid characters here to make the XML
+               valid, so clients can see the custom element.
+
+               Subversion Clients will then either use a slightly invalid
+               author (unlikely) or more likely use the second result, which
+               will be transferred with full escaping capabilities.
+
+               We have tests in place to assert proper behavior over the RA layer.
+             */
+            apr_size_t i;
+            svn_stringbuf_t *buf;
+
+            buf = svn_stringbuf_create_from_string(last_author, scratch_pool);
+
+            for (i = 0; i < buf->len; i++)
+              {
+                char c = buf->data[i];
+
+                if (svn_ctype_iscntrl(c))
+                  {
+                    svn_stringbuf_remove(buf, i--, 1);
+                  }
+              }
+
+            value = apr_xml_quote_string(scratch_pool, buf->data, 1);
+          }
         break;
       }
 
@@ -750,20 +787,30 @@ insert_prop_internal(const dav_resource *resource,
 
     case SVN_PROPID_deadprop_count:
       {
-        unsigned int propcount;
-        apr_hash_t *proplist;
+        svn_boolean_t has_props;
 
         if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
           return DAV_PROP_INSERT_NOTSUPP;
 
-        serr = svn_fs_node_proplist(&proplist,
-                                    resource->info->root.root,
-                                    resource->info->repos_path, scratch_pool);
+        /* Retrieving the actual properties is quite expensive while
+           svn clients only want to know if there are properties, by
+           using this svn defined property.
+
+           Our and and SvnKit's implementation of the ra layer check
+           for '> 0' to provide the boolean if the node has custom
+           properties or not, so starting with 1.9 we just provide
+           "1" or "0".
+         */
+        serr = svn_fs_node_has_props(&has_props,
+                                      resource->info->root.root,
+                                      resource->info->repos_path,
+                                      scratch_pool);
+
         if (serr != NULL)
           {
             ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err,
                           resource->info->r,
-                          "Can't fetch proplist of '%s': "
+                          "Can't fetch has properties on '%s': "
                           "%s",
                           resource->info->repos_path,
                           serr->message);
@@ -772,8 +819,7 @@ insert_prop_internal(const dav_resource *resource,
             break;
           }
 
-        propcount = apr_hash_count(proplist);
-        value = apr_psprintf(scratch_pool, "%u", propcount);
+        value = has_props ? "1" : "0";
         break;
       }
 

@@ -81,48 +81,6 @@ public class ConfigLib
         return nativeRemoveCredential(configDir, kind.toString(), realm);
     }
 
-    ///** @see SVNUtil.addCredential */
-    //public SVNUtil.Credential addCredential(String configDir,
-    //                                        SVNUtil.Credential credential,
-    //                                        boolean replace)
-    //    throws ClientException, SubversionException
-    //{
-    //    final SVNUtil.Credential.Kind kind = credential.getKind();
-    //
-    //    final String username =
-    //        ((kind == SVNUtil.Credential.Kind.username
-    //          || kind == SVNUtil.Credential.Kind.simple)
-    //         ? credential.getUsername() : null);
-    //
-    //    final String password =
-    //        (kind == SVNUtil.Credential.Kind.simple
-    //         ? credential.getPassword() : null);
-    //
-    //    final AuthnCallback.SSLServerCertInfo sci =
-    //        (kind == SVNUtil.Credential.Kind.sslServer
-    //         ? credential.getServerCertInfo() : null);
-    //
-    //    final AuthnCallback.SSLServerCertFailures scf =
-    //        (kind == SVNUtil.Credential.Kind.sslServer
-    //         ? credential.getServerCertFailures() : null);
-    //
-    //    final String passphrase =
-    //        (kind == SVNUtil.Credential.Kind.sslClientPassphrase
-    //         ? credential.getClientCertPassphrase() : null);
-    //
-    //    return nativeAddCredential(configDir, kind.toString(),
-    //                               credential.getRealm(),
-    //                               username, password,
-    //                               (sci != null ? sci.getHostname() : null),
-    //                               (sci != null ? sci.getFingerprint() : null),
-    //                               (sci != null ? sci.getValidFrom() : null),
-    //                               (sci != null ? sci.getValidUntil() : null),
-    //                               (sci != null ? sci.getIssuer() : null),
-    //                               (sci != null ? sci.getDER() : null),
-    //                               (scf != null ? scf.getFailures() : 0),
-    //                               passphrase);
-    //}
-
     /** @see SVNUtil.searchCredentials */
     public List<SVNUtil.Credential>
         searchCredentials(String configDir,
@@ -150,22 +108,6 @@ public class ConfigLib
                                String kind,
                                String realm)
         throws ClientException, SubversionException;
-
-    //private native SVNUtil.Credential
-    //    nativeAddCredential(String configDir,
-    //                        String kind,
-    //                        String realm,
-    //                        String username,
-    //                        String password,
-    //                        String serverCertHostname,
-    //                        String serverCertFingerprint,
-    //                        String serverCertValidFrom,
-    //                        String serverCertValidUntil,
-    //                        String serverCertIssuer,
-    //                        String serverCertDER,
-    //                        int serverCertFailures,
-    //                        String clientCertPassphrase)
-    //    throws ClientException, SubversionException;
 
     private native List<SVNUtil.Credential>
         nativeSearchCredentials(String configDir,

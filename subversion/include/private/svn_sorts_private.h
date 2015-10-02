@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_sorts.h
+ * @file svn_sorts_private.h
  * @brief all sorts of sorts.
  */
 
@@ -28,7 +28,7 @@
 #ifndef SVN_SORTS_PRIVATE_H
 #define SVN_SORTS_PRIVATE_H
 
-#include "../svn_sorts.h" 
+#include "../svn_sorts.h"
 
 #ifdef __cplusplus
 extern "C" {

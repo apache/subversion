@@ -316,12 +316,15 @@ svn_wc__expand_keywords(apr_hash_t **keywords,
                                    db, local_abspath,
                                    scratch_pool, scratch_pool));
 
-      if (repos_relpath)
-        url = svn_path_url_add_component2(repos_root_url, repos_relpath,
-                                          scratch_pool);
-      else
-         SVN_ERR(svn_wc__db_read_url(&url, db, local_abspath, scratch_pool,
-                                     scratch_pool));
+      /* Handle special statuses (e.g. added) */
+      if (!repos_relpath)
+         SVN_ERR(svn_wc__db_read_repos_info(NULL, &repos_relpath,
+                                            &repos_root_url, NULL,
+                                            db, local_abspath,
+                                            scratch_pool, scratch_pool));
+
+      url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                        scratch_pool);
     }
   else
     {

@@ -27,6 +27,8 @@
 #ifndef JAVAHL_EDITOR_PROXY_H
 #define JAVAHL_EDITOR_PROXY_H
 
+#include <memory>
+
 #include "svn_delta.h"
 #include "private/svn_editor.h"
 #include "private/svn_delta_private.h"
@@ -51,6 +53,8 @@ struct EditorProxyCallbacks
 class EditorProxy
 {
 public:
+  typedef std::auto_ptr<EditorProxy> UniquePtr;
+
   EditorProxy(jobject jeditor, apr_pool_t* edit_pool,
               const char* repos_root_url, const char* base_relpath,
               svn_cancel_func_t cancel_func, void* cancel_baton,
@@ -142,7 +146,7 @@ private:
   const char* m_repos_root_url; ///< The root of the repository
   const char* m_base_relpath;   ///< The root of the session within the repo
   bool m_found_paths;           ///< Returned paths are absolute
-  
+
   svn_editor_t* m_editor;
   const svn_delta_editor_t* m_delta_editor;
   void* m_delta_baton;

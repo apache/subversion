@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__NODEREVS_H
-#define SVN_LIBSVN_FS__NODEREVS_H
+#ifndef SVN_LIBSVN_FS_X_NODEREVS_H
+#define SVN_LIBSVN_FS_X_NODEREVS_H
 
 #include "svn_io.h"
 #include "fs.h"
@@ -47,11 +47,12 @@ typedef struct svn_fs_x__noderevs_t svn_fs_x__noderevs_t;
 /* Create and populate noderev containers. */
 
 /* Create and return a new noderevs container with an initial capacity of
- * INITIAL_COUNT svn_fs_x__noderev_t objects.  Allocate the result in POOL.
+ * INITIAL_COUNT svn_fs_x__noderev_t objects.
+ * Allocate the result in RESULT_POOL.
  */
 svn_fs_x__noderevs_t *
 svn_fs_x__noderevs_create(int initial_count,
-                          apr_pool_t *pool);
+                          apr_pool_t *result_pool);
 
 /* Add NODEREV to the CONTAINER. Return the index that identifies the new
  * item in this container.
@@ -75,17 +76,17 @@ svn_error_t *
 svn_fs_x__noderevs_get(svn_fs_x__noderev_t **noderev_p,
                        const svn_fs_x__noderevs_t *container,
                        apr_size_t idx,
-                       apr_pool_t *pool);
+                       apr_pool_t *result_pool);
 
 /* I/O interface. */
 
-/* Write a serialized representation of CONTAINER to STREAM.  Use POOL for
- * temporary allocations.
+/* Write a serialized representation of CONTAINER to STREAM.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__write_noderevs_container(svn_stream_t *stream,
-                                    const svn_fs_x__noderevs_t *container,
-                                    apr_pool_t *pool);
+                                   const svn_fs_x__noderevs_t *container,
+                                   apr_pool_t *scratch_pool);
 
 /* Read a noderev container from its serialized representation in STREAM.
  * Allocate the result in RESULT_POOL and return it in *CONTAINER.  Use
@@ -113,7 +114,7 @@ svn_error_t *
 svn_fs_x__deserialize_noderevs_container(void **out,
                                           void *data,
                                           apr_size_t data_len,
-                                          apr_pool_t *pool);
+                                          apr_pool_t *result_pool);
 
 /* Implements svn_cache__partial_getter_func_t for svn_fs_x__noderevs_t,
  * setting *OUT to the svn_fs_x__noderev_t selected by the apr_uint32_t index

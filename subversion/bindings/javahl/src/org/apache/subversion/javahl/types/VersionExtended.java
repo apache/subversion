@@ -41,6 +41,21 @@ public class VersionExtended
     }
 
     /**
+     * Release the native peer. This method must be called to release
+     * the native resources held by this object.
+     * <p>
+     * Once this method is called, all object references obtained from
+     * the iterators returned by {@link #getLinkedLibs()} and
+     * {@link #getLoadedLibs()} become invalid and should no longer be used.
+     */
+    public native void dispose();
+
+    /**
+     * release the native peer (should use dispose instead)
+     */
+    public native void finalize();
+
+    /**
      * @return The date when the libsvn_subr library was compiled, in
      * the format defined by the C standard macro #__DATE__.
      */

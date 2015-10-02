@@ -83,7 +83,7 @@ class Daemon(object):
     p = multiprocessing.Process(target=self._first_child,
                                 args=(child_is_ready, child_completed))
     p.start()
-    
+
     # Wait for the child to finish setting things up (in case we need
     # to communicate with it). It will only exit when ready.
     ### use a timeout here! (parameterized, of course)
@@ -260,13 +260,13 @@ class _Detacher(Daemon):
   def run(self):
     self.target(*self.args, **self.kwargs)
 
-    
+
 def run_detached(target, *args, **kwargs):
   """Simple function to run TARGET as a detached daemon.
-  
+
   The additional arguments/keywords will be passed along. This function
   does not return -- sys.exit() will be called as appropriate.
-  
+
   (capture SystemExit if logging/reporting is necessary)
   ### if needed, a variant of this func could be written to not exit
   """

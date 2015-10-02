@@ -32,6 +32,7 @@
 
 #include "../svn_test.h"
 
+/*------------------------ Tests --------------------------- */
 
 static svn_error_t *
 test_stream_from_string(apr_pool_t *pool)

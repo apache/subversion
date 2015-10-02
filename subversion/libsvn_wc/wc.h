@@ -158,7 +158,7 @@ extern "C" {
  * Bumped in r1395109.
  *
  * == 1.8.x shipped with format 31
- * 
+ *
  * Please document any further format changes here.
  */
 
@@ -189,6 +189,10 @@ extern "C" {
 
 /* A version < this has no work queue (see workqueue.h).  */
 #define SVN_WC__HAS_WORK_QUEUE 13
+
+/* While we still have this DB version we should verify if there is
+   sqlite_stat1 table on opening */
+#define SVN_WC__ENSURE_STAT1_TABLE 31
 
 /* Return a string indicating the released version (or versions) of
  * Subversion that used WC format number WC_FORMAT, or some other
@@ -577,17 +581,6 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
-/* Internal version of svn_wc__node_get_repos_info() */
-svn_error_t *
-svn_wc__internal_get_repos_info(svn_revnum_t *revision,
-                                const char **repos_relpath,
-                                const char **repos_root_url,
-                                const char **repos_uuid,
-                                svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
-
 /* Upgrade the wc sqlite database given in SDB for the wc located at
    WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.
    After the upgrade is complete (to as far as the automatic upgrade will
@@ -642,9 +635,11 @@ svn_wc__write_check(svn_wc__db_t *db,
  */
 svn_error_t *
 svn_wc__read_conflicts(const apr_array_header_t **conflicts,
+                       svn_skel_t **conflict_skel,
                        svn_wc__db_t *db,
                        const char *local_abspath,
                        svn_boolean_t create_tempfiles,
+                       svn_boolean_t only_tree_conflict,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
@@ -733,6 +728,7 @@ svn_wc__node_has_local_mods(svn_boolean_t *modified,
                             svn_boolean_t *all_edits_are_deletes,
                             svn_wc__db_t *db,
                             const char *local_abspath,
+                            svn_boolean_t ignore_unversioned,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool);

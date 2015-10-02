@@ -54,13 +54,15 @@ str_to_item_type(unsigned *type,
                            _("Unknown item type '%s'"), str);
 }
 
-/* Parse the hex string given as const char * at IDX in TOKENS and return
- * its value in *VALUE_P.  Check for index overflows and non-hex chars.
+/* Parse the string given as const char * at IDX in TOKENS and return its
+ * value in *VALUE_P.  Assume that the string an integer with base RADIX.
+ * Check for index overflows and non-hex chars.
  */
 static svn_error_t *
 token_to_i64(apr_int64_t *value_p,
              apr_array_header_t *tokens,
-             int idx)
+             int idx,
+             int radix)
 {
   const char *hex;
   char *end;
@@ -75,7 +77,7 @@ token_to_i64(apr_int64_t *value_p,
 
   /* hex -> int conversion */
   hex = APR_ARRAY_IDX(tokens, idx, const char *);
-  value = apr_strtoi64(hex, &end, 16);
+  value = apr_strtoi64(hex, &end, radix);
 
   /* Has the whole token be parsed without error? */
   if (errno || *end != '\0')
@@ -102,11 +104,13 @@ parse_index_line(svn_fs_fs__p2l_entry_t **entry,
   apr_int64_t value;
 
   /* Parse the hex columns. */
-  SVN_ERR(token_to_i64(&value, tokens, 0));
+  SVN_ERR(token_to_i64(&value, tokens, 0, 16));
   result->offset = (apr_off_t)value;
-  SVN_ERR(token_to_i64(&value, tokens, 1));
+  SVN_ERR(token_to_i64(&value, tokens, 1, 16));
   result->size = (apr_off_t)value;
-  SVN_ERR(token_to_i64(&value, tokens, 4));
+
+  /* Parse the rightmost colum that we care of. */
+  SVN_ERR(token_to_i64(&value, tokens, 4, 10));
   result->item.number = (apr_uint64_t)value;
 
   /* We now know that there were at least 5 columns.
@@ -182,7 +186,7 @@ subcommand__load_index(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svnfsfs__opt_state *opt_state = baton;
   svn_stream_t *input;
 
-  SVN_ERR(svn_stream_for_stdin(&input, pool));
+  SVN_ERR(svn_stream_for_stdin2(&input, TRUE, pool));
   SVN_ERR(load_index(opt_state->repository_path, input, pool));
 
   return SVN_NO_ERROR;

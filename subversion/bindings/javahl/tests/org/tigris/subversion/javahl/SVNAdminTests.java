@@ -35,13 +35,33 @@ import org.tigris.subversion.javahl.SubversionException;
  */
 public class SVNAdminTests extends SVNTests
 {
+    /**
+     * Base name of all our tests.
+     */
+    public final static String testName = "admin_test";
+
     public SVNAdminTests()
     {
+        init();
     }
 
     public SVNAdminTests(String name)
     {
         super(name);
+        init();
+    }
+
+    /**
+     * Initialize the testBaseName and the testCounter, if this is the
+     * first test of this class.
+     */
+    private void init()
+    {
+        if (!testName.equals(testBaseName))
+        {
+            testCounter = 0;
+            testBaseName = testName;
+        }
     }
 
     /**

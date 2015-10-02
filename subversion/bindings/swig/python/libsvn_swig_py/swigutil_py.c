@@ -459,6 +459,14 @@ static PyObject *make_ob_wc_adm_access(void *adm_access)
                                       NULL);
 }
 
+static PyObject *make_ob_error(svn_error_t *err)
+{
+  if (err)
+    return svn_swig_NewPointerObjString(err, "svn_error_t *", NULL);
+  else
+    Py_RETURN_NONE;
+}
+
 
 /***/
 
@@ -1417,62 +1425,62 @@ commit_item_array_to_list(const apr_array_header_t *array)
 }
 
 
-
+ 
 /*** Errors ***/
 
 /* Convert a given SubversionException to an svn_error_t. On failure returns
    NULL and sets a Python exception. */
 static svn_error_t *exception_to_error(PyObject * exc)
 {
-	const char *message, *file = NULL;
-	apr_status_t apr_err;
-	long line = 0;
-	PyObject *apr_err_ob = NULL, *child_ob = NULL, *message_ob = NULL;
-	PyObject *file_ob = NULL, *line_ob = NULL;
+    const char *message, *file = NULL;
+    apr_status_t apr_err;
+    long line = 0;
+    PyObject *apr_err_ob = NULL, *child_ob = NULL, *message_ob = NULL;
+    PyObject *file_ob = NULL, *line_ob = NULL;
     svn_error_t *rv = NULL, *child = NULL;
 
-	if ((apr_err_ob = PyObject_GetAttrString(exc, "apr_err")) == NULL)
-	    goto finished;
-	apr_err = (apr_status_t) PyInt_AsLong(apr_err_ob);
-	if (PyErr_Occurred()) goto finished;
+    if ((apr_err_ob = PyObject_GetAttrString(exc, "apr_err")) == NULL)
+        goto finished;
+    apr_err = (apr_status_t) PyInt_AsLong(apr_err_ob);
+    if (PyErr_Occurred()) goto finished;
 
-	if ((message_ob = PyObject_GetAttrString(exc, "message")) == NULL)
-	    goto finished;
-	message = PyString_AsString(message_ob);
-	if (PyErr_Occurred()) goto finished;
+    if ((message_ob = PyObject_GetAttrString(exc, "message")) == NULL)
+        goto finished;
+    message = PyString_AsString(message_ob);
+    if (PyErr_Occurred()) goto finished;
 
-	if ((file_ob = PyObject_GetAttrString(exc, "file")) == NULL)
-	    goto finished;
-	if (file_ob != Py_None)
-	    file = PyString_AsString(file_ob);
-	if (PyErr_Occurred()) goto finished;
+    if ((file_ob = PyObject_GetAttrString(exc, "file")) == NULL)
+        goto finished;
+    if (file_ob != Py_None)
+        file = PyString_AsString(file_ob);
+    if (PyErr_Occurred()) goto finished;
 
-	if ((line_ob = PyObject_GetAttrString(exc, "line")) == NULL)
-	    goto finished;
-	if (line_ob != Py_None)
-	    line = PyInt_AsLong(line_ob);
-	if (PyErr_Occurred()) goto finished;
+    if ((line_ob = PyObject_GetAttrString(exc, "line")) == NULL)
+        goto finished;
+    if (line_ob != Py_None)
+        line = PyInt_AsLong(line_ob);
+    if (PyErr_Occurred()) goto finished;
 
-	if ((child_ob = PyObject_GetAttrString(exc, "child")) == NULL)
-	    goto finished;
-	/* We could check if the child is a Subversion exception too,
-	   but let's just apply duck typing. */
-	if (child_ob != Py_None)
-	    child = exception_to_error(child_ob);
-	if (PyErr_Occurred()) goto finished;
+    if ((child_ob = PyObject_GetAttrString(exc, "child")) == NULL)
+        goto finished;
+    /* We could check if the child is a Subversion exception too,
+       but let's just apply duck typing. */
+    if (child_ob != Py_None)
+        child = exception_to_error(child_ob);
+    if (PyErr_Occurred()) goto finished;
 
-	rv = svn_error_create(apr_err, child, message);
-	/* Somewhat hacky, but we need to preserve original file/line info. */
-	rv->file = file ? apr_pstrdup(rv->pool, file) : NULL;
-	rv->line = line;
+    rv = svn_error_create(apr_err, child, message);
+    /* Somewhat hacky, but we need to preserve original file/line info. */
+    rv->file = file ? apr_pstrdup(rv->pool, file) : NULL;
+    rv->line = line;
 
 finished:
-	Py_XDECREF(child_ob);
-	Py_XDECREF(line_ob);
-	Py_XDECREF(file_ob);
-	Py_XDECREF(message_ob);
-	Py_XDECREF(apr_err_ob);
-	return rv;
+    Py_XDECREF(child_ob);
+    Py_XDECREF(line_ob);
+    Py_XDECREF(file_ob);
+    Py_XDECREF(message_ob);
+    Py_XDECREF(apr_err_ob);
+    return rv;
 }
 
 /* If the currently set Python exception is a valid SubversionException,
@@ -1521,8 +1529,9 @@ finished:
 static svn_error_t *callback_bad_return_error(const char *message)
 {
   PyErr_SetString(PyExc_TypeError, message);
-  return svn_error_create(APR_EGENERAL, NULL,
-                          "Python callback returned an invalid object");
+  return svn_error_createf(APR_EGENERAL, NULL,
+                           "Python callback returned an invalid object: %s",
+                           message);
 }
 
 /* Return a generic error about not being able to map types. */
@@ -2376,7 +2385,7 @@ static svn_error_t *parse_fn3_close_revision(void *revision_baton)
 }
 
 
-static const svn_repos_parse_fns3_t thunk_parse_fns3_vtable = 
+static const svn_repos_parse_fns3_t thunk_parse_fns3_vtable =
   {
     parse_fn3_magic_header_record,
     parse_fn3_uuid_record,
@@ -2852,6 +2861,42 @@ svn_error_t *svn_swig_py_fs_get_locks_func(void *baton,
   svn_swig_py_release_py_lock();
   return err;
 }
+
+svn_error_t *svn_swig_py_fs_lock_callback(
+                    void *baton,
+                    const char *path,
+                    const svn_lock_t *lock,
+                    svn_error_t *fs_err,
+                    apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  PyObject *py_callback = baton, *result;
+
+  if (py_callback == NULL || py_callback == Py_None)
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(py_callback,
+                                      (char *)"sO&O&O&",
+                                      path,
+                                      make_ob_lock, lock,
+                                      make_ob_error, fs_err,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (result != Py_None)
+    {
+      err = callback_bad_return_error("Not None");
+    }
+
+  Py_XDECREF(result);
+
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
 
 svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
                                              const char **tmp_file,
@@ -3761,7 +3806,7 @@ ra_callbacks_open_tmp_file(apr_file_t **fp,
       *fp = svn_swig_py_make_file(result, pool);
       if (*fp == NULL)
        {
-      	  err = callback_exception_error();
+          err = callback_exception_error();
        }
     }
 
@@ -3811,7 +3856,7 @@ ra_callbacks_get_wc_prop(void *baton,
       Py_ssize_t len;
       if (PyString_AsStringAndSize(result, &buf, &len) == -1)
         {
-      	  err = callback_exception_error();
+          err = callback_exception_error();
         }
       else
         {
@@ -4053,7 +4098,7 @@ ra_callbacks_get_client_string(void *baton,
     {
       if ((*name = PyString_AsString(result)) == NULL)
         {
-      	  err = callback_exception_error();
+          err = callback_exception_error();
         }
     }
 
@@ -4252,9 +4297,10 @@ svn_error_t *svn_swig_py_ra_lock_callback(
   svn_swig_py_acquire_py_lock();
 
   if ((result = PyObject_CallFunction(py_callback,
-                                     (char *)"sbO&O&",
+                                     (char *)"sbO&O&O&",
                                      path, do_lock,
                                      make_ob_lock, lock,
+                                     make_ob_error, ra_err,
                                      make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();

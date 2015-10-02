@@ -115,7 +115,7 @@ test_svn_subst_translate_string2_null_encoding_helper(apr_pool_t *pool)
     svn_string_t *new_value = NULL;
     svn_boolean_t translated_to_utf8 = FALSE;
     svn_boolean_t translated_line_endings = TRUE;
-    /* 'Æ', which is 0xc6 in both ISO-8859-1 and Windows-1252 */
+    /* The 'AE' ligature, which is 0xc6 in both ISO-8859-1 and Windows-1252 */
     svn_string_t *source_string = svn_string_create("\xc6", pool);
 
     SVN_ERR(svn_subst_translate_string2(&new_value, &translated_to_utf8,
@@ -397,7 +397,7 @@ test_svn_subst_long_keywords(apr_pool_t *pool)
       "01234567890123456789012345678901234567890123456789"
       "012345678901234567890123456789012345678901234567";
 
-  /* The longest keyword that can be expanded: the value is empty. */ 
+  /* The longest keyword that can be expanded: the value is empty. */
   const char keyword_z[]
     = "Q"
       "01234567890123456789012345678901234567890123456789"

@@ -117,8 +117,9 @@ fuzzing_1_byte_1_rev(const char *repo_name,
       svn_fs_set_warning_func(svn_repos_fs(repos), dont_filter_warnings, NULL);
 
       /* This shall detect the corruption and return an error. */
-      err = svn_repos_verify_fs3(repos, revision, revision, TRUE, FALSE, FALSE,
-                                 NULL, NULL, NULL, NULL, iterpool);
+      err = svn_repos_verify_fs3(repos, revision, revision, FALSE, FALSE,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 iterpool);
 
       /* Case-only changes in checksum digests are not an error.
        * We allow upper case chars to be used in MD5 checksums in all other
@@ -133,7 +134,7 @@ fuzzing_1_byte_1_rev(const char *repo_name,
               /* Let us know where we were too strict ... */
               printf("Detected case change in checksum digest at offset 0x%"
                      APR_UINT64_T_HEX_FMT " (%" APR_OFF_T_FMT ") in r%ld: "
-                     "%c -> %c\n", i, i, revision, c_old, c_new);
+                     "%c -> %c\n", (apr_uint64_t)i, i, revision, c_old, c_new);
 
               SVN_ERR(err);
             }
@@ -143,7 +144,7 @@ fuzzing_1_byte_1_rev(const char *repo_name,
           /* Let us know where we miss changes ... */
           printf("Undetected mod at offset 0x%"APR_UINT64_T_HEX_FMT
                 " (%"APR_OFF_T_FMT") in r%ld: 0x%02x -> 0x%02x\n",
-                i, i, revision, c_old, c_new);
+                (apr_uint64_t)i, i, revision, c_old, c_new);
 
           SVN_TEST_ASSERT(err);
         }
@@ -325,7 +326,7 @@ fuzzing_null_byte_test(const svn_test_opts_t *opts,
                              apr_pool_t *pool) \
   { \
     return svn_error_trace(fuzzing_set_byte_test(opts, N, M, pool)); \
-  } 
+  }
 
 /* Add the test function declared above to the test_funcs array. */
 #define TEST_FUZZING_SET_BYTE_TEST_N(N,M)\

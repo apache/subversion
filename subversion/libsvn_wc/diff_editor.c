@@ -145,6 +145,9 @@ struct dir_baton_t
   /* TRUE if the node is to be compared with an unrelated node*/
   svn_boolean_t ignoring_ancestry;
 
+  /* TRUE if the directory was reported incomplete to the repository */
+  svn_boolean_t is_incomplete;
+
   /* Processor state */
   void *pdb;
   svn_boolean_t skip;
@@ -1051,8 +1054,12 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
       copyfrom_src->repos_relpath = original_repos_relpath;
     }
 
+  /* svn_wc__db_status_incomplete should never happen, as the result won't be
+     stable or guaranteed related to what is in the repository for this
+     revision, but without this it would be hard to diagnose that status... */
   assert(kind == svn_node_dir
          && (status == svn_wc__db_status_normal
+             || status == svn_wc__db_status_incomplete
              || status == svn_wc__db_status_added
              || (status == svn_wc__db_status_deleted && diff_pristine)));
 
@@ -1167,12 +1174,12 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
   if (!skip)
     {
       apr_hash_t *right_props;
-      if (diff_pristine)
-        SVN_ERR(svn_wc__db_read_pristine_props(&right_props, db, local_abspath,
-                                               scratch_pool, scratch_pool));
+
+      if (props_mod && !diff_pristine)
+        SVN_ERR(svn_wc__db_read_props(&right_props, db, local_abspath,
+                                      scratch_pool, scratch_pool));
       else
-        SVN_ERR(svn_wc__get_actual_props(&right_props, db, local_abspath,
-                                         scratch_pool, scratch_pool));
+        right_props = svn_prop_hash_dup(pristine_props, scratch_pool);
 
       SVN_ERR(processor->dir_added(relpath,
                                    copyfrom_src,
@@ -1216,10 +1223,8 @@ handle_local_only(struct dir_baton_t *pb,
 
   switch (info->status)
     {
-      case svn_wc__db_status_incomplete:
-        return SVN_NO_ERROR; /* Not local only */
-
       case svn_wc__db_status_normal:
+      case svn_wc__db_status_incomplete:
         if (!repos_delete)
           return SVN_NO_ERROR; /* Local and remote */
         svn_hash_sets(pb->deletes, name, NULL);
@@ -1604,25 +1609,47 @@ open_directory(const char *path,
         db->repos_only = TRUE;
 
       if (!db->repos_only)
-        switch (info->status)
-          {
-            case svn_wc__db_status_normal:
-              break;
-            case svn_wc__db_status_deleted:
-              db->repos_only = TRUE;
-
-              if (!info->have_more_work)
-                svn_hash_sets(pb->compared,
-                              apr_pstrdup(pb->pool, db->name), "");
-              break;
-            case svn_wc__db_status_added:
-              if (eb->ignore_ancestry)
-                db->ignoring_ancestry = TRUE;
-              else
+        {
+          switch (info->status)
+            {
+              case svn_wc__db_status_normal:
+              case svn_wc__db_status_incomplete:
+                db->is_incomplete = (info->status ==
+                                     svn_wc__db_status_incomplete);
+                break;
+              case svn_wc__db_status_deleted:
                 db->repos_only = TRUE;
-              break;
-            default:
-              SVN_ERR_MALFUNCTION();
+
+                if (!info->have_more_work)
+                  svn_hash_sets(pb->compared,
+                                apr_pstrdup(pb->pool, db->name), "");
+                break;
+              case svn_wc__db_status_added:
+                if (eb->ignore_ancestry)
+                  db->ignoring_ancestry = TRUE;
+                else
+                  db->repos_only = TRUE;
+                break;
+              default:
+                SVN_ERR_MALFUNCTION();
+          }
+
+          if (info->status == svn_wc__db_status_added
+              || info->status == svn_wc__db_status_deleted)
+            {
+              svn_wc__db_status_t base_status;
+
+              /* Node is shadowed; check BASE */
+              SVN_ERR(svn_wc__db_base_get_info(&base_status, NULL, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL, NULL, NULL,
+                                               NULL, NULL, NULL,
+                                               eb->db, db->local_abspath,
+                                               dir_pool, dir_pool));
+
+              if (base_status == svn_wc__db_status_incomplete)
+                db->is_incomplete = TRUE;
+            }
         }
 
       if (!db->repos_only)
@@ -1710,7 +1737,7 @@ close_directory(void *dir_baton,
     {
       apr_hash_t *repos_props;
 
-      if (db->added)
+      if (db->added || db->is_incomplete)
         {
           repos_props = apr_hash_make(scratch_pool);
         }
@@ -1887,6 +1914,7 @@ open_file(const char *path,
         switch (info->status)
           {
             case svn_wc__db_status_normal:
+            case svn_wc__db_status_incomplete:
               break;
             case svn_wc__db_status_deleted:
               fb->repos_only = TRUE;
@@ -2192,7 +2220,7 @@ change_file_prop(void *file_baton,
 
   propchange = apr_array_push(fb->propchanges);
   propchange->name = apr_pstrdup(fb->pool, name);
-  propchange->value = value ? svn_string_dup(value, fb->pool) : NULL;
+  propchange->value = svn_string_dup(value, fb->pool);
 
   return SVN_NO_ERROR;
 }
@@ -2217,7 +2245,7 @@ change_dir_prop(void *dir_baton,
 
   propchange = apr_array_push(db->propchanges);
   propchange->name = apr_pstrdup(db->pool, name);
-  propchange->value = value ? svn_string_dup(value, db->pool) : NULL;
+  propchange->value = svn_string_dup(value, db->pool);
 
   return SVN_NO_ERROR;
 }
@@ -2400,8 +2428,8 @@ wrap_dir_opened(void **new_dir_baton,
   wc_diff_wrap_baton_t *wb = processor->baton;
   svn_boolean_t tree_conflicted = FALSE;
 
-  assert(left_source || right_source);
-  assert(!copyfrom_source || !right_source);
+  assert(left_source || right_source);      /* Must exist at one point. */
+  assert(!left_source || !copyfrom_source); /* Either existed or added. */
 
   /* Maybe store state and tree_conflicted in baton? */
   if (left_source != NULL)

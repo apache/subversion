@@ -318,7 +318,7 @@ def fail_add_mixed_eol_style(sbox):
   expected_stderr = "svn: E200009: File '.*" + filename + \
                     "' has inconsistent newlines" + \
                     "|" + "svn: E135000: Inconsistent line ending style\n"
-  run_and_verify_svn(None, [], expected_stderr,
+  run_and_verify_svn([], expected_stderr,
                      'add', filepath, *parameters)
 
   expected_status = svntest.wc.State(sbox.wc_dir,
@@ -466,7 +466,7 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
   sbox.simple_propset(SVN_PROP_INHERITABLE_AUTOPROPS,
                       '*.py = svn:mime-type=text/x-python',
                       'A/D')
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+  svntest.actions.run_and_verify_svn(None, [], 'ci', '-m',
                                      'Add some ' + SVN_PROP_INHERITABLE_AUTOPROPS +
                                      ' properties', wc_dir)
 
@@ -674,7 +674,7 @@ def svn_prop_inheritable_autoprops_propset_file_target(sbox):
 
   sbox.build()
   svntest.actions.run_and_verify_svn(
-    None, None,
+    None,
     ".*Cannot set '" + SVN_PROP_INHERITABLE_AUTOPROPS + "' on a file.*",
     'ps', SVN_PROP_INHERITABLE_AUTOPROPS, '*.c=svn:eol-style=native',
     sbox.ospath('iota'))
@@ -718,9 +718,9 @@ def svn_prop_inheritable_autoprops_unversioned_subtrees_versioned_target(sbox):
   os.chdir(saved_wd)
 
   # Check the resulting autoprops.
-  svntest.actions.run_and_verify_svn(None, 'native\n', [],
+  svntest.actions.run_and_verify_svn('native\n', [],
                                      'pg', 'svn:eol-style', foo_path)
-  svntest.actions.run_and_verify_svn(None, 'CR\n', [],
+  svntest.actions.run_and_verify_svn('CR\n', [],
                                      'pg', 'svn:eol-style', bar_path)
 
 ########################################################################

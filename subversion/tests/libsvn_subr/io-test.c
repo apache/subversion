@@ -30,8 +30,10 @@
 
 #include "svn_pools.h"
 #include "svn_string.h"
+#include "svn_io.h"
 #include "private/svn_skel.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_io_private.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
@@ -680,7 +682,243 @@ aligned_seek_test(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-
+static svn_error_t *
+ignore_enoent(apr_pool_t *pool)
+{
+  const char *tmp_dir, *path;
+  const svn_io_dirent2_t *dirent_p;
+  apr_file_t *file;
+
+  /* Create an empty directory. */
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "ignore_enoent", pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  /* Path does not exist. */
+  path = svn_dirent_join(tmp_dir, "not-present", pool);
+  SVN_ERR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_only(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, TRUE, TRUE, pool, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, FALSE, TRUE, pool, pool));
+
+  /* Neither path nor parent exists. */
+  path = svn_dirent_join(path, "not-present", pool);
+  SVN_ERR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_only(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, TRUE, TRUE, pool, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, FALSE, TRUE, pool, pool));
+
+  /* File does exist. */
+  path = svn_dirent_join(tmp_dir, "present", pool);
+  SVN_ERR(svn_io_file_open(&file, path,
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE,
+                           APR_OS_DEFAULT,
+                           pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  /* Path does not exist as child of file. */
+  path = svn_dirent_join(path, "not-present", pool);
+  SVN_ERR(svn_io_remove_dir2(path, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_remove_file2(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_only(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_read_write(path, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, TRUE, TRUE, pool));
+  SVN_ERR(svn_io_set_file_executable(path, FALSE, TRUE, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, TRUE, TRUE, pool, pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent_p, path, FALSE, TRUE, pool, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_install_stream_to_longpath(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *final_abspath;
+  const char *deep_dir;
+  svn_stream_t *stream;
+  svn_stringbuf_t *actual_content;
+  int i;
+
+  /* Create an empty directory. */
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_install_stream_to_longpath",
+                                  pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  deep_dir = tmp_dir;
+
+  /* Generate very long path (> 260 symbols) */
+  for (i = 0; i < 26; i++)
+    {
+      deep_dir = svn_dirent_join(deep_dir, "1234567890", pool);
+      SVN_ERR(svn_io_make_dir_recursively(deep_dir, pool));
+    }
+
+  final_abspath = svn_dirent_join(deep_dir, "stream1", pool);
+  SVN_ERR(svn_stream__create_for_install(&stream, deep_dir, pool, pool));
+  SVN_ERR(svn_stream_puts(stream, "stream1 content"));
+  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stream__install_stream(stream,
+                                     final_abspath,
+                                     TRUE,
+                                     pool));
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content,
+                                   final_abspath,
+                                   pool));
+
+  SVN_TEST_STRING_ASSERT(actual_content->data, "stream1 content");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_install_stream_over_readonly_file(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *final_abspath;
+  svn_stream_t *stream;
+  svn_stringbuf_t *actual_content;
+
+  /* Create an empty directory. */
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_install_stream_over_readonly_file",
+                                  pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  final_abspath = svn_dirent_join(tmp_dir, "stream1", pool);
+
+  /* Create empty read-only file. */
+  SVN_ERR(svn_io_file_create_empty(final_abspath, pool));
+  SVN_ERR(svn_io_set_file_read_only(final_abspath, FALSE, pool));
+
+  SVN_ERR(svn_stream__create_for_install(&stream, tmp_dir, pool, pool));
+  SVN_ERR(svn_stream_puts(stream, "stream1 content"));
+  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stream__install_stream(stream,
+                                     final_abspath,
+                                     TRUE,
+                                     pool));
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content,
+                                   final_abspath,
+                                   pool));
+
+  SVN_TEST_STRING_ASSERT(actual_content->data, "stream1 content");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_file_size_get(apr_pool_t *pool)
+{
+  const char *tmp_dir, *path;
+  apr_file_t *file;
+  svn_filesize_t filesize;
+
+  /* Create an empty directory. */
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_file_size_get", pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  /* Path does not exist. */
+  path = svn_dirent_join(tmp_dir, "file", pool);
+
+  /* Create a file.*/
+  SVN_ERR(svn_io_file_open(&file, path,
+                           APR_WRITE | APR_CREATE | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_file_size_get(&filesize, file, pool));
+  SVN_TEST_ASSERT(filesize == 0);
+
+  /* Write 8 bytes and check new size. */
+  SVN_ERR(svn_io_file_write_full(file, "12345678", 8, NULL, pool));
+
+  SVN_ERR(svn_io_file_size_get(&filesize, file, pool));
+  SVN_TEST_ASSERT(filesize == 8);
+
+  /* Truncate to 2 bytes. */
+  SVN_ERR(svn_io_file_trunc(file, 2, pool));
+
+  SVN_ERR(svn_io_file_size_get(&filesize, file, pool));
+  SVN_TEST_ASSERT(filesize == 2);
+
+  /* Close the file. */
+  SVN_ERR(svn_io_file_close(file, pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_file_rename2(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *foo_path;
+  const char *bar_path;
+  svn_stringbuf_t *actual_content;
+  svn_node_kind_t actual_kind;
+
+  /* Create an empty directory. */
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_file_rename2", pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  foo_path = svn_dirent_join(tmp_dir, "foo", pool);
+  bar_path = svn_dirent_join(tmp_dir, "bar", pool);
+
+  /* Test 1: Simple file rename. */
+  SVN_ERR(svn_io_file_create(foo_path, "file content", pool));
+
+  SVN_ERR(svn_io_file_rename2(foo_path, bar_path, FALSE, pool));
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content, bar_path, pool));
+  SVN_TEST_STRING_ASSERT(actual_content->data, "file content");
+
+  SVN_ERR(svn_io_check_path(foo_path, &actual_kind, pool));
+  SVN_TEST_ASSERT(actual_kind == svn_node_none);
+  SVN_ERR(svn_io_remove_file2(bar_path, FALSE, pool));
+
+  /* Test 2: Rename file with flush_to_disk flag. */
+  SVN_ERR(svn_io_file_create(foo_path, "file content", pool));
+
+  SVN_ERR(svn_io_file_rename2(foo_path, bar_path, TRUE, pool));
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content, bar_path, pool));
+  SVN_TEST_STRING_ASSERT(actual_content->data, "file content");
+  SVN_ERR(svn_io_check_path(foo_path, &actual_kind, pool));
+  SVN_TEST_ASSERT(actual_kind == svn_node_none);
+
+  SVN_ERR(svn_io_remove_file2(bar_path, FALSE, pool));
+
+  /* Test 3: Rename file over existing read-only file. */
+  SVN_ERR(svn_io_file_create(foo_path, "file content", pool));
+  SVN_ERR(svn_io_file_create(bar_path, "bar content", pool));
+  SVN_ERR(svn_io_set_file_read_only(bar_path, FALSE, pool));
+
+  SVN_ERR(svn_io_file_rename2(foo_path, bar_path, FALSE, pool));
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content, bar_path, pool));
+  SVN_TEST_STRING_ASSERT(actual_content->data, "file content");
+  SVN_ERR(svn_io_check_path(foo_path, &actual_kind, pool));
+  SVN_TEST_ASSERT(actual_kind == svn_node_none);
+  SVN_ERR(svn_io_remove_file2(bar_path, FALSE, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 static int max_threads = 3;
@@ -700,6 +938,16 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "svn_io_read_length_line() shouldn't loop"),
     SVN_TEST_PASS2(aligned_seek_test,
                    "test aligned seek"),
+    SVN_TEST_PASS2(ignore_enoent,
+                   "test ignore-enoent"),
+    SVN_TEST_PASS2(test_install_stream_to_longpath,
+                   "test svn_stream__install_stream to long path"),
+    SVN_TEST_PASS2(test_install_stream_over_readonly_file,
+                   "test svn_stream__install_stream over RO file"),
+    SVN_TEST_PASS2(test_file_size_get,
+                   "test svn_io_file_size_get"),
+    SVN_TEST_PASS2(test_file_rename2,
+                   "test svn_io_file_rename2"),
     SVN_TEST_NULL
   };
 

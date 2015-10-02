@@ -167,7 +167,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t version;         /* print version information */
   svn_boolean_t verbose;         /* be verbose */
   svn_boolean_t update;          /* contact the server for the full story */
-  svn_boolean_t strict;          /* do strictly what was requested */
   svn_stringbuf_t *filedata;     /* contents of file used as option data
                                     (not converted to UTF-8) */
   const char *encoding;          /* the locale/encoding of 'message' and of
@@ -248,12 +247,17 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t remove_ignored;    /* remove ignored items */
   svn_boolean_t no_newline;        /* do not output the trailing newline */
   svn_boolean_t show_passwords;    /* show cached passwords */
+  svn_boolean_t pin_externals;     /* pin externals to last-changed revisions */
+  const char *show_item;           /* print only the given item */
 } svn_cl__opt_state_t;
 
+/* Conflict stats for operations such as update and merge. */
+typedef struct svn_cl__conflict_stats_t svn_cl__conflict_stats_t;
 
 typedef struct svn_cl__cmd_baton_t
 {
   svn_cl__opt_state_t *opt_state;
+  svn_cl__conflict_stats_t *conflict_stats;
   svn_client_ctx_t *ctx;
 } svn_cl__cmd_baton_t;
 
@@ -296,8 +300,7 @@ svn_opt_subcommand_t
   svn_cl__switch,
   svn_cl__unlock,
   svn_cl__update,
-  svn_cl__upgrade,
-  svn_cl__youngest;
+  svn_cl__upgrade;
 
 
 /* See definition in svn.c for documentation. */
@@ -345,9 +348,6 @@ svn_cl__check_cancel(void *baton);
 /* Opaque baton type for svn_cl__conflict_func_interactive(). */
 typedef struct svn_cl__interactive_conflict_baton_t
   svn_cl__interactive_conflict_baton_t;
-
-/* Conflict stats for operations such as update and merge. */
-typedef struct svn_cl__conflict_stats_t svn_cl__conflict_stats_t;
 
 /* Return a new, initialized, conflict stats structure, allocated in
  * POOL. */
@@ -401,6 +401,23 @@ svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
                                   void *baton,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
+
+
+svn_error_t *
+svn_cl__resolve_conflict(svn_boolean_t *resolved,
+                         svn_cl__accept_t *accept_which,
+                         svn_boolean_t *quit,
+                         svn_boolean_t *external_failed,
+                         svn_boolean_t *printed_summary,
+                         svn_client_conflict_t *conflict,
+                         const char *editor_cmd,
+                         apr_hash_t *config,
+                         const char *path_prefix,
+                         svn_cmdline_prompt_baton_t *pb,
+                         svn_cl__conflict_stats_t *conflict_stats,
+                         svn_client_conflict_option_id_t option_id,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool);
 
 
 /*** Command-line output functions -- printing to the user. ***/
@@ -777,15 +794,18 @@ svn_cl__args_to_target_array_print_reserved(apr_array_header_t **targets_p,
                                             svn_boolean_t keep_dest_origpath_on_truepath_collision,
                                             apr_pool_t *pool);
 
-/* Return a string showing NODE's kind, URL and revision, to the extent that
- * that information is available in NODE. If NODE itself is NULL, this prints
- * just a 'none' node kind.
+/* Return a string showing a conflicted node's kind, URL and revision,
+ * to the extent that that information is available. If REPOS_ROOT_URL or
+ * REPOS_RELPATH are NULL, this prints just a 'none' node kind.
  * WC_REPOS_ROOT_URL should reflect the target working copy's repository
- * root URL. If NODE is from that same URL, the printed URL is abbreviated
+ * root URL. If the node is from that same URL, the printed URL is abbreviated
  * to caret notation (^/). WC_REPOS_ROOT_URL may be NULL, in which case
  * this function tries to print the conflicted node's complete URL. */
 const char *
-svn_cl__node_description(const svn_wc_conflict_version_t *node,
+svn_cl__node_description(const char *repos_root_url,
+                         const char *repos_relpath,
+                         svn_revnum_t peg_rev,
+                         svn_node_kind_t node_kind,
                          const char *wc_repos_root_URL,
                          apr_pool_t *pool);
 
@@ -854,6 +874,48 @@ svn_cl__deprecated_merge_reintegrate(const char *source_path_or_url,
                                      const apr_array_header_t *merge_options,
                                      svn_client_ctx_t *ctx,
                                      apr_pool_t *pool);
+
+
+/* Forward declaration of the similarity check context. */
+typedef struct svn_cl__simcheck_context_t svn_cl__simcheck_context_t;
+
+/* Token definition for the similarity check. */
+typedef struct svn_cl__simcheck_t
+{
+  /* The token we're checking for similarity. */
+  svn_string_t token;
+
+  /* User data associated with this token. */
+  const void *data;
+
+  /*
+   * The following fields are populated by svn_cl__similarity_check.
+   */
+
+  /* Similarity score [0..SVN_STRING__SIM_RANGE_MAX] */
+  apr_size_t score;
+
+  /* Number of characters of difference from the key. */
+  apr_size_t diff;
+
+  /* Similarity check context (private) */
+  svn_cl__simcheck_context_t *context;
+} svn_cl__simcheck_t;
+
+/* Find the entries in TOKENS that are most similar to KEY.
+ * TOKEN_COUNT is the number of entries in the (mutable) TOKENS array.
+ * Use SCRATCH_POOL for temporary allocations.
+ *
+ * On return, the TOKENS array will be sorted according to similarity
+ * to KEY, in descending order. The return value will be zero if the
+ * first token is an exact match; otherwise, it will be one more than
+ * the number of tokens that are at least two-thirds similar to KEY.
+ */
+apr_size_t
+svn_cl__similarity_check(const char *key,
+                         svn_cl__simcheck_t **tokens,
+                         apr_size_t token_count,
+                         apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

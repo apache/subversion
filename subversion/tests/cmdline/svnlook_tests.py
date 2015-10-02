@@ -95,9 +95,7 @@ def test_misc(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # give the repo a new UUID
   uuid = "01234567-89ab-cdef-89ab-cdef01234567"
@@ -209,9 +207,9 @@ def delete_file_in_moved_dir(sbox):
   # move E to E2 and delete E2/alpha
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   E2_path = os.path.join(wc_dir, 'A', 'B', 'E2')
-  svntest.actions.run_and_verify_svn(None, None, [], 'mv', E_path, E2_path)
+  svntest.actions.run_and_verify_svn(None, [], 'mv', E_path, E2_path)
   alpha_path = os.path.join(E2_path, 'alpha')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', alpha_path)
 
   # commit
   expected_output = svntest.wc.State(wc_dir, {
@@ -234,9 +232,7 @@ def delete_file_in_moved_dir(sbox):
   ### in order to get this commit working again.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   exit_code, output, errput = svntest.main.run_svnlook("dirs-changed",
                                                        repo_dir)
@@ -263,16 +259,16 @@ def test_print_property_diffs(sbox):
 
   # Add a bogus property to iota
   iota_path = os.path.join(wc_dir, 'iota')
-  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+  svntest.actions.run_and_verify_svn(None, [], 'propset',
                                      'bogus_prop', 'bogus_val', iota_path)
 
   # commit the change
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'log msg', iota_path)
 
   # Grab the diff
   exit_code, expected_output, err = svntest.actions.run_and_verify_svn(
-    None, None, [], 'diff', '-r', 'PREV', iota_path)
+    None, [], 'diff', '-r', 'PREV', iota_path)
 
   exit_code, output, errput = svntest.main.run_svnlook("diff", repo_dir)
   if errput:
@@ -370,7 +366,7 @@ def changed_copy_info(sbox):
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
   alpha2_path = os.path.join(wc_dir, 'A', 'alpha2')
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', alpha_path,
+  svntest.actions.run_and_verify_svn(None, [], 'cp', alpha_path,
                                      alpha2_path)
 
   # commit
@@ -383,9 +379,7 @@ def changed_copy_info(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   exit_code, output, errput = svntest.main.run_svnlook("changed", repo_dir)
   if errput:
@@ -446,10 +440,10 @@ def limit_history(sbox):
   "history --limit"
   sbox.build(create_wc=False)
   repo_url = sbox.repo_url
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'mv', '-m', 'log msg',
                                      repo_url + "/iota", repo_url + "/iota2")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'mv', '-m', 'log msg',
                                      repo_url + "/A/mu", repo_url + "/iota")
   history = run_svnlook("history", "--limit=1", sbox.repo_dir)
@@ -481,9 +475,7 @@ def diff_ignore_whitespace(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Check the output of 'svnlook diff -x --ignore-space-change' on mu.
   # It should not print anything.
@@ -536,13 +528,11 @@ def diff_ignore_eolstyle(sbox):
 
     svntest.actions.run_and_verify_commit(wc_dir,
                                           expected_output,
-                                          expected_status,
-                                          None,
-                                          wc_dir)
+                                          expected_status)
 
     # Grab the diff
     exit_code, expected_output, err = svntest.actions.run_and_verify_svn(
-      None, None, [],
+      None, [],
       'diff', '-r', 'PREV', '-x', '--ignore-eol-style', mu_path)
 
 
@@ -676,9 +666,9 @@ fp.close()"""
   svntest.main.file_append(rho_path, 'new appended text for rho')
 
   # commit, and check the hook's logfile
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'log msg', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', wc_dir)
 
   expected_data = [ 'U   A/D/G/rho\n', 'U   A/mu\n', 'A/\n', 'A/D/G/\n' ]
@@ -694,9 +684,9 @@ fp.close()"""
   svntest.main.create_python_hook_script(pre_commit_hook,
                                          hook_instance)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+  svntest.actions.run_and_verify_svn(None, [], 'propset',
                                      'bogus_prop', 'bogus_val\n', A_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'log msg', wc_dir,
                                      '--with-revprop', 'bogus_rev_prop=bogus_rev_val\n')
   # Now check the logfile
@@ -705,7 +695,6 @@ fp.close()"""
                     "Properties on '/A':\n",
                     '  bogus_prop\n',
                     '  svn:log\n', '  svn:author\n',
-                    '  svn:check-locks\n', # internal prop, not really expected
                     '  bogus_rev_prop\n',
                     '  svn:date\n',
                     '  svn:txn-client-compat-version\n',
@@ -726,7 +715,7 @@ def property_delete(sbox):
   sbox.simple_propdel('foo', 'A/mu')
   sbox.simple_commit()
 
-  svntest.actions.run_and_verify_svnlook(None, ["_U  A/mu\n"], [],
+  svntest.actions.run_and_verify_svnlook(["_U  A/mu\n"], [],
                                          'changed', repo_dir)
 
 

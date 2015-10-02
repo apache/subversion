@@ -38,6 +38,14 @@
 #include "private/svn_subr_private.h"
 #include "../libsvn_fs/fs-loader.h"
 
+
+const svn_version_t *
+svn_fs_util__version(void)
+{
+  SVN_VERSION_BODY;
+}
+
+
 /* Return TRUE, if PATH of PATH_LEN > 0 chars starts with a '/' and does
  * not end with a '/' and does not contain duplicate '/'.
  */

@@ -52,7 +52,7 @@ struct notify_baton
   svn_boolean_t is_export;
   svn_boolean_t is_wc_to_repos_copy;
   svn_boolean_t sent_first_txdelta;
-  svn_boolean_t in_external;
+  int in_external;
   svn_boolean_t had_print_error; /* Used to not keep printing error messages
                                     when we've already had one print error. */
 
@@ -129,7 +129,7 @@ svn_cl__conflict_stats_resolved(svn_cl__conflict_stats_t *conflict_stats,
 static const char *
 remaining_str(apr_pool_t *pool, int n_remaining)
 {
-  return apr_psprintf(pool, Q_("%d remaining", 
+  return apr_psprintf(pool, Q_("%d remaining",
                                "%d remaining",
                                n_remaining),
                       n_remaining);
@@ -415,8 +415,10 @@ notify_body(struct notify_baton *nb,
             store_path(nb, nb->conflict_stats->prop_conflicts, path_local);
             statchar_buf[1] = 'C';
           }
+        else if (n->prop_state == svn_wc_notify_state_merged)
+          statchar_buf[1] = 'G';
         else if (n->prop_state == svn_wc_notify_state_changed)
-              statchar_buf[1] = 'U';
+          statchar_buf[1] = 'U';
 
         if (statchar_buf[0] != ' ' || statchar_buf[1] != ' ')
           {
@@ -636,7 +638,7 @@ notify_body(struct notify_baton *nb,
 
     case svn_wc_notify_update_external:
       /* Remember that we're now "inside" an externals definition. */
-      nb->in_external = TRUE;
+      ++nb->in_external;
 
       /* Currently this is used for checkouts and switches too.  If we
          want different output, we'll have to add new actions. */
@@ -653,7 +655,7 @@ notify_body(struct notify_baton *nb,
       if (nb->in_external)
         {
           svn_handle_warning2(stderr, n->err, "svn: ");
-          nb->in_external = FALSE;
+          --nb->in_external;
           SVN_ERR(svn_cmdline_printf(pool, "\n"));
         }
       /* Otherwise, we'll just print two warnings.  Why?  Because
@@ -752,7 +754,7 @@ notify_body(struct notify_baton *nb,
 
       if (nb->in_external)
         {
-          nb->in_external = FALSE;
+          --nb->in_external;
           SVN_ERR(svn_cmdline_printf(pool, "\n"));
         }
       break;
@@ -1117,7 +1119,7 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
   nb->is_checkout = FALSE;
   nb->is_export = FALSE;
   nb->is_wc_to_repos_copy = FALSE;
-  nb->in_external = FALSE;
+  nb->in_external = 0;
   nb->had_print_error = FALSE;
   nb->conflict_stats = conflict_stats;
   SVN_ERR(svn_dirent_get_absolute(&nb->path_prefix, "", pool));

@@ -81,13 +81,13 @@ StatusCallback::doStatus(const char *local_abspath,
   // it can be cached.
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/StatusCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/StatusCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "doStatus",
                              "(Ljava/lang/String;"
-                             "L"JAVA_PACKAGE"/types/Status;)V");
+                             JAVAHL_ARG("/types/Status;") ")V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }
@@ -101,11 +101,8 @@ StatusCallback::doStatus(const char *local_abspath,
     POP_AND_RETURN(SVN_NO_ERROR);
 
   env->CallVoidMethod(m_callback, mid, jPath, jStatus);
-  // We return here regardless of whether an exception is thrown or not,
-  // so we do not need to explicitly check for one.
 
-  env->PopLocalFrame(NULL);
-  return SVN_NO_ERROR;
+  POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }
 
 void

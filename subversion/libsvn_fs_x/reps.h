@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__REPS_H
-#define SVN_LIBSVN_FS__REPS_H
+#ifndef SVN_LIBSVN_FS_X_REPS_H
+#define SVN_LIBSVN_FS_X_REPS_H
 
 #include "svn_io.h"
 #include "fs.h"
@@ -71,11 +71,11 @@ typedef struct svn_fs_x__reps_baton_t
 
 /* Create and populate noderev containers. */
 
-/* Create and return a new builder object, allocated in POOL.
+/* Create and return a new builder object, allocated in RESULT_POOL.
  */
 svn_fs_x__reps_builder_t *
 svn_fs_x__reps_builder_create(svn_fs_t *fs,
-                              apr_pool_t *pool);
+                              apr_pool_t *result_pool);
 
 /* To BUILDER, add reference to the fulltext currently stored in
  * representation REP.  Substrings matching with any of the base reps
@@ -112,14 +112,14 @@ svn_fs_x__reps_estimate_size(const svn_fs_x__reps_builder_t *builder);
 /* Read from representation containers. */
 
 /* For fulltext IDX in CONTAINER in filesystem FS, create an extract object
- * allocated in POOL and return it in *EXTRACTOR.
+ * allocated in RESULT_POOL and return it in *EXTRACTOR.
  */
 svn_error_t *
 svn_fs_x__reps_get(svn_fs_x__rep_extractor_t **extractor,
                    svn_fs_t *fs,
                    const svn_fs_x__reps_t *container,
                    apr_size_t idx,
-                   apr_pool_t *pool);
+                   apr_pool_t *result_pool);
 
 /* Let the EXTRACTOR object fetch all parts of the desired fulltext and
  * return the latter in *CONTENTS.  If SIZE is not 0, return SIZE bytes
@@ -141,12 +141,12 @@ svn_fs_x__extractor_drive(svn_stringbuf_t** contents,
 /* I/O interface. */
 
 /* Write a serialized representation of the final container described by
- * BUILDER to STREAM.  Use POOL for temporary allocations.
+ * BUILDER to STREAM.  Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__write_reps_container(svn_stream_t *stream,
                                const svn_fs_x__reps_builder_t *builder,
-                               apr_pool_t *pool);
+                               apr_pool_t *scratch_pool);
 
 /* Read a representations container from its serialized representation in
  * STREAM.  Allocate the result in RESULT_POOL and return it in *CONTAINER.
@@ -172,7 +172,7 @@ svn_error_t *
 svn_fs_x__deserialize_reps_container(void **out,
                                      void *data,
                                      apr_size_t data_len,
-                                     apr_pool_t *pool);
+                                     apr_pool_t *result_pool);
 
 /* Implements svn_cache__partial_getter_func_t for svn_fs_x__reps_t,
  * setting *OUT to an svn_fs_x__rep_extractor_t object defined by the
