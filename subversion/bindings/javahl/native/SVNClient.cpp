@@ -70,10 +70,18 @@
 #include "svn_diff.h"
 #include "svn_config.h"
 #include "svn_io.h"
+#include "svn_hash.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_utf.h"
+#include "private/svn_subr_private.h"
 #include "svn_private_config.h"
+
+#include "ExternalItem.hpp"
+#include "jniwrapper/jni_list.hpp"
+#include "jniwrapper/jni_stack.hpp"
+#include "jniwrapper/jni_string_map.hpp"
+
 
 SVNClient::SVNClient(jobject jthis_in)
     : m_lastPath("", pool), context(jthis_in, pool)
@@ -88,21 +96,21 @@ SVNClient *SVNClient::getCppObject(jobject jthis)
 {
     static jfieldID fid = 0;
     jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
-                                                   JAVA_PACKAGE"/SVNClient");
+                                                   JAVAHL_CLASS("/SVNClient"));
     return (cppAddr == 0 ? NULL : reinterpret_cast<SVNClient *>(cppAddr));
 }
 
 void SVNClient::dispose(jobject jthis)
 {
     static jfieldID fid = 0;
-    SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNClient");
+    SVNBase::dispose(jthis, &fid, JAVAHL_CLASS("/SVNClient"));
 }
 
 jobject SVNClient::getVersionExtended(bool verbose)
 {
     JNIEnv *const env = JNIUtil::getEnv();
 
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/types/VersionExtended");
+    jclass clazz = env->FindClass(JAVAHL_CLASS("/types/VersionExtended"));
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
@@ -339,7 +347,8 @@ void SVNClient::remove(Targets &targets, CommitMessage *message, bool force,
 
 void SVNClient::revert(StringArray &paths, svn_depth_t depth,
                        StringArray &changelists,
-                       bool clear_changelists)
+                       bool clear_changelists,
+                       bool metadata_only)
 {
     SVN::Pool subPool(pool);
 
@@ -352,6 +361,7 @@ void SVNClient::revert(StringArray &paths, svn_depth_t depth,
     SVN_JNI_ERR(svn_client_revert3(targets.array(subPool), depth,
                                    changelists.array(subPool),
                                    clear_changelists,
+                                   metadata_only,
                                    ctx, subPool.getPool()), );
 }
 
@@ -441,9 +451,76 @@ void SVNClient::commit(Targets &targets, CommitMessage *message,
                 );
 }
 
+
+namespace {
+typedef Java::ImmutableList<JavaHL::ExternalItem> PinList;
+typedef Java::ImmutableMap<PinList> PinMap;
+
+struct PinListFunctor
+{
+  explicit PinListFunctor(const Java::Env& env, SVN::Pool& pool, int refs_len)
+    : m_pool(pool),
+      m_refs(apr_array_make(pool.getPool(), refs_len,
+                            sizeof(svn_wc_external_item2_t*)))
+      {}
+
+  void operator()(const JavaHL::ExternalItem& item)
+    {
+      APR_ARRAY_PUSH(m_refs, svn_wc_external_item2_t*) =
+        item.get_external_item(m_pool);
+    }
+
+  SVN::Pool& m_pool;
+  apr_array_header_t *m_refs;
+};
+
+struct PinMapFunctor
+{
+  explicit PinMapFunctor(const Java::Env& env, SVN::Pool& pool)
+    : m_env(env),
+      m_pool(pool),
+      m_pin_set(svn_hash__make(pool.getPool()))
+    {}
+
+  void operator()(const std::string& path, const PinList& refs)
+    {
+      PinListFunctor lf(m_env, m_pool, refs.length());
+      refs.for_each(lf);
+      const char* key = static_cast<const char*>(
+          apr_pmemdup(m_pool.getPool(), path.c_str(), path.size() + 1));
+      svn_hash_sets(m_pin_set, key, lf.m_refs);
+    }
+
+  const Java::Env& m_env;
+  SVN::Pool& m_pool;
+  apr_hash_t *m_pin_set;
+};
+
+apr_hash_t *get_externals_to_pin(jobject jexternalsToPin, SVN::Pool& pool)
+{
+  if (!jexternalsToPin)
+    return NULL;
+
+  const Java::Env env;
+  JNIEnv *jenv = env.get();
+
+  try
+    {
+      PinMap pin_map(env, jexternalsToPin);
+      PinMapFunctor mf(env, pool);
+      pin_map.for_each(mf);
+      return mf.m_pin_set;
+    }
+  SVN_JAVAHL_JNI_CATCH;
+  return NULL;
+}
+} // anonymous namespace
+
 void SVNClient::copy(CopySources &copySources, const char *destPath,
                      CommitMessage *message, bool copyAsChild,
                      bool makeParents, bool ignoreExternals,
+                     bool metadataOnly,
+                     bool pinExternals, jobject jexternalsToPin,
                      PropertyTable &revprops, CommitCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -458,10 +535,14 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_copy6(srcs, destinationPath.c_str(),
-                                 copyAsChild, makeParents, ignoreExternals,
-                                 revprops.hash(subPool),
-                                 CommitCallback::callback, callback,
+    apr_hash_t *pin_set = get_externals_to_pin(jexternalsToPin, subPool);
+    if (!JNIUtil::isJavaExceptionThrown())
+      SVN_JNI_ERR(svn_client_copy7(srcs, destinationPath.c_str(),
+                                   copyAsChild, makeParents, ignoreExternals,
+                                   metadataOnly,
+                                   pinExternals, pin_set,
+                                   revprops.hash(subPool),
+                                   CommitCallback::callback, callback,
                                  ctx, subPool.getPool()), );
 }
 
@@ -1184,7 +1265,7 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
 void SVNClient::blame(const char *path, Revision &pegRevision,
                       Revision &revisionStart, Revision &revisionEnd,
                       bool ignoreMimeType, bool includeMergedRevisions,
-                      BlameCallback *callback)
+                      BlameCallback *callback, DiffOptions const& options)
 {
     SVN::Pool subPool(pool);
     SVN_JNI_NULL_PTR_EX(path, "path", );
@@ -1198,7 +1279,7 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     SVN_JNI_ERR(svn_client_blame5(
           intPath.c_str(), pegRevision.revision(), revisionStart.revision(),
           revisionEnd.revision(),
-          svn_diff_file_options_create(subPool.getPool()), ignoreMimeType,
+          options.fileOptions(subPool), ignoreMimeType,
           includeMergedRevisions, BlameCallback::callback, callback, ctx,
           subPool.getPool()),
         );

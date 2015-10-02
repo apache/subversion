@@ -31,13 +31,6 @@ import re
 import sys
 
 
-# operator.methodcaller doesn't exist in Python 2.5.
-if not hasattr(operator, 'methodcaller'):
-  def methodcaller(method, *args, **kwargs):
-    return lambda x: getattr(x, method)(*args, **kwargs)
-  operator.methodcaller = methodcaller
-  del methodcaller
-
 DEFINE_END = '  ""\n\n'
 
 
@@ -140,7 +133,7 @@ class Processor(object):
 
       # '/'+1 == '0'
       line = re.sub(
-            r'IS_STRICT_DESCENDANT_OF[(]([A-Za-z_.]+), ([?][0-9]+)[)]',
+            r'IS_STRICT_DESCENDANT_OF[(]([?]?[A-Za-z0-9_.]+), ([?]?[A-Za-z0-9_.]+)[)]',
             r"(((\1) > (CASE (\2) WHEN '' THEN '' ELSE (\2) || '/' END))" +
             r" AND ((\1) < CASE (\2) WHEN '' THEN X'FFFF' ELSE (\2) || '0' END))",
             line)
@@ -194,14 +187,14 @@ class Processor(object):
             line)
 
       # Another preprocessing.
-      for symbol, string in self.token_map.iteritems():
+      for symbol, string in self.token_map.items():
         # ### This doesn't sql-escape 'string'
         line = re.sub(r'\b%s\b' % re.escape(symbol), "'%s'" % string, line)
 
       if line.strip():
         handled = False
 
-        for regex, handler in self._directives.iteritems():
+        for regex, handler in self._directives.items():
           match = regex.match(line)
           if match:
             handler(match)

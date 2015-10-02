@@ -33,7 +33,7 @@
  */
 #define BLOCK_SIZE          0x10000
 
-/* Number of bits in each block. 
+/* Number of bits in each block.
  */
 #define BLOCK_SIZE_BITS     (8 * BLOCK_SIZE)
 

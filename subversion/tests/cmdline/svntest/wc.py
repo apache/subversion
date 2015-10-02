@@ -141,12 +141,14 @@ class State:
 
     self.desc.update(more_desc)
 
-  def add_state(self, parent, state):
+  def add_state(self, parent, state, strict=False):
     "Import state items from a State object, reparent the items to PARENT."
     assert isinstance(state, State)
 
     for path, item in state.desc.items():
-      if path == '':
+      if strict:
+        path = parent + path
+      elif path == '':
         path = parent
       else:
         path = parent + '/' + path
@@ -358,6 +360,11 @@ class State:
           for p, i in self.desc.copy().items():
             if p.startswith(path + '/'):
               del self.desc[p]
+        elif item.entry_kind == 'file':
+          # A file has no descendants in svn_wc_entry_t
+          for p, i in self.desc.copy().items():
+            if p.startswith(path + '/'):
+              del self.desc[p]
         else:
           # when reading the entry structures, we don't examine for text or
           # property mods, so clear those flags. we also do not examine the
@@ -434,13 +441,24 @@ class State:
     return not self.__eq__(other)
 
   @classmethod
-  def from_status(cls, lines):
+  def from_status(cls, lines, wc_dir=None):
     """Create a State object from 'svn status' output."""
 
     def not_space(value):
       if value and value != ' ':
         return value
       return None
+
+    def parse_move(path, wc_dir):
+      if path.startswith('../'):
+        # ../ style paths are relative from the status root
+        return to_relpath(os.path.normpath(repos_join(wc_dir, path)))
+      else:
+        # Other paths are just relative from cwd
+        return to_relpath(path)
+
+    if not wc_dir:
+      wc_dir = ''
 
     desc = { }
     last = None
@@ -455,15 +473,15 @@ class State:
 
         if ex_match:
           if ex_match.group('moved_from'):
-            path = ex_match.group('moved_from')
-            last.tweak(moved_from = to_relpath(path))
+            path = to_relpath(ex_match.group('moved_from'))
+            last.tweak(moved_from = parse_move(path, wc_dir))
           elif ex_match.group('moved_to'):
-            path = ex_match.group('moved_to')
-            last.tweak(moved_to = to_relpath(path))
+            path = to_relpath(ex_match.group('moved_to'))
+            last.tweak(moved_to = parse_move(path, wc_dir))
           elif ex_match.group('swapped_with'):
-            path = ex_match.group('swapped_with')
-            last.tweak(moved_to = to_relpath(path))
-            last.tweak(moved_from = to_relpath(path))
+            path = to_relpath(ex_match.group('swapped_with'))
+            last.tweak(moved_to = parse_move(path, wc_dir))
+            last.tweak(moved_from = parse_move(path, wc_dir))
 
           # Parse TC description?
 
@@ -669,14 +687,22 @@ class State:
           })
 
     desc = { }
-    dot_svn = svntest.main.get_admin_name()
-
     dump_data = svntest.main.run_entriesdump_tree(base)
 
     if not dump_data:
       # Probably 'svn status' run on an actual only node
       # ### Improve!
       return cls('', desc)
+
+    dirent_join = repos_join
+    if len(base) == 2 and base[1:]==':' and sys.platform=='win32':
+      # We have a win32 drive relative path... Auch. Fix joining
+      def drive_join(a, b):
+        if len(a) == 2:
+          return a+b
+        else:
+          return repos_join(a,b)
+      dirent_join = drive_join
 
     for parent, entries in sorted(dump_data.items()):
 
@@ -699,11 +725,11 @@ class State:
           # that we can't put the status as "! " because that gets tweaked
           # out of our expected tree.
           item = StateItem(status='  ', wc_rev='?')
-          desc[repos_join(parent, name)] = item
+          desc[dirent_join(parent, name)] = item
           continue
         item = StateItem.from_entry(entry)
         if name:
-          desc[repos_join(parent, name)] = item
+          desc[dirent_join(parent, name)] = item
           implied_url = repos_join(parent_url, svn_uri_quote(name))
         else:
           item._url = entry.url  # attach URL to directory StateItems
@@ -734,7 +760,7 @@ class StateItem:
   """
 
   def __init__(self, contents=None, props=None,
-               status=None, verb=None, wc_rev=None,
+               status=None, verb=None, wc_rev=None, entry_kind=None,
                entry_rev=None, entry_status=None, entry_copied=None,
                locked=None, copied=None, switched=None, writelocked=None,
                treeconflict=None, moved_from=None, moved_to=None,
@@ -761,6 +787,9 @@ class StateItem:
     self.prev_verb = prev_verb
     # The base revision number of the node in the WC, as a string.
     self.wc_rev = wc_rev
+    # If 'file' specifies that the node is a file, and as such has no svn_wc_entry_t
+    # descendants
+    self.entry_kind = None
     # These will be set when we expect the wc_rev/status to differ from those
     # found in the entries code.
     self.entry_rev = entry_rev
@@ -951,6 +980,20 @@ def svn_uri_quote(url):
 
 # ------------
 
+def python_sqlite_can_read_wc():
+  """Check if the Python builtin is capable enough to peek into wc.db"""
+
+  try:
+    db = svntest.sqlite3.connect('')
+
+    c = db.cursor()
+    c.execute('select sqlite_version()')
+    ver = tuple(map(int, c.fetchall()[0][0].split('.')))
+
+    return ver >= (3, 6, 18) # Currently enough (1.7-1.9)
+  except:
+    return False
+
 def open_wc_db(local_path):
   """Open the SQLite DB for the WC path LOCAL_PATH.
      Return (DB object, WC root path, WC relpath of LOCAL_PATH)."""
@@ -1005,6 +1048,16 @@ def sqlite_stmt(wc_root_path, stmt):
   c = db.cursor()
   c.execute(stmt)
   return c.fetchall()
+
+def sqlite_exec(wc_root_path, stmt):
+  """Execute STMT on the SQLite wc.db in WC_ROOT_PATH and return the
+     results."""
+
+  db = open_wc_db(wc_root_path)[0]
+  c = db.cursor()
+  c.execute(stmt)
+  db.commit()
+
 
 # ------------
 ### probably toss these at some point. or major rework. or something.

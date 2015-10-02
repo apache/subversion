@@ -51,7 +51,7 @@ Blanket commit access:
       rhuijben   Bert Huijben <rhuijben@collab.net>
       stylesen   Senthil Kumaran S <stylesen@gmail.com>
      steveking   Stefan Küng <tortoisesvn@gmail.com>
-         neels   Neels J. Hofmeyr <neels@elego.de>
+         neels   Neels J. Hofmeyr <neels@hofmeyr.de>
      jwhitlock   Jeremy Whitlock <jcscoobyrs@gmail.com>
        sbutler   Stephen Butler <sbutler@elego.de>
         dannas   Daniel Näslund <dannas@dannas.name>
@@ -164,7 +164,8 @@ Commit access for specific areas:
      humbedooh   Daniel Gruno <humbedooh@apache.org>         (svnpubsub)
       prabhugs   Prabhu Gnana Sundar <pprabhugs@gmail.com>   (verify-keep-going)
         schabi   Markus Schaber <schabi@apache.org>          (testsuite)
-	gbg      Gabriela Gibson <gabriela.gibson@gmail.com> (gtest) 
+           gbg   Gabriela Gibson <gabriela.gibson@gmail.com> (gtest)
+      luke1410   Stefan Hett <luke1410@gmx.de>               (doc)
 
   Translation of message files:
 

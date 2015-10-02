@@ -463,8 +463,8 @@ mtcc_verify_create(svn_client__mtcc_t *mtcc,
         return SVN_NO_ERROR; /* Node is explicitly deleted. We can replace */
     }
 
-  /* mod_dav_svn allows overwriting existing directories. Let's hide that
-     for users of this api */
+  /* mod_dav_svn used to allow overwriting existing directories. Let's hide
+     that for users of this api */
   SVN_ERR(svn_client__mtcc_check_path(&kind, new_relpath, FALSE,
                                       mtcc, scratch_pool));
 
@@ -710,8 +710,7 @@ mtcc_prop_getter(const svn_string_t **mime_type,
 
               if (! strcmp(mod->name, SVN_PROP_MIME_TYPE))
                 {
-                  *mime_type = mod->value ? svn_string_dup(mod->value, pool)
-                                          : NULL;
+                  *mime_type = svn_string_dup(mod->value, pool);
                   mime_type = NULL;
                 }
             }
@@ -977,19 +976,19 @@ svn_client__mtcc_check_path(svn_node_kind_t *kind,
           if (op->kind == OP_OPEN_DIR || op->kind == OP_ADD_DIR)
             op->performed_stat = TRUE;
           else if (op->kind == OP_OPEN_FILE || op->kind == OP_ADD_FILE)
-            return svn_error_createf(SVN_ERR_FS_NOT_DIRECTORY, NULL,
-                                     _("Can't perform directory operation "
-                                       "on '%s' as it is not a directory"),
+            return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
+                                     _("Can't perform file operation "
+                                       "on '%s' as it is not a file"),
                                      relpath);
         }
-      else if (op && *kind == svn_node_dir)
+      else if (op && *kind == svn_node_file)
         {
           if (op->kind == OP_OPEN_FILE || op->kind == OP_ADD_FILE)
             op->performed_stat = TRUE;
           else if (op->kind == OP_OPEN_DIR || op->kind == OP_ADD_DIR)
-            return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
-                                     _("Can't perform file operation "
-                                       "on '%s' as it is not a file"),
+            return svn_error_createf(SVN_ERR_FS_NOT_DIRECTORY, NULL,
+                                     _("Can't perform directory operation "
+                                       "on '%s' as it is not a directory"),
                                      relpath);
         }
       else if (op && (op->kind == OP_OPEN_DIR || op->kind == OP_OPEN_FILE))

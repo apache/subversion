@@ -63,6 +63,12 @@ typedef struct svn_config_t svn_config_t;
  * @{
  */
 
+/* If you add a new SVN_CONFIG_* category/section/option macro to this group,
+ * you have to re-run gen-make.py manually.
+ *
+ * ### This should be fixed in the build system; see issue #4581.
+ */
+
  /* This list of #defines is intentionally presented as a nested list
     that matches the in-config hierarchy.  */
 
@@ -731,31 +737,6 @@ svn_config_ensure(const char *config_dir,
  */
 #define SVN_CONFIG_AUTHN_FAILURES_KEY           "failures"
 
-/** A hash-key for a hostname, such as hostnames in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_HOSTNAME_KEY           "hostname"
-
-/** A hash-key for a fingerprint, such as fingerprints in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_FINGERPRINT_KEY        "fingerprint"
-
-/** A hash-key for a valid-from date, such as dates in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_VALID_FROM_KEY         "valid_from"
-
-/** A hash-key for a valid-to date, such as dates in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_VALID_UNTIL_KEY        "valid_until"
-
-/** A hash-key for an issuer distinguished name, such as issuer names
- * in SSL certificates.
- * @since New in 1.9.
- */
-#define SVN_CONFIG_AUTHN_ISSUER_DN_KEY        "issuer_dn"
 
 /** @} */
 
@@ -807,7 +788,8 @@ svn_config_write_auth_data(apr_hash_t *hash,
  * fully purged) to allow perusal and selective removal of credentials.
  *
  * @a cred_kind and @a realmstring specify the key of the credential.
- * @a hash contains the hash data associated with the record.
+ * @a hash contains the hash data associated with the record. @a walk_baton
+ * is the baton passed to svn_config_walk_auth_data().
  *
  * Before returning set @a *delete_cred to TRUE to remove the credential from
  * the cache; leave @a *delete_cred unchanged or set it to FALSE to keep the

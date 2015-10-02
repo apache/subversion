@@ -82,6 +82,19 @@ svn_test__create_repos(svn_repos_t **repos_p,
                        const svn_test_opts_t *opts,
                        apr_pool_t *pool);
 
+/* Create a repository with a filesystem based on OPTS in a subdir NAME
+   and return optionally new REPOS object, the directory it was created in
+   and/or the url of the repository .  */
+svn_error_t *
+svn_test__create_repos2(svn_repos_t **repos_p,
+                        const char **repos_url,
+                        const char **repos_dirent,
+                        const char *name,
+                        const svn_test_opts_t *opts,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+
 /* Read all data from a generic read STREAM, and return it in STRING.
    Allocate the svn_stringbuf_t in POOL.  (All data in STRING will be
    dup'ed from STREAM using POOL too.) */

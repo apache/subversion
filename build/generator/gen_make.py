@@ -53,6 +53,12 @@ from gen_base import build_path_join, build_path_strip, build_path_splitfile, \
       build_path_basename, build_path_dirname, build_path_retreat, unique
 
 
+def _normstr(x):
+  if os.sep == '/':
+    return os.path.normpath(str(x))
+  else:
+    return os.path.normpath(str(x).replace('/', os.sep)).replace(os.sep, '/')
+
 class Generator(gen_base.GeneratorBase):
 
   _extension_map = {
@@ -232,6 +238,7 @@ class Generator(gen_base.GeneratorBase):
 
       # get the source items (.o and .la) for the link unit
       objects = [ ]
+      objdeps = [ ]
       object_srcs = [ ]
       headers = [ ]
       header_classes = [ ]
@@ -263,6 +270,7 @@ class Generator(gen_base.GeneratorBase):
         elif isinstance(link_dep, gen_base.ObjectFile):
           # link in the object file
           objects.append(link_dep.filename)
+          objdeps.append(_normstr(link_dep.filename))
           for dep in self.graph.get_sources(gen_base.DT_OBJECT, link_dep, gen_base.SourceFile):
             object_srcs.append(
               build_path_join('$(abs_srcdir)', dep.filename))
@@ -291,6 +299,7 @@ class Generator(gen_base.GeneratorBase):
                             install=None,
                             add_deps=add_deps,
                             objects=objects,
+                            objdeps=objdeps,
                             deps=deps,
                             when=target_ob.when,
                             )
@@ -467,11 +476,11 @@ class Generator(gen_base.GeneratorBase):
                       key=lambda t: t[0].filename)
 
     for objname, sources in obj_deps:
-      dep = _eztdata(name=str(objname),
+      dep = _eztdata(name=_normstr(objname),
                      when=objname.when,
-                     deps=list(map(str, sources)),
+                     deps=list(map(_normstr, sources)),
                      cmd=objname.compile_cmd,
-                     source=str(sources[0]))
+                     source=_normstr(sources[0]))
       data.deps.append(dep)
       dep.generated = ezt.boolean(getattr(objname, 'source_generated', 0))
 

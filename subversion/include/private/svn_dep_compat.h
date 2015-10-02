@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_compat.h
+ * @file svn_dep_compat.h
  * @brief Compatibility macros and functions.
  * @since New in 1.5.0.
  */
@@ -72,6 +72,27 @@ extern "C" {
     (APR_STATUS_IS_EBUSY(x) || (x) == APR_FROM_OS_ERROR(WAIT_TIMEOUT))
 #else
 #define SVN_LOCK_IS_BUSY(x) APR_STATUS_IS_EBUSY(x)
+#endif
+
+/**
+ * Indicate whether we are running on a POSIX platform.  This has
+ * implications on the way e.g. fsync() works.
+ *
+ * For details on this check, see
+ * http://nadeausoftware.com/articles/2012/01/c_c_tip_how_use_compiler_predefined_macros_detect_operating_system#POSIX
+ *
+ * @since New in 1.10.
+ */
+#ifndef SVN_ON_POSIX
+#if    !defined(_WIN32) \
+    && (   defined(__unix__) \
+        || defined(__unix) \
+        || (defined(__APPLE__) && defined(__MACH__)))  /* UNIX-style OS? */
+#  include <unistd.h>
+#  if defined(_POSIX_VERSION)
+#    define SVN_ON_POSIX
+#  endif
+#endif
 #endif
 
 /**

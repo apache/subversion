@@ -75,6 +75,13 @@ svn_cl__print_commit_info(const svn_commit_info_t *commit_info,
                           void *baton,
                           apr_pool_t *pool)
 {
+  /* Be very careful with returning errors from this callback as those
+     will be returned as errors from editor->close_edit(...), which may
+     cause callers to assume that the commit itself failed.
+
+     See log message of r1659867 and the svn_ra_get_commit_editor3
+     documentation for details on error scenarios. */
+
   if (SVN_IS_VALID_REVNUM(commit_info->revision))
     SVN_ERR(svn_cmdline_printf(pool, _("Committed revision %ld%s.\n"),
                                commit_info->revision,
@@ -197,7 +204,7 @@ svn_cl__make_log_msg_baton(void **baton,
                            apr_hash_t *config,
                            apr_pool_t *pool)
 {
-  struct log_msg_baton *lmb = apr_palloc(pool, sizeof(*lmb));
+  struct log_msg_baton *lmb = apr_pcalloc(pool, sizeof(*lmb));
 
   if (opt_state->filedata)
     {
@@ -230,8 +237,10 @@ svn_cl__make_log_msg_baton(void **baton,
                      SVN_CONFIG_OPTION_LOG_ENCODING,
                      NULL);
     }
+  else
+    lmb->message_encoding = NULL;
 
-  lmb->base_dir = base_dir ? base_dir : "";
+  lmb->base_dir = base_dir;
   lmb->tmpfile_left = NULL;
   lmb->config = config;
   lmb->keep_locks = opt_state->no_unlock;
@@ -383,14 +392,11 @@ svn_cl__get_log_message(const char **log_msg,
 
           if (! path)
             path = item->url;
-          else if (! *path)
-            path = ".";
-
-          if (! svn_path_is_url(path) && lmb->base_dir)
+          else if (lmb->base_dir)
             path = svn_dirent_is_child(lmb->base_dir, path, pool);
 
           /* If still no path, then just use current directory. */
-          if (! path)
+          if (! path || !*path)
             path = ".";
 
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
@@ -429,7 +435,8 @@ svn_cl__get_log_message(const char **log_msg,
       if (! lmb->non_interactive)
         {
           err = svn_cmdline__edit_string_externally(&msg_string, &lmb->tmpfile_left,
-                                                    lmb->editor_cmd, lmb->base_dir,
+                                                    lmb->editor_cmd,
+                                                    lmb->base_dir ? lmb->base_dir : "",
                                                     msg_string, "svn-commit",
                                                     lmb->config, TRUE,
                                                     lmb->message_encoding,
@@ -900,14 +907,17 @@ svn_cl__time_cstring_to_human_cstring(const char **human_cstring,
 }
 
 const char *
-svn_cl__node_description(const svn_wc_conflict_version_t *node,
+svn_cl__node_description(const char *repos_root_url,
+                         const char *repos_relpath,
+                         svn_revnum_t peg_rev,
+                         svn_node_kind_t node_kind,
                          const char *wc_repos_root_URL,
                          apr_pool_t *pool)
 {
   const char *root_str = "^";
   const char *path_str = "...";
 
-  if (!node)
+  if (!repos_root_url || !repos_relpath || !SVN_IS_VALID_REVNUM(peg_rev))
     /* Printing "(none)" the harder way to ensure conformity (mostly with
      * translations). */
     return apr_psprintf(pool, "(%s)",
@@ -916,18 +926,18 @@ svn_cl__node_description(const svn_wc_conflict_version_t *node,
   /* Construct a "caret notation" ^/URL if NODE matches WC_REPOS_ROOT_URL.
    * Otherwise show the complete URL, and if we can't, show dots. */
 
-  if (node->repos_url &&
+  if (repos_root_url &&
       (wc_repos_root_URL == NULL ||
-       strcmp(node->repos_url, wc_repos_root_URL) != 0))
-    root_str = node->repos_url;
+       strcmp(repos_root_url, wc_repos_root_URL) != 0))
+    root_str = repos_root_url;
 
-  if (node->path_in_repos)
-    path_str = node->path_in_repos;
+  if (repos_relpath)
+    path_str = repos_relpath;
 
   return apr_psprintf(pool, "(%s) %s@%ld",
-                      svn_cl__node_kind_str_human_readable(node->node_kind),
+                      svn_cl__node_kind_str_human_readable(node_kind),
                       svn_path_url_add_component2(root_str, path_str, pool),
-                      node->peg_rev);
+                      peg_rev);
 }
 
 svn_error_t *

@@ -272,7 +272,7 @@ log_closed(svn_ra_serf__xml_estate_t *xes,
       svn_log_entry_t *log_entry;
       const char *rev_str;
 
-      if (log_ctx->limit && (log_ctx->nest_level == 0)
+      if ((log_ctx->limit > 0) && (log_ctx->nest_level == 0)
           && (++log_ctx->count > log_ctx->limit))
         {
           return SVN_NO_ERROR;
@@ -412,7 +412,8 @@ static svn_error_t *
 create_log_body(serf_bucket_t **body_bkt,
                 void *baton,
                 serf_bucket_alloc_t *alloc,
-                apr_pool_t *pool)
+                apr_pool_t *pool /* request pool */,
+                apr_pool_t *scratch_pool)
 {
   serf_bucket_t *buckets;
   log_context_t *log_ctx = baton;
@@ -579,7 +580,7 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   peg_rev = (start == SVN_INVALID_REVNUM || start > end) ? start : end;
 
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      session, NULL /* conn */,
+                                      session,
                                       NULL /* url */, peg_rev,
                                       pool, pool));
 
@@ -587,20 +588,18 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                                            log_opened, log_closed, NULL,
                                            log_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_delegate = create_log_body;
   handler->body_delegate_baton = log_ctx;
   handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
-  return svn_error_trace(
-              svn_ra_serf__error_on_status(handler->sline,
-                                           req_url,
-                                           handler->location));
+  if (handler->sline.code != 200)
+    SVN_ERR(svn_ra_serf__unexpected_status(handler));
+
+  return SVN_NO_ERROR;
 }

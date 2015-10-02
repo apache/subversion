@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__CHANGES_H
-#define SVN_LIBSVN_FS__CHANGES_H
+#ifndef SVN_LIBSVN_FS_X_CHANGES_H
+#define SVN_LIBSVN_FS_X_CHANGES_H
 
 #include "svn_io.h"
 #include "fs.h"
@@ -47,11 +47,12 @@ typedef struct svn_fs_x__changes_t svn_fs_x__changes_t;
 /* Create and populate changes containers. */
 
 /* Create and return a new changes container with an initial capacity of
- * INITIAL_COUNT svn_fs_x__change_t objects.  Allocate the result in POOL.
+ * INITIAL_COUNT svn_fs_x__change_t objects.
+ * Allocate the result in RESULT_POOL.
  */
 svn_fs_x__changes_t *
 svn_fs_x__changes_create(apr_size_t initial_count,
-                         apr_pool_t *pool);
+                         apr_pool_t *result_pool);
 
 /* Start a new change list CHANGES (implicitly terminating the previous one)
  * and return its index in *LIST_INDEX.  Append all changes from LIST to
@@ -77,17 +78,17 @@ svn_error_t *
 svn_fs_x__changes_get_list(apr_array_header_t **list,
                            const svn_fs_x__changes_t *changes,
                            apr_size_t idx,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool);
 
 /* I/O interface. */
 
-/* Write a serialized representation of CHANGES to STREAM.  Use POOL for
- * temporary allocations.
+/* Write a serialized representation of CHANGES to STREAM.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
 svn_fs_x__write_changes_container(svn_stream_t *stream,
                                   const svn_fs_x__changes_t *changes,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *scratch_pool);
 
 /* Read a changes container from its serialized representation in STREAM.
  * Allocate the result in RESULT_POOL and return it in *CHANGES_P.  Use
@@ -113,7 +114,7 @@ svn_error_t *
 svn_fs_x__deserialize_changes_container(void **out,
                                         void *data,
                                         apr_size_t data_len,
-                                        apr_pool_t *pool);
+                                        apr_pool_t *result_pool);
 
 /* Implements svn_cache__partial_getter_func_t for svn_fs_x__changes_t,
  * setting *OUT to the change list (apr_array_header_t *) selected by

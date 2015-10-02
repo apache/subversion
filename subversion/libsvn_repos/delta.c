@@ -321,7 +321,7 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
   SVN_ERR(svn_fs_node_relation(&relation, tgt_root, tgt_fullpath,
                                src_root, src_fullpath, pool));
 
-  if (relation == svn_fs_node_same)
+  if (relation == svn_fs_node_unchanged)
     {
       /* They are the same node!  No-op (you gotta love those). */
       goto cleanup;

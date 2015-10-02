@@ -34,6 +34,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_props.h"
+#include "svn_hash.h"
 #include "svn_sorts.h"
 
 #include "private/svn_wc_private.h"
@@ -76,6 +77,7 @@ struct diff_baton {
 /* The baton used for a file revision. Lives the entire operation */
 struct file_rev_baton {
   svn_revnum_t start_rev, end_rev;
+  svn_boolean_t backwards;
   const char *target;
   svn_client_ctx_t *ctx;
   const svn_diff_file_options_t *diff_options;
@@ -96,6 +98,14 @@ struct file_rev_baton {
   /* pools for files which may need to persist for more than one rev. */
   apr_pool_t *filepool;
   apr_pool_t *prevfilepool;
+
+  svn_boolean_t check_mime_type;
+
+  /* When blaming backwards we have to use the changes
+     on the *next* revision, as the interesting change
+     happens when we move to the previous revision */
+  svn_revnum_t last_revnum;
+  apr_hash_t *last_props;
 };
 
 /* The baton used by the txdelta window handler. Allocated per revision */
@@ -431,6 +441,26 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   /* Clear the current pool. */
   svn_pool_clear(frb->currpool);
 
+  if (frb->check_mime_type)
+    {
+      apr_hash_t *props = svn_prop_array_to_hash(prop_diffs, frb->currpool);
+      const char *value;
+
+      frb->check_mime_type = FALSE; /* Only check first */
+
+      value = svn_prop_get_value(props, SVN_PROP_MIME_TYPE);
+
+      if (value && svn_mime_type_is_binary(value))
+        {
+          return svn_error_createf(
+              SVN_ERR_CLIENT_IS_BINARY_FILE, NULL,
+              _("Cannot calculate blame information for binary file '%s'"),
+               (svn_path_is_url(frb->target)
+                      ? frb->target 
+                      : svn_dirent_local_style(frb->target, pool)));
+        }
+    }
+
   if (frb->ctx->notify_func2)
     {
       svn_wc_notify_t *notify
@@ -489,18 +519,24 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   /* Create the rev structure. */
   delta_baton->rev = apr_pcalloc(frb->mainpool, sizeof(struct rev));
 
-  if (revnum < MIN(frb->start_rev, frb->end_rev))
+  if (frb->backwards)
     {
-      /* We shouldn't get more than one revision before the starting
-         revision (unless of including merged revisions). */
-      SVN_ERR_ASSERT((frb->last_filename == NULL)
-                     || frb->include_merged_revisions);
+      /* Use from last round...
+         SVN_INVALID_REVNUM on first, which is exactly
+         what we want */
+      delta_baton->rev->revision = frb->last_revnum;
+      delta_baton->rev->rev_props = frb->last_props;
 
-      /* The file existed before start_rev; generate no blame info for
-         lines from this revision (or before). */
-      delta_baton->rev->revision = SVN_INVALID_REVNUM;
+      /* Store for next delta */
+      if (revnum >= MIN(frb->start_rev, frb->end_rev))
+        {
+          frb->last_revnum = revnum;
+          frb->last_props = svn_prop_hash_dup(rev_props, frb->mainpool);
+        }
+      /* Else: Not needed on last rev */
     }
-  else
+  else if (merged_revision
+           || (revnum >= MIN(frb->start_rev, frb->end_rev)))
     {
       /* 1+ for the "youngest to oldest" blame */
       SVN_ERR_ASSERT(revnum <= 1 + MAX(frb->end_rev, frb->start_rev));
@@ -508,6 +544,20 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
       /* Set values from revision props. */
       delta_baton->rev->revision = revnum;
       delta_baton->rev->rev_props = svn_prop_hash_dup(rev_props, frb->mainpool);
+    }
+  else
+    {
+      /* We shouldn't get more than one revision outside the
+         specified range (unless we alsoe receive merged revisions) */
+      SVN_ERR_ASSERT((frb->last_filename == NULL)
+                     || frb->include_merged_revisions);
+
+      /* The file existed before start_rev; generate no blame info for
+         lines from this revision (or before). 
+
+         This revision specifies the state as it was at the start revision */
+
+      delta_baton->rev->revision = SVN_INVALID_REVNUM;
     }
 
   if (frb->include_merged_revisions)
@@ -626,7 +676,6 @@ svn_client_blame5(const char *target,
   svn_stream_t *last_stream;
   svn_stream_t *stream;
   const char *target_abspath_or_url;
-  svn_revnum_t youngest;
 
   if (start->kind == svn_opt_revision_unspecified
       || end->kind == svn_opt_revision_unspecified)
@@ -662,35 +711,54 @@ svn_client_blame5(const char *target,
                                             target, peg_revision,
                                             &younger_end,
                                             ctx, pool));
-  
+
     /* Make the session point to the real URL. */
     SVN_ERR(svn_ra_reparent(ra_session, loc->url, pool));
   }
 
   /* We check the mime-type of the yougest revision before getting all
      the older revisions. */
-  if (!ignore_mime_type)
+  if (!ignore_mime_type
+      && start_revnum < end_revnum)
     {
       apr_hash_t *props;
-      apr_hash_index_t *hi;
+      const char *mime_type = NULL;
 
-      SVN_ERR(svn_client_propget5(&props, NULL, SVN_PROP_MIME_TYPE,
-                                  target_abspath_or_url,  peg_revision,
-                                  end, NULL, svn_depth_empty, NULL, ctx,
-                                  pool, pool));
-
-      /* props could be keyed on URLs or paths depending on the
-         peg_revision and end values so avoid using the key. */
-      hi = apr_hash_first(pool, props);
-      if (hi)
+      if (svn_path_is_url(target)
+          || start_revnum > end_revnum
+          || (end->kind != svn_opt_revision_working
+              && end->kind != svn_opt_revision_base))
         {
-          svn_string_t *value;
+          SVN_ERR(svn_ra_get_file(ra_session, "", end_revnum, NULL, NULL,
+                                  &props, pool));
 
-          /* Should only be one value */
-          SVN_ERR_ASSERT(apr_hash_count(props) == 1);
+          mime_type = svn_prop_get_value(props, SVN_PROP_MIME_TYPE);
+        }
+      else 
+        {
+          const svn_string_t *value;
 
-          value = apr_hash_this_val(hi);
-          if (value && svn_mime_type_is_binary(value->data))
+          if (end->kind == svn_opt_revision_working)
+            SVN_ERR(svn_wc_prop_get2(&value, ctx->wc_ctx,
+                                     target_abspath_or_url,
+                                     SVN_PROP_MIME_TYPE,
+                                     pool, pool));
+          else
+            {
+              SVN_ERR(svn_wc_get_pristine_props(&props, ctx->wc_ctx,
+                                                target_abspath_or_url,
+                                                pool, pool));
+
+              value = props ? svn_hash_gets(props, SVN_PROP_MIME_TYPE)
+                            : NULL;
+            }
+
+          mime_type = value ? value->data : NULL;
+        }
+
+      if (mime_type)
+        {
+          if (svn_mime_type_is_binary(mime_type))
             return svn_error_createf
               (SVN_ERR_CLIENT_IS_BINARY_FILE, 0,
                _("Cannot calculate blame information for binary file '%s'"),
@@ -719,6 +787,10 @@ svn_client_blame5(const char *target,
       frb.merged_chain->avail = NULL;
       frb.merged_chain->pool = pool;
     }
+  frb.backwards = (frb.start_rev > frb.end_rev);
+  frb.last_revnum = SVN_INVALID_REVNUM;
+  frb.last_props = NULL;
+  frb.check_mime_type = (frb.backwards && !ignore_mime_type);
 
   SVN_ERR(svn_ra_get_repos_root2(ra_session, &frb.repos_root_url, pool));
 
@@ -738,12 +810,11 @@ svn_client_blame5(const char *target,
      We need to ensure that we get one revision before the start_rev,
      if available so that we can know what was actually changed in the start
      revision. */
-  SVN_ERR(svn_ra_get_latest_revnum(ra_session, &youngest, frb.currpool));
   SVN_ERR(svn_ra_get_file_revs2(ra_session, "",
-                                start_revnum 
-                                - (0 < start_revnum && start_revnum <= end_revnum ? 1 : 0)
-                                + (youngest > start_revnum && start_revnum > end_revnum ? 1 : 0),
-                                end_revnum, include_merged_revisions,
+                                frb.backwards ? start_revnum
+                                              : MAX(0, start_revnum-1),
+                                end_revnum,
+                                include_merged_revisions,
                                 file_rev_handler, &frb, pool));
 
   if (end->kind == svn_opt_revision_working)

@@ -30,7 +30,10 @@ import java.io.InputStream;
 import java.util.Map;
 
 /**
- * Editor interface (implements the EV2 abstraction).
+ * Commit/update/status editor interface.
+ * <p>
+ * <b>This interface is EXPERIMENTAL.
+ * It may change or be removed in a future version of JavaHL</b>
  * @see <a href="http://svn.apache.org/repos/asf/subversion/trunk/subversion/include/private/svn_editor.h">svn_editor.h</a>
  *      for all restrictions on driving an editor.
  * @since 1.9
@@ -91,7 +94,9 @@ public interface ISVNEditor
      * <code>replacesRevision</code> set accordingly <em>must</em> be used.
      * <p>
      * <b>Note:</b> The <code>contents</code> stream's lifetime must not
-     *      extend beyond the scope of this function.
+     *      extend beyond the scope of this function. An
+     *      implementation <b>must</b> close the stream after
+     *      consuming its contents.
      *
      * @throws ClientException
      */
@@ -190,7 +195,9 @@ public interface ISVNEditor
      * #addFile().
      * <p>
      * <b>Note:</b> The <code>contents</code> stream's lifetime must not
-     *      extend beyond the scope of this function.
+     *      extend beyond the scope of this function. An
+     *      implementation <b>must</b> close the stream after
+     *      consuming its contents.
      *
      * @throws ClientException
      */

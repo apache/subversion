@@ -135,7 +135,8 @@ static svn_error_t *
 create_mergeinfo_body(serf_bucket_t **bkt,
                       void *baton,
                       serf_bucket_alloc_t *alloc,
-                      apr_pool_t *pool)
+                      apr_pool_t *pool /* request pool */,
+                      apr_pool_t *scratch_pool)
 {
   mergeinfo_context_t *mergeinfo_ctx = baton;
   serf_bucket_t *body_bkt;
@@ -200,7 +201,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
   *catalog = NULL;
 
   SVN_ERR(svn_ra_serf__get_stable_url(&path, NULL /* latest_revnum */,
-                                      session, NULL /* conn */,
+                                      session,
                                       NULL /* url */, revision,
                                       pool, pool));
 
@@ -216,20 +217,19 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
                                            NULL, mergeinfo_closed, NULL,
                                            mergeinfo_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = path;
-  handler->conn = session->conns[0];
-  handler->session = session;
+
   handler->body_delegate = create_mergeinfo_body;
   handler->body_delegate_baton = mergeinfo_ctx;
   handler->body_type = "text/xml";
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
-  SVN_ERR(svn_ra_serf__error_on_status(handler->sline, handler->path,
-                                       handler->location));
+  if (handler->sline.code != 200)
+    SVN_ERR(svn_ra_serf__unexpected_status(handler));
 
   if (apr_hash_count(mergeinfo_ctx->result_catalog))
     *catalog = mergeinfo_ctx->result_catalog;

@@ -114,7 +114,8 @@ static svn_error_t *
 create_gls_body(serf_bucket_t **body_bkt,
                 void *baton,
                 serf_bucket_alloc_t *alloc,
-                apr_pool_t *pool)
+                apr_pool_t *pool /* request pool */,
+                apr_pool_t *scratch_pool)
 {
   serf_bucket_t *buckets;
   gls_context_t *gls_ctx = baton;
@@ -178,32 +179,25 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   gls_ctx->receiver_baton = receiver_baton;
 
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      session, NULL /* conn */,
-                                      NULL /* url */, peg_revision,
+                                      session, NULL /* url */, peg_revision,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(gls_ttable,
                                            NULL, gls_closed, NULL,
                                            gls_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_delegate = create_gls_body;
   handler->body_delegate_baton = gls_ctx;
   handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
 
   err = svn_ra_serf__context_run_one(handler, pool);
 
-  if (!err)
-    {
-      err = svn_ra_serf__error_on_status(handler->sline,
-                                         handler->path,
-                                         handler->location);
-    }
+  if (!err && handler->sline.code != 200)
+    err = svn_ra_serf__unexpected_status(handler);
 
   if (err && (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE))
     return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err, NULL);

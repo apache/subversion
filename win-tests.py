@@ -31,6 +31,7 @@ import os, sys, subprocess
 import filecmp
 import shutil
 import traceback
+import logging
 try:
   # Python >=3.0
   import configparser
@@ -59,7 +60,6 @@ def _usage_exit():
   print("  -u URL, --url=URL      : run ra_dav or ra_svn tests against URL;")
   print("                           will start svnserve for ra_svn tests")
   print("  -v, --verbose          : talk more")
-  print("  -q, --quiet            : talk less")
   print("  -f, --fs-type=type     : filesystem type to use (fsfs is default)")
   print("  -c, --cleanup          : cleanup after running a test")
   print("  -t, --test=TEST        : Run the TEST test (all is default); use")
@@ -83,6 +83,13 @@ def _usage_exit():
   print("  --disable-http-v2      : Do not advertise support for HTTPv2 on server")
   print("  --disable-bulk-updates : Disable bulk updates on HTTP server")
   print("  --ssl-cert             : Path to SSL server certificate to trust.")
+  print("  --exclusive-wc-locks   : Enable exclusive working copy locks")
+  print("  --memcached-dir=DIR    : Run memcached from dir")
+  print("  --memcached-server=    : Enable usage of the specified memcached server")
+  print("              <url:port>")
+  print("  --skip-c-tests         : Skip all C tests")
+  print("  --dump-load-cross-check: Run the dump load cross check after every test")
+
   print("  --javahl               : Run the javahl tests instead of the normal tests")
   print("  --swig=language        : Run the swig perl/python/ruby tests instead of")
   print("                           the normal tests")
@@ -101,6 +108,8 @@ def _usage_exit():
   print("  --config-file          : Configuration file for tests")
   print("  --fsfs-sharding        : Specify shard size (for fsfs)")
   print("  --fsfs-packing         : Run 'svnadmin pack' automatically")
+  print("  -q, --quiet            : Deprecated; this is the default.")
+  print("                           Use --set-log-level instead.")
 
   sys.exit(0)
 
@@ -127,12 +136,14 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'list', 'enable-sasl', 'bin=', 'parallel',
                         'config-file=', 'server-minor-version=', 'log-level=',
                         'log-to-stdout', 'mode-filter=', 'milestone-filter=',
-                        'ssl-cert='])
+                        'ssl-cert=', 'exclusive-wc-locks', 'memcached-server=',
+                        'skip-c-tests', 'dump-load-cross-check', 'memcached-dir=',
+                        ])
 if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
 
 # Interpret the options and set parameters
-base_url, fs_type, verbose, quiet, cleanup = None, None, None, None, None
+base_url, fs_type, verbose, cleanup = None, None, None, None
 repo_loc = 'local repository.'
 objdir = 'Debug'
 log = 'tests.log'
@@ -162,6 +173,12 @@ mode_filter=None
 tests_to_run = []
 log_level = None
 ssl_cert = None
+exclusive_wc_locks = None
+run_memcached = None
+memcached_server = None
+memcached_dir = None
+skip_c_tests = None
+dump_load_cross_check = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -172,8 +189,7 @@ for opt, val in opts:
     fs_type = val
   elif opt in ('-v', '--verbose'):
     verbose = 1
-  elif opt in ('-q', '--quiet'):
-    quiet = 1
+    log_level = logging.DEBUG
   elif opt in ('-c', '--cleanup'):
     cleanup = 1
   elif opt in ('-t', '--test'):
@@ -212,7 +228,7 @@ for opt, val in opts:
     test_javahl = 1
   elif opt == '--swig':
     if val not in ['perl', 'python', 'ruby']:
-      sys.stderr.write('Running \'%s\' swig tests not supported (yet).\n' 
+      sys.stderr.write('Running \'%s\' swig tests not supported (yet).\n'
                         % (val,))
     test_swig = val
   elif opt == '--list':
@@ -225,7 +241,7 @@ for opt, val in opts:
     enable_sasl = 1
     base_url = "svn://localhost/"
   elif opt == '--server-minor-version':
-    server_minor_version = val
+    server_minor_version = int(val)
   elif opt == '--bin':
     svn_bin = val
   elif opt in ('-p', '--parallel'):
@@ -235,9 +251,20 @@ for opt, val in opts:
   elif opt == '--log-to-stdout':
     log_to_stdout = 1
   elif opt == '--log-level':
-    log_level = val
+    log_level = getattr(logging, val, None) or int(val)
   elif opt == '--ssl-cert':
     ssl_cert = val
+  elif opt == '--exclusive-wc-locks':
+    exclusive_wc_locks = 1
+  elif opt == '--memcached-server':
+    memcached_server = val
+  elif opt == '--skip-c-tests':
+    skip_c_tests = 1
+  elif opt == '--dump-load-cross-check':
+    dump_load_cross_check = 1
+  elif opt == '--memcached-dir':
+    memcached_dir = val
+    run_memcached = 1
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -257,7 +284,7 @@ if fs_type == 'bdb':
   all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
             + gen_obj.scripts + gen_obj.bdb_scripts
 else:
-  all_tests = gen_obj.test_progs + gen_obj.scripts            
+  all_tests = gen_obj.test_progs + gen_obj.scripts
 
 client_tests = [x for x in all_tests if x.startswith(CMDLINE_TEST_SCRIPT_PATH)]
 
@@ -323,14 +350,14 @@ def locate_libs():
   "Move DLLs to a known location and set env vars"
 
   debug = (objdir == 'Debug')
-  
+
   for lib in gen_obj._libraries.values():
 
     if debug:
       name, dir = lib.debug_dll_name, lib.debug_dll_dir
     else:
       name, dir = lib.dll_name, lib.dll_dir
-      
+
     if name and dir:
       src = os.path.join(dir, name)
       if os.path.exists(src):
@@ -464,6 +491,7 @@ class Httpd:
     self.httpd_config = os.path.join(self.root, 'httpd.conf')
     self.httpd_users = os.path.join(self.root, 'users')
     self.httpd_mime_types = os.path.join(self.root, 'mime.types')
+    self.httpd_groups = os.path.join(self.root, 'groups')
     self.abs_builddir = abs_builddir
     self.abs_objdir = abs_objdir
     self.service_name = 'svn-test-httpd-' + str(httpd_port)
@@ -477,6 +505,7 @@ class Httpd:
     create_target_dir(self.root_dir)
 
     self._create_users_file()
+    self._create_groups_file()
     self._create_mime_types_file()
     self._create_dontdothat_file()
 
@@ -517,6 +546,8 @@ class Httpd:
     if self.httpd_ver >= 2.2:
       fp.write(self._sys_module('auth_basic_module', 'mod_auth_basic.so'))
       fp.write(self._sys_module('authn_file_module', 'mod_authn_file.so'))
+      fp.write(self._sys_module('authz_groupfile_module', 'mod_authz_groupfile.so'))
+      fp.write(self._sys_module('authz_host_module', 'mod_authz_host.so'))
     else:
       fp.write(self._sys_module('auth_module', 'mod_auth.so'))
     fp.write(self._sys_module('alias_module', 'mod_alias.so'))
@@ -539,6 +570,7 @@ class Httpd:
     # Define two locations for repositories
     fp.write(self._svn_repo('repositories'))
     fp.write(self._svn_repo('local_tmp'))
+    fp.write(self._svn_authz_repo())
 
     # And two redirects for the redirect tests
     fp.write('RedirectMatch permanent ^/svn-test-work/repositories/'
@@ -569,6 +601,19 @@ class Httpd:
                                     'jrandom', 'rayjandom'])
     os.spawnv(os.P_WAIT, htpasswd, ['htpasswd.exe', '-bp',  self.httpd_users,
                                     'jconstant', 'rayjandom'])
+    os.spawnv(os.P_WAIT, htpasswd, ['htpasswd.exe', '-bp',  self.httpd_users,
+                                    '__dumpster__', '__loadster__'])
+    os.spawnv(os.P_WAIT, htpasswd, ['htpasswd.exe', '-bp',  self.httpd_users,
+                                    'JRANDOM', 'rayjandom'])
+    os.spawnv(os.P_WAIT, htpasswd, ['htpasswd.exe', '-bp',  self.httpd_users,
+                                    'JCONSTANT', 'rayjandom'])
+
+  def _create_groups_file(self):
+    "Create groups for mod_authz_svn tests"
+    fp = open(self.httpd_groups, 'w')
+    fp.write('random: jrandom\n')
+    fp.write('constant: jconstant\n')
+    fp.close()
 
   def _create_mime_types_file(self):
     "Create empty mime.types file"
@@ -629,11 +674,162 @@ class Httpd:
       '  DontDoThatConfigFile ' + self._quote(self.dontdothat_file) + '\n' \
       '</Location>\n'
 
+  def _svn_authz_repo(self):
+    local_tmp = os.path.join(self.abs_builddir,
+                             CMDLINE_TEST_SCRIPT_NATIVE_PATH,
+                             'svn-test-work', 'local_tmp')
+    return \
+      '<Location /authz-test-work/anon>' + '\n' \
+      '  DAV               svn' + '\n' \
+      '  SVNParentPath     ' + local_tmp + '\n' \
+      '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  SVNListParentPath On' + '\n' \
+      '  <IfModule mod_authz_core.c>' + '\n' \
+      '    Require all granted' + '\n' \
+      '  </IfModule>' + '\n' \
+      '  <IfModule !mod_authz_core.c>' + '\n' \
+      '    Allow from all' + '\n' \
+      '  </IfModule>' + '\n' \
+      '  SVNPathAuthz ' + self.path_authz_option + '\n' \
+      '</Location>' + '\n' \
+      '<Location /authz-test-work/mixed>' + '\n' \
+      '  DAV               svn' + '\n' \
+      '  SVNParentPath     ' + local_tmp + '\n' \
+      '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  SVNListParentPath On' + '\n' \
+      '  AuthType          Basic' + '\n' \
+      '  AuthName          "Subversion Repository"' + '\n' \
+      '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
+      '  Require           valid-user' + '\n' \
+      '  Satisfy Any' + '\n' \
+      '  SVNPathAuthz ' + self.path_authz_option + '\n' \
+      '</Location>' + '\n' \
+      '<Location /authz-test-work/mixed-noauthwhenanon>' + '\n' \
+      '  DAV               svn' + '\n' \
+      '  SVNParentPath     ' + local_tmp + '\n' \
+      '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  SVNListParentPath On' + '\n' \
+      '  AuthType          Basic' + '\n' \
+      '  AuthName          "Subversion Repository"' + '\n' \
+      '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
+      '  Require           valid-user' + '\n' \
+      '  AuthzSVNNoAuthWhenAnonymousAllowed On' + '\n' \
+      '  SVNPathAuthz On' + '\n' \
+      '</Location>' + '\n' \
+      '<Location /authz-test-work/authn>' + '\n' \
+      '  DAV               svn' + '\n' \
+      '  SVNParentPath     ' + local_tmp + '\n' \
+      '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  SVNListParentPath On' + '\n' \
+      '  AuthType          Basic' + '\n' \
+      '  AuthName          "Subversion Repository"' + '\n' \
+      '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
+      '  Require           valid-user' + '\n' \
+      '  SVNPathAuthz ' + self.path_authz_option + '\n' \
+      '</Location>' + '\n' \
+      '<Location /authz-test-work/authn-anonoff>' + '\n' \
+      '  DAV               svn' + '\n' \
+      '  SVNParentPath     ' + local_tmp + '\n' \
+      '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  SVNListParentPath On' + '\n' \
+      '  AuthType          Basic' + '\n' \
+      '  AuthName          "Subversion Repository"' + '\n' \
+      '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
+      '  Require           valid-user' + '\n' \
+      '  AuthzSVNAnonymous Off' + '\n' \
+      '  SVNPathAuthz On' + '\n' \
+      '</Location>' + '\n' \
+      '<Location /authz-test-work/authn-lcuser>' + '\n' \
+      '  DAV               svn' + '\n' \
+      '  SVNParentPath     ' + local_tmp + '\n' \
+      '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  SVNListParentPath On' + '\n' \
+      '  AuthType          Basic' + '\n' \
+      '  AuthName          "Subversion Repository"' + '\n' \
+      '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
+      '  Require           valid-user' + '\n' \
+      '  AuthzForceUsernameCase Lower' + '\n' \
+      '  SVNPathAuthz ' + self.path_authz_option + '\n' \
+      '</Location>' + '\n' \
+      '<Location /authz-test-work/authn-lcuser>' + '\n' \
+      '  DAV               svn' + '\n' \
+      '  SVNParentPath     ' + local_tmp + '\n' \
+      '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  SVNListParentPath On' + '\n' \
+      '  AuthType          Basic' + '\n' \
+      '  AuthName          "Subversion Repository"' + '\n' \
+      '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
+      '  Require           valid-user' + '\n' \
+      '  AuthzForceUsernameCase Lower' + '\n' \
+      '  SVNPathAuthz ' + self.path_authz_option + '\n' \
+      '</Location>' + '\n' \
+      '<Location /authz-test-work/authn-group>' + '\n' \
+      '  DAV               svn' + '\n' \
+      '  SVNParentPath     ' + local_tmp + '\n' \
+      '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  SVNListParentPath On' + '\n' \
+      '  AuthType          Basic' + '\n' \
+      '  AuthName          "Subversion Repository"' + '\n' \
+      '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
+      '  AuthGroupFile    ' + self._quote(self.httpd_groups) + '\n' \
+      '  Require           group random' + '\n' \
+      '  AuthzSVNAuthoritative Off' + '\n' \
+      '  SVNPathAuthz On' + '\n' \
+      '</Location>' + '\n' \
+      '<IfModule mod_authz_core.c>' + '\n' \
+      '<Location /authz-test-work/sallrany>' + '\n' \
+      '  DAV               svn' + '\n' \
+      '  SVNParentPath     ' + local_tmp + '\n' \
+      '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  SVNListParentPath On' + '\n' \
+      '  AuthType          Basic' + '\n' \
+      '  AuthName          "Subversion Repository"' + '\n' \
+      '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
+      '  AuthzSendForbiddenOnFailure On' + '\n' \
+      '  Satisfy All' + '\n' \
+      '  <RequireAny>' + '\n' \
+      '    Require valid-user' + '\n' \
+      '    Require expr req(\'ALLOW\') == \'1\'' + '\n' \
+      '  </RequireAny>' + '\n' \
+      '  SVNPathAuthz ' + self.path_authz_option + '\n' \
+      '</Location>' + '\n' \
+      '<Location /authz-test-work/sallrall>'+ '\n' \
+      '  DAV               svn' + '\n' \
+      '  SVNParentPath     ' + local_tmp + '\n' \
+      '  AuthzSVNAccessFile ' + self._quote(self.authz_file) + '\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  SVNListParentPath On' + '\n' \
+      '  AuthType          Basic' + '\n' \
+      '  AuthName          "Subversion Repository"' + '\n' \
+      '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
+      '  AuthzSendForbiddenOnFailure On' + '\n' \
+      '  Satisfy All' + '\n' \
+      '  <RequireAll>' + '\n' \
+      '    Require valid-user' + '\n' \
+      '    Require expr req(\'ALLOW\') == \'1\'' + '\n' \
+      '  </RequireAll>' + '\n' \
+      '  SVNPathAuthz ' + self.path_authz_option + '\n' \
+      '</Location>' + '\n' \
+      '</IfModule>' + '\n' \
+
   def start(self):
     if self.service:
       self._start_service()
     else:
       self._start_daemon()
+
+    # Avoid output from starting and preparing between test results
+    sys.stderr.flush()
+    sys.stdout.flush()
 
   def stop(self):
     if self.service:
@@ -672,6 +868,45 @@ class Httpd:
         pass
     print('Httpd.stop_daemon not implemented')
 
+class Memcached:
+  "Run memcached for tests"
+  def __init__(self, abs_memcached_dir, memcached_server):
+    self.name = 'memcached.exe'
+
+    self.memcached_host, self.memcached_port = memcached_server.split(':')
+    self.memcached_dir = abs_memcached_dir
+
+    self.proc = None
+    self.path = os.path.join(self.memcached_dir, self.name)
+
+    self.memcached_args = [
+                            self.name,
+                            '-p', self.memcached_port,
+                            '-l', self.memcached_host
+                          ]
+
+  def __del__(self):
+    "Stop memcached when the object is deleted"
+    self.stop()
+
+  def start(self):
+    "Start memcached as daemon"
+    print('Starting %s as daemon' % self.name)
+    print(self.memcached_args)
+    self.proc = subprocess.Popen([self.path] + self.memcached_args)
+
+  def stop(self):
+    "Stop memcached"
+    if self.proc is not None:
+      try:
+        print('Stopping %s' % self.name)
+        self.proc.poll();
+        if self.proc.returncode is None:
+          self.proc.kill();
+        return
+      except AttributeError:
+        pass
+
 # Move the binaries to the test directory
 create_target_dir(abs_builddir)
 locate_libs()
@@ -692,10 +927,15 @@ create_target_dir(CMDLINE_TEST_SCRIPT_NATIVE_PATH)
 abs_builddir = fix_case(abs_builddir)
 
 daemon = None
+memcached = None
 # Run the tests
 
 # No need to start any servers if we are only listing the tests.
 if not list_tests:
+  if run_memcached:
+    memcached = Memcached(memcached_dir, memcached_server)
+    memcached.start()
+
   if run_svnserve:
     daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
@@ -750,16 +990,35 @@ if not test_javahl and not test_swig:
     log_file = os.path.join(abs_builddir, log)
     fail_log_file = os.path.join(abs_builddir, faillog)
 
+  if run_httpd:
+    httpd_version = gen_obj._libraries['httpd'].version
+  else:
+    httpd_version = None
+
+  opts, args = run_tests.create_parser().parse_args([])
+  opts.url = base_url
+  opts.fs_type = fs_type
+  opts.http_library = 'serf'
+  opts.server_minor_version = server_minor_version
+  opts.cleanup = cleanup
+  opts.enable_sasl = enable_sasl
+  opts.parallel = parallel
+  opts.config_file = config_file
+  opts.fsfs_sharding = fsfs_sharding
+  opts.fsfs_packing = fsfs_packing
+  opts.list_tests = list_tests
+  opts.svn_bin = svn_bin
+  opts.mode_filter = mode_filter
+  opts.milestone_filter = milestone_filter
+  opts.httpd_version = httpd_version
+  opts.set_log_level = log_level
+  opts.ssl_cert = ssl_cert
+  opts.exclusive_wc_locks = exclusive_wc_locks
+  opts.memcached_server = memcached_server
+  opts.skip_c_tests = skip_c_tests
+  opts.dump_load_cross_check = dump_load_cross_check
   th = run_tests.TestHarness(abs_srcdir, abs_builddir,
-                             log_file,
-                             fail_log_file,
-                             base_url, fs_type, 'serf',
-                             server_minor_version, not quiet,
-                             cleanup, enable_sasl, parallel, config_file,
-                             fsfs_sharding, fsfs_packing,
-                             list_tests, svn_bin, mode_filter,
-                             milestone_filter,
-                             set_log_level=log_level, ssl_cert=ssl_cert)
+                             log_file, fail_log_file, opts)
   old_cwd = os.getcwd()
   try:
     os.chdir(abs_builddir)
@@ -792,6 +1051,9 @@ elif test_javahl:
     if (objdir == 'Debug'):
       args = args + ('-Xcheck:jni',)
 
+    if cleanup:
+      args = args + ('-Dtest.cleanup=1',)
+
     args = args + (
             '-Dtest.rootdir=' + os.path.join(abs_builddir, 'javahl'),
             '-Dtest.srcdir=' + os.path.join(abs_srcdir,
@@ -799,7 +1061,7 @@ elif test_javahl:
             '-Dtest.rooturl=',
             '-Dtest.fstype=' + fs_type ,
             '-Dtest.tests=',
-  
+
             '-Djava.library.path='
                       + os.path.join(abs_objdir,
                                      'subversion/bindings/javahl/native'),
@@ -975,6 +1237,9 @@ elif test_swig == 'ruby':
 # Stop service daemon, if any
 if daemon:
   del daemon
+
+if memcached:
+  del memcached
 
 # Remove the execs again
 for tgt in copied_execs:

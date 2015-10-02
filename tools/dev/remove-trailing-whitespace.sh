@@ -17,8 +17,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
- for ext in c h cpp java py pl rb hpp cmd bat; do
-   find . -name "*.$ext" -exec \
+ for ext in c h cpp java py pl rb hpp cmd bat sql sh; do
+   find . -name "*.$ext" -not -type l -exec \
      perl -pi -e 's/[ \t]*$//' {} + ;
      # don't use \s to not strip ^L pagebreaks
- done                         
+ done

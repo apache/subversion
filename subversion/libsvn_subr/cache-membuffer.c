@@ -28,12 +28,18 @@
 #include "svn_pools.h"
 #include "svn_checksum.h"
 #include "svn_private_config.h"
-#include "cache.h"
+#include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_sorts.h"  /* get the MIN macro */
+
+#include "private/svn_atomic.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_mutex.h"
-#include "private/svn_pseudo_md5.h"
+#include "private/svn_subr_private.h"
+#include "private/svn_string_private.h"
+
+#include "cache.h"
+#include "fnv1a.h"
 
 /*
  * This svn_cache__t implementation actually consists of two parts:
@@ -44,8 +50,9 @@
  * A membuffer cache consists of two parts:
  *
  * 1. A linear data buffer containing cached items in a serialized
- *    representation. There may be arbitrary gaps between entries.
- *    This buffer is sub-devided into (currently two) cache levels.
+ *    representation, prefixed by their full cache keys. There may be
+ *    arbitrary gaps between entries.  This buffer is sub-devided into
+ *    (currently two) cache levels.
  *
  * 2. A directory of cache entries. This is organized similar to CPU
  *    data caches: for every possible key, there is exactly one group
@@ -77,9 +84,10 @@
  * Insertion can occur at only one, sliding position per cache level.  It is
  * marked by its offset in the data buffer and the index of the first used
  * entry at or behind that position.  If this gap is too small to accommodate
- * the new item, the insertion window is extended as described below. The new
- * entry will always be inserted at the bottom end of the window and since
- * the next used entry is known, properly sorted insertion is possible.
+ * the new item (plus its full key), the insertion window is extended as
+ * described below.  The new entry will always be inserted at the bottom end
+ * of the window and since the next used entry is known, properly sorted
+ * insertion is possible.
  *
  * To make the cache perform robustly in a wide range of usage scenarios,
  * L2 uses a randomized variant of LFU (see ensure_data_insertable_l2 for
@@ -103,11 +111,19 @@
  * an already used group to extend it.
  *
  * To limit the entry size and management overhead, not the actual item keys
- * but only their MD5-based hashes will be stored. This is reasonably safe
- * to do since users have only limited control over the full keys, even if
- * these contain folder paths. So, it is very hard to deliberately construct
- * colliding keys. Random checksum collisions can be shown to be extremely
- * unlikely.
+ * but only their hashed "fingerprint" will be stored.  These are reasonably
+ * unique to prevent collisions, so we only need to support up to one entry
+ * per entry key.  To guarantee that there are no conflicts, however, we
+ * store the actual full key immediately in front of the serialized item
+ * data.  That is, the entry offset actually points to the full key and the
+ * key length stored in the entry acts as an additional offset to find the
+ * actual item.
+ *
+ * Most keys are 16 bytes or less.  We use the prefix indexes returned by
+ * a prefix_pool_t instance to uniquely identify the prefix in that case.
+ * Then the combination of prefix index and key stored in the fingerprint
+ * is then unique, too, and can never conflict.  No full key construction,
+ * storage and comparison is needed in that case.
  *
  * All access to the cached data needs to be serialized. Because we want
  * to scale well despite that bottleneck, we simply segment the cache into
@@ -122,7 +138,7 @@
  * Use a simple mutex on Windows.  Because there is one mutex per segment,
  * large machines should (and usually can) be configured with large caches
  * such that read contention is kept low.  This is basically the situation
- * we head before 1.8.
+ * we had before 1.8.
  */
 #ifdef WIN32
 #  define USE_SIMPLE_MUTEX 1
@@ -177,17 +193,198 @@
  */
 #define MAX_ITEM_SIZE ((apr_uint32_t)(0 - ITEM_ALIGNMENT))
 
-/* A 16 byte key type. We use that to identify cache entries.
- * The notation as just two integer values will cause many compilers
- * to create better code.
+/* We use this structure to identify cache entries. There cannot be two
+ * entries with the same entry key. However unlikely, though, two different
+ * full keys (see full_key_t) may have the same entry key.  That is a
+ * collision and at most one of them can be stored in the cache at any time.
+ *
+ * If the prefix is shared, which implies that the variable key part is no
+ * longer than 16 bytes, then there is a 1:1 mapping between full key and
+ * entry key.
  */
-typedef apr_uint64_t entry_key_t[2];
+typedef struct entry_key_t
+{
+  /* 16 byte finger print of the full key. */
+  apr_uint64_t fingerprint[2];
 
-/* The prefix passed to svn_cache__create_membuffer_cache() effectively
- * defines the type of all items stored by that cache instance. We'll take
- * the last 15 bytes + \0 as plaintext for easy identification by the dev.
+  /* Length of the full key.  This value is aligned to ITEM_ALIGNMENT to
+   * make sure the subsequent item content is properly aligned.  If 0,
+   * PREFIX_KEY is implied to be != NO_INDEX. */
+  apr_size_t key_len;
+
+  /* Unique index of the shared key prefix, i.e. it's index within the
+   * prefix pool (see prefix_pool_t).  NO_INDEX if the key prefix is not
+   * shared, otherwise KEY_LEN==0 is implied. */
+  apr_uint32_t prefix_idx;
+} entry_key_t;
+
+/* A full key, i.e. the combination of the cache's key prefix with some
+ * dynamic part appended to it.  It also contains its ENTRY_KEY.
+ *
+ * If the ENTRY_KEY has a 1:1 mapping to the FULL_KEY, then the latter
+ * will be empty and remains unused.
  */
-#define PREFIX_TAIL_LEN 16
+typedef struct full_key_t
+{
+  /* Reduced form identifying the cache entry (if such an entry exists). */
+  entry_key_t entry_key;
+
+  /* If ENTRY_KEY is not a 1:1 mapping of the prefix + dynamic key
+   * combination,  then this contains the full combination.  Note that the
+   * SIZE element may be larger than ENTRY_KEY.KEY_LEN, but only the latter
+   * determines the valid key size. */
+  svn_membuf_t full_key;
+} full_key_t;
+
+/* A limited capacity, thread-safe pool of unique C strings.  Operations on
+ * this data structure are defined by prefix_pool_* functions.  The only
+ * "public" member is VALUES (r/o access only).
+ */
+typedef struct prefix_pool_t
+{
+  /* Map C string to a pointer into VALUES with the same contents. */
+  apr_hash_t *map;
+
+  /* Pointer to an array of strings. These are the contents of this pool
+   * and each one of them is referenced by MAP.  Valid indexes are 0 to
+   * VALUES_USED - 1.  May be NULL if VALUES_MAX is 0. */
+  const char **values;
+
+  /* Number of used entries that VALUES may have. */
+  apr_uint32_t values_max;
+
+  /* Number of used entries in VALUES.  Never exceeds VALUES_MAX. */
+  apr_uint32_t values_used;
+
+  /* Maximum number of bytes to allocate. */
+  apr_size_t bytes_max;
+
+  /* Number of bytes currently allocated.  Should not exceed BYTES_MAX but
+   * the implementation may . */
+  apr_size_t bytes_used;
+
+  /* The serialization object. */
+  svn_mutex__t *mutex;
+} prefix_pool_t;
+
+/* Set *PREFIX_POOL to a new instance that tries to limit allocation to
+ * BYTES_MAX bytes.  If MUTEX_REQUIRED is set and multi-threading is
+ * supported, serialize all access to the new instance.  Allocate the
+ * object from *RESULT_POOL. */
+static svn_error_t *
+prefix_pool_create(prefix_pool_t **prefix_pool,
+                   apr_size_t bytes_max,
+                   svn_boolean_t mutex_required,
+                   apr_pool_t *result_pool)
+{
+  enum
+    {
+      /* With 56 byes of overhead under 64 bits, we will probably never get
+       * substantially below this.  If we accidentally do, we will simply
+       * run out of entries in the VALUES array before running out of
+       * allocated memory. */
+      ESTIMATED_BYTES_PER_ENTRY = 120,
+    };
+
+  /* Number of entries we are going to support. */
+  apr_size_t capacity = MIN(APR_UINT32_MAX,
+                            bytes_max / ESTIMATED_BYTES_PER_ENTRY);
+
+  /* Construct the result struct. */
+  prefix_pool_t *result = apr_pcalloc(result_pool, sizeof(*result));
+  result->map = svn_hash__make(result_pool);
+
+  result->values = capacity
+                 ? apr_pcalloc(result_pool, capacity * sizeof(const char *))
+                 : NULL;
+  result->values_max = (apr_uint32_t)capacity;
+  result->values_used = 0;
+
+  result->bytes_max = bytes_max;
+  result->bytes_used = capacity * sizeof(svn_membuf_t);
+
+  SVN_ERR(svn_mutex__init(&result->mutex, mutex_required, result_pool));
+
+  /* Done. */
+  *prefix_pool = result;
+  return SVN_NO_ERROR;
+}
+
+/* Set *PREFIX_IDX to the offset in PREFIX_POOL->VALUES that contains the
+ * value PREFIX.  If none exists, auto-insert it.  If we can't due to
+ * capacity exhaustion, set *PREFIX_IDX to NO_INDEX.
+ * To be called by prefix_pool_get() only. */
+static svn_error_t *
+prefix_pool_get_internal(apr_uint32_t *prefix_idx,
+                         prefix_pool_t *prefix_pool,
+                         const char *prefix)
+{
+  enum
+    {
+      /* Size of an hash entry plus (max.) APR alignment loss.
+       *
+       * This may be slightly off if e.g. APR changes its internal data
+       * structures but that will translate in just a few percent (~10%)
+       * over-allocation.  Memory consumption will still be capped.
+       */
+      OVERHEAD = 40 + 8
+    };
+
+  const char **value;
+  apr_size_t prefix_len = strlen(prefix);
+  apr_size_t bytes_needed;
+  apr_pool_t *pool;
+
+  /* Lookup.  If we already know that prefix, return its index. */
+  value = apr_hash_get(prefix_pool->map, prefix, prefix_len);
+  if (value != NULL)
+    {
+      const apr_size_t idx = value - prefix_pool->values;
+      SVN_ERR_ASSERT(idx < prefix_pool->values_used);
+      *prefix_idx = (apr_uint32_t) idx;
+      return SVN_NO_ERROR;
+    }
+
+  /* Capacity checks. */
+  if (prefix_pool->values_used == prefix_pool->values_max)
+    {
+      *prefix_idx = NO_INDEX;
+      return SVN_NO_ERROR;
+    }
+
+  bytes_needed = prefix_len + 1 + OVERHEAD;
+  if (prefix_pool->bytes_used + bytes_needed > prefix_pool->values_max)
+    {
+      *prefix_idx = NO_INDEX;
+      return SVN_NO_ERROR;
+    }
+
+  /* Add new entry. */
+  pool = apr_hash_pool_get(prefix_pool->map);
+
+  value = &prefix_pool->values[prefix_pool->values_used];
+  *value = apr_pstrndup(pool, prefix, prefix_len + 1);
+  apr_hash_set(prefix_pool->map, *value, prefix_len, value);
+
+  *prefix_idx = prefix_pool->values_used;
+  ++prefix_pool->values_used;
+  prefix_pool->bytes_used += bytes_needed;
+
+  return SVN_NO_ERROR;
+}
+
+/* Thread-safe wrapper around prefix_pool_get_internal. */
+static svn_error_t *
+prefix_pool_get(apr_uint32_t *prefix_idx,
+                prefix_pool_t *prefix_pool,
+                const char *prefix)
+{
+  SVN_MUTEX__WITH_LOCK(prefix_pool->mutex,
+                       prefix_pool_get_internal(prefix_idx, prefix_pool,
+                                                prefix));
+
+  return SVN_NO_ERROR;
+}
 
 /* Debugging / corruption detection support.
  * If you define this macro, the getter functions will performed expensive
@@ -196,6 +393,12 @@ typedef apr_uint64_t entry_key_t[2];
  * remembered in the setter function, an error will be returned.
  */
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
+
+/* The prefix passed to svn_cache__create_membuffer_cache() effectively
+ * defines the type of all items stored by that cache instance. We'll take
+ * the last 15 bytes + \0 as plaintext for easy identification by the dev.
+ */
+#define PREFIX_TAIL_LEN 16
 
 /* This record will be attached to any cache entry. It tracks item data
  * (content), key and type as hash values and is the baseline against which
@@ -232,22 +435,36 @@ typedef struct entry_tag_t
 /* Initialize all members of TAG except for the content hash.
  */
 static svn_error_t *store_key_part(entry_tag_t *tag,
-                                   entry_key_t prefix_hash,
-                                   char *prefix_tail,
+                                   const char *prefix,
                                    const void *key,
                                    apr_size_t key_len,
-                                   apr_pool_t *pool)
+                                   apr_pool_t *scratch_pool)
 {
   svn_checksum_t *checksum;
+  apr_size_t prefix_len = strlen(prefix);
+
+  if (prefix_len > sizeof(tag->prefix_tail))
+    {
+      prefix += prefix_len - (sizeof(tag->prefix_tail) - 1);
+      prefix_len = sizeof(tag->prefix_tail) - 1;
+    }
+
+  SVN_ERR(svn_checksum(&checksum,
+                       svn_checksum_md5,
+                       prefix,
+                       strlen(prefix),
+                       scratch_pool));
+  memcpy(tag->prefix_hash, checksum->digest, sizeof(tag->prefix_hash));
+
   SVN_ERR(svn_checksum(&checksum,
                        svn_checksum_md5,
                        key,
                        key_len,
-                       pool));
-
-  memcpy(tag->prefix_hash, prefix_hash, sizeof(tag->prefix_hash));
+                       scratch_pool));
   memcpy(tag->key_hash, checksum->digest, sizeof(tag->key_hash));
-  memcpy(tag->prefix_tail, prefix_tail, sizeof(tag->prefix_tail));
+
+  memset(tag->prefix_tail, 0, sizeof(tag->key_hash));
+  memcpy(tag->prefix_tail, prefix, prefix_len + 1);
 
   tag->key_len = key_len;
 
@@ -257,7 +474,7 @@ static svn_error_t *store_key_part(entry_tag_t *tag,
 /* Initialize the content hash member of TAG.
  */
 static svn_error_t* store_content_part(entry_tag_t *tag,
-                                       const char *data,
+                                       const void *data,
                                        apr_size_t size,
                                        apr_pool_t *pool)
 {
@@ -304,8 +521,7 @@ static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
   entry_tag_t *tag = &_tag;                                      \
   if (key)                                                       \
     SVN_ERR(store_key_part(tag,                                  \
-                           cache->prefix,                        \
-                           cache->info_prefix,                   \
+                           get_prefix_key(cache),                \
                            key,                                  \
                            cache->key_len == APR_HASH_KEY_STRING \
                                ? strlen((const char *) key)      \
@@ -321,23 +537,6 @@ static svn_error_t* assert_equal_tags(const entry_tag_t *lhs,
 #define DEBUG_CACHE_MEMBUFFER_INIT_TAG(pool)
 
 #endif /* SVN_DEBUG_CACHE_MEMBUFFER */
-
-/* Per svn_cache_t instance initialization helper.
- * Copy the last to up PREFIX_TAIL_LEN-1 chars from PREFIX to PREFIX_TAIL.
- * If the prefix has been structured by ':', only store the last element
- * (which will tell us the type).
- */
-static void get_prefix_tail(const char *prefix, char *prefix_tail)
-{
-  apr_size_t len = strlen(prefix);
-  apr_size_t to_copy = MIN(len, PREFIX_TAIL_LEN - 1);
-  const char *last_colon = strrchr(prefix, ':');
-  apr_size_t last_element_pos = last_colon ? 0 : last_colon - prefix + 1; 
-
-  to_copy = MIN(to_copy, len - last_element_pos);
-  memset(prefix_tail, 0, PREFIX_TAIL_LEN);
-  memcpy(prefix_tail, prefix + len - to_copy, to_copy);
-}
 
 /* A single dictionary entry. Since all entries will be allocated once
  * during cache creation, those entries might be either used or unused.
@@ -359,12 +558,12 @@ typedef struct entry_t
    * above ensures that there will be no overflows.
    * Only valid for used entries.
    */
-  apr_uint32_t size;
+  apr_size_t size;
 
   /* Number of (read) hits for this entry. Will be reset upon write.
    * Only valid for used entries.
    */
-  apr_uint32_t hit_count;
+  svn_atomic_t hit_count;
 
   /* Reference to the next used entry in the order defined by offset.
    * NO_INDEX indicates the end of the list; this entry must be referenced
@@ -410,7 +609,7 @@ typedef struct group_header_t
   /* number of elements in the chain from start to here.
    * >= 1 for used groups, 0 for unused spare groups */
   apr_uint32_t chain_length;
- 
+
 } group_header_t;
 
 /* The size of the group struct should be a power of two make sure it does
@@ -438,7 +637,7 @@ typedef struct entry_group_t
 {
   /* group globals */
   group_header_t header;
-  
+
   /* padding and also room for future extensions */
   char padding[GROUP_BLOCK_SIZE - sizeof(group_header_t)
                - sizeof(entry_t) * GROUP_SIZE];
@@ -496,6 +695,12 @@ struct svn_membuffer_t
      Please note that this structure represents only one such segment
      and that all segments must / will report the same values here. */
   apr_uint32_t segment_count;
+
+  /* Collection of prefixes shared among all instances accessing the
+   * same membuffer cache backend.  If a prefix is contained in this
+   * pool then all cache instances using an equal prefix must actually
+   * use the one stored in this pool. */
+  prefix_pool_t *prefix_pool;
 
   /* The dictionary, GROUP_SIZE * (group_count + spare_group_count)
    * entries long.  Never NULL.
@@ -557,18 +762,13 @@ struct svn_membuffer_t
    */
   cache_level_t l2;
 
+
   /* Number of used dictionary entries, i.e. number of cached items.
-   * In conjunction with hit_count, this is used calculate the average
-   * hit count as part of the randomized LFU algorithm.
+   * Purely statistical information that may be used for profiling only.
+   * Updates are not synchronized and values may be nonsensicle on some
+   * platforms.
    */
   apr_uint32_t used_entries;
-
-  /* Sum of (read) hit counts of all used dictionary entries.
-   * In conjunction used_entries used_entries, this is used calculate
-   * the average hit count as part of the randomized LFU algorithm.
-   */
-  apr_uint64_t hit_count;
-
 
   /* Total number of calls to membuffer_cache_get.
    * Purely statistical information that may be used for profiling only.
@@ -591,16 +791,15 @@ struct svn_membuffer_t
    */
   apr_uint64_t total_hits;
 
-#if APR_HAS_THREADS
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
   /* A lock for intra-process synchronization to the cache, or NULL if
    * the cache's creator doesn't feel the cache needs to be
    * thread-safe.
    */
-#  if USE_SIMPLE_MUTEX
   svn_mutex__t *lock;
-#  else
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
+  /* Same for read-write lock. */
   apr_thread_rwlock_t *lock;
-#  endif
 
   /* If set, write access will wait until they get exclusive access.
    * Otherwise, they will become no-ops if the segment is currently
@@ -608,12 +807,6 @@ struct svn_membuffer_t
    */
   svn_boolean_t allow_blocking_writes;
 #endif
-
-  /* All counters that have consistency requirements on thems (currently,
-   * that's only the hit counters) must use this mutex to serialize their
-   * updates.
-   */
-  svn_mutex__t *counter_mutex;
 };
 
 /* Align integer VALUE to the next ITEM_ALIGNMENT boundary.
@@ -629,33 +822,32 @@ struct svn_membuffer_t
 static svn_error_t *
 read_lock_cache(svn_membuffer_t *cache)
 {
-#if APR_HAS_THREADS
-#  if USE_SIMPLE_MUTEX
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
   return svn_mutex__lock(cache->lock);
-#  else
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
   if (cache->lock)
   {
     apr_status_t status = apr_thread_rwlock_rdlock(cache->lock);
     if (status)
       return svn_error_wrap_apr(status, _("Can't lock cache mutex"));
   }
-#  endif
-#endif
+
   return SVN_NO_ERROR;
+#else
+  return SVN_NO_ERROR;
+#endif
 }
 
 /* If locking is supported for CACHE, acquire a write lock for it.
+ * Set *SUCCESS to FALSE, if we couldn't acquire the write lock;
+ * leave it untouched otherwise.
  */
 static svn_error_t *
 write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
 {
-#if APR_HAS_THREADS
-#  if USE_SIMPLE_MUTEX
-
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
   return svn_mutex__lock(cache->lock);
-
-#  else
-
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
   if (cache->lock)
     {
       apr_status_t status;
@@ -678,9 +870,10 @@ write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
                                   _("Can't write-lock cache mutex"));
     }
 
-#  endif
-#endif
   return SVN_NO_ERROR;
+#else
+  return SVN_NO_ERROR;
+#endif
 }
 
 /* If locking is supported for CACHE, acquire an unconditional write lock
@@ -689,36 +882,29 @@ write_lock_cache(svn_membuffer_t *cache, svn_boolean_t *success)
 static svn_error_t *
 force_write_lock_cache(svn_membuffer_t *cache)
 {
-#if APR_HAS_THREADS
-#  if USE_SIMPLE_MUTEX
-
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
   return svn_mutex__lock(cache->lock);
-
-#  else
-
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
   apr_status_t status = apr_thread_rwlock_wrlock(cache->lock);
   if (status)
     return svn_error_wrap_apr(status,
                               _("Can't write-lock cache mutex"));
 
-#  endif
-#endif
   return SVN_NO_ERROR;
+#else
+  return SVN_NO_ERROR;
+#endif
 }
 
 /* If locking is supported for CACHE, release the current lock
- * (read or write).
+ * (read or write).  Return ERR upon success.
  */
 static svn_error_t *
 unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
 {
-#if APR_HAS_THREADS
-#  if USE_SIMPLE_MUTEX
-
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
   return svn_mutex__unlock(cache->lock, err);
-
-#  else
-
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
   if (cache->lock)
   {
     apr_status_t status = apr_thread_rwlock_unlock(cache->lock);
@@ -729,13 +915,14 @@ unlock_cache(svn_membuffer_t *cache, svn_error_t *err)
       return svn_error_wrap_apr(status, _("Can't unlock cache mutex"));
   }
 
-#  endif
-#endif
   return err;
+#else
+  return err;
+#endif
 }
 
-/* If supported, guard the execution of EXPR with a read lock to cache.
- * Macro has been modeled after SVN_MUTEX__WITH_LOCK.
+/* If supported, guard the execution of EXPR with a read lock to CACHE.
+ * The macro has been modeled after SVN_MUTEX__WITH_LOCK.
  */
 #define WITH_READ_LOCK(cache, expr)         \
 do {                                        \
@@ -743,8 +930,8 @@ do {                                        \
   SVN_ERR(unlock_cache(cache, (expr)));     \
 } while (0)
 
-/* If supported, guard the execution of EXPR with a write lock to cache.
- * Macro has been modeled after SVN_MUTEX__WITH_LOCK.
+/* If supported, guard the execution of EXPR with a write lock to CACHE.
+ * The macro has been modeled after SVN_MUTEX__WITH_LOCK.
  *
  * The write lock process is complicated if we don't allow to wait for
  * the lock: If we didn't get the lock, we may still need to remove an
@@ -796,8 +983,8 @@ initialize_group(svn_membuffer_t *cache, apr_uint32_t group_index)
   apr_uint32_t first_index =
       (group_index / GROUP_INIT_GRANULARITY) * GROUP_INIT_GRANULARITY;
   apr_uint32_t last_index = first_index + GROUP_INIT_GRANULARITY;
-  if (last_index > cache->group_count)
-    last_index = cache->group_count;
+  if (last_index > cache->group_count + cache->spare_group_count)
+    last_index = cache->group_count + cache->spare_group_count;
 
   for (i = first_index; i < last_index; ++i)
     {
@@ -988,11 +1175,11 @@ unchain_entry(svn_membuffer_t *cache,
 {
   assert(idx == get_index(cache, entry));
 
-  /* update 
+  /* update
    */
   if (level->next == idx)
     level->next = entry->next;
-  
+
   /* unlink it from the chain of used entries
    */
   if (entry->previous == NO_INDEX)
@@ -1027,7 +1214,6 @@ drop_entry(svn_membuffer_t *cache, entry_t *entry)
   /* update global cache usage counters
    */
   cache->used_entries--;
-  cache->hit_count -= entry->hit_count;
   cache->data_used -= entry->size;
 
   /* extend the insertion window, if the entry happens to border it
@@ -1140,17 +1326,19 @@ insert_entry(svn_membuffer_t *cache, entry_t *entry)
  */
 static apr_uint32_t
 get_group_index(svn_membuffer_t **cache,
-                entry_key_t key)
+                const entry_key_t *key)
 {
   svn_membuffer_t *segment0 = *cache;
+  apr_uint64_t key0 = key->fingerprint[0];
+  apr_uint64_t key1 = key->fingerprint[1];
 
   /* select the cache segment to use. they have all the same group_count.
    * Since key may not be well-distributed, pre-fold it to a smaller but
    * "denser" ranger.  The modulus is a prime larger than the largest
    * counts. */
-  *cache = &segment0[(key[1] % APR_UINT64_C(2809637) + (key[0] / 37))
+  *cache = &segment0[(key1 % APR_UINT64_C(2809637) + (key0 / 37))
                      & (segment0->segment_count - 1)];
-  return (key[0] % APR_UINT64_C(5030895599)) % segment0->group_count;
+  return (key0 % APR_UINT64_C(5030895599)) % segment0->group_count;
 }
 
 /* Reduce the hit count of ENTRY and update the accumulated hit info
@@ -1163,13 +1351,24 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
 
   if (hits_removed)
     {
-      cache->hit_count -= hits_removed;
       entry->hit_count -= hits_removed;
     }
   else
     {
       entry->priority /= 2;
     }
+}
+
+/* Return whether the keys in LHS and RHS match.
+ */
+static svn_boolean_t
+entry_keys_match(const entry_key_t *lhs,
+                 const entry_key_t *rhs)
+{
+  return (lhs->fingerprint[0] == rhs->fingerprint[0])
+      && (lhs->fingerprint[1] == rhs->fingerprint[1])
+      && (lhs->prefix_idx == rhs->prefix_idx)
+      && (lhs->key_len == rhs->key_len);
 }
 
 /* Given the GROUP_INDEX that shall contain an entry with the hash key
@@ -1183,11 +1382,15 @@ let_entry_age(svn_membuffer_t *cache, entry_t *entry)
  * new content), an unused entry or a forcibly removed entry (if all
  * group entries are currently in use). The entries' hash value will be
  * initialized with TO_FIND.
+ *
+ * Note: This function requires the caller to appropriately lock the CACHE.
+ * For FIND_EMPTY==FALSE, a read lock is required, for FIND_EMPTY==TRUE,
+ * the write lock must have been acquired.
  */
 static entry_t *
 find_entry(svn_membuffer_t *cache,
            apr_uint32_t group_index,
-           const apr_uint64_t to_find[2],
+           const full_key_t *to_find,
            svn_boolean_t find_empty)
 {
   entry_group_t *group;
@@ -1208,8 +1411,7 @@ find_entry(svn_membuffer_t *cache,
           entry = &group->entries[0];
 
           /* initialize entry for the new key */
-          entry->key[0] = to_find[0];
-          entry->key[1] = to_find[1];
+          entry->key = to_find->entry_key;
         }
 
       return entry;
@@ -1220,14 +1422,29 @@ find_entry(svn_membuffer_t *cache,
   while (1)
     {
       for (i = 0; i < group->header.used; ++i)
-        if (   to_find[0] == group->entries[i].key[0]
-            && to_find[1] == group->entries[i].key[1])
+        if (entry_keys_match(&group->entries[i].key, &to_find->entry_key))
           {
-            /* found it
-             */
+            /* This is the only entry that _may_ contain the correct data. */
             entry = &group->entries[i];
+
+            /* If we want to preserve it, check that it is actual a match. */
             if (!find_empty)
-              return entry;
+              {
+                /* If the full key is fully defined in prefix_id & mangeled
+                 * key, we are done. */
+                if (!entry->key.key_len)
+                  return entry;
+
+                /* Compare the full key. */
+                if (memcmp(to_find->full_key.data,
+                           cache->data + entry->offset,
+                           entry->key.key_len) == 0)
+                  return entry;
+
+                /* Key conflict. The entry to find cannot be anywhere else.
+                 * Therefore, it is not cached. */
+                return NULL;
+              }
 
             /* need to empty that entry */
             drop_entry(cache, entry);
@@ -1237,6 +1454,8 @@ find_entry(svn_membuffer_t *cache,
               group = last_group_in_chain(cache,
                                           &cache->directory[group_index]);
 
+            /* No entry found (actually, none left to find). */
+            entry = NULL;
             break;
           }
 
@@ -1311,7 +1530,7 @@ find_entry(svn_membuffer_t *cache,
            */
           for (i = 0; i < GROUP_SIZE; ++i)
             if (entry != &to_shrink->entries[i])
-              let_entry_age(cache, entry);
+              let_entry_age(cache, &to_shrink->entries[i]);
 
           drop_entry(cache, entry);
         }
@@ -1319,8 +1538,7 @@ find_entry(svn_membuffer_t *cache,
       /* initialize entry for the new key
        */
       entry = &group->entries[group->header.used];
-      entry->key[0] = to_find[0];
-      entry->key[1] = to_find[1];
+      entry->key = to_find->entry_key;
     }
 
   return entry;
@@ -1394,12 +1612,12 @@ promote_entry(svn_membuffer_t *cache, entry_t *entry)
 }
 
 /* This function implements the cache insertion / eviction strategy for L2.
- * 
+ *
  * If necessary, enlarge the insertion window of CACHE->L2 until it is at
  * least TO_FIT_IN->SIZE bytes long. TO_FIT_IN->SIZE must not exceed the
  * data buffer size allocated to CACHE->L2.  IDX is the item index of
  * TO_FIT_IN and is given for performance reasons.
- * 
+ *
  * Return TRUE if enough room could be found or made.  A FALSE result
  * indicates that the respective item shall not be added.
  */
@@ -1526,7 +1744,7 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
                * Count the "hit importance" such that we are not sacrificing
                * too much of the high-hit contents.  However, don't count
                * low-priority hits because higher prio entries will often
-               * provide the same data but in a further stage of processing. 
+               * provide the same data but in a further stage of processing.
                */
               if (entry->priority > SVN_CACHE__MEMBUFFER_LOW_PRIORITY)
                 drop_hits += entry->hit_count * (apr_uint64_t)entry->priority;
@@ -1640,6 +1858,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   apr_pool_t *pool)
 {
   svn_membuffer_t *c;
+  prefix_pool_t *prefix_pool;
 
   apr_uint32_t seg;
   apr_uint32_t group_count;
@@ -1648,6 +1867,12 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
   apr_uint32_t group_init_size;
   apr_uint64_t data_size;
   apr_uint64_t max_entry_size;
+
+  /* Allocate 1% of the cache capacity to the prefix string pool.
+   */
+  SVN_ERR(prefix_pool_create(&prefix_pool, total_size / 100, thread_safe,
+                             pool));
+  total_size -= total_size / 100;
 
   /* Limit the total size (only relevant if we can address > 4GB)
    */
@@ -1738,7 +1963,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                  : data_size / 8;
 
   /* to keep the entries small, we use 32 bit indexes only
-   * -> we need to ensure that no more then 4G entries exist.
+   * -> we need to ensure that no more than 4G entries exist.
    *
    * Note, that this limit could only be exceeded in a very
    * theoretical setup with about 1EB of cache.
@@ -1759,14 +1984,18 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       /* allocate buffers and initialize cache members
        */
       c[seg].segment_count = (apr_uint32_t)segment_count;
+      c[seg].prefix_pool = prefix_pool;
 
       c[seg].group_count = main_group_count;
       c[seg].spare_group_count = spare_group_count;
       c[seg].first_spare_group = NO_INDEX;
       c[seg].max_spare_used = 0;
 
-      c[seg].directory = apr_pcalloc(pool,
-                                     group_count * sizeof(entry_group_t));
+      /* Allocate but don't clear / zero the directory because it would add
+         significantly to the server start-up time if the caches are large.
+         Group initialization will take care of that in stead. */
+      c[seg].directory = apr_palloc(pool,
+                                    group_count * sizeof(entry_group_t));
 
       /* Allocate and initialize directory entries as "not initialized",
          hence "unused" */
@@ -1795,7 +2024,6 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       c[seg].max_entry_size = max_entry_size;
 
       c[seg].used_entries = 0;
-      c[seg].hit_count = 0;
       c[seg].total_reads = 0;
       c[seg].total_writes = 0;
       c[seg].total_hits = 0;
@@ -1810,17 +2038,14 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
           return svn_error_wrap_apr(APR_ENOMEM, "OOM");
         }
 
-#if APR_HAS_THREADS
+#if (APR_HAS_THREADS && USE_SIMPLE_MUTEX)
       /* A lock for intra-process synchronization to the cache, or NULL if
        * the cache's creator doesn't feel the cache needs to be
        * thread-safe.
        */
-#  if USE_SIMPLE_MUTEX
-
       SVN_ERR(svn_mutex__init(&c[seg].lock, thread_safe, pool));
-
-#  else
-
+#elif (APR_HAS_THREADS && !USE_SIMPLE_MUTEX)
+      /* Same for read-write lock. */
       c[seg].lock = NULL;
       if (thread_safe)
         {
@@ -1830,22 +2055,70 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
             return svn_error_wrap_apr(status, _("Can't create cache mutex"));
         }
 
-#  endif
-
       /* Select the behavior of write operations.
        */
       c[seg].allow_blocking_writes = allow_blocking_writes;
 #endif
-
-      /* Since a simple mutex already guarantees fully serialized access,
-         we need this mutex only when we use multple-reader-1-writer locks. */
-      SVN_ERR(svn_mutex__init(&c[seg].counter_mutex,
-                              thread_safe && !USE_SIMPLE_MUTEX, pool));
     }
 
   /* done here
    */
   *cache = c;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_cache__membuffer_clear(svn_membuffer_t *cache)
+{
+  apr_size_t seg;
+  apr_size_t segment_count = cache->segment_count;
+
+  /* Length of the group_initialized array in bytes.
+     See also svn_cache__membuffer_cache_create(). */
+  apr_size_t group_init_size
+    = 1 + (cache->group_count + cache->spare_group_count)
+            / (8 * GROUP_INIT_GRANULARITY);
+
+  /* Clear segment by segment.  This implies that other thread may read
+     and write to other segments after we cleared them and before the
+     last segment is done.
+
+     However, that is no different from a write request coming through
+     right after we cleared all segments because dependencies between
+     cache entries (recursive lookup / access locks) are not allowed.
+   */
+  for (seg = 0; seg < segment_count; ++seg)
+    {
+      /* Unconditionally acquire the write lock. */
+      SVN_ERR(force_write_lock_cache(&cache[seg]));
+
+      /* Mark all groups as "not initialized", which implies "empty". */
+      cache[seg].first_spare_group = NO_INDEX;
+      cache[seg].max_spare_used = 0;
+
+      memset(cache[seg].group_initialized, 0, group_init_size);
+
+      /* Unlink L1 contents. */
+      cache[seg].l1.first = NO_INDEX;
+      cache[seg].l1.last = NO_INDEX;
+      cache[seg].l1.next = NO_INDEX;
+      cache[seg].l1.current_data = cache[seg].l1.start_offset;
+
+      /* Unlink L2 contents. */
+      cache[seg].l2.first = NO_INDEX;
+      cache[seg].l2.last = NO_INDEX;
+      cache[seg].l2.next = NO_INDEX;
+      cache[seg].l2.current_data = cache[seg].l2.start_offset;
+
+      /* Reset content counters. */
+      cache[seg].data_used = 0;
+      cache[seg].used_entries = 0;
+
+      /* Segment may be used again. */
+      SVN_ERR(unlock_cache(&cache[seg], SVN_NO_ERROR));
+    }
+
+  /* done here */
   return SVN_NO_ERROR;
 }
 
@@ -1858,7 +2131,7 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
 static svn_error_t *
 entry_exists_internal(svn_membuffer_t *cache,
                       apr_uint32_t group_index,
-                      entry_key_t to_find,
+                      const full_key_t *to_find,
                       svn_boolean_t *found)
 {
   *found = find_entry(cache, group_index, to_find, FALSE) != NULL;
@@ -1871,7 +2144,7 @@ entry_exists_internal(svn_membuffer_t *cache,
 static svn_error_t *
 entry_exists(svn_membuffer_t *cache,
              apr_uint32_t group_index,
-             entry_key_t to_find,
+             const full_key_t *to_find,
              svn_boolean_t *found)
 {
   WITH_READ_LOCK(cache,
@@ -1904,9 +2177,9 @@ select_level(svn_membuffer_t *cache,
            && priority > SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY)
     {
       /* Large but important items go into L2. */
-      entry_t dummy_entry = { { 0 } };
+      entry_t dummy_entry = { { { 0 } } };
       dummy_entry.priority = priority;
-      dummy_entry.size = (apr_uint32_t) size;
+      dummy_entry.size = size;
 
       return ensure_data_insertable_l2(cache, &dummy_entry)
            ? &cache->l2
@@ -1917,9 +2190,9 @@ select_level(svn_membuffer_t *cache,
   return NULL;
 }
 
-/* Try to insert the serialized item given in BUFFER with SIZE into
- * the group GROUP_INDEX of CACHE and uniquely identify it by hash
- * value TO_FIND.
+/* Try to insert the serialized item given in BUFFER with ITEM_SIZE
+ * into the group GROUP_INDEX of CACHE and uniquely identify it by
+ * hash value TO_FIND.
  *
  * However, there is no guarantee that it will actually be put into
  * the cache. If there is already some data associated with TO_FIND,
@@ -1927,19 +2200,20 @@ select_level(svn_membuffer_t *cache,
  * be inserted.
  *
  * Note: This function requires the caller to serialization access.
- * Don't call it directly, call membuffer_cache_get_partial instead.
+ * Don't call it directly, call membuffer_cache_set instead.
  */
 static svn_error_t *
 membuffer_cache_set_internal(svn_membuffer_t *cache,
-                             entry_key_t to_find,
+                             const full_key_t *to_find,
                              apr_uint32_t group_index,
                              char *buffer,
-                             apr_size_t size,
+                             apr_size_t item_size,
                              apr_uint32_t priority,
                              DEBUG_CACHE_MEMBUFFER_TAG_ARG
                              apr_pool_t *scratch_pool)
 {
   cache_level_t *level;
+  apr_size_t size = item_size + to_find->entry_key.key_len;
 
   /* first, look for a previous entry for the given key */
   entry_t *entry = find_entry(cache, group_index, to_find, FALSE);
@@ -1953,20 +2227,24 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
        * negative value.
        */
       cache->data_used += (apr_uint64_t)size - entry->size;
-      entry->size = (apr_uint32_t) size;
+      entry->size = size;
       entry->priority = priority;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
       /* Remember original content, type and key (hashes)
        */
-      SVN_ERR(store_content_part(tag, buffer, size, scratch_pool));
+      SVN_ERR(store_content_part(tag, buffer, item_size, scratch_pool));
       memcpy(&entry->tag, tag, sizeof(*tag));
 
 #endif
 
-      if (size)
-        memcpy(cache->data + entry->offset, buffer, size);
+      if (entry->key.key_len)
+        memcpy(cache->data + entry->offset, to_find->full_key.data,
+               entry->key.key_len);
+      if (item_size)
+        memcpy(cache->data + entry->offset + entry->key.key_len, buffer,
+               item_size);
 
       cache->total_writes++;
       return SVN_NO_ERROR;
@@ -1982,7 +2260,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
        * the serialized item's (future) position within data buffer.
        */
       entry = find_entry(cache, group_index, to_find, TRUE);
-      entry->size = (apr_uint32_t) size;
+      entry->size = size;
       entry->offset = level->current_data;
       entry->priority = priority;
 
@@ -1990,7 +2268,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
 
       /* Remember original content, type and key (hashes)
        */
-      SVN_ERR(store_content_part(tag, buffer, size, scratch_pool));
+      SVN_ERR(store_content_part(tag, buffer, item_size, scratch_pool));
       memcpy(&entry->tag, tag, sizeof(*tag));
 
 #endif
@@ -2001,8 +2279,12 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
 
       /* Copy the serialized item data into the cache.
        */
-      if (size)
-        memcpy(cache->data + entry->offset, buffer, size);
+      if (entry->key.key_len)
+        memcpy(cache->data + entry->offset, to_find->full_key.data,
+               entry->key.key_len);
+      if (item_size)
+        memcpy(cache->data + entry->offset + entry->key.key_len, buffer,
+               item_size);
 
       cache->total_writes++;
     }
@@ -2031,7 +2313,7 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
  */
 static svn_error_t *
 membuffer_cache_set(svn_membuffer_t *cache,
-                    entry_key_t key,
+                    const full_key_t *key,
                     void *item,
                     svn_cache__serialize_func_t serializer,
                     apr_uint32_t priority,
@@ -2044,7 +2326,7 @@ membuffer_cache_set(svn_membuffer_t *cache,
 
   /* find the entry group that will hold the key.
    */
-  group_index = get_group_index(&cache, key);
+  group_index = get_group_index(&cache, &key->entry_key);
 
   /* Serialize data data.
    */
@@ -2067,21 +2349,17 @@ membuffer_cache_set(svn_membuffer_t *cache,
 
 /* Count a hit in ENTRY within CACHE.
  */
-static svn_error_t *
+static void
 increment_hit_counters(svn_membuffer_t *cache, entry_t *entry)
 {
   /* To minimize the memory footprint of the cache index, we limit local
-   * hit counters to 32 bits.  These may overflow and we must make sure that
-   * the global sums are still the sum of all local counters. */
-  if (++entry->hit_count == 0)
-    cache->hit_count -= APR_UINT32_MAX;
-  else
-    cache->hit_count++;
+   * hit counters to 32 bits.  These may overflow but we don't really
+   * care because at worst, ENTRY will be dropped from cache once every
+   * few billion hits. */
+  svn_atomic_inc(&entry->hit_count);
 
   /* That one is for stats only. */
   cache->total_hits++;
-
-  return SVN_NO_ERROR;
 }
 
 /* Look for the cache entry in group GROUP_INDEX of CACHE, identified
@@ -2091,12 +2369,12 @@ increment_hit_counters(svn_membuffer_t *cache, entry_t *entry)
  * be done in POOL.
  *
  * Note: This function requires the caller to serialization access.
- * Don't call it directly, call membuffer_cache_get_partial instead.
+ * Don't call it directly, call membuffer_cache_get instead.
  */
 static svn_error_t *
 membuffer_cache_get_internal(svn_membuffer_t *cache,
                              apr_uint32_t group_index,
-                             entry_key_t to_find,
+                             const full_key_t *to_find,
                              char **buffer,
                              apr_size_t *item_size,
                              DEBUG_CACHE_MEMBUFFER_TAG_ARG
@@ -2119,9 +2397,9 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
       return SVN_NO_ERROR;
     }
 
-  size = ALIGN_VALUE(entry->size);
+  size = ALIGN_VALUE(entry->size) - entry->key.key_len;
   *buffer = ALIGN_POINTER(apr_palloc(result_pool, size + ITEM_ALIGNMENT-1));
-  memcpy(*buffer, (const char*)cache->data + entry->offset, size);
+  memcpy(*buffer, cache->data + entry->offset + entry->key.key_len, size);
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
@@ -2133,28 +2411,28 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
 
   /* Compare original content, type and key (hashes)
    */
-  SVN_ERR(store_content_part(tag, *buffer, entry->size, result_pool));
+  SVN_ERR(store_content_part(tag, *buffer, entry->size - entry->key.key_len,
+                             result_pool));
   SVN_ERR(assert_equal_tags(&entry->tag, tag));
 
 #endif
 
   /* update hit statistics
    */
-  SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
-                       increment_hit_counters(cache, entry));
-  *item_size = entry->size;
+  increment_hit_counters(cache, entry);
+  *item_size = entry->size - entry->key.key_len;
 
   return SVN_NO_ERROR;
 }
 
 /* Look for the *ITEM identified by KEY. If no item has been stored
  * for KEY, *ITEM will be NULL. Otherwise, the DESERIALIZER is called
- * re-construct the proper object from the serialized data.
+ * to re-construct the proper object from the serialized data.
  * Allocations will be done in POOL.
  */
 static svn_error_t *
 membuffer_cache_get(svn_membuffer_t *cache,
-                    entry_key_t key,
+                    const full_key_t *key,
                     void **item,
                     svn_cache__deserialize_func_t deserializer,
                     DEBUG_CACHE_MEMBUFFER_TAG_ARG
@@ -2166,7 +2444,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
 
   /* find the entry group that will hold the key.
    */
-  group_index = get_group_index(&cache, key);
+  group_index = get_group_index(&cache, &key->entry_key);
   WITH_READ_LOCK(cache,
                  membuffer_cache_get_internal(cache,
                                               group_index,
@@ -2194,7 +2472,7 @@ membuffer_cache_get(svn_membuffer_t *cache,
 static svn_error_t *
 membuffer_cache_has_key_internal(svn_membuffer_t *cache,
                                  apr_uint32_t group_index,
-                                 entry_key_t to_find,
+                                 const full_key_t *to_find,
                                  svn_boolean_t *found)
 {
   entry_t *entry = find_entry(cache, group_index, to_find, FALSE);
@@ -2205,9 +2483,7 @@ membuffer_cache_has_key_internal(svn_membuffer_t *cache,
          again.  While items in L1 are well protected for a while, L2
          items may get evicted soon.  Thus, mark all them as "hit" to give
          them a higher chance of survival. */
-      SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
-                           increment_hit_counters(cache, entry));
-
+      increment_hit_counters(cache, entry);
       *found = TRUE;
     }
   else
@@ -2225,12 +2501,12 @@ membuffer_cache_has_key_internal(svn_membuffer_t *cache,
  */
 static svn_error_t *
 membuffer_cache_has_key(svn_membuffer_t *cache,
-                        entry_key_t key,
+                        const full_key_t *key,
                         svn_boolean_t *found)
 {
   /* find the entry group that will hold the key.
    */
-  apr_uint32_t group_index = get_group_index(&cache, key);
+  apr_uint32_t group_index = get_group_index(&cache, &key->entry_key);
   cache->total_reads++;
 
   WITH_READ_LOCK(cache,
@@ -2256,7 +2532,7 @@ membuffer_cache_has_key(svn_membuffer_t *cache,
 static svn_error_t *
 membuffer_cache_get_partial_internal(svn_membuffer_t *cache,
                                      apr_uint32_t group_index,
-                                     entry_key_t to_find,
+                                     const full_key_t *to_find,
                                      void **item,
                                      svn_boolean_t *found,
                                      svn_cache__partial_getter_func_t deserializer,
@@ -2275,10 +2551,10 @@ membuffer_cache_get_partial_internal(svn_membuffer_t *cache,
     }
   else
     {
+      const void *item_data = cache->data + entry->offset + entry->key.key_len;
+      apr_size_t item_size = entry->size - entry->key.key_len;
       *found = TRUE;
-
-      SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
-                           increment_hit_counters(cache, entry));
+      increment_hit_counters(cache, entry);
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
 
@@ -2290,19 +2566,12 @@ membuffer_cache_get_partial_internal(svn_membuffer_t *cache,
 
       /* Compare original content, type and key (hashes)
        */
-      SVN_ERR(store_content_part(tag,
-                                 (const char*)cache->data + entry->offset,
-                                 entry->size,
-                                 result_pool));
+      SVN_ERR(store_content_part(tag, item_data, item_size, result_pool));
       SVN_ERR(assert_equal_tags(&entry->tag, tag));
 
 #endif
 
-      return deserializer(item,
-                          (const char*)cache->data + entry->offset,
-                          entry->size,
-                          baton,
-                          result_pool);
+      return deserializer(item, item_data, item_size, baton, result_pool);
     }
 }
 
@@ -2314,7 +2583,7 @@ membuffer_cache_get_partial_internal(svn_membuffer_t *cache,
  */
 static svn_error_t *
 membuffer_cache_get_partial(svn_membuffer_t *cache,
-                            entry_key_t key,
+                            const full_key_t *key,
                             void **item,
                             svn_boolean_t *found,
                             svn_cache__partial_getter_func_t deserializer,
@@ -2322,7 +2591,7 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
                             DEBUG_CACHE_MEMBUFFER_TAG_ARG
                             apr_pool_t *result_pool)
 {
-  apr_uint32_t group_index = get_group_index(&cache, key);
+  apr_uint32_t group_index = get_group_index(&cache, &key->entry_key);
 
   WITH_READ_LOCK(cache,
                  membuffer_cache_get_partial_internal
@@ -2346,7 +2615,7 @@ membuffer_cache_get_partial(svn_membuffer_t *cache,
 static svn_error_t *
 membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
                                      apr_uint32_t group_index,
-                                     entry_key_t to_find,
+                                     const full_key_t *to_find,
                                      svn_cache__partial_setter_func_t func,
                                      void *baton,
                                      DEBUG_CACHE_MEMBUFFER_TAG_ARG
@@ -2364,12 +2633,12 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
       svn_error_t *err;
 
       /* access the serialized cache item */
-      char *data = (char*)cache->data + entry->offset;
-      char *orig_data = data;
-      apr_size_t size = entry->size;
+      apr_size_t key_len = entry->key.key_len;
+      void *item_data = cache->data + entry->offset + key_len;
+      void *orig_data = item_data;
+      apr_size_t item_size = entry->size - key_len;
 
-      SVN_MUTEX__WITH_LOCK(cache->counter_mutex,
-                           increment_hit_counters(cache, entry));
+      increment_hit_counters(cache, entry);
       cache->total_writes++;
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER
@@ -2377,19 +2646,19 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
       /* Check for overlapping entries.
        */
       SVN_ERR_ASSERT(entry->next == NO_INDEX ||
-                     entry->offset + size
+                     entry->offset + entry->size
                         <= get_entry(cache, entry->next)->offset);
 
       /* Compare original content, type and key (hashes)
        */
-      SVN_ERR(store_content_part(tag, data, size, scratch_pool));
+      SVN_ERR(store_content_part(tag, item_data, item_size, scratch_pool));
       SVN_ERR(assert_equal_tags(&entry->tag, tag));
 
 #endif
 
       /* modify it, preferably in-situ.
        */
-      err = func((void **)&data, &size, baton, scratch_pool);
+      err = func(&item_data, &item_size, baton, scratch_pool);
 
       if (err)
         {
@@ -2406,21 +2675,26 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
           /* if the modification caused a re-allocation, we need to remove
            * the old entry and to copy the new data back into cache.
            */
-          if (data != orig_data)
+          if (item_data != orig_data)
             {
               /* Remove the old entry and try to make space for the new one.
                */
               drop_entry(cache, entry);
-              if (   (cache->max_entry_size >= size)
-                  && ensure_data_insertable_l1(cache, size))
+              if (   (cache->max_entry_size >= item_size + key_len)
+                  && ensure_data_insertable_l1(cache, item_size + key_len))
                 {
                   /* Write the new entry.
                    */
                   entry = find_entry(cache, group_index, to_find, TRUE);
-                  entry->size = (apr_uint32_t) size;
+                  entry->size = item_size + key_len;
                   entry->offset = cache->l1.current_data;
-                  if (size)
-                    memcpy(cache->data + entry->offset, data, size);
+
+                  if (key_len)
+                    memcpy(cache->data + entry->offset,
+                           to_find->full_key.data, key_len);
+                  if (item_size)
+                    memcpy(cache->data + entry->offset + key_len, item_data,
+                           item_size);
 
                   /* Link the entry properly.
                    */
@@ -2432,7 +2706,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
 
           /* Remember original content, type and key (hashes)
            */
-          SVN_ERR(store_content_part(tag, data, size, scratch_pool));
+          SVN_ERR(store_content_part(tag, item_data, item_size, scratch_pool));
           memcpy(&entry->tag, tag, sizeof(*tag));
 
 #endif
@@ -2449,7 +2723,7 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
  */
 static svn_error_t *
 membuffer_cache_set_partial(svn_membuffer_t *cache,
-                            entry_key_t key,
+                            const full_key_t *key,
                             svn_cache__partial_setter_func_t func,
                             void *baton,
                             DEBUG_CACHE_MEMBUFFER_TAG_ARG
@@ -2457,7 +2731,7 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
 {
   /* cache item lookup
    */
-  apr_uint32_t group_index = get_group_index(&cache, key);
+  apr_uint32_t group_index = get_group_index(&cache, &key->entry_key);
   WITH_WRITE_LOCK(cache,
                   membuffer_cache_set_partial_internal
                      (cache, group_index, key, func, baton,
@@ -2483,22 +2757,6 @@ membuffer_cache_set_partial(svn_membuffer_t *cache,
  * svn_cache__t instance.
  */
 
-/* Stores the combined key value for the given key.  It will be used by
- * combine_key() to short-circuit expensive hash calculations.
- */
-typedef struct last_access_key_t
-{
-  /* result of key combining */
-  entry_key_t combined_key;
-
-  /* length of the key (or APR_HASH_KEY_STRING if not used) */
-  apr_ssize_t key_len;
-
-  /* the original key.  Only KEY_LEN bytes are valid.  We use uint32 for
-   * better compatibility with pseudo-md5 functions. */
-  apr_uint32_t key[64];
-} last_access_key_t;
-
 /* Internal cache structure (used in svn_cache__t.cache_internal) basically
  * holding the additional parameters needed to call the respective membuffer
  * functions.
@@ -2517,16 +2775,11 @@ typedef struct svn_membuffer_cache_t
    */
   svn_cache__deserialize_func_t deserializer;
 
-  /* Prepend this byte sequence to any key passed to us.
-   * This makes (very likely) our keys different from all keys used
-   * by other svn_membuffer_cache_t instances.
+  /* Prepend this to any key passed to us.
+   * This makes our keys different from all keys used by svn_membuffer_cache_t
+   * instances that we don't want to share cached data with.
    */
   entry_key_t prefix;
-
-  /* The tail of the prefix string. It is being used as a developer-visible
-   * ID for this cache instance.
-   */
-  char info_prefix[PREFIX_TAIL_LEN];
 
   /* length of the keys that will be passed to us through the
    * svn_cache_t interface. May be APR_HASH_KEY_STRING.
@@ -2535,25 +2788,24 @@ typedef struct svn_membuffer_cache_t
 
   /* priority class for all items written through this interface */
   apr_uint32_t priority;
-  
+
   /* Temporary buffer containing the hash key for the current access
    */
-  entry_key_t combined_key;
+  full_key_t combined_key;
 
-  /* cache for the last key used.
-   * Will be NULL for caches with short fix-sized keys.
-   */
-  last_access_key_t *last_access;
-  
   /* if enabled, this will serialize the access to this instance.
    */
   svn_mutex__t *mutex;
 } svn_membuffer_cache_t;
 
-/* After an estimated ALLOCATIONS_PER_POOL_CLEAR allocations, we should
- * clear the svn_membuffer_cache_t.pool to keep memory consumption in check.
- */
-#define ALLOCATIONS_PER_POOL_CLEAR 10
+/* Return the prefix key used by CACHE. */
+static const char *
+get_prefix_key(const svn_membuffer_cache_t *cache)
+{
+  return (cache->prefix.prefix_idx == NO_INDEX
+       ? cache->combined_key.full_key.data
+       : cache->membuffer->prefix_pool->values[cache->prefix.prefix_idx]);
+}
 
 /* Basically calculate a hash value for KEY of length KEY_LEN, combine it
  * with the CACHE->PREFIX and write the result in CACHE->COMBINED_KEY.
@@ -2565,70 +2817,35 @@ combine_long_key(svn_membuffer_cache_t *cache,
                  const void *key,
                  apr_ssize_t key_len)
 {
-  assert(cache->last_access);
+  apr_uint32_t *digest_buffer;
+  char *key_copy;
+  apr_size_t prefix_len = cache->prefix.key_len;
+  apr_size_t aligned_key_len;
 
   /* handle variable-length keys */
   if (key_len == APR_HASH_KEY_STRING)
     key_len = strlen((const char *) key);
 
-  /* same key as the last time? -> short-circuit */
-  if (   key_len == cache->last_access->key_len
-      && memcmp(key, cache->last_access->key, key_len) == 0)
-    {
-      memcpy(cache->combined_key, cache->last_access->combined_key,
-             sizeof(cache->combined_key));
-    }
-  else if (key_len >= 64)
-    {
-      /* relatively long key.  Use the generic, slow hash code for it */
-      apr_md5((unsigned char*)cache->combined_key, key, key_len);
-      cache->combined_key[0] ^= cache->prefix[0];
-      cache->combined_key[1] ^= cache->prefix[1];
+  aligned_key_len = ALIGN_VALUE(key_len);
 
-      /* is the key short enough to cache the result? */
-      if (key_len <= sizeof(cache->last_access->key))
-        {
-          memcpy(cache->last_access->combined_key, cache->combined_key,
-                 sizeof(cache->combined_key));
-          cache->last_access->key_len = key_len;
-          memcpy(cache->last_access->key, key, key_len);
-        }
-    }
-  else
-    {
-      /* shorter keys use efficient hash code and *do* cache the results */
-      cache->last_access->key_len = key_len;
-      if (key_len < 16)
-        {
-          memset(cache->last_access->key, 0, 16);
-          memcpy(cache->last_access->key, key, key_len);
+  /* Combine keys. */
+  svn_membuf__ensure(&cache->combined_key.full_key,
+                     aligned_key_len + prefix_len);
 
-          svn__pseudo_md5_15((apr_uint32_t *)cache->combined_key,
-                             cache->last_access->key);
-        }
-      else if (key_len < 32)
-        {
-          memset(cache->last_access->key, 0, 32);
-          memcpy(cache->last_access->key, key, key_len);
+  key_copy = (char *)cache->combined_key.full_key.data + prefix_len;
+  cache->combined_key.entry_key.key_len = aligned_key_len + prefix_len;
+  memcpy(key_copy, key, key_len);
+  memset(key_copy + key_len, 0, aligned_key_len - key_len);
 
-          svn__pseudo_md5_31((apr_uint32_t *)cache->combined_key,
-                             cache->last_access->key);
-        }
-      else
-        {
-          memset(cache->last_access->key, 0, 64);
-          memcpy(cache->last_access->key, key, key_len);
+  /* Hash key into 16 bytes. */
+  digest_buffer = (apr_uint32_t *)cache->combined_key.entry_key.fingerprint;
+  svn__fnv1a_32x4_raw(digest_buffer, key, key_len);
 
-          svn__pseudo_md5_63((apr_uint32_t *)cache->combined_key,
-                             cache->last_access->key);
-        }
-
-      cache->combined_key[0] ^= cache->prefix[0];
-      cache->combined_key[1] ^= cache->prefix[1];
-
-      memcpy(cache->last_access->combined_key, cache->combined_key,
-             sizeof(cache->combined_key));
-    }
+  /* Combine with prefix. */
+  cache->combined_key.entry_key.fingerprint[0]
+    ^= cache->prefix.fingerprint[0];
+  cache->combined_key.entry_key.fingerprint[1]
+    ^= cache->prefix.fingerprint[1];
 }
 
 /* Basically calculate a hash value for KEY of length KEY_LEN, combine it
@@ -2642,39 +2859,52 @@ combine_key(svn_membuffer_cache_t *cache,
   /* copy of *key, padded with 0 */
   apr_uint64_t data[2];
 
-  /* short, fixed-size keys are the most common case */
-  if (key_len == 16)
+  /* Do we have to compare full keys? */
+  if (cache->prefix.prefix_idx == NO_INDEX)
     {
-      data[0] = ((const apr_uint64_t *)key)[0];
-      data[1] = ((const apr_uint64_t *)key)[1];
-    }
-  else if (key_len == 8)
-    {
-      data[0] = ((const apr_uint64_t *)key)[0];
-      data[1] = 0;
-    }
-  else if (key_len != APR_HASH_KEY_STRING && key_len < 16)
-    {
-      data[0] = 0;
-      data[1] = 0;
-      memcpy(data, key, key_len);
-    }
-  else
-    {
-      /* longer or variably sized keys */
       combine_long_key(cache, key, key_len);
       return;
     }
 
-  /* scramble key DATA.  All of this must be reversible to prevent key
-   * collisions.  So, we limit ourselves to xor and permutations. */
+  /* short, fixed-size keys are the most common case */
+  if (key_len == 16)
+    {
+      memcpy(data, key, 16);
+    }
+  else if (key_len == 8)
+    {
+      memcpy(data, key, 8);
+      data[1] = 0;
+    }
+  else
+    {
+      assert(key_len != APR_HASH_KEY_STRING && key_len < 16);
+      data[0] = 0;
+      data[1] = 0;
+      memcpy(data, key, key_len);
+    }
+
+  /* Scramble key DATA to spread the key space more evenly across the
+   * cache segments and entry buckets.  All of this shall be reversible
+   * to prevent key collisions.  So, we limit ourselves to xor and
+   * permutations.
+   *
+   * Since the entry key must preserve the full key (prefix and KEY),
+   * the scramble must not introduce KEY collisions.
+   */
   data[1] = (data[1] << 27) | (data[1] >> 37);
   data[1] ^= data[0] & 0xffff;
   data[0] ^= data[1] & APR_UINT64_C(0xffffffffffff0000);
 
-  /* combine with this cache's namespace */
-  cache->combined_key[0] = data[0] ^ cache->prefix[0];
-  cache->combined_key[1] = data[1] ^ cache->prefix[1];
+  /* Combine with this cache's prefix.  This is reversible because the
+   * prefix is known through to the respective entry_key element.  So,
+   * knowing entry_key.prefix_id, we can still reconstruct KEY (and the
+   * prefix key).
+   */
+  cache->combined_key.entry_key.fingerprint[0]
+    = data[0] ^ cache->prefix.fingerprint[0];
+  cache->combined_key.entry_key.fingerprint[1]
+    = data[1] ^ cache->prefix.fingerprint[1];
 }
 
 /* Implement svn_cache__vtable_t.get (not thread-safe)
@@ -2706,7 +2936,7 @@ svn_membuffer_cache_get(void **value_p,
 
   /* Look the item up. */
   SVN_ERR(membuffer_cache_get(cache->membuffer,
-                              cache->combined_key,
+                              &cache->combined_key,
                               value_p,
                               cache->deserializer,
                               DEBUG_CACHE_MEMBUFFER_TAG
@@ -2743,7 +2973,7 @@ svn_membuffer_cache_has_key(svn_boolean_t *found,
 
   /* Look the item up. */
   SVN_ERR(membuffer_cache_has_key(cache->membuffer,
-                                  cache->combined_key,
+                                  &cache->combined_key,
                                   found));
 
   /* return result */
@@ -2775,7 +3005,7 @@ svn_membuffer_cache_set(void *cache_void,
    * that the item will actually be cached afterwards.
    */
   return membuffer_cache_set(cache->membuffer,
-                             cache->combined_key,
+                             &cache->combined_key,
                              value,
                              cache->serializer,
                              cache->priority,
@@ -2821,7 +3051,7 @@ svn_membuffer_cache_get_partial(void **value_p,
 
   combine_key(cache, key, cache->key_len);
   SVN_ERR(membuffer_cache_get_partial(cache->membuffer,
-                                      cache->combined_key,
+                                      &cache->combined_key,
                                       value_p,
                                       found,
                                       func,
@@ -2849,7 +3079,7 @@ svn_membuffer_cache_set_partial(void *cache_void,
     {
       combine_key(cache, key, cache->key_len);
       SVN_ERR(membuffer_cache_set_partial(cache->membuffer,
-                                          cache->combined_key,
+                                          &cache->combined_key,
                                           func,
                                           baton,
                                           DEBUG_CACHE_MEMBUFFER_TAG
@@ -2921,7 +3151,7 @@ svn_membuffer_cache_get_info(void *cache_void,
 
   /* cache front-end specific data */
 
-  info->id = apr_pstrdup(result_pool, cache->info_prefix);
+  info->id = apr_pstrdup(result_pool, get_prefix_key(cache));
 
   /* collect info from shared cache back-end */
 
@@ -3110,15 +3340,17 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
                                   const char *prefix,
                                   apr_uint32_t priority,
                                   svn_boolean_t thread_safe,
+                                  svn_boolean_t short_lived,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
   svn_checksum_t *checksum;
+  apr_size_t prefix_len, prefix_orig_len;
 
   /* allocate the cache header structures
    */
   svn_cache__t *wrapper = apr_pcalloc(result_pool, sizeof(*wrapper));
-  svn_membuffer_cache_t *cache = apr_palloc(result_pool, sizeof(*cache));
+  svn_membuffer_cache_t *cache = apr_pcalloc(result_pool, sizeof(*cache));
 
   /* initialize our internal cache header
    */
@@ -3129,32 +3361,59 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   cache->deserializer = deserializer
                       ? deserializer
                       : deserialize_svn_stringbuf;
-  get_prefix_tail(prefix, cache->info_prefix);
   cache->priority = priority;
   cache->key_len = klen;
 
   SVN_ERR(svn_mutex__init(&cache->mutex, thread_safe, result_pool));
 
-  /* for performance reasons, we don't actually store the full prefix but a
-   * hash value of it
-   */
+  /* Copy the prefix into the prefix full key. Align it to ITEM_ALIGMENT.
+   * Don't forget to include the terminating NUL. */
+  prefix_orig_len = strlen(prefix) + 1;
+  prefix_len = ALIGN_VALUE(prefix_orig_len);
+
+  /* Construct the folded prefix key. */
   SVN_ERR(svn_checksum(&checksum,
                        svn_checksum_md5,
                        prefix,
                        strlen(prefix),
                        scratch_pool));
-  memcpy(cache->prefix, checksum->digest, sizeof(cache->prefix));
+  memcpy(cache->prefix.fingerprint, checksum->digest,
+         sizeof(cache->prefix.fingerprint));
+  cache->prefix.key_len = prefix_len;
 
-  /* fix-length keys of 16 bytes or under don't need a buffer because we
-   * can use a very fast key combining algorithm. */
-  if ((klen == APR_HASH_KEY_STRING) ||  klen > sizeof(entry_key_t))
+  /* Fix-length keys of up to 16 bytes may be handled without storing the
+   * full key separately for each item. */
+  if (   (klen != APR_HASH_KEY_STRING)
+      && (klen <= sizeof(cache->combined_key.entry_key.fingerprint))
+      && !short_lived)
+    SVN_ERR(prefix_pool_get(&cache->prefix.prefix_idx,
+                            membuffer->prefix_pool,
+                            prefix));
+  else
+    cache->prefix.prefix_idx = NO_INDEX;
+
+  /* If key combining is not guaranteed to produce unique results, we have
+   * to handle full keys.  Otherwise, leave it NULL. */
+  if (cache->prefix.prefix_idx == NO_INDEX)
     {
-      cache->last_access = apr_pcalloc(result_pool, sizeof(*cache->last_access));
-      cache->last_access->key_len = APR_HASH_KEY_STRING;
+      /* Initialize the combined key. Pre-allocate some extra room in the
+       * full key such that we probably don't need to re-alloc. */
+      cache->combined_key.entry_key = cache->prefix;
+      svn_membuf__create(&cache->combined_key.full_key, prefix_len + 200,
+                         result_pool);
+      memcpy((char *)cache->combined_key.full_key.data, prefix,
+             prefix_orig_len);
+      memset((char *)cache->combined_key.full_key.data + prefix_orig_len, 0,
+             prefix_len - prefix_orig_len);
     }
   else
     {
-      cache->last_access = NULL;
+      /* Initialize the combined key.  We will never have the full combined
+       * key, so leave it NULL and set its length to 0 to prevent access to
+       * it.  Keep the fingerprint 0 as well b/c it will always be set anew
+       * by combine_key(). */
+      cache->combined_key.entry_key.prefix_idx = cache->prefix.prefix_idx;
+      cache->combined_key.entry_key.key_len = 0;
     }
 
   /* initialize the generic cache wrapper

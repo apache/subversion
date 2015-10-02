@@ -82,7 +82,7 @@ class SVNClient :public SVNBase
   void blame(const char *path, Revision &pegRevision,
              Revision &revisionStart, Revision &revisionEnd,
              bool ignoreMimeType, bool includeMergedRevisions,
-             BlameCallback *callback);
+             BlameCallback *callback, DiffOptions const& options);
   void relocate(const char *from, const char *to, const char *path,
                 bool ignoreExternals);
   apr_hash_t *streamFileContent(const char *path,
@@ -149,8 +149,9 @@ class SVNClient :public SVNBase
             PropertyTable &revprops, CommitCallback *callback);
   void copy(CopySources &copySources, const char *destPath,
             CommitMessage *message, bool copyAsChild, bool makeParents,
-            bool ignoreExternals, PropertyTable &revprops,
-            CommitCallback *callback);
+            bool ignoreExternals, bool metaDataOnly, bool pinExternals,
+            jobject jexternalsToPin,
+            PropertyTable &revprops, CommitCallback *callback);
   void commit(Targets &targets, CommitMessage *message, svn_depth_t depth,
               bool noUnlock, bool keepChangelist,
               StringArray &changelists, PropertyTable &revprops,
@@ -161,7 +162,7 @@ class SVNClient :public SVNBase
   void add(const char *path, svn_depth_t depth, bool force,
            bool no_ignore, bool no_autoprops, bool add_parents);
   void revert(StringArray &paths, svn_depth_t depth, StringArray &changelists,
-              bool clear_changelists);
+              bool clear_changelists, bool metadata_only);
   void remove(Targets &targets, CommitMessage *message, bool force,
               bool keep_local, PropertyTable &revprops,
               CommitCallback *callback);

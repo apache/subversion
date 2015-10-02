@@ -1,4 +1,4 @@
-/* verify.h : verification interface of the native filesystem layer
+/* verify.h : verification interface of the FSX filesystem
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__VERIFY_H
-#define SVN_LIBSVN_FS__VERIFY_H
+#ifndef SVN_LIBSVN_FS_X_VERIFY_H
+#define SVN_LIBSVN_FS_X_VERIFY_H
 
 #include "fs.h"
 
@@ -29,14 +29,15 @@
  * START to END where possible.  Indicate progress via the optional
  * NOTIFY_FUNC callback using NOTIFY_BATON.  The optional CANCEL_FUNC
  * will periodically be called with CANCEL_BATON to allow for preemption.
- * Use POOL for temporary allocations. */
-svn_error_t *svn_fs_x__verify(svn_fs_t *fs,
-                              svn_revnum_t start,
-                              svn_revnum_t end,
-                              svn_fs_progress_notify_func_t notify_func,
-                              void *notify_baton,
-                              svn_cancel_func_t cancel_func,
-                              void *cancel_baton,
-                              apr_pool_t *pool);
+ * Use SCRATCH_POOL for temporary allocations. */
+svn_error_t *
+svn_fs_x__verify(svn_fs_t *fs,
+                 svn_revnum_t start,
+                 svn_revnum_t end,
+                 svn_fs_progress_notify_func_t notify_func,
+                 void *notify_baton,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 apr_pool_t *scratch_pool);
 
 #endif

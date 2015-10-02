@@ -796,28 +796,35 @@ dav_svn__authz_read_func(dav_svn__authz_read_baton *baton);
 
    If ERROR_ID is 0, SVN_ERR_RA_DAV_REQUEST_FAILED will be used as a
    default value for the error code.
+
+   mod_dav is definitive documentation of the parameters, but a
+   guideline to the different error is:
+
+   STATUS is the HTTP status returned to the client.
+
+   ERROR_ID is an additional DAV-specific error such as a violation of
+   the DAV rules.  mod_dav.h defines some values but callers can pass
+   others.
+
+   APRERR is any underlying OS/system error.
 */
 dav_error *
 dav_svn__new_error_svn(apr_pool_t *pool,
                        int status,
                        int error_id,
+                       apr_status_t aprerr,
                        const char *desc);
 
 
 /* A wrapper around mod_dav's dav_new_error, mod_dav_svn uses this
    instead of the mod_dav function to enable special mod_dav_svn specific
-   processing.  See dav_new_error for parameter documentation.
-   Note that DESC may be null (it's hard to track this down from
-   dav_new_error()'s documentation, but see the dav_error type,
-   which says that its desc field may be NULL).
-
-   If ERROR_ID is 0, SVN_ERR_RA_DAV_REQUEST_FAILED will be used as a
-   default value for the error code.
+   processing.  See dav_svn__new_error_svn for additional details.
 */
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
                    int status,
                    int error_id,
+                   apr_status_t aprerr,
                    const char *desc);
 
 

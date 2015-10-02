@@ -29,6 +29,7 @@
 
 #include <apr_tables.h>
 #include "svn_types.h"
+#include "svn_diff.h"
 #include "Pool.h"
 #include "JNIUtil.h"
 
@@ -38,6 +39,7 @@ class DiffOptions
   DiffOptions(jobject joptions);
 
   apr_array_header_t *optionsArray(SVN::Pool &resultPool) const;
+  svn_diff_file_options_t *fileOptions(SVN::Pool &resultPool) const;
 
   svn_boolean_t useGitDiffFormat() const
   {

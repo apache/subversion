@@ -389,6 +389,10 @@ remove_non_prop_changes(apr_hash_t *pristine_props,
 {
   int i;
 
+  /* For added nodes, there is nothing to filter. */
+  if (apr_hash_count(pristine_props) == 0)
+    return;
+
   for (i = 0; i < changes->nelts; i++)
     {
       svn_prop_t *change = &APR_ARRAY_IDX(changes, i, svn_prop_t);
@@ -1162,7 +1166,7 @@ change_file_prop(void *file_baton,
 
   propchange = apr_array_push(fb->propchanges);
   propchange->name = apr_pstrdup(fb->pool, name);
-  propchange->value = value ? svn_string_dup(value, fb->pool) : NULL;
+  propchange->value = svn_string_dup(value, fb->pool);
 
   return SVN_NO_ERROR;
 }
@@ -1192,7 +1196,7 @@ change_dir_prop(void *dir_baton,
 
   propchange = apr_array_push(db->propchanges);
   propchange->name = apr_pstrdup(db->pool, name);
-  propchange->value = value ? svn_string_dup(value, db->pool) : NULL;
+  propchange->value = svn_string_dup(value, db->pool);
 
   return SVN_NO_ERROR;
 }

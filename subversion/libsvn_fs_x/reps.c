@@ -34,7 +34,7 @@
 /* Length of the text chunks we hash and match.  The algorithm will find
  * most matches with a length of 2 * MATCH_BLOCKSIZE and only specific
  * ones that are shorter than MATCH_BLOCKSIZE.
- * 
+ *
  * This should be a power of two and must be a multiple of 8.
  * Good choices are 32, 64 and 128.
  */
@@ -55,7 +55,7 @@
 
 /* Byte strings are described by a series of copy instructions that each
  * do one of the following
- * 
+ *
  * - copy a given number of bytes from the text corpus starting at a
  *   given offset
  * - reference other instruction and specify how many of instructions of
@@ -244,7 +244,7 @@ struct svn_fs_x__rep_extractor_t
 
   /* bases (base_t) yet to process (not used ATM) */
   apr_array_header_t *bases;
-  
+
   /* missing sections (missing_t) in result->data that need to be filled,
    * yet */
   apr_array_header_t *missing;
@@ -302,38 +302,40 @@ hash_to_index(hash_t *hash, hash_key_t adler32)
   return (adler32 * 0xd1f3da69) >> hash->shift;
 }
 
-/* Allocate and initialized SIZE buckets in POOL.  Assign them to HASH.
+/* Allocate and initialized SIZE buckets in RESULT_POOL.
+ * Assign them to HASH.
  */
 static void
 allocate_hash_members(hash_t *hash,
                       apr_size_t size,
-                      apr_pool_t *pool)
+                      apr_pool_t *result_pool)
 {
   apr_size_t i;
 
-  hash->pool = pool;
+  hash->pool = result_pool;
   hash->size = size;
 
-  hash->prefixes = apr_pcalloc(pool, size);
-  hash->last_matches = apr_pcalloc(pool, sizeof(*hash->last_matches) * size);
-  hash->offsets = apr_palloc(pool, sizeof(*hash->offsets) * size);
+  hash->prefixes = apr_pcalloc(result_pool, size);
+  hash->last_matches = apr_pcalloc(result_pool,
+                                   sizeof(*hash->last_matches) * size);
+  hash->offsets = apr_palloc(result_pool, sizeof(*hash->offsets) * size);
 
   for (i = 0; i < size; ++i)
     hash->offsets[i] = NO_OFFSET;
 }
 
 /* Initialize the HASH data structure with 2**TWOPOWER buckets allocated
- * in POOL.
+ * in RESULT_POOL.
  */
 static void
 init_hash(hash_t *hash,
           apr_size_t twoPower,
-          apr_pool_t *pool)
+          apr_pool_t *result_pool)
 {
   hash->used = 0;
   hash->shift = sizeof(hash_key_t) * 8 - twoPower;
 
-  allocate_hash_members(hash, 1 << twoPower, pool);
+  allocate_hash_members(hash, 1 << twoPower, result_pool);
 }
 
 /* Make HASH have at least MIN_SIZE buckets but at least double the number
@@ -384,17 +386,19 @@ grow_hash(hash_t *hash,
 
 svn_fs_x__reps_builder_t *
 svn_fs_x__reps_builder_create(svn_fs_t *fs,
-                              apr_pool_t *pool)
+                              apr_pool_t *result_pool)
 {
-  svn_fs_x__reps_builder_t *result = apr_pcalloc(pool, sizeof(*result));
+  svn_fs_x__reps_builder_t *result = apr_pcalloc(result_pool,
+                                                 sizeof(*result));
 
   result->fs = fs;
-  result->text = svn_stringbuf_create_empty(pool);
-  init_hash(&result->hash, 4, pool);
+  result->text = svn_stringbuf_create_empty(result_pool);
+  init_hash(&result->hash, 4, result_pool);
 
-  result->bases = apr_array_make(pool, 0, sizeof(base_t));
-  result->reps = apr_array_make(pool, 0, sizeof(rep_t));
-  result->instructions = apr_array_make(pool, 0, sizeof(instruction_t));
+  result->bases = apr_array_make(result_pool, 0, sizeof(base_t));
+  result->reps = apr_array_make(result_pool, 0, sizeof(rep_t));
+  result->instructions = apr_array_make(result_pool, 0,
+                                        sizeof(instruction_t));
 
   return result;
 }
@@ -623,7 +627,7 @@ get_text(svn_fs_x__rep_extractor_t *extractor,
         missing.count = instruction->count;
         missing.offset = instruction->offset;
         svn_stringbuf_appendfill(extractor->result, 0, instruction->count);
-        
+
         if (extractor->missing == NULL)
           extractor->missing = apr_array_make(extractor->pool, 1,
                                               sizeof(missing));
@@ -637,16 +641,17 @@ svn_fs_x__reps_get(svn_fs_x__rep_extractor_t **extractor,
                    svn_fs_t *fs,
                    const svn_fs_x__reps_t *container,
                    apr_size_t idx,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool)
 {
   apr_uint32_t first = container->first_instructions[idx];
   apr_uint32_t last = container->first_instructions[idx + 1];
 
   /* create the extractor object */
-  svn_fs_x__rep_extractor_t *result = apr_pcalloc(pool, sizeof(*result));
+  svn_fs_x__rep_extractor_t *result = apr_pcalloc(result_pool,
+                                                  sizeof(*result));
   result->fs = fs;
-  result->result = svn_stringbuf_create_empty(pool);
-  result->pool = pool;
+  result->result = svn_stringbuf_create_empty(result_pool);
+  result->pool = result_pool;
 
   /* fill all the bits of the result that we can, i.e. all but bits coming
    * from base representations */
@@ -689,10 +694,10 @@ svn_fs_x__extractor_drive(svn_stringbuf_t **contents,
 svn_error_t *
 svn_fs_x__write_reps_container(svn_stream_t *stream,
                                const svn_fs_x__reps_builder_t *builder,
-                               apr_pool_t *pool)
+                               apr_pool_t *scratch_pool)
 {
   int i;
-  svn_packed__data_root_t *root = svn_packed__data_create_root(pool);
+  svn_packed__data_root_t *root = svn_packed__data_create_root(scratch_pool);
 
   /* one top-level stream for each array */
   svn_packed__int_stream_t *bases_stream
@@ -719,7 +724,7 @@ svn_fs_x__write_reps_container(svn_stream_t *stream,
 
   svn_packed__create_int_substream(instructions_stream, TRUE, TRUE);
   svn_packed__create_int_substream(instructions_stream, FALSE, FALSE);
-  
+
   /* text */
   svn_packed__add_bytes(text_stream, builder->text->data, builder->text->len);
 
@@ -755,8 +760,8 @@ svn_fs_x__write_reps_container(svn_stream_t *stream,
   svn_packed__add_uint(misc_stream, 0);
 
   /* write to stream */
-  SVN_ERR(svn_packed__data_write(stream, root, pool));
-  
+  SVN_ERR(svn_packed__data_write(stream, root, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -783,7 +788,7 @@ svn_fs_x__read_reps_container(svn_fs_x__reps_t **container,
 
   /* read from disk */
   SVN_ERR(svn_packed__data_read(&root, stream, result_pool, scratch_pool));
-  
+
   bases_stream = svn_packed__first_int_stream(root);
   reps_stream = svn_packed__next_int_stream(bases_stream);
   instructions_stream = svn_packed__next_int_stream(reps_stream);
@@ -844,7 +849,7 @@ svn_fs_x__read_reps_container(svn_fs_x__reps_t **container,
 
   /* return result */
   *container = reps;
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -896,7 +901,7 @@ svn_error_t *
 svn_fs_x__deserialize_reps_container(void **out,
                                      void *data,
                                      apr_size_t data_len,
-                                     apr_pool_t *pool)
+                                     apr_pool_t *result_pool)
 {
   svn_fs_x__reps_t *reps = (svn_fs_x__reps_t *)data;
 
@@ -920,7 +925,7 @@ svn_fs_x__reps_get_func(void **out,
                         apr_pool_t *pool)
 {
   svn_fs_x__reps_baton_t *reps_baton = baton;
-  
+
   /* get a usable reps structure  */
   const svn_fs_x__reps_t *cached = data;
   svn_fs_x__reps_t *reps = apr_pmemdup(pool, cached, sizeof(*reps));

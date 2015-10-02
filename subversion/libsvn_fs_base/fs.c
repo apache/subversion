@@ -780,11 +780,11 @@ base_create(svn_fs_t *fs,
   ((base_fs_data_t *) fs->fsap_data)->format = format;
 
   SVN_ERR(populate_opened_fs(fs, pool));
-  return SVN_NO_ERROR;;
+  return SVN_NO_ERROR;
 
 error:
-  svn_error_clear(cleanup_fs(fs));
-  return svn_err;
+  return svn_error_compose_create(svn_err,
+                                  svn_error_trace(cleanup_fs(fs)));
 }
 
 
@@ -871,8 +871,8 @@ base_open(svn_fs_t *fs,
   return SVN_NO_ERROR;
 
  error:
-  svn_error_clear(cleanup_fs(fs));
-  return svn_err;
+  return svn_error_compose_create(svn_err,
+                                  svn_error_trace(cleanup_fs(fs)));
 }
 
 
@@ -1516,6 +1516,7 @@ svn_fs_base__init(const svn_version_t *loader_version,
     {
       { "svn_subr",  svn_subr_version },
       { "svn_delta", svn_delta_version },
+      { "svn_fs_util", svn_fs_util__version },
       { NULL, NULL }
     };
 

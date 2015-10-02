@@ -104,7 +104,7 @@ svn_repos_fs_commit_txn(const char **conflict_p,
             svn_error_clear(svn_fs_change_txn_prop(txn, key, val, iterpool));
         }
       svn_pool_destroy(iterpool);
-      
+
       return err;
     }
 
@@ -592,7 +592,7 @@ svn_repos_fs_lock_many(svn_repos_t *repos,
           if (!cb_err && lock_callback)
             cb_err = lock_callback(lock_baton, path, NULL, err, iterpool);
           svn_error_clear(err);
-          
+
           continue;
         }
 
@@ -678,7 +678,7 @@ svn_repos_fs_lock(svn_lock_t **lock,
 {
   apr_hash_t *targets = apr_hash_make(pool);
   svn_fs_lock_target_t *target = svn_fs_lock_target_create(token, current_rev,
-                                                           pool); 
+                                                           pool);
   svn_error_t *err;
   struct lock_baton_t baton = {0};
 
@@ -975,15 +975,18 @@ pack_notify_func(void *baton,
 {
   struct pack_notify_baton *pnb = baton;
   svn_repos_notify_t *notify;
+  svn_repos_notify_action_t repos_action;
 
   /* Simple conversion works for these values. */
   SVN_ERR_ASSERT(pack_action >= svn_fs_pack_notify_start
-                 && pack_action <= svn_fs_pack_notify_end_revprop);
+                 && pack_action <= svn_fs_pack_notify_noop);
 
-  notify = svn_repos_notify_create(pack_action
-                                   + svn_repos_notify_pack_shard_start
-                                   - svn_fs_pack_notify_start,
-                                   pool);
+  repos_action = pack_action == svn_fs_pack_notify_noop
+               ? svn_repos_notify_pack_noop
+               : pack_action + svn_repos_notify_pack_shard_start
+                             - svn_fs_pack_notify_start;
+
+  notify = svn_repos_notify_create(repos_action, pool);
   notify->shard = shard;
   pnb->notify_func(pnb->notify_baton, notify, pool);
 

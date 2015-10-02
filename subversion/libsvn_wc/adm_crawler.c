@@ -162,6 +162,7 @@ static svn_error_t *
 restore_node(svn_wc__db_t *db,
              const char *local_abspath,
              svn_node_kind_t kind,
+             svn_boolean_t mark_resolved_text_conflict,
              svn_boolean_t use_commit_times,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
@@ -173,7 +174,7 @@ restore_node(svn_wc__db_t *db,
     {
       /* Recreate file from text-base; mark any text conflict as resolved */
       SVN_ERR(restore_file(db, local_abspath, use_commit_times,
-                           TRUE /*mark_resolved_text_conflict*/,
+                           mark_resolved_text_conflict,
                            cancel_func, cancel_baton,
                            scratch_pool));
     }
@@ -384,12 +385,13 @@ report_revisions_and_depths(svn_wc__db_t *db,
           svn_wc__db_status_t wrk_status;
           svn_node_kind_t wrk_kind;
           const svn_checksum_t *checksum;
+          svn_boolean_t conflicted;
 
           SVN_ERR(svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        &checksum, NULL, NULL, NULL, NULL, NULL,
+                                       NULL, NULL, NULL, NULL, &conflicted,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL,
                                        db, this_abspath, iterpool, iterpool));
 
           if ((wrk_status == svn_wc__db_status_normal
@@ -408,7 +410,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
               if (dirent_kind == svn_node_none)
                 {
                   SVN_ERR(restore_node(db, this_abspath, wrk_kind,
-                                       use_commit_times,
+                                       conflicted, use_commit_times,
                                        cancel_func, cancel_baton,
                                        notify_func, notify_baton, iterpool));
                 }
@@ -718,12 +720,13 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       svn_wc__db_status_t wrk_status;
       svn_node_kind_t wrk_kind;
       const svn_checksum_t *checksum;
+      svn_boolean_t conflicted;
 
       err = svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL, NULL,
                                  NULL, NULL, NULL, NULL, NULL, &checksum, NULL,
                                  NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL,
+                                 NULL, &conflicted, NULL, NULL, NULL, NULL,
+                                 NULL, NULL,
                                  db, local_abspath,
                                  scratch_pool, scratch_pool);
 
@@ -743,7 +746,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
           && (wrk_kind == svn_node_dir || checksum))
         {
           SVN_ERR(restore_node(wc_ctx->db, local_abspath,
-                               wrk_kind, use_commit_times,
+                               wrk_kind, conflicted, use_commit_times,
                                cancel_func, cancel_baton,
                                notify_func, notify_baton,
                                scratch_pool));
@@ -1013,6 +1016,7 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
   svn_checksum_t *local_sha1_checksum;  /* calc'd SHA1 of LOCAL_STREAM */
   svn_wc__db_install_data_t *install_data = NULL;
   svn_error_t *err;
+  svn_error_t *err2;
   svn_stream_t *base_stream;  /* delta source */
   svn_stream_t *local_stream;  /* delta target: LOCAL_ABSPATH transl. to NF */
 
@@ -1109,7 +1113,15 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                         scratch_pool, scratch_pool);
 
   /* Close the two streams to force writing the digest */
-  err = svn_error_compose_create(err, svn_stream_close(base_stream));
+  err2 = svn_stream_close(base_stream);
+  if (err2)
+    {
+      /* Set verify_checksum to NULL if svn_stream_close() returns error
+         because checksum will be uninitialized in this case. */
+      verify_checksum = NULL;
+      err = svn_error_compose_create(err, err2);
+    }
+
   err = svn_error_compose_create(err, svn_stream_close(local_stream));
 
   /* If we have an error, it may be caused by a corrupt text base,

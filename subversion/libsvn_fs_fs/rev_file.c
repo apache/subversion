@@ -146,7 +146,7 @@ open_pack_or_rev_file(svn_fs_fs__revision_file_t *file,
 
       /* We may have to *temporarily* enable write access. */
       err = writable ? auto_make_writable(path, result_pool, scratch_pool)
-                     : SVN_NO_ERROR; 
+                     : SVN_NO_ERROR;
 
       /* open the revision file in buffered r/o or r/w mode */
       if (!err)
@@ -259,6 +259,7 @@ svn_fs_fs__auto_read_footer(svn_fs_fs__revision_file_t *file)
       SVN_ERR(svn_fs_fs__parse_footer(&file->l2p_offset, &file->l2p_checksum,
                                       &file->p2l_offset, &file->p2l_checksum,
                                       footer, file->start_revision,
+                                      filesize - footer_length - 1,
                                       file->pool));
       file->footer_offset = filesize - footer_length - 1;
     }

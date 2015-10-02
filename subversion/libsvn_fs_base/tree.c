@@ -1237,7 +1237,7 @@ base_node_prop(svn_string_t **value_p,
   args.propname = propname;
   SVN_ERR(svn_fs_base__retry_txn(root->fs, txn_body_node_prop, &args,
                                  FALSE, scratch_pool));
-  *value_p = value ? svn_string_dup(value, pool) : NULL;
+  *value_p = svn_string_dup(value, pool);
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
@@ -1282,6 +1282,21 @@ base_node_proplist(apr_hash_t **table_p,
                                  FALSE, pool));
 
   *table_p = table;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+base_node_has_props(svn_boolean_t *has_props,
+                    svn_fs_root_t *root,
+                    const char *path,
+                    apr_pool_t *scratch_pool)
+{
+  apr_hash_t *props;
+
+  SVN_ERR(base_node_proplist(&props, root, path, scratch_pool));
+
+  *has_props = (0 < apr_hash_count(props));
+
   return SVN_NO_ERROR;
 }
 
@@ -1608,13 +1623,15 @@ static svn_error_t *
 base_dir_optimal_order(apr_array_header_t **ordered_p,
                        svn_fs_root_t *root,
                        apr_hash_t *entries,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   /* 1:1 copy of entries with no differnce in ordering */
   apr_hash_index_t *hi;
-  apr_array_header_t *result = apr_array_make(pool, apr_hash_count(entries),
-                                              sizeof(svn_fs_dirent_t *));
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  apr_array_header_t *result
+    = apr_array_make(result_pool, apr_hash_count(entries),
+                     sizeof(svn_fs_dirent_t *));
+  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
     APR_ARRAY_PUSH(result, svn_fs_dirent_t *) = apr_hash_this_val(hi);
 
   *ordered_p = result;
@@ -3164,7 +3181,8 @@ txn_body_copy(void *baton,
   if ((to_parent_path->node)
       && (svn_fs_base__id_compare(svn_fs_base__dag_get_id(from_node),
                                   svn_fs_base__dag_get_id
-                                  (to_parent_path->node)) == svn_fs_node_same))
+                                  (to_parent_path->node))
+          == svn_fs_node_unchanged))
     return SVN_NO_ERROR;
 
   if (! from_root->is_txn_root)
@@ -5489,6 +5507,7 @@ static root_vtable_t root_vtable = {
   base_closest_copy,
   base_node_prop,
   base_node_proplist,
+  base_node_has_props,
   base_change_node_prop,
   base_props_changed,
   base_dir_entries,

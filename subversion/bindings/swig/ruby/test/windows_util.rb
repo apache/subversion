@@ -51,7 +51,7 @@ module SvnTestUtil
 
           IO.popen("#{svnserve_path} -d -r #{Svnserve.escape_value(root)} --listen-host #{@svnserve_host} --listen-port #{@svnserve_port} --pid-file #{@svnserve_pid_file}")
           user = ENV["USERNAME"] || Etc.getlogin
-          
+
           # Give svnserve a bit of time to start
           sleep 1
         end

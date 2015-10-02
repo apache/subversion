@@ -51,6 +51,27 @@
 #ifndef UTF8PROC_H
 #define UTF8PROC_H
 
+/** @name API version
+ *  
+ * The utf8proc API version MAJOR.MINOR.PATCH, following
+ * semantic-versioning rules (http://semver.org) based on API
+ * compatibility.
+ *
+ * This is also returned at runtime by @ref utf8proc_version; however, the
+ * runtime version may append a string like "-dev" to the version number
+ * for prerelease versions.
+ *
+ * @note The shared-library version number in the Makefile may be different,
+ *       being based on ABI compatibility rather than API compatibility.
+ */
+/** @{ */
+/** The MAJOR version number (increased when backwards API compatibility is broken). */
+#define UTF8PROC_VERSION_MAJOR 1
+/** The MINOR version number (increased when new functionality is added in a backwards-compatible manner). */
+#define UTF8PROC_VERSION_MINOR 1
+/** The PATCH version (increased for fixes that do not change the API). */
+#define UTF8PROC_VERSION_PATCH 5
+/** @} */
 
 /*
  * Define UTF8PROC_INLINE and include utf8proc.c to embed a static
@@ -70,26 +91,34 @@
 
 #include <stdlib.h>
 #include <sys/types.h>
-#ifdef _MSC_VER
-typedef signed char int8_t;
-typedef unsigned char uint8_t;
-typedef short int16_t;
-typedef unsigned short uint16_t;
-typedef int int32_t;
-#ifdef _WIN64
-#define ssize_t __int64
-#else
-#define ssize_t int
-#endif
-typedef unsigned char bool;
-enum {false, true};
-#elif defined(HAVE_STDBOOL_H) && defined(HAVE_INTTYPES_H)
-#include <stdbool.h>
-#include <inttypes.h>
+
+#ifdef HAVE_STDINT_H
+#include <stdint.h>
 #else
 #include <apr.h>
+#ifdef _MSC_VER
+typedef apr_int8_t int8_t;
+typedef apr_uint8_t uint8_t;
+typedef apr_int16_t int16_t;
+typedef apr_uint16_t uint16_t;
+typedef apr_int32_t int32_t;
+typedef apr_uint32_t uint32_t;
+#endif
+#endif
+
+#ifdef HAVE_STDBOOL_H
+#include <stdbool.h>
+#elif !defined(__cplusplus)
 typedef uint8_t bool;
-enum {false, true};
+enum { false, true };
+#endif
+
+#ifdef _MSC_VER
+# ifdef _WIN64
+#   define ssize_t __int64
+# else
+#   define ssize_t int
+# endif
 #endif
 #include <limits.h>
 

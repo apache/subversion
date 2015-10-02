@@ -80,12 +80,6 @@ dag_node_t *
 svn_fs_fs__dag_dup(const dag_node_t *node,
                    apr_pool_t *pool);
 
-/* If NODE has been allocated in POOL, return NODE.  Otherwise, return
-   a copy created in POOL with svn_fs_fs__dag_dup. */
-dag_node_t *
-svn_fs_fs__dag_copy_into_pool(dag_node_t *node,
-                              apr_pool_t *pool);
-
 /* Serialize a DAG node, except don't try to preserve the 'fs' member.
    Implements svn_cache__serialize_func_t */
 svn_error_t *
@@ -182,6 +176,12 @@ svn_node_kind_t svn_fs_fs__dag_node_kind(dag_node_t *node);
 svn_error_t *svn_fs_fs__dag_get_proplist(apr_hash_t **proplist_p,
                                          dag_node_t *node,
                                          apr_pool_t *pool);
+
+/* Set *HAS_PROPS to TRUE if NODE has properties. Use SCRATCH_POOL
+   for temporary allocations */
+svn_error_t *svn_fs_fs__dag_has_props(svn_boolean_t *has_props,
+                                      dag_node_t *node,
+                                      apr_pool_t *scratch_pool);
 
 /* Set the property list of NODE to PROPLIST, allocating from POOL.
    The node being changed must be mutable.

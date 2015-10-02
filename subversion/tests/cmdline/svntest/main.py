@@ -54,7 +54,7 @@ import svntest
 from svntest import Failure
 from svntest import Skip
 
-SVN_VER_MINOR = 9
+SVN_VER_MINOR = 10
 
 ######################################################################
 #
@@ -112,7 +112,7 @@ class SVNRepositoryCreateFailure(Failure):
 # Windows specifics
 if sys.platform == 'win32':
   windows = True
-  file_scheme_prefix = 'file:'
+  file_scheme_prefix = 'file:///'
   _exe = '.exe'
   _bat = '.bat'
   os.environ['SVN_DBG_STACKTRACES_TO_STDERR'] = 'y'
@@ -132,6 +132,10 @@ else:
 wc_author = 'jrandom'
 wc_passwd = 'rayjandom'
 
+# Username and password used by svnrdump in dump/load cross-checks
+crosscheck_username = '__dumpster__'
+crosscheck_password = '__loadster__'
+
 # Username and password used by the working copies for "second user"
 # scenarios
 wc_author2 = 'jconstant' # use the same password as wc_author
@@ -147,7 +151,10 @@ os.environ['LC_ALL'] = 'C'
 def P(relpath,
       head=os.path.dirname(os.path.dirname(os.path.abspath('.')))
       ):
-  return os.path.join(head, relpath)
+  if sys.platform=='win32':
+    return os.path.join(head, relpath + '.exe')
+  else:
+    return os.path.join(head, relpath)
 svn_binary = P('svn/svn')
 svnadmin_binary = P('svnadmin/svnadmin')
 svnlook_binary = P('svnlook/svnlook')
@@ -544,6 +551,15 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
        and not any(map(lambda arg: 'prop_tests-12' in arg, varargs)):
       raise Failure("Repository diskpath in %s: %r" % (name, lines))
 
+  valgrind_diagnostic = False
+  # A valgrind diagnostic will raise a failure if the command is
+  # expected to run without error.  When an error is expected any
+  # subsequent error pattern matching is usually lenient and will not
+  # detect the diagnostic so make sure a failure is raised here.
+  if error_expected and stderr_lines:
+    if any(map(lambda arg: re.match('==[0-9]+==', arg), stderr_lines)):
+      valgrind_diagnostic = True
+
   stop = time.time()
   logger.info('<TIME = %.6f>' % (stop - start))
   for x in stdout_lines:
@@ -551,7 +567,8 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
   for x in stderr_lines:
     logger.info(x.rstrip())
 
-  if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
+  if (((not error_expected) and ((stderr_lines) or (exit_code != 0)))
+      or valgrind_diagnostic):
     for x in stderr_lines:
       logger.warning(x.rstrip())
     if len(varargs) <= 5:
@@ -683,14 +700,25 @@ def _with_config_dir(args):
   else:
     return args + ('--config-dir', default_config_dir)
 
+class svnrdump_crosscheck_authentication:
+  pass
+
 def _with_auth(args):
   assert '--password' not in args
-  args = args + ('--password', wc_passwd,
+  if svnrdump_crosscheck_authentication in args:
+    args = filter(lambda x: x is not svnrdump_crosscheck_authentication, args)
+    auth_username = crosscheck_username
+    auth_password = crosscheck_password
+  else:
+    auth_username = wc_author
+    auth_password = wc_passwd
+
+  args = args + ('--password', auth_password,
                  '--no-auth-cache' )
   if '--username' in args:
     return args
   else:
-    return args + ('--username', wc_author )
+    return args + ('--username', auth_username )
 
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
@@ -738,7 +766,8 @@ def run_svnrdump(stdin_input, *varargs):
 def run_svnsync(*varargs):
   """Run svnsync with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnsync_binary, 1, False, *(_with_config_dir(varargs)))
+  return run_command(svnsync_binary, 1, False,
+                     *(_with_auth(_with_config_dir(varargs))))
 
 def run_svnversion(*varargs):
   """Run svnversion with VARARGS, returns exit code as int; stdout, stderr
@@ -852,6 +881,8 @@ def youngest(repos_path):
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
+  """For each node in the OS filesystem tree PATH, subtract MASK from its
+  permissions and add MODE to them."""
   for dirpath, dirs, files in os.walk(path):
     for name in dirs + files:
       fullname = os.path.join(dirpath, name)
@@ -924,8 +955,13 @@ def _post_create_repos(path, minor_version = None):
     # This actually creates TWO [users] sections in the file (one of them is
     # uncommented in `svnadmin create`'s template), so we exercise the .ini
     # files reading code's handling of duplicates, too. :-)
-    file_append(os.path.join(path, "conf", "passwd"),
-                "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
+    users = ("[users]\n"
+             "jrandom = rayjandom\n"
+             "jconstant = rayjandom\n")
+    if tests_verify_dump_load_cross_check():
+      # Insert a user for the dump/load cross-check.
+      users += (crosscheck_username + " = " + crosscheck_password + "\n")
+    file_append(os.path.join(path, "conf", "passwd"), users)
 
   if options.fs_type is None or options.fs_type == 'fsfs':
     # fsfs.conf file
@@ -1191,7 +1227,7 @@ def write_restrictive_svnserve_conf_with_groups(repo_dir,
 # parallel execution at the bottom like so
 #   if __name__ == '__main__':
 #     svntest.main.run_tests(test_list, serial_only = True)
-def write_authz_file(sbox, rules, sections=None):
+def write_authz_file(sbox, rules, sections=None, prefixed_rules=None):
   """Write an authz file to SBOX, appropriate for the RA method used,
 with authorizations rules RULES mapping paths to strings containing
 the rules. You can add sections SECTIONS (ex. groups, aliases...) with
@@ -1199,23 +1235,37 @@ an appropriate list of mappings.
 """
   fp = open(sbox.authz_file, 'w')
 
-  # When the sandbox repository is read only it's name will be different from
+  # When the sandbox repository is read only its name will be different from
   # the repository name.
-  repo_name = sbox.repo_dir
-  while repo_name[-1] == '/':
-    repo_name = repo_name[:-1]
-  repo_name = os.path.basename(repo_name)
+  repo_name = os.path.basename(sbox.repo_dir.rstrip('/'))
 
   if sbox.repo_url.startswith("http"):
-    prefix = repo_name + ":"
+    default_prefix = repo_name + ":"
   else:
-    prefix = ""
+    default_prefix = ""
+
   if sections:
     for p, r in sections.items():
       fp.write("[%s]\n%s\n" % (p, r))
 
-  for p, r in rules.items():
-    fp.write("[%s%s]\n%s\n" % (prefix, p, r))
+  if not prefixed_rules:
+    prefixed_rules = dict()
+
+  if rules:
+    for p, r in rules.items():
+      prefixed_rules[default_prefix + p] = r
+
+  for p, r in prefixed_rules.items():
+    fp.write("[%s]\n%s\n" % (p, r))
+    if tests_verify_dump_load_cross_check():
+      # Insert an ACE that lets the dump/load cross-check bypass
+      # authz restrictions.
+      fp.write(crosscheck_username + " = rw\n")
+
+  if tests_verify_dump_load_cross_check() and '/' not in prefixed_rules:
+    # We need a repository-root ACE for the dump/load cross-check
+    fp.write("[/]\n" + crosscheck_username + " = rw\n")
+
   fp.close()
 
 # See the warning about parallel test execution in write_authz_file
@@ -1366,8 +1416,11 @@ def make_log_msg():
 # Functions which check the test configuration
 # (useful for conditional XFails)
 
-def tests_use_prepacakaged_repository():
+def tests_use_prepackaged_repository():
   return options.fsfs_version is not None
+
+def tests_verify_dump_load_cross_check():
+  return options.dump_load_cross_check
 
 def is_ra_type_dav():
   return options.test_area_url.startswith('http')
@@ -1476,13 +1529,26 @@ def is_plaintext_password_storage_disabled():
 
 
 # https://issues.apache.org/bugzilla/show_bug.cgi?id=56480
+# https://issues.apache.org/bugzilla/show_bug.cgi?id=55397
 __mod_dav_url_quoting_broken_versions = frozenset([
+    '2.2.27',
     '2.2.26',
+    '2.2.25',
     '2.4.9',
+    '2.4.8',
+    '2.4.7',
+    '2.4.6',
+    '2.4.5',
 ])
 def is_mod_dav_url_quoting_broken():
     if is_ra_type_dav():
         return (options.httpd_version in __mod_dav_url_quoting_broken_versions)
+    return None
+
+def is_httpd_authz_provider_enabled():
+    if is_ra_type_dav():
+      v = options.httpd_version.split('.')
+      return (v[0] == '2' and int(v[1]) >= 3) or int(v[0]) > 2
     return None
 
 ######################################################################
@@ -1519,13 +1585,12 @@ class TestSpawningThread(threading.Thread):
     args = []
     args.append(str(index))
     args.append('-c')
+    args.append('--set-log-level=%s' % logger.getEffectiveLevel())
     # add some startup arguments from this process
     if options.fs_type:
       args.append('--fs-type=' + options.fs_type)
     if options.test_area_url:
       args.append('--url=' + options.test_area_url)
-    if logger.getEffectiveLevel() <= logging.DEBUG:
-      args.append('-v')
     if options.cleanup:
       args.append('--cleanup')
     if options.enable_sasl:
@@ -1558,6 +1623,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--fsfs-packing')
     if options.fsfs_version:
       args.append('--fsfs-version=' + str(options.fsfs_version))
+    if options.dump_load_cross_check:
+      args.append('--dump-load-cross-check')
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -1817,14 +1884,48 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
   return exit_code
 
 
-def create_default_options():
-  """Set the global options to the defaults, as provided by the argument
-     parser."""
-  _parse_options([])
+class AbbreviatedFormatter(logging.Formatter):
+  """A formatter with abbreviated loglevel indicators in the output.
 
+  Use %(levelshort)s in the format string to get a single character
+  representing the loglevel..
+  """
 
-def _create_parser():
+  _level_short = {
+    logging.CRITICAL : 'C',
+    logging.ERROR : 'E',
+    logging.WARNING : 'W',
+    logging.INFO : 'I',
+    logging.DEBUG : 'D',
+    logging.NOTSET : '-',
+    }
+
+  def format(self, record):
+    record.levelshort = self._level_short[record.levelno]
+    return logging.Formatter.format(self, record)
+
+def _create_parser(usage=None):
   """Return a parser for our test suite."""
+
+  global logger
+
+  # Initialize the LOGGER global variable so the option parsing can set
+  # its loglevel, as appropriate.
+  logger = logging.getLogger()
+
+  # Did some chucklehead log something before we configured it? If they
+  # did, then a default handler/formatter would get installed. We want
+  # to be the one to install the first (and only) handler.
+  for handler in logger.handlers:
+    if not isinstance(handler.formatter, AbbreviatedFormatter):
+      raise Exception('Logging occurred before configuration. Some code'
+                      ' path needs to be fixed. Examine the log output'
+                      ' to find what/where logged something.')
+
+  # Set a sane default log level
+  if logger.getEffectiveLevel() == logging.NOTSET:
+    logger.setLevel(logging.WARN)
+
   def set_log_level(option, opt, value, parser, level=None):
     if level:
       # called from --verbose
@@ -1833,9 +1934,18 @@ def _create_parser():
       # called from --set-log-level
       logger.setLevel(getattr(logging, value, None) or int(value))
 
-  # set up the parser
+  # Set up the parser.
+  # If you add new options, consider adding them in
+  #
+  #     .../build/run_tests.py:main()
+  #
+  # and handling them in
+  #
+  #     .../build/run_tests.py:TestHarness._init_py_tests()
+  #
   _default_http_library = 'serf'
-  usage = 'usage: %prog [options] [<test> ...]'
+  if usage is None:
+    usage = 'usage: %prog [options] [<test> ...]'
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-l', '--list', action='store_true', dest='list_tests',
                     help='Print test doc strings instead of running them')
@@ -1850,6 +1960,9 @@ def _create_parser():
   parser.add_option('-p', '--parallel', action='store_const',
                     const=default_num_threads, dest='parallel',
                     help='Run the tests in parallel')
+  parser.add_option('--parallel-instances', action='store',
+                    type='int', dest='parallel',
+                    help='Run the given number of tests in parallel')
   parser.add_option('-c', action='store_true', dest='is_child_process',
                     help='Flag if we are running this python test as a ' +
                          'child process')
@@ -1882,6 +1995,11 @@ def _create_parser():
                     help='Default shard size (for fsfs)')
   parser.add_option('--fsfs-version', type='int', action='store',
                     help='FSFS version (fsfs)')
+  parser.add_option('--dump-load-cross-check', action='store_true',
+                    help="After every test, run a series of dump and load " +
+                         "tests with svnadmin, svnrdump and svndumpfilter " +
+                         " on the testcase repositories to cross-check " +
+                         " dump file compatibility.")
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
   parser.add_option('--set-log-level', action='callback', type='str',
@@ -1922,36 +2040,53 @@ def _create_parser():
   parser.set_defaults(
         server_minor_version=SVN_VER_MINOR,
         url=file_scheme_prefix + \
-                        urllib.pathname2url(os.path.abspath(os.getcwd())),
+                        svntest.wc.svn_uri_quote(
+                           os.path.abspath(
+                               os.getcwd()).replace(os.path.sep, '/')),
         http_library=_default_http_library)
 
   return parser
 
 
-def _parse_options(arglist=sys.argv[1:]):
+def parse_options(arglist=sys.argv[1:], usage=None):
   """Parse the arguments in arg_list, and set the global options object with
      the results"""
 
   global options
 
-  parser = _create_parser()
+  parser = _create_parser(usage)
   (options, args) = parser.parse_args(arglist)
 
-  # some sanity checking
-  if options.fsfs_packing and not options.fsfs_sharding:
-    parser.error("--fsfs-packing requires --fsfs-sharding")
+  # If there are no logging handlers registered yet, then install our
+  # own with our custom formatter. (anything currently installed *is*
+  # our handler as tested above, in _create_parser)
+  if not logger.handlers:
+    # Now that we have some options, let's get the logger configured before
+    # doing anything more
+    if options.log_with_timestamps:
+      formatter = AbbreviatedFormatter('%(levelshort)s:'
+                                       ' [%(asctime)s] %(message)s',
+                                       datefmt='%Y-%m-%d %H:%M:%S')
+    else:
+      formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
-  # If you change the below condition then change
-  # ../../../../build/run_tests.py too.
-  if options.server_minor_version not in range(3, SVN_VER_MINOR+1):
-    parser.error("test harness only supports server minor versions 3-%d"
-                 % SVN_VER_MINOR)
-
+  # Normalize url to have no trailing slash
   if options.url:
-    if options.url[-1:] == '/': # Normalize url to have no trailing slash
+    if options.url[-1:] == '/':
       options.test_area_url = options.url[:-1]
     else:
       options.test_area_url = options.url
+
+  # Some sanity checking
+  if options.fsfs_packing and not options.fsfs_sharding:
+    parser.error("--fsfs-packing requires --fsfs-sharding")
+
+  if options.server_minor_version not in range(3, SVN_VER_MINOR+1):
+    parser.error("test harness only supports server minor versions 3-%d"
+                 % SVN_VER_MINOR)
 
   # Make sure the server-minor-version matches the fsfs-version parameter.
   if options.fsfs_version:
@@ -2035,27 +2170,6 @@ def get_issue_details(issue_numbers):
   return issue_dict
 
 
-class AbbreviatedFormatter(logging.Formatter):
-  """A formatter with abbreviated loglevel indicators in the output.
-
-  Use %(levelshort)s in the format string to get a single character
-  representing the loglevel..
-  """
-
-  _level_short = {
-    logging.CRITICAL : 'C',
-    logging.ERROR : 'E',
-    logging.WARNING : 'W',
-    logging.INFO : 'I',
-    logging.DEBUG : 'D',
-    logging.NOTSET : '-',
-    }
-
-  def format(self, record):
-    record.levelshort = self._level_short[record.levelno]
-    return logging.Formatter.format(self, record)
-
-
 # Main func.  This is the "entry point" that all the test scripts call
 # to run their list of tests.
 #
@@ -2066,7 +2180,6 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   exiting the process.  This function can be used when a caller doesn't
   want the process to die."""
 
-  global logger
   global pristine_url
   global pristine_greek_repos_url
   global svn_binary
@@ -2086,41 +2199,12 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   testnums = []
 
-  # Initialize the LOGGER global variable so the option parsing can set
-  # its loglevel, as appropriate.
-  logger = logging.getLogger()
-
-  # Did some chucklehead log something before we configured it? If they
-  # did, then a default handler/formatter would get installed. We want
-  # to be the one to install the first (and only) handler.
-  for handler in logger.handlers:
-    if not isinstance(handler.formatter, AbbreviatedFormatter):
-      raise Exception('Logging occurred before configuration. Some code'
-                      ' path needs to be fixed. Examine the log output'
-                      ' to find what/where logged something.')
-
   if not options:
     # Override which tests to run from the commandline
-    (parser, args) = _parse_options()
+    (parser, args) = parse_options()
     test_selection = args
   else:
     parser = _create_parser()
-
-  # If there are no handlers registered yet, then install our own with
-  # our custom formatter. (anything currently installed *is* our handler
-  # as tested above)
-  if not logger.handlers:
-    # Now that we have some options, let's get the logger configured before
-    # doing anything more
-    if options.log_with_timestamps:
-      formatter = AbbreviatedFormatter('%(levelshort)s:'
-                                       ' [%(asctime)s] %(message)s',
-                                       datefmt='%Y-%m-%d %H:%M:%S')
-    else:
-      formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
 
   # parse the positional arguments (test nums, names)
   for arg in test_selection:
@@ -2171,7 +2255,9 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   # Calculate pristine_greek_repos_url from test_area_url.
   pristine_greek_repos_url = options.test_area_url + '/' + \
-                                urllib.pathname2url(pristine_greek_repos_dir)
+                                svntest.wc.svn_uri_quote(
+                                  pristine_greek_repos_dir.replace(
+                                      os.path.sep, '/'))
 
   if options.use_jsvn:
     if options.svn_bin is None:
@@ -2249,25 +2335,29 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     # We are simply listing the tests so always exit with success.
     return 0
 
-  # don't run tests in parallel when the tests don't support it or there
-  # are only a few tests to run.
+  # don't run tests in parallel when the tests don't support it or
+  # there are only a few tests to run.
+  options_parallel = options.parallel
   if serial_only or len(testnums) < 2:
     options.parallel = 0
 
-  if not options.is_child_process:
-    # Build out the default configuration directory
-    create_config_dir(default_config_dir,
-                      ssl_cert=options.ssl_cert,
-                      ssl_url=options.test_area_url,
-                      http_proxy=options.http_proxy,
-                      exclusive_wc_locks=options.exclusive_wc_locks)
+  try:
+    if not options.is_child_process:
+      # Build out the default configuration directory
+      create_config_dir(default_config_dir,
+                        ssl_cert=options.ssl_cert,
+                        ssl_url=options.test_area_url,
+                        http_proxy=options.http_proxy,
+                        exclusive_wc_locks=options.exclusive_wc_locks)
 
-    # Setup the pristine repository
-    svntest.actions.setup_pristine_greek_repository()
+      # Setup the pristine repository
+      svntest.actions.setup_pristine_greek_repository()
 
-  # Run the tests.
-  exit_code = _internal_run_tests(test_list, testnums, options.parallel,
-                                  options.srcdir, progress_func)
+    # Run the tests.
+    exit_code = _internal_run_tests(test_list, testnums, options.parallel,
+                                    options.srcdir, progress_func)
+  finally:
+    options.parallel = options_parallel
 
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.

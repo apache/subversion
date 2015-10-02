@@ -904,7 +904,7 @@ malformed_element_error(const char *tagname, apr_pool_t *pool)
                                    "' element is malformed; there "
                                    "is a problem with the client.",
                                    SVN_VA_NULL);
-  return dav_svn__new_error_svn(pool, HTTP_BAD_REQUEST, 0, errstr);
+  return dav_svn__new_error_svn(pool, HTTP_BAD_REQUEST, 0, 0, errstr);
 }
 
 
@@ -988,14 +988,14 @@ dav_svn__update_report(const dav_resource *resource,
 
   if ((resource->info->restype != DAV_SVN_RESTYPE_VCC)
       && (resource->info->restype != DAV_SVN_RESTYPE_ME))
-    return dav_svn__new_error_svn(resource->pool, HTTP_CONFLICT, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_CONFLICT, 0, 0,
                                   "This report can only be run against "
                                   "a VCC or root-stub URI");
 
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have an "
                                     "svn:target-revision element. That element "
@@ -1191,7 +1191,7 @@ dav_svn__update_report(const dav_resource *resource,
   if (! src_path)
     {
       return dav_svn__new_error_svn
-        (resource->pool, HTTP_BAD_REQUEST, 0,
+        (resource->pool, HTTP_BAD_REQUEST, 0, 0,
          "The request did not contain the '<src-path>' element.\n"
          "This may indicate that your client is too old");
     }

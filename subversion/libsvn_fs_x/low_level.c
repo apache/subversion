@@ -1,4 +1,4 @@
-/* low_level.c --- low level r/w access to fs_x file structures
+/* low_level.c --- low level r/w access to FSX file structures
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -48,7 +48,6 @@
 #define HEADER_PRED        "pred"
 #define HEADER_COPYFROM    "copyfrom"
 #define HEADER_COPYROOT    "copyroot"
-#define HEADER_FRESHTXNRT  "is-fresh-txn-root"
 #define HEADER_MINFO_HERE  "minfo-here"
 #define HEADER_MINFO_CNT   "minfo-cnt"
 
@@ -57,7 +56,6 @@
 #define ACTION_ADD         "add"
 #define ACTION_DELETE      "delete"
 #define ACTION_REPLACE     "replace"
-#define ACTION_RESET       "reset"
 
 /* True and False flags. */
 #define FLAG_TRUE          "true"
@@ -354,9 +352,11 @@ read_rep_offsets(svn_fs_x__representation_t **rep_p,
   return SVN_NO_ERROR;
 }
 
+/* If PATH needs to be escaped, return an escaped version of it, allocated
+ * from RESULT_POOL. Otherwise, return PATH directly. */
 static const char *
 auto_escape_path(const char *path,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool)
 {
   apr_size_t len = strlen(path);
   apr_size_t i;
@@ -365,7 +365,8 @@ auto_escape_path(const char *path,
   for (i = 0; i < len; ++i)
     if (path[i] < ' ')
       {
-        svn_stringbuf_t *escaped = svn_stringbuf_create_ensure(2 * len, pool);
+        svn_stringbuf_t *escaped = svn_stringbuf_create_ensure(2 * len,
+                                                               result_pool);
         for (i = 0; i < len; ++i)
           if (path[i] < ' ')
             {
@@ -379,13 +380,15 @@ auto_escape_path(const char *path,
 
         return escaped->data;
       }
-      
+
    return path;
 }
 
+/* If PATH has been escaped, return the un-escaped version of it, allocated
+ * from RESULT_POOL. Otherwise, return PATH directly. */
 static const char *
 auto_unescape_path(const char *path,
-                   apr_pool_t *pool)
+                   apr_pool_t *result_pool)
 {
   const char esc = '\x1b';
   if (strchr(path, esc))
@@ -393,7 +396,8 @@ auto_unescape_path(const char *path,
       apr_size_t len = strlen(path);
       apr_size_t i;
 
-      svn_stringbuf_t *unescaped = svn_stringbuf_create_ensure(len, pool);
+      svn_stringbuf_t *unescaped = svn_stringbuf_create_ensure(len,
+                                                               result_pool);
       for (i = 0; i < len; ++i)
         if (path[i] == esc)
           svn_stringbuf_appendbyte(unescaped, path[++i] + 1 - 'A');
@@ -554,10 +558,6 @@ svn_fs_x__read_noderev(svn_fs_x__noderev_t **noderev_p,
                                                   result_pool);
     }
 
-  /* Get whether this is a fresh txn root. */
-  value = svn_hash_gets(headers, HEADER_FRESHTXNRT);
-  noderev->is_fresh_txn_root = (value != NULL);
-
   /* Get the mergeinfo count. */
   value = svn_hash_gets(headers, HEADER_MINFO_CNT);
   if (value)
@@ -587,7 +587,7 @@ format_digest(const unsigned char *digest,
   svn_checksum_t checksum;
   checksum.digest = digest;
   checksum.kind = kind;
-  
+
   if (is_null)
     return "(null)";
 
@@ -685,9 +685,6 @@ svn_fs_x__write_noderev(svn_stream_t *outfile,
                               auto_escape_path(noderev->copyroot_path,
                                                scratch_pool)));
 
-  if (noderev->is_fresh_txn_root)
-    SVN_ERR(svn_stream_puts(outfile, HEADER_FRESHTXNRT ": y\n"));
-
   if (noderev->mergeinfo_count > 0)
     SVN_ERR(svn_stream_printf(outfile, scratch_pool, HEADER_MINFO_CNT ": %"
                               APR_INT64_T_FMT "\n",
@@ -756,7 +753,7 @@ svn_fs_x__write_rep_header(svn_fs_x__rep_header_t *header,
                            apr_pool_t *scratch_pool)
 {
   const char *text;
-  
+
   switch (header->type)
     {
       case svn_fs_x__rep_self_delta:
@@ -846,10 +843,6 @@ read_change(svn_fs_x__change_t **change_p,
   else if (strcmp(str, ACTION_REPLACE) == 0)
     {
       change->change_kind = svn_fs_path_change_replace;
-    }
-  else if (strcmp(str, ACTION_RESET) == 0)
-    {
-      change->change_kind = svn_fs_path_change_reset;
     }
   else
     {
@@ -1006,7 +999,7 @@ svn_fs_x__read_changes_incrementally(svn_stream_t *stream,
     }
   while (change);
   svn_pool_destroy(iterpool);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -1037,9 +1030,6 @@ write_change_entry(svn_stream_t *stream,
       break;
     case svn_fs_path_change_replace:
       change_string = ACTION_REPLACE;
-      break;
-    case svn_fs_path_change_reset:
-      change_string = ACTION_RESET;
       break;
     default:
       return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,

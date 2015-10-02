@@ -303,7 +303,7 @@ limit_receiver(void *baton, svn_log_entry_t *log_entry, apr_pool_t *pool)
 
    The limitations on TARGETS specified by svn_client_log5 are enforced here.
    So TARGETS can only contain a single WC path or a URL and zero or more
-   relative paths -- anything else will raise an error. 
+   relative paths -- anything else will raise an error.
 
    PEG_REVISION, TARGETS, and CTX are as per svn_client_log5.
 
@@ -642,7 +642,7 @@ run_ra_get_log(apr_array_header_t *revision_ranges,
                apr_array_header_t *log_segments,
                svn_client__pathrev_t *actual_loc,
                svn_ra_session_t *ra_session,
-               /* The following are as per svn_client_log5. */ 
+               /* The following are as per svn_client_log5. */
                const apr_array_header_t *targets,
                int limit,
                svn_boolean_t discover_changed_paths,
@@ -761,7 +761,7 @@ run_ra_get_log(apr_array_header_t *revision_ranges,
          So to be safe we handle that case. */
       if (matching_segment == NULL)
         continue;
-      
+
       /* A segment with a NULL path means there is gap in the history.
          We'll just proceed and let svn_ra_get_log2 fail with a useful
          error...*/
@@ -852,10 +852,12 @@ svn_client_log5(const apr_array_header_t *targets,
   svn_ra_session_t *ra_session;
   const char *old_session_url;
   const char *ra_target;
+  const char *path_or_url;
   svn_opt_revision_t youngest_opt_rev;
   svn_revnum_t youngest_rev;
   svn_revnum_t oldest_rev;
   svn_opt_revision_t peg_rev;
+  svn_client__pathrev_t *ra_session_loc;
   svn_client__pathrev_t *actual_loc;
   apr_array_header_t *log_segments;
   apr_array_header_t *revision_ranges;
@@ -875,7 +877,7 @@ svn_client_log5(const apr_array_header_t *targets,
   SVN_ERR(resolve_log_targets(&relative_targets, &ra_target, &peg_rev,
                               targets, ctx, pool, pool));
 
-  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, NULL,
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &ra_session_loc,
                                             ra_target, NULL, &peg_rev, &peg_rev,
                                             ctx, pool));
 
@@ -889,11 +891,22 @@ svn_client_log5(const apr_array_header_t *targets,
                                                    opt_rev_ranges, &peg_rev,
                                                    ctx, pool,  pool));
 
+  /* For some peg revisions we must resolve revision and url via a local path
+     so use the original RA_TARGET. For others, use the potentially corrected
+     (redirected) ra session URL. */
+  if (peg_rev.kind == svn_opt_revision_previous ||
+      peg_rev.kind == svn_opt_revision_base ||
+      peg_rev.kind == svn_opt_revision_committed ||
+      peg_rev.kind == svn_opt_revision_working)
+    path_or_url = ra_target;
+  else
+    path_or_url = ra_session_loc->url;
+
   /* Make ACTUAL_LOC and RA_SESSION point to the youngest operative rev. */
   youngest_opt_rev.kind = svn_opt_revision_number;
   youngest_opt_rev.value.number = youngest_rev;
   SVN_ERR(svn_client__resolve_rev_and_url(&actual_loc, ra_session,
-                                          ra_target, &peg_rev,
+                                          path_or_url, &peg_rev,
                                           &youngest_opt_rev, ctx, pool));
   SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
                                             actual_loc->url, pool));

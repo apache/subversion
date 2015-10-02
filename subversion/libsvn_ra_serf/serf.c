@@ -64,7 +64,7 @@ ra_serf_version(void)
 
 #define RA_SERF_DESCRIPTION_VER \
     N_("Module for accessing a repository via WebDAV protocol using serf.\n" \
-       "  - using serf %d.%d.%d")
+       "  - using serf %d.%d.%d (compiled with %d.%d.%d)")
 
 /* Implements svn_ra__vtable_t.get_description(). */
 static const char *
@@ -73,7 +73,12 @@ ra_serf_get_description(apr_pool_t *pool)
   int major, minor, patch;
 
   serf_lib_version(&major, &minor, &patch);
-  return apr_psprintf(pool, _(RA_SERF_DESCRIPTION_VER), major, minor, patch);
+  return apr_psprintf(pool, _(RA_SERF_DESCRIPTION_VER),
+                      major, minor, patch,
+                      SERF_MAJOR_VERSION,
+                      SERF_MINOR_VERSION,
+                      SERF_PATCH_VERSION
+                      );
 }
 
 /* Implements svn_ra__vtable_t.get_schemes(). */
@@ -148,7 +153,8 @@ load_http_auth_types(apr_pool_t *pool, svn_config_t *config,
 static svn_error_t *
 load_config(svn_ra_serf__session_t *session,
             apr_hash_t *config_hash,
-            apr_pool_t *pool)
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
 {
   svn_config_t *config, *config_client;
   const char *server_group;
@@ -180,17 +186,17 @@ load_config(svn_ra_serf__session_t *session,
   svn_config_get(config, &timeout_str, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
 
-  if (session->wc_callbacks->auth_baton)
+  if (session->auth_baton)
     {
       if (config_client)
         {
-          svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+          svn_auth_set_parameter(session->auth_baton,
                                  SVN_AUTH_PARAM_CONFIG_CATEGORY_CONFIG,
                                  config_client);
         }
       if (config)
         {
-          svn_auth_set_parameter(session->wc_callbacks->auth_baton,
+          svn_auth_set_parameter(session->auth_baton,
                                  SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS,
                                  config);
         }
@@ -202,7 +208,7 @@ load_config(svn_ra_serf__session_t *session,
                  SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS, "");
   if (! svn_cstring_match_glob_list(session->session_url.hostname,
                                     svn_cstring_split(exceptions, ",",
-                                                      TRUE, pool)))
+                                                      TRUE, scratch_pool)))
     {
       svn_config_get(config, &proxy_host, SVN_CONFIG_SECTION_GLOBAL,
                      SVN_CONFIG_OPTION_HTTP_PROXY_HOST, NULL);
@@ -238,7 +244,7 @@ load_config(svn_ra_serf__session_t *session,
                                SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                SVN_CONFIG_DEFAULT_OPTION_HTTP_MAX_CONNECTIONS));
 
-  /* Should we use chunked transfer encoding. */ 
+  /* Should we use chunked transfer encoding. */
   SVN_ERR(svn_config_get_tristate(config, &chunked_requests,
                                   SVN_CONFIG_SECTION_GLOBAL,
                                   SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
@@ -255,7 +261,7 @@ load_config(svn_ra_serf__session_t *session,
                                SERF_LOG_INFO));
 #endif
 
-  server_group = svn_auth_get_parameter(session->wc_callbacks->auth_baton,
+  server_group = svn_auth_get_parameter(session->auth_baton,
                                         SVN_AUTH_PARAM_SERVER_GROUP);
 
   if (server_group)
@@ -305,7 +311,7 @@ load_config(svn_ra_serf__session_t *session,
                                    SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS,
                                    session->max_connections));
 
-      /* Should we use chunked transfer encoding. */ 
+      /* Should we use chunked transfer encoding. */
       SVN_ERR(svn_config_get_tristate(config, &chunked_requests,
                                       server_group,
                                       SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
@@ -335,7 +341,7 @@ load_config(svn_ra_serf__session_t *session,
                                                  (apr_uint32_t)log_components,
                                                  SERF_LOG_DEFAULT_LAYOUT,
                                                  stderr,
-                                                 pool);
+                                                 result_pool);
 
       if (!status)
           serf_logging_add_output(session->context, output);
@@ -354,19 +360,16 @@ load_config(svn_ra_serf__session_t *session,
   session->timeout = apr_time_from_sec(DEFAULT_HTTP_TIMEOUT);
   if (timeout_str)
     {
-      char *endstr;
-      const long int timeout = strtol(timeout_str, &endstr, 10);
-
-      if (*endstr)
-        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                                _("Invalid config: illegal character in "
-                                  "timeout value"));
-      if (timeout < 0)
-        return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
-                                _("Invalid config: negative timeout value"));
+      apr_int64_t timeout;
+      svn_error_t *err;
+      
+      err = svn_cstring_strtoi64(&timeout, timeout_str, 0, APR_INT64_MAX, 10);
+      if (err)
+        return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, err,
+                                _("invalid config: bad value for '%s' option"),
+                                SVN_CONFIG_OPTION_HTTP_TIMEOUT);
       session->timeout = apr_time_from_sec(timeout);
     }
-  SVN_ERR_ASSERT(session->timeout >= 0);
 
   /* Convert the proxy port value, if any. */
   if (port_str)
@@ -433,7 +436,7 @@ load_config(svn_ra_serf__session_t *session,
     }
 
   /* Setup authentication. */
-  SVN_ERR(load_http_auth_types(pool, config, server_group,
+  SVN_ERR(load_http_auth_types(result_pool, config, server_group,
                                &session->authn_types));
   serf_config_authn_types(session->context, session->authn_types);
   serf_config_credentials_callback(session->context,
@@ -444,12 +447,13 @@ load_config(svn_ra_serf__session_t *session,
 #undef DEFAULT_HTTP_TIMEOUT
 
 static void
-svn_ra_serf__progress(void *progress_baton, apr_off_t read, apr_off_t written)
+svn_ra_serf__progress(void *progress_baton, apr_off_t bytes_read,
+                      apr_off_t bytes_written)
 {
   const svn_ra_serf__session_t *serf_sess = progress_baton;
   if (serf_sess->progress_func)
     {
-      serf_sess->progress_func(read + written, -1,
+      serf_sess->progress_func(bytes_read + bytes_written, -1,
                                serf_sess->progress_baton,
                                serf_sess->pool);
     }
@@ -474,27 +478,29 @@ svn_ra_serf__open(svn_ra_session_t *session,
                   const char *session_URL,
                   const svn_ra_callbacks2_t *callbacks,
                   void *callback_baton,
+                  svn_auth_baton_t *auth_baton,
                   apr_hash_t *config,
-                  apr_pool_t *pool)
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   apr_status_t status;
   svn_ra_serf__session_t *serf_sess;
   apr_uri_t url;
   const char *client_string = NULL;
   svn_error_t *err;
-  apr_pool_t *subpool;
 
   if (corrected_url)
     *corrected_url = NULL;
 
-  serf_sess = apr_pcalloc(pool, sizeof(*serf_sess));
-  serf_sess->pool = svn_pool_create(pool);
+  serf_sess = apr_pcalloc(result_pool, sizeof(*serf_sess));
+  serf_sess->pool = result_pool;
   if (config)
-    SVN_ERR(svn_config_copy_config(&serf_sess->config, config, pool));
+    SVN_ERR(svn_config_copy_config(&serf_sess->config, config, result_pool));
   else
     serf_sess->config = NULL;
   serf_sess->wc_callbacks = callbacks;
   serf_sess->wc_callback_baton = callback_baton;
+  serf_sess->auth_baton = auth_baton;
   serf_sess->progress_func = callbacks->progress_func;
   serf_sess->progress_baton = callbacks->progress_baton;
   serf_sess->cancel_func = callbacks->cancel_func;
@@ -507,19 +513,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
                                        serf_sess->pool));
 
 
-  status = apr_uri_parse(serf_sess->pool, session_URL, &url);
-  if (status)
-    {
-      return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                               _("Illegal URL '%s'"),
-                               session_URL);
-    }
-  /* Depending the version of apr-util in use, for root paths url.path
-     will be NULL or "", where serf requires "/". */
-  if (url.path == NULL || url.path[0] == '\0')
-    {
-      url.path = apr_pstrdup(serf_sess->pool, "/");
-    }
+  SVN_ERR(svn_ra_serf__uri_parse(&url, session_URL, serf_sess->pool));
+
   if (!url.port)
     {
       url.port = apr_uri_port_of_scheme(url.scheme);
@@ -540,7 +535,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
      this, if we find an intervening proxy does not support chunked requests.  */
   serf_sess->using_chunked_requests = TRUE;
 
-  SVN_ERR(load_config(serf_sess, config, serf_sess->pool));
+  SVN_ERR(load_config(serf_sess, config, serf_sess->pool, scratch_pool));
 
   serf_sess->conns[0] = apr_pcalloc(serf_sess->pool,
                                     sizeof(*serf_sess->conns[0]));
@@ -551,13 +546,16 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   /* create the user agent string */
   if (callbacks->get_client_string)
-    SVN_ERR(callbacks->get_client_string(callback_baton, &client_string, pool));
+    SVN_ERR(callbacks->get_client_string(callback_baton, &client_string,
+                                         scratch_pool));
 
   if (client_string)
-    serf_sess->useragent = apr_pstrcat(pool, get_user_agent_string(pool), " ",
+    serf_sess->useragent = apr_pstrcat(result_pool,
+                                       get_user_agent_string(scratch_pool),
+                                       " ",
                                        client_string, SVN_VA_NULL);
   else
-    serf_sess->useragent = get_user_agent_string(pool);
+    serf_sess->useragent = get_user_agent_string(result_pool);
 
   /* go ahead and tell serf about the connection. */
   status =
@@ -578,24 +576,29 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   session->priv = serf_sess;
 
-  /* This subpool not only avoids having a lot of temporary state in the long
-     living session pool, but it also works around a bug in serf
-     <= r2319 / 1.3.4 where serf doesn't report the request as failed/cancelled
-     when the authorization request handler fails to handle the request.
+  /* The following code explicitly works around a bug in serf <= r2319 / 1.3.8
+     where serf doesn't report the request as failed/cancelled when the
+     authorization request handler fails to handle the request.
 
-     In this specific case the serf connection is cleaned up by the pool
-     handlers before our handler is cleaned up (via subpools). Using a
-     subpool here cleans up our handler before the connection is cleaned. */
-  subpool = svn_pool_create(pool);
+     As long as we allocate the request in a subpool of the serf connection
+     pool, we know that the handler is always cleaned before the connection.
+
+     Luckily our caller now passes us two pools which handle this case.
+   */
+#if defined(SVN_DEBUG) && !SERF_VERSION_AT_LEAST(1,4,0)
+  /* Currently ensured by svn_ra_open4().
+     If failing causes segfault in basic_tests.py 48, "basic auth test" */
+  SVN_ERR_ASSERT((serf_sess->pool != scratch_pool)
+                 && apr_pool_is_ancestor(serf_sess->pool, scratch_pool));
+#endif
 
   err = svn_ra_serf__exchange_capabilities(serf_sess, corrected_url,
-                                           pool, subpool);
+                                           result_pool, scratch_pool);
 
   /* serf should produce a usable error code instead of APR_EGENERAL */
   if (err && err->apr_err == APR_EGENERAL)
     err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, err,
                             _("Connection to '%s' failed"), session_URL);
-  svn_pool_clear(subpool);
   SVN_ERR(err);
 
   /* We have set up a useful connection (that doesn't indication a redirect).
@@ -604,9 +607,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
      problems in any proxy.  */
   if ((corrected_url == NULL || *corrected_url == NULL)
       && serf_sess->detect_chunking && !serf_sess->http10)
-    SVN_ERR(svn_ra_serf__probe_proxy(serf_sess, subpool));
-
-  svn_pool_destroy(subpool);
+    SVN_ERR(svn_ra_serf__probe_proxy(serf_sess, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -733,25 +734,24 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
 
   new_sess->repos_root_str = apr_pstrdup(result_pool,
                                          new_sess->repos_root_str);
-  status = apr_uri_parse(result_pool, new_sess->repos_root_str,
-                         &new_sess->repos_root);
-  if (status)
-    return svn_ra_serf__wrap_err(status, NULL);
+  SVN_ERR(svn_ra_serf__uri_parse(&new_sess->repos_root,
+                                 new_sess->repos_root_str,
+                                 result_pool));
 
   new_sess->session_url_str = apr_pstrdup(result_pool, new_session_url);
 
-  status = apr_uri_parse(result_pool, new_sess->session_url_str,
-                         &new_sess->session_url);
-
-  if (status)
-    return svn_ra_serf__wrap_err(status, NULL);
+  SVN_ERR(svn_ra_serf__uri_parse(&new_sess->session_url,
+                                 new_sess->session_url_str,
+                                 result_pool));
 
   /* svn_boolean_t supports_inline_props */
   /* supports_rev_rsrc_replay */
+  /* supports_svndiff1 */
 
   new_sess->context = serf_context_create(result_pool);
 
-  SVN_ERR(load_config(new_sess, old_sess->config, result_pool));
+  SVN_ERR(load_config(new_sess, old_sess->config,
+                      result_pool, scratch_pool));
 
   new_sess->conns[0] = apr_pcalloc(result_pool,
                                    sizeof(*new_sess->conns[0]));
@@ -776,6 +776,7 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
                                new_sess);
 
   new_sess->num_conns = 1;
+  new_sess->cur_conn = 0;
 
   new_session->priv = new_sess;
 
@@ -790,7 +791,6 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
 {
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_uri_t new_url;
-  apr_status_t status;
 
   /* If it's the URL we already have, wave our hands and do nothing. */
   if (strcmp(session->session_url_str, url) == 0)
@@ -801,7 +801,7 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
   if (!session->repos_root_str)
     {
       const char *vcc_url;
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, pool));
     }
 
   if (!svn_uri__is_ancestor(session->repos_root_str, url))
@@ -812,25 +812,11 @@ svn_ra_serf__reparent(svn_ra_session_t *ra_session,
             "URL '%s'"), url, session->repos_root_str);
     }
 
-  status = apr_uri_parse(pool, url, &new_url);
-  if (status)
-    {
-      return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                               _("Illegal repository URL '%s'"), url);
-    }
+  SVN_ERR(svn_ra_serf__uri_parse(&new_url, url, pool));
 
-  /* Depending the version of apr-util in use, for root paths url.path
-     will be NULL or "", where serf requires "/". */
   /* ### Maybe we should use a string buffer for these strings so we
      ### don't allocate memory in the session on every reparent? */
-  if (new_url.path == NULL || new_url.path[0] == '\0')
-    {
-      session->session_url.path = apr_pstrdup(session->pool, "/");
-    }
-  else
-    {
-      session->session_url.path = apr_pstrdup(session->pool, new_url.path);
-    }
+  session->session_url.path = apr_pstrdup(session->pool, new_url.path);
   session->session_url_str = apr_pstrdup(session->pool, url);
 
   return SVN_NO_ERROR;
@@ -871,6 +857,7 @@ serf__rev_proplist(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   apr_hash_t *props;
   const char *propfind_path;
+  svn_ra_serf__handler_t *handler;
 
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session))
     {
@@ -886,17 +873,23 @@ serf__rev_proplist(svn_ra_session_t *ra_session,
   else
     {
       /* Use the VCC as the propfind target path. */
-      SVN_ERR(svn_ra_serf__discover_vcc(&propfind_path, session, NULL,
+      SVN_ERR(svn_ra_serf__discover_vcc(&propfind_path, session,
                                         scratch_pool));
     }
 
-  /* ### fix: fetch hash of *just* the PATH@REV props. no nested hash.  */
-  SVN_ERR(svn_ra_serf__retrieve_props(&props, session, session->conns[0],
-                                      propfind_path, rev, "0", fetch_props,
-                                      result_pool, scratch_pool));
+  props = apr_hash_make(result_pool);
+  SVN_ERR(svn_ra_serf__create_propfind_handler(&handler, session,
+                                               propfind_path, rev, "0",
+                                               fetch_props,
+                                               svn_ra_serf__deliver_svn_props,
+                                               props,
+                                               scratch_pool));
 
-  SVN_ERR(svn_ra_serf__select_revprops(ret_props, propfind_path, rev, props,
-                                       result_pool, scratch_pool));
+  SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
+
+  svn_ra_serf__keep_only_regular_props(props, scratch_pool);
+
+  *ret_props = props;
 
   return SVN_NO_ERROR;
 }
@@ -967,7 +960,7 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
   if (!session->repos_root_str)
     {
       const char *vcc_url;
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, pool));
     }
 
   *url = session->repos_root_str;
@@ -1003,7 +996,7 @@ svn_ra_serf__get_uuid(svn_ra_session_t *ra_session,
 
       /* We're not interested in vcc_url and relative_url, but this call also
          stores the repository's uuid in the session. */
-      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, NULL, pool));
+      SVN_ERR(svn_ra_serf__discover_vcc(&vcc_url, session, pool));
       if (!session->uuid)
         {
           return svn_error_create(SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,

@@ -1087,7 +1087,8 @@ expat_response_handler(serf_request_t *request,
 
 
 svn_ra_serf__handler_t *
-svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
+svn_ra_serf__create_expat_handler(svn_ra_serf__session_t *session,
+                                  svn_ra_serf__xml_context_t *xmlctx,
                                   const int *expected_status,
                                   apr_pool_t *result_pool)
 {
@@ -1100,7 +1101,7 @@ svn_ra_serf__create_expat_handler(svn_ra_serf__xml_context_t *xmlctx,
   ectx->expected_status = expected_status;
   ectx->cleanup_pool = result_pool;
 
-  handler = svn_ra_serf__create_handler(result_pool);
+  handler = svn_ra_serf__create_handler(session, result_pool);
   handler->response_handler = expat_response_handler;
   handler->response_baton = ectx;
 

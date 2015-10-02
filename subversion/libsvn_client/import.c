@@ -832,6 +832,8 @@ svn_client_import5(const char *path,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
 
+  SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
+
   /* Create a new commit item and add it to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
@@ -845,6 +847,8 @@ svn_client_import5(const char *path,
 
       item = svn_client_commit_item3_create(scratch_pool);
       item->path = local_abspath;
+      item->url = url;
+      item->kind = kind;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
 
@@ -859,8 +863,6 @@ svn_client_import5(const char *path,
           svn_hash_sets(excludes, abs_path, (void *)1);
         }
     }
-
-  SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
 
   SVN_ERR(svn_client_open_ra_session2(&ra_session, url, NULL,
                                       ctx, scratch_pool, iterpool));

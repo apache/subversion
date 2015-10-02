@@ -100,7 +100,8 @@ static svn_error_t *
 create_getdate_body(serf_bucket_t **body_bkt,
                     void *baton,
                     serf_bucket_alloc_t *alloc,
-                    apr_pool_t *pool)
+                    apr_pool_t *pool /* request pool */,
+                    apr_pool_t *scratch_pool)
 {
   serf_bucket_t *buckets;
   date_context_t *date_ctx = baton;
@@ -139,19 +140,17 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   date_ctx->time = tm;
   date_ctx->revision = revision;
 
-  SVN_ERR(svn_ra_serf__report_resource(&report_target, session, NULL, pool));
+  SVN_ERR(svn_ra_serf__report_resource(&report_target, session, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(date_ttable,
                                            NULL, date_closed, NULL,
                                            date_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, NULL, pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = report_target;
   handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
 
   handler->body_delegate = create_getdate_body;
   handler->body_delegate_baton = date_ctx;

@@ -64,7 +64,7 @@ LockTokenTable::LockTokenTable(jobject jlock_tokens)
     {
       JNIEnv *env = JNIUtil::getEnv();
 
-      jclass lock_cls = env->FindClass(JAVA_PACKAGE"/types/Lock");
+      jclass lock_cls = env->FindClass(JAVAHL_CLASS("/types/Lock"));
       if (JNIUtil::isExceptionThrown())
         return;
 

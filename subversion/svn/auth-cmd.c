@@ -41,6 +41,9 @@
 #include "svn_config.h"
 #include "svn_auth.h"
 #include "svn_sorts.h"
+#include "svn_base64.h"
+#include "svn_x509.h"
+#include "svn_time.h"
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_token.h"
@@ -93,6 +96,39 @@ show_cert_failures(const char *failure_string,
   return SVN_NO_ERROR;
 }
 
+
+/* decodes from format we store certs in for auth creds and
+ * turns parsing errors into warnings if PRINT_WARNING is TRUE
+ * and ignores them otherwise. returns NULL if it couldn't
+ * parse a cert for any reason. */
+static svn_x509_certinfo_t *
+parse_certificate(const svn_string_t *ascii_cert,
+                  svn_boolean_t print_warning,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  svn_x509_certinfo_t *certinfo;
+  const svn_string_t *der_cert;
+  svn_error_t *err;
+
+  /* Convert header-less PEM to DER by undoing base64 encoding. */
+  der_cert = svn_base64_decode_string(ascii_cert, scratch_pool);
+
+  err = svn_x509_parse_cert(&certinfo, der_cert->data, der_cert->len,
+                            result_pool, scratch_pool);
+  if (err)
+    {
+      /* Just display X.509 parsing errors as warnings and continue */
+      if (print_warning)
+        svn_handle_warning2(stderr, err, "svn: ");
+      svn_error_clear(err);
+      return NULL;
+    }
+
+  return certinfo;
+}
+
+
 struct walk_credentials_baton_t
 {
   int matches;
@@ -112,12 +148,58 @@ match_pattern(const char *pattern, const char *value,
   return (apr_fnmatch(p, value, flags) == APR_SUCCESS);
 }
 
+static svn_boolean_t
+match_certificate(svn_x509_certinfo_t **certinfo,
+                  const char *pattern,
+                  const svn_string_t *ascii_cert,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  const char *value;
+  const svn_checksum_t *checksum;
+  const apr_array_header_t *hostnames;
+  int i;
+
+  *certinfo = parse_certificate(ascii_cert, FALSE, result_pool, scratch_pool);
+  if (*certinfo == NULL)
+    return FALSE;
+
+  value = svn_x509_certinfo_get_subject(*certinfo, scratch_pool);
+  if (match_pattern(pattern, value, FALSE, scratch_pool))
+    return TRUE;
+
+  value = svn_x509_certinfo_get_issuer(*certinfo, scratch_pool);
+  if (match_pattern(pattern, value, FALSE, scratch_pool))
+    return TRUE;
+
+  checksum = svn_x509_certinfo_get_digest(*certinfo);
+  value = svn_checksum_to_cstring_display(checksum, scratch_pool);
+  if (match_pattern(pattern, value, TRUE, scratch_pool))
+    return TRUE;
+
+  hostnames = svn_x509_certinfo_get_hostnames(*certinfo);
+  if (hostnames)
+    {
+      for (i = 0; i < hostnames->nelts; i++)
+        {
+          const char *hostname = APR_ARRAY_IDX(hostnames, i, const char *);
+          if (match_pattern(pattern, hostname, TRUE, scratch_pool))
+            return TRUE;
+        }
+    }
+
+  return FALSE;
+}
+
+
 static svn_error_t *
 match_credential(svn_boolean_t *match,
+                 svn_x509_certinfo_t **certinfo,
                  const char *cred_kind,
                  const char *realmstring,
                  apr_array_header_t *patterns,
                  apr_array_header_t *cred_items,
+                 apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
   int i;
@@ -149,10 +231,8 @@ match_credential(svn_boolean_t *match,
                   strcmp(key, SVN_CONFIG_AUTHN_PASSPHRASE_KEY) == 0)
                 continue; /* don't match secrets */
               else if (strcmp(key, SVN_CONFIG_AUTHN_ASCII_CERT_KEY) == 0)
-                continue; /* don't match base64 data */
-              else if (strcmp(key, SVN_CONFIG_AUTHN_HOSTNAME_KEY) == 0 ||
-                       strcmp(key, SVN_CONFIG_AUTHN_FINGERPRINT_KEY) == 0)
-                *match = match_pattern(pattern, value->data, TRUE, iterpool);
+                *match = match_certificate(certinfo, pattern, value,
+                                           result_pool, iterpool);
               else
                 *match = match_pattern(pattern, value->data, FALSE, iterpool);
 
@@ -168,10 +248,58 @@ match_credential(svn_boolean_t *match,
 }
 
 static svn_error_t *
+show_cert(svn_x509_certinfo_t *certinfo, const svn_string_t *pem_cert,
+          apr_pool_t *scratch_pool)
+{
+  const apr_array_header_t *hostnames;
+
+  if (certinfo == NULL)
+    certinfo = parse_certificate(pem_cert, TRUE, scratch_pool, scratch_pool);
+  if (certinfo == NULL)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Subject: %s\n"),
+                             svn_x509_certinfo_get_subject(certinfo, scratch_pool)));
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Valid from: %s\n"),
+                             svn_time_to_human_cstring(
+                                 svn_x509_certinfo_get_valid_from(certinfo),
+                                 scratch_pool)));
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Valid until: %s\n"),
+                             svn_time_to_human_cstring(
+                                 svn_x509_certinfo_get_valid_to(certinfo),
+                                 scratch_pool)));
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Issuer: %s\n"),
+                             svn_x509_certinfo_get_issuer(certinfo, scratch_pool)));
+  SVN_ERR(svn_cmdline_printf(scratch_pool, _("Fingerprint: %s\n"),
+                             svn_checksum_to_cstring_display(
+                                 svn_x509_certinfo_get_digest(certinfo),
+                                 scratch_pool)));
+
+  hostnames = svn_x509_certinfo_get_hostnames(certinfo);
+  if (hostnames && !apr_is_empty_array(hostnames))
+    {
+      int i;
+      svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
+      for (i = 0; i < hostnames->nelts; ++i)
+        {
+          const char *hostname = APR_ARRAY_IDX(hostnames, i, const char*);
+          if (i > 0)
+            svn_stringbuf_appendbytes(buf, ", ", 2);
+          svn_stringbuf_appendbytes(buf, hostname, strlen(hostname));
+        }
+      SVN_ERR(svn_cmdline_printf(scratch_pool, _("Hostnames: %s\n"),
+                                 buf->data));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 list_credential(const char *cred_kind,
                 const char *realmstring,
                 apr_array_header_t *cred_items,
                 svn_boolean_t show_passwords,
+                svn_x509_certinfo_t *certinfo,
                 apr_pool_t *scratch_pool)
 {
   int i;
@@ -188,7 +316,7 @@ list_credential(const char *cred_kind,
       svn_sort__item_t item;
       const char *key;
       svn_string_t *value;
-      
+
       svn_pool_clear(iterpool);
       item = APR_ARRAY_IDX(cred_items, i, svn_sort__item_t);
       key = item.key;
@@ -218,20 +346,7 @@ list_credential(const char *cred_kind,
       else if (strcmp(key, SVN_CONFIG_AUTHN_USERNAME_KEY) == 0)
         SVN_ERR(svn_cmdline_printf(iterpool, _("Username: %s\n"), value->data));
       else if (strcmp(key, SVN_CONFIG_AUTHN_ASCII_CERT_KEY) == 0)
-        continue; /* don't show data which is not human-readable */
-      else if (strcmp(key, SVN_CONFIG_AUTHN_HOSTNAME_KEY) == 0)
-        SVN_ERR(svn_cmdline_printf(iterpool, _("Hostname: %s\n"), value->data));
-      else if (strcmp(key, SVN_CONFIG_AUTHN_VALID_FROM_KEY) == 0)
-        SVN_ERR(svn_cmdline_printf(iterpool, _("Valid from: %s\n"),
-                                   value->data));
-      else if (strcmp(key, SVN_CONFIG_AUTHN_VALID_UNTIL_KEY) == 0)
-        SVN_ERR(svn_cmdline_printf(iterpool, _("Valid until: %s\n"),
-                                   value->data));
-      else if (strcmp(key, SVN_CONFIG_AUTHN_ISSUER_DN_KEY) == 0)
-        SVN_ERR(svn_cmdline_printf(iterpool, _("Issuer: %s\n"), value->data));
-      else if (strcmp(key, SVN_CONFIG_AUTHN_FINGERPRINT_KEY) == 0)
-        SVN_ERR(svn_cmdline_printf(iterpool, _("Fingerprint: %s\n"),
-                                   value->data));
+       SVN_ERR(show_cert(certinfo, value, iterpool));
       else if (strcmp(key, SVN_CONFIG_AUTHN_FAILURES_KEY) == 0)
         SVN_ERR(show_cert_failures(value->data, iterpool));
       else
@@ -254,6 +369,7 @@ walk_credentials(svn_boolean_t *delete_cred,
 {
   struct walk_credentials_baton_t *b = baton;
   apr_array_header_t *sorted_cred_items;
+  svn_x509_certinfo_t *certinfo = NULL;
 
   *delete_cred = FALSE;
 
@@ -264,9 +380,9 @@ walk_credentials(svn_boolean_t *delete_cred,
     {
       svn_boolean_t match;
 
-      SVN_ERR(match_credential(&match, cred_kind, realmstring,
+      SVN_ERR(match_credential(&match, &certinfo, cred_kind, realmstring,
                                b->patterns, sorted_cred_items,
-                               scratch_pool));
+                               scratch_pool, scratch_pool));
       if (!match)
         return SVN_NO_ERROR;
     }
@@ -275,7 +391,7 @@ walk_credentials(svn_boolean_t *delete_cred,
 
   if (b->list)
     SVN_ERR(list_credential(cred_kind, realmstring, sorted_cred_items,
-                            b->show_passwords, scratch_pool));
+                            b->show_passwords, certinfo, scratch_pool));
   if (b->delete)
     {
       *delete_cred = TRUE;
@@ -329,7 +445,7 @@ svn_cl__auth(apr_getopt_t *os, void *baton, apr_pool_t *pool)
             SVN_ERR(svn_cmdline_printf(pool,
                       _("Credentials cache in '%s' is empty\n"),
                       svn_dirent_local_style(config_path, pool)));
-          else 
+          else
             return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, 0,
                                      _("Credentials cache in '%s' contains "
                                        "no matching credentials"),

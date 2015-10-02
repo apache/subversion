@@ -170,7 +170,11 @@ svn_string_createv(apr_pool_t *pool, const char *fmt, va_list ap)
 svn_boolean_t
 svn_string_isempty(const svn_string_t *str);
 
-/** Return a duplicate of @a original_string. */
+/** Return a duplicate of @a original_string.
+ *
+ * @since Since 1.9, @a original_string can be NULL in which case NULL will
+ * be returned.
+ */
 svn_string_t *
 svn_string_dup(const svn_string_t *original_string, apr_pool_t *pool);
 
@@ -309,16 +313,16 @@ svn_stringbuf_fillchar(svn_stringbuf_t *str, unsigned char c);
  * The advantages extend beyond the actual call because the reduced
  * register pressure allows for more optimization within the caller.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  * @since New in 1.7.
  */
 void
 svn_stringbuf_appendbyte(svn_stringbuf_t *targetstr,
                          char byte);
 
-/** Append an array of bytes onto @a targetstr.
+/** Append the array of bytes @a bytes of length @a count onto @a targetstr.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  *
  * @since 1.9 @a bytes can be NULL if @a count is zero.
  */
@@ -329,7 +333,7 @@ svn_stringbuf_appendbytes(svn_stringbuf_t *targetstr,
 
 /** Append @a byte @a count times onto @a targetstr.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  * @since New in 1.9.
  */
 void
@@ -339,7 +343,7 @@ svn_stringbuf_appendfill(svn_stringbuf_t *targetstr,
 
 /** Append the stringbuf @c appendstr onto @a targetstr.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  */
 void
 svn_stringbuf_appendstr(svn_stringbuf_t *targetstr,
@@ -347,20 +351,21 @@ svn_stringbuf_appendstr(svn_stringbuf_t *targetstr,
 
 /** Append the C string @a cstr onto @a targetstr.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  */
 void
 svn_stringbuf_appendcstr(svn_stringbuf_t *targetstr,
                          const char *cstr);
 
-/** Read @a count bytes from @a bytes and insert them into @a str at
- * position @a pos and following.  The resulting string will be
- * @c count+str->len bytes long.  If @c pos is larger or equal to the
- * number of bytes currently used in @a str,  simply append @a bytes.
+/** Insert into @a str at position @a pos an array of bytes @a bytes
+ * which is @a count bytes long.
+ *
+ * The resulting string will be @c count+str->len bytes long.  If
+ * @a pos is larger than or equal to @c str->len, simply append @a bytes.
  *
  * Reallocs if necessary. @a str is affected, nothing else is.
  *
- * @note The inserted string may be a sub-range if @a str.
+ * @note The inserted string may be a sub-range of @a str.
  *
  * @since New in 1.8.
  *
@@ -372,9 +377,10 @@ svn_stringbuf_insert(svn_stringbuf_t *str,
                      const char *bytes,
                      apr_size_t count);
 
-/** Removes @a count bytes from @a str, starting at position @a pos.
- * If that range exceeds the current string data,  @a str gets truncated
- * at @a pos.  If the latter is larger or equal to @c str->pos, this will
+/** Remove @a count bytes from @a str, starting at position @a pos.
+ *
+ * If that range exceeds the current string data, truncate @a str at
+ * @a pos.  If @a pos is larger than or equal to @c str->len, this will
  * be a no-op.  Otherwise, the resulting string will be @c str->len-count
  * bytes long.
  *
@@ -386,8 +392,8 @@ svn_stringbuf_remove(svn_stringbuf_t *str,
                      apr_size_t count);
 
 /** Replace in @a str the substring which starts at @a pos and is @a
- * old_count bytes long with a new substring @a bytes (which is @a
- * new_count bytes long).
+ * old_count bytes long with a new substring @a bytes which is @a
+ * new_count bytes long.
  *
  * This is faster but functionally equivalent to the following sequence:
  * @code
@@ -455,7 +461,7 @@ svn_string_compare_stringbuf(const svn_string_t *str1,
  */
 
 /** Divide @a input into substrings, interpreting any char from @a sep
- * as a token separator.  
+ * as a token separator.
  *
  * Return an array of copies of those substrings (plain const char*),
  * allocating both the array and the copies in @a pool.
@@ -553,7 +559,17 @@ svn_cstring_casecmp(const char *str1, const char *str2);
  * Assume that the number is represented in base @a base.
  * Raise an error if conversion fails (e.g. due to overflow), or if the
  * converted number is smaller than @a minval or larger than @a maxval.
+ *
  * Leading whitespace in @a str is skipped in a locale-dependent way.
+ * After that, the string may contain an optional '+' (positive, default)
+ * or '-' (negative) character, followed by an optional '0x' prefix if
+ * @a base is 0 or 16, followed by numeric digits appropriate for the base.
+ * If there are any more characters after the numeric digits, an error is
+ * returned.
+ *
+ * If @a base is zero, then a leading '0x' or '0X' prefix means hexadecimal,
+ * else a leading '0' means octal (implemented, though not documented, in
+ * apr_strtoi64() in APR 0.9.0 through 1.5.0), else use base ten.
  *
  * @since New in 1.7.
  */
@@ -566,7 +582,8 @@ svn_cstring_strtoi64(apr_int64_t *n, const char *str,
  * Parse the C string @a str into a 64 bit number, and return it in @a *n.
  * Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
- * Leading whitespace in @a str is skipped in a locale-dependent way.
+ *
+ * The behaviour otherwise is as described for svn_cstring_strtoi64().
  *
  * @since New in 1.7.
  */
@@ -577,7 +594,8 @@ svn_cstring_atoi64(apr_int64_t *n, const char *str);
  * Parse the C string @a str into a 32 bit number, and return it in @a *n.
  * Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
- * Leading whitespace in @a str is skipped in a locale-dependent way.
+ *
+ * The behaviour otherwise is as described for svn_cstring_strtoi64().
  *
  * @since New in 1.7.
  */
@@ -589,7 +607,21 @@ svn_cstring_atoi(int *n, const char *str);
  * it in @a *n. Assume that the number is represented in base @a base.
  * Raise an error if conversion fails (e.g. due to overflow), or if the
  * converted number is smaller than @a minval or larger than @a maxval.
+ *
  * Leading whitespace in @a str is skipped in a locale-dependent way.
+ * After that, the string may contain an optional '+' (positive, default)
+ * or '-' (negative) character, followed by an optional '0x' prefix if
+ * @a base is 0 or 16, followed by numeric digits appropriate for the base.
+ * If there are any more characters after the numeric digits, an error is
+ * returned.
+ *
+ * If @a base is zero, then a leading '0x' or '0X' prefix means hexadecimal,
+ * else a leading '0' means octal (implemented, though not documented, in
+ * apr_strtoi64() in APR 0.9.0 through 1.5.0), else use base ten.
+ *
+ * @warning The implementation used since version 1.7 returns an error
+ * if the parsed number is greater than APR_INT64_MAX, even if it is not
+ * greater than @a maxval.
  *
  * @since New in 1.7.
  */
@@ -602,7 +634,9 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
  * Parse the C string @a str into an unsigned 64 bit number, and return
  * it in @a *n. Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
- * Leading whitespace in @a str is skipped in a locale-dependent way.
+ *
+ * The behaviour otherwise is as described for svn_cstring_strtoui64(),
+ * including the upper limit of APR_INT64_MAX.
  *
  * @since New in 1.7.
  */
@@ -613,7 +647,9 @@ svn_cstring_atoui64(apr_uint64_t *n, const char *str);
  * Parse the C string @a str into an unsigned 32 bit number, and return
  * it in @a *n. Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
- * Leading whitespace in @a str is skipped in a locale-dependent way.
+ *
+ * The behaviour otherwise is as described for svn_cstring_strtoui64(),
+ * including the upper limit of APR_INT64_MAX.
  *
  * @since New in 1.7.
  */

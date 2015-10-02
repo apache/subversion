@@ -495,8 +495,8 @@ get_revision_info(report_baton_t *b,
       /* Create a result object */
       info = apr_palloc(b->pool, sizeof(*info));
       info->rev = rev;
-      info->date = cdate ? svn_string_dup(cdate, b->pool) : NULL;
-      info->author = author ? svn_string_dup(author, b->pool) : NULL;
+      info->date = svn_string_dup(cdate, b->pool);
+      info->author = svn_string_dup(author, b->pool);
 
       /* Cache it */
       apr_hash_set(b->revision_infos, &info->rev, sizeof(info->rev), info);
@@ -1282,7 +1282,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
       /* Loop over the dirents in the target. */
       SVN_ERR(svn_fs_dir_optimal_order(&t_ordered_entries, b->t_root,
-                                       t_entries, subpool));
+                                       t_entries, subpool, iterpool));
       for (i = 0; i < t_ordered_entries->nelts; ++i)
         {
           const svn_fs_dirent_t *t_entry

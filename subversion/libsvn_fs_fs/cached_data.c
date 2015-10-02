@@ -57,7 +57,7 @@ block_read(void **result,
            apr_pool_t *scratch_pool);
 
 
-/* Defined this to enable access logging via dgb__log_access
+/* Define this to enable access logging via dbg_log_access
 #define SVN_FS_FS__LOG_ACCESS
  */
 
@@ -91,7 +91,7 @@ dbg_log_access(svn_fs_t *fs,
   svn_fs_fs__revision_file_t *rev_file;
 
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, fs, revision,
-                                           scratch_pool));
+                                           scratch_pool, scratch_pool));
 
   /* determine rev / pack file offset */
   SVN_ERR(svn_fs_fs__item_offset(&offset, fs, rev_file, revision, NULL,
@@ -158,7 +158,8 @@ dbg_log_access(svn_fs_t *fs,
     {
       /* reverse index lookup: get item description in ENTRY */
       SVN_ERR(svn_fs_fs__p2l_entry_lookup(&entry, fs, rev_file, revision,
-                                          offset, scratch_pool));
+                                          offset, scratch_pool,
+                                          scratch_pool));
       if (entry)
         {
           /* more details */
@@ -182,6 +183,10 @@ dbg_log_access(svn_fs_t *fs,
              pack, (apr_uint64_t)(offset), type, revision, item_index,
              description);
     }
+
+  /* We don't know when SCRATCH_POOL will be cleared, so close the rev file
+     explicitly. */
+  SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
 
 #endif
 
@@ -286,6 +291,114 @@ use_block_read(svn_fs_t *fs)
   return svn_fs_fs__use_log_addressing(fs) && ffd->use_block_read;
 }
 
+svn_error_t *
+svn_fs_fs__fixup_expanded_size(svn_fs_t *fs,
+                               representation_t *rep,
+                               apr_pool_t *scratch_pool)
+{
+  svn_checksum_t checksum;
+  svn_checksum_t *empty_md5;
+  svn_fs_fs__revision_file_t *revision_file;
+  svn_fs_fs__rep_header_t *rep_header;
+
+  /* Anything to do at all?
+   *
+   * Note that a 0 SIZE is only possible for PLAIN reps due to the SVN\1
+   * magic prefix in any DELTA rep. */
+  if (!rep || rep->expanded_size != 0 || rep->size == 0)
+    return SVN_NO_ERROR;
+
+  /* This function may only be called for committed data. */
+  assert(!svn_fs_fs__id_txn_used(&rep->txn_id));
+
+  /* EXPANDED_SIZE is 0. If the MD5 does not match the one for empty
+   * contents, we know that EXPANDED_SIZE == 0 is wrong and needs to
+   * be set to the actual value given by SIZE.
+   *
+   * Using svn_checksum_match() will also accept all-zero values for
+   * the MD5 digest and only report a mismatch if the MD5 has actually
+   * been given. */
+  empty_md5 = svn_checksum_empty_checksum(svn_checksum_md5, scratch_pool);
+
+  checksum.digest = rep->md5_digest;
+  checksum.kind = svn_checksum_md5;
+  if (!svn_checksum_match(empty_md5, &checksum))
+    {
+      rep->expanded_size = rep->size;
+      return SVN_NO_ERROR;
+    }
+
+  /* Data in the rep-cache.db does not have MD5 checksums (all zero) on it.
+   * Compare SHA1 instead. */
+  if (rep->has_sha1)
+    {
+      svn_checksum_t *empty_sha1
+        = svn_checksum_empty_checksum(svn_checksum_sha1, scratch_pool);
+
+      checksum.digest = rep->sha1_digest;
+      checksum.kind = svn_checksum_sha1;
+      if (!svn_checksum_match(empty_sha1, &checksum))
+        {
+          rep->expanded_size = rep->size;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  /* Only two cases are left here.
+   * (1) A non-empty PLAIN rep with a MD5 collision on EMPTY_MD5.
+   * (2) A DELTA rep with zero-length output. */
+
+  /* SVN always stores a DELTA rep with zero-length output as an empty
+   * sequence of txdelta windows, i.e. as "SVN\1".  In that case, SIZE is
+   * 4 bytes.  There is no other possible DELTA rep of that size and any
+   * PLAIN rep of 4 bytes would produce a different MD5.  Hence, if SIZE is
+   * actually 4 here, we know that this is an empty DELTA rep.
+   *
+   * Note that it is technically legal to have DELTA reps with a 0 length
+   * output window.  Their on-disk size would be longer.  We handle that
+   * case later together with the equally unlikely MD5 collision. */
+  if (rep->size == 4)
+    {
+      /* EXPANDED_SIZE is already 0. */
+      return SVN_NO_ERROR;
+    }
+
+  /* We still have the two options, PLAIN or DELTA rep.  At this point, we
+   * are in an extremely unlikely case and can spend some time to figure it
+   * out.  So, let's just look at the representation header. */
+  SVN_ERR(open_and_seek_revision(&revision_file, fs, rep->revision,
+                                 rep->item_index, scratch_pool));
+  SVN_ERR(svn_fs_fs__read_rep_header(&rep_header, revision_file->stream,
+                                     scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_fs__close_revision_file(revision_file));
+
+  /* Only for PLAIN reps do we have to correct EXPANDED_SIZE. */
+  if (rep_header->type == svn_fs_fs__rep_plain)
+    rep->expanded_size = rep->size;
+
+  return SVN_NO_ERROR;
+}
+
+/* Correct known issues with committed NODEREV in FS.
+ * Uses SCRATCH_POOL for temporaries.
+ */
+static svn_error_t *
+fixup_node_revision(svn_fs_t *fs,
+                    node_revision_t *noderev,
+                    apr_pool_t *scratch_pool)
+{
+  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
+  noderev->is_fresh_txn_root = FALSE;
+
+  /* Make sure EXPANDED_SIZE has the correct value for every rep. */
+  SVN_ERR(svn_fs_fs__fixup_expanded_size(fs, noderev->data_rep,
+                                         scratch_pool));
+  SVN_ERR(svn_fs_fs__fixup_expanded_size(fs, noderev->prop_rep,
+                                         scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Get the node-revision for the node ID in FS.
    Set *NODEREV_P to the new node-revision structure, allocated in POOL.
    See svn_fs_fs__get_node_revision, which wraps this and adds another
@@ -376,9 +489,7 @@ get_node_revision_body(node_revision_t **noderev_p,
                                           revision_file->stream,
                                           result_pool,
                                           scratch_pool));
-
-          /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-          (*noderev_p)->is_fresh_txn_root = FALSE;
+          SVN_ERR(fixup_node_revision(fs, *noderev_p, scratch_pool));
 
           /* The noderev is not in cache, yet. Add it, if caching has been enabled. */
           if (ffd->node_revision_cache)
@@ -631,7 +742,7 @@ typedef struct rep_state_t
                        -1 if the offset is yet unknown. */
   apr_off_t current;/* The current offset relative to START. */
   apr_off_t size;   /* The on-disk size of the representation. */
-  int ver;          /* If a delta, what svndiff version? 
+  int ver;          /* If a delta, what svndiff version?
                        -1 for unknown delta version. */
   int chunk_index;  /* number of the window to read */
 } rep_state_t;
@@ -765,9 +876,7 @@ create_rep_state_body(rep_state_t **rep_state,
      Since we don't know the depth of the delta chain, let's assume, the
      whole contents get rewritten 3 times.
    */
-  estimated_window_storage
-    = 4 * (  (rep->expanded_size ? rep->expanded_size : rep->size)
-           + SVN_DELTA_WINDOW_SIZE);
+  estimated_window_storage = 4 * (rep->expanded_size + SVN_DELTA_WINDOW_SIZE);
   estimated_window_storage = MIN(estimated_window_storage, APR_SIZE_MAX);
 
   rs->window_cache =    ffd->txdelta_window_cache
@@ -952,7 +1061,7 @@ svn_fs_fs__check_rep(representation_t *rep,
       if (   entry == NULL
           || entry->type < SVN_FS_FS__ITEM_TYPE_FILE_REP
           || entry->type > SVN_FS_FS__ITEM_TYPE_DIR_PROPS)
-        return svn_error_createf(SVN_ERR_REPOS_CORRUPTED, NULL,
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                                  _("No representation found at offset %s "
                                    "for item %s in revision %ld"),
                                  apr_off_t_toa(scratch_pool, offset),
@@ -991,7 +1100,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
   int count = 0;
   int shards = 1;
   svn_revnum_t last_shard = rep->revision / shard_size;
-  
+
   /* Check whether the length of the deltification chain is acceptable.
    * Otherwise, shared reps may form a non-skipping delta chain in
    * extreme cases. */
@@ -1104,7 +1213,7 @@ struct rep_read_baton
   /* The text we've been reading, if we're going to cache it. */
   svn_stringbuf_t *current_fulltext;
 
-  /* If not NULL, attempt to read the data from this cache. 
+  /* If not NULL, attempt to read the data from this cache.
      Once that lookup fails, reset it to NULL. */
   svn_cache__t *fulltext_cache;
 
@@ -1322,15 +1431,11 @@ set_cached_combined_window(svn_stringbuf_t *window,
    ID, and representation REP.
    Also, set *WINDOW_P to the base window content for *LIST, if it
    could be found in cache. Otherwise, *LIST will contain the base
-   representation for the whole delta chain.
-   Finally, return the expanded size of the representation in
-   *EXPANDED_SIZE. It will take care of cases where only the on-disk
-   size is known.  */
+   representation for the whole delta chain. */
 static svn_error_t *
 build_rep_list(apr_array_header_t **list,
                svn_stringbuf_t **window_p,
                rep_state_t **src_state,
-               svn_filesize_t *expanded_size,
                svn_fs_t *fs,
                representation_t *first_rep,
                apr_pool_t *pool)
@@ -1345,24 +1450,9 @@ build_rep_list(apr_array_header_t **list,
   *list = apr_array_make(pool, 1, sizeof(rep_state_t *));
   rep = *first_rep;
 
-  /* The value as stored in the data struct.
-     0 is either for unknown length or actually zero length. */
-  *expanded_size = first_rep->expanded_size;
-
   /* for the top-level rep, we need the rep_args */
   SVN_ERR(create_rep_state(&rs, &rep_header, &shared_file, &rep, fs, pool,
                            iterpool));
-
-  /* Unknown size or empty representation?
-     That implies the this being the first iteration.
-     Usually size equals on-disk size, except for empty,
-     compressed representations (delta, size = 4).
-     Please note that for all non-empty deltas have
-     a 4-byte header _plus_ some data. */
-  if (*expanded_size == 0)
-    if (rep_header->type == svn_fs_fs__rep_plain || first_rep->size != 4)
-      *expanded_size = first_rep->size;
-
   while (1)
     {
       svn_pool_clear(iterpool);
@@ -1550,7 +1640,7 @@ read_plain_window(svn_stringbuf_t **nwin, rep_state_t *rs,
                   apr_pool_t *scratch_pool)
 {
   apr_off_t offset;
-  
+
   /* RS->FILE may be shared between RS instances -> make sure we point
    * to the right data. */
   SVN_ERR(auto_open_shared_file(rs->sfile));
@@ -1624,9 +1714,11 @@ get_combined_window(svn_stringbuf_t **result,
       /* Maybe, we've got a PLAIN start representation.  If we do, read
          as much data from it as the needed for the txdelta window's source
          view.
-         Note that BUF / SOURCE may only be NULL in the first iteration. */
+         Note that BUF / SOURCE may only be NULL in the first iteration.
+         Also note that we may have short-cut reading the delta chain --
+         in which case SRC_OPS is 0 and it might not be a PLAIN rep. */
       source = buf;
-      if (source == NULL && rb->src_state != NULL)
+      if (source == NULL && rb->src_state != NULL && window->src_ops)
         SVN_ERR(read_plain_window(&source, rb->src_state, window->sview_len,
                                   pool, iterpool));
 
@@ -1664,7 +1756,7 @@ get_combined_window(svn_stringbuf_t **result,
 }
 
 /* Returns whether or not the expanded fulltext of the file is cachable
- * based on its size SIZE.  The decision depends on the cache used by RB.
+ * based on its size SIZE.  The decision depends on the cache used by FFD.
  */
 static svn_boolean_t
 fulltext_size_is_cachable(fs_fs_data_t *ffd, svn_filesize_t size)
@@ -1997,11 +2089,12 @@ rep_read_contents(void *baton,
   if (!rb->rs_list)
     {
       /* Window stream not initialized, yet.  Do it now. */
+      rb->len = rb->rep.expanded_size;
       SVN_ERR(build_rep_list(&rb->rs_list, &rb->base_window,
-                             &rb->src_state, &rb->len, rb->fs, &rb->rep,
+                             &rb->src_state, rb->fs, &rb->rep,
                              rb->filehandle_pool));
 
-      /* In case we did read from the fulltext cache before, make the 
+      /* In case we did read from the fulltext cache before, make the
        * window stream catch up.  Also, initialize the fulltext buffer
        * if we want to cache the fulltext at the end. */
       SVN_ERR(skip_contents(rb, rb->fulltext_delivered));
@@ -2065,7 +2158,6 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
   else
     {
       fs_fs_data_t *ffd = fs->fsap_data;
-      svn_filesize_t len = rep->expanded_size ? rep->expanded_size : rep->size;
       struct rep_read_baton *rb;
 
       pair_cache_key_t fulltext_cache_key = { 0 };
@@ -2081,7 +2173,7 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
        * cache it. */
       if (ffd->fulltext_cache && cache_fulltext
           && SVN_IS_VALID_REVNUM(rep->revision)
-          && fulltext_size_is_cachable(ffd, len))
+          && fulltext_size_is_cachable(ffd, rep->expanded_size))
         {
           rb->fulltext_cache = ffd->fulltext_cache;
         }
@@ -2437,11 +2529,41 @@ read_dir_entries(apr_array_header_t *entries,
   return SVN_NO_ERROR;
 }
 
-/* Fetch the contents of a directory into ENTRIES.  Values are stored
+/* For directory NODEREV in FS, return the *FILESIZE of its in-txn
+ * representation.  If the directory representation is comitted data,
+ * set *FILESIZE to SVN_INVALID_FILESIZE. Use SCRATCH_POOL for temporaries.
+ */
+static svn_error_t *
+get_txn_dir_info(svn_filesize_t *filesize,
+                 svn_fs_t *fs,
+                 node_revision_t *noderev,
+                 apr_pool_t *scratch_pool)
+{
+  if (noderev->data_rep && svn_fs_fs__id_txn_used(&noderev->data_rep->txn_id))
+    {
+      const svn_io_dirent2_t *dirent;
+      const char *filename;
+
+      filename = svn_fs_fs__path_txn_node_children(fs, noderev->id,
+                                                   scratch_pool);
+
+      SVN_ERR(svn_io_stat_dirent2(&dirent, filename, FALSE, FALSE,
+                                  scratch_pool, scratch_pool));
+      *filesize = dirent->filesize;
+    }
+  else
+    {
+      *filesize = SVN_INVALID_FILESIZE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Fetch the contents of a directory into DIR.  Values are stored
    as filename to string mappings; further conversion is necessary to
    convert them into svn_fs_dirent_t values. */
 static svn_error_t *
-get_dir_contents(apr_array_header_t **entries,
+get_dir_contents(svn_fs_fs__dir_data_t *dir,
                  svn_fs_t *fs,
                  node_revision_t *noderev,
                  apr_pool_t *result_pool,
@@ -2449,18 +2571,31 @@ get_dir_contents(apr_array_header_t **entries,
 {
   svn_stream_t *contents;
 
-  *entries = apr_array_make(result_pool, 16, sizeof(svn_fs_dirent_t *));
+  /* Initialize the result. */
+  dir->entries = apr_array_make(result_pool, 16, sizeof(svn_fs_dirent_t *));
+  dir->txn_filesize = SVN_INVALID_FILESIZE;
+
+  /* Read dir contents - unless there is none in which case we are done. */
   if (noderev->data_rep && svn_fs_fs__id_txn_used(&noderev->data_rep->txn_id))
     {
-      const char *filename
-        = svn_fs_fs__path_txn_node_children(fs, noderev->id, scratch_pool);
+      /* Get location & current size of the directory representation. */
+      const char *filename;
+      apr_file_t *file;
+
+      filename = svn_fs_fs__path_txn_node_children(fs, noderev->id,
+                                                   scratch_pool);
 
       /* The representation is mutable.  Read the old directory
          contents from the mutable children file, followed by the
          changes we've made in this transaction. */
-      SVN_ERR(svn_stream_open_readonly(&contents, filename, scratch_pool,
-                                       scratch_pool));
-      SVN_ERR(read_dir_entries(*entries, contents, TRUE,  noderev->id,
+      SVN_ERR(svn_io_file_open(&file, filename, APR_READ | APR_BUFFERED,
+                               APR_OS_DEFAULT, scratch_pool));
+
+      /* Obtain txn children file size. */
+      SVN_ERR(svn_io_file_size_get(&dir->txn_filesize, file, scratch_pool));
+
+      contents = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
+      SVN_ERR(read_dir_entries(dir->entries, contents, TRUE, noderev->id,
                                result_pool, scratch_pool));
       SVN_ERR(svn_stream_close(contents));
     }
@@ -2469,9 +2604,7 @@ get_dir_contents(apr_array_header_t **entries,
       /* Undeltify content before parsing it. Otherwise, we could only
        * parse it byte-by-byte.
        */
-      apr_size_t len = noderev->data_rep->expanded_size
-                     ? (apr_size_t)noderev->data_rep->expanded_size
-                     : (apr_size_t)noderev->data_rep->size;
+      apr_size_t len = noderev->data_rep->expanded_size;
       svn_stringbuf_t *text;
 
       /* The representation is immutable.  Read it normally. */
@@ -2482,7 +2615,7 @@ get_dir_contents(apr_array_header_t **entries,
 
       /* de-serialize hash */
       contents = svn_stream_from_stringbuf(text, scratch_pool);
-      SVN_ERR(read_dir_entries(*entries, contents, FALSE,  noderev->id,
+      SVN_ERR(read_dir_entries(dir->entries, contents, FALSE, noderev->id,
                                result_pool, scratch_pool));
     }
 
@@ -2524,7 +2657,7 @@ locate_dir_cache(svn_fs_t *fs,
              A NULL key causes a cache miss. */
           *key = NULL;
         }
-      
+
       return ffd->dir_cache;
     }
 }
@@ -2538,6 +2671,7 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
 {
   pair_cache_key_t pair_key = { 0 };
   const void *key;
+  svn_fs_fs__dir_data_t *dir;
 
   /* find the cache we may use */
   svn_cache__t *cache = locate_dir_cache(fs, &key, &pair_key, noderev,
@@ -2546,19 +2680,32 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
     {
       svn_boolean_t found;
 
-      SVN_ERR(svn_cache__get((void **)entries_p, &found, cache, key,
+      SVN_ERR(svn_cache__get((void **)&dir, &found, cache, key,
                              result_pool));
       if (found)
-        return SVN_NO_ERROR;
+        {
+          /* Verify that the cached dir info is not stale
+           * (no-op for committed data). */
+          svn_filesize_t filesize;
+          SVN_ERR(get_txn_dir_info(&filesize, fs, noderev, scratch_pool));
+
+          if (filesize == dir->txn_filesize)
+            {
+              /* Still valid. Done. */
+              *entries_p = dir->entries;
+              return SVN_NO_ERROR;
+            }
+        }
     }
 
   /* Read in the directory contents. */
-  SVN_ERR(get_dir_contents(entries_p, fs, noderev, result_pool,
-                           scratch_pool));
+  dir = apr_pcalloc(scratch_pool, sizeof(*dir));
+  SVN_ERR(get_dir_contents(dir, fs, noderev, result_pool, scratch_pool));
+  *entries_p = dir->entries;
 
   /* Update the cache, if we are to use one. */
   if (cache)
-    SVN_ERR(svn_cache__set(cache, key, *entries_p, scratch_pool));
+    SVN_ERR(svn_cache__set(cache, key, dir, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2590,30 +2737,40 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                          scratch_pool);
   if (cache)
     {
+      extract_dir_entry_baton_t baton;
+
+      svn_filesize_t filesize;
+      SVN_ERR(get_txn_dir_info(&filesize, fs, noderev, scratch_pool));
+
       /* Cache lookup. */
+      baton.txn_filesize = filesize;
+      baton.name = name;
       SVN_ERR(svn_cache__get_partial((void **)dirent,
                                      &found,
                                      cache,
                                      key,
                                      svn_fs_fs__extract_dir_entry,
-                                     (void*)name,
+                                     &baton,
                                      result_pool));
     }
 
   /* fetch data from disk if we did not find it in the cache */
   if (! found)
     {
-      apr_array_header_t *entries;
       svn_fs_dirent_t *entry;
       svn_fs_dirent_t *entry_copy = NULL;
+      svn_fs_fs__dir_data_t dir;
 
-      /* read the dir from the file system. It will probably be put it
-         into the cache for faster lookup in future calls. */
-      SVN_ERR(svn_fs_fs__rep_contents_dir(&entries, fs, noderev,
-                                          scratch_pool, scratch_pool));
+      /* Read in the directory contents. */
+      SVN_ERR(get_dir_contents(&dir, fs, noderev, scratch_pool,
+                               scratch_pool));
+
+      /* Update the cache, if we are to use one. */
+      if (cache)
+        SVN_ERR(svn_cache__set(cache, key, &dir, scratch_pool));
 
       /* find desired entry and return a copy in POOL, if found */
-      entry = svn_fs_fs__find_dir_entry(entries, name, NULL);
+      entry = svn_fs_fs__find_dir_entry(dir.entries, name, NULL);
       if (entry)
         {
           entry_copy = apr_palloc(result_pool, sizeof(*entry_copy));
@@ -2639,16 +2796,27 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
 
   if (noderev->prop_rep && svn_fs_fs__id_txn_used(&noderev->prop_rep->txn_id))
     {
+      svn_error_t *err;
       const char *filename
         = svn_fs_fs__path_txn_node_props(fs, noderev->id, pool);
       proplist = apr_hash_make(pool);
 
       SVN_ERR(svn_stream_open_readonly(&stream, filename, pool, pool));
-      SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+      err = svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool);
+      if (err)
+        {
+          svn_string_t *id_str = svn_fs_fs__id_unparse(noderev->id, pool);
+
+          err = svn_error_compose_create(err, svn_stream_close(stream));
+          return svn_error_quick_wrapf(err,
+                   _("malformed property list for node-revision '%s' in '%s'"),
+                   id_str->data, filename);
+        }
       SVN_ERR(svn_stream_close(stream));
     }
   else if (noderev->prop_rep)
     {
+      svn_error_t *err;
       fs_fs_data_t *ffd = fs->fsap_data;
       representation_t *rep = noderev->prop_rep;
       pair_cache_key_t key = { 0 };
@@ -2667,7 +2835,16 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
       proplist = apr_hash_make(pool);
       SVN_ERR(svn_fs_fs__get_contents(&stream, fs, noderev->prop_rep, FALSE,
                                       pool));
-      SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool));
+      err = svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR, pool);
+      if (err)
+        {
+          svn_string_t *id_str = svn_fs_fs__id_unparse(noderev->id, pool);
+
+          err = svn_error_compose_create(err, svn_stream_close(stream));
+          return svn_error_quick_wrapf(err,
+                   _("malformed property list for node-revision '%s'"),
+                   id_str->data);
+        }
       SVN_ERR(svn_stream_close(stream));
 
       if (ffd->properties_cache && SVN_IS_VALID_REVNUM(rep->revision))
@@ -2690,7 +2867,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
                        svn_revnum_t rev,
                        apr_pool_t *result_pool)
 {
-  apr_off_t changes_offset = SVN_FS_FS__ITEM_INDEX_CHANGES;
+  apr_off_t item_index = SVN_FS_FS__ITEM_INDEX_CHANGES;
   svn_fs_fs__revision_file_t *revision_file;
   svn_boolean_t found;
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -2725,17 +2902,26 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
         }
       else
         {
+          apr_off_t changes_offset;
+
           /* Addressing is very different for old formats
            * (needs to read the revision trailer). */
           if (svn_fs_fs__use_log_addressing(fs))
-            SVN_ERR(svn_fs_fs__item_offset(&changes_offset, fs,
-                                           revision_file, rev, NULL,
-                                           SVN_FS_FS__ITEM_INDEX_CHANGES,
-                                           scratch_pool));
+            {
+              SVN_ERR(svn_fs_fs__item_offset(&changes_offset, fs,
+                                             revision_file, rev, NULL,
+                                             SVN_FS_FS__ITEM_INDEX_CHANGES,
+                                             scratch_pool));
+            }
           else
-            SVN_ERR(get_root_changes_offset(NULL, &changes_offset,
-                                            revision_file, fs, rev,
-                                            scratch_pool));
+            {
+              SVN_ERR(get_root_changes_offset(NULL, &changes_offset,
+                                              revision_file, fs, rev,
+                                              scratch_pool));
+
+              /* This variable will be used for debug logging only. */
+              item_index = changes_offset;
+            }
 
           /* Actual reading and parsing are the same, though. */
           SVN_ERR(aligned_seek(fs, revision_file->file, NULL, changes_offset,
@@ -2763,7 +2949,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
       SVN_ERR(svn_fs_fs__close_revision_file(revision_file));
     }
 
-  SVN_ERR(dbg_log_access(fs, rev, changes_offset, *changes,
+  SVN_ERR(dbg_log_access(fs, rev, item_index, *changes,
                          SVN_FS_FS__ITEM_TYPE_CHANGES, scratch_pool));
 
   svn_pool_destroy(scratch_pool);
@@ -2788,7 +2974,7 @@ init_rep_state(rep_state_t *rs,
   /* this function does not apply to representation containers */
   SVN_ERR_ASSERT(entry->type >= SVN_FS_FS__ITEM_TYPE_FILE_REP
                  && entry->type <= SVN_FS_FS__ITEM_TYPE_DIR_PROPS);
-  
+
   shared_file->rfile = file;
   shared_file->fs = fs;
   shared_file->revision = entry->item.revision;
@@ -2850,7 +3036,7 @@ get_raw_window_end(void **out,
  * at or beyond that offset.  Use POOL for temporary allocations.
  *
  * This function requires RS->RAW_WINDOW_CACHE and RS->WINDOW_CACHE to
- * be non-NULL. 
+ * be non-NULL.
  */
 static svn_error_t *
 cache_windows(svn_fs_t *fs,
@@ -2965,7 +3151,7 @@ block_read_windows(svn_fs_fs__rep_header_t *rep_header,
 
   SVN_ERR(init_rep_state(&rs, rep_header, fs, rev_file, entry,
                          result_pool));
-  
+
   /* RS->FILE may be shared between RS instances -> make sure we point
    * to the right data. */
   offset = rs.start + rs.current;
@@ -3018,7 +3204,7 @@ read_rep_header(svn_fs_fs__rep_header_t **rep_header,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_boolean_t is_cached = FALSE;
-  
+
   if (ffd->rep_header_cache)
     {
       SVN_ERR(svn_cache__get((void**)rep_header, &is_cached,
@@ -3200,9 +3386,7 @@ block_read_noderev(node_revision_t **noderev_p,
   /* read node rev from revision file */
   SVN_ERR(svn_fs_fs__read_noderev(noderev_p, stream,
                                   result_pool, scratch_pool));
-
-  /* Workaround issue #4031: is-fresh-txn-root in revision files. */
-  (*noderev_p)->is_fresh_txn_root = FALSE;
+  SVN_ERR(fixup_node_revision(fs, *noderev_p, scratch_pool));
 
   if (ffd->node_revision_cache)
     SVN_ERR(svn_cache__set(ffd->node_revision_cache, &key, *noderev_p,
@@ -3246,7 +3430,7 @@ block_read(void **result,
 
   /* don't try this on transaction protorev files */
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
-  
+
   /* index lookup: find the OFFSET of the item we *must* read plus (in the
    * "do-while" block) the list of items in the same block. */
   SVN_ERR(svn_fs_fs__item_offset(&wanted_offset, fs, revision_file,

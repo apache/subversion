@@ -327,7 +327,8 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
     {
       svn_boolean_t prop_conflicted;
 
-      SVN_ERR(svn_wc__conflict_invoke_resolver(db, local_abspath, conflict_skel,
+      SVN_ERR(svn_wc__conflict_invoke_resolver(db, local_abspath, kind,
+                                               conflict_skel,
                                                NULL /* merge_options */,
                                                conflict_func, conflict_baton,
                                                cancel_func, cancel_baton,
@@ -541,7 +542,7 @@ prop_conflict_new(const svn_string_t **conflict_desc,
 
   /* How we render the conflict:
 
-     We have four sides: original, mine, incoming_base, incoming.  
+     We have four sides: original, mine, incoming_base, incoming.
      We render the conflict as a 3-way diff.  A diff3 API has three parts,
      called:
 
@@ -750,7 +751,8 @@ svn_wc__create_prejfile(const char **tmp_prejfile_abspath,
       apr_hash_t *conflicted_props;
       svn_skel_t *conflicts;
 
-      SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+      SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, NULL,
+                                       db, local_abspath,
                                       scratch_pool, scratch_pool));
 
       SVN_ERR(svn_wc__conflict_read_info(&operation, NULL, NULL, NULL, NULL,
@@ -1272,7 +1274,7 @@ svn_wc__merge_props(svn_skel_t **conflict_skel,
 
       svn_pool_clear(iterpool);
 
-      to_val = to_val ? svn_string_dup(to_val, result_pool) : NULL;
+      to_val = svn_string_dup(to_val, result_pool);
 
       svn_hash_sets(their_props, propname, to_val);
 

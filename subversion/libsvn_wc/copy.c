@@ -42,6 +42,7 @@
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
 
+/* #define RECORD_MIXED_MOVE */
 
 /*** Code. ***/
 
@@ -257,8 +258,9 @@ copy_versioned_file(svn_wc__db_t *db,
           svn_error_t *err;
 
           /* Is there a text conflict at the source path? */
-          SVN_ERR(svn_wc__db_read_conflict(&conflict, db, src_abspath,
-                                         scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, NULL,
+                                           db, src_abspath,
+                                           scratch_pool, scratch_pool));
 
           err = svn_wc__conflict_read_text_conflict(&conflict_working, NULL, NULL,
                                                     db, src_abspath, conflict,
@@ -567,10 +569,10 @@ copy_versioned_dir(svn_wc__db_t *db,
  * The additional parameter IS_MOVE indicates whether this is a copy or
  * a move operation.
  *
- * If MOVE_DEGRADED_TO_COPY is not NULL and a move had to be degraded
- * to a copy, then set *MOVE_DEGRADED_TO_COPY. */
+ * If RECORD_MOVE_ON_DELETE is not NULL and a move had to be degraded
+ * to a copy, then set *RECORD_MOVE_ON_DELETE to FALSE. */
 static svn_error_t *
-copy_or_move(svn_boolean_t *move_degraded_to_copy,
+copy_or_move(svn_boolean_t *record_move_on_delete,
              svn_wc_context_t *wc_ctx,
              const char *src_abspath,
              const char *dst_abspath,
@@ -820,8 +822,8 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
   if (is_move
       && !within_one_wc)
     {
-      if (move_degraded_to_copy)
-        *move_degraded_to_copy = TRUE;
+      if (record_move_on_delete)
+        *record_move_on_delete = FALSE;
 
       is_move = FALSE;
     }
@@ -865,9 +867,11 @@ copy_or_move(svn_boolean_t *move_degraded_to_copy,
                                                                 scratch_pool),
                                          min_rev, max_rev);
 
+#ifndef RECORD_MIXED_MOVE
               is_move = FALSE;
-              if (move_degraded_to_copy)
-                *move_degraded_to_copy = TRUE;
+              if (record_move_on_delete)
+                *record_move_on_delete = FALSE;
+#endif
             }
         }
 
@@ -942,7 +946,8 @@ remove_node_conflict_markers(svn_wc__db_t *db,
 {
   svn_skel_t *conflict;
 
-  SVN_ERR(svn_wc__db_read_conflict(&conflict, db, src_abspath,
+  SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, NULL,
+                                   db, src_abspath,
                                    scratch_pool, scratch_pool));
 
   /* Do we have conflict markers that should be removed? */
@@ -962,18 +967,18 @@ remove_node_conflict_markers(svn_wc__db_t *db,
         {
           const char *marker_abspath;
           const char *child_relpath;
-          const char *child_abpath;
+          const char *child_abspath;
 
           marker_abspath = APR_ARRAY_IDX(markers, i, const char *);
 
-          child_relpath = svn_dirent_is_child(src_dir, marker_abspath, NULL);
+          child_relpath = svn_dirent_skip_ancestor(src_dir, marker_abspath);
 
           if (child_relpath)
             {
-              child_abpath = svn_dirent_join(dst_dir, child_relpath,
-                                             scratch_pool);
+              child_abspath = svn_dirent_join(dst_dir, child_relpath,
+                                              scratch_pool);
 
-              SVN_ERR(svn_io_remove_file2(child_abpath, TRUE, scratch_pool));
+              SVN_ERR(svn_io_remove_file2(child_abspath, TRUE, scratch_pool));
             }
         }
     }
@@ -993,7 +998,9 @@ remove_node_conflict_markers(svn_wc__db_t *db,
 static svn_error_t *
 remove_all_conflict_markers(svn_wc__db_t *db,
                             const char *src_dir_abspath,
-                            const char *wc_dir_abspath,
+                            const char *dst_dir_abspath,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1017,13 +1024,16 @@ remove_all_conflict_markers(svn_wc__db_t *db,
       const char *name = apr_hash_this_key(hi);
       struct svn_wc__db_info_t *info = apr_hash_this_val(hi);
 
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
       if (info->conflicted)
         {
           svn_pool_clear(iterpool);
           SVN_ERR(remove_node_conflict_markers(
                             db,
                             svn_dirent_join(src_dir_abspath, name, iterpool),
-                            svn_dirent_join(wc_dir_abspath, name, iterpool),
+                            svn_dirent_join(dst_dir_abspath, name, iterpool),
                             iterpool));
         }
       if (info->kind == svn_node_dir)
@@ -1032,7 +1042,8 @@ remove_all_conflict_markers(svn_wc__db_t *db,
           SVN_ERR(remove_all_conflict_markers(
                             db,
                             svn_dirent_join(src_dir_abspath, name, iterpool),
-                            svn_dirent_join(wc_dir_abspath, name, iterpool),
+                            svn_dirent_join(dst_dir_abspath, name, iterpool),
+                            cancel_func, cancel_baton,
                             iterpool));
         }
     }
@@ -1054,7 +1065,7 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
               apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
-  svn_boolean_t move_degraded_to_copy = FALSE;
+  svn_boolean_t record_on_delete = TRUE;
   svn_node_kind_t kind;
   svn_boolean_t conflicted;
 
@@ -1066,7 +1077,7 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
                               svn_dirent_dirname(dst_abspath, scratch_pool),
                               scratch_pool));
 
-  SVN_ERR(copy_or_move(&move_degraded_to_copy,
+  SVN_ERR(copy_or_move(&record_on_delete,
                        wc_ctx, src_abspath, dst_abspath,
                        TRUE /* metadata_only */,
                        TRUE /* is_move */,
@@ -1090,7 +1101,25 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
      is still in a valid state. So be careful when switching this over
      to the workqueue. */
   if (!metadata_only)
-    SVN_ERR(svn_io_file_rename(src_abspath, dst_abspath, scratch_pool));
+    {
+      svn_error_t *err;
+
+      err = svn_error_trace(svn_io_file_rename2(src_abspath, dst_abspath,
+                                                FALSE, scratch_pool));
+
+      /* Let's try if we can keep wc.db consistent even when the move
+         fails. Deleting the target is a wc.db only operation, while
+         going forward (delaying the error) would try to change
+         conflict markers, which might also fail. */
+      if (err)
+        return svn_error_trace(
+          svn_error_compose_create(
+              err,
+              svn_wc__db_op_delete(wc_ctx->db, dst_abspath, NULL, TRUE,
+                                   NULL, NULL, cancel_func, cancel_baton,
+                                   NULL, NULL,
+                                   scratch_pool)));
+    }
 
   SVN_ERR(svn_wc__db_read_info(NULL, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, NULL, NULL, NULL, NULL,
@@ -1102,14 +1131,23 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
 
   if (kind == svn_node_dir)
     SVN_ERR(remove_all_conflict_markers(db, src_abspath, dst_abspath,
+                                        cancel_func, cancel_baton,
                                         scratch_pool));
 
   if (conflicted)
-    SVN_ERR(remove_node_conflict_markers(db, src_abspath, dst_abspath,
-                                         scratch_pool));
+    {
+      /* When we moved a directory, we moved the conflict markers
+         with the target... if we moved a file we only moved the
+         file itself and the markers are still in the old location */
+      SVN_ERR(remove_node_conflict_markers(db, src_abspath,
+                                           (kind == svn_node_dir)
+                                             ? dst_abspath
+                                             : src_abspath,
+                                           scratch_pool));
+    }
 
   SVN_ERR(svn_wc__db_op_delete(db, src_abspath,
-                               move_degraded_to_copy ? NULL : dst_abspath,
+                               record_on_delete ? dst_abspath : NULL,
                                TRUE /* delete_dir_externals */,
                                NULL /* conflict */, NULL /* work_items */,
                                cancel_func, cancel_baton,

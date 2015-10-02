@@ -112,7 +112,7 @@ def mergeinfo_and_skipped_paths(sbox):
 
   # Checkout just the branch under the newly restricted authz.
   wc_restricted = sbox.add_wc_path('restricted')
-  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+  svntest.actions.run_and_verify_svn(None, [], 'checkout',
                                      sbox.repo_url,
                                      wc_restricted)
 
@@ -194,8 +194,7 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1)
+                                       check_props=True)
 
   # Merge r4:8 into the restricted WC's A_COPY_2.
   #
@@ -270,8 +269,7 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0)
+                                       check_props=True)
 
   # Merge r5:7 into the restricted WC's A_COPY_3.
   #
@@ -335,9 +333,8 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0)
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
+                                       check_props=True)
+  svntest.actions.run_and_verify_svn(None, [], 'revert', '--recursive',
                                      wc_restricted)
 
   # Test issue #2997.  If a merge requires two separate editor drives and the
@@ -379,23 +376,23 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0, '-c5', '-c8',
+                                       [], True, False,
+                                       '-c5', '-c8',
                                        A_COPY_2_H_path)
 
   # Test issue #2829 'Improve handling for skipped paths encountered
   # during a merge'
 
   # Revert previous changes to restricted WC
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
+  svntest.actions.run_and_verify_svn(None, [], 'revert', '--recursive',
                                      wc_restricted)
   # Add new path 'A/D/H/zeta'
   svntest.main.file_write(zeta_path, "This is the file 'zeta'.\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'add', zeta_path)
+  svntest.actions.run_and_verify_svn(None, [], 'add', zeta_path)
   expected_output = wc.State(wc_dir, {'A/D/H/zeta' : Item(verb='Adding')})
   wc_status.add({'A/D/H/zeta' : Item(status='  ', wc_rev=9)})
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        wc_status, None, wc_dir)
+                                        wc_status)
 
   # Merge -r7:9 to the restricted WC's A_COPY_2/D/H.
   #
@@ -436,8 +433,7 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0)
+                                       check_props=True)
 
   # Merge -r4:9 to the restricted WC's A_COPY_2/D/H.
   #
@@ -445,7 +441,7 @@ def mergeinfo_and_skipped_paths(sbox):
   # non-inheritable mergeinfo (due to the fact 'A_COPY_2/D/H/psi' is missing
   # and skipped). 'A_COPY_2/D/H/zeta' must therefore get its own explicit
   # mergeinfo from this merge.
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
+  svntest.actions.run_and_verify_svn(None, [], 'revert', '--recursive',
                                      wc_restricted)
   expected_output = wc.State(A_COPY_2_H_path, {
     'omega' : Item(status='U '),
@@ -483,8 +479,7 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0)
+                                       check_props=True)
 
 @SkipUnless(server_has_mergeinfo)
 @Issue(2876)
@@ -526,13 +521,13 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
 
   # Commit the new content
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', A_url, Acopy_url,
+  svntest.actions.run_and_verify_svn(None, [], 'cp', A_url, Acopy_url,
                                      '-m', 'create a new copy of A')
 
   # Update working copy
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
 
   svntest.main.file_substitute(gamma_path, "line1", "this is line1")
   # Create expected output tree for commit
@@ -566,10 +561,10 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Delete A/D/gamma from working copy
-  svntest.actions.run_and_verify_svn(None, None, [], 'delete', gamma_path)
+  svntest.actions.run_and_verify_svn(None, [], 'delete', gamma_path)
   # Create expected output tree for commit
   expected_output = wc.State(wc_dir, {
     'A/D/gamma' : Item(verb='Deleting'),
@@ -580,10 +575,9 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         wc_dir, wc_dir)
   svntest.actions.run_and_verify_svn(
-    None,
     expected_merge_output([[3,4]],
                           ['U    ' + Acopy_gamma_path + '\n',
                            ' U   ' + Acopy_gamma_path + '\n']),
@@ -603,7 +597,6 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   # see notes/tree-conflicts/detection.txt, but --force currently avoids
   # this.
   svntest.actions.run_and_verify_svn(
-    None,
     expected_merge_output([[3,6]],
                           ['D    ' + Acopy_gamma_path + '\n',
                            ' U   ' + Acopy_path + '\n']),
@@ -642,7 +635,7 @@ def reintegrate_fails_if_no_root_access(sbox):
   expected_output = wc.State(wc_dir, {'A_COPY/mu' : Item(verb='Sending')})
   expected_status.tweak('A_COPY/mu', wc_rev=7)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
   expected_disk.tweak('A_COPY/mu', contents='Changed on the branch.')
 
   # Update the WC.
@@ -657,7 +650,7 @@ def reintegrate_fails_if_no_root_access(sbox):
                                            'U    ' + psi_COPY_path   + '\n',
                                            # Mergeinfo notification
                                            ' U   ' + A_COPY_path     + '\n'])
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
+  svntest.actions.run_and_verify_svn(expected_output, [], 'merge',
                                      sbox.repo_url + '/A', A_COPY_path)
   sbox.simple_commit(message='synch A_COPY with A')
 
@@ -733,8 +726,7 @@ def reintegrate_fails_if_no_root_access(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, True, True,
+                                       [], True, True,
                                        '--reintegrate', A_path)
 
 def diff_unauth_parent(sbox):
@@ -743,13 +735,13 @@ def diff_unauth_parent(sbox):
   sbox.build(create_wc=False)
 
   # Create r2: Change A a bit
-  svntest.actions.run_and_verify_svnmucc(None, None, [],
+  svntest.actions.run_and_verify_svnmucc(None, [],
                                          'propset', 'k', 'v',
                                          sbox.repo_url + '/A',
                                          '-m', 'set prop')
 
   # Create r3 Mark E and G
-  svntest.actions.run_and_verify_svnmucc(None, None, [],
+  svntest.actions.run_and_verify_svnmucc(None, [],
                                          'propset', 'this-is', 'E',
                                          sbox.repo_url + '/A/B/E',
                                          'propset', 'this-is', 'G',
@@ -757,7 +749,7 @@ def diff_unauth_parent(sbox):
                                          '-m', 'set prop')
 
   # Create r4: Replace A/B/E with A/D/G
-  svntest.actions.run_and_verify_svnmucc(None, None, [],
+  svntest.actions.run_and_verify_svnmucc(None, [],
                                          'rm', sbox.repo_url + '/A/B/E',
                                          'cp', '3', sbox.repo_url + '/A/D/G',
                                          sbox.repo_url + '/A/B/E',
@@ -783,7 +775,7 @@ def diff_unauth_parent(sbox):
     '+v\n',
     '\ No newline at end of property\n'
   ]
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', sbox.repo_url + '/A', '-c', '2')
 
   if is_ra_type_svn() or is_ra_type_dav():
@@ -871,7 +863,7 @@ def diff_unauth_parent(sbox):
 
   # Use two url diff, because 'svn diff url -c' uses copyfrom to diff against
   expected_output = svntest.verify.UnorderedOutput(expected_output)
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', sbox.repo_url + '/A/B/E@3',
                                       sbox.repo_url + '/A/B/E@4',
                                       '--notice-ancestry')
@@ -900,7 +892,7 @@ def diff_unauth_parent(sbox):
     ]
 
   expected_output = svntest.verify.UnorderedOutput(expected_output)
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', sbox.repo_url + '/A/B/E@3',
                                       sbox.repo_url + '/A/B/E@4',
                                       '--notice-ancestry', '--summarize')

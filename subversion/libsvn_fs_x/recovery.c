@@ -38,10 +38,28 @@
 
 #include "svn_private_config.h"
 
-/* Part of the recovery procedure.  Return the largest revision *REV in
-   filesystem FS.  Use POOL for temporary allocation. */
+/* Set *EXISTS to TRUE, if the revision / pack file for REV exists in FS.
+   Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
+revision_file_exists(svn_boolean_t *exists,
+                     svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     apr_pool_t *scratch_pool)
+{
+  svn_node_kind_t kind;
+  const char *path = svn_fs_x__path_rev_absolute(fs, rev, scratch_pool);
+  SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+
+  *exists = kind == svn_node_file;
+  return SVN_NO_ERROR;
+}
+
+/* Part of the recovery procedure.  Return the largest revision *REV in
+   filesystem FS.  Use SCRATCH_POOL for temporary allocation. */
+static svn_error_t *
+recover_get_largest_revision(svn_fs_t *fs,
+                             svn_revnum_t *rev,
+                             apr_pool_t *scratch_pool)
 {
   /* Discovering the largest revision in the filesystem would be an
      expensive operation if we did a readdir() or searched linearly,
@@ -50,23 +68,16 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
   apr_pool_t *iterpool;
   svn_revnum_t left, right = 1;
 
-  iterpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(scratch_pool);
   /* Keep doubling right, until we find a revision that doesn't exist. */
   while (1)
     {
-      svn_error_t *err;
-      svn_fs_x__revision_file_t *file;
+      svn_boolean_t exists;
       svn_pool_clear(iterpool);
 
-      err = svn_fs_x__open_pack_or_rev_file(&file, fs, right, iterpool,
-                                            iterpool);
-      if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
-        {
-          svn_error_clear(err);
-          break;
-        }
-      else
-        SVN_ERR(err);
+      SVN_ERR(revision_file_exists(&exists, fs, right, iterpool));
+      if (!exists)
+        break;
 
       right <<= 1;
     }
@@ -78,22 +89,14 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
   while (left + 1 < right)
     {
       svn_revnum_t probe = left + ((right - left) / 2);
-      svn_error_t *err;
-      svn_fs_x__revision_file_t *file;
+      svn_boolean_t exists;
       svn_pool_clear(iterpool);
 
-      err = svn_fs_x__open_pack_or_rev_file(&file, fs, probe, iterpool,
-                                            iterpool);
-      if (err && err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
-        {
-          svn_error_clear(err);
-          right = probe;
-        }
+      SVN_ERR(revision_file_exists(&exists, fs, probe, iterpool));
+      if (exists)
+        left = probe;
       else
-        {
-          SVN_ERR(err);
-          left = probe;
-        }
+        right = probe;
     }
 
   svn_pool_destroy(iterpool);
@@ -104,38 +107,40 @@ recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
 }
 
 /* Baton used for recover_body below. */
-struct recover_baton {
+typedef struct recover_baton_t {
   svn_fs_t *fs;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
-};
+} recover_baton_t;
 
 /* The work-horse for svn_fs_x__recover, called with the FS
    write lock.  This implements the svn_fs_x__with_write_lock()
-   'body' callback type.  BATON is a 'struct recover_baton *'. */
+   'body' callback type.  BATON is a 'recover_baton_t *'. */
 static svn_error_t *
-recover_body(void *baton, apr_pool_t *pool)
+recover_body(void *baton,
+             apr_pool_t *scratch_pool)
 {
-  struct recover_baton *b = baton;
+  recover_baton_t *b = baton;
   svn_fs_t *fs = b->fs;
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_revnum_t max_rev;
   svn_revnum_t youngest_rev;
-  svn_node_kind_t youngest_revprops_kind;
+  svn_boolean_t revprop_missing = TRUE;
+  svn_boolean_t revprop_accessible = FALSE;
 
   /* Lose potentially corrupted data in temp files */
-  SVN_ERR(svn_fs_x__reset_revprop_generation_file(fs, pool));
+  SVN_ERR(svn_fs_x__reset_revprop_generation_file(fs, scratch_pool));
 
   /* The admin may have created a plain copy of this repo before attempting
      to recover it (hotcopy may or may not work with corrupted repos).
      Bump the instance ID. */
-  SVN_ERR(svn_fs_x__set_uuid(fs, fs->uuid, NULL, pool));
+  SVN_ERR(svn_fs_x__set_uuid(fs, fs->uuid, NULL, scratch_pool));
 
   /* We need to know the largest revision in the filesystem. */
-  SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
+  SVN_ERR(recover_get_largest_revision(fs, &max_rev, scratch_pool));
 
   /* Get the expected youngest revision */
-  SVN_ERR(svn_fs_x__youngest_rev(&youngest_rev, fs, pool));
+  SVN_ERR(svn_fs_x__youngest_rev(&youngest_rev, fs, scratch_pool));
 
   /* Policy note:
 
@@ -176,35 +181,49 @@ recover_body(void *baton, apr_pool_t *pool)
 
   /* Before setting current, verify that there is a revprops file
      for the youngest revision.  (Issue #2992) */
-  SVN_ERR(svn_io_check_path(svn_fs_x__path_revprops(fs, max_rev, pool),
-                            &youngest_revprops_kind, pool));
-  if (youngest_revprops_kind == svn_node_none)
+  if (svn_fs_x__is_packed_revprop(fs, max_rev))
     {
-      svn_boolean_t missing = TRUE;
-      if (!svn_fs_x__packed_revprop_available(&missing, fs, max_rev, pool))
-        {
-          if (missing)
-            {
-              return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                      _("Revision %ld has a revs file but no "
-                                        "revprops file"),
-                                      max_rev);
-            }
-          else
-            {
-              return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                                      _("Revision %ld has a revs file but the "
-                                        "revprops file is inaccessible"),
-                                      max_rev);
-            }
-          }
+      revprop_accessible
+        = svn_fs_x__packed_revprop_available(&revprop_missing, fs, max_rev,
+                                             scratch_pool);
     }
-  else if (youngest_revprops_kind != svn_node_file)
+  else
     {
-      return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                               _("Revision %ld has a non-file where its "
-                                 "revprops file should be"),
-                               max_rev);
+      svn_node_kind_t youngest_revprops_kind;
+      SVN_ERR(svn_io_check_path(svn_fs_x__path_revprops(fs, max_rev,
+                                                        scratch_pool),
+                                &youngest_revprops_kind, scratch_pool));
+
+      if (youngest_revprops_kind == svn_node_file)
+        {
+          revprop_missing = FALSE;
+          revprop_accessible = TRUE;
+        }
+      else if (youngest_revprops_kind != svn_node_none)
+        {
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                  _("Revision %ld has a non-file where its "
+                                    "revprops file should be"),
+                                  max_rev);
+        }
+    }
+
+  if (!revprop_accessible)
+    {
+      if (revprop_missing)
+        {
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                  _("Revision %ld has a revs file but no "
+                                    "revprops file"),
+                                  max_rev);
+        }
+      else
+        {
+          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                                  _("Revision %ld has a revs file but the "
+                                    "revprops file is inaccessible"),
+                                  max_rev);
+        }
     }
 
   /* Prune younger-than-(newfound-youngest) revisions from the rep
@@ -214,23 +233,25 @@ recover_body(void *baton, apr_pool_t *pool)
     {
       svn_boolean_t rep_cache_exists;
 
-      SVN_ERR(svn_fs_x__exists_rep_cache(&rep_cache_exists, fs, pool));
+      SVN_ERR(svn_fs_x__exists_rep_cache(&rep_cache_exists, fs,
+                                         scratch_pool));
       if (rep_cache_exists)
-        SVN_ERR(svn_fs_x__del_rep_reference(fs, max_rev, pool));
+        SVN_ERR(svn_fs_x__del_rep_reference(fs, max_rev, scratch_pool));
     }
 
   /* Now store the discovered youngest revision, and the next IDs if
      relevant, in a new 'current' file. */
-  return svn_fs_x__write_current(fs, max_rev, pool);
+  return svn_fs_x__write_current(fs, max_rev, scratch_pool);
 }
 
 /* This implements the fs_library_vtable_t.recover() API. */
 svn_error_t *
 svn_fs_x__recover(svn_fs_t *fs,
-                  svn_cancel_func_t cancel_func, void *cancel_baton,
-                  apr_pool_t *pool)
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *scratch_pool)
 {
-  struct recover_baton b;
+  recover_baton_t b;
 
   /* We have no way to take out an exclusive lock in FSX, so we're
      restricted as to the types of recovery we can do.  Luckily,
@@ -239,5 +260,5 @@ svn_fs_x__recover(svn_fs_t *fs,
   b.fs = fs;
   b.cancel_func = cancel_func;
   b.cancel_baton = cancel_baton;
-  return svn_fs_x__with_all_locks(fs, recover_body, &b, pool);
+  return svn_fs_x__with_all_locks(fs, recover_body, &b, scratch_pool);
 }

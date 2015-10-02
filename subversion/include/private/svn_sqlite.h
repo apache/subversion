@@ -63,7 +63,7 @@ typedef enum svn_sqlite__mode_e {
 typedef svn_error_t *(*svn_sqlite__func_t)(svn_sqlite__context_t *sctx,
                                            int argc,
                                            svn_sqlite__value_t *values[],
-                                           apr_pool_t *scatch_pool);
+                                           void *baton);
 
 
 /* Step the given statement; if it returns SQLITE_DONE, reset the statement.

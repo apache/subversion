@@ -19,7 +19,7 @@
 #
 #
 #
-# gen_win_dependencies.py 
+# gen_win_dependencies.py
 #
 #   base class for generating windows projects, containing the
 #   dependency locator code shared between the test runner and
@@ -73,22 +73,22 @@ class SVNCommonLibrary:
       self.debug_lib_dir = debug_lib_dir
     else:
       self.debug_lib_dir = lib_dir
-      
+
     if debug_lib_name:
       self.debug_lib_name = debug_lib_name
     else:
       self.debug_lib_name = lib_name
-      
+
     if debug_dll_dir:
       self.debug_dll_dir = debug_dll_dir
     else:
       self.debug_dll_dir = dll_dir
-      
+
     if debug_dll_name:
       self.debug_dll_name = debug_dll_name
     else:
       self.debug_dll_name = dll_name
-      
+
     self.extra_bin = extra_bin
 
 class GenDependenciesBase(gen_base.GeneratorBase):
@@ -118,9 +118,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         'python',
         'ruby',
         'java_sdk',
+        'openssl',
+        'apr_memcache',
 
         # So optional, we don't even have any code to detect them on Windows
-        'apr_memcache',
         'magic',
   ]
 
@@ -136,7 +137,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self.apr_util_path = 'apr-util'
     self.apr_iconv_path = 'apr-iconv'
     self.serf_path = None
-    self.bdb_path = 'db4-win32'
+    self.bdb_path = None
     self.httpd_path = None
     self.libintl_path = None
     self.zlib_path = 'zlib'
@@ -253,6 +254,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
           self.sln_version = '12.00'
           self.vcproj_version = '12.0'
           self.vcproj_extension = '.vcxproj'
+        elif val == '2015' or val == '14':
+          self.vs_version = '2015'
+          self.sln_version = '12.00'
+          self.vcproj_version = '14.0'
+          self.vcproj_extension = '.vcxproj'
+        elif re.match('^20\d+$', val):
+          print('WARNING: Unknown VS.NET version "%s",'
+                ' assuming VS2012. Your VS can probably upgrade')
+          self.vs_version = '2012'
+          self.sln_version = '12.00'
+          self.vcproj_version = '11.0'
+          self.vcproj_extension = '.vcxproj'
         elif re.match('^1\d+$', val):
           self.vs_version = val
           self.sln_version = '12.00'
@@ -278,13 +291,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     if find_libs:
       self.find_libraries(False)
-      
+
   def find_libraries(self, show_warnings):
     "find required and optional libraries"
 
     # Required dependencies
     self._find_apr()
-    self._find_apr_util_and_expat()
+    self._find_apr_util_etc()
     self._find_zlib()
     self._find_sqlite(show_warnings)
 
@@ -312,7 +325,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if not self.apr_path:
       sys.stderr.write("ERROR: Use '--with-apr' option to configure APR " + \
                        "location.\n")
-      sys.exit(1)                       
+      sys.exit(1)
 
     inc_base = os.path.join(self.apr_path, 'include')
 
@@ -391,18 +404,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     extra_bin = []
 
-    if dll_dir:        
+    if dll_dir:
       bin_files = os.listdir(dll_dir)
       if debug_dll_dir and os.path.isdir(debug_dll_dir):
         debug_bin_files = os.listdir(debug_dll_dir)
       else:
-        debug_bin_files = bin_files 
-      
+        debug_bin_files = bin_files
+
       for bin in bin_files:
         if bin in debug_bin_files:
           if re.match('^(lib)?apr[-_].*' + suffix + '(d)?.dll$', bin):
             extra_bin.append(bin)
-      
+
     self._libraries['apr'] = SVNCommonLibrary('apr', inc_path, lib_dir, lib_name,
                                               apr_version,
                                               debug_lib_dir=debug_lib_dir,
@@ -412,7 +425,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                               defines=defines,
                                               extra_bin=extra_bin)
 
-  def _find_apr_util_and_expat(self):
+  def _find_apr_util_etc(self):
     "Find the APR-util library and version"
 
     minimal_aprutil_version = (1, 3, 0)
@@ -442,7 +455,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     version = (major, minor, patch)
     self.aprutil_version = aprutil_version = '%d.%d.%d' % version
-    
+
     if version < minimal_aprutil_version:
       sys.stderr.write("ERROR: apr-util %s or higher is required "
                        "(%s found)\n" % (
@@ -462,7 +475,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       debug_dll_dir = None
       dll_name = None
       defines.extend(["APU_DECLARE_STATIC"])
-      
+
       if not os.path.isdir(lib_dir) and \
          os.path.isfile(os.path.join(self.apr_util_path, 'lib', lib_name)):
         # Installed APR-Util instead of APR-Util-Source
@@ -473,7 +486,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     else:
       lib_name = 'libaprutil%s.lib' % suffix
       lib_dir = os.path.join(self.apr_util_path, 'Release')
-      
+
       if not os.path.isdir(lib_dir) and \
          os.path.isfile(os.path.join(self.apr_util_path, 'lib', lib_name)):
         # Installed APR-Util instead of APR-Util-Source
@@ -481,7 +494,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         debug_lib_dir = lib_dir
       else:
         debug_lib_dir = os.path.join(self.apr_util_path, 'Debug')
-        
+
       dll_name = 'libaprutil%s.dll' % suffix
       if os.path.isfile(os.path.join(lib_dir, dll_name)):
         dll_dir = lib_dir
@@ -491,13 +504,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         debug_dll_dir = None
 
     extra_bin = []
-    
+
     if dll_dir:
       bin_files = os.listdir(dll_dir)
       if debug_dll_dir and os.path.isdir(debug_dll_dir):
         debug_bin_files = os.listdir(debug_dll_dir)
       else:
-        debug_bin_files = bin_files 
+        debug_bin_files = bin_files
 
       for bin in bin_files:
         if bin in debug_bin_files:
@@ -513,6 +526,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                    debug_dll_dir=debug_dll_dir,
                                                    defines=defines,
                                                    extra_bin=extra_bin)
+
+    # Perhaps apr-util can also provide memcached support
+    if version >= (1, 3, 0) :
+      self._libraries['apr_memcache'] = SVNCommonLibrary(
+                                          'apr_memcache', inc_path, lib_dir,
+                                          None, aprutil_version,
+                                          defines=['SVN_HAVE_MEMCACHE'])
 
     # And now find expat
     # If we have apr-util as a source location, it is in a subdir.
@@ -688,7 +708,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         # CMake default: zlibstatic.lib (static) and zlib.lib (dll)
         lib_name = 'zlibstatic.lib'
       else:
-        # Standard makefile produces zlib.lib (static) and zdll.lib (dll)      
+        # Standard makefile produces zlib.lib (static) and zdll.lib (dll)
         lib_name = 'zlib.lib'
       debug_lib_name = None
     else:
@@ -711,7 +731,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     version = tuple(map(int, vermatch.groups()))
     self.zlib_version = '%d.%d.%d' % version
-    
+
     if version < minimal_zlib_version:
       sys.stderr.write("ERROR: ZLib %s or higher is required "
                        "(%s found)\n" % (
@@ -726,13 +746,17 @@ class GenDependenciesBase(gen_base.GeneratorBase):
   def _find_bdb(self, show_warnings):
     "Find the Berkeley DB library and version"
 
-    # Default to not found
-    self.bdb_lib = None
+    # try default path to detect BDB support, unless different path is
+    # specified so to keep pre 1.10-behavior for BDB detection on Windows
+    bdb_path = 'db4-win32'
 
-    inc_path = os.path.join(self.bdb_path, 'include')
+    if self.bdb_path:
+      bdb_path = self.bdb_path
+    
+    inc_path = os.path.join(bdb_path, 'include')
     db_h_path = os.path.join(inc_path, 'db.h')
 
-    if not self.bdb_path or not os.path.isfile(db_h_path):
+    if not os.path.isfile(db_h_path):
       if show_warnings and self.bdb_path:
         print('WARNING: \'%s\' not found' % (db_h_path,))
         print("Use '--with-berkeley-db' to configure BDB location.");
@@ -762,7 +786,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
        ):
       return
 
-    lib_dir = os.path.join(self.bdb_path, 'lib')
+    lib_dir = os.path.join(bdb_path, 'lib')
     lib_name = 'libdb%s.lib' % (versuffix,)
 
     if not os.path.exists(os.path.join(lib_dir, lib_name)):
@@ -773,7 +797,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if not os.path.isfile(os.path.join(lib_dir, debug_lib_name)):
       debug_lib_name = None
 
-    dll_dir = os.path.join(self.bdb_path, 'bin')
+    dll_dir = os.path.join(bdb_path, 'bin')
 
     # Are there binaries we should copy for testing?
     dll_name = os.path.splitext(lib_name)[0] + '.dll'
@@ -799,15 +823,12 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                               debug_dll_name=debug_dll_name,
                                               defines=defines)
 
-    # For compatibility with old code
-    self.bdb_lib = self._libraries['db'].lib_name
-
   def _find_openssl(self, show_warnings):
     "Find openssl"
-    
+
     if not self.openssl_path:
       return
-      
+
     version_path = os.path.join(self.openssl_path, 'inc32/openssl/opensslv.h')
     if os.path.isfile(version_path):
       # We have an OpenSSL Source location
@@ -838,14 +859,14 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     txt = open(version_path).read()
 
     vermatch = re.search(
-      r'#define OPENSSL_VERSION_TEXT\s+"OpenSSL\s+((\d+)\.(\d+).(\d+)([^ -]*))',
+      r'#\s*define\s+OPENSSL_VERSION_TEXT\s+"OpenSSL\s+((\d+)\.(\d+).(\d+)([^ -]*))',
       txt)
-  
-    version = (int(vermatch.group(2)), 
+
+    version = (int(vermatch.group(2)),
                int(vermatch.group(3)),
                int(vermatch.group(4)))
     openssl_version = vermatch.group(1)
-  
+
     self._libraries['openssl'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
                                                   'ssleay32.lib',
                                                   openssl_version,
@@ -906,11 +927,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     # Pass -W0 to stifle the "-e:1: Use RbConfig instead of obsolete
     # and deprecated Config." warning if we are using Ruby 1.9.
     fp = os.popen('ruby -rrbconfig -W0 -e ' + escape_shell_arg(
-                  "puts Config::CONFIG['ruby_version'];"
-                  "puts Config::CONFIG['LIBRUBY'];"
-                  "puts Config::CONFIG['libdir'];"
-                  "puts Config::CONFIG['rubyhdrdir'];"
-                  "puts Config::CONFIG['arch'];"), 'r')
+                  "puts RbConfig::CONFIG['ruby_version'];"
+                  "puts RbConfig::CONFIG['LIBRUBY'];"
+                  "puts RbConfig::CONFIG['libdir'];"
+                  "puts RbConfig::CONFIG['rubyhdrdir'];"
+                  "puts RbConfig::CONFIG['arch'];"), 'r')
     try:
       line = fp.readline()
       if line:
@@ -939,9 +960,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if not lib_dir:
       return
 
-    # Visual C++ doesn't have a standard compliant snprintf yet
-    # (Will probably be added in VS2013 + 1)
-    defines = ['snprintf=_snprintf']
+    # Visual C++ prior to VS2015 doesn't have a standard compliant snprintf
+    if self.vs_version < '2015':
+      defines = ['snprintf=_snprintf']
+    else:
+      defines = []
 
     ver = ruby_version.split('.')
     ver = tuple(map(int, ver))
@@ -1378,7 +1401,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       # Amalgamation
       inc_dir = sqlite_base
       lib_dir = None
-      lib_name = None 
+      lib_name = None
       defines.append('SVN_SQLITE_INLINE')
     else:
       sys.stderr.write("ERROR: SQLite not found\n")

@@ -52,7 +52,7 @@
 #include <apr_strings.h>
 #include "svn_private_config.h"
 
-#define JAVA_CLASS_REMOTE_SESSION JAVA_PACKAGE "/remote/RemoteSession"
+#define JAVA_CLASS_REMOTE_SESSION JAVAHL_CLASS("/remote/RemoteSession")
 
 RemoteSession *
 RemoteSession::getCppObject(jobject jthis)
@@ -71,8 +71,7 @@ RemoteSession::open(jint jretryAttempts,
                     jobject jprompter, jobject jdeprecatedPrompter,
                     jobject jprogress, jobject jcfgcb, jobject jtunnelcb)
 {
-  SVN_ERR_ASSERT_NO_RETURN(!jprompter != !jdeprecatedPrompter
-                           || !jprompter && !jdeprecatedPrompter);
+  SVN_ERR_ASSERT_NO_RETURN(!(jprompter && jdeprecatedPrompter));
 
   SVN::Pool requestPool;
   URL url(jurl, requestPool);
@@ -215,6 +214,8 @@ RemoteSession::RemoteSession(int retryAttempts,
           cycle_detected = true;
           break;
         }
+      /* ### Shouldn't url be updated for the next attempt?
+         ### There is no real cycle if we just do the same thing twice? */
     }
 
   if (cycle_detected)
@@ -227,7 +228,7 @@ RemoteSession::RemoteSession(int retryAttempts,
                        corrected_url));
 
       jclass excls = env->FindClass(
-          JAVA_PACKAGE "/SubversionException");
+          JAVAHL_CLASS("/SubversionException"));
       if (JNIUtil::isJavaExceptionThrown())
         return;
 
@@ -257,7 +258,7 @@ RemoteSession::RemoteSession(int retryAttempts,
         return;
 
       jclass excls = env->FindClass(
-          JAVA_PACKAGE "/remote/RetryOpenSession");
+          JAVAHL_CLASS("/remote/RetryOpenSession"));
       if (JNIUtil::isJavaExceptionThrown())
         return;
 
@@ -543,7 +544,7 @@ void fill_dirents(const char* base_url, const char* base_relpath,
   static jfieldID path_fid = 0;
   if (path_fid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE "/types/DirEntry");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/types/DirEntry"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NOTHING();
 
@@ -834,7 +835,7 @@ RemoteSession::status(jobject jthis, jstring jstatus_target,
   proxy_callbacks.m_extra_baton.baton = &rp->m_target_revision;
 
   apr_pool_t* report_pool = rp->get_report_pool();
-  std::auto_ptr<EditorProxy> editor(
+  EditorProxy::UniquePtr editor(
       new EditorProxy(jstatus_editor, report_pool,
                       repos_root_url, base_relpath,
                       m_context->checkCancel, m_context,
@@ -852,7 +853,7 @@ RemoteSession::status(jobject jthis, jstring jstatus_target,
                                 editor->delta_editor(),
                                 editor->delta_baton(),
                                 report_pool),);
-  rp->set_reporter_data(raw_reporter, report_baton, editor.release());
+  rp->set_reporter_data(raw_reporter, report_baton, editor);
 }
 
 // TODO: diff
@@ -878,8 +879,10 @@ RemoteSession::getLog(jobject jpaths,
                                                        true, subPool);
   if (JNIUtil::isJavaExceptionThrown())
     return;
-  const apr_array_header_t* revprops = build_string_array(revpropiter,
-                                                          false, subPool);
+  const apr_array_header_t* revprops = (jrevprops != NULL)
+                                        ? build_string_array(revpropiter,
+                                                             false, subPool)
+                                        : NULL;
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -1088,7 +1091,7 @@ public:
         return;
 
       m_call_mid = env->GetMethodID(
-          cls, "doSegment", "(L"JAVA_PACKAGE"/ISVNRemote$LocationSegment;)V");
+          cls, "doSegment", "(" JAVAHL_ARG("/ISVNRemote$LocationSegment;") ")V");
       if (JNIUtil::isJavaExceptionThrown())
         return;
     }
@@ -1097,7 +1100,7 @@ private:
   void call(svn_location_segment_t* segment)
     {
       JNIEnv* env = JNIUtil::getEnv();
-      jclass cls = env->FindClass(JAVA_PACKAGE"/ISVNRemote$LocationSegment");
+      jclass cls = env->FindClass(JAVAHL_CLASS("/ISVNRemote$LocationSegment"));
       if (JNIUtil::isJavaExceptionThrown())
         return;
 
@@ -1175,7 +1178,9 @@ public:
         static_cast<FileRevisionHandler*>(baton);
       SVN_ERR_ASSERT(self->m_jcallback != NULL);
       self->call(path, revision, revision_props,
-                result_of_merge, prop_diffs, scratch_pool);
+                result_of_merge, prop_diffs,
+                (delta_handler != NULL),
+                scratch_pool);
       SVN_ERR(JNIUtil::checkJavaException(SVN_ERR_BASE));
       return SVN_NO_ERROR;
     }
@@ -1190,7 +1195,7 @@ public:
         return;
 
       m_call_mid = env->GetMethodID(
-          cls, "doRevision", "(L"JAVA_PACKAGE"/ISVNRemote$FileRevision;)V");
+          cls, "doRevision", "(" JAVAHL_ARG("/ISVNRemote$FileRevision;") ")V");
       if (JNIUtil::isJavaExceptionThrown())
         return;
     }
@@ -1200,10 +1205,11 @@ private:
            apr_hash_t* revision_props,
            svn_boolean_t result_of_merge,
            apr_array_header_t* prop_diffs,
+           svn_boolean_t has_text_delta,
            apr_pool_t* scratch_pool)
     {
       JNIEnv* env = JNIUtil::getEnv();
-      jclass cls = env->FindClass(JAVA_PACKAGE"/ISVNRemote$FileRevision");
+      jclass cls = env->FindClass(JAVAHL_CLASS("/ISVNRemote$FileRevision"));
       if (JNIUtil::isJavaExceptionThrown())
         return;
 
@@ -1212,7 +1218,7 @@ private:
         {
           mid = env->GetMethodID(cls, "<init>",
                                  "(Ljava/lang/String;JZ"
-                                 "Ljava/util/Map;Ljava/util/Map;)V");
+                                 "Ljava/util/Map;Ljava/util/Map;Z)V");
           if (JNIUtil::isJavaExceptionThrown())
             return;
         }
@@ -1230,7 +1236,8 @@ private:
       env->CallVoidMethod(m_jcallback, m_call_mid,
                           env->NewObject(cls, mid, jpath, jlong(revision),
                                          jboolean(result_of_merge),
-                                         jrevprops, jpropdelta));
+                                         jrevprops, jpropdelta,
+                                         jboolean(has_text_delta)));
       if (JNIUtil::isJavaExceptionThrown())
         return;
       env->DeleteLocalRef(jpath);

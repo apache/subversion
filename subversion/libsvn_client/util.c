@@ -142,6 +142,7 @@ svn_client_commit_item3_create(apr_pool_t *pool)
 
   item->revision = SVN_INVALID_REVNUM;
   item->copyfrom_rev = SVN_INVALID_REVNUM;
+  item->kind = svn_node_unknown;
 
   return item;
 }

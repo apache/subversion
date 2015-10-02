@@ -198,7 +198,7 @@ record_conflict(svn_wc_conflict_result_t **result,
    is not null.
 
    Use RA_SESSION_P to run the update if it is not NULL.  If it is then
-   open a new ra session and place it in RA_SESSION_P.  This allows 
+   open a new ra session and place it in RA_SESSION_P.  This allows
    repeated calls to update_internal to reuse the same session.
 */
 static svn_error_t *

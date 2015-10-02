@@ -89,7 +89,7 @@ svn_error_t *ProplistCallback::singlePath(const char *path,
   static volatile jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/ProplistCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/ProplistCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
@@ -112,9 +112,7 @@ svn_error_t *ProplistCallback::singlePath(const char *path,
   env->CallVoidMethod(m_callback, mid, jpath, jmap);
   // We return whether an exception was thrown or not.
 
-  env->PopLocalFrame(NULL);
-
-  return SVN_NO_ERROR;
+  POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }
 
 
@@ -144,7 +142,7 @@ svn_error_t *ProplistCallback::singlePath(
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/InheritedProplistCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/InheritedProplistCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 

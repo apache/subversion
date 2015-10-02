@@ -38,7 +38,7 @@ AC_DEFUN(SVN_CHECK_SWIG,
         SVN_FIND_SWIG(no)
       ;;
       "yes")
-        SVN_FIND_SWIG(check)
+        SVN_FIND_SWIG(required)
       ;;
       *)
         SVN_FIND_SWIG($withval)
@@ -56,8 +56,11 @@ AC_DEFUN(SVN_FIND_SWIG,
 
   if test $where = no; then
     SWIG=none
-  elif test $where = check; then
+  elif test $where = required || test $where = check; then
     AC_PATH_PROG(SWIG, swig, none)
+    if test "$SWIG" = "none" && test $where = required; then
+      AC_MSG_ERROR([SWIG required, but not found])
+    fi
   else
     if test -f "$where"; then
       SWIG="$where"
@@ -88,16 +91,13 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_MSG_RESULT([$SWIG_VERSION_RAW])
     # If you change the required swig version number, don't forget to update:
     #   subversion/bindings/swig/INSTALL
-    #   packages/rpm/redhat-8+/subversion.spec
-    #   packages/rpm/redhat-7.x/subversion.spec
-    #   packages/rpm/rhel-3/subversion.spec
-    #   packages/rpm/rhel-4/subversion.spec
-    if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103024"; then
+    if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103024" && \
+       test "$SWIG_VERSION" -lt "300000"; then
       SWIG_SUITABLE=yes
     else
       SWIG_SUITABLE=no
       AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
-      AC_MSG_WARN([Subversion requires SWIG 1.3.24 or later])
+      AC_MSG_WARN([Subversion requires SWIG >= 1.3.24 and < 3.0.0 ])
     fi
   fi
  

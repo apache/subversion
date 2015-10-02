@@ -54,18 +54,14 @@
 
 
 /* Set *CHILDREN_ABSPATHS to a new array of the full paths formed by joining
- * each name in REL_CHILDREN onto DIR_ABSPATH.  If SHOW_HIDDEN is false then
- * omit any paths that are reported as 'hidden' by svn_wc__db_node_hidden().
+ * each name in REL_CHILDREN onto DIR_ABSPATH.
  *
  * Allocate the output array and its elements in RESULT_POOL. */
-static svn_error_t *
-filter_and_make_absolute(const apr_array_header_t **children_abspaths,
-                         svn_wc_context_t *wc_ctx,
-                         const char *dir_abspath,
-                         const apr_array_header_t *rel_children,
-                         svn_boolean_t show_hidden,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+static void
+make_absolute(const apr_array_header_t **children_abspaths,
+              const char *dir_abspath,
+              const apr_array_header_t *rel_children,
+              apr_pool_t *result_pool)
 {
   apr_array_header_t *children;
   int i;
@@ -74,29 +70,13 @@ filter_and_make_absolute(const apr_array_header_t **children_abspaths,
                             sizeof(const char *));
   for (i = 0; i < rel_children->nelts; i++)
     {
-      const char *child_abspath = svn_dirent_join(dir_abspath,
-                                                  APR_ARRAY_IDX(rel_children,
-                                                                i,
-                                                                const char *),
-                                                  result_pool);
-
-      /* Don't add hidden nodes to *CHILDREN if we don't want them. */
-      if (!show_hidden)
-        {
-          svn_boolean_t child_is_hidden;
-
-          SVN_ERR(svn_wc__db_node_hidden(&child_is_hidden, wc_ctx->db,
-                                         child_abspath, scratch_pool));
-          if (child_is_hidden)
-            continue;
-        }
-
-      APR_ARRAY_PUSH(children, const char *) = child_abspath;
+      const char *name = APR_ARRAY_IDX(rel_children, i, const char *);
+      APR_ARRAY_PUSH(children, const char *) =
+                        svn_dirent_join(dir_abspath, name,
+                                        result_pool);
     }
 
   *children_abspaths = children;
-
-  return SVN_NO_ERROR;
 }
 
 
@@ -104,136 +84,36 @@ svn_error_t *
 svn_wc__node_get_children_of_working_node(const apr_array_header_t **children,
                                           svn_wc_context_t *wc_ctx,
                                           const char *dir_abspath,
-                                          svn_boolean_t show_hidden,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool)
 {
-  const apr_array_header_t *rel_children;
+  const apr_array_header_t *child_names;
 
-  SVN_ERR(svn_wc__db_read_children_of_working_node(&rel_children,
+  SVN_ERR(svn_wc__db_read_children_of_working_node(&child_names,
                                                    wc_ctx->db, dir_abspath,
                                                    scratch_pool, scratch_pool));
-  SVN_ERR(filter_and_make_absolute(children, wc_ctx, dir_abspath,
-                                   rel_children, show_hidden,
-                                   result_pool, scratch_pool));
+  make_absolute(children, dir_abspath, child_names, result_pool);
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_wc__node_get_children(const apr_array_header_t **children,
-                          svn_wc_context_t *wc_ctx,
-                          const char *dir_abspath,
-                          svn_boolean_t show_hidden,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
-{
-  const apr_array_header_t *rel_children;
 
-  SVN_ERR(svn_wc__db_read_children(&rel_children, wc_ctx->db, dir_abspath,
+svn_error_t *
+svn_wc__node_get_not_present_children(const apr_array_header_t **children,
+                                      svn_wc_context_t *wc_ctx,
+                                      const char *dir_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool)
+{
+  const apr_array_header_t *child_names;
+
+  SVN_ERR(svn_wc__db_base_read_not_present_children(
+                                   &child_names,
+                                   wc_ctx->db, dir_abspath,
                                    scratch_pool, scratch_pool));
-  SVN_ERR(filter_and_make_absolute(children, wc_ctx, dir_abspath,
-                                   rel_children, show_hidden,
-                                   result_pool, scratch_pool));
+  make_absolute(children, dir_abspath, child_names, result_pool);
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_wc__internal_get_repos_info(svn_revnum_t *revision,
-                                const char **repos_relpath,
-                                const char **repos_root_url,
-                                const char **repos_uuid,
-                                svn_wc__db_t *db,
-                                const char *local_abspath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool)
-{
-  svn_wc__db_status_t status;
-  svn_boolean_t have_work;
-
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, revision, repos_relpath,
-                               repos_root_url, repos_uuid,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, &have_work,
-                               db, local_abspath,
-                               result_pool, scratch_pool));
-
-  if ((repos_relpath ? *repos_relpath != NULL : TRUE)
-      && (repos_root_url ? *repos_root_url  != NULL: TRUE)
-      && (repos_uuid ? *repos_uuid != NULL : TRUE))
-    return SVN_NO_ERROR; /* We got the requested information */
-
-  if (!have_work) /* not-present, (server-)excluded? */
-    {
-      return SVN_NO_ERROR; /* Can't fetch more */
-    }
-
-  if (status == svn_wc__db_status_deleted)
-    {
-      const char *base_del_abspath, *wrk_del_abspath;
-
-      SVN_ERR(svn_wc__db_scan_deletion(&base_del_abspath, NULL,
-                                       &wrk_del_abspath, NULL,
-                                       db, local_abspath,
-                                       scratch_pool, scratch_pool));
-
-      if (base_del_abspath)
-        {
-          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, repos_relpath,
-                                           repos_root_url, repos_uuid, NULL,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL,
-                                           db, base_del_abspath,
-                                           result_pool, scratch_pool));
-
-          /* If we have a repos_relpath, it is of the op-root */
-          if (repos_relpath)
-            *repos_relpath = svn_relpath_join(*repos_relpath,
-                                svn_dirent_skip_ancestor(base_del_abspath,
-                                                         local_abspath),
-                                              result_pool);
-          /* We keep revision as SVN_INVALID_REVNUM */
-        }
-      else if (wrk_del_abspath)
-        {
-          const char *op_root_abspath = NULL;
-
-          SVN_ERR(svn_wc__db_scan_addition(NULL, repos_relpath
-                                                    ? &op_root_abspath : NULL,
-                                           repos_relpath, repos_root_url,
-                                           repos_uuid, NULL, NULL, NULL, NULL,
-                                           db, svn_dirent_dirname(
-                                                   wrk_del_abspath,
-                                                   scratch_pool),
-                                           result_pool, scratch_pool));
-
-          /* If we have a repos_relpath, it is of the op-root */
-          if (repos_relpath)
-            *repos_relpath = svn_relpath_join(
-                                    *repos_relpath,
-                                    svn_dirent_skip_ancestor(op_root_abspath,
-                                                             local_abspath),
-                                    result_pool);
-        }
-    }
-  else /* added, or WORKING incomplete */
-    {
-      /* We have an addition. scan_addition() will find the intended
-         repository location by scanning up the tree.  */
-      SVN_ERR(svn_wc__db_scan_addition(NULL,  NULL,
-                                       repos_relpath, repos_root_url,
-                                       repos_uuid, NULL, NULL, NULL, NULL,
-                                       db, local_abspath,
-                                       result_pool, scratch_pool));
-    }
-
-  SVN_ERR_ASSERT(repos_root_url == NULL || *repos_root_url != NULL);
-  SVN_ERR_ASSERT(repos_uuid == NULL || *repos_uuid != NULL);
-  return SVN_NO_ERROR;
-}
-
+
 svn_error_t *
 svn_wc__node_get_repos_info(svn_revnum_t *revision,
                             const char **repos_relpath,
@@ -245,12 +125,12 @@ svn_wc__node_get_repos_info(svn_revnum_t *revision,
                             apr_pool_t *scratch_pool)
 {
   return svn_error_trace(
-            svn_wc__internal_get_repos_info(revision,
-                                            repos_relpath,
-                                            repos_root_url,
-                                            repos_uuid,
-                                            wc_ctx->db, local_abspath,
-                                            result_pool, scratch_pool));
+            svn_wc__db_read_repos_info(revision,
+                                       repos_relpath,
+                                       repos_root_url,
+                                       repos_uuid,
+                                       wc_ctx->db, local_abspath,
+                                       result_pool, scratch_pool));
 }
 
 /* Convert DB_KIND into the appropriate NODE_KIND value.
@@ -344,8 +224,18 @@ svn_wc__node_get_url(const char **url,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_wc__db_read_url(url, wc_ctx->db, local_abspath,
-                                             result_pool, scratch_pool));
+  const char *repos_root_url;
+  const char *repos_relpath;
+
+  SVN_ERR(svn_wc__db_read_repos_info(NULL, &repos_relpath, &repos_root_url,
+                                     NULL,
+                                     wc_ctx->db, local_abspath,
+                                     scratch_pool, scratch_pool));
+
+  *url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                     result_pool);
+
+  return SVN_NO_ERROR;
 }
 
 /* A recursive node-walker, helper for svn_wc__internal_walk_children().
@@ -370,25 +260,24 @@ walker_helper(svn_wc__db_t *db,
               void *cancel_baton,
               apr_pool_t *scratch_pool)
 {
-  apr_hash_t *rel_children_info;
-  apr_hash_index_t *hi;
   apr_pool_t *iterpool;
+  const apr_array_header_t *items;
+  int i;
 
   if (depth == svn_depth_empty)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__db_read_children_walker_info(&rel_children_info, db,
-                                               dir_abspath, scratch_pool,
-                                               scratch_pool));
-
-
   iterpool = svn_pool_create(scratch_pool);
-  for (hi = apr_hash_first(scratch_pool, rel_children_info);
-       hi;
-       hi = apr_hash_next(hi))
+
+  SVN_ERR(svn_wc__db_read_children_walker_info(&items, db,
+                                               dir_abspath, scratch_pool,
+                                               iterpool));
+
+  for (i = 0; i < items->nelts; i++)
     {
-      const char *child_name = apr_hash_this_key(hi);
-      struct svn_wc__db_walker_info_t *wi = apr_hash_this_val(hi);
+      struct svn_wc__db_walker_info_t *wi =
+              APR_ARRAY_IDX(items, i, struct svn_wc__db_walker_info_t *);
+      const char *child_name = wi->name;
       svn_node_kind_t child_kind = wi->kind;
       svn_wc__db_status_t child_status = wi->status;
       const char *child_abspath;
@@ -514,33 +403,6 @@ svn_wc__internal_walk_children(svn_wc__db_t *db,
                            _("'%s' has an unrecognized node kind"),
                            svn_dirent_local_style(local_abspath,
                                                   scratch_pool));
-}
-
-svn_error_t *
-svn_wc__node_get_deleted_ancestor(const char **deleted_ancestor_abspath,
-                                  svn_wc_context_t *wc_ctx,
-                                  const char *local_abspath,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool)
-{
-  svn_wc__db_status_t status;
-
-  *deleted_ancestor_abspath = NULL;
-
-  SVN_ERR(svn_wc__db_read_info(&status,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL,
-                               wc_ctx->db, local_abspath,
-                               scratch_pool, scratch_pool));
-
-  if (status == svn_wc__db_status_deleted)
-    SVN_ERR(svn_wc__db_scan_deletion(deleted_ancestor_abspath, NULL, NULL,
-                                     NULL, wc_ctx->db, local_abspath,
-                                     result_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1044,7 +906,8 @@ svn_wc__rename_wc(svn_wc_context_t *wc_ctx,
     {
       SVN_ERR(svn_wc__db_drop_root(wc_ctx->db, wcroot_abspath, scratch_pool));
 
-      SVN_ERR(svn_io_file_rename(from_abspath, dst_abspath, scratch_pool));
+      SVN_ERR(svn_io_file_rename2(from_abspath, dst_abspath, FALSE,
+                                  scratch_pool));
     }
   else
     return svn_error_createf(
