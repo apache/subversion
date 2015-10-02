@@ -3434,6 +3434,7 @@ def patch_add_symlink(sbox):
     "+++ iota_symlink\t(working copy)\n",
     "@@ -0,0 +1 @@\n",
     "+link iota\n",
+    "\\ No newline at end of file\n"
     "\n",
     "Property changes on: iota_symlink\n",
     "-------------------------------------------------------------------\n",
@@ -3453,7 +3454,7 @@ def patch_add_symlink(sbox):
   expected_disk.add({'iota_symlink': Item(contents="This is the file 'iota'.\n",
                                           props={'svn:special' : '*'})})
   if not svntest.main.is_posix_os():
-    expected_disk.tweak('iota_symlink', contents='link iota\n')
+    expected_disk.tweak('iota_symlink', contents='link iota')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({'iota_symlink': Item(status='A ', wc_rev='0')})
 
