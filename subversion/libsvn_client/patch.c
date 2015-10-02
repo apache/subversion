@@ -3008,7 +3008,7 @@ create_missing_parents(patch_target_t *target,
 
           component = APR_ARRAY_IDX(components, i, const char *);
           local_abspath = svn_dirent_join(local_abspath, component,
-                                          iterpool);
+                                          scratch_pool);
 
           if (target_is_added(targets_info, local_abspath, iterpool))
             continue;
