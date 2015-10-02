@@ -6759,10 +6759,6 @@ def patch_add_remove_executable(sbox):
 def patch_git_symlink(sbox):
   "patch a git symlink"
 
-  # ### Currently we completely ignore the symlink behavior via mode in
-  # ### Subversion but writing this test already found a few bugs in the
-  # ### patch code.
-
   sbox.build(read_only = True)
   wc_dir = sbox.wc_dir
 
@@ -6792,6 +6788,132 @@ def patch_git_symlink(sbox):
   patch_to_file = [
     'diff --git a/link-to-iota b/link-to-iota\n',
     'deleted file mode 120000\n',
+    'index 33e5b38..0000000\n',
+    '--- a/link-to-iota\n',
+    '+++ /dev/null\n',
+    '@@ -1 +0,0 @@\n',
+    '-A/mu\n',
+    '\ No newline at end of file\n',
+    'diff --git a/link-to-iota b/link-to-iota\n',
+    'new file mode 100644\n',
+    'index 0000000..1b130bf\n',
+    '--- /dev/null\n',
+    '+++ b/link-to-iota\n',
+    '@@ -0,0 +1 @@\n',
+    '+This is a real file\n',
+  ]
+
+  add_patch = sbox.get_tempname('add.patch')
+  svntest.main.file_write(add_patch, ''.join(patch_add), mode='wb')
+
+  edit_patch = sbox.get_tempname('edit.patch')
+  svntest.main.file_write(edit_patch, ''.join(patch_edit), mode='wb')
+
+  to_file_patch = sbox.get_tempname('to_file.patch')
+  svntest.main.file_write(to_file_patch, ''.join(patch_to_file), mode='wb')
+
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'link-to-iota'      : Item(status='A ', wc_rev='-'),
+  })
+  expected_output = svntest.wc.State(wc_dir, {
+    'link-to-iota'      : Item(status='A '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'link-to-iota'      : Item(contents="This is the file 'iota'.\n",
+                               props={'svn:special': '*'}),
+  })
+  if not svntest.main.is_posix_os():
+    expected_disk.tweak('link-to-iota', contents='link iota')
+  expected_skip = svntest.wc.State(wc_dir, {})
+
+  svntest.actions.run_and_verify_patch(wc_dir, add_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # And again
+  expected_output.tweak('link-to-iota', status='GG')
+  svntest.actions.run_and_verify_patch(wc_dir, add_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # Now tweak the link
+  expected_output.tweak('link-to-iota', status='G ')
+  if svntest.main.is_posix_os():
+    expected_disk.tweak('link-to-iota', contents="This is the file 'mu'.\n")
+  else:
+    expected_disk.tweak('link-to-iota', contents='link A/mu')
+  svntest.actions.run_and_verify_patch(wc_dir, edit_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # And again
+  svntest.actions.run_and_verify_patch(wc_dir, edit_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # And replace the link with a file
+  expected_output.tweak('link-to-iota', status='A ', prev_status='D ')
+  expected_disk.tweak('link-to-iota', contents="This is a real file\n",
+                      props={})
+  svntest.actions.run_and_verify_patch(wc_dir, to_file_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # And again - Delete can't be applied
+  expected_output.tweak('link-to-iota', status='G ', prev_status='C ')
+  expected_disk.add({
+    'link-to-iota.svnpatch.rej': Item(
+                     contents='--- link-to-iota\n'
+                              '+++ link-to-iota\n'
+                              '@@ -1,1 +0,0 @@\n'
+                              '-A/mu\n'
+                              '\\ No newline at end of file\n'),
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, to_file_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+def patch_like_git_symlink(sbox):
+  "patch like a git symlink"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  patch_add = [
+    'diff --git a/link-to-iota b/link-to-iota\n',
+    'new file mode 100000\n',
+    'index 0000000..3ef26e4\n',
+    '--- /dev/null\n',
+    '+++ b/link-to-iota\n',
+    '@@ -0,0 +1 @@\n',
+    '+iota\n',
+    '\ No newline at end of file\n',
+  ]
+
+  patch_edit = [
+    'diff --git a/link-to-iota b/link-to-iota\n',
+    'index 3ef26e4..33e5b38 100000\n',
+    '--- a/link-to-iota\n',
+    '+++ b/link-to-iota\n',
+    '@@ -1 +1 @@\n',
+    '-iota\n',
+    '\ No newline at end of file\n',
+    '+A/mu\n',
+    '\ No newline at end of file\n',
+  ]
+
+  patch_to_file = [
+    'diff --git a/link-to-iota b/link-to-iota\n',
+    'deleted file mode 100000\n',
     'index 33e5b38..0000000\n',
     '--- a/link-to-iota\n',
     '+++ /dev/null\n',
@@ -6953,6 +7075,7 @@ test_list = [ None,
               patch_empty_vs_delete,
               patch_add_remove_executable,
               patch_git_symlink,
+              patch_like_git_symlink,
             ]
 
 if __name__ == '__main__':

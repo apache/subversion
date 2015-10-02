@@ -264,6 +264,10 @@ typedef struct patch_target_t {
   /* A hash table of prop_patch_target_t objects keyed by property names. */
   apr_hash_t *prop_targets;
 
+  /* When TRUE, this patch uses the raw git symlink format instead of the
+     Subversion internal style format where links start with 'link '. */
+  svn_boolean_t git_symlink_format;
+
 } patch_target_t;
 
 
@@ -912,6 +916,23 @@ readline_symlink(void *baton, svn_stringbuf_t **line, const char **eol_str,
   return SVN_NO_ERROR;
 }
 
+/* Identical to readline_symlink(), but returns symlink in raw format to
+ * allow patching links in git-style.
+ */
+static svn_error_t *
+readline_symlink_git(void *baton, svn_stringbuf_t **line, const char **eol_str,
+                     svn_boolean_t *eof, apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  SVN_ERR(readline_symlink(baton, line, eol_str, eof,
+                           result_pool, scratch_pool));
+
+  if (*line && (*line)->len > 5 && !strncmp((*line)->data, "link ", 5))
+    svn_stringbuf_remove(*line, 0, 5); /* Skip "link " */
+
+  return SVN_NO_ERROR;
+}
+
 /* Set *OFFSET to 1 or 0 depending on whether the "normal form" of
  * the symlink has already been read. */
 static svn_error_t *
@@ -933,30 +954,6 @@ seek_symlink(void *baton, apr_off_t offset, apr_pool_t *scratch_pool)
   sb->at_eof = (offset != 0);
   return SVN_NO_ERROR;
 }
-
-
-/* Set the target of the symlink accessed via BATON.
- * The contents of BUF must be a valid "normal form" of a symlink. */
-static svn_error_t *
-write_symlink(void *baton, const char *buf, apr_size_t len,
-              apr_pool_t *scratch_pool)
-{
-  const char *target_abspath = baton;
-
-  /* We assume the entire symlink is written at once, as the patch
-     format is line based */
-
-  {
-    svn_stream_t *stream;
-    SVN_ERR(svn_subst_create_specialfile(&stream, target_abspath,
-                                         scratch_pool, scratch_pool));
-    SVN_ERR(svn_stream_write(stream, buf, &len));
-    SVN_ERR(svn_stream_close(stream));
-  }
-
-  return SVN_NO_ERROR;
-}
-
 
 /* Return a suitable filename for the target of PATCH.
  * Examine the ``old'' and ``new'' file names, and choose the file name
@@ -1000,41 +997,6 @@ choose_target_filename(const svn_patch_t *patch)
 
   return (old < new) ? patch->old_filename : patch->new_filename;
 }
-
-/* Return whether the svn:executable proppatch and the out-of-band
- * executability metadata contradict each other, assuming both are present.
- */
-static svn_boolean_t
-contradictory_executability(const svn_patch_t *patch,
-                            const prop_patch_target_t *target)
-{
-  switch (target->operation)
-    {
-      case svn_diff_op_added:
-        return patch->new_executable_bit == svn_tristate_false;
-
-      case svn_diff_op_deleted:
-        return patch->new_executable_bit == svn_tristate_true;
-
-      case svn_diff_op_unchanged:
-        /* ### Can this happen? */
-        return (patch->old_executable_bit != svn_tristate_unknown
-                && patch->new_executable_bit != svn_tristate_unknown
-                && patch->old_executable_bit != patch->new_executable_bit);
-
-      case svn_diff_op_modified:
-        /* Can't happen: the property should only ever be added or deleted,
-         * but never modified from one valid value to another. */
-        return (patch->old_executable_bit != svn_tristate_unknown
-                && patch->new_executable_bit != svn_tristate_unknown
-                && patch->old_executable_bit == patch->new_executable_bit);
-
-      default:
-        /* Can't happen: the proppatch parser never generates other values. */
-        SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
-}
-
 
 /* Attempt to initialize a *PATCH_TARGET structure for a target file
  * described by PATCH. Use working copy context WC_CTX.
@@ -1090,6 +1052,12 @@ init_patch_target(patch_target_t **patch_target,
       const char *diff_header;
       apr_size_t len;
 
+      if (patch->old_symlink_bit == svn_tristate_true
+          || patch->new_symlink_bit == svn_tristate_true)
+        {
+          target->git_symlink_format = TRUE;
+        }
+
       /* Create a temporary file to write the patched result to.
        * Also grab various bits of information about the file. */
       if (target->is_symlink)
@@ -1102,7 +1070,8 @@ init_patch_target(patch_target_t **patch_target,
           /* Wire up the read callbacks. */
           content->read_baton = sb;
 
-          content->readline = readline_symlink;
+          content->readline = target->git_symlink_format ? readline_symlink_git
+                                                         : readline_symlink;
           content->seek = seek_symlink;
           content->tell = tell_symlink;
         }
@@ -1199,34 +1168,17 @@ init_patch_target(patch_target_t **patch_target,
             }
         }
 
-      if (! target->is_symlink)
-        {
-          /* Open a temporary file to write the patched result to. */
-          SVN_ERR(svn_io_open_unique_file3(&target->patched_file,
-                                           &target->patched_path, NULL,
-                                           remove_tempfiles ?
-                                             svn_io_file_del_on_pool_cleanup :
-                                             svn_io_file_del_none,
-                                           result_pool, scratch_pool));
+      /* Open a temporary file to write the patched result to. */
+      SVN_ERR(svn_io_open_unique_file3(&target->patched_file,
+                                        &target->patched_path, NULL,
+                                        remove_tempfiles ?
+                                          svn_io_file_del_on_pool_cleanup :
+                                          svn_io_file_del_none,
+                                        result_pool, scratch_pool));
 
-          /* Put the write callback in place. */
-          content->write = write_file;
-          content->write_baton = target->patched_file;
-        }
-      else
-        {
-          /* Put the write callback in place. */
-          SVN_ERR(svn_io_open_unique_file3(NULL,
-                                           &target->patched_path, NULL,
-                                           remove_tempfiles ?
-                                             svn_io_file_del_on_pool_cleanup :
-                                             svn_io_file_del_none,
-                                           result_pool, scratch_pool));
-
-          content->write_baton = (void*)target->patched_path;
-
-          content->write = write_symlink;
-        }
+      /* Put the write callback in place. */
+      content->write = write_file;
+      content->write_baton = target->patched_file;
 
       /* Open a temporary file to write rejected hunks to. */
       SVN_ERR(svn_io_open_unique_file3(&target->reject_file,
@@ -1250,7 +1202,6 @@ init_patch_target(patch_target_t **patch_target,
       if (! target->skipped)
         {
           apr_hash_index_t *hi;
-          prop_patch_target_t *prop_executable_target;
 
           for (hi = apr_hash_first(result_pool, patch->prop_patches);
                hi;
@@ -1268,82 +1219,98 @@ init_patch_target(patch_target_t **patch_target,
               svn_hash_sets(target->prop_targets, prop_name, prop_target);
             }
 
-          /* Now, check for an out-of-band mode change and convert it to
-           * an svn:executable property patch. */
-          prop_executable_target = svn_hash_gets(target->prop_targets,
-                                                 SVN_PROP_EXECUTABLE);
+          /* Now, check for out-of-band mode changes and convert these in
+             their Subversion equivalent properties. */
           if (patch->new_executable_bit != svn_tristate_unknown
-              && patch->new_executable_bit != patch->old_executable_bit
-              && prop_executable_target)
-            {
-              if (contradictory_executability(patch, prop_executable_target))
-                /* Invalid input: specifies both git-like "new mode" lines and
-                 * svn-like addition/removal of svn:executable.
-                 *
-                 * If this were merely a hunk that didn't apply, we'd reject it
-                 * and move on.  However, this is a self-contradictory hunk;
-                 * it has no unambiguous interpretation.  Therefore: */
-                return svn_error_createf(SVN_ERR_INVALID_INPUT, NULL,
-                                         _("Invalid patch: specifies "
-                                           "contradicting mode changes and "
-                                           "%s changes (for '%s')"),
-                                         SVN_PROP_EXECUTABLE,
-                                         target->local_abspath);
-              else
-                {
-                  /* We have two representations of the same change. This will
-                   * be detected where the svn:executable hunk would otherwise
-                   * be created.
-                   */
-                }
-            }
-          else if (patch->new_executable_bit != svn_tristate_unknown
-                   && !prop_executable_target)
+              && patch->new_executable_bit != patch->old_executable_bit)
             {
               svn_diff_operation_kind_t operation;
-              svn_boolean_t nothing_to_do = FALSE;
-              prop_patch_target_t *prop_target;
 
-              if (patch->old_executable_bit == patch->new_executable_bit)
+              if (patch->new_executable_bit == svn_tristate_true)
+                operation = svn_diff_op_added;
+              else if (patch->new_executable_bit == svn_tristate_false)
                 {
-                    /* Noop change. */
+                  /* Made non-executable. */
+                  if (patch->old_executable_bit == svn_tristate_true)
+                    operation = svn_diff_op_deleted;
+                  else
                     operation = svn_diff_op_unchanged;
                 }
-              else switch (patch->old_executable_bit)
+              else
+                operation = svn_diff_op_unchanged;
+
+              if (operation != svn_diff_op_unchanged)
                 {
-                  case svn_tristate_false:
-                    /* Made executable. */
-                    operation = svn_diff_op_added;
-                    break;
+                  prop_patch_target_t *prop_target;
 
-                  case svn_tristate_true:
-                    /* Made non-executable. */
-                    operation = svn_diff_op_deleted;
-                    break;
+                  prop_target = svn_hash_gets(target->prop_targets,
+                                              SVN_PROP_EXECUTABLE);
 
-                  case svn_tristate_unknown:
-                    if (patch->new_executable_bit == svn_tristate_true)
-                      /* New, executable file. */
-                      operation = svn_diff_op_added;
-                    else
-                      /* New, non-executable file. That's not a change. */
-                      nothing_to_do = TRUE;
-                    break;
-
-                  default:
-                    /* NOTREACHED */
-                    SVN_ERR_MALFUNCTION();
+                  if (prop_target && operation != prop_target->operation)
+                    {
+                      return svn_error_createf(SVN_ERR_INVALID_INPUT, NULL,
+                                               _("Invalid patch: specifies "
+                                                 "contradicting mode changes and "
+                                                 "%s changes (for '%s')"),
+                                               SVN_PROP_EXECUTABLE,
+                                               target->local_abspath);
+                    }
+                  else if (!prop_target)
+                    {
+                      SVN_ERR(init_prop_target(&prop_target,
+                                               SVN_PROP_EXECUTABLE,
+                                               operation,
+                                               wc_ctx, target->local_abspath,
+                                               result_pool, scratch_pool));
+                      svn_hash_sets(target->prop_targets, SVN_PROP_EXECUTABLE,
+                                    prop_target);
+                    }
                 }
+            }
 
-              if (! nothing_to_do)
+          if (patch->new_symlink_bit != svn_tristate_unknown
+              && patch->new_symlink_bit != patch->old_symlink_bit)
+            {
+              svn_diff_operation_kind_t operation;
+
+              if (patch->new_symlink_bit == svn_tristate_true)
+                operation = svn_diff_op_added;
+              else if (patch->new_symlink_bit == svn_tristate_false)
                 {
-                  SVN_ERR(init_prop_target(&prop_target,
-                                           SVN_PROP_EXECUTABLE,
-                                           operation,
-                                           wc_ctx, target->local_abspath,
-                                           result_pool, scratch_pool));
-                  svn_hash_sets(target->prop_targets, SVN_PROP_EXECUTABLE,
-                                prop_target);
+                  /* Made non-symlink. */
+                  if (patch->old_symlink_bit == svn_tristate_true)
+                    operation = svn_diff_op_deleted;
+                  else
+                    operation = svn_diff_op_unchanged;
+                }
+              else
+                operation = svn_diff_op_unchanged;
+
+              if (operation != svn_diff_op_unchanged)
+                {
+                  prop_patch_target_t *prop_target;
+                  prop_target = svn_hash_gets(target->prop_targets,
+                                              SVN_PROP_SPECIAL);
+
+                  if (prop_target && operation != prop_target->operation)
+                    {
+                      return svn_error_createf(SVN_ERR_INVALID_INPUT, NULL,
+                                               _("Invalid patch: specifies "
+                                                 "contradicting mode changes and "
+                                                 "%s changes (for '%s')"),
+                                               SVN_PROP_SPECIAL,
+                                               target->local_abspath);
+                    }
+                  else if (!prop_target)
+                    {
+                      SVN_ERR(init_prop_target(&prop_target,
+                                               SVN_PROP_SPECIAL,
+                                               operation,
+                                               wc_ctx, target->local_abspath,
+                                               result_pool, scratch_pool));
+                      svn_hash_sets(target->prop_targets, SVN_PROP_SPECIAL,
+                                    prop_target);
+                    }
                 }
             }
         }
@@ -2715,6 +2682,45 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       APR_ARRAY_PUSH(prop_target->content->hunks, hunk_info_t *) = hi;
     }
 
+  if (patch->new_symlink_bit != svn_tristate_unknown
+      && patch->new_symlink_bit != patch->old_symlink_bit
+      && svn_hash_gets(target->prop_targets, SVN_PROP_SPECIAL)
+      && !svn_hash_gets(patch->prop_patches, SVN_PROP_SPECIAL))
+    {
+      hunk_info_t *hi;
+      svn_diff_hunk_t *hunk;
+
+      prop_patch_target_t *prop_target = svn_hash_gets(target->prop_targets,
+                                                       SVN_PROP_SPECIAL);
+
+      if (patch->new_symlink_bit == svn_tristate_true)
+        {
+          SVN_ERR(svn_diff_hunk__create_adds_single_line(
+                                            &hunk,
+                                            SVN_PROP_SPECIAL_VALUE,
+                                            patch,
+                                            result_pool,
+                                            iterpool));
+          target->is_special = TRUE;
+        }
+      else
+        SVN_ERR(svn_diff_hunk__create_deletes_single_line(
+                                            &hunk,
+                                            SVN_PROP_SPECIAL_VALUE,
+                                            patch,
+                                            result_pool,
+                                            iterpool));
+
+      /* Derive a hunk_info from hunk. */
+      SVN_ERR(get_hunk_info(&hi, target, prop_target->content,
+                            hunk, 0 /* fuzz */, 0 /* previous_offset */,
+                            ignore_whitespace,
+                            TRUE /* is_prop_hunk */,
+                            cancel_func, cancel_baton,
+                            result_pool, iterpool));
+      APR_ARRAY_PUSH(prop_target->content->hunks, hunk_info_t *) = hi;
+    }
+
   /* Apply or reject property hunks. */
   for (hash_index = apr_hash_first(scratch_pool, target->prop_targets);
        hash_index;
@@ -2779,9 +2785,9 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
        * will be closed later in write_out_rejected_hunks(). */
       if (target->kind_on_disk == svn_node_file)
         SVN_ERR(svn_io_file_close(target->file, scratch_pool));
-
-      SVN_ERR(svn_io_file_close(target->patched_file, scratch_pool));
     }
+
+  SVN_ERR(svn_io_file_close(target->patched_file, scratch_pool));
 
   if (! target->skipped)
     {
@@ -3127,7 +3133,8 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
 
       if (! dry_run && ! target->skipped)
         {
-          if (target->is_special)
+          /* ### Are these properly reset? */
+          if (target->is_special || target->is_symlink)
             {
               svn_stream_t *stream;
               svn_stream_t *patched_stream;
@@ -3138,6 +3145,8 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
               SVN_ERR(svn_subst_create_specialfile(&stream,
                                                    target->local_abspath,
                                                    pool, pool));
+              if (target->git_symlink_format)
+                  SVN_ERR(svn_stream_puts(stream, "link "));
               SVN_ERR(svn_stream_copy3(patched_stream, stream,
                                        ctx->cancel_func, ctx->cancel_baton,
                                        pool));
