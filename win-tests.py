@@ -241,7 +241,7 @@ for opt, val in opts:
     enable_sasl = 1
     base_url = "svn://localhost/"
   elif opt == '--server-minor-version':
-    server_minor_version = val
+    server_minor_version = int(val)
   elif opt == '--bin':
     svn_bin = val
   elif opt in ('-p', '--parallel'):

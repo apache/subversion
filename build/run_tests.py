@@ -192,7 +192,7 @@ class TestHarness:
     if self.opts.fsfs_version is not None:
       cmdline.append('--fsfs-version=%d' % self.opts.fsfs_version)
     if self.opts.server_minor_version is not None:
-      cmdline.append('--server-minor-version=' +
+      cmdline.append('--server-minor-version=%d' %
                      self.opts.server_minor_version)
     if self.opts.mode_filter is not None:
       cmdline.append('--mode-filter=' + self.opts.mode_filter)
