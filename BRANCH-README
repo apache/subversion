@@ -20,9 +20,9 @@ Steps:
   - Use-case?  Who are the current consumers of 'svn diff --git'?
 
 - [TODO] Support symlinks as well (mode 120000)
-         - add the 'svn:special' property0
+         - add the 'svn:special' property
          - map the link target representation svn to/from git
-  - [TODO] teach parse-diff.c to parse mode 120000
+  - [DONE] teach parse-diff.c to parse mode 120000
   - [TODO] forbid mode=120000 and svn:special on one file
            (don't know how to parse file contents)
   - [TODO] munge hunks: repository normal form ↔ just the symlink target
