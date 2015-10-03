@@ -5685,6 +5685,7 @@ def patch_final_eol(sbox):
                                        expected_status, expected_skip,
                                        [], False, True, '--reverse-diff')
 
+
 def patch_prop_madness(sbox):
   "patch property madness"
 
@@ -5987,6 +5988,53 @@ def patch_empty_vs_delete(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        [], True, True)
+
+  # # Not needed. Result of previous test
+  #svntest.actions.run_and_verify_svn(None, [],
+  #                                   'rm', '--force', sbox.ospath('iota'))
+
+  # Ok, and now let's check what happens on reverse diffs with nothing
+  # there
+
+  # Git empty patch -> skip... target not found
+  expect_no_output = svntest.wc.State(wc_dir, {})
+  expect_skip_iota = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Skipped')
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, empty_git_patch,
+                                       expect_no_output, expected_disk,
+                                       expected_status, expect_skip_iota,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # # Not needed. Result of previous test
+  #svntest.actions.run_and_verify_svn(None, [],
+  #                                   'rm', '--force', sbox.ospath('iota'))
+
+  # Unified empty patch -> Create iota
+  expected_output.tweak('iota', status='A ')
+  expected_status.tweak('iota', status='R ')
+  expected_disk.add({
+    'iota' : Item(contents="This is the file 'iota'.\n")
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, empty_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count,
+                                       '--reverse-diff')
+  # And retry
+  expected_output.tweak('iota', status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, empty_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count,
+                                       '--reverse-diff')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'rm', '--force', sbox.ospath('iota'))
+
 
 def patch_git_symlink(sbox):
   "patch a git symlink"
