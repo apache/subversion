@@ -2774,9 +2774,9 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           if (! prop_target->content->eof)
             {
               /* We could not copy the entire target property to the
-               * temporary file, and would truncate the target if we
-               * copied the temporary file on top of it. Skip this target.  */
-              target->skipped = TRUE;
+               * temporary stream, and would truncate the target if we
+               * copied the temporary stream on top of it. Skip this target. */
+              prop_target->skipped = TRUE;
             }
         }
       }
