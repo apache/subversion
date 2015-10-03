@@ -738,6 +738,7 @@ write_prop(void *baton, const char *buf, apr_size_t len,
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 init_prop_target(prop_patch_target_t **prop_target,
+                 const patch_target_t *target,
                  const char *prop_name,
                  svn_diff_operation_kind_t operation,
                  svn_wc_context_t *wc_ctx,
@@ -747,7 +748,6 @@ init_prop_target(prop_patch_target_t **prop_target,
   prop_patch_target_t *new_prop_target;
   target_content_t *content;
   const svn_string_t *value;
-  svn_error_t *err;
   prop_read_baton_t *prop_read_baton;
 
   content = apr_pcalloc(result_pool, sizeof(*content));
@@ -764,18 +764,12 @@ init_prop_target(prop_patch_target_t **prop_target,
   new_prop_target->operation = operation;
   new_prop_target->content = content;
 
-  err = svn_wc_prop_get2(&value, wc_ctx, local_abspath, prop_name,
-                         result_pool, scratch_pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          value = NULL;
-        }
-      else
-        return svn_error_trace(err);
-    }
+  if (!(target->deleted || target->db_kind == svn_node_none))
+    SVN_ERR(svn_wc_prop_get2(&value, wc_ctx, local_abspath, prop_name,
+                             result_pool, scratch_pool));
+  else
+    value = NULL;
+
   content->existed = (value != NULL);
   new_prop_target->value = value;
   new_prop_target->patched_value = svn_stringbuf_create_empty(result_pool);
@@ -1206,7 +1200,7 @@ init_patch_target(patch_target_t **patch_target,
               prop_patch_target_t *prop_target;
 
               SVN_ERR(init_prop_target(&prop_target,
-                                       prop_name,
+                                       target, prop_name,
                                        prop_patch->operation,
                                        wc_ctx, target->local_abspath,
                                        result_pool, scratch_pool));
@@ -1252,7 +1246,7 @@ init_patch_target(patch_target_t **patch_target,
                   else if (!prop_target)
                     {
                       SVN_ERR(init_prop_target(&prop_target,
-                                               SVN_PROP_EXECUTABLE,
+                                               target, SVN_PROP_EXECUTABLE,
                                                operation,
                                                wc_ctx, target->local_abspath,
                                                result_pool, scratch_pool));
@@ -1298,7 +1292,7 @@ init_patch_target(patch_target_t **patch_target,
                   else if (!prop_target)
                     {
                       SVN_ERR(init_prop_target(&prop_target,
-                                               SVN_PROP_SPECIAL,
+                                               target, SVN_PROP_SPECIAL,
                                                operation,
                                                wc_ctx, target->local_abspath,
                                                result_pool, scratch_pool));
