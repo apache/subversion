@@ -59,7 +59,7 @@ struct svn_diff__hunk_range {
 
 struct svn_diff_hunk_t {
   /* The patch this hunk belongs to. */
-  svn_patch_t *patch;
+  const svn_patch_t *patch;
 
   /* APR file handle to the patch file this hunk came from. */
   apr_file_t *apr_file;
