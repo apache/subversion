@@ -5372,6 +5372,7 @@ def patch_closest(sbox):
                      truncate=True)
   sbox.simple_commit()
 
+  os.remove(sbox.ospath('A/mu.svnpatch.rej'))
   expected_output = [
     'C         %s\n' % sbox.ospath('A/mu'),
     '>         applied hunk @@ -47,7 +47,7 @@ with offset 4\n',
@@ -5410,6 +5411,7 @@ def patch_closest(sbox):
                      truncate=True)
   sbox.simple_commit()
 
+  os.remove(sbox.ospath('A/mu.svnpatch.rej'))
   expected_output = [
     'C         %s\n' % sbox.ospath('A/mu'),
     '>         applied hunk @@ -47,7 +47,7 @@ with offset 4\n',
@@ -5448,6 +5450,7 @@ def patch_closest(sbox):
                      truncate=True)
   sbox.simple_commit()
 
+  os.remove(sbox.ospath('A/mu.svnpatch.rej'))
   expected_output = [
     'C         %s\n' % sbox.ospath('A/mu'),
     '>         applied hunk @@ -47,7 +47,7 @@ with offset 4\n',
@@ -5486,6 +5489,7 @@ def patch_closest(sbox):
                      truncate=True)
   sbox.simple_commit()
 
+  os.remove(sbox.ospath('A/mu.svnpatch.rej'))
   expected_output = [
     'C         %s\n' % sbox.ospath('A/mu'),
     '>         applied hunk @@ -180,7 +180,7 @@ with offset -169\n',
