@@ -6465,10 +6465,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
       /* Sort CHILDREN_WITH_MERGEINFO by each child's path (i.e. as per
          compare_merge_path_t_as_paths).  Any subsequent insertions of new
          children with insert_child_to_merge() require this ordering. */
-      qsort(children_with_mergeinfo->elts,
-            children_with_mergeinfo->nelts,
-            children_with_mergeinfo->elt_size,
-            compare_merge_path_t_as_paths);
+      svn_sort__array(children_with_mergeinfo, compare_merge_path_t_as_paths);
     }
 
   /* Case 2: Switched subtrees
@@ -7077,8 +7074,7 @@ combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
   /* If this was a subtractive merge, and we created more than one
      merge source, we need to reverse the sort ordering of our sources. */
   if (subtractive && (merge_source_ts->nelts > 1))
-    qsort(merge_source_ts->elts, merge_source_ts->nelts,
-          merge_source_ts->elt_size, compare_merge_source_ts);
+    svn_sort__array(merge_source_ts, compare_merge_source_ts);
 
   *merge_source_ts_p = merge_source_ts;
   return SVN_NO_ERROR;
