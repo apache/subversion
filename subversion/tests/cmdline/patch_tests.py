@@ -2533,6 +2533,7 @@ def patch_dir_properties(sbox):
   expected_output = [
     ' U        %s\n' % wc_dir,
     ' C        %s\n' % sbox.ospath('A/B'),
+    '>         rejected hunk ## -0,0 +1,1 ## (svn:executable)\n',
   ] + svntest.main.summary_of_conflicts(prop_conflicts=1)
 
   expected_disk = svntest.main.greek_state.copy()
