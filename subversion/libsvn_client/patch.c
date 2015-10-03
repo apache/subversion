@@ -2428,7 +2428,6 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   static const svn_linenum_t MAX_FUZZ = 2;
   apr_hash_index_t *hash_index;
   svn_linenum_t previous_offset = 0;
-  svn_boolean_t has_text_changes = FALSE;
   apr_array_header_t *prop_targets;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
@@ -2533,7 +2532,6 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
               target->skipped = TRUE;
             }
         }
-      has_text_changes = TRUE;
     }
   else if (patch->binary_patch)
     {
@@ -2558,7 +2556,6 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
              the patch... So we can write the result stream; no fuzz,
              just a 100% match */
 
-          has_text_changes = TRUE;
           target->has_text_changes = TRUE;
         }
       else
@@ -2632,7 +2629,6 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                * temporary file on top of it. Skip this target. */
               target->skipped = TRUE;
             }
-          has_text_changes = TRUE;
         }
     }
 
