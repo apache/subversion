@@ -2257,9 +2257,62 @@ def patch_with_properties(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, # expected err
-                                       1, # check-props
-                                       1) # dry-run
+                                       [], True, True)
+  # And repeat
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status=' G')
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       [], True, True)
+
+  # Reverse
+  expected_output.tweak('iota', status=' U')
+  expected_disk.tweak('iota',
+                      props={'deleted': "This is the property 'deleted'.\n",
+                             'modified': "This is the property 'modified'.\n"})
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # Repeat
+  expected_output.tweak('iota', status=' G')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # And now try against a not existing target
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'rm', '--force', sbox.ospath('iota'))
+  expected_output.tweak('iota', status=' C')
+  expected_disk.remove('iota')
+  expected_status.tweak('iota', status='D ')
+  expected_disk.add({
+    'iota.svnpatch.rej' : Item(contents="--- iota\n"
+                                        "+++ iota\n"
+                                        "Property: modified\n"
+                                        "## -1,1 +1,1 ##\n"
+                                        "-This is the property 'modified'.\n"
+                                        "+The property 'modified' has changed.\n")
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       [], True, True)
+
 
 def patch_same_twice(sbox):
   "apply the same patch twice"
@@ -5329,6 +5382,7 @@ def patch_closest(sbox):
                      truncate=True)
   sbox.simple_commit()
 
+  os.remove(sbox.ospath('A/mu.svnpatch.rej'))
   expected_output = [
     'C         %s\n' % sbox.ospath('A/mu'),
     '>         applied hunk @@ -47,7 +47,7 @@ with offset 4\n',
@@ -5367,6 +5421,7 @@ def patch_closest(sbox):
                      truncate=True)
   sbox.simple_commit()
 
+  os.remove(sbox.ospath('A/mu.svnpatch.rej'))
   expected_output = [
     'C         %s\n' % sbox.ospath('A/mu'),
     '>         applied hunk @@ -47,7 +47,7 @@ with offset 4\n',
@@ -5405,6 +5460,7 @@ def patch_closest(sbox):
                      truncate=True)
   sbox.simple_commit()
 
+  os.remove(sbox.ospath('A/mu.svnpatch.rej'))
   expected_output = [
     'C         %s\n' % sbox.ospath('A/mu'),
     '>         applied hunk @@ -47,7 +47,7 @@ with offset 4\n',
@@ -5443,6 +5499,7 @@ def patch_closest(sbox):
                      truncate=True)
   sbox.simple_commit()
 
+  os.remove(sbox.ospath('A/mu.svnpatch.rej'))
   expected_output = [
     'C         %s\n' % sbox.ospath('A/mu'),
     '>         applied hunk @@ -180,7 +180,7 @@ with offset -169\n',

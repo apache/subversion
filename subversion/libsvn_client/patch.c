@@ -193,8 +193,8 @@ typedef struct patch_target_t {
   /* Path to the patched file. */
   const char *patched_path;
 
-  /* Hunks that are rejected will be written to this file. */
-  apr_file_t *reject_file;
+  /* Hunks that are rejected will be written to this stream. */
+  svn_stream_t *reject_stream;
 
   /* Path to the reject file. */
   const char *reject_path;
@@ -1042,9 +1042,6 @@ init_patch_target(patch_target_t **patch_target,
   *patch_target = target;
   if (! target->skipped)
     {
-      const char *diff_header;
-      apr_size_t len;
-
       /* Create a temporary file to write the patched result to.
        * Also grab various bits of information about the file. */
       if (target->is_symlink)
@@ -1166,23 +1163,20 @@ init_patch_target(patch_target_t **patch_target,
       content->write = write_file;
       content->write_baton = target->patched_file;
 
-      /* Open a temporary file to write rejected hunks to. */
-      SVN_ERR(svn_io_open_unique_file3(&target->reject_file,
-                                       &target->reject_path, NULL,
-                                       remove_tempfiles ?
+      /* Open a temporary stream to write rejected hunks to. */
+      SVN_ERR(svn_stream_open_unique(&target->reject_stream,
+                                     &target->reject_path, NULL,
+                                     remove_tempfiles ?
                                          svn_io_file_del_on_pool_cleanup :
                                          svn_io_file_del_none,
-                                       result_pool, scratch_pool));
+                                     result_pool, scratch_pool));
 
       /* The reject file needs a diff header. */
-      diff_header = apr_psprintf(scratch_pool, "--- %s%s+++ %s%s",
+      SVN_ERR(svn_stream_printf(target->reject_stream, scratch_pool,
+                                "--- %s" APR_EOL_STR
+                                "+++ %s" APR_EOL_STR,
                                  target->canon_path_from_patchfile,
-                                 APR_EOL_STR,
-                                 target->canon_path_from_patchfile,
-                                 APR_EOL_STR);
-      len = strlen(diff_header);
-      SVN_ERR(svn_io_file_write_full(target->reject_file, diff_header, len,
-                                     &len, scratch_pool));
+                                 target->canon_path_from_patchfile));
 
       /* Handle properties. */
       if (! target->skipped)
@@ -1873,8 +1867,6 @@ reject_hunk(patch_target_t *target, target_content_t *content,
             svn_diff_hunk_t *hunk, const char *prop_name,
             apr_pool_t *pool)
 {
-  const char *hunk_header;
-  apr_size_t len;
   svn_boolean_t eof;
   static const char * const text_atat = "@@";
   static const char * const prop_atat = "##";
@@ -1883,14 +1875,9 @@ reject_hunk(patch_target_t *target, target_content_t *content,
 
   if (prop_name)
     {
-      const char *prop_header;
-
-      /* ### Print 'Added', 'Deleted' or 'Modified' instead of 'Property'.
-       */
-      prop_header = apr_psprintf(pool, "Property: %s\n", prop_name);
-      len = strlen(prop_header);
-      SVN_ERR(svn_io_file_write_full(target->reject_file, prop_header,
-                                     len, &len, pool));
+      /* ### Print 'Added', 'Deleted' or 'Modified' instead of 'Property'. */
+      svn_stream_printf(target->reject_stream,
+                        pool, "Property: %s" APR_EOL_STR, prop_name);
       atat = prop_atat;
     }
   else
@@ -1898,17 +1885,14 @@ reject_hunk(patch_target_t *target, target_content_t *content,
       atat = text_atat;
     }
 
-  hunk_header = apr_psprintf(pool, "%s -%lu,%lu +%lu,%lu %s%s",
-                             atat,
-                             svn_diff_hunk_get_original_start(hunk),
-                             svn_diff_hunk_get_original_length(hunk),
-                             svn_diff_hunk_get_modified_start(hunk),
-                             svn_diff_hunk_get_modified_length(hunk),
-                             atat,
-                             APR_EOL_STR);
-  len = strlen(hunk_header);
-  SVN_ERR(svn_io_file_write_full(target->reject_file, hunk_header, len,
-                                 &len, pool));
+  SVN_ERR(svn_stream_printf(target->reject_stream, pool,
+                            "%s -%lu,%lu +%lu,%lu %s" APR_EOL_STR,
+                            atat,
+                            svn_diff_hunk_get_original_start(hunk),
+                            svn_diff_hunk_get_original_length(hunk),
+                            svn_diff_hunk_get_modified_start(hunk),
+                            svn_diff_hunk_get_modified_length(hunk),
+                            atat));
 
   iterpool = svn_pool_create(pool);
   do
@@ -1924,17 +1908,15 @@ reject_hunk(patch_target_t *target, target_content_t *content,
         {
           if (hunk_line->len >= 1)
             {
-              len = hunk_line->len;
-              SVN_ERR(svn_io_file_write_full(target->reject_file,
-                                             hunk_line->data, len, &len,
-                                             iterpool));
+              apr_size_t len = hunk_line->len;
+
+              SVN_ERR(svn_stream_write(target->reject_stream,
+                                       hunk_line->data, &len));
             }
 
           if (eol_str)
             {
-              len = strlen(eol_str);
-              SVN_ERR(svn_io_file_write_full(target->reject_file, eol_str,
-                                             len, &len, iterpool));
+              SVN_ERR(svn_stream_puts(target->reject_stream, eol_str));
             }
         }
     }
@@ -2481,9 +2463,9 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           if (! prop_target->content->eof)
             {
               /* We could not copy the entire target property to the
-               * temporary file, and would truncate the target if we
-               * copied the temporary file on top of it. Skip this target.  */
-              target->skipped = TRUE;
+               * temporary stream, and would truncate the target if we
+               * copied the temporary stream on top of it. Skip this target. */
+              prop_target->skipped = TRUE;
             }
         }
       }
@@ -2578,16 +2560,46 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           && !target->skipped
           && target->has_prop_changes)
         {
+          svn_boolean_t has_adds = FALSE;
+          svn_boolean_t has_deletes = FALSE;
+          svn_boolean_t has_mods = FALSE;
+
           for (hash_index = apr_hash_first(scratch_pool, target->prop_targets);
                hash_index;
                hash_index = apr_hash_next(hash_index))
             {
               prop_patch_target_t *prop_target = apr_hash_this_val(hash_index);
 
-              if (prop_target->operation != svn_diff_op_deleted)
-              {
-                ensure_exists = TRUE;
-              }
+              switch (prop_target->operation)
+                {
+                  case svn_diff_op_added:
+                    has_adds = TRUE;
+                    break;
+                  case svn_diff_op_deleted:
+                    has_deletes = TRUE;
+                    break;
+                  case svn_diff_op_modified:
+                  default:
+                    has_mods = TRUE;
+                    break;
+                }
+            }
+
+          if (has_adds && !has_mods && !has_deletes)
+            ensure_exists = TRUE;
+          else if (has_mods && target->locally_deleted
+                   || target->kind_on_disk == svn_node_none)
+            {
+              target->had_prop_rejects = TRUE;
+              for (hash_index = apr_hash_first(scratch_pool, target->prop_targets);
+                   hash_index;
+                   hash_index = apr_hash_next(hash_index))
+                {
+                  prop_patch_target_t *prop_target = apr_hash_this_val(hash_index);
+
+                  if (prop_target->operation != svn_diff_op_deleted)
+                    prop_target->skipped = TRUE;
+                }
             }
         }
 
@@ -2940,19 +2952,36 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
 static svn_error_t *
 write_out_rejected_hunks(patch_target_t *target,
                          svn_boolean_t dry_run,
-                         apr_pool_t *pool)
+                         apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_io_file_close(target->reject_file, pool));
-
   if (! dry_run && (target->had_rejects || target->had_prop_rejects))
     {
       /* Write out rejected hunks, if any. */
-      SVN_ERR(svn_io_copy_file(target->reject_path,
-                               apr_psprintf(pool, "%s.svnpatch.rej",
-                               target->local_abspath),
-                               FALSE, pool));
+      apr_file_t *reject_file;
+
+      SVN_ERR(svn_io_open_uniquely_named(&reject_file, NULL,
+                                         svn_dirent_dirname(
+                                              target->local_abspath,
+                                              scratch_pool),
+                                         svn_dirent_basename(
+                                              target->local_abspath,
+                                              NULL),
+                                         ".svnpatch.rej",
+                                         svn_io_file_del_none,
+                                         scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_stream_reset(target->reject_stream));
+
+      /* svn_stream_copy3() closes the files for us */
+      SVN_ERR(svn_stream_copy3(target->reject_stream,
+                                  svn_stream_from_aprfile2(reject_file, FALSE,
+                                                           scratch_pool),
+                                  NULL, NULL, scratch_pool));
       /* ### TODO mark file as conflicted. */
     }
+  else
+    SVN_ERR(svn_stream_close(target->reject_stream));
+
   return SVN_NO_ERROR;
 }
 
