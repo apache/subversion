@@ -6171,8 +6171,11 @@ def patch_git_symlink(sbox):
   })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'link-to-iota'      : Item(contents="iota"),
+    'link-to-iota'      : Item(contents="This is the file 'iota'.\n",
+                               props={'svn:special': '*'}),
   })
+  if not svntest.main.is_posix_os():
+    expected_disk.tweak('link-to-iota', contents='link iota')
   expected_skip = svntest.wc.State(wc_dir, {})
 
   svntest.actions.run_and_verify_patch(wc_dir, add_patch,
@@ -6181,14 +6184,18 @@ def patch_git_symlink(sbox):
                                        [], True, True)
 
   # And again
-  expected_output.tweak('link-to-iota', status='G ')
+  expected_output.tweak('link-to-iota', status='GG')
   svntest.actions.run_and_verify_patch(wc_dir, add_patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        [], True, True)
 
   # Now tweak the link
-  expected_disk.tweak('link-to-iota', contents='A/mu')
+  expected_output.tweak('link-to-iota', status='G ')
+  if svntest.main.is_posix_os():
+    expected_disk.tweak('link-to-iota', contents="This is the file 'mu'.\n")
+  else:
+    expected_disk.tweak('link-to-iota', contents='link A/mu')
   svntest.actions.run_and_verify_patch(wc_dir, edit_patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
@@ -6202,7 +6209,8 @@ def patch_git_symlink(sbox):
 
   # And replace the link with a file
   expected_output.tweak('link-to-iota', status='A ', prev_status='D ')
-  expected_disk.tweak('link-to-iota', contents="This is a real file\n")
+  expected_disk.tweak('link-to-iota', contents="This is a real file\n",
+                      props={})
   svntest.actions.run_and_verify_patch(wc_dir, to_file_patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
@@ -6219,6 +6227,162 @@ def patch_git_symlink(sbox):
                               '\\ No newline at end of file\n'),
   })
   svntest.actions.run_and_verify_patch(wc_dir, to_file_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+
+def patch_symlink_changes(sbox):
+  "patch symlink changes"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  strip_count = wc_dir.count(os.path.sep)+1
+
+  os.remove(sbox.ospath('iota'))
+  sbox.simple_symlink('A/B/E/beta', 'iota')
+  sbox.simple_propset('svn:special', 'X', 'iota')
+
+  _, diff_tolink, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                         'diff', wc_dir)
+
+  _, git_tolink, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                         'diff', wc_dir, '--git')
+
+  sbox.simple_commit()
+
+  os.remove(sbox.ospath('iota'))
+  sbox.simple_symlink('A/B/E/alpha', 'iota')
+
+  _, diff_changelink, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                            'diff', wc_dir)
+
+  _, git_changelink, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                            'diff', wc_dir, '--git')
+
+  tolink_patch = sbox.get_tempname('tolink.patch')
+  svntest.main.file_write(tolink_patch, ''.join(diff_tolink), mode='wb')
+
+  git_tolink_patch = sbox.get_tempname('git_tolink.patch')
+  svntest.main.file_write(git_tolink_patch, ''.join(git_tolink), mode='wb')
+
+  changelink_patch = sbox.get_tempname('changelink.patch')
+  svntest.main.file_write(changelink_patch, ''.join(diff_changelink), mode='wb')
+
+  git_changelink_patch = sbox.get_tempname('git_changelink.patch')
+  svntest.main.file_write(git_changelink_patch, ''.join(git_changelink), mode='wb')
+
+  sbox.simple_revert('iota')
+  sbox.simple_update('', 1)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='MM')
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota'      : Item(status='UU'),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', props={'svn:special': '*'})
+  expected_skip = svntest.wc.State(wc_dir, {})
+
+  if svntest.main.is_posix_os():
+    expected_disk.tweak('iota', contents="This is the file 'beta'.\n")
+  else:
+    expected_disk.tweak('iota', contents="link A/B/E/beta")
+
+  # Turn into link
+  svntest.actions.run_and_verify_patch(wc_dir, tolink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count)
+
+  # And in git style
+  sbox.simple_revert('iota')
+  svntest.actions.run_and_verify_patch(wc_dir, git_tolink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # Retry
+  expected_output.tweak('iota', status='GG')
+  svntest.actions.run_and_verify_patch(wc_dir, tolink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count)
+  svntest.actions.run_and_verify_patch(wc_dir, git_tolink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  sbox.simple_update('', 2) # Go to r2.
+  sbox.simple_revert('iota')
+  expected_status.tweak(wc_rev=2)
+
+  # Turn back into files
+  expected_output.tweak('iota', status='UU')
+  expected_disk.tweak('iota', props={}, contents="This is the file 'iota'.\n")
+  svntest.actions.run_and_verify_patch(wc_dir, tolink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count,
+                                       '--reverse-diff')
+
+  # And in git style
+  sbox.simple_revert('iota')
+  svntest.actions.run_and_verify_patch(wc_dir, git_tolink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # Retry
+  expected_output.tweak('iota', status='GG')
+  svntest.actions.run_and_verify_patch(wc_dir, tolink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count,
+                                       '--reverse-diff')
+  svntest.actions.run_and_verify_patch(wc_dir, git_tolink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # And now just tweak the link
+  expected_output.tweak('iota', status='U ')
+  expected_disk.tweak('iota', props={'svn:special': '*'})
+  expected_status.tweak('iota', status='M ')
+
+  if svntest.main.is_posix_os():
+    expected_disk.tweak('iota', contents="This is the file 'alpha'.\n")
+  else:
+    expected_disk.tweak('iota', contents="link A/B/E/alpha")
+
+  sbox.simple_revert('iota')
+  svntest.actions.run_and_verify_patch(wc_dir, changelink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count)
+
+  # And in git style
+  sbox.simple_revert('iota')
+  svntest.actions.run_and_verify_patch(wc_dir, git_changelink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # Retry
+  expected_output.tweak('iota', status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, changelink_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count)
+  svntest.actions.run_and_verify_patch(wc_dir, git_changelink_patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        [], True, True)
@@ -6288,6 +6452,7 @@ test_list = [ None,
               patch_prop_madness,
               patch_empty_vs_delete,
               patch_git_symlink,
+              patch_symlink_changes,
             ]
 
 if __name__ == '__main__':

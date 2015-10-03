@@ -2423,6 +2423,9 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
         }
     }
 
+  /* Assume nothing changed. Will be updated via property hunks */
+  target->is_special = target->is_symlink;
+
   /* Match property hunks. */
   for (hash_index = apr_hash_first(scratch_pool, patch->prop_patches);
        hash_index;
@@ -2435,8 +2438,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       prop_name = apr_hash_this_key(hash_index);
       prop_patch = apr_hash_this_val(hash_index);
 
-      if (! strcmp(prop_name, SVN_PROP_SPECIAL))
-        target->is_special = TRUE;
+      if (!strcmp(prop_name, SVN_PROP_SPECIAL))
+        target->is_special = (prop_patch->operation != svn_diff_op_deleted);
 
       /* We'll store matched hunks in prop_content. */
       prop_target = svn_hash_gets(target->prop_targets, prop_name);
