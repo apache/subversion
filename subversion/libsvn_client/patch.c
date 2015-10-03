@@ -2878,8 +2878,8 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
 
           if (has_adds && !has_mods && !has_deletes)
             ensure_exists = TRUE;
-          else if (has_mods && target->locally_deleted
-                   || target->kind_on_disk == svn_node_none)
+          else if (has_mods && (target->locally_deleted
+                                || target->kind_on_disk == svn_node_none))
             {
               target->had_prop_rejects = TRUE;
               for (hash_index = apr_hash_first(scratch_pool, target->prop_targets);
