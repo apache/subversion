@@ -1578,14 +1578,14 @@ match_existing_target(svn_boolean_t *match,
           *match = FALSE;
           return SVN_NO_ERROR;
         }
-      }
-    while (lines_matched && ! content->eof && ! hunk_eof);
-    svn_pool_destroy(iterpool);
+    }
+  while (lines_matched && ! content->eof && ! hunk_eof);
+  svn_pool_destroy(iterpool);
 
-    *match = (lines_matched && content->eof == hunk_eof);
-    SVN_ERR(seek_to_line(content, saved_line, scratch_pool));
+  *match = (lines_matched && content->eof == hunk_eof);
+  SVN_ERR(seek_to_line(content, saved_line, scratch_pool));
 
-    return SVN_NO_ERROR;
+  return SVN_NO_ERROR;
 }
 
 /* Determine the line at which a HUNK applies to CONTENT of the TARGET
@@ -2540,8 +2540,18 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
            * for deletion. In the rare case where the unidiff was really
            * meant to replace a file with an empty one, this may not
            * be desirable. But the deletion can easily be reverted and
-           * creating an empty file manually is not exactly hard either. */
-          target->deleted = (target->db_kind == svn_node_file);
+           * creating an empty file manually is not exactly hard either.
+           *
+           * But if we have a git style diff we can properly use the
+           * change type we found to do the right thing
+           */
+          if (((patch->hunks && patch->hunks->nelts)
+               || target->move_target_abspath)
+              && !target->deleted
+              && patch->operation == svn_diff_op_unchanged)
+            {
+              target->deleted = (target->db_kind == svn_node_file);
+            }
         }
       else if (patched_file.size == 0 && working_file.size == 0)
         {
