@@ -108,9 +108,6 @@ typedef struct path_order_t
   /* noderev predecessor count */
   int predecessor_count;
 
-  /* this is a directory node */
-  svn_boolean_t is_dir;
-
   /* length of the expanded representation content */
   apr_int64_t expanded_size;
 
@@ -746,7 +743,6 @@ copy_node_to_temp(pack_context_t *context,
   path_order->node_id = *svn_fs_fs__id_node_id(noderev->id);
   path_order->revision = svn_fs_fs__id_rev(noderev->id);
   path_order->predecessor_count = noderev->predecessor_count;
-  path_order->is_dir = noderev->kind == svn_node_dir;
   path_order->noderev_id = *svn_fs_fs__id_rev_item(noderev->id);
   APR_ARRAY_PUSH(context->path_order, path_order_t *) = path_order;
 
@@ -763,13 +759,8 @@ compare_path_order(const path_order_t * const * lhs_p,
   const path_order_t * lhs = *lhs_p;
   const path_order_t * rhs = *rhs_p;
 
-  /* cluster all directories */
-  int diff = rhs->is_dir - lhs->is_dir;
-  if (diff)
-    return diff;
-
   /* lexicographic order on path and node (i.e. latest first) */
-  diff = svn_prefix_string__compare(lhs->path, rhs->path);
+  int diff = svn_prefix_string__compare(lhs->path, rhs->path);
   if (diff)
     return diff;
 
