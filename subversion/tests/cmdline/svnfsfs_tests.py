@@ -288,7 +288,13 @@ def load_index_sharded(sbox):
       columns.append("junk")
       items[i] = ' '.join(columns) + "\n"
 
-  # first entry is for rev 1, pack starts at rev 0, though
+  # first entry shall be for rev 1, pack starts at rev 0, though
+  for i in range(0, len(items)):
+    if items[i].split()[3] == "1":
+      if i != 1:
+        items[i],items[1] = items[1],items[i]
+      break
+
   assert(items[1].split()[3] == "1")
 
   # Reload the index
