@@ -762,7 +762,7 @@ transform_link_to_git(const char **new_tmpfile,
 
       /* git calculates the sha over "blob X\0" + the actual data,
          where X is the decimal size of the blob. */
-      sz_str = apr_psprintf(scratch_pool, "blob %u", line->len);
+      sz_str = apr_psprintf(scratch_pool, "blob %u", (unsigned int)line->len);
       svn_stringbuf_insert(line, 0, sz_str, strlen(sz_str) + 1);
 
       SVN_ERR(svn_checksum(&checksum, svn_checksum_sha1,
