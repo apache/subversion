@@ -2240,7 +2240,7 @@ def patch_with_properties(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', status=' M', wc_rev='2')
 
-  expected_skip = wc.State('', { })
+  expected_skip = wc.State(wc_dir, { })
 
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
@@ -2285,16 +2285,11 @@ def patch_with_properties(sbox):
   # And now try against a not existing target
   svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '--force', sbox.ospath('iota'))
-  expected_output.tweak('iota', status=' C')
+  expected_output.remove('iota')
   expected_disk.remove('iota')
   expected_status.tweak('iota', status='D ')
-  expected_disk.add({
-    'iota.svnpatch.rej' : Item(contents="--- iota\n"
-                                        "+++ iota\n"
-                                        "Property: modified\n"
-                                        "## -1,1 +1,1 ##\n"
-                                        "-This is the property 'modified'.\n"
-                                        "+The property 'modified' has changed.\n")
+  expected_skip.add({
+    'iota' : Item(verb='Skipped'),
   })
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,

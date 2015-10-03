@@ -1304,6 +1304,65 @@ init_patch_target(patch_target_t **patch_target,
         }
     }
 
+  if ((target->locally_deleted || target->db_kind == svn_node_none)
+      && !target->added
+      && target->operation == svn_diff_op_unchanged)
+    {
+      svn_boolean_t maybe_add = FALSE;
+
+      if (patch->hunks && patch->hunks->nelts == 1)
+        {
+          svn_diff_hunk_t *hunk = APR_ARRAY_IDX(patch->hunks, 0,
+                                                svn_diff_hunk_t *);
+
+          if (svn_diff_hunk_get_original_start(hunk) == 0)
+            maybe_add = TRUE;
+        }
+      else if (patch->prop_patches && apr_hash_count(patch->prop_patches))
+        {
+          apr_hash_index_t *hi;
+          svn_boolean_t all_add = TRUE;
+
+          for (hi = apr_hash_first(result_pool, patch->prop_patches);
+               hi;
+               hi = apr_hash_next(hi))
+            {
+              svn_prop_patch_t *prop_patch = apr_hash_this_val(hi);
+
+              if (prop_patch->operation != svn_diff_op_added)
+                {
+                  all_add = FALSE;
+                  break;
+                }
+            }
+
+          maybe_add = all_add;
+        }
+      /* Other implied types */
+
+      if (maybe_add)
+        target->added = TRUE;
+    }
+  else if (!target->deleted && !target->added
+           && target->operation == svn_diff_op_unchanged)
+    {
+      svn_boolean_t maybe_delete = FALSE;
+
+      if (patch->hunks && patch->hunks->nelts == 1)
+        {
+          svn_diff_hunk_t *hunk = APR_ARRAY_IDX(patch->hunks, 0,
+                                                svn_diff_hunk_t *);
+
+          if (svn_diff_hunk_get_modified_start(hunk) == 0)
+            maybe_delete = TRUE;
+        }
+
+      /* Other implied types */
+
+      if (maybe_delete)
+        target->deleted = TRUE;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -2173,7 +2232,7 @@ send_hunk_notification(const hunk_info_t *hi,
 static svn_error_t *
 send_patch_notification(const patch_target_t *target,
                         const svn_client_ctx_t *ctx,
-                        apr_pool_t *pool)
+                        apr_pool_t *scratch_pool)
 {
   svn_wc_notify_t *notify;
   svn_wc_notify_action_t action;
@@ -2184,7 +2243,7 @@ send_patch_notification(const patch_target_t *target,
 
   if (target->skipped)
     action = svn_wc_notify_skip;
-  else if (target->deleted && !target->locally_deleted)
+  else if (target->deleted)
     action = svn_wc_notify_delete;
   else if (target->added || target->move_target_abspath)
     action = svn_wc_notify_add;
@@ -2197,7 +2256,7 @@ send_patch_notification(const patch_target_t *target,
     notify_path = target->local_abspath ? target->local_abspath
                                         : target->local_relpath;
 
-  notify = svn_wc_create_notify(notify_path, action, pool);
+  notify = svn_wc_create_notify(notify_path, action, scratch_pool);
   notify->kind = svn_node_file;
 
   if (action == svn_wc_notify_skip)
@@ -2233,15 +2292,15 @@ send_patch_notification(const patch_target_t *target,
         notify->prop_state = svn_wc_notify_state_unchanged;
     }
 
-  ctx->notify_func2(ctx->notify_baton2, notify, pool);
+  ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
 
   if (action == svn_wc_notify_patch)
     {
       int i;
       apr_pool_t *iterpool;
-      apr_hash_index_t *hash_index;
+      apr_array_header_t *prop_targets;
 
-      iterpool = svn_pool_create(pool);
+      iterpool = svn_pool_create(scratch_pool);
       for (i = 0; i < target->content->hunks->nelts; i++)
         {
           const hunk_info_t *hi;
@@ -2254,21 +2313,24 @@ send_patch_notification(const patch_target_t *target,
                                          ctx, iterpool));
         }
 
-      for (hash_index = apr_hash_first(pool, target->prop_targets);
-           hash_index;
-           hash_index = apr_hash_next(hash_index))
+      prop_targets = svn_sort__hash(target->prop_targets,
+                                    svn_sort_compare_items_lexically,
+                                    scratch_pool);
+      for (i = 0; i < prop_targets->nelts; i++)
         {
-          prop_patch_target_t *prop_target;
+          int j;
+          svn_sort__item_t item = APR_ARRAY_IDX(prop_targets, i,
+                                                svn_sort__item_t);
 
-          prop_target = apr_hash_this_val(hash_index);
+          prop_patch_target_t *prop_target = item.value;
 
-          for (i = 0; i < prop_target->content->hunks->nelts; i++)
+          for (j = 0; j < prop_target->content->hunks->nelts; j++)
             {
               const hunk_info_t *hi;
 
               svn_pool_clear(iterpool);
 
-              hi = APR_ARRAY_IDX(prop_target->content->hunks, i,
+              hi = APR_ARRAY_IDX(prop_target->content->hunks, j,
                                  hunk_info_t *);
 
               /* Don't notify on the hunk level for added or deleted props. */
@@ -2286,9 +2348,9 @@ send_patch_notification(const patch_target_t *target,
     {
       /* Notify about deletion of move source. */
       notify = svn_wc_create_notify(target->local_abspath,
-                                    svn_wc_notify_delete, pool);
+                                    svn_wc_notify_delete, scratch_pool);
       notify->kind = svn_node_file;
-      ctx->notify_func2(ctx->notify_baton2, notify, pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
 
   return SVN_NO_ERROR;
@@ -2367,6 +2429,7 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
   apr_hash_index_t *hash_index;
   svn_linenum_t previous_offset = 0;
   svn_boolean_t has_text_changes = FALSE;
+  apr_array_header_t *prop_targets;
 
   SVN_ERR(init_patch_target(&target, patch, abs_wc_path, wc_ctx, strip_count,
                             remove_tempfiles, targets_info,
@@ -2573,6 +2636,15 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
         }
     }
 
+  if (target->had_rejects || target->locally_deleted)
+    target->deleted = FALSE;
+
+  if (target->added
+      && !(target->locally_deleted || target->db_kind == svn_node_none))
+    {
+      target->added = FALSE;
+    }
+
   /* Assume nothing changed. Will be updated via property hunks */
   target->is_special = target->is_symlink;
 
@@ -2703,23 +2775,61 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
       APR_ARRAY_PUSH(prop_target->content->hunks, hunk_info_t *) = hi;
     }
 
-  /* Apply or reject property hunks. */
-  for (hash_index = apr_hash_first(scratch_pool, target->prop_targets);
-       hash_index;
-       hash_index = apr_hash_next(hash_index))
+  /* When the node is deleted or does not exist after the patch is applied
+     we should reject a few more property hunks that can't be applied even
+     though the source matched */
+  if (target->deleted
+      || (!target->added &&
+          (target->locally_deleted || target->db_kind == svn_node_none)))
     {
-      prop_patch_target_t *prop_target;
+      for (hash_index = apr_hash_first(scratch_pool, target->prop_targets);
+           hash_index;
+           hash_index = apr_hash_next(hash_index))
+        {
+          prop_patch_target_t *prop_target = apr_hash_this_val(hash_index);
+
+          if (prop_target->operation == svn_diff_op_deleted)
+            continue;
+
+          for (i = 0; i < prop_target->content->hunks->nelts; i++)
+            {
+              hunk_info_t *hi;
+
+              hi = APR_ARRAY_IDX(prop_target->content->hunks, i, hunk_info_t*);
+
+              if (hi->already_applied || hi->rejected)
+                continue;
+              else
+                {
+                  hi->rejected = TRUE;
+                  prop_target->skipped = TRUE;
+
+                  if (!target->deleted && !target->added)
+                    target->skipped = TRUE;
+                }
+            }
+        }
+    }
+
+  /* Apply or reject property hunks. */
+
+  prop_targets = svn_sort__hash(target->prop_targets,
+                                svn_sort_compare_items_lexically,
+                                scratch_pool);
+  for (i = 0; i < prop_targets->nelts; i++)
+    {
+      svn_sort__item_t item = APR_ARRAY_IDX(prop_targets, i, svn_sort__item_t);
+      prop_patch_target_t *prop_target = item.value;
       svn_boolean_t applied_one = FALSE;
+      int j;
 
-      prop_target = apr_hash_this_val(hash_index);
-
-      for (i = 0; i < prop_target->content->hunks->nelts; i++)
+      for (j = 0; j < prop_target->content->hunks->nelts; j++)
         {
           hunk_info_t *hi;
 
           svn_pool_clear(iterpool);
 
-          hi = APR_ARRAY_IDX(prop_target->content->hunks, i,
+          hi = APR_ARRAY_IDX(prop_target->content->hunks, j,
                              hunk_info_t *);
           if (hi->already_applied)
             {
@@ -2770,140 +2880,6 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
     }
 
   SVN_ERR(svn_io_file_close(target->patched_file, scratch_pool));
-
-  if (! target->skipped)
-    {
-      apr_finfo_t working_file;
-      apr_finfo_t patched_file;
-      svn_boolean_t ensure_exists = FALSE;
-
-      /* Get sizes of the patched temporary file and the working file.
-       * We'll need those to figure out whether we should delete the
-       * patched file. */
-      SVN_ERR(svn_io_stat(&patched_file, target->patched_path,
-                          APR_FINFO_SIZE | APR_FINFO_LINK, scratch_pool));
-      if (target->kind_on_disk == svn_node_file)
-        SVN_ERR(svn_io_stat(&working_file, target->local_abspath,
-                            APR_FINFO_SIZE | APR_FINFO_LINK, scratch_pool));
-      else
-        working_file.size = 0;
-
-      if (patch->operation == svn_diff_op_deleted
-          && target->had_rejects)
-        {
-          /* No match -> No delete! */
-          target->deleted = FALSE;
-        }
-
-      if (patched_file.size == 0 && working_file.size > 0)
-        {
-          /* If a unidiff or a binary patch removes all lines from a file,
-           * that usually means deletion, so we can confidently schedule
-           * the target for deletion. In the rare case where the unidiff
-           * was really meant to replace a file with an empty one, this may
-           * not be desirable. But the deletion can easily be reverted and
-           * creating an empty file manually is not exactly hard either.
-           *
-           * But if we have a git style diff we can properly use the
-           * change type we found to do the right thing
-           */
-          if (has_text_changes && !target->deleted
-              && patch->operation == svn_diff_op_unchanged)
-            {
-              target->deleted = (target->db_kind == svn_node_file);
-            }
-        }
-      else if (patched_file.size == 0 && working_file.size == 0)
-        {
-          /* The target was empty or non-existent to begin with
-           * and no content was changed by patching.
-           * Report this as skipped if it didn't exist, unless in the special
-           * case of adding an empty file which has properties set on it or
-           * adding an empty file with a 'git diff' */
-          if (target->kind_on_disk == svn_node_none
-              && !target->has_prop_changes
-              && !target->has_text_changes
-              && !target->had_already_applied
-              && !target->added)
-          {
-            target->skipped = TRUE;
-          }
-        }
-      else if (patched_file.size > 0 && working_file.size == 0)
-        {
-          /* The patch has created a file. */
-          ensure_exists = TRUE;
-        }
-      else if (target->operation == svn_diff_op_added)
-        {
-          /* Can't add something that is already there.
-             Report node as merged or conflict */
-          target->added = FALSE;
-        }
-
-      if (!ensure_exists
-          && !target->skipped
-          && target->has_prop_changes)
-        {
-          svn_boolean_t has_adds = FALSE;
-          svn_boolean_t has_deletes = FALSE;
-          svn_boolean_t has_mods = FALSE;
-
-          for (hash_index = apr_hash_first(scratch_pool, target->prop_targets);
-               hash_index;
-               hash_index = apr_hash_next(hash_index))
-            {
-              prop_patch_target_t *prop_target = apr_hash_this_val(hash_index);
-
-              switch (prop_target->operation)
-                {
-                  case svn_diff_op_added:
-                    has_adds = TRUE;
-                    break;
-                  case svn_diff_op_deleted:
-                    has_deletes = TRUE;
-                    break;
-                  case svn_diff_op_modified:
-                  default:
-                    has_mods = TRUE;
-                    break;
-                }
-            }
-
-          if (has_adds && !has_mods && !has_deletes)
-            ensure_exists = TRUE;
-          else if (has_mods && (target->locally_deleted
-                                || target->kind_on_disk == svn_node_none))
-            {
-              target->had_prop_rejects = TRUE;
-              for (hash_index = apr_hash_first(scratch_pool, target->prop_targets);
-                   hash_index;
-                   hash_index = apr_hash_next(hash_index))
-                {
-                  prop_patch_target_t *prop_target = apr_hash_this_val(hash_index);
-
-                  if (prop_target->operation != svn_diff_op_deleted)
-                    prop_target->skipped = TRUE;
-                }
-            }
-        }
-
-      if (ensure_exists)
-        {
-          if (patch->operation == svn_diff_op_unchanged
-              || patch->operation == svn_diff_op_added)
-            {
-              if (target->locally_deleted || target->db_kind == svn_node_none)
-                target->added = TRUE;
-            }
-          else if (target->locally_deleted
-                   || target->kind_on_disk == svn_node_none)
-            {
-              /* Can't modify something that isn't there */
-              target->skipped = TRUE;
-            }
-        }
-    }
 
   *patch_target = target;
 
