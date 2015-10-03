@@ -108,6 +108,9 @@ typedef struct path_order_t
   /* noderev predecessor count */
   int predecessor_count;
 
+  /* this is a node is the latest for this PATH in this rev / pack file */
+  svn_boolean_t is_head;
+
   /* length of the expanded representation content */
   apr_int64_t expanded_size;
 
@@ -807,6 +810,41 @@ roundness(int value)
   return value ? value - (value & (value - 1)) : INT_MAX;
 }
 
+/* For all paths in first COUNT entries in PATH_ORDER, mark their latest
+ * node as "HEAD".  PATH_ORDER must be ordered by path, revision.
+ */
+static void
+classify_nodes(path_order_t **path_order,
+               int count)
+{
+  const svn_prefix_string__t *path;
+  int i;
+
+  /* The logic below would fail for empty ranges. */
+  if (count == 0)
+    return;
+
+  /* All entries are sorted by path, followed by revision.
+   * So, the first index is also HEAD for the first path.
+   */
+  path = path_order[0]->path;
+  path_order[0]->is_head = TRUE;
+
+  /* Since the sorting implicitly groups all entries by path and then sorts
+   * by descending revision within the group, whenever we encounter a new
+   * path, the first entry is "HEAD" for that path.
+   */
+  for (i = 1; i < count; ++i)
+    {
+      /* New path? */
+      if (svn_prefix_string__compare(path, path_order[i]->path))
+        {
+          path = path_order[i]->path;
+          path_order[i]->is_head = TRUE;
+        }
+    }
+}
+
 /* Order a range of data collected in CONTEXT such that we can place them
  * in the desired order.  The input is taken from *PATH_ORDER, offsets FIRST
  * to LAST and then written in the final order to the same range in *TEMP.
@@ -944,7 +982,7 @@ static void
 sort_reps(pack_context_t *context)
 {
   apr_pool_t *temp_pool;
-  const path_order_t **temp, **path_order;
+  path_order_t **temp, **path_order;
   int i, count;
 
   /* We will later assume that there is at least one node / path.
@@ -970,7 +1008,10 @@ sort_reps(pack_context_t *context)
   temp = apr_pcalloc(temp_pool, count * sizeof(*temp));
   path_order = (void *)context->path_order->elts;
 
-  /* Sort those sub-sections separately. */
+  /* Mark nodes depending on what other nodes exist for the same path etc. */
+  classify_nodes(path_order, count);
+
+  /* Rearrange those sub-sections separately. */
   sort_reps_range(context, path_order, temp, 0, count);
 
   /* We now know the final ordering. */
@@ -1138,7 +1179,7 @@ copy_reps_from_temp(pack_context_t *context,
   apr_array_header_t *path_order = context->path_order;
   int i;
 
-  /* copy items in path order. */
+  /* copy items in path order.  Exclude the non-HEAD noderevs. */
   for (i = 0; i < path_order->nelts; ++i)
     {
       path_order_t *current_path;
@@ -1148,13 +1189,30 @@ copy_reps_from_temp(pack_context_t *context,
       svn_pool_clear(iterpool);
 
       current_path = APR_ARRAY_IDX(path_order, i, path_order_t *);
-      node_part = get_item(context, &current_path->noderev_id, TRUE);
-      rep_part = get_item(context, &current_path->rep_id, TRUE);
+      if (current_path->is_head)
+        {
+          node_part = get_item(context, &current_path->noderev_id, TRUE);
+          if (node_part)
+            SVN_ERR(store_item(context, temp_file, node_part, iterpool));
+        }
 
-      if (node_part)
-        SVN_ERR(store_item(context, temp_file, node_part, iterpool));
+      rep_part = get_item(context, &current_path->rep_id, TRUE);
       if (rep_part)
         SVN_ERR(store_item(context, temp_file, rep_part, iterpool));
+    }
+
+  /* copy the remaining non-head noderevs. */
+  for (i = 0; i < path_order->nelts; ++i)
+    {
+      path_order_t *current_path;
+      svn_fs_fs__p2l_entry_t *node_part;
+
+      svn_pool_clear(iterpool);
+
+      current_path = APR_ARRAY_IDX(path_order, i, path_order_t *);
+      node_part = get_item(context, &current_path->noderev_id, TRUE);
+      if (node_part)
+        SVN_ERR(store_item(context, temp_file, node_part, iterpool));
     }
 
   svn_pool_destroy(iterpool);
