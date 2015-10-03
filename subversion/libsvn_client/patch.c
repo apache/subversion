@@ -933,30 +933,6 @@ seek_symlink(void *baton, apr_off_t offset, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
-
-/* Set the target of the symlink accessed via BATON.
- * The contents of BUF must be a valid "normal form" of a symlink. */
-static svn_error_t *
-write_symlink(void *baton, const char *buf, apr_size_t len,
-              apr_pool_t *scratch_pool)
-{
-  const char *target_abspath = baton;
-
-  /* We assume the entire symlink is written at once, as the patch
-     format is line based */
-
-  {
-    svn_stream_t *stream;
-    SVN_ERR(svn_subst_create_specialfile(&stream, target_abspath,
-                                         scratch_pool, scratch_pool));
-    SVN_ERR(svn_stream_write(stream, buf, &len));
-    SVN_ERR(svn_stream_close(stream));
-  }
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Return a suitable filename for the target of PATCH.
  * Examine the ``old'' and ``new'' file names, and choose the file name
  * with the fewest path components, the shortest basename, and the shortest
@@ -1178,34 +1154,17 @@ init_patch_target(patch_target_t **patch_target,
             }
         }
 
-      if (! target->is_symlink)
-        {
-          /* Open a temporary file to write the patched result to. */
-          SVN_ERR(svn_io_open_unique_file3(&target->patched_file,
-                                           &target->patched_path, NULL,
-                                           remove_tempfiles ?
-                                             svn_io_file_del_on_pool_cleanup :
-                                             svn_io_file_del_none,
-                                           result_pool, scratch_pool));
+      /* Open a temporary file to write the patched result to. */
+      SVN_ERR(svn_io_open_unique_file3(&target->patched_file,
+                                        &target->patched_path, NULL,
+                                        remove_tempfiles ?
+                                          svn_io_file_del_on_pool_cleanup :
+                                          svn_io_file_del_none,
+                                        result_pool, scratch_pool));
 
-          /* Put the write callback in place. */
-          content->write = write_file;
-          content->write_baton = target->patched_file;
-        }
-      else
-        {
-          /* Put the write callback in place. */
-          SVN_ERR(svn_io_open_unique_file3(NULL,
-                                           &target->patched_path, NULL,
-                                           remove_tempfiles ?
-                                             svn_io_file_del_on_pool_cleanup :
-                                             svn_io_file_del_none,
-                                           result_pool, scratch_pool));
-
-          content->write_baton = (void*)target->patched_path;
-
-          content->write = write_symlink;
-        }
+      /* Put the write callback in place. */
+      content->write = write_file;
+      content->write_baton = target->patched_file;
 
       /* Open a temporary file to write rejected hunks to. */
       SVN_ERR(svn_io_open_unique_file3(&target->reject_file,
@@ -2539,9 +2498,9 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
        * will be closed later in write_out_rejected_hunks(). */
       if (target->kind_on_disk == svn_node_file)
         SVN_ERR(svn_io_file_close(target->file, scratch_pool));
-
-      SVN_ERR(svn_io_file_close(target->patched_file, scratch_pool));
     }
+
+  SVN_ERR(svn_io_file_close(target->patched_file, scratch_pool));
 
   if (! target->skipped)
     {
