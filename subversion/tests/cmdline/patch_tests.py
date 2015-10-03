@@ -2225,7 +2225,7 @@ def patch_with_properties(sbox):
     "-This is the property 'deleted'.\n",
   ]
 
-  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch), 'wb')
 
   modified_prop_contents = "The property 'modified' has changed.\n"
   added_prop_contents = "This is the property 'added'.\n"
@@ -2261,6 +2261,7 @@ def patch_with_properties(sbox):
 
   # Reverse
   expected_output.tweak('iota', status=' U')
+  expected_status.tweak('iota', status='  ')
   expected_disk.tweak('iota',
                       props={'deleted': "This is the property 'deleted'.\n",
                              'modified': "This is the property 'modified'.\n"})
