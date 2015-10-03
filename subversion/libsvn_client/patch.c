@@ -2869,16 +2869,46 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
           && !target->skipped
           && target->has_prop_changes)
         {
+          svn_boolean_t has_adds = FALSE;
+          svn_boolean_t has_deletes = FALSE;
+          svn_boolean_t has_mods = FALSE;
+
           for (hash_index = apr_hash_first(scratch_pool, target->prop_targets);
                hash_index;
                hash_index = apr_hash_next(hash_index))
             {
               prop_patch_target_t *prop_target = apr_hash_this_val(hash_index);
 
-              if (prop_target->operation != svn_diff_op_deleted)
-              {
-                ensure_exists = TRUE;
-              }
+              switch (prop_target->operation)
+                {
+                  case svn_diff_op_added:
+                    has_adds = TRUE;
+                    break;
+                  case svn_diff_op_deleted:
+                    has_deletes = TRUE;
+                    break;
+                  case svn_diff_op_modified:
+                  default:
+                    has_mods = TRUE;
+                    break;
+                }
+            }
+
+          if (has_adds && !has_mods && !has_deletes)
+            ensure_exists = TRUE;
+          else if (has_mods && target->locally_deleted
+                   || target->kind_on_disk == svn_node_none)
+            {
+              target->had_prop_rejects = TRUE;
+              for (hash_index = apr_hash_first(scratch_pool, target->prop_targets);
+                   hash_index;
+                   hash_index = apr_hash_next(hash_index))
+                {
+                  prop_patch_target_t *prop_target = apr_hash_this_val(hash_index);
+
+                  if (prop_target->operation != svn_diff_op_deleted)
+                    prop_target->skipped = TRUE;
+                }
             }
         }
 
