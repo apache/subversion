@@ -231,6 +231,9 @@ typedef struct patch_target_t {
    * patch was applied to it. */
   svn_boolean_t local_mods;
 
+  /* The operation on the target as set in the patch file */
+  svn_diff_operation_kind_t operation;
+
   /* True if the target was added by the patch, which means that it did
    * not exist on disk before patching and has content after patching. */
   svn_boolean_t added;
@@ -1040,6 +1043,7 @@ init_patch_target(patch_target_t **patch_target,
   target->kind_on_disk = svn_node_none;
   target->content = content;
   target->prop_targets = apr_hash_make(result_pool);
+  target->operation = patch->operation;
 
   SVN_ERR(resolve_target_path(target, choose_target_filename(patch),
                               root_abspath, strip_count, prop_changes_only,
@@ -1718,17 +1722,24 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
               svn_linenum_t modified_start;
 
               modified_start = svn_diff_hunk_get_modified_start(hunk);
-              if (modified_start == 0)
+              if (modified_start == 0
+                  && (target->operation == svn_diff_op_unchanged
+                      || target->operation == svn_diff_op_deleted))
                 {
-                  /* Patch wants to delete the file.
+                  /* Patch wants to delete the file. */
 
-                     ### locally_deleted is always false here? */
                   already_applied = target->locally_deleted;
                 }
               else
                 {
-                  SVN_ERR(seek_to_line(content, modified_start,
-                                       scratch_pool));
+                  svn_linenum_t seek_to;
+
+                  if (modified_start == 0)
+                    seek_to = 1; /* Empty file case */
+                  else
+                    seek_to = modified_start;
+
+                  SVN_ERR(seek_to_line(content, seek_to, scratch_pool));
                   SVN_ERR(scan_for_match(&matched_line, content,
                                          hunk, TRUE,
                                          modified_start + 1,
@@ -2561,9 +2572,13 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
            * case of adding an empty file which has properties set on it or
            * adding an empty file with a 'git diff' */
           if (target->kind_on_disk == svn_node_none
-              && ! target->has_prop_changes
-              && ! target->added)
+              && !target->has_prop_changes
+              && !target->has_text_changes
+              && !target->had_already_applied
+              && !target->added)
+          {
             target->skipped = TRUE;
+          }
         }
       else if (patched_file.size > 0 && working_file.size == 0)
         {
