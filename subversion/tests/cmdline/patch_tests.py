@@ -3425,7 +3425,6 @@ def patch_set_prop_no_eol(sbox):
   return patch_one_property(sbox, False)
 
 # Regression test for issue #3697
-@SkipUnless(svntest.main.is_posix_os)
 @Issue(3697)
 def patch_add_symlink(sbox):
   "patch that adds a symlink"
@@ -3444,23 +3443,27 @@ def patch_add_symlink(sbox):
     "+++ iota_symlink\t(working copy)\n",
     "@@ -0,0 +1 @@\n",
     "+link iota\n",
+    "\\ No newline at end of file\n"
     "\n",
     "Property changes on: iota_symlink\n",
     "-------------------------------------------------------------------\n",
     "Added: svn:special\n",
     "## -0,0 +1 ##\n",
     "+*\n",
+    "\\ No newline at end of property\n"
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-  expected_output = [
-    'A         %s\n' % sbox.ospath('iota_symlink'),
-  ]
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota_symlink' : Item(status='A ')
+  })
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({'iota_symlink': Item(contents="This is the file 'iota'.\n",
                                           props={'svn:special' : '*'})})
+  if not svntest.main.is_posix_os():
+    expected_disk.tweak('iota_symlink', contents='link iota')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({'iota_symlink': Item(status='A ', wc_rev='0')})
 
@@ -3471,9 +3474,38 @@ def patch_add_symlink(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, # expected err
-                                       1, # check-props
-                                       1) # dry-run
+                                       [], True, True)
+
+  # And again
+  expected_output.tweak('iota_symlink', status='GG')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       [], True, True)
+
+  # Reverse
+  expected_output.tweak('iota_symlink', status='D ')
+  expected_disk.remove('iota_symlink')
+  expected_status.remove('iota_symlink')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # And again
+  expected_output.tweak('iota_symlink', status='GG')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
 
 def patch_moved_away(sbox):
   "patch a file that was moved away"
@@ -6176,11 +6208,20 @@ def patch_git_symlink(sbox):
                                        expected_status, expected_skip,
                                        [], True, True)
 
-  # And again
-  # svntest.actions.run_and_verify_patch(wc_dir, to_file_patch,
-  #                                      expected_output, expected_disk,
-  #                                      expected_status, expected_skip,
-  #                                      [], True, True)
+  # And again - Delete can't be applied
+  expected_output.tweak('link-to-iota', status='G ', prev_status='C ')
+  expected_disk.add({
+    'link-to-iota.svnpatch.rej': Item(
+                     contents='--- link-to-iota\n'
+                              '+++ link-to-iota\n'
+                              '@@ -1,1 +0,0 @@\n'
+                              '-A/mu\n'
+                              '\\ No newline at end of file\n'),
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, to_file_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
 
 ########################################################################
 #Run the tests

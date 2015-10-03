@@ -539,6 +539,9 @@ resolve_target_path(patch_target_t *target,
       target->locally_deleted = TRUE;
     }
 
+  if (status->text_status != svn_wc_status_normal)
+    target->local_mods = TRUE;
+
   if (status && (status->kind != svn_node_unknown))
     target->db_kind = status->kind;
   else
@@ -583,6 +586,22 @@ resolve_target_path(patch_target_t *target,
           return SVN_NO_ERROR;
         }
     }
+
+#ifndef HAVE_SYMLINK
+  if (target->kind_on_disk == svn_node_file
+      && !target->is_symlink
+      && !target->locally_deleted
+      && status->prop_status != svn_wc_status_none)
+    {
+      const svn_string_t *value;
+
+      SVN_ERR(svn_wc_prop_get2(&value, wc_ctx, target->local_abspath,
+                               SVN_PROP_SPECIAL, scratch_pool, scratch_pool));
+
+      if (value)
+        target->is_symlink = TRUE;
+    }
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -1071,9 +1090,6 @@ init_patch_target(patch_target_t **patch_target,
           SVN_ERR(svn_io_file_open(&target->file, target->local_abspath,
                                    APR_READ | APR_BUFFERED,
                                    APR_OS_DEFAULT, result_pool));
-          SVN_ERR(svn_wc_text_modified_p2(&target->local_mods, wc_ctx,
-                                          target->local_abspath, FALSE,
-                                          scratch_pool));
           SVN_ERR(svn_io_is_file_executable(&target->executable,
                                             target->local_abspath,
                                             scratch_pool));
@@ -2540,6 +2556,13 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                             APR_FINFO_SIZE | APR_FINFO_LINK, scratch_pool));
       else
         working_file.size = 0;
+
+      if (patch->operation == svn_diff_op_deleted
+          && target->had_rejects)
+        {
+          /* No match -> No delete! */
+          target->deleted = FALSE;
+        }
 
       if (patched_file.size == 0 && working_file.size > 0)
         {
