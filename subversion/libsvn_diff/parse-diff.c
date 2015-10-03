@@ -843,14 +843,16 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
               SVN_ERR(parse_prop_name(prop_name, line->data, "Added: ",
                                       result_pool));
               if (*prop_name)
-                *prop_operation = svn_diff_op_added;
+                *prop_operation = (patch->reverse ? svn_diff_op_deleted
+                                                  : svn_diff_op_added);
             }
           else if (starts_with(line->data, "Deleted: "))
             {
               SVN_ERR(parse_prop_name(prop_name, line->data, "Deleted: ",
                                       result_pool));
               if (*prop_name)
-                *prop_operation = svn_diff_op_deleted;
+                *prop_operation = (patch->reverse ? svn_diff_op_added
+                                                  : svn_diff_op_deleted);
             }
           else if (starts_with(line->data, "Modified: "))
             {
@@ -1474,6 +1476,22 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
       temp = patch->old_filename;
       patch->old_filename = patch->new_filename;
       patch->new_filename = temp;
+
+      switch (patch->operation)
+        {
+          case svn_diff_op_added:
+            patch->operation = svn_diff_op_deleted;
+            break;
+          case svn_diff_op_deleted:
+            patch->operation = svn_diff_op_added;
+            break;
+
+          /* ### case svn_diff_op_copied:
+             ### case svn_diff_op_moved:*/
+
+          case svn_diff_op_modified:
+            break; /* Stays modify */
+        }
     }
 
   if (patch->old_filename == NULL || patch->new_filename == NULL)
