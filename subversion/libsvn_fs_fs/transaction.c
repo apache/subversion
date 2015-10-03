@@ -2226,6 +2226,10 @@ get_shared_rep(representation_t **old_rep,
   if (!ffd->rep_sharing_allowed)
     return SVN_NO_ERROR;
 
+  /* Can't look up if we don't know the key (happens for directories). */
+  if (!rep->has_sha1)
+    return SVN_NO_ERROR;
+
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out.  Start with the hash lookup
      because it is cheapest. */
@@ -2342,6 +2346,7 @@ get_shared_rep(representation_t **old_rep,
 }
 
 /* Copy the hash sum calculation results from MD5_CTX, SHA1_CTX into REP.
+ * SHA1 results are only be set if SHA1_CTX is not NULL.
  * Use POOL for allocations.
  */
 static svn_error_t *
@@ -2354,10 +2359,12 @@ digests_final(representation_t *rep,
 
   SVN_ERR(svn_checksum_final(&checksum, md5_ctx, pool));
   memcpy(rep->md5_digest, checksum->digest, svn_checksum_size(checksum));
-  SVN_ERR(svn_checksum_final(&checksum, sha1_ctx, pool));
-  rep->has_sha1 = checksum != NULL;
+  rep->has_sha1 = sha1_ctx != NULL;
   if (rep->has_sha1)
-    memcpy(rep->sha1_digest, checksum->digest, svn_checksum_size(checksum));
+    {
+      SVN_ERR(svn_checksum_final(&checksum, sha1_ctx, pool));
+      memcpy(rep->sha1_digest, checksum->digest, svn_checksum_size(checksum));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2562,6 +2569,8 @@ struct write_container_baton
   apr_size_t size;
 
   svn_checksum_ctx_t *md5_ctx;
+
+  /* SHA1 calculation is optional. If not needed, this will be NULL. */
   svn_checksum_ctx_t *sha1_ctx;
 };
 
@@ -2576,7 +2585,8 @@ write_container_handler(void *baton,
   struct write_container_baton *whb = baton;
 
   SVN_ERR(svn_checksum_update(whb->md5_ctx, data, *len));
-  SVN_ERR(svn_checksum_update(whb->sha1_ctx, data, *len));
+  if (whb->sha1_ctx)
+    SVN_ERR(svn_checksum_update(whb->sha1_ctx, data, *len));
 
   SVN_ERR(svn_stream_write(whb->stream, data, len));
   whb->size += *len;
@@ -2648,7 +2658,8 @@ write_container_rep(representation_t *rep,
                                   scratch_pool);
   whb->size = 0;
   whb->md5_ctx = svn_checksum_ctx_create(svn_checksum_md5, scratch_pool);
-  whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, scratch_pool);
+  if (item_type != SVN_FS_FS__ITEM_TYPE_DIR_REP)
+    whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, scratch_pool);
 
   stream = svn_stream_create(whb, scratch_pool);
   svn_stream_set_write(stream, write_container_handler);
@@ -2787,7 +2798,8 @@ write_container_delta_rep(representation_t *rep,
                                         scratch_pool);
   whb->size = 0;
   whb->md5_ctx = svn_checksum_ctx_create(svn_checksum_md5, scratch_pool);
-  whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, scratch_pool);
+  if (item_type != SVN_FS_FS__ITEM_TYPE_DIR_REP)
+    whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, scratch_pool);
 
   /* serialize the hash */
   stream = svn_stream_create(whb, scratch_pool);
