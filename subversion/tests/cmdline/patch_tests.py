@@ -6035,6 +6035,39 @@ def patch_empty_vs_delete(sbox):
   svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '--force', sbox.ospath('iota'))
 
+  expected_output.tweak('iota', status='A ')
+  svntest.actions.run_and_verify_patch(wc_dir, del_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count,
+                                       '--reverse-diff')
+  # And retry
+  expected_output.tweak('iota', status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, del_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count,
+                                       '--reverse-diff')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'rm', '--force', sbox.ospath('iota'))
+
+  expected_output.tweak('iota', status='A ')
+  svntest.actions.run_and_verify_patch(wc_dir, del_git_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+  # And retry
+  expected_output.tweak('iota', status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, del_git_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
 
 def patch_git_symlink(sbox):
   "patch a git symlink"
