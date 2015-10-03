@@ -594,7 +594,7 @@ readline_prop(void *baton, svn_stringbuf_t **line, const char **eol_str,
   while (c < b->value->data + b->value->len);
 
   if (eof)
-    *eof = found_eof;
+    *eof = found_eof && !(str && str->len > 0);
   *line = str;
 
   return SVN_NO_ERROR;
@@ -874,6 +874,7 @@ readline_symlink(void *baton, svn_stringbuf_t **line, const char **eol_str,
 
       SVN_ERR(svn_io_read_link(&dest, sb->local_abspath, scratch_pool));
       *line = svn_stringbuf_createf(result_pool, "link %s", dest->data);
+      *eof = FALSE;
       sb->at_eof = TRUE;
     }
 
@@ -1637,8 +1638,6 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
                 {
                   svn_boolean_t file_matches;
 
-                  /* ### I can't reproduce anything but a no-match here.
-                         The content is already at eof, so any hunk fails */
                   SVN_ERR(match_existing_target(&file_matches, content, hunk,
                                             scratch_pool));
                   if (file_matches)
