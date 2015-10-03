@@ -576,16 +576,62 @@ unparse_dir_entry(svn_fs_dirent_t *dirent,
                   svn_stream_t *stream,
                   apr_pool_t *pool)
 {
-  const char *val
-    = apr_psprintf(pool, "%s %s",
-                   (dirent->kind == svn_node_file) ? SVN_FS_FS__KIND_FILE
-                                                   : SVN_FS_FS__KIND_DIR,
-                   svn_fs_fs__id_unparse(dirent->id, pool)->data);
+  apr_size_t to_write;
+  svn_string_t *id_str = svn_fs_fs__id_unparse(dirent->id, pool);
+  apr_size_t name_len = strlen(dirent->name);
 
-  SVN_ERR(svn_stream_printf(stream, pool, "K %" APR_SIZE_T_FMT "\n%s\n"
-                            "V %" APR_SIZE_T_FMT "\n%s\n",
-                            strlen(dirent->name), dirent->name,
-                            strlen(val), val));
+  /* Note that sizeof == len + 1, i.e. accounts for the space between
+   * type and ID. */
+  apr_size_t type_len = (dirent->kind == svn_node_file)
+                      ? sizeof(SVN_FS_FS__KIND_FILE)
+                      : sizeof(SVN_FS_FS__KIND_DIR);
+  apr_size_t value_len = type_len + id_str->len;
+
+  /* A buffer with sufficient space for 
+   * - both string lines
+   * - 4 newlines
+   * - 2 lines K/V lines containing a number each
+   */
+  char *buffer = apr_palloc(pool,   name_len + value_len
+                                  + 4
+                                  + 2 * (2 + SVN_INT64_BUFFER_SIZE));
+
+  /* Now construct the value. */
+  char *p = buffer;
+
+  /* The "K length(name)\n" line. */
+  p[0] = 'K';
+  p[1] = ' ';
+  p += 2;
+  p += svn__i64toa(p, name_len);
+  *(p++) = '\n';
+
+  /* The line with the key, i.e. dir entry name. */
+  memcpy(p, dirent->name, name_len);
+  p += name_len;
+  *(p++) = '\n';
+
+  /* The "V length(type+id)\n" line. */
+  p[0] = 'V';
+  p[1] = ' ';
+  p += 2;
+  p += svn__i64toa(p, value_len);
+  *(p++) = '\n';
+
+  /* The line with the type and ID. */
+  memcpy(p,
+         (dirent->kind == svn_node_file) ? SVN_FS_FS__KIND_FILE
+                                         : SVN_FS_FS__KIND_DIR,
+         type_len - 1);
+  p += type_len - 1;
+  *(p++) = ' ';
+  memcpy(p, id_str->data, id_str->len);
+  p+=id_str->len;
+  *(p++) = '\n';
+
+  /* Add the entry to the output stream. */
+  to_write = p - buffer;
+  SVN_ERR(svn_stream_write(stream, buffer, &to_write));
   return SVN_NO_ERROR;
 }
 
