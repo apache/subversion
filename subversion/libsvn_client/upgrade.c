@@ -183,7 +183,6 @@ svn_client_upgrade(const char *path,
    in EXTERNALS_PARENT. Uses SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 upgrade_external_item(svn_client_ctx_t *ctx,
-                      const char *externals_parent,
                       const char *externals_parent_abspath,
                       const char *externals_parent_url,
                       const char *externals_parent_repos_root_url,
@@ -285,7 +284,7 @@ upgrade_external_item(svn_client_ctx_t *ctx,
   SVN_ERR(svn_wc__upgrade_add_external_info(ctx->wc_ctx,
                                             external_abspath,
                                             external_kind,
-                                            externals_parent,
+                                            externals_parent_abspath,
                                             repos_relpath,
                                             repos_root_url,
                                             repos_uuid,
@@ -324,34 +323,32 @@ upgrade_externals_from_properties(svn_client_ctx_t *ctx,
        hi = apr_hash_next(hi))
     {
       int i;
-      const char *externals_parent_abspath;
       const char *externals_parent_url;
       const char *externals_parent_repos_root_url;
       const char *externals_parent_repos_relpath;
-      const char *externals_parent = apr_hash_this_key(hi);
+      const char *externals_parent_abspath = apr_hash_this_key(hi);
       svn_string_t *external_desc = apr_hash_this_val(hi);
       apr_array_header_t *externals_p;
       svn_error_t *err;
 
       svn_pool_clear(iterpool);
+
+      /* svn_client_propget5() has API promise to return absolute paths. */
+      SVN_ERR_ASSERT(svn_dirent_is_absolute(externals_parent_abspath));
+
       externals_p = apr_array_make(iterpool, 1,
                                    sizeof(svn_wc_external_item2_t*));
 
       /* In this loop, an error causes the respective externals definition, or
        * the external (inner loop), to be skipped, so that upgrade carries on
        * with the other externals. */
-
-      err = svn_dirent_get_absolute(&externals_parent_abspath,
-                                    externals_parent, iterpool);
-
-      if (!err)
-        err = svn_wc__node_get_repos_info(NULL,
-                                          &externals_parent_repos_relpath,
-                                          &externals_parent_repos_root_url,
-                                          NULL,
-                                          ctx->wc_ctx,
-                                          externals_parent_abspath,
-                                          iterpool, iterpool);
+      err = svn_wc__node_get_repos_info(NULL,
+                                        &externals_parent_repos_relpath,
+                                        &externals_parent_repos_root_url,
+                                        NULL,
+                                        ctx->wc_ctx,
+                                        externals_parent_abspath,
+                                        iterpool, iterpool);
 
       if (!err)
         externals_parent_url = svn_path_url_add_component2(
@@ -365,7 +362,7 @@ upgrade_externals_from_properties(svn_client_ctx_t *ctx,
       if (err)
         {
           svn_wc_notify_t *notify =
-              svn_wc_create_notify(externals_parent,
+              svn_wc_create_notify(externals_parent_abspath,
                                    svn_wc_notify_failed_external,
                                    scratch_pool);
           notify->err = err;
@@ -386,8 +383,7 @@ upgrade_externals_from_properties(svn_client_ctx_t *ctx,
           item = APR_ARRAY_IDX(externals_p, i, svn_wc_external_item2_t*);
 
           svn_pool_clear(iterpool2);
-          err = upgrade_external_item(ctx, externals_parent,
-                                      externals_parent_abspath,
+          err = upgrade_external_item(ctx, externals_parent_abspath,
                                       externals_parent_url,
                                       externals_parent_repos_root_url,
                                       item, info_baton, iterpool2);
@@ -395,7 +391,7 @@ upgrade_externals_from_properties(svn_client_ctx_t *ctx,
           if (err)
             {
               svn_wc_notify_t *notify =
-                  svn_wc_create_notify(svn_dirent_join(externals_parent,
+                  svn_wc_create_notify(svn_dirent_join(externals_parent_abspath,
                                                        item->target_dir,
                                                        iterpool2),
                                        svn_wc_notify_failed_external,
