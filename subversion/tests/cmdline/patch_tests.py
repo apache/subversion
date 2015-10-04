@@ -5613,7 +5613,7 @@ def patch_symlink_traversal(sbox):
   )
 
   expected_output = wc.State(wc_dir, {
-    'A/B/E/versioned' : Item(status='C')
+    'A/B/E/versioned' : Item(status='C ')
   })
   expected_disk.add({
      'A/B/E/versioned.svnpatch.rej' : Item(contents=reject_contents)
