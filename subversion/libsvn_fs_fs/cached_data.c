@@ -2636,27 +2636,27 @@ locate_dir_cache(svn_fs_t *fs,
                  apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  if (svn_fs_fs__id_is_txn(noderev->id))
+  if (!noderev->data_rep)
+    {
+      /* no data rep -> empty directory.
+         A NULL key causes a cache miss. */
+      *key = NULL;
+      return ffd->dir_cache;
+    }
+
+  if (svn_fs_fs__id_txn_used(&noderev->data_rep->txn_id))
     {
       /* data in txns requires the expensive fs_id-based addressing mode */
       *key = svn_fs_fs__id_unparse(noderev->id, pool)->data;
+
       return ffd->txn_dir_cache;
     }
   else
     {
       /* committed data can use simple rev,item pairs */
-      if (noderev->data_rep)
-        {
-          pair_key->revision = noderev->data_rep->revision;
-          pair_key->second = noderev->data_rep->item_index;
-          *key = pair_key;
-        }
-      else
-        {
-          /* no data rep -> empty directory.
-             A NULL key causes a cache miss. */
-          *key = NULL;
-        }
+      pair_key->revision = noderev->data_rep->revision;
+      pair_key->second = noderev->data_rep->item_index;
+      *key = pair_key;
 
       return ffd->dir_cache;
     }
