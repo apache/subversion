@@ -5584,8 +5584,8 @@ def patch_symlink_traversal(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({'A/B/E/versioned' : Item(status='A ', wc_rev='-')})
   expected_status.add({'A/B/versioned' : Item(status='A ', wc_rev='-')})
-  expected_skip = wc.State('', {
-    sbox.ospath('A/B/E/unversioned') : Item(verb='Skipped'),
+  expected_skip = wc.State(wc_dir, {
+    'A/B/E/unversioned' : Item(verb='Skipped'),
   })
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
@@ -5612,13 +5612,13 @@ def patch_symlink_traversal(sbox):
     "+xx\n"
   )
 
-  expected_output = [
-    'C         %s\n' % sbox.ospath('A/B/E/versioned'),
-    '>         rejected hunk @@ -1,1 +1,2 @@\n',
-  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
-  expected_disk.add({'A/B/E/versioned.svnpatch.rej'
-                     : Item(contents=reject_contents)})
-  expected_skip = wc.State('', { })
+  expected_output = wc.State(wc_dir, {
+    'A/B/E/versioned' : Item(status='C')
+  })
+  expected_disk.add({
+     'A/B/E/versioned.svnpatch.rej' : Item(contents=reject_contents)
+  })
+  expected_skip = wc.State(wc_dir, { })
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
@@ -5639,11 +5639,9 @@ def patch_symlink_traversal(sbox):
   patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
-  expected_output = [
-    'Skipped missing target: \'%s\'\n' % sbox.ospath('A/B/unversioned/alpha'),
-  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
-  expected_skip = wc.State('', {
-    sbox.ospath('A/B/unversioned/alpha') : Item(verb='Skipped missing target'),
+  expected_output = wc.State(wc_dir, {})
+  expected_skip = wc.State(wc_dir, {
+    'A/B/unversioned/alpha' : Item(verb='Skipped'),
   })
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
@@ -5663,11 +5661,9 @@ def patch_symlink_traversal(sbox):
   patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
-  expected_output = [
-    'Skipped missing target: \'%s\'\n' % sbox.ospath('A/B/versioned/alpha'),
-  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
-  expected_skip = wc.State('', {
-    sbox.ospath('A/B/versioned/alpha') :  Item(verb='Skipped missing target'),
+  expected_output = wc.State(wc_dir, {})
+  expected_skip = wc.State(wc_dir, {
+    'A/B/versioned/alpha' :  Item(verb='Skipped'),
   })
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
