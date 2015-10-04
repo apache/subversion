@@ -14,7 +14,7 @@ Status of 1.8.15:
 
 Candidate changes:
 ==================
- * r1703470, r1703475,
+ * r1703470, r1703475
    Updated INSTALL documentation.
    Justification:
      Corrects outdated statement.
