@@ -14,13 +14,6 @@ Status of 1.9.3:
 
 Candidate changes:
 ==================
- * r1703470, r1703475, r1703476, r1703477, r1703544
-   Updated INSTALL documentation.
-   Justification:
-     Corrects outdated and partially incorrect statements
-   Votes:
-     +1: luke1410
-
  * r1701488
    Issue #4592 "fix contrib check-mime-type.pl for changes to 'svnlook proplist'
      output", http://subversion.tigris.org/issues/show_bug.cgi?id=4592
@@ -114,6 +107,13 @@ Candidate changes:
      r1706324 fixes the crash.
    Votes:
      +1: kotkov
+
+ * r1703470, r1703475, r1703476, r1703477, r1703544
+   Updated INSTALL documentation.
+   Justification:
+     Corrects outdated and partially incorrect statements
+   Votes:
+     +1: luke1410
 
 Veto-blocked changes:
 =====================
