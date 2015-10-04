@@ -213,6 +213,9 @@ typedef struct patch_target_t {
   /* True if the target had to be skipped for some reason. */
   svn_boolean_t skipped;
 
+  /* True if the reason for skipping is a local obstruction */
+  svn_boolean_t obstructed;
+
   /* True if the target has been filtered by the patch callback. */
   svn_boolean_t filtered;
 
@@ -227,10 +230,6 @@ typedef struct patch_target_t {
 
   /* True if at least one property hunk was handled as already applied */
   svn_boolean_t had_prop_already_applied;
-
-  /* True if the target file had local modifications before the
-   * patch was applied to it. */
-  svn_boolean_t local_mods;
 
   /* The operation on the target as set in the patch file */
   svn_diff_operation_kind_t operation;
@@ -537,15 +536,13 @@ resolve_target_path(patch_target_t *target,
            status->conflicted)
     {
       target->skipped = TRUE;
+      target->obstructed = TRUE;
       return SVN_NO_ERROR;
     }
   else if (status->node_status == svn_wc_status_deleted)
     {
       target->locally_deleted = TRUE;
     }
-
-  if (status->text_status != svn_wc_status_normal)
-    target->local_mods = TRUE;
 
   if (status && (status->kind != svn_node_unknown))
     target->db_kind = status->kind;
@@ -2281,15 +2278,16 @@ send_patch_notification(const patch_target_t *target,
                                         : target->local_relpath;
 
   notify = svn_wc_create_notify(notify_path, action, scratch_pool);
-  notify->kind = svn_node_file;
+  notify->kind = (target->db_kind == svn_node_dir) ? svn_node_dir
+                                                   : svn_node_file;
 
   if (action == svn_wc_notify_skip)
     {
-      if (target->db_kind == svn_node_none ||
-          target->db_kind == svn_node_unknown)
-        notify->content_state = svn_wc_notify_state_missing;
-      else if (target->db_kind == svn_node_dir)
+      if (target->obstructed)
         notify->content_state = svn_wc_notify_state_obstructed;
+      else if (target->db_kind == svn_node_none ||
+               target->db_kind == svn_node_unknown)
+        notify->content_state = svn_wc_notify_state_missing;
       else
         notify->content_state = svn_wc_notify_state_unknown;
     }
@@ -2297,8 +2295,6 @@ send_patch_notification(const patch_target_t *target,
     {
       if (target->had_rejects)
         notify->content_state = svn_wc_notify_state_conflicted;
-      else if (target->local_mods)
-        notify->content_state = svn_wc_notify_state_merged;
       else if (target->has_text_changes)
         notify->content_state = svn_wc_notify_state_changed;
       else if (target->had_already_applied)
@@ -3136,6 +3132,8 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
               || wc_kind != target->kind_on_disk)
             {
               target->skipped = TRUE;
+              if (wc_kind != target->kind_on_disk)
+                target->obstructed = TRUE;
             }
         }
 
