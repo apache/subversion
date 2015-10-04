@@ -5574,9 +5574,8 @@ def patch_symlink_traversal(sbox):
   patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, unidiff_patch)
 
-  expected_output = [
-    'Skipped missing target: \'%s\'\n' % sbox.ospath('A/B/E/unversioned'),
-  ] + svntest.main.summary_of_conflicts(skipped_paths=1)
+  expected_output = wc.State(wc_dir, {
+  })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({'A/B/E/unversioned' : Item(contents=alpha_contents)})
   expected_disk.add({'A/B/E/versioned' : Item(contents=alpha_contents)})
@@ -5586,7 +5585,7 @@ def patch_symlink_traversal(sbox):
   expected_status.add({'A/B/E/versioned' : Item(status='A ', wc_rev='-')})
   expected_status.add({'A/B/versioned' : Item(status='A ', wc_rev='-')})
   expected_skip = wc.State('', {
-    sbox.ospath('A/B/E/unversioned') : Item(verb='Skipped missing target'),
+    sbox.ospath('A/B/E/unversioned') : Item(verb='Skipped'),
   })
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
