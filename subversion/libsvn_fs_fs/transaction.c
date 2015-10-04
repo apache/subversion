@@ -2975,6 +2975,9 @@ get_final_id(svn_fs_fs__id_part_t *part,
    INITIAL_OFFSET is the offset of the proto-rev-file on entry to
    commit_body.
 
+   Collect the pair_cache_key_t of all directories written to the
+   committed cache in DIRECTORY_IDS.
+
    If REPS_TO_CACHE is not NULL, append to it a copy (allocated in
    REPS_POOL) of each data rep that is new in this revision.
 
@@ -2996,6 +2999,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                 apr_uint64_t start_node_id,
                 apr_uint64_t start_copy_id,
                 apr_off_t initial_offset,
+                apr_array_header_t *directory_ids,
                 apr_array_header_t *reps_to_cache,
                 apr_hash_t *reps_hash,
                 apr_pool_t *reps_pool,
@@ -3038,14 +3042,17 @@ write_final_rev(const svn_fs_id_t **new_id_p,
           svn_pool_clear(subpool);
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, dirent->id,
                                   start_node_id, start_copy_id, initial_offset,
-                                  reps_to_cache, reps_hash, reps_pool, FALSE,
-                                  subpool));
+                                  directory_ids, reps_to_cache, reps_hash,
+                                  reps_pool, FALSE, subpool));
           if (new_id && (svn_fs_fs__id_rev(new_id) == rev))
             dirent->id = svn_fs_fs__id_copy(new_id, pool);
         }
 
       if (noderev->data_rep && is_txn_rep(noderev->data_rep))
         {
+          pair_cache_key_t *key;
+          svn_fs_fs__dir_data_t dir_data;
+
           /* Write out the contents of this directory as a text rep. */
           noderev->data_rep->revision = rev;
           if (ffd->deltify_directories)
@@ -3061,6 +3068,23 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                         SVN_FS_FS__ITEM_TYPE_DIR_REP, pool));
 
           reset_txn_in_rep(noderev->data_rep);
+
+          /* Cache the new directory contents.  Otherwise, subsequent reads
+           * or commits will likely have to reconstruct, verify and parse
+           * it again. */
+          key = apr_array_push(directory_ids);
+          key->revision = noderev->data_rep->revision;
+          key->second = noderev->data_rep->item_index;
+
+          /* Store directory contents under the new revision number but mark
+           * it as "stale" by setting the file length to 0.  Committed dirs
+           * will report -1, in-txn dirs will report > 0, so that this can
+           * never match.  We reset that to -1 after the commit is complete.
+           */
+          dir_data.entries = entries;
+          dir_data.txn_filesize = 0;
+
+          SVN_ERR(svn_cache__set(ffd->dir_cache, key, &dir_data, subpool));
         }
     }
   else
@@ -3503,6 +3527,41 @@ svn_fs_fs__add_index_data(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Mark the directories cached in FS with the keys from DIRECTORY_IDS
+ * as "valid" now.  Use SCRATCH_POOL for temporaries. */
+static svn_error_t *
+promote_cached_directories(svn_fs_t *fs,
+                           apr_array_header_t *directory_ids,
+                           apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  apr_pool_t *iterpool;
+  int i;
+
+  if (!ffd->dir_cache)
+    return SVN_NO_ERROR;
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < directory_ids->nelts; ++i)
+    {
+      const pair_cache_key_t *key
+        = &APR_ARRAY_IDX(directory_ids, i, pair_cache_key_t);
+
+      svn_pool_clear(iterpool);
+
+      /* Currently, the entry for KEY - if it still exists - is marked
+       * as "stale" and would not be used.  Mark it as current for in-
+       * revison data. */
+      SVN_ERR(svn_cache__set_partial(ffd->dir_cache, key,
+                                     svn_fs_fs__reset_txn_filesize, NULL,
+                                     iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Baton used for commit_body below. */
 struct commit_baton {
   svn_revnum_t *new_rev_p;
@@ -3532,6 +3591,8 @@ commit_body(void *baton, apr_pool_t *pool)
   apr_off_t initial_offset, changed_path_offset;
   const svn_fs_fs__id_part_t *txn_id = svn_fs_fs__txn_get_id(cb->txn);
   apr_hash_t *changed_paths;
+  apr_array_header_t *directory_ids = apr_array_make(pool, 4,
+                                                     sizeof(pair_cache_key_t));
 
   /* Re-Read the current repository format.  All our repo upgrade and
      config evaluation strategies are such that existing information in
@@ -3585,8 +3646,8 @@ commit_body(void *baton, apr_pool_t *pool)
   root_id = svn_fs_fs__id_txn_create_root(txn_id, pool);
   SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, root_id,
                           start_node_id, start_copy_id, initial_offset,
-                          cb->reps_to_cache, cb->reps_hash, cb->reps_pool,
-                          TRUE, pool));
+                          directory_ids, cb->reps_to_cache, cb->reps_hash,
+                          cb->reps_pool, TRUE, pool));
 
   /* Write the changed-path information. */
   SVN_ERR(write_final_changed_path_info(&changed_path_offset, proto_file,
@@ -3694,6 +3755,10 @@ commit_body(void *baton, apr_pool_t *pool)
   *cb->new_rev_p = new_rev;
 
   ffd->youngest_rev_cache = new_rev;
+
+  /* Make the directory contents alreday cached for the new revision
+   * visible. */
+  SVN_ERR(promote_cached_directories(cb->fs, directory_ids, pool));
 
   /* Remove this transaction directory. */
   SVN_ERR(svn_fs_fs__purge_txn(cb->fs, cb->txn->id, pool));
