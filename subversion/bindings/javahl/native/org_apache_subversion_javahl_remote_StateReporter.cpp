@@ -47,7 +47,7 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_remote_StateReporter_nativeDispose(
     JNIEnv* env, jobject jthis)
 {
-  JNIEntry(StateReporter, nativeCreateInstance);
+  JNIEntry(StateReporter, nativeDispose);
   StateReporter* reporter = StateReporter::getCppObject(jthis);
   CPPADDR_NULL_PTR(reporter,);
   reporter->dispose(jthis);
