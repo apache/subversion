@@ -1647,9 +1647,9 @@ def patch_no_svn_eol_style(sbox):
 
       svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-      expected_output = [
-        'G         %s\n' % sbox.ospath('A/mu'),
-      ]
+      expected_output = wc.State(wc_dir, {
+        'A/mu' : Item(status='U '),
+      })
       expected_disk = svntest.main.greek_state.copy()
       expected_disk.tweak('A/mu', contents=''.join(mu_contents))
 
@@ -1664,12 +1664,11 @@ def patch_no_svn_eol_style(sbox):
                                            expected_disk,
                                            expected_status,
                                            expected_skip,
-                                           None, # expected err
-                                           1, # check-props
-                                           1) # dry-run
+                                           [], True, True)
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
-      svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
+      svntest.actions.run_and_verify_svn(expected_output, [],
+                                         'revert', '-R', wc_dir)
 
 def patch_with_svn_eol_style(sbox):
   "patch target with svn:eol-style"
@@ -1870,9 +1869,9 @@ def patch_with_svn_eol_style_uncommitted(sbox):
 
       svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-      expected_output = [
-        'G         %s\n' % sbox.ospath('A/mu'),
-      ]
+      expected_output = wc.State(wc_dir, {
+        'A/mu' : Item(status='U '),
+      })
       expected_disk = svntest.main.greek_state.copy()
       expected_disk.tweak('A/mu', contents=''.join(mu_contents),
                           props={'svn:eol-style' : target_eol_style})
@@ -3370,10 +3369,10 @@ def patch_reverse_revert(sbox):
 
   # Applying the same patch in reverse should undo local mods
   expected_output = wc.State(wc_dir, {
-    'A/D/gamma'   : Item(status='G '),
-    'iota'        : Item(status='G '),
+    'A/D/gamma'   : Item(status='U '),
+    'iota'        : Item(status='U '),
     'new'         : Item(status='D '),
-    'A/mu'        : Item(status='G '),
+    'A/mu'        : Item(status='U '),
     'A/B/E/beta'  : Item(status='A '),
   })
   expected_disk = svntest.main.greek_state.copy()
@@ -4544,7 +4543,7 @@ def patch_apply_no_fuz(sbox):
   sbox.build(read_only=True)
   wc_dir = sbox.wc_dir
 
-  svntest.main.file_write(sbox.ospath('test.txt'), '\n'.join([
+  test1_body = '\n'.join([
       "line_1",
       "line_2",
       "line_3",
@@ -4576,8 +4575,9 @@ def patch_apply_no_fuz(sbox):
       "line_29",
       "line_30",
       ""
-    ]))
-  svntest.main.file_write(sbox.ospath('test_v2.txt'), '\n'.join([
+    ])
+  svntest.main.file_write(sbox.ospath('test.txt'), test1_body, 'wb')
+  test2_body = '\n'.join([
       "line_1a",
       "line_1b",
       "line_1c",
@@ -4620,7 +4620,8 @@ def patch_apply_no_fuz(sbox):
       "line_29",
       "line_30",
       ""
-    ]))
+    ])
+  svntest.main.file_write(sbox.ospath('test_v2.txt'), test2_body, 'wb')
 
   sbox.simple_add('test.txt', 'test_v2.txt')
 
@@ -4631,19 +4632,30 @@ def patch_apply_no_fuz(sbox):
                                                     '--new',
                                                     sbox.ospath('test_v2.txt'))
 
-  patch_path = sbox.ospath('patch.diff')
-  svntest.main.file_write(patch_path, ''.join(out_text))
+  patch_path = sbox.get_tempname('patch.diff')
+  svntest.main.file_write(patch_path, ''.join(out_text), 'wb')
 
-  expected_output = [
-    'G         %s\n' % sbox.ospath('test.txt'),
-  ]
+  expected_output = wc.State(wc_dir, {
+    'test.txt' : Item(status='U '),
+  })
 
-  # Current result: lf.txt patched ok, new created, empty succeeds with offset.
-  svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'patch', patch_path, wc_dir)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'test.txt' : Item(contents=test2_body),
+    'test_v2.txt' : Item(contents=test2_body),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'test_v2.txt'       : Item(status='A ', wc_rev='-'),
+    'test.txt'          : Item(status='A ', wc_rev='-'),
+  })
 
-  if not filecmp.cmp(sbox.ospath('test.txt'), sbox.ospath('test_v2.txt')):
-    raise svntest.Failure("Patch result not identical")
+  expected_skip = wc.State(wc_dir, {})
+
+  svntest.actions.run_and_verify_patch(wc_dir, patch_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
 
 def patch_lacking_trailing_eol_on_context(sbox):
   "patch file lacking trailing eol on context"
@@ -4694,7 +4706,9 @@ def patch_lacking_trailing_eol_on_context(sbox):
   sbox.simple_append('iota', "Another line.\n")
   expected_disk.tweak('iota', contents="Some more bytes\n" + iota_contents +
                                        "Another line.\n")
-  expected_output = [ 'G         %s\n' % sbox.ospath('iota') ]
+  expected_output = wc.State(wc_dir, {
+    'iota' : Item(status='U ')
+  })
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
@@ -5766,7 +5780,7 @@ def patch_binary_file(sbox):
                                        [], True, True)
 
   # Ok, now try applying it backwards
-  expected_output.tweak('iota', status='GU')
+  expected_output.tweak('iota', status='UU')
   expected_disk = svntest.main.greek_state.copy()
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_patch(wc_dir, tmp,
@@ -5964,14 +5978,15 @@ def patch_final_eol(sbox):
                                        expected_status, expected_skip,
                                        [], False, True)
 
-  # And again
-  expected_output.tweak('iota', 'A/mu', status='G ')
+  # And again - Still U as patch doesn't check final EOL of source
+  expected_output.tweak('iota', 'A/mu', status='U ')
   svntest.actions.run_and_verify_patch(wc_dir, patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        [], False, True)
 
   # Reverse
+  expected_output.tweak('iota', 'A/mu', status='U ')
   expected_disk.tweak('iota', contents="This is the file 'iota'.\n")
   expected_disk.tweak('A/mu', contents="This is the file 'mu'.\n")
   expected_status.tweak('iota', 'A/mu', status='  ')
@@ -6025,13 +6040,14 @@ def patch_final_eol(sbox):
                                        [], False, True)
 
   # And again
-  expected_output.tweak('iota', 'A/mu', status='G ')
+  expected_output.tweak('iota', 'A/mu', status='U ')
   svntest.actions.run_and_verify_patch(wc_dir, patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        [], False, True)
 
   # And in reverse
+  expected_output.tweak('iota', 'A/mu', status='U ')
   expected_disk.tweak('iota', contents="This is the file 'iota'.")
   expected_disk.tweak('A/mu', contents="This is the file 'mu'.")
   expected_status.tweak('iota', 'A/mu', status='  ')
@@ -6735,7 +6751,7 @@ def patch_add_remove_executable(sbox):
                                        [], True, True)
 
   # Now apply the edit
-  expected_output.tweak('eicar.com', status='GU')
+  expected_output.tweak('eicar.com', status='UU')
   expected_disk.tweak('eicar.com',
                       props={'svn:mime-type': 'application/octet-stream'},
                       contents=other_data)
@@ -6789,7 +6805,7 @@ def patch_add_remove_executable(sbox):
                                        '--reverse-diff')
 
   # And reverse the edit
-  expected_output.tweak('eicar.com', status='GU')
+  expected_output.tweak('eicar.com', status='UU')
   expected_disk.tweak('eicar.com', contents=eicar_data,
                       props={'svn:mime-type': 'application/octet-stream',
                               'svn:executable': '*'})
@@ -6910,7 +6926,7 @@ def patch_git_symlink(sbox):
                                        [], True, True)
 
   # Now tweak the link
-  expected_output.tweak('link-to-iota', status='G ')
+  expected_output.tweak('link-to-iota', status='U ')
   if svntest.main.is_posix_os():
     expected_disk.tweak('link-to-iota', contents="This is the file 'mu'.\n")
   else:
@@ -6921,6 +6937,7 @@ def patch_git_symlink(sbox):
                                        [], True, True)
 
   # And again
+  expected_output.tweak('link-to-iota', status='G ')
   svntest.actions.run_and_verify_patch(wc_dir, edit_patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
@@ -7032,6 +7049,7 @@ def patch_like_git_symlink(sbox):
                                        [], True, True)
 
   # Now tweak the link
+  expected_output.tweak('link-to-iota', status='U ')
   expected_disk.tweak('link-to-iota', contents='A/mu')
   svntest.actions.run_and_verify_patch(wc_dir, edit_patch,
                                        expected_output, expected_disk,
@@ -7039,12 +7057,14 @@ def patch_like_git_symlink(sbox):
                                        [], True, True)
 
   # And again
+  expected_output.tweak('link-to-iota', status='G ')
   svntest.actions.run_and_verify_patch(wc_dir, edit_patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
                                        [], True, True)
 
   # And replace the link with a file
+  expected_output.tweak('link-to-iota', status='U ')
   expected_output.tweak('link-to-iota', status='A ', prev_status='D ')
   expected_disk.tweak('link-to-iota', contents="This is a real file\n")
   svntest.actions.run_and_verify_patch(wc_dir, to_file_patch,
@@ -7284,6 +7304,7 @@ def patch_add_one_line(sbox):
                      "This is the file 'beta'.\n")
 
   # But can we remove the line? - Yes
+  expected_output.tweak(status='U ')
   svntest.actions.run_and_verify_patch(wc_dir, recurse_patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
@@ -7300,6 +7321,7 @@ def patch_add_one_line(sbox):
                                        '--reverse-diff')
 
   # And the last lines? - No...
+  expected_output.tweak(status='G ')
   svntest.actions.run_and_verify_patch(wc_dir, recurse_patch,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
