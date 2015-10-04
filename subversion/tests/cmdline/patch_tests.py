@@ -4345,6 +4345,7 @@ def patch_change_symlink_target(sbox):
 def patch_replace_dir_with_file_and_vv(sbox):
   "replace dir with file and file with dir"
   sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
 
   patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join([
@@ -4422,24 +4423,39 @@ def patch_replace_dir_with_file_and_vv(sbox):
     "\ No newline at end of property\n",
   ]))
 
-  expected_output = [
-    'D         %s\n' % sbox.ospath('A/D/G/pi'),
-    'D         %s\n' % sbox.ospath('A/D/G/rho'),
-    'D         %s\n' % sbox.ospath('A/D/G/tau'),
-    'D         %s\n' % sbox.ospath('A/D/G'),
-    'D         %s\n' % sbox.ospath('A/D/H/chi'),
-    'D         %s\n' % sbox.ospath('A/D/H/omega'),
-    'D         %s\n' % sbox.ospath('A/D/H/psi'),
-    'D         %s\n' % sbox.ospath('A/D/H'),
-    'D         %s\n' % sbox.ospath('A/D/gamma'),
-    'D         %s\n' % sbox.ospath('A/D'),
-    'D         %s\n' % sbox.ospath('iota'),
-    'A         %s\n' % sbox.ospath('A/D'),
-    'A         %s\n' % sbox.ospath('iota'),
-  ]
+  expected_output = wc.State(wc_dir, {
+    'A/D/G/pi'     : Item(status='D '),
+    'A/D/G/rho'    : Item(status='D '),
+    'A/D/G/tau'    : Item(status='D '),
+    'A/D/G'        : Item(status='D '),
+    'A/D/H/chi'    : Item(status='D '),
+    'A/D/H/omega'  : Item(status='D '),
+    'A/D/H/psi'    : Item(status='D '),
+    'A/D/H'        : Item(status='D '),
+    'A/D/gamma'    : Item(status='D '),
+    'A/D'          : Item(status='A ', prev_status='D '),
+    'iota'         : Item(status='A ', prev_status='D '),
+  })
+  expected_skip = wc.State(wc_dir, {})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau',
+                         'A/D/H/psi', 'A/D/H/omega', 'A/D/H/chi',
+                         'A/D/gamma', 'A/D/G', 'A/D/H')
+  expected_status.tweak('A/D', status='R ')
+  expected_status.tweak('iota', status='RM')
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau',
+                       'A/D/H/psi', 'A/D/H/omega', 'A/D/H/chi',
+                       'A/D/gamma', 'A/D', 'A/D/G', 'A/D/H')
+  expected_disk.add({
+    'A/D' : Item(contents="New file"),
+    'iota' : Item(contents="", props={u'k': u'v'}),
+  })
 
-  svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'patch', patch_file_path, sbox.wc_dir)
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
 
 @Issue(4297)
 def single_line_mismatch(sbox):
@@ -4467,13 +4483,30 @@ def single_line_mismatch(sbox):
 
   # And now this patch should fail, as 'line' doesn't equal 'foo'
   # But yet it shows up as deleted instead of conflicted
-  expected_output = [
-    'C         %s\n' % sbox.ospath('test'),
-    '>         rejected hunk @@ -1,1 +1,1 @@\n',
-  ] + svntest.main.summary_of_conflicts(text_conflicts=1)
+  expected_output = wc.State(wc_dir, {
+    'test' : Item(status='C ')
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'test' : Item(status='  ', wc_rev='2'),
+  })
+  expected_skip = wc.State(wc_dir, {})
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'test'              : Item(contents="line"),
+    'test.svnpatch.rej' : Item(contents="--- test\n"
+                                        "+++ test\n"
+                                        "@@ -1,1 +1,1 @@\n"
+                                        "-foo\n"
+                                        "\\ No newline at end of file\n"
+                                        "+bar\n"
+                                        "\\ No newline at end of file\n"),
+  })
 
-  svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'patch', patch_file_path, wc_dir)
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
 
 @Issue(3644)
 def patch_empty_file(sbox):
