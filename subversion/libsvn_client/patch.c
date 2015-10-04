@@ -1821,7 +1821,10 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
     }
   else if (original_start > 0 && content->existed)
     {
+      svn_linenum_t modified_start;
       svn_linenum_t saved_line = content->current_line;
+
+      modified_start = svn_diff_hunk_get_modified_start(hunk);
 
       /* Scan for a match at the line where the hunk thinks it
        * should be going. */
@@ -1846,9 +1849,6 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
            * check would be ambiguous. */
           if (fuzz == 0)
             {
-              svn_linenum_t modified_start;
-
-              modified_start = svn_diff_hunk_get_modified_start(hunk);
               if (modified_start == 0
                   && (target->operation == svn_diff_op_unchanged
                       || target->operation == svn_diff_op_deleted))
@@ -1962,6 +1962,30 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
                     matched_line = matched_line2;
                 }
             }
+        }
+      else if (matched_line > 0
+               && fuzz == 0
+               && (svn_diff_hunk_get_leading_context(hunk) == 0
+                   || svn_diff_hunk_get_trailing_context(hunk) == 0)
+               && (svn_diff_hunk_get_modified_length(hunk) >
+                                    svn_diff_hunk_get_original_length(hunk)))
+        {
+          /* Check that we are not applying the same change that just adds some
+             lines again, when we don't have enough context to see the
+             difference */
+          svn_linenum_t reverse_matched_line;
+
+          SVN_ERR(seek_to_line(content, modified_start, scratch_pool));
+          SVN_ERR(scan_for_match(&reverse_matched_line, content,
+                                  hunk, TRUE,
+                                  modified_start + 1,
+                                  fuzz, ignore_whitespace, TRUE,
+                                  cancel_func, cancel_baton,
+                                  scratch_pool));
+
+          /* We might want to check that we are actually at the start or the
+             end of the file. Having no context implies that we should be. */
+          already_applied = (reverse_matched_line == modified_start);
         }
 
       SVN_ERR(seek_to_line(content, saved_line, scratch_pool));

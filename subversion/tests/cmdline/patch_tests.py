@@ -189,13 +189,13 @@ def patch(sbox):
     "winnings with the below details.\n",
   ]
 
-  expected_output = [
-    'U         %s\n' % sbox.ospath('A/D/gamma'),
-    'U         %s\n' % sbox.ospath('iota'),
-    'A         %s\n' % sbox.ospath('new'),
-    'U         %s\n' % sbox.ospath('A/mu'),
-    'D         %s\n' % sbox.ospath('A/B/E/beta'),
-  ]
+  expected_output = wc.State(wc_dir, {
+    'A/D/gamma'  : Item(status='U '),
+    'iota'       : Item(status='U '),
+    'new'        : Item(status='A '),
+    'A/mu'       : Item(status='U '),
+    'A/B/E/beta' : Item(status='D '),
+  })
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/gamma', contents=gamma_contents)
@@ -218,10 +218,16 @@ def patch(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, # expected err
-                                       1, # check-props
-                                       1) # dry-run
+                                       [], True, True)
 
+  # Retry
+  expected_output.tweak(status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       [], True, True)
 
 def patch_absolute_paths(sbox):
   "patch containing absolute paths"
@@ -2475,13 +2481,10 @@ def patch_same_twice(sbox):
     '>         hunk @@ -1,1 +1,1 @@ already applied\n',
     'G         %s\n' % sbox.ospath('iota'),
     # The iota patch inserts a line after the first line in the file,
-    # with no trailing context. Currently, Subversion applies this patch
-    # multiple times, which matches the behaviour of Larry Wall's patch
-    # implementation. A more complicated hunk matching algorithm is needed
-    # to detect the duplicate application in this case. GNU patch does detect
-    # the duplicate application. Should Subversion be taught to detect it,
-    # we need this line here:
-    # '>         hunk @@ -1,1 +1,2 @@ already applied\n',
+    # with no trailing context. Originally, Subversion applied this patch
+    # multiple times, which matched the behaviour of Larry Wall's patch
+    # implementation.
+    '>         hunk @@ -1,1 +1,2 @@ already applied\n',
     'G         %s\n' % sbox.ospath('new'),
     '>         hunk @@ -0,0 +1,1 @@ already applied\n',
     'G         %s\n' % sbox.ospath('A/mu'),
@@ -2490,10 +2493,6 @@ def patch_same_twice(sbox):
     'G         %s\n' % sbox.ospath('A/B/E/beta'),
     '>         hunk @@ -1,1 +0,0 @@ already applied\n',
   ]
-
-  # See above comment about the iota patch being applied twice.
-  iota_contents += "Some more bytes\n"
-  expected_disk.tweak('iota', contents=iota_contents)
 
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
@@ -3329,13 +3328,13 @@ def patch_reverse_revert(sbox):
     "winnings with the below details.\n",
   ]
 
-  expected_output = [
-    'U         %s\n' % sbox.ospath('A/D/gamma'),
-    'U         %s\n' % sbox.ospath('iota'),
-    'A         %s\n' % sbox.ospath('new'),
-    'U         %s\n' % sbox.ospath('A/mu'),
-    'D         %s\n' % sbox.ospath('A/B/E/beta'),
-  ]
+  expected_output = wc.State(wc_dir, {
+    'A/D/gamma'   : Item(status='U '),
+    'iota'        : Item(status='U '),
+    'new'         : Item(status='A '),
+    'A/mu'        : Item(status='U '),
+    'A/B/E/beta'  : Item(status='D '),
+  })
 
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/D/gamma', contents=gamma_contents)
@@ -3351,25 +3350,32 @@ def patch_reverse_revert(sbox):
   expected_status.tweak('A/mu', status='M ', wc_rev=2)
   expected_status.tweak('A/B/E/beta', status='D ')
 
-  expected_skip = wc.State('', { })
+  expected_skip = wc.State(wc_dir, { })
 
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, # expected err
-                                       1, # check-props
-                                       1) # dry-run
+                                       [], True, True)
+
+  # Try again
+  expected_output.tweak(status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       [], True, True)
 
   # Applying the same patch in reverse should undo local mods
-  expected_output = [
-    'G         %s\n' % sbox.ospath('A/D/gamma'),
-    'G         %s\n' % sbox.ospath('iota'),
-    'D         %s\n' % sbox.ospath('new'),
-    'G         %s\n' % sbox.ospath('A/mu'),
-    'A         %s\n' % sbox.ospath('A/B/E/beta'),
-  ]
+  expected_output = wc.State(wc_dir, {
+    'A/D/gamma'   : Item(status='G '),
+    'iota'        : Item(status='G '),
+    'new'         : Item(status='D '),
+    'A/mu'        : Item(status='G '),
+    'A/B/E/beta'  : Item(status='A '),
+  })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', contents=''.join(mu_contents_pre_patch))
 
@@ -3386,9 +3392,17 @@ def patch_reverse_revert(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, # expected err
-                                       1, # check-props
-                                       1, # dry-run
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # And again
+  expected_output.tweak(status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       [], True, True,
                                        '--reverse-diff')
 
 def patch_one_property(sbox, trailing_eol):
@@ -4510,17 +4524,18 @@ def patch_empty_file(sbox):
   ]
 
   # Current result: lf.txt patched ok, new created, empty succeeds with offset.
-  svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'patch', patch_file_path, wc_dir)
-
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     'lf.txt'            : Item(contents="\n"),
     'new.txt'           : Item(contents="new file\n"),
     'empty.txt'         : Item(contents="replacement\n"),
   })
+  expected_skip = wc.State(wc_dir, {})
+  expected_status = None
 
-  svntest.actions.verify_disk(wc_dir, expected_disk)
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
 
 @Issue(3362)
 def patch_apply_no_fuz(sbox):
@@ -7207,6 +7222,91 @@ def patch_symlink_changes(sbox):
                                        expected_status, expected_skip,
                                        [], True, True)
 
+def patch_add_one_line(sbox):
+  "patch add just one line"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  diff = [
+    # This is a normal unified diff
+    "Index: A/B/E/alpha",
+    "===================================================================",
+    "--- A/B/E/alpha\t(revision 1)",
+    "+++ A/B/E/alpha\t(working copy)",
+    "@@ -1 +1,2 @@",
+    " This is the file 'alpha'.",
+    "+This is the file 'alpha'.",
+
+    "",
+
+    # This diff is hand crafted, as a generated diff would add the line at
+    # the end
+    "Index: A/B/E/beta",
+    "===================================================================",
+    "--- A/B/E/beta\t(revision 1)",
+    "+++ A/B/E/beta\t(working copy)",
+    "@@ -1 +1,2 @@",
+    "+This is the file 'beta'.",
+    " This is the file 'beta'.",
+    ""
+  ]
+
+  recurse_patch = sbox.get_tempname('recurse.patch')
+  svntest.main.file_write(recurse_patch, '\n'.join(diff), mode='wb')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='M ')
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E/alpha'   : Item(status='U '),
+    'A/B/E/beta'    : Item(status='U '),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/B/E/alpha', contents="This is the file 'alpha'.\nThis is the file 'alpha'.\n")
+  expected_disk.tweak('A/B/E/beta', contents="This is the file 'beta'.\nThis is the file 'beta'.\n")
+  expected_skip = svntest.wc.State(wc_dir, {})
+
+  svntest.actions.run_and_verify_patch(wc_dir, recurse_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # Retry
+  expected_output.tweak(status='G ')
+  svntest.actions.run_and_verify_patch(wc_dir, recurse_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  sbox.simple_append('A/B/E/alpha',
+                     "This is the file 'alpha'.\n")
+  sbox.simple_append('A/B/E/beta',
+                     "This is the file 'beta'.\n")
+
+  # But can we remove the line? - Yes
+  svntest.actions.run_and_verify_patch(wc_dir, recurse_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # Once more?
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status.tweak('A/B/E/alpha', 'A/B/E/beta', status='  ')
+  svntest.actions.run_and_verify_patch(wc_dir, recurse_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # And the last lines? - No...
+  svntest.actions.run_and_verify_patch(wc_dir, recurse_patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+
 ########################################################################
 #Run the tests
 
@@ -7284,6 +7384,7 @@ test_list = [ None,
               patch_git_symlink,
               patch_like_git_symlink,
               patch_symlink_changes,
+              patch_add_one_line,
             ]
 
 if __name__ == '__main__':
