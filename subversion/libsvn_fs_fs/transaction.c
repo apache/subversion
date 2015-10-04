@@ -1549,8 +1549,6 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       out = svn_stream_from_aprfile2(file, TRUE, pool);
       SVN_ERR(unparse_dir_entries(entries, out, subpool));
 
-      svn_pool_clear(subpool);
-
       /* Mark the node-rev's data rep as mutable. */
       rep = apr_pcalloc(pool, sizeof(*rep));
       rep->revision = SVN_INVALID_REVNUM;
@@ -1559,6 +1557,30 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       parent_noderev->data_rep = rep;
       SVN_ERR(svn_fs_fs__put_node_revision(fs, parent_noderev->id,
                                            parent_noderev, FALSE, pool));
+
+      /* Immediately populate the txn dir cache to avoid re-reading
+       * the file we just wrote. */
+      if (ffd->txn_dir_cache)
+        {
+          const char *key
+            = svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
+          svn_fs_fs__dir_data_t dir_data;
+          svn_filesize_t filesize;
+
+          /* Flush APR buffers. */
+          SVN_ERR(svn_io_file_flush(file, subpool));
+
+          /* Obtain final file size to update txn_dir_cache. */
+          SVN_ERR(svn_io_file_size_get(&filesize, file, subpool));
+
+          /* Store in the cache. */
+          dir_data.entries = entries;
+          dir_data.txn_filesize = filesize;
+          SVN_ERR(svn_cache__set(ffd->txn_dir_cache, key, &dir_data,
+                                 subpool));
+        }
+
+      svn_pool_clear(subpool);
     }
   else
     {
