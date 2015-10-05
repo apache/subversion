@@ -115,6 +115,13 @@ Candidate changes:
    Votes:
      +1: luke1410
 
+ * r1706783
+   Really pass patch result to svn_client_patch() filter 
+   Justification:
+     Without this fix the filter can't determine the result of a patch.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
