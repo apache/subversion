@@ -4798,8 +4798,10 @@ def patch_git_rename(sbox):
   patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
-  expected_output = [ 'A         %s\n' % sbox.ospath('iota2'),
-                      'D         %s\n' % sbox.ospath('iota')]
+  expected_output = wc.State(wc_dir, {
+    'iota'  : Item(status='D '),
+    'iota2' : Item(status='A ')
+  })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.remove('iota')
   expected_disk.add({'iota2' : Item(contents="This is the file 'iota'.\n")})
@@ -4811,7 +4813,36 @@ def patch_git_rename(sbox):
   expected_skip = wc.State('', { })
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
-                                       expected_status, expected_skip)
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # Retry
+  #svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+  #                                     expected_output, expected_disk,
+  #                                     expected_status, expected_skip,
+  #                                     [], True, True)
+
+  # Reverse
+  expected_output.tweak('iota', status='A ')
+  expected_output.tweak('iota2', status='D ')
+  expected_disk.remove('iota2')
+  expected_disk.add({
+    'iota'              : Item(contents="This is the file 'iota'.\n"),
+  })
+  expected_status.remove('iota2')
+  expected_status.tweak('iota', moved_to=None, status='  ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # Retry reverse
+  # svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+  #                                      expected_output, expected_disk,
+  #                                      expected_status, expected_skip,
+  #                                      [], True, True,
+  #                                      '--reverse-diff')
 
 @Issue(4533)
 def patch_hunk_avoid_reorder(sbox):
@@ -7404,6 +7435,84 @@ def patch_with_mergeinfo(sbox):
                                        [], True, True,
                                        '--strip', strip_count)
 
+def patch_move_and_change(sbox):
+  "patch move and change"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/B/E/alpha', 'extra\nlines\n')
+  sbox.simple_propset('k', 'v', 'A/B/E/alpha')
+
+  sbox.simple_move('A/B/E/alpha', 'alpha')
+
+  _, diff, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                  'diff', wc_dir, '--git')
+
+  patch = sbox.get_tempname('move_and_change.patch')
+  svntest.main.file_write(patch, ''.join(diff), mode='wb')
+
+  # Running the diff reversed doesn't work...
+  # We perform the add before reverting the move...
+  expected_output = wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(status='A '),
+  })
+  expected_skip = wc.State(wc_dir, {
+    'alpha' : Item(verb='Skipped'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E/alpha', status='R ',
+                        moved_to='alpha')
+  expected_status.add({
+    'alpha'             : Item(status='A ', copied='+',
+                               moved_from='A/B/E/alpha', wc_rev='-'),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'alpha' : Item(contents="This is the file 'alpha'.\nextra\nlines\n",
+                   props={'k': 'v'}),
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
+
+  # Ok, let's remove the 'delete' portion and try in a clean WC
+  n = diff.index('Index: %s\n' % sbox.path('alpha'))
+  diff = diff[n:]
+  svntest.main.file_write(patch, ''.join(diff), mode='wb')
+
+  sbox.simple_revert('A/B/E/alpha', 'alpha')
+
+  expected_output = wc.State(wc_dir, {
+    'A/B/E/alpha' : Item(status='D '),
+    'alpha'       : Item(status='A '),
+  })
+  expected_skip = wc.State(wc_dir, {})
+  expected_disk.remove('A/B/E/alpha')
+  expected_status.tweak('A/B/E/alpha', status='D ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # Retry won't work yet, but let's try a reverse merge
+  expected_output = wc.State(wc_dir, {
+    'alpha'       : Item(status='D '),
+    'A/B/E/alpha' : Item(status='A '),
+  })
+  expected_disk.remove('alpha')
+  expected_disk.add({
+    'A/B/E/alpha'       : Item(contents="This is the file 'alpha'.\n"),
+  })
+  expected_status.remove('alpha')
+  expected_status.tweak('A/B/E/alpha', status='  ', moved_to=None)
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--reverse-diff')
 
 ########################################################################
 #Run the tests
@@ -7484,6 +7593,7 @@ test_list = [ None,
               patch_symlink_changes,
               patch_add_one_line,
               patch_with_mergeinfo,
+              patch_move_and_change,
             ]
 
 if __name__ == '__main__':
