@@ -7351,7 +7351,6 @@ def patch_add_one_line(sbox):
                                        [], True, True,
                                        '--reverse-diff')
 
-@XFail()
 def patch_with_mergeinfo(sbox):
   "patch with mergeinfo"
 
