@@ -7351,6 +7351,60 @@ def patch_add_one_line(sbox):
                                        [], True, True,
                                        '--reverse-diff')
 
+@XFail()
+def patch_with_mergeinfo(sbox):
+  "patch with mergeinfo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  strip_count = wc_dir.count(os.path.sep)+1
+
+  sbox.simple_copy('A/B/E', 'E')
+  sbox.simple_append('A/B/E/alpha', 'extra\nlines\n')
+  sbox.simple_commit()
+
+  sbox.simple_propset('a', 'A', 'E') # 'a' < 'svn:mergeinfo'
+  sbox.simple_propset('z', 'Z', 'E') # 'z' > 'svn:mergeinfo'
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'merge', '^/A/B/E', sbox.ospath('E'))
+
+  _, diff, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                  'diff', wc_dir)
+
+  sbox.simple_revert('E', 'E/alpha')
+
+  patch = sbox.get_tempname('recurse.patch')
+  svntest.main.file_write(patch, ''.join(diff), mode='wb')
+
+  expected_output = wc.State(wc_dir, {
+    'E'                 : Item(status=' U'),
+    'E/alpha'           : Item(status='U '),
+  })
+  expected_skip = wc.State(wc_dir, {})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'E'                 : Item(status=' M', wc_rev='2'),
+    'E/alpha'           : Item(status='M ', wc_rev='2'),
+    'E/beta'            : Item(status='  ', wc_rev='2'),
+  })
+  expected_status.tweak('A/B/E/alpha', wc_rev=2)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/B/E/alpha', contents="This is the file 'alpha'.\nextra\nlines\n")
+  expected_disk.add({
+    'E'                 : Item(props={'a': 'A',
+                                      # We can't apply 'svn:mergeinfo' (yet)
+                                      'z': 'Z'}),
+    'E/beta'            : Item(contents="This is the file 'beta'.\n"),
+    'E/alpha'           : Item(contents="This is the file 'alpha'.\nextra\nlines\n"),
+  })
+
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count)
+
 
 ########################################################################
 #Run the tests
@@ -7430,6 +7484,7 @@ test_list = [ None,
               patch_like_git_symlink,
               patch_symlink_changes,
               patch_add_one_line,
+              patch_with_mergeinfo,
             ]
 
 if __name__ == '__main__':
