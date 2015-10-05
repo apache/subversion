@@ -441,6 +441,7 @@ resolve_target_path(patch_target_t *target,
                     const char *root_abspath,
                     int strip_count,
                     svn_boolean_t has_text_changes,
+                    svn_boolean_t follow_moves,
                     svn_wc_context_t *wc_ctx,
                     const apr_array_header_t *targets_info,
                     apr_pool_t *result_pool,
@@ -552,12 +553,17 @@ resolve_target_path(patch_target_t *target,
 
   if (target->locally_deleted)
     {
-      const char *moved_to_abspath;
-      const char *op_root_abspath;
+      const char *moved_to_abspath = NULL;
 
-      SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, &op_root_abspath,
-                                          wc_ctx, target->local_abspath,
-                                          result_pool, scratch_pool));
+      if (follow_moves
+          && !target_is_added(targets_info, target->local_abspath,
+                              scratch_pool))
+        {
+          SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, NULL,
+                                              wc_ctx, target->local_abspath,
+                                              result_pool, scratch_pool));
+        }
+
       if (moved_to_abspath)
         {
           target->local_abspath = moved_to_abspath;
@@ -1009,6 +1015,7 @@ init_patch_target(patch_target_t **patch_target,
   patch_target_t *target;
   target_content_t *content;
   svn_boolean_t has_text_changes = FALSE;
+  svn_boolean_t follow_moves;
 
   has_text_changes = ((patch->hunks && patch->hunks->nelts > 0)
                       || patch->binary_patch);
@@ -1031,9 +1038,26 @@ init_patch_target(patch_target_t **patch_target,
   target->prop_targets = apr_hash_make(result_pool);
   target->operation = patch->operation;
 
+  if (patch->operation == svn_diff_op_added /* Allow replacing */
+      || patch->operation == svn_diff_op_added)
+    {
+      follow_moves = FALSE;
+    }
+  else if (patch->operation == svn_diff_op_unchanged
+           && patch->hunks && patch->hunks->nelts == 1)
+    {
+      svn_diff_hunk_t *hunk = APR_ARRAY_IDX(patch->hunks, 0,
+                                            svn_diff_hunk_t *);
+
+      follow_moves = (svn_diff_hunk_get_original_start(hunk) != 0);
+    }
+  else
+    follow_moves = TRUE;
+
   SVN_ERR(resolve_target_path(target, choose_target_filename(patch),
                               root_abspath, strip_count, has_text_changes,
-                              wc_ctx, targets_info, result_pool, scratch_pool));
+                              follow_moves, wc_ctx, targets_info,
+                              result_pool, scratch_pool));
   *patch_target = target;
   if (! target->skipped)
     {
@@ -1119,7 +1143,6 @@ init_patch_target(patch_target_t **patch_target,
                   /* The move target path is either outside of the working
                    * copy or it is the working copy itself. Skip it. */
                   target->skipped = TRUE;
-                  target->local_abspath = NULL;
                   return SVN_NO_ERROR;
                 }
             }
@@ -1135,7 +1158,7 @@ init_patch_target(patch_target_t **patch_target,
             {
               /* The target path is outside of the working copy. Skip it. */
               target->skipped = TRUE;
-              target->local_abspath = NULL;
+              target->move_target_abspath = NULL;
               return SVN_NO_ERROR;
             }
 
@@ -1144,7 +1167,9 @@ init_patch_target(patch_target_t **patch_target,
           SVN_ERR(svn_wc_read_kind2(&wc_kind, wc_ctx,
                                     target->move_target_abspath,
                                     FALSE, FALSE, scratch_pool));
-          if (kind_on_disk != svn_node_none || wc_kind != svn_node_none)
+          if (kind_on_disk != svn_node_none || wc_kind != svn_node_none
+              || target_is_added(targets_info, target->move_target_abspath,
+                                 scratch_pool))
             {
               /* The move target path already exists on disk. Skip target. */
               target->skipped = TRUE;
@@ -2361,7 +2386,7 @@ send_patch_notification(const patch_target_t *target,
       svn_pool_destroy(iterpool);
     }
 
-  if (target->move_target_abspath)
+  if (!target->skipped && target->move_target_abspath)
     {
       /* Notify about deletion of move source. */
       notify = svn_wc_create_notify(target->local_abspath,
@@ -3258,6 +3283,13 @@ install_patched_prop_targets(patch_target_t *target,
 {
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
+  const char *local_abspath;
+
+  /* Apply properties to a move target if there is one */
+  if (target->move_target_abspath)
+    local_abspath = target->move_target_abspath;
+  else
+    local_abspath = target->local_abspath;
 
   iterpool = svn_pool_create(scratch_pool);
 
@@ -3281,7 +3313,7 @@ install_patched_prop_targets(patch_target_t *target,
       if (prop_target->operation == svn_diff_op_deleted)
         {
           if (! dry_run)
-            SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
+            SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath,
                                      prop_target->name, NULL, svn_depth_empty,
                                      TRUE /* skip_checks */,
                                      NULL /* changelist_filter */,
@@ -3306,7 +3338,7 @@ install_patched_prop_targets(patch_target_t *target,
 
           err = svn_wc_canonicalize_svn_prop(&canon_propval,
                                              prop_target->name,
-                                             prop_val, target->local_abspath,
+                                             prop_val, local_abspath,
                                              target->db_kind,
                                              TRUE, /* ### Skipping checks */
                                              NULL, NULL,
@@ -3314,7 +3346,7 @@ install_patched_prop_targets(patch_target_t *target,
         }
       else
         {
-          err = svn_wc_prop_set4(ctx->wc_ctx, target->local_abspath,
+          err = svn_wc_prop_set4(ctx->wc_ctx, local_abspath,
                                  prop_target->name, prop_val, svn_depth_empty,
                                  TRUE /* skip_checks */,
                                  NULL /* changelist_filter */,
