@@ -1197,9 +1197,13 @@ diff_file_added(const char *relpath,
                                  copyfrom_source->revision,
                                  right_source->revision,
                                  left_props, right_props,
-                                 svn_diff_op_copied,
+                                 copyfrom_source->moved_from_relpath
+                                    ? svn_diff_op_moved
+                                    : svn_diff_op_copied,
                                  TRUE /* force diff output */,
-                                 copyfrom_source->repos_relpath,
+                                 copyfrom_source->moved_from_relpath
+                                    ? copyfrom_source->moved_from_relpath
+                                    : copyfrom_source->repos_relpath,
                                  copyfrom_source->revision,
                                  dwi, scratch_pool));
   else if (right_file)

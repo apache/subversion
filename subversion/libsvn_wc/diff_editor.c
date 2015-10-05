@@ -744,9 +744,29 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
 
           if (eb->local_before_remote && local_only)
             {
+              const char *moved_from_relpath;
+
+              if (info->moved_here)
+                {
+                  const char *moved_from_abspath;
+
+                  SVN_ERR(svn_wc__db_scan_moved(&moved_from_abspath,
+                                                NULL, NULL, NULL,
+                                                db, child_abspath,
+                                                iterpool, iterpool));
+                  SVN_ERR_ASSERT(moved_from_abspath != NULL);
+
+                  moved_from_relpath = svn_dirent_skip_ancestor(
+                                                        eb->anchor_abspath,
+                                                        moved_from_abspath);
+                }
+              else
+                moved_from_relpath = NULL;
+
               if (info->kind == svn_node_file && diff_files)
                 SVN_ERR(svn_wc__diff_local_only_file(db, child_abspath,
                                                      child_relpath,
+                                                     moved_from_relpath,
                                                      eb->processor, dir_baton,
                                                      eb->diff_pristine,
                                                      eb->cancel_func,
@@ -756,6 +776,7 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
                 SVN_ERR(svn_wc__diff_local_only_dir(db, child_abspath,
                                                     child_relpath,
                                                     depth_below_here,
+                                                    moved_from_relpath,
                                                     eb->processor, dir_baton,
                                                     eb->diff_pristine,
                                                     eb->cancel_func,
@@ -810,9 +831,29 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
 
           if (!eb->local_before_remote && local_only)
             {
+              const char *moved_from_relpath;
+
+              if (info->moved_here)
+                {
+                  const char *moved_from_abspath;
+
+                  SVN_ERR(svn_wc__db_scan_moved(&moved_from_abspath,
+                                                NULL, NULL, NULL,
+                                                db, child_abspath,
+                                                iterpool, iterpool));
+                  SVN_ERR_ASSERT(moved_from_abspath != NULL);
+
+                  moved_from_relpath = svn_dirent_skip_ancestor(
+                                                        eb->anchor_abspath,
+                                                        moved_from_abspath);
+                }
+              else
+                moved_from_relpath = NULL;
+
               if (info->kind == svn_node_file && diff_files)
                 SVN_ERR(svn_wc__diff_local_only_file(db, child_abspath,
                                                      child_relpath,
+                                                     moved_from_relpath,
                                                      eb->processor, dir_baton,
                                                      eb->diff_pristine,
                                                      eb->cancel_func,
@@ -820,12 +861,13 @@ walk_local_nodes_diff(struct edit_baton_t *eb,
                                                      iterpool));
               else if (info->kind == svn_node_dir && diff_dirs)
                 SVN_ERR(svn_wc__diff_local_only_dir(db, child_abspath,
-                                                     child_relpath, depth_below_here,
-                                                     eb->processor, dir_baton,
-                                                     eb->diff_pristine,
-                                                     eb->cancel_func,
-                                                     eb->cancel_baton,
-                                                     iterpool));
+                                                    child_relpath, depth_below_here,
+                                                    moved_from_relpath,
+                                                    eb->processor, dir_baton,
+                                                    eb->diff_pristine,
+                                                    eb->cancel_func,
+                                                    eb->cancel_baton,
+                                                    iterpool));
             }
         }
     }
@@ -876,6 +918,7 @@ svn_error_t *
 svn_wc__diff_local_only_file(svn_wc__db_t *db,
                              const char *local_abspath,
                              const char *relpath,
+                             const char *moved_from_relpath,
                              const svn_diff_tree_processor_t *processor,
                              void *processor_parent_baton,
                              svn_boolean_t diff_pristine,
@@ -938,6 +981,7 @@ svn_wc__diff_local_only_file(svn_wc__db_t *db,
     {
       copyfrom_src = svn_diff__source_create(original_revision, scratch_pool);
       copyfrom_src->repos_relpath = original_repos_relpath;
+      copyfrom_src->moved_from_relpath = moved_from_relpath;
     }
 
   if (props_mod || !SVN_IS_VALID_REVNUM(revision))
@@ -1016,6 +1060,7 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
                             const char *local_abspath,
                             const char *relpath,
                             svn_depth_t depth,
+                            const char *moved_from_relpath,
                             const svn_diff_tree_processor_t *processor,
                             void *processor_parent_baton,
                             svn_boolean_t diff_pristine,
@@ -1052,6 +1097,7 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
     {
       copyfrom_src = svn_diff__source_create(original_revision, scratch_pool);
       copyfrom_src->repos_relpath = original_repos_relpath;
+      copyfrom_src->moved_from_relpath = moved_from_relpath;
     }
 
   /* svn_wc__db_status_incomplete should never happen, as the result won't be
@@ -1139,12 +1185,40 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
 
           child_relpath = svn_relpath_join(relpath, name, iterpool);
 
+          if (info->moved_here)
+            {
+              const char *moved_from_abspath;
+              const char *a_abspath;
+              const char *a_relpath;
+
+              a_relpath = relpath;
+              a_abspath = local_abspath;
+              while (*a_relpath)
+                {
+                  a_relpath = svn_relpath_dirname(a_relpath, iterpool);
+                  a_abspath = svn_dirent_dirname(a_abspath, iterpool);
+                }
+
+              SVN_ERR(svn_wc__db_scan_moved(&moved_from_abspath,
+                                            NULL, NULL, NULL,
+                                            db, child_abspath,
+                                            iterpool, iterpool));
+              SVN_ERR_ASSERT(moved_from_abspath != NULL);
+
+              moved_from_relpath = svn_dirent_skip_ancestor(
+                                                        a_abspath,
+                                                        moved_from_abspath);
+            }
+          else
+            moved_from_relpath = NULL;
+
           switch (info->kind)
             {
             case svn_node_file:
             case svn_node_symlink:
               SVN_ERR(svn_wc__diff_local_only_file(db, child_abspath,
                                                    child_relpath,
+                                                   moved_from_relpath,
                                                    processor, pdb,
                                                    diff_pristine,
                                                    cancel_func, cancel_baton,
@@ -1157,6 +1231,7 @@ svn_wc__diff_local_only_dir(svn_wc__db_t *db,
                   SVN_ERR(svn_wc__diff_local_only_dir(db, child_abspath,
                                                       child_relpath,
                                                       depth_below_here,
+                                                      moved_from_relpath,
                                                       processor, pdb,
                                                       diff_pristine,
                                                       cancel_func,
@@ -1205,6 +1280,8 @@ handle_local_only(struct dir_baton_t *pb,
 {
   struct edit_baton_t *eb = pb->eb;
   const struct svn_wc__db_info_t *info;
+  const char *child_abspath;
+  const char *moved_from_relpath;
   svn_boolean_t repos_delete = (pb->deletes
                                 && svn_hash_gets(pb->deletes, name));
 
@@ -1240,6 +1317,25 @@ handle_local_only(struct dir_baton_t *pb,
         break;
     }
 
+  child_abspath = svn_dirent_join(pb->local_abspath, name, scratch_pool);
+
+  if (info->moved_here)
+    {
+      const char *moved_from_abspath;
+
+      SVN_ERR(svn_wc__db_scan_moved(&moved_from_abspath,
+                                    NULL, NULL, NULL,
+                                    eb->db, child_abspath,
+                                    scratch_pool, scratch_pool));
+      SVN_ERR_ASSERT(moved_from_abspath != NULL);
+
+      moved_from_relpath = svn_dirent_skip_ancestor(
+                                    eb->anchor_abspath,
+                                    moved_from_abspath);
+    }
+  else
+    moved_from_relpath = NULL;
+
   if (info->kind == svn_node_dir)
     {
       svn_depth_t depth ;
@@ -1251,9 +1347,10 @@ handle_local_only(struct dir_baton_t *pb,
 
       SVN_ERR(svn_wc__diff_local_only_dir(
                       eb->db,
-                      svn_dirent_join(pb->local_abspath, name, scratch_pool),
+                      child_abspath,
                       svn_relpath_join(pb->relpath, name, scratch_pool),
                       repos_delete ? svn_depth_infinity : depth,
+                      moved_from_relpath,
                       eb->processor, pb->pdb,
                       eb->diff_pristine,
                       eb->cancel_func, eb->cancel_baton,
@@ -1262,8 +1359,9 @@ handle_local_only(struct dir_baton_t *pb,
   else
     SVN_ERR(svn_wc__diff_local_only_file(
                       eb->db,
-                      svn_dirent_join(pb->local_abspath, name, scratch_pool),
+                      child_abspath,
                       svn_relpath_join(pb->relpath, name, scratch_pool),
+                      moved_from_relpath,
                       eb->processor, pb->pdb,
                       eb->diff_pristine,
                       eb->cancel_func, eb->cancel_baton,

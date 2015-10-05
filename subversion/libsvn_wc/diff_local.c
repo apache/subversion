@@ -391,9 +391,20 @@ diff_status_callback(void *baton,
 
     if (local_only && (db_status != svn_wc__db_status_deleted))
       {
+        /* Moved from. Relative from diff anchor*/
+        const char *moved_from_relpath = NULL;
+
+        if (status->moved_from_abspath)
+          {
+            moved_from_relpath = svn_dirent_skip_ancestor(
+                                          eb->anchor_abspath,
+                                          status->moved_from_abspath);
+          }
+
         if (db_kind == svn_node_file)
           SVN_ERR(svn_wc__diff_local_only_file(db, child_abspath,
                                                child_relpath,
+                                               moved_from_relpath,
                                                eb->processor,
                                                eb->cur ? eb->cur->baton : NULL,
                                                FALSE,
@@ -403,6 +414,7 @@ diff_status_callback(void *baton,
         else if (db_kind == svn_node_dir)
           SVN_ERR(svn_wc__diff_local_only_dir(db, child_abspath,
                                               child_relpath, depth_below_here,
+                                              moved_from_relpath,
                                               eb->processor,
                                               eb->cur ? eb->cur->baton : NULL,
                                               FALSE,
