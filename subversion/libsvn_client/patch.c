@@ -1039,7 +1039,8 @@ init_patch_target(patch_target_t **patch_target,
   target->operation = patch->operation;
 
   if (patch->operation == svn_diff_op_added /* Allow replacing */
-      || patch->operation == svn_diff_op_added)
+      || patch->operation == svn_diff_op_added
+      || patch->operation == svn_diff_op_moved)
     {
       follow_moves = FALSE;
     }
@@ -1065,6 +1066,118 @@ init_patch_target(patch_target_t **patch_target,
           || patch->new_symlink_bit == svn_tristate_true)
         {
           target->git_symlink_format = TRUE;
+        }
+
+      /* ### Is it ok to set the operation of the target already here? Isn't
+       * ### the target supposed to be marked with an operation after we have
+       * ### determined that the changes will apply cleanly to the WC? Maybe
+       * ### we should have kept the patch field in patch_target_t to be
+       * ### able to distinguish between 'what the patch says we should do'
+       * ### and 'what we can do with the given state of our WC'. */
+      if (patch->operation == svn_diff_op_added)
+        target->added = TRUE;
+      else if (patch->operation == svn_diff_op_deleted)
+        target->deleted = TRUE;
+      else if (patch->operation == svn_diff_op_moved)
+        {
+          const char *move_target_path;
+          const char *move_target_relpath;
+          svn_boolean_t under_root;
+          svn_boolean_t is_special;
+          svn_node_kind_t kind_on_disk;
+          svn_node_kind_t wc_kind;
+
+          move_target_path = svn_dirent_internal_style(patch->new_filename,
+                                                       scratch_pool);
+
+          if (strip_count > 0)
+            SVN_ERR(strip_path(&move_target_path, move_target_path,
+                               strip_count, scratch_pool, scratch_pool));
+
+          if (svn_dirent_is_absolute(move_target_path))
+            {
+              move_target_relpath = svn_dirent_is_child(root_abspath,
+                                                        move_target_path,
+                                                        scratch_pool);
+              if (! move_target_relpath)
+                {
+                  /* The move target path is either outside of the working
+                   * copy or it is the working copy itself. Skip it. */
+                  target->skipped = TRUE;
+                  return SVN_NO_ERROR;
+                }
+            }
+          else
+            move_target_relpath = move_target_path;
+
+          /* Make sure the move target path is secure to use. */
+          SVN_ERR(svn_dirent_is_under_root(&under_root,
+                                           &target->move_target_abspath,
+                                           root_abspath,
+                                           move_target_relpath, result_pool));
+          if (! under_root)
+            {
+              /* The target path is outside of the working copy. Skip it. */
+              target->skipped = TRUE;
+              target->move_target_abspath = NULL;
+              return SVN_NO_ERROR;
+            }
+
+          SVN_ERR(svn_io_check_special_path(target->move_target_abspath,
+                                            &kind_on_disk, &is_special,
+                                            scratch_pool));
+          SVN_ERR(svn_wc_read_kind2(&wc_kind, wc_ctx,
+                                    target->move_target_abspath,
+                                    FALSE, FALSE, scratch_pool));
+          if (wc_kind == svn_node_file || wc_kind == svn_node_dir)
+            {
+              /* The move target path already exists on disk. */
+              svn_error_t *err;
+              const char *moved_from_abspath;
+
+              err = svn_wc__node_was_moved_here(&moved_from_abspath, NULL,
+                                                wc_ctx,
+                                                target->move_target_abspath,
+                                                scratch_pool, scratch_pool);
+
+              if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+                {
+                  svn_error_clear(err);
+                  err = NULL;
+                  moved_from_abspath = NULL;
+                }
+              else
+                SVN_ERR(err);
+
+              if (moved_from_abspath && (strcmp(moved_from_abspath,
+                                                target->local_abspath) == 0))
+                {
+                  target->local_abspath = target->move_target_abspath;
+                  target->move_target_abspath = NULL;
+                  target->operation = svn_diff_op_modified;
+                  target->locally_deleted = FALSE;
+                  target->db_kind = wc_kind;
+                  target->kind_on_disk = kind_on_disk;
+                  target->is_special = is_special;
+
+                  target->had_already_applied = TRUE; /* Make sure we notify */
+                }
+              else
+                {
+                  target->skipped = TRUE;
+                  target->move_target_abspath = NULL;
+                  return SVN_NO_ERROR;
+                }
+
+            }
+          else if (kind_on_disk != svn_node_none
+              || target_is_added(targets_info, target->move_target_abspath,
+                                 scratch_pool))
+            {
+                  target->skipped = TRUE;
+                  target->move_target_abspath = NULL;
+                  return SVN_NO_ERROR;
+            }
         }
 
       /* Create a temporary file to write the patched result to.
@@ -1106,76 +1219,6 @@ init_patch_target(patch_target_t **patch_target,
           content->seek = seek_file;
           content->tell = tell_file;
           content->read_baton = target->file;
-        }
-
-      /* ### Is it ok to set the operation of the target already here? Isn't
-       * ### the target supposed to be marked with an operation after we have
-       * ### determined that the changes will apply cleanly to the WC? Maybe
-       * ### we should have kept the patch field in patch_target_t to be
-       * ### able to distinguish between 'what the patch says we should do'
-       * ### and 'what we can do with the given state of our WC'. */
-      if (patch->operation == svn_diff_op_added)
-        target->added = TRUE;
-      else if (patch->operation == svn_diff_op_deleted)
-        target->deleted = TRUE;
-      else if (patch->operation == svn_diff_op_moved)
-        {
-          const char *move_target_path;
-          const char *move_target_relpath;
-          svn_boolean_t under_root;
-          svn_node_kind_t kind_on_disk;
-          svn_node_kind_t wc_kind;
-
-          move_target_path = svn_dirent_internal_style(patch->new_filename,
-                                                       scratch_pool);
-
-          if (strip_count > 0)
-            SVN_ERR(strip_path(&move_target_path, move_target_path,
-                               strip_count, scratch_pool, scratch_pool));
-
-          if (svn_dirent_is_absolute(move_target_path))
-            {
-              move_target_relpath = svn_dirent_is_child(root_abspath,
-                                                        move_target_path,
-                                                        scratch_pool);
-              if (! move_target_relpath)
-                {
-                  /* The move target path is either outside of the working
-                   * copy or it is the working copy itself. Skip it. */
-                  target->skipped = TRUE;
-                  return SVN_NO_ERROR;
-                }
-            }
-          else
-            move_target_relpath = move_target_path;
-
-          /* Make sure the move target path is secure to use. */
-          SVN_ERR(svn_dirent_is_under_root(&under_root,
-                                           &target->move_target_abspath,
-                                           root_abspath,
-                                           move_target_relpath, result_pool));
-          if (! under_root)
-            {
-              /* The target path is outside of the working copy. Skip it. */
-              target->skipped = TRUE;
-              target->move_target_abspath = NULL;
-              return SVN_NO_ERROR;
-            }
-
-          SVN_ERR(svn_io_check_path(target->move_target_abspath,
-                                    &kind_on_disk, scratch_pool));
-          SVN_ERR(svn_wc_read_kind2(&wc_kind, wc_ctx,
-                                    target->move_target_abspath,
-                                    FALSE, FALSE, scratch_pool));
-          if (kind_on_disk != svn_node_none || wc_kind != svn_node_none
-              || target_is_added(targets_info, target->move_target_abspath,
-                                 scratch_pool))
-            {
-              /* The move target path already exists on disk. Skip target. */
-              target->skipped = TRUE;
-              target->move_target_abspath = NULL;
-              return SVN_NO_ERROR;
-            }
         }
 
       /* Open a temporary file to write the patched result to. */

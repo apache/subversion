@@ -4817,14 +4817,19 @@ def patch_git_rename(sbox):
                                        [], True, True)
 
   # Retry
-  #svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
-  #                                     expected_output, expected_disk,
-  #                                     expected_status, expected_skip,
-  #                                     [], True, True)
+  expected_output = wc.State(wc_dir, {
+    'iota2' : Item(status='G ')
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
 
   # Reverse
-  expected_output.tweak('iota', status='A ')
-  expected_output.tweak('iota2', status='D ')
+  expected_output = wc.State(wc_dir, {
+    'iota2' : Item(status='D '),
+    'iota'  : Item(status='A '),
+  })
   expected_disk.remove('iota2')
   expected_disk.add({
     'iota'              : Item(contents="This is the file 'iota'.\n"),
@@ -7497,7 +7502,16 @@ def patch_move_and_change(sbox):
                                        expected_status, expected_skip,
                                        [], True, True)
 
-  # Retry won't work yet, but let's try a reverse merge
+  # Retry
+  expected_output = svntest.wc.State(wc_dir, {
+    'alpha'             : Item(status='GG'),
+  })
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True)
+
+  # And now reverse
   expected_output = wc.State(wc_dir, {
     'alpha'       : Item(status='D '),
     'A/B/E/alpha' : Item(status='A '),
