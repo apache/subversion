@@ -39,7 +39,6 @@ import filecmp
 # Our testing module
 import svntest
 from svntest import wc
-from svntest.main import SVN_PROP_MERGEINFO, is_os_windows
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -3436,9 +3435,9 @@ def patch_one_property(sbox, trailing_eol):
     value = "v\n"
   else:
     value = "v"
-    unidiff_patch += ['\ No newline at end of property']
+    unidiff_patch += ['\ No newline at end of property\n']
 
-  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch), 'wb')
 
   expected_output = [
     ' U        %s\n' % os.path.join(wc_dir),
@@ -3461,10 +3460,6 @@ def patch_one_property(sbox, trailing_eol):
                                        1, # check-props
                                        1, # dry-run
                                        '--strip', '3')
-
-  if is_os_windows():
-    # On Windows 'svn pg' uses \r\n as EOL.
-    value = value.replace('\n', '\r\n')
 
   svntest.actions.check_prop('k', wc_dir, [value])
 
