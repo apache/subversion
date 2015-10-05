@@ -1167,7 +1167,13 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
           SVN_ERR(parse_mergeinfo(&found_mergeinfo, line, *hunk, patch,
                                   result_pool, iterpool));
           if (found_mergeinfo)
-            continue; /* Proceed to the next line in the patch. */
+            continue; /* Proceed to the next line in the svn:mergeinfo hunk. */
+          else
+            {
+              /* Perhaps we can also use original_lines/modified_lines here */
+
+              in_hunk = FALSE; /* On to next property */
+            }
         }
 
       if (in_hunk)
