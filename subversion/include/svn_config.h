@@ -139,8 +139,11 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS         "enable-auto-props"
 /** @since New in 1.9. */
 #define SVN_CONFIG_OPTION_ENABLE_MAGIC_FILE         "enable-magic-file"
+/** @since New in 1.2. */
 #define SVN_CONFIG_OPTION_NO_UNLOCK                 "no-unlock"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_MIMETYPES_FILE            "mime-types-file"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_PRESERVED_CF_EXTS         "preserved-conflict-file-exts"
 /** @since New in 1.7. */
 #define SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS     "interactive-conflicts"
