@@ -1017,22 +1017,6 @@ svn_editor3__get_baton(const svn_editor3_t *editor);
 
 /* ====================================================================== */
 
-/* Return (left, right) pairs of element content that differ between
- * subtrees LEFT and RIGHT.
-
- * Set *DIFF_P to a hash of (eid -> (svn_branch_el_rev_content_t *)[2]).
- */
-svn_error_t *
-svn_branch_subtree_differences(apr_hash_t **diff_p,
-                               svn_editor3_t *editor,
-                               svn_branch_subtree_t *left,
-                               svn_branch_subtree_t *right,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
-
-
-/* ====================================================================== */
-
 #ifdef SVN_DEBUG
 /** Return an editor in @a *editor_p which will forward all calls to the
  * @a wrapped_editor while printing a diagnostic trace of the calls to

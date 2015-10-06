@@ -264,6 +264,62 @@ wc_create(svnmover_wc_t **wc_p,
   return SVN_NO_ERROR;
 }
 
+/* Return (left, right) pairs of element content that differ between
+ * subtrees LEFT and RIGHT.
+ *
+ * Set *DIFF_P to a hash of (eid -> (svn_branch_el_rev_content_t *)[2]).
+ */
+static svn_error_t *
+element_differences(apr_hash_t **diff_p,
+                    svn_editor3_t *editor,
+                    svn_branch_subtree_t *left,
+                    svn_branch_subtree_t *right,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  apr_hash_t *diff = apr_hash_make(result_pool);
+  SVN_ITER_T(int) *hi;
+
+  /*SVN_DBG(("svn_branch_subtree_differences(b%s r%ld, b%s r%ld, e%d)",
+           svn_branch_get_id(left->branch, scratch_pool), left->rev,
+           svn_branch_get_id(right->branch, scratch_pool), right->rev,
+           right->eid));*/
+
+  for (SVN_HASH_ITER(hi, scratch_pool,
+                     apr_hash_overlay(scratch_pool, left->e_map, right->e_map)))
+    {
+      int e = svn_int_hash_this_key(hi->apr_hi);
+      svn_branch_el_rev_content_t *element_left
+        = svn_int_hash_get(left->e_map, e);
+      svn_branch_el_rev_content_t *element_right
+        = svn_int_hash_get(right->e_map, e);
+
+      /* If node payload is given by reference, resolve it to full payload */
+      if (element_left)
+        {
+          SVN_ERR(svn_editor3_payload_resolve(editor, element_left));
+        }
+      if (element_right)
+        {
+          SVN_ERR(svn_editor3_payload_resolve(editor, element_right));
+        }
+
+      if (! svn_branch_el_rev_content_equal(element_left, element_right,
+                                            scratch_pool))
+        {
+          svn_branch_el_rev_content_t **contents
+            = apr_palloc(result_pool, 2 * sizeof(void *));
+
+          contents[0] = element_left;
+          contents[1] = element_right;
+          svn_int_hash_set(diff, e, contents);
+        }
+    }
+
+  *diff_p = diff;
+  return SVN_NO_ERROR;
+}
+
 /* Replay differences between S_LEFT and S_RIGHT into EDITOR:EDIT_BRANCH.
  *
  * S_LEFT and/or S_RIGHT may be null meaning an empty set.
@@ -285,9 +341,9 @@ subtree_replay(svn_editor3_t *editor,
   if (! s_right)
     s_right = svn_branch_subtree_create(NULL, 0 /*root_eid*/, scratch_pool);
 
-  SVN_ERR(svn_branch_subtree_differences(&diff_left_right,
-                                         editor, s_left, s_right,
-                                         scratch_pool, scratch_pool));
+  SVN_ERR(element_differences(&diff_left_right,
+                              editor, s_left, s_right,
+                              scratch_pool, scratch_pool));
 
   /* Go through the per-element differences. */
   for (hi = apr_hash_first(scratch_pool, diff_left_right);
@@ -1478,14 +1534,14 @@ branch_merge_subtree_r(svn_editor3_t *editor,
   s_src = svn_branch_get_subtree(src->branch, src->eid, scratch_pool);
   s_tgt = svn_branch_get_subtree(tgt->branch, tgt->eid, scratch_pool);
   s_yca = svn_branch_get_subtree(yca->branch, yca->eid, scratch_pool);
-  SVN_ERR(svn_branch_subtree_differences(&diff_yca_src,
-                                         editor, s_yca, s_src,
-                                         scratch_pool, scratch_pool));
+  SVN_ERR(element_differences(&diff_yca_src,
+                              editor, s_yca, s_src,
+                              scratch_pool, scratch_pool));
   /* ### We only need to query for YCA:TO differences in elements that are
          different in YCA:FROM, but right now we ask for all differences. */
-  SVN_ERR(svn_branch_subtree_differences(&diff_yca_tgt,
-                                         editor, s_yca, s_tgt,
-                                         scratch_pool, scratch_pool));
+  SVN_ERR(element_differences(&diff_yca_tgt,
+                              editor, s_yca, s_tgt,
+                              scratch_pool, scratch_pool));
 
   all_elements = apr_hash_overlay(scratch_pool,
                                   svn_branch_get_elements(src->branch),
@@ -1740,9 +1796,9 @@ subtree_diff(apr_hash_t **diff_changes,
 
   *diff_changes = apr_hash_make(result_pool);
 
-  SVN_ERR(svn_branch_subtree_differences(&diff_left_right,
-                                         editor, s_left, s_right,
-                                         result_pool, scratch_pool));
+  SVN_ERR(element_differences(&diff_left_right,
+                              editor, s_left, s_right,
+                              result_pool, scratch_pool));
 
   for (hi = apr_hash_first(scratch_pool, diff_left_right);
        hi; hi = apr_hash_next(hi))
