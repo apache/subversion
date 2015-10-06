@@ -1242,17 +1242,20 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
 {
   apr_getopt_t *os;
   struct opt_parsing_error_baton_t opt_parsing_error_baton;
-  /* Make room for each option (starting at index 1) plus trailing NULL. */
-  const char **argv = apr_palloc(pool, sizeof(char*) * (args->nelts + 2));
+  apr_array_header_t *argv;
 
   opt_parsing_error_baton.err = NULL;
   opt_parsing_error_baton.pool = pool;
 
-  argv[0] = "";
-  memcpy(argv + 1, args->elts, sizeof(char*) * args->nelts);
-  argv[args->nelts + 1] = NULL;
+  /* Make room for each option (starting at index 1) plus trailing NULL. */
+  argv = apr_array_make(pool, args->nelts + 2, sizeof(char*));
+  APR_ARRAY_PUSH(argv, const char *) = "";
+  apr_array_cat(argv, args);
+  APR_ARRAY_PUSH(argv, const char *) = NULL;
 
-  apr_getopt_init(&os, pool, args->nelts + 1, argv);
+  apr_getopt_init(&os, pool, 
+                  argv->nelts - 1 /* Exclude trailing NULL */,
+                  (const char *const *) argv->elts);
 
   /* Capture any error message from apr_getopt_long().  This will typically
    * say which option is wrong, which we would not otherwise know. */
@@ -1415,6 +1418,10 @@ typedef struct svn_diff__file_output_baton_t
   char hunk_extra_context[SVN_DIFF__EXTRA_CONTEXT_LENGTH + 1];
 
   int context_size;
+
+  /* Cancel handler */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
 
   apr_pool_t *pool;
 } svn_diff__file_output_baton_t;
@@ -1597,10 +1604,15 @@ static APR_INLINE svn_error_t *
 output_unified_diff_range(svn_diff__file_output_baton_t *output_baton,
                           int source,
                           svn_diff__file_output_unified_type_e type,
-                          apr_off_t until)
+                          apr_off_t until,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton)
 {
   while (output_baton->current_line[source] < until)
     {
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
       SVN_ERR(output_unified_line(output_baton, type, source));
     }
   return SVN_NO_ERROR;
@@ -1626,7 +1638,8 @@ output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
   /* Add trailing context to the hunk */
   SVN_ERR(output_unified_diff_range(baton, 0 /* original */,
                                     svn_diff__file_output_unified_context,
-                                    target_line));
+                                    target_line,
+                                    baton->cancel_func, baton->cancel_baton));
 
   old_start = baton->hunk_start[0];
   new_start = baton->hunk_start[1];
@@ -1714,7 +1727,9 @@ output_unified_diff_modified(void *baton,
         /* Original: Output the context preceding the changed range */
         SVN_ERR(output_unified_diff_range(output_baton, 0 /* original */,
                                           svn_diff__file_output_unified_context,
-                                          original_start));
+                                          original_start,
+                                          output_baton->cancel_func,
+                                          output_baton->cancel_baton));
       }
   }
 
@@ -1722,7 +1737,9 @@ output_unified_diff_modified(void *baton,
      to display */
   SVN_ERR(output_unified_diff_range(output_baton, 0 /* original */,
                                     svn_diff__file_output_unified_skip,
-                                    original_start - context_prefix_length));
+                                    original_start - context_prefix_length,
+                                    output_baton->cancel_func,
+                                    output_baton->cancel_baton));
 
   /* Note that the above skip stores data for the show_c_function support below */
 
@@ -1768,20 +1785,28 @@ output_unified_diff_modified(void *baton,
   /* Modified: Skip lines until we are at the start of the changed range */
   SVN_ERR(output_unified_diff_range(output_baton, 1 /* modified */,
                                     svn_diff__file_output_unified_skip,
-                                    modified_start));
+                                    modified_start,
+                                    output_baton->cancel_func,
+                                    output_baton->cancel_baton));
 
   /* Original: Output the context preceding the changed range */
   SVN_ERR(output_unified_diff_range(output_baton, 0 /* original */,
                                     svn_diff__file_output_unified_context,
-                                    original_start));
+                                    original_start,
+                                    output_baton->cancel_func,
+                                    output_baton->cancel_baton));
 
   /* Both: Output the changed range */
   SVN_ERR(output_unified_diff_range(output_baton, 0 /* original */,
                                     svn_diff__file_output_unified_delete,
-                                    original_start + original_length));
+                                    original_start + original_length,
+                                    output_baton->cancel_func,
+                                    output_baton->cancel_baton));
   SVN_ERR(output_unified_diff_range(output_baton, 1 /* modified */,
                                     svn_diff__file_output_unified_insert,
-                                    modified_start + modified_length));
+                                    modified_start + modified_length,
+                                    output_baton->cancel_func,
+                                    output_baton->cancel_baton));
 
   return SVN_NO_ERROR;
 }
@@ -1842,6 +1867,8 @@ svn_diff_file_output_unified4(svn_stream_t *output_stream,
 
       memset(&baton, 0, sizeof(baton));
       baton.output_stream = output_stream;
+      baton.cancel_func = cancel_func;
+      baton.cancel_baton = cancel_baton;
       baton.pool = pool;
       baton.header_encoding = header_encoding;
       baton.path[0] = original_path;

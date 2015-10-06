@@ -359,22 +359,14 @@ for_each_option(svn_config_t *cfg, void *baton, apr_pool_t *pool,
        sec_ndx != NULL;
        sec_ndx = apr_hash_next(sec_ndx))
     {
-      void *sec_ptr;
-      cfg_section_t *sec;
+      cfg_section_t *sec = apr_hash_this_val(sec_ndx);
       apr_hash_index_t *opt_ndx;
-
-      apr_hash_this(sec_ndx, NULL, NULL, &sec_ptr);
-      sec = sec_ptr;
 
       for (opt_ndx = apr_hash_first(pool, sec->options);
            opt_ndx != NULL;
            opt_ndx = apr_hash_next(opt_ndx))
         {
-          void *opt_ptr;
-          cfg_option_t *opt;
-
-          apr_hash_this(opt_ndx, NULL, NULL, &opt_ptr);
-          opt = opt_ptr;
+          cfg_option_t *opt = apr_hash_this_val(opt_ndx);
 
           if (callback(baton, sec, opt))
             return;
@@ -1030,11 +1022,8 @@ svn_config_enumerate_sections2(svn_config_t *cfg,
        sec_ndx != NULL;
        sec_ndx = apr_hash_next(sec_ndx))
     {
-      void *sec_ptr;
-      cfg_section_t *sec;
+      cfg_section_t *sec = apr_hash_this_val(sec_ndx);
 
-      apr_hash_this(sec_ndx, NULL, NULL, &sec_ptr);
-      sec = sec_ptr;
       ++count;
       svn_pool_clear(iteration_pool);
       if (!callback(sec->name, baton, iteration_pool))
@@ -1066,12 +1055,8 @@ svn_config_enumerate(svn_config_t *cfg, const char *section,
        opt_ndx != NULL;
        opt_ndx = apr_hash_next(opt_ndx))
     {
-      void *opt_ptr;
-      cfg_option_t *opt;
+      cfg_option_t *opt = apr_hash_this_val(opt_ndx);
       const char *temp_value;
-
-      apr_hash_this(opt_ndx, NULL, NULL, &opt_ptr);
-      opt = opt_ptr;
 
       ++count;
       make_string_from_option(&temp_value, cfg, sec, opt, NULL);
@@ -1104,12 +1089,8 @@ svn_config_enumerate2(svn_config_t *cfg, const char *section,
        opt_ndx != NULL;
        opt_ndx = apr_hash_next(opt_ndx))
     {
-      void *opt_ptr;
-      cfg_option_t *opt;
+      cfg_option_t *opt = apr_hash_this_val(opt_ndx);
       const char *temp_value;
-
-      apr_hash_this(opt_ndx, NULL, NULL, &opt_ptr);
-      opt = opt_ptr;
 
       ++count;
       make_string_from_option(&temp_value, cfg, sec, opt, NULL);

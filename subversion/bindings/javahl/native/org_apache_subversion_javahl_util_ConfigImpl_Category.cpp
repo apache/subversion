@@ -260,7 +260,7 @@ Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_enumerate(
     JNIEnv* env, jobject jthis, jstring jcategory, jlong jcontext,
     jstring jsection, jobject jhandler)
 {
-  JNIEntry(ConfigImpl$Category, sections);
+  JNIEntry(ConfigImpl$Category, enumerate);
   const ImplContext ctx(env, jthis, jcategory, jcontext, jsection, NULL);
 
   struct enumerator_t

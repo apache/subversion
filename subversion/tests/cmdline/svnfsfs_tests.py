@@ -182,6 +182,7 @@ def test_stats(sbox):
                            '.*\d+ bytes in .*\d+ representations of added file nodes',
                            '.*\d+ bytes in .*\d+ directory property representations',
                            '.*\d+ bytes in .*\d+ file property representations',
+                           '.*\d+ average delta chain length',
                            '.*\d+ bytes in header & footer overhead' ],
     '.* representation statistics:' : 
                           ['.*\d+ bytes in .*\d+ reps',
@@ -189,7 +190,8 @@ def test_stats(sbox):
                            '.*\d+ bytes expanded size',
                            '.*\d+ bytes expanded shared size',
                            '.*\d+ bytes with rep-sharing off',
-                           '.*\d+ shared references' ],
+                           '.*\d+ shared references',
+                           '.*\d+ average delta chain length'],
     'Largest.*:'        : ['.*\d+ r\d+ */\S*'],
     'Extensions by number .*:' :
                           ['.*\d+ \( ?\d+%\) representations'],
@@ -286,7 +288,13 @@ def load_index_sharded(sbox):
       columns.append("junk")
       items[i] = ' '.join(columns) + "\n"
 
-  # first entry is for rev 1, pack starts at rev 0, though
+  # first entry shall be for rev 1, pack starts at rev 0, though
+  for i in range(0, len(items)):
+    if items[i].split()[3] == "1":
+      if i != 1:
+        items[i],items[1] = items[1],items[i]
+      break
+
   assert(items[1].split()[3] == "1")
 
   # Reload the index
