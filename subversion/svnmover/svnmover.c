@@ -353,9 +353,9 @@ subtree_replay(svn_editor3_t *editor,
       svn_branch_el_rev_content_t **e_pair = apr_hash_this_val(hi);
       svn_branch_el_rev_content_t *e0 = e_pair[0], *e1 = e_pair[1];
 
-      SVN_ERR_ASSERT(!e0 || !e0->payload
+      SVN_ERR_ASSERT(!e0
                      || svn_element_payload_invariants(e0->payload));
-      SVN_ERR_ASSERT(!e1 || !e1->payload
+      SVN_ERR_ASSERT(!e1
                      || svn_element_payload_invariants(e1->payload));
       if (e0 || e1)
         {
@@ -1327,7 +1327,8 @@ element_merge(svn_branch_el_rev_content_t **result_p,
       /* Double add (as we already handled the case where YCA also exists) */
       /* May be allowed for equal content of a normal element (not subbranch) */
       if (policy->merge_double_add
-          && side1->payload && side2->payload /* they are not subbranches */
+          && !side1->payload->is_subbranch_root
+          && !side2->payload->is_subbranch_root
           && svn_branch_el_rev_content_equal(side1, side2, scratch_pool))
         {
           SVN_DBG(("e%d double add",
@@ -2386,7 +2387,7 @@ mk_branch(const char **new_branch_id_p,
   SVN_ERR(svn_editor3_alter(editor,
                             outer_branch_id, new_outer_eid,
                             outer_parent_eid, outer_name,
-                            NULL /*new_payload*/));
+                            svn_element_payload_create_subbranch(scratch_pool)));
 
   SVN_ERR(svn_editor3_new_eid(editor, &new_inner_eid));
   SVN_ERR(svn_editor3_open_branch(editor, &new_branch_id,
@@ -2441,7 +2442,8 @@ do_branch(const char **new_branch_id_p,
 
   SVN_ERR(svn_editor3_alter(editor,
                             to_outer_branch_id, to_outer_eid,
-                            to_outer_parent_eid, new_name, NULL));
+                            to_outer_parent_eid, new_name,
+                            svn_element_payload_create_subbranch(scratch_pool)));
 
   notify_v("A+   %s (branch %s)",
            svn_branch_get_path_by_eid(to_outer_branch, to_outer_eid,

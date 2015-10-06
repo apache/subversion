@@ -71,6 +71,9 @@ svn_pathrev_equal(svn_pathrev_t *peg_path1,
 svn_boolean_t
 svn_element_payload_invariants(const svn_element_payload_t *payload)
 {
+  if (payload->is_subbranch_root)
+    return TRUE;
+
   /* If kind is unknown, it's a reference; otherwise it has content
      specified and may also have a reference. */
   if (payload->kind == svn_node_unknown)
@@ -119,14 +122,15 @@ svn_element_payload_equal(const svn_element_payload_t *left,
 {
   apr_array_header_t *prop_diffs;
 
-  assert(! left || svn_element_payload_invariants(left));
-  assert(! right || svn_element_payload_invariants(right));
+  assert(svn_element_payload_invariants(left));
+  assert(svn_element_payload_invariants(right));
 
-  if (!left && !right)
+  /* any two subbranch-root elements compare equal */
+  if (left->is_subbranch_root && right->is_subbranch_root)
     {
       return TRUE;
     }
-  else if (!left || !right)
+  else if (left->is_subbranch_root || right->is_subbranch_root)
     {
       return FALSE;
     }
@@ -169,6 +173,18 @@ svn_element_payload_equal(const svn_element_payload_t *left,
     }
 
   return TRUE;
+}
+
+svn_element_payload_t *
+svn_element_payload_create_subbranch(apr_pool_t *result_pool)
+{
+  svn_element_payload_t *new_payload
+    = apr_pcalloc(result_pool, sizeof(*new_payload));
+
+  new_payload->pool = result_pool;
+  new_payload->is_subbranch_root = TRUE;
+  assert(svn_element_payload_invariants(new_payload));
+  return new_payload;
 }
 
 svn_element_payload_t *

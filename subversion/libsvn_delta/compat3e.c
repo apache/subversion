@@ -1283,23 +1283,20 @@ editor3_alter(void *baton,
          || (new_parent_eid < eb->edited_rev_root->first_eid))
     svn_branch_txn_new_eid(eb->edited_rev_root);
 
-  if (new_payload)
+  if (! new_payload->is_subbranch_root)
     {
       SVN_DBG(("alter(e%d): parent e%d, name '%s', kind %s",
                eid, new_parent_eid,
                new_name, svn_node_kind_to_word(new_payload->kind)));
 
-      svn_branch_update_element(branch, eid, new_parent_eid, new_name,
-                                new_payload);
     }
   else
     {
       SVN_DBG(("alter(e%d): parent e%d, name '%s', kind (subbranch)",
                eid, new_parent_eid, new_name));
-
-      svn_branch_update_subbranch_root_element(branch, eid,
-                                               new_parent_eid, new_name);
     }
+  svn_branch_update_element(branch, eid, new_parent_eid, new_name,
+                            new_payload);
 
   return SVN_NO_ERROR;
 }

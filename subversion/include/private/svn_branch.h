@@ -586,18 +586,6 @@ svn_branch_update_element(svn_branch_state_t *branch,
                           const char *new_name,
                           const svn_element_payload_t *new_payload);
 
-/* Set or change the EID:element mapping for EID in BRANCH to reflect a
- * subbranch root element. This element has no payload in this branch; the
- * corresponding element of the subbranch will define its payload.
- *
- * Duplicate NEW_NAME into the branch mapping's pool.
- */
-void
-svn_branch_update_subbranch_root_element(svn_branch_state_t *branch,
-                                         int eid,
-                                         svn_branch_eid_t new_parent_eid,
-                                         const char *new_name);
-
 /* Purge orphaned elements and subbranches.
  */
 void
