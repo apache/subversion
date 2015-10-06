@@ -1241,13 +1241,6 @@ init_patch_target(patch_target_t **patch_target,
                                          svn_io_file_del_none,
                                      result_pool, scratch_pool));
 
-      /* The reject file needs a diff header. */
-      SVN_ERR(svn_stream_printf(target->reject_stream, scratch_pool,
-                                "--- %s" APR_EOL_STR
-                                "+++ %s" APR_EOL_STR,
-                                 target->canon_path_from_patchfile,
-                                 target->canon_path_from_patchfile));
-
       /* Handle properties. */
       if (! target->skipped)
         {
@@ -1423,6 +1416,24 @@ init_patch_target(patch_target_t **patch_target,
 
       if (maybe_delete)
         target->deleted = TRUE;
+    }
+
+  if (target->reject_stream != NULL)
+    {
+      /* The reject file needs a diff header. */
+      const char *left_src = target->canon_path_from_patchfile;
+      const char *right_src = target->canon_path_from_patchfile;
+
+      /* Handle moves specifically? */
+      if (target->added)
+        left_src = "/dev/null";
+      if (target->deleted)
+        right_src = "/dev/null";
+
+      SVN_ERR(svn_stream_printf(target->reject_stream, scratch_pool,
+                                "--- %s" APR_EOL_STR
+                                "+++ %s" APR_EOL_STR,
+                                left_src, right_src));
     }
 
   return SVN_NO_ERROR;
