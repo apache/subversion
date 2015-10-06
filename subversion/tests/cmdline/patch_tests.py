@@ -5341,7 +5341,7 @@ def patch_delete_modified(sbox):
   expected_skip = wc.State('', { })
   reject_file_contents = [
     "--- A/B/E/beta\n",
-    "+++ A/B/E/beta\n",
+    "+++ /dev/null\n",
     "@@ -1,1 +0,0 @@\n",
     "-This is the file 'beta'.\n",
   ]
@@ -7016,7 +7016,7 @@ def patch_git_symlink(sbox):
   expected_disk.add({
     'link-to-iota.svnpatch.rej': Item(
                      contents='--- link-to-iota\n'
-                              '+++ link-to-iota\n'
+                              '+++ /dev/null\n'
                               '@@ -1,1 +0,0 @@\n'
                               '-A/mu\n'
                               '\\ No newline at end of file\n'),
@@ -7136,7 +7136,7 @@ def patch_like_git_symlink(sbox):
   expected_disk.add({
     'link-to-iota.svnpatch.rej': Item(
                      contents='--- link-to-iota\n'
-                              '+++ link-to-iota\n'
+                              '+++ /dev/null\n'
                               '@@ -1,1 +0,0 @@\n'
                               '-A/mu\n'
                               '\\ No newline at end of file\n'),
