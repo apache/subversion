@@ -152,6 +152,9 @@ typedef struct svn_fs_fs__representation_stats_t
   /* sum of ref_count * expanded_size,
    * i.e. total plaintext content if there was no rep sharing */
   apr_uint64_t expanded_size;
+
+  /* sum of all representation delta chain lengths */
+  apr_uint64_t chain_len;
 } svn_fs_fs__representation_stats_t;
 
 /* Basic statistics we collect over a given set of noderevs.

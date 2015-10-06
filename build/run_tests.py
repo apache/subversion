@@ -192,7 +192,7 @@ class TestHarness:
     if self.opts.fsfs_version is not None:
       cmdline.append('--fsfs-version=%d' % self.opts.fsfs_version)
     if self.opts.server_minor_version is not None:
-      cmdline.append('--server-minor-version=' +
+      cmdline.append('--server-minor-version=%d' %
                      self.opts.server_minor_version)
     if self.opts.mode_filter is not None:
       cmdline.append('--mode-filter=' + self.opts.mode_filter)
@@ -214,7 +214,7 @@ class TestHarness:
       else:
         cmdline.append('--parallel-instances=%d' % self.opts.parallel)
     if self.opts.svn_bin is not None:
-      cmdline.append('--bin=%s', self.opts.svn_bin)
+      cmdline.append('--bin=%s' % self.opts.svn_bin)
     if self.opts.url is not None:
       cmdline.append('--url=%s' % self.opts.url)
     if self.opts.fs_type is not None:

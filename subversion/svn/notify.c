@@ -253,6 +253,13 @@ notify_body(struct notify_baton *nb,
                     _("Skipped target: '%s' -- copy-source is missing\n"),
                     path_local));
         }
+      else if (n->content_state == svn_wc_notify_state_obstructed)
+        {
+          SVN_ERR(svn_cmdline_printf(
+                    pool,
+                    _("Skipped '%s' -- obstructed by unversioned node\n"),
+                    path_local));
+        }
       else
         {
           SVN_ERR(svn_cmdline_printf(pool, _("Skipped '%s'\n"), path_local));

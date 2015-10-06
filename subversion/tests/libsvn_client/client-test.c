@@ -34,6 +34,7 @@
 #include "private/svn_client_mtcc.h"
 #include "svn_repos.h"
 #include "svn_subst.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_wc_private.h"
 #include "svn_props.h"
 #include "svn_hash.h"
@@ -1014,8 +1015,7 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_TEST_ASSERT(results->nelts == i);
 
   if (opts->verbose)
-    qsort(results->elts, results->nelts, results->elt_size,
-          compare_status_paths);
+    svn_sort__array(results, compare_status_paths);
 
   for (i = 0; i < results->nelts; ++i)
     {

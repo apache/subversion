@@ -1729,7 +1729,7 @@ negotiate_encoding_prefs(request_rec *r, int *svndiff_version)
      httpd/modules/mappers/mod_negotiation.c).  Thus, we duplicate the
      necessary ones in this file. */
   int i;
-  const apr_array_header_t *encoding_prefs;
+  apr_array_header_t *encoding_prefs;
   encoding_prefs = do_header_line(r->pool,
                                   apr_table_get(r->headers_in,
                                                 "Accept-Encoding"));
@@ -1741,8 +1741,7 @@ negotiate_encoding_prefs(request_rec *r, int *svndiff_version)
     }
 
   *svndiff_version = 0;
-  qsort(encoding_prefs->elts, (size_t) encoding_prefs->nelts,
-        sizeof(accept_rec), sort_encoding_pref);
+  svn_sort__array(encoding_prefs, sort_encoding_pref);
   for (i = 0; i < encoding_prefs->nelts; i++)
     {
       struct accept_rec rec = APR_ARRAY_IDX(encoding_prefs, i,

@@ -64,7 +64,7 @@ struct svn_diff__hunk_range {
 
 struct svn_diff_hunk_t {
   /* The patch this hunk belongs to. */
-  svn_patch_t *patch;
+  const svn_patch_t *patch;
 
   /* APR file handle to the patch file this hunk came from. */
   apr_file_t *apr_file;
@@ -93,7 +93,7 @@ struct svn_diff_hunk_t {
 
 struct svn_diff_binary_patch_t {
   /* The patch this hunk belongs to. */
-  svn_patch_t *patch;
+  const svn_patch_t *patch;
 
   /* APR file handle to the patch file this hunk came from. */
   apr_file_t *apr_file;
@@ -117,7 +117,7 @@ struct svn_diff_binary_patch_t {
 static svn_error_t *
 add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
                           const char *line,
-                          svn_patch_t *patch,
+                          const svn_patch_t *patch,
                           svn_boolean_t add,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
@@ -202,11 +202,12 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
 svn_error_t *
 svn_diff_hunk__create_adds_single_line(svn_diff_hunk_t **hunk_out,
                                        const char *line,
-                                       svn_patch_t *patch,
+                                       const svn_patch_t *patch,
                                        apr_pool_t *result_pool,
                                        apr_pool_t *scratch_pool)
 {
-  SVN_ERR(add_or_delete_single_line(hunk_out, line, patch, TRUE,
+  SVN_ERR(add_or_delete_single_line(hunk_out, line, patch, 
+                                    (!patch->reverse),
                                     result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -214,11 +215,12 @@ svn_diff_hunk__create_adds_single_line(svn_diff_hunk_t **hunk_out,
 svn_error_t *
 svn_diff_hunk__create_deletes_single_line(svn_diff_hunk_t **hunk_out,
                                           const char *line,
-                                          svn_patch_t *patch,
+                                          const svn_patch_t *patch,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool)
 {
-  SVN_ERR(add_or_delete_single_line(hunk_out, line, patch, FALSE,
+  SVN_ERR(add_or_delete_single_line(hunk_out, line, patch,
+                                    patch->reverse,
                                     result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -653,6 +655,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
   apr_off_t pos;
   svn_stringbuf_t *str;
   const char *eol_p;
+  apr_pool_t *last_pool;
 
   if (!eol)
     eol = &eol_p;
@@ -669,13 +672,19 @@ hunk_readline_original_or_modified(apr_file_t *file,
   pos = 0;
   SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos,  scratch_pool));
   SVN_ERR(svn_io_file_seek(file, APR_SET, &range->current, scratch_pool));
+
+  /* It's not ITERPOOL because we use data allocated in LAST_POOL out
+     of the loop. */
+  last_pool = svn_pool_create(scratch_pool);
   do
     {
+      svn_pool_clear(last_pool);
+
       max_len = range->end - range->current;
       SVN_ERR(svn_io_file_readline(file, &str, eol, eof, max_len,
-                                   result_pool, scratch_pool));
+                                   last_pool, last_pool));
       range->current = 0;
-      SVN_ERR(svn_io_file_seek(file, APR_CUR, &range->current, scratch_pool));
+      SVN_ERR(svn_io_file_seek(file, APR_CUR, &range->current, last_pool));
       filtered = (str->data[0] == verboten || str->data[0] == '\\');
     }
   while (filtered && ! *eof);
@@ -697,7 +706,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
       *stringbuf = svn_stringbuf_dup(str, result_pool);
     }
 
-  if (!filtered && *eof && !*eol && !no_final_eol && *str->data)
+  if (!filtered && *eof && !*eol && *str->data)
     {
       /* Ok, we miss a final EOL in the patch file, but didn't see a
          no eol marker line.
@@ -705,7 +714,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
          We should report that we had an EOL or the patch code will
          misbehave (and it knows nothing about no eol markers) */
 
-      if (eol != &eol_p)
+      if (!no_final_eol && eol != &eol_p)
         {
           apr_off_t start = 0;
 
@@ -723,6 +732,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
     }
   SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
 
+  svn_pool_destroy(last_pool);
   return SVN_NO_ERROR;
 }
 
@@ -1139,12 +1149,12 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                 }
 
               SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &pos, iterpool));
+              /* Set for the type and context by using != the other type */
+              if (last_line_type != modified_line)
+                original_no_final_eol = TRUE;
+              if (last_line_type != original_line)
+                modified_no_final_eol = TRUE;
             }
-          /* Set for the type and context by using != the other type */
-          if (last_line_type != modified_line)
-            original_no_final_eol = TRUE;
-          if (last_line_type != original_line)
-            modified_no_final_eol = TRUE;
 
           continue;
         }
@@ -1157,7 +1167,13 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
           SVN_ERR(parse_mergeinfo(&found_mergeinfo, line, *hunk, patch,
                                   result_pool, iterpool));
           if (found_mergeinfo)
-            continue; /* Proceed to the next line in the patch. */
+            continue; /* Proceed to the next line in the svn:mergeinfo hunk. */
+          else
+            {
+              /* Perhaps we can also use original_lines/modified_lines here */
+
+              in_hunk = FALSE; /* On to next property */
+            }
         }
 
       if (in_hunk)
@@ -1590,10 +1606,11 @@ git_plus(enum parse_state *new_state, char *line, svn_patch_t *patch,
 }
 
 /* Helper for git_old_mode() and git_new_mode().  Translate the git
- * file mode MODE_STR into a binary "executable?" notion EXECUTABLE_P. */
+ * file mode MODE_STR into a binary "executable?" and "symlink?" state. */
 static svn_error_t *
-parse_bits_into_executability(svn_tristate_t *executable_p,
-                              const char *mode_str)
+parse_git_mode_bits(svn_tristate_t *executable_p,
+                    svn_tristate_t *symlink_p,
+                    const char *mode_str)
 {
   apr_uint64_t mode;
   SVN_ERR(svn_cstring_strtoui64(&mode, mode_str,
@@ -1629,6 +1646,24 @@ parse_bits_into_executability(svn_tristate_t *executable_p,
         break;
     }
 
+  switch (mode & 0170000 /* S_IFMT */)
+    {
+      case 0120000: /* S_IFLNK */
+        *symlink_p = svn_tristate_true;
+        break;
+
+      case 0100000: /* S_IFREG */
+      case 0040000: /* S_IFDIR */
+        *symlink_p = svn_tristate_false;
+        break;
+
+      default:
+        /* Ignore unknown values.
+           (Including those generated by Subversion <= 1.9) */
+        *symlink_p = svn_tristate_unknown;
+        break;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -1637,12 +1672,13 @@ static svn_error_t *
 git_old_mode(enum parse_state *new_state, char *line, svn_patch_t *patch,
              apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(parse_bits_into_executability(&patch->old_executable_p,
-                                        line + STRLEN_LITERAL("old mode ")));
+  SVN_ERR(parse_git_mode_bits(&patch->old_executable_bit,
+                              &patch->old_symlink_bit,
+                              line + STRLEN_LITERAL("old mode ")));
 
 #ifdef SVN_DEBUG
   /* If this assert trips, the "old mode" is neither ...644 nor ...755 . */
-  SVN_ERR_ASSERT(patch->old_executable_p != svn_tristate_unknown);
+  SVN_ERR_ASSERT(patch->old_executable_bit != svn_tristate_unknown);
 #endif
 
   *new_state = state_old_mode_seen;
@@ -1654,17 +1690,51 @@ static svn_error_t *
 git_new_mode(enum parse_state *new_state, char *line, svn_patch_t *patch,
              apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(parse_bits_into_executability(&patch->new_executable_p,
-                                        line + STRLEN_LITERAL("new mode ")));
+  SVN_ERR(parse_git_mode_bits(&patch->new_executable_bit,
+                              &patch->new_symlink_bit,
+                              line + STRLEN_LITERAL("new mode ")));
 
 #ifdef SVN_DEBUG
   /* If this assert trips, the "old mode" is neither ...644 nor ...755 . */
-  SVN_ERR_ASSERT(patch->new_executable_p != svn_tristate_unknown);
+  SVN_ERR_ASSERT(patch->new_executable_bit != svn_tristate_unknown);
 #endif
 
   /* Don't touch patch->operation. */
 
   *new_state = state_git_mode_seen;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+git_index(enum parse_state *new_state, char *line, svn_patch_t *patch,
+          apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  /* We either have something like "index 33e5b38..0000000" (which we just
+     ignore as we are not interested in git specific shas) or something like
+     "index 33e5b38..0000000 120000" which tells us the mode, that isn't
+     changed by applying this patch.
+
+     If the mode would have changed then we would see 'old mode' and 'new mode'
+     lines.
+  */
+  line = strchr(line + STRLEN_LITERAL("index "), ' ');
+
+  if (line && patch->new_executable_bit == svn_tristate_unknown
+           && patch->new_symlink_bit == svn_tristate_unknown
+           && patch->operation != svn_diff_op_added
+           && patch->operation != svn_diff_op_deleted)
+    {
+      SVN_ERR(parse_git_mode_bits(&patch->new_executable_bit,
+                                  &patch->new_symlink_bit,
+                                  line + 1));
+
+      /* There is no change.. so set the old values to the new values */
+      patch->old_executable_bit = patch->new_executable_bit;
+      patch->old_symlink_bit = patch->new_symlink_bit;
+    }
+
+  /* This function doesn't change the state! */
+  /* *new_state = *new_state */
   return SVN_NO_ERROR;
 }
 
@@ -1728,9 +1798,9 @@ static svn_error_t *
 git_new_file(enum parse_state *new_state, char *line, svn_patch_t *patch,
              apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(
-    parse_bits_into_executability(&patch->new_executable_p,
-                                  line + STRLEN_LITERAL("new file mode ")));
+  SVN_ERR(parse_git_mode_bits(&patch->new_executable_bit,
+                              &patch->new_symlink_bit,
+                              line + STRLEN_LITERAL("new file mode ")));
 
   patch->operation = svn_diff_op_added;
 
@@ -1745,9 +1815,9 @@ static svn_error_t *
 git_deleted_file(enum parse_state *new_state, char *line, svn_patch_t *patch,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  SVN_ERR(
-    parse_bits_into_executability(&patch->old_executable_p,
-                                  line + STRLEN_LITERAL("deleted file mode ")));
+  SVN_ERR(parse_git_mode_bits(&patch->old_executable_bit,
+                              &patch->old_symlink_bit,
+                              line + STRLEN_LITERAL("deleted file mode ")));
 
   patch->operation = svn_diff_op_deleted;
 
@@ -1762,8 +1832,6 @@ static svn_error_t *
 binary_patch_start(enum parse_state *new_state, char *line, svn_patch_t *patch,
              apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  patch->operation = svn_diff_op_modified;
-
   *new_state = state_binary_patch_found;
   return SVN_NO_ERROR;
 }
@@ -1896,7 +1964,6 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
 
   bpatch->apr_file = apr_file;
 
-  patch->operation = svn_diff_op_modified;
   patch->prop_patches = apr_hash_make(result_pool);
 
   pos = 0;
@@ -2034,8 +2101,13 @@ static struct transition transitions[] =
 
   {"deleted file ",     state_git_diff_seen,    git_deleted_file},
 
+  {"index ",            state_git_diff_seen,    git_index},
+  {"index ",            state_git_tree_seen,    git_index},
+  {"index ",            state_git_mode_seen,    git_index},
+
   {"GIT binary patch",  state_git_diff_seen,    binary_patch_start},
   {"GIT binary patch",  state_git_tree_seen,    binary_patch_start},
+  {"GIT binary patch",  state_git_mode_seen,    binary_patch_start},
 };
 
 svn_error_t *
@@ -2061,8 +2133,10 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
     }
 
   patch = apr_pcalloc(result_pool, sizeof(*patch));
-  patch->old_executable_p = svn_tristate_unknown;
-  patch->new_executable_p = svn_tristate_unknown;
+  patch->old_executable_bit = svn_tristate_unknown;
+  patch->new_executable_bit = svn_tristate_unknown;
+  patch->old_symlink_bit = svn_tristate_unknown;
+  patch->new_symlink_bit = svn_tristate_unknown;
 
   pos = patch_file->next_patch_offset;
   SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &pos, scratch_pool));
@@ -2113,17 +2187,13 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
                && line_after_tree_header_read
                && !valid_header_line)
         {
-          /* git patches can contain an index line after the file mode line */
-          if (!starts_with(line->data, "index "))
-          {
-            /* We have a valid diff header for a patch with only tree changes.
-             * Rewind to the start of the line just read, so subsequent calls
-             * to this function don't end up skipping the line -- it may
-             * contain a patch. */
-            SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &last_line,
-                    scratch_pool));
-            break;
-          }
+          /* We have a valid diff header for a patch with only tree changes.
+           * Rewind to the start of the line just read, so subsequent calls
+           * to this function don't end up skipping the line -- it may
+           * contain a patch. */
+          SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &last_line,
+                                   scratch_pool));
+          break;
         }
       else if (state == state_git_tree_seen
                || state == state_git_mode_seen)
@@ -2131,8 +2201,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
           line_after_tree_header_read = TRUE;
         }
       else if (! valid_header_line && state != state_start
-               && state != state_git_diff_seen
-               && !starts_with(line->data, "index "))
+               && state != state_git_diff_seen)
         {
           /* We've encountered an invalid diff header.
            *
@@ -2172,9 +2241,13 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
             break; /* Stays modify */
         }
 
-      ts_tmp = patch->old_executable_p;
-      patch->old_executable_p = patch->new_executable_p;
-      patch->new_executable_p = ts_tmp;
+      ts_tmp = patch->old_executable_bit;
+      patch->old_executable_bit = patch->new_executable_bit;
+      patch->new_executable_bit = ts_tmp;
+
+      ts_tmp = patch->old_symlink_bit;
+      patch->old_symlink_bit = patch->new_symlink_bit;
+      patch->new_symlink_bit = ts_tmp;
     }
 
   if (patch->old_filename == NULL || patch->new_filename == NULL)

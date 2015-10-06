@@ -1076,6 +1076,18 @@ svn_fs_fs__replace_dir_entry(void **data,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__reset_txn_filesize(void **data,
+                              apr_size_t *data_len,
+                              void *baton,
+                              apr_pool_t *pool)
+{
+  dir_data_t *dir_data = (dir_data_t *)*data;
+  dir_data->txn_filesize = SVN_INVALID_FILESIZE;
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t  *
 svn_fs_fs__serialize_rep_header(void **data,
                                 apr_size_t *data_len,
