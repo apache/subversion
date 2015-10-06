@@ -14,6 +14,7 @@ Status of 1.9.3:
 
 Candidate changes:
 ==================
+
  * r1701488
    Issue #4592 "fix contrib check-mime-type.pl for changes to 'svnlook proplist'
      output", http://subversion.tigris.org/issues/show_bug.cgi?id=4592
@@ -119,6 +120,13 @@ Candidate changes:
    Really pass patch result to svn_client_patch() filter 
    Justification:
      Without this fix the filter can't determine the result of a patch.
+   Votes:
+     +1: rhuijben
+
+ * r1706983, r1706999
+   Add some @since information to config defines
+   Justification:
+     Trivial correctness fix. Will propagate to documentation.
    Votes:
      +1: rhuijben
 
