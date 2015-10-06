@@ -267,7 +267,7 @@ svn_editor3_alter(svn_editor3_t *editor,
                                          : VALID_EID(new_parent_eid));*/
   /*SVN_ERR_ASSERT(eid == branch->root_eid ? *new_name == '\0'
                                          : VALID_NAME(new_name));*/
-  SVN_ERR_ASSERT(!new_payload || VALID_PAYLOAD(new_payload));
+  SVN_ERR_ASSERT(VALID_PAYLOAD(new_payload));
   VERIFY(alter, new_parent_eid != eid);
 
   DO_CALLBACK(editor, cb_alter,
@@ -291,7 +291,7 @@ svn_editor3_copy_one(svn_editor3_t *editor,
   SVN_ERR_ASSERT(VALID_REV_BID_EID(src_el_rev));
   SVN_ERR_ASSERT(VALID_EID(new_parent_eid));
   SVN_ERR_ASSERT(VALID_NAME(new_name));
-  SVN_ERR_ASSERT(! new_payload || VALID_PAYLOAD(new_payload));
+  SVN_ERR_ASSERT(VALID_PAYLOAD(new_payload));
   /* TODO: verify source element exists (in a committed rev) */
 
   DO_CALLBACK(editor, cb_copy_one,
@@ -341,14 +341,12 @@ svn_error_t *
 svn_editor3_payload_resolve(svn_editor3_t *editor,
                             svn_branch_el_rev_content_t *element)
 {
-  SVN_ERR_ASSERT(!element->payload
-                 || svn_element_payload_invariants(element->payload));
+  SVN_ERR_ASSERT(svn_element_payload_invariants(element->payload));
 
   DO_CALLBACK(editor, cb_payload_resolve,
               1(element));
 
-  SVN_ERR_ASSERT(!element->payload
-                 || svn_element_payload_invariants(element->payload));
+  SVN_ERR_ASSERT(svn_element_payload_invariants(element->payload));
   return SVN_NO_ERROR;
 }
 
@@ -516,7 +514,7 @@ wrap_alter(void *baton,
   dbg(eb, scratch_pool, "%s : alter(p=%s, n=%s, k=%s)",
       eid_str(eid, scratch_pool),
       eid_str(new_parent_eid, scratch_pool), new_name,
-      new_payload ? svn_node_kind_to_word(new_payload->kind) : "subbranch");
+      (!new_payload->is_subbranch_root) ? svn_node_kind_to_word(new_payload->kind) : "subbranch");
   SVN_ERR(svn_editor3_alter(eb->wrapped_editor,
                             branch_id, eid,
                             new_parent_eid, new_name, new_payload));

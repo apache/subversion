@@ -107,6 +107,10 @@ typedef struct svn_element_payload_t svn_element_payload_t;
  */
 struct svn_element_payload_t
 {
+  /* Is this a subbranch-root element, in other words a link to a nested
+   * branch? If so, all other fields are irrelevant. */
+  svn_boolean_t is_subbranch_root;
+
   /* The node kind for this payload: dir, file, symlink, or unknown. */
   svn_node_kind_t kind;
 
@@ -152,6 +156,14 @@ svn_boolean_t
 svn_element_payload_equal(const svn_element_payload_t *left,
                           const svn_element_payload_t *right,
                           apr_pool_t *scratch_pool);
+
+/** Create a new node-payload object for a subbranch-root (link to a
+ * nested branch).
+ *
+ * Allocate the result in @a result_pool.
+ */
+svn_element_payload_t *
+svn_element_payload_create_subbranch(apr_pool_t *result_pool);
 
 /** Create a new node-payload object by reference to an existing payload.
  *
