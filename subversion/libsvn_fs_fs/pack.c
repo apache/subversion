@@ -851,8 +851,8 @@ classify_nodes(path_order_t **path_order,
  */
 static void
 sort_reps_range(pack_context_t *context,
-                const path_order_t **path_order,
-                const path_order_t **temp,
+                path_order_t **path_order,
+                path_order_t **temp,
                 int first,
                 int last)
 {
