@@ -857,7 +857,7 @@ sort_reps_range(pack_context_t *context,
                 int last)
 {
   const svn_prefix_string__t *path;
-  int i, dest, best;
+  int i, dest;
   svn_fs_fs__id_part_t rep_id;
   fs_fs_data_t *ffd = context->fs->fsap_data;
 
@@ -874,49 +874,47 @@ sort_reps_range(pack_context_t *context,
    * We simply pick & chose from the existing path, rev order.
    */
   dest = first;
-  path = path_order[first]->path;
-  best = first;
 
-  /* (1) For each path, pick the "roundest" representation and put it in
-   * front of all other nodes in the pack file.  The "roundest" rep is
-   * the one most likely to be referenced from future pack files, i.e. we
-   * concentrate those potential "foreign link targets" in one section of
-   * the pack file.
+  /* (1) There are two classes of representations that are likely to be
+   * referenced from future shards.  These form a "hot zone" of mostly
+   * relevant data, i.e. we try to include as many reps as possible that
+   * are needed for future checkouts while trying to exclude as many as
+   * possible that are likely not needed in future checkouts.
    *
-   * And we only apply this to reps outside the linear deltification
-   * sections because references *into* linear deltification ranges are
-   * much less likely.
+   * First, "very round" representations from frequently changing nodes.
+   * That excludes many in-between representations not accessed from HEAD.
+   *
+   * The second class are infrequently changing nodes.  Because they are
+   * unlikely to change often in the future, they will remain relevant for
+   * HEAD even over long spans of revisions.  They are most likely the only
+   * thing we need from very old pack files.
    */
   for (i = first; i < last; ++i)
     {
-      /* Investigated all nodes for the current path? */
-      if (svn_prefix_string__compare(path, path_order[i]->path))
+      int round = roundness(path_order[i]->predecessor_count);
+
+      /* Class 1:
+       * Pretty round _and_ a significant stop in the node's delta chain.
+       * This may pick up more than one representation from the same chain
+       * but that's rare not a problem.  Prefer simple checks here. */
+      svn_boolean_t likely_target
+        =    (round >= ffd->max_linear_deltification)
+          && (4 * round >= path_order[i]->predecessor_count);
+
+      /* Class 2:
+       * Anything from short node chains.  The default of 16 is generous
+       * but we'd rather include to many than to few nodes here to keep
+       * seeks between different regions of this pack file at a minimum. */
+      svn_boolean_t likely_head
+        =   path_order[i]->predecessor_count
+          < ffd->max_linear_deltification;
+
+      /* Pick any node that from either class. */
+      if (likely_target || likely_head)
         {
-          /* next path */
-          path = path_order[i]->path;
-
-          /* Pick roundest non-linear deltified node. */
-          if (roundness(path_order[best]->predecessor_count)
-              >= ffd->max_linear_deltification)
-            {
-              temp[dest++] = path_order[best];
-              path_order[best] = NULL;
-              best = i;
-            }
+          temp[dest++] = path_order[i];
+          path_order[i] = NULL;
         }
-
-      /* next entry */
-      if (  roundness(path_order[best]->predecessor_count)
-          < roundness(path_order[i]->predecessor_count))
-        best = i;
-    }
-
-  /* Treat the last path the same as all others. */
-  if (roundness(path_order[best]->predecessor_count)
-      >= ffd->max_linear_deltification)
-    {
-      temp[dest++] = path_order[best];
-      path_order[best] = NULL;
     }
 
   /* (2) For each (remaining) path, pick the nodes along the delta chain
