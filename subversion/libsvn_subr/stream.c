@@ -1490,7 +1490,7 @@ svn_stringbuf_from_stream(svn_stringbuf_t **str,
 
   apr_size_t to_read = 0;
   svn_stringbuf_t *text
-    = svn_stringbuf_create_ensure(len_hint ? len_hint : MIN_READ_SIZE,
+    = svn_stringbuf_create_ensure(len_hint + MIN_READ_SIZE,
                                   result_pool);
 
   do
