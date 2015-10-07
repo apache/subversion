@@ -50,8 +50,8 @@ svn_min__help(apr_getopt_t *os,
   const char *config_path;
 
   char help_header[] =
-  N_("usage: svn <subcommand> [options] [args]\n"
-     "Subversion svn:mergeinfo normalization and reduction tool.\n"
+  N_("usage: svn-mergeinfo-normalizer <subcommand> [options] [args]\n"
+     "Subversion mergeinfo normalization and reduction tool.\n"
      "Type 'svn-mergeinfo-normalizer help <subcommand>' for help on a specific\n"
      "subcommand.  Type 'svn-mergeinfo-normalizer --version' to see the program\n"
      "version and RA modules or 'svn-mergeinfo-normalizer --version --quiet'\n"
