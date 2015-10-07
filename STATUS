@@ -130,6 +130,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1705843
+   Cleanup external registrations when they are user deleted
+   Justification:
+     When a directory external is gone remove its registration. Avoids
+     working copies with broken state.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
