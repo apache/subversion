@@ -710,10 +710,10 @@ svn_ra_serf__handle_server_error(svn_ra_serf__server_error_t *server_error,
     {
       /* Perhaps we already parsed some server generated message. Let's pass
          all information we can get.*/
-      if (err && server_error->items->nelts)
+      if (err)
         err = svn_error_compose_create(
-                err,
-                svn_ra_serf__server_error_create(handler, scratch_pool));
+          svn_ra_serf__server_error_create(handler, scratch_pool),
+          err);
 
       return svn_error_trace(err);
     }
