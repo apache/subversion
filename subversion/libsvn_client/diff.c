@@ -2017,11 +2017,15 @@ diff_repos_repos(const char **root_relpath,
 /* Perform a diff between a repository path and a working-copy path.
 
    PATH_OR_URL1 may be either a URL or a working copy path.  PATH2 is a
-   working copy path.  REVISION1 and REVISION2 are their respective
-   revisions.  If REVERSE is TRUE, the diff will be done in reverse.
-   If PEG_REVISION is specified, then PATH_OR_URL1 is the path in the peg
-   revision, and the actual repository path to be compared is
-   determined by following copy history.
+   working copy path.  REVISION1 is the revision of URL1. If PEG_REVISION1
+   is specified, then PATH_OR_URL1 is the path in the peg revision, and the
+   actual repository path to be compared is determined by following copy
+   history.
+
+   REVISION_KIND2 specifies which revision should be reported from the
+   working copy (BASE or WORKING)
+
+   If REVERSE is TRUE, the diff will be reported in reverse.
 
    All other options are the same as those passed to svn_client_diff6(). */
 static svn_error_t *
@@ -2030,9 +2034,9 @@ diff_repos_wc(const char **root_relpath,
               struct diff_driver_info_t *ddi,
               const char *path_or_url1,
               const svn_opt_revision_t *revision1,
-              const svn_opt_revision_t *peg_revision,
+              const svn_opt_revision_t *peg_revision1,
               const char *path2,
-              const svn_opt_revision_t *revision2,
+              enum svn_opt_revision_kind revision2_kind,
               svn_boolean_t reverse,
               svn_depth_t depth,
               svn_boolean_t ignore_ancestry,
@@ -2049,7 +2053,7 @@ diff_repos_wc(const char **root_relpath,
   void *reporter_baton;
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
-  svn_boolean_t rev2_is_base = (revision2->kind == svn_opt_revision_base);
+  svn_boolean_t rev2_is_base = (revision2_kind == svn_opt_revision_base);
   svn_boolean_t server_supports_depth;
   const char *abspath_or_url1;
   const char *abspath2;
@@ -2089,10 +2093,10 @@ diff_repos_wc(const char **root_relpath,
 
   SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc1,
                                             path_or_url1, abspath2,
-                                            peg_revision, revision1,
+                                            peg_revision1, revision1,
                                             ctx, scratch_pool));
 
-  if (revision2->kind == svn_opt_revision_base || !is_copy)
+  if (revision2_kind == svn_opt_revision_base || !is_copy)
     {
       /* Convert path_or_url1 to a URL to feed to do_diff. */
       SVN_ERR(svn_wc_get_actual_target2(&anchor, &target, ctx->wc_ctx, path2,
@@ -2236,7 +2240,7 @@ diff_repos_wc(const char **root_relpath,
 
 
 
-  if (is_copy && revision2->kind != svn_opt_revision_base)
+  if (is_copy && revision2_kind != svn_opt_revision_base)
     {
       /* Tell the RA layer we want a delta to change our txn to URL1 */
       SVN_ERR(svn_ra_do_diff3(ra_session,
@@ -2311,6 +2315,7 @@ do_diff(const char **root_relpath,
         const svn_opt_revision_t *revision1,
         const svn_opt_revision_t *revision2,
         const svn_opt_revision_t *peg_revision,
+        svn_boolean_t no_peg_revision,
         svn_depth_t depth,
         svn_boolean_t ignore_ancestry,
         const apr_array_header_t *changelists,
@@ -2331,7 +2336,7 @@ do_diff(const char **root_relpath,
     {
       if (is_repos2)
         {
-          /* ### Ignores 'show_copies_as_adds'. */
+          /* Ignores changelists. */
           SVN_ERR(diff_repos_repos(root_relpath, root_is_dir,
                                    ddi,
                                    path_or_url1, path_or_url2,
@@ -2344,8 +2349,11 @@ do_diff(const char **root_relpath,
       else /* path_or_url2 is a working copy path */
         {
           SVN_ERR(diff_repos_wc(root_relpath, root_is_dir, ddi,
-                                path_or_url1, revision1, peg_revision,
-                                path_or_url2, revision2, FALSE, depth,
+                                path_or_url1, revision1,
+                                no_peg_revision ? revision1
+                                                : peg_revision,
+                                path_or_url2, revision2->kind,
+                                FALSE, depth,
                                 ignore_ancestry, changelists,
                                 diff_processor, ctx,
                                 result_pool, scratch_pool));
@@ -2356,8 +2364,12 @@ do_diff(const char **root_relpath,
       if (is_repos2)
         {
           SVN_ERR(diff_repos_wc(root_relpath, root_is_dir, ddi,
-                                path_or_url2, revision2, peg_revision,
-                                path_or_url1, revision1, TRUE, depth,
+                                path_or_url2, revision2,
+                                no_peg_revision ? revision2
+                                                : peg_revision,
+                                path_or_url1,
+                                revision1->kind,
+                                TRUE, depth,
                                 ignore_ancestry, changelists,
                                 diff_processor, ctx,
                                 result_pool, scratch_pool));
@@ -2376,7 +2388,7 @@ do_diff(const char **root_relpath,
                                               scratch_pool));
 
               /* ### What about ddi? */
-
+              /* Ignores changelists, ignore_ancestry */
               SVN_ERR(svn_client__arbitrary_nodes_diff(root_relpath, root_is_dir,
                                                        abspath1, abspath2,
                                                        depth,
@@ -2580,7 +2592,8 @@ svn_client_diff6(const apr_array_header_t *options,
 
   return svn_error_trace(do_diff(NULL, NULL, &dwi.ddi,
                                  path_or_url1, path_or_url2,
-                                 revision1, revision2, &peg_revision,
+                                 revision1, revision2,
+                                 &peg_revision, TRUE /* no_peg_revision */,
                                  depth, ignore_ancestry, changelists,
                                  TRUE /* text_deltas */,
                                  diff_processor, ctx, pool, pool));
@@ -2663,7 +2676,8 @@ svn_client_diff_peg6(const apr_array_header_t *options,
 
   return svn_error_trace(do_diff(NULL, NULL, &dwi.ddi,
                                  path_or_url, path_or_url,
-                                 start_revision, end_revision, peg_revision,
+                                 start_revision, end_revision,
+                                 peg_revision, FALSE /* no_peg_revision */,
                                  depth, ignore_ancestry, changelists,
                                  TRUE /* text_deltas */,
                                  diff_processor, ctx, pool, pool));
@@ -2696,7 +2710,8 @@ svn_client_diff_summarize2(const char *path_or_url1,
 
   return svn_error_trace(do_diff(p_root_relpath, NULL, NULL,
                                  path_or_url1, path_or_url2,
-                                 revision1, revision2, &peg_revision,
+                                 revision1, revision2,
+                                 &peg_revision, TRUE /* no_peg_revision */,
                                  depth, ignore_ancestry, changelists,
                                  FALSE /* text_deltas */,
                                  diff_processor, ctx, pool, pool));
@@ -2725,7 +2740,8 @@ svn_client_diff_summarize_peg2(const char *path_or_url,
 
   return svn_error_trace(do_diff(p_root_relpath, NULL, NULL,
                                  path_or_url, path_or_url,
-                                 start_revision, end_revision, peg_revision,
+                                 start_revision, end_revision,
+                                 peg_revision, FALSE /* no_peg_revision */,
                                  depth, ignore_ancestry, changelists,
                                  FALSE /* text_deltas */,
                                  diff_processor, ctx, pool, pool));

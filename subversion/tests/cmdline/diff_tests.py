@@ -5088,6 +5088,59 @@ def diff_symlinks(sbox):
   ], [], 'diff', wc_dir, '--git')
 
 
+@Issue(4597)
+def diff_peg_resolve(sbox):
+  "peg resolving during diff"
+
+  sbox.build()
+  repo_url = sbox.repo_url
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', repo_url, '-m', 'Q',
+                                         'mkdir', 'branches',
+                                         'cp', 1, 'A', 'branches/A1',
+                                         'cp', 1, 'A', 'branches/A2',
+                                         'rm', 'A')
+
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', repo_url, '-m', 'Q2',
+                                         'rm', 'branches/A1')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'diff', repo_url + '/branches/A1@2',
+                                             sbox.wc_dir,
+                                     '--notice-ancestry')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'diff',
+                                     '--old=' + repo_url + '/branches/A1@2',
+                                     '--new=' + sbox.wc_dir,
+                                     '--git')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'diff',
+                                     '--old=' + repo_url + '/branches/A1@2',
+                                     '--new=' + repo_url + '/A@1',
+                                     '--git')
+
+  svntest.actions.run_and_verify_svn(None, '.*E160005: Target path.*A1',
+                                     'diff',
+                                     repo_url + '/branches/A1',
+                                     wc_dir,
+                                     '--summarize')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'diff',
+                                     repo_url + '/branches/A2',
+                                     wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, '.*E200009: .*mix.*',
+                                     'diff',
+                                     repo_url + '/branches/A2',
+                                     wc_dir, '-r1:2')
+
+
 ########################################################################
 #Run the tests
 
@@ -5182,6 +5235,7 @@ test_list = [ None,
               diff_incomplete,
               diff_incomplete_props,
               diff_symlinks,
+              diff_peg_resolve,
               ]
 
 if __name__ == '__main__':
