@@ -1351,8 +1351,6 @@ generate_propconflict(svn_boolean_t *conflict_remains,
         }
       case svn_wc_conflict_choose_merged:
         {
-          svn_stringbuf_t *merged_stringbuf;
-
           if (!cdesc->merged_file 
               && (!result->merged_file && !result->merged_value))
             return svn_error_create
@@ -1364,6 +1362,8 @@ generate_propconflict(svn_boolean_t *conflict_remains,
             new_value = result->merged_value;
           else
             {
+              svn_stringbuf_t *merged_stringbuf;
+
               SVN_ERR(svn_stringbuf_from_file2(&merged_stringbuf,
                                                result->merged_file ?
                                                     result->merged_file :
