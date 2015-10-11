@@ -1014,7 +1014,8 @@ close_revision(void *baton)
           apr_array_header_t *diff;
           int i;
 
-          SVN_ERR(svn_fs_revision_proplist(&orig_props, pb->fs, 0, rb->pool));
+          SVN_ERR(svn_fs_revision_proplist2(&orig_props, pb->fs, 0, FALSE,
+                                            rb->pool, rb->pool));
           new_props = svn_prop_array_to_hash(rb->revprops, rb->pool);
           SVN_ERR(svn_prop_diffs(&diff, new_props, orig_props, rb->pool));
 
@@ -1334,7 +1335,8 @@ revprops_close_revision(void *baton)
       prop->value = NULL;
     }
 
-  SVN_ERR(svn_fs_revision_proplist(&orig_props, pb->fs, rb->rev, rb->pool));
+  SVN_ERR(svn_fs_revision_proplist2(&orig_props, pb->fs, rb->rev, FALSE,
+                                    rb->pool, rb->pool));
   new_props = svn_prop_array_to_hash(rb->revprops, rb->pool);
   SVN_ERR(svn_prop_diffs(&diff, new_props, orig_props, rb->pool));
 

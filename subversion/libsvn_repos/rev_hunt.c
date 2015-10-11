@@ -171,7 +171,8 @@ svn_repos_get_committed_info(svn_revnum_t *committed_rev,
   SVN_ERR(svn_fs_node_created_rev(committed_rev, root, path, pool));
 
   /* Get the revision properties of this revision. */
-  SVN_ERR(svn_fs_revision_proplist(&revprops, fs, *committed_rev, pool));
+  SVN_ERR(svn_fs_revision_proplist2(&revprops, fs, *committed_rev, FALSE,
+                                    pool, pool));
 
   /* Extract date and author from these revprops. */
   committed_date_s = svn_hash_gets(revprops, SVN_PROP_REVISION_DATE);
