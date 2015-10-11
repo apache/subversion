@@ -1359,8 +1359,9 @@ send_path_revision(struct path_revision *path_rev,
   svn_pool_clear(sb->iterpool);
 
   /* Get the revision properties. */
-  SVN_ERR(svn_fs_revision_proplist(&rev_props, repos->fs,
-                                   path_rev->revnum, sb->iterpool));
+  SVN_ERR(svn_fs_revision_proplist2(&rev_props, repos->fs,
+                                    path_rev->revnum, FALSE,
+                                    sb->iterpool, sb->iterpool));
 
   /* Open the revision root. */
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, path_rev->revnum,
@@ -1594,6 +1595,10 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
       if (!SVN_IS_VALID_REVNUM(end))
         end = youngest_rev;
     }
+
+  /* Make sure we catch up on the latest revprop changes.  This is the only
+   * time we will refresh the revprop data in this query. */
+  SVN_ERR(svn_fs_refresh_revision_props(repos->fs, scratch_pool));
 
   if (end < start)
     {
