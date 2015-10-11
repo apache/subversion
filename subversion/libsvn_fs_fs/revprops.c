@@ -28,6 +28,7 @@
 
 #include "fs_fs.h"
 #include "revprops.h"
+#include "temp_serializer.h"
 #include "util.h"
 
 #include "private/svn_subr_private.h"
@@ -202,6 +203,25 @@ parse_revprop(apr_hash_t **properties,
                          revision));
 
   return SVN_NO_ERROR;
+}
+
+void
+svn_fs_fs__reset_revprop_cache(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  svn_stringbuf_setempty(ffd->revprop_prefix);
+}
+
+/* If FS has not a revprop cache prefix set, generate one.
+ * Always call this before accessing the revprop cache.
+ */
+static void
+prepare_revprop_cache(svn_fs_t *fs,
+                      apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  if (svn_stringbuf_isempty(ffd->revprop_prefix))
+    svn_stringbuf_set(ffd->revprop_prefix, svn_uuid_generate(scratch_pool));
 }
 
 /* Read the non-packed revprops for revision REV in FS, put them into the
@@ -598,6 +618,33 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
 
   /* should they be available at all? */
   SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, scratch_pool));
+
+  if (refresh)
+    {
+      /* Previous cache contents is invalid now. */
+      svn_fs_fs__reset_revprop_cache(fs);
+    }
+  else
+    {
+      /* Try cache lookup first. */
+      svn_boolean_t is_cached;
+      const char *key;
+
+      /* Auto-alloc prefix and construct the key. */
+      prepare_revprop_cache(fs, scratch_pool);
+      key = svn_fs_fs__combine_number_and_string(rev,
+                                                 ffd->revprop_prefix->data,
+                                                 scratch_pool);
+
+      /* The only way that this might error out is due to parser error. */
+      SVN_ERR_W(svn_cache__get((void **) proplist_p, &is_cached,
+                               ffd->revprop_cache, key, result_pool),
+                apr_psprintf(scratch_pool,
+                             "Failed to parse revprops for r%ld.",
+                             rev));
+      if (is_cached)
+        return SVN_NO_ERROR;
+    }
 
   /* if REV had not been packed when we began, try reading it from the
    * non-packed shard.  If that fails, we will fall through to packed
@@ -1060,6 +1107,9 @@ svn_fs_fs__set_revision_proplist(svn_fs_t *fs,
   else
     SVN_ERR(write_non_packed_revprop(&final_path, &tmp_path,
                                      fs, rev, proplist, pool));
+
+  /* Previous cache contents is invalid now. */
+  svn_fs_fs__reset_revprop_cache(fs);
 
   /* We use the rev file of this revision as the perms reference,
    * because when setting revprops for the first time, the revprop

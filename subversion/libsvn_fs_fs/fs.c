@@ -152,6 +152,8 @@ static svn_error_t *
 fs_refresh_revprops(svn_fs_t *fs,
                     apr_pool_t *scratch_pool)
 {
+  svn_fs_fs__reset_revprop_cache(fs);
+
   return SVN_NO_ERROR;
 }
 
@@ -289,6 +291,7 @@ initialize_fs_struct(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
   ffd->use_log_addressing = FALSE;
+  ffd->revprop_prefix = svn_stringbuf_create_empty(fs->pool);
 
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;

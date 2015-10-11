@@ -351,6 +351,15 @@ typedef struct fs_fs_data_t
      rep key (revision/offset) to svn_stringbuf_t. */
   svn_cache__t *fulltext_cache;
 
+  /* The current prefix to be used for revprop cache entries.
+     If this string is empty, a new unique prefix must be chosen. */
+  svn_stringbuf_t *revprop_prefix;
+
+  /* Revision property cache.  Maps from (rev,prefix) to apr_hash_t.
+     Unparsed svn_string_t representations of the serialized hash
+     will be written to the cache but the getter returns apr_hash_t. */
+  svn_cache__t *revprop_cache;
+
   /* Node properties cache.  Maps from rep key to apr_hash_t. */
   svn_cache__t *properties_cache;
 
