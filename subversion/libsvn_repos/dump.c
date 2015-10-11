@@ -1934,7 +1934,7 @@ write_revision_record(svn_stream_t *stream,
 
   if (include_revprops)
     {
-      SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, pool));
+      SVN_ERR(svn_fs_revision_proplist2(&props, fs, rev, FALSE, pool, pool));
 
       /* Run revision date properties through the time conversion to
         canonicalize them. */
@@ -1990,6 +1990,10 @@ svn_repos_dump_fs4(svn_repos_t *repos,
   svn_boolean_t found_old_reference = FALSE;
   svn_boolean_t found_old_mergeinfo = FALSE;
   svn_repos_notify_t *notify;
+
+  /* Make sure we catch up on the latest revprop changes.  This is the only
+   * time we will refresh the revprop data in this query. */
+  SVN_ERR(svn_fs_refresh_revision_props(fs, pool));
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
