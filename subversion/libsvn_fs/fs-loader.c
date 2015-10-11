@@ -1557,7 +1557,8 @@ svn_fs_revision_prop(svn_string_t **value_p, svn_fs_t *fs, svn_revnum_t rev,
                      const char *propname, apr_pool_t *pool)
 {
   return svn_error_trace(fs->vtable->revision_prop(value_p, fs, rev,
-                                                   propname, pool));
+                                                   propname, TRUE,
+                                                   pool, pool));
 }
 
 svn_error_t *
@@ -1565,7 +1566,7 @@ svn_fs_revision_proplist(apr_hash_t **table_p, svn_fs_t *fs, svn_revnum_t rev,
                          apr_pool_t *pool)
 {
   return svn_error_trace(fs->vtable->revision_proplist(table_p, fs, rev,
-                                                       pool));
+                                                       TRUE, pool, pool));
 }
 
 svn_error_t *

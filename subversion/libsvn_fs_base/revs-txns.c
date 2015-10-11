@@ -194,7 +194,9 @@ svn_error_t *
 svn_fs_base__revision_proplist(apr_hash_t **table_p,
                                svn_fs_t *fs,
                                svn_revnum_t rev,
-                               apr_pool_t *pool)
+                               svn_boolean_t refresh,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
   struct revision_proplist_args args;
   apr_hash_t *table;
@@ -204,9 +206,9 @@ svn_fs_base__revision_proplist(apr_hash_t **table_p,
   args.table_p = &table;
   args.rev = rev;
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_revision_proplist, &args,
-                                 FALSE, pool));
+                                 FALSE, result_pool));
 
-  *table_p = table ? table : apr_hash_make(pool);
+  *table_p = table ? table : apr_hash_make(result_pool);
   return SVN_NO_ERROR;
 }
 
@@ -216,7 +218,9 @@ svn_fs_base__revision_prop(svn_string_t **value_p,
                            svn_fs_t *fs,
                            svn_revnum_t rev,
                            const char *propname,
-                           apr_pool_t *pool)
+                           svn_boolean_t refresh,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   struct revision_proplist_args args;
   apr_hash_t *table;
@@ -227,7 +231,7 @@ svn_fs_base__revision_prop(svn_string_t **value_p,
   args.table_p = &table;
   args.rev = rev;
   SVN_ERR(svn_fs_base__retry_txn(fs, txn_body_revision_proplist, &args,
-                                 FALSE, pool));
+                                 FALSE, result_pool));
 
   /* And then the prop from that list (if there was a list). */
   *value_p = svn_hash_gets(table, propname);

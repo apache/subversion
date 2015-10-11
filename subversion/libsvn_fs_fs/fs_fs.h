@@ -224,13 +224,16 @@ svn_fs_fs__with_all_locks(svn_fs_t *fs,
                           void *baton,
                           apr_pool_t *pool);
 
-/* Find the value of the property named PROPNAME in transaction TXN.
+/* Find the value of the property named PROPNAME in revision REV.
    Return the contents in *VALUE_P.  The contents will be allocated
-   from POOL. */
+   from RESULT_POOL and SCRATCH_POOL is used for temporaries.
+   Invalidate any revprop cache is REFRESH is set. */
 svn_error_t *svn_fs_fs__revision_prop(svn_string_t **value_p, svn_fs_t *fs,
                                       svn_revnum_t rev,
                                       const char *propname,
-                                      apr_pool_t *pool);
+                                      svn_boolean_t refresh,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
 
 /* Change, add, or delete a property on a revision REV in filesystem
    FS.  NAME gives the name of the property, and value, if non-NULL,

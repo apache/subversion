@@ -2058,14 +2058,17 @@ svn_fs_fs__revision_prop(svn_string_t **value_p,
                          svn_fs_t *fs,
                          svn_revnum_t rev,
                          const char *propname,
-                         apr_pool_t *pool)
+                         svn_boolean_t refresh,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   apr_hash_t *table;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
-  SVN_ERR(svn_fs_fs__get_revision_proplist(&table, fs, rev, pool));
+  SVN_ERR(svn_fs_fs__get_revision_proplist(&table, fs, rev, refresh,
+                                           scratch_pool, scratch_pool));
 
-  *value_p = svn_hash_gets(table, propname);
+  *value_p = svn_string_dup(svn_hash_gets(table, propname), result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -2090,7 +2093,8 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
   apr_hash_t *table;
   const svn_string_t *present_value;
 
-  SVN_ERR(svn_fs_fs__get_revision_proplist(&table, cb->fs, cb->rev, pool));
+  SVN_ERR(svn_fs_fs__get_revision_proplist(&table, cb->fs, cb->rev, TRUE,
+                                           pool, pool));
   present_value = svn_hash_gets(table, cb->name);
 
   if (cb->old_value_p)

@@ -587,7 +587,9 @@ svn_error_t *
 svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
                                  svn_fs_t *fs,
                                  svn_revnum_t rev,
-                                 apr_pool_t *pool)
+                                 svn_boolean_t refresh,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
@@ -595,7 +597,7 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
   *proplist_p = NULL;
 
   /* should they be available at all? */
-  SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, pool));
+  SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, scratch_pool));
 
   /* if REV had not been packed when we began, try reading it from the
    * non-packed shard.  If that fails, we will fall through to packed
@@ -603,7 +605,7 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
   if (!svn_fs_fs__is_packed_revprop(fs, rev))
     {
       svn_error_t *err = read_non_packed_revprop(proplist_p, fs, rev,
-                                                 pool);
+                                                 result_pool);
       if (err)
         {
           if (!APR_STATUS_IS_ENOENT(err->apr_err)
@@ -621,7 +623,8 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT && !*proplist_p)
     {
       packed_revprops_t *revprops;
-      SVN_ERR(read_pack_revprop(&revprops, fs, rev, FALSE, pool));
+      SVN_ERR(read_pack_revprop(&revprops, fs, rev, FALSE,
+                                result_pool));
       *proplist_p = revprops->properties;
     }
 
