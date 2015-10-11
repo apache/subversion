@@ -88,7 +88,7 @@ svn_repos_dated_revision(svn_revnum_t *revision,
 
   /* Initialize top and bottom values of binary search. */
   SVN_ERR(svn_fs_youngest_rev(&rev_latest, fs, pool));
-  SVN_ERR(svn_fs_refresh_rev_props(fs, pool));
+  SVN_ERR(svn_fs_refresh_revision_props(fs, pool));
   rev_bot = 0;
   rev_top = rev_latest;
 
