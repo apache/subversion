@@ -484,7 +484,7 @@ get_revision_info(report_baton_t *b,
       SVN_ERR(svn_fs_revision_proplist2(&r_props,
                                         b->repos->fs,
                                         rev,
-                                        TRUE,
+                                        FALSE,
                                         scratch_pool,
                                         scratch_pool));
 
