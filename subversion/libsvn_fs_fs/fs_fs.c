@@ -2093,6 +2093,8 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
   apr_hash_t *table;
   const svn_string_t *present_value;
 
+  /* We always need to read the current revprops from disk.
+   * Hence, always "refresh" here. */
   SVN_ERR(svn_fs_fs__get_revision_proplist(&table, cb->fs, cb->rev, TRUE,
                                            pool, pool));
   present_value = svn_hash_gets(table, cb->name);

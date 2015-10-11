@@ -58,6 +58,10 @@ svn_fs_fs__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
                                          void *cancel_baton,
                                          apr_pool_t *scratch_pool);
 
+/* Invalidate the revprop cache in FS. */
+void
+svn_fs_fs__reset_revprop_cache(svn_fs_t *fs);
+
 /* Read the revprops for revision REV in FS and return them in *PROPERTIES_P.
  * If REFRESH is set, clear the revprop cache before accessing the data.
  *
