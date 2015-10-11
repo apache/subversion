@@ -139,9 +139,6 @@ typedef struct packed_revprops_t
   /* revision number to read (not necessarily the first in the pack) */
   svn_revnum_t revision;
 
-  /* current revprop generation. Used when populating the revprop cache */
-  apr_int64_t generation;
-
   /* the actual revision properties */
   apr_hash_t *properties;
 
@@ -184,9 +181,6 @@ typedef struct packed_revprops_t
 
 /* Parse the serialized revprops in CONTENT and return them in *PROPERTIES.
  * Also, put them into the revprop cache, if activated, for future use.
- * Three more parameters are being used to update the revprop cache: FS is
- * our file system, the revprops belong to REVISION and the global revprop
- * GENERATION is used as well.
  *
  * The returned hash will be allocated in POOL, SCRATCH_POOL is being used
  * for temporary allocations.
@@ -195,7 +189,6 @@ static svn_error_t *
 parse_revprop(apr_hash_t **properties,
               svn_fs_t *fs,
               svn_revnum_t revision,
-              apr_int64_t generation,
               svn_string_t *content,
               apr_pool_t *pool,
               apr_pool_t *scratch_pool)
@@ -211,8 +204,7 @@ parse_revprop(apr_hash_t **properties,
 }
 
 /* Read the non-packed revprops for revision REV in FS, put them into the
- * revprop cache if activated and return them in *PROPERTIES.  GENERATION
- * is the current revprop generation.
+ * revprop cache if activated and return them in *PROPERTIES. 
  *
  * If the data could not be read due to an otherwise recoverable error,
  * leave *PROPERTIES unchanged. No error will be returned in that case.
@@ -223,7 +215,6 @@ static svn_error_t *
 read_non_packed_revprop(apr_hash_t **properties,
                         svn_fs_t *fs,
                         svn_revnum_t rev,
-                        apr_int64_t generation,
                         apr_pool_t *pool)
 {
   svn_stringbuf_t *content = NULL;
@@ -244,7 +235,7 @@ read_non_packed_revprop(apr_hash_t **properties,
     }
 
   if (content)
-    SVN_ERR(parse_revprop(properties, fs, rev, generation,
+    SVN_ERR(parse_revprop(properties, fs, rev,
                           svn_stringbuf__morph_into_string(content),
                           pool, iterpool));
 
@@ -486,8 +477,7 @@ parse_packed_revprops(svn_fs_t *fs,
       if (revision == revprops->revision)
         {
           SVN_ERR(parse_revprop(&revprops->properties, fs, revision,
-                                revprops->generation, &serialized,
-                                pool, iterpool));
+                                &serialized, pool, iterpool));
           revprops->serialized_size = serialized.len;
 
           /* If we only wanted the revprops for REVISION then we are done. */
@@ -510,7 +500,8 @@ parse_packed_revprops(svn_fs_t *fs,
 }
 
 /* In filesystem FS, read the packed revprops for revision REV into
- * *REVPROPS.  Use GENERATION to populate the revprop cache, if enabled.
+ * *REVPROPS.
+ *
  * If you want to modify revprop contents / update REVPROPS, READ_ALL
  * must be set.  Otherwise, only the properties of REV are being provided.
  * Allocate data in POOL.
@@ -519,7 +510,6 @@ static svn_error_t *
 read_pack_revprop(packed_revprops_t **revprops,
                   svn_fs_t *fs,
                   svn_revnum_t rev,
-                  apr_int64_t generation,
                   svn_boolean_t read_all,
                   apr_pool_t *pool)
 {
@@ -540,7 +530,6 @@ read_pack_revprop(packed_revprops_t **revprops,
   /* initialize the result data structure */
   result = apr_pcalloc(pool, sizeof(*result));
   result->revision = rev;
-  result->generation = generation;
 
   /* try to read the packed revprops. This may require retries if we have
    * concurrent writers. */
@@ -593,7 +582,6 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
                                  apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  apr_int64_t generation = 0;
 
   /* not found, yet */
   *proplist_p = NULL;
@@ -607,7 +595,7 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
   if (!svn_fs_fs__is_packed_revprop(fs, rev))
     {
       svn_error_t *err = read_non_packed_revprop(proplist_p, fs, rev,
-                                                 generation, pool);
+                                                 pool);
       if (err)
         {
           if (!APR_STATUS_IS_ENOENT(err->apr_err)
@@ -625,7 +613,7 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
   if (ffd->format >= SVN_FS_FS__MIN_PACKED_REVPROP_FORMAT && !*proplist_p)
     {
       packed_revprops_t *revprops;
-      SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, FALSE, pool));
+      SVN_ERR(read_pack_revprop(&revprops, fs, rev, FALSE, pool));
       *proplist_p = revprops->properties;
     }
 
@@ -903,7 +891,6 @@ write_packed_revprop(const char **final_path,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   packed_revprops_t *revprops;
-  apr_int64_t generation = 0;
   svn_stream_t *stream;
   apr_file_t *file;
   svn_stringbuf_t *serialized;
@@ -911,7 +898,7 @@ write_packed_revprop(const char **final_path,
   int changed_index;
 
   /* read contents of the current pack file */
-  SVN_ERR(read_pack_revprop(&revprops, fs, rev, generation, TRUE, pool));
+  SVN_ERR(read_pack_revprop(&revprops, fs, rev, TRUE, pool));
 
   /* serialize the new revprops */
   serialized = svn_stringbuf_create_empty(pool);
