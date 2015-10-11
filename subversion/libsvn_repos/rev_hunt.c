@@ -65,8 +65,8 @@ get_time(apr_time_t *tm,
 {
   svn_string_t *date_str;
 
-  SVN_ERR(svn_fs_revision_prop(&date_str, fs, rev, SVN_PROP_REVISION_DATE,
-                               pool));
+  SVN_ERR(svn_fs_revision_prop2(&date_str, fs, rev, SVN_PROP_REVISION_DATE,
+                                FALSE, pool, pool));
   if (! date_str)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
@@ -88,6 +88,7 @@ svn_repos_dated_revision(svn_revnum_t *revision,
 
   /* Initialize top and bottom values of binary search. */
   SVN_ERR(svn_fs_youngest_rev(&rev_latest, fs, pool));
+  SVN_ERR(svn_fs_refresh_rev_props(fs, pool));
   rev_bot = 0;
   rev_top = rev_latest;
 
