@@ -218,6 +218,13 @@ x_info(const void **fsx_info,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+x_refresh_revprops(svn_fs_t *fs,
+                   apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
 /* Wrapper around svn_fs_x__revision_prop() adapting between function
    signatures. */
 static svn_error_t *
@@ -225,12 +232,12 @@ x_revision_prop(svn_string_t **value_p,
                 svn_fs_t *fs,
                 svn_revnum_t rev,
                 const char *propname,
-                apr_pool_t *pool)
+                svn_boolean_t refresh,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
-  SVN_ERR(svn_fs_x__revision_prop(value_p, fs, rev, propname, pool,
+  SVN_ERR(svn_fs_x__revision_prop(value_p, fs, rev, propname, result_pool,
                                   scratch_pool));
-  svn_pool_destroy(scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -241,14 +248,13 @@ static svn_error_t *
 x_revision_proplist(apr_hash_t **proplist_p,
                     svn_fs_t *fs,
                     svn_revnum_t rev,
-                    apr_pool_t *pool)
+                    svn_boolean_t refresh,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
-
   /* No need to bypass the caches for r/o access to revprops. */
   SVN_ERR(svn_fs_x__get_revision_proplist(proplist_p, fs, rev, FALSE,
-                                          pool, scratch_pool));
-  svn_pool_destroy(scratch_pool);
+                                          result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -285,6 +291,7 @@ x_begin_txn(svn_fs_txn_t **txn_p,
 /* The vtable associated with a specific open filesystem. */
 static fs_vtable_t fs_vtable = {
   svn_fs_x__youngest_rev,
+  x_refresh_revprops,
   x_revision_prop,
   x_revision_proplist,
   svn_fs_x__change_rev_prop,

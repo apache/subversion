@@ -471,6 +471,13 @@ bdb_write_config(svn_fs_t *fs)
 }
 
 static svn_error_t *
+base_bdb_refresh_revision(svn_fs_t *fs,
+                          apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 base_bdb_info_format(int *fs_format,
                      svn_version_t **supports_version,
                      svn_fs_t *fs,
@@ -545,6 +552,7 @@ base_bdb_freeze(svn_fs_t *fs,
 
 static fs_vtable_t fs_vtable = {
   svn_fs_base__youngest_rev,
+  base_bdb_refresh_revision,
   svn_fs_base__revision_prop,
   svn_fs_base__revision_proplist,
   svn_fs_base__change_rev_prop,

@@ -59,14 +59,18 @@ svn_fs_fs__upgrade_cleanup_pack_revprops(svn_fs_t *fs,
                                          apr_pool_t *scratch_pool);
 
 /* Read the revprops for revision REV in FS and return them in *PROPERTIES_P.
+ * If REFRESH is set, clear the revprop cache before accessing the data.
  *
- * Allocations will be done in POOL.
+ * The result will be allocated in RESULT_POOL; SCRATCH_POOL is used for
+ * temporaries.
  */
 svn_error_t *
 svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
                                  svn_fs_t *fs,
                                  svn_revnum_t rev,
-                                 apr_pool_t *pool);
+                                 svn_boolean_t refresh,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
 /* Set the revision property list of revision REV in filesystem FS to
    PROPLIST.  Use POOL for temporary allocations. */
