@@ -235,9 +235,10 @@ read_non_packed_revprop(apr_hash_t **properties,
     }
 
   if (content)
-    SVN_ERR(parse_revprop(properties, fs, rev,
-                          svn_stringbuf__morph_into_string(content),
-                          pool, iterpool));
+    {
+      svn_string_t *as_string = svn_stringbuf__morph_into_string(content);
+      SVN_ERR(parse_revprop(properties, fs, rev, as_string, pool, iterpool));
+    }
 
   svn_pool_clear(iterpool);
 
