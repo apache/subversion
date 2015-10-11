@@ -378,7 +378,8 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
            * to the hooks to be accurate. */
           svn_string_t *old_value2;
 
-          SVN_ERR(svn_fs_revision_prop(&old_value2, repos->fs, rev, name, pool));
+          SVN_ERR(svn_fs_revision_prop2(&old_value2, repos->fs, rev, name,
+                                        FALSE, pool, pool));
           old_value = old_value2;
         }
 
@@ -448,12 +449,13 @@ svn_repos_fs_revision_prop(svn_string_t **value_p,
         *value_p = NULL;
 
       else
-        SVN_ERR(svn_fs_revision_prop(value_p, repos->fs,
-                                     rev, propname, pool));
+        SVN_ERR(svn_fs_revision_prop2(value_p, repos->fs,
+                                      rev, propname, FALSE, pool, pool));
     }
   else /* wholly readable revision */
     {
-      SVN_ERR(svn_fs_revision_prop(value_p, repos->fs, rev, propname, pool));
+      SVN_ERR(svn_fs_revision_prop2(value_p, repos->fs, rev, propname, FALSE,
+                                    pool, pool));
     }
 
   return SVN_NO_ERROR;
@@ -486,7 +488,8 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
       svn_string_t *value;
 
       /* Produce two property hashtables, both in POOL. */
-      SVN_ERR(svn_fs_revision_proplist(&tmphash, repos->fs, rev, pool));
+      SVN_ERR(svn_fs_revision_proplist2(&tmphash, repos->fs, rev, FALSE,
+                                        pool, pool));
       *table_p = apr_hash_make(pool);
 
       /* If they exist, we only copy svn:author and svn:date into the
@@ -501,7 +504,8 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
     }
   else /* wholly readable revision */
     {
-      SVN_ERR(svn_fs_revision_proplist(table_p, repos->fs, rev, pool));
+      SVN_ERR(svn_fs_revision_proplist2(table_p, repos->fs, rev, FALSE,
+                                        pool, pool));
     }
 
   return SVN_NO_ERROR;
