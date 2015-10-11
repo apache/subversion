@@ -2515,11 +2515,70 @@ svn_fs_deltify_revision(svn_fs_t *fs,
                         svn_revnum_t revision,
                         apr_pool_t *pool);
 
+/** Make sure that all completed revision property changes to the filesystem
+ * underlying @a fs are actually visible through @a fs.  Use @a scratch_pool
+ * for temporary allocations.
+ *
+ * This is an explicit synchronization barrier for revprop changes made
+ * through different #svn_fs_t for the same underlying filesystem. Any
+ * revprop change through @a fs acts as an implicit barrier, i.e. that
+ * object will see all completed revprop changes up to an including its own.
+ * Only #svn_fs_revision_prop2 and #svn_fs_revision_proplist2 have an option
+ * to not synchronize with on-disk data and potentially return outdated data
+ * as old as the last barrier.
+ *
+ * The intended use of this is implementing efficient queries in upper layers
+ * where the result only needs to include all changes up the the start of
+ * that query but does not need to pick up on changes while the query is
+ * running:
+ *
+ * @code
+     SVN_ERR(svn_fs_deltify_revision(fs, pool);
+     for (i = 0; i < n; i++)
+       SVN_ERR(svn_fs_revision_prop2(&authors[i], fs, revs[i], "svn:author",
+                                     FALSE, pool, pool)); @endcode
+ *
+ * @see svn_fs_revision_prop2, svn_fs_revision_proplist2
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_fs_refresh_revision_props(svn_fs_t *fs,
+                              apr_pool_t *scratch_pool);
 
 /** Set @a *value_p to the value of the property named @a propname on
  * revision @a rev in the filesystem @a fs.  If @a rev has no property by
- * that name, set @a *value_p to zero.  Allocate the result in @a pool.
+ * that name, set @a *value_p to zero.
+ *
+ * If @a refresh is set, this call acts as a read barrier and is guaranteed
+ * to return the latest value.  Otherwise, it may return data as old as the
+ * last synchronization point but can be much faster to access - in
+ * particular for packed repositories.
+ *
+ * Allocate the result in @a result_pool and use @a scratch_pool for
+ * temporary allocations.
+ *
+ * @see svn_fs_refresh_revision_props
+ *
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_fs_revision_prop2(svn_string_t **value_p,
+                      svn_fs_t *fs,
+                      svn_revnum_t rev,
+                      const char *propname,
+                      svn_boolean_t refresh,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+/** Like #svn_fs_revision_prop2 but using @a pool for @a scratch_pool as
+ * well as @a result_pool and setting @a refresh to #TRUE.
+ *
+ * @see svn_fs_refresh_revision_props
+ *
+ * @deprecated For backward compatibility with 1.9.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_revision_prop(svn_string_t **value_p,
                      svn_fs_t *fs,
@@ -2531,14 +2590,40 @@ svn_fs_revision_prop(svn_string_t **value_p,
 /** Set @a *table_p to the entire property list of revision @a rev in
  * filesystem @a fs, as an APR hash table allocated in @a pool.  The table
  * maps <tt>char *</tt> property names to #svn_string_t * values; the names
- * and values are allocated in @a pool.
+ * and values are allocated in @a result_pool.  Use @a scratch_pool for
+ * temporary allocations.
+ *
+ * If @a refresh is set, this call acts as a read barrier and is guaranteed
+ * to return the latest value.  Otherwise, it may return data as old as the
+ * last synchronization point but can be much faster to access - in
+ * particular for packed repositories.
+ *
+ * @see svn_fs_refresh_revision_props
+ *
+ * @since New in 1.10.
+ *
  */
+svn_error_t *
+svn_fs_revision_proplist2(apr_hash_t **table_p,
+                          svn_fs_t *fs,
+                          svn_revnum_t rev,
+                          svn_boolean_t refresh,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/** Like svn_fs_revision_proplist2 but using @a pool for @a scratch_pool as
+ * well as @a result_pool and setting @a refresh to #TRUE.
+ *
+ * @see svn_fs_refresh_revision_props
+ *
+ * @deprecated For backward compatibility with 1.9.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_revision_proplist(apr_hash_t **table_p,
                          svn_fs_t *fs,
                          svn_revnum_t rev,
                          apr_pool_t *pool);
-
 
 /** Change a revision's property's value, or add/delete a property.
  *

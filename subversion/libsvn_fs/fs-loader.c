@@ -1553,20 +1553,39 @@ svn_fs_deltify_revision(svn_fs_t *fs, svn_revnum_t revision, apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_fs_revision_prop(svn_string_t **value_p, svn_fs_t *fs, svn_revnum_t rev,
-                     const char *propname, apr_pool_t *pool)
+svn_fs_refresh_revision_props(svn_fs_t *fs,
+                              apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(fs->vtable->revision_prop(value_p, fs, rev,
-                                                   propname, TRUE,
-                                                   pool, pool));
+  return svn_error_trace(fs->vtable->refresh_revprops(fs, scratch_pool));
 }
 
 svn_error_t *
-svn_fs_revision_proplist(apr_hash_t **table_p, svn_fs_t *fs, svn_revnum_t rev,
-                         apr_pool_t *pool)
+svn_fs_revision_prop2(svn_string_t **value_p,
+                      svn_fs_t *fs,
+                      svn_revnum_t rev,
+                      const char *propname,
+                      svn_boolean_t refresh,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(fs->vtable->revision_prop(value_p, fs, rev,
+                                                   propname, refresh,
+                                                   result_pool,
+                                                   scratch_pool));
+}
+
+svn_error_t *
+svn_fs_revision_proplist2(apr_hash_t **table_p,
+                          svn_fs_t *fs,
+                          svn_revnum_t rev,
+                          svn_boolean_t refresh,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
 {
   return svn_error_trace(fs->vtable->revision_proplist(table_p, fs, rev,
-                                                       TRUE, pool, pool));
+                                                       refresh,
+                                                       result_pool,
+                                                       scratch_pool));
 }
 
 svn_error_t *
