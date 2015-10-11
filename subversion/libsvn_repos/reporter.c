@@ -481,10 +481,12 @@ get_revision_info(report_baton_t *b,
     {
       /* Info is not available, yet.
          Get all revprops. */
-      SVN_ERR(svn_fs_revision_proplist(&r_props,
-                                       b->repos->fs,
-                                       rev,
-                                       scratch_pool));
+      SVN_ERR(svn_fs_revision_proplist2(&r_props,
+                                        b->repos->fs,
+                                        rev,
+                                        TRUE,
+                                        scratch_pool,
+                                        scratch_pool));
 
       /* Extract the committed-date. */
       cdate = svn_hash_gets(r_props, SVN_PROP_REVISION_DATE);
@@ -1548,6 +1550,7 @@ svn_repos_finish_report(void *baton, apr_pool_t *pool)
 {
   report_baton_t *b = baton;
 
+  SVN_ERR(svn_fs_refresh_revision_props(svn_repos_fs(b->repos), pool));
   return svn_error_trace(finish_report(b, pool));
 }
 
