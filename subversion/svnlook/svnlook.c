@@ -43,6 +43,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_repos.h"
+#include "svn_cache_config.h"
 #include "svn_fs.h"
 #include "svn_time.h"
 #include "svn_utf.h"
@@ -143,6 +144,13 @@ static const apr_getopt_option_t options_table[] =
 
   {"properties-only",   svnlook__properties_only, 0,
    N_("show only properties during the operation")},
+
+  {"memory-cache-size", 'M', 1,
+   N_("size of the extra in-memory cache in MB used to\n"
+      "                             "
+      "minimize redundant operations. Default: 16.\n"
+      "                             "
+      "[used for FSFS repositories only]")},
 
   {"no-newline",        svnlook__no_newline, 0,
    N_("do not output the trailing newline")},
@@ -296,7 +304,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    N_("usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\n"
       "Print the tree, starting at PATH_IN_REPOS (if supplied, at the root\n"
       "of the tree otherwise), optionally showing node revision ids.\n"),
-   {'r', 't', 'N', svnlook__show_ids, svnlook__full_paths} },
+   {'r', 't', 'N', svnlook__show_ids, svnlook__full_paths, 'M'} },
 
   {"uuid", subcommand_uuid, {0},
    N_("usage: svnlook uuid REPOS_PATH\n\n"
@@ -340,6 +348,7 @@ struct svnlook_opt_state
   const char *diff_cmd;           /* --diff-cmd */
   svn_boolean_t show_inherited_props; /*  --show-inherited-props */
   svn_boolean_t no_newline;       /* --no-newline */
+  apr_uint64_t memory_cache_size; /* --memory-cache-size */
 };
 
 
@@ -2489,6 +2498,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* Initialize opt_state. */
   memset(&opt_state, 0, sizeof(opt_state));
   opt_state.rev = SVN_INVALID_REVNUM;
+  opt_state.memory_cache_size = svn_cache_config_get()->cache_size;
 
   /* Parse options. */
   SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
@@ -2528,6 +2538,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
         case 't':
           opt_state.txn = opt_arg;
+          break;
+
+        case 'M':
+          opt_state.memory_cache_size
+            = 0x100000 * apr_strtoi64(opt_arg, NULL, 0);
           break;
 
         case 'N':
@@ -2824,6 +2839,17 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
    * large file support will crash the program, which is uncool. */
   apr_signal(SIGXFSZ, SIG_IGN);
 #endif
+
+  /* Configure FSFS caches for maximum efficiency with svnadmin.
+   * Also, apply the respective command line parameters, if given. */
+  {
+    svn_cache_config_t settings = *svn_cache_config_get();
+
+    settings.cache_size = opt_state.memory_cache_size;
+    settings.single_threaded = TRUE;
+
+    svn_cache_config_set(&settings);
+  }
 
   /* Run the subcommand. */
   err = (*subcommand->cmd_func)(os, &opt_state, pool);
