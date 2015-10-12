@@ -2329,7 +2329,7 @@ verify_one_revision(svn_fs_t *fs,
      do this for completeness. */
   SVN_ERR(cancel_editor->close_edit(cancel_edit_baton, scratch_pool));
 
-  SVN_ERR(svn_fs_revision_proplist2(&props, fs, rev, TRUE, scratch_pool,
+  SVN_ERR(svn_fs_revision_proplist2(&props, fs, rev, FALSE, scratch_pool,
                                     scratch_pool));
 
   return SVN_NO_ERROR;
