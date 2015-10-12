@@ -1934,7 +1934,7 @@ write_revision_record(svn_stream_t *stream,
 
   if (include_revprops)
     {
-      SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, pool));
+      SVN_ERR(svn_fs_revision_proplist2(&props, fs, rev, FALSE, pool, pool));
 
       /* Run revision date properties through the time conversion to
         canonicalize them. */
@@ -1990,6 +1990,10 @@ svn_repos_dump_fs4(svn_repos_t *repos,
   svn_boolean_t found_old_reference = FALSE;
   svn_boolean_t found_old_mergeinfo = FALSE;
   svn_repos_notify_t *notify;
+
+  /* Make sure we catch up on the latest revprop changes.  This is the only
+   * time we will refresh the revprop data in this query. */
+  SVN_ERR(svn_fs_refresh_revision_props(fs, pool));
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -2325,7 +2329,8 @@ verify_one_revision(svn_fs_t *fs,
      do this for completeness. */
   SVN_ERR(cancel_editor->close_edit(cancel_edit_baton, scratch_pool));
 
-  SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, scratch_pool));
+  SVN_ERR(svn_fs_revision_proplist2(&props, fs, rev, FALSE, scratch_pool,
+                                    scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2404,6 +2409,10 @@ svn_repos_verify_fs3(svn_repos_t *repos,
   svn_fs_progress_notify_func_t verify_notify = NULL;
   struct verify_fs_notify_func_baton_t *verify_notify_baton = NULL;
   svn_error_t *err;
+
+  /* Make sure we catch up on the latest revprop changes.  This is the only
+   * time we will refresh the revprop data in this query. */
+  SVN_ERR(svn_fs_refresh_revision_props(fs, pool));
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));

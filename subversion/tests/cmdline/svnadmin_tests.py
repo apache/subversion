@@ -3304,7 +3304,7 @@ test_list = [ None,
               fsfs_pack_non_sharded,
               load_revprops,
               dump_revprops,
-              dump_no_op_change
+              dump_no_op_change,
              ]
 
 if __name__ == '__main__':

@@ -1429,7 +1429,7 @@ test_list = [ None,
               effective_sync_results_in_reintegrate,
               reintegrate_subtree_not_updated,
               merge_to_copy_and_add,
-              merge_delete_crlf_file
+              merge_delete_crlf_file,
              ]
 
 if __name__ == '__main__':

@@ -214,11 +214,11 @@ invoke_commit_cb(svn_commit_callback2_t commit_cb,
   if (commit_cb == NULL)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_fs_revision_prop(&date, fs, revision, SVN_PROP_REVISION_DATE,
-                               scratch_pool));
-  SVN_ERR(svn_fs_revision_prop(&author, fs, revision,
-                               SVN_PROP_REVISION_AUTHOR,
-                               scratch_pool));
+  SVN_ERR(svn_fs_revision_prop2(&date, fs, revision, SVN_PROP_REVISION_DATE,
+                                TRUE, scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_revision_prop2(&author, fs, revision,
+                                SVN_PROP_REVISION_AUTHOR,
+                                TRUE, scratch_pool, scratch_pool));
 
   commit_info = svn_create_commit_info(scratch_pool);
 

@@ -1351,8 +1351,6 @@ generate_propconflict(svn_boolean_t *conflict_remains,
         }
       case svn_wc_conflict_choose_merged:
         {
-          svn_stringbuf_t *merged_stringbuf;
-
           if (!cdesc->merged_file 
               && (!result->merged_file && !result->merged_value))
             return svn_error_create
@@ -1364,6 +1362,8 @@ generate_propconflict(svn_boolean_t *conflict_remains,
             new_value = result->merged_value;
           else
             {
+              svn_stringbuf_t *merged_stringbuf;
+
               SVN_ERR(svn_stringbuf_from_file2(&merged_stringbuf,
                                                result->merged_file ?
                                                     result->merged_file :
@@ -2472,15 +2472,12 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
 
           if (!merged_value)
             {
-              svn_stream_t *stream;
-              svn_string_t *merged_propval;
+              svn_stringbuf_t *merged_propval;
 
-              SVN_ERR(svn_stream_open_readonly(&stream, merged_file,
-                                               scratch_pool, scratch_pool));
-              SVN_ERR(svn_string_from_stream(&merged_propval, stream,
-                                             scratch_pool, scratch_pool));
+              SVN_ERR(svn_stringbuf_from_file2(&merged_propval, merged_file,
+                                               scratch_pool));
 
-              merged_value = merged_propval;
+              merged_value = svn_stringbuf__morph_into_string(merged_propval);
             }
           svn_hash_sets(resolve_from, conflicted_propname, merged_value);
         }
