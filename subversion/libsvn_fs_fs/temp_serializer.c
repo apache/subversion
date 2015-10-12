@@ -663,6 +663,44 @@ svn_fs_fs__deserialize_properties(void **out,
 }
 
 svn_error_t *
+svn_fs_fs__serialize_revprops(void **data,
+                              apr_size_t *data_len,
+                              void *in,
+                              apr_pool_t *pool)
+{
+  svn_string_t *buffer = in;
+
+  *data = (void *)buffer->data;
+  *data_len = buffer->len;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__deserialize_revprops(void **out,
+                                void *data,
+                                apr_size_t data_len,
+                                apr_pool_t *pool)
+{
+  apr_hash_t *properties;
+  svn_stream_t *stream;
+
+  svn_string_t buffer;
+  buffer.data = data;
+  buffer.len = data_len;
+
+  stream = svn_stream_from_string(&buffer, pool);
+  properties = svn_hash__make(pool);
+
+  SVN_ERR(svn_hash_read2(properties, stream, SVN_HASH_TERMINATOR, pool));
+
+  /* done */
+  *out = properties;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_fs__serialize_id(void **data,
                         apr_size_t *data_len,
                         void *in,

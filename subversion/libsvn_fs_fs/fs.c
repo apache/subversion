@@ -148,6 +148,15 @@ svn_fs_fs__initialize_shared_data(svn_fs_t *fs,
 
 
 
+static svn_error_t *
+fs_refresh_revprops(svn_fs_t *fs,
+                    apr_pool_t *scratch_pool)
+{
+  svn_fs_fs__reset_revprop_cache(fs);
+
+  return SVN_NO_ERROR;
+}
+
 /* This function is provided for Subversion 1.0.x compatibility.  It
    has no effect for fsfs backed Subversion filesystems.  It conforms
    to the fs_library_vtable_t.bdb_set_errcall() API. */
@@ -249,6 +258,7 @@ fs_set_uuid(svn_fs_t *fs,
 /* The vtable associated with a specific open filesystem. */
 static fs_vtable_t fs_vtable = {
   svn_fs_fs__youngest_rev,
+  fs_refresh_revprops,
   svn_fs_fs__revision_prop,
   svn_fs_fs__get_revision_proplist,
   svn_fs_fs__change_rev_prop,
@@ -281,6 +291,7 @@ initialize_fs_struct(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
   ffd->use_log_addressing = FALSE;
+  ffd->revprop_prefix = svn_stringbuf_create_empty(fs->pool);
 
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;

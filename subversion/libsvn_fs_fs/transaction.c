@@ -1565,7 +1565,6 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
           const char *key
             = svn_fs_fs__id_unparse(parent_noderev->id, subpool)->data;
           svn_fs_fs__dir_data_t dir_data;
-          svn_filesize_t filesize;
 
           /* Flush APR buffers. */
           SVN_ERR(svn_io_file_flush(file, subpool));

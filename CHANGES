@@ -118,7 +118,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * fsfs: enable dir and prop deltas by default for formats that support
       it (r1555286)
     * fsfs: avoid out of date errors from files in a directory changing when
-      you change a property on the directory (r1558224)
+      you change a property on the directory (issue #2118)
     * fsfs: temporary transaction properties are preserved when commit is
       interrupted (r1549907 et al)
     * fsfs: speed up transaction creation (r1544719)

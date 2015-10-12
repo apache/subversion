@@ -506,6 +506,21 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        no_handler,
                        fs->pool, pool));
 
+  /* if enabled, cache revprops */
+  SVN_ERR(create_cache(&(ffd->revprop_cache),
+                       NULL,
+                       membuffer,
+                       0, 0, /* Do not use inprocess cache */
+                       svn_fs_fs__serialize_revprops,
+                       svn_fs_fs__deserialize_revprops,
+                       APR_HASH_KEY_STRING,
+                       apr_pstrcat(pool, prefix, "REVPROP", SVN_VA_NULL),
+                       SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                       TRUE, /* contents is short-lived */
+                       fs,
+                       no_handler,
+                       fs->pool, pool));
+
   /* if enabled, cache fulltext and other derived information */
   if (cache_fulltexts)
     {

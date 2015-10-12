@@ -426,8 +426,8 @@ get_property(svn_string_t **prop_value,
 
   /* ...or revision property -- it's your call. */
   else
-    SVN_ERR(svn_fs_revision_prop(&raw_value, c->fs, c->rev_id,
-                                 prop_name, pool));
+    SVN_ERR(svn_fs_revision_prop2(&raw_value, c->fs, c->rev_id,
+                                  prop_name, TRUE, pool, pool));
 
   *prop_value = raw_value;
 
@@ -756,8 +756,9 @@ generate_label(const char **label,
       if (svn_fs_is_revision_root(root))
         {
           rev = svn_fs_revision_root_revision(root);
-          SVN_ERR(svn_fs_revision_prop(&date, fs, rev,
-                                       SVN_PROP_REVISION_DATE, pool));
+          SVN_ERR(svn_fs_revision_prop2(&date, fs, rev,
+                                        SVN_PROP_REVISION_DATE, TRUE,
+                                        pool, pool));
         }
       else
         {
@@ -1876,7 +1877,8 @@ do_plist(svnlook_ctxt_t *c,
     }
   else if (c->is_revision)
     {
-      SVN_ERR(svn_fs_revision_proplist(&props, c->fs, c->rev_id, pool));
+      SVN_ERR(svn_fs_revision_proplist2(&props, c->fs, c->rev_id, TRUE,
+                                        pool, pool));
       revprop = TRUE;
     }
   else

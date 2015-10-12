@@ -65,8 +65,8 @@ get_time(apr_time_t *tm,
 {
   svn_string_t *date_str;
 
-  SVN_ERR(svn_fs_revision_prop(&date_str, fs, rev, SVN_PROP_REVISION_DATE,
-                               pool));
+  SVN_ERR(svn_fs_revision_prop2(&date_str, fs, rev, SVN_PROP_REVISION_DATE,
+                                FALSE, pool, pool));
   if (! date_str)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
@@ -88,6 +88,7 @@ svn_repos_dated_revision(svn_revnum_t *revision,
 
   /* Initialize top and bottom values of binary search. */
   SVN_ERR(svn_fs_youngest_rev(&rev_latest, fs, pool));
+  SVN_ERR(svn_fs_refresh_revision_props(fs, pool));
   rev_bot = 0;
   rev_top = rev_latest;
 
@@ -170,7 +171,8 @@ svn_repos_get_committed_info(svn_revnum_t *committed_rev,
   SVN_ERR(svn_fs_node_created_rev(committed_rev, root, path, pool));
 
   /* Get the revision properties of this revision. */
-  SVN_ERR(svn_fs_revision_proplist(&revprops, fs, *committed_rev, pool));
+  SVN_ERR(svn_fs_revision_proplist2(&revprops, fs, *committed_rev, TRUE,
+                                    pool, pool));
 
   /* Extract date and author from these revprops. */
   committed_date_s = svn_hash_gets(revprops, SVN_PROP_REVISION_DATE);
@@ -1358,8 +1360,9 @@ send_path_revision(struct path_revision *path_rev,
   svn_pool_clear(sb->iterpool);
 
   /* Get the revision properties. */
-  SVN_ERR(svn_fs_revision_proplist(&rev_props, repos->fs,
-                                   path_rev->revnum, sb->iterpool));
+  SVN_ERR(svn_fs_revision_proplist2(&rev_props, repos->fs,
+                                    path_rev->revnum, FALSE,
+                                    sb->iterpool, sb->iterpool));
 
   /* Open the revision root. */
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, path_rev->revnum,
@@ -1593,6 +1596,10 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
       if (!SVN_IS_VALID_REVNUM(end))
         end = youngest_rev;
     }
+
+  /* Make sure we catch up on the latest revprop changes.  This is the only
+   * time we will refresh the revprop data in this query. */
+  SVN_ERR(svn_fs_refresh_revision_props(repos->fs, scratch_pool));
 
   if (end < start)
     {

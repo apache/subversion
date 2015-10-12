@@ -1122,7 +1122,8 @@ fill_log_entry(svn_log_entry_t *log_entry,
   if (get_revprops && want_revprops)
     {
       /* User is allowed to see at least some revprops. */
-      SVN_ERR(svn_fs_revision_proplist(&r_props, fs, rev, pool));
+      SVN_ERR(svn_fs_revision_proplist2(&r_props, fs, rev, FALSE, pool,
+                                        pool));
       if (revprops == NULL)
         {
           /* Requested all revprops... */
@@ -2339,6 +2340,10 @@ svn_repos_get_logs4(svn_repos_t *repos,
 
       revprops = new_revprops;
     }
+
+  /* Make sure we catch up on the latest revprop changes.  This is the only
+   * time we will refresh the revprop data in this query. */
+  SVN_ERR(svn_fs_refresh_revision_props(fs, pool));
 
   /* Setup log range. */
   SVN_ERR(svn_fs_youngest_rev(&head, fs, pool));
