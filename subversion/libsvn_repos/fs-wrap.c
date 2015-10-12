@@ -379,7 +379,7 @@ svn_repos_fs_change_rev_prop4(svn_repos_t *repos,
           svn_string_t *old_value2;
 
           SVN_ERR(svn_fs_revision_prop2(&old_value2, repos->fs, rev, name,
-                                        FALSE, pool, pool));
+                                        TRUE, pool, pool));
           old_value = old_value2;
         }
 
@@ -450,11 +450,11 @@ svn_repos_fs_revision_prop(svn_string_t **value_p,
 
       else
         SVN_ERR(svn_fs_revision_prop2(value_p, repos->fs,
-                                      rev, propname, FALSE, pool, pool));
+                                      rev, propname, TRUE, pool, pool));
     }
   else /* wholly readable revision */
     {
-      SVN_ERR(svn_fs_revision_prop2(value_p, repos->fs, rev, propname, FALSE,
+      SVN_ERR(svn_fs_revision_prop2(value_p, repos->fs, rev, propname, TRUE,
                                     pool, pool));
     }
 
@@ -488,7 +488,7 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
       svn_string_t *value;
 
       /* Produce two property hashtables, both in POOL. */
-      SVN_ERR(svn_fs_revision_proplist2(&tmphash, repos->fs, rev, FALSE,
+      SVN_ERR(svn_fs_revision_proplist2(&tmphash, repos->fs, rev, TRUE,
                                         pool, pool));
       *table_p = apr_hash_make(pool);
 
@@ -504,7 +504,7 @@ svn_repos_fs_revision_proplist(apr_hash_t **table_p,
     }
   else /* wholly readable revision */
     {
-      SVN_ERR(svn_fs_revision_proplist2(table_p, repos->fs, rev, FALSE,
+      SVN_ERR(svn_fs_revision_proplist2(table_p, repos->fs, rev, TRUE,
                                         pool, pool));
     }
 
