@@ -452,8 +452,7 @@ typedef struct svn_branch_el_rev_content_t
   /* struct svn_branch_element_t *parent_element; */
   /* element name, or "" for root element; never null */
   const char *name;
-  /* payload (kind, props, text, ...);
-   * null if this is a subbranch root element */
+  /* payload (kind, props, text, ...) */
   svn_element_payload_t *payload;
 
 } svn_branch_el_rev_content_t;
