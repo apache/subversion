@@ -96,6 +96,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * 1708699
+   Fix authz with mandatory authn provided by mod_auth_kerb/mod_auth_ntlm.
+   Justification:
+     Regression introduced in 1.8.14.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
