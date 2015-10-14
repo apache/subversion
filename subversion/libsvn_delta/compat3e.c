@@ -1133,7 +1133,7 @@ payload_resolve(svn_element_payload_t *payload,
 
 static svn_error_t *
 editor3_payload_resolve(void *baton,
-                        svn_branch_el_rev_content_t *element,
+                        svn_element_content_t *element,
                         apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;

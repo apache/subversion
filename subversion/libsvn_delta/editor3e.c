@@ -339,7 +339,7 @@ svn_editor3_delete(svn_editor3_t *editor,
 
 svn_error_t *
 svn_editor3_payload_resolve(svn_editor3_t *editor,
-                            svn_branch_el_rev_content_t *element)
+                            svn_element_content_t *element)
 {
   SVN_ERR_ASSERT(svn_element_payload_invariants(element->payload));
 
@@ -580,7 +580,7 @@ wrap_delete(void *baton,
 
 static svn_error_t *
 wrap_payload_resolve(void *baton,
-                     svn_branch_el_rev_content_t *element,
+                     svn_element_content_t *element,
                      apr_pool_t *scratch_pool)
 {
   wrapper_baton_t *eb = baton;
@@ -799,7 +799,7 @@ change_detection_delete(void *baton,
 
 static svn_error_t *
 change_detection_payload_resolve(void *baton,
-                     svn_branch_el_rev_content_t *element,
+                     svn_element_content_t *element,
                      apr_pool_t *scratch_pool)
 {
   change_detection_baton_t *eb = baton;

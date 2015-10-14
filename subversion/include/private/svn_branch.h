@@ -434,7 +434,7 @@ svn_branch_get_elements(svn_branch_state_t *branch);
  *
  * If element EID is not present, return null.
  */
-svn_branch_el_rev_content_t *
+svn_element_content_t *
 svn_branch_get_element(const svn_branch_state_t *branch,
                        int eid);
 

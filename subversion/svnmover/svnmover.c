@@ -291,9 +291,9 @@ element_differences(apr_hash_t **diff_p,
                                       left->tree->e_map, right->tree->e_map)))
     {
       int e = svn_int_hash_this_key(hi->apr_hi);
-      svn_branch_el_rev_content_t *element_left
+      svn_element_content_t *element_left
         = svn_element_tree_get(left->tree, e);
-      svn_branch_el_rev_content_t *element_right
+      svn_element_content_t *element_right
         = svn_element_tree_get(right->tree, e);
 
       /* If node payload is given by reference, resolve it to full payload */
@@ -306,10 +306,10 @@ element_differences(apr_hash_t **diff_p,
           SVN_ERR(svn_editor3_payload_resolve(editor, element_right));
         }
 
-      if (! svn_branch_el_rev_content_equal(element_left, element_right,
-                                            scratch_pool))
+      if (! svn_element_content_equal(element_left, element_right,
+                                      scratch_pool))
         {
-          svn_branch_el_rev_content_t **contents
+          svn_element_content_t **contents
             = apr_palloc(result_pool, 2 * sizeof(void *));
 
           contents[0] = element_left;
@@ -352,8 +352,8 @@ subtree_replay(svn_editor3_t *editor,
        hi; hi = apr_hash_next(hi))
     {
       int eid = svn_int_hash_this_key(hi);
-      svn_branch_el_rev_content_t **e_pair = apr_hash_this_val(hi);
-      svn_branch_el_rev_content_t *e0 = e_pair[0], *e1 = e_pair[1];
+      svn_element_content_t **e_pair = apr_hash_this_val(hi);
+      svn_element_content_t *e0 = e_pair[0], *e1 = e_pair[1];
 
       SVN_ERR_ASSERT(!e0
                      || svn_element_payload_invariants(e0->payload));
@@ -935,7 +935,7 @@ sort_compare_items_by_eid(const svn_sort__item_t *a,
 }
 
 static const char *
-peid_name(const svn_branch_el_rev_content_t *element,
+peid_name(const svn_element_content_t *element,
           apr_pool_t *scratch_pool)
 {
   if (element->parent_eid == -1)
@@ -955,14 +955,14 @@ static svn_error_t *
 list_branch_elements_by_eid(svn_branch_state_t *branch,
                             apr_pool_t *scratch_pool)
 {
-  SVN_ITER_T(svn_branch_el_rev_content_t) *pi;
+  SVN_ITER_T(svn_element_content_t) *pi;
 
   notify_v("%s", elements_by_eid_header);
   for (SVN_HASH_ITER_SORTED(pi, svn_branch_get_elements(branch),
                             sort_compare_items_by_eid, scratch_pool))
     {
       int eid = *(const int *)(pi->key);
-      svn_branch_el_rev_content_t *element = pi->val;
+      svn_element_content_t *element = pi->val;
 
       if (element)
         {
@@ -1013,7 +1013,7 @@ branch_id_str(svn_branch_state_t *branch,
     }
   else
     {
-      svn_branch_el_rev_content_t *outer_el = NULL;
+      svn_element_content_t *outer_el = NULL;
       svn_branch_state_t *outer_branch;
       int outer_eid;
 
@@ -1227,22 +1227,20 @@ payload_merge(svn_element_payload_t **result_p,
  * Allocate the result in RESULT_POOL and/or as pointers to the inputs.
  */
 static void
-element_merge(svn_branch_el_rev_content_t **result_p,
+element_merge(svn_element_content_t **result_p,
               svn_boolean_t *conflict_p,
               int eid,
-              svn_branch_el_rev_content_t *side1,
-              svn_branch_el_rev_content_t *side2,
-              svn_branch_el_rev_content_t *yca,
+              svn_element_content_t *side1,
+              svn_element_content_t *side2,
+              svn_element_content_t *yca,
               const merge_conflict_policy_t *policy,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  svn_boolean_t same1 = svn_branch_el_rev_content_equal(yca, side1,
-                                                        scratch_pool);
-  svn_boolean_t same2 = svn_branch_el_rev_content_equal(yca, side2,
-                                                        scratch_pool);
+  svn_boolean_t same1 = svn_element_content_equal(yca, side1, scratch_pool);
+  svn_boolean_t same2 = svn_element_content_equal(yca, side2, scratch_pool);
   svn_boolean_t conflict = FALSE;
-  svn_branch_el_rev_content_t *result = NULL;
+  svn_element_content_t *result = NULL;
 
   if (same1)
     {
@@ -1337,7 +1335,7 @@ element_merge(svn_branch_el_rev_content_t **result_p,
       if (policy->merge_double_add
           && !side1->payload->is_subbranch_root
           && !side2->payload->is_subbranch_root
-          && svn_branch_el_rev_content_equal(side1, side2, scratch_pool))
+          && svn_element_content_equal(side1, side2, scratch_pool))
         {
           SVN_DBG(("e%d double add",
                    eid));
@@ -1347,8 +1345,7 @@ element_merge(svn_branch_el_rev_content_t **result_p,
         {
           SVN_DBG(("e%d conflict: add vs. add (%s)",
                    eid,
-                   svn_branch_el_rev_content_equal(side1, side2,
-                                                   scratch_pool)
+                   svn_element_content_equal(side1, side2, scratch_pool)
                      ? "same content" : "different content"));
           conflict = TRUE;
         }
@@ -1453,8 +1450,8 @@ static int
 sort_compare_items_by_peid_and_name(const svn_sort__item_t *a,
                                     const svn_sort__item_t *b)
 {
-  svn_branch_el_rev_content_t *element_a = a->value;
-  svn_branch_el_rev_content_t *element_b = b->value;
+  svn_element_content_t *element_a = a->value;
+  svn_element_content_t *element_b = b->value;
 
   if (element_a->parent_eid != element_b->parent_eid)
     return element_a->parent_eid - element_b->parent_eid;
@@ -1470,15 +1467,15 @@ detect_clashes(apr_array_header_t **clashes_p,
                apr_pool_t *scratch_pool)
 {
   apr_array_header_t *clashes = apr_array_make(result_pool, 0, sizeof(void *));
-  SVN_ITER_T(svn_branch_el_rev_content_t) *pi;
+  SVN_ITER_T(svn_element_content_t) *pi;
   int prev_eid = -1;
-  svn_branch_el_rev_content_t *prev_element = NULL;
+  svn_element_content_t *prev_element = NULL;
 
   for (SVN_HASH_ITER_SORTED(pi, svn_branch_get_elements(branch),
                             sort_compare_items_by_peid_and_name, scratch_pool))
     {
       int eid = *(const int *)(pi->key);
-      svn_branch_el_rev_content_t *element = pi->val;
+      svn_element_content_t *element = pi->val;
 
       if (prev_element
           && element->parent_eid == prev_element->parent_eid
@@ -1511,7 +1508,7 @@ branch_merge_subtree_r(svn_editor3_t *editor,
   apr_hash_t *diff_yca_src, *diff_yca_tgt;
   int single_element_conflicts = 0;
   apr_array_header_t *clashes;
-  SVN_ITER_T(svn_branch_el_rev_content_t *) *pi;
+  SVN_ITER_T(svn_element_content_t *) *pi;
   apr_hash_t *all_elements;
   const merge_conflict_policy_t policy = { TRUE, TRUE, TRUE, TRUE, TRUE };
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1562,14 +1559,14 @@ branch_merge_subtree_r(svn_editor3_t *editor,
                             sort_compare_items_by_eid, scratch_pool))
     {
       int eid = *(const int *)(pi->key);
-      svn_branch_el_rev_content_t **e_yca_src
+      svn_element_content_t **e_yca_src
         = svn_int_hash_get(diff_yca_src, eid);
-      svn_branch_el_rev_content_t **e_yca_tgt
+      svn_element_content_t **e_yca_tgt
         = svn_int_hash_get(diff_yca_tgt, eid);
-      svn_branch_el_rev_content_t *e_yca;
-      svn_branch_el_rev_content_t *e_src;
-      svn_branch_el_rev_content_t *e_tgt;
-      svn_branch_el_rev_content_t *result;
+      svn_element_content_t *e_yca;
+      svn_element_content_t *e_src;
+      svn_element_content_t *e_tgt;
+      svn_element_content_t *result;
       svn_boolean_t conflict;
       const char *tgt_branch_id
         = svn_branch_get_id(tgt->branch, scratch_pool);
@@ -1780,7 +1777,7 @@ do_switch(svnmover_wc_t *wc,
 typedef struct diff_item_t
 {
   int eid;
-  svn_branch_el_rev_content_t *e0, *e1;
+  svn_element_content_t *e0, *e1;
   const char *relpath0, *relpath1;
   svn_boolean_t modified, reparented, renamed;
 } diff_item_t;
@@ -1814,8 +1811,8 @@ subtree_diff(apr_hash_t **diff_changes,
        hi; hi = apr_hash_next(hi))
     {
       int eid = svn_int_hash_this_key(hi);
-      svn_branch_el_rev_content_t **e_pair = apr_hash_this_val(hi);
-      svn_branch_el_rev_content_t *e0 = e_pair[0], *e1 = e_pair[1];
+      svn_element_content_t **e_pair = apr_hash_this_val(hi);
+      svn_element_content_t *e0 = e_pair[0], *e1 = e_pair[1];
 
       if (e0 || e1)
         {
@@ -1902,7 +1899,7 @@ show_subtree_diff(svn_editor3_t *editor,
                             scratch_pool))
     {
       diff_item_t *item = ai->val;
-      svn_branch_el_rev_content_t *e0 = item->e0, *e1 = item->e1;
+      svn_element_content_t *e0 = item->e0, *e1 = item->e1;
       char status_mod = (e0 && e1) ? 'M' : e0 ? 'D' : 'A';
 
       /* For a deleted element whose parent was also deleted, mark it is
@@ -2209,7 +2206,7 @@ do_put_file(svn_editor3_t *editor,
   if (file_el_rev->eid >= 0)
     {
       /* get existing props */
-      svn_branch_el_rev_content_t *existing_element
+      svn_element_content_t *existing_element
         = svn_branch_get_element(file_el_rev->branch, file_el_rev->eid);
 
       SVN_ERR(svn_editor3_payload_resolve(editor, existing_element));
@@ -2285,7 +2282,7 @@ do_cat(svn_editor3_t *editor,
   apr_hash_index_t *hi;
 
   /* get existing props */
-  svn_branch_el_rev_content_t *existing_element
+  svn_element_content_t *existing_element
     = svn_branch_get_element(file_el_rev->branch, file_el_rev->eid);
 
   SVN_ERR(svn_editor3_payload_resolve(editor, existing_element));
@@ -2500,7 +2497,7 @@ do_branch_into(svn_branch_state_t *from_branch,
                apr_pool_t *scratch_pool)
 {
   svn_branch_subtree_t *from_subtree;
-  svn_branch_el_rev_content_t *new_root_content;
+  svn_element_content_t *new_root_content;
 
   /* Source element must exist */
   if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
@@ -2518,8 +2515,8 @@ do_branch_into(svn_branch_state_t *from_branch,
   new_root_content
     = svn_element_tree_get(from_subtree->tree, from_subtree->tree->root_eid);
   new_root_content
-    = svn_branch_el_rev_content_create(to_parent_eid, new_name,
-                                       new_root_content->payload, scratch_pool);
+    = svn_element_content_create(to_parent_eid, new_name,
+                                 new_root_content->payload, scratch_pool);
   svn_element_tree_set(from_subtree->tree, from_subtree->tree->root_eid,
                          new_root_content);
 
@@ -2717,7 +2714,7 @@ do_move(svn_editor3_t *editor,
                                             scratch_pool);
   const char *from_path = el_rev_id_to_path(el_rev, scratch_pool);
   /* New payload shall be the same as before */
-  svn_branch_el_rev_content_t *existing_element
+  svn_element_content_t *existing_element
     = svn_branch_get_element(el_rev->branch, el_rev->eid);
 
   SVN_ERR(svn_editor3_alter(editor,

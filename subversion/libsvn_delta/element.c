@@ -256,13 +256,13 @@ svn_element_payload_create_symlink(apr_hash_t *props,
   return new_payload;
 }
 
-svn_branch_el_rev_content_t *
-svn_branch_el_rev_content_create(int parent_eid,
-                                 const char *name,
-                                 const svn_element_payload_t *payload,
-                                 apr_pool_t *result_pool)
+svn_element_content_t *
+svn_element_content_create(int parent_eid,
+                           const char *name,
+                           const svn_element_payload_t *payload,
+                           apr_pool_t *result_pool)
 {
-  svn_branch_el_rev_content_t *content
+  svn_element_content_t *content
      = apr_palloc(result_pool, sizeof(*content));
 
   content->parent_eid = parent_eid;
@@ -271,11 +271,11 @@ svn_branch_el_rev_content_create(int parent_eid,
   return content;
 }
 
-svn_branch_el_rev_content_t *
-svn_branch_el_rev_content_dup(const svn_branch_el_rev_content_t *old,
-                              apr_pool_t *result_pool)
+svn_element_content_t *
+svn_element_content_dup(const svn_element_content_t *old,
+                        apr_pool_t *result_pool)
 {
-  svn_branch_el_rev_content_t *content
+  svn_element_content_t *content
      = apr_pmemdup(result_pool, old, sizeof(*content));
 
   content->name = apr_pstrdup(result_pool, old->name);
@@ -284,9 +284,9 @@ svn_branch_el_rev_content_dup(const svn_branch_el_rev_content_t *old,
 }
 
 svn_boolean_t
-svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
-                                const svn_branch_el_rev_content_t *content_right,
-                                apr_pool_t *scratch_pool)
+svn_element_content_equal(const svn_element_content_t *content_left,
+                          const svn_element_content_t *content_right,
+                          apr_pool_t *scratch_pool)
 {
   if (!content_left && !content_right)
     {
@@ -328,7 +328,7 @@ svn_element_tree_create(apr_hash_t *e_map,
   return element_tree;
 }
 
-svn_branch_el_rev_content_t *
+svn_element_content_t *
 svn_element_tree_get(const svn_element_tree_t *tree,
                      int eid)
 {
@@ -338,7 +338,7 @@ svn_element_tree_get(const svn_element_tree_t *tree,
 svn_error_t *
 svn_element_tree_set(svn_element_tree_t *tree,
                      int eid,
-                     svn_branch_el_rev_content_t *element)
+                     svn_element_content_t *element)
 {
   svn_int_hash_set(tree->e_map, eid, element);
 
@@ -363,11 +363,11 @@ svn_element_tree_purge_orphans(apr_hash_t *e_map,
            hi; hi = apr_hash_next(hi))
         {
           int this_eid = svn_int_hash_this_key(hi);
-          svn_branch_el_rev_content_t *this_element = apr_hash_this_val(hi);
+          svn_element_content_t *this_element = apr_hash_this_val(hi);
 
           if (this_eid != root_eid)
             {
-              svn_branch_el_rev_content_t *parent_element
+              svn_element_content_t *parent_element
                 = svn_int_hash_get(e_map, this_element->parent_eid);
 
               /* Purge if parent is deleted */
@@ -392,7 +392,7 @@ svn_element_tree_get_path_by_eid(const svn_element_tree_t *tree,
                                  apr_pool_t *result_pool)
 {
   const char *path = "";
-  svn_branch_el_rev_content_t *element;
+  svn_element_content_t *element;
 
   for (; eid != tree->root_eid; eid = element->parent_eid)
     {
