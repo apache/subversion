@@ -924,18 +924,11 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
   int root_eid, num_eids;
   svn_branch_rev_bid_t *predecessor;
   svn_branch_state_t *branch_state;
-  int outer_eid;
   int i;
 
   SVN_ERR(parse_branch_line(bid, &root_eid, &num_eids, &predecessor,
                             stream, scratch_pool, scratch_pool));
 
-  /* Find the outer branch and outer EID */
-  {
-    const char *outer_bid;
-
-    svn_branch_id_unnest(&outer_bid, &outer_eid, bid, scratch_pool);
-  }
   branch_state = svn_branch_state_create(bid, predecessor, root_eid, rev_root,
                                          result_pool);
 
