@@ -48,12 +48,6 @@
   (strcmp(svn_branch_get_id(branch1, scratch_pool), \
           svn_branch_get_id(branch2, scratch_pool)) == 0)
 
-/* Is BRANCH1 an immediate child of BRANCH2? Compare by full branch-ids; don't
-   require identical branch objects. */
-#define BRANCH_IS_CHILD_OF_BRANCH(branch1, branch2, scratch_pool) \
-  ((branch1)->outer_branch && \
-   BRANCH_IS_SAME_BRANCH((branch1)->outer_branch, branch2, scratch_pool))
-
 svn_branch_revision_root_t *
 svn_branch_revision_root_create(svn_branch_repos_t *repos,
                                 svn_revnum_t rev,
