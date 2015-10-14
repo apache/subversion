@@ -789,7 +789,7 @@ svn_editor3_delete(svn_editor3_t *editor,
  */
 svn_error_t *
 svn_editor3_payload_resolve(svn_editor3_t *editor,
-                            svn_branch_el_rev_content_t *element);
+                            svn_element_content_t *element);
 
 /** Register a sequence point.
  *
@@ -928,7 +928,7 @@ typedef svn_error_t *(*svn_editor3_cb_delete_t)(
  */
 typedef svn_error_t *(*svn_editor3_cb_payload_resolve_t)(
   void *baton,
-  svn_branch_el_rev_content_t *element,
+  svn_element_content_t *element,
   apr_pool_t *scratch_pool);
 
 /** @see svn_editor3_sequence_point(), #svn_editor3_t

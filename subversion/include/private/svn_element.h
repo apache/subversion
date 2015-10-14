@@ -218,7 +218,7 @@ svn_element_payload_create_symlink(apr_hash_t *props,
 /* The content (parent, name and payload) of an element-revision.
  * In other words, an el-rev node in a (mixed-rev) directory-tree.
  */
-typedef struct svn_branch_el_rev_content_t
+typedef struct svn_element_content_t
 {
   /* eid of the parent element, or -1 if this is the root element */
   int parent_eid;
@@ -227,28 +227,28 @@ typedef struct svn_branch_el_rev_content_t
   /* payload (kind, props, text, ...) */
   svn_element_payload_t *payload;
 
-} svn_branch_el_rev_content_t;
+} svn_element_content_t;
 
 /* Return a new content object constructed with deep copies of PARENT_EID,
  * NAME and PAYLOAD, allocated in RESULT_POOL.
  */
-svn_branch_el_rev_content_t *
-svn_branch_el_rev_content_create(int parent_eid,
-                                 const char *name,
-                                 const svn_element_payload_t *payload,
-                                 apr_pool_t *result_pool);
+svn_element_content_t *
+svn_element_content_create(int parent_eid,
+                           const char *name,
+                           const svn_element_payload_t *payload,
+                           apr_pool_t *result_pool);
 
 /* Return a deep copy of OLD, allocated in RESULT_POOL.
  */
-svn_branch_el_rev_content_t *
-svn_branch_el_rev_content_dup(const svn_branch_el_rev_content_t *old,
-                              apr_pool_t *result_pool);
+svn_element_content_t *
+svn_element_content_dup(const svn_element_content_t *old,
+                        apr_pool_t *result_pool);
 
 /* Return TRUE iff CONTENT_LEFT is the same as CONTENT_RIGHT. */
 svn_boolean_t
-svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
-                                const svn_branch_el_rev_content_t *content_right,
-                                apr_pool_t *scratch_pool);
+svn_element_content_equal(const svn_element_content_t *content_left,
+                          const svn_element_content_t *content_right,
+                          apr_pool_t *scratch_pool);
 
 /** @} */
 
@@ -299,14 +299,14 @@ svn_element_tree_create(apr_hash_t *e_map,
                         int root_eid,
                         apr_pool_t *result_pool);
 
-svn_branch_el_rev_content_t *
+svn_element_content_t *
 svn_element_tree_get(const svn_element_tree_t *tree,
                      int eid);
 
 svn_error_t *
 svn_element_tree_set(svn_element_tree_t *tree,
                      int eid,
-                     svn_branch_el_rev_content_t *element);
+                     svn_element_content_t *element);
 
 /* Purge entries from E_MAP that don't connect, via parent directory hierarchy,
  * to ROOT_EID. In other words, remove elements that have been implicitly

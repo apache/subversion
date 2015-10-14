@@ -97,7 +97,7 @@ svn_branch_get_subbranch_at_eid(svn_branch_state_t *branch,
                                 int eid,
                                 apr_pool_t *scratch_pool)
 {
-  svn_branch_el_rev_content_t *element = svn_branch_get_element(branch, eid);
+  svn_element_content_t *element = svn_branch_get_element(branch, eid);
 
   if (element && element->payload->is_subbranch_root)
     {
@@ -125,7 +125,7 @@ svn_branch_get_immediate_subbranches(svn_branch_state_t *branch,
        hi; hi = apr_hash_next(hi))
     {
       int eid = svn_int_hash_this_key(hi);
-      svn_branch_el_rev_content_t *element = apr_hash_this_val(hi);
+      svn_element_content_t *element = apr_hash_this_val(hi);
 
       if (element->payload->is_subbranch_root)
         {
