@@ -161,14 +161,6 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
                                 svn_revnum_t base_rev,
                                 apr_pool_t *result_pool);
 
-/* Return the top-level branch numbered TOP_BRANCH_NUM in REV_ROOT.
- *
- * Return null if there is no such branch.
- */
-svn_branch_state_t *
-svn_branch_revision_root_get_root_branch(svn_branch_revision_root_t *rev_root,
-                                         int top_branch_num);
-
 /* Return all the branches in REV_ROOT.
  *
  * Return an empty array if there are none.
@@ -235,7 +227,8 @@ svn_branch_txn_finalize_eids(svn_branch_revision_root_t *txn,
  */
 struct svn_branch_state_t
 {
-  /* --- Identity of this object --- */
+  /* The branch identifier (starting with 'B') */
+  const char *bid;
 
   /* The previous location in the lifeline of this branch. */
   /* (REV = -1 means "in this txn") */
@@ -246,16 +239,6 @@ struct svn_branch_state_t
 
   /* The revision to which this branch state belongs */
   svn_branch_revision_root_t *rev_root;
-
-  /* The outer branch state that contains the subbranch
-     root element of this branch. Null if this is a root branch. */
-  struct svn_branch_state_t *outer_branch;
-
-  /* The subbranch-root element in OUTER_BRANCH of the root of this branch.
-   * The top branch id if this is a root branch. */
-  int outer_eid;
-
-  /* --- Contents of this object --- */
 
   /* EID -> svn_branch_el_rev_content_t mapping. */
   /* ### TODO: This should use an svn_branch_subtree_t instead of E_MAP and
@@ -270,11 +253,10 @@ struct svn_branch_state_t
  * element).
  */
 svn_branch_state_t *
-svn_branch_state_create(svn_branch_rev_bid_t *predecessor,
+svn_branch_state_create(const char *bid,
+                        svn_branch_rev_bid_t *predecessor,
                         int root_eid,
                         svn_branch_revision_root_t *rev_root,
-                        svn_branch_state_t *outer_branch,
-                        int outer_eid,
                         apr_pool_t *result_pool);
 
 /* Get the full id of branch BRANCH.
@@ -335,36 +317,18 @@ svn_branch_id_unnest(const char **outer_bid,
  * Set the root element to ROOT_EID.
  */
 svn_branch_state_t *
-svn_branch_add_new_branch(svn_branch_revision_root_t *rev_root,
+svn_branch_add_new_branch(const char *bid,
+                          svn_branch_revision_root_t *rev_root,
                           svn_branch_rev_bid_t *predecessor,
-                          svn_branch_state_t *outer_branch,
-                          int outer_eid,
                           int root_eid,
                           apr_pool_t *scratch_pool);
 
-/* Delete the branch BRANCH, and any subbranches recursively.
- *
- * Do not require that a subbranch root element exists in its outer branch,
- * nor delete it if it does exist.
+/* Remove branch BRANCH from the list of branches in REV_ROOT.
  */
 void
-svn_branch_delete_branch_r(svn_branch_state_t *branch,
-                           apr_pool_t *scratch_pool);
-
-/* Return an array of pointers to the branches that are immediate
- * sub-branches of BRANCH.
- */
-apr_array_header_t *
-svn_branch_get_immediate_subbranches(const svn_branch_state_t *branch,
-                                     apr_pool_t *result_pool,
-                                     apr_pool_t *scratch_pool);
-
-/* Return the subbranch rooted at BRANCH:EID, or NULL if that is
- * not a subbranch root.
- */
-svn_branch_state_t *
-svn_branch_get_subbranch_at_eid(svn_branch_state_t *branch,
-                                int eid,
+svn_branch_revision_root_delete_branch(
+                                svn_branch_revision_root_t *rev_root,
+                                svn_branch_state_t *branch,
                                 apr_pool_t *scratch_pool);
 
 /* element */
@@ -531,16 +495,15 @@ svn_branch_subtree_get_subbranch_at_eid(svn_branch_subtree_t *subtree,
                                         apr_pool_t *result_pool);
 
 /* Return the subtree of BRANCH rooted at EID.
- * Recursive: includes subbranches.
  *
  * The result is limited by the lifetime of BRANCH. It includes a shallow
- * copy of the element maps in BRANCH and its subbranches: the hash tables
- * are duplicated but the keys and values (element content data) are not.
+ * copy of the element maps in BRANCH: the hash table is
+ * duplicated but the keys and values (element content data) are not.
  * It assumes that modifications on a svn_branch_state_t treat element
  * map keys and values as immutable -- which they do.
  */
 svn_branch_subtree_t *
-svn_branch_get_subtree(const svn_branch_state_t *branch,
+svn_branch_get_subtree_n(svn_branch_state_t *branch,
                        int eid,
                        apr_pool_t *result_pool);
 
@@ -585,19 +548,16 @@ svn_branch_update_element(svn_branch_state_t *branch,
                           const char *new_name,
                           const svn_element_payload_t *new_payload);
 
-/* Purge orphaned elements and subbranches.
+/* Purge orphaned elements in BRANCH.
  */
 void
-svn_branch_purge_r(svn_branch_state_t *branch,
-                   apr_pool_t *scratch_pool);
+svn_branch_purge(svn_branch_state_t *branch,
+                 apr_pool_t *scratch_pool);
 
 /* Instantiate elements in a branch.
  *
  * In TO_BRANCH, instantiate (or alter, if existing) each element of
  * ELEMENTS, each with its given tree structure (parent, name) and payload.
- *
- * Also branch the subbranches in ELEMENTS, creating corresponding new
- * subbranches in TO_BRANCH, recursively.
  */
 svn_error_t *
 svn_branch_instantiate_elements(svn_branch_state_t *to_branch,
@@ -623,14 +583,6 @@ svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
                            svn_branch_subtree_t new_subtree,
                            apr_pool_t *scratch_pool);
 
-/* Return the root repos-relpath of BRANCH.
- *
- * ### TODO: Clarify sequencing requirements.
- */
-const char *
-svn_branch_get_root_rrpath(const svn_branch_state_t *branch,
-                           apr_pool_t *result_pool);
-
 /* Return the subtree-relative path of element EID in SUBTREE.
  *
  * If the element EID does not currently exist in SUBTREE, return NULL.
@@ -652,17 +604,6 @@ svn_branch_get_path_by_eid(const svn_branch_state_t *branch,
                            int eid,
                            apr_pool_t *result_pool);
 
-/* Return the repos-relpath of element EID in BRANCH.
- *
- * If the element EID does not currently exist in BRANCH, return NULL.
- *
- * ### TODO: Clarify sequencing requirements.
- */
-const char *
-svn_branch_get_rrpath_by_eid(const svn_branch_state_t *branch,
-                             int eid,
-                             apr_pool_t *result_pool);
-
 /* Return the EID for the branch-relative path PATH in BRANCH.
  *
  * If no element of BRANCH is at this path, return -1.
@@ -673,40 +614,6 @@ int
 svn_branch_get_eid_by_path(const svn_branch_state_t *branch,
                            const char *path,
                            apr_pool_t *scratch_pool);
-
-/* Return the EID for the repos-relpath RRPATH in BRANCH.
- *
- * If no element of BRANCH is at this path, return -1.
- *
- * ### TODO: Clarify sequencing requirements.
- */
-int
-svn_branch_get_eid_by_rrpath(svn_branch_state_t *branch,
-                             const char *rrpath,
-                             apr_pool_t *scratch_pool);
-
-/* Find the (deepest) branch of which the path RELPATH is either the root
- * path or a normal, non-sub-branch path. An element need not exist at
- * RELPATH.
- *
- * Set *BRANCH_P to the deepest branch within ROOT_BRANCH (recursively,
- * including itself) that contains the path RELPATH.
- *
- * If EID_P is not null then set *EID_P to the element id of RELPATH in
- * *BRANCH_P, or to -1 if no element exists at RELPATH in that branch.
- *
- * If RELPATH is not within any branch in ROOT_BRANCH, set *BRANCH_P to
- * NULL and (if EID_P is not null) *EID_P to -1.
- *
- * ### TODO: Clarify sequencing requirements.
- */
-void
-svn_branch_find_nested_branch_element_by_relpath(
-                                svn_branch_state_t **branch_p,
-                                int *eid_p,
-                                svn_branch_state_t *root_branch,
-                                const char *relpath,
-                                apr_pool_t *scratch_pool);
 
 /* Get the default branching metadata for r0 of a new repository.
  */

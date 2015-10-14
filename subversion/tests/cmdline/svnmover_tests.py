@@ -1340,13 +1340,14 @@ def merge_swap_abc(sbox):
   sbox_build_svnmover(sbox)
 
   expected_eids = svntest.wc.State('', {
-    ''           : Item(eid=0),
-    'X'          : Item(eid=2),
-    'X/A'        : Item(eid=3),
-    'X/A/a1'     : Item(eid=4),
-    'X/A/B'      : Item(eid=5),
-    'X/A/B/C'    : Item(eid=6),
-    'X/A/B/C/c1' : Item(eid=7),
+    'B0'            : Item(eid=0),
+    'B0/X'          : Item(eid=1),
+    'B0.1'          : Item(eid=2),
+    'B0.1/A'        : Item(eid=3),
+    'B0.1/A/a1'     : Item(eid=4),
+    'B0.1/A/B'      : Item(eid=5),
+    'B0.1/A/B/C'    : Item(eid=6),
+    'B0.1/A/B/C/c1' : Item(eid=7),
   })
   test_svnmover3(sbox, '',
                  reported_br_diff('') +
@@ -1360,20 +1361,21 @@ def merge_swap_abc(sbox):
                  'mkdir X/A/B/C/c1')
 
   expected_eids.add({
-    'Y'          : Item(eid=2),
-    'Y/A'        : Item(eid=3),
-    'Y/A/a1'     : Item(eid=4),
-    'Y/A/B'      : Item(eid=5),
-    'Y/A/B/C'    : Item(eid=6),
-    'Y/A/B/C/c1' : Item(eid=7),
+    'B0/Y'          : Item(eid=8),
+    'B0.8'          : Item(eid=2),
+    'B0.8/A'        : Item(eid=3),
+    'B0.8/A/a1'     : Item(eid=4),
+    'B0.8/A/B'      : Item(eid=5),
+    'B0.8/A/B/C'    : Item(eid=6),
+    'B0.8/A/B/C/c1' : Item(eid=7),
   })
   test_svnmover3(sbox, '', None, expected_eids,
                  'branch X Y')
 
   expected_eids.rename({
-    'X/A/B/C' : 'X/A',
-    'X/A/B'   : 'X/A/B',
-    'X/A'     : 'X/A/B/C',
+    'B0.1/A/B/C' : 'B0.1/A',
+    'B0.1/A/B'   : 'B0.1/A/B',
+    'B0.1/A'     : 'B0.1/A/B/C',
   })
   test_svnmover3(sbox, '',
                  reported_br_diff('X') +
@@ -1387,9 +1389,9 @@ def merge_swap_abc(sbox):
                  'mv X/C X/A')
 
   expected_eids.rename({
-    'Y/A'     : 'Y/A/B/C',
-    'Y/A/B'   : 'Y/A/B',
-    'Y/A/B/C' : 'Y/A',
+    'B0.8/A'     : 'B0.8/A/B/C',
+    'B0.8/A/B'   : 'B0.8/A/B',
+    'B0.8/A/B/C' : 'B0.8/A',
   })
   test_svnmover3(sbox, '',
                  reported_br_diff('Y') +
@@ -1404,10 +1406,11 @@ def move_to_related_branch_2(sbox):
   sbox_build_svnmover(sbox)
 
   expected_eids = svntest.wc.State('', {
-    ''      : Item(eid=0),
-    'X'     : Item(eid=2),
-    'X/A'   : Item(eid=3),
-    'X/A/B' : Item(eid=4),
+    'B0'       : Item(eid=0),
+    'B0/X'     : Item(eid=1),
+    'B0.1'     : Item(eid=2),
+    'B0.1/A'   : Item(eid=3),
+    'B0.1/A/B' : Item(eid=4),
   })
   test_svnmover3(sbox, '',
                  reported_br_diff('') +
@@ -1418,9 +1421,10 @@ def move_to_related_branch_2(sbox):
                  'mkdir X/A/B')
 
   expected_eids.add({
-    'Y'     : Item(eid=2),
-    'Y/A'   : Item(eid=3),
-    'Y/A/B' : Item(eid=4),
+    'B0/Y'     : Item(eid=5),
+    'B0.5'     : Item(eid=2),
+    'B0.5/A'   : Item(eid=3),
+    'B0.5/A/B' : Item(eid=4),
   })
   test_svnmover3(sbox, '',
                  reported_br_diff('') +
@@ -1429,10 +1433,10 @@ def move_to_related_branch_2(sbox):
                  'branch X Y')
 
   expected_eids.add({
-    'X/A/ax'   : Item(eid=6),
-    'X/A/B/bx' : Item(eid=7),
-    'Y/A/ay'   : Item(eid=8),
-    'Y/A/B/by' : Item(eid=9),
+    'B0.1/A/ax'   : Item(eid=6),
+    'B0.1/A/B/bx' : Item(eid=7),
+    'B0.5/A/ay'   : Item(eid=8),
+    'B0.5/A/B/by' : Item(eid=9),
   })
   test_svnmover3(sbox, '',
                  reported_br_diff('X') +
@@ -1450,10 +1454,10 @@ def move_to_related_branch_2(sbox):
   # X and Y are related, X/A/B contains X/A/B/bx, Y/A/B contains Y/A/B/by.
   # Moving X/A/B to Y/B, i.e. from X to Y, by branch-into-and-delete,
   # results in Y/B that contains both bx and by.
-  expected_eids.rename({'X/A/B' : 'Y/B'})
-  expected_eids.remove('Y/A/B', 'Y/A/B/by')
+  expected_eids.rename({'B0.1/A/B' : 'B0.5/B'})
+  expected_eids.remove('B0.5/A/B', 'B0.5/A/B/by')
   expected_eids.add({
-    'Y/B/by' : Item(eid=9),
+    'B0.5/B/by' : Item(eid=9),
   })
   test_svnmover3(sbox, '',
                  reported_br_diff('X') +

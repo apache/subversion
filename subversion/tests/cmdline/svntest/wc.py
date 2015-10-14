@@ -119,13 +119,11 @@ _re_parse_commit = re.compile('^(\w+(  \(bin\))?)\s+(.+)')
 #rN: eids 0 15 branches 4
 _re_parse_eid_header = re.compile('^r(-1|[0-9]+): eids ([0-9]+) ([0-9]+) '
                                   'branches ([0-9]+)$')
-# B0.2 root-eid 3  # at /X
-_re_parse_eid_branch = re.compile('^B([0-9.]+) root-eid ([0-9]+) num-eids ([0-9]+)( from [^ ]*)?  # at /(.*)$')
+# B0.2 root-eid 3
+_re_parse_eid_branch = re.compile('^(B[0-9.]+) root-eid ([0-9]+) num-eids ([0-9]+)( from [^ ]*)?$')
 # e4: normal 6 C
 _re_parse_eid_ele = re.compile('^e([0-9]+): (none|normal|subbranch) '
                                '(-1|[0-9]+) (.*)$')
-# 25.34.78
-_re_parse_split_branch_eid = re.compile('^([0-9.]+)\.([0-9]+)$')
 
 class State:
   """Describes an existing or expected state of a working copy.
@@ -789,6 +787,7 @@ class State:
 
     # Need to read all elements in a branch before we can construct
     # the full path to an element.
+    # For the full path we use <branch-id>/<path-within-branch>.
 
     def eid_path(eids, eid):
       ele = eids[eid]
@@ -799,20 +798,17 @@ class State:
         return ele[1]
       return parent_path + '/' + ele[1]
 
-    def eid_full_path(eids, eid, root_path):
+    def eid_full_path(eids, eid, branch_id):
       path = eid_path(eids, eid)
-      if root_path == '':
-        return eid_path(eids, eid)
       if path == '':
-        return root_path
-      return root_path + '/' + eid_path(eids, eid)
+        return branch_id
+      return branch_id + '/' + path
 
-    def add_to_desc(eids, desc, branch_root_path):
+    def add_to_desc(eids, desc, branch_id):
       for k, v in eids.items():
-        desc[eid_full_path(eids, k, branch_root_path)] = StateItem(eid=k)
+        desc[eid_full_path(eids, k, branch_id)] = StateItem(eid=k)
 
-    branches = {}
-    branch = None
+    branch_id = None
     eids = {}
     desc = {}
     for line in lines:
@@ -828,21 +824,13 @@ class State:
 
       match = _re_parse_eid_branch.search(line)
       if match:
-        if branch:
-          branches[branch[0]] = branch
-          add_to_desc(eids, desc, branch[3])
+        if branch_id:
+          add_to_desc(eids, desc, branch_id)
           eids = {}
-        parent_branch_eid = None
-        branch_eid = match.group(1)
-        match2 = _re_parse_split_branch_eid.search(branch_eid)
-        if match2:
-          parent_branch_eid = branches[match2.group(1)]
+        branch_id = match.group(1)
         root_eid = match.group(2)
-        path = match.group(5)
-        branch = [branch_eid, parent_branch_eid, root_eid, path]
 
-    branches[branch[0]] = branch
-    add_to_desc(eids, desc, branch[3])
+    add_to_desc(eids, desc, branch_id)
 
     return cls('', desc)
   
