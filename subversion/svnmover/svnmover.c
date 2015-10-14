@@ -46,6 +46,7 @@
 #include "private/svn_cmdline_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_branch_repos.h"
+#include "private/svn_branch_nested.h"
 #include "private/svn_editor3e.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_string_private.h"
@@ -1010,10 +1011,14 @@ branch_id_str(svn_branch_state_t *branch,
   else
     {
       svn_branch_el_rev_content_t *outer_el = NULL;
+      svn_branch_state_t *outer_branch;
+      int outer_eid;
 
-      if (branch->outer_branch)
-        outer_el = svn_branch_get_element(branch->outer_branch,
-                                          branch->outer_eid);
+      svn_branch_get_outer_branch_and_eid(&outer_branch, &outer_eid,
+                                          branch, scratch_pool);
+
+      if (outer_branch)
+        outer_el = svn_branch_get_element(outer_branch, outer_eid);
 
       return apr_psprintf(result_pool, "%-10s %-12s root=e%d",
                           svn_branch_get_id(branch, scratch_pool),
@@ -2515,8 +2520,8 @@ do_branch_into(svn_branch_state_t *from_branch,
                    new_root_content);
 
   /* Populate the new branch mapping */
-  SVN_ERR(svn_branch_instantiate_elements(to_branch, *from_subtree,
-                                          scratch_pool));
+  SVN_ERR(svn_branch_instantiate_elements_r(to_branch, *from_subtree,
+                                            scratch_pool));
   notify_v("A+   %s (subtree)",
            svn_branch_get_path_by_eid(to_branch, from_eid, scratch_pool));
 
@@ -2998,17 +3003,24 @@ typedef struct arg_t
  */
 static svn_error_t *
 point_to_outer_element_instead(svn_branch_el_rev_id_t *el_rev,
-                               const char *op)
+                               const char *op,
+                               apr_pool_t *scratch_pool)
 {
   if (is_branch_root_element(el_rev->branch, el_rev->eid))
     {
-      if (! el_rev->branch->outer_branch)
+      svn_branch_state_t *outer_branch;
+      int outer_eid;
+
+      svn_branch_get_outer_branch_and_eid(&outer_branch, &outer_eid,
+                                          el_rev->branch, scratch_pool);
+
+      if (! outer_branch)
         return svn_error_createf(SVN_ERR_BRANCHING, NULL, "%s: %s", op,
                                  _("svnmover cannot delete or move a "
                                    "top-level branch"));
 
-      el_rev->eid = el_rev->branch->outer_eid;
-      el_rev->branch = el_rev->branch->outer_branch;
+      el_rev->eid = outer_eid;
+      el_rev->branch = outer_branch;
     }
 
   return SVN_NO_ERROR;
@@ -3290,7 +3302,8 @@ execute(svnmover_wc_t *wc,
           break;
 
         case ACTION_MV:
-          SVN_ERR(point_to_outer_element_instead(arg[0]->el_rev, "mv"));
+          SVN_ERR(point_to_outer_element_instead(arg[0]->el_rev, "mv",
+                                                 iterpool));
 
           VERIFY_REV_UNSPECIFIED("mv", 0);
           VERIFY_EID_EXISTS("mv", 0);
@@ -3333,7 +3346,8 @@ execute(svnmover_wc_t *wc,
           break;
 
         case ACTION_RM:
-          SVN_ERR(point_to_outer_element_instead(arg[0]->el_rev, "rm"));
+          SVN_ERR(point_to_outer_element_instead(arg[0]->el_rev, "rm",
+                                                 iterpool));
 
           VERIFY_REV_UNSPECIFIED("rm", 0);
           VERIFY_EID_EXISTS("rm", 0);
@@ -3344,7 +3358,7 @@ execute(svnmover_wc_t *wc,
 
         case ACTION_CP_RM:
           SVN_ERR(point_to_outer_element_instead(arg[0]->el_rev,
-                                                 "copy-and-delete"));
+                                                 "copy-and-delete", iterpool));
 
           VERIFY_REV_UNSPECIFIED("copy-and-delete", 0);
           VERIFY_EID_EXISTS("copy-and-delete", 0);
@@ -3363,7 +3377,8 @@ execute(svnmover_wc_t *wc,
 
         case ACTION_BR_RM:
           SVN_ERR(point_to_outer_element_instead(arg[0]->el_rev,
-                                                 "branch-and-delete"));
+                                                 "branch-and-delete",
+                                                 iterpool));
 
           VERIFY_REV_UNSPECIFIED("branch-and-delete", 0);
           VERIFY_EID_EXISTS("branch-and-delete", 0);
@@ -3382,7 +3397,8 @@ execute(svnmover_wc_t *wc,
 
         case ACTION_BR_INTO_RM:
           SVN_ERR(point_to_outer_element_instead(arg[0]->el_rev,
-                                                 "branch-into-and-delete"));
+                                                 "branch-into-and-delete",
+                                                 iterpool));
 
           VERIFY_REV_UNSPECIFIED("branch-into-and-delete", 0);
           VERIFY_EID_EXISTS("branch-into-and-delete", 0);

@@ -32,6 +32,7 @@
 #include "svn_pools.h"
 
 #include "private/svn_branch_repos.h"
+#include "private/svn_branch_nested.h"
 #include "private/svn_delta_private.h"
 #include "private/svn_editor3e.h"
 #include "../libsvn_delta/debug_editor.h"
@@ -952,18 +953,6 @@ apply_change(void **dir_baton,
  * (A branch root is not necessarily a directory, it could be a file.)
  */
 
-/*  */
-static int
-branch_get_top_num(const svn_branch_state_t *branch,
-                   apr_pool_t *scratch_pool)
-{
-  while (branch->outer_branch)
-    {
-      branch = branch->outer_branch;
-    }
-  return branch->outer_eid;
-}
-
 /* Get the old-repository path for the storage of the root element of BRANCH.
  *
  * Currently, this is the same as the nested-branching hierarchical path
@@ -973,7 +962,7 @@ static const char *
 branch_get_storage_root_rrpath(const svn_branch_state_t *branch,
                                apr_pool_t *result_pool)
 {
-  int top_branch_num = branch_get_top_num(branch, result_pool);
+  int top_branch_num = atoi(branch->bid + 1);
   const char *top_path = apr_psprintf(result_pool, "top%d", top_branch_num);
   const char *nested_path = svn_branch_get_root_rrpath(branch, result_pool);
 
@@ -1187,7 +1176,6 @@ editor3_open_branch(void *baton,
 {
   ev3_from_delta_baton_t *eb = baton;
   svn_branch_state_t *new_branch;
-  svn_branch_state_t *outer_branch = NULL;
 
   /* if the subbranch already exists, just return its bid */
   *new_branch_id_p
@@ -1204,14 +1192,10 @@ editor3_open_branch(void *baton,
       return SVN_NO_ERROR;
     }
 
-  if (outer_branch_id)
-    outer_branch = svn_branch_revision_root_get_branch_by_id(
-                     eb->edited_rev_root, outer_branch_id, scratch_pool);
-  new_branch = svn_branch_add_new_branch(eb->edited_rev_root,
+  new_branch = svn_branch_add_new_branch(*new_branch_id_p,
+                                         eb->edited_rev_root,
                                          predecessor,
-                                         outer_branch, outer_eid,
                                          root_eid, scratch_pool);
-  *new_branch_id_p = svn_branch_get_id(new_branch, result_pool);
   return SVN_NO_ERROR;
 }
 
@@ -1228,7 +1212,6 @@ editor3_branch(void *baton,
   ev3_from_delta_baton_t *eb = baton;
   svn_branch_rev_bid_t *predecessor;
   svn_branch_state_t *new_branch;
-  svn_branch_state_t *outer_branch = NULL;
   svn_branch_state_t *from_branch;
   svn_branch_subtree_t *from_subtree;
 
@@ -1244,20 +1227,18 @@ editor3_branch(void *baton,
                                from->rev, from->bid, from->eid);
     }
 
-  if (outer_branch_id)
-    outer_branch = svn_branch_revision_root_get_branch_by_id(
-                     eb->edited_rev_root, outer_branch_id, scratch_pool);
+  *new_branch_id_p
+    = svn_branch_id_nest(outer_branch_id, outer_eid, result_pool);
   predecessor = svn_branch_rev_bid_create(from->rev, from->bid, scratch_pool);
-  new_branch = svn_branch_add_new_branch(eb->edited_rev_root,
+  new_branch = svn_branch_add_new_branch(*new_branch_id_p,
+                                         eb->edited_rev_root,
                                          predecessor,
-                                         outer_branch, outer_eid,
                                          from->eid, scratch_pool);
 
   /* Populate the mapping from the 'from' source */
-  SVN_ERR(svn_branch_instantiate_elements(new_branch, *from_subtree,
-                                          scratch_pool));
+  SVN_ERR(svn_branch_instantiate_elements_r(new_branch, *from_subtree,
+                                            scratch_pool));
 
-  *new_branch_id_p = svn_branch_get_id(new_branch, result_pool);
   return SVN_NO_ERROR;
 }
 
@@ -1843,17 +1824,20 @@ drive_changes(ev3_from_delta_baton_t *eb,
   for (i = 0; i < eb->edited_rev_root->root_branches->nelts; i++)
     {
       svn_branch_state_t *root_branch
-        = svn_branch_revision_root_get_root_branch(eb->edited_rev_root, i);
+        = APR_ARRAY_IDX(eb->edited_rev_root->root_branches, i, void *);
       apr_hash_t *paths_final;
 
       const char *top_path = branch_get_storage_root_rrpath(root_branch,
                                                             scratch_pool);
       svn_pathrev_t current;
-      svn_branch_state_t *base_root_branch
-        = svn_branch_repos_get_root_branch(eb->edited_rev_root->repos,
-                                           eb->edited_rev_root->base_rev,
-                                           root_branch->outer_eid /*top_branch_num*/);
-      svn_boolean_t branch_is_new = !base_root_branch;
+      svn_branch_state_t *base_root_branch;
+      svn_boolean_t branch_is_new;
+
+      SVN_ERR(svn_branch_repos_get_branch_by_id(&base_root_branch,
+                                                eb->edited_rev_root->repos,
+                                                eb->edited_rev_root->base_rev,
+                                                root_branch->bid, scratch_pool));
+      branch_is_new = !base_root_branch;
 
       paths_final = apr_hash_make(scratch_pool);
       convert_branch_to_paths_r(paths_final,
@@ -1913,13 +1897,35 @@ editor3_sequence_point(void *baton,
   ev3_from_delta_baton_t *eb = baton;
   int i;
 
-  for (i = 0; i < eb->edited_rev_root->root_branches->nelts; i++)
+  /* first, purge elements in each branch */
+  for (i = 0; i < eb->edited_rev_root->branches->nelts; i++)
     {
       svn_branch_state_t *b
-        = svn_branch_revision_root_get_root_branch(eb->edited_rev_root, i);
+        = APR_ARRAY_IDX(eb->edited_rev_root->branches, i, void *);
 
-      svn_branch_purge_r(b, scratch_pool);
+      svn_branch_purge(b, scratch_pool);
     }
+
+  /* second, purge branches that are no longer nested */
+  for (i = 0; i < eb->edited_rev_root->branches->nelts; i++)
+    {
+      svn_branch_state_t *b
+        = APR_ARRAY_IDX(eb->edited_rev_root->branches, i, void *);
+      svn_branch_state_t *outer_branch;
+      int outer_eid;
+
+      svn_branch_get_outer_branch_and_eid(&outer_branch, &outer_eid,
+                                          b, scratch_pool);
+
+      if (outer_branch
+          && ! svn_branch_get_element(outer_branch, outer_eid))
+        {
+          svn_branch_revision_root_delete_branch(b->rev_root, b, scratch_pool);
+          /* Re-visit this position in the array */
+          i--;
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 

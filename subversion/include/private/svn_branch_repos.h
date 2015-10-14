@@ -60,14 +60,6 @@ struct svn_branch_revision_root_t *
 svn_branch_repos_get_revision(const svn_branch_repos_t *repos,
                               svn_revnum_t revnum);
 
-/* Return a pointer to the root branch of revision REVNUM of the
- * repository REPOS.
- */
-struct svn_branch_state_t *
-svn_branch_repos_get_root_branch(const svn_branch_repos_t *repos,
-                                 svn_revnum_t revnum,
-                                 int top_branch_num);
-
 /* Return the revision root that represents the base revision (or,
  * potentially, txn) of the revision or txn REV_ROOT.
  */
@@ -103,27 +95,6 @@ svn_branch_repos_find_el_rev_by_id(svn_branch_el_rev_id_t **el_rev_p,
                                    int eid,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
-
-/* Set *EL_REV_P to the el-rev-id of the element at relative path RELPATH
- * anywhere in or under branch BRANCH_ID in revision REVNUM in REPOS.
- *
- * If there is no element there, set *EL_REV_P to point to an id in which
- * the BRANCH field is the nearest enclosing branch of RRPATH and the EID
- * field is -1.
- *
- * Allocate *EL_REV_P (but not the branch object that it refers to) in
- * RESULT_POOL.
- *
- * ### TODO: Clarify sequencing requirements.
- */
-svn_error_t *
-svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
-                                const svn_branch_repos_t *repos,
-                                svn_revnum_t revnum,
-                                const char *branch_id,
-                                const char *relpath,
-                                apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus
