@@ -121,7 +121,7 @@ svn_branch_get_immediate_subbranches(svn_branch_state_t *branch,
   const char *branch_id = svn_branch_get_id(branch, scratch_pool);
   apr_hash_index_t *hi;
 
-  for (hi = apr_hash_first(scratch_pool, branch->e_map);
+  for (hi = apr_hash_first(scratch_pool, svn_branch_get_elements(branch));
        hi; hi = apr_hash_next(hi))
     {
       int eid = svn_int_hash_this_key(hi);
@@ -143,6 +143,18 @@ svn_branch_get_immediate_subbranches(svn_branch_state_t *branch,
 }
 
 svn_branch_subtree_t *
+svn_branch_subtree_create(apr_hash_t *e_map,
+                          int root_eid,
+                          apr_pool_t *result_pool)
+{
+  svn_branch_subtree_t *subtree = apr_pcalloc(result_pool, sizeof(*subtree));
+
+  subtree->tree = svn_element_tree_create(e_map, root_eid, result_pool);
+  subtree->subbranches = apr_hash_make(result_pool);
+  return subtree;
+}
+
+svn_branch_subtree_t *
 svn_branch_get_subtree(svn_branch_state_t *branch,
                        int eid,
                        apr_pool_t *result_pool)
@@ -153,7 +165,11 @@ svn_branch_get_subtree(svn_branch_state_t *branch,
   SVN_BRANCH_SEQUENCE_POINT(branch);
 
   new_subtree
-    = svn_branch_get_subtree_n(branch, eid, result_pool);
+    = svn_branch_subtree_create(
+        svn_branch_get_element_tree_at_eid(branch, eid, result_pool)->e_map,
+        eid, result_pool);
+  new_subtree->predecessor = svn_branch_rev_bid_dup(branch->predecessor,
+                                                    result_pool);
 
   /* Add subbranches */
   for (SVN_ARRAY_ITER(bi, svn_branch_get_immediate_subbranches(
@@ -167,14 +183,15 @@ svn_branch_get_subtree(svn_branch_state_t *branch,
       svn_branch_id_unnest(&outer_bid, &outer_eid, subbranch->bid,
                            bi->iterpool);
       subbranch_relpath_in_subtree
-        = svn_branch_subtree_get_path_by_eid(new_subtree, outer_eid,
-                                             bi->iterpool);
+        = svn_element_tree_get_path_by_eid(new_subtree->tree, outer_eid,
+                                           bi->iterpool);
 
       /* Is it pathwise at or below EID? If so, add it into the subtree. */
       if (subbranch_relpath_in_subtree)
         {
           svn_branch_subtree_t *this_subtree
-            = svn_branch_get_subtree(subbranch, subbranch->root_eid, result_pool);
+            = svn_branch_get_subtree(subbranch, svn_branch_root_eid(subbranch),
+                                     result_pool);
 
           svn_int_hash_set(new_subtree->subbranches, outer_eid,
                            this_subtree);
@@ -183,12 +200,23 @@ svn_branch_get_subtree(svn_branch_state_t *branch,
   return new_subtree;
 }
 
+svn_branch_subtree_t *
+svn_branch_subtree_get_subbranch_at_eid(svn_branch_subtree_t *subtree,
+                                        int eid,
+                                        apr_pool_t *result_pool)
+{
+  subtree = svn_int_hash_get(subtree->subbranches, eid);
+
+  return subtree;
+}
+
 svn_error_t *
 svn_branch_instantiate_elements_r(svn_branch_state_t *to_branch,
                                   svn_branch_subtree_t elements,
                                   apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_branch_instantiate_elements(to_branch, elements, scratch_pool));
+  SVN_ERR(svn_branch_instantiate_elements(to_branch, elements.tree,
+                                          scratch_pool));
 
   /* branch any subbranches */
   {
@@ -207,7 +235,7 @@ svn_branch_instantiate_elements_r(svn_branch_state_t *to_branch,
         new_branch = svn_branch_add_new_branch(new_branch_id,
                                                to_branch->rev_root,
                                                this_subtree->predecessor,
-                                               this_subtree->root_eid,
+                                               this_subtree->tree->root_eid,
                                                bi->iterpool);
 
         SVN_ERR(svn_branch_instantiate_elements_r(new_branch, *this_subtree,

@@ -1188,7 +1188,7 @@ editor3_open_branch(void *baton,
     {
       SVN_ERR_ASSERT(predecessor->rev == new_branch->predecessor->rev);
       SVN_ERR_ASSERT(strcmp(predecessor->bid, new_branch->predecessor->bid) == 0);
-      SVN_ERR_ASSERT(root_eid == new_branch->root_eid);
+      SVN_ERR_ASSERT(root_eid == svn_branch_root_eid(new_branch));
       return SVN_NO_ERROR;
     }
 
@@ -1326,15 +1326,24 @@ copy_subtree(const svn_branch_el_rev_id_t *from_el_rev,
              const char *to_name,
              apr_pool_t *scratch_pool)
 {
+  svn_branch_subtree_t *new_subtree;
+
   SVN_DBG(("cp subtree from e%d to e%d/%s",
            from_el_rev->eid, to_parent_eid, to_name));
+
+  new_subtree = svn_branch_get_subtree(from_el_rev->branch, from_el_rev->eid,
+                                       scratch_pool);
+  if (new_subtree->subbranches && apr_hash_count(new_subtree->subbranches))
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("Adding or copying a subtree containing "
+                                 "subbranches is not implemented"));
+    }
 
   /* copy the subtree, assigning new EIDs */
   SVN_ERR(svn_branch_map_add_subtree(to_branch, -1 /*to_eid*/,
                                      to_parent_eid, to_name,
-                                     *svn_branch_get_subtree(
-                                       from_el_rev->branch, from_el_rev->eid,
-                                       scratch_pool),
+                                     new_subtree->tree,
                                      scratch_pool));
 
   /* handle any subbranches under FROM_BRANCH:FROM_EID */
@@ -1405,7 +1414,7 @@ convert_branch_to_paths(apr_hash_t *paths,
 
   /* assert(branch is at a sequence point); */
 
-  for (hi = apr_hash_first(scratch_pool, branch->e_map);
+  for (hi = apr_hash_first(scratch_pool, svn_branch_get_elements(branch));
        hi; hi = apr_hash_next(hi))
     {
       int eid = *(const int *)apr_hash_this_key(hi);
@@ -1419,7 +1428,7 @@ convert_branch_to_paths(apr_hash_t *paths,
          be specifying the element's payload.
        */
       if (! ba
-          || eid == branch->root_eid)
+          || eid == svn_branch_root_eid(branch))
         {
           ba = svn_branch_el_rev_id_create(branch, eid, branch->rev_root->rev,
                                            result_pool);

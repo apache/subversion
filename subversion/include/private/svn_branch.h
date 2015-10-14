@@ -231,17 +231,11 @@ struct svn_branch_state_t
   /* (REV = -1 means "in this txn") */
   svn_branch_rev_bid_t *predecessor;
 
-  /* The EID of its pathwise root element. */
-  int root_eid;
-
   /* The revision to which this branch state belongs */
   svn_branch_revision_root_t *rev_root;
 
   /* EID -> svn_branch_el_rev_content_t mapping. */
-  /* ### TODO: This should use an svn_branch_subtree_t instead of E_MAP and
-   *     ROOT_EID.
-   *     And a whole bunch of methods would be common to both. */
-  apr_hash_t *e_map;
+  svn_element_tree_t *element_tree;
 
 };
 
@@ -269,6 +263,11 @@ svn_branch_state_create(const char *bid,
 const char *
 svn_branch_get_id(svn_branch_state_t *branch,
                   apr_pool_t *result_pool);
+
+/* Return the element id of the root element of BRANCH.
+ */
+int
+svn_branch_root_eid(const svn_branch_state_t *branch);
 
 /* Return the id of the branch nested in OUTER_BID at element OUTER_EID.
  *
@@ -397,95 +396,13 @@ svn_branch_rev_bid_t *
 svn_branch_rev_bid_dup(const svn_branch_rev_bid_t *old_id,
                        apr_pool_t *result_pool);
 
-/* The content (parent, name and payload) of an element-revision.
- * In other words, an el-rev node in a (mixed-rev) directory-tree.
+
+/* Return the element-tree of BRANCH.
  */
-typedef struct svn_branch_el_rev_content_t
-{
-  /* eid of the parent element, or -1 if this is the root element */
-  int parent_eid;
-  /* struct svn_branch_element_t *parent_element; */
-  /* element name, or "" for root element; never null */
-  const char *name;
-  /* payload (kind, props, text, ...) */
-  svn_element_payload_t *payload;
+const svn_element_tree_t *
+svn_branch_get_element_tree(svn_branch_state_t *branch);
 
-} svn_branch_el_rev_content_t;
-
-/* Return a new content object constructed with deep copies of PARENT_EID,
- * NAME and PAYLOAD, allocated in RESULT_POOL.
- */
-svn_branch_el_rev_content_t *
-svn_branch_el_rev_content_create(svn_branch_eid_t parent_eid,
-                                 const char *name,
-                                 const svn_element_payload_t *payload,
-                                 apr_pool_t *result_pool);
-
-/* Return a deep copy of OLD, allocated in RESULT_POOL.
- */
-svn_branch_el_rev_content_t *
-svn_branch_el_rev_content_dup(const svn_branch_el_rev_content_t *old,
-                              apr_pool_t *result_pool);
-
-/* Return TRUE iff CONTENT_LEFT is the same as CONTENT_RIGHT. */
-svn_boolean_t
-svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
-                                const svn_branch_el_rev_content_t *content_right,
-                                apr_pool_t *scratch_pool);
-
-
-/* Describe a subtree of elements.
- *
- * A subtree is described by the content of element ROOT_EID in E_MAP,
- * and its children (as determined by their parent links) and their names
- * and their content recursively. For the element ROOT_EID itself, only
- * its content is relevant; its parent and name are to be ignored.
- *
- * E_MAP may also contain entries that are not part of the subtree. Thus,
- * to select a sub-subtree, it is only necessary to change ROOT_EID.
- *
- * The EIDs used in here may be considered either as global EIDs (known to
- * the repo), or as local stand-alone EIDs (in their own local name-space),
- * according to the context.
- *
- * ### TODO: This should be used in the implementation of svn_branch_state_t.
- *     A whole bunch of methods would be common to both.
- */
-typedef struct svn_branch_subtree_t
-{
-  svn_branch_rev_bid_t *predecessor;
-
-  /* EID -> svn_branch_el_rev_content_t mapping. */
-  apr_hash_t *e_map;
-
-  /* Subtree root EID. (ROOT_EID must be an existing key in E_MAP.) */
-  int root_eid;
-
-  /* Subbranches to be included: each subbranch-root element in E_MAP
-     should be mapped here.
-
-     A mapping of (int)EID -> (svn_branch_subtree_t *). */
-  apr_hash_t *subbranches;
-} svn_branch_subtree_t;
-
-/* Create an empty subtree (no elements populated, not even ROOT_EID).
- *
- * The result contains a *shallow* copy of E_MAP, or a new empty mapping
- * if E_MAP is null.
- */
-svn_branch_subtree_t *
-svn_branch_subtree_create(apr_hash_t *e_map,
-                          int root_eid,
-                          apr_pool_t *result_pool);
-
-/* Return the subbranch rooted at SUBTREE:EID, or NULL if that is
- * not a subbranch root. */
-svn_branch_subtree_t *
-svn_branch_subtree_get_subbranch_at_eid(svn_branch_subtree_t *subtree,
-                                        int eid,
-                                        apr_pool_t *result_pool);
-
-/* Return the subtree of BRANCH rooted at EID.
+/* Return the element-tree within BRANCH rooted at EID.
  *
  * The result is limited by the lifetime of BRANCH. It includes a shallow
  * copy of the element maps in BRANCH: the hash table is
@@ -493,10 +410,10 @@ svn_branch_subtree_get_subbranch_at_eid(svn_branch_subtree_t *subtree,
  * It assumes that modifications on a svn_branch_state_t treat element
  * map keys and values as immutable -- which they do.
  */
-svn_branch_subtree_t *
-svn_branch_get_subtree_n(svn_branch_state_t *branch,
-                       int eid,
-                       apr_pool_t *result_pool);
+svn_element_tree_t *
+svn_branch_get_element_tree_at_eid(svn_branch_state_t *branch,
+                                   int eid,
+                                   apr_pool_t *result_pool);
 
 /* Declare that the following function requires/implies that in BRANCH's
  * mapping, for each existing element, the parent also exists.
@@ -551,7 +468,7 @@ svn_branch_purge(svn_branch_state_t *branch,
  */
 svn_error_t *
 svn_branch_instantiate_elements(svn_branch_state_t *to_branch,
-                                svn_branch_subtree_t elements,
+                                const svn_element_tree_t *elements,
                                 apr_pool_t *scratch_pool);
 
 /* Create a copy of NEW_SUBTREE in TO_BRANCH.
@@ -570,19 +487,9 @@ svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
                            int to_eid,
                            svn_branch_eid_t new_parent_eid,
                            const char *new_name,
-                           svn_branch_subtree_t new_subtree,
+                           svn_element_tree_t *new_subtree,
                            apr_pool_t *scratch_pool);
 
-/* Return the subtree-relative path of element EID in SUBTREE.
- *
- * If the element EID does not currently exist in SUBTREE, return NULL.
- *
- * ### TODO: Clarify sequencing requirements.
- */
-const char *
-svn_branch_subtree_get_path_by_eid(const svn_branch_subtree_t *subtree,
-                                   int eid,
-                                   apr_pool_t *result_pool);
 /* Return the branch-relative path of element EID in BRANCH.
  *
  * If the element EID does not currently exist in BRANCH, return NULL.

@@ -206,6 +206,135 @@ svn_element_payload_create_symlink(apr_hash_t *props,
 /** @} */
 
 
+/*
+ * ========================================================================
+ * Element-Revision Content
+ * ========================================================================
+ *
+ * @defgroup svn_el_rev_content Element-Revision Content
+ * @{
+ */
+
+/* The content (parent, name and payload) of an element-revision.
+ * In other words, an el-rev node in a (mixed-rev) directory-tree.
+ */
+typedef struct svn_branch_el_rev_content_t
+{
+  /* eid of the parent element, or -1 if this is the root element */
+  int parent_eid;
+  /* element name, or "" for root element; never null */
+  const char *name;
+  /* payload (kind, props, text, ...) */
+  svn_element_payload_t *payload;
+
+} svn_branch_el_rev_content_t;
+
+/* Return a new content object constructed with deep copies of PARENT_EID,
+ * NAME and PAYLOAD, allocated in RESULT_POOL.
+ */
+svn_branch_el_rev_content_t *
+svn_branch_el_rev_content_create(int parent_eid,
+                                 const char *name,
+                                 const svn_element_payload_t *payload,
+                                 apr_pool_t *result_pool);
+
+/* Return a deep copy of OLD, allocated in RESULT_POOL.
+ */
+svn_branch_el_rev_content_t *
+svn_branch_el_rev_content_dup(const svn_branch_el_rev_content_t *old,
+                              apr_pool_t *result_pool);
+
+/* Return TRUE iff CONTENT_LEFT is the same as CONTENT_RIGHT. */
+svn_boolean_t
+svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
+                                const svn_branch_el_rev_content_t *content_right,
+                                apr_pool_t *scratch_pool);
+
+/** @} */
+
+
+/*
+ * ========================================================================
+ * Element Tree
+ * ========================================================================
+ *
+ * The elements in an Element Tree do not necessarily form a single,
+ * complete tree at all times.
+ *
+ * @defgroup svn_element_tree Element Tree
+ * @{
+ */
+
+/* A (sub)tree of elements.
+ *
+ * An element tree is described by the content of element ROOT_EID in E_MAP,
+ * and its children (as determined by their parent links) and their names
+ * and their content recursively. For the element ROOT_EID itself, only
+ * its content is relevant; its parent and name are to be ignored.
+ *
+ * E_MAP may also contain entries that are not part of the subtree. Thus,
+ * to select a sub-subtree, it is only necessary to change ROOT_EID.
+ *
+ * The EIDs used in here may be considered either as global EIDs (known to
+ * the repo), or as local stand-alone EIDs (in their own local name-space),
+ * according to the context.
+ */
+typedef struct svn_element_tree_t
+{
+  /* EID -> svn_branch_el_rev_content_t mapping. */
+  apr_hash_t *e_map;
+
+  /* Subtree root EID. (ROOT_EID must be an existing key in E_MAP.) */
+  int root_eid;
+
+} svn_element_tree_t;
+
+/* Create an element tree object.
+ *
+ * The result contains a *shallow* copy of E_MAP, or a new empty mapping
+ * if E_MAP is null.
+ */
+svn_element_tree_t *
+svn_element_tree_create(apr_hash_t *e_map,
+                        int root_eid,
+                        apr_pool_t *result_pool);
+
+svn_branch_el_rev_content_t *
+svn_element_tree_get(const svn_element_tree_t *tree,
+                     int eid);
+
+svn_error_t *
+svn_element_tree_set(svn_element_tree_t *tree,
+                     int eid,
+                     svn_branch_el_rev_content_t *element);
+
+/* Purge entries from E_MAP that don't connect, via parent directory hierarchy,
+ * to ROOT_EID. In other words, remove elements that have been implicitly
+ * deleted.
+ *
+ * ROOT_EID must be present in E_MAP.
+ *
+ * ### Does not detect cycles: current implementation will not purge a cycle
+ *     that is disconnected from ROOT_EID. This could be a problem.
+ */
+void
+svn_element_tree_purge_orphans(apr_hash_t *e_map,
+                               int root_eid,
+                               apr_pool_t *scratch_pool);
+
+/* Return the subtree-relative path of element EID in TREE.
+ *
+ * If the element EID does not currently exist in TREE, return NULL.
+ *
+ * ### TODO: Clarify sequencing requirements.
+ */
+const char *
+svn_element_tree_get_path_by_eid(const svn_element_tree_t *tree,
+                                 int eid,
+                                 apr_pool_t *result_pool);
+
+/** @} */
+
 
 #ifdef __cplusplus
 }

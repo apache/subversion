@@ -29,6 +29,7 @@
 #include "svn_string.h"
 #include "svn_props.h"
 #include "svn_dirent_uri.h"
+#include "svn_iter.h"
 
 #include "private/svn_element.h"
 #include "svn_private_config.h"
@@ -253,5 +254,154 @@ svn_element_payload_create_symlink(apr_hash_t *props,
   new_payload->target = apr_pstrdup(result_pool, target);
   assert(svn_element_payload_invariants(new_payload));
   return new_payload;
+}
+
+svn_branch_el_rev_content_t *
+svn_branch_el_rev_content_create(int parent_eid,
+                                 const char *name,
+                                 const svn_element_payload_t *payload,
+                                 apr_pool_t *result_pool)
+{
+  svn_branch_el_rev_content_t *content
+     = apr_palloc(result_pool, sizeof(*content));
+
+  content->parent_eid = parent_eid;
+  content->name = apr_pstrdup(result_pool, name);
+  content->payload = svn_element_payload_dup(payload, result_pool);
+  return content;
+}
+
+svn_branch_el_rev_content_t *
+svn_branch_el_rev_content_dup(const svn_branch_el_rev_content_t *old,
+                              apr_pool_t *result_pool)
+{
+  svn_branch_el_rev_content_t *content
+     = apr_pmemdup(result_pool, old, sizeof(*content));
+
+  content->name = apr_pstrdup(result_pool, old->name);
+  content->payload = svn_element_payload_dup(old->payload, result_pool);
+  return content;
+}
+
+svn_boolean_t
+svn_branch_el_rev_content_equal(const svn_branch_el_rev_content_t *content_left,
+                                const svn_branch_el_rev_content_t *content_right,
+                                apr_pool_t *scratch_pool)
+{
+  if (!content_left && !content_right)
+    {
+      return TRUE;
+    }
+  else if (!content_left || !content_right)
+    {
+      return FALSE;
+    }
+
+  if (content_left->parent_eid != content_right->parent_eid)
+    {
+      return FALSE;
+    }
+  if (strcmp(content_left->name, content_right->name) != 0)
+    {
+      return FALSE;
+    }
+  if (! svn_element_payload_equal(content_left->payload, content_right->payload,
+                                  scratch_pool))
+    {
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
+svn_element_tree_t *
+svn_element_tree_create(apr_hash_t *e_map,
+                        int root_eid,
+                        apr_pool_t *result_pool)
+{
+  svn_element_tree_t *element_tree
+    = apr_pcalloc(result_pool, sizeof(*element_tree));
+
+  element_tree->e_map = e_map ? apr_hash_copy(result_pool, e_map)
+                              : apr_hash_make(result_pool);
+  element_tree->root_eid = root_eid;
+  return element_tree;
+}
+
+svn_branch_el_rev_content_t *
+svn_element_tree_get(const svn_element_tree_t *tree,
+                     int eid)
+{
+  return svn_int_hash_get(tree->e_map, eid);
+}
+
+svn_error_t *
+svn_element_tree_set(svn_element_tree_t *tree,
+                     int eid,
+                     svn_branch_el_rev_content_t *element)
+{
+  svn_int_hash_set(tree->e_map, eid, element);
+
+  return SVN_NO_ERROR;
+}
+
+void
+svn_element_tree_purge_orphans(apr_hash_t *e_map,
+                               int root_eid,
+                               apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+  svn_boolean_t changed;
+
+  SVN_ERR_ASSERT_NO_RETURN(svn_int_hash_get(e_map, root_eid));
+
+  do
+    {
+      changed = FALSE;
+
+      for (hi = apr_hash_first(scratch_pool, e_map);
+           hi; hi = apr_hash_next(hi))
+        {
+          int this_eid = svn_int_hash_this_key(hi);
+          svn_branch_el_rev_content_t *this_element = apr_hash_this_val(hi);
+
+          if (this_eid != root_eid)
+            {
+              svn_branch_el_rev_content_t *parent_element
+                = svn_int_hash_get(e_map, this_element->parent_eid);
+
+              /* Purge if parent is deleted */
+              if (! parent_element)
+                {
+                  SVN_DBG(("purge orphan: e%d", this_eid));
+                  svn_int_hash_set(e_map, this_eid, NULL);
+                  changed = TRUE;
+                }
+              else
+                SVN_ERR_ASSERT_NO_RETURN(
+                  ! parent_element->payload->is_subbranch_root);
+            }
+        }
+    }
+  while (changed);
+}
+
+const char *
+svn_element_tree_get_path_by_eid(const svn_element_tree_t *tree,
+                                 int eid,
+                                 apr_pool_t *result_pool)
+{
+  const char *path = "";
+  svn_branch_el_rev_content_t *element;
+
+  for (; eid != tree->root_eid; eid = element->parent_eid)
+    {
+      element = svn_element_tree_get(tree, eid);
+      if (! element)
+        return NULL;
+      path = svn_relpath_join(element->name, path, result_pool);
+    }
+  SVN_ERR_ASSERT_NO_RETURN(eid == tree->root_eid);
+  return path;
 }
 

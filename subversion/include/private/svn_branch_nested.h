@@ -138,6 +138,32 @@ svn_branch_get_subbranch_at_eid(svn_branch_state_t *branch,
                                 int eid,
                                 apr_pool_t *scratch_pool);
 
+/* A subtree of a branch, including any nested branches.
+ */
+typedef struct svn_branch_subtree_t
+{
+  svn_branch_rev_bid_t *predecessor;
+
+  /* EID -> svn_branch_el_rev_content_t mapping. */
+  svn_element_tree_t *tree;
+
+  /* Subbranches to be included: each subbranch-root element in E_MAP
+     should be mapped here.
+
+     A mapping of (int)EID -> (svn_branch_subtree_t *). */
+  apr_hash_t *subbranches;
+} svn_branch_subtree_t;
+
+/* Create an empty subtree (no elements populated, not even ROOT_EID).
+ *
+ * The result contains a *shallow* copy of E_MAP, or a new empty mapping
+ * if E_MAP is null.
+ */
+svn_branch_subtree_t *
+svn_branch_subtree_create(apr_hash_t *e_map,
+                          int root_eid,
+                          apr_pool_t *result_pool);
+
 /* Return the subtree of BRANCH rooted at EID.
  * Recursive: includes subbranches.
  *
@@ -151,6 +177,13 @@ svn_branch_subtree_t *
 svn_branch_get_subtree(svn_branch_state_t *branch,
                        int eid,
                        apr_pool_t *result_pool);
+
+/* Return the subbranch rooted at SUBTREE:EID, or NULL if that is
+ * not a subbranch root. */
+svn_branch_subtree_t *
+svn_branch_subtree_get_subbranch_at_eid(svn_branch_subtree_t *subtree,
+                                        int eid,
+                                        apr_pool_t *result_pool);
 
 /* Instantiate elements in a branch.
  *
