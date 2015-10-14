@@ -450,8 +450,7 @@ svn_branch_get_element(const svn_branch_state_t *branch,
 
 /* In BRANCH, set element EID to ELEMENT.
  *
- * If ELEMENT is null, delete element EID. Otherwise, ELEMENT->payload may be
- * null meaning it is a subbranch-root.
+ * If ELEMENT is null, delete element EID.
  *
  * Assume ELEMENT is already allocated with sufficient lifetime.
  */
