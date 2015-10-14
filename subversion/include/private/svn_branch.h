@@ -143,10 +143,7 @@ typedef struct svn_branch_revision_root_t
    * (skipping -1). */
   int first_eid, next_eid;
 
-  /* The root branches, indexed by top-level branch id (0...N). */
-  apr_array_header_t *root_branches;
-
-  /* All branches, including root branches. */
+  /* All branches. */
   apr_array_header_t *branches;
 
 } svn_branch_revision_root_t;
@@ -242,8 +239,7 @@ struct svn_branch_state_t
 
   /* EID -> svn_branch_el_rev_content_t mapping. */
   /* ### TODO: This should use an svn_branch_subtree_t instead of E_MAP and
-   *     ROOT_EID. And the immediate subbranches would be directly in there,
-   *     instead of (or as well as) being in a single big list in REV_ROOT.
+   *     ROOT_EID.
    *     And a whole bunch of methods would be common to both. */
   apr_hash_t *e_map;
 
