@@ -304,15 +304,10 @@ svn_branch_id_unnest(const char **outer_bid,
                      const char *bid,
                      apr_pool_t *result_pool);
 
-/* Create a new branch at OUTER_BRANCH:OUTER_EID, with no elements
+/* Create a new branch with branch id BID, with no elements
  * (not even a root element).
  *
  * Create and return a new branch object. Register its existence in REV_ROOT.
- *
- * If OUTER_BRANCH is NULL, create a top-level branch with a new top-level
- * branch number, ignoring OUTER_EID. Otherise, create a branch that claims
- * to be nested under OUTER_BRANCH:OUTER_EID, but do not require that
- * a subbranch root element exists there, nor create one.
  *
  * Set the root element to ROOT_EID.
  */
