@@ -1821,10 +1821,10 @@ drive_changes(ev3_from_delta_baton_t *eb,
    */
 
   /* Process one hierarchy of nested branches at a time. */
-  for (i = 0; i < eb->edited_rev_root->root_branches->nelts; i++)
+  for (i = 0; i < eb->edited_rev_root->branches->nelts; i++)
     {
       svn_branch_state_t *root_branch
-        = APR_ARRAY_IDX(eb->edited_rev_root->root_branches, i, void *);
+        = APR_ARRAY_IDX(eb->edited_rev_root->branches, i, void *);
       apr_hash_t *paths_final;
 
       const char *top_path = branch_get_storage_root_rrpath(root_branch,
@@ -1832,6 +1832,9 @@ drive_changes(ev3_from_delta_baton_t *eb,
       svn_pathrev_t current;
       svn_branch_state_t *base_root_branch;
       svn_boolean_t branch_is_new;
+
+      if (strchr(root_branch->bid, '.'))
+        continue;  /* that's not a root branch */
 
       SVN_ERR(svn_branch_repos_get_branch_by_id(&base_root_branch,
                                                 eb->edited_rev_root->repos,

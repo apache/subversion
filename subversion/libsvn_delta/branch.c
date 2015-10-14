@@ -60,7 +60,6 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
   rev_root->repos = repos;
   rev_root->rev = rev;
   rev_root->base_rev = base_rev;
-  rev_root->root_branches = apr_array_make(result_pool, 0, sizeof(void *));
   rev_root->branches = svn_array_make(result_pool);
   return rev_root;
 }
@@ -744,8 +743,6 @@ svn_branch_add_new_branch(const char *bid,
                                        rev_root->branches->pool);
 
   SVN_ARRAY_PUSH(rev_root->branches) = new_branch;
-  if (!strchr(bid, '.'))
-    SVN_ARRAY_PUSH(rev_root->root_branches) = new_branch;
 
   return new_branch;
 }
@@ -768,17 +765,6 @@ svn_branch_revision_root_delete_branch(
                    svn_branch_get_id(bi->val, bi->iterpool),
                    bi->val->root_eid));
           svn_sort__array_delete(rev_root->branches, bi->i, 1);
-          break;
-        }
-    }
-  for (SVN_ARRAY_ITER(bi, rev_root->root_branches, scratch_pool))
-    {
-      if (bi->val == branch)
-        {
-          SVN_DBG(("deleting root-branch b%s e%d",
-                   svn_branch_get_id(bi->val, bi->iterpool),
-                   bi->val->root_eid));
-          svn_sort__array_delete(rev_root->root_branches, bi->i, 1);
           break;
         }
     }
@@ -998,12 +984,6 @@ svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
       SVN_ERR(svn_branch_state_parse(&branch, rev_root, stream,
                                      result_pool, scratch_pool));
       SVN_ARRAY_PUSH(rev_root->branches) = branch;
-
-      /* Note the root branches */
-      if (! strchr(branch->bid, '.'))
-        {
-          APR_ARRAY_PUSH(rev_root->root_branches, void *) = branch;
-        }
     }
 
   *rev_root_p = rev_root;
