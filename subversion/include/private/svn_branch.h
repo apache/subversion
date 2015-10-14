@@ -519,8 +519,7 @@ svn_branch_get_elements(svn_branch_state_t *branch);
 
 /* In BRANCH, get element EID (parent, name, payload).
  *
- * If element EID is not present, return null. Otherwise, the returned
- * element's payload may be null meaning it is a subbranch-root.
+ * If element EID is not present, return null.
  */
 svn_branch_el_rev_content_t *
 svn_branch_get_element(const svn_branch_state_t *branch,
