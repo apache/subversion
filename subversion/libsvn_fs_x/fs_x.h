@@ -160,12 +160,15 @@ svn_fs_x__write_format(svn_fs_t *fs,
 
 /* Find the value of the property named PROPNAME in transaction REV.
    Return the contents in *VALUE_P, allocated from RESULT_POOL.
+   If REFRESH is not set, continue using the potentially outdated
+   revprop generation value in FS->FSAP_DATA.
    Use SCRATCH_POOL for temporary allocations. */
 svn_error_t *
 svn_fs_x__revision_prop(svn_string_t **value_p,
                         svn_fs_t *fs,
                         svn_revnum_t rev,
                         const char *propname,
+                        svn_boolean_t refresh,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 

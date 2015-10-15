@@ -39,8 +39,15 @@ svn_error_t *
 svn_fs_x__reset_revprop_generation_file(svn_fs_t *fs,
                                         apr_pool_t *scratch_pool);
 
+/* Invalidate the cached revprop generation value in FS->FSAP_DATA.
+ * This enforces a re-read upon the next revprop read. */
+void
+svn_fs_x__invalidate_revprop_generation(svn_fs_t *fs);
+
 /* Read the revprops for revision REV in FS and return them in *PROPLIST_P.
  * If BYPASS_CACHE is set, don't consult the disks but always read from disk.
+ * If REFRESH is set, update the revprop generation info; otherwise access
+ * potentially outdated cache data directly.
  *
  * Allocate the *PROPLIST_P in RESULT_POOL and use SCRATCH_POOL for temporary
  * allocations.
@@ -50,6 +57,7 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
                                 svn_fs_t *fs,
                                 svn_revnum_t rev,
                                 svn_boolean_t bypass_cache,
+                                svn_boolean_t refresh,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
