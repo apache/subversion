@@ -110,6 +110,7 @@ read_revprop_generation_file(apr_int64_t *current,
        * file replacement scheme. */
       if (!err)
         {
+          svn_stringbuf_strip_whitespace(buf);
           SVN_ERR(svn_cstring_atoi64(current, buf->data));
           break;
         }
