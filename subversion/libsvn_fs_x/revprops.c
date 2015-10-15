@@ -277,6 +277,21 @@ read_revprop_generation(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+void
+svn_fs_x__invalidate_revprop_generation(svn_fs_t *fs)
+{
+  svn_fs_x__data_t *ffd = fs->fsap_data;
+  ffd->revprop_generation = -1;
+}
+
+/* Return TRUE if the revprop generation value in FS->FSAP_DATA is valid. */
+static svn_boolean_t
+is_generation_valid(svn_fs_t *fs)
+{
+  svn_fs_x__data_t *ffd = fs->fsap_data;
+  return ffd->revprop_generation >= 0;
+}
+
 /* Set the revprop generation in FS to the next odd number to indicate
    that there is a revprop write process under way.  Update the value
    in FS->FSAP_DATA accordingly.  If the change times out, readers shall
@@ -398,6 +413,8 @@ parse_revprop(apr_hash_t **properties,
     {
       svn_fs_x__data_t *ffd = fs->fsap_data;
       svn_fs_x__pair_cache_key_t key = { 0 };
+
+      SVN_ERR_ASSERT(is_generation_valid(fs));
 
       key.revision = revision;
       key.second = ffd->revprop_generation;
@@ -803,6 +820,7 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
                                 svn_fs_t *fs,
                                 svn_revnum_t rev,
                                 svn_boolean_t bypass_cache,
+                                svn_boolean_t refresh,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
@@ -814,13 +832,15 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
   /* should they be available at all? */
   SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, scratch_pool));
 
+  /* Ensure that the revprop generation info is valid. */
+  if (refresh || !is_generation_valid(fs))
+    SVN_ERR(read_revprop_generation(fs, scratch_pool));
+
   /* Try cache lookup first. */
   if (!bypass_cache && has_revprop_cache(fs, scratch_pool))
     {
       svn_boolean_t is_cached;
       svn_fs_x__pair_cache_key_t key = { 0 };
-
-      SVN_ERR(read_revprop_generation(fs, scratch_pool));
 
       key.revision = rev;
       key.second = ffd->revprop_generation;

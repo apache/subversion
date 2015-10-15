@@ -701,7 +701,7 @@ verify_revprops(svn_fs_t *fs,
       /* Access the svn:date revprop.
        * This implies parsing all revprops for that revision. */
       SVN_ERR(svn_fs_x__revision_prop(&date, fs, revision,
-                                      SVN_PROP_REVISION_DATE,
+                                      SVN_PROP_REVISION_DATE, TRUE,
                                       iterpool, iterpool));
 
       /* The time stamp is the only revprop that, if given, needs to

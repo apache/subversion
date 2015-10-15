@@ -1115,13 +1115,14 @@ svn_fs_x__revision_prop(svn_string_t **value_p,
                         svn_fs_t *fs,
                         svn_revnum_t rev,
                         const char *propname,
+                        svn_boolean_t refresh,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
   apr_hash_t *table;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
-  SVN_ERR(svn_fs_x__get_revision_proplist(&table, fs, rev, FALSE,
+  SVN_ERR(svn_fs_x__get_revision_proplist(&table, fs, rev, FALSE, refresh,
                                           scratch_pool, scratch_pool));
 
   *value_p = svn_string_dup(svn_hash_gets(table, propname), result_pool);
@@ -1154,7 +1155,7 @@ change_rev_prop_body(void *baton,
      Even if somehow the cache got out of sync, we want to make sure that
      we read, update and write up-to-date data. */
   SVN_ERR(svn_fs_x__get_revision_proplist(&table, cb->fs, cb->rev, TRUE,
-                                          scratch_pool, scratch_pool));
+                                          TRUE, scratch_pool, scratch_pool));
   present_value = svn_hash_gets(table, cb->name);
 
   if (cb->old_value_p)
