@@ -295,6 +295,9 @@ typedef struct svn_fs_x__data_t
      rep key (revision/offset) to svn_stringbuf_t. */
   svn_cache__t *fulltext_cache;
 
+  /* Revprop generation number.  Will be -1 if it has to reread from disk. */
+  apr_int64_t revprop_generation;
+
   /* Revision property cache.  Maps from (rev,generation) to apr_hash_t. */
   svn_cache__t *revprop_cache;
 
