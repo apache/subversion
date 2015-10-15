@@ -48,10 +48,6 @@
    giving up. */
 #define GENERATION_READ_RETRY_COUNT 100
 
-/* Maximum size of the generation number file contents (including NUL). */
-#define CHECKSUMMED_NUMBER_BUFFER_LEN \
-           (SVN_INT64_BUFFER_SIZE + 3 + APR_MD5_DIGESTSIZE * 2)
-
 
 /* Revprop caching management.
  *
@@ -67,16 +63,7 @@
  * as keys with the generation being incremented upon every revprop change.
  * Since the cache is process-local, the generation needs to be tracked
  * for at least as long as the process lives but may be reset afterwards.
- *
- * We track the revprop generation in a persistent, unbuffered file that
- * we may keep open for the lifetime of the svn_fs_t.  It is the OS'
- * responsibility to provide us with the latest contents upon read.  To
- * detect incomplete updates due to non-atomic reads, we put a MD5 checksum
- * next to the actual generation number and verify that it matches.
- *
- * Since we cannot guarantee that the OS will provide us with up-to-date
- * data buffers for open files, we re-open and re-read the file before
- * modifying it.  This will prevent lost updates.
+ * We track the revprop generation in a file that.
  *
  * A race condition exists between switching to the modified revprop data
  * and bumping the generation number.  In particular, the process may crash
@@ -94,62 +81,6 @@
  * the generation if it is still odd.  So, for about REVPROP_CHANGE_TIMEOUT
  * after the crash, reader caches may be stale.
  */
-
-/* Return the textual representation of NUMBER and its checksum in *BUFFER.
- */
-static svn_error_t *
-checkedsummed_number(svn_stringbuf_t **buffer,
-                     apr_int64_t number,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
-{
-  svn_checksum_t *checksum;
-  const char *digest;
-
-  char str[SVN_INT64_BUFFER_SIZE];
-  apr_size_t len = svn__i64toa(str, number);
-  str[len] = 0;
-
-  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, str, len, scratch_pool));
-  digest = svn_checksum_to_cstring_display(checksum, scratch_pool);
-
-  *buffer = svn_stringbuf_createf(result_pool, "%s %s\n", digest, str);
-
-  return SVN_NO_ERROR;
-}
-
-/* Extract the generation number from the text BUFFER of LEN bytes and
- * verify it against the checksum in the same BUFFER.  If they match, return
- * the generation in *NUMBER.  Otherwise, return an error.
- * BUFFER does not need to be NUL-terminated.
- */
-static svn_error_t *
-verify_extract_number(apr_int64_t *number,
-                      const char *buffer,
-                      apr_size_t len,
-                      apr_pool_t *scratch_pool)
-{
-  const char *digest_end = strchr(buffer, ' ');
-
-  /* Does the buffer even contain checksum _and_ number? */
-  if (digest_end != NULL)
-    {
-      svn_checksum_t *expected;
-      svn_checksum_t *actual;
-
-      SVN_ERR(svn_checksum_parse_hex(&expected, svn_checksum_md5, buffer,
-                                     scratch_pool));
-      SVN_ERR(svn_checksum(&actual, svn_checksum_md5, digest_end + 1,
-                           (buffer + len) - (digest_end + 1), scratch_pool));
-
-      if (svn_checksum_match(expected, actual))
-        return svn_error_trace(svn_cstring_atoi64(number, digest_end + 1));
-    }
-
-  /* Incomplete buffer or not a match. */
-  return svn_error_create(SVN_ERR_FS_INVALID_GENERATION, NULL,
-                          _("Invalid generation number data."));
-}
 
 /* Read revprop generation as stored on disk for repository FS. The result is
  * returned in *CURRENT.  Call only for repos that support revprop caching.
@@ -173,19 +104,17 @@ read_revprop_generation_file(apr_int64_t *current,
       svn_pool_clear(iterpool);
 
       /* Read the generation file. */
-      SVN_ERR(svn_stringbuf_from_file2(&buf, path, iterpool));
+      err = svn_stringbuf_from_file2(&buf, path, iterpool);
 
-      /* Drop EOL, if present (beware of corrupted files). */
-      if (buf->len && buf->data[buf->len-1] == '\n')
-        svn_stringbuf_remove(buf, buf->len-1, 1);
-
-      /* Some data has been read.  It will most likely be complete and
-       * consistent.  Extract and verify anyway. */
-      err = verify_extract_number(current, buf->data, buf->len, iterpool);
+      /* If we could read the file, it should be complete due to our atomic
+       * file replacement scheme. */
       if (!err)
-        break;
+        {
+          SVN_ERR(svn_cstring_atoi64(current, buf->data));
+          break;
+        }
 
-      /* Got unlucky and data was invalid.  Retry. */
+      /* Got unlucky the file was not available.  Retry. */
 #if APR_HAS_THREADS
       apr_thread_yield();
 #else
@@ -216,7 +145,8 @@ write_revprop_generation_file(svn_fs_t *fs,
   ffd->revprop_generation = -1;
 
   /* Write the new number. */
-  SVN_ERR(checkedsummed_number(&buffer, current, scratch_pool, scratch_pool));
+  buffer = svn_stringbuf_createf(scratch_pool, "%" APR_INT64_T_FMT "\n",
+                                 current);
   SVN_ERR(svn_io_write_atomic2(path, buffer->data, buffer->len,
                                path /* copy_perms */, TRUE,
                                scratch_pool));
