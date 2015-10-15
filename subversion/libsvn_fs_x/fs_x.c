@@ -996,6 +996,9 @@ svn_fs_x__create_file_tree(svn_fs_t *fs,
                           scratch_pool));
 
   /* Initialize the revprop caching info. */
+  SVN_ERR(svn_io_file_create_empty(
+                        svn_fs_x__path_revprop_generation(fs, scratch_pool),
+                        scratch_pool));
   SVN_ERR(svn_fs_x__reset_revprop_generation_file(fs, scratch_pool));
 
   ffd->youngest_rev_cache = 0;
