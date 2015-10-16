@@ -198,7 +198,7 @@ wc_checkout(svnmover_wc_t *wc,
   base_txn = svn_branch_repos_get_base_revision_root(edit_txn);
   wc->base = apr_pcalloc(wc->pool, sizeof(*wc->base));
   wc->base->revision = base_revision;
-  wc->base->branch_id = base_branch_id;
+  wc->base->branch_id = apr_pstrdup(wc->pool, base_branch_id);
   wc->base->branch
     = svn_branch_revision_root_get_branch_by_id(base_txn, wc->base->branch_id,
                                                 scratch_pool);
@@ -2466,9 +2466,12 @@ do_topbranch(const char **new_branch_id_p,
              apr_pool_t *result_pool,
              apr_pool_t *scratch_pool)
 {
+  int outer_eid;
+
+  SVN_ERR(svn_editor3_new_eid(editor, &outer_eid));
   SVN_ERR(svn_editor3_branch(editor, new_branch_id_p,
                              from,
-                             NULL, 0, /*outer_branch,outer_eid*/
+                             NULL /*outer_branch*/, outer_eid,
                              result_pool));
 
   notify_v("A+   (branch %s)",
