@@ -48,6 +48,13 @@
   (strcmp(svn_branch_get_id(branch1, scratch_pool), \
           svn_branch_get_id(branch2, scratch_pool)) == 0)
 
+/*  */
+static apr_pool_t *
+branch_state_pool_get(svn_branch_state_t *branch)
+{
+  return apr_hash_pool_get(branch->element_tree->e_map);
+}
+
 svn_branch_revision_root_t *
 svn_branch_revision_root_create(svn_branch_repos_t *repos,
                                 svn_revnum_t rev,
@@ -107,7 +114,8 @@ branch_finalize_eids(svn_branch_state_t *branch,
 {
   apr_hash_index_t *hi;
 
-  branch->bid = branch_finalize_bid(branch->bid, mapping_offset, scratch_pool);
+  branch->bid = branch_finalize_bid(branch->bid, mapping_offset,
+                                    branch_state_pool_get(branch));
   if (branch->element_tree->root_eid < -1)
     {
       branch->element_tree->root_eid
