@@ -770,6 +770,7 @@ svn_branch_get_mutable_state(svn_branch_revision_root_t **rev_root_p,
                              apr_pool_t *scratch_pool)
 {
   svn_branch_revision_root_t *txn;
+  apr_array_header_t *branches;
   int i;
 
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(base_revision));
@@ -785,9 +786,10 @@ svn_branch_get_mutable_state(svn_branch_revision_root_t **rev_root_p,
   txn->base_rev = base_revision;
   txn->rev = SVN_INVALID_REVNUM;
 
-  for (i = 0; i < txn->branches->nelts; i++)
+  branches = svn_branch_revision_root_get_branches(txn, scratch_pool);
+  for (i = 0; i < branches->nelts; i++)
     {
-      svn_branch_state_t *b = APR_ARRAY_IDX(txn->branches, i, void *);
+      svn_branch_state_t *b = APR_ARRAY_IDX(branches, i, void *);
 
       b->predecessor
         = svn_branch_rev_bid_create(base_revision,
