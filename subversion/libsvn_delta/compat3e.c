@@ -1157,9 +1157,8 @@ editor3_new_eid(void *baton,
                 apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
-  int eid = svn_branch_txn_new_eid(eb->txn);
 
-  *eid_p = eid;
+  SVN_ERR(svn_branch_txn_new_eid(eb->txn, eid_p, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1175,23 +1174,15 @@ editor3_open_branch(void *baton,
                     apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
-  svn_branch_state_t *new_branch;
 
-  /* if the subbranch already exists, just return its bid */
-  *new_branch_id_p
-    = svn_branch_id_nest(outer_branch_id, outer_eid, result_pool);
-  new_branch
-    = svn_branch_txn_get_branch_by_id(eb->txn, *new_branch_id_p,
-                                      scratch_pool);
-  if (new_branch)
-    {
-      SVN_ERR_ASSERT(root_eid == svn_branch_root_eid(new_branch));
-      return SVN_NO_ERROR;
-    }
-
-  new_branch = svn_branch_txn_add_new_branch(eb->txn,
-                                             *new_branch_id_p, predecessor,
-                                             root_eid, scratch_pool);
+  SVN_ERR(svn_branch_txn_open_branch(eb->txn,
+                                     new_branch_id_p,
+                                     predecessor,
+                                     outer_branch_id,
+                                     outer_eid,
+                                     root_eid,
+                                     result_pool,
+                                     scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1206,31 +1197,25 @@ editor3_branch(void *baton,
                apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
-  svn_branch_rev_bid_t *predecessor;
   svn_branch_state_t *new_branch;
   svn_branch_state_t *from_branch;
   svn_branch_subtree_t *from_subtree;
 
+  SVN_ERR(svn_branch_txn_branch(eb->txn,
+                                new_branch_id_p,
+                                from,
+                                outer_branch_id,
+                                outer_eid,
+                                result_pool,
+                                scratch_pool));
+
+  /* Recursively branch any nested branches */
+  /* (The way we're doing it here also redundantly re-instantiates all the
+     elements in NEW_BRANCH.) */
   SVN_ERR(branch_in_rev_or_txn(&from_branch, from, eb, scratch_pool));
   from_subtree = svn_branch_get_subtree(from_branch, from->eid, scratch_pool);
-
-  /* Source element must exist */
-  if (! from_subtree)
-    {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("Cannot branch from r%ld %s e%d: "
-                                 "does not exist"),
-                               from->rev, from->bid, from->eid);
-    }
-
-  *new_branch_id_p
-    = svn_branch_id_nest(outer_branch_id, outer_eid, result_pool);
-  predecessor = svn_branch_rev_bid_create(from->rev, from->bid, scratch_pool);
-  new_branch = svn_branch_txn_add_new_branch(eb->txn,
-                                             *new_branch_id_p, predecessor,
-                                             from->eid, scratch_pool);
-
-  /* Populate the mapping from the 'from' source */
+  new_branch = svn_branch_txn_get_branch_by_id(eb->txn, *new_branch_id_p,
+                                               scratch_pool);
   SVN_ERR(svn_branch_instantiate_elements_r(new_branch, *from_subtree,
                                             scratch_pool));
 
@@ -1256,7 +1241,7 @@ editor3_alter(void *baton,
          created' EIDs to new EIDs? See BRANCH-README. */
   while (eid < eb->txn->first_eid
          || (new_parent_eid < eb->txn->first_eid))
-    svn_branch_txn_new_eid(eb->txn);
+    SVN_ERR(svn_branch_txn_new_eid(eb->txn, NULL, scratch_pool));
 
   if (! new_payload->is_subbranch_root)
     {
@@ -1270,8 +1255,8 @@ editor3_alter(void *baton,
       SVN_DBG(("alter(e%d): parent e%d, name '%s', kind (subbranch)",
                eid, new_parent_eid, new_name));
     }
-  svn_branch_update_element(branch, eid, new_parent_eid, new_name,
-                            new_payload);
+  SVN_ERR(svn_branch_state_alter_one(branch, eid, new_parent_eid, new_name,
+                                     new_payload, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1297,55 +1282,6 @@ editor3_copy_one(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Copy a subtree.
- *
- * Adjust TO_BRANCH and its subbranches (recursively), to reflect a copy
- * of a subtree from FROM_EL_REV to TO_PARENT_EID:TO_NAME.
- *
- * FROM_EL_REV must be an existing element. (It may be a branch root.)
- *
- * ### TODO:
- * If FROM_EL_REV is the root of a subbranch and/or contains nested
- * subbranches, also copy them ...
- * ### What shall we do with a subbranch? Make plain copies of its raw
- *     elements; make a subbranch by branching the source subbranch?
- *
- * TO_PARENT_EID must be a directory element in TO_BRANCH, and TO_NAME a
- * non-existing path in it.
- */
-static svn_error_t *
-copy_subtree(const svn_branch_el_rev_id_t *from_el_rev,
-             svn_branch_state_t *to_branch,
-             svn_branch_eid_t to_parent_eid,
-             const char *to_name,
-             apr_pool_t *scratch_pool)
-{
-  svn_branch_subtree_t *new_subtree;
-
-  SVN_DBG(("cp subtree from e%d to e%d/%s",
-           from_el_rev->eid, to_parent_eid, to_name));
-
-  new_subtree = svn_branch_get_subtree(from_el_rev->branch, from_el_rev->eid,
-                                       scratch_pool);
-  if (new_subtree->subbranches && apr_hash_count(new_subtree->subbranches))
-    {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("Adding or copying a subtree containing "
-                                 "subbranches is not implemented"));
-    }
-
-  /* copy the subtree, assigning new EIDs */
-  SVN_ERR(svn_branch_map_add_subtree(to_branch, -1 /*to_eid*/,
-                                     to_parent_eid, to_name,
-                                     new_subtree->tree,
-                                     scratch_pool));
-
-  /* handle any subbranches under FROM_BRANCH:FROM_EID */
-  /* ### Later. */
-
-  return SVN_NO_ERROR;
-}
-
 /* An #svn_editor3_t method. */
 static svn_error_t *
 editor3_copy_tree(void *baton,
@@ -1356,20 +1292,14 @@ editor3_copy_tree(void *baton,
                   apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
-  svn_branch_state_t *src_branch;
-  svn_branch_el_rev_id_t *from_el_rev;
   svn_branch_state_t *to_branch
     = svn_branch_txn_get_branch_by_id(eb->txn, to_branch_id, scratch_pool);
 
-  SVN_DBG(("copy_tree(e%d -> e%d/%s)",
-           src_el_rev->eid, new_parent_eid, new_name));
+  SVN_ERR(svn_branch_state_copy_tree(to_branch,
+                                     src_el_rev, new_parent_eid, new_name,
+                                     scratch_pool));
 
-  SVN_ERR(branch_in_rev_or_txn(&src_branch, src_el_rev, eb, scratch_pool));
-  from_el_rev = svn_branch_el_rev_id_create(src_branch, src_el_rev->eid,
-                                            src_el_rev->rev, scratch_pool);
-  SVN_ERR(copy_subtree(from_el_rev,
-                       to_branch, new_parent_eid, new_name,
-                       scratch_pool));
+  /* ### TODO: If any copied elements are subbranch-roots, ... Unimplemented. */
 
   return SVN_NO_ERROR;
 }
@@ -1388,7 +1318,7 @@ editor3_delete(void *baton,
   SVN_DBG(("delete(b%s e%d)",
            svn_branch_get_id(branch, scratch_pool), eid));
 
-  svn_branch_delete_element(branch, eid /* ### , since_rev? */);
+  SVN_ERR(svn_branch_state_delete_one(branch, eid, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1906,12 +1836,7 @@ editor3_sequence_point(void *baton,
   branches = svn_branch_txn_get_branches(eb->txn, scratch_pool);
 
   /* first, purge elements in each branch */
-  for (i = 0; i < branches->nelts; i++)
-    {
-      svn_branch_state_t *b = APR_ARRAY_IDX(branches, i, void *);
-
-      svn_branch_purge(b, scratch_pool);
-    }
+  SVN_ERR(svn_branch_txn_sequence_point(eb->txn, scratch_pool));
 
   /* second, purge branches that are no longer nested */
   for (i = 0; i < branches->nelts; i++)

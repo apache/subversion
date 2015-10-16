@@ -123,11 +123,18 @@ typedef struct svn_branch_state_t svn_branch_state_t;
  */
 typedef struct svn_branch_repos_t svn_branch_repos_t;
 
+/* Private methods and data for a transaction.
+ */
+typedef struct svn_branch_txn_priv_t svn_branch_txn_priv_t;
+
 /* A container for all the branching metadata for a specific revision (or
  * an uncommitted transaction).
  */
 typedef struct svn_branch_txn_t
 {
+  /* Private methods and data. */
+  svn_branch_txn_priv_t *priv;
+
   /* The repository in which this revision exists. */
   svn_branch_repos_t *repos;
 
@@ -183,8 +190,33 @@ svn_branch_txn_get_branch_by_id(const svn_branch_txn_t *txn,
 
 /* Assign a new txn-scope element id in TXN.
  */
-int
-svn_branch_txn_new_eid(svn_branch_txn_t *txn);
+svn_error_t *
+svn_branch_txn_new_eid(svn_branch_txn_t *txn,
+                       int *new_eid_p,
+                       apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_branch_txn_open_branch(svn_branch_txn_t *txn,
+                           const char **new_branch_id_p,
+                           svn_branch_rev_bid_t *predecessor,
+                           const char *outer_branch_id,
+                           int outer_eid,
+                           int root_eid,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_branch_txn_branch(svn_branch_txn_t *txn,
+                      const char **new_branch_id_p,
+                      svn_branch_rev_bid_eid_t *from,
+                      const char *outer_branch_id,
+                      int outer_eid,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_branch_txn_sequence_point(svn_branch_txn_t *txn,
+                              apr_pool_t *scratch_pool);
 
 /* Change txn-local EIDs (negative integers) in TXN to revision EIDs, by
  * assigning a new revision-EID (positive integer) for each one.
@@ -218,12 +250,19 @@ svn_branch_txn_finalize_eids(svn_branch_txn_t *txn,
  *          ...
  */
 
+/* Private methods and data for a branch state.
+ */
+typedef struct svn_branch_state_priv_t svn_branch_state_priv_t;
+
 /* A branch state.
  *
  * A branch state object describes one version of one branch.
  */
 struct svn_branch_state_t
 {
+  /* Private methods and data. */
+  svn_branch_state_priv_t *priv;
+
   /* The branch identifier (starting with 'B') */
   const char *bid;
 
@@ -430,26 +469,35 @@ svn_branch_get_element(const svn_branch_state_t *branch,
 
 /* In BRANCH, delete element EID.
  */
-void
-svn_branch_delete_element(svn_branch_state_t *branch,
-                          int eid);
+svn_error_t *
+svn_branch_state_delete_one(svn_branch_state_t *branch,
+                           svn_branch_eid_t eid,
+                           apr_pool_t *scratch_pool);
 
 /* Set or change the EID:element mapping for EID in BRANCH.
  *
  * Duplicate NEW_NAME and NEW_PAYLOAD into the branch mapping's pool.
  */
-void
-svn_branch_update_element(svn_branch_state_t *branch,
-                          int eid,
-                          svn_branch_eid_t new_parent_eid,
-                          const char *new_name,
-                          const svn_element_payload_t *new_payload);
+svn_error_t *
+svn_branch_state_alter_one(svn_branch_state_t *branch,
+                           svn_branch_eid_t eid,
+                           svn_branch_eid_t new_parent_eid,
+                           const char *new_name,
+                           const svn_element_payload_t *new_payload,
+                           apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_branch_state_copy_tree(svn_branch_state_t *branch,
+                           const svn_branch_rev_bid_eid_t *src_el_rev,
+                           svn_branch_eid_t new_parent_eid,
+                           const char *new_name,
+                           apr_pool_t *scratch_pool);
 
 /* Purge orphaned elements in BRANCH.
  */
-void
-svn_branch_purge(svn_branch_state_t *branch,
-                 apr_pool_t *scratch_pool);
+svn_error_t *
+svn_branch_state_purge(svn_branch_state_t *branch,
+                       apr_pool_t *scratch_pool);
 
 /* Instantiate elements in a branch.
  *
