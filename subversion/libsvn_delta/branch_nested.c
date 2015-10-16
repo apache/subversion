@@ -230,11 +230,11 @@ svn_branch_instantiate_elements_r(svn_branch_state_t *to_branch,
         /* branch this subbranch into NEW_BRANCH (recursing) */
         new_branch_id = svn_branch_id_nest(to_branch->bid, this_outer_eid,
                                            bi->iterpool);
-        new_branch = svn_branch_add_new_branch(new_branch_id,
-                                               to_branch->txn,
-                                               this_subtree->predecessor,
-                                               this_subtree->tree->root_eid,
-                                               bi->iterpool);
+        new_branch = svn_branch_txn_add_new_branch(to_branch->txn,
+                                                   new_branch_id,
+                                                   this_subtree->predecessor,
+                                                   this_subtree->tree->root_eid,
+                                                   bi->iterpool);
 
         SVN_ERR(svn_branch_instantiate_elements_r(new_branch, *this_subtree,
                                                   bi->iterpool));

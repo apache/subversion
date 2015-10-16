@@ -1189,10 +1189,9 @@ editor3_open_branch(void *baton,
       return SVN_NO_ERROR;
     }
 
-  new_branch = svn_branch_add_new_branch(*new_branch_id_p,
-                                         eb->txn,
-                                         predecessor,
-                                         root_eid, scratch_pool);
+  new_branch = svn_branch_txn_add_new_branch(eb->txn,
+                                             *new_branch_id_p, predecessor,
+                                             root_eid, scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -1227,10 +1226,9 @@ editor3_branch(void *baton,
   *new_branch_id_p
     = svn_branch_id_nest(outer_branch_id, outer_eid, result_pool);
   predecessor = svn_branch_rev_bid_create(from->rev, from->bid, scratch_pool);
-  new_branch = svn_branch_add_new_branch(*new_branch_id_p,
-                                         eb->txn,
-                                         predecessor,
-                                         from->eid, scratch_pool);
+  new_branch = svn_branch_txn_add_new_branch(eb->txn,
+                                             *new_branch_id_p, predecessor,
+                                             from->eid, scratch_pool);
 
   /* Populate the mapping from the 'from' source */
   SVN_ERR(svn_branch_instantiate_elements_r(new_branch, *from_subtree,
@@ -1928,7 +1926,7 @@ editor3_sequence_point(void *baton,
       if (outer_branch
           && ! svn_branch_get_element(outer_branch, outer_eid))
         {
-          svn_branch_txn_delete_branch(b->txn, b, scratch_pool);
+          SVN_ERR(svn_branch_txn_delete_branch(eb->txn, b->bid, scratch_pool));
         }
     }
 
