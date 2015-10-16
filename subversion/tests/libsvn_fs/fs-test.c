@@ -24,6 +24,7 @@
 #include <string.h>
 #include <apr_pools.h>
 #include <apr_thread_proc.h>
+#include <apr_poll.h>
 #include <assert.h>
 
 #include "../svn_test.h"
@@ -6956,6 +6957,160 @@ freeze_and_commit(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Convenience wrapper around svn_fs_change_rev_prop2. */
+static svn_error_t *
+set_revprop(svn_fs_t *fs,
+            svn_revnum_t revision,
+            const char *value,
+            apr_pool_t *scratch_pool)
+{
+  svn_string_t *content = svn_string_create(value, scratch_pool);
+  SVN_ERR(svn_fs_change_rev_prop2(fs, revision, "prop", NULL, content,
+                                  scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Call svn_fs_revision_prop2 and verify that the property value matches
+ * EXPECTED. */
+static svn_error_t *
+check_revprop(svn_fs_t *fs,
+              svn_revnum_t revision,
+              svn_boolean_t refresh,
+              const char *expected,
+              apr_pool_t *scratch_pool)
+{
+  svn_string_t *actual;
+  SVN_ERR(svn_fs_revision_prop2(&actual, fs, revision, "prop", refresh,
+                                scratch_pool, scratch_pool));
+  SVN_TEST_STRING_ASSERT(actual->data, expected);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+revprop_refresh(const svn_test_opts_t *opts,
+                apr_pool_t *pool)
+{
+  svn_fs_t *fs, *fs2;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_string_t *old_value, *new_value;
+  apr_hash_t *config;
+
+  if (!strcmp(opts->fs_type, "bdb"))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "the BDB backend ignores the refresh option");
+
+  /* That option is required to make this work with FSX. */
+  config = apr_hash_make(pool);
+  svn_hash_sets(config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "1");
+
+  /* Build a repository with a few revisions in it. */
+  SVN_ERR(svn_test__create_fs2(&fs, "test-repo-revprop-refresh", opts,
+                               config, pool));
+  SVN_ERR(svn_fs_open2(&fs2, "test-repo-revprop-refresh", config, pool,
+                       pool));
+
+  for (i = 1; i < 5; ++i)
+    {
+      svn_fs_txn_t *txn;
+      svn_fs_root_t *txn_root;
+      svn_revnum_t new_rev = 0;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, iterpool));
+      SVN_ERR(svn_fs_txn_root(&txn_root, txn, iterpool));
+      SVN_ERR(svn_fs_make_dir(txn_root, apr_itoa(pool, i), iterpool));
+      SVN_ERR(test_commit_txn(&new_rev, txn, NULL, iterpool));
+    }
+
+  /* The initial access sees the latest revprops - even without refresh. */
+  SVN_ERR(set_revprop(fs, 0, "x0", pool));
+  SVN_ERR(set_revprop(fs, 1, "x1", pool));
+  SVN_ERR(set_revprop(fs, 2, "x2", pool));
+  SVN_ERR(check_revprop(fs2, 0, FALSE, "x0", pool));
+  SVN_ERR(check_revprop(fs2, 1, FALSE, "x1", pool));
+  SVN_ERR(check_revprop(fs2, 2, FALSE, "x2", pool));
+
+  /* With the REFRESH option set, revprop changes are immediately visible. */
+  SVN_ERR(set_revprop(fs, 0, "y0", pool));
+  SVN_ERR(set_revprop(fs, 1, "y1", pool));
+  SVN_ERR(set_revprop(fs, 2, "y2", pool));
+  SVN_ERR(check_revprop(fs2, 0, TRUE, "y0", pool));
+  SVN_ERR(check_revprop(fs2, 1, TRUE, "y1", pool));
+  SVN_ERR(check_revprop(fs2, 2, TRUE, "y2", pool));
+
+  /* Without the REFRESH option set, revprop changes not always visible.
+   * Our cache is large enough that we won't see any change.
+   * But first we have to heat up our cache. */
+  SVN_ERR(check_revprop(fs2, 0, FALSE, "y0", pool));
+  SVN_ERR(check_revprop(fs2, 1, FALSE, "y1", pool));
+  SVN_ERR(check_revprop(fs2, 2, FALSE, "y2", pool));
+  SVN_ERR(set_revprop(fs, 0, "z0", pool));
+  SVN_ERR(set_revprop(fs, 1, "z1", pool));
+  SVN_ERR(set_revprop(fs, 2, "z2", pool));
+  SVN_ERR(check_revprop(fs2, 0, FALSE, "y0", pool));
+  SVN_ERR(check_revprop(fs2, 1, FALSE, "y1", pool));
+  SVN_ERR(check_revprop(fs2, 2, FALSE, "y2", pool));
+
+  /* An explicit refresh helps. */
+  SVN_ERR(svn_fs_refresh_revision_props(fs2, pool));
+  SVN_ERR(check_revprop(fs2, 0, FALSE, "z0", pool));
+  SVN_ERR(check_revprop(fs2, 1, FALSE, "z1", pool));
+  SVN_ERR(check_revprop(fs2, 2, FALSE, "z2", pool));
+
+  /* A single REFRESH is enough to make *all* recent changes visible. */
+  SVN_ERR(set_revprop(fs, 0, "t0", pool));
+  SVN_ERR(set_revprop(fs, 1, "t1", pool));
+  SVN_ERR(set_revprop(fs, 2, "t2", pool));
+  SVN_ERR(check_revprop(fs2, 0, FALSE, "z0", pool));
+  SVN_ERR(check_revprop(fs2, 1, TRUE, "t1", pool));
+  SVN_ERR(check_revprop(fs2, 2, FALSE, "t2", pool));
+  SVN_ERR(check_revprop(fs2, 0, FALSE, "t0", pool));
+
+  /* A single revprop write is enough to make *all* recent changes visible. */
+  SVN_ERR(set_revprop(fs, 0, "u0", pool));
+  SVN_ERR(set_revprop(fs, 1, "u1", pool));
+  SVN_ERR(set_revprop(fs, 2, "u2", pool));
+  SVN_ERR(check_revprop(fs2, 0, FALSE, "t0", pool));
+  SVN_ERR(set_revprop(fs2, 3, "a3", pool));
+  SVN_ERR(check_revprop(fs2, 1, FALSE, "u1", pool));
+  SVN_ERR(check_revprop(fs2, 2, FALSE, "u2", pool));
+  SVN_ERR(check_revprop(fs2, 0, FALSE, "u0", pool));
+
+  /* A revprop write is always visible to the writer. */
+  SVN_ERR(check_revprop(fs, 0, FALSE, "u0", pool));
+  SVN_ERR(check_revprop(fs, 1, FALSE, "u1", pool));
+  SVN_ERR(check_revprop(fs, 2, FALSE, "u2", pool));
+  SVN_ERR(check_revprop(fs2, 3, FALSE, "a3", pool));
+
+  /* An atomic revprop write will always verify against the on-disk data. */
+  SVN_ERR(set_revprop(fs, 0, "v0", pool));
+
+  SVN_ERR(check_revprop(fs, 0, FALSE, "v0", pool));
+  SVN_ERR(check_revprop(fs2, 0, FALSE, "u0", pool));
+
+  old_value = svn_string_create("v0", pool);
+  new_value = svn_string_create("b0", pool);
+  SVN_ERR(svn_fs_change_rev_prop2(fs2, 0, "prop",
+                                  (const svn_string_t * const *)&old_value,
+                                  new_value, pool));
+
+  SVN_ERR(check_revprop(fs, 0, FALSE, "v0", pool));
+  SVN_ERR(check_revprop(fs2, 0, FALSE, "b0", pool));
+
+  old_value = svn_string_create("v0", pool);
+  new_value = svn_string_create("w0", pool);
+  SVN_TEST_ASSERT_ERROR(svn_fs_change_rev_prop2(fs, 0, "prop",
+                                  (const svn_string_t * const *)&old_value,
+                                  new_value, pool),
+                        SVN_ERR_FS_PROP_BASEVALUE_MISMATCH);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -7090,6 +7245,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_check_related for transactions"),
     SVN_TEST_OPTS_PASS(freeze_and_commit,
                        "freeze and commit"),
+    SVN_TEST_OPTS_PASS(revprop_refresh,
+                       "refresh option in FS revprop API"),
     SVN_TEST_NULL
   };
 
