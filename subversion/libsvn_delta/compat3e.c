@@ -1910,18 +1910,18 @@ editor3_sequence_point(void *baton,
   apr_array_header_t *branches;
   int i;
 
+  branches = svn_branch_revision_root_get_branches(eb->edited_rev_root,
+                                                   scratch_pool);
+
   /* first, purge elements in each branch */
-  for (i = 0; i < eb->edited_rev_root->branches->nelts; i++)
+  for (i = 0; i < branches->nelts; i++)
     {
-      svn_branch_state_t *b
-        = APR_ARRAY_IDX(eb->edited_rev_root->branches, i, void *);
+      svn_branch_state_t *b = APR_ARRAY_IDX(branches, i, void *);
 
       svn_branch_purge(b, scratch_pool);
     }
 
   /* second, purge branches that are no longer nested */
-  branches = svn_branch_revision_root_get_branches(eb->edited_rev_root,
-                                                   scratch_pool);
   for (i = 0; i < branches->nelts; i++)
     {
       svn_branch_state_t *b = APR_ARRAY_IDX(branches, i, void *);
