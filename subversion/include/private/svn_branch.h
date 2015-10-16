@@ -150,9 +150,6 @@ typedef struct svn_branch_txn_t
    * (skipping -1). */
   int first_eid, next_eid;
 
-  /* All branches. */
-  apr_array_header_t *branches;
-
 } svn_branch_txn_t;
 
 /* Create a new branching revision-info object.
@@ -272,9 +269,6 @@ struct svn_branch_state_t
 
   /* The revision to which this branch state belongs */
   svn_branch_txn_t *txn;
-
-  /* EID -> svn_branch_el_rev_content_t mapping. */
-  svn_element_tree_t *element_tree;
 
 };
 
