@@ -162,7 +162,7 @@ svn_branch_revision_root_create(svn_branch_repos_t *repos,
  *
  * Return an empty array if there are none.
  */
-const apr_array_header_t *
+apr_array_header_t *
 svn_branch_revision_root_get_branches(svn_branch_revision_root_t *rev_root,
                                       apr_pool_t *result_pool);
 

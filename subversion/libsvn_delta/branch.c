@@ -171,11 +171,11 @@ svn_branch_txn_finalize_eids(svn_branch_revision_root_t *txn,
   return SVN_NO_ERROR;
 }
 
-const apr_array_header_t *
+apr_array_header_t *
 svn_branch_revision_root_get_branches(svn_branch_revision_root_t *rev_root,
                                       apr_pool_t *result_pool)
 {
-  return rev_root->branches;
+  return apr_array_copy(result_pool, rev_root->branches);
 }
 
 svn_branch_state_t *
