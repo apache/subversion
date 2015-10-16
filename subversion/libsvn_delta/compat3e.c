@@ -554,7 +554,7 @@ typedef struct ev3_from_delta_baton_t
   apr_hash_t *changes;
 
   /* The branching state on which the per-element API is working */
-  svn_branch_revision_root_t *edited_rev_root;
+  svn_branch_txn_t *txn;
 
   apr_pool_t *edit_pool;
 } ev3_from_delta_baton_t;
@@ -1032,7 +1032,7 @@ branch_in_rev_or_txn(svn_branch_state_t **src_branch,
   if (SVN_IS_VALID_REVNUM(src_el_rev->rev))
     {
       SVN_ERR(svn_branch_repos_get_branch_by_id(src_branch,
-                                                eb->edited_rev_root->repos,
+                                                eb->txn->repos,
                                                 src_el_rev->rev,
                                                 src_el_rev->bid,
                                                 result_pool));
@@ -1040,8 +1040,8 @@ branch_in_rev_or_txn(svn_branch_state_t **src_branch,
   else
     {
       *src_branch
-        = svn_branch_revision_root_get_branch_by_id(
-            eb->edited_rev_root, src_el_rev->bid, result_pool);
+        = svn_branch_txn_get_branch_by_id(
+            eb->txn, src_el_rev->bid, result_pool);
     }
 
   return SVN_NO_ERROR;
@@ -1115,7 +1115,7 @@ payload_resolve(svn_element_payload_t *payload,
     return SVN_NO_ERROR;
 
   SVN_ERR(payload_get_storage_pathrev(&storage, payload,
-                                      eb->edited_rev_root->repos,
+                                      eb->txn->repos,
                                       scratch_pool));
 
   SVN_ERR(eb->fetch_func(&payload->kind,
@@ -1157,7 +1157,7 @@ editor3_new_eid(void *baton,
                 apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
-  int eid = svn_branch_txn_new_eid(eb->edited_rev_root);
+  int eid = svn_branch_txn_new_eid(eb->txn);
 
   *eid_p = eid;
   return SVN_NO_ERROR;
@@ -1181,9 +1181,8 @@ editor3_open_branch(void *baton,
   *new_branch_id_p
     = svn_branch_id_nest(outer_branch_id, outer_eid, result_pool);
   new_branch
-    = svn_branch_revision_root_get_branch_by_id(eb->edited_rev_root,
-                                                *new_branch_id_p,
-                                                scratch_pool);
+    = svn_branch_txn_get_branch_by_id(eb->txn, *new_branch_id_p,
+                                      scratch_pool);
   if (new_branch)
     {
       SVN_ERR_ASSERT(root_eid == svn_branch_root_eid(new_branch));
@@ -1191,7 +1190,7 @@ editor3_open_branch(void *baton,
     }
 
   new_branch = svn_branch_add_new_branch(*new_branch_id_p,
-                                         eb->edited_rev_root,
+                                         eb->txn,
                                          predecessor,
                                          root_eid, scratch_pool);
   return SVN_NO_ERROR;
@@ -1229,7 +1228,7 @@ editor3_branch(void *baton,
     = svn_branch_id_nest(outer_branch_id, outer_eid, result_pool);
   predecessor = svn_branch_rev_bid_create(from->rev, from->bid, scratch_pool);
   new_branch = svn_branch_add_new_branch(*new_branch_id_p,
-                                         eb->edited_rev_root,
+                                         eb->txn,
                                          predecessor,
                                          from->eid, scratch_pool);
 
@@ -1252,15 +1251,14 @@ editor3_alter(void *baton,
 {
   ev3_from_delta_baton_t *eb = baton;
   svn_branch_state_t *branch
-    = svn_branch_revision_root_get_branch_by_id(eb->edited_rev_root,
-                                                branch_id, scratch_pool);
+    = svn_branch_txn_get_branch_by_id(eb->txn, branch_id, scratch_pool);
 
   /* ### Ensure the requested EIDs are allocated... This is not the
          right way to do it. Instead the Editor should map 'to be
          created' EIDs to new EIDs? See BRANCH-README. */
-  while (eid < eb->edited_rev_root->first_eid
-         || (new_parent_eid < eb->edited_rev_root->first_eid))
-    svn_branch_txn_new_eid(eb->edited_rev_root);
+  while (eid < eb->txn->first_eid
+         || (new_parent_eid < eb->txn->first_eid))
+    svn_branch_txn_new_eid(eb->txn);
 
   if (! new_payload->is_subbranch_root)
     {
@@ -1363,8 +1361,7 @@ editor3_copy_tree(void *baton,
   svn_branch_state_t *src_branch;
   svn_branch_el_rev_id_t *from_el_rev;
   svn_branch_state_t *to_branch
-    = svn_branch_revision_root_get_branch_by_id(eb->edited_rev_root,
-                                                to_branch_id, scratch_pool);
+    = svn_branch_txn_get_branch_by_id(eb->txn, to_branch_id, scratch_pool);
 
   SVN_DBG(("copy_tree(e%d -> e%d/%s)",
            src_el_rev->eid, new_parent_eid, new_name));
@@ -1388,8 +1385,7 @@ editor3_delete(void *baton,
 {
   ev3_from_delta_baton_t *eb = baton;
   svn_branch_state_t *branch
-    = svn_branch_revision_root_get_branch_by_id(eb->edited_rev_root,
-                                                branch_id, scratch_pool);
+    = svn_branch_txn_get_branch_by_id(eb->txn, branch_id, scratch_pool);
 
   SVN_DBG(("delete(b%s e%d)",
            svn_branch_get_id(branch, scratch_pool), eid));
@@ -1428,7 +1424,7 @@ convert_branch_to_paths(apr_hash_t *paths,
       if (! ba
           || eid == svn_branch_root_eid(branch))
         {
-          ba = svn_branch_el_rev_id_create(branch, eid, branch->rev_root->rev,
+          ba = svn_branch_el_rev_id_create(branch, eid, branch->txn->rev,
                                            result_pool);
           svn_hash_sets(paths, rrpath, ba);
           /*SVN_DBG(("branch-to-path[%d]: b%s e%d -> %s",
@@ -1524,7 +1520,7 @@ get_copy_from(svn_pathrev_t *copyfrom_pathrev_p,
   if (final_payload->branch_ref.branch_id)
     {
       SVN_ERR(payload_get_storage_pathrev(copyfrom_pathrev_p, final_payload,
-                                          eb->edited_rev_root->repos,
+                                          eb->txn->repos,
                                           result_pool));
     }
   else
@@ -1640,7 +1636,7 @@ drive_changes_r(const char *rrpath,
       svn_branch_el_rev_id_t *pred_el_rev;
 
       SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(&pred_el_rev,
-                                            eb->edited_rev_root->repos,
+                                            eb->txn->repos,
                                             pred_loc->rev,
                                             top_branch_id,
                                             pred_loc->relpath,
@@ -1829,8 +1825,7 @@ drive_changes(ev3_from_delta_baton_t *eb,
    */
 
   /* Process one hierarchy of nested branches at a time. */
-  branches = svn_branch_revision_root_get_branches(eb->edited_rev_root,
-                                                   scratch_pool);
+  branches = svn_branch_txn_get_branches(eb->txn, scratch_pool);
   for (i = 0; i < branches->nelts; i++)
     {
       svn_branch_state_t *root_branch = APR_ARRAY_IDX(branches, i, void *);
@@ -1846,8 +1841,8 @@ drive_changes(ev3_from_delta_baton_t *eb,
         continue;  /* that's not a root branch */
 
       SVN_ERR(svn_branch_repos_get_branch_by_id(&base_root_branch,
-                                                eb->edited_rev_root->repos,
-                                                eb->edited_rev_root->base_rev,
+                                                eb->txn->repos,
+                                                eb->txn->base_rev,
                                                 root_branch->bid, scratch_pool));
       branch_is_new = !base_root_branch;
 
@@ -1856,7 +1851,7 @@ drive_changes(ev3_from_delta_baton_t *eb,
                                 root_branch,
                                 scratch_pool, scratch_pool);
 
-      current.rev = eb->edited_rev_root->base_rev;
+      current.rev = eb->txn->base_rev;
       current.relpath = top_path;
 
       /* Create the top-level storage node if the branch is new, or if this is
@@ -1910,8 +1905,7 @@ editor3_sequence_point(void *baton,
   apr_array_header_t *branches;
   int i;
 
-  branches = svn_branch_revision_root_get_branches(eb->edited_rev_root,
-                                                   scratch_pool);
+  branches = svn_branch_txn_get_branches(eb->txn, scratch_pool);
 
   /* first, purge elements in each branch */
   for (i = 0; i < branches->nelts; i++)
@@ -1934,7 +1928,7 @@ editor3_sequence_point(void *baton,
       if (outer_branch
           && ! svn_branch_get_element(outer_branch, outer_eid))
         {
-          svn_branch_revision_root_delete_branch(b->rev_root, b, scratch_pool);
+          svn_branch_txn_delete_branch(b->txn, b, scratch_pool);
         }
     }
 
@@ -1951,7 +1945,7 @@ editor3_complete(void *baton,
 
   /* Convert the transaction to a revision */
   SVN_ERR(editor3_sequence_point(baton, scratch_pool));
-  SVN_ERR(svn_branch_txn_finalize_eids(eb->edited_rev_root, scratch_pool));
+  SVN_ERR(svn_branch_txn_finalize_eids(eb->txn, scratch_pool));
 
   err = drive_changes(eb, scratch_pool);
 
@@ -2046,7 +2040,7 @@ wrap_fetch_func(svn_node_kind_t *kind,
 
 svn_error_t *
 svn_editor3_in_memory(svn_editor3_t **editor_p,
-                      svn_branch_revision_root_t *branching_txn,
+                      svn_branch_txn_t *branching_txn,
                       svn_editor3__shim_fetch_func_t fetch_func,
                       void *fetch_baton,
                       apr_pool_t *result_pool)
@@ -2070,7 +2064,7 @@ svn_editor3_in_memory(svn_editor3_t **editor_p,
   *editor_p = svn_editor3_create(&editor_funcs, eb,
                                  NULL, NULL /*cancel*/, result_pool);
 
-  eb->edited_rev_root = branching_txn;
+  eb->txn = branching_txn;
 
   wb->fetch_func = fetch_func;
   wb->fetch_baton = fetch_baton;
@@ -2086,7 +2080,7 @@ svn_editor3__ev3_from_delta_for_commit(
                         svn_editor3__shim_connector_t **shim_connector,
                         const svn_delta_editor_t *deditor,
                         void *dedit_baton,
-                        svn_branch_revision_root_t *branching_txn,
+                        svn_branch_txn_t *branching_txn,
                         const char *repos_root_url,
                         svn_editor3__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
@@ -2128,7 +2122,7 @@ svn_editor3__ev3_from_delta_for_commit(
   *editor_p = svn_editor3_create(&editor_funcs, eb,
                                  cancel_func, cancel_baton, result_pool);
 
-  eb->edited_rev_root = branching_txn;
+  eb->txn = branching_txn;
 
   if (shim_connector)
     {
@@ -2156,7 +2150,7 @@ svn_editor3__ev3_from_delta_for_update(
                         svn_update_editor3_t **update_editor_p,
                         const svn_delta_editor_t *deditor,
                         void *dedit_baton,
-                        svn_branch_revision_root_t *branching_txn,
+                        svn_branch_txn_t *branching_txn,
                         const char *repos_root_url,
                         const char *base_repos_relpath,
                         svn_editor3__shim_fetch_func_t fetch_func,

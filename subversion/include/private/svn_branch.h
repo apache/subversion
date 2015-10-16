@@ -66,7 +66,7 @@
  * - modify (not involving paths)
  *   => requires a txn
  *
- * Currently, a txn is represented by 'svn_branch_revision_root_t', with
+ * Currently, a txn is represented by 'svn_branch_txn_t', with
  * 'svn_branch_state_t' for the individual branches in it. A flat tree is
  * represented by 'svn_branch_subtree_t'. But there is currently not a
  * clean separation; there is some overlap and some warts such as the
@@ -126,7 +126,7 @@ typedef struct svn_branch_repos_t svn_branch_repos_t;
 /* A container for all the branching metadata for a specific revision (or
  * an uncommitted transaction).
  */
-typedef struct svn_branch_revision_root_t
+typedef struct svn_branch_txn_t
 {
   /* The repository in which this revision exists. */
   svn_branch_repos_t *repos;
@@ -146,27 +146,27 @@ typedef struct svn_branch_revision_root_t
   /* All branches. */
   apr_array_header_t *branches;
 
-} svn_branch_revision_root_t;
+} svn_branch_txn_t;
 
 /* Create a new branching revision-info object.
  *
  * It will have no branch-roots.
  */
-svn_branch_revision_root_t *
-svn_branch_revision_root_create(svn_branch_repos_t *repos,
-                                svn_revnum_t rev,
-                                svn_revnum_t base_rev,
-                                apr_pool_t *result_pool);
+svn_branch_txn_t *
+svn_branch_txn_create(svn_branch_repos_t *repos,
+                      svn_revnum_t rev,
+                      svn_revnum_t base_rev,
+                      apr_pool_t *result_pool);
 
-/* Return all the branches in REV_ROOT.
+/* Return all the branches in TXN.
  *
  * Return an empty array if there are none.
  */
 apr_array_header_t *
-svn_branch_revision_root_get_branches(svn_branch_revision_root_t *rev_root,
-                                      apr_pool_t *result_pool);
+svn_branch_txn_get_branches(svn_branch_txn_t *txn,
+                            apr_pool_t *result_pool);
 
-/* Return the branch whose id is BRANCH_ID in REV_ROOT.
+/* Return the branch whose id is BRANCH_ID in TXN.
  *
  * Return NULL if not found.
  *
@@ -177,14 +177,14 @@ svn_branch_revision_root_get_branches(svn_branch_revision_root_t *rev_root,
  * See also: svn_branch_get_id().
  */
 svn_branch_state_t *
-svn_branch_revision_root_get_branch_by_id(const svn_branch_revision_root_t *rev_root,
-                                          const char *branch_id,
-                                          apr_pool_t *scratch_pool);
+svn_branch_txn_get_branch_by_id(const svn_branch_txn_t *txn,
+                                const char *branch_id,
+                                apr_pool_t *scratch_pool);
 
-/* Assign a new txn-scope element id in REV_ROOT.
+/* Assign a new txn-scope element id in TXN.
  */
 int
-svn_branch_txn_new_eid(svn_branch_revision_root_t *rev_root);
+svn_branch_txn_new_eid(svn_branch_txn_t *txn);
 
 /* Change txn-local EIDs (negative integers) in TXN to revision EIDs, by
  * assigning a new revision-EID (positive integer) for each one.
@@ -192,7 +192,7 @@ svn_branch_txn_new_eid(svn_branch_revision_root_t *rev_root);
  * Rewrite TXN->first_eid and TXN->next_eid accordingly.
  */
 svn_error_t *
-svn_branch_txn_finalize_eids(svn_branch_revision_root_t *txn,
+svn_branch_txn_finalize_eids(svn_branch_txn_t *txn,
                              apr_pool_t *scratch_pool);
 
 /* Often, branches have the same root element. For example,
@@ -232,7 +232,7 @@ struct svn_branch_state_t
   svn_branch_rev_bid_t *predecessor;
 
   /* The revision to which this branch state belongs */
-  svn_branch_revision_root_t *rev_root;
+  svn_branch_txn_t *txn;
 
   /* EID -> svn_branch_el_rev_content_t mapping. */
   svn_element_tree_t *element_tree;
@@ -246,7 +246,7 @@ svn_branch_state_t *
 svn_branch_state_create(const char *bid,
                         svn_branch_rev_bid_t *predecessor,
                         int root_eid,
-                        svn_branch_revision_root_t *rev_root,
+                        svn_branch_txn_t *txn,
                         apr_pool_t *result_pool);
 
 /* Get the full id of branch BRANCH.
@@ -258,7 +258,7 @@ svn_branch_state_create(const char *bid,
  * current implementation it is constructed from the hierarchy of subbranch
  * root EIDs leading to the branch, but that may be changed in future.
  *
- * See also: svn_branch_revision_root_get_branch_by_id().
+ * See also: svn_branch_txn_get_branch_by_id().
  */
 const char *
 svn_branch_get_id(svn_branch_state_t *branch,
@@ -302,24 +302,23 @@ svn_branch_id_unnest(const char **outer_bid,
 /* Create a new branch with branch id BID, with no elements
  * (not even a root element).
  *
- * Create and return a new branch object. Register its existence in REV_ROOT.
+ * Create and return a new branch object. Register its existence in TXN.
  *
  * Set the root element to ROOT_EID.
  */
 svn_branch_state_t *
 svn_branch_add_new_branch(const char *bid,
-                          svn_branch_revision_root_t *rev_root,
+                          svn_branch_txn_t *txn,
                           svn_branch_rev_bid_t *predecessor,
                           int root_eid,
                           apr_pool_t *scratch_pool);
 
-/* Remove branch BRANCH from the list of branches in REV_ROOT.
+/* Remove branch BRANCH from the list of branches in TXN.
  */
 void
-svn_branch_revision_root_delete_branch(
-                                svn_branch_revision_root_t *rev_root,
-                                svn_branch_state_t *branch,
-                                apr_pool_t *scratch_pool);
+svn_branch_txn_delete_branch(svn_branch_txn_t *txn,
+                             svn_branch_state_t *branch,
+                             apr_pool_t *scratch_pool);
 
 /* element */
 /*
@@ -517,22 +516,22 @@ svn_branch_get_eid_by_path(const svn_branch_state_t *branch,
 svn_string_t *
 svn_branch_get_default_r0_metadata(apr_pool_t *result_pool);
 
-/* Create a new revision-root object *REV_ROOT_P, initialized with info
+/* Create a new txn object *TXN_P, initialized with info
  * parsed from STREAM, allocated in RESULT_POOL.
  */
 svn_error_t *
-svn_branch_revision_root_parse(svn_branch_revision_root_t **rev_root_p,
-                               svn_branch_repos_t *repos,
-                               svn_stream_t *stream,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
+svn_branch_txn_parse(svn_branch_txn_t **txn_p,
+                     svn_branch_repos_t *repos,
+                     svn_stream_t *stream,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
 
-/* Write to STREAM a parseable representation of REV_ROOT.
+/* Write to STREAM a parseable representation of TXN.
  */
 svn_error_t *
-svn_branch_revision_root_serialize(svn_stream_t *stream,
-                                   svn_branch_revision_root_t *rev_root,
-                                   apr_pool_t *scratch_pool);
+svn_branch_txn_serialize(svn_stream_t *stream,
+                         svn_branch_txn_t *txn,
+                         apr_pool_t *scratch_pool);
 
 /* Write to STREAM a parseable representation of BRANCH.
  */

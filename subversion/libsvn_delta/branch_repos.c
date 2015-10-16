@@ -56,14 +56,14 @@ svn_branch_repos_create(apr_pool_t *result_pool)
 
 svn_error_t *
 svn_branch_repos_add_revision(svn_branch_repos_t *repos,
-                              svn_branch_revision_root_t *rev_root)
+                              svn_branch_txn_t *rev_root)
 {
   APR_ARRAY_PUSH(repos->rev_roots, void *) = rev_root;
 
   return SVN_NO_ERROR;
 }
 
-struct svn_branch_revision_root_t *
+struct svn_branch_txn_t *
 svn_branch_repos_get_revision(const svn_branch_repos_t *repos,
                               svn_revnum_t revnum)
 {
@@ -71,8 +71,8 @@ svn_branch_repos_get_revision(const svn_branch_repos_t *repos,
   return svn_array_get(repos->rev_roots, revnum);
 }
 
-svn_branch_revision_root_t *
-svn_branch_repos_get_base_revision_root(svn_branch_revision_root_t *rev_root)
+svn_branch_txn_t *
+svn_branch_repos_get_base_revision_root(svn_branch_txn_t *rev_root)
 {
   return svn_branch_repos_get_revision(rev_root->repos, rev_root->base_rev);
 }
@@ -84,15 +84,15 @@ svn_branch_repos_get_branch_by_id(svn_branch_state_t **branch_p,
                                   const char *branch_id,
                                   apr_pool_t *scratch_pool)
 {
-  svn_branch_revision_root_t *rev_root;
+  svn_branch_txn_t *rev_root;
 
   if (revnum < 0 || revnum >= repos->rev_roots->nelts)
     return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                              _("No such revision %ld"), revnum);
 
   rev_root = svn_branch_repos_get_revision(repos, revnum);
-  *branch_p = svn_branch_revision_root_get_branch_by_id(rev_root, branch_id,
-                                                        scratch_pool);
+  *branch_p = svn_branch_txn_get_branch_by_id(rev_root, branch_id,
+                                              scratch_pool);
   if (! *branch_p)
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,
                              _("Branch %s not found in r%ld"),

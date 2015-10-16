@@ -1126,7 +1126,7 @@ svn_editor3__ev3_from_delta_for_commit(
                         svn_editor3__shim_connector_t **shim_connector,
                         const svn_delta_editor_t *deditor,
                         void *dedit_baton,
-                        svn_branch_revision_root_t *branching_txn,
+                        svn_branch_txn_t *branching_txn,
                         const char *repos_root_url,
                         svn_editor3__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
@@ -1219,7 +1219,7 @@ svn_editor3__ev3_from_delta_for_update(
                         svn_update_editor3_t **editor_p,
                         const svn_delta_editor_t *deditor,
                         void *dedit_baton,
-                        svn_branch_revision_root_t *branching_txn,
+                        svn_branch_txn_t *branching_txn,
                         const char *repos_root_url,
                         const char *base_repos_relpath,
                         svn_editor3__shim_fetch_func_t fetch_func,
@@ -1247,7 +1247,7 @@ svn_editor3__delta_from_ev3_for_update(
  */
 svn_error_t *
 svn_editor3_in_memory(svn_editor3_t **editor_p,
-                      svn_branch_revision_root_t *branching_txn,
+                      svn_branch_txn_t *branching_txn,
                       svn_editor3__shim_fetch_func_t fetch_func,
                       void *fetch_baton,
                       apr_pool_t *result_pool);
