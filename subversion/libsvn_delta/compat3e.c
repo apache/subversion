@@ -1817,6 +1817,7 @@ static svn_error_t *
 drive_changes(ev3_from_delta_baton_t *eb,
               apr_pool_t *scratch_pool)
 {
+  apr_array_header_t *branches;
   int i;
   const apr_array_header_t *paths;
 
@@ -1828,10 +1829,11 @@ drive_changes(ev3_from_delta_baton_t *eb,
    */
 
   /* Process one hierarchy of nested branches at a time. */
-  for (i = 0; i < eb->edited_rev_root->branches->nelts; i++)
+  branches = svn_branch_revision_root_get_branches(eb->edited_rev_root,
+                                                   scratch_pool);
+  for (i = 0; i < branches->nelts; i++)
     {
-      svn_branch_state_t *root_branch
-        = APR_ARRAY_IDX(eb->edited_rev_root->branches, i, void *);
+      svn_branch_state_t *root_branch = APR_ARRAY_IDX(branches, i, void *);
       apr_hash_t *paths_final;
 
       const char *top_path = branch_get_storage_root_rrpath(root_branch,
@@ -1905,6 +1907,7 @@ editor3_sequence_point(void *baton,
                        apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
+  apr_array_header_t *branches;
   int i;
 
   /* first, purge elements in each branch */
@@ -1917,10 +1920,11 @@ editor3_sequence_point(void *baton,
     }
 
   /* second, purge branches that are no longer nested */
-  for (i = 0; i < eb->edited_rev_root->branches->nelts; i++)
+  branches = svn_branch_revision_root_get_branches(eb->edited_rev_root,
+                                                   scratch_pool);
+  for (i = 0; i < branches->nelts; i++)
     {
-      svn_branch_state_t *b
-        = APR_ARRAY_IDX(eb->edited_rev_root->branches, i, void *);
+      svn_branch_state_t *b = APR_ARRAY_IDX(branches, i, void *);
       svn_branch_state_t *outer_branch;
       int outer_eid;
 
@@ -1931,8 +1935,6 @@ editor3_sequence_point(void *baton,
           && ! svn_branch_get_element(outer_branch, outer_eid))
         {
           svn_branch_revision_root_delete_branch(b->rev_root, b, scratch_pool);
-          /* Re-visit this position in the array */
-          i--;
         }
     }
 
