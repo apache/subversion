@@ -47,8 +47,8 @@ svn_branch_get_outer_branch_and_eid(svn_branch_state_t **outer_branch_p,
   if (outer_bid)
     {
       *outer_branch_p
-        = svn_branch_revision_root_get_branch_by_id(branch->rev_root, outer_bid,
-                                                    scratch_pool);
+        = svn_branch_txn_get_branch_by_id(branch->txn, outer_bid,
+                                          scratch_pool);
     }
 }
 
@@ -105,9 +105,8 @@ svn_branch_get_subbranch_at_eid(svn_branch_state_t *branch,
       const char *subbranch_id = svn_branch_id_nest(branch_id, eid,
                                                     scratch_pool);
 
-      return svn_branch_revision_root_get_branch_by_id(branch->rev_root,
-                                                       subbranch_id,
-                                                       scratch_pool);
+      return svn_branch_txn_get_branch_by_id(branch->txn, subbranch_id,
+                                             scratch_pool);
     }
   return NULL;
 }
@@ -132,9 +131,8 @@ svn_branch_get_immediate_subbranches(svn_branch_state_t *branch,
           const char *subbranch_id
             = svn_branch_id_nest(branch_id, eid, scratch_pool);
           svn_branch_state_t *subbranch
-            = svn_branch_revision_root_get_branch_by_id(branch->rev_root,
-                                                        subbranch_id,
-                                                        scratch_pool);
+            = svn_branch_txn_get_branch_by_id(branch->txn, subbranch_id,
+                                              scratch_pool);
 
           SVN_ARRAY_PUSH(subbranches) = subbranch;
         }
@@ -233,7 +231,7 @@ svn_branch_instantiate_elements_r(svn_branch_state_t *to_branch,
         new_branch_id = svn_branch_id_nest(to_branch->bid, this_outer_eid,
                                            bi->iterpool);
         new_branch = svn_branch_add_new_branch(new_branch_id,
-                                               to_branch->rev_root,
+                                               to_branch->txn,
                                                this_subtree->predecessor,
                                                this_subtree->tree->root_eid,
                                                bi->iterpool);

@@ -678,7 +678,7 @@ write_rev_prop(svn_ra_session_t *ra_session,
  * branch-tracking metadata from the repository into it.
  */
 static svn_error_t *
-svn_branch_revision_fetch_info(svn_branch_revision_root_t **rev_root_p,
+svn_branch_revision_fetch_info(svn_branch_txn_t **txn_p,
                                svn_branch_repos_t *repos,
                                svn_ra_session_t *ra_session,
                                const char *branch_info_dir,
@@ -688,7 +688,7 @@ svn_branch_revision_fetch_info(svn_branch_revision_root_t **rev_root_p,
 {
   svn_string_t *value;
   svn_stream_t *stream;
-  svn_branch_revision_root_t *rev_root;
+  svn_branch_txn_t *txn;
 
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
 
@@ -706,23 +706,22 @@ svn_branch_revision_fetch_info(svn_branch_revision_root_t **rev_root_p,
   SVN_ERR_ASSERT(value);
   stream = svn_stream_from_string(value, scratch_pool);
 
-  SVN_ERR(svn_branch_revision_root_parse(&rev_root, repos, stream,
-                                         result_pool, scratch_pool));
+  SVN_ERR(svn_branch_txn_parse(&txn, repos, stream,
+                               result_pool, scratch_pool));
 
   /* Self-test: writing out the info should produce exactly the same string. */
   {
     svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
 
     stream = svn_stream_from_stringbuf(buf, scratch_pool);
-    SVN_ERR(svn_branch_revision_root_serialize(stream, rev_root,
-                                               scratch_pool));
+    SVN_ERR(svn_branch_txn_serialize(stream, txn, scratch_pool));
     SVN_ERR(svn_stream_close(stream));
 
     SVN_ERR_ASSERT(svn_string_compare(value,
                                       svn_stringbuf__morph_into_string(buf)));
   }
 
-  *rev_root_p = rev_root;
+  *txn_p = txn;
   return SVN_NO_ERROR;
 }
 
@@ -745,13 +744,13 @@ svn_branch_repos_fetch_info(svn_branch_repos_t **repos_p,
 
   for (r = 0; r <= base_revision; r++)
     {
-      svn_branch_revision_root_t *rev_root;
+      svn_branch_txn_t *txn;
 
-      SVN_ERR(svn_branch_revision_fetch_info(&rev_root,
+      SVN_ERR(svn_branch_revision_fetch_info(&txn,
                                              repos, ra_session, branch_info_dir,
                                              r,
                                              result_pool, scratch_pool));
-      SVN_ERR(svn_branch_repos_add_revision(repos, rev_root));
+      SVN_ERR(svn_branch_repos_add_revision(repos, txn));
     }
 
   *repos_p = repos;
@@ -761,7 +760,7 @@ svn_branch_repos_fetch_info(svn_branch_repos_t **repos_p,
 /* Return a mutable state based on revision BASE_REVISION in REPOS.
  */
 static svn_error_t *
-svn_branch_get_mutable_state(svn_branch_revision_root_t **rev_root_p,
+svn_branch_get_mutable_state(svn_branch_txn_t **txn_p,
                              svn_branch_repos_t *repos,
                              svn_ra_session_t *ra_session,
                              const char *branch_info_dir,
@@ -769,7 +768,7 @@ svn_branch_get_mutable_state(svn_branch_revision_root_t **rev_root_p,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  svn_branch_revision_root_t *txn;
+  svn_branch_txn_t *txn;
   apr_array_header_t *branches;
   int i;
 
@@ -786,7 +785,7 @@ svn_branch_get_mutable_state(svn_branch_revision_root_t **rev_root_p,
   txn->base_rev = base_revision;
   txn->rev = SVN_INVALID_REVNUM;
 
-  branches = svn_branch_revision_root_get_branches(txn, scratch_pool);
+  branches = svn_branch_txn_get_branches(txn, scratch_pool);
   for (i = 0; i < branches->nelts; i++)
     {
       svn_branch_state_t *b = APR_ARRAY_IDX(branches, i, void *);
@@ -797,15 +796,15 @@ svn_branch_get_mutable_state(svn_branch_revision_root_t **rev_root_p,
                                     result_pool);
     }
 
-  *rev_root_p = txn;
+  *txn_p = txn;
   return SVN_NO_ERROR;
 }
 
-/* Store the move-tracking / branch-tracking metadata from REV_ROOT into the
- * repository. REV_ROOT->rev is the newly committed revision number.
+/* Store the move-tracking / branch-tracking metadata from TXN into the
+ * repository. TXN->rev is the newly committed revision number.
  */
 static svn_error_t *
-store_repos_info(svn_branch_revision_root_t *rev_root,
+store_repos_info(svn_branch_txn_t *txn,
                  svn_ra_session_t *ra_session,
                  const char *branch_info_dir,
                  apr_pool_t *scratch_pool)
@@ -813,11 +812,11 @@ store_repos_info(svn_branch_revision_root_t *rev_root,
   svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
   svn_stream_t *stream = svn_stream_from_stringbuf(buf, scratch_pool);
 
-  SVN_ERR(svn_branch_revision_root_serialize(stream, rev_root, scratch_pool));
+  SVN_ERR(svn_branch_txn_serialize(stream, txn, scratch_pool));
 
   SVN_ERR(svn_stream_close(stream));
   /*SVN_DBG(("store_repos_info: %s", buf->data));*/
-  SVN_ERR(write_rev_prop(ra_session, branch_info_dir, rev_root->rev,
+  SVN_ERR(write_rev_prop(ra_session, branch_info_dir, txn->rev,
                          svn_stringbuf__morph_into_string(buf), scratch_pool));
 
   return SVN_NO_ERROR;
@@ -830,7 +829,7 @@ struct ccw_baton
 
   svn_ra_session_t *session;
   const char *branch_info_dir;
-  svn_branch_revision_root_t *branching_txn;
+  svn_branch_txn_t *branching_txn;
 };
 
 /* Wrapper which stores the branching/move-tracking info.
@@ -870,7 +869,7 @@ static void
 remap_commit_callback(svn_commit_callback2_t *callback,
                       void **callback_baton,
                       svn_ra_session_t *session,
-                      svn_branch_revision_root_t *branching_txn,
+                      svn_branch_txn_t *branching_txn,
                       const char *branch_info_dir,
                       svn_commit_callback2_t original_callback,
                       void *original_baton,
@@ -967,7 +966,7 @@ svn_ra_fetch(svn_node_kind_t *kind_p,
 }
 
 svn_error_t *
-svn_ra_load_branching_state(svn_branch_revision_root_t **branching_txn_p,
+svn_ra_load_branching_state(svn_branch_txn_t **branching_txn_p,
                             svn_editor3__shim_fetch_func_t *fetch_func,
                             void **fetch_baton,
                             svn_ra_session_t *session,
@@ -1008,7 +1007,7 @@ svn_ra_load_branching_state(svn_branch_revision_root_t **branching_txn_p,
 
 svn_error_t *
 svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
-                             svn_branch_revision_root_t **edit_txn_p,
+                             svn_branch_txn_t **edit_txn_p,
                              svn_editor3_t **editor,
                              apr_hash_t *revprop_table,
                              svn_commit_callback2_t commit_callback,
@@ -1018,7 +1017,7 @@ svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
                              const char *branch_info_dir,
                              apr_pool_t *pool)
 {
-  svn_branch_revision_root_t *branching_txn;
+  svn_branch_txn_t *branching_txn;
   svn_editor3__shim_fetch_func_t fetch_func;
   void *fetch_baton;
   const svn_delta_editor_t *deditor;

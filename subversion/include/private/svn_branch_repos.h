@@ -52,19 +52,19 @@ svn_branch_repos_create(apr_pool_t *result_pool);
  */
 svn_error_t *
 svn_branch_repos_add_revision(svn_branch_repos_t *repos,
-                              svn_branch_revision_root_t *rev_root);
+                              svn_branch_txn_t *rev_root);
 
 /* Return a pointer to revision REVNUM of the repository REPOS.
  */
-struct svn_branch_revision_root_t *
+struct svn_branch_txn_t *
 svn_branch_repos_get_revision(const svn_branch_repos_t *repos,
                               svn_revnum_t revnum);
 
 /* Return the revision root that represents the base revision (or,
  * potentially, txn) of the revision or txn REV_ROOT.
  */
-svn_branch_revision_root_t *
-svn_branch_repos_get_base_revision_root(svn_branch_revision_root_t *rev_root);
+svn_branch_txn_t *
+svn_branch_repos_get_base_revision_root(svn_branch_txn_t *rev_root);
 
 /* Set *BRANCH_P to the branch found in REPOS : REVNUM : BRANCH_ID.
  *
