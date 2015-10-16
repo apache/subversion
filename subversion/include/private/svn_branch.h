@@ -307,27 +307,18 @@ svn_branch_id_unnest(const char **outer_bid,
  * Set the root element to ROOT_EID.
  */
 svn_branch_state_t *
-svn_branch_add_new_branch(const char *bid,
-                          svn_branch_txn_t *txn,
-                          svn_branch_rev_bid_t *predecessor,
-                          int root_eid,
-                          apr_pool_t *scratch_pool);
+svn_branch_txn_add_new_branch(svn_branch_txn_t *txn,
+                              const char *bid,
+                              svn_branch_rev_bid_t *predecessor,
+                              int root_eid,
+                              apr_pool_t *scratch_pool);
 
-/* Remove branch BRANCH from the list of branches in TXN.
+/* Remove the branch with id BID from the list of branches in TXN.
  */
-void
+svn_error_t *
 svn_branch_txn_delete_branch(svn_branch_txn_t *txn,
-                             svn_branch_state_t *branch,
+                             const char *bid,
                              apr_pool_t *scratch_pool);
-
-/* element */
-/*
-typedef struct svn_branch_element_t
-{
-  int eid;
-  svn_node_kind_t node_kind;
-} svn_branch_element_t;
-*/
 
 /* Branch-Element-Revision */
 struct svn_branch_el_rev_id_t

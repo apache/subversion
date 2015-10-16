@@ -595,11 +595,11 @@ svn_branch_instantiate_elements(svn_branch_state_t *to_branch,
 }
 
 svn_branch_state_t *
-svn_branch_add_new_branch(const char *bid,
-                          svn_branch_txn_t *txn,
-                          svn_branch_rev_bid_t *predecessor,
-                          int root_eid,
-                          apr_pool_t *scratch_pool)
+svn_branch_txn_add_new_branch(svn_branch_txn_t *txn,
+                              const char *bid,
+                              svn_branch_rev_bid_t *predecessor,
+                              int root_eid,
+                              apr_pool_t *scratch_pool)
 {
   svn_branch_state_t *new_branch;
 
@@ -613,26 +613,26 @@ svn_branch_add_new_branch(const char *bid,
   return new_branch;
 }
 
-void
+svn_error_t *
 svn_branch_txn_delete_branch(svn_branch_txn_t *txn,
-                             svn_branch_state_t *branch,
+                             const char *bid,
                              apr_pool_t *scratch_pool)
 {
   SVN_ITER_T(svn_branch_state_t) *bi;
 
-  SVN_ERR_ASSERT_NO_RETURN(branch->txn == txn);
-
   for (SVN_ARRAY_ITER(bi, txn->branches, scratch_pool))
     {
-      if (bi->val == branch)
+      svn_branch_state_t *b = bi->val;
+
+      if (strcmp(b->bid, bid) == 0)
         {
           SVN_DBG(("deleting branch b%s e%d",
-                   svn_branch_get_id(bi->val, bi->iterpool),
-                   bi->val->element_tree->root_eid));
+                   bid, b->element_tree->root_eid));
           svn_sort__array_delete(txn->branches, bi->i, 1);
           break;
         }
     }
+  return SVN_NO_ERROR;
 }
 
 /*
