@@ -143,7 +143,15 @@ Candidate changes:
    Justification:
      Regression introduced in 1.9.2.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
+
+ * 1709389
+   Simple translation fix
+   Justification:
+     Trivial fix that doesn't require nomination, but I like to see
+     at least one developer or translator reviewing this.
+   Votes:
+     +1: rhuijben (doesn't need nomination, but would like review)
 
 Veto-blocked changes:
 =====================
