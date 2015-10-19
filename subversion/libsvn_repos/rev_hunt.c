@@ -1374,31 +1374,17 @@ send_path_revision(struct path_revision *path_rev,
   SVN_ERR(svn_prop_diffs(&prop_diffs, props, sb->last_props,
                          sb->iterpool));
 
-  /* Check if the contents *may* have changed. */
+  /* Check if the contents changed. */
   if (! sb->last_root)
     {
       /* Special case: In the first revision, we always provide a delta. */
       contents_changed = TRUE;
     }
-  else if (sb->include_merged_revisions
-           && strcmp(sb->last_path, path_rev->path))
-    {
-      /* ### This is a HACK!!!
-       * Blame -g, in older clients anyways, relies on getting a notification
-       * whenever the path changes - even if there was no content change.
-       *
-       * TODO: A future release should take an extra parameter and depending
-       * on that either always send a text delta or only send it if there
-       * is a difference. */
-      contents_changed = TRUE;
-    }
   else
     {
-      /* Did the file contents actually change?
-       * It could e.g. be a property-only change. */
-      SVN_ERR(svn_fs_contents_different(&contents_changed, sb->last_root,
-                                        sb->last_path, root, path_rev->path,
-                                        sb->iterpool));
+      SVN_ERR(svn_fs_contents_changed(&contents_changed, sb->last_root,
+                                      sb->last_path, root, path_rev->path,
+                                      sb->iterpool));
     }
 
   /* We have all we need, give to the handler. */

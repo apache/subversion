@@ -2093,11 +2093,10 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
  * the revision range for @a include_merged_revision @c FALSE reporting by
  * switching @a start with @a end.
  *
- * @note Prior to Subversion 1.9, this function may request delta handlers
- * from @a handler even for empty text deltas.  Starting with 1.9, the
- * delta handler / baton return arguments passed to @a handler will be
- * #NULL unless there is an actual difference in the file contents between
- * the current and the previous call.
+ * @note In Subversion 1.9.0-1.9.2, the delta handler / baton return
+ * arguments passed to @a handler were set to #NULL in case of an empty
+ * text delta.  All other versions may request delta handlers from
+ * @a handler even for empty text deltas.
  *
  * @since New in 1.5.
  */

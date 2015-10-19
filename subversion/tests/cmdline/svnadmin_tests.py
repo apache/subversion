@@ -3202,7 +3202,7 @@ def dump_revprops(sbox):
   svntest.actions.run_and_verify_svnlook(log_msg, [], 'log', '-r1',
                                          sbox.repo_dir)
 
-@XFail()
+@XFail(svntest.main.is_fs_type_fsx)
 @Issue(4598)
 def dump_no_op_change(sbox):
   "svnadmin dump with no-op changes"
