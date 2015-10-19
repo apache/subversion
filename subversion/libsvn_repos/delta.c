@@ -530,8 +530,8 @@ delta_proplists(struct context *c,
       svn_boolean_t changed;
 
       /* Is this deltification worth our time? */
-      SVN_ERR(svn_fs_props_different(&changed, c->target_root, target_path,
-                                     c->source_root, source_path, subpool));
+      SVN_ERR(svn_fs_props_changed(&changed, c->target_root, target_path,
+                                   c->source_root, source_path, subpool));
       if (! changed)
         goto cleanup;
 
@@ -611,8 +611,62 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
                          const char *path2,
                          apr_pool_t *pool)
 {
-  return svn_error_trace(svn_fs_contents_different(changed_p, root1, path1,
-                                                   root2, path2, pool));
+  svn_filesize_t size1, size2;
+  svn_checksum_t *checksum1, *checksum2;
+  svn_stream_t *stream1, *stream2;
+  svn_boolean_t same;
+
+  /* If the filesystem claims the things haven't changed, then they
+     haven't changed. */
+  SVN_ERR(svn_fs_contents_changed(changed_p, root1, path1,
+                                  root2, path2, pool));
+  if (!*changed_p)
+    return SVN_NO_ERROR;
+
+  /* If the SHA1 checksums match for these things, we'll claim they
+     have the same contents.  (We don't give quite as much weight to
+     MD5 checksums.)  */
+  SVN_ERR(svn_fs_file_checksum(&checksum1, svn_checksum_sha1,
+                               root1, path1, FALSE, pool));
+  SVN_ERR(svn_fs_file_checksum(&checksum2, svn_checksum_sha1,
+                               root2, path2, FALSE, pool));
+  if (checksum1 && checksum2)
+    {
+      *changed_p = !svn_checksum_match(checksum1, checksum2);
+      return SVN_NO_ERROR;
+    }
+
+  /* From this point on, our default answer is "Nothing's changed". */
+  *changed_p = FALSE;
+
+  /* Different filesizes means the contents are different. */
+  SVN_ERR(svn_fs_file_length(&size1, root1, path1, pool));
+  SVN_ERR(svn_fs_file_length(&size2, root2, path2, pool));
+  if (size1 != size2)
+    {
+      *changed_p = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* Different MD5 checksums means the contents are different. */
+  SVN_ERR(svn_fs_file_checksum(&checksum1, svn_checksum_md5, root1, path1,
+                               FALSE, pool));
+  SVN_ERR(svn_fs_file_checksum(&checksum2, svn_checksum_md5, root2, path2,
+                               FALSE, pool));
+  if (!svn_checksum_match(checksum1, checksum2))
+    {
+      *changed_p = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  /* And finally, different contents means the ... uh ... contents are
+     different. */
+  SVN_ERR(svn_fs_file_contents(&stream1, root1, path1, pool));
+  SVN_ERR(svn_fs_file_contents(&stream2, root2, path2, pool));
+  SVN_ERR(svn_stream_contents_same2(&same, stream1, stream2, pool));
+  *changed_p = !same;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -639,7 +693,19 @@ delta_files(struct context *c,
 
   if (source_path)
     {
-      SVN_ERR(svn_fs_contents_different(&changed,
+      /* Is this delta calculation worth our time?  If we are ignoring
+         ancestry, then our editor implementor isn't concerned by the
+         theoretical differences between "has contents which have not
+         changed with respect to" and "has the same actual contents
+         as".  We'll do everything we can to avoid transmitting even
+         an empty text-delta in that case.  */
+      if (c->ignore_ancestry)
+        SVN_ERR(svn_repos__compare_files(&changed,
+                                         c->target_root, target_path,
+                                         c->source_root, source_path,
+                                         subpool));
+      else
+        SVN_ERR(svn_fs_contents_changed(&changed,
                                         c->target_root, target_path,
                                         c->source_root, source_path,
                                         subpool));
