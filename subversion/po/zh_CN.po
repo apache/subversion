@@ -11284,9 +11284,9 @@ msgid "done\n"
 msgstr "完成。\n"
 
 #: ../svn/notify.c:1066
-#, fuzzy, c-format
+#, c-format
 msgid "Committing transaction...\n"
-msgstr "正在读取事务"
+msgstr "正在读取事务\n"
 
 #: ../svn/propdel-cmd.c:88
 #, c-format
@@ -13710,10 +13710,9 @@ msgid "  Updated '%s' to r%ld.\n"
 msgstr "更新 '%s' 到版本 %ld。\n"
 
 #: ../svn/util.c:79
-#, fuzzy, c-format
+#, c-format
 msgid "Committed revision %ld%s.\n"
 msgstr ""
-"\n"
 "提交后的版本为 %ld%s。\n"
 
 #: ../svn/util.c:83

@@ -10530,10 +10530,8 @@ msgstr "  '%s' 을(를) r%ld 로 업데이트함.\n"
 #: ../svn/util.c:75
 #, c-format
 msgid ""
-"\n"
 "Committed revision %ld%s.\n"
 msgstr ""
-"\n"
 "커밋된 리비전 %ld%s.\n"
 
 #: ../svn/util.c:79
