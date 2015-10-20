@@ -123,7 +123,11 @@ typedef struct svn_branch_state_t svn_branch_state_t;
  */
 typedef struct svn_branch_repos_t svn_branch_repos_t;
 
-/* Private methods and data for a transaction.
+/* Methods (conceptually public, but called indirectly) for a transaction.
+ */
+typedef struct svn_branch_txn_vtable_t svn_branch_txn_vtable_t;
+
+/* Private data for a transaction.
  */
 typedef struct svn_branch_txn_priv_t svn_branch_txn_priv_t;
 
@@ -132,8 +136,13 @@ typedef struct svn_branch_txn_priv_t svn_branch_txn_priv_t;
  */
 typedef struct svn_branch_txn_t
 {
-  /* Private methods and data. */
+  /* Methods (conceptually public, but called indirectly). */
+  svn_branch_txn_vtable_t *vtable;
+
+  /* Private data. */
   svn_branch_txn_priv_t *priv;
+
+  /* Public data. */
 
   /* The repository in which this revision exists. */
   svn_branch_repos_t *repos;
@@ -247,7 +256,11 @@ svn_branch_txn_finalize_eids(svn_branch_txn_t *txn,
  *          ...
  */
 
-/* Private methods and data for a branch state.
+/* Methods (conceptually public, but called indirectly) for a branch state.
+ */
+typedef struct svn_branch_state_vtable_t svn_branch_state_vtable_t;
+
+/* Private data for a branch state.
  */
 typedef struct svn_branch_state_priv_t svn_branch_state_priv_t;
 
@@ -257,8 +270,13 @@ typedef struct svn_branch_state_priv_t svn_branch_state_priv_t;
  */
 struct svn_branch_state_t
 {
-  /* Private methods and data. */
+  /* Methods (conceptually public, but called indirectly). */
+  svn_branch_state_vtable_t *vtable;
+
+  /* Private data. */
   svn_branch_state_priv_t *priv;
+
+  /* Public data. */
 
   /* The branch identifier (starting with 'B') */
   const char *bid;
