@@ -153,6 +153,13 @@ Candidate changes:
    Votes:
      +1: rhuijben (doesn't need nomination, but would like review)
 
+ * 1709553
+   Fix display of process ID in mod_dav_svn cache statistics.
+   Justification:
+     User cannot determine to which process the output applies.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
