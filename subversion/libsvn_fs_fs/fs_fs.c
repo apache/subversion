@@ -1387,12 +1387,30 @@ svn_fs_fs__file_length(svn_filesize_t *length,
   return SVN_NO_ERROR;
 }
 
+svn_boolean_t
+svn_fs_fs__noderev_same_rep_key(representation_t *a,
+                                representation_t *b)
+{
+  if (a == b)
+    return TRUE;
+
+  if (a == NULL || b == NULL)
+    return FALSE;
+
+  if (a->item_index != b->item_index)
+    return FALSE;
+
+  if (a->revision != b->revision)
+    return FALSE;
+
+  return memcmp(&a->uniquifier, &b->uniquifier, sizeof(a->uniquifier)) == 0;
+}
+
 svn_error_t *
 svn_fs_fs__file_text_rep_equal(svn_boolean_t *equal,
                                svn_fs_t *fs,
                                node_revision_t *a,
                                node_revision_t *b,
-                               svn_boolean_t strict,
                                apr_pool_t *scratch_pool)
 {
   svn_stream_t *contents_a, *contents_b;
@@ -1437,19 +1455,6 @@ svn_fs_fs__file_text_rep_equal(svn_boolean_t *equal,
       return SVN_NO_ERROR;
     }
 
-  /* Old repositories may not have the SHA1 checksum handy.
-     This check becomes expensive.  Skip it unless explicitly required.
-
-     We already have seen that the ID is different, so produce a likely
-     false negative as allowed by the API description - even though the
-     MD5 matched, there is an extremely slim chance that the SHA1 wouldn't.
-   */
-  if (!strict)
-    {
-      *equal = FALSE;
-      return SVN_NO_ERROR;
-    }
-
   SVN_ERR(svn_fs_fs__get_contents(&contents_a, fs, rep_a, TRUE,
                                   scratch_pool));
   SVN_ERR(svn_fs_fs__get_contents(&contents_b, fs, rep_b, TRUE,
@@ -1465,7 +1470,6 @@ svn_fs_fs__prop_rep_equal(svn_boolean_t *equal,
                           svn_fs_t *fs,
                           node_revision_t *a,
                           node_revision_t *b,
-                          svn_boolean_t strict,
                           apr_pool_t *scratch_pool)
 {
   representation_t *rep_a = a->prop_rep;
@@ -1509,14 +1513,6 @@ svn_fs_fs__prop_rep_equal(svn_boolean_t *equal,
   if (svn_fs_fs__id_eq(a->id, b->id))
     {
       *equal = TRUE;
-      return SVN_NO_ERROR;
-    }
-
-  /* Skip the expensive bits unless we are in strict mode.
-     Simply assume that there is a difference. */
-  if (!strict)
-    {
-      *equal = FALSE;
       return SVN_NO_ERROR;
     }
 

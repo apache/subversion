@@ -954,19 +954,21 @@ access_checker(request_rec *r)
 #if USE_FORCE_AUTHN
       if (authn_configured) {
           /* We have to check to see if authn is required because if so we must
-           * return UNAUTHORIZED (401) rather than FORBIDDEN (403) since returning
+           * return DECLINED rather than FORBIDDEN (403) since returning
            * the 403 leaks information about what paths may exist to
-           * unauthenticated users.  We must set a note here in order
-           * to use ap_some_authn_rquired() without triggering an infinite
-           * loop since the call will trigger this function to be called again. */
+           * unauthenticated users.  Returning DECLINED means apache's request
+           * handling will continue until the authn module itself generates
+           * UNAUTHORIZED (401).
+
+           * We must set a note here in order to use
+           * ap_some_authn_rquired() without triggering an infinite
+           * loop since the call will trigger this function to be
+           * called again. */
           apr_table_setn(r->notes, IN_SOME_AUTHN_NOTE, (const char*)1);
           authn_required = ap_some_authn_required(r);
           apr_table_unset(r->notes, IN_SOME_AUTHN_NOTE);
           if (authn_required)
-            {
-              ap_note_auth_failure(r);
-              return HTTP_UNAUTHORIZED;
-            }
+            return DECLINED;
       }
 #else
       if (!authn_required)

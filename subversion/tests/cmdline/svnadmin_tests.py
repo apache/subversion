@@ -147,7 +147,7 @@ def check_hotcopy_fsfs_fsx(src, dst):
         # the hotcopy destination (i.e. a fresh cache generation)
         if src_file == 'revprop-generation':
           f2 = open(dst_path, 'r')
-          revprop_gen = int(f2.read().strip().split()[1])
+          revprop_gen = int(f2.read().strip())
           if revprop_gen != 0:
               raise svntest.Failure("Hotcopy destination has non-zero " +
                                     "revprop generation")
@@ -3202,7 +3202,7 @@ def dump_revprops(sbox):
   svntest.actions.run_and_verify_svnlook(log_msg, [], 'log', '-r1',
                                          sbox.repo_dir)
 
-@XFail()
+@XFail(svntest.main.is_fs_type_fsx)
 @Issue(4598)
 def dump_no_op_change(sbox):
   "svnadmin dump with no-op changes"

@@ -24,6 +24,7 @@
 #include <string.h>
 #include <apr_pools.h>
 #include <apr_thread_proc.h>
+#include <apr_poll.h>
 #include <assert.h>
 
 #include "../svn_test.h"
