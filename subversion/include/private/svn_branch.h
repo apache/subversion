@@ -161,14 +161,12 @@ typedef struct svn_branch_txn_t
 
 } svn_branch_txn_t;
 
-/* Create a new branching revision-info object.
- *
- * It will have no branch-roots.
+/* Create a new branch txn object.
  */
 svn_branch_txn_t *
-svn_branch_txn_create(svn_branch_repos_t *repos,
-                      svn_revnum_t rev,
-                      svn_revnum_t base_rev,
+svn_branch_txn_create(const svn_branch_txn_vtable_t *vtable,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
                       apr_pool_t *result_pool);
 
 /* Return all the branches in TXN.
@@ -290,14 +288,12 @@ struct svn_branch_state_t
 
 };
 
-/* Create a new branch state object, with no elements (not even a root
- * element).
+/* Create a new branch state object.
  */
 svn_branch_state_t *
-svn_branch_state_create(const char *bid,
-                        svn_branch_rev_bid_t *predecessor,
-                        int root_eid,
-                        svn_branch_txn_t *txn,
+svn_branch_state_create(const svn_branch_state_vtable_t *vtable,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         apr_pool_t *result_pool);
 
 /* Get the full id of branch BRANCH.
