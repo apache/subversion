@@ -824,14 +824,12 @@ svn_fs_x__verify(svn_fs_t *fs,
                  void *cancel_baton,
                  apr_pool_t *scratch_pool)
 {
-  svn_fs_x__data_t *ffd = fs->fsap_data;
-
   /* Input validation. */
   if (! SVN_IS_VALID_REVNUM(start))
     start = 0;
   if (! SVN_IS_VALID_REVNUM(end))
     {
-      SVN_ERR(svn_fs_fs__youngest_rev(&end, fs, pool));
+      SVN_ERR(svn_fs_x__youngest_rev(&end, fs, scratch_pool));
     }
 
   SVN_ERR(svn_fs_x__ensure_revision_exists(start, fs, scratch_pool));
