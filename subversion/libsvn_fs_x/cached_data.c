@@ -2665,6 +2665,7 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
   apr_hash_t *proplist;
   svn_stream_t *stream;
   const svn_fs_x__id_t *noderev_id = &noderev->noderev_id;
+  svn_error_t *err;
 
   if (noderev->prop_rep
       && !svn_fs_x__is_revision(noderev->prop_rep->id.change_set))
@@ -2680,7 +2681,7 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
                           result_pool);
       if (err)
         {
-          svn_string_t *id_str = svn_fs_x__id_unparse(noderev->id,
+          svn_string_t *id_str = svn_fs_x__id_unparse(&noderev->noderev_id,
                                                       scratch_pool);
 
           err = svn_error_compose_create(err, svn_stream_close(stream));
@@ -2715,8 +2716,8 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
                            result_pool);
       if (err)
         {
-          svn_string_t *id_str = svn_fs_fs__id_unparse(noderev->id,
-                                                       scratch_pool);
+          svn_string_t *id_str = svn_fs_x__id_unparse(&noderev->noderev_id,
+                                                      scratch_pool);
 
           err = svn_error_compose_create(err, svn_stream_close(stream));
           return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
