@@ -195,7 +195,7 @@ svn_test__create_fs2(svn_fs_t **fs_p,
   SVN_ERR(maybe_install_fs_conf(*fs_p, opts, &must_reopen, pool));
   if (must_reopen)
     {
-      SVN_ERR(svn_fs_open2(fs_p, name, NULL, pool, pool));
+      SVN_ERR(svn_fs_open2(fs_p, name, fs_config, pool, pool));
       svn_fs_set_warning_func(*fs_p, fs_warning_handler, NULL);
     }
 

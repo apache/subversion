@@ -222,23 +222,7 @@ static svn_error_t *
 x_refresh_revprops(svn_fs_t *fs,
                    apr_pool_t *scratch_pool)
 {
-  return SVN_NO_ERROR;
-}
-
-/* Wrapper around svn_fs_x__revision_prop() adapting between function
-   signatures. */
-static svn_error_t *
-x_revision_prop(svn_string_t **value_p,
-                svn_fs_t *fs,
-                svn_revnum_t rev,
-                const char *propname,
-                svn_boolean_t refresh,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
-{
-  SVN_ERR(svn_fs_x__revision_prop(value_p, fs, rev, propname, result_pool,
-                                  scratch_pool));
-
+  svn_fs_x__invalidate_revprop_generation(fs);
   return SVN_NO_ERROR;
 }
 
@@ -254,7 +238,8 @@ x_revision_proplist(apr_hash_t **proplist_p,
 {
   /* No need to bypass the caches for r/o access to revprops. */
   SVN_ERR(svn_fs_x__get_revision_proplist(proplist_p, fs, rev, FALSE,
-                                          result_pool, scratch_pool));
+                                          refresh, result_pool,
+                                          scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -292,7 +277,7 @@ x_begin_txn(svn_fs_txn_t **txn_p,
 static fs_vtable_t fs_vtable = {
   svn_fs_x__youngest_rev,
   x_refresh_revprops,
-  x_revision_prop,
+  svn_fs_x__revision_prop,
   x_revision_proplist,
   svn_fs_x__change_rev_prop,
   x_set_uuid,
@@ -323,6 +308,8 @@ static svn_error_t *
 initialize_fs_struct(svn_fs_t *fs)
 {
   svn_fs_x__data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
+  ffd->revprop_generation = -1;
+
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
   return SVN_NO_ERROR;

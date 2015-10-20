@@ -10197,13 +10197,11 @@ msgid "local %s, incoming %s upon %s"
 msgstr ""
 
 #: ../svn/util.c:74
-#, fuzzy, c-format
+#, c-format
 msgid ""
-"\n"
 "Committed revision %ld%s.\n"
 msgstr ""
-"\n"
-"Commit de la revisión %ld.\n"
+"Commit de la revisión %ld%s.\n"
 
 #: ../svn/util.c:78
 msgid " (the answer to life, the universe, and everything)"

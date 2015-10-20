@@ -10285,13 +10285,11 @@ msgid "local %s, incoming %s upon %s"
 msgstr "lokalne: %s, przychodzące: %s, operacja: %s"
 
 #: ../svn/util.c:74
-#, fuzzy, c-format
+#, c-format
 msgid ""
-"\n"
 "Committed revision %ld%s.\n"
 msgstr ""
-"\n"
-"Zatwierdzona wersja %ld.\n"
+"Zatwierdzona wersja %ld%s.\n"
 
 #: ../svn/util.c:78
 msgid " (the answer to life, the universe, and everything)"
