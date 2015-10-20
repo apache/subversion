@@ -28,9 +28,13 @@
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
 #include "svn_iter.h"
+#include "svn_pools.h"
 
 #include "private/svn_branch_nested.h"
 #include "private/svn_branch_repos.h"
+
+#include "branch_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -134,6 +138,7 @@ svn_branch_get_immediate_subbranches(svn_branch_state_t *branch,
             = svn_branch_txn_get_branch_by_id(branch->txn, subbranch_id,
                                               scratch_pool);
 
+          SVN_ERR_ASSERT_NO_RETURN(subbranch);
           SVN_ARRAY_PUSH(subbranches) = subbranch;
         }
     }
@@ -325,5 +330,167 @@ svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
   SVN_ERR_ASSERT_NO_RETURN(el_rev->branch);
   *el_rev_p = el_rev;
   return SVN_NO_ERROR;
+}
+
+/* Set *BRANCH_P to the branch found in the repository of TXN, at the
+ * location (in a revision or in this txn) SRC_EL_REV.
+ *
+ * Return an error if REVNUM or BRANCH_ID is not found.
+ */
+static svn_error_t *
+branch_in_rev_or_txn(svn_branch_state_t **branch_p,
+                     const svn_branch_rev_bid_eid_t *src_el_rev,
+                     svn_branch_txn_t *txn,
+                     apr_pool_t *result_pool)
+{
+  if (SVN_IS_VALID_REVNUM(src_el_rev->rev))
+    {
+      SVN_ERR(svn_branch_repos_get_branch_by_id(branch_p,
+                                                txn->repos,
+                                                src_el_rev->rev,
+                                                src_el_rev->bid,
+                                                result_pool));
+    }
+  else
+    {
+      *branch_p
+        = svn_branch_txn_get_branch_by_id(
+            txn, src_el_rev->bid, result_pool);
+      if (! *branch_p)
+        return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                                 _("Branch %s not found"),
+                                 src_el_rev->bid);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+struct svn_branch_txn_priv_t
+{
+  /* The underlying branch-txn that supports only non-nested branching. */
+  svn_branch_txn_t *wrapped_txn;
+
+};
+
+/* Implements nested branching.
+ * An #svn_branch_txn_t method. */
+static svn_error_t *
+nested_branch_txn_new_eid(svn_branch_txn_t *txn,
+                          svn_branch_eid_t *eid_p,
+                          apr_pool_t *scratch_pool)
+{
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_new_eid(txn->priv->wrapped_txn,
+                                 eid_p,
+                                 scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Implements nested branching.
+ * An #svn_branch_txn_t method. */
+static svn_error_t *
+nested_branch_txn_open_branch(svn_branch_txn_t *txn,
+                              const char **new_branch_id_p,
+                              svn_branch_rev_bid_t *predecessor,
+                              const char *outer_branch_id,
+                              int outer_eid,
+                              int root_eid,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_open_branch(txn->priv->wrapped_txn,
+                                     new_branch_id_p, predecessor,
+                                     outer_branch_id, outer_eid, root_eid,
+                                     result_pool,
+                                     scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Implements nested branching.
+ * An #svn_branch_txn_t method. */
+static svn_error_t *
+nested_branch_txn_branch(svn_branch_txn_t *txn,
+                         const char **new_branch_id_p,
+                         svn_branch_rev_bid_eid_t *from,
+                         const char *outer_branch_id,
+                         int outer_eid,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  svn_branch_state_t *new_branch;
+  svn_branch_state_t *from_branch;
+  svn_branch_subtree_t *from_subtree;
+
+  SVN_ERR(svn_branch_txn_branch(txn->priv->wrapped_txn,
+                                new_branch_id_p, from,
+                                outer_branch_id, outer_eid,
+                                result_pool,
+                                scratch_pool));
+
+  /* Recursively branch any nested branches */
+  /* (The way we're doing it here also redundantly re-instantiates all the
+     elements in NEW_BRANCH.) */
+  SVN_ERR(branch_in_rev_or_txn(&from_branch, from, txn->priv->wrapped_txn,
+                               scratch_pool));
+  from_subtree = svn_branch_get_subtree(from_branch, from->eid, scratch_pool);
+  new_branch = svn_branch_txn_get_branch_by_id(txn->priv->wrapped_txn,
+                                               *new_branch_id_p,
+                                               scratch_pool);
+  SVN_ERR(svn_branch_instantiate_elements_r(new_branch, *from_subtree,
+                                            scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+nested_branch_txn_sequence_point(svn_branch_txn_t *txn,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_branch_txn_t *wrapped_txn = txn->priv->wrapped_txn;
+  apr_array_header_t *branches;
+  int i;
+
+  /* first, purge elements in each branch */
+  SVN_ERR(svn_branch_txn_sequence_point(wrapped_txn, scratch_pool));
+
+  /* second, purge branches that are no longer nested */
+  branches = svn_branch_txn_get_branches(wrapped_txn, scratch_pool);
+  for (i = 0; i < branches->nelts; i++)
+    {
+      svn_branch_state_t *b = APR_ARRAY_IDX(branches, i, void *);
+      svn_branch_state_t *outer_branch;
+      int outer_eid;
+
+      svn_branch_get_outer_branch_and_eid(&outer_branch, &outer_eid,
+                                          b, scratch_pool);
+
+      if (outer_branch
+          && ! svn_branch_get_element(outer_branch, outer_eid))
+        {
+          SVN_ERR(svn_branch_txn_delete_branch(wrapped_txn, b->bid,
+                                               scratch_pool));
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_branch_txn_t *
+svn_nested_branch_txn_create(svn_branch_txn_t *wrapped_txn,
+                             apr_pool_t *result_pool)
+{
+  static const svn_branch_txn_vtable_t vtable = {
+    {0},
+    nested_branch_txn_new_eid,
+    nested_branch_txn_open_branch,
+    nested_branch_txn_branch,
+    nested_branch_txn_sequence_point,
+  };
+  svn_branch_txn_t *txn
+    = svn_branch_txn_create(&vtable, NULL, NULL, result_pool);
+
+  txn->priv = apr_pcalloc(result_pool, sizeof(*txn->priv));
+  txn->priv->wrapped_txn = wrapped_txn;
+  return txn;
 }
 
