@@ -84,7 +84,7 @@ typedef svn_error_t *(*branch_txn_v_sequence_point_t)(
   svn_branch_txn_t *txn,
   apr_pool_t *scratch_pool);
 
-struct svn_branch_txn_priv_t
+struct svn_branch_txn_vtable_t
 {
   svn_vtable_priv_t vpriv;
 
@@ -93,9 +93,6 @@ struct svn_branch_txn_priv_t
   branch_txn_v_open_branch_t open_branch;
   branch_txn_v_branch_t branch;
   branch_txn_v_sequence_point_t sequence_point;
-
-  /* All branches. */
-  apr_array_header_t *branches;
 
 };
 
@@ -141,7 +138,7 @@ typedef svn_error_t *(*branch_state_v_purge_t)(
   svn_branch_state_t *branch,
   apr_pool_t *scratch_pool);
 
-struct svn_branch_state_priv_t
+struct svn_branch_state_vtable_t
 {
   svn_vtable_priv_t vpriv;
 
@@ -151,9 +148,6 @@ struct svn_branch_state_priv_t
   branch_state_v_delete_one_t delete_one;
   branch_state_v_payload_resolve_t payload_resolve;
   branch_state_v_purge_t purge;
-
-  /* EID -> svn_branch_el_rev_content_t mapping. */
-  svn_element_tree_t *element_tree;
 
 };
 
