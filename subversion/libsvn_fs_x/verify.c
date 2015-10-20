@@ -783,8 +783,15 @@ verify_metadata_consistency(svn_fs_t *fs,
       /* concurrent packing is one of the reasons why verification may fail.
          Make sure, we operate on up-to-date information. */
       if (err)
-        SVN_ERR(svn_fs_x__read_min_unpacked_rev(&ffd->min_unpacked_rev,
-                                                fs, scratch_pool));
+        {
+          svn_error_t *err2
+            = svn_fs_x__read_min_unpacked_rev(&ffd->min_unpacked_rev,
+                                              fs, scratch_pool);
+
+          /* Be careful to not leak ERR. */
+          if (err2)
+            return svn_error_trace(svn_error_compose_create(err, err2));
+        }
 
       /* retry the whole shard if it got packed in the meantime */
       if (err && count != svn_fs_x__pack_size(fs, revision))
@@ -818,13 +825,15 @@ svn_fs_x__verify(svn_fs_t *fs,
                  apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
-  svn_revnum_t youngest = ffd->youngest_rev_cache; /* cache is current */
 
   /* Input validation. */
   if (! SVN_IS_VALID_REVNUM(start))
     start = 0;
   if (! SVN_IS_VALID_REVNUM(end))
-    end = youngest;
+    {
+      SVN_ERR(svn_fs_fs__youngest_rev(&end, fs, pool));
+    }
+
   SVN_ERR(svn_fs_x__ensure_revision_exists(start, fs, scratch_pool));
   SVN_ERR(svn_fs_x__ensure_revision_exists(end, fs, scratch_pool));
 
