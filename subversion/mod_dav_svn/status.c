@@ -29,6 +29,24 @@
 #include "private/svn_cache.h"
 #include "private/svn_fs_private.h"
 
+/* The apache headers define these and they conflict with our definitions. */
+#ifdef PACKAGE_BUGREPORT
+#undef PACKAGE_BUGREPORT
+#endif
+#ifdef PACKAGE_NAME
+#undef PACKAGE_NAME
+#endif
+#ifdef PACKAGE_STRING
+#undef PACKAGE_STRING
+#endif
+#ifdef PACKAGE_TARNAME
+#undef PACKAGE_TARNAME
+#endif
+#ifdef PACKAGE_VERSION
+#undef PACKAGE_VERSION
+#endif
+#include "svn_private_config.h"
+
 #ifndef DEFAULT_TIME_FORMAT
 #define DEFAULT_TIME_FORMAT "%Y-%m-%d %H:%M:%S %Z"
 #endif
