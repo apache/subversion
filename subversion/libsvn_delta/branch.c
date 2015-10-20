@@ -66,6 +66,13 @@ struct svn_branch_state_priv_t
 
 };
 
+static svn_branch_state_t *
+branch_state_create(const char *bid,
+                    svn_branch_rev_bid_t *predecessor,
+                    int root_eid,
+                    svn_branch_txn_t *txn,
+                    apr_pool_t *result_pool);
+
 /*  */
 static apr_pool_t *
 branch_state_pool_get(svn_branch_state_t *branch)
@@ -278,22 +285,18 @@ svn_branch_txn_sequence_point(svn_branch_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
-static svn_branch_txn_t *
-branch_txn_create(apr_pool_t *result_pool)
+svn_branch_txn_t *
+svn_branch_txn_create(const svn_branch_txn_vtable_t *vtable,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      apr_pool_t *result_pool)
 {
-  static const svn_branch_txn_vtable_t vtable = {
-    {0},
-    branch_txn_new_eid,
-    branch_txn_open_branch,
-    branch_txn_branch,
-    branch_txn_sequence_point,
-  };
   svn_branch_txn_t *txn = apr_pcalloc(result_pool, sizeof(*txn));
 
-  txn->vtable = apr_pmemdup(result_pool, &vtable, sizeof(vtable));
+  txn->vtable = apr_pmemdup(result_pool, vtable, sizeof(*vtable));
 
-  txn->vtable->vpriv.cancel_func = NULL;
-  txn->vtable->vpriv.cancel_baton = NULL;
+  txn->vtable->vpriv.cancel_func = cancel_func;
+  txn->vtable->vpriv.cancel_baton = cancel_baton;
   txn->vtable->vpriv.scratch_pool = svn_pool_create(result_pool);
 
 #ifdef ENABLE_ORDERING_CHECK
@@ -305,13 +308,25 @@ branch_txn_create(apr_pool_t *result_pool)
   return txn;
 }
 
-svn_branch_txn_t *
-svn_branch_txn_create(svn_branch_repos_t *repos,
-                      svn_revnum_t rev,
-                      svn_revnum_t base_rev,
-                      apr_pool_t *result_pool)
+/* Create a new branch txn object.
+ *
+ * It will have no branches.
+ */
+static svn_branch_txn_t *
+branch_txn_create(svn_branch_repos_t *repos,
+                  svn_revnum_t rev,
+                  svn_revnum_t base_rev,
+                  apr_pool_t *result_pool)
 {
-  svn_branch_txn_t *txn = branch_txn_create(result_pool);
+  static const svn_branch_txn_vtable_t vtable = {
+    {0},
+    branch_txn_new_eid,
+    branch_txn_open_branch,
+    branch_txn_branch,
+    branch_txn_sequence_point,
+  };
+  svn_branch_txn_t *txn
+    = svn_branch_txn_create(&vtable, NULL, NULL, result_pool);
 
   txn->priv = apr_pcalloc(result_pool, sizeof(*txn->priv));
   txn->repos = repos;
@@ -951,8 +966,8 @@ svn_branch_txn_add_new_branch(svn_branch_txn_t *txn,
 
   SVN_ERR_ASSERT_NO_RETURN(root_eid != -1);
 
-  new_branch = svn_branch_state_create(bid, predecessor, root_eid, txn,
-                                       txn->priv->branches->pool);
+  new_branch = branch_state_create(bid, predecessor, root_eid, txn,
+                                   txn->priv->branches->pool);
 
   SVN_ARRAY_PUSH(txn->priv->branches) = new_branch;
 
@@ -1038,24 +1053,18 @@ svn_branch_state_purge(svn_branch_state_t *branch,
   return SVN_NO_ERROR;
 }
 
-static svn_branch_state_t *
-branch_state_create(apr_pool_t *result_pool)
+svn_branch_state_t *
+svn_branch_state_create(const svn_branch_state_vtable_t *vtable,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool)
 {
-  static const svn_branch_state_vtable_t vtable = {
-    {0},
-    branch_state_alter,
-    branch_state_copy_one,
-    branch_state_copy_tree,
-    branch_state_delete_one,
-    branch_state_payload_resolve,
-    branch_state_purge,
-  };
   svn_branch_state_t *b = apr_pcalloc(result_pool, sizeof(*b));
 
-  b->vtable = apr_pmemdup(result_pool, &vtable, sizeof(vtable));
+  b->vtable = apr_pmemdup(result_pool, vtable, sizeof(*vtable));
 
-  b->vtable->vpriv.cancel_func = NULL;
-  b->vtable->vpriv.cancel_baton = NULL;
+  b->vtable->vpriv.cancel_func = cancel_func;
+  b->vtable->vpriv.cancel_baton = cancel_baton;
   b->vtable->vpriv.scratch_pool = svn_pool_create(result_pool);
 
 #ifdef ENABLE_ORDERING_CHECK
@@ -1067,14 +1076,28 @@ branch_state_create(apr_pool_t *result_pool)
   return b;
 }
 
-svn_branch_state_t *
-svn_branch_state_create(const char *bid,
-                        svn_branch_rev_bid_t *predecessor,
-                        int root_eid,
-                        svn_branch_txn_t *txn,
-                        apr_pool_t *result_pool)
+/* Create a new branch state object.
+ *
+ * It will have no elements (not even a root element).
+ */
+static svn_branch_state_t *
+branch_state_create(const char *bid,
+                    svn_branch_rev_bid_t *predecessor,
+                    int root_eid,
+                    svn_branch_txn_t *txn,
+                    apr_pool_t *result_pool)
 {
-  svn_branch_state_t *b = branch_state_create(result_pool);
+  static const svn_branch_state_vtable_t vtable = {
+    {0},
+    branch_state_alter,
+    branch_state_copy_one,
+    branch_state_copy_tree,
+    branch_state_delete_one,
+    branch_state_payload_resolve,
+    branch_state_purge,
+  };
+  svn_branch_state_t *b
+    = svn_branch_state_create(&vtable, NULL, NULL, result_pool);
 
   b->priv = apr_pcalloc(result_pool, sizeof(*b->priv));
   b->bid = apr_pstrdup(result_pool, bid);
@@ -1224,8 +1247,8 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
   SVN_ERR(parse_branch_line(bid, &root_eid, &num_eids, &predecessor,
                             stream, scratch_pool, scratch_pool));
 
-  branch_state = svn_branch_state_create(bid, predecessor, root_eid, txn,
-                                         result_pool);
+  branch_state = branch_state_create(bid, predecessor, root_eid, txn,
+                                     result_pool);
 
   /* Read in the structure. Set the payload of each normal element to a
      (branch-relative) reference. */
@@ -1287,7 +1310,7 @@ svn_branch_txn_parse(svn_branch_txn_t **txn_p,
              &num_branches);
   SVN_ERR_ASSERT(n == 4);
 
-  txn = svn_branch_txn_create(repos, rev, rev - 1, result_pool);
+  txn = branch_txn_create(repos, rev, rev - 1, result_pool);
   txn->first_eid = first_eid;
   txn->next_eid = next_eid;
 
