@@ -2182,8 +2182,8 @@ svn_fs_x__p2l_index_append(svn_checksum_t **checksum,
 
   apr_uint64_t last_entry_end = 0;
   apr_uint64_t last_page_end = 0;
-  apr_size_t last_buffer_size = 0;  /* byte offset in the spill buffer at
-                                       the begin of the current revision */
+  apr_uint64_t last_buffer_size = 0;  /* byte offset in the spill buffer at
+                                         the begin of the current revision */
   apr_uint64_t file_size = 0;
 
   /* temporary data structures that collect the data which will be moved
