@@ -32,6 +32,7 @@ import filecmp
 import shutil
 import traceback
 import logging
+import re
 try:
   # Python >=3.0
   import configparser
@@ -129,7 +130,7 @@ gen_obj = gen_win_dependencies.GenDependenciesBase('build.conf', version_header,
 opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                        ['release', 'debug', 'verbose', 'quiet', 'cleanup',
                         'test=', 'url=', 'svnserve-args=', 'fs-type=', 'asp.net-hack',
-                        'httpd-dir=', 'httpd-port=', 'httpd-daemon',
+                        'httpd-dir=', 'httpd-port=', 'httpd-daemon', 'https',
                         'httpd-server', 'http-short-circuit', 'httpd-no-log',
                         'disable-http-v2', 'disable-bulk-updates', 'help',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl', 'swig=',
@@ -154,6 +155,7 @@ run_httpd = None
 httpd_port = None
 httpd_service = None
 httpd_no_log = None
+use_ssl = False
 http_short_circuit = False
 advertise_httpv2 = True
 http_bulk_updates = True
@@ -214,6 +216,8 @@ for opt, val in opts:
     httpd_service = 1
   elif opt == '--httpd-no-log':
     httpd_no_log = 1
+  elif opt == '--https':
+    use_ssl = 1
   elif opt == '--http-short-circuit':
     http_short_circuit = True
   elif opt == '--disable-http-v2':
@@ -292,7 +296,12 @@ if run_httpd:
   if not httpd_port:
     httpd_port = random.randrange(1024, 30000)
   if not base_url:
-    base_url = 'http://localhost:' + str(httpd_port)
+    if use_ssl:
+      scheme = 'https'
+    else:
+      scheme = 'http'
+
+    base_url = '%s://localhost:%d' % (scheme, httpd_port)
 
 if base_url:
   repo_loc = 'remote repository ' + base_url + '.'
@@ -449,8 +458,9 @@ class Svnserve:
 
 class Httpd:
   "Run httpd for DAV tests"
-  def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
-               service, no_log, httpv2, short_circuit, bulk_updates):
+  def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, abs_srcdir,
+               httpd_port, service, use_ssl, no_log, httpv2, short_circuit,
+               bulk_updates):
     self.name = 'apache.exe'
     self.httpd_port = httpd_port
     self.httpd_dir = abs_httpd_dir
@@ -488,12 +498,19 @@ class Httpd:
     self.dontdothat_file = os.path.join(abs_builddir,
                                          CMDLINE_TEST_SCRIPT_NATIVE_PATH,
                                          'svn-test-work', 'dontdothat')
+    self.certfile = os.path.join(abs_builddir,
+                                 CMDLINE_TEST_SCRIPT_NATIVE_PATH,
+                                 'svn-test-work', 'cert.pem')
+    self.certkeyfile = os.path.join(abs_builddir,
+                                     CMDLINE_TEST_SCRIPT_NATIVE_PATH,
+                                     'svn-test-work', 'cert-key.pem')
     self.httpd_config = os.path.join(self.root, 'httpd.conf')
     self.httpd_users = os.path.join(self.root, 'users')
     self.httpd_mime_types = os.path.join(self.root, 'mime.types')
     self.httpd_groups = os.path.join(self.root, 'groups')
     self.abs_builddir = abs_builddir
     self.abs_objdir = abs_objdir
+    self.abs_srcdir = abs_srcdir
     self.service_name = 'svn-test-httpd-' + str(httpd_port)
 
     if self.service:
@@ -508,6 +525,9 @@ class Httpd:
     self._create_groups_file()
     self._create_mime_types_file()
     self._create_dontdothat_file()
+
+    if use_ssl:
+      self._create_cert_files()
 
     # Obtain version.
     version_vals = gen_obj._libraries['httpd'].version.split('.')
@@ -537,6 +557,8 @@ class Httpd:
       fp.write('LogLevel     Crit\n')
 
     # Write LoadModule for minimal system module
+    if use_ssl:
+      fp.write(self._sys_module('ssl_module', 'mod_ssl.so'))
     fp.write(self._sys_module('dav_module', 'mod_dav.so'))
     if self.httpd_ver >= 2.3:
       fp.write(self._sys_module('access_compat_module', 'mod_access_compat.so'))
@@ -560,6 +582,11 @@ class Httpd:
 
     # And for mod_dontdothat
     fp.write(self._svn_module('dontdothat_module', 'mod_dontdothat.so'))
+
+    if use_ssl:
+      fp.write('SSLEngine on\n')
+      fp.write('SSLCertificateFile %s\n' % self._quote(self.certfile))
+      fp.write('SSLCertificateKeyFile %s\n' % self._quote(self.certkeyfile))
 
     # Don't handle .htaccess, symlinks, etc.
     fp.write('<Directory />\n')
@@ -632,6 +659,34 @@ class Httpd:
     fp.write('[recursive-actions]\n')
     fp.write('/ = deny\n')
     fp.close()
+
+  def _create_cert_files(self):
+    "Create certificate files"
+    # The unix build uses certificates encoded in davautocheck.sh
+    # Let's just read them from there
+
+    sh_path = os.path.join(self.abs_srcdir, 'subversion', 'tests', 'cmdline',
+                           'davautocheck.sh')
+    sh = open(sh_path).readlines()
+
+    def cert_extract(lines, what):
+      r = []
+      pattern = r'cat\s*\>\s*' + re.escape(what) + r'\s*\<\<([A-Z_a-z0-9]+)'
+      exit_marker = None
+      for i in lines:
+        if exit_marker:
+          if i.startswith(exit_marker):
+            return r
+          r.append(i)
+        else:
+          m = re.match(pattern, i)
+          if m:
+            exit_marker = m.groups(1)
+
+    cert_file = cert_extract(sh, '"$SSL_CERTIFICATE_FILE"')
+    cert_key = cert_extract(sh, '"$SSL_CERTIFICATE_KEY_FILE"')
+    open(self.certfile, 'w').write(''.join(cert_file))
+    open(self.certkeyfile, 'w').write(''.join(cert_key))
 
   def _sys_module(self, name, path):
     full_path = os.path.join(self.httpd_dir, 'modules', path)
@@ -940,10 +995,13 @@ if not list_tests:
     daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
   if run_httpd:
-    daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
-                   httpd_service, httpd_no_log,
-                   advertise_httpv2, http_short_circuit,
+    daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, abs_srcdir,
+                   httpd_port, httpd_service, use_ssl,
+                   httpd_no_log, advertise_httpv2, http_short_circuit,
                    http_bulk_updates)
+
+    if use_ssl and not ssl_cert:
+      ssl_cert = daemon.certfile
 
   # Start service daemon, if any
   if daemon:

@@ -680,8 +680,7 @@ V %d
 %s
 END
 """ % (len(cert_rep), cert_rep, len(netloc_url), netloc_url)
-
-  file_write(md5_file, md5_file_contents)
+  file_write(md5_file, md5_file_contents, mode='wb')
 
 def copy_trust(dst_cfgdir, src_cfgdir):
   """Copy svn.ssl.server files from one config dir to another.
