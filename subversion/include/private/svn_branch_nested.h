@@ -198,6 +198,13 @@ svn_branch_instantiate_elements_r(svn_branch_state_t *to_branch,
                                   svn_branch_subtree_t elements,
                                   apr_pool_t *scratch_pool);
 
+/* Create a branch txn object that implements nesting, and wraps a plain
+ * branch txn (that doesn't support nesting) WRAPPED_TXN.
+ */
+svn_branch_txn_t *
+svn_nested_branch_txn_create(svn_branch_txn_t *wrapped_txn,
+                             apr_pool_t *result_pool);
+
 
 #ifdef __cplusplus
 }

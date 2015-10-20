@@ -1023,31 +1023,6 @@ storage_pathrev_from_branch_ref(svn_pathrev_t *storage_pathrev_p,
  */
 
 /*  */
-static svn_error_t *
-branch_in_rev_or_txn(svn_branch_state_t **src_branch,
-                     const svn_branch_rev_bid_eid_t *src_el_rev,
-                     ev3_from_delta_baton_t *eb,
-                     apr_pool_t *result_pool)
-{
-  if (SVN_IS_VALID_REVNUM(src_el_rev->rev))
-    {
-      SVN_ERR(svn_branch_repos_get_branch_by_id(src_branch,
-                                                eb->txn->repos,
-                                                src_el_rev->rev,
-                                                src_el_rev->bid,
-                                                result_pool));
-    }
-  else
-    {
-      *src_branch
-        = svn_branch_txn_get_branch_by_id(
-            eb->txn, src_el_rev->bid, result_pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/*  */
 #define PAYLOAD_IS_ONLY_BY_REFERENCE(payload) \
     ((payload)->kind == svn_node_unknown)
 
@@ -1157,8 +1132,10 @@ editor3_new_eid(void *baton,
                 apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
+  svn_branch_txn_t *txn = eb->txn;
 
-  SVN_ERR(svn_branch_txn_new_eid(eb->txn, eid_p, scratch_pool));
+  txn = svn_nested_branch_txn_create(txn, scratch_pool);
+  SVN_ERR(svn_branch_txn_new_eid(txn, eid_p, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1174,8 +1151,10 @@ editor3_open_branch(void *baton,
                     apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
+  svn_branch_txn_t *txn = eb->txn;
 
-  SVN_ERR(svn_branch_txn_open_branch(eb->txn,
+  txn = svn_nested_branch_txn_create(txn, scratch_pool);
+  SVN_ERR(svn_branch_txn_open_branch(txn,
                                      new_branch_id_p,
                                      predecessor,
                                      outer_branch_id,
@@ -1197,27 +1176,16 @@ editor3_branch(void *baton,
                apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
-  svn_branch_state_t *new_branch;
-  svn_branch_state_t *from_branch;
-  svn_branch_subtree_t *from_subtree;
+  svn_branch_txn_t *txn = eb->txn;
 
-  SVN_ERR(svn_branch_txn_branch(eb->txn,
+  txn = svn_nested_branch_txn_create(txn, scratch_pool);
+  SVN_ERR(svn_branch_txn_branch(txn,
                                 new_branch_id_p,
                                 from,
                                 outer_branch_id,
                                 outer_eid,
                                 result_pool,
                                 scratch_pool));
-
-  /* Recursively branch any nested branches */
-  /* (The way we're doing it here also redundantly re-instantiates all the
-     elements in NEW_BRANCH.) */
-  SVN_ERR(branch_in_rev_or_txn(&from_branch, from, eb, scratch_pool));
-  from_subtree = svn_branch_get_subtree(from_branch, from->eid, scratch_pool);
-  new_branch = svn_branch_txn_get_branch_by_id(eb->txn, *new_branch_id_p,
-                                               scratch_pool);
-  SVN_ERR(svn_branch_instantiate_elements_r(new_branch, *from_subtree,
-                                            scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1830,30 +1798,10 @@ editor3_sequence_point(void *baton,
                        apr_pool_t *scratch_pool)
 {
   ev3_from_delta_baton_t *eb = baton;
-  apr_array_header_t *branches;
-  int i;
+  svn_branch_txn_t *txn = eb->txn;
 
-  branches = svn_branch_txn_get_branches(eb->txn, scratch_pool);
-
-  /* first, purge elements in each branch */
-  SVN_ERR(svn_branch_txn_sequence_point(eb->txn, scratch_pool));
-
-  /* second, purge branches that are no longer nested */
-  for (i = 0; i < branches->nelts; i++)
-    {
-      svn_branch_state_t *b = APR_ARRAY_IDX(branches, i, void *);
-      svn_branch_state_t *outer_branch;
-      int outer_eid;
-
-      svn_branch_get_outer_branch_and_eid(&outer_branch, &outer_eid,
-                                          b, scratch_pool);
-
-      if (outer_branch
-          && ! svn_branch_get_element(outer_branch, outer_eid))
-        {
-          SVN_ERR(svn_branch_txn_delete_branch(eb->txn, b->bid, scratch_pool));
-        }
-    }
+  txn = svn_nested_branch_txn_create(txn, scratch_pool);
+  SVN_ERR(svn_branch_txn_sequence_point(txn, scratch_pool));
 
   return SVN_NO_ERROR;
 }
