@@ -1386,8 +1386,15 @@ get_txn_proplist(apr_hash_t *proplist,
                                    scratch_pool, scratch_pool));
 
   /* Read in the property list. */
-  SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
-                         scratch_pool));
+  err = svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
+                       scratch_pool));
+  if (err)
+    {
+      err = svn_error_compose_create(err, svn_stream_close(stream));
+      return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
+               _("malformed transaction property list in '%s'"),
+               path_txn_props(fs, txn_id, pool));
+    }
 
   return svn_stream_close(stream);
 }
