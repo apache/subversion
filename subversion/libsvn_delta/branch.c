@@ -147,8 +147,6 @@ branch_txn_open_branch(svn_branch_txn_t *txn,
     = svn_branch_txn_get_branch_by_id(txn, *new_branch_id_p, scratch_pool);
   if (new_branch)
     {
-      SVN_ERR_ASSERT(predecessor->rev == new_branch->predecessor->rev);
-      SVN_ERR_ASSERT(strcmp(predecessor->bid, new_branch->predecessor->bid) == 0);
       SVN_ERR_ASSERT(root_eid == svn_branch_root_eid(new_branch));
       return SVN_NO_ERROR;
     }
