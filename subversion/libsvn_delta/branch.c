@@ -176,15 +176,23 @@ branch_txn_branch(svn_branch_txn_t *txn,
   svn_element_tree_t *from_subtree;
 
   SVN_ERR(branch_in_rev_or_txn(&from_branch, from, txn, scratch_pool));
+  /* Source branch must exist */
+  if (! from_branch)
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("Cannot branch from r%ld %s e%d: "
+                                 "branch does not exist"),
+                               from->rev, from->bid, from->eid);
+    }
+
   from_subtree = svn_branch_get_element_tree_at_eid(from_branch, from->eid,
                                                     scratch_pool);
-
   /* Source element must exist */
   if (! from_subtree)
     {
       return svn_error_createf(SVN_ERR_BRANCHING, NULL,
                                _("Cannot branch from r%ld %s e%d: "
-                                 "does not exist"),
+                                 "element does not exist"),
                                from->rev, from->bid, from->eid);
     }
 
