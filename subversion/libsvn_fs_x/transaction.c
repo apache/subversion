@@ -1792,6 +1792,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
                                        scratch_pool, scratch_pool);
   apr_file_t *file;
   svn_stream_t *out;
+  svn_filesize_t filesize;
   svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
@@ -1828,35 +1829,37 @@ svn_fs_x__set_entry(svn_fs_t *fs,
     }
   else
     {
+      const svn_fs_x__id_t *key = &(parent_noderev->noderev_id);
+      svn_boolean_t found;
+      svn_filesize_t cached_filesize;
+
       /* The directory rep is already mutable, so just open it for append. */
       SVN_ERR(svn_io_file_open(&file, filename, APR_WRITE | APR_APPEND,
-                               APR_OS_DEFAULT, scratch_pool));
-      out = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
-    }
+                               APR_OS_DEFAULT, subpool));
+      out = svn_stream_from_aprfile2(file, TRUE, subpool);
 
-  /* update directory cache */
-    {
-      /* build parameters: (name, new entry) pair */
-      const svn_fs_x__id_t *key = &(parent_noderev->noderev_id);
-      replace_baton_t baton;
+      /* If the cache contents is stale, drop it.
+       *
+       * Note that the directory file is append-only, i.e. if the size
+       * did not change, the contents didn't either. */
 
-      baton.name = name;
-      baton.new_entry = NULL;
+      /* Get the file size that corresponds to the cached contents
+       * (if any). */
+      SVN_ERR(svn_cache__get_partial((void **)&cached_filesize, &found,
+                                     ffd->dir_cache, key,
+                                     svn_fs_x__extract_dir_filesize,
+                                     NULL, subpool));
 
-      if (id)
+      /* File size info still matches?
+       * If not, we need to drop the cache entry. */
+      if (found)
         {
-          baton.new_entry = apr_pcalloc(subpool, sizeof(*baton.new_entry));
-          baton.new_entry->name = name;
-          baton.new_entry->kind = kind;
-          baton.new_entry->id = *id;
-        }
+          SVN_ERR(svn_io_file_size_get(&filesize, file, subpool));
 
-      /* actually update the cached directory (if cached) */
-      SVN_ERR(svn_cache__set_partial(ffd->dir_cache, key,
-                                     svn_fs_x__replace_dir_entry, &baton,
-                                     subpool));
+          if (cached_filesize != filesize)
+            SVN_ERR(svn_cache__set(ffd->dir_cache, key, NULL, subpool));
+        }
     }
-  svn_pool_clear(subpool);
 
   /* Append an incremental hash entry for the entry change. */
   if (id)
@@ -1874,7 +1877,40 @@ svn_fs_x__set_entry(svn_fs_t *fs,
                                 strlen(name), name));
     }
 
+  /* Flush APR buffers. */
+  SVN_ERR(svn_io_file_flush(file, subpool));
+
+  /* Obtain final file size to update txn_dir_cache. */
+  SVN_ERR(svn_io_file_size_get(&filesize, file, subpool));
+
+  /* Close file. */
   SVN_ERR(svn_io_file_close(file, subpool));
+  svn_pool_clear(subpool);
+
+  /* update directory cache */
+    {
+      /* build parameters: name, new entry, new file size  */
+      const svn_fs_x__id_t *key = &(parent_noderev->noderev_id);
+      replace_baton_t baton;
+
+      baton.name = name;
+      baton.new_entry = NULL;
+      baton.txn_filesize = filesize;
+
+      if (id)
+        {
+          baton.new_entry = apr_pcalloc(subpool, sizeof(*baton.new_entry));
+          baton.new_entry->name = name;
+          baton.new_entry->kind = kind;
+          baton.new_entry->id = *id;
+        }
+
+      /* actually update the cached directory (if cached) */
+      SVN_ERR(svn_cache__set_partial(ffd->dir_cache, key,
+                                     svn_fs_x__replace_dir_entry, &baton,
+                                     subpool));
+    }
+
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }

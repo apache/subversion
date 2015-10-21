@@ -129,7 +129,7 @@ svn_fs_x__deserialize_node_revision(void **item,
                                     apr_pool_t *result_pool);
 
 /**
- * Implements #svn_cache__serialize_func_t for a directory contents array
+ * Implements #svn_cache__serialize_func_t for a #svn_fs_x__dir_data_t
  */
 svn_error_t *
 svn_fs_x__serialize_dir_entries(void **data,
@@ -138,7 +138,7 @@ svn_fs_x__serialize_dir_entries(void **data,
                                 apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__deserialize_func_t for a directory contents array
+ * Implements #svn_cache__deserialize_func_t for a #svn_fs_x__dir_data_t
  */
 svn_error_t *
 svn_fs_x__deserialize_dir_entries(void **out,
@@ -158,6 +158,18 @@ svn_fs_x__get_sharded_offset(void **out,
                              apr_pool_t *pool);
 
 /**
+ * Implements #svn_cache__partial_getter_func_t.
+ * Set (svn_filesize_t) @a *out to the filesize info stored with the
+ * serialized directory in @a data of @a data_len.  @a baton is unused.
+ */
+svn_error_t *
+svn_fs_x__extract_dir_filesize(void **out,
+                               const void *data,
+                               apr_size_t data_len,
+                               void *baton,
+                               apr_pool_t *pool);
+
+/**
  * Baton type to be used with svn_fs_x__extract_dir_entry. */
 typedef struct svn_fs_x__ede_baton_t
 {
@@ -166,12 +178,18 @@ typedef struct svn_fs_x__ede_baton_t
 
   /* Lookup hint [in / out] */
   apr_size_t hint;
+
+  /** Current length of the in-txn in-disk representation of the directory.
+   * SVN_INVALID_FILESIZE if unknown. */
+  svn_filesize_t txn_filesize;
 } svn_fs_x__ede_baton_t;
 
 /**
  * Implements #svn_cache__partial_getter_func_t for a single
  * #svn_fs_x__dirent_t within a serialized directory contents hash,
- * identified by its name (given in @a svn_fs_x__ede_baton_t @a *baton).
+ * identified by its name (in (svn_fs_x__ede_baton_t *) @a *baton).
+ * If the filesize specified in the baton does not match the cached
+ * value for this directory, @a *out will be NULL as well.
  */
 svn_error_t *
 svn_fs_x__extract_dir_entry(void **out,
@@ -184,7 +202,10 @@ svn_fs_x__extract_dir_entry(void **out,
  * Describes the change to be done to a directory: Set the entry
  * identify by @a name to the value @a new_entry. If the latter is
  * @c NULL, the entry shall be removed if it exists. Otherwise it
- * will be replaced or automatically added, respectively.
+ * will be replaced or automatically added, respectively.  The
+ * @a filesize allows readers to identify stale cache data (e.g.
+ * due to concurrent access to txns); writers use it to update the
+ * cached file size info.
  */
 typedef struct replace_baton_t
 {
@@ -193,6 +214,10 @@ typedef struct replace_baton_t
 
   /** directory entry to insert instead */
   svn_fs_x__dirent_t *new_entry;
+
+  /** Current length of the in-txn in-disk representation of the directory.
+   * SVN_INVALID_FILESIZE if unknown. */
+  svn_filesize_t txn_filesize;
 } replace_baton_t;
 
 /**
