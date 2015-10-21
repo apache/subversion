@@ -780,17 +780,6 @@ svn_editor3_delete(svn_editor3_t *editor,
                    const char *branch_id,
                    svn_branch_eid_t eid);
 
-/** Fetch full payload.
- *
- * If the payload in @a element is defined only by reference (to a
- * path@rev location in the repository), fetch the full payload.
- * That is, leave the 'ref' field as it is and also fill in the
- * 'kind', 'props', and other fields as appropriate.
- */
-svn_error_t *
-svn_editor3_payload_resolve(svn_editor3_t *editor,
-                            svn_element_content_t *element);
-
 /** Register a sequence point.
  *
  * At a sequence point, elements are arranged in a tree hierarchy: each
@@ -924,13 +913,6 @@ typedef svn_error_t *(*svn_editor3_cb_delete_t)(
   svn_branch_eid_t eid,
   apr_pool_t *scratch_pool);
 
-/** @see svn_editor3_payload_resolve(), #svn_editor3_t
- */
-typedef svn_error_t *(*svn_editor3_cb_payload_resolve_t)(
-  void *baton,
-  svn_element_content_t *element,
-  apr_pool_t *scratch_pool);
-
 /** @see svn_editor3_sequence_point(), #svn_editor3_t
  */
 typedef svn_error_t *(*svn_editor3_cb_sequence_point_t)(
@@ -973,7 +955,6 @@ typedef struct svn_editor3_cb_funcs_t
   svn_editor3_cb_copy_one_t cb_copy_one;
   svn_editor3_cb_copy_tree_t cb_copy_tree;
   svn_editor3_cb_delete_t cb_delete;
-  svn_editor3_cb_payload_resolve_t cb_payload_resolve;
 
   svn_editor3_cb_sequence_point_t cb_sequence_point;
   svn_editor3_cb_complete_t cb_complete;
@@ -1068,6 +1049,17 @@ typedef svn_error_t *(*svn_editor3__shim_fetch_func_t)(
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool
   );
+
+/*
+ */
+svn_error_t *
+svn_payload_fetch(svn_element_payload_t **payload_p,
+                  svn_branch_txn_t *txn,
+                  svn_element_branch_ref_t branch_ref,
+                  svn_editor3__shim_fetch_func_t fetch_func,
+                  void *fetch_baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool);
 
 /* An object for communicating out-of-band details between an Ev1-to-Ev3
  * shim and an Ev3-to-Ev1 shim. */

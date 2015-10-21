@@ -338,19 +338,6 @@ svn_editor3_delete(svn_editor3_t *editor,
 }
 
 svn_error_t *
-svn_editor3_payload_resolve(svn_editor3_t *editor,
-                            svn_element_content_t *element)
-{
-  SVN_ERR_ASSERT(svn_element_payload_invariants(element->payload));
-
-  DO_CALLBACK(editor, cb_payload_resolve,
-              1(element));
-
-  SVN_ERR_ASSERT(svn_element_payload_invariants(element->payload));
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_editor3_sequence_point(svn_editor3_t *editor)
 {
   SHOULD_NOT_BE_FINISHED(editor);
@@ -579,18 +566,6 @@ wrap_delete(void *baton,
 }
 
 static svn_error_t *
-wrap_payload_resolve(void *baton,
-                     svn_element_content_t *element,
-                     apr_pool_t *scratch_pool)
-{
-  wrapper_baton_t *eb = baton;
-
-  SVN_ERR(svn_editor3_payload_resolve(eb->wrapped_editor,
-                                      element));
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 wrap_sequence_point(void *baton,
                     apr_pool_t *scratch_pool)
 {
@@ -636,7 +611,6 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
     wrap_copy_one,
     wrap_copy_tree,
     wrap_delete,
-    wrap_payload_resolve,
     wrap_sequence_point,
     wrap_complete,
     wrap_abort

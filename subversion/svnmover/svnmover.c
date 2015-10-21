@@ -296,16 +296,6 @@ element_differences(apr_hash_t **diff_p,
       svn_element_content_t *element_right
         = svn_element_tree_get(right, e);
 
-      /* If node payload is given by reference, resolve it to full payload */
-      if (element_left)
-        {
-          SVN_ERR(svn_editor3_payload_resolve(editor, element_left));
-        }
-      if (element_right)
-        {
-          SVN_ERR(svn_editor3_payload_resolve(editor, element_right));
-        }
-
       if (! svn_element_content_equal(element_left, element_right,
                                       scratch_pool))
         {
@@ -2270,7 +2260,6 @@ do_put_file(svn_editor3_t *editor,
       svn_element_content_t *existing_element
         = svn_branch_get_element(file_el_rev->branch, file_el_rev->eid);
 
-      SVN_ERR(svn_editor3_payload_resolve(editor, existing_element));
       props = existing_element->payload->props;
     }
   else
@@ -2346,7 +2335,6 @@ do_cat(svn_editor3_t *editor,
   svn_element_content_t *existing_element
     = svn_branch_get_element(file_el_rev->branch, file_el_rev->eid);
 
-  SVN_ERR(svn_editor3_payload_resolve(editor, existing_element));
   props = existing_element->payload->props;
   text = existing_element->payload->text;
 
