@@ -249,8 +249,7 @@ svn_branch_txn_new_eid(svn_branch_txn_t *txn,
 {
   SVN_ERR(txn->vtable->new_eid(txn,
                                new_eid_p,
-                               txn->vtable->vpriv.scratch_pool));
-  svn_pool_clear(txn->vtable->vpriv.scratch_pool);  /* ### assumes no recursion */
+                               scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -268,8 +267,7 @@ svn_branch_txn_open_branch(svn_branch_txn_t *txn,
                                    new_branch_p,
                                    predecessor, outer_branch_id, outer_eid,
                                    root_eid, result_pool,
-                                   txn->vtable->vpriv.scratch_pool));
-  svn_pool_clear(txn->vtable->vpriv.scratch_pool);  /* ### assumes no recursion */
+                                   scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -285,8 +283,7 @@ svn_branch_txn_branch(svn_branch_txn_t *txn,
   SVN_ERR(txn->vtable->branch(txn,
                               new_branch_p,
                               from, outer_branch_id, outer_eid, result_pool,
-                              txn->vtable->vpriv.scratch_pool));
-  svn_pool_clear(txn->vtable->vpriv.scratch_pool);  /* ### assumes no recursion */
+                              scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -295,8 +292,7 @@ svn_branch_txn_sequence_point(svn_branch_txn_t *txn,
                               apr_pool_t *scratch_pool)
 {
   SVN_ERR(txn->vtable->sequence_point(txn,
-                                      txn->vtable->vpriv.scratch_pool));
-  svn_pool_clear(txn->vtable->vpriv.scratch_pool);  /* ### assumes no recursion */
+                                      scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -312,7 +308,6 @@ svn_branch_txn_create(const svn_branch_txn_vtable_t *vtable,
 
   txn->vtable->vpriv.cancel_func = cancel_func;
   txn->vtable->vpriv.cancel_baton = cancel_baton;
-  txn->vtable->vpriv.scratch_pool = svn_pool_create(result_pool);
 
 #ifdef ENABLE_ORDERING_CHECK
   txn->vtable->vpriv.within_callback = FALSE;
@@ -1027,8 +1022,7 @@ svn_branch_state_alter_one(svn_branch_state_t *branch,
 {
   SVN_ERR(branch->vtable->alter_one(branch,
                                     eid, new_parent_eid, new_name, new_payload,
-                                    branch->vtable->vpriv.scratch_pool));
-  svn_pool_clear(branch->vtable->vpriv.scratch_pool);  /* ### assumes no recursion */
+                                    scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1041,8 +1035,7 @@ svn_branch_state_copy_tree(svn_branch_state_t *branch,
 {
   SVN_ERR(branch->vtable->copy_tree(branch,
                                     src_el_rev, new_parent_eid, new_name,
-                                    branch->vtable->vpriv.scratch_pool));
-  svn_pool_clear(branch->vtable->vpriv.scratch_pool);  /* ### assumes no recursion */
+                                    scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1053,8 +1046,7 @@ svn_branch_state_delete_one(svn_branch_state_t *branch,
 {
   SVN_ERR(branch->vtable->delete_one(branch,
                                      eid,
-                                     branch->vtable->vpriv.scratch_pool));
-  svn_pool_clear(branch->vtable->vpriv.scratch_pool); /* ### assumes no recursion */
+                                     scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1063,8 +1055,7 @@ svn_branch_state_purge(svn_branch_state_t *branch,
                        apr_pool_t *scratch_pool)
 {
   SVN_ERR(branch->vtable->purge(branch,
-                                branch->vtable->vpriv.scratch_pool));
-  svn_pool_clear(branch->vtable->vpriv.scratch_pool); /* ### assumes no recursion */
+                                scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1080,7 +1071,6 @@ svn_branch_state_create(const svn_branch_state_vtable_t *vtable,
 
   b->vtable->vpriv.cancel_func = cancel_func;
   b->vtable->vpriv.cancel_baton = cancel_baton;
-  b->vtable->vpriv.scratch_pool = svn_pool_create(result_pool);
 
 #ifdef ENABLE_ORDERING_CHECK
   b->vtable->vpriv.within_callback = FALSE;
