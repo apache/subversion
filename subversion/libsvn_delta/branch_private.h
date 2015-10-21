@@ -41,9 +41,6 @@ typedef struct svn_vtable_priv_t
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
 
-  /* This pool is used as the scratch_pool for all callbacks.  */
-  apr_pool_t *scratch_pool;
-
 #ifdef ENABLE_ORDERING_CHECK
   svn_boolean_t within_callback;
   svn_boolean_t finished;
