@@ -418,12 +418,13 @@ nested_branch_txn_branch(svn_branch_txn_t *txn,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
+  const char *new_branch_id;
   svn_branch_state_t *new_branch;
   svn_branch_state_t *from_branch;
   svn_branch_subtree_t *from_subtree;
 
   SVN_ERR(svn_branch_txn_branch(txn->priv->wrapped_txn,
-                                new_branch_id_p, from,
+                                &new_branch_id, from,
                                 outer_branch_id, outer_eid,
                                 result_pool,
                                 scratch_pool));
@@ -435,11 +436,13 @@ nested_branch_txn_branch(svn_branch_txn_t *txn,
                                scratch_pool));
   from_subtree = svn_branch_get_subtree(from_branch, from->eid, scratch_pool);
   new_branch = svn_branch_txn_get_branch_by_id(txn->priv->wrapped_txn,
-                                               *new_branch_id_p,
+                                               new_branch_id,
                                                scratch_pool);
   SVN_ERR(svn_branch_instantiate_elements_r(new_branch, *from_subtree,
                                             scratch_pool));
 
+  if (new_branch_id_p)
+    *new_branch_id_p = new_branch_id;
   return SVN_NO_ERROR;
 }
 
