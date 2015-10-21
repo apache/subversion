@@ -1510,7 +1510,7 @@ get_combined_window(svn_stringbuf_t **result,
 }
 
 /* Returns whether or not the expanded fulltext of the file is cachable
- * based on its size SIZE.  The decision depends on the cache used by RB.
+ * based on its size SIZE.  The decision depends on the cache used by FFD.
  */
 static svn_boolean_t
 fulltext_size_is_cachable(svn_fs_x__data_t *ffd,
@@ -2498,7 +2498,7 @@ get_dir_contents(apr_array_header_t **entries,
          changes we've made in this transaction. */
       SVN_ERR(svn_stream_open_readonly(&contents, filename, scratch_pool,
                                        scratch_pool));
-      SVN_ERR(read_dir_entries(*entries, contents, TRUE,  id,
+      SVN_ERR(read_dir_entries(*entries, contents, TRUE, id,
                                result_pool, scratch_pool));
       SVN_ERR(svn_stream_close(contents));
     }
