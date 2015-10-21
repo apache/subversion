@@ -331,7 +331,7 @@ auto_read_footer(svn_fs_x__revision_file_t *file)
                                      &file->p2l_info.start,
                                      &file->p2l_info.checksum,
                                      footer, file->file_info.start_revision,
-                                     file->pool));
+                                     filesize - footer_length - 1, file->pool));
       file->l2p_info.end = file->p2l_info.start;
       file->p2l_info.end = filesize - footer_length - 1;
     }
