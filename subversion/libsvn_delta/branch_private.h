@@ -63,7 +63,7 @@ typedef svn_error_t *(*branch_txn_v_new_eid_t)(
 
 typedef svn_error_t *(*branch_txn_v_open_branch_t)(
   svn_branch_txn_t *txn,
-  const char **new_branch_id_p,
+  svn_branch_state_t **new_branch_p,
   svn_branch_rev_bid_t *predecessor,
   const char *outer_branch_id,
   int outer_eid,
@@ -73,7 +73,7 @@ typedef svn_error_t *(*branch_txn_v_open_branch_t)(
 
 typedef svn_error_t *(*branch_txn_v_branch_t)(
   svn_branch_txn_t *txn,
-  const char **new_branch_id_p,
+  svn_branch_state_t **new_branch_p,
   svn_branch_rev_bid_eid_t *from,
   const char *outer_branch_id,
   int outer_eid,

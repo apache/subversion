@@ -1152,16 +1152,18 @@ editor3_open_branch(void *baton,
 {
   ev3_from_delta_baton_t *eb = baton;
   svn_branch_txn_t *txn = eb->txn;
+  svn_branch_state_t *new_branch;
 
   txn = svn_nested_branch_txn_create(txn, scratch_pool);
   SVN_ERR(svn_branch_txn_open_branch(txn,
-                                     new_branch_id_p,
+                                     &new_branch,
                                      predecessor,
                                      outer_branch_id,
                                      outer_eid,
                                      root_eid,
                                      result_pool,
                                      scratch_pool));
+  *new_branch_id_p = new_branch->bid;
   return SVN_NO_ERROR;
 }
 
@@ -1177,16 +1179,18 @@ editor3_branch(void *baton,
 {
   ev3_from_delta_baton_t *eb = baton;
   svn_branch_txn_t *txn = eb->txn;
+  svn_branch_state_t *new_branch;
 
   txn = svn_nested_branch_txn_create(txn, scratch_pool);
   SVN_ERR(svn_branch_txn_branch(txn,
-                                new_branch_id_p,
+                                &new_branch,
                                 from,
                                 outer_branch_id,
                                 outer_eid,
                                 result_pool,
                                 scratch_pool));
 
+  *new_branch_id_p = new_branch->bid;
   return SVN_NO_ERROR;
 }
 
