@@ -273,8 +273,8 @@ wc_create(svnmover_wc_t **wc_p,
 static svn_error_t *
 element_differences(apr_hash_t **diff_p,
                     svn_editor3_t *editor,
-                    svn_branch_subtree_t *left,
-                    svn_branch_subtree_t *right,
+                    const svn_element_tree_t *left,
+                    const svn_element_tree_t *right,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
@@ -288,13 +288,13 @@ element_differences(apr_hash_t **diff_p,
 
   for (SVN_HASH_ITER(hi, scratch_pool,
                      apr_hash_overlay(scratch_pool,
-                                      left->tree->e_map, right->tree->e_map)))
+                                      left->e_map, right->e_map)))
     {
       int e = svn_int_hash_this_key(hi->apr_hi);
       svn_element_content_t *element_left
-        = svn_element_tree_get(left->tree, e);
+        = svn_element_tree_get(left, e);
       svn_element_content_t *element_right
-        = svn_element_tree_get(right->tree, e);
+        = svn_element_tree_get(right, e);
 
       /* If node payload is given by reference, resolve it to full payload */
       if (element_left)
@@ -322,6 +322,69 @@ element_differences(apr_hash_t **diff_p,
   return SVN_NO_ERROR;
 }
 
+/* Set *IS_CHANGED to true if EDIT_TXN differs from its base txn, else to
+ * false.
+ */
+static svn_error_t *
+txn_is_changed(svn_editor3_t *editor,
+               svn_branch_txn_t *edit_txn,
+               svn_boolean_t *is_changed,
+               apr_pool_t *scratch_pool)
+{
+  SVN_ITER_T(svn_branch_state_t) *bi;
+  svn_branch_txn_t *base_txn
+    = svn_branch_repos_get_base_revision_root(edit_txn);
+  apr_array_header_t *edit_branches
+    = svn_branch_txn_get_branches(edit_txn, scratch_pool);
+  apr_array_header_t *base_branches
+    = svn_branch_txn_get_branches(base_txn, scratch_pool);
+
+  *is_changed = FALSE;
+
+  /* If any previous branch is now missing, that's a change. */
+  for (SVN_ARRAY_ITER(bi, base_branches, scratch_pool))
+    {
+      svn_branch_state_t *base_branch = bi->val;
+      svn_branch_state_t *edit_branch
+        = svn_branch_txn_get_branch_by_id(edit_txn, base_branch->bid,
+                                          scratch_pool);
+
+      if (! edit_branch)
+        {
+          *is_changed = TRUE;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  /* If any current branch is new or changed, that's a change. */
+  for (SVN_ARRAY_ITER(bi, edit_branches, scratch_pool))
+    {
+      svn_branch_state_t *edit_branch = bi->val;
+      svn_branch_state_t *base_branch
+        = svn_branch_txn_get_branch_by_id(base_txn, edit_branch->bid,
+                                          scratch_pool);
+      apr_hash_t *diff;
+
+      if (! base_branch)
+        {
+          *is_changed = TRUE;
+          return SVN_NO_ERROR;
+        }
+
+      SVN_ERR(element_differences(&diff, editor,
+                                  svn_branch_get_element_tree(edit_branch),
+                                  svn_branch_get_element_tree(base_branch),
+                                  scratch_pool, scratch_pool));
+      if (apr_hash_count(diff))
+        {
+          *is_changed = TRUE;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Replay differences between S_LEFT and S_RIGHT into EDITOR:EDIT_BRANCH.
  *
  * S_LEFT and/or S_RIGHT may be null meaning an empty set.
@@ -344,7 +407,7 @@ subtree_replay(svn_editor3_t *editor,
     s_right = svn_branch_subtree_create(NULL, 0 /*root_eid*/, scratch_pool);
 
   SVN_ERR(element_differences(&diff_left_right,
-                              editor, s_left, s_right,
+                              editor, s_left->tree, s_right->tree,
                               scratch_pool, scratch_pool));
 
   /* Go through the per-element differences. */
@@ -575,10 +638,6 @@ wc_commit(svn_revnum_t *new_rev_p,
                                        NULL /*lock_tokens*/, FALSE /*keep_locks*/,
                                        branch_info_dir,
                                        scratch_pool));
-  SVN_ERR(svn_editor3__change_detection_editor(&commit_editor,
-                                               &change_detected,
-                                               commit_editor,
-                                               scratch_pool));
   /*SVN_ERR(svn_editor3__get_debug_editor(&wc->editor, wc->editor, scratch_pool));*/
 
   edit_root_branch_id = wc->working->branch_id;
@@ -608,6 +667,8 @@ wc_commit(svn_revnum_t *new_rev_p,
                  wc->base->branch,
                  wc->working->branch,
                  scratch_pool));
+  SVN_ERR(txn_is_changed(commit_editor, commit_txn, &change_detected,
+                         scratch_pool));
   if (change_detected)
     {
       ccbb.edit_txn = commit_txn;
@@ -1541,12 +1602,12 @@ branch_merge_subtree_r(svn_editor3_t *editor,
   s_tgt = svn_branch_get_subtree(tgt->branch, tgt->eid, scratch_pool);
   s_yca = svn_branch_get_subtree(yca->branch, yca->eid, scratch_pool);
   SVN_ERR(element_differences(&diff_yca_src,
-                              editor, s_yca, s_src,
+                              editor, s_yca->tree, s_src->tree,
                               scratch_pool, scratch_pool));
   /* ### We only need to query for YCA:TO differences in elements that are
          different in YCA:FROM, but right now we ask for all differences. */
   SVN_ERR(element_differences(&diff_yca_tgt,
-                              editor, s_yca, s_tgt,
+                              editor, s_yca->tree, s_tgt->tree,
                               scratch_pool, scratch_pool));
 
   all_elements = apr_hash_overlay(scratch_pool,
@@ -1804,7 +1865,7 @@ subtree_diff(apr_hash_t **diff_changes,
   *diff_changes = apr_hash_make(result_pool);
 
   SVN_ERR(element_differences(&diff_left_right,
-                              editor, s_left, s_right,
+                              editor, s_left->tree, s_right->tree,
                               result_pool, scratch_pool));
 
   for (hi = apr_hash_first(scratch_pool, diff_left_right);

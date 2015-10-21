@@ -1032,16 +1032,6 @@ svn_editor3__get_debug_editor(svn_editor3_t **editor_p,
                               apr_pool_t *result_pool);
 #endif
 
-/* After driving this editor, *CHANGE_DETECTED will be true iff an editor
- * method was called that can make a change. This does not necessarily mean
- * a non-empty change was actually made.
- */
-svn_error_t *
-svn_editor3__change_detection_editor(svn_editor3_t **editor_p,
-                                     svn_boolean_t *change_detected,
-                                     svn_editor3_t *wrapped_editor,
-                                     apr_pool_t *result_pool);
-
 /** Callback to retrieve a node's kind and content.  This is
  * needed by the various editor shims in order to effect backwards
  * compatibility.
