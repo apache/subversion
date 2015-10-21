@@ -174,7 +174,7 @@ svn_branch_txn_create(const svn_branch_txn_vtable_t *vtable,
  * Return an empty array if there are none.
  */
 apr_array_header_t *
-svn_branch_txn_get_branches(svn_branch_txn_t *txn,
+svn_branch_txn_get_branches(const svn_branch_txn_t *txn,
                             apr_pool_t *result_pool);
 
 /* Return the branch whose id is BRANCH_ID in TXN.
@@ -345,6 +345,13 @@ svn_branch_id_unnest(const char **outer_bid,
                      int *outer_eid,
                      const char *bid,
                      apr_pool_t *result_pool);
+
+/* Register the existence of BRANCH in TXN.
+ */
+svn_error_t *
+svn_branch_txn_add_branch(svn_branch_txn_t *txn,
+                          svn_branch_state_t *branch,
+                          apr_pool_t *scratch_pool);
 
 /* Create a new branch with branch id BID, with no elements
  * (not even a root element).
