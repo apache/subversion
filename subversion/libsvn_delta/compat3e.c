@@ -1075,6 +1075,40 @@ payload_get_storage_pathrev(svn_pathrev_t *storage_pathrev_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_payload_fetch(svn_element_payload_t **payload_p,
+                  svn_branch_txn_t *txn,
+                  svn_element_branch_ref_t branch_ref,
+                  svn_editor3__shim_fetch_func_t fetch_func,
+                  void *fetch_baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  ev3_from_delta_baton_t eb;
+  svn_pathrev_t storage_pathrev;
+
+  /* Simulate the existence of /top0 in r0. */
+  if (branch_ref.rev == 0 && branch_ref.eid == 0)
+    {
+      *payload_p = svn_element_payload_create_dir(apr_hash_make(result_pool),
+                                                  result_pool);
+      return SVN_NO_ERROR;
+    }
+
+  eb.txn = txn;
+  eb.fetch_func = fetch_func;
+  eb.fetch_baton = fetch_baton;
+
+  SVN_ERR(storage_pathrev_from_branch_ref(&storage_pathrev,
+                                          branch_ref, txn->repos,
+                                          scratch_pool, scratch_pool));
+
+  SVN_ERR(payload_fetch(payload_p, NULL,
+                        &eb, &storage_pathrev, result_pool, scratch_pool));
+  (*payload_p)->branch_ref = branch_ref;
+  return SVN_NO_ERROR;
+}
+
 /* Fill in the actual payload, from its reference, if not already done.
  */
 static svn_error_t *
@@ -1103,25 +1137,6 @@ payload_resolve(svn_element_payload_t *payload,
 
   SVN_ERR_ASSERT(svn_element_payload_invariants(payload));
   SVN_ERR_ASSERT(! PAYLOAD_IS_ONLY_BY_REFERENCE(payload));
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-editor3_payload_resolve(void *baton,
-                        svn_element_content_t *element,
-                        apr_pool_t *scratch_pool)
-{
-  ev3_from_delta_baton_t *eb = baton;
-
-  SVN_ERR_ASSERT(element);
-  SVN_ERR_ASSERT(!element->payload
-                 || svn_element_payload_invariants(element->payload));
-
-  /* If payload is only by reference, fetch full payload. */
-  if (element->payload && PAYLOAD_IS_ONLY_BY_REFERENCE(element->payload))
-    {
-      SVN_ERR(payload_resolve(element->payload, eb, scratch_pool));
-    }
   return SVN_NO_ERROR;
 }
 
@@ -1928,7 +1943,6 @@ svn_editor3_in_memory(svn_editor3_t **editor_p,
     editor3_copy_one,
     editor3_copy_tree,
     editor3_delete,
-    editor3_payload_resolve,
     editor3_sequence_point,
     editor3_mem_complete,
     editor3_mem_abort
@@ -1972,7 +1986,6 @@ svn_editor3__ev3_from_delta_for_commit(
     editor3_copy_one,
     editor3_copy_tree,
     editor3_delete,
-    editor3_payload_resolve,
     editor3_sequence_point,
     editor3_complete,
     editor3_abort
