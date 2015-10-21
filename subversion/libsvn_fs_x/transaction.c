@@ -2795,6 +2795,7 @@ write_container_delta_rep(svn_fs_x__representation_t *rep,
 
   /* Store the results. */
   SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, scratch_pool));
+  rep->expanded_size = whb->size;
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
@@ -2838,7 +2839,6 @@ write_container_delta_rep(svn_fs_x__representation_t *rep,
       SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, scratch_pool));
 
       /* update the representation */
-      rep->expanded_size = whb->size;
       rep->size = rep_end - delta_start;
     }
 
