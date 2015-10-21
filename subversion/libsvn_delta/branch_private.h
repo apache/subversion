@@ -53,6 +53,27 @@ typedef struct svn_vtable_priv_t
  * See the corresponding public API functions for details.
  */
 
+typedef apr_array_header_t *(*branch_txn_v_get_branches_t)(
+  const svn_branch_txn_t *txn,
+  apr_pool_t *result_pool);
+
+typedef svn_error_t *(*branch_txn_v_add_branch_t)(
+  svn_branch_txn_t *txn,
+  svn_branch_state_t *branch,
+  apr_pool_t *scratch_pool);
+
+typedef svn_branch_state_t *(*branch_txn_v_add_new_branch_t)(
+  svn_branch_txn_t *txn,
+  const char *bid,
+  svn_branch_rev_bid_t *predecessor,
+  int root_eid,
+  apr_pool_t *scratch_pool);
+
+typedef svn_error_t *(*branch_txn_v_delete_branch_t)(
+  svn_branch_txn_t *txn,
+  const char *bid,
+  apr_pool_t *scratch_pool);
+
 typedef svn_error_t *(*branch_txn_v_new_eid_t)(
   svn_branch_txn_t *txn,
   svn_branch_eid_t *eid_p,
@@ -86,6 +107,10 @@ struct svn_branch_txn_vtable_t
   svn_vtable_priv_t vpriv;
 
   /* Methods. */
+  branch_txn_v_get_branches_t get_branches;
+  branch_txn_v_add_branch_t add_branch;
+  branch_txn_v_add_new_branch_t add_new_branch;
+  branch_txn_v_delete_branch_t delete_branch;
   branch_txn_v_new_eid_t new_eid;
   branch_txn_v_open_branch_t open_branch;
   branch_txn_v_branch_t branch;
