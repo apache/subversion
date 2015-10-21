@@ -137,6 +137,18 @@ x_serialized_init(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_x__initialize_shared_data(svn_fs_t *fs,
+                                 svn_mutex__t *common_pool_lock,
+                                 apr_pool_t *scratch_pool,
+                                 apr_pool_t *common_pool)
+{
+  SVN_MUTEX__WITH_LOCK(common_pool_lock,
+                       x_serialized_init(fs, common_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* This function is provided for Subversion 1.0.x compatibility.  It
@@ -530,24 +542,17 @@ x_hotcopy(svn_fs_t *src_fs,
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
 
-  /* Test target repo when in INCREMENTAL mode, initialize it when not.
-   * For this, we need our FS internal data structures to be temporarily
-   * available. */
+  SVN_ERR(svn_fs__check_fs(dst_fs, FALSE));
   SVN_ERR(initialize_fs_struct(dst_fs));
-  SVN_ERR(svn_fs_x__hotcopy_prepare_target(src_fs, dst_fs, dst_path,
-                                           incremental, scratch_pool));
-  uninitialize_fs_struct(dst_fs);
 
-  /* Now, the destination repo should open just fine. */
-  SVN_ERR(x_open(dst_fs, dst_path, common_pool_lock, scratch_pool,
-                 common_pool));
-  if (cancel_func)
-    SVN_ERR(cancel_func(cancel_baton));
-
-  /* Now, we may copy data as needed ... */
-  return svn_fs_x__hotcopy(src_fs, dst_fs, incremental,
-                           notify_func, notify_baton,
-                           cancel_func, cancel_baton, scratch_pool);
+  /* In INCREMENTAL mode, svn_fs_x__hotcopy() will open DST_FS.
+     Otherwise, it's not an FS yet --- possibly just an empty dir --- so
+     can't be opened.
+   */
+  return svn_fs_x__hotcopy(src_fs, dst_fs, src_path, dst_path,
+                            incremental, notify_func, notify_baton,
+                            cancel_func, cancel_baton, common_pool_lock,
+                            scratch_pool, common_pool);
 }
 
 
