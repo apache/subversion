@@ -50,6 +50,8 @@ extern "C" {
  * *P2L_OFFSET, respectively.  Also, return the expected checksums in
  * in *L2P_CHECKSUM and *P2L_CHECKSUM.
  *
+ * FOOTER_OFFSET is used for validation.
+ *
  * Note that REV is only used to construct nicer error objects that
  * mention this revision.  Allocate the checksums in RESULT_POOL.
  */
@@ -60,6 +62,7 @@ svn_fs_x__parse_footer(apr_off_t *l2p_offset,
                        svn_checksum_t **p2l_checksum,
                        svn_stringbuf_t *footer,
                        svn_revnum_t rev,
+                       apr_off_t footer_offset,
                        apr_pool_t *result_pool);
 
 /* Given the offset of the L2P index data in L2P_OFFSET, the content
