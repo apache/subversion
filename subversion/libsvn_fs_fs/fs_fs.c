@@ -754,8 +754,8 @@ read_config(fs_fs_data_t *ffd,
                                    CONFIG_SECTION_PACKED_REVPROPS,
                                    CONFIG_OPTION_REVPROP_PACK_SIZE,
                                    ffd->compress_packed_revprops
-                                       ? 0x10
-                                       : 0x4));
+                                       ? 0x40
+                                       : 0x10));
 
       ffd->revprop_pack_size *= 1024;
     }
@@ -962,9 +962,9 @@ write_config(svn_fs_t *fs,
 "### latency and CPU usage reading and changing individual revprops."        NL
 "### Values smaller than 4 kByte will not improve latency any further and "  NL
 "### quickly render revprop packing ineffective."                            NL
-"### revprop-pack-size is 4 kBytes by default for non-compressed revprop"    NL
-"### pack files and 16 kBytes when compression has been enabled."            NL
-"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 4"                                  NL
+"### revprop-pack-size is 16 kBytes by default for non-compressed revprop"   NL
+"### pack files and 64 kBytes when compression has been enabled."            NL
+"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 16"                                 NL
 "###"                                                                        NL
 "### To save disk space, packed revprop files may be compressed.  Standard"  NL
 "### revprops tend to allow for very effective compression.  Reading and"    NL
