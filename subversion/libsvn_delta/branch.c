@@ -149,13 +149,14 @@ branch_txn_open_branch(svn_branch_txn_t *txn,
   if (new_branch)
     {
       SVN_ERR_ASSERT(root_eid == svn_branch_root_eid(new_branch));
-      return SVN_NO_ERROR;
     }
-
-  new_branch = svn_branch_txn_add_new_branch(txn,
-                                             new_branch_id,
-                                             predecessor,
-                                             root_eid, scratch_pool);
+  else
+    {
+      new_branch = svn_branch_txn_add_new_branch(txn,
+                                                 new_branch_id,
+                                                 predecessor,
+                                                 root_eid, scratch_pool);
+    }
 
   if (new_branch_id_p)
     *new_branch_id_p = new_branch_id;
