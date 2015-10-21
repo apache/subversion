@@ -2578,26 +2578,24 @@ locate_dir_cache(svn_fs_t *fs,
                  svn_fs_x__noderev_t *noderev)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
-  if (svn_fs_x__is_txn(noderev->noderev_id.change_set))
+
+  if (!noderev->data_rep)
     {
-      /* data in txns must be addressed by ID since the representation has
-         not been created, yet. */
+      /* no data rep -> empty directory.
+         Use a key that does definitely not clash with non-NULL reps. */
+      key->change_set = SVN_FS_X__INVALID_CHANGE_SET;
+      key->number = SVN_FS_X__ITEM_INDEX_UNUSED;
+    }
+  else if (svn_fs_x__is_txn(noderev->noderev_id.change_set))
+    {
+      /* data in txns must be addressed by noderev ID since the
+         representation has not been created, yet. */
       *key = noderev->noderev_id;
     }
   else
     {
       /* committed data can use simple rev,item pairs */
-      if (noderev->data_rep)
-        {
-          *key = noderev->data_rep->id;
-        }
-      else
-        {
-          /* no data rep -> empty directory.
-             Use a key that does definitely not clash with non-NULL reps. */
-          key->change_set = SVN_FS_X__INVALID_CHANGE_SET;
-          key->number = SVN_FS_X__ITEM_INDEX_UNUSED;
-        }
+      *key = noderev->data_rep->id;
     }
 
   return ffd->dir_cache;

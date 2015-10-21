@@ -232,6 +232,17 @@ svn_fs_x__replace_dir_entry(void **data,
                             apr_pool_t *pool);
 
 /**
+ * Implements #svn_cache__partial_setter_func_t for a #svn_fs_x__dir_data_t
+ * at @a *data, resetting its txn_filesize field to SVN_INVALID_FILESIZE.
+ * &a baton should be NULL.
+ */
+svn_error_t *
+svn_fs_x__reset_txn_filesize(void **data,
+                             apr_size_t *data_len,
+                             void *baton,
+                             apr_pool_t *pool);
+
+/**
  * Implements #svn_cache__serialize_func_t for a #svn_fs_x__rep_header_t.
  */
 svn_error_t *
