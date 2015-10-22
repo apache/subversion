@@ -222,6 +222,10 @@ svn_error_t *
 svn_branch_txn_sequence_point(svn_branch_txn_t *txn,
                               apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_branch_txn_complete(svn_branch_txn_t *txn,
+                        apr_pool_t *scratch_pool);
+
 /* Change txn-local EIDs (negative integers) in TXN to revision EIDs, by
  * assigning a new revision-EID (positive integer) for each one.
  *
