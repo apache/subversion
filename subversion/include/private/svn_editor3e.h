@@ -1104,7 +1104,7 @@ typedef struct svn_editor3__shim_connector_t svn_editor3__shim_connector_t;
  */
 svn_error_t *
 svn_editor3__ev3_from_delta_for_commit(
-                        svn_editor3_t **editor_p,
+                        svn_branch_txn_t **txn_p,
                         svn_editor3__shim_connector_t **shim_connector,
                         const svn_delta_editor_t *deditor,
                         void *dedit_baton,
@@ -1138,7 +1138,7 @@ svn_error_t *
 svn_editor3__delta_from_ev3_for_commit(
                         const svn_delta_editor_t **deditor,
                         void **dedit_baton,
-                        svn_editor3_t *editor,
+                        svn_branch_txn_t *edit_txn,
                         const char *repos_root_url,
                         const char *base_relpath,
                         svn_editor3__shim_fetch_func_t fetch_func,
@@ -1183,8 +1183,8 @@ typedef svn_error_t *(*svn_editor3__set_target_revision_func_t)(
  * resources needed for use as an update or switch editor.
  */
 typedef struct svn_update_editor3_t {
-  /* The basic editor. */
-  svn_editor3_t *editor;
+  /* The txn we're driving. */
+  svn_branch_txn_t *edit_txn;
 
   /* A method to communicate the target revision of the update (or switch),
    * to be called before driving the editor. It has its own baton, rather

@@ -1058,7 +1058,6 @@ svn_ra_load_branching_state(svn_branch_txn_t **branching_txn_p,
 svn_error_t *
 svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
                              svn_branch_txn_t **edit_txn_p,
-                             svn_editor3_t **editor,
                              apr_hash_t *revprop_table,
                              svn_commit_callback2_t commit_callback,
                              void *commit_baton,
@@ -1102,7 +1101,7 @@ svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
       SVN_ERR(svn_delta__get_debug_editor(&deditor, &dedit_baton,
                                           deditor, dedit_baton, "", pool));*/
     SVN_ERR(svn_editor3__ev3_from_delta_for_commit(
-                        editor,
+                        edit_txn_p,
                         &shim_connector,
                         deditor, dedit_baton, branching_txn,
                         repos_root_url,
@@ -1111,8 +1110,6 @@ svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
                         pool, pool));
   }
 
-  if (edit_txn_p)
-    *edit_txn_p = branching_txn;
   return SVN_NO_ERROR;
 }
 

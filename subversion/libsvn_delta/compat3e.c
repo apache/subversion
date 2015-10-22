@@ -36,6 +36,9 @@
 #include "private/svn_delta_private.h"
 #include "private/svn_editor3e.h"
 #include "../libsvn_delta/debug_editor.h"
+
+#include "branch_private.h"
+
 #include "svn_private_config.h"
 
 
@@ -130,7 +133,7 @@ svn_editor3__insert_shims(
                         apr_pool_t *scratch_pool)
 {
 #if 0
-  svn_editor3_t *editor3;
+  svn_branch_txn_t *edit_txn;
   svn_editor3__shim_connector_t *shim_connector;
 
 #ifdef SVN_DEBUG
@@ -139,7 +142,7 @@ svn_editor3__insert_shims(
                                       "[OUT] ", result_pool));*/
 #endif
   SVN_ERR(svn_editor3__ev3_from_delta_for_commit(
-                        &editor3,
+                        &edit_txn,
                         &shim_connector,
                         old_deditor, old_dedit_baton,
                         branching_txn,
@@ -147,12 +150,9 @@ svn_editor3__insert_shims(
                         fetch_func, fetch_baton,
                         NULL, NULL /*cancel*/,
                         result_pool, scratch_pool));
-#ifdef SVN_DEBUG
-  /*SVN_ERR(svn_editor3__get_debug_editor(&editor3, editor3, result_pool));*/
-#endif
   SVN_ERR(svn_editor3__delta_from_ev3_for_commit(
                         new_deditor, new_dedit_baton,
-                        editor3,
+                        edit_txn,
                         repos_root, base_relpath,
                         fetch_func, fetch_baton,
                         shim_connector,
@@ -428,7 +428,7 @@ svn_error_t *
 svn_editor3__delta_from_ev3_for_commit(
                         const svn_delta_editor_t **deditor,
                         void **dedit_baton,
-                        svn_editor3_t *editor,
+                        svn_branch_txn_t *edit_txn,
                         const char *repos_root_url,
                         const char *base_relpath,
                         svn_editor3__shim_fetch_func_t fetch_func,
@@ -465,7 +465,7 @@ svn_editor3__delta_from_ev3_for_update(
 
   SVN_ERR(svn_editor3__delta_from_ev3_for_commit(
                         deditor, dedit_baton,
-                        update_editor->editor,
+                        update_editor->edit_txn,
                         repos_root_url, base_repos_relpath,
                         fetch_func, fetch_baton,
                         shim_connector,
@@ -1022,6 +1022,15 @@ storage_pathrev_from_branch_ref(svn_pathrev_t *storage_pathrev_p,
  * ========================================================================
  */
 
+struct svn_branch_txn_priv_t
+{
+  /* The underlying branch-txn that supports
+   ### ? only non-nested branching. */
+  svn_branch_txn_t *wrapped_txn;
+
+  ev3_from_delta_baton_t *eb;
+};
+
 /*  */
 #define PAYLOAD_IS_ONLY_BY_REFERENCE(payload) \
     ((payload)->kind == svn_node_unknown)
@@ -1137,169 +1146,6 @@ payload_resolve(svn_element_payload_t *payload,
 
   SVN_ERR_ASSERT(svn_element_payload_invariants(payload));
   SVN_ERR_ASSERT(! PAYLOAD_IS_ONLY_BY_REFERENCE(payload));
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_editor3_t method. */
-static svn_error_t *
-editor3_new_eid(void *baton,
-                svn_branch_eid_t *eid_p,
-                apr_pool_t *scratch_pool)
-{
-  ev3_from_delta_baton_t *eb = baton;
-  svn_branch_txn_t *txn = eb->txn;
-
-  txn = svn_nested_branch_txn_create(txn, scratch_pool);
-  SVN_ERR(svn_branch_txn_new_eid(txn, eid_p, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_editor3_t method. */
-static svn_error_t *
-editor3_open_branch(void *baton,
-                    const char **new_branch_id_p,
-                    svn_branch_rev_bid_t *predecessor,
-                    const char *outer_branch_id,
-                    int outer_eid,
-                    int root_eid,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
-{
-  ev3_from_delta_baton_t *eb = baton;
-  svn_branch_txn_t *txn = eb->txn;
-  svn_branch_state_t *new_branch;
-
-  txn = svn_nested_branch_txn_create(txn, scratch_pool);
-  SVN_ERR(svn_branch_txn_open_branch(txn,
-                                     &new_branch,
-                                     predecessor,
-                                     outer_branch_id,
-                                     outer_eid,
-                                     root_eid,
-                                     result_pool,
-                                     scratch_pool));
-  *new_branch_id_p = new_branch->bid;
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_editor3_t method. */
-static svn_error_t *
-editor3_branch(void *baton,
-               const char **new_branch_id_p,
-               svn_branch_rev_bid_eid_t *from,
-               const char *outer_branch_id,
-               int outer_eid,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool)
-{
-  ev3_from_delta_baton_t *eb = baton;
-  svn_branch_txn_t *txn = eb->txn;
-  svn_branch_state_t *new_branch;
-
-  txn = svn_nested_branch_txn_create(txn, scratch_pool);
-  SVN_ERR(svn_branch_txn_branch(txn,
-                                &new_branch,
-                                from,
-                                outer_branch_id,
-                                outer_eid,
-                                result_pool,
-                                scratch_pool));
-
-  *new_branch_id_p = new_branch->bid;
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_editor3_t method. */
-static svn_error_t *
-editor3_alter(void *baton,
-              const char *branch_id,
-              svn_branch_eid_t eid,
-              svn_branch_eid_t new_parent_eid,
-              const char *new_name,
-              const svn_element_payload_t *new_payload,
-              apr_pool_t *scratch_pool)
-{
-  ev3_from_delta_baton_t *eb = baton;
-  svn_branch_state_t *branch
-    = svn_branch_txn_get_branch_by_id(eb->txn, branch_id, scratch_pool);
-
-  if (! new_payload->is_subbranch_root)
-    {
-      SVN_DBG(("alter(e%d): parent e%d, name '%s', kind %s",
-               eid, new_parent_eid,
-               new_name, svn_node_kind_to_word(new_payload->kind)));
-
-    }
-  else
-    {
-      SVN_DBG(("alter(e%d): parent e%d, name '%s', kind (subbranch)",
-               eid, new_parent_eid, new_name));
-    }
-  SVN_ERR(svn_branch_state_alter_one(branch, eid, new_parent_eid, new_name,
-                                     new_payload, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_editor3_t method. */
-static svn_error_t *
-editor3_copy_one(void *baton,
-                 const svn_branch_rev_bid_eid_t *src_el_rev,
-                 const char *branch_id,
-                 svn_branch_eid_t eid,
-                 svn_branch_eid_t new_parent_eid,
-                 const char *new_name,
-                 const svn_element_payload_t *new_payload,
-                 apr_pool_t *scratch_pool)
-{
-  /* New payload shall be the same as the source if NEW_PAYLOAD is null. */
-  /* ### if (! new_payload)
-    {
-      new_payload = branch_map_get(branch, eid)->payload;
-    }
-   */
-
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_editor3_t method. */
-static svn_error_t *
-editor3_copy_tree(void *baton,
-                  const svn_branch_rev_bid_eid_t *src_el_rev,
-                  const char *to_branch_id,
-                  svn_branch_eid_t new_parent_eid,
-                  const char *new_name,
-                  apr_pool_t *scratch_pool)
-{
-  ev3_from_delta_baton_t *eb = baton;
-  svn_branch_state_t *to_branch
-    = svn_branch_txn_get_branch_by_id(eb->txn, to_branch_id, scratch_pool);
-
-  SVN_ERR(svn_branch_state_copy_tree(to_branch,
-                                     src_el_rev, new_parent_eid, new_name,
-                                     scratch_pool));
-
-  /* ### TODO: If any copied elements are subbranch-roots, ... Unimplemented. */
-
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_editor3_t method. */
-static svn_error_t *
-editor3_delete(void *baton,
-                   const char *branch_id,
-                   svn_branch_eid_t eid,
-                   apr_pool_t *scratch_pool)
-{
-  ev3_from_delta_baton_t *eb = baton;
-  svn_branch_state_t *branch
-    = svn_branch_txn_get_branch_by_id(eb->txn, branch_id, scratch_pool);
-
-  SVN_DBG(("delete(b%s e%d)",
-           svn_branch_get_id(branch, scratch_pool), eid));
-
-  SVN_ERR(svn_branch_state_delete_one(branch, eid, scratch_pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -1804,31 +1650,178 @@ drive_changes(ev3_from_delta_baton_t *eb,
   return SVN_NO_ERROR;
 }
 
-/* An #svn_editor3_t method. */
-static svn_error_t *
-editor3_sequence_point(void *baton,
-                       apr_pool_t *scratch_pool)
+/* An #svn_branch_txn_t method. */
+static apr_array_header_t *
+compat_branch_txn_get_branches(const svn_branch_txn_t *txn,
+                               apr_pool_t *result_pool)
 {
-  ev3_from_delta_baton_t *eb = baton;
-  svn_branch_txn_t *txn = eb->txn;
+  /* Just forwarding: nothing more is needed. */
+  apr_array_header_t *branches
+    = svn_branch_txn_get_branches(txn->priv->wrapped_txn,
+                                  result_pool);
 
-  txn = svn_nested_branch_txn_create(txn, scratch_pool);
-  SVN_ERR(svn_branch_txn_sequence_point(txn, scratch_pool));
+  return branches;
+}
 
+/* An #svn_branch_txn_t method. */
+static svn_error_t *
+compat_branch_txn_add_branch(svn_branch_txn_t *txn,
+                             svn_branch_state_t *branch,
+                             apr_pool_t *scratch_pool)
+{
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_add_branch(txn->priv->wrapped_txn,
+                                    branch,
+                                    scratch_pool));
   return SVN_NO_ERROR;
 }
 
-/* An #svn_editor3_t method. */
-static svn_error_t *
-editor3_complete(void *baton,
-                 apr_pool_t *scratch_pool)
+/* An #svn_branch_txn_t method. */
+static svn_branch_state_t *
+compat_branch_txn_add_new_branch(svn_branch_txn_t *txn,
+                                 const char *bid,
+                                 svn_branch_rev_bid_t *predecessor,
+                                 int root_eid,
+                                 apr_pool_t *scratch_pool)
 {
-  ev3_from_delta_baton_t *eb = baton;
+  /* Just forwarding: nothing more is needed. */
+  svn_branch_state_t *new_branch
+    = svn_branch_txn_add_new_branch(txn->priv->wrapped_txn,
+                                    bid, predecessor, root_eid,
+                                    scratch_pool);
+
+  return new_branch;
+}
+
+/* An #svn_branch_txn_t method. */
+static svn_error_t *
+compat_branch_txn_delete_branch(svn_branch_txn_t *txn,
+                                const char *bid,
+                                apr_pool_t *scratch_pool)
+{
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_delete_branch(txn->priv->wrapped_txn,
+                                       bid,
+                                       scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_branch_txn_t method. */
+static svn_error_t *
+compat_branch_txn_get_num_new_eids(const svn_branch_txn_t *txn,
+                                   int *num_new_eids_p,
+                                   apr_pool_t *scratch_pool)
+{
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_get_num_new_eids(txn->priv->wrapped_txn,
+                                          num_new_eids_p,
+                                          scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_branch_txn_t method. */
+static svn_error_t *
+compat_branch_txn_new_eid(svn_branch_txn_t *txn,
+                          svn_branch_eid_t *eid_p,
+                          apr_pool_t *scratch_pool)
+{
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_new_eid(txn->priv->wrapped_txn,
+                                 eid_p,
+                                 scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_branch_txn_t method. */
+static svn_error_t *
+compat_branch_txn_finalize_eids(svn_branch_txn_t *txn,
+                                apr_pool_t *scratch_pool)
+{
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_finalize_eids(txn->priv->wrapped_txn,
+                                       scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_branch_txn_t method. */
+static svn_error_t *
+compat_branch_txn_open_branch(svn_branch_txn_t *txn,
+                              svn_branch_state_t **new_branch_p,
+                              svn_branch_rev_bid_t *predecessor,
+                              const char *outer_branch_id,
+                              int outer_eid,
+                              int root_eid,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_open_branch(txn->priv->wrapped_txn,
+                                     new_branch_p, predecessor,
+                                     outer_branch_id, outer_eid, root_eid,
+                                     result_pool,
+                                     scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_branch_txn_t method. */
+static svn_error_t *
+compat_branch_txn_branch(svn_branch_txn_t *txn,
+                         svn_branch_state_t **new_branch_p,
+                         svn_branch_rev_bid_eid_t *from,
+                         const char *outer_branch_id,
+                         int outer_eid,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  svn_branch_state_t *new_branch;
+
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_branch(txn->priv->wrapped_txn,
+                                &new_branch, from,
+                                outer_branch_id, outer_eid,
+                                result_pool,
+                                scratch_pool));
+
+  if (new_branch_p)
+    *new_branch_p = new_branch;
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_branch_txn_t method. */
+static svn_error_t *
+compat_branch_txn_serialize(svn_branch_txn_t *txn,
+                            svn_stream_t *stream,
+                            apr_pool_t *scratch_pool)
+{
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_serialize(txn->priv->wrapped_txn,
+                                   stream,
+                                   scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_branch_txn_t method. */
+static svn_error_t *
+compat_branch_txn_sequence_point(svn_branch_txn_t *txn,
+                                 apr_pool_t *scratch_pool)
+{
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_sequence_point(txn->priv->wrapped_txn,
+                                        scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_branch_txn_t method. */
+static svn_error_t *
+compat_branch_txn_complete(svn_branch_txn_t *txn,
+                           apr_pool_t *scratch_pool)
+{
+  ev3_from_delta_baton_t *eb = txn->priv->eb;
   svn_error_t *err;
 
   /* Convert the transaction to a revision */
-  SVN_ERR(editor3_sequence_point(baton, scratch_pool));
-  SVN_ERR(svn_branch_txn_finalize_eids(eb->txn, scratch_pool));
+  SVN_ERR(svn_branch_txn_sequence_point(txn->priv->wrapped_txn, scratch_pool));
+  SVN_ERR(svn_branch_txn_finalize_eids(txn->priv->wrapped_txn, scratch_pool));
 
   err = drive_changes(eb, scratch_pool);
 
@@ -1842,18 +1835,22 @@ editor3_complete(void *baton,
   if (err)
     svn_error_clear(eb->deditor->abort_edit(eb->dedit_baton, scratch_pool));
 
+  SVN_ERR(svn_branch_txn_complete(txn->priv->wrapped_txn, scratch_pool));
+
   return err;
 }
 
-/* An #svn_editor3_t method. */
+/* An #svn_branch_txn_t method. */
 static svn_error_t *
-editor3_abort(void *baton,
-              apr_pool_t *scratch_pool)
+compat_branch_txn_abort(svn_branch_txn_t *txn,
+                        apr_pool_t *scratch_pool)
 {
-  ev3_from_delta_baton_t *eb = baton;
+  ev3_from_delta_baton_t *eb = txn->priv->eb;
 
   SVN_ERR(eb->deditor->abort_edit(eb->dedit_baton, scratch_pool));
 
+  SVN_ERR(svn_branch_txn_abort(txn->priv->wrapped_txn,
+                               scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1905,7 +1902,7 @@ wrap_fetch_func(svn_node_kind_t *kind,
 
 svn_error_t *
 svn_editor3__ev3_from_delta_for_commit(
-                        svn_editor3_t **editor_p,
+                        svn_branch_txn_t **txn_p,
                         svn_editor3__shim_connector_t **shim_connector,
                         const svn_delta_editor_t *deditor,
                         void *dedit_baton,
@@ -1918,18 +1915,23 @@ svn_editor3__ev3_from_delta_for_commit(
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  static const svn_editor3_cb_funcs_t editor_funcs = {
-    editor3_new_eid,
-    editor3_open_branch,
-    editor3_branch,
-    editor3_alter,
-    editor3_copy_one,
-    editor3_copy_tree,
-    editor3_delete,
-    editor3_sequence_point,
-    editor3_complete,
-    editor3_abort
+  static const svn_branch_txn_vtable_t vtable = {
+    {0},
+    compat_branch_txn_get_branches,
+    compat_branch_txn_add_branch,
+    compat_branch_txn_add_new_branch,
+    compat_branch_txn_delete_branch,
+    compat_branch_txn_get_num_new_eids,
+    compat_branch_txn_new_eid,
+    compat_branch_txn_open_branch,
+    compat_branch_txn_branch,
+    compat_branch_txn_finalize_eids,
+    compat_branch_txn_serialize,
+    compat_branch_txn_sequence_point,
+    compat_branch_txn_complete,
+    compat_branch_txn_abort
   };
+  svn_branch_txn_t *txn;
   ev3_from_delta_baton_t *eb = apr_pcalloc(result_pool, sizeof(*eb));
   wrap_fetch_baton_t *wb = apr_pcalloc(result_pool, sizeof(*wb));
 
@@ -1947,10 +1949,18 @@ svn_editor3__ev3_from_delta_for_commit(
 
   eb->edit_pool = result_pool;
 
-  *editor_p = svn_editor3_create(&editor_funcs, eb,
-                                 cancel_func, cancel_baton, result_pool);
+  branching_txn = svn_nested_branch_txn_create(branching_txn, result_pool);
 
   eb->txn = branching_txn;
+
+  txn = svn_branch_txn_create(&vtable, NULL, NULL, result_pool);
+  txn->priv = apr_pcalloc(result_pool, sizeof(*txn->priv));
+  txn->priv->wrapped_txn = branching_txn;
+  txn->priv->eb = eb;
+  txn->repos = branching_txn->repos;
+  txn->rev = branching_txn->rev;
+  txn->base_rev = branching_txn->base_rev;
+  *txn_p = txn;
 
   if (shim_connector)
     {
@@ -1999,7 +2009,7 @@ svn_editor3__ev3_from_delta_for_update(
                                       deditor, dedit_baton,
                                       "[1>UP] ", result_pool));*/
   SVN_ERR(svn_editor3__ev3_from_delta_for_commit(
-                        &update_editor->editor,
+                        &update_editor->edit_txn,
                         &shim_connector,
                         deditor, dedit_baton,
                         branching_txn, repos_root_url,

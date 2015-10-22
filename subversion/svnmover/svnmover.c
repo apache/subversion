@@ -193,6 +193,8 @@ wc_checkout(svnmover_wc_t *wc,
                                       base_revision,
                                       wc->pool, scratch_pool));
 
+  wc->edit_txn = svn_nested_branch_txn_create(wc->edit_txn, wc->pool);
+
   /* Store the WC base state */
   base_txn = svn_branch_repos_get_base_revision_root(wc->edit_txn);
   wc->base = apr_pcalloc(wc->pool, sizeof(*wc->base));
@@ -548,7 +550,6 @@ replay(svn_branch_txn_t *edit_txn,
 {
   SVN_ERR_ASSERT(left_branch || right_branch);
 
-  edit_txn = svn_nested_branch_txn_create(edit_txn, scratch_pool);
   SVN_ERR(svn_branch_replay(edit_txn, edit_root_branch,
                             left_branch, right_branch, scratch_pool));
   return SVN_NO_ERROR;
@@ -621,7 +622,6 @@ wc_commit(svn_revnum_t *new_rev_p,
 {
   const char *branch_info_dir = NULL;
   svn_branch_txn_t *commit_txn;
-  svn_editor3_t *commit_editor;
   commit_callback_baton_t ccbb;
   svn_boolean_t change_detected;
   const char *edit_root_branch_id;
@@ -651,7 +651,7 @@ wc_commit(svn_revnum_t *new_rev_p,
 
   /* Start a new editor for the commit. */
   SVN_ERR(svn_ra_get_commit_editor_ev3(wc->ra_session,
-                                       &commit_txn, &commit_editor,
+                                       &commit_txn,
                                        revprops,
                                        commit_callback, &ccbb,
                                        NULL /*lock_tokens*/, FALSE /*keep_locks*/,
@@ -694,7 +694,7 @@ wc_commit(svn_revnum_t *new_rev_p,
       ccbb.wc_base_branch_id = wc->base->branch_id;
       ccbb.wc_commit_branch_id = edit_root_branch_id;
 
-      SVN_ERR(svn_editor3_complete(commit_editor));
+      SVN_ERR(svn_branch_txn_complete(commit_txn, scratch_pool));
       SVN_ERR(display_diff_of_commit(&ccbb, scratch_pool));
 
       wc->head_revision = ccbb.revision;
@@ -703,7 +703,7 @@ wc_commit(svn_revnum_t *new_rev_p,
     }
   else
     {
-      SVN_ERR(svn_editor3_abort(commit_editor));
+      SVN_ERR(svn_branch_txn_abort(commit_txn, scratch_pool));
       if (new_rev_p)
         *new_rev_p = SVN_INVALID_REVNUM;
     }
@@ -1783,7 +1783,6 @@ svn_branch_merge(svn_branch_txn_t *edit_txn,
   /*SVN_ERR(verify_not_subbranch_root(to, scratch_pool));*/
   /*SVN_ERR(verify_not_subbranch_root(yca, scratch_pool));*/
 
-  edit_txn = svn_nested_branch_txn_create(edit_txn, scratch_pool);
   SVN_ERR(branch_merge_subtree_r(edit_txn, src, tgt, yca, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2635,7 +2634,6 @@ do_branch_and_delete(svn_branch_txn_t *edit_txn,
 
   SVN_ERR_ASSERT(! is_branch_root_element(el_rev->branch, el_rev->eid));
 
-  edit_txn = svn_nested_branch_txn_create(edit_txn, scratch_pool);
   SVN_ERR(do_branch(&new_branch, edit_txn, from,
                     to_outer_branch, to_outer_parent_eid, to_name,
                     scratch_pool, scratch_pool));
@@ -3298,11 +3296,9 @@ execute(svnmover_wc_t *wc,
             svn_branch_rev_bid_eid_t *from
               = svn_branch_rev_bid_eid_create(arg[0]->el_rev->rev, from_branch_id,
                                               arg[0]->el_rev->eid, iterpool);
-            svn_branch_txn_t *edit_txn
-              = svn_nested_branch_txn_create(wc->edit_txn, iterpool);
             svn_branch_state_t *new_branch;
 
-            SVN_ERR(do_branch(&new_branch, edit_txn,
+            SVN_ERR(do_branch(&new_branch, wc->edit_txn,
                               from,
                               arg[1]->el_rev->branch, arg[1]->parent_el_rev->eid,
                               arg[1]->path_name,

@@ -328,7 +328,6 @@ svn_ra_load_branching_state(svn_branch_txn_t **branching_txn_p,
 svn_error_t *
 svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
                              svn_branch_txn_t **edit_txn_p,
-                             svn_editor3_t **editor,
                              apr_hash_t *revprop_table,
                              svn_commit_callback2_t commit_callback,
                              void *commit_baton,
