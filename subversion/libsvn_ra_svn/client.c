@@ -2410,7 +2410,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
       SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "wl", &status, &list));
 
       if (strcmp(status, "failure") == 0)
-        err = svn_ra_svn__handle_failure_status(list, iterpool);
+        err = svn_ra_svn__handle_failure_status(list);
       else if (strcmp(status, "success") == 0)
         {
           SVN_ERR(parse_lock(list, iterpool, &lock));
@@ -2537,7 +2537,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
       SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "wl", &status, &list));
 
       if (strcmp(status, "failure") == 0)
-        err = svn_ra_svn__handle_failure_status(list, iterpool);
+        err = svn_ra_svn__handle_failure_status(list);
       else if (strcmp(status, "success") == 0)
         {
           SVN_ERR(svn_ra_svn__parse_tuple(list, "c", &path));
@@ -2752,7 +2752,7 @@ ra_svn_replay_range(svn_ra_session_t *session,
       if (strcmp(word, "revprops") != 0)
         {
           if (strcmp(word, "failure") == 0)
-            SVN_ERR(svn_ra_svn__handle_failure_status(list, iterpool));
+            SVN_ERR(svn_ra_svn__handle_failure_status(list));
 
           return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                    _("Expected 'revprops', found '%s'"),
