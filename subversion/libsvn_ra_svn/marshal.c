@@ -1507,7 +1507,6 @@ svn_ra_svn__skip_leading_garbage(svn_ra_svn_conn_t *conn,
  * tuple specification and advance AP by the corresponding arguments. */
 static svn_error_t *
 vparse_tuple(const svn_ra_svn__list_t *items,
-             apr_pool_t *pool,
              const char **fmt,
              va_list *ap)
 {
@@ -1523,7 +1522,7 @@ vparse_tuple(const svn_ra_svn__list_t *items,
       if (**fmt == '(' && elt->kind == SVN_RA_SVN_LIST)
         {
           (*fmt)++;
-          SVN_ERR(vparse_tuple(&elt->u.list, pool, fmt, ap));
+          SVN_ERR(vparse_tuple(&elt->u.list, fmt, ap));
         }
       else if (**fmt == 'c' && elt->kind == SVN_RA_SVN_STRING)
         *va_arg(*ap, const char **) = elt->u.string.data;
@@ -1618,14 +1617,13 @@ vparse_tuple(const svn_ra_svn__list_t *items,
 
 svn_error_t *
 svn_ra_svn__parse_tuple(const svn_ra_svn__list_t *list,
-                        apr_pool_t *pool,
                         const char *fmt, ...)
 {
   svn_error_t *err;
   va_list ap;
 
   va_start(ap, fmt);
-  err = vparse_tuple(list, pool, &fmt, &ap);
+  err = vparse_tuple(list, &fmt, &ap);
   va_end(ap);
   return err;
 }
@@ -1644,7 +1642,7 @@ svn_ra_svn__read_tuple(svn_ra_svn_conn_t *conn,
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("Malformed network data"));
   va_start(ap, fmt);
-  err = vparse_tuple(&item->u.list, pool, &fmt, &ap);
+  err = vparse_tuple(&item->u.list, &fmt, &ap);
   va_end(ap);
   return err;
 }
@@ -1679,8 +1677,7 @@ svn_ra_svn__parse_proplist(const svn_ra_svn__list_t *list,
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Proplist element not a list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, pool, "ss",
-                                      &name, &value));
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "ss", &name, &value));
       apr_hash_set(*props, name->data, name->len, value);
     }
 
@@ -1728,7 +1725,7 @@ svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Malformed error list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, subpool, "nccn",
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "nccn",
                                       &apr_err, &message, &file, &line));
       /* The message field should have been optional, but we can't
          easily change that, so "" means a nonexistent message. */
@@ -1772,7 +1769,7 @@ svn_ra_svn__read_cmd_response(svn_ra_svn_conn_t *conn,
   if (strcmp(status, "success") == 0)
     {
       va_start(ap, fmt);
-      err = vparse_tuple(params, pool, &fmt, &ap);
+      err = vparse_tuple(params, &fmt, &ap);
       va_end(ap);
       return err;
     }
