@@ -306,6 +306,14 @@ branch_txn_complete(svn_branch_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
+/* An #svn_branch_txn_t method. */
+static svn_error_t *
+branch_txn_abort(svn_branch_txn_t *txn,
+                 apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
 /*
  * ========================================================================
  * Branch Txn Object
@@ -423,6 +431,15 @@ svn_branch_txn_complete(svn_branch_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_branch_txn_abort(svn_branch_txn_t *txn,
+                     apr_pool_t *scratch_pool)
+{
+  SVN_ERR(txn->vtable->abort(txn,
+                             scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 svn_branch_txn_t *
 svn_branch_txn_create(const svn_branch_txn_vtable_t *vtable,
                       svn_cancel_func_t cancel_func,
@@ -466,6 +483,7 @@ branch_txn_create(svn_branch_repos_t *repos,
     branch_txn_branch,
     branch_txn_sequence_point,
     branch_txn_complete,
+    branch_txn_abort,
   };
   svn_branch_txn_t *txn
     = svn_branch_txn_create(&vtable, NULL, NULL, result_pool);
