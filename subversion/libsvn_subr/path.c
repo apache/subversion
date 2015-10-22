@@ -910,9 +910,20 @@ uri_escape(const char *path, const char table[], apr_pool_t *pool)
   svn_stringbuf_t *retstr;
   apr_size_t i, copied = 0;
   int c;
+  apr_size_t len = strlen(path);
+  const char *p, *end;
 
-  retstr = svn_stringbuf_create_ensure(strlen(path), pool);
-  for (i = 0; path[i]; i++)
+  /* Quick check: Does any character need escaping? */
+  for (p = path, end = p + len; p < end; ++p)
+    if (!table[(unsigned char)*p])
+      break;
+
+  if (p == end)
+    return path;
+
+  /* We need to escape at least one character. */
+  retstr = svn_stringbuf_create_ensure(len, pool);
+  for (i = p - path; i < len; i++)
     {
       c = (unsigned char)path[i];
       if (table[c])
@@ -940,10 +951,6 @@ uri_escape(const char *path, const char table[], apr_pool_t *pool)
       /* Finally, update our copy counter. */
       copied = i + 1;
     }
-
-  /* If we didn't encode anything, we don't need to duplicate the string. */
-  if (retstr->len == 0)
-    return path;
 
   /* Anything left to copy? */
   if (i - copied)
