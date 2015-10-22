@@ -106,6 +106,10 @@ typedef svn_error_t *(*branch_txn_v_complete_t)(
   svn_branch_txn_t *txn,
   apr_pool_t *scratch_pool);
 
+typedef svn_error_t *(*branch_txn_v_abort_t)(
+  svn_branch_txn_t *txn,
+  apr_pool_t *scratch_pool);
+
 struct svn_branch_txn_vtable_t
 {
   svn_vtable_priv_t vpriv;
@@ -120,6 +124,7 @@ struct svn_branch_txn_vtable_t
   branch_txn_v_branch_t branch;
   branch_txn_v_sequence_point_t sequence_point;
   branch_txn_v_complete_t complete;
+  branch_txn_v_complete_t abort;
 
 };
 
