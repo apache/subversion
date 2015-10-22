@@ -1440,8 +1440,8 @@ get_txn_proplist(apr_hash_t *proplist,
   if (err)
     {
       err = svn_error_compose_create(err, svn_stream_close(stream));
-      return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
-               _("malformed transaction property list in '%s'"),
+      return svn_error_quick_wrapf(err,
+               _("malformed property list in transaction '%s'"),
                svn_fs_x__path_txn_props(fs, txn_id, scratch_pool));
     }
 
