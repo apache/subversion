@@ -103,6 +103,15 @@ typedef svn_error_t *(*branch_txn_v_branch_t)(
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
+typedef svn_error_t *(*branch_txn_v_finalize_eids_t)(
+  svn_branch_txn_t *txn,
+  apr_pool_t *scratch_pool);
+
+typedef svn_error_t *(*branch_txn_v_serialize_t)(
+  svn_branch_txn_t *txn,
+  svn_stream_t *stream,
+  apr_pool_t *scratch_pool);
+
 typedef svn_error_t *(*branch_txn_v_sequence_point_t)(
   svn_branch_txn_t *txn,
   apr_pool_t *scratch_pool);
@@ -128,6 +137,8 @@ struct svn_branch_txn_vtable_t
   branch_txn_v_new_eid_t new_eid;
   branch_txn_v_open_branch_t open_branch;
   branch_txn_v_branch_t branch;
+  branch_txn_v_finalize_eids_t finalize_eids;
+  branch_txn_v_serialize_t serialize;
   branch_txn_v_sequence_point_t sequence_point;
   branch_txn_v_complete_t complete;
   branch_txn_v_complete_t abort;

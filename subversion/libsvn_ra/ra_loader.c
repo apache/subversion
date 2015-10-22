@@ -715,7 +715,7 @@ svn_branch_revision_fetch_info(svn_branch_txn_t **txn_p,
     svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
 
     stream = svn_stream_from_stringbuf(buf, scratch_pool);
-    SVN_ERR(svn_branch_txn_serialize(stream, txn, scratch_pool));
+    SVN_ERR(svn_branch_txn_serialize(txn, stream, scratch_pool));
     SVN_ERR(svn_stream_close(stream));
 
     SVN_ERR_ASSERT(svn_string_compare(value,
@@ -860,7 +860,7 @@ store_repos_info(svn_branch_txn_t *txn,
   svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
   svn_stream_t *stream = svn_stream_from_stringbuf(buf, scratch_pool);
 
-  SVN_ERR(svn_branch_txn_serialize(stream, txn, scratch_pool));
+  SVN_ERR(svn_branch_txn_serialize(txn, stream, scratch_pool));
 
   SVN_ERR(svn_stream_close(stream));
   /*SVN_DBG(("store_repos_info: %s", buf->data));*/

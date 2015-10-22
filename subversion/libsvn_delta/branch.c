@@ -442,6 +442,26 @@ svn_branch_txn_branch(svn_branch_txn_t *txn,
 }
 
 svn_error_t *
+svn_branch_txn_finalize_eids(svn_branch_txn_t *txn,
+                             apr_pool_t *scratch_pool)
+{
+  SVN_ERR(txn->vtable->finalize_eids(txn,
+                                     scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_branch_txn_serialize(svn_branch_txn_t *txn,
+                         svn_stream_t *stream,
+                         apr_pool_t *scratch_pool)
+{
+  SVN_ERR(txn->vtable->serialize(txn,
+                                 stream,
+                                 scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_branch_txn_sequence_point(svn_branch_txn_t *txn,
                               apr_pool_t *scratch_pool)
 {
@@ -487,41 +507,6 @@ svn_branch_txn_create(const svn_branch_txn_vtable_t *vtable,
   txn->vtable->vpriv.state_pool = result_pool;
 #endif
 
-  return txn;
-}
-
-/* Create a new branch txn object.
- *
- * It will have no branches.
- */
-static svn_branch_txn_t *
-branch_txn_create(svn_branch_repos_t *repos,
-                  svn_revnum_t rev,
-                  svn_revnum_t base_rev,
-                  apr_pool_t *result_pool)
-{
-  static const svn_branch_txn_vtable_t vtable = {
-    {0},
-    branch_txn_get_branches,
-    branch_txn_add_branch,
-    branch_txn_add_new_branch,
-    branch_txn_delete_branch,
-    branch_txn_get_num_new_eids,
-    branch_txn_new_eid,
-    branch_txn_open_branch,
-    branch_txn_branch,
-    branch_txn_sequence_point,
-    branch_txn_complete,
-    branch_txn_abort,
-  };
-  svn_branch_txn_t *txn
-    = svn_branch_txn_create(&vtable, NULL, NULL, result_pool);
-
-  txn->priv = apr_pcalloc(result_pool, sizeof(*txn->priv));
-  txn->repos = repos;
-  txn->rev = rev;
-  txn->base_rev = base_rev;
-  txn->priv->branches = svn_array_make(result_pool);
   return txn;
 }
 
@@ -592,9 +577,10 @@ branch_finalize_eids(svn_branch_state_t *branch,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_branch_txn_finalize_eids(svn_branch_txn_t *txn,
-                             apr_pool_t *scratch_pool)
+/* An #svn_branch_txn_t method. */
+static svn_error_t *
+branch_txn_finalize_eids(svn_branch_txn_t *txn,
+                         apr_pool_t *scratch_pool)
 {
   int n_txn_eids = (-1) - txn->priv->first_eid;
   int mapping_offset;
@@ -625,12 +611,45 @@ svn_branch_txn_finalize_eids(svn_branch_txn_t *txn,
  * ========================================================================
  */
 
+static svn_error_t *
+branch_txn_serialize(svn_branch_txn_t *txn,
+                     svn_stream_t *stream,
+                     apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *branches = branch_txn_get_branches(txn, scratch_pool);
+  SVN_ITER_T(svn_branch_state_t) *bi;
+
+  SVN_ERR(svn_stream_printf(stream, scratch_pool,
+                            "r%ld: eids %d %d "
+                            "branches %d\n",
+                            txn->rev,
+                            txn->priv->first_eid, txn->priv->next_eid,
+                            branches->nelts));
+
+  for (SVN_ARRAY_ITER(bi, branches, scratch_pool))
+    {
+      svn_branch_state_t *branch = bi->val;
+
+      if (branch->predecessor && branch->predecessor->rev < 0)
+        {
+          branch->predecessor->rev = txn->rev;
+        }
+
+      SVN_ERR(svn_branch_state_serialize(stream, bi->val, bi->iterpool));
+    }
+  return SVN_NO_ERROR;
+}
+
+/*
+ * ========================================================================
+ */
+
 svn_branch_state_t *
 svn_branch_txn_get_branch_by_id(const svn_branch_txn_t *txn,
                                 const char *branch_id,
                                 apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *branches = branch_txn_get_branches(txn, scratch_pool);
+  apr_array_header_t *branches = svn_branch_txn_get_branches(txn, scratch_pool);
   SVN_ITER_T(svn_branch_state_t) *bi;
   svn_branch_state_t *branch = NULL;
 
@@ -645,6 +664,47 @@ svn_branch_txn_get_branch_by_id(const svn_branch_txn_t *txn,
         }
     }
   return branch;
+}
+
+/*
+ * ========================================================================
+ */
+
+/* Create a new branch txn object.
+ *
+ * It will have no branches.
+ */
+static svn_branch_txn_t *
+branch_txn_create(svn_branch_repos_t *repos,
+                  svn_revnum_t rev,
+                  svn_revnum_t base_rev,
+                  apr_pool_t *result_pool)
+{
+  static const svn_branch_txn_vtable_t vtable = {
+    {0},
+    branch_txn_get_branches,
+    branch_txn_add_branch,
+    branch_txn_add_new_branch,
+    branch_txn_delete_branch,
+    branch_txn_get_num_new_eids,
+    branch_txn_new_eid,
+    branch_txn_open_branch,
+    branch_txn_branch,
+    branch_txn_finalize_eids,
+    branch_txn_serialize,
+    branch_txn_sequence_point,
+    branch_txn_complete,
+    branch_txn_abort,
+  };
+  svn_branch_txn_t *txn
+    = svn_branch_txn_create(&vtable, NULL, NULL, result_pool);
+
+  txn->priv = apr_pcalloc(result_pool, sizeof(*txn->priv));
+  txn->repos = repos;
+  txn->rev = rev;
+  txn->base_rev = base_rev;
+  txn->priv->branches = svn_array_make(result_pool);
+  return txn;
 }
 
 /*
@@ -1527,36 +1587,6 @@ svn_branch_state_serialize(svn_stream_t *stream,
     }
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_branch_txn_serialize(svn_stream_t *stream,
-                         svn_branch_txn_t *txn,
-                         apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *branches = branch_txn_get_branches(txn, scratch_pool);
-  SVN_ITER_T(svn_branch_state_t) *bi;
-
-  SVN_ERR(svn_stream_printf(stream, scratch_pool,
-                            "r%ld: eids %d %d "
-                            "branches %d\n",
-                            txn->rev,
-                            txn->priv->first_eid, txn->priv->next_eid,
-                            branches->nelts));
-
-  for (SVN_ARRAY_ITER(bi, branches, scratch_pool))
-    {
-      svn_branch_state_t *branch = bi->val;
-
-      if (branch->predecessor && branch->predecessor->rev < 0)
-        {
-          branch->predecessor->rev = txn->rev;
-        }
-
-      SVN_ERR(svn_branch_state_serialize(stream, bi->val, bi->iterpool));
-    }
-  return SVN_NO_ERROR;
-}
-
 
 /*
  * ========================================================================
