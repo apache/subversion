@@ -5117,7 +5117,7 @@ make_editor3(svn_revnum_t *target_revision,
     SVN_DBG(("wc make up/sw editor: base_rrpath='%s'; base_abspath=%s",
              sfb->base_rrpath, sfb->base_abspath));
 
-    SVN_ERR(svn_editor3__ev3_from_delta_for_update(
+    SVN_ERR(svn_branch_compat_txn_from_delta_for_update(
                         editor,
                         inner_editor, inner_baton,
                         NULL /* ### branching_txn */,
@@ -5648,7 +5648,7 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
   sfb->base_rrpath = anchor_repos_relpath;
   sfb->fetch_base = TRUE;
 
-  SVN_ERR(svn_editor3__delta_from_ev3_for_update(
+  SVN_ERR(svn_branch_compat_delta_from_txn_for_update(
                       editor, edit_baton,
                       editor3,
                       repos_root, anchor_repos_relpath,

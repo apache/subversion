@@ -161,7 +161,7 @@ wc_checkout(svnmover_wc_t *wc,
             apr_pool_t *scratch_pool)
 {
   const char *branch_info_dir = NULL;
-  svn_editor3__shim_fetch_func_t fetch_func;
+  svn_branch_compat__shim_fetch_func_t fetch_func;
   void *fetch_baton;
   svn_branch_txn_t *base_txn;
 
@@ -650,14 +650,14 @@ wc_commit(svn_revnum_t *new_rev_p,
     }
 
   /* Start a new editor for the commit. */
-  SVN_ERR(svn_ra_get_commit_editor_ev3(wc->ra_session,
-                                       &commit_txn,
-                                       revprops,
-                                       commit_callback, &ccbb,
-                                       NULL /*lock_tokens*/, FALSE /*keep_locks*/,
-                                       branch_info_dir,
-                                       scratch_pool));
-  /*SVN_ERR(svn_editor3__get_debug_editor(&wc->editor, wc->editor, scratch_pool));*/
+  SVN_ERR(svn_ra_get_commit_txn(wc->ra_session,
+                                &commit_txn,
+                                revprops,
+                                commit_callback, &ccbb,
+                                NULL /*lock_tokens*/, FALSE /*keep_locks*/,
+                                branch_info_dir,
+                                scratch_pool));
+  /*SVN_ERR(svn_branch_txn__get_debug(&wc->edit_txn, wc->edit_txn, scratch_pool));*/
 
   edit_root_branch_id = wc->working->branch_id;
   edit_root_branch = svn_branch_txn_get_branch_by_id(

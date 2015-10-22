@@ -1077,7 +1077,7 @@ svn_ra_local__do_update_ev3(svn_ra_session_t *session,
   void *update_baton;
 
   fb->session = session;
-  SVN_ERR(svn_editor3__delta_from_ev3_for_update(
+  SVN_ERR(svn_branch_compat_delta_from_txn_for_update(
                         &update_editor, &update_baton,
                         update_editor3,
                         sess->repos_url, sess->fs_path->data + 1,
@@ -1149,7 +1149,7 @@ svn_ra_local__do_switch_ev3(svn_ra_session_t *session,
   void *update_baton;
 
   fb->session = session;
-  SVN_ERR(svn_editor3__delta_from_ev3_for_update(
+  SVN_ERR(svn_branch_compat_delta_from_txn_for_update(
                         &update_editor, &update_baton,
                         switch_editor,
                         sess->repos_url, sess->fs_path->data + 1,
