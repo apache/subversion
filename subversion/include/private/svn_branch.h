@@ -70,7 +70,7 @@
  * 'svn_branch_state_t' for the individual branches in it. A flat tree is
  * represented by 'svn_branch_subtree_t'. But there is currently not a
  * clean separation; there is some overlap and some warts such as the
- * 'svn_editor3_sequence_point' method.
+ * 'svn_branch_txn_sequence_point' method.
  */
 
 

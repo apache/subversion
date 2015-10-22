@@ -31,7 +31,6 @@
 #include "svn_ra.h"
 
 #include "private/svn_branch.h"
-#include "private/svn_editor3e.h"
 
 #ifdef __cplusplus
 extern "C" {

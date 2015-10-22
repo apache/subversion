@@ -730,7 +730,7 @@ svn_branch_revision_fetch_info(svn_branch_txn_t **txn_p,
  */
 static svn_error_t *
 txn_fetch_payloads(svn_branch_txn_t *txn,
-                   svn_editor3__shim_fetch_func_t fetch_func,
+                   svn_branch_compat__shim_fetch_func_t fetch_func,
                    void *fetch_baton,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
@@ -772,7 +772,7 @@ static svn_error_t *
 svn_branch_repos_fetch_info(svn_branch_repos_t **repos_p,
                             svn_ra_session_t *ra_session,
                             const char *branch_info_dir,
-                            svn_editor3__shim_fetch_func_t fetch_func,
+                            svn_branch_compat__shim_fetch_func_t fetch_func,
                             void *fetch_baton,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
@@ -809,7 +809,7 @@ svn_branch_get_mutable_state(svn_branch_txn_t **txn_p,
                              svn_ra_session_t *ra_session,
                              const char *branch_info_dir,
                              svn_revnum_t base_revision,
-                             svn_editor3__shim_fetch_func_t fetch_func,
+                             svn_branch_compat__shim_fetch_func_t fetch_func,
                              void *fetch_baton,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
@@ -1015,7 +1015,7 @@ svn_ra_fetch(svn_node_kind_t *kind_p,
 
 svn_error_t *
 svn_ra_load_branching_state(svn_branch_txn_t **branching_txn_p,
-                            svn_editor3__shim_fetch_func_t *fetch_func,
+                            svn_branch_compat__shim_fetch_func_t *fetch_func,
                             void **fetch_baton,
                             svn_ra_session_t *session,
                             const char *branch_info_dir,
@@ -1056,22 +1056,22 @@ svn_ra_load_branching_state(svn_branch_txn_t **branching_txn_p,
 }
 
 svn_error_t *
-svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
-                             svn_branch_txn_t **edit_txn_p,
-                             apr_hash_t *revprop_table,
-                             svn_commit_callback2_t commit_callback,
-                             void *commit_baton,
-                             apr_hash_t *lock_tokens,
-                             svn_boolean_t keep_locks,
-                             const char *branch_info_dir,
-                             apr_pool_t *pool)
+svn_ra_get_commit_txn(svn_ra_session_t *session,
+                      svn_branch_txn_t **edit_txn_p,
+                      apr_hash_t *revprop_table,
+                      svn_commit_callback2_t commit_callback,
+                      void *commit_baton,
+                      apr_hash_t *lock_tokens,
+                      svn_boolean_t keep_locks,
+                      const char *branch_info_dir,
+                      apr_pool_t *pool)
 {
   svn_branch_txn_t *branching_txn;
-  svn_editor3__shim_fetch_func_t fetch_func;
+  svn_branch_compat__shim_fetch_func_t fetch_func;
   void *fetch_baton;
   const svn_delta_editor_t *deditor;
   void *dedit_baton;
-  svn_editor3__shim_connector_t *shim_connector;
+  svn_branch_compat__shim_connector_t *shim_connector;
 
   /* load branching info
    * ### Currently we always start from a single base revision, never from
@@ -1100,7 +1100,7 @@ svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
     /*if (! svn_dbg__quiet_mode())
       SVN_ERR(svn_delta__get_debug_editor(&deditor, &dedit_baton,
                                           deditor, dedit_baton, "", pool));*/
-    SVN_ERR(svn_editor3__ev3_from_delta_for_commit(
+    SVN_ERR(svn_branch_compat_txn_from_delta_for_commit(
                         edit_txn_p,
                         &shim_connector,
                         deditor, dedit_baton, branching_txn,
@@ -1139,9 +1139,10 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
     SVN_ERR(svn_ra__dup_session(&fbb->session, session, repos_root_url, pool, pool));
     fbb->session_path = base_relpath;
     fbb->repos_root_url = repos_root_url;
-    SVN_ERR(svn_editor3__insert_shims(editor, edit_baton, *editor, *edit_baton,
-                                      repos_root_url, base_relpath,
-                                      svn_ra_fetch, fbb, pool, pool));
+    SVN_ERR(svn_branch_compat__insert_shims(editor, edit_baton,
+                                            *editor, *edit_baton,
+                                            repos_root_url, base_relpath,
+                                            svn_ra_fetch, fbb, pool, pool));
   }
 
   return SVN_NO_ERROR;

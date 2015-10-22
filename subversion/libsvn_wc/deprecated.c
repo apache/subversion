@@ -3595,7 +3595,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
   sfb->base_rrpath = anchor_repos_relpath;
   sfb->fetch_base = TRUE;
 
-  SVN_ERR(svn_editor3__delta_from_ev3_for_update(
+  SVN_ERR(svn_branch_compat_delta_from_txn_for_update(
                       editor, edit_baton,
                       editor3,
                       repos_root_url, anchor_repos_relpath,

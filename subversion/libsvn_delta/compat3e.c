@@ -82,7 +82,7 @@ peg_path_str(svn_pathrev_t loc,
  * The shim connector enables a more exact round-trip conversion from an
  * Ev1 drive to Ev3 and back to Ev1.
  */
-struct svn_editor3__shim_connector_t
+struct svn_branch_compat__shim_connector_t
 {
   /* Set to true if and when an Ev1 receiving shim receives an absolute
    * path (prefixed with '/') from the delta edit, and causes the Ev1
@@ -98,7 +98,7 @@ struct svn_editor3__shim_connector_t
    * Otherwise, default calls will be used.
    *
    * (Possibly more useful for update editors than for commit editors?) */
-  svn_editor3__set_target_revision_func_t target_revision_func;
+  svn_branch_compat__set_target_revision_func_t target_revision_func;
 
   /* If not null, a callback that the Ev3 driver may call to
    * provide the "base revision" of the root directory, even if it is not
@@ -120,28 +120,28 @@ struct svn_editor3__shim_connector_t
 };
 
 svn_error_t *
-svn_editor3__insert_shims(
+svn_branch_compat__insert_shims(
                         const svn_delta_editor_t **new_deditor,
                         void **new_dedit_baton,
                         const svn_delta_editor_t *old_deditor,
                         void *old_dedit_baton,
                         const char *repos_root,
                         const char *base_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_branch_compat__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
 #if 0
   svn_branch_txn_t *edit_txn;
-  svn_editor3__shim_connector_t *shim_connector;
+  svn_branch_compat__shim_connector_t *shim_connector;
 
 #ifdef SVN_DEBUG
   /*SVN_ERR(svn_delta__get_debug_editor(&old_deditor, &old_dedit_baton,
                                       old_deditor, old_dedit_baton,
                                       "[OUT] ", result_pool));*/
 #endif
-  SVN_ERR(svn_editor3__ev3_from_delta_for_commit(
+  SVN_ERR(svn_branch_compat_txn_from_delta_for_commit(
                         &edit_txn,
                         &shim_connector,
                         old_deditor, old_dedit_baton,
@@ -150,7 +150,7 @@ svn_editor3__insert_shims(
                         fetch_func, fetch_baton,
                         NULL, NULL /*cancel*/,
                         result_pool, scratch_pool));
-  SVN_ERR(svn_editor3__delta_from_ev3_for_commit(
+  SVN_ERR(svn_branch_compat_delta_from_txn_for_commit(
                         new_deditor, new_dedit_baton,
                         edit_txn,
                         repos_root, base_relpath,
@@ -425,15 +425,15 @@ delete_subtree(apr_hash_t *changes,
  */
 
 svn_error_t *
-svn_editor3__delta_from_ev3_for_commit(
+svn_branch_compat_delta_from_txn_for_commit(
                         const svn_delta_editor_t **deditor,
                         void **dedit_baton,
                         svn_branch_txn_t *edit_txn,
                         const char *repos_root_url,
                         const char *base_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_branch_compat__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
-                        const svn_editor3__shim_connector_t *shim_connector,
+                        const svn_branch_compat__shim_connector_t *shim_connector,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
@@ -443,18 +443,18 @@ svn_editor3__delta_from_ev3_for_commit(
 }
 
 svn_error_t *
-svn_editor3__delta_from_ev3_for_update(
+svn_branch_compat_delta_from_txn_for_update(
                         const svn_delta_editor_t **deditor,
                         void **dedit_baton,
                         svn_update_editor3_t *update_editor,
                         const char *repos_root_url,
                         const char *base_repos_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_branch_compat__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  svn_editor3__shim_connector_t *shim_connector
+  svn_branch_compat__shim_connector_t *shim_connector
     = apr_pcalloc(result_pool, sizeof(*shim_connector));
 
   shim_connector->target_revision_func = update_editor->set_target_revision_func;
@@ -463,7 +463,7 @@ svn_editor3__delta_from_ev3_for_update(
   shim_connector->ev1_absolute_paths /*...*/;
 #endif
 
-  SVN_ERR(svn_editor3__delta_from_ev3_for_commit(
+  SVN_ERR(svn_branch_compat_delta_from_txn_for_commit(
                         deditor, dedit_baton,
                         update_editor->edit_txn,
                         repos_root_url, base_repos_relpath,
@@ -536,7 +536,7 @@ typedef struct ev3_from_delta_baton_t
   void *dedit_baton;
 
   /* Callbacks */
-  svn_editor3__shim_fetch_func_t fetch_func;
+  svn_branch_compat__shim_fetch_func_t fetch_func;
   void *fetch_baton;
 
   /* The Ev1 root directory baton if we have opened the root, else null. */
@@ -642,7 +642,7 @@ static svn_error_t *
 fetch_base_props(apr_hash_t **base_props,
                  apr_hash_t *changes,
                  const char *repos_relpath,
-                 svn_editor3__shim_fetch_func_t fetch_func,
+                 svn_branch_compat__shim_fetch_func_t fetch_func,
                  void *fetch_baton,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
@@ -1088,7 +1088,7 @@ svn_error_t *
 svn_payload_fetch(svn_element_payload_t **payload_p,
                   svn_branch_txn_t *txn,
                   svn_element_branch_ref_t branch_ref,
-                  svn_editor3__shim_fetch_func_t fetch_func,
+                  svn_branch_compat__shim_fetch_func_t fetch_func,
                   void *fetch_baton,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
@@ -1858,7 +1858,7 @@ compat_branch_txn_abort(svn_branch_txn_t *txn,
 typedef struct wrap_fetch_baton_t
 {
   /* Wrapped fetcher */
-  svn_editor3__shim_fetch_func_t fetch_func;
+  svn_branch_compat__shim_fetch_func_t fetch_func;
   void *fetch_baton;
 } wrap_fetch_baton_t;
 
@@ -1901,14 +1901,14 @@ wrap_fetch_func(svn_node_kind_t *kind,
 }
 
 svn_error_t *
-svn_editor3__ev3_from_delta_for_commit(
+svn_branch_compat_txn_from_delta_for_commit(
                         svn_branch_txn_t **txn_p,
-                        svn_editor3__shim_connector_t **shim_connector,
+                        svn_branch_compat__shim_connector_t **shim_connector,
                         const svn_delta_editor_t *deditor,
                         void *dedit_baton,
                         svn_branch_txn_t *branching_txn,
                         const char *repos_root_url,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_branch_compat__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
@@ -1984,14 +1984,14 @@ svn_editor3__ev3_from_delta_for_commit(
 }
 
 svn_error_t *
-svn_editor3__ev3_from_delta_for_update(
+svn_branch_compat_txn_from_delta_for_update(
                         svn_update_editor3_t **update_editor_p,
                         const svn_delta_editor_t *deditor,
                         void *dedit_baton,
                         svn_branch_txn_t *branching_txn,
                         const char *repos_root_url,
                         const char *base_repos_relpath,
-                        svn_editor3__shim_fetch_func_t fetch_func,
+                        svn_branch_compat__shim_fetch_func_t fetch_func,
                         void *fetch_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
@@ -2000,7 +2000,7 @@ svn_editor3__ev3_from_delta_for_update(
 {
   svn_update_editor3_t *update_editor
     = apr_pcalloc(result_pool, sizeof(*update_editor));
-  svn_editor3__shim_connector_t *shim_connector;
+  svn_branch_compat__shim_connector_t *shim_connector;
 
   SVN_DBG(("svn_delta__ev3_from_delta_for_update(base='%s')...",
            base_repos_relpath));
@@ -2008,7 +2008,7 @@ svn_editor3__ev3_from_delta_for_update(
   /*SVN_ERR(svn_delta__get_debug_editor(&deditor, &dedit_baton,
                                       deditor, dedit_baton,
                                       "[1>UP] ", result_pool));*/
-  SVN_ERR(svn_editor3__ev3_from_delta_for_commit(
+  SVN_ERR(svn_branch_compat_txn_from_delta_for_commit(
                         &update_editor->edit_txn,
                         &shim_connector,
                         deditor, dedit_baton,

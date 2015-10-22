@@ -312,7 +312,7 @@ svn_ra__replay_ev2(svn_ra_session_t *session,
  */
 svn_error_t *
 svn_ra_load_branching_state(svn_branch_txn_t **branching_txn_p,
-                            svn_editor3__shim_fetch_func_t *fetch_func,
+                            svn_branch_compat__shim_fetch_func_t *fetch_func,
                             void **fetch_baton,
                             svn_ra_session_t *session,
                             const char *branch_info_dir,
@@ -326,15 +326,15 @@ svn_ra_load_branching_state(svn_branch_txn_t **branching_txn_p,
  * directory, otherwise store branching info in revprops.
  */
 svn_error_t *
-svn_ra_get_commit_editor_ev3(svn_ra_session_t *session,
-                             svn_branch_txn_t **edit_txn_p,
-                             apr_hash_t *revprop_table,
-                             svn_commit_callback2_t commit_callback,
-                             void *commit_baton,
-                             apr_hash_t *lock_tokens,
-                             svn_boolean_t keep_locks,
-                             const char *branch_info_dir,
-                             apr_pool_t *pool);
+svn_ra_get_commit_txn(svn_ra_session_t *session,
+                      svn_branch_txn_t **edit_txn_p,
+                      apr_hash_t *revprop_table,
+                      svn_commit_callback2_t commit_callback,
+                      void *commit_baton,
+                      apr_hash_t *lock_tokens,
+                      svn_boolean_t keep_locks,
+                      const char *branch_info_dir,
+                      apr_pool_t *pool);
 
 /* Ev3 version of svn_ra_do_update3(). */
 svn_error_t *
@@ -367,7 +367,7 @@ svn_ra_do_switch4(svn_ra_session_t *session,
 
 /* Fetch kind and/or props and/or text.
  *
- * Implements svn_editor3__shim_fetch_func_t. */
+ * Implements svn_branch_compat__shim_fetch_func_t. */
 svn_error_t *
 svn_ra_fetch(svn_node_kind_t *kind_p,
       apr_hash_t **props_p,
