@@ -2200,7 +2200,14 @@ pack_body(void *baton,
      we need to re-read the pack status. */
   SVN_ERR(get_pack_status(&fully_packed, pb->fs, scratch_pool));
   if (fully_packed)
-    return SVN_NO_ERROR;
+    {
+      if (pb->notify_func)
+        (*pb->notify_func)(pb->notify_baton,
+                           ffd->min_unpacked_rev / ffd->max_files_per_dir,
+                           svn_fs_pack_notify_noop, scratch_pool);
+
+      return SVN_NO_ERROR;
+    }
 
   completed_shards = (ffd->youngest_rev_cache + 1) / ffd->max_files_per_dir;
   data_path = svn_dirent_join(pb->fs->path, PATH_REVS_DIR, scratch_pool);
@@ -2243,7 +2250,16 @@ svn_fs_x__pack(svn_fs_t *fs,
   /* Is there we even anything to do?. */
   SVN_ERR(get_pack_status(&fully_packed, fs, scratch_pool));
   if (fully_packed)
-    return SVN_NO_ERROR;
+    {
+      svn_fs_x__data_t *ffd = fs->fsap_data;
+
+      if (notify_func)
+        (*notify_func)(notify_baton,
+                       ffd->min_unpacked_rev / ffd->max_files_per_dir,
+                       svn_fs_pack_notify_noop, scratch_pool);
+
+      return SVN_NO_ERROR;
+    }
 
   /* Lock the repo and start the pack process. */
   pb.fs = fs;
