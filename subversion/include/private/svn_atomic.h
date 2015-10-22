@@ -134,6 +134,21 @@ svn_atomic__init_once_no_error(volatile svn_atomic_t *global_status,
                                svn_atomic__str_init_func_t str_init_func,
                                void *baton);
 
+
+/**
+ * Query and increment the global counter and set @a value to the new
+ * counter value.
+ *
+ * This function is thread-safe and you should call it whenever you need
+ * a number that is unique within the current process. The values are > 0.
+ *
+ * @return the error object in case of a synchronization failure.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_atomic__unique_counter(apr_uint64_t* value);
+
 /** @} */
 
 #ifdef __cplusplus

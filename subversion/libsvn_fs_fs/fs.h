@@ -352,8 +352,8 @@ typedef struct fs_fs_data_t
   svn_cache__t *fulltext_cache;
 
   /* The current prefix to be used for revprop cache entries.
-     If this string is empty, a new unique prefix must be chosen. */
-  svn_stringbuf_t *revprop_prefix;
+     If this is 0, a new unique prefix must be chosen. */
+  apr_uint64_t revprop_prefix;
 
   /* Revision property cache.  Maps from (rev,prefix) to apr_hash_t.
      Unparsed svn_string_t representations of the serialized hash
