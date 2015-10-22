@@ -106,9 +106,6 @@ typedef struct path_order_t
   /* when this change happened */
   svn_revnum_t revision;
 
-  /* this is a directory node */
-  svn_boolean_t is_dir;
-
   /* length of the expanded representation content */
   apr_int64_t expanded_size;
 
@@ -623,9 +620,6 @@ compare_dir_entries(const svn_sort__item_t *a,
   const svn_fs_dirent_t *lhs = (const svn_fs_dirent_t *) a->value;
   const svn_fs_dirent_t *rhs = (const svn_fs_dirent_t *) b->value;
 
-  if (lhs->kind != rhs->kind)
-    return lhs->kind == svn_node_dir ? -1 : 1;
-
   return strcmp(lhs->name, rhs->name);
 }
 
@@ -742,7 +736,6 @@ copy_node_to_temp(pack_context_t *context,
   path_order->path = svn_prefix_string__create(context->paths, sort_path);
   path_order->node_id = noderev->node_id;
   path_order->revision = svn_fs_x__get_revnum(noderev->noderev_id.change_set);
-  path_order->is_dir = noderev->kind == svn_node_dir;
   path_order->noderev_id = noderev->noderev_id;
   APR_ARRAY_PUSH(context->path_order, path_order_t *) = path_order;
 
@@ -786,13 +779,8 @@ compare_path_order(const path_order_t * const * lhs_p,
   const path_order_t * lhs = *lhs_p;
   const path_order_t * rhs = *rhs_p;
 
-  /* cluster all directories */
-  int diff = rhs->is_dir - lhs->is_dir;
-  if (diff)
-    return diff;
-
   /* lexicographic order on path and node (i.e. latest first) */
-  diff = svn_prefix_string__compare(lhs->path, rhs->path);
+  int diff = svn_prefix_string__compare(lhs->path, rhs->path);
   if (diff)
     return diff;
 
