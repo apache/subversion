@@ -1225,21 +1225,12 @@ svn_editor3__delta_from_ev3_for_update(
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
-/* Get an editor for editing branches of BRANCHING_TXN in memory.
- */
-svn_error_t *
-svn_editor3_in_memory(svn_editor3_t **editor_p,
-                      svn_branch_txn_t *branching_txn,
-                      svn_editor3__shim_fetch_func_t fetch_func,
-                      void *fetch_baton,
-                      apr_pool_t *result_pool);
-
 /* An Ev1 editor that drives (heuristically) a move-tracking editor.
  */
 svn_error_t *
 svn_branch_get_migration_editor(const svn_delta_editor_t **old_editor,
                                 void **old_edit_baton,
-                                svn_editor3_t *new_editor,
+                                svn_branch_txn_t *edit_txn,
                                 svn_ra_session_t *from_session,
                                 svn_revnum_t revision,
                                 apr_pool_t *result_pool);
