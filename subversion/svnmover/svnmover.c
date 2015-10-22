@@ -214,11 +214,6 @@ wc_checkout(svnmover_wc_t *wc,
                                       scratch_pool);
   SVN_ERR_ASSERT(wc->working->branch);
 
-  SVN_ERR(svn_editor3_in_memory(&wc->editor,
-                                wc->edit_txn,
-                                fetch_func, fetch_baton,
-                                wc->pool));
-
   return SVN_NO_ERROR;
 }
 
@@ -1809,7 +1804,7 @@ do_switch(svnmover_wc_t *wc,
     }
 
   /* Complete the old edit drive into the 'WC' txn */
-  SVN_ERR(svn_editor3_complete(wc->editor));
+  SVN_ERR(svn_branch_txn_sequence_point(wc->edit_txn, scratch_pool));
 
   /* Check out a new WC, re-using the same data object */
   SVN_ERR(wc_checkout(wc, revision, target_branch_id, scratch_pool));
@@ -2841,7 +2836,7 @@ do_commit(svn_revnum_t *new_rev_p,
   svn_revnum_t new_rev;
 
   /* Complete the old edit drive (into the 'WC') */
-  SVN_ERR(svn_editor3_complete(wc->editor));
+  SVN_ERR(svn_branch_txn_sequence_point(wc->edit_txn, scratch_pool));
 
   /* Commit */
   SVN_ERR(wc_commit(&new_rev, wc, revprops, scratch_pool));
@@ -2874,7 +2869,7 @@ do_revert(svnmover_wc_t *wc,
 
 /* Migration replay baton */
 typedef struct migrate_replay_baton_t {
-  svn_editor3_t *new_editor;
+  svn_branch_txn_t *edit_txn;
   svn_ra_session_t *from_session;
   /* Hash (by revnum) of array of svn_repos_move_info_t. */
   apr_hash_t *moves;
@@ -2898,7 +2893,7 @@ migrate_replay_rev_started(svn_revnum_t revision,
   printf("DBG: migrate: start r%ld\n", revision);
 
   SVN_ERR(svn_branch_get_migration_editor(&old_editor, &old_edit_baton,
-                                          rb->new_editor,
+                                          rb->edit_txn,
                                           rb->from_session, revision,
                                           pool));
   SVN_ERR(svn_delta__get_debug_editor(&old_editor, &old_edit_baton,
@@ -2979,7 +2974,7 @@ do_migrate(svnmover_wc_t *wc,
                                       start_revision, end_revision,
                                       wc->ctx, scratch_pool, scratch_pool));
 
-  rb->new_editor = wc->editor;
+  rb->edit_txn = wc->edit_txn;
   rb->from_session = wc->ra_session;
   SVN_ERR(svn_ra_replay_range(rb->from_session,
                               start_revision, end_revision,
@@ -3553,7 +3548,7 @@ final_commit(svnmover_wc_t *wc,
   svn_error_t *err;
 
   /* Complete the old edit drive (into the 'WC') */
-  SVN_ERR(svn_editor3_complete(wc->editor));
+  SVN_ERR(svn_branch_txn_sequence_point(wc->edit_txn, scratch_pool));
 
   /* Commit, if there are any changes */
   err = wc_commit(NULL, wc, revprops, scratch_pool);

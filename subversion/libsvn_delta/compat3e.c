@@ -1864,24 +1864,6 @@ editor3_abort(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* An #svn_editor3_t method. */
-static svn_error_t *
-editor3_mem_complete(void *baton,
-                     apr_pool_t *scratch_pool)
-{
-  SVN_ERR(editor3_sequence_point(baton, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_editor3_t method. */
-static svn_error_t *
-editor3_mem_abort(void *baton,
-                  apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
 /* Baton for wrap_fetch_func. */
 typedef struct wrap_fetch_baton_t
 {
@@ -1924,41 +1906,6 @@ wrap_fetch_func(svn_node_kind_t *kind,
                             repos_relpath, revision,
                             result_pool, scratch_pool));
     }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_editor3_in_memory(svn_editor3_t **editor_p,
-                      svn_branch_txn_t *branching_txn,
-                      svn_editor3__shim_fetch_func_t fetch_func,
-                      void *fetch_baton,
-                      apr_pool_t *result_pool)
-{
-  static const svn_editor3_cb_funcs_t editor_funcs = {
-    editor3_new_eid,
-    editor3_open_branch,
-    editor3_branch,
-    editor3_alter,
-    editor3_copy_one,
-    editor3_copy_tree,
-    editor3_delete,
-    editor3_sequence_point,
-    editor3_mem_complete,
-    editor3_mem_abort
-  };
-  ev3_from_delta_baton_t *eb = apr_pcalloc(result_pool, sizeof(*eb));
-  wrap_fetch_baton_t *wb = apr_pcalloc(result_pool, sizeof(*wb));
-
-  *editor_p = svn_editor3_create(&editor_funcs, eb,
-                                 NULL, NULL /*cancel*/, result_pool);
-
-  eb->txn = branching_txn;
-
-  wb->fetch_func = fetch_func;
-  wb->fetch_baton = fetch_baton;
-  eb->fetch_func = wrap_fetch_func;
-  eb->fetch_baton = wb;
 
   return SVN_NO_ERROR;
 }
