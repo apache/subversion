@@ -910,18 +910,22 @@ uri_escape(const char *path, const char table[], apr_pool_t *pool)
   svn_stringbuf_t *retstr;
   apr_size_t i, copied = 0;
   int c;
-  apr_size_t len = strlen(path);
+  apr_size_t len;
   const char *p, *end;
 
-  /* Quick check: Does any character need escaping? */
-  for (p = path, end = p + len; p < end; ++p)
-    if (!table[(unsigned char)*p])
-      break;
+  /* To terminate our scanning loop, table[NUL] must report "invalid". */
+  assert(table[0] == 0);
 
-  if (p == end)
+  /* Quick check: Does any character need escaping? */
+  for (p = path; table[(unsigned char)*p]; ++p)
+    {}
+
+  /* No char to escape before EOS? */
+  if (*p == '\0')
     return path;
 
   /* We need to escape at least one character. */
+  len = strlen(p) + (p - path);
   retstr = svn_stringbuf_create_ensure(len, pool);
   for (i = p - path; i < len; i++)
     {
@@ -978,7 +982,7 @@ svn_path_uri_encode(const char *path, apr_pool_t *pool)
 }
 
 static const char iri_escape_chars[256] = {
-  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  0, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
@@ -1005,7 +1009,7 @@ svn_path_uri_from_iri(const char *iri, apr_pool_t *pool)
 }
 
 static const char uri_autoescape_chars[256] = {
-  1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
+  0, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   0, 1, 0, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 0, 1, 0, 1,
