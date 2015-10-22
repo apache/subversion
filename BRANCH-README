@@ -200,10 +200,3 @@ Work on this branch:
     paths/nodes. We should try to use exactly the same API for update,
     commit, diff, merge, etc. as far as possible.)
 
-
-Terminology:
-
-  'Ev3'/'svn_editor3_t' is a temporary name. It should end up
-  replacing Ev2 and so should be called 'Ev2'/'svn_editor_t' then.
-  Or perhaps 'svn_branch[ing]_editor'.
-
