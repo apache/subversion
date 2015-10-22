@@ -382,6 +382,8 @@ close_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_remove_file2(proto_l2p_index_path, FALSE, scratch_pool));
   SVN_ERR(svn_io_remove_file2(proto_p2l_index_path, FALSE, scratch_pool));
 
+  /* Ensure that packed file is written to disk.*/
+  SVN_ERR(svn_io_file_flush_to_disk(context->pack_file, scratch_pool));
   SVN_ERR(svn_io_file_close(context->pack_file, scratch_pool));
 
   return SVN_NO_ERROR;
