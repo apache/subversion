@@ -2691,17 +2691,20 @@ svn_fs_x__rep_contents_dir_entry(svn_fs_x__dirent_t **dirent,
   /* fetch data from disk if we did not find it in the cache */
   if (! found)
     {
-      apr_array_header_t *entries;
       svn_fs_x__dirent_t *entry;
       svn_fs_x__dirent_t *entry_copy = NULL;
+      svn_fs_x__dir_data_t dir;
 
-      /* read the dir from the file system. It will probably be put it
-         into the cache for faster lookup in future calls. */
-      SVN_ERR(svn_fs_x__rep_contents_dir(&entries, fs, noderev,
-                                         scratch_pool, scratch_pool));
+      /* Read in the directory contents. */
+      SVN_ERR(get_dir_contents(&dir, fs, noderev, scratch_pool,
+                               scratch_pool));
+
+      /* Update the cache, if we are to use one. */
+      if (cache)
+        SVN_ERR(svn_cache__set(cache, &key, &dir, scratch_pool));
 
       /* find desired entry and return a copy in POOL, if found */
-      entry = svn_fs_x__find_dir_entry(entries, name, NULL);
+      entry = svn_fs_x__find_dir_entry(dir.entries, name, NULL);
       if (entry)
         {
           entry_copy = apr_pmemdup(result_pool, entry, sizeof(*entry_copy));
