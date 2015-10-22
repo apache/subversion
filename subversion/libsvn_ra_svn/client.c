@@ -50,6 +50,7 @@
 #include "svn_private_config.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
 
 #include "../libsvn_ra/ra_loader.h"
@@ -1608,8 +1609,10 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
 static svn_boolean_t
 is_done_response(const svn_ra_svn__item_t *item)
 {
+  static const svn_string_t str_done = SVN__STATIC_STRING("done");
+
   return (   item->kind == SVN_RA_SVN_WORD
-          && !strcmp(item->u.word, "done"));
+          && svn_string_compare(&item->u.word, &str_done));
 }
 
 

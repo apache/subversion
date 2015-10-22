@@ -72,6 +72,10 @@
  */
 #define ITEM_NESTING_LIMIT 64
 
+/* The protocol words for booleans. */
+static const svn_string_t str_true = SVN__STATIC_STRING("true");
+static const svn_string_t str_false = SVN__STATIC_STRING("false");
+
 /* Return the APR socket timeout to be used for the connection depending
  * on whether there is a blockage handler or zero copy has been activated. */
 static apr_interval_time_t
@@ -97,7 +101,7 @@ svn_ra_svn__to_public_item(svn_ra_svn_item_t *target,
         target->u.number = source->u.number;
         break;
       case SVN_RA_SVN_WORD:
-        target->u.word = source->u.word;
+        target->u.word = source->u.word.data;
         break;
       case SVN_RA_SVN_LIST:
         target->u.list = svn_ra_svn__to_public_array(&source->u.list,
@@ -140,7 +144,8 @@ svn_ra_svn__to_private_item(svn_ra_svn__item_t *target,
         target->u.number = source->u.number;
         break;
       case SVN_RA_SVN_WORD:
-        target->u.word = source->u.word;
+        target->u.word.data = source->u.word;
+        target->u.word.len = strlen(source->u.word);
         break;
       case SVN_RA_SVN_LIST:
         target->u.list = *svn_ra_svn__to_private_array(source->u.list,
@@ -248,8 +253,8 @@ svn_ra_svn__set_capabilities(svn_ra_svn_conn_t *conn,
       if (item->kind != SVN_RA_SVN_WORD)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Capability entry is not a word"));
-      word = apr_pstrdup(conn->pool, item->u.word);
-      svn_hash_sets(conn->capabilities, word, word);
+      word = apr_pstrmemdup(conn->pool, item->u.word.data, item->u.word.len);
+      apr_hash_set(conn->capabilities, word, item->u.word.len, word);
     }
   return SVN_NO_ERROR;
 }
@@ -1289,8 +1294,10 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       c = *p;
       *p = '\0';
 
+      /* Store the word in ITEM. */
       item->kind = SVN_RA_SVN_WORD;
-      item->u.word = buffer;
+      item->u.word.data = buffer;
+      item->u.word.len = p - buffer;
     }
   else if (c == '(')
     {
@@ -1529,12 +1536,12 @@ vparse_tuple(const svn_ra_svn__list_t *items,
       else if (**fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
         *va_arg(*ap, svn_string_t **) = &elt->u.string;
       else if (**fmt == 'w' && elt->kind == SVN_RA_SVN_WORD)
-        *va_arg(*ap, const char **) = elt->u.word;
+        *va_arg(*ap, const char **) = elt->u.word.data;
       else if (**fmt == 'b' && elt->kind == SVN_RA_SVN_WORD)
         {
-          if (strcmp(elt->u.word, "true") == 0)
+          if (svn_string_compare(&elt->u.word, &str_true))
             *va_arg(*ap, svn_boolean_t *) = TRUE;
-          else if (strcmp(elt->u.word, "false") == 0)
+          else if (svn_string_compare(&elt->u.word, &str_false))
             *va_arg(*ap, svn_boolean_t *) = FALSE;
           else
             break;
@@ -1545,18 +1552,18 @@ vparse_tuple(const svn_ra_svn__list_t *items,
         *va_arg(*ap, svn_revnum_t *) = (svn_revnum_t) elt->u.number;
       else if (**fmt == 'B' && elt->kind == SVN_RA_SVN_WORD)
         {
-          if (strcmp(elt->u.word, "true") == 0)
+          if (svn_string_compare(&elt->u.word, &str_true))
             *va_arg(*ap, apr_uint64_t *) = TRUE;
-          else if (strcmp(elt->u.word, "false") == 0)
+          else if (svn_string_compare(&elt->u.word, &str_false))
             *va_arg(*ap, apr_uint64_t *) = FALSE;
           else
             break;
         }
       else if (**fmt == '3' && elt->kind == SVN_RA_SVN_WORD)
         {
-          if (strcmp(elt->u.word, "true") == 0)
+          if (svn_string_compare(&elt->u.word, &str_true))
             *va_arg(*ap, svn_tristate_t *) = svn_tristate_true;
-          else if (strcmp(elt->u.word, "false") == 0)
+          else if (svn_string_compare(&elt->u.word, &str_false))
             *va_arg(*ap, svn_tristate_t *) = svn_tristate_false;
           else
             break;
@@ -2861,7 +2868,7 @@ svn_ra_svn__read_word(const svn_ra_svn__list_t *items,
 {
   svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_WORD);
-  *result = elt->u.word;
+  *result = elt->u.word.data;
 
   return SVN_NO_ERROR;
 }
@@ -2889,9 +2896,9 @@ svn_ra_svn__read_boolean(const svn_ra_svn__list_t *items,
 {
   svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_WORD);
-  if (elt->u.word[0] == 't' && strcmp(elt->u.word, "true") == 0)
+  if (svn_string_compare(&elt->u.word, &str_true))
     *result = TRUE;
-  else if (strcmp(elt->u.word, "false") == 0)
+  else if (svn_string_compare(&elt->u.word, &str_false))
     *result = FALSE;
   else
     CHECK_PROTOCOL_COND(FALSE);

@@ -860,7 +860,7 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
           mechstring = apr_pstrcat(pool,
                                    mechstring,
                                    i == 0 ? "" : " ",
-                                   elt->u.word, SVN_VA_NULL);
+                                   elt->u.word.data, SVN_VA_NULL);
         }
     }
 
