@@ -154,11 +154,6 @@ typedef struct svn_branch_txn_t
      on which this transaction is based. */
   svn_revnum_t base_rev;
 
-  /* The range of element ids assigned. */
-  /* EIDs local to the txn are negative, assigned by decrementing FIRST_EID
-   * (skipping -1). */
-  int first_eid, next_eid;
-
 } svn_branch_txn_t;
 
 /* Create a new branch txn object.
@@ -190,6 +185,11 @@ svn_branch_txn_get_branches(const svn_branch_txn_t *txn,
 svn_branch_state_t *
 svn_branch_txn_get_branch_by_id(const svn_branch_txn_t *txn,
                                 const char *branch_id,
+                                apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_branch_txn_get_num_new_eids(const svn_branch_txn_t *txn,
+                                int *num_new_eids_p,
                                 apr_pool_t *scratch_pool);
 
 /* Assign a new txn-scope element id in TXN.

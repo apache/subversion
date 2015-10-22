@@ -432,6 +432,20 @@ nested_branch_txn_delete_branch(svn_branch_txn_t *txn,
 /* Implements nested branching.
  * An #svn_branch_txn_t method. */
 static svn_error_t *
+nested_branch_txn_get_num_new_eids(const svn_branch_txn_t *txn,
+                                   int *num_new_eids_p,
+                                   apr_pool_t *scratch_pool)
+{
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_get_num_new_eids(txn->priv->wrapped_txn,
+                                          num_new_eids_p,
+                                          scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Implements nested branching.
+ * An #svn_branch_txn_t method. */
+static svn_error_t *
 nested_branch_txn_new_eid(svn_branch_txn_t *txn,
                           svn_branch_eid_t *eid_p,
                           apr_pool_t *scratch_pool)
@@ -563,6 +577,7 @@ svn_nested_branch_txn_create(svn_branch_txn_t *wrapped_txn,
     nested_branch_txn_add_branch,
     nested_branch_txn_add_new_branch,
     nested_branch_txn_delete_branch,
+    nested_branch_txn_get_num_new_eids,
     nested_branch_txn_new_eid,
     nested_branch_txn_open_branch,
     nested_branch_txn_branch,

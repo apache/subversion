@@ -405,12 +405,6 @@ subtree_replay(svn_branch_state_t *edit_branch,
                      || svn_element_payload_invariants(e1->payload));
       if (e0 || e1)
         {
-          /* Ensure the requested EIDs are allocated. */
-          /* ### Doesn't seem like the right way... See BRANCH-README. */
-          while (eid < edit_branch->txn->first_eid
-                 || (e1 && (e1->parent_eid < edit_branch->txn->first_eid)))
-            SVN_ERR(svn_branch_txn_new_eid(edit_branch->txn, NULL, scratch_pool));
-
           if (e0 && e1)
             {
               SVN_DBG(("replay: alter e%d", eid));
@@ -587,6 +581,27 @@ do_topbranch(svn_branch_state_t **new_branch_p,
              apr_pool_t *result_pool,
              apr_pool_t *scratch_pool);
 
+/* Allocate the same number of new EIDs in NEW_TXN as are already
+ * allocated in OLD_TXN.
+ */
+static svn_error_t *
+allocate_eids(svn_branch_txn_t *new_txn,
+              const svn_branch_txn_t *old_txn,
+              apr_pool_t *scratch_pool)
+{
+  int num_new_eids;
+  int i;
+
+  SVN_ERR(svn_branch_txn_get_num_new_eids(old_txn, &num_new_eids,
+                                          scratch_pool));
+  for (i = 0; i < num_new_eids; i++)
+    {
+      SVN_ERR(svn_branch_txn_new_eid(new_txn, NULL, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Commit the changes from WC into the repository.
  *
  * Open a new commit txn to the repo. Replay the changes from WC into it.
@@ -665,6 +680,8 @@ wc_commit(svn_revnum_t *new_rev_p,
                            from, scratch_pool, scratch_pool));
       edit_root_branch_id = edit_root_branch->bid;
     }
+  /* Allocate all the new eids we'll need in this new txn */
+  SVN_ERR(allocate_eids(commit_txn, wc->working->branch->txn, scratch_pool));
   SVN_ERR(replay(commit_txn, edit_root_branch,
                  wc->base->branch,
                  wc->working->branch,

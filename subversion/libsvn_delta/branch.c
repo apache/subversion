@@ -41,7 +41,8 @@
 
 /* Is EID allocated (no matter whether an element with this id exists)? */
 #define EID_IS_ALLOCATED(branch, eid) \
-  ((eid) >= (branch)->txn->first_eid && (eid) < (branch)->txn->next_eid)
+  ((eid) >= (branch)->txn->priv->first_eid \
+   && (eid) < (branch)->txn->priv->next_eid)
 
 #define IS_BRANCH_ROOT_EID(branch, eid) \
   ((eid) == (branch)->priv->element_tree->root_eid)
@@ -56,6 +57,11 @@ struct svn_branch_txn_priv_t
 {
   /* All branches. */
   apr_array_header_t *branches;
+
+  /* The range of element ids assigned. */
+  /* EIDs local to the txn are negative, assigned by decrementing FIRST_EID
+   * (skipping -1). */
+  int first_eid, next_eid;
 
 };
 
@@ -177,13 +183,24 @@ branch_txn_delete_branch(svn_branch_txn_t *txn,
 
 /* An #svn_branch_txn_t method. */
 static svn_error_t *
+branch_txn_get_num_new_eids(const svn_branch_txn_t *txn,
+                            int *num_new_eids_p,
+                            apr_pool_t *scratch_pool)
+{
+  if (num_new_eids_p)
+    *num_new_eids_p = -1 - txn->priv->first_eid;
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_branch_txn_t method. */
+static svn_error_t *
 branch_txn_new_eid(svn_branch_txn_t *txn,
                    svn_branch_eid_t *eid_p,
                    apr_pool_t *scratch_pool)
 {
-  int eid = (txn->first_eid < 0) ? txn->first_eid - 1 : -2;
+  int eid = (txn->priv->first_eid < 0) ? txn->priv->first_eid - 1 : -2;
 
-  txn->first_eid = eid;
+  txn->priv->first_eid = eid;
   if (eid_p)
     *eid_p = eid;
   return SVN_NO_ERROR;
@@ -369,6 +386,17 @@ svn_branch_txn_delete_branch(svn_branch_txn_t *txn,
 }
 
 svn_error_t *
+svn_branch_txn_get_num_new_eids(const svn_branch_txn_t *txn,
+                                int *num_new_eids_p,
+                                apr_pool_t *scratch_pool)
+{
+  SVN_ERR(txn->vtable->get_num_new_eids(txn,
+                                        num_new_eids_p,
+                                        scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_branch_txn_new_eid(svn_branch_txn_t *txn,
                         int *new_eid_p,
                         apr_pool_t *scratch_pool)
@@ -478,6 +506,7 @@ branch_txn_create(svn_branch_repos_t *repos,
     branch_txn_add_branch,
     branch_txn_add_new_branch,
     branch_txn_delete_branch,
+    branch_txn_get_num_new_eids,
     branch_txn_new_eid,
     branch_txn_open_branch,
     branch_txn_branch,
@@ -567,18 +596,18 @@ svn_error_t *
 svn_branch_txn_finalize_eids(svn_branch_txn_t *txn,
                              apr_pool_t *scratch_pool)
 {
-  int n_txn_eids = (-1) - txn->first_eid;
+  int n_txn_eids = (-1) - txn->priv->first_eid;
   int mapping_offset;
   apr_array_header_t *branches = branch_txn_get_branches(txn, scratch_pool);
   int i;
 
-  if (txn->first_eid == 0)
+  if (txn->priv->first_eid == 0)
     return SVN_NO_ERROR;
 
   /* mapping from txn-local (negative) EID to committed (positive) EID is:
        txn_local_eid == -2  =>  committed_eid := (txn.next_eid + 0)
        txn_local_eid == -3  =>  committed_eid := (txn.next_eid + 1) ... */
-  mapping_offset = txn->next_eid - 2;
+  mapping_offset = txn->priv->next_eid - 2;
 
   for (i = 0; i < branches->nelts; i++)
     {
@@ -587,8 +616,8 @@ svn_branch_txn_finalize_eids(svn_branch_txn_t *txn,
       SVN_ERR(branch_finalize_eids(b, mapping_offset, scratch_pool));
     }
 
-  txn->next_eid += n_txn_eids;
-  txn->first_eid = 0;
+  txn->priv->next_eid += n_txn_eids;
+  txn->priv->first_eid = 0;
   return SVN_NO_ERROR;
 }
 
@@ -1420,8 +1449,8 @@ svn_branch_txn_parse(svn_branch_txn_t **txn_p,
   SVN_ERR_ASSERT(n == 4);
 
   txn = branch_txn_create(repos, rev, rev - 1, result_pool);
-  txn->first_eid = first_eid;
-  txn->next_eid = next_eid;
+  txn->priv->first_eid = first_eid;
+  txn->priv->next_eid = next_eid;
 
   /* parse the branches */
   for (j = 0; j < num_branches; j++)
@@ -1511,7 +1540,7 @@ svn_branch_txn_serialize(svn_stream_t *stream,
                             "r%ld: eids %d %d "
                             "branches %d\n",
                             txn->rev,
-                            txn->first_eid, txn->next_eid,
+                            txn->priv->first_eid, txn->priv->next_eid,
                             branches->nelts));
 
   for (SVN_ARRAY_ITER(bi, branches, scratch_pool))
