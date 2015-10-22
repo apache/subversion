@@ -47,7 +47,7 @@
 #include "private/svn_subr_private.h"
 #include "private/svn_branch_repos.h"
 #include "private/svn_branch_nested.h"
-#include "private/svn_editor3e.h"
+#include "private/svn_branch_compat.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_string_private.h"
 #include "private/svn_sorts_private.h"
