@@ -716,14 +716,6 @@ svn_fs_x__read_number_from_stream(apr_int64_t *result,
   return SVN_NO_ERROR;
 }
 
-
-/* Move a file into place from OLD_FILENAME in the transactions
-   directory to its final location NEW_FILENAME in the repository.  On
-   Unix, match the permissions of the new file to the permissions of
-   PERMS_REFERENCE.  Temporary allocations are from SCRATCH_POOL.
-
-   This function almost duplicates svn_io_file_move(), but it tries to
-   guarantee a flush. */
 svn_error_t *
 svn_fs_x__move_into_place(const char *old_filename,
                           const char *new_filename,
@@ -731,52 +723,47 @@ svn_fs_x__move_into_place(const char *old_filename,
                           apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
+  apr_file_t *file;
 
+  /* Copying permissions is a no-op on WIN32. */
   SVN_ERR(svn_io_copy_perms(perms_reference, old_filename, scratch_pool));
 
   /* Move the file into place. */
-  err = svn_io_file_rename2(old_filename, new_filename, FALSE, scratch_pool);
+  err = svn_io_file_rename2(old_filename, new_filename, TRUE, scratch_pool);
   if (err && APR_STATUS_IS_EXDEV(err->apr_err))
     {
-      apr_file_t *file;
-
       /* Can't rename across devices; fall back to copying. */
       svn_error_clear(err);
-      err = SVN_NO_ERROR;
       SVN_ERR(svn_io_copy_file(old_filename, new_filename, TRUE,
                                scratch_pool));
 
-      /* Flush the target of the copy to disk. */
-      SVN_ERR(svn_io_file_open(&file, new_filename, APR_READ,
+      /* Flush the target of the copy to disk.
+         ### The code below is duplicates svn_io_file_rename2(), because
+             currently we don't have the svn_io_copy_file2() function with
+             a flush_to_disk argument. */
+      SVN_ERR(svn_io_file_open(&file, new_filename, APR_WRITE,
                                APR_OS_DEFAULT, scratch_pool));
-      /* ### BH: Does this really guarantee a flush of the data written
-         ### via a completely different handle on all operating systems?
-         ###
-         ### Maybe we should perform the copy ourselves instead of making
-         ### apr do that and flush the real handle? */
       SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
       SVN_ERR(svn_io_file_close(file, scratch_pool));
-    }
-  if (err)
-    return svn_error_trace(err);
 
-#ifdef __linux__
-  {
-    /* Linux has the unusual feature that fsync() on a file is not
-       enough to ensure that a file's directory entries have been
-       flushed to disk; you have to fsync the directory as well.
-       On other operating systems, we'd only be asking for trouble
-       by trying to open and fsync a directory. */
-    const char *dirname;
-    apr_file_t *file;
+#ifdef SVN_ON_POSIX
+      {
+        /* On POSIX, the file name is stored in the file's directory entry.
+           Hence, we need to fsync() that directory as well.
+           On other operating systems, we'd only be asking for trouble
+           by trying to open and fsync a directory. */
+        const char *dirname;
 
-    dirname = svn_dirent_dirname(new_filename, scratch_pool);
-    SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
-                             scratch_pool));
-    SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
-    SVN_ERR(svn_io_file_close(file, scratch_pool));
-  }
+        dirname = svn_dirent_dirname(new_filename, scratch_pool);
+        SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
+                                 scratch_pool));
+        SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
+        SVN_ERR(svn_io_file_close(file, scratch_pool));
+      }
 #endif
+    }
+  else if (err)
+    return svn_error_trace(err);
 
   return SVN_NO_ERROR;
 }
