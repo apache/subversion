@@ -1674,6 +1674,19 @@ get_dir(svn_ra_svn_conn_t *conn,
         svn_ra_svn__list_t *params,
         void *baton)
 {
+  static const svn_string_t str_kind
+    = SVN__STATIC_STRING(SVN_RA_SVN_DIRENT_KIND);
+  static const svn_string_t str_size
+    = SVN__STATIC_STRING(SVN_RA_SVN_DIRENT_SIZE);
+  static const svn_string_t str_has_props
+    = SVN__STATIC_STRING(SVN_RA_SVN_DIRENT_HAS_PROPS);
+  static const svn_string_t str_created_rev
+    = SVN__STATIC_STRING(SVN_RA_SVN_DIRENT_CREATED_REV);
+  static const svn_string_t str_time
+    = SVN__STATIC_STRING(SVN_RA_SVN_DIRENT_TIME);
+  static const svn_string_t str_last_author
+    = SVN__STATIC_STRING(SVN_RA_SVN_DIRENT_LAST_AUTHOR);
+
   server_baton_t *b = baton;
   const char *path, *full_path;
   svn_revnum_t rev;
@@ -1717,17 +1730,17 @@ get_dir(svn_ra_svn_conn_t *conn,
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     "Dirent field not a string");
 
-          if (strcmp(SVN_RA_SVN_DIRENT_KIND, elt->u.word) == 0)
+          if (svn_string_compare(&str_kind, &elt->u.word))
             dirent_fields |= SVN_DIRENT_KIND;
-          else if (strcmp(SVN_RA_SVN_DIRENT_SIZE, elt->u.word) == 0)
+          else if (svn_string_compare(&str_size, &elt->u.word))
             dirent_fields |= SVN_DIRENT_SIZE;
-          else if (strcmp(SVN_RA_SVN_DIRENT_HAS_PROPS, elt->u.word) == 0)
+          else if (svn_string_compare(&str_has_props, &elt->u.word))
             dirent_fields |= SVN_DIRENT_HAS_PROPS;
-          else if (strcmp(SVN_RA_SVN_DIRENT_CREATED_REV, elt->u.word) == 0)
+          else if (svn_string_compare(&str_created_rev, &elt->u.word))
             dirent_fields |= SVN_DIRENT_CREATED_REV;
-          else if (strcmp(SVN_RA_SVN_DIRENT_TIME, elt->u.word) == 0)
+          else if (svn_string_compare(&str_time, &elt->u.word))
             dirent_fields |= SVN_DIRENT_TIME;
-          else if (strcmp(SVN_RA_SVN_DIRENT_LAST_AUTHOR, elt->u.word) == 0)
+          else if (svn_string_compare(&str_last_author, &elt->u.word))
             dirent_fields |= SVN_DIRENT_LAST_AUTHOR;
         }
     }
@@ -3951,9 +3964,12 @@ construct_server_baton(server_baton_t **baton,
                                                  sizeof(const char *));
     for (i = 0; i < caplist->nelts; i++)
       {
+        static const svn_string_t str_cap_mergeinfo
+          = SVN__STATIC_STRING(SVN_RA_SVN_CAP_MERGEINFO);
+
         item = &SVN_RA_SVN__LIST_ITEM(caplist, i);
         /* ra_svn_set_capabilities() already type-checked for us */
-        if (strcmp(item->u.word, SVN_RA_SVN_CAP_MERGEINFO) == 0)
+        if (svn_string_compare(&item->u.word, &str_cap_mergeinfo))
           {
             APR_ARRAY_PUSH(b->repository->capabilities, const char *)
               = SVN_RA_CAPABILITY_MERGEINFO;
@@ -3961,7 +3977,7 @@ construct_server_baton(server_baton_t **baton,
         /* Save for operational log. */
         if (cap_log->len > 0)
           svn_stringbuf_appendcstr(cap_log, " ");
-        svn_stringbuf_appendcstr(cap_log, item->u.word);
+        svn_stringbuf_appendcstr(cap_log, item->u.word.data);
       }
   }
 
