@@ -46,7 +46,7 @@
 #include "private/svn_fspath.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_repos_private.h"
-#include "private/svn_editor3e.h"
+#include "private/svn_branch_compat.h"
 
 
 
