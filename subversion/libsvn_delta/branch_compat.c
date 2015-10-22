@@ -529,7 +529,7 @@ svn_branch_compat_delta_from_txn_for_update(
  */
 
 /* Information needed for driving the delta editor. */
-typedef struct ev3_from_delta_baton_t
+struct svn_branch_txn_priv_t
 {
   /* The Ev1 "delta editor" */
   const svn_delta_editor_t *deditor;
@@ -557,7 +557,7 @@ typedef struct ev3_from_delta_baton_t
   svn_branch_txn_t *txn;
 
   apr_pool_t *edit_pool;
-} ev3_from_delta_baton_t;
+};
 
 /* Get all the (Ev1) paths that have changes.
  */
@@ -584,7 +584,7 @@ set_target_revision_ev3(void *edit_baton,
                         svn_revnum_t target_revision,
                         apr_pool_t *scratch_pool)
 {
-  ev3_from_delta_baton_t *eb = edit_baton;
+  svn_branch_txn_priv_t *eb = edit_baton;
 
   SVN_ERR(eb->deditor->set_target_revision(eb->dedit_baton, target_revision,
                                            scratch_pool));
@@ -598,7 +598,7 @@ static svn_error_t *
 open_root_ev3(void *baton,
               svn_revnum_t base_revision)
 {
-  ev3_from_delta_baton_t *eb = baton;
+  svn_branch_txn_priv_t *eb = baton;
 
   SVN_ERR(eb->deditor->open_root(eb->dedit_baton, base_revision,
                                  eb->edit_pool, &eb->ev1_root_dir_baton));
@@ -774,7 +774,7 @@ apply_change(void **dir_baton,
              apr_pool_t *result_pool)
 {
   apr_pool_t *scratch_pool = result_pool;
-  const ev3_from_delta_baton_t *eb = callback_baton;
+  const svn_branch_txn_priv_t *eb = callback_baton;
   const change_node_t *change = svn_hash_gets(eb->changes, ev1_relpath);
   void *file_baton = NULL;
   apr_hash_t *base_props;
@@ -1022,15 +1022,6 @@ storage_pathrev_from_branch_ref(svn_pathrev_t *storage_pathrev_p,
  * ========================================================================
  */
 
-struct svn_branch_txn_priv_t
-{
-  /* The underlying branch-txn that supports
-   ### ? only non-nested branching. */
-  svn_branch_txn_t *wrapped_txn;
-
-  ev3_from_delta_baton_t *eb;
-};
-
 /*  */
 #define PAYLOAD_IS_ONLY_BY_REFERENCE(payload) \
     ((payload)->kind == svn_node_unknown)
@@ -1042,7 +1033,7 @@ struct svn_branch_txn_priv_t
 static svn_error_t *
 payload_fetch(svn_element_payload_t **payload_p,
               apr_hash_t **children_names,
-              ev3_from_delta_baton_t *eb,
+              svn_branch_txn_priv_t *eb,
               const svn_pathrev_t *path_rev,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
@@ -1093,7 +1084,7 @@ svn_payload_fetch(svn_element_payload_t **payload_p,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  ev3_from_delta_baton_t eb;
+  svn_branch_txn_priv_t eb;
   svn_pathrev_t storage_pathrev;
 
   /* Simulate the existence of /top0 in r0. */
@@ -1122,7 +1113,7 @@ svn_payload_fetch(svn_element_payload_t **payload_p,
  */
 static svn_error_t *
 payload_resolve(svn_element_payload_t *payload,
-                ev3_from_delta_baton_t *eb,
+                svn_branch_txn_priv_t *eb,
                 apr_pool_t *scratch_pool)
 {
   svn_pathrev_t storage;
@@ -1268,7 +1259,7 @@ text_equal(svn_element_payload_t *initial_payload,
 static svn_error_t *
 get_copy_from(svn_pathrev_t *copyfrom_pathrev_p,
               svn_element_payload_t *final_payload,
-              ev3_from_delta_baton_t *eb,
+              svn_branch_txn_priv_t *eb,
               apr_pool_t *result_pool)
 {
   if (final_payload->branch_ref.branch_id)
@@ -1339,7 +1330,7 @@ drive_changes_r(const char *rrpath,
                 svn_pathrev_t *pred_loc,
                 apr_hash_t *paths_final,
                 const char *top_branch_id,
-                ev3_from_delta_baton_t *eb,
+                svn_branch_txn_priv_t *eb,
                 apr_pool_t *scratch_pool)
 {
   /* The el-rev-id of the element that will finally exist at RRPATH. */
@@ -1564,7 +1555,7 @@ drive_changes_r(const char *rrpath,
  * a before-and-after element mapping.
  */
 static svn_error_t *
-drive_changes(ev3_from_delta_baton_t *eb,
+drive_changes(svn_branch_txn_priv_t *eb,
               apr_pool_t *scratch_pool)
 {
   apr_array_header_t *branches;
@@ -1657,7 +1648,7 @@ compat_branch_txn_get_branches(const svn_branch_txn_t *txn,
 {
   /* Just forwarding: nothing more is needed. */
   apr_array_header_t *branches
-    = svn_branch_txn_get_branches(txn->priv->wrapped_txn,
+    = svn_branch_txn_get_branches(txn->priv->txn,
                                   result_pool);
 
   return branches;
@@ -1670,7 +1661,7 @@ compat_branch_txn_add_branch(svn_branch_txn_t *txn,
                              apr_pool_t *scratch_pool)
 {
   /* Just forwarding: nothing more is needed. */
-  SVN_ERR(svn_branch_txn_add_branch(txn->priv->wrapped_txn,
+  SVN_ERR(svn_branch_txn_add_branch(txn->priv->txn,
                                     branch,
                                     scratch_pool));
   return SVN_NO_ERROR;
@@ -1686,7 +1677,7 @@ compat_branch_txn_add_new_branch(svn_branch_txn_t *txn,
 {
   /* Just forwarding: nothing more is needed. */
   svn_branch_state_t *new_branch
-    = svn_branch_txn_add_new_branch(txn->priv->wrapped_txn,
+    = svn_branch_txn_add_new_branch(txn->priv->txn,
                                     bid, predecessor, root_eid,
                                     scratch_pool);
 
@@ -1700,7 +1691,7 @@ compat_branch_txn_delete_branch(svn_branch_txn_t *txn,
                                 apr_pool_t *scratch_pool)
 {
   /* Just forwarding: nothing more is needed. */
-  SVN_ERR(svn_branch_txn_delete_branch(txn->priv->wrapped_txn,
+  SVN_ERR(svn_branch_txn_delete_branch(txn->priv->txn,
                                        bid,
                                        scratch_pool));
   return SVN_NO_ERROR;
@@ -1713,7 +1704,7 @@ compat_branch_txn_get_num_new_eids(const svn_branch_txn_t *txn,
                                    apr_pool_t *scratch_pool)
 {
   /* Just forwarding: nothing more is needed. */
-  SVN_ERR(svn_branch_txn_get_num_new_eids(txn->priv->wrapped_txn,
+  SVN_ERR(svn_branch_txn_get_num_new_eids(txn->priv->txn,
                                           num_new_eids_p,
                                           scratch_pool));
   return SVN_NO_ERROR;
@@ -1726,7 +1717,7 @@ compat_branch_txn_new_eid(svn_branch_txn_t *txn,
                           apr_pool_t *scratch_pool)
 {
   /* Just forwarding: nothing more is needed. */
-  SVN_ERR(svn_branch_txn_new_eid(txn->priv->wrapped_txn,
+  SVN_ERR(svn_branch_txn_new_eid(txn->priv->txn,
                                  eid_p,
                                  scratch_pool));
   return SVN_NO_ERROR;
@@ -1738,7 +1729,7 @@ compat_branch_txn_finalize_eids(svn_branch_txn_t *txn,
                                 apr_pool_t *scratch_pool)
 {
   /* Just forwarding: nothing more is needed. */
-  SVN_ERR(svn_branch_txn_finalize_eids(txn->priv->wrapped_txn,
+  SVN_ERR(svn_branch_txn_finalize_eids(txn->priv->txn,
                                        scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -1755,7 +1746,7 @@ compat_branch_txn_open_branch(svn_branch_txn_t *txn,
                               apr_pool_t *scratch_pool)
 {
   /* Just forwarding: nothing more is needed. */
-  SVN_ERR(svn_branch_txn_open_branch(txn->priv->wrapped_txn,
+  SVN_ERR(svn_branch_txn_open_branch(txn->priv->txn,
                                      new_branch_p, predecessor,
                                      outer_branch_id, outer_eid, root_eid,
                                      result_pool,
@@ -1776,7 +1767,7 @@ compat_branch_txn_branch(svn_branch_txn_t *txn,
   svn_branch_state_t *new_branch;
 
   /* Just forwarding: nothing more is needed. */
-  SVN_ERR(svn_branch_txn_branch(txn->priv->wrapped_txn,
+  SVN_ERR(svn_branch_txn_branch(txn->priv->txn,
                                 &new_branch, from,
                                 outer_branch_id, outer_eid,
                                 result_pool,
@@ -1794,7 +1785,7 @@ compat_branch_txn_serialize(svn_branch_txn_t *txn,
                             apr_pool_t *scratch_pool)
 {
   /* Just forwarding: nothing more is needed. */
-  SVN_ERR(svn_branch_txn_serialize(txn->priv->wrapped_txn,
+  SVN_ERR(svn_branch_txn_serialize(txn->priv->txn,
                                    stream,
                                    scratch_pool));
   return SVN_NO_ERROR;
@@ -1806,7 +1797,7 @@ compat_branch_txn_sequence_point(svn_branch_txn_t *txn,
                                  apr_pool_t *scratch_pool)
 {
   /* Just forwarding: nothing more is needed. */
-  SVN_ERR(svn_branch_txn_sequence_point(txn->priv->wrapped_txn,
+  SVN_ERR(svn_branch_txn_sequence_point(txn->priv->txn,
                                         scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -1816,12 +1807,12 @@ static svn_error_t *
 compat_branch_txn_complete(svn_branch_txn_t *txn,
                            apr_pool_t *scratch_pool)
 {
-  ev3_from_delta_baton_t *eb = txn->priv->eb;
+  svn_branch_txn_priv_t *eb = txn->priv;
   svn_error_t *err;
 
   /* Convert the transaction to a revision */
-  SVN_ERR(svn_branch_txn_sequence_point(txn->priv->wrapped_txn, scratch_pool));
-  SVN_ERR(svn_branch_txn_finalize_eids(txn->priv->wrapped_txn, scratch_pool));
+  SVN_ERR(svn_branch_txn_sequence_point(txn->priv->txn, scratch_pool));
+  SVN_ERR(svn_branch_txn_finalize_eids(txn->priv->txn, scratch_pool));
 
   err = drive_changes(eb, scratch_pool);
 
@@ -1835,7 +1826,7 @@ compat_branch_txn_complete(svn_branch_txn_t *txn,
   if (err)
     svn_error_clear(eb->deditor->abort_edit(eb->dedit_baton, scratch_pool));
 
-  SVN_ERR(svn_branch_txn_complete(txn->priv->wrapped_txn, scratch_pool));
+  SVN_ERR(svn_branch_txn_complete(txn->priv->txn, scratch_pool));
 
   return err;
 }
@@ -1845,11 +1836,11 @@ static svn_error_t *
 compat_branch_txn_abort(svn_branch_txn_t *txn,
                         apr_pool_t *scratch_pool)
 {
-  ev3_from_delta_baton_t *eb = txn->priv->eb;
+  svn_branch_txn_priv_t *eb = txn->priv;
 
   SVN_ERR(eb->deditor->abort_edit(eb->dedit_baton, scratch_pool));
 
-  SVN_ERR(svn_branch_txn_abort(txn->priv->wrapped_txn,
+  SVN_ERR(svn_branch_txn_abort(txn->priv->txn,
                                scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -1932,7 +1923,7 @@ svn_branch_compat_txn_from_delta_for_commit(
     compat_branch_txn_abort
   };
   svn_branch_txn_t *txn;
-  ev3_from_delta_baton_t *eb = apr_pcalloc(result_pool, sizeof(*eb));
+  svn_branch_txn_priv_t *eb = apr_pcalloc(result_pool, sizeof(*eb));
   wrap_fetch_baton_t *wb = apr_pcalloc(result_pool, sizeof(*wb));
 
   eb->deditor = deditor;
@@ -1954,9 +1945,7 @@ svn_branch_compat_txn_from_delta_for_commit(
   eb->txn = branching_txn;
 
   txn = svn_branch_txn_create(&vtable, NULL, NULL, result_pool);
-  txn->priv = apr_pcalloc(result_pool, sizeof(*txn->priv));
-  txn->priv->wrapped_txn = branching_txn;
-  txn->priv->eb = eb;
+  txn->priv = eb;
   txn->repos = branching_txn->repos;
   txn->rev = branching_txn->rev;
   txn->base_rev = branching_txn->base_rev;
