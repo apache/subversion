@@ -963,8 +963,8 @@ svn_fs_x__l2p_index_append(svn_checksum_t **checksum,
               /* 1 page with up to L2P_PAGE_SIZE entries.
                * fsfs.conf settings validation guarantees this to fit into
                * our address space. */
-              apr_size_t last_buffer_size
-                = (apr_size_t)svn_spillbuf__get_size(buffer);
+              apr_uint64_t last_buffer_size
+                = (apr_uint64_t)svn_spillbuf__get_size(buffer);
 
               svn_pool_clear(iterpool);
 

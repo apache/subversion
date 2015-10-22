@@ -565,7 +565,7 @@ svn_fs_x__serialize_properties(void **data,
   /* create our auxiliary data structure */
   properties.count = apr_hash_count(hash);
   properties.keys = apr_palloc(pool, sizeof(const char*) * (properties.count + 1));
-  properties.values = apr_palloc(pool, sizeof(const char*) * properties.count);
+  properties.values = apr_palloc(pool, sizeof(const svn_string_t *) * properties.count);
 
   /* populate it with the hash entries */
   for (hi = apr_hash_first(pool, hash), i=0; hi; hi = apr_hash_next(hi), ++i)
