@@ -1121,7 +1121,7 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
                 command */
               if (aborted)
                 *aborted = TRUE;
-              err = svn_ra_svn__handle_failure_status(params, pool);
+              err = svn_ra_svn__handle_failure_status(params);
               return svn_error_compose_create(
                                 err,
                                 editor->abort_edit(edit_baton, subpool));

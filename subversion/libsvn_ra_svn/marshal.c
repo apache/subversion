@@ -1703,15 +1703,13 @@ svn_error_t *svn_ra_svn__locate_real_error_child(svn_error_t *err)
 }
 
 svn_error_t *
-svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
-                                  apr_pool_t *pool)
+svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params)
 {
   const char *message, *file;
   svn_error_t *err = NULL;
   svn_ra_svn__item_t *elt;
   int i;
   apr_uint64_t apr_err, line;
-  apr_pool_t *subpool = svn_pool_create(pool);
 
   if (params->nelts == 0)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1720,7 +1718,6 @@ svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
   /* Rebuild the error list from the end, to avoid reversing the order. */
   for (i = params->nelts - 1; i >= 0; i--)
     {
-      svn_pool_clear(subpool);
       elt = &SVN_RA_SVN__LIST_ITEM(params, i);
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1743,8 +1740,6 @@ svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
           err->line = (long)line;
         }
     }
-
-  svn_pool_destroy(subpool);
 
   /* If we get here, then we failed to find a real error in the error
      chain that the server proported to be sending us.  That's bad. */
@@ -1775,7 +1770,7 @@ svn_ra_svn__read_cmd_response(svn_ra_svn_conn_t *conn,
     }
   else if (strcmp(status, "failure") == 0)
     {
-      return svn_error_trace(svn_ra_svn__handle_failure_status(params, pool));
+      return svn_error_trace(svn_ra_svn__handle_failure_status(params));
     }
 
   return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,

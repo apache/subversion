@@ -163,11 +163,9 @@ svn_error_t *svn_ra_svn__locate_real_error_child(svn_error_t *err);
 
 /* Return an error chain based on @a params (which contains a
  * command response indicating failure).  The error chain will be
- * in the same order as the errors indicated in @a params.  Use
- * @a pool for temporary allocations. */
+ * in the same order as the errors indicated in @a params. */
 svn_error_t *
-svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
-                                  apr_pool_t *pool);
+svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params);
 
 /* Returns a stream that reads/writes from/to SOCK. */
 svn_ra_svn__stream_t *svn_ra_svn__stream_from_sock(apr_socket_t *sock,
