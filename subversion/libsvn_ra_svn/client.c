@@ -1604,6 +1604,14 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Return TRUE if ITEM matches the word "done". */
+static svn_boolean_t
+is_done_response(const svn_ra_svn__item_t *item)
+{
+  return (   item->kind == SVN_RA_SVN_WORD
+          && !strcmp(item->u.word, "done"));
+}
+
 
 static svn_error_t *
 perform_ra_svn_log(svn_error_t **outer_error,
@@ -1695,7 +1703,7 @@ perform_ra_svn_log(svn_error_t **outer_error,
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_ra_svn__read_item(conn, iterpool, &item));
-      if (item->kind == SVN_RA_SVN_WORD && strcmp(item->u.word, "done") == 0)
+      if (is_done_response(item))
         break;
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1971,7 +1979,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
       const char *ret_path;
 
       SVN_ERR(svn_ra_svn__read_item(conn, pool, &item));
-      if (item->kind == SVN_RA_SVN_WORD && strcmp(item->u.word, "done") == 0)
+      if (is_done_response(item))
         is_done = 1;
       else if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -2028,7 +2036,7 @@ perform_get_location_segments(svn_error_t **outer_error,
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_ra_svn__read_item(conn, iterpool, &item));
-      if (item->kind == SVN_RA_SVN_WORD && strcmp(item->u.word, "done") == 0)
+      if (is_done_response(item))
         is_done = 1;
       else if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -2131,7 +2139,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
       svn_pool_clear(rev_pool);
       svn_pool_clear(chunk_pool);
       SVN_ERR(svn_ra_svn__read_item(sess_baton->conn, rev_pool, &item));
-      if (item->kind == SVN_RA_SVN_WORD && strcmp(item->u.word, "done") == 0)
+      if (is_done_response(item))
         break;
       /* Either we've got a correct revision or we will error out below. */
       had_revision = TRUE;
@@ -2400,7 +2408,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
          the middle of the request list.  If this happens, it will
          transmit "done" to end the lock-info early, and then the
          overall command response will talk about the fatal error. */
-      if (elt->kind == SVN_RA_SVN_WORD && strcmp(elt->u.word, "done") == 0)
+      if (is_done_response(elt))
         break;
 
       if (elt->kind != SVN_RA_SVN_LIST)
@@ -2440,7 +2448,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
       svn_ra_svn__item_t *elt;
 
       SVN_ERR(svn_ra_svn__read_item(conn, pool, &elt));
-      if (elt->kind != SVN_RA_SVN_WORD || strcmp(elt->u.word, "done") != 0)
+      if (!is_done_response(elt))
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Didn't receive end marker for lock "
                                   "responses"));
@@ -2524,7 +2532,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
          the middle of the request list.  If this happens, it will
          transmit "done" to end the lock-info early, and then the
          overall command response will talk about the fatal error. */
-      if (elt->kind == SVN_RA_SVN_WORD && (strcmp(elt->u.word, "done") == 0))
+      if (is_done_response(elt))
         break;
 
       apr_hash_this(hi, &key, NULL, NULL);
@@ -2566,7 +2574,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
       svn_ra_svn__item_t *elt;
 
       SVN_ERR(svn_ra_svn__read_item(conn, pool, &elt));
-      if (elt->kind != SVN_RA_SVN_WORD || strcmp(elt->u.word, "done") != 0)
+      if (! is_done_response(elt))
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Didn't receive end marker for unlock "
                                   "responses"));
