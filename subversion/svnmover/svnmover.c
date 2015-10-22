@@ -3232,9 +3232,8 @@ execute(svnmover_wc_t *wc,
               {
                 svn_stream_t *stream;
                 SVN_ERR(svn_stream_for_stdout(&stream, iterpool));
-                SVN_ERR(svn_branch_txn_serialize(
+                SVN_ERR(svn_branch_txn_serialize(wc->working->branch->txn,
                           stream,
-                          wc->working->branch->txn,
                           iterpool));
               }
             else

@@ -513,6 +513,34 @@ nested_branch_txn_branch(svn_branch_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
+/* Implements nested branching.
+ * An #svn_branch_txn_t method. */
+static svn_error_t *
+nested_branch_txn_finalize_eids(svn_branch_txn_t *txn,
+                                apr_pool_t *scratch_pool)
+{
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_finalize_eids(txn->priv->wrapped_txn,
+                                       scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Implements nested branching.
+ * An #svn_branch_txn_t method. */
+static svn_error_t *
+nested_branch_txn_serialize(svn_branch_txn_t *txn,
+                            svn_stream_t *stream,
+                            apr_pool_t *scratch_pool)
+{
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_serialize(txn->priv->wrapped_txn,
+                                   stream,
+                                   scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Implements nested branching.
+ * An #svn_branch_txn_t method. */
 static svn_error_t *
 nested_branch_txn_sequence_point(svn_branch_txn_t *txn,
                                  apr_pool_t *scratch_pool)
@@ -581,6 +609,8 @@ svn_nested_branch_txn_create(svn_branch_txn_t *wrapped_txn,
     nested_branch_txn_new_eid,
     nested_branch_txn_open_branch,
     nested_branch_txn_branch,
+    nested_branch_txn_finalize_eids,
+    nested_branch_txn_serialize,
     nested_branch_txn_sequence_point,
     nested_branch_txn_complete,
     nested_branch_txn_abort,
@@ -590,6 +620,9 @@ svn_nested_branch_txn_create(svn_branch_txn_t *wrapped_txn,
 
   txn->priv = apr_pcalloc(result_pool, sizeof(*txn->priv));
   txn->priv->wrapped_txn = wrapped_txn;
+  txn->repos = wrapped_txn->repos;
+  txn->rev = wrapped_txn->rev;
+  txn->base_rev = wrapped_txn->base_rev;
   return txn;
 }
 

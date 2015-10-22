@@ -591,8 +591,8 @@ svn_branch_txn_parse(svn_branch_txn_t **txn_p,
 /* Write to STREAM a parseable representation of TXN.
  */
 svn_error_t *
-svn_branch_txn_serialize(svn_stream_t *stream,
-                         svn_branch_txn_t *txn,
+svn_branch_txn_serialize(svn_branch_txn_t *txn,
+                         svn_stream_t *stream,
                          apr_pool_t *scratch_pool);
 
 /* Write to STREAM a parseable representation of BRANCH.
