@@ -602,8 +602,9 @@ svn_fs_x__open(svn_fs_t *fs,
   /* Read the configuration file. */
   SVN_ERR(read_config(ffd, fs->path, fs->pool, scratch_pool));
 
-  return svn_error_trace(svn_fs_x__read_current(&ffd->youngest_rev_cache,
-                                                fs, scratch_pool));
+  ffd->youngest_rev_cache = 0;
+
+  return SVN_NO_ERROR;
 }
 
 /* Baton type bridging svn_fs_x__upgrade and upgrade_body carrying
