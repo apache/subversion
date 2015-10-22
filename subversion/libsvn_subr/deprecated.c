@@ -1209,6 +1209,16 @@ svn_stream_checksummed(svn_stream_t *stream,
   return s;
 }
 
+svn_error_t *
+svn_string_from_stream(svn_string_t **result,
+                       svn_stream_t *stream,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_string_from_stream2(result, stream, 0,
+                                                 result_pool, scratch_pool));
+}
+
 /*** From path.c ***/
 
 const char *

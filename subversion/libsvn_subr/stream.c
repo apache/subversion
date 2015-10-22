@@ -1793,31 +1793,18 @@ svn_stream_for_stderr(svn_stream_t **err, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_string_from_stream(svn_string_t **result,
-                       svn_stream_t *stream,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
+svn_string_from_stream2(svn_string_t **result,
+                        svn_stream_t *stream,
+                        apr_size_t len_hint,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
-  svn_stringbuf_t *work = svn_stringbuf_create_ensure(SVN__STREAM_CHUNK_SIZE,
-                                                      result_pool);
-  char *buffer = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
+  svn_stringbuf_t *buf;
 
-  while (1)
-    {
-      apr_size_t len = SVN__STREAM_CHUNK_SIZE;
-
-      SVN_ERR(svn_stream_read_full(stream, buffer, &len));
-      svn_stringbuf_appendbytes(work, buffer, len);
-
-      if (len < SVN__STREAM_CHUNK_SIZE)
-        break;
-    }
+  SVN_ERR(svn_stringbuf_from_stream(&buf, stream, len_hint, result_pool));
+  *result = svn_stringbuf__morph_into_string(buf);
 
   SVN_ERR(svn_stream_close(stream));
-
-  *result = apr_palloc(result_pool, sizeof(**result));
-  (*result)->data = work->data;
-  (*result)->len = work->len;
 
   return SVN_NO_ERROR;
 }

@@ -1524,20 +1524,35 @@ svn_stream_contents_same(svn_boolean_t *same,
  * @a result. The stream will be closed when it has been successfully and
  * completely read.
  *
+ * @a len_hint specifies the initial capacity of the string buffer and
+ * may be 0.
+ *
  * The returned memory is allocated in @a result_pool, and any temporary
  * allocations are performed in @a scratch_pool.
  *
  * @note due to memory pseudo-reallocation behavior (due to pools), this
  *   can be a memory-intensive operation for large files.
  *
- * @since New in 1.6
+ * @since New in 1.10
  */
+svn_error_t *
+svn_string_from_stream2(svn_string_t **result,
+                        svn_stream_t *stream,
+                        apr_size_t len_hint,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/** Similar to svn_string_from_stream2(), but always passes 0 for
+ * @a len_hint.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.9 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_string_from_stream(svn_string_t **result,
                        svn_stream_t *stream,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
-
 
 /** A function type provided for use as a callback from
  * @c svn_stream_lazyopen_create().
