@@ -531,6 +531,17 @@ nested_branch_txn_sequence_point(svn_branch_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
+/* An #svn_branch_txn_t method. */
+static svn_error_t *
+nested_branch_txn_complete(svn_branch_txn_t *txn,
+                           apr_pool_t *scratch_pool)
+{
+  /* Just forwarding: nothing more is needed. */
+  SVN_ERR(svn_branch_txn_complete(txn->priv->wrapped_txn,
+                                  scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 svn_branch_txn_t *
 svn_nested_branch_txn_create(svn_branch_txn_t *wrapped_txn,
                              apr_pool_t *result_pool)
@@ -545,6 +556,7 @@ svn_nested_branch_txn_create(svn_branch_txn_t *wrapped_txn,
     nested_branch_txn_open_branch,
     nested_branch_txn_branch,
     nested_branch_txn_sequence_point,
+    nested_branch_txn_complete,
   };
   svn_branch_txn_t *txn
     = svn_branch_txn_create(&vtable, NULL, NULL, result_pool);
