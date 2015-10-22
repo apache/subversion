@@ -513,7 +513,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        0, 0, /* Do not use inprocess cache */
                        svn_fs_fs__serialize_revprops,
                        svn_fs_fs__deserialize_revprops,
-                       APR_HASH_KEY_STRING,
+                       sizeof(pair_cache_key_t),
                        apr_pstrcat(pool, prefix, "REVPROP", SVN_VA_NULL),
                        SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
                        TRUE, /* contents is short-lived */
