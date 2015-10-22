@@ -42,6 +42,7 @@
 #include "svn_checksum.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
+#include "svn_sorts.h"
 #include "private/svn_atomic.h"
 #include "private/svn_error_private.h"
 #include "private/svn_eol_private.h"
@@ -1487,22 +1488,24 @@ svn_stringbuf_from_stream(svn_stringbuf_t **str,
                           apr_pool_t *result_pool)
 {
 #define MIN_READ_SIZE 64
-
-  apr_size_t to_read = 0;
   svn_stringbuf_t *text
-    = svn_stringbuf_create_ensure(len_hint + MIN_READ_SIZE,
+    = svn_stringbuf_create_ensure(MAX(len_hint + 1, MIN_READ_SIZE),
                                   result_pool);
 
-  do
+  while(TRUE)
     {
-      to_read = text->blocksize - 1 - text->len;
-      SVN_ERR(svn_stream_read_full(stream, text->data + text->len, &to_read));
-      text->len += to_read;
+      apr_size_t to_read = text->blocksize - 1 - text->len;
+      apr_size_t actually_read = to_read;
 
-      if (to_read && text->blocksize < text->len + MIN_READ_SIZE)
+      SVN_ERR(svn_stream_read_full(stream, text->data + text->len, &actually_read));
+      text->len += actually_read;
+
+      if (actually_read < to_read)
+        break;
+
+      if (text->blocksize < text->len + MIN_READ_SIZE)
         svn_stringbuf_ensure(text, text->blocksize * 2);
     }
-  while (to_read);
 
   text->data[text->len] = '\0';
   *str = text;
