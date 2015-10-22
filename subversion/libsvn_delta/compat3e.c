@@ -1223,13 +1223,6 @@ editor3_alter(void *baton,
   svn_branch_state_t *branch
     = svn_branch_txn_get_branch_by_id(eb->txn, branch_id, scratch_pool);
 
-  /* ### Ensure the requested EIDs are allocated... This is not the
-         right way to do it. Instead the Editor should map 'to be
-         created' EIDs to new EIDs? See BRANCH-README. */
-  while (eid < eb->txn->first_eid
-         || (new_parent_eid < eb->txn->first_eid))
-    SVN_ERR(svn_branch_txn_new_eid(eb->txn, NULL, scratch_pool));
-
   if (! new_payload->is_subbranch_root)
     {
       SVN_DBG(("alter(e%d): parent e%d, name '%s', kind %s",
