@@ -110,7 +110,7 @@ Candidate changes:
    Justification:
      Trivial correctness fix. Will propagate to documentation.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1705843
    Cleanup external registrations when they are user deleted
