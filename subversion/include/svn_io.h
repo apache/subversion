@@ -1147,16 +1147,27 @@ svn_error_t *
 svn_stream_for_stdout(svn_stream_t **out,
                       apr_pool_t *pool);
 
-/** Set @a *str to a string buffer allocated in @a result_pool that contains
- * all data from the current position in @a stream to its end.  @a len_hint
- * specifies the initial capacity of the string buffer and may be 0.  The
- * buffer gets automatically resized to fit the actual amount of data being
- * read from @a stream.
+/** Read the contents of @a stream into memory, from its current position
+ * to its end, returning the data in @a *result. The stream will be closed
+ * when it has been successfully and completely read.
+ *
+ * @a len_hint gives a hint about the expected length, in bytes, of the
+ * actual data that will be read from the stream. It may be 0, meaning no
+ * hint is being provided. Efficiency in time and/or in space may be
+ * better (and in general will not be worse) when the actual data length
+ * is equal or approximately equal to the length hint.
+ *
+ * The returned memory is allocated in @a result_pool.
+ *
+ * @note The present implementation is efficient when @a len_hint is big
+ * enough (but not vastly bigger than necessary), and also for actual
+ * lengths up to 64 bytes when @a len_hint is 0. Otherwise it can incur
+ * significant time and space overheads. See source code for details.
  *
  * @since New in 1.9.
  */
 svn_error_t *
-svn_stringbuf_from_stream(svn_stringbuf_t **str,
+svn_stringbuf_from_stream(svn_stringbuf_t **result,
                           svn_stream_t *stream,
                           apr_size_t len_hint,
                           apr_pool_t *result_pool);
@@ -1520,18 +1531,23 @@ svn_stream_contents_same(svn_boolean_t *same,
                          apr_pool_t *pool);
 
 
-/** Read the contents of @a stream into memory, returning the data in
- * @a result. The stream will be closed when it has been successfully and
- * completely read.
+/** Read the contents of @a stream into memory, from its current position
+ * to its end, returning the data in @a *result. The stream will be closed
+ * when it has been successfully and completely read.
  *
- * @a len_hint specifies the initial capacity of the string buffer and
- * may be 0.
+ * @a len_hint gives a hint about the expected length, in bytes, of the
+ * actual data that will be read from the stream. It may be 0, meaning no
+ * hint is being provided. Efficiency in time and/or in space may be
+ * better (and in general will not be worse) when the actual data length
+ * is equal or approximately equal to the length hint.
  *
  * The returned memory is allocated in @a result_pool, and any temporary
- * allocations are performed in @a scratch_pool.
+ * allocations may be performed in @a scratch_pool.
  *
- * @note due to memory pseudo-reallocation behavior (due to pools), this
- *   can be a memory-intensive operation for large files.
+ * @note The present implementation is efficient when @a len_hint is big
+ * enough (but not vastly bigger than necessary), and also for actual
+ * lengths up to 64 bytes when @a len_hint is 0. Otherwise it can incur
+ * significant time and space overheads. See source code for details.
  *
  * @since New in 1.10
  */

@@ -1481,8 +1481,18 @@ svn_stream_checksummed2(svn_stream_t *stream,
 
 /* Miscellaneous stream functions. */
 
+/*
+ * [JAF] By considering the buffer size doubling algorithm we use, I think
+ * the performance characteristics of this implementation are as follows:
+ *
+ * When the effective hint is big enough for the actual data, it uses
+ * minimal time and allocates space roughly equal to the effective hint.
+ * Otherwise, it incurs a time overhead for copying an additional 1x to 2x
+ * the actual length of data, and a space overhead of an additional 2x to
+ * 3x the actual length.
+ */
 svn_error_t *
-svn_stringbuf_from_stream(svn_stringbuf_t **str,
+svn_stringbuf_from_stream(svn_stringbuf_t **result,
                           svn_stream_t *stream,
                           apr_size_t len_hint,
                           apr_pool_t *result_pool)
@@ -1508,7 +1518,7 @@ svn_stringbuf_from_stream(svn_stringbuf_t **str,
     }
 
   text->data[text->len] = '\0';
-  *str = text;
+  *result = text;
 
   return SVN_NO_ERROR;
 }
