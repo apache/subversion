@@ -4098,22 +4098,22 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * @{
  */
 
-/** Recursively vacuum a working copy directory @a path, removing unnecessary
- * data.
+/** Recursively vacuum a working copy directory @a dir_abspath,
+ * removing unnecessary data.
  *
  * If @a include_externals is @c TRUE, recurse into externals and vacuum them
  * as well.
  *
  * If @a remove_unversioned_items is @c TRUE, remove unversioned items
- * in @a path after successful working copy cleanup.
+ * in @a dir_abspath after successful working copy cleanup.
  * If @a remove_ignored_items is @c TRUE, remove ignored unversioned items
- * in @a path after successful working copy cleanup.
+ * in @a dir_abspath after successful working copy cleanup.
  *
  * If @a fix_recorded_timestamps is @c TRUE, this function fixes recorded
  * timestamps for unmodified files in the working copy, reducing comparision
  * time on future checks.
  *
- * If @a vacuum_pristines is @c TRUE, and @a path points to the working
+ * If @a vacuum_pristines is @c TRUE, and @a dir_abspath points to the working
  * copy root unreferenced files in the pristine store are removed.
  *
  * When asked to remove unversioned or ignored items, and the working copy
@@ -4132,7 +4132,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * @since New in 1.9.
  */
 svn_error_t *
-svn_client_vacuum(const char *path,
+svn_client_vacuum(const char *dir_abspath,
                   svn_boolean_t remove_unversioned_items,
                   svn_boolean_t remove_ignored_items,
                   svn_boolean_t fix_recorded_timestamps,
@@ -4142,11 +4142,11 @@ svn_client_vacuum(const char *path,
                   apr_pool_t *scratch_pool);
 
 
-/** Recursively cleanup a working copy directory @a path, finishing any
+/** Recursively cleanup a working copy directory @a dir_abspath, finishing any
  * incomplete operations, removing lockfiles, etc.
  *
  * If @a break_locks is @c TRUE, existing working copy locks at or below @a
- * path are broken, otherwise a normal write lock is obtained.
+ * dir_abspath are broken, otherwise a normal write lock is obtained.
  *
  * If @a fix_recorded_timestamps is @c TRUE, this function fixes recorded
  * timestamps for unmodified files in the working copy, reducing comparision
@@ -4156,7 +4156,7 @@ svn_client_vacuum(const char *path,
  * mod_dav served repositories is cleared. This clearing invalidates some
  * cached information used for pre-HTTPv2 repositories.
  *
- * If @a vacuum_pristines is @c TRUE, and @a path points to the working
+ * If @a vacuum_pristines is @c TRUE, and @a dir_abspath points to the working
  * copy root unreferenced files in the pristine store are removed.
  *
  * If @a include_externals is @c TRUE, recurse into externals and clean
@@ -4172,7 +4172,7 @@ svn_client_vacuum(const char *path,
  * @since New in 1.9.
  */
 svn_error_t *
-svn_client_cleanup2(const char *path,
+svn_client_cleanup2(const char *dir_abspath,
                     svn_boolean_t break_locks,
                     svn_boolean_t fix_recorded_timestamps,
                     svn_boolean_t clear_dav_cache,
