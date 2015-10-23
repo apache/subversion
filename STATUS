@@ -127,15 +127,6 @@ Candidate changes:
    Votes:
      +1: philip, rhuijben
 
- * 1709389, 1709562
-   Simple translation fix
-   Justification:
-     Trivial fix that doesn't require nomination, but I like to see
-     at least one developer or translator reviewing this.
-   Votes:
-     +1: rhuijben (doesn't need nomination, but would like review, not 1709562)
-     +1: philip
-
  * 1709553
    Fix display of process ID in mod_dav_svn cache statistics.
    Justification:
@@ -180,3 +171,11 @@ Approved changes:
      in ra_serf, but I'm going to resolve them separately.
    Votes:
      +1: ivan, rhuijben, philip
+
+ * 1709389, 1709562
+   Simple translation fix
+   Justification:
+     Trivial fix that doesn't require nomination, but I like to see
+     at least one developer or translator reviewing this.
+   Votes:
+     +1: rhuijben, philip
