@@ -160,6 +160,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1710167
+   Set journal-mode in exclusive-locking mode to improve NFS performance.
+   Justification:
+     Reduces performance regression compared to 1.8.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
