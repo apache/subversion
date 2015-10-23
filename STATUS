@@ -136,7 +136,7 @@ Candidate changes:
      When a directory external is gone remove its registration. Avoids
      working copies with broken state.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, philip
 
  * 1708699
    Fix authz with mandatory authn provided by mod_auth_kerb/mod_auth_ntlm.
