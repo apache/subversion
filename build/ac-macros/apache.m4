@@ -46,7 +46,7 @@ AC_ARG_WITH(apxs,
 ])
 
 if test -z "$APXS"; then
-  for i in /usr/sbin /usr/local/apache/bin /usr/local/apache2/bin /usr/bin ; do
+  for i in /usr/local/apache2/bin /usr/local/apache/bin /usr/bin /usr/sbin ; do
     if test -f "$i/apxs2"; then
       APXS="$i/apxs2"
       break
