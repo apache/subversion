@@ -88,13 +88,6 @@ Candidate changes:
    Votes:
      +1: ivan, rhuijben
 
- * r1706241
-   Resolve unneeded memory growth during pristine cleanup
-   Justification:
-     Simple iterpool reduces memory usage on applying deletes.
-   Votes:
-     +1: rhuijben, kotkov
-
  * r1706323, r1706324
    Fix a crash in libsvn_ra_serf's multistatus parser caused by dereferencing
    a null pointer.
@@ -180,3 +173,10 @@ Approved changes:
      Regression from 1.8, JVM SEGV.
    Votes:
      +1: philip, brane
+
+ * r1706241
+   Resolve unneeded memory growth during pristine cleanup
+   Justification:
+     Simple iterpool reduces memory usage on applying deletes.
+   Votes:
+     +1: rhuijben, kotkov, philip
