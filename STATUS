@@ -141,6 +141,18 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1710215
+   Make JavaHL SVNClient.vacuum allow non-absolute, and non-canonical, paths.
+   Justification:
+     Passing the wrong sort of path triggers an assert and kills the JVM.
+   Notes:
+     This adds the JNI path handling to vacuum, like all othe SVNClient
+     functions.  It also changes the C code to allow non-absolute paths,
+     which is not strictly necessary given the JNI change but leads to
+     consistency with other libsvn_client functions.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
