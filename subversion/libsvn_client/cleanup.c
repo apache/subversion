@@ -215,7 +215,7 @@ cleanup_status_walk(void *baton,
 }
 
 svn_error_t *
-svn_client_cleanup2(const char *path,
+svn_client_cleanup2(const char *dir_abspath,
                     svn_boolean_t break_locks,
                     svn_boolean_t fix_recorded_timestamps,
                     svn_boolean_t clear_dav_cache,
@@ -224,15 +224,9 @@ svn_client_cleanup2(const char *path,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool)
 {
-  const char *local_abspath;
-  
-  if (svn_path_is_url(path))
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' is not a local path"), path);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-
-  SVN_ERR(do_cleanup(local_abspath,
+  SVN_ERR(do_cleanup(dir_abspath,
                      break_locks,
                      fix_recorded_timestamps,
                      clear_dav_cache,
@@ -246,7 +240,7 @@ svn_client_cleanup2(const char *path,
 }
 
 svn_error_t *
-svn_client_vacuum(const char *path,
+svn_client_vacuum(const char *dir_abspath,
                   svn_boolean_t remove_unversioned_items,
                   svn_boolean_t remove_ignored_items,
                   svn_boolean_t fix_recorded_timestamps,
@@ -255,15 +249,9 @@ svn_client_vacuum(const char *path,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *scratch_pool)
 {
-  const char *local_abspath;
-  
-  if (svn_path_is_url(path))
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' is not a local path"), path);
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-
-  SVN_ERR(do_cleanup(local_abspath,
+  SVN_ERR(do_cleanup(dir_abspath,
                      FALSE /* break_locks */,
                      fix_recorded_timestamps,
                      FALSE /* clear_dav_cache */,
