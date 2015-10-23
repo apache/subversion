@@ -100,7 +100,7 @@ Candidate changes:
      r1706323 lays groundwork for the fix by removing unneeded code.
      r1706324 fixes the crash.
    Votes:
-     +1: kotkov
+     +1: kotkov, philip
 
  * r1703470, r1703475, r1703476, r1703477, r1703544
    Updated INSTALL documentation.
