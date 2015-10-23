@@ -1216,7 +1216,7 @@ svn_string_from_stream(svn_string_t **result,
                        apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_string_from_stream2(result, stream, 0,
-                                                 result_pool, scratch_pool));
+                                                 result_pool));
 }
 
 /*** From path.c ***/

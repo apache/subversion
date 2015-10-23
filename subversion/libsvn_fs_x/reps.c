@@ -418,7 +418,7 @@ svn_fs_x__reps_add_base(svn_fs_x__reps_builder_t *builder,
   SVN_ERR(svn_fs_x__get_contents(&stream, builder->fs, rep, FALSE,
                                  scratch_pool));
   SVN_ERR(svn_string_from_stream2(&contents, stream, SVN__STREAM_CHUNK_SIZE,
-                                  scratch_pool, scratch_pool));
+                                  scratch_pool));
   SVN_ERR(svn_fs_x__reps_add(&idx, builder, contents));
 
   base.revision = svn_fs_x__get_revnum(rep->id.change_set);
