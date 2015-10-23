@@ -911,7 +911,7 @@ uri_escape(const char *path, const char table[], apr_pool_t *pool)
   apr_size_t i, copied = 0;
   int c;
   apr_size_t len;
-  const char *p, *end;
+  const char *p;
 
   /* To terminate our scanning loop, table[NUL] must report "invalid". */
   assert(table[0] == 0);
