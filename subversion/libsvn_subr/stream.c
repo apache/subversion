@@ -1809,8 +1809,7 @@ svn_error_t *
 svn_string_from_stream2(svn_string_t **result,
                         svn_stream_t *stream,
                         apr_size_t len_hint,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
+                        apr_pool_t *result_pool)
 {
   svn_stringbuf_t *buf;
 

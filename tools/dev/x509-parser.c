@@ -95,7 +95,7 @@ get_der_cert_from_stream(const svn_string_t **der_cert, svn_stream_t *in,
 {
   svn_string_t *raw;
   SVN_ERR(svn_string_from_stream2(&raw, in, SVN__STREAM_CHUNK_SIZE,
-                                  pool, pool));
+                                  pool));
 
   *der_cert = NULL;
 
