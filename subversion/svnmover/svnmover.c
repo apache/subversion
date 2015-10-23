@@ -1240,6 +1240,156 @@ typedef struct merge_conflict_policy_t
   /* merge (props, text) independently or as a group */
 } merge_conflict_policy_t;
 
+/* An element-merge conflict description.
+ */
+typedef struct element_merge3_conflict_t
+{
+  svn_element_content_t *yca;
+  svn_element_content_t *side1;
+  svn_element_content_t *side2;
+} element_merge3_conflict_t;
+
+static element_merge3_conflict_t *
+element_merge3_conflict_create(svn_element_content_t *yca,
+                               svn_element_content_t *side1,
+                               svn_element_content_t *side2,
+                               apr_pool_t *result_pool)
+{
+  element_merge3_conflict_t *c = apr_pcalloc(result_pool, sizeof(*c));
+
+  c->yca = yca;
+  c->side1 = side1;
+  c->side2 = side2;
+  return c;
+}
+
+/* A name-clash conflict description.
+ */
+typedef struct name_clash_conflict_t
+{
+  int parent_eid;
+  const char *name;
+  /* All EIDs that conflict with each other: hash of (eid -> irrelevant). */
+  apr_hash_t *elements;
+} name_clash_conflict_t;
+
+static name_clash_conflict_t *
+name_clash_conflict_create(int parent_eid,
+                           const char *name,
+                           apr_pool_t *result_pool)
+{
+  name_clash_conflict_t *c = apr_pcalloc(result_pool, sizeof(*c));
+
+  c->parent_eid = parent_eid;
+  c->name = apr_pstrdup(result_pool, name);
+  c->elements = apr_hash_make(result_pool);
+  return c;
+}
+
+/* An orphan conflict description.
+ */
+typedef struct orphan_conflict_t
+{
+  svn_element_content_t *element;
+} orphan_conflict_t;
+
+static orphan_conflict_t *
+orphan_conflict_create(svn_element_content_t *element,
+                       apr_pool_t *result_pool)
+{
+  orphan_conflict_t *c = apr_pcalloc(result_pool, sizeof(*c));
+
+  c->element = element;
+  return c;
+}
+
+typedef struct conflict_storage_t
+{
+  /* Single-element conflicts */
+  /* (eid -> element_merge3_conflict_t) */
+  apr_hash_t *single_element_conflicts;
+
+  /* Name-clash conflicts */
+  /* ("%{parent_eid}d/%{name}s" -> name_clash_conflict_t) */
+  apr_hash_t *name_clash_conflicts;
+
+  /* Orphan conflicts */
+  /* (eid -> orphan_conflict_t) */
+  apr_hash_t *orphan_conflicts;
+} conflict_storage_t;
+
+/*  */
+static conflict_storage_t *
+conflict_storage_create(apr_pool_t *result_pool)
+{
+  conflict_storage_t *c = apr_pcalloc(result_pool, sizeof(*c));
+
+  return c;
+}
+
+/*  */
+static const char *
+brief_eid_and_name_or_nil(svn_element_content_t *e,
+                          apr_pool_t *result_pool)
+{
+  return e ? apr_psprintf(result_pool, "%d/%s", e->parent_eid, e->name)
+           : "<nil>";
+
+  return SVN_NO_ERROR;
+}
+
+/*  */
+static svn_error_t *
+display_conflicts(conflict_storage_t *conflict_storage,
+                  const char *prefix,
+                  apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool,
+                           conflict_storage->single_element_conflicts);
+       hi; hi = apr_hash_next(hi))
+    {
+      int eid = svn_int_hash_this_key(hi);
+      element_merge3_conflict_t *c = apr_hash_this_val(hi);
+
+      printf("%ssingle-element conflict: e%d: yca=%s, side1=%s, side2=%s\n",
+             prefix, eid,
+             brief_eid_and_name_or_nil(c->yca, scratch_pool),
+             brief_eid_and_name_or_nil(c->side1, scratch_pool),
+             brief_eid_and_name_or_nil(c->side2, scratch_pool));
+    }
+  for (hi = apr_hash_first(scratch_pool,
+                           conflict_storage->name_clash_conflicts);
+       hi; hi = apr_hash_next(hi))
+    {
+      /*const char *key = apr_hash_this_key(hi);*/
+      name_clash_conflict_t *c = apr_hash_this_val(hi);
+      apr_hash_index_t *hi2;
+
+      printf("%sname-clash conflict: peid %d, name '%s', %d elements\n",
+             prefix, c->parent_eid, c->name, apr_hash_count(c->elements));
+      for (hi2 = apr_hash_first(scratch_pool, c->elements);
+           hi2; hi2 = apr_hash_next(hi2))
+        {
+          int eid = svn_int_hash_this_key(hi2);
+
+          printf("%s  element %d\n", prefix, eid);
+        }
+    }
+  for (hi = apr_hash_first(scratch_pool,
+                           conflict_storage->orphan_conflicts);
+       hi; hi = apr_hash_next(hi))
+    {
+      int eid = svn_int_hash_this_key(hi);
+      orphan_conflict_t *c = apr_hash_this_val(hi);
+
+      printf("%sorphan conflict: element %d/%s: peid %d does not exist\n",
+             prefix, eid, c->element->name, c->element->parent_eid);
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Merge the payload for one element.
  *
  * If there is no conflict, set *CONFLICT_P to FALSE and *RESULT_P to the
@@ -1307,7 +1457,7 @@ payload_merge(svn_element_payload_t **result_p,
  */
 static void
 element_merge(svn_element_content_t **result_p,
-              svn_boolean_t *conflict_p,
+              element_merge3_conflict_t **conflict_p,
               int eid,
               svn_element_content_t *side1,
               svn_element_content_t *side2,
@@ -1438,14 +1588,18 @@ element_merge(svn_element_content_t **result_p,
     }
 
   *result_p = result;
-  *conflict_p = conflict;
+  *conflict_p
+    = conflict ? element_merge3_conflict_create(yca, side1, side2,
+                                                result_pool) : NULL;
 }
 
 static svn_error_t *
 branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
+                       conflict_storage_t **conflict_storage_p,
                        const svn_branch_el_rev_id_t *src,
                        const svn_branch_el_rev_id_t *tgt,
                        const svn_branch_el_rev_id_t *yca,
+                       apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
 /* Merge the subbranch of {SRC, TGT, YCA} found at EID.
@@ -1483,9 +1637,14 @@ merge_subbranch(svn_branch_txn_t *edit_txn,
 
   if (subbr_src && subbr_tgt && subbr_yca)  /* ?edit vs. ?edit */
     {
+      conflict_storage_t *conflict_storage;
+
       /* subbranch possibly changed in source => merge */
-      SVN_ERR(branch_merge_subtree_r(edit_txn, subbr_src, subbr_tgt, subbr_yca,
-                                     scratch_pool));
+      SVN_ERR(branch_merge_subtree_r(edit_txn,
+                                     &conflict_storage,
+                                     subbr_src, subbr_tgt, subbr_yca,
+                                     scratch_pool, scratch_pool));
+      /* ### store this branch's conflict_storage somewhere ... */
     }
   else if (subbr_src && subbr_yca)  /* ?edit vs. delete */
     {
@@ -1537,15 +1696,15 @@ sort_compare_items_by_peid_and_name(const svn_sort__item_t *a,
   return strcmp(element_a->name, element_b->name);
 }
 
-/* Return an array of (what type?) clashes...
+/* Return all (key -> name_clash_conflict_t) name clash conflicts in BRANCH.
  */
 static svn_error_t *
-detect_clashes(apr_array_header_t **clashes_p,
+detect_clashes(apr_hash_t **clashes_p,
                svn_branch_state_t *branch,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *clashes = apr_array_make(result_pool, 0, sizeof(void *));
+  apr_hash_t *clashes = apr_hash_make(result_pool);
   SVN_ITER_T(svn_element_content_t) *pi;
   int prev_eid = -1;
   svn_element_content_t *prev_element = NULL;
@@ -1560,9 +1719,20 @@ detect_clashes(apr_array_header_t **clashes_p,
           && element->parent_eid == prev_element->parent_eid
           && strcmp(element->name, prev_element->name) == 0)
         {
-          notify("  clash: e%d, e%d: %s",
-                 prev_eid, eid, peid_name(element, scratch_pool));
-          APR_ARRAY_PUSH(clashes, void *) = element;
+          const char *key = apr_psprintf(result_pool, "%d/%s",
+                                         element->parent_eid, element->name);
+          name_clash_conflict_t *c;
+
+          c = svn_hash_gets(clashes, key);
+          if (!c)
+            {
+              c = name_clash_conflict_create(
+                    element->parent_eid, element->name,
+                    result_pool);
+              svn_hash_sets(clashes, key, c);
+            }
+          svn_int_hash_set(c->elements, eid, &c);
+          svn_int_hash_set(c->elements, prev_eid, &c);
         }
       prev_eid = eid;
       prev_element = element;
@@ -1572,21 +1742,57 @@ detect_clashes(apr_array_header_t **clashes_p,
   return SVN_NO_ERROR;
 }
 
+/* Return all (eid -> orphan_conflict_t) orphan conflicts in BRANCH.
+ */
+static svn_error_t *
+detect_orphans(apr_hash_t **orphans_p,
+               svn_branch_state_t *branch,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
+{
+  apr_hash_t *orphans = apr_hash_make(result_pool);
+  SVN_ITER_T(svn_element_content_t) *pi;
+  const svn_element_tree_t *elements = svn_branch_get_element_tree(branch);
+
+  for (SVN_HASH_ITER(pi, scratch_pool, elements->e_map))
+    {
+      int eid = *(const int *)(pi->key);
+      svn_element_content_t *element = pi->val;
+
+      if (eid != elements->root_eid
+          && ! svn_element_tree_get(elements, element->parent_eid))
+        {
+          orphan_conflict_t *c;
+
+          c = orphan_conflict_create(element, result_pool);
+          svn_int_hash_set(orphans, eid, c);
+
+          notify("  orphan: %d/%s: peid %d does not exist",
+                 eid, element->name, element->parent_eid);
+        }
+    }
+
+  *orphans_p = orphans;
+  return SVN_NO_ERROR;
+}
+
 /* Merge ...
  *
  * Merge any sub-branches in the same way, recursively.
  */
 static svn_error_t *
 branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
+                       conflict_storage_t **conflict_storage_p,
                        const svn_branch_el_rev_id_t *src,
                        const svn_branch_el_rev_id_t *tgt,
                        const svn_branch_el_rev_id_t *yca,
+                       apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
   svn_branch_subtree_t *s_src, *s_tgt, *s_yca;
   apr_hash_t *diff_yca_src, *diff_yca_tgt;
-  int single_element_conflicts = 0;
-  apr_array_header_t *clashes;
+  apr_hash_t *e_conflicts = apr_hash_make(scratch_pool);
+  conflict_storage_t *conflict_storage = conflict_storage_create(result_pool);
   SVN_ITER_T(svn_element_content_t *) *pi;
   apr_hash_t *all_elements;
   const merge_conflict_policy_t policy = { TRUE, TRUE, TRUE, TRUE, TRUE };
@@ -1646,7 +1852,7 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
       svn_element_content_t *e_src;
       svn_element_content_t *e_tgt;
       svn_element_content_t *result;
-      svn_boolean_t conflict;
+      element_merge3_conflict_t *conflict;
 
       svn_pool_clear(iterpool);
 
@@ -1676,7 +1882,7 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
       if (conflict)
         {
           notify_v("!    e%d <conflict>", eid);
-          ++single_element_conflicts;
+          svn_int_hash_set(e_conflicts, eid, conflict);
         }
       else if (e_tgt && result)
         {
@@ -1728,26 +1934,18 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
                info (including the relevant incoming changes) for each
                kind of conflict. If there are no conflicts, flatten the
                merge result into a tree. */
-  SVN_ERR(detect_clashes(&clashes,
+  conflict_storage->single_element_conflicts = e_conflicts;
+  SVN_ERR(detect_clashes(&conflict_storage->name_clash_conflicts,
                          tgt->branch,
-                         scratch_pool, scratch_pool));
+                         result_pool, scratch_pool));
+  SVN_ERR(detect_orphans(&conflict_storage->orphan_conflicts,
+                         tgt->branch,
+                         result_pool, scratch_pool));
 
   notify_v("merging into branch %s -- finished",
            svn_branch_get_id(tgt->branch, scratch_pool));
 
-  if (single_element_conflicts || clashes->nelts /* || ... */)
-    {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("Merge failed: %d single-element conflicts and %d clashes occurred"),
-                               single_element_conflicts, clashes->nelts);
-      /* TODO: Return all conflicts to the caller;
-               have the caller display them. */
-    }
-  else
-    {
-      SVN_DBG(("merge completed: no conflicts"));
-    }
-
+  *conflict_storage_p = conflict_storage;
   return SVN_NO_ERROR;
 }
 
@@ -1766,6 +1964,7 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
  */
 static svn_error_t *
 svn_branch_merge(svn_branch_txn_t *edit_txn,
+                 conflict_storage_t **conflict_storage_p,
                  svn_branch_el_rev_id_t *src,
                  svn_branch_el_rev_id_t *tgt,
                  svn_branch_el_rev_id_t *yca,
@@ -1783,7 +1982,10 @@ svn_branch_merge(svn_branch_txn_t *edit_txn,
   /*SVN_ERR(verify_not_subbranch_root(to, scratch_pool));*/
   /*SVN_ERR(verify_not_subbranch_root(yca, scratch_pool));*/
 
-  SVN_ERR(branch_merge_subtree_r(edit_txn, src, tgt, yca, scratch_pool));
+  SVN_ERR(branch_merge_subtree_r(edit_txn,
+                                 conflict_storage_p,
+                                 src, tgt, yca,
+                                 scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1828,6 +2030,7 @@ do_switch(svnmover_wc_t *wc,
   if (has_local_changes)
     {
       svn_branch_el_rev_id_t *yca, *src, *tgt;
+      conflict_storage_t *conflicts;
 
       /* Merge changes from the old into the new WC */
       yca = svn_branch_el_rev_id_create(previous_base_br,
@@ -1840,8 +2043,29 @@ do_switch(svnmover_wc_t *wc,
       tgt = svn_branch_el_rev_id_create(wc->working->branch,
                                         svn_branch_root_eid(wc->working->branch),
                                         SVN_INVALID_REVNUM, scratch_pool);
-      SVN_ERR(svn_branch_merge(wc->edit_txn, src, tgt, yca,
-                               scratch_pool));
+      SVN_ERR(svn_branch_merge(wc->edit_txn, &conflicts,
+                               src, tgt, yca, scratch_pool));
+
+      if (apr_hash_count(conflicts->single_element_conflicts)
+          || apr_hash_count(conflicts->name_clash_conflicts)
+          || apr_hash_count(conflicts->orphan_conflicts))
+        {
+          SVN_ERR(display_conflicts(conflicts, "switch: ", scratch_pool));
+          return svn_error_createf(
+                   SVN_ERR_BRANCHING, NULL,
+                   _("Switch failed because of conflicts: "
+                     "%d single-element conflicts, "
+                     "%d name-clash conflicts, "
+                     "%d orphan conflicts"),
+                   apr_hash_count(conflicts->single_element_conflicts),
+                   apr_hash_count(conflicts->name_clash_conflicts),
+                   apr_hash_count(conflicts->orphan_conflicts));
+        }
+      else
+        {
+          SVN_DBG(("Switch completed: no conflicts"));
+        }
+
       /* ### TODO: If the merge raises conflicts, either revert to the
              pre-update state or store and handle the conflicts. Currently
              this just leaves the merge partially done and raises an error. */
@@ -3337,14 +3561,38 @@ execute(svnmover_wc_t *wc,
 
         case ACTION_MERGE:
           {
+            conflict_storage_t *conflicts;
+
             VERIFY_EID_EXISTS("merge", 0);
             VERIFY_EID_EXISTS("merge", 1);
             VERIFY_EID_EXISTS("merge", 2);
             SVN_ERR(svn_branch_merge(wc->edit_txn,
+                                     &conflicts,
                                      arg[0]->el_rev /*from*/,
                                      arg[1]->el_rev /*to*/,
                                      arg[2]->el_rev /*yca*/,
                                      iterpool));
+
+            if (apr_hash_count(conflicts->single_element_conflicts)
+                || apr_hash_count(conflicts->name_clash_conflicts)
+                || apr_hash_count(conflicts->orphan_conflicts))
+              {
+                SVN_ERR(display_conflicts(conflicts, "merge: ", iterpool));
+                return svn_error_createf(
+                         SVN_ERR_BRANCHING, NULL,
+                         _("Merge failed because of conflicts: "
+                           "%d single-element conflicts, "
+                           "%d name-clash conflicts, "
+                           "%d orphan conflicts"),
+                         apr_hash_count(conflicts->single_element_conflicts),
+                         apr_hash_count(conflicts->name_clash_conflicts),
+                         apr_hash_count(conflicts->orphan_conflicts));
+              }
+            else
+              {
+                SVN_DBG(("Merge completed: no conflicts"));
+              }
+
           }
           break;
 
