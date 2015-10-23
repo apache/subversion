@@ -160,6 +160,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1710104
+   Fix JavaHL ABI incompatibilty with 1.8.
+   Justification:
+     Regression from 1.8, JVM SEGV.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
