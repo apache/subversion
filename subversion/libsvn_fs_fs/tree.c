@@ -1275,11 +1275,15 @@ get_dag(dag_node_t **dag_node_p,
     {
       /* Canonicalize the input PATH.  As it turns out, >95% of all paths
        * seen here during e.g. svnadmin verify are non-canonical, i.e.
-       * miss the leading '/'.  Unconditional canonicalization has a net
-       * performance benefit over previously checking path for being
-       * canonical. */
-      path = svn_fs__canonicalize_abspath(path, pool);
-      SVN_ERR(dag_node_cache_get(&node, root, path, pool));
+       * miss the leading '/'.  Check for those quickly.
+       *
+       * For normalized paths, it is much faster to check the path than
+       * to attempt a second cache lookup (which would fail). */
+      if (*path != '/' || !svn_fs__is_canonical_abspath(path))
+        {
+          path = svn_fs__canonicalize_abspath(path, pool);
+          SVN_ERR(dag_node_cache_get(&node, root, path, pool));
+        }
 
       if (! node)
         {
