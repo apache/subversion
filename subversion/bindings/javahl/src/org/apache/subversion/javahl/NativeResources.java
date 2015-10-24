@@ -141,6 +141,7 @@ public class NativeResources
      */
     private static final void init()
     {
+        initNativeLibrary();
         version = new Version();
         if (!version.isAtLeast(1, 9, 0))
         {
@@ -158,4 +159,11 @@ public class NativeResources
                 " but the run-time version is " + runtimeVersion);
         }
     }
+
+    /**
+     * Initialize the native library layer.
+     * @note This is a no-op in 1.9+, but we need it for ABI
+     *       compatibility with older versions of the native library.
+     */
+    private static native void initNativeLibrary();
 }

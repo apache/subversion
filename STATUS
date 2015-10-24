@@ -154,13 +154,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1710104
-   Fix JavaHL ABI incompatibilty with 1.8.
-   Justification:
-     Regression from 1.8, JVM SEGV.
-   Votes:
-     +1: philip, brane
-
  * r1706241
    Resolve unneeded memory growth during pristine cleanup
    Justification:
