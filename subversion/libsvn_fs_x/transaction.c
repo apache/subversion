@@ -281,17 +281,33 @@ with_some_lock_file(with_lock_baton_t *baton)
           ffd->has_write_lock = TRUE;
         }
 
-      /* nobody else will modify the repo state
-         => read HEAD & pack info once */
       if (baton->is_inner_most_lock)
         {
-          err = svn_fs_x__update_min_unpacked_rev(fs, pool);
-          if (!err)
-            err = svn_fs_x__youngest_rev(&ffd->youngest_rev_cache, fs, pool);
-        }
+          /* Use a separate sub-pool for the actual function body and a few
+           * file accesses. So, the lock-pool only contains the file locks.
+           */
+          apr_pool_t *subpool = svn_pool_create(pool);
 
-      if (!err)
-        err = baton->body(baton->baton, pool);
+          /* nobody else will modify the repo state
+             => read HEAD & pack info once */
+          err = svn_fs_x__update_min_unpacked_rev(fs, subpool);
+          if (!err)
+            err = svn_fs_x__youngest_rev(&ffd->youngest_rev_cache, fs,
+                                         subpool);
+
+          /* We performed a few file operations. Clean the pool. */
+          svn_pool_clear(subpool);
+
+          if (!err)
+            err = baton->body(baton->baton, subpool);
+
+          svn_pool_destroy(subpool);
+        }
+      else
+        {
+          /* Nested lock level */
+          err = baton->body(baton->baton, pool);
+        }
     }
 
   if (baton->is_outer_most_lock)
@@ -1502,11 +1518,12 @@ svn_fs_x__change_txn_props(svn_fs_txn_t *txn,
                            apr_pool_t *scratch_pool)
 {
   fs_txn_data_t *ftd = txn->fsap_data;
-  apr_hash_t *txn_prop = apr_hash_make(scratch_pool);
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
+  apr_hash_t *txn_prop = apr_hash_make(subpool);
   int i;
   svn_error_t *err;
 
-  err = get_txn_proplist(txn_prop, txn->fs, ftd->txn_id, scratch_pool);
+  err = get_txn_proplist(txn_prop, txn->fs, ftd->txn_id, subpool);
   /* Here - and here only - we need to deal with the possibility that the
      transaction property file doesn't yet exist.  The rest of the
      implementation assumes that the file exists, but we're called to set the
@@ -1523,15 +1540,16 @@ svn_fs_x__change_txn_props(svn_fs_txn_t *txn,
       if (svn_hash_gets(txn_prop, SVN_FS__PROP_TXN_CLIENT_DATE)
           && !strcmp(prop->name, SVN_PROP_REVISION_DATE))
         svn_hash_sets(txn_prop, SVN_FS__PROP_TXN_CLIENT_DATE,
-                      svn_string_create("1", scratch_pool));
+                      svn_string_create("1", subpool));
 
       svn_hash_sets(txn_prop, prop->name, prop->value);
     }
 
   /* Create a new version of the file and write out the new props. */
   /* Open the transaction properties file. */
-  SVN_ERR(set_txn_proplist(txn->fs, ftd->txn_id, txn_prop, scratch_pool));
+  SVN_ERR(set_txn_proplist(txn->fs, ftd->txn_id, txn_prop, subpool));
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
