@@ -79,11 +79,11 @@ typedef struct fs_library_vtable_t
      parameter for allocating fs-global objects such as an env cache. */
   svn_error_t *(*create)(svn_fs_t *fs, const char *path,
                          svn_mutex__t *common_pool_lock,
-                         apr_pool_t *pool,
+                         apr_pool_t *scratch_pool,
                          apr_pool_t *common_pool);
   svn_error_t *(*open_fs)(svn_fs_t *fs, const char *path,
                           svn_mutex__t *common_pool_lock,
-                          apr_pool_t *pool,
+                          apr_pool_t *scratch_pool,
                           apr_pool_t *common_pool);
   /* open_for_recovery() is like open(), but used to fill in an fs pointer
      that will be passed to recover().  We assume that the open() method

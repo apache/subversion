@@ -315,18 +315,18 @@ static svn_error_t *
 fs_create(svn_fs_t *fs,
           const char *path,
           svn_mutex__t *common_pool_lock,
-          apr_pool_t *pool,
+          apr_pool_t *scratch_pool,
           apr_pool_t *common_pool)
 {
   SVN_ERR(svn_fs__check_fs(fs, FALSE));
 
   SVN_ERR(initialize_fs_struct(fs));
 
-  SVN_ERR(svn_fs_fs__create(fs, path, pool));
+  SVN_ERR(svn_fs_fs__create(fs, path, scratch_pool));
 
-  SVN_ERR(svn_fs_fs__initialize_caches(fs, pool));
+  SVN_ERR(svn_fs_fs__initialize_caches(fs, scratch_pool));
   SVN_MUTEX__WITH_LOCK(common_pool_lock,
-                       fs_serialized_init(fs, common_pool, pool));
+                       fs_serialized_init(fs, common_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -344,10 +344,10 @@ static svn_error_t *
 fs_open(svn_fs_t *fs,
         const char *path,
         svn_mutex__t *common_pool_lock,
-        apr_pool_t *pool,
+        apr_pool_t *scratch_pool,
         apr_pool_t *common_pool)
 {
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_fs__check_fs(fs, FALSE));
 
