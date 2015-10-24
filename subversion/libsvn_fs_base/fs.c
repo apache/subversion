@@ -580,13 +580,12 @@ static fs_vtable_t fs_vtable = {
 #define FORMAT_FILE   "format"
 
 /* Depending on CREATE, create or open the environment and databases
-   for filesystem FS in PATH. Use POOL for temporary allocations. */
+   for filesystem FS in PATH. */
 static svn_error_t *
 open_databases(svn_fs_t *fs,
                svn_boolean_t create,
                int format,
-               const char *path,
-               apr_pool_t *pool)
+               const char *path)
 {
   base_fs_data_t *bfd;
 
@@ -773,7 +772,7 @@ base_create(svn_fs_t *fs,
     }
 
   /* Create the environment and databases. */
-  svn_err = open_databases(fs, TRUE, format, path, pool);
+  svn_err = open_databases(fs, TRUE, format, path);
   if (svn_err) goto error;
 
   /* Initialize the DAG subsystem. */
@@ -860,7 +859,7 @@ base_open(svn_fs_t *fs,
     goto error;
 
   /* Create the environment and databases. */
-  svn_err = open_databases(fs, FALSE, format, path, pool);
+  svn_err = open_databases(fs, FALSE, format, path);
   if (svn_err) goto error;
 
   ((base_fs_data_t *) fs->fsap_data)->format = format;
