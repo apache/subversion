@@ -364,15 +364,17 @@ svn_test__set_file_contents(svn_fs_root_t *root,
   svn_txdelta_window_handler_t consumer_func;
   void *consumer_baton;
   svn_string_t string;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   SVN_ERR(svn_fs_apply_textdelta(&consumer_func, &consumer_baton,
-                                 root, path, NULL, NULL, pool));
+                                 root, path, NULL, NULL, subpool));
 
   string.data = contents;
   string.len = strlen(contents);
   SVN_ERR(svn_txdelta_send_string(&string, consumer_func,
-                                  consumer_baton, pool));
+                                  consumer_baton, subpool));
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -847,6 +849,7 @@ svn_test__create_blame_repository(svn_repos_t **out_repos,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *revision_root;
   svn_revnum_t youngest_rev = 0;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(&repos, test_name,
@@ -857,87 +860,96 @@ svn_test__create_blame_repository(svn_repos_t **out_repos,
 
   /* Revision 1:  Add trunk, tags, branches. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "initial", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_fs_make_dir(txn_root, "trunk", pool));
-  SVN_ERR(svn_fs_make_dir(txn_root, "tags", pool));
-  SVN_ERR(svn_fs_make_dir(txn_root, "branches", pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                                            "initial", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "trunk", subpool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "tags", subpool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "branches", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
 
   /* Revision 2:  Add the Greek tree on the trunk. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "initial", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_test__create_greek_tree_at(txn_root, "trunk", pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                                            "initial", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__create_greek_tree_at(txn_root, "trunk", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
 
   /* Revision 3:  Tweak trunk/A/mu. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "user-trunk", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+                                            "user-trunk", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "trunk/A/mu",
-                                      "A\nB\nC\nD\nE\nF\nG\nH\nI", pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                                      "A\nB\nC\nD\nE\nF\nG\nH\nI", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
 
   /* Revision 4:  Copy trunk to branches/1.0.x. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "copy", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_fs_revision_root(&revision_root, fs, youngest_rev, pool));
+                                            "copy", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_revision_root(&revision_root, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_copy(revision_root, "trunk",
                       txn_root, "branches/1.0.x",
-                      pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                      subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
 
   /* Revision 5:  Tweak trunk/A/mu. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "user-trunk", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+                                            "user-trunk", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "trunk/A/mu",
                                       "A\nB\nC -- trunk edit\nD\nE\nF\nG\nH\nI",
-                                      pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                                      subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
 
   /* Revision 6:  Tweak branches/1.0.x/A/mu. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "user-branch", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+                                            "user-branch", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "branches/1.0.x/A/mu",
                                       "A\nB\nC\nD -- branch edit\nE\nF\nG\nH\nI",
-                                      pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                                      subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
 
   /* Revision 7:  Merge trunk to branch. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "user-merge1", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+                                            "user-merge1", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "branches/1.0.x/A/mu",
                                       "A\nB\nC -- trunk edit\nD -- branch edit"
-                                      "\nE\nF\nG\nH\nI", pool));
+                                      "\nE\nF\nG\nH\nI", subpool));
   SVN_ERR(svn_fs_change_node_prop(txn_root, "/branches/1.0.x", "svn:mergeinfo",
-                                  svn_string_create("/trunk:4-6", pool),
-                                  pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                                  svn_string_create("/trunk:4-6", subpool),
+                                  subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
 
   /* Revision 8:  Merge branch to trunk. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "user-merge2", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+                                            "user-merge2", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "trunk/A/mu",
                                       "A\nB\nC -- trunk edit\nD -- branch edit\n"
-                                      "E\nF\nG\nH\nI", pool));
+                                      "E\nF\nG\nH\nI", subpool));
   SVN_ERR(svn_fs_change_node_prop(txn_root, "/trunk", "svn:mergeinfo",
-                                  svn_string_create("/branches/1.0.x:4-7", pool),
-                                  pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                                  svn_string_create("/branches/1.0.x:4-7", subpool),
+                                  subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
