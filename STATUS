@@ -120,14 +120,14 @@ Candidate changes:
    Votes:
      +1: rhuijben, philip
 
- * 1708699
+ * r1708699
    Fix authz with mandatory authn provided by mod_auth_kerb/mod_auth_ntlm.
    Justification:
      Regression introduced in 1.9.2.
    Votes:
      +1: philip, rhuijben
 
- * 1709553
+ * r1709553
    Fix display of process ID in mod_dav_svn cache statistics.
    Justification:
      User cannot determine to which process the output applies.
@@ -172,7 +172,7 @@ Approved changes:
    Votes:
      +1: ivan, rhuijben, philip
 
- * 1709389, 1709562
+ * r1709389, r1709562
    Simple translation fix
    Justification:
      Trivial fix that doesn't require nomination, but I like to see
