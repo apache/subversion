@@ -154,13 +154,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1706241
-   Resolve unneeded memory growth during pristine cleanup
-   Justification:
-     Simple iterpool reduces memory usage on applying deletes.
-   Votes:
-     +1: rhuijben, kotkov, philip
-
  * r1705060, r1705062, r1705064, r1705088
    Resolve segfault in 'svn diff' when repository is on server root.
    Justification:
