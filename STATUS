@@ -153,11 +153,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1709389, r1709562
-   Simple translation fix
-   Justification:
-     Trivial fix that doesn't require nomination, but I like to see
-     at least one developer or translator reviewing this.
-   Votes:
-     +1: rhuijben, philip
