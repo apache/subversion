@@ -1538,6 +1538,17 @@ svn_ra_serf__create_bucket_with_eagain(const char *data,
                                        apr_size_t len,
                                        serf_bucket_alloc_t *allocator);
 
+/* Parse a given URL_STR, fill in all supplied fields of URI
+ * structure.
+ *
+ * This function is a compatibility wrapper around apr_uri_parse().
+ * Different apr-util versions set apr_uri_t.path to either NULL or ""
+ * for root paths, and serf expects to see "/". This function always
+ * sets URI.path to "/" for these paths. */
+svn_error_t *
+svn_ra_serf__uri_parse(apr_uri_t *uri,
+                       const char *url_str,
+                       apr_pool_t *result_pool);
 
 
 #if defined(SVN_DEBUG)
