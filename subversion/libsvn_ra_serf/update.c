@@ -941,8 +941,17 @@ headers_fetch(serf_bucket_t *headers,
     {
       serf_bucket_headers_setn(headers, SVN_DAV_DELTA_BASE_HEADER,
                                fetch_ctx->delta_base);
-      serf_bucket_headers_setn(headers, "Accept-Encoding",
-                               "svndiff1;q=0.9,svndiff;q=0.8");
+      if (fetch_ctx->using_compression)
+        {
+          serf_bucket_headers_setn(headers, "Accept-Encoding",
+                                   "svndiff1;q=0.9,svndiff;q=0.8");
+        }
+      else
+        {
+          /* Do not advertise svndiff1 support if we're not interested in
+             compression. */
+          serf_bucket_headers_setn(headers, "Accept-Encoding", "svndiff;q=0.9");
+        }
     }
   else if (fetch_ctx->using_compression)
     {
@@ -2351,8 +2360,9 @@ setup_update_report_headers(serf_bucket_t *headers,
     }
   else
     {
-      serf_bucket_headers_setn(headers, "Accept-Encoding",
-                               "svndiff1;q=0.9,svndiff;q=0.8");
+      /* Do not advertise svndiff1 support if we're not interested in
+         compression. */
+      serf_bucket_headers_setn(headers, "Accept-Encoding", "svndiff;q=0.9");
     }
 
   return SVN_NO_ERROR;
