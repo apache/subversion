@@ -42,6 +42,7 @@
 
 #include "private/svn_opt_private.h"
 #include "private/svn_cmdline_private.h"
+#include "private/svn_string_private.h"
 
 #include "svn_private_config.h"
 
@@ -337,6 +338,23 @@ signal_handler(int signum)
   cancelled = TRUE;
 }
 
+/* Baton for ra_progress_func() callback. */
+typedef struct ra_progress_baton_t
+{
+  apr_off_t bytes_transferred;
+} ra_progress_baton_t;
+
+/* Implements svn_ra_progress_notify_func_t. */
+static void
+ra_progress_func(apr_off_t progress,
+                 apr_off_t total,
+                 void *baton,
+                 apr_pool_t *pool)
+{
+  ra_progress_baton_t *b = baton;
+  b->bytes_transferred = progress;
+}
+
 /* Our cancellation callback. */
 svn_error_t *
 svn_cl__check_cancel(void *baton)
@@ -372,6 +390,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t descend = TRUE;
   svn_boolean_t use_notifier = TRUE;
   apr_time_t start_time, time_taken;
+  ra_progress_baton_t ra_progress_baton = {0};
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -939,6 +958,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   ctx->conflict_func2 = NULL;
   ctx->conflict_baton2 = NULL;
 
+  if (!opt_state.quiet)
+    {
+      ctx->progress_func = ra_progress_func;
+      ctx->progress_baton = &ra_progress_baton;
+    }
+
   /* And now we finally run the subcommand. */
   start_time = apr_time_now();
   err = (*subcommand->cmd_func)(os, &command_baton, pool);
@@ -979,6 +1004,15 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       SVN_ERR(svn_cmdline_printf(pool,
                                 _("%15.6f seconds taken\n"),
                                 time_taken / 1.0e6));
+
+      /* Report how many bytes transferred over network if RA layer provided
+         this information. */
+      if (ra_progress_baton.bytes_transferred > 0)
+        SVN_ERR(svn_cmdline_printf(pool,
+                                   _("%15s bytes transferred over network\n"),
+                                   svn__i64toa_sep(
+                                     ra_progress_baton.bytes_transferred, ',',
+                                     pool)));
     }
 
   return SVN_NO_ERROR;
