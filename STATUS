@@ -77,20 +77,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1706323, r1706324
-   Fix a crash in libsvn_ra_serf's multistatus parser caused by dereferencing
-   a null pointer.
-   Justification:
-     Segfault. User reported.
-   Notes:
-     Can be reproduced by trying to do a -g reverse blame against 1.8 server:
-     svn blame -g -r 1706092:1706091 https://svn.apache.org/repos/asf/subversion/trunk/README
-     .
-     r1706323 lays groundwork for the fix by removing unneeded code.
-     r1706324 fixes the crash.
-   Votes:
-     +1: kotkov, philip
-
  * r1703470, r1703475, r1703476, r1703477, r1703544
    Updated INSTALL documentation.
    Justification:
@@ -154,3 +140,17 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1706323, r1706324
+   Fix a crash in libsvn_ra_serf's multistatus parser caused by dereferencing
+   a null pointer.
+   Justification:
+     Segfault. User reported.
+   Notes:
+     Can be reproduced by trying to do a -g reverse blame against 1.8 server:
+     svn blame -g -r 1706092:1706091 https://svn.apache.org/repos/asf/subversion/trunk/README
+     .
+     r1706323 lays groundwork for the fix by removing unneeded code.
+     r1706324 fixes the crash.
+   Votes:
+     +1: kotkov, philip, ivan
