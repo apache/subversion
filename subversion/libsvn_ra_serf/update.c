@@ -950,7 +950,7 @@ headers_fetch(serf_bucket_t *headers,
         {
           /* Do not advertise svndiff1 support if we're not interested in
              compression. */
-          serf_bucket_headers_setn(headers, "Accept-Encoding", "svndiff;q=0.9");
+          serf_bucket_headers_setn(headers, "Accept-Encoding", "svndiff");
         }
     }
   else if (fetch_ctx->using_compression)
@@ -2362,7 +2362,7 @@ setup_update_report_headers(serf_bucket_t *headers,
     {
       /* Do not advertise svndiff1 support if we're not interested in
          compression. */
-      serf_bucket_headers_setn(headers, "Accept-Encoding", "svndiff;q=0.9");
+      serf_bucket_headers_setn(headers, "Accept-Encoding", "svndiff");
     }
 
   return SVN_NO_ERROR;
