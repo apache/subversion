@@ -203,8 +203,7 @@ svn_error_t *
 svn_branch_txn_open_branch(svn_branch_txn_t *txn,
                            svn_branch_state_t **new_branch_p,
                            svn_branch_rev_bid_t *predecessor,
-                           const char *outer_branch_id,
-                           int outer_eid,
+                           const char *new_branch_id,
                            int root_eid,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
@@ -213,8 +212,7 @@ svn_error_t *
 svn_branch_txn_branch(svn_branch_txn_t *txn,
                       svn_branch_state_t **new_branch_p,
                       svn_branch_rev_bid_eid_t *from,
-                      const char *outer_branch_id,
-                      int outer_eid,
+                      const char *new_branch_id,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
