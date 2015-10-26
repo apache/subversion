@@ -103,7 +103,7 @@ Candidate changes:
    Justification:
      Without this fix the filter can't determine the result of a patch.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1706983, r1706999
    Add some @since information to config defines
