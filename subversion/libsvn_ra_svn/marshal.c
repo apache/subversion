@@ -72,6 +72,10 @@
  */
 #define ITEM_NESTING_LIMIT 64
 
+/* The protocol words for booleans. */
+static const svn_string_t str_true = SVN__STATIC_STRING("true");
+static const svn_string_t str_false = SVN__STATIC_STRING("false");
+
 /* Return the APR socket timeout to be used for the connection depending
  * on whether there is a blockage handler or zero copy has been activated. */
 static apr_interval_time_t
@@ -97,7 +101,7 @@ svn_ra_svn__to_public_item(svn_ra_svn_item_t *target,
         target->u.number = source->u.number;
         break;
       case SVN_RA_SVN_WORD:
-        target->u.word = source->u.word;
+        target->u.word = source->u.word.data;
         break;
       case SVN_RA_SVN_LIST:
         target->u.list = svn_ra_svn__to_public_array(&source->u.list,
@@ -140,7 +144,8 @@ svn_ra_svn__to_private_item(svn_ra_svn__item_t *target,
         target->u.number = source->u.number;
         break;
       case SVN_RA_SVN_WORD:
-        target->u.word = source->u.word;
+        target->u.word.data = source->u.word;
+        target->u.word.len = strlen(source->u.word);
         break;
       case SVN_RA_SVN_LIST:
         target->u.list = *svn_ra_svn__to_private_array(source->u.list,
@@ -248,8 +253,8 @@ svn_ra_svn__set_capabilities(svn_ra_svn_conn_t *conn,
       if (item->kind != SVN_RA_SVN_WORD)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Capability entry is not a word"));
-      word = apr_pstrdup(conn->pool, item->u.word);
-      svn_hash_sets(conn->capabilities, word, word);
+      word = apr_pstrmemdup(conn->pool, item->u.word.data, item->u.word.len);
+      apr_hash_set(conn->capabilities, word, item->u.word.len, word);
     }
   return SVN_NO_ERROR;
 }
@@ -1289,8 +1294,10 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       c = *p;
       *p = '\0';
 
+      /* Store the word in ITEM. */
       item->kind = SVN_RA_SVN_WORD;
-      item->u.word = buffer;
+      item->u.word.data = buffer;
+      item->u.word.len = p - buffer;
     }
   else if (c == '(')
     {
@@ -1507,7 +1514,6 @@ svn_ra_svn__skip_leading_garbage(svn_ra_svn_conn_t *conn,
  * tuple specification and advance AP by the corresponding arguments. */
 static svn_error_t *
 vparse_tuple(const svn_ra_svn__list_t *items,
-             apr_pool_t *pool,
              const char **fmt,
              va_list *ap)
 {
@@ -1523,19 +1529,19 @@ vparse_tuple(const svn_ra_svn__list_t *items,
       if (**fmt == '(' && elt->kind == SVN_RA_SVN_LIST)
         {
           (*fmt)++;
-          SVN_ERR(vparse_tuple(&elt->u.list, pool, fmt, ap));
+          SVN_ERR(vparse_tuple(&elt->u.list, fmt, ap));
         }
       else if (**fmt == 'c' && elt->kind == SVN_RA_SVN_STRING)
         *va_arg(*ap, const char **) = elt->u.string.data;
       else if (**fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
         *va_arg(*ap, svn_string_t **) = &elt->u.string;
       else if (**fmt == 'w' && elt->kind == SVN_RA_SVN_WORD)
-        *va_arg(*ap, const char **) = elt->u.word;
+        *va_arg(*ap, const char **) = elt->u.word.data;
       else if (**fmt == 'b' && elt->kind == SVN_RA_SVN_WORD)
         {
-          if (strcmp(elt->u.word, "true") == 0)
+          if (svn_string_compare(&elt->u.word, &str_true))
             *va_arg(*ap, svn_boolean_t *) = TRUE;
-          else if (strcmp(elt->u.word, "false") == 0)
+          else if (svn_string_compare(&elt->u.word, &str_false))
             *va_arg(*ap, svn_boolean_t *) = FALSE;
           else
             break;
@@ -1546,18 +1552,18 @@ vparse_tuple(const svn_ra_svn__list_t *items,
         *va_arg(*ap, svn_revnum_t *) = (svn_revnum_t) elt->u.number;
       else if (**fmt == 'B' && elt->kind == SVN_RA_SVN_WORD)
         {
-          if (strcmp(elt->u.word, "true") == 0)
+          if (svn_string_compare(&elt->u.word, &str_true))
             *va_arg(*ap, apr_uint64_t *) = TRUE;
-          else if (strcmp(elt->u.word, "false") == 0)
+          else if (svn_string_compare(&elt->u.word, &str_false))
             *va_arg(*ap, apr_uint64_t *) = FALSE;
           else
             break;
         }
       else if (**fmt == '3' && elt->kind == SVN_RA_SVN_WORD)
         {
-          if (strcmp(elt->u.word, "true") == 0)
+          if (svn_string_compare(&elt->u.word, &str_true))
             *va_arg(*ap, svn_tristate_t *) = svn_tristate_true;
-          else if (strcmp(elt->u.word, "false") == 0)
+          else if (svn_string_compare(&elt->u.word, &str_false))
             *va_arg(*ap, svn_tristate_t *) = svn_tristate_false;
           else
             break;
@@ -1618,14 +1624,13 @@ vparse_tuple(const svn_ra_svn__list_t *items,
 
 svn_error_t *
 svn_ra_svn__parse_tuple(const svn_ra_svn__list_t *list,
-                        apr_pool_t *pool,
                         const char *fmt, ...)
 {
   svn_error_t *err;
   va_list ap;
 
   va_start(ap, fmt);
-  err = vparse_tuple(list, pool, &fmt, &ap);
+  err = vparse_tuple(list, &fmt, &ap);
   va_end(ap);
   return err;
 }
@@ -1644,7 +1649,7 @@ svn_ra_svn__read_tuple(svn_ra_svn_conn_t *conn,
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("Malformed network data"));
   va_start(ap, fmt);
-  err = vparse_tuple(&item->u.list, pool, &fmt, &ap);
+  err = vparse_tuple(&item->u.list, &fmt, &ap);
   va_end(ap);
   return err;
 }
@@ -1679,8 +1684,7 @@ svn_ra_svn__parse_proplist(const svn_ra_svn__list_t *list,
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Proplist element not a list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, pool, "ss",
-                                      &name, &value));
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "ss", &name, &value));
       apr_hash_set(*props, name->data, name->len, value);
     }
 
@@ -1706,15 +1710,13 @@ svn_error_t *svn_ra_svn__locate_real_error_child(svn_error_t *err)
 }
 
 svn_error_t *
-svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
-                                  apr_pool_t *pool)
+svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params)
 {
   const char *message, *file;
   svn_error_t *err = NULL;
   svn_ra_svn__item_t *elt;
   int i;
   apr_uint64_t apr_err, line;
-  apr_pool_t *subpool = svn_pool_create(pool);
 
   if (params->nelts == 0)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1723,12 +1725,11 @@ svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
   /* Rebuild the error list from the end, to avoid reversing the order. */
   for (i = params->nelts - 1; i >= 0; i--)
     {
-      svn_pool_clear(subpool);
       elt = &SVN_RA_SVN__LIST_ITEM(params, i);
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Malformed error list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, subpool, "nccn",
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "nccn",
                                       &apr_err, &message, &file, &line));
       /* The message field should have been optional, but we can't
          easily change that, so "" means a nonexistent message. */
@@ -1746,8 +1747,6 @@ svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
           err->line = (long)line;
         }
     }
-
-  svn_pool_destroy(subpool);
 
   /* If we get here, then we failed to find a real error in the error
      chain that the server proported to be sending us.  That's bad. */
@@ -1772,13 +1771,13 @@ svn_ra_svn__read_cmd_response(svn_ra_svn_conn_t *conn,
   if (strcmp(status, "success") == 0)
     {
       va_start(ap, fmt);
-      err = vparse_tuple(params, pool, &fmt, &ap);
+      err = vparse_tuple(params, &fmt, &ap);
       va_end(ap);
       return err;
     }
   else if (strcmp(status, "failure") == 0)
     {
-      return svn_error_trace(svn_ra_svn__handle_failure_status(params, pool));
+      return svn_error_trace(svn_ra_svn__handle_failure_status(params));
     }
 
   return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -2869,7 +2868,7 @@ svn_ra_svn__read_word(const svn_ra_svn__list_t *items,
 {
   svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_WORD);
-  *result = elt->u.word;
+  *result = elt->u.word.data;
 
   return SVN_NO_ERROR;
 }
@@ -2897,9 +2896,9 @@ svn_ra_svn__read_boolean(const svn_ra_svn__list_t *items,
 {
   svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_WORD);
-  if (elt->u.word[0] == 't' && strcmp(elt->u.word, "true") == 0)
+  if (svn_string_compare(&elt->u.word, &str_true))
     *result = TRUE;
-  else if (strcmp(elt->u.word, "false") == 0)
+  else if (svn_string_compare(&elt->u.word, &str_false))
     *result = FALSE;
   else
     CHECK_PROTOCOL_COND(FALSE);

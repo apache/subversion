@@ -334,6 +334,7 @@ txn_names_are_not_reused_helper1(apr_hash_t **txn_names,
   apr_hash_index_t *hi;
   const int N = 10;
   int i;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   *txn_names = apr_hash_make(pool);
 
@@ -343,7 +344,8 @@ txn_names_are_not_reused_helper1(apr_hash_t **txn_names,
     {
       svn_fs_txn_t *txn;
       const char *name;
-      SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+
+      SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
       SVN_ERR(svn_fs_txn_name(&name, txn, pool));
       if (apr_hash_get(*txn_names, name, APR_HASH_KEY_STRING) != NULL)
         return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
@@ -367,6 +369,7 @@ txn_names_are_not_reused_helper1(apr_hash_t **txn_names,
                              "created %d transactions, but only aborted %d",
                              N, i);
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -1018,8 +1021,9 @@ check_entry(svn_fs_root_t *root,
 {
   apr_hash_t *entries;
   svn_fs_dirent_t *ent;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_fs_dir_entries(&entries, root, path, pool));
+  SVN_ERR(svn_fs_dir_entries(&entries, root, path, subpool));
   ent = apr_hash_get(entries, name, APR_HASH_KEY_STRING);
 
   if (ent)
@@ -1027,6 +1031,7 @@ check_entry(svn_fs_root_t *root,
   else
     *present = FALSE;
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -4761,6 +4766,7 @@ closest_copy_test(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
   SVN_ERR(svn_test__create_greek_tree(txn_root, spool));
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+  svn_pool_clear(spool);
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
 
   /* Copy A to Z, and commit. */
@@ -4768,6 +4774,7 @@ closest_copy_test(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
   SVN_ERR(svn_fs_copy(rev_root, "A", txn_root, "Z", spool));
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+  svn_pool_clear(spool);
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
 
   /* Anything under Z should have a closest copy pair of ("/Z", 2), so
@@ -4804,6 +4811,7 @@ closest_copy_test(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_make_file(txn_root, "Z/t", pool));
   SVN_ERR(svn_fs_make_file(txn_root, "Z2/D/H2/t", pool));
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+  svn_pool_clear(spool);
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
 
   /* Okay, just for kicks, let's modify Z2/D/H2/t.  Shouldn't affect
@@ -4813,6 +4821,7 @@ closest_copy_test(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__set_file_contents(txn_root, "Z2/D/H2/t",
                                       "Edited text.", spool));
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+  svn_pool_clear(spool);
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
 
   /* Now, we expect Z2/D/H2 to have a closest copy of ("/Z2/D/H2", 3)
@@ -6496,6 +6505,7 @@ test_delta_file_stream(const svn_test_opts_t *opts,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *root1, *root2;
   svn_revnum_t rev;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   const char *old_content = "some content";
   const char *new_content = "some more content";
@@ -6527,51 +6537,55 @@ test_delta_file_stream(const svn_test_opts_t *opts,
 
   /* Test 1: Get delta against empty target. */
   SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
-                                       NULL, NULL, root1, "foo", pool));
+                                       NULL, NULL, root1, "foo", subpool));
 
   svn_stringbuf_setempty(source);
   svn_stringbuf_setempty(dest);
 
-  svn_txdelta_apply(svn_stream_from_stringbuf(source, pool),
-                    svn_stream_from_stringbuf(dest, pool),
-                    NULL, NULL, pool, &delta_handler, &delta_baton);
+  svn_txdelta_apply(svn_stream_from_stringbuf(source, subpool),
+                    svn_stream_from_stringbuf(dest, subpool),
+                    NULL, NULL, subpool, &delta_handler, &delta_baton);
   SVN_ERR(svn_txdelta_send_txstream(delta_stream,
                                     delta_handler,
                                     delta_baton,
-                                    pool));
+                                    subpool));
   SVN_TEST_STRING_ASSERT(old_content, dest->data);
+  svn_pool_clear(subpool);
 
   /* Test 2: Get delta against previous version. */
   SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
-                                       root1, "foo", root2, "foo", pool));
+                                       root1, "foo", root2, "foo", subpool));
 
   svn_stringbuf_set(source, old_content);
   svn_stringbuf_setempty(dest);
 
-  svn_txdelta_apply(svn_stream_from_stringbuf(source, pool),
-                    svn_stream_from_stringbuf(dest, pool),
-                    NULL, NULL, pool, &delta_handler, &delta_baton);
+  svn_txdelta_apply(svn_stream_from_stringbuf(source, subpool),
+                    svn_stream_from_stringbuf(dest, subpool),
+                    NULL, NULL, subpool, &delta_handler, &delta_baton);
   SVN_ERR(svn_txdelta_send_txstream(delta_stream,
                                     delta_handler,
                                     delta_baton,
-                                    pool));
+                                    subpool));
   SVN_TEST_STRING_ASSERT(new_content, dest->data);
+  svn_pool_clear(subpool);
 
   /* Test 3: Get reverse delta. */
   SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream,
-                                       root2, "foo", root1, "foo", pool));
+                                       root2, "foo", root1, "foo", subpool));
 
   svn_stringbuf_set(source, new_content);
   svn_stringbuf_setempty(dest);
 
-  svn_txdelta_apply(svn_stream_from_stringbuf(source, pool),
-                    svn_stream_from_stringbuf(dest, pool),
-                    NULL, NULL, pool, &delta_handler, &delta_baton);
+  svn_txdelta_apply(svn_stream_from_stringbuf(source, subpool),
+                    svn_stream_from_stringbuf(dest, subpool),
+                    NULL, NULL, subpool, &delta_handler, &delta_baton);
   SVN_ERR(svn_txdelta_send_txstream(delta_stream,
                                     delta_handler,
                                     delta_baton,
-                                    pool));
+                                    subpool));
   SVN_TEST_STRING_ASSERT(old_content, dest->data);
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }

@@ -268,16 +268,16 @@ dav_svn__merge_response(ap_filter_t *output,
 
 
   /* get the creationdate and creator-displayname of the new revision, too. */
-  serr = svn_fs_revision_prop(&creationdate, repos->fs, new_rev,
-                              SVN_PROP_REVISION_DATE, pool);
+  serr = svn_fs_revision_prop2(&creationdate, repos->fs, new_rev,
+                               SVN_PROP_REVISION_DATE, TRUE, pool, pool);
   if (serr != NULL)
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                   "Could not get date of newest revision",
                                   repos->pool);
     }
-  serr = svn_fs_revision_prop(&creator_displayname, repos->fs, new_rev,
-                              SVN_PROP_REVISION_AUTHOR, pool);
+  serr = svn_fs_revision_prop2(&creator_displayname, repos->fs, new_rev,
+                               SVN_PROP_REVISION_AUTHOR, TRUE, pool, pool);
   if (serr != NULL)
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

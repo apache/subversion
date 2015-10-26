@@ -106,9 +106,6 @@ typedef struct path_order_t
   /* when this change happened */
   svn_revnum_t revision;
 
-  /* this is a directory node */
-  svn_boolean_t is_dir;
-
   /* length of the expanded representation content */
   apr_int64_t expanded_size;
 
@@ -382,6 +379,8 @@ close_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_remove_file2(proto_l2p_index_path, FALSE, scratch_pool));
   SVN_ERR(svn_io_remove_file2(proto_p2l_index_path, FALSE, scratch_pool));
 
+  /* Ensure that packed file is written to disk.*/
+  SVN_ERR(svn_io_file_flush_to_disk(context->pack_file, scratch_pool));
   SVN_ERR(svn_io_file_close(context->pack_file, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -621,9 +620,6 @@ compare_dir_entries(const svn_sort__item_t *a,
   const svn_fs_dirent_t *lhs = (const svn_fs_dirent_t *) a->value;
   const svn_fs_dirent_t *rhs = (const svn_fs_dirent_t *) b->value;
 
-  if (lhs->kind != rhs->kind)
-    return lhs->kind == svn_node_dir ? -1 : 1;
-
   return strcmp(lhs->name, rhs->name);
 }
 
@@ -740,7 +736,6 @@ copy_node_to_temp(pack_context_t *context,
   path_order->path = svn_prefix_string__create(context->paths, sort_path);
   path_order->node_id = noderev->node_id;
   path_order->revision = svn_fs_x__get_revnum(noderev->noderev_id.change_set);
-  path_order->is_dir = noderev->kind == svn_node_dir;
   path_order->noderev_id = noderev->noderev_id;
   APR_ARRAY_PUSH(context->path_order, path_order_t *) = path_order;
 
@@ -784,13 +779,8 @@ compare_path_order(const path_order_t * const * lhs_p,
   const path_order_t * lhs = *lhs_p;
   const path_order_t * rhs = *rhs_p;
 
-  /* cluster all directories */
-  int diff = rhs->is_dir - lhs->is_dir;
-  if (diff)
-    return diff;
-
   /* lexicographic order on path and node (i.e. latest first) */
-  diff = svn_prefix_string__compare(lhs->path, rhs->path);
+  int diff = svn_prefix_string__compare(lhs->path, rhs->path);
   if (diff)
     return diff;
 
@@ -2142,6 +2132,34 @@ pack_shard(const char *dir,
   return SVN_NO_ERROR;
 }
 
+/* Read the youngest rev and the first non-packed rev info for FS from disk.
+   Set *FULLY_PACKED when there is no completed unpacked shard.
+   Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+get_pack_status(svn_boolean_t *fully_packed,
+                svn_fs_t *fs,
+                apr_pool_t *scratch_pool)
+{
+  svn_fs_x__data_t *ffd = fs->fsap_data;
+  apr_int64_t completed_shards;
+  svn_revnum_t youngest;
+
+  SVN_ERR(svn_fs_x__read_min_unpacked_rev(&ffd->min_unpacked_rev, fs,
+                                          scratch_pool));
+
+  SVN_ERR(svn_fs_x__youngest_rev(&youngest, fs, scratch_pool));
+  completed_shards = (youngest + 1) / ffd->max_files_per_dir;
+
+  /* See if we've already completed all possible shards thus far. */
+  if (ffd->min_unpacked_rev == (completed_shards * ffd->max_files_per_dir))
+    *fully_packed = TRUE;
+  else
+    *fully_packed = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
 typedef struct pack_baton_t
 {
   svn_fs_t *fs;
@@ -2174,21 +2192,24 @@ pack_body(void *baton,
   svn_fs_x__data_t *ffd = pb->fs->fsap_data;
   apr_int64_t completed_shards;
   apr_int64_t i;
-  svn_revnum_t youngest;
   apr_pool_t *iterpool;
   const char *data_path;
+  svn_boolean_t fully_packed;
 
-  /* If we aren't using sharding, we can't do any packing, so quit. */
-  SVN_ERR(svn_fs_x__read_min_unpacked_rev(&ffd->min_unpacked_rev, pb->fs,
-                                          scratch_pool));
+  /* Since another process might have already packed the repo,
+     we need to re-read the pack status. */
+  SVN_ERR(get_pack_status(&fully_packed, pb->fs, scratch_pool));
+  if (fully_packed)
+    {
+      if (pb->notify_func)
+        (*pb->notify_func)(pb->notify_baton,
+                           ffd->min_unpacked_rev / ffd->max_files_per_dir,
+                           svn_fs_pack_notify_noop, scratch_pool);
 
-  SVN_ERR(svn_fs_x__youngest_rev(&youngest, pb->fs, scratch_pool));
-  completed_shards = (youngest + 1) / ffd->max_files_per_dir;
+      return SVN_NO_ERROR;
+    }
 
-  /* See if we've already completed all possible shards thus far. */
-  if (ffd->min_unpacked_rev == (completed_shards * ffd->max_files_per_dir))
-    return SVN_NO_ERROR;
-
+  completed_shards = (ffd->youngest_rev_cache + 1) / ffd->max_files_per_dir;
   data_path = svn_dirent_join(pb->fs->path, PATH_REVS_DIR, scratch_pool);
 
   iterpool = svn_pool_create(scratch_pool);
@@ -2224,6 +2245,23 @@ svn_fs_x__pack(svn_fs_t *fs,
                apr_pool_t *scratch_pool)
 {
   pack_baton_t pb = { 0 };
+  svn_boolean_t fully_packed;
+
+  /* Is there we even anything to do?. */
+  SVN_ERR(get_pack_status(&fully_packed, fs, scratch_pool));
+  if (fully_packed)
+    {
+      svn_fs_x__data_t *ffd = fs->fsap_data;
+
+      if (notify_func)
+        (*notify_func)(notify_baton,
+                       ffd->min_unpacked_rev / ffd->max_files_per_dir,
+                       svn_fs_pack_notify_noop, scratch_pool);
+
+      return SVN_NO_ERROR;
+    }
+
+  /* Lock the repo and start the pack process. */
   pb.fs = fs;
   pb.notify_func = notify_func;
   pb.notify_baton = notify_baton;

@@ -135,7 +135,7 @@ svn_ra_svn_parse_tuple(const apr_array_header_t *list,
   svn_ra_svn__list_t *internal = svn_ra_svn__to_private_array(list, pool);
 
   va_start(va, fmt);
-  err = svn_ra_svn__parse_tuple(internal, pool, fmt, va);
+  err = svn_ra_svn__parse_tuple(internal, fmt, va);
   va_end(va);
 
   return svn_error_trace(err);

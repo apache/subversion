@@ -42,6 +42,7 @@
 #include "svn_checksum.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
+#include "svn_sorts.h"
 #include "private/svn_atomic.h"
 #include "private/svn_error_private.h"
 #include "private/svn_eol_private.h"
@@ -1480,32 +1481,44 @@ svn_stream_checksummed2(svn_stream_t *stream,
 
 /* Miscellaneous stream functions. */
 
+/*
+ * [JAF] By considering the buffer size doubling algorithm we use, I think
+ * the performance characteristics of this implementation are as follows:
+ *
+ * When the effective hint is big enough for the actual data, it uses
+ * minimal time and allocates space roughly equal to the effective hint.
+ * Otherwise, it incurs a time overhead for copying an additional 1x to 2x
+ * the actual length of data, and a space overhead of an additional 2x to
+ * 3x the actual length.
+ */
 svn_error_t *
-svn_stringbuf_from_stream(svn_stringbuf_t **str,
+svn_stringbuf_from_stream(svn_stringbuf_t **result,
                           svn_stream_t *stream,
                           apr_size_t len_hint,
                           apr_pool_t *result_pool)
 {
 #define MIN_READ_SIZE 64
-
-  apr_size_t to_read = 0;
   svn_stringbuf_t *text
-    = svn_stringbuf_create_ensure(len_hint + MIN_READ_SIZE,
+    = svn_stringbuf_create_ensure(MAX(len_hint + 1, MIN_READ_SIZE),
                                   result_pool);
 
-  do
+  while(TRUE)
     {
-      to_read = text->blocksize - 1 - text->len;
-      SVN_ERR(svn_stream_read_full(stream, text->data + text->len, &to_read));
-      text->len += to_read;
+      apr_size_t to_read = text->blocksize - 1 - text->len;
+      apr_size_t actually_read = to_read;
 
-      if (to_read && text->blocksize < text->len + MIN_READ_SIZE)
+      SVN_ERR(svn_stream_read_full(stream, text->data + text->len, &actually_read));
+      text->len += actually_read;
+
+      if (actually_read < to_read)
+        break;
+
+      if (text->blocksize < text->len + MIN_READ_SIZE)
         svn_stringbuf_ensure(text, text->blocksize * 2);
     }
-  while (to_read);
 
   text->data[text->len] = '\0';
-  *str = text;
+  *result = text;
 
   return SVN_NO_ERROR;
 }
@@ -1793,31 +1806,17 @@ svn_stream_for_stderr(svn_stream_t **err, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_string_from_stream(svn_string_t **result,
-                       svn_stream_t *stream,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
+svn_string_from_stream2(svn_string_t **result,
+                        svn_stream_t *stream,
+                        apr_size_t len_hint,
+                        apr_pool_t *result_pool)
 {
-  svn_stringbuf_t *work = svn_stringbuf_create_ensure(SVN__STREAM_CHUNK_SIZE,
-                                                      result_pool);
-  char *buffer = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
+  svn_stringbuf_t *buf;
 
-  while (1)
-    {
-      apr_size_t len = SVN__STREAM_CHUNK_SIZE;
-
-      SVN_ERR(svn_stream_read_full(stream, buffer, &len));
-      svn_stringbuf_appendbytes(work, buffer, len);
-
-      if (len < SVN__STREAM_CHUNK_SIZE)
-        break;
-    }
+  SVN_ERR(svn_stringbuf_from_stream(&buf, stream, len_hint, result_pool));
+  *result = svn_stringbuf__morph_into_string(buf);
 
   SVN_ERR(svn_stream_close(stream));
-
-  *result = apr_palloc(result_pool, sizeof(**result));
-  (*result)->data = work->data;
-  (*result)->len = work->len;
 
   return SVN_NO_ERROR;
 }

@@ -209,19 +209,21 @@ void
 svn_fs_fs__reset_revprop_cache(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  svn_stringbuf_setempty(ffd->revprop_prefix);
+  ffd->revprop_prefix = 0;
 }
 
 /* If FS has not a revprop cache prefix set, generate one.
  * Always call this before accessing the revprop cache.
  */
-static void
+static svn_error_t *
 prepare_revprop_cache(svn_fs_t *fs,
                       apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  if (svn_stringbuf_isempty(ffd->revprop_prefix))
-    svn_stringbuf_set(ffd->revprop_prefix, svn_uuid_generate(scratch_pool));
+  if (!ffd->revprop_prefix)
+    SVN_ERR(svn_atomic__unique_counter(&ffd->revprop_prefix));
+
+  return SVN_NO_ERROR;
 }
 
 /* Store the unparsed revprop hash CONTENT for REVISION in FS's revprop
@@ -233,15 +235,14 @@ cache_revprops(svn_fs_t *fs,
                apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  const char *key;
+  pair_cache_key_t key;
 
   /* Make sure prepare_revprop_cache() has been called. */
-  SVN_ERR_ASSERT(!svn_stringbuf_isempty(ffd->revprop_prefix));
-  key = svn_fs_fs__combine_number_and_string(revision,
-                                             ffd->revprop_prefix->data,
-                                             scratch_pool);
+  SVN_ERR_ASSERT(ffd->revprop_prefix);
+  key.revision = revision;
+  key.second = ffd->revprop_prefix;
 
-  SVN_ERR(svn_cache__set(ffd->revprop_cache, key, content, scratch_pool));
+  SVN_ERR(svn_cache__set(ffd->revprop_cache, &key, content, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -666,17 +667,16 @@ svn_fs_fs__get_revision_proplist(apr_hash_t **proplist_p,
     {
       /* Try cache lookup first. */
       svn_boolean_t is_cached;
-      const char *key;
+      pair_cache_key_t key;
 
       /* Auto-alloc prefix and construct the key. */
-      prepare_revprop_cache(fs, scratch_pool);
-      key = svn_fs_fs__combine_number_and_string(rev,
-                                                 ffd->revprop_prefix->data,
-                                                 scratch_pool);
+      SVN_ERR(prepare_revprop_cache(fs, scratch_pool));
+      key.revision = rev;
+      key.second = ffd->revprop_prefix;
 
       /* The only way that this might error out is due to parser error. */
       SVN_ERR_W(svn_cache__get((void **) proplist_p, &is_cached,
-                               ffd->revprop_cache, key, result_pool),
+                               ffd->revprop_cache, &key, result_pool),
                 apr_psprintf(scratch_pool,
                              "Failed to parse revprops for r%ld.",
                              rev));
