@@ -252,8 +252,10 @@ switch_dir_external(const char *local_abspath,
                 svn_error_clear(err);
                 err = NULL;
               }
+            else if (err)
+              return svn_error_trace(err);
 
-            return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, err,
+            return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                      _("The external '%s' defined in %s at '%s' "
                                        "cannot be checked out because '%s' is "
                                        "already a versioned path."),
