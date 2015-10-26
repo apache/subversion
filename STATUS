@@ -30,19 +30,6 @@ Candidate changes:
      +0: julianfoad, rhuijben (he says it works, but I haven't reviewed or tested)
      +0: danielsh (not tested; would be nice to have a $ anchor in the pattern)
 
- * r1701598, r1701603, r1701611, r1701646
-   Make 'svn lock' and 'svn unlock' report (un)lock errors as failure
-   Justification:
-     A single lock or unlock failure doesn't affect the whole operation
-     since 1.9, but this has the side effect of no longer producing an
-     error at all on failures. This patch makes 'svn' return an error when
-     at least one failure is reported by the locking code.
-   Notes:
-     r1701598 is the actual fix. The other patches simplify and fix
-     test expectations.
-   Votes:
-     +1: rhuijben, philip
-
  * r1703581
    Allow simple resolving of binary file text conflicts
    Justification:
@@ -154,3 +141,16 @@ Approved changes:
      r1706324 fixes the crash.
    Votes:
      +1: kotkov, philip, ivan
+
+ * r1701598, r1701603, r1701611, r1701646
+   Make 'svn lock' and 'svn unlock' report (un)lock errors as failure
+   Justification:
+     A single lock or unlock failure doesn't affect the whole operation
+     since 1.9, but this has the side effect of no longer producing an
+     error at all on failures. This patch makes 'svn' return an error when
+     at least one failure is reported by the locking code.
+   Notes:
+     r1701598 is the actual fix. The other patches simplify and fix
+     test expectations.
+   Votes:
+     +1: rhuijben, philip, ivan
