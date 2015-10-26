@@ -84,6 +84,8 @@ def _usage_exit():
   print("  --disable-http-v2      : Do not advertise support for HTTPv2 on server")
   print("  --disable-bulk-updates : Disable bulk updates on HTTP server")
   print("  --ssl-cert             : Path to SSL server certificate to trust.")
+  print("  --https                : Run Apache httpd with an https setup.")
+  print("  --http2                : Enable http2 in Apache Httpd (>= 2.4.17).")
   print("  --exclusive-wc-locks   : Enable exclusive working copy locks")
   print("  --memcached-dir=DIR    : Run memcached from dir")
   print("  --memcached-server=    : Enable usage of the specified memcached server")
@@ -134,7 +136,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'httpd-server', 'http-short-circuit', 'httpd-no-log',
                         'disable-http-v2', 'disable-bulk-updates', 'help',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl', 'swig=',
-                        'list', 'enable-sasl', 'bin=', 'parallel',
+                        'list', 'enable-sasl', 'bin=', 'parallel', 'http2',
                         'config-file=', 'server-minor-version=', 'log-level=',
                         'log-to-stdout', 'mode-filter=', 'milestone-filter=',
                         'ssl-cert=', 'exclusive-wc-locks', 'memcached-server=',
@@ -156,6 +158,7 @@ httpd_port = None
 httpd_service = None
 httpd_no_log = None
 use_ssl = False
+use_http2 = False
 http_short_circuit = False
 advertise_httpv2 = True
 http_bulk_updates = True
@@ -218,6 +221,8 @@ for opt, val in opts:
     httpd_no_log = 1
   elif opt == '--https':
     use_ssl = 1
+  elif opt == '--http2':
+    use_http2 = 1
   elif opt == '--http-short-circuit':
     http_short_circuit = True
   elif opt == '--disable-http-v2':
@@ -459,8 +464,8 @@ class Svnserve:
 class Httpd:
   "Run httpd for DAV tests"
   def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, abs_srcdir,
-               httpd_port, service, use_ssl, no_log, httpv2, short_circuit,
-               bulk_updates):
+               httpd_port, service, use_ssl, use_http2, no_log, httpv2,
+               short_circuit, bulk_updates):
     self.name = 'apache.exe'
     self.httpd_port = httpd_port
     self.httpd_dir = abs_httpd_dir
@@ -559,6 +564,8 @@ class Httpd:
     # Write LoadModule for minimal system module
     if use_ssl:
       fp.write(self._sys_module('ssl_module', 'mod_ssl.so'))
+    if use_http2:
+      fp.write(self._sys_module('http2_module', 'mod_http2.so'))
     fp.write(self._sys_module('dav_module', 'mod_dav.so'))
     if self.httpd_ver >= 2.3:
       fp.write(self._sys_module('access_compat_module', 'mod_access_compat.so'))
@@ -587,6 +594,11 @@ class Httpd:
       fp.write('SSLEngine on\n')
       fp.write('SSLCertificateFile %s\n' % self._quote(self.certfile))
       fp.write('SSLCertificateKeyFile %s\n' % self._quote(self.certkeyfile))
+
+    if use_ssl and use_http2:
+      fp.write('Protocols h2 http/1.1\n')
+    elif use_http2:
+      fp.write('Protocols h2c http/1.1\n')
 
     # Don't handle .htaccess, symlinks, etc.
     fp.write('<Directory />\n')
@@ -996,7 +1008,7 @@ if not list_tests:
 
   if run_httpd:
     daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, abs_srcdir,
-                   httpd_port, httpd_service, use_ssl,
+                   httpd_port, httpd_service, use_ssl, use_http2,
                    httpd_no_log, advertise_httpv2, http_short_circuit,
                    http_bulk_updates)
 
