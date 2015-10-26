@@ -199,6 +199,26 @@ svn_branch_txn_new_eid(svn_branch_txn_t *txn,
                        int *new_eid_p,
                        apr_pool_t *scratch_pool);
 
+/** Create a new branch or access an existing branch.
+ *
+ * When creating a branch, declare its root element id to be ROOT_EID. Do
+ * not instantiate the root element, nor any other elements.
+ *
+ * We use a common 'open subbranch' method for both 'find' and 'add'
+ * cases, according to the principle that 'editing' a txn should dictate
+ * the new state without reference to the old state.
+ *
+ * This method returns a mutable 'branch state' object which is a part of
+ * the txn.
+ *
+ * When adding a new branch, PREDECESSOR and ROOT_EID are used.
+ *
+ * ### When opening ('finding') an existing branch, they must match it
+ *     (else throw an error)? But this is problematic: we should't care
+ *     exactly where it was branched from, as long as it was branched from
+ *     ... roughly 'the right branch'? ... perhaps meaning one with a common
+ *     ancestor?
+ */
 svn_error_t *
 svn_branch_txn_open_branch(svn_branch_txn_t *txn,
                            svn_branch_state_t **new_branch_p,
@@ -216,14 +236,35 @@ svn_branch_txn_branch(svn_branch_txn_t *txn,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
+/** Register a sequence point.
+ *
+ * At a sequence point, elements are arranged in a tree hierarchy: each
+ * element has exactly one parent element, except the root, and so on.
+ * Translation between paths and element addressing is defined only at
+ * a sequence point.
+ *
+ * The other edit operations -- add, alter, delete, etc. -- result in a
+ * state that is not a sequence point.
+ *
+ * The new transaction begins at a sequence point. Completion of editing
+ * (svn_branch_txn_complete()) also creates a sequence point.
+ */
 svn_error_t *
 svn_branch_txn_sequence_point(svn_branch_txn_t *txn,
                               apr_pool_t *scratch_pool);
 
+/** Finalize this transaction.
+ *
+ * Notify that the edit has been completed successfully.
+ */
 svn_error_t *
 svn_branch_txn_complete(svn_branch_txn_t *txn,
                         apr_pool_t *scratch_pool);
 
+/** Abandon this transaction.
+ *
+ * Notify that editing this transaction was not successful.
+ */
 svn_error_t *
 svn_branch_txn_abort(svn_branch_txn_t *txn,
                      apr_pool_t *scratch_pool);
@@ -488,16 +529,68 @@ svn_element_content_t *
 svn_branch_get_element(const svn_branch_state_t *branch,
                        int eid);
 
-/* In BRANCH, delete element EID.
+/** Specify that the element of @a branch identified by @a eid shall not
+ * be present.
+ *
+ * The delete is not explicitly recursive. However, as an effect of the
+ * final 'flattening' of a branch state into a single tree, each element
+ * in the final state that still has this element as its parent will also
+ * be deleted, recursively.
+ *
+ * The element @a eid must not be the root element of @a branch.
+ *
+ * ### Options for Out-Of-Date Checking on Rebase
+ *
+ *   We may want to specify what kind of OOD check takes place. The
+ *   following two options differ in what happens to an element that is
+ *   added, on the other side, as a child of this deleted element.
+ *
+ *   Rebase option 1: The rebase checks for changes in the whole subtree,
+ *   excluding any portions of the subtree for which an explicit delete or
+ *   move-away has been issued. The check includes checking that the other
+ *   side has not added any child. In other words, the deletion is
+ *   interpreted as an action affecting a subtree (dynamically rooted at
+ *   this element), rather than as an action affecting a single element or
+ *   a fixed set of elements that was explicitly or implicitly specified
+ *   by the sender.
+ *
+ *   To delete a mixed-rev subtree, the client sends an explicit delete for
+ *   each subtree that has a different base revision from its parent.
+ *
+ *   Rebase option 2: The rebase checks for changes to this element only.
+ *   The sender can send an explicit delete for each existing child element
+ *   that it requires to be checked as well. However, there is no way for
+ *   the sender to specify whether a child element added by the other side
+ *   should be considered an out-of-date error or silently deleted.
+ *
+ *   It would also be possible to let the caller specify, at some suitable
+ *   granularity, which option to use.
  */
 svn_error_t *
 svn_branch_state_delete_one(svn_branch_state_t *branch,
                            svn_branch_eid_t eid,
                            apr_pool_t *scratch_pool);
 
-/* Set or change the EID:element mapping for EID in BRANCH.
+/** Specify the tree position and payload of the element of @a branch
+ * identified by @a eid.
  *
- * Duplicate NEW_NAME and NEW_PAYLOAD into the branch mapping's pool.
+ * Set the element's parent EID, name and payload to @a new_parent_eid,
+ * @a new_name and @a new_payload respectively.
+ *
+ * This may create a new element or alter an existing element.
+ *
+ * If the element ...                   we can describe the effect as ...
+ *
+ *   exists in the branch               =>  altering it;
+ *   previously existed in the branch   =>  resurrecting it;
+ *   only existed in other branches     =>  branching it;
+ *   never existed anywhere             =>  creating or adding it.
+ *
+ * However, these are imprecise descriptions and not mutually exclusive.
+ * For example, if it existed previously in this branch and another, then
+ * we may describe the result as 'resurrecting' and/or as 'branching'.
+ *
+ * Duplicate @a new_name and @a new_payload into the branch's pool.
  */
 svn_error_t *
 svn_branch_state_alter_one(svn_branch_state_t *branch,

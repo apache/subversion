@@ -493,23 +493,10 @@ extern "C" {
 /*#define SVN_EDITOR3_WITH_COPY_FROM_THIS_REV*/
 
 
-/**
- * @defgroup svn_editor The editor interface
- * @{
- */
-
 /** Tree Editor
  */
 typedef struct svn_editor3_t svn_editor3_t;
 
-
-/** These functions are called by the tree delta driver to edit the target.
- *
- * @see #svn_editor3_t
- *
- * @defgroup svn_editor3_drive Driving the editor
- * @{
- */
 
 /*
  * ========================================================================
@@ -576,92 +563,11 @@ typedef struct svn_editor3_t svn_editor3_t;
  *     but in that case the caller would need to specify the new eids.]
  */
 
-/** Allocate a new EID.
- */
-svn_error_t *
-svn_editor3_new_eid(svn_editor3_t *editor,
-                    svn_branch_eid_t *eid_p);
-
-/** Create a new branch or access an existing branch.
- *
- * When creating a branch, declare its root element id to be ROOT_EID. Do
- * not instantiate the root element, nor any other elements.
- *
- * We use a common 'open subbranch' method for both 'find' and 'add'
- * cases, according to the principle that the editor dictates the new
- * state without reference to the old state.
- *
- * This must be used before editing the resulting branch. In that sense
- * this method conceptually returns a "branch editor" for the designated
- * branch.
- *
- * When adding a new branch, PREDECESSOR and ROOT_EID are used; when
- * finding an existing branch they must match it (else throw an error).
- *
- * ### Should we take a single branch-id parameter instead of taking
- *     (outer-bid, outer-eid) and returning the new branch-id?
- *
- *     If we want to think of this as a "txn editor" method and we want
- *     random access to any branch, that would be a good option.
- *
- *     If we want to think of this as a "branch editor" method then
- *     outer-branch-id conceptually identifies "this branch" that we're
- *     editing and could be represented instead by a different value of
- *     the "editor" parameter; and the subbranch must be an immediate child.
- */
-svn_error_t *
-svn_editor3_open_branch(svn_editor3_t *editor,
-                        const char **new_branch_id_p,
-                        svn_branch_rev_bid_t *predecessor,
-                        const char *outer_branch_id,
-                        int outer_eid,
-                        int root_eid,
-                        apr_pool_t *result_pool);
-svn_error_t *
-svn_editor3_branch(svn_editor3_t *editor,
-                   const char **new_branch_id_p,
-                   svn_branch_rev_bid_eid_t *from,
-                   const char *outer_branch_id,
-                   int outer_eid,
-                   apr_pool_t *result_pool);
-
-/** Specify the tree position and payload of the element of @a branch_id
- * identified by @a eid.
- *
- * This may create a new element or alter an existing element.
- *
- * Set the element's parent and name to @a new_parent_eid and @a new_name.
- *
- * Set the payload to @a new_payload. If @a new_payload is null, create a
- * subbranch-root element instead of a normal element.
+/** On serializing an edit drive over a network:
  *
  * A no-op change MUST be accepted but, in the interest of efficiency,
  * SHOULD NOT be sent.
- *
- * @see #svn_editor3_t
- *
- * If the element ...                   we can describe the effect as ...
- *
- *   exists in the branch               =>  altering it;
- *   previously existed in the branch   =>  resurrecting it;
- *   only existed in other branches     =>  branching it;
- *   never existed anywhere             =>  creating or adding it.
- *
- * However, these are imprecise descriptions and not mutually exclusive.
- * For example, if it existed previously in this branch and another, then
- * we may describe the result as 'resurrecting' and/or as 'branching'.
- *
- * ### When converting this edit to an Ev1 edit, do we need a way to specify
- *     where the Ev1 node is to be "copied" from, when this is branching the
- *     element?
  */
-svn_error_t *
-svn_editor3_alter(svn_editor3_t *editor,
-                  const char *branch_id,
-                  svn_branch_eid_t eid,
-                  svn_branch_eid_t new_parent_eid,
-                  const char *new_name,
-                  const svn_element_payload_t *new_payload);
 
 /** Create a new element that is copied from a pre-existing
  * <SVN_EDITOR3_WITH_COPY_FROM_THIS_REV> or newly created </>
@@ -736,86 +642,11 @@ svn_editor3_copy_tree(svn_editor3_t *editor,
                       svn_branch_eid_t new_parent_eid,
                       const char *new_name);
 
-/** Delete the existing element of @a branch_id identified by @a eid.
+/** On 'flattening' with nested branching:
  *
- * The delete is not explicitly recursive. However, unless otherwise
- * specified, the caller may assume that each element that has element
- * @a eid as its parent in the final state will also be deleted,
- * recursively.
- *
- * If the element @a eid is a subbranch root, then delete that subbranch
- * (recursively). The element @a eid is not the root element of @a branch_id.
- *
- * ### Options for Out-Of-Date Checking on Rebase
- *
- *   We may want to specify what kind of OOD check takes place. The
- *   following two options differ in what happens to an element that is
- *   added, on the other side, as a child of this deleted element.
- *
- *   Rebase option 1: The rebase checks for changes in the whole subtree,
- *   excluding any portions of the subtree for which an explicit delete or
- *   move-away has been issued. The check includes checking that the other
- *   side has not added any child. In other words, the deletion is
- *   interpreted as an action affecting a subtree (dynamically rooted at
- *   this element), rather than as an action affecting a single element or
- *   a fixed set of elements that was explicitly or implicitly specified
- *   by the sender.
- *
- *   To delete a mixed-rev subtree, the client sends an explicit delete for
- *   each subtree that has a different base revision from its parent.
- *
- *   Rebase option 2: The rebase checks for changes to this element only.
- *   The sender can send an explicit delete for each existing child element
- *   that it requires to be checked as well. However, there is no way for
- *   the sender to specify whether a child element added by the other side
- *   should be considered an out-of-date error or silently deleted.
- *
- *   It would also be possible to let the caller specify, per delete call,
- *   which option to use.
- *
- * @see #svn_editor3_t
+ * Deleting a subbranch root element implies also deleting the subbranch
+ * it points to, recursively.
  */
-svn_error_t *
-svn_editor3_delete(svn_editor3_t *editor,
-                   const char *branch_id,
-                   svn_branch_eid_t eid);
-
-/** Register a sequence point.
- *
- * At a sequence point, elements are arranged in a tree hierarchy: each
- * element has exactly one parent element, except the root, and so on.
- * Translation between paths and element addressing is defined only at
- * a sequence point.
- *
- * The other edit operations -- add, alter, delete, etc. -- result in a
- * state that is not a sequence point.
- *
- * The beginning of an edit is a sequence point. Completion of an edit
- * (svn_editor3_complete()) creates a sequence point.
- */
-svn_error_t *
-svn_editor3_sequence_point(svn_editor3_t *editor);
-
-/** Drive @a editor's #svn_editor3_cb_complete_t callback.
- *
- * Send word that the edit has been completed successfully.
- *
- * @see #svn_editor3_t
- */
-svn_error_t *
-svn_editor3_complete(svn_editor3_t *editor);
-
-/** Drive @a editor's #svn_editor3_cb_abort_t callback.
- *
- * Notify that the edit transmission was not successful.
- * ### TODO @todo Shouldn't we add a reason-for-aborting argument?
- *
- * @see #svn_editor3_t
- */
-svn_error_t *
-svn_editor3_abort(svn_editor3_t *editor);
-
-/** @} */
 
 
 #ifdef __cplusplus
