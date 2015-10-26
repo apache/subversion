@@ -1739,8 +1739,7 @@ static svn_error_t *
 compat_branch_txn_open_branch(svn_branch_txn_t *txn,
                               svn_branch_state_t **new_branch_p,
                               svn_branch_rev_bid_t *predecessor,
-                              const char *outer_branch_id,
-                              int outer_eid,
+                              const char *new_branch_id,
                               int root_eid,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
@@ -1748,7 +1747,7 @@ compat_branch_txn_open_branch(svn_branch_txn_t *txn,
   /* Just forwarding: nothing more is needed. */
   SVN_ERR(svn_branch_txn_open_branch(txn->priv->txn,
                                      new_branch_p, predecessor,
-                                     outer_branch_id, outer_eid, root_eid,
+                                     new_branch_id, root_eid,
                                      result_pool,
                                      scratch_pool));
   return SVN_NO_ERROR;
@@ -1759,8 +1758,7 @@ static svn_error_t *
 compat_branch_txn_branch(svn_branch_txn_t *txn,
                          svn_branch_state_t **new_branch_p,
                          svn_branch_rev_bid_eid_t *from,
-                         const char *outer_branch_id,
-                         int outer_eid,
+                         const char *new_branch_id,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -1769,7 +1767,7 @@ compat_branch_txn_branch(svn_branch_txn_t *txn,
   /* Just forwarding: nothing more is needed. */
   SVN_ERR(svn_branch_txn_branch(txn->priv->txn,
                                 &new_branch, from,
-                                outer_branch_id, outer_eid,
+                                new_branch_id,
                                 result_pool,
                                 scratch_pool));
 

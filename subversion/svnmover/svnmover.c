@@ -517,9 +517,12 @@ svn_branch_replay(svn_branch_txn_t *edit_txn,
              corresponding edit subbranch, or, if not found, create one. */
           if (right_subbranch)
             {
+              const char *new_branch_id
+                = svn_branch_id_nest(edit_branch->bid, this_eid, scratch_pool);
+
               SVN_ERR(svn_branch_txn_open_branch(edit_txn, &edit_subbranch,
                                                  right_subbranch->predecessor,
-                                                 edit_branch->bid, this_eid,
+                                                 new_branch_id,
                                                  svn_branch_root_eid(right_subbranch),
                                                  scratch_pool, scratch_pool));
             }
@@ -1660,6 +1663,9 @@ merge_subbranch(svn_branch_txn_t *edit_txn,
     }
   else if (subbr_src)  /* added on source branch */
     {
+      const char *new_branch_id
+        = svn_branch_id_nest(svn_branch_get_id(tgt->branch, scratch_pool),
+                             eid, scratch_pool);
       svn_branch_rev_bid_eid_t *from
         = svn_branch_rev_bid_eid_create(src_subbranch->txn->rev,
                                         svn_branch_get_id(src_subbranch,
@@ -1668,8 +1674,7 @@ merge_subbranch(svn_branch_txn_t *edit_txn,
                                         scratch_pool);
 
       SVN_ERR(svn_branch_txn_branch(edit_txn, NULL /*new_branch_id_p*/, from,
-                                    svn_branch_get_id(tgt->branch, scratch_pool),
-                                    eid, scratch_pool, scratch_pool));
+                                    new_branch_id, scratch_pool, scratch_pool));
     }
   else if (subbr_tgt)  /* added on target branch */
     {
@@ -2665,6 +2670,7 @@ mk_branch(const char **new_branch_id_p,
 {
   const char *outer_branch_id = svn_branch_get_id(outer_branch, scratch_pool);
   int new_outer_eid, new_inner_eid;
+  const char *new_branch_id;
   svn_branch_state_t *new_branch;
 
   SVN_ERR(svn_branch_txn_new_eid(txn, &new_outer_eid, scratch_pool));
@@ -2674,9 +2680,10 @@ mk_branch(const char **new_branch_id_p,
                                        scratch_pool), scratch_pool));
 
   SVN_ERR(svn_branch_txn_new_eid(txn, &new_inner_eid, scratch_pool));
+  new_branch_id = svn_branch_id_nest(outer_branch_id, new_outer_eid,
+                                     scratch_pool);
   SVN_ERR(svn_branch_txn_open_branch(txn, &new_branch,
-                                     NULL /*predecessor*/,
-                                     outer_branch_id, new_outer_eid,
+                                     NULL /*predecessor*/, new_branch_id,
                                      new_inner_eid, scratch_pool, scratch_pool));
   SVN_ERR(svn_branch_state_alter_one(new_branch, new_inner_eid,
                                      -1, "", payload, scratch_pool));
@@ -2715,13 +2722,16 @@ do_branch(svn_branch_state_t **new_branch_p,
   const char *to_outer_branch_id
     = to_outer_branch ? svn_branch_get_id(to_outer_branch, scratch_pool) : NULL;
   int to_outer_eid;
+  const char *new_branch_id;
   svn_branch_state_t *new_branch;
 
   /* assign new eid to root element (outer branch) */
   SVN_ERR(svn_branch_txn_new_eid(txn, &to_outer_eid, scratch_pool));
 
+  new_branch_id = svn_branch_id_nest(to_outer_branch_id, to_outer_eid,
+                                     scratch_pool);
   SVN_ERR(svn_branch_txn_branch(txn, &new_branch,
-                                from, to_outer_branch_id, to_outer_eid,
+                                from, new_branch_id,
                                 result_pool, scratch_pool));
   SVN_ERR(svn_branch_state_alter_one(to_outer_branch, to_outer_eid,
                                      to_outer_parent_eid, new_name,
@@ -2746,12 +2756,14 @@ do_topbranch(svn_branch_state_t **new_branch_p,
              apr_pool_t *scratch_pool)
 {
   int outer_eid;
+  const char *new_branch_id;
   svn_branch_state_t *new_branch;
 
   SVN_ERR(svn_branch_txn_new_eid(txn, &outer_eid, scratch_pool));
+  new_branch_id = svn_branch_id_nest(NULL /*outer_branch*/, outer_eid,
+                                     scratch_pool);
   SVN_ERR(svn_branch_txn_branch(txn, &new_branch,
-                                from,
-                                NULL /*outer_branch*/, outer_eid,
+                                from, new_branch_id,
                                 result_pool, scratch_pool));
 
   notify_v("A+   (branch %s)",
