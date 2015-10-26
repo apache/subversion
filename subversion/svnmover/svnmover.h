@@ -65,6 +65,49 @@ typedef struct svnmover_wc_t
 
 } svnmover_wc_t;
 
+/*  */
+typedef struct conflict_storage_t
+{
+  /* Single-element conflicts */
+  /* (eid -> element_merge3_conflict_t) */
+  apr_hash_t *single_element_conflicts;
+
+  /* Name-clash conflicts */
+  /* ("%{parent_eid}d/%{name}s" -> name_clash_conflict_t) */
+  apr_hash_t *name_clash_conflicts;
+
+  /* Orphan conflicts */
+  /* (eid -> orphan_conflict_t) */
+  apr_hash_t *orphan_conflicts;
+} conflict_storage_t;
+
+/* Merge SRC into TGT, using the common ancestor YCA.
+ *
+ * Merge the two sets of changes: YCA -> SRC and YCA -> TGT, applying
+ * the result to the transaction at TGT.
+ *
+ * If conflicts arise, just fail.
+ *
+ * SRC, TGT and YCA must be existing and corresponding (same EID) elements.
+ *
+ * None of SRC, TGT and YCA is a subbranch root element.
+ *
+ * Nested subbranches will also be merged.
+ */
+svn_error_t *
+svnmover_branch_merge(svn_branch_txn_t *edit_txn,
+                      conflict_storage_t **conflict_storage_p,
+                      svn_branch_el_rev_id_t *src,
+                      svn_branch_el_rev_id_t *tgt,
+                      svn_branch_el_rev_id_t *yca,
+                      apr_pool_t *scratch_pool);
+
+/*  */
+svn_error_t *
+svnmover_display_conflicts(conflict_storage_t *conflict_storage,
+                           const char *prefix,
+                           apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }
