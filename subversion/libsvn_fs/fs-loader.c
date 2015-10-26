@@ -506,11 +506,13 @@ svn_fs_set_warning_func(svn_fs_t *fs, svn_fs_warning_callback_t warning,
 }
 
 svn_error_t *
-svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
-              apr_pool_t *pool)
+svn_fs_create2(svn_fs_t **fs_p,
+               const char *path,
+               apr_hash_t *fs_config,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
   fs_library_vtable_t *vtable;
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   const char *fs_type = svn_hash__get_cstring(fs_config,
                                               SVN_FS_CONFIG_FS_TYPE,
@@ -522,14 +524,22 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   SVN_ERR(write_fs_type(path, fs_type, scratch_pool));
 
   /* Perform the actual creation. */
-  *fs_p = fs_new(fs_config, pool);
+  *fs_p = fs_new(fs_config, result_pool);
 
   SVN_ERR(vtable->create(*fs_p, path, common_pool_lock, scratch_pool,
                          common_pool));
   SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open2));
 
-  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_create(svn_fs_t **fs_p,
+              const char *path,
+              apr_hash_t *fs_config,
+              apr_pool_t *pool)
+{
+  return svn_fs_create2(fs_p, path, fs_config, pool, pool);
 }
 
 svn_error_t *

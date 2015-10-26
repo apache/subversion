@@ -269,11 +269,13 @@ svn_fs_set_warning_func(svn_fs_t *fs,
  * @c NULL, the options it contains modify the behavior of the
  * filesystem.  The interpretation of @a fs_config is specific to the
  * filesystem back-end.  The new filesystem may be closed by
- * destroying @a pool.
+ * destroying @a result_pool.
+ *
+ * Use @a scratch_pool for temporary allocations.
  *
  * @note The lifetime of @a fs_config must not be shorter than @a
- * pool's. It's a good idea to allocate @a fs_config from @a pool or
- * one of its ancestors.
+ * result_pool's. It's a good idea to allocate @a fs_config from
+ * @a result_pool or one of its ancestors.
  *
  * If @a fs_config contains a value for #SVN_FS_CONFIG_FS_TYPE, that
  * value determines the filesystem type for the new filesystem.
@@ -289,8 +291,22 @@ svn_fs_set_warning_func(svn_fs_t *fs,
  * though the caller should not rely upon any particular default if they
  * wish to ensure that a filesystem of a specific type is created.
  *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_fs_create2(svn_fs_t **fs_p,
+               const char *path,
+               apr_hash_t *fs_config,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_fs_create2(), but without @a scratch_pool.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API.
  * @since New in 1.1.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_create(svn_fs_t **fs_p,
               const char *path,
