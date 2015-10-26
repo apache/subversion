@@ -580,13 +580,12 @@ static fs_vtable_t fs_vtable = {
 #define FORMAT_FILE   "format"
 
 /* Depending on CREATE, create or open the environment and databases
-   for filesystem FS in PATH. Use POOL for temporary allocations. */
+   for filesystem FS in PATH. */
 static svn_error_t *
 open_databases(svn_fs_t *fs,
                svn_boolean_t create,
                int format,
-               const char *path,
-               apr_pool_t *pool)
+               const char *path)
 {
   base_fs_data_t *bfd;
 
@@ -740,7 +739,7 @@ static svn_error_t *
 base_create(svn_fs_t *fs,
             const char *path,
             svn_mutex__t *common_pool_lock,
-            apr_pool_t *pool,
+            apr_pool_t *scratch_pool,
             apr_pool_t *common_pool)
 {
   int format = SVN_FS_BASE__FORMAT_NUMBER;
@@ -751,7 +750,7 @@ base_create(svn_fs_t *fs,
     {
       svn_version_t *compatible_version;
       SVN_ERR(svn_fs__compatible_version(&compatible_version, fs->config,
-                                         pool));
+                                         scratch_pool));
 
       /* select format number */
       switch(compatible_version->minor)
@@ -773,7 +772,7 @@ base_create(svn_fs_t *fs,
     }
 
   /* Create the environment and databases. */
-  svn_err = open_databases(fs, TRUE, format, path, pool);
+  svn_err = open_databases(fs, TRUE, format, path);
   if (svn_err) goto error;
 
   /* Initialize the DAG subsystem. */
@@ -781,13 +780,14 @@ base_create(svn_fs_t *fs,
   if (svn_err) goto error;
 
   /* This filesystem is ready.  Stamp it with a format number. */
-  svn_err = svn_io_write_version_file(
-   svn_dirent_join(fs->path, FORMAT_FILE, pool), format, pool);
+  svn_err = svn_io_write_version_file(svn_dirent_join(fs->path, FORMAT_FILE,
+                                                      scratch_pool),
+                                      format, scratch_pool);
   if (svn_err) goto error;
 
   ((base_fs_data_t *) fs->fsap_data)->format = format;
 
-  SVN_ERR(populate_opened_fs(fs, pool));
+  SVN_ERR(populate_opened_fs(fs, scratch_pool));
   return SVN_NO_ERROR;
 
 error:
@@ -834,7 +834,7 @@ static svn_error_t *
 base_open(svn_fs_t *fs,
           const char *path,
           svn_mutex__t *common_pool_lock,
-          apr_pool_t *pool,
+          apr_pool_t *scratch_pool,
           apr_pool_t *common_pool)
 {
   int format;
@@ -843,8 +843,9 @@ base_open(svn_fs_t *fs,
 
   /* Read the FS format number. */
   svn_err = svn_io_read_version_file(&format,
-                                     svn_dirent_join(path, FORMAT_FILE, pool),
-                                     pool);
+                                     svn_dirent_join(path, FORMAT_FILE,
+                                                     scratch_pool),
+                                     scratch_pool);
   if (svn_err && APR_STATUS_IS_ENOENT(svn_err->apr_err))
     {
       /* Pre-1.2 filesystems did not have a format file (you could say
@@ -860,7 +861,7 @@ base_open(svn_fs_t *fs,
     goto error;
 
   /* Create the environment and databases. */
-  svn_err = open_databases(fs, FALSE, format, path, pool);
+  svn_err = open_databases(fs, FALSE, format, path);
   if (svn_err) goto error;
 
   ((base_fs_data_t *) fs->fsap_data)->format = format;
@@ -870,12 +871,12 @@ base_open(svn_fs_t *fs,
   if (write_format_file)
     {
       svn_err = svn_io_write_version_file(svn_dirent_join(path, FORMAT_FILE,
-                                                        pool),
-                                          format, pool);
+                                                        scratch_pool),
+                                          format, scratch_pool);
       if (svn_err) goto error;
     }
 
-  SVN_ERR(populate_opened_fs(fs, pool));
+  SVN_ERR(populate_opened_fs(fs, scratch_pool));
   return SVN_NO_ERROR;
 
  error:

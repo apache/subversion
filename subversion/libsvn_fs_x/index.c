@@ -963,8 +963,8 @@ svn_fs_x__l2p_index_append(svn_checksum_t **checksum,
               /* 1 page with up to L2P_PAGE_SIZE entries.
                * fsfs.conf settings validation guarantees this to fit into
                * our address space. */
-              apr_size_t last_buffer_size
-                = (apr_size_t)svn_spillbuf__get_size(buffer);
+              apr_uint64_t last_buffer_size
+                = (apr_uint64_t)svn_spillbuf__get_size(buffer);
 
               svn_pool_clear(iterpool);
 
@@ -2182,8 +2182,8 @@ svn_fs_x__p2l_index_append(svn_checksum_t **checksum,
 
   apr_uint64_t last_entry_end = 0;
   apr_uint64_t last_page_end = 0;
-  apr_size_t last_buffer_size = 0;  /* byte offset in the spill buffer at
-                                       the begin of the current revision */
+  apr_uint64_t last_buffer_size = 0;  /* byte offset in the spill buffer at
+                                         the begin of the current revision */
   apr_uint64_t file_size = 0;
 
   /* temporary data structures that collect the data which will be moved

@@ -1510,7 +1510,7 @@ get_combined_window(svn_stringbuf_t **result,
 }
 
 /* Returns whether or not the expanded fulltext of the file is cachable
- * based on its size SIZE.  The decision depends on the cache used by RB.
+ * based on its size SIZE.  The decision depends on the cache used by FFD.
  */
 static svn_boolean_t
 fulltext_size_is_cachable(svn_fs_x__data_t *ffd,
@@ -2472,11 +2472,42 @@ read_dir_entries(apr_array_header_t *entries,
   return SVN_NO_ERROR;
 }
 
-/* Fetch the contents of a directory into ENTRIES.  Values are stored
+/* For directory NODEREV in FS, return the *FILESIZE of its in-txn
+ * representation.  If the directory representation is comitted data,
+ * set *FILESIZE to SVN_INVALID_FILESIZE. Use SCRATCH_POOL for temporaries.
+ */
+static svn_error_t *
+get_txn_dir_info(svn_filesize_t *filesize,
+                 svn_fs_t *fs,
+                 svn_fs_x__noderev_t *noderev,
+                 apr_pool_t *scratch_pool)
+{
+  if (noderev->data_rep
+      && ! svn_fs_x__is_revision(noderev->data_rep->id.change_set))
+    {
+      const svn_io_dirent2_t *dirent;
+      const char *filename;
+
+      filename = svn_fs_x__path_txn_node_children(fs, &noderev->noderev_id,
+                                                  scratch_pool, scratch_pool);
+
+      SVN_ERR(svn_io_stat_dirent2(&dirent, filename, FALSE, FALSE,
+                                  scratch_pool, scratch_pool));
+      *filesize = dirent->filesize;
+    }
+  else
+    {
+      *filesize = SVN_INVALID_FILESIZE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Fetch the contents of a directory into DIR.  Values are stored
    as filename to string mappings; further conversion is necessary to
    convert them into svn_fs_x__dirent_t values. */
 static svn_error_t *
-get_dir_contents(apr_array_header_t **entries,
+get_dir_contents(svn_fs_x__dir_data_t *dir,
                  svn_fs_t *fs,
                  svn_fs_x__noderev_t *noderev,
                  apr_pool_t *result_pool,
@@ -2485,20 +2516,32 @@ get_dir_contents(apr_array_header_t **entries,
   svn_stream_t *contents;
   const svn_fs_x__id_t *id = &noderev->noderev_id;
 
-  *entries = apr_array_make(result_pool, 16, sizeof(svn_fs_x__dirent_t *));
+  /* Initialize the result. */
+  dir->entries = apr_array_make(result_pool, 16, sizeof(svn_fs_x__dirent_t *));
+  dir->txn_filesize = SVN_INVALID_FILESIZE;
+
+  /* Read dir contents - unless there is none in which case we are done. */
   if (noderev->data_rep
       && ! svn_fs_x__is_revision(noderev->data_rep->id.change_set))
     {
-      const char *filename
-        = svn_fs_x__path_txn_node_children(fs, id, scratch_pool,
-                                           scratch_pool);
+      /* Get location & current size of the directory representation. */
+      const char *filename;
+      apr_file_t *file;
+
+      filename = svn_fs_x__path_txn_node_children(fs, id, scratch_pool,
+                                                  scratch_pool);
 
       /* The representation is mutable.  Read the old directory
          contents from the mutable children file, followed by the
          changes we've made in this transaction. */
-      SVN_ERR(svn_stream_open_readonly(&contents, filename, scratch_pool,
-                                       scratch_pool));
-      SVN_ERR(read_dir_entries(*entries, contents, TRUE,  id,
+      SVN_ERR(svn_io_file_open(&file, filename, APR_READ | APR_BUFFERED,
+                               APR_OS_DEFAULT, scratch_pool));
+
+      /* Obtain txn children file size. */
+      SVN_ERR(svn_io_file_size_get(&dir->txn_filesize, file, scratch_pool));
+
+      contents = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
+      SVN_ERR(read_dir_entries(dir->entries, contents, TRUE, id,
                                result_pool, scratch_pool));
       SVN_ERR(svn_stream_close(contents));
     }
@@ -2518,7 +2561,7 @@ get_dir_contents(apr_array_header_t **entries,
 
       /* de-serialize hash */
       contents = svn_stream_from_stringbuf(text, scratch_pool);
-      SVN_ERR(read_dir_entries(*entries, contents, FALSE,  id,
+      SVN_ERR(read_dir_entries(dir->entries, contents, FALSE, id,
                                result_pool, scratch_pool));
     }
 
@@ -2535,26 +2578,24 @@ locate_dir_cache(svn_fs_t *fs,
                  svn_fs_x__noderev_t *noderev)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
-  if (svn_fs_x__is_txn(noderev->noderev_id.change_set))
+
+  if (!noderev->data_rep)
     {
-      /* data in txns must be addressed by ID since the representation has
-         not been created, yet. */
+      /* no data rep -> empty directory.
+         Use a key that does definitely not clash with non-NULL reps. */
+      key->change_set = SVN_FS_X__INVALID_CHANGE_SET;
+      key->number = SVN_FS_X__ITEM_INDEX_UNUSED;
+    }
+  else if (svn_fs_x__is_txn(noderev->noderev_id.change_set))
+    {
+      /* data in txns must be addressed by noderev ID since the
+         representation has not been created, yet. */
       *key = noderev->noderev_id;
     }
   else
     {
       /* committed data can use simple rev,item pairs */
-      if (noderev->data_rep)
-        {
-          *key = noderev->data_rep->id;
-        }
-      else
-        {
-          /* no data rep -> empty directory.
-             Use a key that does definitely not clash with non-NULL reps. */
-          key->change_set = SVN_FS_X__INVALID_CHANGE_SET;
-          key->number = SVN_FS_X__ITEM_INDEX_UNUSED;
-        }
+      *key = noderev->data_rep->id;
     }
 
   return ffd->dir_cache;
@@ -2568,22 +2609,35 @@ svn_fs_x__rep_contents_dir(apr_array_header_t **entries_p,
                            apr_pool_t *scratch_pool)
 {
   svn_fs_x__id_t key;
+  svn_fs_x__dir_data_t *dir;
 
   /* find the cache we may use */
   svn_cache__t *cache = locate_dir_cache(fs, &key, noderev);
   svn_boolean_t found;
 
-  SVN_ERR(svn_cache__get((void **)entries_p, &found, cache, &key,
-                         result_pool));
+  SVN_ERR(svn_cache__get((void **)&dir, &found, cache, &key, result_pool));
   if (found)
-    return SVN_NO_ERROR;
+    {
+      /* Verify that the cached dir info is not stale
+       * (no-op for committed data). */
+      svn_filesize_t filesize;
+      SVN_ERR(get_txn_dir_info(&filesize, fs, noderev, scratch_pool));
+
+      if (filesize == dir->txn_filesize)
+        {
+          /* Still valid. Done. */
+          *entries_p = dir->entries;
+          return SVN_NO_ERROR;
+        }
+    }
 
   /* Read in the directory contents. */
-  SVN_ERR(get_dir_contents(entries_p, fs, noderev, result_pool,
-                           scratch_pool));
+  dir = apr_pcalloc(scratch_pool, sizeof(*dir));
+  SVN_ERR(get_dir_contents(dir, fs, noderev, result_pool, scratch_pool));
+  *entries_p = dir->entries;
 
   /* Update the cache, if we are to use one. */
-  SVN_ERR(svn_cache__set(cache, &key, *entries_p, scratch_pool));
+  SVN_ERR(svn_cache__set(cache, &key, dir, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2613,10 +2667,15 @@ svn_fs_x__rep_contents_dir_entry(svn_fs_x__dirent_t **dirent,
   svn_fs_x__id_t key;
   svn_cache__t *cache = locate_dir_cache(fs, &key, noderev);
   svn_fs_x__ede_baton_t baton;
+
+  svn_filesize_t filesize;
+  SVN_ERR(get_txn_dir_info(&filesize, fs, noderev, scratch_pool));
+
+   /* Cache lookup. */
   baton.hint = *hint;
   baton.name = name;
+  baton.txn_filesize = filesize;
 
-  /* Cache lookup. */
   SVN_ERR(svn_cache__get_partial((void **)dirent,
                                  &found,
                                  cache,
@@ -2632,17 +2691,20 @@ svn_fs_x__rep_contents_dir_entry(svn_fs_x__dirent_t **dirent,
   /* fetch data from disk if we did not find it in the cache */
   if (! found)
     {
-      apr_array_header_t *entries;
       svn_fs_x__dirent_t *entry;
       svn_fs_x__dirent_t *entry_copy = NULL;
+      svn_fs_x__dir_data_t dir;
 
-      /* read the dir from the file system. It will probably be put it
-         into the cache for faster lookup in future calls. */
-      SVN_ERR(svn_fs_x__rep_contents_dir(&entries, fs, noderev,
-                                         scratch_pool, scratch_pool));
+      /* Read in the directory contents. */
+      SVN_ERR(get_dir_contents(&dir, fs, noderev, scratch_pool,
+                               scratch_pool));
+
+      /* Update the cache, if we are to use one. */
+      if (cache)
+        SVN_ERR(svn_cache__set(cache, &key, &dir, scratch_pool));
 
       /* find desired entry and return a copy in POOL, if found */
-      entry = svn_fs_x__find_dir_entry(entries, name, NULL);
+      entry = svn_fs_x__find_dir_entry(dir.entries, name, NULL);
       if (entry)
         {
           entry_copy = apr_pmemdup(result_pool, entry, sizeof(*entry_copy));
@@ -2665,6 +2727,7 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
   apr_hash_t *proplist;
   svn_stream_t *stream;
   const svn_fs_x__id_t *noderev_id = &noderev->noderev_id;
+  svn_error_t *err;
 
   if (noderev->prop_rep
       && !svn_fs_x__is_revision(noderev->prop_rep->id.change_set))
@@ -2676,8 +2739,19 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
 
       SVN_ERR(svn_stream_open_readonly(&stream, filename, scratch_pool,
                                        scratch_pool));
-      SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
-                             result_pool));
+      err = svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
+                          result_pool);
+      if (err)
+        {
+          svn_string_t *id_str = svn_fs_x__id_unparse(&noderev->noderev_id,
+                                                      scratch_pool);
+
+          err = svn_error_compose_create(err, svn_stream_close(stream));
+          return svn_error_quick_wrapf(err,
+                   _("malformed property list for node-revision '%s' in '%s'"),
+                   id_str->data, filename);
+        }
+
       SVN_ERR(svn_stream_close(stream));
     }
   else if (noderev->prop_rep)
@@ -2700,8 +2774,19 @@ svn_fs_x__get_proplist(apr_hash_t **proplist_p,
       proplist = apr_hash_make(result_pool);
       SVN_ERR(svn_fs_x__get_contents(&stream, fs, noderev->prop_rep, FALSE,
                                      scratch_pool));
-      SVN_ERR(svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
-                             result_pool));
+      err = svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
+                           result_pool);
+      if (err)
+        {
+          svn_string_t *id_str = svn_fs_x__id_unparse(&noderev->noderev_id,
+                                                      scratch_pool);
+
+          err = svn_error_compose_create(err, svn_stream_close(stream));
+          return svn_error_quick_wrapf(err,
+                   _("malformed property list for node-revision '%s'"),
+                   id_str->data);
+        }
+
       SVN_ERR(svn_stream_close(stream));
 
       if (SVN_IS_VALID_REVNUM(rep->id.change_set))

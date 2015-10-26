@@ -235,7 +235,7 @@ write_digest_file(apr_hash_t *children,
   if ((err = svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR,
                              scratch_pool)))
     {
-      svn_error_clear(svn_stream_close(stream));
+      err = svn_error_compose_create(err, svn_stream_close(stream));
       return svn_error_createf(err->apr_err,
                                err,
                                _("Cannot write lock/entries hashfile '%s'"),
@@ -287,7 +287,7 @@ read_digest_file(apr_hash_t **children_p,
   hash = apr_hash_make(pool);
   if ((err = svn_hash_read2(hash, stream, SVN_HASH_TERMINATOR, pool)))
     {
-      svn_error_clear(svn_stream_close(stream));
+      err = svn_error_compose_create(err, svn_stream_close(stream));
       return svn_error_createf(err->apr_err,
                                err,
                                _("Can't parse lock/entries hashfile '%s'"),
@@ -951,6 +951,7 @@ lock_body(void *baton,
         }
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -1163,7 +1164,7 @@ svn_fs_x__lock(svn_fs_t *fs,
 
   lb.fs = fs;
   lb.targets = sorted_targets;
-  lb.infos = apr_array_make(scratch_pool, sorted_targets->nelts,
+  lb.infos = apr_array_make(result_pool, sorted_targets->nelts,
                             sizeof(struct lock_info_t));
   lb.comment = comment;
   lb.is_dav_comment = is_dav_comment;
@@ -1259,7 +1260,7 @@ svn_fs_x__unlock(svn_fs_t *fs,
 
   ub.fs = fs;
   ub.targets = sorted_targets;
-  ub.infos = apr_array_make(scratch_pool, sorted_targets->nelts,
+  ub.infos = apr_array_make(result_pool, sorted_targets->nelts,
                             sizeof(struct unlock_info_t));
   ub.skip_check = FALSE;
   ub.break_lock = break_lock;

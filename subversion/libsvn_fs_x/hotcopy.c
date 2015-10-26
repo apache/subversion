@@ -326,6 +326,19 @@ hotcopy_copy_packed_shard(svn_boolean_t *skipped_p,
   return SVN_NO_ERROR;
 }
 
+/* Remove file PATH, if it exists - even if it is read-only.
+ * Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+hotcopy_remove_file(const char *path,
+                    apr_pool_t *scratch_pool)
+{
+  /* Make the rev file writable and remove it. */
+  SVN_ERR(svn_io_set_file_read_write(path, TRUE, scratch_pool));
+  SVN_ERR(svn_io_remove_file2(path, TRUE, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Verify that DST_FS is a suitable destination for an incremental
  * hotcopy from SRC_FS. */
 static svn_error_t *
@@ -651,6 +664,10 @@ hotcopy_body(void *baton,
       /* Copy the rep cache and then remove entries for revisions
        * that did not make it into the destination. */
       SVN_ERR(svn_sqlite__hotcopy(src_subdir, dst_subdir, scratch_pool));
+
+      /* The source might have r/o flags set on it - which would be
+         carried over to the copy. */
+      SVN_ERR(svn_io_set_file_read_write(dst_subdir, FALSE, scratch_pool));
       SVN_ERR(svn_fs_x__del_rep_reference(dst_fs, src_youngest,
                                           scratch_pool));
     }
@@ -665,64 +682,33 @@ hotcopy_body(void *baton,
    * used for the named atomics implementation. */
   SVN_ERR(svn_fs_x__reset_revprop_generation_file(dst_fs, scratch_pool));
 
-  return SVN_NO_ERROR;
-}
-
-/* Wrapper around hotcopy_body taking out all necessary source repository
- * locks.
- */
-static svn_error_t *
-hotcopy_locking_src_body(void *baton,
-                         apr_pool_t *scratch_pool)
-{
-  hotcopy_body_baton_t *hbb = baton;
-
-  return svn_error_trace(svn_fs_x__with_pack_lock(hbb->src_fs, hotcopy_body,
-                                                  baton, scratch_pool));
-}
-
-/* Create an empty filesystem at DST_FS at DST_PATH with the same
- * configuration as SRC_FS (uuid, format, and other parameters).
- * After creation DST_FS has no revisions, not even revision zero. */
-static svn_error_t *
-hotcopy_create_empty_dest(svn_fs_t *src_fs,
-                          svn_fs_t *dst_fs,
-                          const char *dst_path,
-                          apr_pool_t *scratch_pool)
-{
-  svn_fs_x__data_t *src_ffd = src_fs->fsap_data;
-
-  /* Create the DST_FS repository with the same layout as SRC_FS. */
-  SVN_ERR(svn_fs_x__create_file_tree(dst_fs, dst_path, src_ffd->format,
-                                     src_ffd->max_files_per_dir,
-                                     scratch_pool));
-
-  /* Copy the UUID.  Hotcopy destination receives a new instance ID, but
-   * has the same filesystem UUID as the source. */
-  SVN_ERR(svn_fs_x__set_uuid(dst_fs, src_fs->uuid, NULL, scratch_pool));
-
-  /* Remove revision 0 contents.  Otherwise, it may not get overwritten
-   * due to having a newer timestamp. */
-  SVN_ERR(svn_io_remove_file2(svn_fs_x__path_rev(dst_fs, 0, scratch_pool),
-                              FALSE, scratch_pool));
-  SVN_ERR(svn_io_remove_file2(svn_fs_x__path_revprops(dst_fs, 0,
-                                                      scratch_pool),
-                              FALSE, scratch_pool));
-
-  /* This filesystem is ready.  Stamp it with a format number.  Fail if
-   * the 'format' file should already exist. */
-  SVN_ERR(svn_fs_x__write_format(dst_fs, FALSE, scratch_pool));
+  /* Hotcopied FS is complete. Stamp it with a format file. */
+  SVN_ERR(svn_fs_x__write_format(dst_fs, TRUE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_fs_x__hotcopy_prepare_target(svn_fs_t *src_fs,
-                                 svn_fs_t *dst_fs,
-                                 const char *dst_path,
-                                 svn_boolean_t incremental,
-                                 apr_pool_t *scratch_pool)
+svn_fs_x__hotcopy(svn_fs_t *src_fs,
+                  svn_fs_t *dst_fs,
+                  const char *src_path,
+                  const char *dst_path,
+                  svn_boolean_t incremental,
+                  svn_fs_hotcopy_notify_t notify_func,
+                  void *notify_baton,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  svn_mutex__t *common_pool_lock,
+                  apr_pool_t *scratch_pool,
+                  apr_pool_t *common_pool)
 {
+  hotcopy_body_baton_t hbb;
+
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
+
+  SVN_ERR(svn_fs_x__open(src_fs, src_path, scratch_pool));
+
   if (incremental)
     {
       const char *dst_format_abspath;
@@ -736,40 +722,52 @@ svn_fs_x__hotcopy_prepare_target(svn_fs_t *src_fs,
                                 scratch_pool));
       if (dst_format_kind == svn_node_none)
         {
-          /* Destination doesn't exist yet. Perform a normal hotcopy to a
-           * empty destination using the same configuration as the source. */
-          SVN_ERR(hotcopy_create_empty_dest(src_fs, dst_fs, dst_path,
-                                            scratch_pool));
+          /* No destination?  Fallback to a non-incremental hotcopy. */
+          incremental = FALSE;
         }
-      else
-        {
-          /* Check the existing repository. */
-          SVN_ERR(svn_fs_x__open(dst_fs, dst_path, scratch_pool));
-          SVN_ERR(hotcopy_incremental_check_preconditions(src_fs, dst_fs));
-        }
+    }
+
+  if (incremental)
+    {
+      /* Check the existing repository. */
+      SVN_ERR(svn_fs_x__open(dst_fs, dst_path, scratch_pool));
+      SVN_ERR(hotcopy_incremental_check_preconditions(src_fs, dst_fs));
+
+      SVN_ERR(svn_fs_x__initialize_shared_data(dst_fs, common_pool_lock,
+                                               scratch_pool, common_pool));
+      SVN_ERR(svn_fs_x__initialize_caches(dst_fs, scratch_pool));
     }
   else
     {
       /* Start out with an empty destination using the same configuration
        * as the source. */
-      SVN_ERR(hotcopy_create_empty_dest(src_fs, dst_fs, dst_path,
-                                        scratch_pool));
+      svn_fs_x__data_t *src_ffd = src_fs->fsap_data;
+
+      /* Create the DST_FS repository with the same layout as SRC_FS. */
+      SVN_ERR(svn_fs_x__create_file_tree(dst_fs, dst_path, src_ffd->format,
+                                         src_ffd->max_files_per_dir,
+                                         scratch_pool));
+
+      /* Copy the UUID.  Hotcopy destination receives a new instance ID, but
+       * has the same filesystem UUID as the source. */
+      SVN_ERR(svn_fs_x__set_uuid(dst_fs, src_fs->uuid, NULL, scratch_pool));
+
+      /* Remove revision 0 contents.  Otherwise, it may not get overwritten
+       * due to having a newer timestamp. */
+      SVN_ERR(hotcopy_remove_file(svn_fs_x__path_rev(dst_fs, 0,
+                                                     scratch_pool),
+                                  scratch_pool));
+      SVN_ERR(hotcopy_remove_file(svn_fs_x__path_revprops(dst_fs, 0,
+                                                          scratch_pool),
+                                  scratch_pool));
+
+      SVN_ERR(svn_fs_x__initialize_shared_data(dst_fs, common_pool_lock,
+                                               scratch_pool, common_pool));
+      SVN_ERR(svn_fs_x__initialize_caches(dst_fs, scratch_pool));
     }
 
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_x__hotcopy(svn_fs_t *src_fs,
-                  svn_fs_t *dst_fs,
-                  svn_boolean_t incremental,
-                  svn_fs_hotcopy_notify_t notify_func,
-                  void *notify_baton,
-                  svn_cancel_func_t cancel_func,
-                  void *cancel_baton,
-                  apr_pool_t *scratch_pool)
-{
-  hotcopy_body_baton_t hbb;
+  if (cancel_func)
+    SVN_ERR(cancel_func(cancel_baton));
 
   hbb.src_fs = src_fs;
   hbb.dst_fs = dst_fs;
@@ -778,8 +776,16 @@ svn_fs_x__hotcopy(svn_fs_t *src_fs,
   hbb.notify_baton = notify_baton;
   hbb.cancel_func = cancel_func;
   hbb.cancel_baton = cancel_baton;
-  SVN_ERR(svn_fs_x__with_all_locks(dst_fs, hotcopy_locking_src_body, &hbb,
-                                   scratch_pool));
+
+  /* Lock the destination in the incremental mode.  For a non-incremental
+   * hotcopy, don't take any locks.  In that case the destination cannot be
+   * opened until the hotcopy finishes, and we don't have to worry about
+   * concurrency. */
+  if (incremental)
+    SVN_ERR(svn_fs_x__with_all_locks(dst_fs, hotcopy_body, &hbb,
+                                     scratch_pool));
+  else
+    SVN_ERR(hotcopy_body(&hbb, scratch_pool));
 
   return SVN_NO_ERROR;
 }

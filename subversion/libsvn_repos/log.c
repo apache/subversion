@@ -43,6 +43,7 @@
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_sorts_private.h"
+#include "private/svn_string_private.h"
 
 
 
@@ -1151,9 +1152,9 @@ fill_log_entry(svn_log_entry_t *log_entry,
              we want static initialization here and must therefore emulate
              strlen(x) by sizeof(x)-1. */
           static const svn_string_t svn_prop_revision_author
-            = {SVN_PROP_REVISION_AUTHOR, sizeof(SVN_PROP_REVISION_AUTHOR)-1};
+            = SVN__STATIC_STRING(SVN_PROP_REVISION_AUTHOR);
           static const svn_string_t svn_prop_revision_date
-            = {SVN_PROP_REVISION_DATE, sizeof(SVN_PROP_REVISION_DATE)-1};
+            = SVN__STATIC_STRING(SVN_PROP_REVISION_DATE);
 
           /* often only the standard revprops got requested and delivered.
              In that case, we can simply pass the hash on. */

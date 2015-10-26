@@ -41,6 +41,16 @@ svn_fs_x__open(svn_fs_t *fs,
                const char *path,
                apr_pool_t *scratch_pool);
 
+/* Initialize parts of the FS data that are being shared across multiple
+   filesystem objects.  Use COMMON_POOL for process-wide and SCRATCH_POOL
+   for temporary allocations.  Use COMMON_POOL_LOCK to ensure that the
+   initialization is serialized. */
+svn_error_t *
+svn_fs_x__initialize_shared_data(svn_fs_t *fs,
+                                 svn_mutex__t *common_pool_lock,
+                                 apr_pool_t *scratch_pool,
+                                 apr_pool_t *common_pool);
+
 /* Upgrade the fsx filesystem FS.  Indicate progress via the optional
  * NOTIFY_FUNC callback using NOTIFY_BATON.  The optional CANCEL_FUNC
  * will periodically be called with CANCEL_BATON to allow for preemption.
