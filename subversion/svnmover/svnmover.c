@@ -1218,8 +1218,8 @@ list_all_branches(svn_branch_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
-/* Switch the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD)
- * and branch BRANCH_ID.
+/* Switch the WC to revision REVISION (SVN_INVALID_REVNUM means HEAD)
+ * and branch TARGET_BRANCH.
  *
  * Merge any changes in the existing txn into the new txn.
  */
@@ -1234,19 +1234,25 @@ do_switch(svnmover_wc_t *wc,
   /* Keep hold of the previous WC txn */
   svn_branch_state_t *previous_base_br = wc->base->branch;
   svn_branch_state_t *previous_working_br = wc->working->branch;
-  svn_boolean_t has_local_changes = TRUE /* ### wc_has_local_changes(wc) */;
+  svn_boolean_t has_local_changes;
 
+  SVN_ERR(txn_is_changed(previous_working_br->txn,
+                         &has_local_changes, scratch_pool));
+
+  /* Usually one would switch the WC to another branch (or just another
+     revision) rooted at the same element. Switching to a branch rooted
+     at a different element is well defined, but give a warning. */
   if (has_local_changes
       && svn_branch_root_eid(target_branch)
          != svn_branch_root_eid(previous_base_br))
     {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                               _("Cannot switch to branch '%s' and preserve "
-                                 "local changes as the new root element e%d "
-                                 "is not related to the old root element e%d"),
-                               target_branch_id,
-                               svn_branch_root_eid(target_branch),
-                               svn_branch_root_eid(previous_base_br));
+      notify(_("Warning: you are switching from %s rooted at e%d "
+               "to %s rooted at e%d, a different root element, "
+               "while there are local changes. "),
+             svn_branch_get_id(previous_base_br, scratch_pool),
+             svn_branch_root_eid(previous_base_br),
+             target_branch_id,
+             svn_branch_root_eid(target_branch));
     }
 
   /* Complete the old edit drive into the 'WC' txn */
@@ -2802,6 +2808,13 @@ execute(svnmover_wc_t *wc,
             VERIFY_EID_EXISTS("merge", 0);
             VERIFY_EID_EXISTS("merge", 1);
             VERIFY_EID_EXISTS("merge", 2);
+            if (arg[0]->el_rev->eid != arg[1]->el_rev->eid
+                || arg[0]->el_rev->eid != arg[2]->el_rev->eid)
+              {
+                notify(_("Warning: root elements differ in the requested merge "
+                         "(from: e%d, to: e%d, yca: e%d)"),
+                       arg[0]->el_rev->eid, arg[1]->el_rev->eid, arg[2]->el_rev->eid);
+              }
             SVN_ERR(svnmover_branch_merge(wc->edit_txn,
                                           &conflicts,
                                           arg[0]->el_rev /*from*/,
