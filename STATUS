@@ -128,20 +128,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1706323, r1706324
-   Fix a crash in libsvn_ra_serf's multistatus parser caused by dereferencing
-   a null pointer.
-   Justification:
-     Segfault. User reported.
-   Notes:
-     Can be reproduced by trying to do a -g reverse blame against 1.8 server:
-     svn blame -g -r 1706092:1706091 https://svn.apache.org/repos/asf/subversion/trunk/README
-     .
-     r1706323 lays groundwork for the fix by removing unneeded code.
-     r1706324 fixes the crash.
-   Votes:
-     +1: kotkov, philip, ivan
-
  * r1701598, r1701603, r1701611, r1701646
    Make 'svn lock' and 'svn unlock' report (un)lock errors as failure
    Justification:
