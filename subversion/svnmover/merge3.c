@@ -720,9 +720,6 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
   const merge_conflict_policy_t policy = { TRUE, TRUE, TRUE, TRUE, TRUE };
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR_ASSERT(src->eid == tgt->eid);
-  SVN_ERR_ASSERT(src->eid == yca->eid);
-
   SVN_DBG(("merge src: r%2ld %s e%3d",
            src->rev,
            svn_branch_get_id(src->branch, scratch_pool), src->eid));
@@ -882,11 +879,6 @@ svnmover_branch_merge(svn_branch_txn_t *edit_txn,
   /*SVN_ERR(verify_exists_in_branch(from, scratch_pool));*/
   /*SVN_ERR(verify_exists_in_branch(to, scratch_pool));*/
   /*SVN_ERR(verify_exists_in_branch(yca, scratch_pool));*/
-  if (src->eid != tgt->eid || src->eid != yca->eid)
-    return svn_error_createf(SVN_ERR_BRANCHING, NULL,
-                             _("Merge branches must all be same element "
-                               "(from: e%d, to: e%d, yca: e%d)"),
-                             src->eid, tgt->eid, yca->eid);
   /*SVN_ERR(verify_not_subbranch_root(from, scratch_pool));*/
   /*SVN_ERR(verify_not_subbranch_root(to, scratch_pool));*/
   /*SVN_ERR(verify_not_subbranch_root(yca, scratch_pool));*/
