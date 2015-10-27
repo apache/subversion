@@ -275,11 +275,11 @@ def steal_lock(sbox):
 
   # attempt (and fail) to lock file
 
-  # This should give a "iota' is already locked... error, but exits 0.
-  svntest.actions.run_and_verify_svn2(None,
-                                      ".*already locked", 0,
-                                      'lock',
-                                      '-m', 'trying to break', file_path_b)
+  # This should give a "iota' is already locked error
+  svntest.actions.run_and_verify_svn(None,
+                                     ".*already locked",
+                                     'lock',
+                                     '-m', 'trying to break', file_path_b)
 
   svntest.actions.run_and_verify_svn(".*locked by user", [],
                                      'lock', '--force',
@@ -703,11 +703,11 @@ def out_of_date(sbox):
                        '-m', '', file_path)
 
   # --- Meanwhile, in our other working copy... ---
-  svntest.actions.run_and_verify_svn2(None,
-                                      ".*newer version of '/iota' exists", 0,
-                                      'lock',
-                                      '--username', svntest.main.wc_author2,
-                                      '-m', '', file_path_b)
+  svntest.actions.run_and_verify_svn(None,
+                                     ".*newer version of '/iota' exists",
+                                     'lock',
+                                     '--username', svntest.main.wc_author2,
+                                     '-m', '', file_path_b)
 
 #----------------------------------------------------------------------
 # Tests reverting a svn:needs-lock file
@@ -1164,10 +1164,10 @@ def unlock_already_unlocked_files(sbox):
 
   error_msg = ".*Path '/A/B/E/alpha' is already locked by user '" + \
               svntest.main.wc_author2 + "'.*"
-  svntest.actions.run_and_verify_svn2(None, error_msg, 0,
-                                      'lock',
-                                      '--username', svntest.main.wc_author2,
-                                      alpha_path, gamma_path)
+  svntest.actions.run_and_verify_svn(None, error_msg,
+                                     'lock',
+                                     '--username', svntest.main.wc_author2,
+                                     alpha_path, gamma_path)
   expected_status.tweak('A/D/gamma', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -1180,11 +1180,11 @@ def unlock_already_unlocked_files(sbox):
 
   error_msg = "(.*No lock on path '/A/B/lambda'.*)" + \
               "|(.*'A/B/lambda' is not locked.*)"
-  svntest.actions.run_and_verify_svn2(None, error_msg, 0,
-                                      'unlock',
-                                      '--username', svntest.main.wc_author2,
-                                      '--force',
-                                      iota_path, lambda_path, alpha_path)
+  svntest.actions.run_and_verify_svn(None, error_msg,
+                                     'unlock',
+                                     '--username', svntest.main.wc_author2,
+                                     '--force',
+                                     iota_path, lambda_path, alpha_path)
 
 
   expected_status.tweak('iota', 'A/B/E/alpha', writelocked=None)
@@ -1305,9 +1305,8 @@ def unlock_wrong_token(sbox):
   # Then, unlocking the WC path should fail.
   ### The error message returned is actually this, but let's worry about that
   ### another day...
-  svntest.actions.run_and_verify_svn2(
-    None, ".*(No lock on path)", 0,
-    'unlock', file_path)
+  svntest.actions.run_and_verify_svn(None, ".*(No lock on path)",
+                                     'unlock', file_path)
 
 #----------------------------------------------------------------------
 # Verify that info shows lock info for locked files with URI-unsafe names
@@ -1366,10 +1365,10 @@ def unlocked_lock_of_other_user(sbox):
   else:
     expected_err = "svn: warning: W160039: User '%s' is trying to use a lock owned by "\
                    "'%s'.*" % (svntest.main.wc_author2, svntest.main.wc_author)
-  svntest.actions.run_and_verify_svn2([], expected_err, 0,
-                                      'unlock',
-                                      '--username', svntest.main.wc_author2,
-                                      pi_path)
+  svntest.actions.run_and_verify_svn([], expected_err,
+                                     'unlock',
+                                     '--username', svntest.main.wc_author2,
+                                     pi_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
@@ -1421,9 +1420,9 @@ def lock_twice_in_one_wc(sbox):
   svntest.actions.run_and_verify_svn(None, [],
                                      'lock', mu_path, '-m', 'Locked here')
 
-  # Locking in location 2 should fail ### Currently returns exitcode 0
-  svntest.actions.run_and_verify_svn2(None, ".*is already locked.*", 0,
-                                      'lock', '-m', '', mu2_path)
+  # Locking in location 2 should fail
+  svntest.actions.run_and_verify_svn(None, ".*is already locked.*",
+                                     'lock', '-m', '', mu2_path)
 
   # Change the file anyway
   os.chmod(mu2_path, 0700)
@@ -1469,8 +1468,8 @@ def lock_path_not_in_head(sbox):
   # ..\..\..\subversion\libsvn_client\ra.c:275: (apr_err=235000)
   # svn: In file '..\..\..\subversion\libsvn_ra_serf\util.c' line 1120:
   #  assertion failed (ctx->status_code)
-  svntest.actions.run_and_verify_svn2(None, expected_lock_fail_err_re,
-                                      0, 'lock', lambda_path)
+  svntest.actions.run_and_verify_svn(None, expected_lock_fail_err_re,
+                                     'lock', lambda_path)
 
   expected_err = 'svn: E155008: The node \'.*D\' is not a file'
   svntest.actions.run_and_verify_svn(None, expected_err,
@@ -1679,8 +1678,8 @@ def block_unlock_if_pre_unlock_hook_fails(sbox):
 
   # Make sure the unlock operation fails as pre-unlock hook blocks it.
   expected_unlock_fail_err_re = ".*error text"
-  svntest.actions.run_and_verify_svn2(None, expected_unlock_fail_err_re,
-                                      0, 'unlock', pi_path)
+  svntest.actions.run_and_verify_svn(None, expected_unlock_fail_err_re,
+                                     'unlock', pi_path)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
@@ -1699,10 +1698,10 @@ def lock_invalid_token(sbox):
   fname = 'iota'
   file_path = os.path.join(sbox.wc_dir, fname)
 
-  svntest.actions.run_and_verify_svn2(None,
-                                      "svn: warning: W160037: " \
-                                      ".*scheme.*'opaquelocktoken'", 0,
-                                      'lock', '-m', '', file_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     "svn: warning: W160037: " \
+                                     ".*scheme.*'opaquelocktoken'",
+                                     'lock', '-m', '', file_path)
 
 @Issue(3105)
 def lock_multi_wc(sbox):
@@ -1922,27 +1921,29 @@ def lock_hook_messages(sbox):
   svntest.actions.create_failing_hook(repo_dir, "pre-lock", error_msg)
   svntest.actions.create_failing_hook(repo_dir, "pre-unlock", error_msg)
 
-  _, _, actual_stderr = svntest.actions.run_and_verify_svn2(
-                                     [], svntest.verify.AnyOutput, 0,
+  _, _, actual_stderr = svntest.actions.run_and_verify_svn(
+                                     [], svntest.verify.AnyOutput,
                                      'lock', mu_url)
-  if len(actual_stderr) > 2:
-    actual_stderr = actual_stderr[-2:]
+  if len(actual_stderr) > 4:
+    actual_stderr = actual_stderr[-4:-2] + actual_stderr[-1:]
   expected_err = [
     'svn: warning: W165001: ' + svntest.actions.hook_failure_message('pre-lock'),
     error_msg + "\n",
+    "svn: E200009: One or more locks could not be obtained\n",
   ]
   svntest.verify.compare_and_display_lines(None, 'STDERR',
                                            expected_err, actual_stderr)
 
 
-  _, _, actual_stderr = svntest.actions.run_and_verify_svn2(
-                                     [], svntest.verify.AnyOutput, 0,
+  _, _, actual_stderr = svntest.actions.run_and_verify_svn(
+                                     [], svntest.verify.AnyOutput,
                                      'unlock', iota_url)
-  if len(actual_stderr) > 2:
-    actual_stderr = actual_stderr[-2:]
+  if len(actual_stderr) > 4:
+    actual_stderr = actual_stderr[-4:-2] + actual_stderr[-1:]
   expected_err = [
     'svn: warning: W165001: ' + svntest.actions.hook_failure_message('pre-unlock'),
     error_msg + "\n",
+    "svn: E200009: One or more locks could not be released\n",
   ]
   svntest.verify.compare_and_display_lines(None, 'STDERR',
                                            expected_err, actual_stderr)
@@ -2036,15 +2037,15 @@ def dav_lock_timeout(sbox):
   expiration_date = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Expires']
 
   # Verify that there is a lock, by trying to obtain one
-  svntest.actions.run_and_verify_svn2(None, ".*locked by user", 0,
-                                      'lock', '-m', '', sbox.ospath('iota'))
+  svntest.actions.run_and_verify_svn(None, ".*locked by user",
+                                     'lock', '-m', '', sbox.ospath('iota'))
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', writelocked='O')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # This used to fail over serf with a parse error of the timeout.
   expected_err = "svn: warning: W160039:"
-  svntest.actions.run_and_verify_svn2(None, expected_err, 0,
+  svntest.actions.run_and_verify_svn(None, expected_err,
                                      'unlock', sbox.repo_url + '/iota')
 
   # Force unlock via working copy, this also used to fail over serf.
@@ -2193,27 +2194,27 @@ def many_locks_hooks(sbox):
                                          '  sys.exit(1)\n'
                                          'sys.exit(0)\n')
 
-  svntest.actions.run_and_verify_svn2(".* locked",
-                                      "svn: warning: W165001: .*", 0,
-                                      'lock',
-                                      sbox.ospath('iota'),
-                                      sbox.ospath('A/mu'),
-                                      sbox.ospath('A/B/E/alpha'),
-                                      sbox.ospath('A/D/G/pi'),
-                                      sbox.ospath('A/D/G/rho'))
+  svntest.actions.run_and_verify_svn(".* locked",
+                                     "svn: warning: W165001: .*",
+                                     'lock',
+                                     sbox.ospath('iota'),
+                                     sbox.ospath('A/mu'),
+                                     sbox.ospath('A/B/E/alpha'),
+                                     sbox.ospath('A/D/G/pi'),
+                                     sbox.ospath('A/D/G/rho'))
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', 'A/mu', 'A/B/E/alpha', 'A/D/G/rho',
                         writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  svntest.actions.run_and_verify_svn2(".* unlocked",
-                                      "svn: warning: W165001: .*", 0,
-                                      'unlock',
-                                      sbox.ospath('iota'),
-                                      sbox.ospath('A/mu'),
-                                      sbox.ospath('A/B/E/alpha'),
-                                      sbox.ospath('A/D/G/rho'))
+  svntest.actions.run_and_verify_svn(".* unlocked",
+                                     "svn: warning: W165001: .*",
+                                     'unlock',
+                                     sbox.ospath('iota'),
+                                     sbox.ospath('A/mu'),
+                                     sbox.ospath('A/B/E/alpha'),
+                                     sbox.ospath('A/D/G/rho'))
 
   expected_status.tweak('iota', 'A/B/E/alpha', 'A/D/G/rho',
                         writelocked=None)

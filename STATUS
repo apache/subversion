@@ -127,16 +127,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1701598, r1701603, r1701611, r1701646
-   Make 'svn lock' and 'svn unlock' report (un)lock errors as failure
-   Justification:
-     A single lock or unlock failure doesn't affect the whole operation
-     since 1.9, but this has the side effect of no longer producing an
-     error at all on failures. This patch makes 'svn' return an error when
-     at least one failure is reported by the locking code.
-   Notes:
-     r1701598 is the actual fix. The other patches simplify and fix
-     test expectations.
-   Votes:
-     +1: rhuijben, philip, ivan
