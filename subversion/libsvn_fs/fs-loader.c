@@ -1116,8 +1116,8 @@ svn_error_t *
 svn_fs_node_history(svn_fs_history_t **history_p, svn_fs_root_t *root,
                     const char *path, apr_pool_t *pool)
 {
-  return svn_error_trace(root->vtable->node_history(history_p, root, path,
-                                                    pool, pool));
+  return svn_error_trace(svn_fs_node_history2(history_p, root, path,
+                                              pool, pool));
 }
 
 svn_error_t *
@@ -1288,10 +1288,10 @@ svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                      svn_boolean_t include_descendants,
                      apr_pool_t *pool)
 {
-  return svn_error_trace(root->vtable->get_mergeinfo(catalog, root, paths,
-                                                     inherit,
-                                                     include_descendants,
-                                                     TRUE, pool, pool));
+  return svn_error_trace(svn_fs_get_mergeinfo2(catalog, root, paths,
+                                               inherit,
+                                               include_descendants,
+                                               TRUE, pool, pool));
 }
 
 svn_error_t *
@@ -1897,8 +1897,8 @@ svn_fs_history_prev(svn_fs_history_t **prev_history_p,
                     svn_fs_history_t *history, svn_boolean_t cross_copies,
                     apr_pool_t *pool)
 {
-  return svn_error_trace(history->vtable->prev(prev_history_p, history,
-                                               cross_copies, pool, pool));
+  return svn_error_trace(svn_fs_history_prev2(prev_history_p, history,
+                                              cross_copies, pool, pool));
 }
 
 svn_error_t *
