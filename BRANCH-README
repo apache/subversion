@@ -146,54 +146,37 @@ Work on this branch:
         that is the same across all branches in a family?
 
 
-  * An 'editor' interface supporting moves
+STRUCTURE
 
-    STATUS
+    svn_element.h
 
-    First I tried:
+        Defines the 'element' and other basic concepts including 'payload'
+        (files and directories), identifiers, etc.
 
-        Type 1: stateful/incremental; path-based addressing
+    svn_branch.h:
 
-        (subversion/include/private/svn_editor3p.h)
+        svn_branch_txn_t: a transaction that defines a new 'commit',
+        or 'head' state, based on a previous one
 
-    This is an evolution of the old delta editor, trying to add on moves.
-    Starting from an Ev1 code base, this one seems easier to start using,
-    as the style is more familiar.
+        svn_branch_state_t: defines the state of one branch
 
-    Ev1->Ev3->Ev1 shims are written, using the 'incremental' API. Tests
-    pass with double-shim conversions at RA layer and repos layer. (One
-    svnlook test fails due to svnlook reporting a no-op change as a
-    change.)
+    svn_branch_nested.h
 
-    However, this version of the editor is not complete with respect to
-    branching: it only provides the operations that are needed *within* a
-    branch. It could, I suppose, be extended to support operations on
-    branches, including both the 'branching' operation itself, and also
-    dealing with sub-branches found in the scope of subtree operations
-    such as move, copy, and delete.
+        Redefines 'branch txn' to support nesting of branches.
 
-    However, now I believe the future lies in:
+    svn_branch_repos.h
 
-        Type 2: stateless/independent per-element changes
+        Access to revisions in a repository.
 
-        (subversion/include/private/svn_element.h,
-         subversion/include/private/svn_branch.h,
-         subversion/include/private/svn_editor3e.h)
+    The 'branch txn' can be used for commit, in which it represents a new
+    head revision based on a previous revision.
 
-    (The functionality is currently partially encapsulated in
-    an 'editor' class with a vtable of methods, and partially
-    provided as plain functions in svn_branch.h. This needs to be
-    sorted out.)
-
-    I think this one is ultimately better and easier to use.
-
-    I think it's not a question of one way is right and one is wrong;
-    rather, both are possible correct approaches.
-
-    This 'editor' can be used for 'commit', in which it edits a transaction
-    based on the 'head' revision, and for 'update', in which it edits a
-    transaction that represents the WC base (and then we merge this edit
-    with the WC base->working edit to update the WC working state).
+    The 'branch txn' can be used for updating a WC. The WC contains a base
+    state and a txn that represents the working state relative to the base
+    state. (This txn is persistent on disk.) To update the WC to a new base
+    state, we first build a new transaction in the WC to represent the new
+    base state, based on the old base state. Then we merge these two txns
+    to produce the txn that represents the new working state.
 
     (The original 'update editor' had a peculiarity in that it used the
     same API underneath but operating on WC paths rather than repository
