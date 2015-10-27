@@ -592,6 +592,7 @@ class Httpd:
 
     if use_ssl:
       fp.write('SSLEngine on\n')
+      fp.write('SSLProtocol All -SSLv2 -SSLv3\n')
       fp.write('SSLCertificateFile %s\n' % self._quote(self.certfile))
       fp.write('SSLCertificateKeyFile %s\n' % self._quote(self.certkeyfile))
 
@@ -599,6 +600,7 @@ class Httpd:
       fp.write('Protocols h2 http/1.1\n')
     elif use_http2:
       fp.write('Protocols h2c http/1.1\n')
+      fp.write('H2Direct on\n')
 
     # Don't handle .htaccess, symlinks, etc.
     fp.write('<Directory />\n')
