@@ -85,15 +85,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, ivan
 
- * r1705843, r1710558
-   Cleanup external registrations when they are user deleted
-   Justification:
-     When a directory external is gone remove its registration. Avoids
-     working copies with broken state.
-   Votes:
-     +1: rhuijben, ivan
-     +1: philip (without r1710558)
-
  * r1708699
    Fix authz with mandatory authn provided by mod_auth_kerb/mod_auth_ntlm.
    Justification:
@@ -127,3 +118,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1705843, r1710558
+   Cleanup external registrations when they are user deleted
+   Justification:
+     When a directory external is gone remove its registration. Avoids
+     working copies with broken state.
+   Votes:
+     +1: rhuijben, ivan, philip
