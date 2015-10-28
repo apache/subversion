@@ -1471,8 +1471,8 @@ show_subtree_diff(svn_branch_subtree_t *left,
   apr_hash_t *diff_changes;
   SVN_ITER_T(diff_item_t) *ai;
 
-  SVN_ERR_ASSERT(left && left->tree->root_eid >= 0
-                 && right && right->tree->root_eid >= 0);
+  SVN_ERR_ASSERT(left && left->tree->root_eid != -1
+                 && right && right->tree->root_eid != -1);
 
   SVN_ERR(subtree_diff(&diff_changes, left, right,
                        scratch_pool, scratch_pool));
@@ -1783,7 +1783,7 @@ do_put_file(svn_branch_txn_t *txn,
   const char *name;
   svn_element_payload_t *payload;
 
-  if (file_el_rev->eid >= 0)
+  if (file_el_rev->eid != -1)
     {
       /* get existing props */
       svn_element_content_t *existing_element
@@ -1821,7 +1821,7 @@ do_put_file(svn_branch_txn_t *txn,
       name = file_name;
     }
 
-  if (file_el_rev->eid >= 0)
+  if (file_el_rev->eid != -1)
     {
       SVN_ERR(svn_branch_state_alter_one(file_el_rev->branch, file_el_rev->eid,
                                          parent_eid, name, payload,
