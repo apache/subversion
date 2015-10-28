@@ -99,6 +99,46 @@ static const svn_token_map_t ui_mode_map[]
   (strcmp(svn_branch_get_id(branch1, scratch_pool), \
           svn_branch_get_id(branch2, scratch_pool)) == 0)
 
+#ifndef WIN32
+
+/* Some ANSI escape codes for controlling text colour in terminal output. */
+#define TEXT_RESET      "\x1b[0m"
+#define TEXT_FG_BLACK   "\x1b[30m"
+#define TEXT_FG_RED     "\x1b[31m"
+#define TEXT_FG_GREEN   "\x1b[32m"
+#define TEXT_FG_YELLOW  "\x1b[33m"
+#define TEXT_FG_BLUE    "\x1b[34m"
+#define TEXT_FG_MAGENTA "\x1b[35m"
+#define TEXT_FG_CYAN    "\x1b[36m"
+#define TEXT_FG_WHITE   "\x1b[37m"
+#define TEXT_BG_BLACK   "\x1b[40m"
+#define TEXT_BG_RED     "\x1b[41m"
+#define TEXT_BG_GREEN   "\x1b[42m"
+#define TEXT_BG_YELLOW  "\x1b[43m"
+#define TEXT_BG_BLUE    "\x1b[44m"
+#define TEXT_BG_MAGENTA "\x1b[45m"
+#define TEXT_BG_CYAN    "\x1b[46m"
+#define TEXT_BG_WHITE   "\x1b[47m"
+
+#define settext(text_attr) (fputs(text_attr, stdout), fflush(stdout))
+#define settext_stderr(text_attr) (fputs(text_attr, stderr), fflush(stderr))
+
+#else
+
+/* To support colour on Windows, we could try:
+ *
+ * https://github.com/mattn/ansicolor-w32.c
+ *
+ * (I notice some obvious bugs in its puts/fputs implementations: the #defines
+ * point to _fprintf_w32 instead of _fputs_w32, and puts() fails to append a
+ * newline).
+ */
+
+#define settext(code)
+#define settext_stderr(code)
+
+#endif
+
 /* Print a notification. */
 __attribute__((format(printf, 1, 2)))
 static void
@@ -107,9 +147,11 @@ notify(const char *fmt,
 {
   va_list ap;
 
+  settext(TEXT_FG_GREEN);
   va_start(ap, fmt);
   vprintf(fmt, ap);
   va_end(ap);
+  settext(TEXT_RESET);
   printf("\n");
 }
 
@@ -123,9 +165,11 @@ notify_v(const char *fmt,
 
   if (! quiet)
     {
+      settext(TEXT_FG_GREEN);
       va_start(ap, fmt);
       vprintf(fmt, ap);
       va_end(ap);
+      settext(TEXT_RESET);
       printf("\n");
     }
 }
@@ -2177,10 +2221,12 @@ do_interactive_cross_branch_move(svn_branch_txn_t *txn,
       "We can do one of these for you now if you wish.\n"
     ));
 
+  settext_stderr(TEXT_FG_YELLOW);
   err = svn_cmdline_prompt_user2(
           &input,
           "Your choice (c, b, i, or just <enter> to do nothing): ",
           NULL, scratch_pool);
+  settext(TEXT_RESET);
   if (err && (err->apr_err == SVN_ERR_CANCELLED || err->apr_err == APR_EOF))
     {
       svn_error_clear(err);
@@ -3431,7 +3477,9 @@ read_words(apr_array_header_t **words,
   svn_error_t *err;
   const char *input;
 
+  settext(TEXT_FG_YELLOW);
   err = svn_cmdline_prompt_user2(&input, prompt, NULL, result_pool);
+  settext(TEXT_RESET);
   if (err && (err->apr_err == SVN_ERR_CANCELLED || err->apr_err == APR_EOF))
     {
       *words = NULL;
@@ -3791,7 +3839,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           if (interactive_actions)
             {
               /* Display the error, but don't quit */
+              settext_stderr(TEXT_FG_RED);
               svn_handle_error2(err, stderr, FALSE, "svnmover: ");
+              settext_stderr(TEXT_RESET);
               svn_error_clear(err);
             }
           else
@@ -3838,7 +3888,9 @@ main(int argc, const char *argv[])
   if (err)
     {
       exit_code = EXIT_FAILURE;
+      settext_stderr(TEXT_FG_RED);
       svn_cmdline_handle_exit_error(err, NULL, "svnmover: ");
+      settext_stderr(TEXT_RESET);
     }
 
   svn_pool_destroy(pool);
