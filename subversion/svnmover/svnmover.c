@@ -175,7 +175,7 @@ svnmover_notify_v(const char *fmt,
 
   if (! quiet)
     {
-      settext(TEXT_FG_GREEN);
+      settext(TEXT_FG_BLUE);
       va_start(ap, fmt);
       vprintf(fmt, ap);
       va_end(ap);
@@ -1175,7 +1175,7 @@ list_branch(svn_branch_state_t *branch,
             svn_boolean_t with_elements,
             apr_pool_t *scratch_pool)
 {
-  svnmover_notify_v("  %s", branch_id_str(branch, scratch_pool));
+  svnmover_notify("  %s", branch_id_str(branch, scratch_pool));
 
   if (with_elements)
     {
@@ -2686,10 +2686,17 @@ execute(svnmover_wc_t *wc,
       switch (action->action)
         {
         case ACTION_INFO_WC:
-          svnmover_notify("Repository Root: %s", wc->repos_root_url);
-          svnmover_notify("Base Revision: %ld", wc->base->revision);
-          svnmover_notify("Base Branch:    %s", wc->base->branch_id);
-          svnmover_notify("Working Branch: %s", wc->working->branch_id);
+          {
+            svn_boolean_t is_modified;
+
+            SVN_ERR(txn_is_changed(wc->working->branch->txn, &is_modified,
+                                   iterpool));
+            svnmover_notify("Repository Root: %s", wc->repos_root_url);
+            svnmover_notify("Base Revision: %ld", wc->base->revision);
+            svnmover_notify("Base Branch:    %s", wc->base->branch_id);
+            svnmover_notify("Working Branch: %s", wc->working->branch_id);
+            svnmover_notify("Modified:       %s", is_modified ? "yes" : "no");
+          }
           break;
 
         case ACTION_DIFF:
