@@ -151,9 +151,9 @@ static svn_boolean_t use_coloured_output = FALSE;
 
 /* Print a notification. */
 __attribute__((format(printf, 1, 2)))
-static void
-notify(const char *fmt,
-       ...)
+void
+svnmover_notify(const char *fmt,
+                ...)
 {
   va_list ap;
 
@@ -167,9 +167,9 @@ notify(const char *fmt,
 
 /* Print a verbose notification: in 'quiet' mode, don't print it. */
 __attribute__((format(printf, 1, 2)))
-static void
-notify_v(const char *fmt,
-         ...)
+void
+svnmover_notify_v(const char *fmt,
+                  ...)
 {
   va_list ap;
 
@@ -1051,9 +1051,9 @@ list_branch_elements(svn_branch_state_t *branch,
       const char *relpath = pi->key;
       int eid = *pi->val;
 
-      notify("    %-20s%s",
-             relpath[0] ? relpath : ".",
-             subbranch_str(branch, eid, scratch_pool));
+      svnmover_notify("    %-20s%s",
+                      relpath[0] ? relpath : ".",
+                      subbranch_str(branch, eid, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1093,7 +1093,7 @@ list_branch_elements_by_eid(svn_branch_state_t *branch,
 {
   SVN_ITER_T(svn_element_content_t) *pi;
 
-  notify_v("%s", elements_by_eid_header);
+  svnmover_notify_v("%s", elements_by_eid_header);
   for (SVN_HASH_ITER_SORTED(pi, svn_branch_get_elements(branch),
                             sort_compare_items_by_eid, scratch_pool))
     {
@@ -1102,10 +1102,10 @@ list_branch_elements_by_eid(svn_branch_state_t *branch,
 
       if (element)
         {
-          notify("    e%-3d %21s%s",
-                 eid,
-                 peid_name(element, scratch_pool),
-                 subbranch_str(branch, eid, scratch_pool));
+          svnmover_notify("    e%-3d %21s%s",
+                          eid,
+                          peid_name(element, scratch_pool),
+                          subbranch_str(branch, eid, scratch_pool));
         }
     }
 
@@ -1175,7 +1175,7 @@ list_branch(svn_branch_state_t *branch,
             svn_boolean_t with_elements,
             apr_pool_t *scratch_pool)
 {
-  notify_v("  %s", branch_id_str(branch, scratch_pool));
+  svnmover_notify_v("  %s", branch_id_str(branch, scratch_pool));
 
   if (with_elements)
     {
@@ -1205,7 +1205,7 @@ list_branches(svn_branch_txn_t *txn,
   SVN_ITER_T(svn_branch_state_t) *bi;
   svn_boolean_t printed_header = FALSE;
 
-  notify_v("%s", branch_id_header_str("  ", scratch_pool));
+  svnmover_notify_v("%s", branch_id_header_str("  ", scratch_pool));
 
   branches = svn_branch_txn_get_branches(txn, scratch_pool);
 
@@ -1218,7 +1218,7 @@ list_branches(svn_branch_txn_t *txn,
 
       SVN_ERR(list_branch(branch, with_elements, bi->iterpool));
       if (with_elements) /* separate branches by a blank line */
-        notify("");
+        svnmover_notify("");
     }
 
   for (SVN_ARRAY_ITER(bi, branches, scratch_pool))
@@ -1232,14 +1232,14 @@ list_branches(svn_branch_txn_t *txn,
       if (! printed_header)
         {
           if (the_ui_mode == UI_MODE_PATHS)
-            notify_v("branches containing but not rooted at that element:");
+            svnmover_notify_v("branches containing but not rooted at that element:");
           else
-            notify_v("branches containing but not rooted at e%d:", eid);
+            svnmover_notify_v("branches containing but not rooted at e%d:", eid);
           printed_header = TRUE;
         }
       SVN_ERR(list_branch(branch, with_elements, bi->iterpool));
       if (with_elements) /* separate branches by a blank line */
-        notify("");
+        svnmover_notify("");
     }
 
   return SVN_NO_ERROR;
@@ -1258,7 +1258,7 @@ list_all_branches(svn_branch_txn_t *txn,
 
   branches = svn_branch_txn_get_branches(txn, scratch_pool);
 
-  notify_v("branches:");
+  svnmover_notify_v("branches:");
 
   for (SVN_ARRAY_ITER(bi, branches, scratch_pool))
     {
@@ -1266,7 +1266,7 @@ list_all_branches(svn_branch_txn_t *txn,
 
       SVN_ERR(list_branch(branch, with_elements, bi->iterpool));
       if (with_elements) /* separate branches by a blank line */
-        notify("");
+        svnmover_notify("");
     }
 
   return SVN_NO_ERROR;
@@ -1300,9 +1300,9 @@ do_switch(svnmover_wc_t *wc,
       && svn_branch_root_eid(target_branch)
          != svn_branch_root_eid(previous_base_br))
     {
-      notify(_("Warning: you are switching from %s rooted at e%d "
-               "to %s rooted at e%d, a different root element, "
-               "while there are local changes. "),
+      svnmover_notify(_("Warning: you are switching from %s rooted at e%d "
+                        "to %s rooted at e%d, a different root element, "
+                        "while there are local changes. "),
              svn_branch_get_id(previous_base_br, scratch_pool),
              svn_branch_root_eid(previous_base_br),
              target_branch_id,
@@ -1478,7 +1478,7 @@ show_subtree_diff(svn_branch_subtree_t *left,
                        scratch_pool, scratch_pool));
 
   if (header && apr_hash_count(diff_changes))
-    notify("%s%s", prefix, header);
+    svnmover_notify("%s%s", prefix, header);
 
   for (SVN_HASH_ITER_SORTED(ai, diff_changes,
                             (the_ui_mode == UI_MODE_EIDS)
@@ -1522,30 +1522,32 @@ show_subtree_diff(svn_branch_subtree_t *left,
                                     " (moved+renamed from %s)",
                                     item->relpath0);
             }
-          notify("%s%c%c%c %s%s%s",
-                 prefix,
-                 status_mod,
-                 item->reparented ? 'v' : ' ', item->renamed ? 'r' : ' ',
-                 major_path,
-                 subtree_subbranch_str(e0 ? left : right,
-                                       e0 ? left_bid : right_bid,
-                                       item->eid, scratch_pool),
-                 from);
+          svnmover_notify("%s%c%c%c %s%s%s",
+                          prefix,
+                          status_mod,
+                          item->reparented ? 'v' : ' ',
+                          item->renamed ? 'r' : ' ',
+                          major_path,
+                          subtree_subbranch_str(e0 ? left : right,
+                                                e0 ? left_bid : right_bid,
+                                                item->eid, scratch_pool),
+                          from);
         }
       else
         {
-          notify("%s%c%c%c e%-3d  %s%s%s%s%s",
-                 prefix,
-                 status_mod,
-                 item->reparented ? 'v' : ' ', item->renamed ? 'r' : ' ',
-                 item->eid,
-                 e1 ? peid_name(e1, scratch_pool) : "",
-                 subtree_subbranch_str(e0 ? left : right,
-                                       e0 ? left_bid : right_bid,
-                                       item->eid, scratch_pool),
-                 e0 && e1 ? " (from " : "",
-                 e0 ? peid_name(e0, scratch_pool) : "",
-                 e0 && e1 ? ")" : "");
+          svnmover_notify("%s%c%c%c e%-3d  %s%s%s%s%s",
+                          prefix,
+                          status_mod,
+                          item->reparented ? 'v' : ' ',
+                          item->renamed ? 'r' : ' ',
+                          item->eid,
+                          e1 ? peid_name(e1, scratch_pool) : "",
+                          subtree_subbranch_str(e0 ? left : right,
+                                                e0 ? left_bid : right_bid,
+                                                item->eid, scratch_pool),
+                          e0 && e1 ? " (from " : "",
+                          e0 ? peid_name(e0, scratch_pool) : "",
+                          e0 && e1 ? ")" : "");
         }
     }
 
@@ -1599,14 +1601,14 @@ subtree_diff_r(svn_branch_subtree_t *left,
       header = apr_psprintf(scratch_pool,
                  "--- added branch %s",
                  right_str);
-      notify("%s%s", prefix, header);
+      svnmover_notify("%s%s", prefix, header);
     }
   else if (!right)
     {
       header = apr_psprintf(scratch_pool,
                  "--- deleted branch %s",
                  left_str);
-      notify("%s%s", prefix, header);
+      svnmover_notify("%s%s", prefix, header);
     }
   else
     {
@@ -1722,10 +1724,10 @@ do_copy(svn_branch_el_rev_id_t *from_el_rev,
   SVN_ERR(svn_branch_state_copy_tree(to_branch,
                                      src_el_rev, to_parent_eid, new_name,
                                      scratch_pool));
-  notify_v("A+   %s (from %s)",
-           branch_peid_name_to_path(to_branch, to_parent_eid, new_name,
-                                    scratch_pool),
-           el_rev_id_to_path(from_el_rev, scratch_pool));
+  svnmover_notify_v("A+   %s (from %s)",
+                    branch_peid_name_to_path(to_branch, to_parent_eid, new_name,
+                                             scratch_pool),
+                    el_rev_id_to_path(from_el_rev, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1739,7 +1741,7 @@ do_delete(svn_branch_state_t *branch,
   const char *path = svn_branch_get_rrpath_by_eid(branch, eid, scratch_pool);
 
   SVN_ERR(svn_branch_state_delete_one(branch, eid, scratch_pool));
-  notify_v("D    %s", path);
+  svnmover_notify_v("D    %s", path);
   return SVN_NO_ERROR;
 }
 
@@ -1760,9 +1762,9 @@ do_mkdir(svn_branch_txn_t *txn,
   SVN_ERR(svn_branch_state_alter_one(to_branch, new_eid,
                                      to_parent_eid, new_name, payload,
                                      scratch_pool));
-  notify_v("A    %s",
-           branch_peid_name_to_path(to_branch, to_parent_eid, new_name,
-                                    scratch_pool));
+  svnmover_notify_v("A    %s",
+                    branch_peid_name_to_path(to_branch, to_parent_eid, new_name,
+                                             scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1824,8 +1826,8 @@ do_put_file(svn_branch_txn_t *txn,
       SVN_ERR(svn_branch_state_alter_one(file_el_rev->branch, file_el_rev->eid,
                                          parent_eid, name, payload,
                                          scratch_pool));
-      notify_v("M    %s",
-               el_rev_id_to_path(file_el_rev, scratch_pool));
+      svnmover_notify_v("M    %s",
+                        el_rev_id_to_path(file_el_rev, scratch_pool));
     }
   else
     {
@@ -1836,8 +1838,8 @@ do_put_file(svn_branch_txn_t *txn,
                                          parent_eid, name, payload,
                                          scratch_pool));
       file_el_rev->eid = new_eid;
-      notify_v("A    %s",
-               el_rev_id_to_path(file_el_rev, scratch_pool));
+      svnmover_notify_v("A    %s",
+                        el_rev_id_to_path(file_el_rev, scratch_pool));
     }
   return SVN_NO_ERROR;
 }
@@ -1863,11 +1865,11 @@ do_cat(svn_branch_el_rev_id_t *file_el_rev,
       const char *pname = apr_hash_this_key(hi);
       svn_string_t *pval = apr_hash_this_val(hi);
 
-      notify("property '%s': '%s'", pname, pval->data);
+      svnmover_notify("property '%s': '%s'", pname, pval->data);
     }
   if (text)
     {
-      notify("%s", text->data);
+      svnmover_notify("%s", text->data);
     }
   return SVN_NO_ERROR;
 }
@@ -1927,9 +1929,9 @@ svn_branch_log(svn_branch_el_rev_id_t *left,
 
       SVN_ERR(svn_branch_find_predecessor_el_rev(&el_rev_left, right, scratch_pool));
 
-      notify(SVN_CL__LOG_SEP_STRING "r%ld | ...",
-             right->rev);
-      notify("Changed elements:");
+      svnmover_notify(SVN_CL__LOG_SEP_STRING "r%ld | ...",
+                      right->rev);
+      svnmover_notify("Changed elements:");
       SVN_ERR(branch_diff_r(el_rev_left, right,
                             show_subtree_diff, "   ",
                             scratch_pool));
@@ -1972,10 +1974,10 @@ mk_branch(const char **new_branch_id_p,
   SVN_ERR(svn_branch_state_alter_one(new_branch, new_inner_eid,
                                      -1, "", payload, scratch_pool));
 
-  notify_v("A    %s (branch %s)",
-           svn_branch_get_path_by_eid(outer_branch, new_outer_eid,
-                                      scratch_pool),
-           new_branch->bid);
+  svnmover_notify_v("A    %s (branch %s)",
+                    svn_branch_get_path_by_eid(outer_branch, new_outer_eid,
+                                               scratch_pool),
+                    new_branch->bid);
   if (new_branch_id_p)
     *new_branch_id_p = new_branch->bid;
   return SVN_NO_ERROR;
@@ -2022,10 +2024,10 @@ do_branch(svn_branch_state_t **new_branch_p,
                                      svn_element_payload_create_subbranch(
                                        scratch_pool), scratch_pool));
 
-  notify_v("A+   %s (branch %s)",
-           svn_branch_get_path_by_eid(to_outer_branch, to_outer_eid,
-                                      scratch_pool),
-           new_branch->bid);
+  svnmover_notify_v("A+   %s (branch %s)",
+                    svn_branch_get_path_by_eid(to_outer_branch, to_outer_eid,
+                                               scratch_pool),
+                    new_branch->bid);
 
   if (new_branch_p)
     *new_branch_p = new_branch;
@@ -2050,8 +2052,8 @@ do_topbranch(svn_branch_state_t **new_branch_p,
                                 from, new_branch_id,
                                 result_pool, scratch_pool));
 
-  notify_v("A+   (branch %s)",
-           new_branch->bid);
+  svnmover_notify_v("A+   (branch %s)",
+                    new_branch->bid);
 
   if (new_branch_p)
     *new_branch_p = new_branch;
@@ -2104,8 +2106,9 @@ do_branch_into(svn_branch_state_t *from_branch,
   /* Populate the new branch mapping */
   SVN_ERR(svn_branch_instantiate_elements_r(to_branch, *from_subtree,
                                             scratch_pool));
-  notify_v("A+   %s (subtree)",
-           svn_branch_get_path_by_eid(to_branch, from_eid, scratch_pool));
+  svnmover_notify_v("A+   %s (subtree)",
+                    svn_branch_get_path_by_eid(to_branch, from_eid,
+                                               scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2221,7 +2224,7 @@ do_interactive_cross_branch_move(svn_branch_txn_t *txn,
           "copy-and-delete, branch-and-delete, branch-into-and-delete"));
     }
 
-  notify_v(
+  svnmover_notify_v(
     _("mv: The source and target are in different branches. "
       "Some ways to move content to a different branch are, "
       "depending on the effect you want to achieve:\n"
@@ -2246,7 +2249,7 @@ do_interactive_cross_branch_move(svn_branch_txn_t *txn,
 
   if (input[0] == 'c' || input[0] == 'C')
     {
-      notify_v("Performing 'copy-and-delete SOURCE TARGET'");
+      svnmover_notify_v("Performing 'copy-and-delete SOURCE TARGET'");
 
       SVN_ERR(do_copy_and_delete(el_rev,
                                  to_parent_el_rev->branch,
@@ -2255,7 +2258,7 @@ do_interactive_cross_branch_move(svn_branch_txn_t *txn,
     }
   else if (input[0] == 'b' || input[0] == 'B')
     {
-      notify_v("Performing 'branch-and-delete SOURCE TARGET'");
+      svnmover_notify_v("Performing 'branch-and-delete SOURCE TARGET'");
 
       SVN_ERR(do_branch_and_delete(txn, el_rev,
                                    to_parent_el_rev->branch,
@@ -2264,8 +2267,8 @@ do_interactive_cross_branch_move(svn_branch_txn_t *txn,
     }
   else if (input[0] == 'i' || input[0] == 'I')
     {
-      notify_v("Performing 'branch-into-and-delete SOURCE TARGET'");
-      notify_v(
+      svnmover_notify_v("Performing 'branch-into-and-delete SOURCE TARGET'");
+      svnmover_notify_v(
         "In the current implementation of this experimental UI, each element "
         "instance from the source branch subtree will overwrite any instance "
         "of the same element that already exists in the target branch."
@@ -2298,11 +2301,11 @@ do_move(svn_branch_el_rev_id_t *el_rev,
   SVN_ERR(svn_branch_state_alter_one(el_rev->branch, el_rev->eid,
                             to_parent_el_rev->eid, to_name,
                             existing_element->payload, scratch_pool));
-  notify_v("V    %s (from %s)",
-           branch_peid_name_to_path(to_parent_el_rev->branch,
-                                    to_parent_el_rev->eid, to_name,
-                                    scratch_pool),
-           from_path);
+  svnmover_notify_v("V    %s (from %s)",
+                    branch_peid_name_to_path(to_parent_el_rev->branch,
+                                             to_parent_el_rev->eid, to_name,
+                                             scratch_pool),
+                    from_path);
   return SVN_NO_ERROR;
 }
 
@@ -2316,7 +2319,7 @@ commit_callback(const svn_commit_info_t *commit_info,
 {
   commit_callback_baton_t *b = baton;
 
-  notify("Committed r%ld:", commit_info->revision);
+  svnmover_notify("Committed r%ld:", commit_info->revision);
 
   b->revision = commit_info->revision;
   return SVN_NO_ERROR;
@@ -2472,7 +2475,7 @@ migrate_replay_rev_finished(svn_revnum_t revision,
 
           if (this_move)
             {
-              notify("%s",
+              svnmover_notify("%s",
                      svn_client__format_move_chain_for_display(this_move,
                                                                "", pool));
             }
@@ -2683,10 +2686,10 @@ execute(svnmover_wc_t *wc,
       switch (action->action)
         {
         case ACTION_INFO_WC:
-          notify("Repository Root: %s", wc->repos_root_url);
-          notify("Base Revision: %ld", wc->base->revision);
-          notify("Base Branch:    %s", wc->base->branch_id);
-          notify("Working Branch: %s", wc->working->branch_id);
+          svnmover_notify("Repository Root: %s", wc->repos_root_url);
+          svnmover_notify("Base Revision: %ld", wc->base->revision);
+          svnmover_notify("Base Branch:    %s", wc->base->branch_id);
+          svnmover_notify("Working Branch: %s", wc->working->branch_id);
           break;
 
         case ACTION_DIFF:
@@ -2731,12 +2734,13 @@ execute(svnmover_wc_t *wc,
             VERIFY_EID_EXISTS("branches", 0);
             if (the_ui_mode == UI_MODE_PATHS)
               {
-                notify_v("branches rooted at same element as '%s':",
-                       action->relpath[0]);
+                svnmover_notify_v("branches rooted at same element as '%s':",
+                                  action->relpath[0]);
               }
             else
               {
-                notify_v("branches rooted at e%d:", arg[0]->el_rev->eid);
+                svnmover_notify_v("branches rooted at e%d:",
+                                  arg[0]->el_rev->eid);
               }
             SVN_ERR(list_branches(
                       arg[0]->el_rev->branch->txn,
@@ -2866,9 +2870,10 @@ execute(svnmover_wc_t *wc,
             if (arg[0]->el_rev->eid != arg[1]->el_rev->eid
                 || arg[0]->el_rev->eid != arg[2]->el_rev->eid)
               {
-                notify(_("Warning: root elements differ in the requested merge "
-                         "(from: e%d, to: e%d, yca: e%d)"),
-                       arg[0]->el_rev->eid, arg[1]->el_rev->eid, arg[2]->el_rev->eid);
+                svnmover_notify(
+                  _("Warning: root elements differ in the requested merge "
+                    "(from: e%d, to: e%d, yca: e%d)"),
+                  arg[0]->el_rev->eid, arg[1]->el_rev->eid, arg[2]->el_rev->eid);
               }
             SVN_ERR(svnmover_branch_merge(wc->edit_txn,
                                           &conflicts,
@@ -3045,7 +3050,7 @@ execute(svnmover_wc_t *wc,
             SVN_ERR(do_commit(&new_rev, wc, revprops, iterpool));
             if (! SVN_IS_VALID_REVNUM(new_rev))
               {
-                notify_v("There are no changes to commit.");
+                svnmover_notify_v("There are no changes to commit.");
               }
           }
           break;
@@ -3349,7 +3354,7 @@ parse_actions(apr_array_header_t **actions,
 
           be_quiet = !be_quiet;
           svn_dbg__set_quiet_mode(be_quiet);
-          notify("verbose debug messages %s", be_quiet ? "off" : "on");
+          svnmover_notify("verbose debug messages %s", be_quiet ? "off" : "on");
           continue;
         }
       for (j = 0; j < sizeof(action_defn) / sizeof(action_defn[0]); j++)

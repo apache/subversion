@@ -37,6 +37,18 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Print a verbose notification: in 'quiet' mode, don't print it. */
+__attribute__((format(printf, 1, 2)))
+void
+svnmover_notify(const char *fmt,
+                ...);
+
+/* Print a verbose notification: in 'quiet' mode, don't print it. */
+__attribute__((format(printf, 1, 2)))
+void
+svnmover_notify_v(const char *fmt,
+                  ...);
+
 typedef struct svnmover_wc_version_t
 {
   svn_revnum_t revision;  /* always SVN_INVALID_REVNUM in working version */
