@@ -1023,6 +1023,16 @@ branch_state_alter(svn_branch_state_t *branch,
   /* NEW_PAYLOAD must be specified, either in full or by reference */
   SVN_ERR_ASSERT(new_payload);
 
+  if ((new_parent_eid == -1) != IS_BRANCH_ROOT_EID(branch, eid)
+      || (*new_name == '\0') != IS_BRANCH_ROOT_EID(branch, eid))
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("Cannot set e%d to (parent=e%d, name='%s'): "
+                                 "branch root is e%d"),
+                               eid, new_parent_eid, new_name,
+                               branch->priv->element_tree->root_eid);
+    }
+
   /* Insert the new version */
   branch_map_set(branch, eid, element);
   return SVN_NO_ERROR;
