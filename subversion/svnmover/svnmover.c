@@ -1164,7 +1164,7 @@ list_branches(svn_branch_txn_t *txn,
 
       SVN_ERR(list_branch(branch, with_elements, bi->iterpool));
       if (with_elements) /* separate branches by a blank line */
-        printf("\n");
+        notify("");
     }
 
   for (SVN_ARRAY_ITER(bi, branches, scratch_pool))
@@ -1185,7 +1185,7 @@ list_branches(svn_branch_txn_t *txn,
         }
       SVN_ERR(list_branch(branch, with_elements, bi->iterpool));
       if (with_elements) /* separate branches by a blank line */
-        printf("\n");
+        notify("");
     }
 
   return SVN_NO_ERROR;
@@ -1212,7 +1212,7 @@ list_all_branches(svn_branch_txn_t *txn,
 
       SVN_ERR(list_branch(branch, with_elements, bi->iterpool));
       if (with_elements) /* separate branches by a blank line */
-        printf("\n");
+        notify("");
     }
 
   return SVN_NO_ERROR;
@@ -2260,8 +2260,7 @@ commit_callback(const svn_commit_info_t *commit_info,
 {
   commit_callback_baton_t *b = baton;
 
-  SVN_ERR(svn_cmdline_printf(pool, "Committed r%ld:\n",
-                             commit_info->revision));
+  notify("Committed r%ld:", commit_info->revision);
 
   b->revision = commit_info->revision;
   return SVN_NO_ERROR;
@@ -2371,7 +2370,7 @@ migrate_replay_rev_started(svn_revnum_t revision,
   const svn_delta_editor_t *old_editor;
   void *old_edit_baton;
 
-  printf("DBG: migrate: start r%ld\n", revision);
+  SVN_DBG(("migrate: start r%ld", revision));
 
   SVN_ERR(svn_branch_get_migration_editor(&old_editor, &old_edit_baton,
                                           rb->edit_txn,
@@ -2404,7 +2403,7 @@ migrate_replay_rev_finished(svn_revnum_t revision,
 
   SVN_ERR(editor->close_edit(edit_baton, pool));
 
-  printf("DBG: migrate: moves in revision r%ld:\n", revision);
+  SVN_DBG(("migrate: moves in revision r%ld:", revision));
 
   if (moves_in_revision)
     {
@@ -2417,7 +2416,7 @@ migrate_replay_rev_finished(svn_revnum_t revision,
 
           if (this_move)
             {
-              printf("%s",
+              notify("%s",
                      svn_client__format_move_chain_for_display(this_move,
                                                                "", pool));
             }
@@ -2628,10 +2627,10 @@ execute(svnmover_wc_t *wc,
       switch (action->action)
         {
         case ACTION_INFO_WC:
-          printf("Repository Root: %s\n", wc->repos_root_url);
-          printf("Base Revision: %ld\n", wc->base->revision);
-          printf("Base Branch:    %s\n", wc->base->branch_id);
-          printf("Working Branch: %s\n", wc->working->branch_id);
+          notify("Repository Root: %s", wc->repos_root_url);
+          notify("Base Revision: %ld", wc->base->revision);
+          notify("Base Branch:    %s", wc->base->branch_id);
+          notify("Working Branch: %s", wc->working->branch_id);
           break;
 
         case ACTION_DIFF:
@@ -3291,7 +3290,7 @@ parse_actions(apr_array_header_t **actions,
 
           be_quiet = !be_quiet;
           svn_dbg__set_quiet_mode(be_quiet);
-          printf("verbose debug messages %s\n", be_quiet ? "off" : "on");
+          notify("verbose debug messages %s", be_quiet ? "off" : "on");
           continue;
         }
       for (j = 0; j < sizeof(action_defn) / sizeof(action_defn[0]); j++)
