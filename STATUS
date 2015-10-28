@@ -111,10 +111,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1710215, r1710290
-   Make JavaHL SVNClient.vacuum allow non-absolute, and non-canonical, paths.
-   Justification:
-     Passing the wrong sort of path triggers an assert and kills the JVM.
-   Votes:
-     +1: philip, rhuijben
