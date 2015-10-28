@@ -120,8 +120,18 @@ static const svn_token_map_t ui_mode_map[]
 #define TEXT_BG_CYAN    "\x1b[46m"
 #define TEXT_BG_WHITE   "\x1b[47m"
 
-#define settext(text_attr) (fputs(text_attr, stdout), fflush(stdout))
-#define settext_stderr(text_attr) (fputs(text_attr, stderr), fflush(stderr))
+static svn_boolean_t use_coloured_output = FALSE;
+
+#define settext(text_attr) \
+  do { \
+    if (use_coloured_output) \
+      { fputs(text_attr, stdout); fflush(stdout); } \
+  } while (0)
+#define settext_stderr(text_attr) \
+  do { \
+    if (use_coloured_output) \
+      { fputs(text_attr, stderr); fflush(stderr); } \
+  } while (0)
 
 #else
 
@@ -3176,6 +3186,9 @@ usage(FILE *stream, apr_pool_t *pool)
     _("\n"
       "Valid options:\n"
       "  --ui={eids|e|paths|p}  : display information as elements or as paths\n"
+      "  --colo[u]r={always|never|auto}\n"
+      "                         : use coloured output; 'auto' (the default)\n"
+      "                           means when standard output goes to a terminal\n"
       "  -h, -? [--help]        : display this text\n"
       "  -v [--verbose]         : display debugging messages\n"
       "  -q [--quiet]           : suppress notifications\n"
@@ -3513,7 +3526,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     force_interactive_opt,
     trust_server_cert_opt,
     trust_server_cert_failures_opt,
-    ui_opt
+    ui_opt,
+    colour_opt
   };
   static const apr_getopt_option_t options[] = {
     {"verbose", 'v', 0, ""},
@@ -3538,6 +3552,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {"no-auth-cache",  no_auth_cache_opt, 0, ""},
     {"version", version_opt, 0, ""},
     {"ui", ui_opt, 1, ""},
+    {"colour", colour_opt, 1, ""},
+    {"color", colour_opt, 1, ""},
     {NULL, 0, 0, NULL}
   };
   const char *message = NULL;
@@ -3564,6 +3580,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_config_t *cfg_config;
   svn_client_ctx_t *ctx;
   const char *log_msg;
+  svn_tristate_t coloured_output = svn_tristate_unknown;
   svnmover_wc_t *wc;
 
   /* Check library versions */
@@ -3681,6 +3698,19 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, arg, pool));
           SVN_ERR(svn_token__from_word_err(&the_ui_mode, ui_mode_map, opt_arg));
           break;
+        case colour_opt:
+          if (strcmp(arg, "always") == 0)
+            coloured_output = svn_tristate_true;
+          else if (strcmp(arg, "never") == 0)
+            coloured_output = svn_tristate_false;
+          else if (strcmp(arg, "auto") == 0)
+            coloured_output = svn_tristate_unknown;
+          else
+            return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                     _("Bad argument in '--colour=%s': "
+                                       "use one of 'always', 'never', 'auto'"),
+                                     arg);
+          break;
         case 'h':
         case '?':
           usage(stdout, pool);
@@ -3693,6 +3723,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       SVN_ERR(display_version(opts, quiet, pool));
       return SVN_NO_ERROR;
     }
+
+  if (coloured_output == svn_tristate_true)
+    use_coloured_output = TRUE;
+  else if (coloured_output == svn_tristate_false)
+    use_coloured_output = FALSE;
+  else
+    use_coloured_output = (svn_cmdline__stdout_is_a_terminal()
+                           && svn_cmdline__stderr_is_a_terminal());
 
   if (non_interactive && force_interactive)
     {
