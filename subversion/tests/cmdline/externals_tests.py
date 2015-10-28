@@ -4302,6 +4302,57 @@ def file_external_recorded_info(sbox):
   }]
   svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('i'))
 
+def external_externally_removed(sbox):
+  "external externally removed"
+
+  sbox.build(read_only = True)
+
+  sbox.simple_propset('svn:externals', '^/A/B B', '')
+
+  # Try fetching the external with a versioned obstruction
+  sbox.simple_mkdir('B')
+  expected_err = ".*W155035: The external.*B' is already a versioned path"
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'up', sbox.wc_dir)
+  sbox.simple_rm('B')
+
+
+  os.makedirs(sbox.ospath('B'))
+  expected_err2 = "svn: warning: W155007:.*B'"
+  svntest.actions.run_and_verify_svn(None, expected_err2,
+                                     'up', sbox.wc_dir)
+  os.rmdir(sbox.ospath('B'))
+
+  # Fetch the external
+  sbox.simple_update()
+
+  svntest.main.safe_rmtree(sbox.ospath('B'))
+  sbox.simple_update() # Fetched again
+  if not os.path.isdir(sbox.ospath('B')):
+    raise svntest.Failure("B not recreated")
+
+  svntest.main.safe_rmtree(sbox.ospath('B'))
+  sbox.simple_propdel('svn:externals', '')
+
+  expected_output = [
+    "Updating '%s':\n" % sbox.wc_dir,
+    "Removed external '%s'\n" % sbox.ospath('B'),
+    "Updated to revision 1.\n"
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'up', sbox.wc_dir)
+
+
+  sbox.simple_propset('svn:externals', '^/A/B B', '')
+  sbox.simple_update()
+  svntest.main.safe_rmtree(sbox.ospath('B'))
+  sbox.simple_mkdir('B')
+
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'up', sbox.wc_dir)
+
+  sbox.simple_propdel('svn:externals', '')
+  sbox.simple_update() # Should succeed
 
 ########################################################################
 # Run the tests
@@ -4377,6 +4428,7 @@ test_list = [ None,
               nested_notification,
               file_external_to_normal_file,
               file_external_recorded_info,
+              external_externally_removed,
              ]
 
 if __name__ == '__main__':
