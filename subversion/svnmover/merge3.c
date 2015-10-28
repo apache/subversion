@@ -47,23 +47,6 @@
 #include "svn_private_config.h"
 
 
-/* Print a verbose notification: in 'quiet' mode, don't print it. */
-__attribute__((format(printf, 1, 2)))
-static void
-notify_v(const char *fmt,
-         ...)
-{
-  va_list ap;
-
-  /*if (! quiet)*/
-    {
-      va_start(ap, fmt);
-      vprintf(fmt, ap);
-      va_end(ap);
-      printf("\n");
-    }
-}
-
 /*  */
 static int
 sort_compare_items_by_eid(const svn_sort__item_t *a,
@@ -276,11 +259,11 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
       int eid = svn_int_hash_this_key(hi);
       element_merge3_conflict_t *c = apr_hash_this_val(hi);
 
-      printf("%ssingle-element conflict: e%d: yca=%s, side1=%s, side2=%s\n",
-             prefix, eid,
-             brief_eid_and_name_or_nil(c->yca, scratch_pool),
-             brief_eid_and_name_or_nil(c->side1, scratch_pool),
-             brief_eid_and_name_or_nil(c->side2, scratch_pool));
+      svnmover_notify("%ssingle-element conflict: e%d: yca=%s, side1=%s, side2=%s",
+                      prefix, eid,
+                      brief_eid_and_name_or_nil(c->yca, scratch_pool),
+                      brief_eid_and_name_or_nil(c->side1, scratch_pool),
+                      brief_eid_and_name_or_nil(c->side2, scratch_pool));
     }
   for (hi = apr_hash_first(scratch_pool,
                            conflict_storage->name_clash_conflicts);
@@ -290,14 +273,15 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
       name_clash_conflict_t *c = apr_hash_this_val(hi);
       apr_hash_index_t *hi2;
 
-      printf("%sname-clash conflict: peid %d, name '%s', %d elements\n",
-             prefix, c->parent_eid, c->name, apr_hash_count(c->elements));
+      svnmover_notify("%sname-clash conflict: peid %d, name '%s', %d elements",
+                      prefix,
+                      c->parent_eid, c->name, apr_hash_count(c->elements));
       for (hi2 = apr_hash_first(scratch_pool, c->elements);
            hi2; hi2 = apr_hash_next(hi2))
         {
           int eid = svn_int_hash_this_key(hi2);
 
-          printf("%s  element %d\n", prefix, eid);
+          svnmover_notify("%s  element %d", prefix, eid);
         }
     }
   for (hi = apr_hash_first(scratch_pool,
@@ -307,8 +291,8 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
       int eid = svn_int_hash_this_key(hi);
       orphan_conflict_t *c = apr_hash_this_val(hi);
 
-      printf("%sorphan conflict: element %d/%s: peid %d does not exist\n",
-             prefix, eid, c->element->name, c->element->parent_eid);
+      svnmover_notify("%sorphan conflict: element %d/%s: peid %d does not exist",
+                      prefix, eid, c->element->name, c->element->parent_eid);
     }
   return SVN_NO_ERROR;
 }
@@ -730,8 +714,8 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
            yca->rev,
            svn_branch_get_id(yca->branch, scratch_pool), yca->eid));
 
-  notify_v("merging into branch %s",
-           svn_branch_get_id(tgt->branch, scratch_pool));
+  svnmover_notify_v("merging into branch %s",
+                    svn_branch_get_id(tgt->branch, scratch_pool));
   /*
       for (eid, diff1) in element_differences(YCA, FROM):
         diff2 = element_diff(eid, YCA, TO)
@@ -800,14 +784,14 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
 
       if (conflict)
         {
-          notify_v("!    e%d <conflict>", eid);
+          svnmover_notify_v("!    e%d <conflict>", eid);
           svn_int_hash_set(e_conflicts, eid, conflict);
         }
       else if (e_tgt && result)
         {
-          notify_v("M/V  e%d %s%s",
-                   eid, result->name,
-                   subbranch_str(tgt->branch, eid, iterpool));
+          svnmover_notify_v("M/V  e%d %s%s",
+                            eid, result->name,
+                            subbranch_str(tgt->branch, eid, iterpool));
 
           SVN_ERR(svn_branch_state_alter_one(tgt->branch, eid,
                                              result->parent_eid, result->name,
@@ -817,9 +801,9 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
         }
       else if (e_tgt)
         {
-          notify_v("D    e%d %s%s",
-                   eid, e_yca->name,
-                   subbranch_str(yca->branch, eid, iterpool));
+          svnmover_notify_v("D    e%d %s%s",
+                            eid, e_yca->name,
+                            subbranch_str(yca->branch, eid, iterpool));
           SVN_ERR(svn_branch_state_delete_one(tgt->branch, eid, iterpool));
 
           /* ### If this is a subbranch-root element being deleted, shouldn't
@@ -828,9 +812,9 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
         }
       else if (result)
         {
-          notify_v("A    e%d %s%s",
-                   eid, result->name,
-                   subbranch_str(src->branch, eid, iterpool));
+          svnmover_notify_v("A    e%d %s%s",
+                            eid, result->name,
+                            subbranch_str(src->branch, eid, iterpool));
 
           /* In BRANCH, create an instance of the element EID with new content.
            *
@@ -861,8 +845,8 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
                          tgt->branch,
                          result_pool, scratch_pool));
 
-  notify_v("merging into branch %s -- finished",
-           svn_branch_get_id(tgt->branch, scratch_pool));
+  svnmover_notify_v("merging into branch %s -- finished",
+                    svn_branch_get_id(tgt->branch, scratch_pool));
 
   *conflict_storage_p = conflict_storage;
   return SVN_NO_ERROR;
