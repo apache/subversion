@@ -213,6 +213,18 @@ svn_cmdline__getopt_init(apr_getopt_t **os,
                          const char *argv[],
                          apr_pool_t *pool);
 
+/*  */
+svn_boolean_t
+svn_cmdline__stdin_is_a_terminal(void);
+
+/*  */
+svn_boolean_t
+svn_cmdline__stdout_is_a_terminal(void);
+
+/*  */
+svn_boolean_t
+svn_cmdline__stderr_is_a_terminal(void);
+
 /* Determine whether interactive mode should be enabled, based on whether
  * the user passed the --non-interactive or --force-interactive options.
  * If neither option was passed, interactivity is enabled if standard
