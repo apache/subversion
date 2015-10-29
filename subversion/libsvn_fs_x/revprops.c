@@ -27,6 +27,7 @@
 #include "svn_hash.h"
 #include "svn_dirent_uri.h"
 
+#include "batch_fsync.h"
 #include "fs_x.h"
 #include "revprops.h"
 #include "util.h"
@@ -892,7 +893,7 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
 /* Serialize the revision property list PROPLIST of revision REV in
  * filesystem FS to a non-packed file.  Return the name of that temporary
  * file in *TMP_PATH and the file path that it must be moved to in
- * *FINAL_PATH.
+ * *FINAL_PATH.  Schedule necessary fsync calls in BATCH.
  *
  * Allocate *FINAL_PATH and *TMP_PATH in RESULT_POOL.  Use SCRATCH_POOL
  * for temporary allocations.
@@ -903,6 +904,7 @@ write_non_packed_revprop(const char **final_path,
                          svn_fs_t *fs,
                          svn_revnum_t rev,
                          apr_hash_t *proplist,
+                         svn_fs_x__batch_fsync_t *batch,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -910,28 +912,20 @@ write_non_packed_revprop(const char **final_path,
   svn_stream_t *stream;
   *final_path = svn_fs_x__path_revprops(fs, rev, result_pool);
 
-  /* ### do we have a directory sitting around already? we really shouldn't
-     ### have to get the dirname here. */
-  SVN_ERR(svn_io_open_unique_file3(&file, tmp_path,
-                                   svn_dirent_dirname(*final_path,
-                                                      scratch_pool),
-                                   svn_io_file_del_none,
-                                   scratch_pool, scratch_pool));
+  *tmp_path = apr_pstrcat(result_pool, *final_path, ".tmp", SVN_VA_NULL);
+  SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, *tmp_path,
+                                          scratch_pool));
   stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
   SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR,
                           scratch_pool));
   SVN_ERR(svn_stream_close(stream));
-
-  /* Flush temporary file to disk and close it. */
-  SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
-  SVN_ERR(svn_io_file_close(file, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 /* After writing the new revprop file(s), call this function to move the
  * file at TMP_PATH to FINAL_PATH and give it the permissions from
- * PERMS_REFERENCE.
+ * PERMS_REFERENCE.  Schedule necessary fsync calls in BATCH.
  *
  * If indicated in BUMP_GENERATION, increase FS' revprop generation.
  * Finally, delete all the temporary files given in FILES_TO_DELETE.
@@ -946,6 +940,7 @@ switch_to_new_revprop(svn_fs_t *fs,
                       const char *perms_reference,
                       apr_array_header_t *files_to_delete,
                       svn_boolean_t bump_generation,
+                      svn_fs_x__batch_fsync_t *batch,
                       apr_pool_t *scratch_pool)
 {
   /* Now, we may actually be replacing revprops. Make sure that all other
@@ -953,8 +948,14 @@ switch_to_new_revprop(svn_fs_t *fs,
   if (bump_generation)
     SVN_ERR(begin_revprop_change(fs, scratch_pool));
 
-  SVN_ERR(svn_fs_x__move_into_place(tmp_path, final_path, perms_reference,
-                                    scratch_pool));
+  /* Ensure the new file contents makes it to disk before switching over to
+   * it. */
+  SVN_ERR(svn_fs_x__batch_fsync_run(batch, scratch_pool));
+
+  /* Make the revision visible to all processes and threads. */
+  SVN_ERR(svn_fs_x__move_into_place2(tmp_path, final_path, perms_reference,
+                                     batch, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_run(batch, scratch_pool));
 
   /* Indicate that the update (if relevant) has been completed. */
   if (bump_generation)
@@ -1089,8 +1090,6 @@ repack_revprops(svn_fs_t *fs,
   /* finally, write the content to the target file, flush and close it */
   SVN_ERR(svn_io_file_write_full(file, compressed->data, compressed->len,
                                  NULL, scratch_pool));
-  SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
-  SVN_ERR(svn_io_file_close(file, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1100,7 +1099,8 @@ repack_revprops(svn_fs_t *fs,
  * of REVPROPS->MANIFEST.  Add the name of old file to FILES_TO_DELETE,
  * auto-create that array if necessary.  Return an open file *FILE that is
  * allocated in RESULT_POOL.  Allocate the paths in *FILES_TO_DELETE from
- * the same pool that contains the array itself.
+ * the same pool that contains the array itself.  Schedule necessary fsync
+ * calls in BATCH.
  *
  * Use SCRATCH_POOL for temporary allocations.
  */
@@ -1111,6 +1111,7 @@ repack_file_open(apr_file_t **file,
                  int start,
                  int end,
                  apr_array_header_t **files_to_delete,
+                 svn_fs_x__batch_fsync_t *batch,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
@@ -1152,11 +1153,11 @@ repack_file_open(apr_file_t **file,
       = new_filename->data;
 
   /* open the file */
-  SVN_ERR(svn_io_file_open(file, svn_dirent_join(revprops->folder,
-                                                 new_filename->data,
-                                                 scratch_pool),
-                           APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
-                           result_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_open_file(file, batch,
+                                          svn_dirent_join(revprops->folder,
+                                                          new_filename->data,
+                                                          scratch_pool),
+                                          scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1165,6 +1166,7 @@ repack_file_open(apr_file_t **file,
  * PROPLIST.  Return a new file in *TMP_PATH that the caller shall move
  * to *FINAL_PATH to make the change visible.  Files to be deleted will
  * be listed in *FILES_TO_DELETE which may remain unchanged / unallocated.
+ * Schedule necessary fsync calls in BATCH.
  *
  * Allocate output values in RESULT_POOL and temporaries from SCRATCH_POOL.
  */
@@ -1175,6 +1177,7 @@ write_packed_revprop(const char **final_path,
                      svn_fs_t *fs,
                      svn_revnum_t rev,
                      apr_hash_t *proplist,
+                     svn_fs_x__batch_fsync_t *batch,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
@@ -1219,9 +1222,9 @@ write_packed_revprop(const char **final_path,
 
       *final_path = svn_dirent_join(revprops->folder, revprops->filename,
                                     result_pool);
-      SVN_ERR(svn_io_open_unique_file3(&file, tmp_path, revprops->folder,
-                                       svn_io_file_del_none, result_pool,
-                                       scratch_pool));
+      *tmp_path = apr_pstrcat(result_pool, *final_path, ".tmp", SVN_VA_NULL);
+      SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, *tmp_path,
+                                              scratch_pool));
       SVN_ERR(repack_revprops(fs, revprops, 0, revprops->sizes->nelts,
                               changed_index, serialized, new_total_size,
                               file, scratch_pool));
@@ -1277,7 +1280,7 @@ write_packed_revprop(const char **final_path,
       if (left_count)
         {
           SVN_ERR(repack_file_open(&file, fs, revprops, 0,
-                                   left_count, files_to_delete,
+                                   left_count, files_to_delete, batch,
                                    scratch_pool, scratch_pool));
           SVN_ERR(repack_revprops(fs, revprops, 0, left_count,
                                   changed_index, serialized, new_total_size,
@@ -1288,7 +1291,7 @@ write_packed_revprop(const char **final_path,
         {
           SVN_ERR(repack_file_open(&file, fs, revprops, changed_index,
                                    changed_index + 1, files_to_delete,
-                                   scratch_pool, scratch_pool));
+                                   batch, scratch_pool, scratch_pool));
           SVN_ERR(repack_revprops(fs, revprops, changed_index,
                                   changed_index + 1,
                                   changed_index, serialized, new_total_size,
@@ -1300,8 +1303,8 @@ write_packed_revprop(const char **final_path,
           SVN_ERR(repack_file_open(&file, fs, revprops,
                                    revprops->sizes->nelts - right_count,
                                    revprops->sizes->nelts,
-                                   files_to_delete, scratch_pool,
-                                   scratch_pool));
+                                   files_to_delete,  batch,
+                                   scratch_pool, scratch_pool));
           SVN_ERR(repack_revprops(fs, revprops,
                                   revprops->sizes->nelts - right_count,
                                   revprops->sizes->nelts, changed_index,
@@ -1312,9 +1315,10 @@ write_packed_revprop(const char **final_path,
       /* write the new manifest */
       *final_path = svn_dirent_join(revprops->folder, PATH_MANIFEST,
                                     result_pool);
-      SVN_ERR(svn_io_open_unique_file3(&file, tmp_path, revprops->folder,
-                                       svn_io_file_del_none, result_pool,
-                                       scratch_pool));
+      *tmp_path = apr_pstrcat(result_pool, *final_path, ".tmp", SVN_VA_NULL);
+      SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, *tmp_path,
+                                              scratch_pool));
+
       stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
       for (i = 0; i < revprops->manifest->nelts; ++i)
         {
@@ -1323,8 +1327,6 @@ write_packed_revprop(const char **final_path,
           SVN_ERR(svn_stream_printf(stream, scratch_pool, "%s\n", filename));
         }
       SVN_ERR(svn_stream_close(stream));
-      SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
-      SVN_ERR(svn_io_file_close(file, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1344,8 +1346,12 @@ svn_fs_x__set_revision_proplist(svn_fs_t *fs,
   const char *tmp_path;
   const char *perms_reference;
   apr_array_header_t *files_to_delete = NULL;
+  svn_fs_x__batch_fsync_t *batch;
 
   SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, scratch_pool));
+
+  /* Perform all fsyncs through this instance. */
+  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, scratch_pool));
 
   /* this info will not change while we hold the global FS write lock */
   is_packed = svn_fs_x__is_packed_revprop(fs, rev);
@@ -1369,12 +1375,12 @@ svn_fs_x__set_revision_proplist(svn_fs_t *fs,
   /* Serialize the new revprop data */
   if (is_packed)
     SVN_ERR(write_packed_revprop(&final_path, &tmp_path, &files_to_delete,
-                                 fs, rev, proplist, scratch_pool,
+                                 fs, rev, proplist, batch, scratch_pool,
                                  scratch_pool));
   else
     SVN_ERR(write_non_packed_revprop(&final_path, &tmp_path,
-                                     fs, rev, proplist, scratch_pool,
-                                     scratch_pool));
+                                     fs, rev, proplist, batch, 
+                                     scratch_pool, scratch_pool));
 
   /* We use the rev file of this revision as the perms reference,
    * because when setting revprops for the first time, the revprop
@@ -1385,7 +1391,7 @@ svn_fs_x__set_revision_proplist(svn_fs_t *fs,
 
   /* Now, switch to the new revprop data. */
   SVN_ERR(switch_to_new_revprop(fs, final_path, tmp_path, perms_reference,
-                                files_to_delete, bump_generation,
+                                files_to_delete, bump_generation, batch,
                                 scratch_pool));
 
   return SVN_NO_ERROR;
