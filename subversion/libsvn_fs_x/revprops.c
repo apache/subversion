@@ -27,7 +27,6 @@
 #include "svn_hash.h"
 #include "svn_dirent_uri.h"
 
-#include "batch_fsync.h"
 #include "fs_x.h"
 #include "revprops.h"
 #include "util.h"
@@ -1567,6 +1566,7 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
                               int max_files_per_dir,
                               apr_off_t max_pack_size,
                               int compression_level,
+                              svn_fs_x__batch_fsync_t *batch,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
                               apr_pool_t *scratch_pool)
@@ -1578,14 +1578,10 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
   apr_off_t total_size;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *sizes;
-  svn_fs_x__batch_fsync_t *batch;
 
   /* Some useful paths. */
   manifest_file_path = svn_dirent_join(pack_file_dir, PATH_MANIFEST,
                                        scratch_pool);
-
-  /* Perform all fsyncs through this instance. */
-  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, scratch_pool));
 
   /* Create the manifest file stream. */
   SVN_ERR(svn_fs_x__batch_fsync_open_file(&manifest_file, batch,
@@ -1668,8 +1664,6 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
   /* flush all data to disk and update permissions */
   SVN_ERR(svn_stream_close(manifest_stream));
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, iterpool));
-  SVN_ERR(svn_fs_x__batch_fsync_run(batch, scratch_pool));
-
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
