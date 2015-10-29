@@ -149,7 +149,7 @@ write_revprop_generation_file(svn_fs_t *fs,
   buffer = svn_stringbuf_createf(scratch_pool, "%" APR_INT64_T_FMT "\n",
                                  current);
   SVN_ERR(svn_io_write_atomic2(path, buffer->data, buffer->len,
-                               path /* copy_perms */, TRUE,
+                               path /* copy_perms */, FALSE,
                                scratch_pool));
 
   /* Remember it to spare us the re-read. */
