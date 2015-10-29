@@ -96,8 +96,11 @@ Candidate changes:
    Fix display of process ID in mod_dav_svn cache statistics.
    Justification:
      User cannot determine to which process the output applies.
+   Notes:
+     rhuijben: The added include is the actual fix. The rest of the patch
+               just avoids compile time problems.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1710167
    Set journal-mode in exclusive-locking mode to improve NFS performance.
