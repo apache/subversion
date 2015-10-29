@@ -1287,10 +1287,9 @@ bump_txn_key(svn_fs_t *fs,
 
   /* Increment the key and add a trailing \n to the string so the
      txn-current file has a newline in it. */
-  SVN_ERR(svn_io_file_rename2(txn_next_path, txn_current_path, FALSE,
-                              scratch_pool));
-  SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, txn_current_path,
-                                         scratch_pool));
+  SVN_ERR(svn_fs_x__move_into_place2(txn_next_path, txn_current_path,
+                                     txn_current_path, batch,
+                                     scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3692,10 +3691,9 @@ bump_ids(void *baton,
 
   /* Make the revision visible to all processes and threads. */
   current_filename = svn_fs_x__path_current(b->fs, scratch_pool);
-  SVN_ERR(svn_io_file_rename2(svn_fs_x__path_next(b->fs, scratch_pool),
-                              current_filename, FALSE, scratch_pool));
-  SVN_ERR(svn_fs_x__batch_fsync_new_path(b->batch, current_filename,
-                                         scratch_pool));
+  SVN_ERR(svn_fs_x__move_into_place2(svn_fs_x__path_next(b->fs, scratch_pool),
+                                     current_filename, current_filename,
+                                     b->batch, scratch_pool));
 
   /* Bump txn id. */
   SVN_ERR(bump_txn_key(b->fs, b->batch, scratch_pool));
