@@ -717,6 +717,28 @@ svn_fs_x__read_number_from_stream(apr_int64_t *result,
 }
 
 svn_error_t *
+svn_fs_x__move_into_place2(const char *old_filename,
+                           const char *new_filename,
+                           const char *perms_reference,
+                           svn_fs_x__batch_fsync_t *batch,
+                           apr_pool_t *scratch_pool)
+{
+  /* Copying permissions is a no-op on WIN32. */
+  SVN_ERR(svn_io_copy_perms(perms_reference, old_filename, scratch_pool));
+
+  /* TODO: teach svn_fs_x__batch_fsync_t how to properly rename on Win32. */
+
+  /* Move the file into place. */
+  SVN_ERR(svn_io_file_rename2(old_filename, new_filename, FALSE,
+                              scratch_pool));
+
+  /* Schedule for synchronization. */
+  SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, new_filename, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_x__move_into_place(const char *old_filename,
                           const char *new_filename,
                           const char *perms_reference,

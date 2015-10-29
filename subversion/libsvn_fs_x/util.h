@@ -25,6 +25,7 @@
 
 #include "svn_fs.h"
 #include "id.h"
+#include "batch_fsync.h"
 
 /* Functions for dealing with recoverable errors on mutable files
  *
@@ -466,5 +467,14 @@ svn_fs_x__move_into_place(const char *old_filename,
                           const char *new_filename,
                           const char *perms_reference,
                           apr_pool_t *scratch_pool);
+
+/* Like svn_fs_x__move_into_place but schedules fsync operations in BATCH.
+   Also, OLD_FILENAME and NEW_FILENAME must point to the same volume. */
+svn_error_t *
+svn_fs_x__move_into_place2(const char *old_filename,
+                           const char *new_filename,
+                           const char *perms_reference,
+                           svn_fs_x__batch_fsync_t *batch,
+                           apr_pool_t *scratch_pool);
 
 #endif
