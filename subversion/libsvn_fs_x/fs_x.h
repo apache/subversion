@@ -148,11 +148,16 @@ svn_fs_x__create(svn_fs_t *fs,
 
 /* Set the uuid of repository FS to UUID and the instance ID to INSTANCE_ID.
    If any of them is NULL, use a newly generated UUID / ID instead.
+
+   If OVERWRITE is not set, the uuid file must not exist yet implying this
+   is a fresh repository.
+
    Perform temporary allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__set_uuid(svn_fs_t *fs,
                    const char *uuid,
                    const char *instance_id,
+                   svn_boolean_t overwrite,
                    apr_pool_t *scratch_pool);
 
 /* Read the format number and maximum number of files per directory
