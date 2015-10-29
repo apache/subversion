@@ -468,20 +468,26 @@ svn_fs_x__batch_fsync_run(svn_fs_x__batch_fsync_t *batch,
 
 #if APR_HAS_THREADS
 
-      apr_status_t status = APR_SUCCESS;
-      status = apr_thread_pool_push(thread_pool, flush_task, to_sync,
-                                    0, NULL);
-      if (status)
-        to_sync->result = svn_error_wrap_apr(status, _("Can't push task"));
+      /* If there are multiple fsyncs to perform, run them in parallel.
+       * Otherwise, skip the thread-pool and synchronization overhead. */
+      if (apr_hash_count(batch->files) > 1)
+        {
+          apr_status_t status = APR_SUCCESS;
+          status = apr_thread_pool_push(thread_pool, flush_task, to_sync,
+                                        0, NULL);
+          if (status)
+            to_sync->result = svn_error_wrap_apr(status, _("Can't push task"));
+          else
+            tasks++;
+        }
       else
-        tasks++;
-
-#else
-
-      to_sync->result = svn_error_trace(svn_io_file_flush_to_disk
-                                           (to_sync->file, to_sync->pool));
 
 #endif
+
+        {
+          to_sync->result = svn_error_trace(svn_io_file_flush_to_disk
+                                              (to_sync->file, to_sync->pool));
+        }
     }
 
   /* Wait for all outstanding flush operations to complete. */
