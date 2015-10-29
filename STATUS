@@ -130,6 +130,16 @@ Candidate changes:
      ^/subversion/branches/1.9.x-r1706428
    Votes:
      +1: kotkov
+     -0.1: rhuijben (Touches far more cases than issue #4598 without properly
+                     argumenting why)
+
+ * r1711346
+   Properly remove tempfiles in svnlook on diff errors such as EPIPE.
+   Justification:
+     Simple fix makes it far less likely that tempfiles are left behind
+     on the server.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
