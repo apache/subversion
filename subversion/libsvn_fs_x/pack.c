@@ -244,6 +244,7 @@ initialize_pack_context(pack_context_t *context,
                         const char *shard_dir,
                         svn_revnum_t shard_rev,
                         int max_items,
+                        svn_fs_x__batch_fsync_t *batch,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *pool)
@@ -272,9 +273,9 @@ initialize_pack_context(pack_context_t *context,
   context->pack_file_dir = pack_file_dir;
   context->pack_file_path
     = svn_dirent_join(pack_file_dir, PATH_PACKED, pool);
-  SVN_ERR(svn_io_file_open(&context->pack_file, context->pack_file_path,
-                           APR_WRITE | APR_BUFFERED | APR_BINARY | APR_EXCL
-                             | APR_CREATE, APR_OS_DEFAULT, pool));
+
+  SVN_ERR(svn_fs_x__batch_fsync_open_file(&context->pack_file, batch,
+                                          context->pack_file_path, pool));
 
   /* Proto index files */
   SVN_ERR(svn_fs_x__l2p_proto_index_open(
@@ -378,10 +379,6 @@ close_pack_context(pack_context_t *context,
   /* remove proto index files */
   SVN_ERR(svn_io_remove_file2(proto_l2p_index_path, FALSE, scratch_pool));
   SVN_ERR(svn_io_remove_file2(proto_p2l_index_path, FALSE, scratch_pool));
-
-  /* Ensure that packed file is written to disk.*/
-  SVN_ERR(svn_io_file_flush_to_disk(context->pack_file, scratch_pool));
-  SVN_ERR(svn_io_file_close(context->pack_file, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1946,10 +1943,14 @@ pack_log_addressed(svn_fs_t *fs,
   int i;
   apr_size_t item_count = 0;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_fs_x__batch_fsync_t *batch;
+
+  /* Perform all fsyncs through this instance. */
+  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, scratch_pool));
 
   /* set up a pack context */
   SVN_ERR(initialize_pack_context(&context, fs, pack_file_dir, shard_dir,
-                                  shard_rev, max_items, cancel_func,
+                                  shard_rev, max_items, batch, cancel_func,
                                   cancel_baton, scratch_pool));
 
   /* phase 1: determine the size of the revisions to pack */
@@ -1997,6 +1998,9 @@ pack_log_addressed(svn_fs_t *fs,
   /* last phase: finalize indexes and clean up */
   SVN_ERR(reset_pack_context(&context, iterpool));
   SVN_ERR(close_pack_context(&context, iterpool));
+
+  /* Ensure that packed file is written to disk.*/
+  SVN_ERR(svn_fs_x__batch_fsync_run(batch, iterpool));
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
