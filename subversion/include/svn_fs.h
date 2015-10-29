@@ -1888,9 +1888,7 @@ svn_fs_props_different(svn_boolean_t *different_p,
                        apr_pool_t *scratch_pool);
 
 
-/** Determine if the properties of two path/root combinations are different.
- * In contrast to #svn_fs_props_different, we only perform a quick test and
- * allow for false positives.
+/** Determine if the properties of two path/root combinations have changed.
  *
  * Set @a *changed_p to #TRUE if the properties at @a path1 under @a root1
  * differ from those at @a path2 under @a root2, or set it to #FALSE if they
@@ -1898,15 +1896,13 @@ svn_fs_props_different(svn_boolean_t *different_p,
  * both roots must be in the same filesystem.
  * Do any necessary temporary allocation in @a pool.
  *
- * @note The behavior is implementation dependent in that the false
- * positives reported may differ from release to release and backend to
- * backend.  There is also no guarantee that there will be false positives
- * at all.
+ * Also see #svn_fs_contents_changed and issue 4598 for notes about this
+ * pair of functions.
  *
- * @note Prior to Subversion 1.9, this function would return false negatives
- * for FSFS: If @a root1 and @a root2 were both transaction roots
- * and the proplists of both paths had been changed in their respective
- * transactions, @a changed_p would be set to #FALSE.
+ * @note This function can currently return false negatives for FSFS:
+ * If @a root1 and @a root2 were both transaction roots and the proplists
+ * of both paths had been changed in their respective transactions,
+ * @a changed_p would be set to #FALSE.
  */
 svn_error_t *
 svn_fs_props_changed(svn_boolean_t *changed_p,
@@ -2426,7 +2422,7 @@ svn_fs_apply_text(svn_stream_t **contents_p,
                   apr_pool_t *pool);
 
 
-/** Check if the contents of two root/path combos have changed.
+/** Check if the contents of two root/path combos are different.
  *
  * Set @a *different_p to #TRUE if the file contents at @a path1 under
  * @a root1 differ from those at @a path2 under @a root2, or set it to
@@ -2444,9 +2440,7 @@ svn_fs_contents_different(svn_boolean_t *different_p,
                           const char *path2,
                           apr_pool_t *scratch_pool);
 
-/** Check if the contents of two root/path combos have changed.  In
- * contrast to #svn_fs_contents_different, we only perform a quick test
- * and allow for false positives.
+/** Check if the contents of two root/path combos have changed.
  *
  * Set @a *changed_p to #TRUE if the file contents at @a path1 under
  * @a root1 differ from those at @a path2 under @a root2, or set it to
@@ -2454,10 +2448,17 @@ svn_fs_contents_different(svn_boolean_t *different_p,
  * respective roots, and both roots must be in the same filesystem.
  * Do any necessary temporary allocation in @a pool.
  *
- * @note The behavior is implementation dependent in that the false
- * positives reported may differ from release to release and backend to
- * backend.  There is also no guarantee that there will be false positives
- * at all.
+ * @note svn_fs_contents_changed() was not designed to be used to detect
+ * when two files have different content, but really to detect when the
+ * contents of a given file have changed across two points in its history.
+ * For the purposes of preserving accurate history, certain bits of code
+ * (such as the repository dump code) need to care about this distinction.
+ * For example, it's not an error from the FS API point of view to call
+ * svn_fs_apply_textdelta() and explicitly set a file's contents to exactly
+ * what they were before the edit was made. But we try to preserve that fact
+ * when dumping rather than claim that the file didn't change at all (despite
+ * there being a change of modified parent directories and an associated
+ * `changes' table entry which claim otherwise.) Also see issue 4598.
  */
 svn_error_t *
 svn_fs_contents_changed(svn_boolean_t *changed_p,
