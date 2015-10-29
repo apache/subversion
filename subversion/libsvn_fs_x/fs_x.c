@@ -974,7 +974,7 @@ svn_fs_x__create_file_tree(svn_fs_t *fs,
   /* Create the 'uuid' file. */
   SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_lock(fs, scratch_pool),
                                    scratch_pool));
-  SVN_ERR(svn_fs_x__set_uuid(fs, NULL, NULL, scratch_pool));
+  SVN_ERR(svn_fs_x__set_uuid(fs, NULL, NULL, FALSE, scratch_pool));
 
   /* Create the fsfs.conf file. */
   SVN_ERR(write_config(fs, scratch_pool));
@@ -1056,6 +1056,7 @@ svn_error_t *
 svn_fs_x__set_uuid(svn_fs_t *fs,
                    const char *uuid,
                    const char *instance_id,
+                   svn_boolean_t overwrite,
                    apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
@@ -1074,11 +1075,23 @@ svn_fs_x__set_uuid(svn_fs_t *fs,
   svn_stringbuf_appendcstr(contents, "\n");
 
   /* We use the permissions of the 'current' file, because the 'uuid'
-     file does not exist during repository creation. */
-  SVN_ERR(svn_io_write_atomic2(uuid_path, contents->data, contents->len,
-                               /* perms */
-                               svn_fs_x__path_current(fs, scratch_pool),
-                               TRUE, scratch_pool));
+     file does not exist during repository creation.
+
+     svn_io_write_atomic2() does a load of magic to allow it to
+     replace version files that already exist.  We only need to do
+     that when we're allowed to overwrite an existing file. */
+  if (! overwrite)
+    {
+      /* Create the file */
+      SVN_ERR(svn_io_file_create(uuid_path, contents->data, scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(svn_io_write_atomic2(uuid_path, contents->data, contents->len,
+                                   /* perms */
+                                   svn_fs_x__path_current(fs, scratch_pool),
+                                   TRUE, scratch_pool));
+    }
 
   fs->uuid = apr_pstrdup(fs->pool, uuid);
   ffd->instance_id = apr_pstrdup(fs->pool, instance_id);
