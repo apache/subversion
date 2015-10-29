@@ -1590,8 +1590,6 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
   /* Create the manifest file stream. */
   SVN_ERR(svn_fs_x__batch_fsync_open_file(&manifest_file, batch,
                                           manifest_file_path, scratch_pool));
-  SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, manifest_file_path,
-                                         scratch_pool));
   manifest_stream = svn_stream_from_aprfile2(manifest_file, TRUE,
                                              scratch_pool);
 
