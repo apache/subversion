@@ -2072,8 +2072,7 @@ pack_shard(const char *dir,
            apr_pool_t *scratch_pool)
 {
   svn_fs_x__data_t *ffd = fs->fsap_data;
-  const char *rev_shard_path, *rev_pack_file_dir;
-  const char *revprops_shard_path, *revprops_pack_file_dir;
+  const char *shard_path, *pack_file_dir;
 
   /* Notify caller we're starting to pack this shard. */
   if (notify_func)
@@ -2081,33 +2080,24 @@ pack_shard(const char *dir,
                         scratch_pool));
 
   /* Some useful paths. */
-  rev_pack_file_dir = svn_dirent_join(dir,
+  pack_file_dir = svn_dirent_join(dir,
                   apr_psprintf(scratch_pool,
                                "%" APR_INT64_T_FMT PATH_EXT_PACKED_SHARD,
                                shard),
                   scratch_pool);
-  rev_shard_path = svn_dirent_join(dir,
+  shard_path = svn_dirent_join(dir,
                       apr_psprintf(scratch_pool, "%" APR_INT64_T_FMT, shard),
                       scratch_pool);
 
   /* pack the revision content */
-  SVN_ERR(pack_rev_shard(fs, rev_pack_file_dir, rev_shard_path,
+  SVN_ERR(pack_rev_shard(fs, pack_file_dir, shard_path,
                          shard, max_files_per_dir, DEFAULT_MAX_MEM,
                          cancel_func, cancel_baton, scratch_pool));
 
   /* pack the revprops in an equivalent way */
-  revprops_pack_file_dir = svn_dirent_join(dir,
-                apr_psprintf(scratch_pool,
-                            "%" APR_INT64_T_FMT PATH_EXT_PACKED_SHARD,
-                            shard),
-                scratch_pool);
-  revprops_shard_path = svn_dirent_join(dir,
-                apr_psprintf(scratch_pool, "%" APR_INT64_T_FMT, shard),
-                scratch_pool);
-
   SVN_ERR(svn_fs_x__pack_revprops_shard(fs,
-                                        revprops_pack_file_dir,
-                                        revprops_shard_path,
+                                        pack_file_dir,
+                                        shard_path,
                                         shard, max_files_per_dir,
                                         (int)(0.9 * max_pack_size),
                                         compression_level,
@@ -2121,7 +2111,7 @@ pack_shard(const char *dir,
   ffd->min_unpacked_rev = (svn_revnum_t)((shard + 1) * max_files_per_dir);
 
   /* Finally, remove the existing shard directories. */
-  SVN_ERR(svn_io_remove_dir2(rev_shard_path, TRUE,
+  SVN_ERR(svn_io_remove_dir2(shard_path, TRUE,
                              cancel_func, cancel_baton, scratch_pool));
 
   /* Notify caller we're starting to pack this shard. */
