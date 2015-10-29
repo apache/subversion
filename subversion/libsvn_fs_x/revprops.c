@@ -1483,7 +1483,7 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
  * COMPRESSION_LEVEL defines how well the resulting pack file shall be
  * compressed or whether is shall be compressed at all.  TOTAL_SIZE is
  * a hint on which initial buffer size we should use to hold the pack file
- * content.
+ * content.  Schedule necessary fsync calls in BATCH.
  *
  * CANCEL_FUNC and CANCEL_BATON are used as usual. Temporary allocations
  * are done in SCRATCH_POOL.
@@ -1498,6 +1498,7 @@ copy_revprops(svn_fs_t *fs,
               apr_array_header_t *sizes,
               apr_size_t total_size,
               int compression_level,
+              svn_fs_x__batch_fsync_t *batch,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
               apr_pool_t *scratch_pool)
@@ -1518,12 +1519,12 @@ copy_revprops(svn_fs_t *fs,
   SVN_ERR(serialize_revprops_header(pack_stream, start_rev, sizes, 0,
                                     sizes->nelts, iterpool));
 
-  /* Some useful paths. */
-  SVN_ERR(svn_io_file_open(&pack_file, svn_dirent_join(pack_file_dir,
-                                                       pack_filename,
-                                                       scratch_pool),
-                           APR_WRITE | APR_CREATE, APR_OS_DEFAULT,
-                           scratch_pool));
+  /* Create the auto-fsync'ing pack file. */
+  SVN_ERR(svn_fs_x__batch_fsync_open_file(&pack_file, batch,
+                                          svn_dirent_join(pack_file_dir,
+                                                          pack_filename,
+                                                          scratch_pool),
+                                          scratch_pool));
 
   /* Iterate over the revisions in this shard, squashing them together. */
   for (rev = start_rev; rev <= end_rev; rev++)
@@ -1553,9 +1554,6 @@ copy_revprops(svn_fs_t *fs,
   /* write the pack file content to disk */
   SVN_ERR(svn_io_file_write_full(pack_file, compressed->data, compressed->len,
                                  NULL, scratch_pool));
-  SVN_ERR(svn_io_file_flush_to_disk(pack_file, scratch_pool));
-  SVN_ERR(svn_io_file_close(pack_file, scratch_pool));
-
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
@@ -1580,16 +1578,20 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
   apr_off_t total_size;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *sizes;
+  svn_fs_x__batch_fsync_t *batch;
 
   /* Some useful paths. */
   manifest_file_path = svn_dirent_join(pack_file_dir, PATH_MANIFEST,
                                        scratch_pool);
 
-  /* Create the manifest file stream. */
+  /* Perform all fsyncs through this instance. */
+  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, scratch_pool));
 
-  SVN_ERR(svn_io_file_open(&manifest_file, manifest_file_path,
-                           APR_WRITE | APR_BUFFERED | APR_CREATE | APR_EXCL,
-                           APR_OS_DEFAULT, scratch_pool));
+  /* Create the manifest file stream. */
+  SVN_ERR(svn_fs_x__batch_fsync_open_file(&manifest_file, batch,
+                                          manifest_file_path, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, manifest_file_path,
+                                         scratch_pool));
   manifest_stream = svn_stream_from_aprfile2(manifest_file, TRUE,
                                              scratch_pool);
 
@@ -1636,7 +1638,7 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
           SVN_ERR(copy_revprops(fs, pack_file_dir, pack_filename,
                                 shard_path, start_rev, rev-1,
                                 sizes, (apr_size_t)total_size,
-                                compression_level, cancel_func,
+                                compression_level, batch, cancel_func,
                                 cancel_baton, iterpool));
 
           /* next pack file starts empty again */
@@ -1663,13 +1665,12 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
     SVN_ERR(copy_revprops(fs, pack_file_dir, pack_filename, shard_path,
                           start_rev, rev-1, sizes,
                           (apr_size_t)total_size, compression_level,
-                          cancel_func, cancel_baton, iterpool));
+                          batch, cancel_func, cancel_baton, iterpool));
 
-  /* flush the manifest file to disk and update permissions */
+  /* flush all data to disk and update permissions */
   SVN_ERR(svn_stream_close(manifest_stream));
-  SVN_ERR(svn_io_file_flush_to_disk(manifest_file, iterpool));
-  SVN_ERR(svn_io_file_close(manifest_file, iterpool));
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, iterpool));
+  SVN_ERR(svn_fs_x__batch_fsync_run(batch, scratch_pool));
 
   svn_pool_destroy(iterpool);
 
