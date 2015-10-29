@@ -3486,7 +3486,6 @@ write_final_revprop(const char **path,
   /* Create a file at the final revprops location. */
   *path = svn_fs_x__path_revprops(txn->fs, revision, result_pool);
   SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, *path, scratch_pool));
-  SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, *path, scratch_pool));
 
   /* Write the new contents to the final revprops file. */
   stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
@@ -3651,7 +3650,6 @@ write_next_file(svn_fs_t *fs,
 
   /* Create / open the 'next' file. */
   SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, path, scratch_pool));
-  SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, path, scratch_pool));
 
   /* Write its contents. */
   buf = apr_psprintf(scratch_pool, "%ld\n", revision);
