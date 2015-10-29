@@ -101,7 +101,15 @@ Candidate changes:
    Justification:
      Regression introduced in 1.8.14.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
+
+ * r1711346
+   Properly remove tempfiles in svnlook on diff errors such as EPIPE.
+   Justification:
+     Simple fix makes it far less likely that tempfiles are left behind
+     on the server.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
