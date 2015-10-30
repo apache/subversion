@@ -1877,6 +1877,15 @@ svn_fs_change_node_prop(svn_fs_root_t *root,
  * both roots must be in the same filesystem.
  * Do any necessary temporary allocation in @a scratch_pool.
  *
+ * @note For the purposes of preserving accurate history, certain bits of
+ * code (such as the repository dump code) need to care about the distinction
+ * between situations when the properties are "different" and "have changed
+ * across two points in history".  We have a pair of functions that can
+ * answer both of these questions, svn_fs_props_different() and
+ * svn_fs_props_changed().  See issue 4598 for more details.
+ *
+ * @see svn_fs_props_changed
+ *
  * @since New in 1.9.
  */
 svn_error_t *
@@ -1896,13 +1905,19 @@ svn_fs_props_different(svn_boolean_t *different_p,
  * both roots must be in the same filesystem.
  * Do any necessary temporary allocation in @a pool.
  *
- * Also see #svn_fs_contents_changed and issue 4598 for notes about this
- * pair of functions.
+ * @note For the purposes of preserving accurate history, certain bits of
+ * code (such as the repository dump code) need to care about the distinction
+ * between situations when the properties are "different" and "have changed
+ * across two points in history".  We have a pair of functions that can
+ * answer both of these questions, svn_fs_props_different() and
+ * svn_fs_props_changed().  See issue 4598 for more details.
  *
  * @note This function can currently return false negatives for FSFS:
  * If @a root1 and @a root2 were both transaction roots and the proplists
  * of both paths had been changed in their respective transactions,
  * @a changed_p would be set to #FALSE.
+ *
+ * @see svn_fs_props_different
  */
 svn_error_t *
 svn_fs_props_changed(svn_boolean_t *changed_p,
@@ -2430,6 +2445,16 @@ svn_fs_apply_text(svn_stream_t **contents_p,
  * respective roots, and both roots must be in the same filesystem.
  * Do any necessary temporary allocation in @a scratch_pool.
  *
+ * @note For the purposes of preserving accurate history, certain bits of
+ * code (such as the repository dump code) need to care about the distinction
+ * between situations when two files have "different" content and when the
+ * contents of a given file "have changed" across two points in its history.
+ * We have a pair of functions that can answer both of these questions,
+ * svn_fs_contents_different() and svn_fs_contents_changed().  See issue
+ * 4598 for more details.
+ *
+ * @see svn_fs_contents_changed
+ *
  * @since New in 1.9.
  */
 svn_error_t *
@@ -2455,10 +2480,11 @@ svn_fs_contents_different(svn_boolean_t *different_p,
  * (such as the repository dump code) need to care about this distinction.
  * For example, it's not an error from the FS API point of view to call
  * svn_fs_apply_textdelta() and explicitly set a file's contents to exactly
- * what they were before the edit was made. But we try to preserve that fact
- * when dumping rather than claim that the file didn't change at all (despite
- * there being a change of modified parent directories and an associated
- * `changes' table entry which claim otherwise.) Also see issue 4598.
+ * what they were before the edit was made.  We have a pair of functions
+ * that can answer both of these questions, svn_fs_contents_changed() and
+ * svn_fs_contents_different().  See issue 4598 for more details.
+ *
+ * @see svn_fs_contents_different
  */
 svn_error_t *
 svn_fs_contents_changed(svn_boolean_t *changed_p,
