@@ -856,10 +856,7 @@ static svn_error_t *
 write_revision_zero(svn_fs_t *fs,
                     apr_pool_t *scratch_pool)
 {
-  /* Use an explicit sub-pool to have full control over temp file lifetimes.
-   * Since we have it, use it for everything else as well. */
-  apr_pool_t *subpool = svn_pool_create(scratch_pool);
-  const char *path_revision_zero = svn_fs_x__path_rev(fs, 0, subpool);
+  const char *path_revision_zero = svn_fs_x__path_rev(fs, 0, scratch_pool);
   apr_hash_t *proplist;
   svn_string_t date;
   svn_stream_t *stream;
@@ -879,70 +876,71 @@ write_revision_zero(svn_fs_t *fs,
                                                 "count: 0\n"
                                                 "cpath: /\n"
                                                 "\n",
-                                                subpool);
+                                                scratch_pool);
   svn_string_t *changes_str = svn_string_create("\n",
-                                                subpool);
-  svn_string_t *r0 = svn_string_createf(subpool, "%s%s",
+                                                scratch_pool);
+  svn_string_t *r0 = svn_string_createf(scratch_pool, "%s%s",
                                         noderev_str->data,
                                         changes_str->data);
 
   /* Write skeleton r0 to disk. */
-  SVN_ERR(svn_io_file_create(path_revision_zero, r0->data, subpool));
+  SVN_ERR(svn_io_file_create(path_revision_zero, r0->data, scratch_pool));
 
   /* Construct the index P2L contents: describe the 2 items we have.
      Be sure to create them in on-disk order. */
-  index_entries = apr_array_make(subpool, 2, sizeof(entry));
+  index_entries = apr_array_make(scratch_pool, 2, sizeof(entry));
 
-  entry = apr_pcalloc(subpool, sizeof(*entry));
+  entry = apr_pcalloc(scratch_pool, sizeof(*entry));
   entry->offset = 0;
   entry->size = (apr_off_t)noderev_str->len;
   entry->type = SVN_FS_X__ITEM_TYPE_NODEREV;
   entry->item_count = 1;
-  entry->items = apr_pcalloc(subpool, sizeof(*entry->items));
+  entry->items = apr_pcalloc(scratch_pool, sizeof(*entry->items));
   entry->items[0].change_set = 0;
   entry->items[0].number = SVN_FS_X__ITEM_INDEX_ROOT_NODE;
   APR_ARRAY_PUSH(index_entries, svn_fs_x__p2l_entry_t *) = entry;
 
-  entry = apr_pcalloc(subpool, sizeof(*entry));
+  entry = apr_pcalloc(scratch_pool, sizeof(*entry));
   entry->offset = (apr_off_t)noderev_str->len;
   entry->size = (apr_off_t)changes_str->len;
   entry->type = SVN_FS_X__ITEM_TYPE_CHANGES;
   entry->item_count = 1;
-  entry->items = apr_pcalloc(subpool, sizeof(*entry->items));
+  entry->items = apr_pcalloc(scratch_pool, sizeof(*entry->items));
   entry->items[0].change_set = 0;
   entry->items[0].number = SVN_FS_X__ITEM_INDEX_CHANGES;
   APR_ARRAY_PUSH(index_entries, svn_fs_x__p2l_entry_t *) = entry;
 
   /* Now re-open r0, create proto-index files from our entries and
-      rewrite the index section of r0. */
+     rewrite the index section of r0. */
   SVN_ERR(svn_fs_x__rev_file_open_writable(&rev_file, fs, 0,
-                                           subpool, subpool));
+                                           scratch_pool, scratch_pool));
   SVN_ERR(svn_fs_x__p2l_index_from_p2l_entries(&p2l_proto_index, fs,
                                                rev_file, index_entries,
-                                               subpool, subpool));
+                                               scratch_pool, scratch_pool));
   SVN_ERR(svn_fs_x__l2p_index_from_p2l_entries(&l2p_proto_index, fs,
                                                index_entries,
-                                               subpool, subpool));
+                                               scratch_pool, scratch_pool));
   SVN_ERR(svn_fs_x__rev_file_get(&apr_file, rev_file));
   SVN_ERR(svn_fs_x__add_index_data(fs, apr_file, l2p_proto_index,
-                                   p2l_proto_index, 0, subpool));
+                                   p2l_proto_index, 0, scratch_pool));
   SVN_ERR(svn_fs_x__close_revision_file(rev_file));
 
-  SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, fs->pool));
+  SVN_ERR(svn_io_set_file_read_only(path_revision_zero, FALSE, scratch_pool));
 
   /* Set a date on revision 0. */
-  date.data = svn_time_to_cstring(apr_time_now(), fs->pool);
+  date.data = svn_time_to_cstring(apr_time_now(), scratch_pool);
   date.len = strlen(date.data);
-  proplist = apr_hash_make(fs->pool);
+  proplist = apr_hash_make(scratch_pool);
   svn_hash_sets(proplist, SVN_PROP_REVISION_DATE, &date);
 
-  revprops = svn_stringbuf_create_empty(subpool);
+  revprops = svn_stringbuf_create_empty(scratch_pool);
   stream = svn_stream_from_stringbuf(revprops, scratch_pool);
-  SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, scratch_pool));
+  SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR,
+                          scratch_pool));
   SVN_ERR(svn_stream_close(stream));
 
-  SVN_ERR(svn_io_file_create(svn_fs_x__path_revprops(fs, 0, subpool),
-                             revprops->data, subpool));
+  SVN_ERR(svn_io_file_create(svn_fs_x__path_revprops(fs, 0, scratch_pool),
+                             revprops->data, scratch_pool));
 
   return SVN_NO_ERROR;
 }
