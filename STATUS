@@ -45,7 +45,7 @@ Candidate changes:
      Resolves unnecessary tree conflicts.
      Any more reasons needed? :-)
    Votes:
-     +1: rhuijben
+     +1: rhuijben, ivan
 
  * r1704292, r1704573
    Make svn diff --git produce proper forward binary diffs
