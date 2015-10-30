@@ -1929,6 +1929,7 @@ merge(svn_stringbuf_t *conflict_p,
   */
   {
     node_revision_t *tgt_nr, *anc_nr, *src_nr;
+    svn_boolean_t same;
     apr_pool_t *scratch_pool;
 
     /* Get node revisions for our id's. */
@@ -1945,16 +1946,15 @@ merge(svn_stringbuf_t *conflict_p,
 
     /* Now compare the prop-keys of the skels.  Note that just because
        the keys are different -doesn't- mean the proplists have
-       different contents.  But merge() isn't concerned with contents;
-       it doesn't do a brute-force comparison on textual contents, so
-       it won't do that here either.  Checking to see if the propkey
-       atoms are `equal' is enough. */
-    if (! svn_fs_fs__noderev_same_rep_key(src_nr->prop_rep, anc_nr->prop_rep))
+       different contents. */
+    SVN_ERR(svn_fs_fs__prop_rep_equal(&same, fs, src_nr, anc_nr, pool));
+    if (! same)
       return conflict_err(conflict_p, target_path);
 
     /* The directory entries got changed in the repository but the directory
        properties did not. */
-    if (! svn_fs_fs__noderev_same_rep_key(tgt_nr->prop_rep, anc_nr->prop_rep))
+    SVN_ERR(svn_fs_fs__prop_rep_equal(&same, fs, tgt_nr, anc_nr, pool));
+    if (! same)
       {
         /* There is an incoming prop change for this directory.
            We will accept it only if the directory changes were mere updates

@@ -578,8 +578,8 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR(get_source_root(b, &s_root, s_rev));
 
       /* Is this deltification worth our time? */
-      SVN_ERR(svn_fs_props_changed(&changed, b->t_root, t_path, s_root,
-                                   s_path, pool));
+      SVN_ERR(svn_fs_props_different(&changed, b->t_root, t_path, s_root,
+                                     s_path, pool));
       if (! changed)
         return SVN_NO_ERROR;
 
