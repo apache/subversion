@@ -46,6 +46,7 @@
 #include "svn_utf.h"
 #include "svn_xml.h"
 #include "svn_auth.h"
+#include "svn_base64.h"
 
 #include "opt.h"
 #include "auth.h"
@@ -1573,4 +1574,11 @@ svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
                                                         cancel_func,
                                                         cancel_baton,
                                                         pool));
+}
+
+/*** From base64.c ***/
+svn_stream_t *
+svn_base64_encode(svn_stream_t *output, apr_pool_t *pool)
+{
+  return svn_base64_encode2(output, TRUE, pool);
 }
