@@ -109,7 +109,7 @@ Candidate changes:
    Votes:
      +1: philip
 
- * r1706428, r1706437, r1709388, r1711250
+ * r1706428, r1706437, r1709388, r1711250, r1711507, r1711510
    Fix issue #4598, "No-op changes no longer dumped by 'svnadmin dump' in 1.9"
    Justification:
      Possible loss of information, different dumps produced by svnadmin and
@@ -118,23 +118,17 @@ Candidate changes:
    Notes:
      Whole discussion is in http://svn.haxx.se/dev/archive-2015-09/0269.shtml
      (Subject: "No-op changes no longer dumped by 'svnadmin dump' in 1.9").
-     The patchset discussed in the referenced thread, r1572363 + r1573111,
-     changes behavior of around six different callers, and two of them have
-     already backfired with problems.  This nomination restores the original
-     behavior of API functions like svn_fs_contents_changed() and switches the
-     calling sites of the new API back to using the old functions -- in order
-     to solve the issue and to avoid possibility of similar problems coming
-     from other places.
      .
-     r1706428 and r1706437 add a regression test.  r1709388 is the fix itself.
-     r1711250 is a documentation update.  Backport branch is required due to
-     conflict in /subversion/tests/cmdline/svnadmin_tests.py
+     r1706428, r1706437 add a regression test.  r1709388, r1711507 fix the
+     issue.  r1711250, r1711510 update documentation.  Backport branch is
+     required due to conflict in /subversion/tests/cmdline/svnadmin_tests.py
    Branch:
      ^/subversion/branches/1.9.x-r1706428
    Votes:
      +1: kotkov
      -0.1: rhuijben (Touches far more cases than issue #4598 without properly
-                     argumenting why)
+                     argumenting why,
+                     without r1711507, r1711510)
 
  * r1711346
    Properly remove tempfiles in svnlook on diff errors such as EPIPE.
