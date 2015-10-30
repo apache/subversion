@@ -455,21 +455,15 @@ svn_fs_x__read_number_from_stream(apr_int64_t *result,
                                   svn_stream_t *stream,
                                   apr_pool_t *scratch_pool);
 
-/* Move a file into place from OLD_FILENAME in the transactions
-   directory to its final location NEW_FILENAME in the repository.  On
-   Unix, match the permissions of the new file to the permissions of
-   PERMS_REFERENCE.  Temporary allocations are from SCRATCH_POOL.
+/* Move a file into place from temporary OLD_FILENAME to its final
+   location NEW_FILENAME, which must be on to the same volume.  Schedule
+   any necessary fsync calls in BATCH.  On Unix, match the permissions
+   of the new file to the permissions of PERMS_REFERENCE.
+
+   Temporary allocations are from SCRATCH_POOL.
 
    This function almost duplicates svn_io_file_move(), but it tries to
    guarantee a flush. */
-svn_error_t *
-svn_fs_x__move_into_place(const char *old_filename,
-                          const char *new_filename,
-                          const char *perms_reference,
-                          apr_pool_t *scratch_pool);
-
-/* Like svn_fs_x__move_into_place but schedules fsync operations in BATCH.
-   Also, OLD_FILENAME and NEW_FILENAME must point to the same volume. */
 svn_error_t *
 svn_fs_x__move_into_place2(const char *old_filename,
                            const char *new_filename,

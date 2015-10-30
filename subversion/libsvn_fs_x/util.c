@@ -598,7 +598,13 @@ svn_fs_x__write_current(svn_fs_t *fs,
                                  scratch_pool));
   SVN_ERR(svn_io_file_close(file, scratch_pool));
 
-  return svn_fs_x__move_into_place(tmp_name, name, name, scratch_pool);
+  /* Copying permissions is a no-op on WIN32. */
+  SVN_ERR(svn_io_copy_perms(name, tmp_name, scratch_pool));
+
+  /* Move the file into place. */
+  SVN_ERR(svn_io_file_rename2(tmp_name, name, TRUE, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -734,58 +740,6 @@ svn_fs_x__move_into_place2(const char *old_filename,
 
   /* Schedule for synchronization. */
   SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, new_filename, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_x__move_into_place(const char *old_filename,
-                          const char *new_filename,
-                          const char *perms_reference,
-                          apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-  apr_file_t *file;
-
-  /* Copying permissions is a no-op on WIN32. */
-  SVN_ERR(svn_io_copy_perms(perms_reference, old_filename, scratch_pool));
-
-  /* Move the file into place. */
-  err = svn_io_file_rename2(old_filename, new_filename, TRUE, scratch_pool);
-  if (err && APR_STATUS_IS_EXDEV(err->apr_err))
-    {
-      /* Can't rename across devices; fall back to copying. */
-      svn_error_clear(err);
-      SVN_ERR(svn_io_copy_file(old_filename, new_filename, TRUE,
-                               scratch_pool));
-
-      /* Flush the target of the copy to disk.
-         ### The code below is duplicates svn_io_file_rename2(), because
-             currently we don't have the svn_io_copy_file2() function with
-             a flush_to_disk argument. */
-      SVN_ERR(svn_io_file_open(&file, new_filename, APR_WRITE,
-                               APR_OS_DEFAULT, scratch_pool));
-      SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
-      SVN_ERR(svn_io_file_close(file, scratch_pool));
-
-#ifdef SVN_ON_POSIX
-      {
-        /* On POSIX, the file name is stored in the file's directory entry.
-           Hence, we need to fsync() that directory as well.
-           On other operating systems, we'd only be asking for trouble
-           by trying to open and fsync a directory. */
-        const char *dirname;
-
-        dirname = svn_dirent_dirname(new_filename, scratch_pool);
-        SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
-                                 scratch_pool));
-        SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
-        SVN_ERR(svn_io_file_close(file, scratch_pool));
-      }
-#endif
-    }
-  else if (err)
-    return svn_error_trace(err);
 
   return SVN_NO_ERROR;
 }
