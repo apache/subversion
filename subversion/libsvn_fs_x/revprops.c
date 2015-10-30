@@ -952,8 +952,8 @@ switch_to_new_revprop(svn_fs_t *fs,
   SVN_ERR(svn_fs_x__batch_fsync_run(batch, scratch_pool));
 
   /* Make the revision visible to all processes and threads. */
-  SVN_ERR(svn_fs_x__move_into_place2(tmp_path, final_path, perms_reference,
-                                     batch, scratch_pool));
+  SVN_ERR(svn_fs_x__move_into_place(tmp_path, final_path, perms_reference,
+                                    batch, scratch_pool));
   SVN_ERR(svn_fs_x__batch_fsync_run(batch, scratch_pool));
 
   /* Indicate that the update (if relevant) has been completed. */

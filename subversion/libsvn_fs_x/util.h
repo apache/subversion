@@ -465,10 +465,10 @@ svn_fs_x__read_number_from_stream(apr_int64_t *result,
    This function almost duplicates svn_io_file_move(), but it tries to
    guarantee a flush. */
 svn_error_t *
-svn_fs_x__move_into_place2(const char *old_filename,
-                           const char *new_filename,
-                           const char *perms_reference,
-                           svn_fs_x__batch_fsync_t *batch,
-                           apr_pool_t *scratch_pool);
+svn_fs_x__move_into_place(const char *old_filename,
+                          const char *new_filename,
+                          const char *perms_reference,
+                          svn_fs_x__batch_fsync_t *batch,
+                          apr_pool_t *scratch_pool);
 
 #endif
