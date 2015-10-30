@@ -862,6 +862,8 @@ write_revision_zero(svn_fs_t *fs,
   const char *path_revision_zero = svn_fs_x__path_rev(fs, 0, subpool);
   apr_hash_t *proplist;
   svn_string_t date;
+  svn_stream_t *stream;
+  svn_stringbuf_t *revprops;
 
   apr_array_header_t *index_entries;
   svn_fs_x__p2l_entry_t *entry;
@@ -933,7 +935,16 @@ write_revision_zero(svn_fs_t *fs,
   date.len = strlen(date.data);
   proplist = apr_hash_make(fs->pool);
   svn_hash_sets(proplist, SVN_PROP_REVISION_DATE, &date);
-  return svn_fs_x__set_revision_proplist(fs, 0, proplist, fs->pool);
+
+  revprops = svn_stringbuf_create_empty(subpool);
+  stream = svn_stream_from_stringbuf(revprops, scratch_pool);
+  SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, scratch_pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  SVN_ERR(svn_io_file_create(svn_fs_x__path_revprops(fs, 0, subpool),
+                             revprops->data, subpool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
