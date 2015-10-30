@@ -967,9 +967,8 @@ svn_fs_x__create_file_tree(svn_fs_t *fs,
                             scratch_pool));
 
   /* Create the 'current' file. */
-  SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_current(fs, scratch_pool),
-                                   scratch_pool));
-  SVN_ERR(svn_fs_x__write_current(fs, 0, scratch_pool));
+  SVN_ERR(svn_io_file_create(svn_fs_x__path_current(fs, scratch_pool),
+                             "0\n", scratch_pool));
 
   /* Create the 'uuid' file. */
   SVN_ERR(svn_io_file_create_empty(svn_fs_x__path_lock(fs, scratch_pool),
