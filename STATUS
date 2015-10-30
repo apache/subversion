@@ -144,6 +144,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1668625
+   Fix 'svn diff --summarize --ignore-properties'.
+   Justification:
+     --ignore-properties option should not be ignored in summarize diff mode.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
