@@ -145,6 +145,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1706375
+   Following up on r1700215: unbreak the test runner's compabitility mode.
+   Justification:
+     Impossible to run tests with older repository formats.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
