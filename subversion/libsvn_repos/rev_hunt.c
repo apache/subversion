@@ -1356,6 +1356,7 @@ send_path_revision(struct path_revision *path_rev,
   void *delta_baton = NULL;
   apr_pool_t *tmp_pool;  /* For swapping */
   svn_boolean_t contents_changed;
+  svn_boolean_t props_changed;
 
   svn_pool_clear(sb->iterpool);
 
@@ -1368,11 +1369,35 @@ send_path_revision(struct path_revision *path_rev,
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, path_rev->revnum,
                                sb->iterpool));
 
-  /* Get the file's properties for this revision and compute the diffs. */
-  SVN_ERR(svn_fs_node_proplist(&props, root, path_rev->path,
+  /* Check if the props *may* have changed. */
+  if (sb->last_root)
+    {
+      /* We don't use svn_fs_props_different() because it's more
+       * expensive. */
+      SVN_ERR(svn_fs_props_changed(&props_changed,
+                                   sb->last_root, sb->last_path,
+                                   root, path_rev->path, sb->iterpool));
+    }
+  else
+    {
+      props_changed = TRUE;
+    }
+
+  /* Calculate actual difference between last and current properties. */
+  if (props_changed)
+    {
+      /* Get the file's properties for this revision and compute the diffs. */
+      SVN_ERR(svn_fs_node_proplist(&props, root, path_rev->path,
                                    sb->iterpool));
-  SVN_ERR(svn_prop_diffs(&prop_diffs, props, sb->last_props,
-                         sb->iterpool));
+      SVN_ERR(svn_prop_diffs(&prop_diffs, props, sb->last_props,
+                             sb->iterpool));
+    }
+  else
+    {
+      /* Properties didn't change: copy  LAST_PROPS to current POOL. */
+      props = svn_prop_hash_dup(sb->last_props, sb->iterpool);
+      prop_diffs = apr_array_make(sb->iterpool, 0, sizeof(svn_prop_t));
+    }
 
   /* Check if the contents *may* have changed. */
   if (! sb->last_root)
