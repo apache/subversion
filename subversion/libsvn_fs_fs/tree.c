@@ -3239,13 +3239,13 @@ fs_contents_changed(svn_boolean_t *changed_p,
   /* Make sure that path is file. */
   if (svn_fs_fs__dag_node_kind(node1) != svn_node_file)
     return svn_error_createf
-      (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path1);
+      (SVN_ERR_FS_NOT_FILE, NULL, _("'%s' is not a file"), path1);
 
   SVN_ERR(get_dag(&node2, root2, path2, pool));
   /* Make sure that path is file. */
   if (svn_fs_fs__dag_node_kind(node2) != svn_node_file)
     return svn_error_createf
-      (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path2);
+      (SVN_ERR_FS_NOT_FILE, NULL, _("'%s' is not a file"), path2);
 
   return svn_fs_fs__dag_things_different(NULL, changed_p,
                                          node1, node2, strict, pool);
