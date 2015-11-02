@@ -265,7 +265,8 @@ x_set_uuid(svn_fs_t *fs,
 {
   /* Whenever we set a new UUID, imply that FS will also be a different
    * instance (on formats that support this). */
-  return svn_error_trace(svn_fs_x__set_uuid(fs, uuid, NULL, scratch_pool));
+  return svn_error_trace(svn_fs_x__set_uuid(fs, uuid, NULL, TRUE,
+                                            scratch_pool));
 }
 
 /* Wrapper around svn_fs_x__begin_txn() providing the scratch pool. */

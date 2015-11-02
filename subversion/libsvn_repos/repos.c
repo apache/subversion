@@ -1175,8 +1175,8 @@ svn_repos_create(svn_repos_t **repos_p,
   SVN_ERR(lock_repos(repos, FALSE, FALSE, scratch_pool));
 
   /* Create an environment for the filesystem. */
-  if ((err = svn_fs_create(&repos->fs, repos->db_path, fs_config,
-                           result_pool)))
+  if ((err = svn_fs_create2(&repos->fs, repos->db_path, fs_config,
+                            result_pool, scratch_pool)))
     {
       /* If there was an error making the filesytem, e.g. unknown/supported
        * filesystem type.  Clean up after ourselves.  Yes this is safe because

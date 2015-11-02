@@ -3236,11 +3236,60 @@ def dump_no_op_change(sbox):
   # Test svn log -v for r2:
   _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
                                                       '-r2', sbox.repo_url)
+  found = [True for line in expected if line.find('M /bar\n') != -1]
+  if not found:
+    raise svntest.Failure
   svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
                                      '-r2', sbox2.repo_url)
   # Test svn log -v for /bar:
   _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
                                                       sbox.repo_url + '/bar')
+  found = [True for line in expected if line.find('M /bar\n') != -1]
+  if not found:
+    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
+                                     sbox2.repo_url + '/bar')
+
+@XFail()
+def dump_no_op_prop_change(sbox):
+  "svnadmin dump with no-op property change"
+
+  sbox.build(create_wc=False, empty=True)
+  empty_file = sbox.get_tempname()
+  svntest.main.file_write(empty_file, '')
+
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', svntest.main.make_log_msg(),
+                                         'put', empty_file, 'bar',
+                                         'propset', 'pname', 'pval', 'bar')
+  # Commit a no-op property change.
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', svntest.main.make_log_msg(),
+                                         'propset', 'pname', 'pval', 'bar')
+  # Dump and load the repository.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       sbox.repo_dir)
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Test svn log -v for r2:
+  _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
+                                                      '-r2', sbox.repo_url)
+  found = [True for line in expected if line.find('M /bar\n') != -1]
+  if not found:
+    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
+                                     '-r2', sbox2.repo_url)
+  # Test svn log -v for /bar:
+  _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
+                                                      sbox.repo_url + '/bar')
+  found = [True for line in expected if line.find('M /bar\n') != -1]
+  if not found:
+    raise svntest.Failure
   svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
                                      sbox2.repo_url + '/bar')
 
@@ -3305,6 +3354,7 @@ test_list = [ None,
               load_revprops,
               dump_revprops,
               dump_no_op_change,
+              dump_no_op_prop_change
              ]
 
 if __name__ == '__main__':

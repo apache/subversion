@@ -1319,9 +1319,6 @@ svn_fs_fs__dag_things_different(svn_boolean_t *props_changed,
     {
       /* In strict mode, compare text and property representations in the
          svn_fs_contents_different() / svn_fs_props_different() manner.
-         These functions are currently not being used in our codebase, but
-         we released them as a part of 1.9, and keep them for compatibility
-         reasons.
 
          See the "No-op changes no longer dumped by 'svnadmin dump' in 1.9"
          discussion (http://svn.haxx.se/dev/archive-2015-09/0269.shtml) and
