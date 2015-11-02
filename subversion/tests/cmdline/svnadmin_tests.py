@@ -3255,12 +3255,13 @@ def dump_no_op_prop_change(sbox):
   svntest.actions.run_and_verify_svnmucc(None, [],
                                          '-U', sbox.repo_url,
                                          '-m', svntest.main.make_log_msg(),
-                                         'put', empty_file, 'bar')
+                                         'put', empty_file, 'bar',
+                                         'propset', 'pname', 'pval', 'bar')
   # Commit a no-op property change.
   svntest.actions.run_and_verify_svnmucc(None, [],
                                          '-U', sbox.repo_url,
                                          '-m', svntest.main.make_log_msg(),
-                                         'propdel', 'non-existant', 'bar')
+                                         'propset', 'pname', 'pval', 'bar')
   # Dump and load the repository.
   _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
                                                        'dump', '-q',
