@@ -3236,11 +3236,17 @@ def dump_no_op_change(sbox):
   # Test svn log -v for r2:
   _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
                                                       '-r2', sbox.repo_url)
+  found = [True for line in expected if line.find('M /bar\n') != -1]
+  if not found:
+    raise svntest.Failure
   svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
                                      '-r2', sbox2.repo_url)
   # Test svn log -v for /bar:
   _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
                                                       sbox.repo_url + '/bar')
+  found = [True for line in expected if line.find('M /bar\n') != -1]
+  if not found:
+    raise svntest.Failure
   svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
                                      sbox2.repo_url + '/bar')
 
@@ -3273,11 +3279,17 @@ def dump_no_op_prop_change(sbox):
   # Test svn log -v for r2:
   _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
                                                       '-r2', sbox.repo_url)
+  found = [True for line in expected if line.find('M /bar\n') != -1]
+  if not found:
+    raise svntest.Failure
   svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
                                      '-r2', sbox2.repo_url)
   # Test svn log -v for /bar:
   _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
                                                       sbox.repo_url + '/bar')
+  found = [True for line in expected if line.find('M /bar\n') != -1]
+  if not found:
+    raise svntest.Failure
   svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
                                      sbox2.repo_url + '/bar')
 
