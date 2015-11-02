@@ -25,6 +25,8 @@
 
 #include "svn_fs.h"
 
+#include "batch_fsync.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -85,7 +87,7 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
 
 /* For the revprop SHARD at SHARD_PATH with exactly MAX_FILES_PER_DIR
  * revprop files in it, create a packed shared at PACK_FILE_DIR in
- * filesystem FS.
+ * filesystem FS.  Schedule necessary fsync calls in BATCH.
  *
  * COMPRESSION_LEVEL defines how well the resulting pack file shall be
  * compressed or whether is shall be compressed at all.  Individual pack
@@ -103,6 +105,7 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
                               int max_files_per_dir,
                               apr_off_t max_pack_size,
                               int compression_level,
+                              svn_fs_x__batch_fsync_t *batch,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
                               apr_pool_t *scratch_pool);

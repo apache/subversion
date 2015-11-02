@@ -327,6 +327,8 @@ internal_open_file(apr_file_t **file,
   svn_error_t *err;
   apr_pool_t *pool;
   to_sync_t *to_sync;
+  svn_node_kind_t kind;
+  svn_boolean_t is_new_file;
 
   /* If we already have a handle for PATH, return that. */
   to_sync = svn_hash_gets(batch->files, path);
@@ -336,9 +338,30 @@ internal_open_file(apr_file_t **file,
       return SVN_NO_ERROR;
     }
 
+  /* Calling fsync in PATH is going to be expensive in any case, so we can
+   * allow for some extra overhead figuring out whether the file already
+   * exists.  If it doesn't, be sure to schedule parent folder updates, if
+   * required on this platform.
+   *
+   * See svn_fs_x__batch_fsync_new_path() for when such extra fsyncs may be
+   * needed at all. */
+
+#ifdef SVN_ON_POSIX
+
+  is_new_file = FALSE;
+  if (flags & APR_CREATE)
+    {
+      /* We might actually be about to create a new file.
+       * Check whether the file already exists. */
+      SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));
+      is_new_file = kind == svn_node_none;
+    }
+
+#endif
+
   /* To be able to process each file in a separate thread, they must use
    * separate, thread-safe pools.  Allocating a sub-pool from the standard
-   * thread-pool achieves exactly that. */
+   * memory pool achieves exactly that. */
   pool = svn_pool_create(NULL);
   err = svn_io_file_open(file, path, flags, APR_OS_DEFAULT, pool);
   if (err)
@@ -356,6 +379,16 @@ internal_open_file(apr_file_t **file,
   svn_hash_sets(batch->files,
                 apr_pstrdup(apr_hash_pool_get(batch->files), path),
                 to_sync);
+
+  /* If we just created a new file, schedule any additional necessary fsyncs.
+   * Note that this can only recurse once since the parent folder already
+   * exists on disk. */
+#ifdef SVN_ON_POSIX
+
+  if (is_new_file)
+    SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, path, scratch_pool));
+
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -468,20 +501,26 @@ svn_fs_x__batch_fsync_run(svn_fs_x__batch_fsync_t *batch,
 
 #if APR_HAS_THREADS
 
-      apr_status_t status = APR_SUCCESS;
-      status = apr_thread_pool_push(thread_pool, flush_task, to_sync,
-                                    0, NULL);
-      if (status)
-        to_sync->result = svn_error_wrap_apr(status, _("Can't push task"));
+      /* If there are multiple fsyncs to perform, run them in parallel.
+       * Otherwise, skip the thread-pool and synchronization overhead. */
+      if (apr_hash_count(batch->files) > 1)
+        {
+          apr_status_t status = APR_SUCCESS;
+          status = apr_thread_pool_push(thread_pool, flush_task, to_sync,
+                                        0, NULL);
+          if (status)
+            to_sync->result = svn_error_wrap_apr(status, _("Can't push task"));
+          else
+            tasks++;
+        }
       else
-        tasks++;
-
-#else
-
-      to_sync->result = svn_error_trace(svn_io_file_flush_to_disk
-                                           (to_sync->file, to_sync->pool));
 
 #endif
+
+        {
+          to_sync->result = svn_error_trace(svn_io_file_flush_to_disk
+                                              (to_sync->file, to_sync->pool));
+        }
     }
 
   /* Wait for all outstanding flush operations to complete. */

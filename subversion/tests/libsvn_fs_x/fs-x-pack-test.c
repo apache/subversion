@@ -888,7 +888,6 @@ test_batch_fsync(const svn_test_opts_t *opts,
       apr_size_t len = strlen(path);
 
       SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, path, pool));
-      SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, path, pool));
 
       SVN_ERR(svn_io_file_write(file, path, &len, pool));
     }
@@ -906,7 +905,6 @@ test_batch_fsync(const svn_test_opts_t *opts,
       apr_size_t len = strlen(path);
 
       SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, path, pool));
-      SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, path, pool));
 
       SVN_ERR(svn_io_file_write(file, path, &len, pool));
     }
@@ -923,7 +921,6 @@ test_batch_fsync(const svn_test_opts_t *opts,
       apr_size_t len = strlen(path);
 
       SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, path, pool));
-      SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, path, pool));
 
       SVN_ERR(svn_io_file_write(file, path, &len, pool));
     }

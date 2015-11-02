@@ -5971,6 +5971,7 @@ compare_contents(const svn_test_opts_t *opts,
   svn_revnum_t rev;
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_boolean_t changed;
 
   /* Two similar but different texts that yield the same MD5 digest. */
   const char *evil_text1
@@ -6152,6 +6153,21 @@ compare_contents(const svn_test_opts_t *opts,
           break;
         }
     }
+
+  /* Check how svn_fs_contents_different() and svn_fs_contents_changed()
+     handles invalid path.*/
+  SVN_ERR(svn_fs_revision_root(&root1, fs, 1, iterpool));
+  SVN_TEST_ASSERT_ANY_ERROR(
+    svn_fs_contents_changed(&changed, root1, "/", root1, "/", iterpool));
+  SVN_TEST_ASSERT_ANY_ERROR(
+    svn_fs_contents_different(&changed, root1, "/", root1, "/", iterpool));
+
+  SVN_TEST_ASSERT_ANY_ERROR(
+    svn_fs_contents_changed(&changed, root1, "/non-existent", root1,
+                            "/non-existent", iterpool));
+  SVN_TEST_ASSERT_ANY_ERROR(
+    svn_fs_contents_different(&changed, root1, "/non-existent", root1,
+                              "/non-existent", iterpool));
 
   svn_pool_destroy(iterpool);
 

@@ -119,7 +119,7 @@ create_fs(svn_fs_t **fs_p,
      runs.  */
   SVN_ERR(svn_io_remove_dir2(name, TRUE, NULL, NULL, pool));
 
-  SVN_ERR(svn_fs_create(fs_p, name, fs_config, pool));
+  SVN_ERR(svn_fs_create2(fs_p, name, fs_config, pool, pool));
   if (! *fs_p)
     return svn_error_create(SVN_ERR_FS_GENERAL, NULL,
                             "Couldn't alloc a new fs object.");

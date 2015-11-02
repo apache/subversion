@@ -750,7 +750,8 @@ svn_fs_x__hotcopy(svn_fs_t *src_fs,
 
       /* Copy the UUID.  Hotcopy destination receives a new instance ID, but
        * has the same filesystem UUID as the source. */
-      SVN_ERR(svn_fs_x__set_uuid(dst_fs, src_fs->uuid, NULL, scratch_pool));
+      SVN_ERR(svn_fs_x__set_uuid(dst_fs, src_fs->uuid, NULL, TRUE,
+                                 scratch_pool));
 
       /* Remove revision 0 contents.  Otherwise, it may not get overwritten
        * due to having a newer timestamp. */

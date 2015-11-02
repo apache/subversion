@@ -506,11 +506,13 @@ svn_fs_set_warning_func(svn_fs_t *fs, svn_fs_warning_callback_t warning,
 }
 
 svn_error_t *
-svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
-              apr_pool_t *pool)
+svn_fs_create2(svn_fs_t **fs_p,
+               const char *path,
+               apr_hash_t *fs_config,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
 {
   fs_library_vtable_t *vtable;
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
 
   const char *fs_type = svn_hash__get_cstring(fs_config,
                                               SVN_FS_CONFIG_FS_TYPE,
@@ -522,13 +524,12 @@ svn_fs_create(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   SVN_ERR(write_fs_type(path, fs_type, scratch_pool));
 
   /* Perform the actual creation. */
-  *fs_p = fs_new(fs_config, pool);
+  *fs_p = fs_new(fs_config, result_pool);
 
   SVN_ERR(vtable->create(*fs_p, path, common_pool_lock, scratch_pool,
                          common_pool));
   SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open2));
 
-  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -546,15 +547,6 @@ svn_fs_open2(svn_fs_t **fs_p, const char *path, apr_hash_t *fs_config,
   SVN_ERR(vtable->set_svn_fs_open(*fs_p, svn_fs_open2));
 
   return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_open(svn_fs_t **fs_p,
-            const char *path,
-            apr_hash_t *fs_config,
-            apr_pool_t *pool)
-{
-  return svn_fs_open2(fs_p, path, fs_config, pool, pool);
 }
 
 svn_error_t *
@@ -1103,14 +1095,6 @@ svn_fs_node_history2(svn_fs_history_t **history_p, svn_fs_root_t *root,
 }
 
 svn_error_t *
-svn_fs_node_history(svn_fs_history_t **history_p, svn_fs_root_t *root,
-                    const char *path, apr_pool_t *pool)
-{
-  return svn_error_trace(root->vtable->node_history(history_p, root, path,
-                                                    pool, pool));
-}
-
-svn_error_t *
 svn_fs_is_dir(svn_boolean_t *is_dir, svn_fs_root_t *root, const char *path,
               apr_pool_t *pool)
 {
@@ -1268,20 +1252,6 @@ svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
   return svn_error_trace(root->vtable->get_mergeinfo(
     catalog, root, paths, inherit, include_descendants,
     adjust_inherited_mergeinfo, result_pool, scratch_pool));
-}
-
-svn_error_t *
-svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
-                     svn_fs_root_t *root,
-                     const apr_array_header_t *paths,
-                     svn_mergeinfo_inheritance_t inherit,
-                     svn_boolean_t include_descendants,
-                     apr_pool_t *pool)
-{
-  return svn_error_trace(root->vtable->get_mergeinfo(catalog, root, paths,
-                                                     inherit,
-                                                     include_descendants,
-                                                     TRUE, pool, pool));
 }
 
 svn_error_t *
@@ -1880,15 +1850,6 @@ svn_fs_history_prev2(svn_fs_history_t **prev_history_p,
   return svn_error_trace(history->vtable->prev(prev_history_p, history,
                                                cross_copies, result_pool,
                                                scratch_pool));
-}
-
-svn_error_t *
-svn_fs_history_prev(svn_fs_history_t **prev_history_p,
-                    svn_fs_history_t *history, svn_boolean_t cross_copies,
-                    apr_pool_t *pool)
-{
-  return svn_error_trace(history->vtable->prev(prev_history_p, history,
-                                               cross_copies, pool, pool));
 }
 
 svn_error_t *
