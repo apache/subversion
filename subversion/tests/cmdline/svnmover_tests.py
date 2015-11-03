@@ -1316,25 +1316,6 @@ def modify_payload_of_branch_root_element(sbox):
   test_svnmover2(sbox, '', None,
                  'put ' + mk_file(sbox, 'f2') + ' f2')
 
-def merge_detects_clash_conflicts(sbox):
-  "merge detects clash conflicts"
-  sbox_build_svnmover(sbox)
-
-  # Make a trunk and a branch
-  test_svnmover2(sbox, '', None,
-                 'mkbranch A ' +
-                 'branch A B')
-
-  # Make new elements at the same path in each branch
-  test_svnmover2(sbox, '', None,
-                 'mkdir A/D ' +
-                 'mkdir B/D')
-
-  # Merge: should generate a clash conflict
-  xtest_svnmover(sbox.repo_url, 'Merge failed.*clash',
-                 'merge A B A@1')
-
-
 def merge_swap_abc(sbox):
   "merge swaps A and C in A/B/C"
   sbox_build_svnmover(sbox)
@@ -1469,6 +1450,78 @@ def move_to_related_branch_2(sbox):
                  expected_eids,
                  'branch-into-and-delete X/A/B Y/B')
 
+def tree_conflict_detect(sbox,
+                         initial_state_cmds,
+                         side1_cmds,
+                         side2_cmds):
+  """Set up an initial state on one branch using INITIAL_STATE_CMDS,
+     branch it to a second branch, make changes on each branch using
+     SIDE1_CMDS and SIDE2_CMDS, merge the first branch to the second,
+     and expect a conflict."""
+  sbox_build_svnmover(sbox)
+
+  # initial state
+  test_svnmover2(sbox, '', None,
+                 'mkbranch trunk')
+  if initial_state_cmds:
+    test_svnmover2(sbox, 'trunk', None,
+                   initial_state_cmds)
+  # branching
+  test_svnmover2(sbox, '', None,
+                 'branch trunk br1')
+  # conflicting changes
+  if side1_cmds:
+    test_svnmover2(sbox, 'trunk', None,
+                   side1_cmds)
+  if side2_cmds:
+    test_svnmover2(sbox, 'br1', None,
+                   side2_cmds)
+  # merge
+  xtest_svnmover(sbox.repo_url, 'E123456: Merge failed because of conflicts',
+                 'merge trunk br1 trunk@2')
+
+# A simple single-element tree conflict
+def tree_conflict_element_1(sbox):
+  "tree_conflict_element_1"
+  tree_conflict_detect(sbox,
+                       'mkdir a',
+                       'mv a b',
+                       'mv a c')
+
+# A simple name-clash tree conflict
+def tree_conflict_clash_1(sbox):
+  "tree_conflict_clash_1"
+  tree_conflict_detect(sbox,
+                       'mkdir a '
+                       'mkdir b',
+                       'mv a c',
+                       'mv b c')
+
+# A simple name-clash tree conflict
+def tree_conflict_clash_2(sbox):
+  "tree_conflict_clash_2"
+  tree_conflict_detect(sbox,
+                       None,
+                       'mkdir c',
+                       'mkdir c')
+
+# A simple cycle tree conflict
+def tree_conflict_cycle_1(sbox):
+  "tree_conflict_cycle_1"
+  tree_conflict_detect(sbox,
+                       'mkdir a '
+                       'mkdir b',
+                       'mv a b/a',
+                       'mv b a/b')
+
+# A simple orphan tree conflict
+def tree_conflict_orphan_1(sbox):
+  "tree_conflict_orphan_1"
+  tree_conflict_detect(sbox,
+                       'mkdir orphan-parent',
+                       'mkdir orphan-parent/orphan',
+                       'rm orphan-parent')
+
 ######################################################################
 
 test_list = [ None,
@@ -1489,9 +1542,13 @@ test_list = [ None,
               branch_to_subbranch_of_self,
               merge_from_subbranch_to_subtree,
               modify_payload_of_branch_root_element,
-              merge_detects_clash_conflicts,
               merge_swap_abc,
               move_to_related_branch_2,
+              tree_conflict_element_1,
+              tree_conflict_clash_1,
+              tree_conflict_clash_2,
+              tree_conflict_cycle_1,
+              tree_conflict_orphan_1,
             ]
 
 if __name__ == '__main__':
