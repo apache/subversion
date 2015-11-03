@@ -88,6 +88,10 @@ typedef struct conflict_storage_t
   /* ("%{parent_eid}d/%{name}s" -> name_clash_conflict_t) */
   apr_hash_t *name_clash_conflicts;
 
+  /* Cycle conflicts */
+  /* (eid -> cycle_conflict_t) */
+  apr_hash_t *cycle_conflicts;
+
   /* Orphan conflicts */
   /* (eid -> orphan_conflict_t) */
   apr_hash_t *orphan_conflicts;
@@ -98,7 +102,8 @@ typedef struct conflict_storage_t
  * Merge the two sets of changes: YCA -> SRC and YCA -> TGT, applying
  * the result to the transaction at TGT.
  *
- * If conflicts arise, just fail.
+ * If conflicts arise, return them in *CONFLICT_STORAGE_P; otherwise set
+ * that to null.
  *
  * SRC, TGT and YCA must be existing and corresponding (same EID) elements.
  *
@@ -112,12 +117,12 @@ svnmover_branch_merge(svn_branch_txn_t *edit_txn,
                       svn_branch_el_rev_id_t *src,
                       svn_branch_el_rev_id_t *tgt,
                       svn_branch_el_rev_id_t *yca,
+                      apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
 /*  */
 svn_error_t *
 svnmover_display_conflicts(conflict_storage_t *conflict_storage,
-                           const char *prefix,
                            apr_pool_t *scratch_pool);
 
 

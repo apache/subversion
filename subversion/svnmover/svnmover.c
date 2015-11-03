@@ -1332,23 +1332,14 @@ do_switch(svnmover_wc_t *wc,
                                         svn_branch_root_eid(wc->working->branch),
                                         SVN_INVALID_REVNUM, scratch_pool);
       SVN_ERR(svnmover_branch_merge(wc->edit_txn, &conflicts,
-                                    src, tgt, yca, scratch_pool));
+                                    src, tgt, yca, scratch_pool, scratch_pool));
 
-      if (apr_hash_count(conflicts->single_element_conflicts)
-          || apr_hash_count(conflicts->name_clash_conflicts)
-          || apr_hash_count(conflicts->orphan_conflicts))
+      if (conflicts)
         {
-          SVN_ERR(svnmover_display_conflicts(conflicts, "switch: ",
-                                             scratch_pool));
+          SVN_ERR(svnmover_display_conflicts(conflicts, scratch_pool));
           return svn_error_createf(
                    SVN_ERR_BRANCHING, NULL,
-                   _("Switch failed because of conflicts: "
-                     "%d single-element conflicts, "
-                     "%d name-clash conflicts, "
-                     "%d orphan conflicts"),
-                   apr_hash_count(conflicts->single_element_conflicts),
-                   apr_hash_count(conflicts->name_clash_conflicts),
-                   apr_hash_count(conflicts->orphan_conflicts));
+                   _("Switch failed because of conflicts"));
         }
       else
         {
@@ -2887,23 +2878,14 @@ execute(svnmover_wc_t *wc,
                                           arg[0]->el_rev /*from*/,
                                           arg[1]->el_rev /*to*/,
                                           arg[2]->el_rev /*yca*/,
-                                          iterpool));
+                                          iterpool, iterpool));
 
-            if (apr_hash_count(conflicts->single_element_conflicts)
-                || apr_hash_count(conflicts->name_clash_conflicts)
-                || apr_hash_count(conflicts->orphan_conflicts))
+            if (conflicts)
               {
-                SVN_ERR(svnmover_display_conflicts(conflicts, "merge: ",
-                                                   iterpool));
+                SVN_ERR(svnmover_display_conflicts(conflicts, iterpool));
                 return svn_error_createf(
                          SVN_ERR_BRANCHING, NULL,
-                         _("Merge failed because of conflicts: "
-                           "%d single-element conflicts, "
-                           "%d name-clash conflicts, "
-                           "%d orphan conflicts"),
-                         apr_hash_count(conflicts->single_element_conflicts),
-                         apr_hash_count(conflicts->name_clash_conflicts),
-                         apr_hash_count(conflicts->orphan_conflicts));
+                         _("Merge failed because of conflicts"));
               }
             else
               {
