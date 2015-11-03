@@ -1716,14 +1716,15 @@ do_copy(svn_branch_el_rev_id_t *from_el_rev,
   svn_branch_rev_bid_eid_t *src_el_rev
     = svn_branch_rev_bid_eid_create(from_el_rev->rev, from_branch_id,
                                     from_el_rev->eid, scratch_pool);
+  const char *from_path = el_rev_id_to_path(from_el_rev, scratch_pool);
+  const char *to_path = branch_peid_name_to_path(to_branch, to_parent_eid,
+                                                 new_name, scratch_pool);
 
   SVN_ERR(svn_branch_state_copy_tree(to_branch,
                                      src_el_rev, to_parent_eid, new_name,
                                      scratch_pool));
   svnmover_notify_v("A+   %s (from %s)",
-                    branch_peid_name_to_path(to_branch, to_parent_eid, new_name,
-                                             scratch_pool),
-                    el_rev_id_to_path(from_el_rev, scratch_pool));
+                    to_path, from_path);
 
   return SVN_NO_ERROR;
 }
@@ -1753,14 +1754,15 @@ do_mkdir(svn_branch_txn_t *txn,
   svn_element_payload_t *payload
     = svn_element_payload_create_dir(props, scratch_pool);
   int new_eid;
+  const char *path = branch_peid_name_to_path(to_branch, to_parent_eid,
+                                              new_name, scratch_pool);
 
   SVN_ERR(svn_branch_txn_new_eid(txn, &new_eid, scratch_pool));
   SVN_ERR(svn_branch_state_alter_one(to_branch, new_eid,
                                      to_parent_eid, new_name, payload,
                                      scratch_pool));
   svnmover_notify_v("A    %s",
-                    branch_peid_name_to_path(to_branch, to_parent_eid, new_name,
-                                             scratch_pool));
+                    path);
   return SVN_NO_ERROR;
 }
 
@@ -1819,15 +1821,20 @@ do_put_file(svn_branch_txn_t *txn,
 
   if (file_el_rev->eid != -1)
     {
+      const char *path = el_rev_id_to_path(file_el_rev, scratch_pool);
+
       SVN_ERR(svn_branch_state_alter_one(file_el_rev->branch, file_el_rev->eid,
                                          parent_eid, name, payload,
                                          scratch_pool));
       svnmover_notify_v("M    %s",
-                        el_rev_id_to_path(file_el_rev, scratch_pool));
+                        path);
     }
   else
     {
       int new_eid;
+      const char *path
+        = branch_peid_name_to_path(parent_el_rev->branch, parent_eid, name,
+                                   scratch_pool);
 
       SVN_ERR(svn_branch_txn_new_eid(txn, &new_eid, scratch_pool));
       SVN_ERR(svn_branch_state_alter_one(parent_el_rev->branch, new_eid,
@@ -1835,7 +1842,7 @@ do_put_file(svn_branch_txn_t *txn,
                                          scratch_pool));
       file_el_rev->eid = new_eid;
       svnmover_notify_v("A    %s",
-                        el_rev_id_to_path(file_el_rev, scratch_pool));
+                        path);
     }
   return SVN_NO_ERROR;
 }
@@ -1954,6 +1961,8 @@ mk_branch(const char **new_branch_id_p,
   int new_outer_eid, new_inner_eid;
   const char *new_branch_id;
   svn_branch_state_t *new_branch;
+  const char *path = branch_peid_name_to_path(outer_branch, outer_parent_eid,
+                                              outer_name, scratch_pool);
 
   SVN_ERR(svn_branch_txn_new_eid(txn, &new_outer_eid, scratch_pool));
   SVN_ERR(svn_branch_state_alter_one(outer_branch, new_outer_eid,
@@ -1971,8 +1980,7 @@ mk_branch(const char **new_branch_id_p,
                                      -1, "", payload, scratch_pool));
 
   svnmover_notify_v("A    %s (branch %s)",
-                    svn_branch_get_path_by_eid(outer_branch, new_outer_eid,
-                                               scratch_pool),
+                    path,
                     new_branch->bid);
   if (new_branch_id_p)
     *new_branch_id_p = new_branch->bid;
@@ -2006,6 +2014,9 @@ do_branch(svn_branch_state_t **new_branch_p,
   int to_outer_eid;
   const char *new_branch_id;
   svn_branch_state_t *new_branch;
+  const char *to_path
+    = branch_peid_name_to_path(to_outer_branch,
+                               to_outer_parent_eid, new_name, scratch_pool);
 
   /* assign new eid to root element (outer branch) */
   SVN_ERR(svn_branch_txn_new_eid(txn, &to_outer_eid, scratch_pool));
@@ -2021,8 +2032,7 @@ do_branch(svn_branch_state_t **new_branch_p,
                                        scratch_pool), scratch_pool));
 
   svnmover_notify_v("A+   %s (branch %s)",
-                    svn_branch_get_path_by_eid(to_outer_branch, to_outer_eid,
-                                               scratch_pool),
+                    to_path,
                     new_branch->bid);
 
   if (new_branch_p)
@@ -2077,6 +2087,8 @@ do_branch_into(svn_branch_state_t *from_branch,
 {
   svn_branch_subtree_t *from_subtree;
   svn_element_content_t *new_root_content;
+  const char *to_path = branch_peid_name_to_path(to_branch, to_parent_eid,
+                                                 new_name, scratch_pool);
 
   /* Source element must exist */
   if (! svn_branch_get_path_by_eid(from_branch, from_eid, scratch_pool))
@@ -2103,8 +2115,7 @@ do_branch_into(svn_branch_state_t *from_branch,
   SVN_ERR(svn_branch_instantiate_elements_r(to_branch, *from_subtree,
                                             scratch_pool));
   svnmover_notify_v("A+   %s (subtree)",
-                    svn_branch_get_path_by_eid(to_branch, from_eid,
-                                               scratch_pool));
+                    to_path);
 
   return SVN_NO_ERROR;
 }
@@ -2121,11 +2132,18 @@ do_copy_and_delete(svn_branch_el_rev_id_t *el_rev,
                    const char *to_name,
                    apr_pool_t *scratch_pool)
 {
+  const char *from_path
+    = svn_branch_get_rrpath_by_eid(el_rev->branch, el_rev->eid, scratch_pool);
+
   SVN_ERR_ASSERT(! is_branch_root_element(el_rev->branch, el_rev->eid));
 
   SVN_ERR(do_copy(el_rev, to_branch, to_parent_eid, to_name,
                   scratch_pool));
-  SVN_ERR(do_delete(el_rev->branch, el_rev->eid, scratch_pool));
+
+  SVN_ERR(svn_branch_state_delete_one(el_rev->branch, el_rev->eid,
+                                      scratch_pool));
+  svnmover_notify_v("D    %s", from_path);
+
   return SVN_NO_ERROR;
 }
 
@@ -2150,6 +2168,8 @@ do_branch_and_delete(svn_branch_txn_t *edit_txn,
     = svn_branch_rev_bid_eid_create(el_rev->rev, from_branch_id,
                                     el_rev->eid, scratch_pool);
   svn_branch_state_t *new_branch;
+  const char *from_path
+    = svn_branch_get_rrpath_by_eid(el_rev->branch, el_rev->eid, scratch_pool);
 
   SVN_ERR_ASSERT(! is_branch_root_element(el_rev->branch, el_rev->eid));
 
@@ -2157,7 +2177,9 @@ do_branch_and_delete(svn_branch_txn_t *edit_txn,
                     to_outer_branch, to_outer_parent_eid, to_name,
                     scratch_pool, scratch_pool));
 
-  SVN_ERR(do_delete(el_rev->branch, el_rev->eid, scratch_pool));
+  SVN_ERR(svn_branch_state_delete_one(el_rev->branch, el_rev->eid,
+                                      scratch_pool));
+  svnmover_notify_v("D    %s", from_path);
 
   return SVN_NO_ERROR;
 }
@@ -2181,6 +2203,9 @@ do_branch_into_and_delete(svn_branch_el_rev_id_t *el_rev,
                           const char *to_name,
                           apr_pool_t *scratch_pool)
 {
+  const char *from_path
+    = svn_branch_get_rrpath_by_eid(el_rev->branch, el_rev->eid, scratch_pool);
+
   SVN_ERR_ASSERT(! is_branch_root_element(el_rev->branch, el_rev->eid));
 
   /* This is supposed to be used for moving to a *different* branch.
@@ -2194,7 +2219,9 @@ do_branch_into_and_delete(svn_branch_el_rev_id_t *el_rev,
                          to_branch, to_parent_eid, to_name,
                          scratch_pool));
 
-  SVN_ERR(do_delete(el_rev->branch, el_rev->eid, scratch_pool));
+  SVN_ERR(svn_branch_state_delete_one(el_rev->branch, el_rev->eid,
+                                      scratch_pool));
+  svnmover_notify_v("D    %s", from_path);
 
   return SVN_NO_ERROR;
 }
@@ -2290,6 +2317,9 @@ do_move(svn_branch_el_rev_id_t *el_rev,
         apr_pool_t *scratch_pool)
 {
   const char *from_path = el_rev_id_to_path(el_rev, scratch_pool);
+  const char *to_path
+    = branch_peid_name_to_path(to_parent_el_rev->branch,
+                               to_parent_el_rev->eid, to_name, scratch_pool);
   /* New payload shall be the same as before */
   svn_element_content_t *existing_element
     = svn_branch_get_element(el_rev->branch, el_rev->eid);
@@ -2298,10 +2328,7 @@ do_move(svn_branch_el_rev_id_t *el_rev,
                             to_parent_el_rev->eid, to_name,
                             existing_element->payload, scratch_pool));
   svnmover_notify_v("V    %s (from %s)",
-                    branch_peid_name_to_path(to_parent_el_rev->branch,
-                                             to_parent_el_rev->eid, to_name,
-                                             scratch_pool),
-                    from_path);
+                    to_path, from_path);
   return SVN_NO_ERROR;
 }
 
