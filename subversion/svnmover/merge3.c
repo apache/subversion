@@ -354,6 +354,122 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
   return SVN_NO_ERROR;
 }
 
+enum conflict_kind_t { conflict_kind_single_element,
+                       conflict_kind_clash,
+                       conflict_kind_cycle,
+                       conflict_kind_orphan };
+
+/*  */
+typedef struct conflict_object_t
+{
+  enum conflict_kind_t conflict_kind;
+  apr_hash_t *conflicts;
+  const void *key;
+} conflict_object_t;
+
+/*  */
+static conflict_object_t *
+conflict_object_create(enum conflict_kind_t conflict_kind,
+                       apr_hash_t *conflicts,
+                       const void *key,
+                       apr_pool_t *result_pool)
+{
+  conflict_object_t *c = apr_pcalloc(result_pool, sizeof(*c));
+
+  c->conflict_kind = conflict_kind;
+  c->conflicts = conflicts;
+  c->key = (conflict_kind == conflict_kind_clash)
+             ? apr_pstrdup(result_pool, key)
+             : apr_pmemdup(result_pool, key, sizeof(int));
+  return c;
+}
+
+static svn_error_t *
+find_conflict(conflict_object_t **conflict_p,
+              conflict_storage_t *conflicts,
+              const char *id_string,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  *conflict_p = NULL;
+
+  if (id_string[0] == 'e')
+    {
+      int which_eid = atoi(id_string + 1);
+
+      if (svn_int_hash_get(conflicts->single_element_conflicts, which_eid))
+        {
+          *conflict_p
+            = conflict_object_create(conflict_kind_single_element,
+                                     conflicts->single_element_conflicts,
+                                     &which_eid, result_pool);
+        }
+      if (svn_int_hash_get(conflicts->cycle_conflicts, which_eid))
+        {
+          *conflict_p
+            = conflict_object_create(conflict_kind_cycle,
+                                     conflicts->cycle_conflicts,
+                                     &which_eid, result_pool);
+        }
+      if (svn_int_hash_get(conflicts->orphan_conflicts, which_eid))
+        {
+          *conflict_p
+            = conflict_object_create(conflict_kind_orphan,
+                                     conflicts->orphan_conflicts,
+                                     &which_eid, result_pool);
+        }
+    }
+  else
+    {
+      if (svn_hash_gets(conflicts->name_clash_conflicts, id_string))
+        {
+          *conflict_p
+            = conflict_object_create(conflict_kind_clash,
+                                     conflicts->name_clash_conflicts,
+                                     id_string, result_pool);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svnmover_conflict_resolved(conflict_storage_t *conflicts,
+                           const char *id_string,
+                           apr_pool_t *scratch_pool)
+{
+  conflict_object_t *conflict;
+
+  SVN_ERR(find_conflict(&conflict, conflicts, id_string,
+                        scratch_pool, scratch_pool));
+  if (! conflict)
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("Conflict '%s' not found"), id_string);
+    }
+
+  if (conflict->conflict_kind == conflict_kind_clash)
+    {
+      svn_hash_sets(conflict->conflicts, conflict->key, NULL);
+    }
+  else
+    {
+      apr_hash_set(conflict->conflicts, conflict->key, sizeof (int), NULL);
+    }
+  svnmover_notify("Marked conflict '%s' as resolved", id_string);
+  return SVN_NO_ERROR;
+}
+
+svn_boolean_t
+svnmover_any_conflicts(const conflict_storage_t *conflicts)
+{
+  return conflicts
+    && (apr_hash_count(conflicts->single_element_conflicts)
+        || apr_hash_count(conflicts->name_clash_conflicts)
+        || apr_hash_count(conflicts->cycle_conflicts)
+        || apr_hash_count(conflicts->orphan_conflicts));
+}
+
 /* Merge the payload for one element.
  *
  * If there is no conflict, set *CONFLICT_P to FALSE and *RESULT_P to the
@@ -982,10 +1098,7 @@ svnmover_branch_merge(svn_branch_txn_t *edit_txn,
 
   if (conflict_storage_p)
     {
-      if (apr_hash_count(conflicts->single_element_conflicts)
-          || apr_hash_count(conflicts->name_clash_conflicts)
-          || apr_hash_count(conflicts->cycle_conflicts)
-          || apr_hash_count(conflicts->orphan_conflicts))
+      if (svnmover_any_conflicts(conflicts))
         {
           *conflict_storage_p = conflicts;
         }
