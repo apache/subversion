@@ -70,6 +70,8 @@ struct svn_branch_state_priv_t
   /* EID -> svn_branch_el_rev_content_t mapping. */
   svn_element_tree_t *element_tree;
 
+  svn_boolean_t is_flat;
+
 };
 
 static svn_branch_state_t *
@@ -282,6 +284,7 @@ branch_txn_branch(svn_branch_txn_t *txn,
   /* Populate the mapping from the 'from' source */
   SVN_ERR(svn_branch_instantiate_elements(new_branch, from_subtree,
                                           scratch_pool));
+  new_branch->priv->is_flat = TRUE;
 
   if (new_branch_p)
     *new_branch_p = new_branch;
@@ -985,6 +988,7 @@ branch_map_set(svn_branch_state_t *branch,
     branch_validate_element(branch, eid, element);
 
   svn_element_tree_set(branch->priv->element_tree, eid, element);
+  branch->priv->is_flat = FALSE;
   assert_branch_state_invariants(branch, map_pool);
 }
 
@@ -1046,7 +1050,7 @@ svn_branch_get_element_tree_at_eid(svn_branch_state_t *branch,
   svn_element_tree_t *new_subtree;
   svn_element_content_t *subtree_root_element;
 
-  SVN_BRANCH_SEQUENCE_POINT(branch);
+  SVN_ERR_ASSERT_NO_RETURN(branch->priv->is_flat);
 
   new_subtree = svn_element_tree_create(branch->priv->element_tree->e_map, eid,
                                         result_pool);
@@ -1073,6 +1077,7 @@ branch_state_purge(svn_branch_state_t *branch,
   svn_element_tree_purge_orphans(branch->priv->element_tree->e_map,
                                  branch->priv->element_tree->root_eid,
                                  scratch_pool);
+  branch->priv->is_flat = TRUE;
   return SVN_NO_ERROR;
 }
 
@@ -1085,6 +1090,7 @@ svn_branch_get_path_by_eid(const svn_branch_state_t *branch,
   svn_element_content_t *element;
 
   SVN_ERR_ASSERT_NO_RETURN(EID_IS_ALLOCATED(branch, eid));
+  SVN_ERR_ASSERT_NO_RETURN(branch->priv->is_flat);
 
   for (; ! IS_BRANCH_ROOT_EID(branch, eid); eid = element->parent_eid)
     {
@@ -1103,6 +1109,8 @@ svn_branch_get_eid_by_path(const svn_branch_state_t *branch,
                            apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
+
+  SVN_ERR_ASSERT_NO_RETURN(branch->priv->is_flat);
 
   /* ### This is a crude, linear search */
   for (hi = apr_hash_first(scratch_pool, branch->priv->element_tree->e_map);
@@ -1303,6 +1311,7 @@ branch_state_create(const char *bid,
   b->txn = txn;
   b->priv->element_tree = svn_element_tree_create(NULL, root_eid, result_pool);
   assert_branch_state_invariants(b, result_pool);
+  b->priv->is_flat = TRUE;
   return b;
 }
 
@@ -1479,6 +1488,7 @@ svn_branch_state_parse(svn_branch_state_t **new_branch,
         }
     }
 
+  branch_state->priv->is_flat = TRUE;
   *new_branch = branch_state;
   return SVN_NO_ERROR;
 }
