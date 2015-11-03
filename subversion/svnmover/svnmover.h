@@ -56,6 +56,9 @@ typedef struct svnmover_wc_version_t
   svn_branch_state_t *branch;
 } svnmover_wc_version_t;
 
+/*  */
+typedef struct conflict_storage_t conflict_storage_t;
+
 typedef struct svnmover_wc_t
 {
   apr_pool_t *pool;
@@ -65,6 +68,7 @@ typedef struct svnmover_wc_t
 
   svn_ra_session_t *ra_session;
   svn_branch_txn_t *edit_txn;
+  conflict_storage_t *conflicts;
 
   /* Base and working versions. */
   svnmover_wc_version_t *base, *working;
@@ -77,8 +81,7 @@ typedef struct svnmover_wc_t
 
 } svnmover_wc_t;
 
-/*  */
-typedef struct conflict_storage_t
+struct conflict_storage_t
 {
   /* Single-element conflicts */
   /* (eid -> element_merge3_conflict_t) */
@@ -95,7 +98,7 @@ typedef struct conflict_storage_t
   /* Orphan conflicts */
   /* (eid -> orphan_conflict_t) */
   apr_hash_t *orphan_conflicts;
-} conflict_storage_t;
+};
 
 /* Merge SRC into TGT, using the common ancestor YCA.
  *
@@ -124,6 +127,15 @@ svnmover_branch_merge(svn_branch_txn_t *edit_txn,
 svn_error_t *
 svnmover_display_conflicts(conflict_storage_t *conflict_storage,
                            apr_pool_t *scratch_pool);
+
+svn_error_t *
+svnmover_conflict_resolved(conflict_storage_t *conflicts,
+                           const char *id_string,
+                           apr_pool_t *scratch_pool);
+
+/*  */
+svn_boolean_t
+svnmover_any_conflicts(const conflict_storage_t *conflicts);
 
 
 #ifdef __cplusplus

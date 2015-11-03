@@ -772,6 +772,8 @@ wc_commit(svn_revnum_t *new_rev_p,
 
 typedef enum action_code_t {
   ACTION_INFO_WC,
+  ACTION_LIST_CONFLICTS,
+  ACTION_RESOLVED_CONFLICT,
   ACTION_DIFF,
   ACTION_LOG,
   ACTION_LIST_BRANCHES,
@@ -812,6 +814,10 @@ static const action_defn_t action_defn[] =
 {
   {ACTION_INFO_WC,          "info-wc", 0, "",
     "print information about the WC"},
+  {ACTION_LIST_CONFLICTS,   "conflicts", 0, "",
+    "list unresolved conflicts"},
+  {ACTION_RESOLVED_CONFLICT,"resolved", 1, "CONFLICT_ID",
+    "mark conflict as resolved"},
   {ACTION_LIST_BRANCHES,    "branches", 1, "PATH",
     "list all branches rooted at the same element as PATH"},
   {ACTION_LIST_BRANCHES_R,  "ls-br-r", 0, "",
@@ -1318,7 +1324,6 @@ do_switch(svnmover_wc_t *wc,
   if (has_local_changes)
     {
       svn_branch_el_rev_id_t *yca, *src, *tgt;
-      conflict_storage_t *conflicts;
 
       /* Merge changes from the old into the new WC */
       yca = svn_branch_el_rev_id_create(previous_base_br,
@@ -1331,12 +1336,12 @@ do_switch(svnmover_wc_t *wc,
       tgt = svn_branch_el_rev_id_create(wc->working->branch,
                                         svn_branch_root_eid(wc->working->branch),
                                         SVN_INVALID_REVNUM, scratch_pool);
-      SVN_ERR(svnmover_branch_merge(wc->edit_txn, &conflicts,
+      SVN_ERR(svnmover_branch_merge(wc->edit_txn, &wc->conflicts,
                                     src, tgt, yca, scratch_pool, scratch_pool));
 
-      if (conflicts)
+      if (svnmover_any_conflicts(wc->conflicts))
         {
-          SVN_ERR(svnmover_display_conflicts(conflicts, scratch_pool));
+          SVN_ERR(svnmover_display_conflicts(wc->conflicts, scratch_pool));
           return svn_error_createf(
                    SVN_ERR_BRANCHING, NULL,
                    _("Switch failed because of conflicts"));
@@ -2347,6 +2352,28 @@ display_diff_of_commit(const commit_callback_baton_t *ccbb,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+commit(svn_revnum_t *new_rev_p,
+       svnmover_wc_t *wc,
+       apr_hash_t *revprops,
+       apr_pool_t *scratch_pool)
+{
+  if (svnmover_any_conflicts(wc->conflicts))
+    {
+      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+                               _("Cannot commit because there are "
+                                 "unresolved conflicts"));
+    }
+
+  /* Complete the old edit drive (into the 'WC') */
+  SVN_ERR(svn_branch_txn_sequence_point(wc->edit_txn, scratch_pool));
+
+  /* Commit */
+  SVN_ERR(wc_commit(new_rev_p, wc, revprops, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Commit and update WC.
  *
  * Set *NEW_REV_P to the committed revision number, and update the WC to
@@ -2365,11 +2392,7 @@ do_commit(svn_revnum_t *new_rev_p,
 {
   svn_revnum_t new_rev;
 
-  /* Complete the old edit drive (into the 'WC') */
-  SVN_ERR(svn_branch_txn_sequence_point(wc->edit_txn, scratch_pool));
-
-  /* Commit */
-  SVN_ERR(wc_commit(&new_rev, wc, revprops, scratch_pool));
+  SVN_ERR(commit(&new_rev, wc, revprops, scratch_pool));
 
   /* Check out a new WC.
      (Instead, we could perhaps just get a new WC editor.) */
@@ -2690,6 +2713,26 @@ execute(svnmover_wc_t *wc,
           }
           break;
 
+        case ACTION_LIST_CONFLICTS:
+          {
+            if (svnmover_any_conflicts(wc->conflicts))
+              {
+                SVN_ERR(svnmover_display_conflicts(wc->conflicts, iterpool));
+              }
+          }
+          break;
+
+        case ACTION_RESOLVED_CONFLICT:
+          {
+            if (svnmover_any_conflicts(wc->conflicts))
+              {
+                SVN_ERR(svnmover_conflict_resolved(wc->conflicts,
+                                                   action->relpath[0],
+                                                   iterpool));
+              }
+          }
+          break;
+
         case ACTION_DIFF:
           VERIFY_EID_EXISTS("diff", 0);
           VERIFY_EID_EXISTS("diff", 1);
@@ -2860,8 +2903,6 @@ execute(svnmover_wc_t *wc,
 
         case ACTION_MERGE:
           {
-            conflict_storage_t *conflicts;
-
             VERIFY_EID_EXISTS("merge", 0);
             VERIFY_EID_EXISTS("merge", 1);
             VERIFY_EID_EXISTS("merge", 2);
@@ -2874,15 +2915,15 @@ execute(svnmover_wc_t *wc,
                   arg[0]->el_rev->eid, arg[1]->el_rev->eid, arg[2]->el_rev->eid);
               }
             SVN_ERR(svnmover_branch_merge(wc->edit_txn,
-                                          &conflicts,
+                                          &wc->conflicts,
                                           arg[0]->el_rev /*from*/,
                                           arg[1]->el_rev /*to*/,
                                           arg[2]->el_rev /*yca*/,
                                           iterpool, iterpool));
 
-            if (conflicts)
+            if (svnmover_any_conflicts(wc->conflicts))
               {
-                SVN_ERR(svnmover_display_conflicts(conflicts, iterpool));
+                SVN_ERR(svnmover_display_conflicts(wc->conflicts, iterpool));
                 return svn_error_createf(
                          SVN_ERR_BRANCHING, NULL,
                          _("Merge failed because of conflicts"));
@@ -3096,25 +3137,6 @@ execute(svnmover_wc_t *wc,
     }
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
-}
-
-/*  */
-static svn_error_t *
-final_commit(svnmover_wc_t *wc,
-             apr_hash_t *revprops,
-             apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-
-  /* Complete the old edit drive (into the 'WC') */
-  SVN_ERR(svn_branch_txn_sequence_point(wc->edit_txn, scratch_pool));
-
-  /* Commit, if there are any changes */
-  err = wc_commit(NULL, wc, revprops, scratch_pool);
-
-  svn_pool_destroy(wc->pool);
-
-  return svn_error_trace(err);
 }
 
 /* Perform the typical suite of manipulations for user-provided URLs
@@ -3888,7 +3910,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     }
   while (interactive_actions && action_args);
 
-  SVN_ERR(final_commit(wc, revprops, pool));
+  /* Final commit */
+  err = commit(NULL, wc, revprops, pool);
+  svn_pool_destroy(wc->pool);
+  SVN_ERR(err);
 
   return SVN_NO_ERROR;
 }
