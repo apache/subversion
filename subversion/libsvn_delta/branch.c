@@ -1557,6 +1557,8 @@ svn_branch_state_serialize(svn_stream_t *stream,
   SVN_ITER_T(svn_element_content_t) *hi;
   const char *predecessor_str = "";
 
+  SVN_ERR_ASSERT(branch->priv->is_flat);
+
   if (branch->predecessor)
     {
       assert(SVN_IS_VALID_REVNUM(branch->predecessor->rev));
@@ -1571,10 +1573,6 @@ svn_branch_state_serialize(svn_stream_t *stream,
                             branch->priv->element_tree->root_eid,
                             apr_hash_count(branch->priv->element_tree->e_map),
                             predecessor_str));
-
-  svn_element_tree_purge_orphans(branch->priv->element_tree->e_map,
-                                 branch->priv->element_tree->root_eid,
-                                 scratch_pool);
 
   for (SVN_HASH_ITER_SORTED(hi, branch->priv->element_tree->e_map,
                             sort_compare_items_by_eid, scratch_pool))
