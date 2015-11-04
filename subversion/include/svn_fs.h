@@ -1076,15 +1076,12 @@ svn_fs_unparse_id(const svn_fs_id_t *id,
  * set.
  *
  * The Subversion filesystem will make a best effort to not reuse
- * transaction names.  The Berkeley DB backend generates transaction
- * names using a sequence, or a counter, which is stored in the BDB
+ * transaction names.  The BDB and FSFS backends generate transaction
+ * names using a sequence, or a counter, which is stored in the
  * database.  Each new transaction increments the counter.  The
  * current value of the counter is not serialized into a filesystem
  * dump file, so dumping and restoring the repository will reset the
- * sequence and reuse transaction names.  The FSFS backend generates a
- * transaction name using the hostname, process ID and current time in
- * microseconds since 00:00:00 January 1, 1970 UTC.  So it is
- * extremely unlikely that a transaction name will be reused.
+ * sequence and reuse transaction names.
  *
  * @defgroup svn_fs_txns Filesystem transactions
  * @{
