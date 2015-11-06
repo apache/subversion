@@ -213,13 +213,38 @@ svn_branch_subtree_get_subbranch_at_eid(svn_branch_subtree_t *subtree,
   return subtree;
 }
 
+/* Instantiate ELEMENTS in TO_BRANCH.
+ */
+static svn_error_t *
+branch_instantiate_elements(svn_branch_state_t *to_branch,
+                            const svn_element_tree_t *elements,
+                            apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, elements->e_map);
+       hi; hi = apr_hash_next(hi))
+    {
+      int this_eid = svn_int_hash_this_key(hi);
+      svn_element_content_t *this_element = apr_hash_this_val(hi);
+
+      svn_branch_state_alter_one(to_branch, this_eid,
+                                 this_element->parent_eid,
+                                 this_element->name,
+                                 this_element->payload,
+                                 scratch_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_branch_instantiate_elements_r(svn_branch_state_t *to_branch,
                                   svn_branch_subtree_t elements,
                                   apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_branch_instantiate_elements(to_branch, elements.tree,
-                                          scratch_pool));
+  SVN_ERR(branch_instantiate_elements(to_branch, elements.tree,
+                                      scratch_pool));
 
   /* branch any subbranches */
   {
