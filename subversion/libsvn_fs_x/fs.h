@@ -403,9 +403,6 @@ typedef struct svn_fs_x__data_t
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
                                apr_pool_t *, apr_pool_t *);
 
-  /* If not 0, this is a pre-allocated transaction ID that can just be
-     used for a new txn without needing to consult 'txn-current'. */
-  apr_uint64_t next_txn_id;
 } svn_fs_x__data_t;
 
 

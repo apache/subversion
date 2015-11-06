@@ -1240,60 +1240,6 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
   return svn_fs_x__put_node_revision(fs, noderev, scratch_pool);
 }
 
-/* Read 'txn-current', return it in *TXN_NUMBER and write the next value
-   into 'txn-next' for FS.  Schedule fsyncs in BATCH.  Use SCRATCH_POOL
-   for temporaries. */
-static svn_error_t *
-get_and_txn_key(apr_uint64_t *txn_number,
-                svn_fs_t *fs,
-                svn_fs_x__batch_fsync_t *batch,
-                apr_pool_t *scratch_pool)
-{
-  const char *txn_current_path = svn_fs_x__path_txn_current(fs, scratch_pool);
-  const char *txn_next_path = svn_fs_x__path_txn_next(fs, scratch_pool);
-
-  apr_file_t *file;
-  char new_id_str[SVN_INT64_BUFFER_SIZE];
-
-  svn_stringbuf_t *buf;
-  SVN_ERR(svn_fs_x__read_content(&buf, txn_current_path, scratch_pool));
-
-  /* remove trailing newlines */
-  *txn_number = svn__base36toui64(NULL, buf->data);
-  if (*txn_number == 0)
-    ++(*txn_number);
-
-  /* Increment the key and add a trailing \n to the string so the
-     txn-current file has a newline in it. */
-  SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, txn_next_path,
-                                          scratch_pool));
-  SVN_ERR(svn_io_file_write_full(file, new_id_str,
-                                 svn__ui64tobase36(new_id_str, *txn_number+1),
-                                 NULL, scratch_pool));
-  SVN_ERR(svn_io_copy_perms(txn_current_path, txn_next_path, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* Move 'txn-next' into place as 'txn-current' for FS.  Schedule fsyncs
-   in BATCH.  Use SCRATCH_POOL for temporaries. */
-static svn_error_t *
-bump_txn_key(svn_fs_t *fs,
-             svn_fs_x__batch_fsync_t *batch,
-             apr_pool_t *scratch_pool)
-{
-  const char *txn_current_path = svn_fs_x__path_txn_current(fs, scratch_pool);
-  const char *txn_next_path = svn_fs_x__path_txn_next(fs, scratch_pool);
-
-  /* Increment the key and add a trailing \n to the string so the
-     txn-current file has a newline in it. */
-  SVN_ERR(svn_fs_x__move_into_place(txn_next_path, txn_current_path,
-                                    txn_current_path, batch,
-                                    scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* A structure used by get_and_increment_txn_key_body(). */
 typedef struct get_and_increment_txn_key_baton_t
 {
@@ -1309,14 +1255,52 @@ get_and_increment_txn_key_body(void *baton,
                                apr_pool_t *scratch_pool)
 {
   get_and_increment_txn_key_baton_t *cb = baton;
-  svn_fs_x__batch_fsync_t *batch;
+  svn_fs_t *fs = cb->fs;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  const char *txn_current_path = svn_fs_x__path_txn_current(fs, scratch_pool);
+  char new_id_str[SVN_INT64_BUFFER_SIZE];
 
-  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, scratch_pool));
-  SVN_ERR(get_and_txn_key(&cb->txn_number, cb->fs, batch, scratch_pool));
-  SVN_ERR(svn_fs_x__batch_fsync_run(batch, scratch_pool));
+  svn_stringbuf_t *buf;
+  SVN_ERR(svn_fs_x__read_content(&buf, txn_current_path, scratch_pool));
 
-  SVN_ERR(bump_txn_key(cb->fs, batch, scratch_pool));
-  SVN_ERR(svn_fs_x__batch_fsync_run(batch, scratch_pool));
+  /* remove trailing newlines */
+  cb->txn_number = svn__base36toui64(NULL, buf->data);
+  if (cb->txn_number == 0)
+    ++cb->txn_number;
+
+  /* Check for conflicts.  Those might happen if the server crashed and we
+   * had 'svnadmin recover' reset the txn counter.
+   *
+   * Once we found an unused txn id, claim it by creating the respective
+   * txn directory.
+   *
+   * Note that this is not racy because we hold the txn-current-lock.
+   */
+  while (TRUE)
+    {
+      const char *txn_dir;
+      svn_node_kind_t kind;
+      svn_pool_clear(iterpool);
+
+      txn_dir = svn_fs_x__path_txn_dir(fs, cb->txn_number, iterpool);
+      SVN_ERR(svn_io_check_path(txn_dir, &kind, iterpool));
+      if (kind == svn_node_none)
+        {
+          svn_io_dir_make(txn_dir, APR_OS_DEFAULT, iterpool);
+          break;
+        }
+
+      ++cb->txn_number;
+    }
+
+  /* Increment the key and add a trailing \n to the string so the
+     txn-current file has a newline in it. */
+  SVN_ERR(svn_io_write_atomic2(txn_current_path, new_id_str,
+                               svn__ui64tobase36(new_id_str,
+                                                 cb->txn_number + 1),
+                               txn_current_path, FALSE, scratch_pool));
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -1332,38 +1316,21 @@ create_txn_dir(const char **id_p,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
-  const char *txn_dir;
-  svn_fs_x__data_t *ffd = fs->fsap_data;
+  get_and_increment_txn_key_baton_t cb;
 
-  /* If we recently committed a revision through FS, we will have a
-     pre-allocated txn-ID that we can just use. */
-  if (ffd->next_txn_id)
-    {
-      *txn_id = ffd->next_txn_id;
-
-      /* Not pre-allocated anymore. */
-      ffd->next_txn_id = 0;
-    }
-  else
-    {
-      get_and_increment_txn_key_baton_t cb;
-
-      /* Get the current transaction sequence value, which is a base-36
-        number, from the txn-current file, and write an
-        incremented value back out to the file.  Place the revision
-        number the transaction is based off into the transaction id. */
-      cb.fs = fs;
-      SVN_ERR(svn_fs_x__with_txn_current_lock(fs,
-                                              get_and_increment_txn_key_body,
-                                              &cb,
-                                              scratch_pool));
-      *txn_id = cb.txn_number;
-    }
-
+  /* Get the current transaction sequence value, which is a base-36
+    number, from the txn-current file, and write an
+    incremented value back out to the file.  Place the revision
+    number the transaction is based off into the transaction id. */
+  cb.fs = fs;
+  SVN_ERR(svn_fs_x__with_txn_current_lock(fs,
+                                          get_and_increment_txn_key_body,
+                                          &cb,
+                                          scratch_pool));
+  *txn_id = cb.txn_number;
   *id_p = svn_fs_x__txn_name(*txn_id, result_pool);
-  txn_dir = svn_fs_x__path_txn_dir(fs, *txn_id, scratch_pool);
 
-  return svn_io_dir_make(txn_dir, APR_OS_DEFAULT, scratch_pool);
+  return SVN_NO_ERROR;
 }
 
 /* Create a new transaction in filesystem FS, based on revision REV,
@@ -3706,14 +3673,10 @@ bump_ids(void *baton,
          apr_pool_t *scratch_pool)
 {
   bump_ids_baton_t *b = baton;
-  svn_fs_x__data_t *ffd = b->fs->fsap_data;
   const char *current_filename;
 
   /* Write the 'next' file. */
   SVN_ERR(write_next_file(b->fs, b->new_rev, b->batch, scratch_pool));
-
-  /* Allocate a new txn id. */
-  SVN_ERR(get_and_txn_key(&ffd->next_txn_id, b->fs, b->batch, scratch_pool));
 
   /* Commit all changes to disk. */
   SVN_ERR(svn_fs_x__batch_fsync_run(b->batch, scratch_pool));
@@ -3723,9 +3686,6 @@ bump_ids(void *baton,
   SVN_ERR(svn_fs_x__move_into_place(svn_fs_x__path_next(b->fs, scratch_pool),
                                     current_filename, current_filename,
                                     b->batch, scratch_pool));
-
-  /* Bump txn id. */
-  SVN_ERR(bump_txn_key(b->fs, b->batch, scratch_pool));
 
   /* Make the new revision permanently visible. */
   SVN_ERR(svn_fs_x__batch_fsync_run(b->batch, scratch_pool));
