@@ -877,61 +877,33 @@ unparse_dir_entry(svn_fs_x__dirent_t *dirent,
                   apr_pool_t *scratch_pool)
 {
   apr_size_t to_write;
-  svn_string_t *id_str = svn_fs_x__id_unparse(&dirent->id, scratch_pool);
   apr_size_t name_len = strlen(dirent->name);
 
-  /* Note that sizeof == len + 1, i.e. accounts for the space between
-   * type and ID. */
-  apr_size_t type_len = (dirent->kind == svn_node_file)
-                      ? sizeof(SVN_FS_X__KIND_FILE)
-                      : sizeof(SVN_FS_X__KIND_DIR);
-  apr_size_t value_len = type_len + id_str->len;
-
   /* A buffer with sufficient space for 
-   * - both string lines
-   * - 4 newlines
-   * - 2 lines K/V lines containing a number each
+   * - entry name + 1 terminating NUL
+   * - 1 byte for the node kind
+   * - 2 numbers in 7b/8b encoding for the noderev-id
    */
-  char *buffer = apr_palloc(scratch_pool,   name_len + value_len
-                                          + 4
-                                          + 2 * (2 + SVN_INT64_BUFFER_SIZE));
+  apr_byte_t *buffer = apr_palloc(scratch_pool,
+                                  name_len + 2 + 2 * SVN__MAX_ENCODED_UINT_LEN);
 
   /* Now construct the value. */
-  char *p = buffer;
+  apr_byte_t *p = buffer;
 
-  /* The "K length(name)\n" line. */
-  p[0] = 'K';
-  p[1] = ' ';
-  p += 2;
-  p += svn__i64toa(p, name_len);
-  *(p++) = '\n';
+  /* The entry name, terminated by NUL. */
+  memcpy(p, dirent->name, name_len + 1);
+  p += name_len + 1;
 
-  /* The line with the key, i.e. dir entry name. */
-  memcpy(p, dirent->name, name_len);
-  p += name_len;
-  *(p++) = '\n';
+  /* The entry type. */
+  p = svn__encode_uint(p, dirent->kind);
 
-  /* The "V length(type+id)\n" line. */
-  p[0] = 'V';
-  p[1] = ' ';
-  p += 2;
-  p += svn__i64toa(p, value_len);
-  *(p++) = '\n';
-
-  /* The line with the type and ID. */
-  memcpy(p,
-         (dirent->kind == svn_node_file) ? SVN_FS_X__KIND_FILE
-                                         : SVN_FS_X__KIND_DIR,
-         type_len - 1);
-  p += type_len - 1;
-  *(p++) = ' ';
-  memcpy(p, id_str->data, id_str->len);
-  p+=id_str->len;
-  *(p++) = '\n';
+  /* The ID. */
+  p = svn__encode_int(p, dirent->id.change_set);
+  p = svn__encode_uint(p, dirent->id.number);
 
   /* Add the entry to the output stream. */
   to_write = p - buffer;
-  SVN_ERR(svn_stream_write(stream, buffer, &to_write));
+  SVN_ERR(svn_stream_write(stream, (const char *)buffer, &to_write));
 
   return SVN_NO_ERROR;
 }
@@ -943,8 +915,15 @@ unparse_dir_entries(apr_array_header_t *entries,
                     svn_stream_t *stream,
                     apr_pool_t *scratch_pool)
 {
+  apr_byte_t buffer[SVN__MAX_ENCODED_UINT_LEN];
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
+
+  /* Write the number of entries. */
+  apr_size_t to_write = svn__encode_uint(buffer, entries->nelts) - buffer;
+  SVN_ERR(svn_stream_write(stream, (const char *)buffer, &to_write));
+
+  /* Write all entries */
   for (i = 0; i < entries->nelts; ++i)
     {
       svn_fs_x__dirent_t *dirent;
@@ -953,9 +932,6 @@ unparse_dir_entries(apr_array_header_t *entries,
       dirent = APR_ARRAY_IDX(entries, i, svn_fs_x__dirent_t *);
       SVN_ERR(unparse_dir_entry(dirent, stream, iterpool));
     }
-
-  SVN_ERR(svn_stream_printf(stream, scratch_pool, "%s\n",
-                            SVN_HASH_TERMINATOR));
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
@@ -1832,6 +1808,7 @@ svn_fs_x__set_entry(svn_fs_t *fs,
   svn_fs_x__data_t *ffd = fs->fsap_data;
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
   const svn_fs_x__id_t *key = &(parent_noderev->noderev_id);
+  svn_fs_x__dirent_t entry;
 
   if (!rep || !svn_fs_x__is_txn(rep->id.change_set))
     {
@@ -1912,21 +1889,17 @@ svn_fs_x__set_entry(svn_fs_t *fs,
         }
     }
 
-  /* Append an incremental hash entry for the entry change. */
+  /* Append an incremental hash entry for the entry change.
+     A deletion is represented by an "unused" noderev-id. */
   if (id)
-    {
-      svn_fs_x__dirent_t entry;
-      entry.name = name;
-      entry.id = *id;
-      entry.kind = kind;
-
-      SVN_ERR(unparse_dir_entry(&entry, out, subpool));
-    }
+    entry.id = *id;
   else
-    {
-      SVN_ERR(svn_stream_printf(out, subpool, "D %" APR_SIZE_T_FMT "\n%s\n",
-                                strlen(name), name));
-    }
+    svn_fs_x__id_reset(&entry.id);
+
+  entry.name = name;
+  entry.kind = kind;
+
+  SVN_ERR(unparse_dir_entry(&entry, out, subpool));
 
   /* Flush APR buffers. */
   SVN_ERR(svn_io_file_flush(file, subpool));
