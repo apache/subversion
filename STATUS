@@ -30,15 +30,6 @@ Candidate changes:
      +0: julianfoad, rhuijben (he says it works, but I haven't reviewed or tested)
      +0: danielsh (not tested; would be nice to have a $ anchor in the pattern)
 
- * r1703581
-   Allow simple resolving of binary file text conflicts
-   Justification:
-     Simple usability improvement. Use reported. Regression.
-   Branch:
-     ^/subversion/branches/1.9.x-r1703581
-   Votes:
-     +1: rhuijben, philip
-
  * r1703688, 1703689
    Fix merging deletes of svn:eol-style CRLF or CR files
    Justification:
@@ -62,7 +53,7 @@ Candidate changes:
      Easier debugging. Consistency with version-reporting of other runtime
      dependencies.
    Votes:
-     +1: danielsh
+     +1: danielsh, stefan2
 
  * r1703470, r1703475, r1703476, r1703477, r1703544
    Updated INSTALL documentation.
@@ -71,43 +62,12 @@ Candidate changes:
    Votes:
      +1: luke1410
 
- * r1706783
-   Really pass patch result to svn_client_patch() filter 
-   Justification:
-     Without this fix the filter can't determine the result of a patch.
-   Votes:
-     +1: rhuijben, ivan
-
- * r1706983, r1706999
-   Add some @since information to config defines
-   Justification:
-     Trivial correctness fix. Will propagate to documentation.
-   Votes:
-     +1: rhuijben, ivan
-
- * r1708699
-   Fix authz with mandatory authn provided by mod_auth_kerb/mod_auth_ntlm.
-   Justification:
-     Regression introduced in 1.9.2.
-   Votes:
-     +1: philip, rhuijben
-
- * r1709553
-   Fix display of process ID in mod_dav_svn cache statistics.
-   Justification:
-     User cannot determine to which process the output applies.
-   Notes:
-     rhuijben: The added include is the actual fix. The rest of the patch
-               just avoids compile time problems.
-   Votes:
-     +1: philip, rhuijben
-
  * r1710167
    Set journal-mode in exclusive-locking mode to improve NFS performance.
    Justification:
      Reduces performance regression compared to 1.8.
    Votes:
-     +1: philip
+     +1: philip, stefan2
 
  * r1706428, r1706437, r1709388, r1711250, r1711507, r1711510
    Fix issue #4598, "No-op changes no longer dumped by 'svnadmin dump' in 1.9"
@@ -136,7 +96,7 @@ Candidate changes:
      Simple fix makes it far less likely that tempfiles are left behind
      on the server.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1668625
    Fix 'svn diff --summarize --ignore-properties'.
@@ -166,3 +126,44 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1703581
+   Allow simple resolving of binary file text conflicts
+   Justification:
+     Simple usability improvement. Use reported. Regression.
+   Branch:
+     ^/subversion/branches/1.9.x-r1703581
+   Votes:
+     +1: rhuijben, philip, stefan2
+
+ * r1706783
+   Really pass patch result to svn_client_patch() filter 
+   Justification:
+     Without this fix the filter can't determine the result of a patch.
+   Votes:
+     +1: rhuijben, ivan, stefan2
+
+ * r1706983, r1706999
+   Add some @since information to config defines
+   Justification:
+     Trivial correctness fix. Will propagate to documentation.
+   Votes:
+     +1: rhuijben, ivan, stefan2
+
+ * r1708699
+   Fix authz with mandatory authn provided by mod_auth_kerb/mod_auth_ntlm.
+   Justification:
+     Regression introduced in 1.9.2.
+   Votes:
+     +1: philip, rhuijben, stefan2
+
+ * r1709553
+   Fix display of process ID in mod_dav_svn cache statistics.
+   Justification:
+     User cannot determine to which process the output applies.
+   Notes:
+     rhuijben: The added include is the actual fix. The rest of the patch
+               just avoids compile time problems.
+   Votes:
+     +1: philip, rhuijben, stefan2
+
