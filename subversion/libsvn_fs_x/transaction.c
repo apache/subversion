@@ -1263,7 +1263,12 @@ get_and_increment_txn_key_body(void *baton,
   svn_stringbuf_t *buf;
   SVN_ERR(svn_fs_x__read_content(&buf, txn_current_path, scratch_pool));
 
-  /* remove trailing newlines */
+  /* Parse the txn number, stopping at the next non-digit.
+   *
+   * Note that an empty string is being interpreted as "0".
+   * This gives us implicit recovery if the file contents should be lost
+   * due to e.g. power failure.
+   */
   cb->txn_number = svn__base36toui64(NULL, buf->data);
   if (cb->txn_number == 0)
     ++cb->txn_number;
