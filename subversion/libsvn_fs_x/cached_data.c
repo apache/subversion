@@ -2366,108 +2366,107 @@ compare_dirent_name(const void *a,
   return strcmp(lhs->name, rhs);
 }
 
-/* Into ENTRIES, read all directories entries from the key-value text in
- * STREAM.  If INCREMENTAL is TRUE, read until the end of the STREAM and
+/* Into ENTRIES, parse all directories entries from the serialized form in
+ * DATA.  If INCREMENTAL is TRUE, read until the end of the STREAM and
  * update the data.  ID is provided for nicer error messages.
+ *
+ * The contents of DATA will be shared with the items in ENTRIES, i.e. it
+ * must not be modified afterwards and must remain valid as long as ENTRIES
+ * is valid.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
-read_dir_entries(apr_array_header_t *entries,
-                 svn_stream_t *stream,
-                 svn_boolean_t incremental,
-                 const svn_fs_x__id_t *id,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
+parse_dir_entries(apr_array_header_t **entries_p,
+                  const svn_stringbuf_t *data,
+                  svn_boolean_t incremental,
+                  const svn_fs_x__id_t *id,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  const apr_byte_t *p = (const apr_byte_t *)data->data;
+  const apr_byte_t *end = p + data->len;
+  apr_uint64_t count;
   apr_hash_t *hash = incremental ? svn_hash__make(scratch_pool) : NULL;
-  const char *terminator = SVN_HASH_TERMINATOR;
+  apr_array_header_t *entries;
 
-  /* Read until the terminator (non-incremental) or the end of STREAM
-     (incremental mode).  In the latter mode, we use a temporary HASH
-     to make updating and removing entries cheaper. */
-  while (1)
+  /* Construct the resulting container. */
+  p = svn__decode_uint(&count, p, end);
+  if (count > INT_MAX)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Directory for '%s' is too large"),
+                             svn_fs_x__id_unparse(id, scratch_pool)->data);
+
+  entries = apr_array_make(result_pool, (int)count,
+                           sizeof(svn_fs_x__dirent_t *));
+
+  while (p != end)
     {
-      svn_hash__entry_t entry;
+      apr_size_t len;
       svn_fs_x__dirent_t *dirent;
-      char *str;
-
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_hash__read_entry(&entry, stream, terminator,
-                                   incremental, iterpool));
-
-      /* End of directory? */
-      if (entry.key == NULL)
-        {
-          /* In incremental mode, we skip the terminator and read the
-             increments following it until the end of the stream. */
-          if (incremental && terminator)
-            terminator = NULL;
-          else
-            break;
-        }
-
-      /* Deleted entry? */
-      if (entry.val == NULL)
-        {
-          /* We must be in incremental mode */
-          assert(hash);
-          apr_hash_set(hash, entry.key, entry.keylen, NULL);
-          continue;
-        }
-
-      /* Add a new directory entry. */
       dirent = apr_pcalloc(result_pool, sizeof(*dirent));
-      dirent->name = apr_pstrmemdup(result_pool, entry.key, entry.keylen);
 
-      str = svn_cstring_tokenize(" ", &entry.val);
-      if (str == NULL)
+      /* The part of the serialized entry that is not the name will be
+       * about 6 bytes or less.  Since APR allocates with an 8 byte
+       * alignment (4 bytes loss on average per string), simply using
+       * the name string in DATA already gives us near-optimal memory
+       * usage. */
+      dirent->name = (const char *)p;
+      len = strlen(dirent->name);
+      p += len + 1;
+      if (p == end)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                      _("Directory entry corrupt in '%s'"),
-                      svn_fs_x__id_unparse(id, scratch_pool)->data);
+                            _("Directory entry missing kind in '%s'"),
+                            svn_fs_x__id_unparse(id, scratch_pool)->data);
 
-      if (strcmp(str, SVN_FS_X__KIND_FILE) == 0)
-        {
-          dirent->kind = svn_node_file;
-        }
-      else if (strcmp(str, SVN_FS_X__KIND_DIR) == 0)
-        {
-          dirent->kind = svn_node_dir;
-        }
-      else
-        {
-          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                      _("Directory entry corrupt in '%s'"),
-                      svn_fs_x__id_unparse(id, scratch_pool)->data);
-        }
-
-      str = svn_cstring_tokenize(" ", &entry.val);
-      if (str == NULL)
+      dirent->kind = (svn_node_kind_t)*(p++);
+      if (p == end)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                      _("Directory entry corrupt in '%s'"),
-                      svn_fs_x__id_unparse(id, scratch_pool)->data);
+                            _("Directory entry missing change set in '%s'"),
+                            svn_fs_x__id_unparse(id, scratch_pool)->data);
 
-      SVN_ERR(svn_fs_x__id_parse(&dirent->id, str));
+      p = svn__decode_int(&dirent->id.change_set, p, end);
+      if (p == end)
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Directory entry missing item number in '%s'"),
+                            svn_fs_x__id_unparse(id, scratch_pool)->data);
+
+      p = svn__decode_uint(&dirent->id.number, p, end);
 
       /* In incremental mode, update the hash; otherwise, write to the
        * final array. */
       if (incremental)
-        apr_hash_set(hash, dirent->name, entry.keylen, dirent);
+        {
+          /* Insertion / update or a deletion? */
+          if (svn_fs_x__id_used(&dirent->id))
+            apr_hash_set(hash, dirent->name, len, dirent);
+          else
+            apr_hash_set(hash, dirent->name, len, NULL);
+        }
       else
-        APR_ARRAY_PUSH(entries, svn_fs_x__dirent_t *) = dirent;
+        {
+          APR_ARRAY_PUSH(entries, svn_fs_x__dirent_t *) = dirent;
+        }
     }
 
-  /* Convert container to a sorted array. */
   if (incremental)
     {
+      /* Convert container into a sorted array. */
       apr_hash_index_t *hi;
-      for (hi = apr_hash_first(iterpool, hash); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(scratch_pool, hash); hi; hi = apr_hash_next(hi))
         APR_ARRAY_PUSH(entries, svn_fs_x__dirent_t *) = apr_hash_this_val(hi);
+
+      if (!sorted(entries))
+        svn_sort__array(entries, compare_dirents);
+    }
+  else
+    {
+      /* Check that we read the expected amount of entries. */
+      if ((apr_uint64_t)entries->nelts != count)
+        return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Directory length mismatch in '%s'"),
+                            svn_fs_x__id_unparse(id, scratch_pool)->data);
     }
 
-  if (!sorted(entries))
-    svn_sort__array(entries, compare_dirents);
-
-  svn_pool_destroy(iterpool);
+ *entries_p = entries;
 
   return SVN_NO_ERROR;
 }
@@ -2515,9 +2514,11 @@ get_dir_contents(svn_fs_x__dir_data_t *dir,
 {
   svn_stream_t *contents;
   const svn_fs_x__id_t *id = &noderev->noderev_id;
+  apr_size_t len;
+  svn_stringbuf_t *text;
+  svn_boolean_t incremental;
 
   /* Initialize the result. */
-  dir->entries = apr_array_make(result_pool, 16, sizeof(svn_fs_x__dirent_t *));
   dir->txn_filesize = SVN_INVALID_FILESIZE;
 
   /* Read dir contents - unless there is none in which case we are done. */
@@ -2539,31 +2540,40 @@ get_dir_contents(svn_fs_x__dir_data_t *dir,
 
       /* Obtain txn children file size. */
       SVN_ERR(svn_io_file_size_get(&dir->txn_filesize, file, scratch_pool));
+      len = (apr_size_t)dir->txn_filesize;
 
+      /* Finally, provide stream access to FILE. */
       contents = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
-      SVN_ERR(read_dir_entries(dir->entries, contents, TRUE, id,
-                               result_pool, scratch_pool));
-      SVN_ERR(svn_stream_close(contents));
+      incremental = TRUE;
     }
   else if (noderev->data_rep)
     {
-      /* Undeltify content before parsing it. Otherwise, we could only
-       * parse it byte-by-byte.
-       */
-      apr_size_t len = noderev->data_rep->expanded_size;
-      svn_stringbuf_t *text;
-
       /* The representation is immutable.  Read it normally. */
+      len = noderev->data_rep->expanded_size;
       SVN_ERR(svn_fs_x__get_contents(&contents, fs, noderev->data_rep,
                                      FALSE, scratch_pool));
-      SVN_ERR(svn_stringbuf_from_stream(&text, contents, len, scratch_pool));
-      SVN_ERR(svn_stream_close(contents));
-
-      /* de-serialize hash */
-      contents = svn_stream_from_stringbuf(text, scratch_pool);
-      SVN_ERR(read_dir_entries(dir->entries, contents, FALSE, id,
-                               result_pool, scratch_pool));
+      incremental = FALSE;
     }
+  else
+    {
+      /* Empty representation == empty directory. */
+      dir->entries = apr_array_make(result_pool, 0,
+                                    sizeof(svn_fs_x__dirent_t *));
+      return SVN_NO_ERROR;
+    }
+
+  /* Read the whole stream contents into a single buffer.
+   * Due to our LEN hint, no allocation overhead occurs.
+   *
+   * Also, a large portion of TEXT will be file / dir names which we
+   * directly reference from DIR->ENTRIES instead of copying them.
+   * Hence, we need to use the RESULT_POOL here. */
+  SVN_ERR(svn_stringbuf_from_stream(&text, contents, len, result_pool));
+  SVN_ERR(svn_stream_close(contents));
+
+  /* de-serialize hash */
+  SVN_ERR(parse_dir_entries(&dir->entries, text, incremental, id,
+                            result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
