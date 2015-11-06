@@ -3124,8 +3124,7 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
                                   initial_offset, directory_ids,
                                   reps_to_cache, reps_hash,
                                   reps_pool, FALSE, subpool));
-          if (   svn_fs_x__id_used(&new_id)
-              && (svn_fs_x__get_revnum(new_id.change_set) == rev))
+          if (new_id.change_set == change_set)
             dirent->id = new_id;
         }
 
