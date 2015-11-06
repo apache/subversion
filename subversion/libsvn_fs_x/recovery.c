@@ -173,6 +173,20 @@ discard_transactions(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Reset txn-current in FS.  Use SCRATCH_POOL for temporaries. */
+static svn_error_t *
+reset_txn_number(svn_fs_t *fs,
+                 apr_pool_t *scratch_pool)
+{
+  const char *initial_txn = "0\n";
+  SVN_ERR(svn_io_write_atomic2(svn_fs_x__path_txn_current(fs, scratch_pool),
+                               initial_txn, strlen(initial_txn),
+                               svn_fs_x__path_uuid(fs, scratch_pool),
+                               FALSE, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Baton used for recover_body below. */
 typedef struct recover_baton_t {
   svn_fs_t *fs;
@@ -207,6 +221,7 @@ recover_body(void *baton,
      any existing transaction is suspect (and would probably not be
      reopened anyway).  Get rid of those. */
   SVN_ERR(discard_transactions(fs, scratch_pool));
+  SVN_ERR(reset_txn_number(fs, scratch_pool));
 
   /* We need to know the largest revision in the filesystem. */
   SVN_ERR(recover_get_largest_revision(fs, &max_rev, scratch_pool));
