@@ -3068,6 +3068,10 @@ get_final_id(svn_fs_x__id_t *part,
    node-revision.  It is only controls additional sanity checking
    logic.
 
+   CHANGED_PATHS is the changed paths hash for the new revision.
+   The noderev-ids in it will be updated as soon as the respective
+   nodesrevs got their final IDs assigned.
+
    Temporary allocations are also from SCRATCH_POOL. */
 static svn_error_t *
 write_final_rev(svn_fs_x__id_t *new_id_p,
@@ -3081,6 +3085,7 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
                 apr_hash_t *reps_hash,
                 apr_pool_t *reps_pool,
                 svn_boolean_t at_root,
+                apr_hash_t *changed_paths,
                 apr_pool_t *scratch_pool)
 {
   svn_fs_x__noderev_t *noderev;
@@ -3093,6 +3098,7 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
   svn_fs_x__change_set_t change_set = svn_fs_x__change_set_by_rev(rev);
   svn_stream_t *file_stream;
   apr_pool_t *subpool;
+  svn_fs_x__change_t *change;
 
   /* Check to see if this is a transaction node. */
   if (txn_id == SVN_FS_X__INVALID_TXN_ID)
@@ -3123,7 +3129,7 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
           SVN_ERR(write_final_rev(&new_id, file, rev, fs, &dirent->id,
                                   initial_offset, directory_ids,
                                   reps_to_cache, reps_hash,
-                                  reps_pool, FALSE, subpool));
+                                  reps_pool, FALSE, changed_paths, subpool));
           if (new_id.change_set == change_set)
             dirent->id = new_id;
         }
@@ -3270,8 +3276,34 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
 
   SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, scratch_pool));
 
+  /* Update the ID within the changed paths list. */
+  change = svn_hash_gets(changed_paths, noderev->created_path);
+  if (change)
+    change->noderev_id = noderev->noderev_id;
+
   /* Return our ID that references the revision file. */
   *new_id_p = new_id;
+
+  return SVN_NO_ERROR;
+}
+
+/* Reset all in-transaction noderev-IDs in CHANGED_PATHS.  They should
+   belong to deleted nodes only.  At any rate, these IDs become invalid
+   as soon as transaction got committed.
+   Perform temporary allocations in SCRATCH_POOL. */
+static svn_error_t *
+sanitize_changed_path_info(apr_hash_t *changed_paths,
+                           apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+  for (hi = apr_hash_first(scratch_pool, changed_paths);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      svn_fs_x__change_t *change = apr_hash_this_val(hi);
+      if (svn_fs_x__is_txn(change->noderev_id.change_set))
+        svn_fs_x__id_reset(&change->noderev_id);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -3829,10 +3861,12 @@ commit_body(void *baton,
   svn_fs_x__init_txn_root(&root_id, txn_id);
   SVN_ERR(write_final_rev(&new_root_id, proto_file, new_rev, cb->fs, &root_id,
                           initial_offset, directory_ids, cb->reps_to_cache,
-                          cb->reps_hash, cb->reps_pool, TRUE, subpool));
+                          cb->reps_hash, cb->reps_pool, TRUE, changed_paths,
+                          subpool));
   svn_pool_clear(subpool);
 
   /* Write the changed-path information. */
+  SVN_ERR(sanitize_changed_path_info(changed_paths, subpool));
   SVN_ERR(write_final_changed_path_info(&changed_path_offset, proto_file,
                                         cb->fs, txn_id, changed_paths,
                                         new_rev, subpool));
