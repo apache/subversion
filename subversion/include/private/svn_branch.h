@@ -613,16 +613,6 @@ svn_error_t *
 svn_branch_state_purge(svn_branch_state_t *branch,
                        apr_pool_t *scratch_pool);
 
-/* Instantiate elements in a branch.
- *
- * In TO_BRANCH, instantiate (or alter, if existing) each element of
- * ELEMENTS, each with its given tree structure (parent, name) and payload.
- */
-svn_error_t *
-svn_branch_instantiate_elements(svn_branch_state_t *to_branch,
-                                const svn_element_tree_t *elements,
-                                apr_pool_t *scratch_pool);
-
 /* Create a copy of NEW_SUBTREE in TO_BRANCH.
  *
  * For each non-root element in NEW_SUBTREE, create a new element with

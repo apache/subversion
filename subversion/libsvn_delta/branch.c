@@ -81,6 +81,11 @@ branch_state_create(const char *bid,
                     svn_branch_txn_t *txn,
                     apr_pool_t *result_pool);
 
+static svn_error_t *
+branch_instantiate_elements(svn_branch_state_t *to_branch,
+                            const svn_element_tree_t *elements,
+                            apr_pool_t *scratch_pool);
+
 /*  */
 static apr_pool_t *
 branch_state_pool_get(svn_branch_state_t *branch)
@@ -282,8 +287,8 @@ branch_txn_branch(svn_branch_txn_t *txn,
                                              from->eid, scratch_pool);
 
   /* Populate the mapping from the 'from' source */
-  SVN_ERR(svn_branch_instantiate_elements(new_branch, from_subtree,
-                                          scratch_pool));
+  SVN_ERR(branch_instantiate_elements(new_branch, from_subtree,
+                                      scratch_pool));
   new_branch->priv->is_flat = TRUE;
 
   if (new_branch_p)
@@ -1184,14 +1189,18 @@ svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_branch_instantiate_elements(svn_branch_state_t *to_branch,
-                                const svn_element_tree_t *elements,
-                                apr_pool_t *scratch_pool)
+/* Instantiate elements in a branch.
+ *
+ * In TO_BRANCH, instantiate (or alter, if existing) each element of
+ * ELEMENTS, each with its given tree structure (parent, name) and payload.
+ */
+static svn_error_t *
+branch_instantiate_elements(svn_branch_state_t *to_branch,
+                            const svn_element_tree_t *elements,
+                            apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
 
-  /* Instantiate all the elements of NEW_SUBTREE */
   for (hi = apr_hash_first(scratch_pool, elements->e_map);
        hi; hi = apr_hash_next(hi))
     {
