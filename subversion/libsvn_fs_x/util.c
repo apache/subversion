@@ -124,13 +124,6 @@ svn_fs_x__path_txn_current(svn_fs_t *fs,
 }
 
 const char *
-svn_fs_x__path_txn_next(svn_fs_t *fs,
-                           apr_pool_t *result_pool)
-{
-  return svn_dirent_join(fs->path, PATH_TXN_NEXT, result_pool);
-}
-
-const char *
 svn_fs_x__path_txn_current_lock(svn_fs_t *fs,
                                 apr_pool_t *result_pool)
 {

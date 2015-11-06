@@ -60,7 +60,6 @@ extern "C" {
 #define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
 #define PATH_TXN_PROTOS_DIR   "txn-protorevs"    /* Directory of proto-revs */
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
-#define PATH_TXN_NEXT         "txn-next"         /* Will become txn-current */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
 #define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Oldest revision which
