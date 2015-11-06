@@ -1416,8 +1416,8 @@ svn_fs_fs__file_text_rep_equal(svn_boolean_t *equal,
   svn_stream_t *contents_a, *contents_b;
   representation_t *rep_a = a->data_rep;
   representation_t *rep_b = b->data_rep;
-  svn_boolean_t a_empty = !rep_a || rep_a->expanded_size == 0;
-  svn_boolean_t b_empty = !rep_b || rep_b->expanded_size == 0;
+  svn_boolean_t a_empty = !rep_a;
+  svn_boolean_t b_empty = !rep_b;
 
   /* This makes sure that neither rep will be NULL later on */
   if (a_empty && b_empty)
