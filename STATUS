@@ -127,13 +127,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1706983, r1706999
-   Add some @since information to config defines
-   Justification:
-     Trivial correctness fix. Will propagate to documentation.
-   Votes:
-     +1: rhuijben, ivan, stefan2
-
  * r1708699
    Fix authz with mandatory authn provided by mod_auth_kerb/mod_auth_ntlm.
    Justification:
