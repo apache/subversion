@@ -127,15 +127,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1703581
-   Allow simple resolving of binary file text conflicts
-   Justification:
-     Simple usability improvement. Use reported. Regression.
-   Branch:
-     ^/subversion/branches/1.9.x-r1703581
-   Votes:
-     +1: rhuijben, philip, stefan2
-
  * r1706783
    Really pass patch result to svn_client_patch() filter 
    Justification:
@@ -166,4 +157,3 @@ Approved changes:
                just avoids compile time problems.
    Votes:
      +1: philip, rhuijben, stefan2
-
