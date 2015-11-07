@@ -476,15 +476,17 @@ read_non_packed_revprop(apr_hash_t **properties,
   return SVN_NO_ERROR;
 }
 
-/* Serialize the packed revprops MANIFEST into STREAM.
+/* Serialize the packed revprops MANIFEST into FILE.
  * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
-write_manifest(svn_stream_t *stream,
+write_manifest(apr_file_t *file,
                const apr_array_header_t *manifest,
                apr_pool_t *scratch_pool)
 {
   int i;
+  svn_checksum_t *checksum;
+  svn_stream_t *stream;
   svn_packed__data_root_t *root = svn_packed__data_create_root(scratch_pool);
 
   /* one top-level stream per struct element */
@@ -501,29 +503,65 @@ write_manifest(svn_stream_t *stream,
       svn_packed__add_uint(tag_stream, entry->tag);
     }
 
-  /* write to stream */
+  /* Write to file and calculate the checksum. */
+  stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
+  stream = svn_checksum__wrap_write_stream(&checksum, stream,
+                                           svn_checksum_fnv1a_32x4,
+                                           scratch_pool);
   SVN_ERR(svn_packed__data_write(stream, root, scratch_pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Append the checksum */
+  SVN_ERR(svn_io_file_write_full(file, checksum->digest,
+                                 svn_checksum_size(checksum), NULL,
+                                 scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-/* Read the packed revprops manifest from STREAM and return it in *MANIFEST,
- * allocated in RESULT_POOL. Use SCRATCH_POOL for temporary allocations.
+/* Read the packed revprops manifest from the CONTENT buffer and return it
+ * in *MANIFEST, allocated in RESULT_POOL.  REVISION is the revision number
+ * to put into error messages.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 read_manifest(apr_array_header_t **manifest,
-               svn_stream_t *stream,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool)
+              svn_stringbuf_t *content,
+              svn_revnum_t revision,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
 {
+  apr_size_t data_len;
   apr_size_t i;
   apr_size_t count;
 
+  svn_stream_t *stream;
   svn_packed__data_root_t *root;
   svn_packed__int_stream_t *start_rev_stream;
   svn_packed__int_stream_t *tag_stream;
+  const apr_byte_t *digest;
+  svn_checksum_t *actual, *expected;
 
-  /* read everything from disk */
+  /* Verify the checksum. */
+  if (content->len < sizeof(apr_uint32_t))
+    return svn_error_createf(SVN_ERR_FS_CORRUPT_REVPROP_MANIFEST, NULL,
+                             "Revprop manifest too short for revision r%ld",
+                             revision);
+
+  data_len = content->len - sizeof(apr_uint32_t);
+  digest = (apr_byte_t *)content->data + data_len;
+
+  expected = svn_checksum__from_digest_fnv1a_32x4(digest, scratch_pool);
+  SVN_ERR(svn_checksum(&actual, svn_checksum_fnv1a_32x4, content->data,
+                       data_len, scratch_pool));
+
+  if (!svn_checksum_match(actual, expected))
+    SVN_ERR(svn_checksum_mismatch_err(expected, actual, scratch_pool, 
+                                      _("checksum mismatch in revprop "
+                                        "manifest for revision r%ld"),
+                                      revision));
+
+  /* read everything from the buffer */
+  stream = svn_stream_from_stringbuf(content, scratch_pool);
   SVN_ERR(svn_packed__data_read(&root, stream, result_pool, scratch_pool));
 
   /* get streams */
@@ -606,7 +644,6 @@ get_revprop_packname(svn_fs_t *fs,
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stringbuf_t *content = NULL;
   const char *manifest_file_path;
-  svn_stream_t *stream;
   int idx;
   svn_revnum_t previous_start_rev;
   int i;
@@ -627,10 +664,8 @@ get_revprop_packname(svn_fs_t *fs,
   manifest_file_path = svn_dirent_join(revprops->folder, PATH_MANIFEST,
                                        result_pool);
   SVN_ERR(svn_fs_x__read_content(&content, manifest_file_path, result_pool));
-
-  stream = svn_stream_from_stringbuf(content, scratch_pool);
-  SVN_ERR(read_manifest(&revprops->manifest, stream, result_pool,
-                        scratch_pool));
+  SVN_ERR(read_manifest(&revprops->manifest, content, revprops->revision,
+                        result_pool, scratch_pool));
 
   /* Verify the manifest data. */
   if (revprops->manifest->nelts == 0)
@@ -1377,10 +1412,7 @@ write_packed_revprop(const char **final_path,
       *tmp_path = apr_pstrcat(result_pool, *final_path, ".tmp", SVN_VA_NULL);
       SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, *tmp_path,
                                               scratch_pool));
-
-      stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
-      SVN_ERR(write_manifest(stream, revprops->manifest, scratch_pool));
-      SVN_ERR(svn_stream_close(stream));
+      SVN_ERR(write_manifest(file, revprops->manifest, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1598,7 +1630,6 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
 {
   const char *manifest_file_path, *pack_filename = NULL;
   apr_file_t *manifest_file;
-  svn_stream_t *manifest_stream;
   svn_revnum_t start_rev, end_rev, rev;
   apr_off_t total_size;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1609,11 +1640,9 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
   manifest_file_path = svn_dirent_join(pack_file_dir, PATH_MANIFEST,
                                        scratch_pool);
 
-  /* Create the manifest file stream. */
+  /* Create the manifest file. */
   SVN_ERR(svn_fs_x__batch_fsync_open_file(&manifest_file, batch,
                                           manifest_file_path, scratch_pool));
-  manifest_stream = svn_stream_from_aprfile2(manifest_file, TRUE,
-                                             scratch_pool);
 
   /* revisions to handle. Special case: revision 0 */
   start_rev = (svn_revnum_t) (shard * max_files_per_dir);
@@ -1692,8 +1721,7 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
                           (apr_size_t)total_size, compression_level,
                           batch, cancel_func, cancel_baton, iterpool));
 
-  SVN_ERR(write_manifest(manifest_stream, manifest, iterpool));
-  SVN_ERR(svn_stream_close(manifest_stream));
+  SVN_ERR(write_manifest(manifest_file, manifest, iterpool));
 
   /* flush all data to disk and update permissions */
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, iterpool));
