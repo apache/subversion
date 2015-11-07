@@ -390,12 +390,8 @@ typedef struct packed_revprops_t
    * in the pack, i.e. the pack content without header and compression */
   svn_stringbuf_t *packed_revprops;
 
-  /* First revision covered by MANIFEST.
-   * Will equal the shard start revision or 1, for the 1st shard. */
-  svn_revnum_t manifest_start;
-
   /* content of the manifest.
-   * Maps long(rev - MANIFEST_START) to manifest_entry_t */
+   * Maps long(rev - first-packed-in-shard) to manifest_entry_t */
   apr_array_header_t *manifest;
 } packed_revprops_t;
 
@@ -575,14 +571,13 @@ get_revprop_packname(svn_fs_t *fs,
   svn_stringbuf_t *content = NULL;
   const char *manifest_file_path;
   svn_stream_t *stream;
-  int idx, rev_count;
+  int idx;
 
   /* Determine the dimensions. Rev 0 is excluded from the first shard. */
-  rev_count = ffd->max_files_per_dir;
-  revprops->manifest_start
-    = revprops->revision - (revprops->revision % rev_count);
-  if (revprops->manifest_start == 0)
-    ++revprops->manifest_start;
+  svn_revnum_t manifest_start
+    = revprops->revision - (revprops->revision % ffd->max_files_per_dir);
+  if (manifest_start == 0)
+    ++manifest_start;
 
   /* Read the content of the manifest file */
   revprops->folder = svn_fs_x__path_pack_shard(fs, revprops->revision,
@@ -596,7 +591,7 @@ get_revprop_packname(svn_fs_t *fs,
                         scratch_pool));
 
   /* Now get the pack file description */
-  idx = (int)(revprops->revision - revprops->manifest_start);
+  idx = (int)(revprops->revision - manifest_start);
   revprops->entry = APR_ARRAY_IDX(revprops->manifest, idx,
                                    manifest_entry_t);
 
@@ -1128,8 +1123,11 @@ repack_file_open(apr_file_t **file,
   manifest_entry_t new_entry;
   const char *new_path;
   int i;
+
+  svn_revnum_t manifest_start
+    = APR_ARRAY_IDX(revprops->manifest, 0, manifest_entry_t).start_rev;
   int manifest_offset
-    = (int)(revprops->entry.start_rev - revprops->manifest_start);
+    = (int)(revprops->entry.start_rev - manifest_start);
 
   /* get the old (= current) pack file and enlist it for later deletion */
   manifest_entry_t old_entry = revprops->entry;
