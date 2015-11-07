@@ -608,12 +608,18 @@ get_revprop_packname(svn_fs_t *fs,
   const char *manifest_file_path;
   svn_stream_t *stream;
   int idx;
+  svn_revnum_t previous_start_rev;
+  int i;
 
   /* Determine the dimensions. Rev 0 is excluded from the first shard. */
+  int rev_count = ffd->max_files_per_dir;
   svn_revnum_t manifest_start
-    = revprops->revision - (revprops->revision % ffd->max_files_per_dir);
+    = revprops->revision - (revprops->revision % rev_count);
   if (manifest_start == 0)
-    ++manifest_start;
+    {
+      ++manifest_start;
+      --rev_count;
+    }
 
   /* Read the content of the manifest file */
   revprops->folder = svn_fs_x__path_pack_shard(fs, revprops->revision,
@@ -625,6 +631,32 @@ get_revprop_packname(svn_fs_t *fs,
   stream = svn_stream_from_stringbuf(content, scratch_pool);
   SVN_ERR(read_manifest(&revprops->manifest, stream, result_pool,
                         scratch_pool));
+
+  /* Verify the manifest data. */
+  if (revprops->manifest->nelts == 0)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT_REVPROP_MANIFEST, NULL,
+                             "Revprop manifest for r%ld is empty",
+                             revprops->revision);
+
+  previous_start_rev = 0;
+  for (i = 0; i < revprops->manifest->nelts; ++i)
+    {
+      svn_revnum_t start_rev = APR_ARRAY_IDX(revprops->manifest, i,
+                                             manifest_entry_t).start_rev;
+      if (   start_rev < manifest_start
+          || start_rev >= manifest_start + rev_count)
+        return svn_error_createf(SVN_ERR_FS_CORRUPT_REVPROP_MANIFEST, NULL,
+                                 "Revprop manifest for r%ld contains "
+                                 "out-of-range revision r%ld",
+                                 revprops->revision, start_rev);
+
+      if (start_rev < previous_start_rev)
+        return svn_error_createf(SVN_ERR_FS_CORRUPT_REVPROP_MANIFEST, NULL,
+                                 "Entries in revprop manifest for r%ld "
+                                 "are not ordered", revprops->revision);
+
+      previous_start_rev = start_rev;
+    }
 
   /* Now get the pack file description */
   idx = get_entry(revprops->manifest, revprops->revision);
