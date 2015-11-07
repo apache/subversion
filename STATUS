@@ -126,13 +126,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1709553
-   Fix display of process ID in mod_dav_svn cache statistics.
-   Justification:
-     User cannot determine to which process the output applies.
-   Notes:
-     rhuijben: The added include is the actual fix. The rest of the patch
-               just avoids compile time problems.
-   Votes:
-     +1: philip, rhuijben, stefan2
