@@ -342,7 +342,7 @@ end_revprop_change(svn_fs_t *fs,
 }
 
 /* Represents an entry in the packed revprop manifest.
- * Right now, there is one such entry per revision. */
+ * There is one such entry per pack file. */
 typedef struct manifest_entry_t
 {
   /* First revision in the pack file. */
@@ -391,7 +391,7 @@ typedef struct packed_revprops_t
   svn_stringbuf_t *packed_revprops;
 
   /* content of the manifest.
-   * Maps long(rev - first-packed-in-shard) to manifest_entry_t */
+   * Sorted list of manifest_entry_t. */
   apr_array_header_t *manifest;
 } packed_revprops_t;
 
@@ -545,6 +545,42 @@ read_manifest(apr_array_header_t **manifest,
   return SVN_NO_ERROR;
 }
 
+/* Implements the standard comparison function signature comparing the
+ * manifest_entry_t(lhs).start_rev to svn_revnum_t(rhs). */
+static int
+compare_entry_revision(const void *lhs,
+                       const void *rhs)
+{
+  const manifest_entry_t *entry = lhs;
+  const svn_revnum_t *revision = rhs;
+
+  if (entry->start_rev < *revision)
+    return -1;
+
+  return entry->start_rev == *revision ? 0 : 1;
+}
+
+/* Return the index in MANIFEST that has the info for the pack file
+ * containing REVISION. */
+static int
+get_entry(apr_array_header_t *manifest,
+          svn_revnum_t revision)
+{
+  manifest_entry_t *entry;
+  int idx = svn_sort__bsearch_lower_bound(manifest, &revision,
+                                          compare_entry_revision);
+
+  assert(manifest->nelts > 0);
+  if (idx >= manifest->nelts)
+    return idx - 1;
+
+  entry = &APR_ARRAY_IDX(manifest, idx, manifest_entry_t);
+  if (entry->start_rev > revision && idx > 0)
+    return idx - 1;
+
+  return idx;
+}
+
 /* Return the full path of the revprop pack file given by ENTRY within
  * REVPROPS.  Allocate the result in RESULT_POOL. */
 static const char *
@@ -591,9 +627,9 @@ get_revprop_packname(svn_fs_t *fs,
                         scratch_pool));
 
   /* Now get the pack file description */
-  idx = (int)(revprops->revision - manifest_start);
+  idx = get_entry(revprops->manifest, revprops->revision);
   revprops->entry = APR_ARRAY_IDX(revprops->manifest, idx,
-                                   manifest_entry_t);
+                                  manifest_entry_t);
 
   return SVN_NO_ERROR;
 }
@@ -1099,9 +1135,8 @@ repack_revprops(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Allocate a new pack file name for revisions
- *   [REVPROPS->ENTRY.START_REV + START, REVPROPS->ENTRY.START_REV + END - 1]
- * of REVPROPS->MANIFEST.  Add the name of old file to FILES_TO_DELETE,
+/* Allocate a new pack file name for revisions starting at START_REV in
+ * REVPROPS->MANIFEST.  Add the name of old file to FILES_TO_DELETE,
  * auto-create that array if necessary.  Return an open file *FILE that is
  * allocated in RESULT_POOL.  Allocate the paths in *FILES_TO_DELETE from
  * the same pool that contains the array itself.  Schedule necessary fsync
@@ -1113,8 +1148,7 @@ static svn_error_t *
 repack_file_open(apr_file_t **file,
                  svn_fs_t *fs,
                  packed_revprops_t *revprops,
-                 int start,
-                 int end,
+                 svn_revnum_t start_rev,
                  apr_array_header_t **files_to_delete,
                  svn_fs_x__batch_fsync_t *batch,
                  apr_pool_t *result_pool,
@@ -1122,31 +1156,31 @@ repack_file_open(apr_file_t **file,
 {
   manifest_entry_t new_entry;
   const char *new_path;
-  int i;
+  int idx;
 
-  svn_revnum_t manifest_start
-    = APR_ARRAY_IDX(revprops->manifest, 0, manifest_entry_t).start_rev;
-  int manifest_offset
-    = (int)(revprops->entry.start_rev - manifest_start);
-
-  /* get the old (= current) pack file and enlist it for later deletion */
-  manifest_entry_t old_entry = revprops->entry;
+  /* We always replace whole pack files - possibly by more than one new file.
+   * When we create the file for the first part of the pack, enlist the old
+   * one for later deletion */
+  SVN_ERR_ASSERT(start_rev >= revprops->entry.start_rev);
 
   if (*files_to_delete == NULL)
     *files_to_delete = apr_array_make(result_pool, 3, sizeof(const char*));
 
-  APR_ARRAY_PUSH(*files_to_delete, const char*)
-    = get_revprop_pack_filepath(revprops, &old_entry,
-                                (*files_to_delete)->pool);
+  if (revprops->entry.start_rev == start_rev)
+    APR_ARRAY_PUSH(*files_to_delete, const char*)
+      = get_revprop_pack_filepath(revprops, &revprops->entry,
+                                  (*files_to_delete)->pool);
 
   /* Initialize the new manifest entry. Bump the tag part. */
-  new_entry.start_rev = old_entry.start_rev + start;
-  new_entry.tag = old_entry.tag + 1;
+  new_entry.start_rev = start_rev;
+  new_entry.tag = revprops->entry.tag + 1;
 
   /* update the manifest to point to the new file */
-  for (i = start; i < end; ++i)
-    APR_ARRAY_IDX(revprops->manifest, i + manifest_offset, manifest_entry_t)
-      = new_entry;
+  idx = get_entry(revprops->manifest, start_rev);
+  if (revprops->entry.start_rev == start_rev)
+    APR_ARRAY_IDX(revprops->manifest, idx, manifest_entry_t) = new_entry;
+  else
+    svn_sort__array_insert(revprops->manifest, &new_path, idx + 1);
 
   /* open the file */
   new_path = get_revprop_pack_filepath(revprops, &new_entry, scratch_pool);
@@ -1273,8 +1307,9 @@ write_packed_revprop(const char **final_path,
       /* write the new, split files */
       if (left_count)
         {
-          SVN_ERR(repack_file_open(&file, fs, revprops, 0,
-                                   left_count, files_to_delete, batch,
+          SVN_ERR(repack_file_open(&file, fs, revprops,
+                                   revprops->entry.start_rev,
+                                   files_to_delete, batch,
                                    scratch_pool, scratch_pool));
           SVN_ERR(repack_revprops(fs, revprops, 0, left_count,
                                   changed_index, serialized, new_total_size,
@@ -1283,9 +1318,9 @@ write_packed_revprop(const char **final_path,
 
       if (left_count + right_count < revprops->sizes->nelts)
         {
-          SVN_ERR(repack_file_open(&file, fs, revprops, changed_index,
-                                   changed_index + 1, files_to_delete,
-                                   batch, scratch_pool, scratch_pool));
+          SVN_ERR(repack_file_open(&file, fs, revprops, rev,
+                                   files_to_delete, batch,
+                                   scratch_pool, scratch_pool));
           SVN_ERR(repack_revprops(fs, revprops, changed_index,
                                   changed_index + 1,
                                   changed_index, serialized, new_total_size,
@@ -1294,9 +1329,7 @@ write_packed_revprop(const char **final_path,
 
       if (right_count)
         {
-          SVN_ERR(repack_file_open(&file, fs, revprops,
-                                   revprops->sizes->nelts - right_count,
-                                   revprops->sizes->nelts,
+          SVN_ERR(repack_file_open(&file, fs, revprops, rev + 1,
                                    files_to_delete,  batch,
                                    scratch_pool, scratch_pool));
           SVN_ERR(repack_revprops(fs, revprops,
@@ -1539,7 +1572,6 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *sizes;
   apr_array_header_t *manifest;
-  manifest_entry_t entry;
 
   /* Some useful paths. */
   manifest_file_path = svn_dirent_join(pack_file_dir, PATH_MANIFEST,
@@ -1573,8 +1605,7 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
   sizes = apr_array_make(scratch_pool, max_files_per_dir, sizeof(apr_off_t));
   total_size = 2 * SVN_INT64_BUFFER_SIZE;
 
-  manifest = apr_array_make(scratch_pool, max_files_per_dir,
-                            sizeof(manifest_entry_t));
+  manifest = apr_array_make(scratch_pool, 4, sizeof(manifest_entry_t));
 
   /* Iterate over the revisions in this shard, determine their size and
    * squashing them together into pack files. */
@@ -1610,12 +1641,12 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
        * file if it is a new one */
       if (sizes->nelts == 0)
         {
-          pack_filename = apr_psprintf(scratch_pool, "%ld.0", rev);
-          entry.start_rev = rev;
-          entry.tag = 0;
-        }
+          manifest_entry_t *entry = apr_array_push(manifest);
+          entry->start_rev = rev;
+          entry->tag = 0;
 
-      APR_ARRAY_PUSH(manifest, manifest_entry_t) = entry;
+          pack_filename = apr_psprintf(scratch_pool, "%ld.0", rev);
+        }
 
       /* add to list of files to put into the current pack file */
       APR_ARRAY_PUSH(sizes, apr_off_t) = finfo.size;
