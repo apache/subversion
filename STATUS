@@ -127,13 +127,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1708699
-   Fix authz with mandatory authn provided by mod_auth_kerb/mod_auth_ntlm.
-   Justification:
-     Regression introduced in 1.9.2.
-   Votes:
-     +1: philip, rhuijben, stefan2
-
  * r1709553
    Fix display of process ID in mod_dav_svn cache statistics.
    Justification:
