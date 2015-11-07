@@ -379,9 +379,6 @@ typedef struct packed_revprops_t
   /* sum of values in SIZES */
   apr_size_t total_size;
 
-  /* first revision in the pack (>= MANIFEST_START) */
-  svn_revnum_t start_revision;
-
   /* size of the revprops in PACKED_REVPROPS */
   apr_array_header_t *sizes;
 
@@ -617,10 +614,9 @@ same_shard(svn_fs_t *fs,
   return (r1 / ffd->max_files_per_dir) == (r2 / ffd->max_files_per_dir);
 }
 
-/* Given FS and the full packed file content in REVPROPS->PACKED_REVPROPS,
- * fill the START_REVISION member, and make PACKED_REVPROPS point to the
- * first serialized revprop.  If READ_ALL is set, initialize the SIZES
- * and OFFSETS members as well.
+/* Given FS and the full packed file content in REVPROPS->PACKED_REVPROPS
+ * and make PACKED_REVPROPS point to the first serialized revprop.  If
+ * READ_ALL is set, initialize the SIZES and OFFSETS members as well.
  *
  * Parse the revprops for REVPROPS->REVISION and set the PROPERTIES as
  * well as the SERIALIZED_SIZE member.  If revprop caching has been
@@ -688,7 +684,7 @@ parse_packed_revprops(svn_fs_t *fs,
   revprops->packed_revprops->blocksize = (apr_size_t)(uncompressed->blocksize - offset);
 
   /* STREAM still points to the first entry in the sizes list. */
-  revprops->start_revision = (svn_revnum_t)first_rev;
+  SVN_ERR_ASSERT(revprops->entry.start_rev = (svn_revnum_t)first_rev);
   if (read_all)
     {
       /* Init / construct REVPROPS members. */
@@ -1066,7 +1062,8 @@ repack_revprops(svn_fs_t *fs,
   stream = svn_stream_from_stringbuf(uncompressed, scratch_pool);
 
   /* write the header*/
-  SVN_ERR(serialize_revprops_header(stream, revprops->start_revision + start,
+  SVN_ERR(serialize_revprops_header(stream,
+                                    revprops->entry.start_rev + start,
                                     revprops->sizes, start, end,
                                     scratch_pool));
 
@@ -1108,7 +1105,7 @@ repack_revprops(svn_fs_t *fs,
 }
 
 /* Allocate a new pack file name for revisions
- *     [REVPROPS->START_REVISION + START, REVPROPS->START_REVISION + END - 1]
+ *   [REVPROPS->ENTRY.START_REV + START, REVPROPS->ENTRY.START_REV + END - 1]
  * of REVPROPS->MANIFEST.  Add the name of old file to FILES_TO_DELETE,
  * auto-create that array if necessary.  Return an open file *FILE that is
  * allocated in RESULT_POOL.  Allocate the paths in *FILES_TO_DELETE from
@@ -1132,12 +1129,10 @@ repack_file_open(apr_file_t **file,
   const char *new_path;
   int i;
   int manifest_offset
-    = (int)(revprops->start_revision - revprops->manifest_start);
+    = (int)(revprops->entry.start_rev - revprops->manifest_start);
 
   /* get the old (= current) pack file and enlist it for later deletion */
-  manifest_entry_t old_entry = APR_ARRAY_IDX(revprops->manifest,
-                                             start + manifest_offset,
-                                             manifest_entry_t);
+  manifest_entry_t old_entry = revprops->entry;
 
   if (*files_to_delete == NULL)
     *files_to_delete = apr_array_make(result_pool, 3, sizeof(const char*));
@@ -1147,7 +1142,7 @@ repack_file_open(apr_file_t **file,
                                 (*files_to_delete)->pool);
 
   /* Initialize the new manifest entry. Bump the tag part. */
-  new_entry.start_rev = revprops->start_revision + start;
+  new_entry.start_rev = old_entry.start_rev + start;
   new_entry.tag = old_entry.tag + 1;
 
   /* update the manifest to point to the new file */
@@ -1207,7 +1202,7 @@ write_packed_revprop(const char **final_path,
   SVN_ERR(svn_stream_close(stream));
 
   /* calculate the size of the new data */
-  changed_index = (int)(rev - revprops->start_revision);
+  changed_index = (int)(rev - revprops->entry.start_rev);
   new_total_size = revprops->total_size - revprops->serialized_size
                  + serialized->len
                  + (revprops->offsets->nelts + 2) * SVN_INT64_BUFFER_SIZE;
