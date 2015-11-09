@@ -32,6 +32,8 @@
 #include "util.h"
 #include "transaction.h"
 
+#include "private/svn_packed_data.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_string_private.h"
 #include "../libsvn_fs/fs-loader.h"
@@ -339,6 +341,18 @@ end_revprop_change(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Represents an entry in the packed revprop manifest.
+ * There is one such entry per pack file. */
+typedef struct manifest_entry_t
+{
+  /* First revision in the pack file. */
+  svn_revnum_t start_rev;
+
+  /* Tag (a counter) appended to the file name to distinguish it from
+     outdated ones. */
+  apr_uint64_t tag;
+} manifest_entry_t;
+
 /* Container for all data required to access the packed revprop file
  * for a given REVISION.  This structure will be filled incrementally
  * by read_pack_revprops() its sub-routines.
@@ -356,17 +370,14 @@ typedef struct packed_revprops_t
   apr_size_t serialized_size;
 
 
-  /* name of the pack file (without folder path) */
-  const char *filename;
+  /* manifest entry describing the pack file */
+  manifest_entry_t entry;
 
   /* packed shard folder path */
   const char *folder;
 
   /* sum of values in SIZES */
   apr_size_t total_size;
-
-  /* first revision in the pack (>= MANIFEST_START) */
-  svn_revnum_t start_revision;
 
   /* size of the revprops in PACKED_REVPROPS */
   apr_array_header_t *sizes;
@@ -379,12 +390,8 @@ typedef struct packed_revprops_t
    * in the pack, i.e. the pack content without header and compression */
   svn_stringbuf_t *packed_revprops;
 
-  /* First revision covered by MANIFEST.
-   * Will equal the shard start revision or 1, for the 1st shard. */
-  svn_revnum_t manifest_start;
-
   /* content of the manifest.
-   * Maps long(rev - MANIFEST_START) to const char* pack file name */
+   * Sorted list of manifest_entry_t. */
   apr_array_header_t *manifest;
 } packed_revprops_t;
 
@@ -469,17 +476,159 @@ read_non_packed_revprop(apr_hash_t **properties,
   return SVN_NO_ERROR;
 }
 
-/* Return the minimum length of any packed revprop file name in REVPROPS. */
-static apr_size_t
-get_min_filename_len(packed_revprops_t *revprops)
+/* Serialize the packed revprops MANIFEST into FILE.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+write_manifest(apr_file_t *file,
+               const apr_array_header_t *manifest,
+               apr_pool_t *scratch_pool)
 {
-  char number_buffer[SVN_INT64_BUFFER_SIZE];
+  int i;
+  svn_checksum_t *checksum;
+  svn_stream_t *stream;
+  svn_packed__data_root_t *root = svn_packed__data_create_root(scratch_pool);
 
-  /* The revprop filenames have the format <REV>.<COUNT> - with <REV> being
-   * at least the first rev in the shard and <COUNT> having at least one
-   * digit.  Thus, the minimum is 2 + #decimal places in the start rev.
-   */
-  return svn__i64toa(number_buffer, revprops->manifest_start) + 2;
+  /* one top-level stream per struct element */
+  svn_packed__int_stream_t *start_rev_stream
+    = svn_packed__create_int_stream(root, TRUE, FALSE);
+  svn_packed__int_stream_t *tag_stream
+    = svn_packed__create_int_stream(root, FALSE, FALSE);
+
+  /* serialize ENTRIES */
+  for (i = 0; i < manifest->nelts; ++i)
+    {
+      manifest_entry_t *entry = &APR_ARRAY_IDX(manifest, i, manifest_entry_t);
+      svn_packed__add_uint(start_rev_stream, entry->start_rev);
+      svn_packed__add_uint(tag_stream, entry->tag);
+    }
+
+  /* Write to file and calculate the checksum. */
+  stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
+  stream = svn_checksum__wrap_write_stream(&checksum, stream,
+                                           svn_checksum_fnv1a_32x4,
+                                           scratch_pool);
+  SVN_ERR(svn_packed__data_write(stream, root, scratch_pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Append the checksum */
+  SVN_ERR(svn_io_file_write_full(file, checksum->digest,
+                                 svn_checksum_size(checksum), NULL,
+                                 scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Read the packed revprops manifest from the CONTENT buffer and return it
+ * in *MANIFEST, allocated in RESULT_POOL.  REVISION is the revision number
+ * to put into error messages.  Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+read_manifest(apr_array_header_t **manifest,
+              svn_stringbuf_t *content,
+              svn_revnum_t revision,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  apr_size_t data_len;
+  apr_size_t i;
+  apr_size_t count;
+
+  svn_stream_t *stream;
+  svn_packed__data_root_t *root;
+  svn_packed__int_stream_t *start_rev_stream;
+  svn_packed__int_stream_t *tag_stream;
+  const apr_byte_t *digest;
+  svn_checksum_t *actual, *expected;
+
+  /* Verify the checksum. */
+  if (content->len < sizeof(apr_uint32_t))
+    return svn_error_createf(SVN_ERR_FS_CORRUPT_REVPROP_MANIFEST, NULL,
+                             "Revprop manifest too short for revision r%ld",
+                             revision);
+
+  data_len = content->len - sizeof(apr_uint32_t);
+  digest = (apr_byte_t *)content->data + data_len;
+
+  expected = svn_checksum__from_digest_fnv1a_32x4(digest, scratch_pool);
+  SVN_ERR(svn_checksum(&actual, svn_checksum_fnv1a_32x4, content->data,
+                       data_len, scratch_pool));
+
+  if (!svn_checksum_match(actual, expected))
+    SVN_ERR(svn_checksum_mismatch_err(expected, actual, scratch_pool, 
+                                      _("checksum mismatch in revprop "
+                                        "manifest for revision r%ld"),
+                                      revision));
+
+  /* read everything from the buffer */
+  stream = svn_stream_from_stringbuf(content, scratch_pool);
+  SVN_ERR(svn_packed__data_read(&root, stream, result_pool, scratch_pool));
+
+  /* get streams */
+  start_rev_stream = svn_packed__first_int_stream(root);
+  tag_stream = svn_packed__next_int_stream(start_rev_stream);
+
+  /* read ids array */
+  count = svn_packed__int_count(start_rev_stream);
+  *manifest = apr_array_make(result_pool, (int)count,
+                            sizeof(manifest_entry_t));
+
+  for (i = 0; i < count; ++i)
+    {
+      manifest_entry_t *entry = apr_array_push(*manifest);
+      entry->start_rev = (svn_revnum_t)svn_packed__get_int(start_rev_stream);
+      entry->tag = svn_packed__get_uint(tag_stream);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements the standard comparison function signature comparing the
+ * manifest_entry_t(lhs).start_rev to svn_revnum_t(rhs). */
+static int
+compare_entry_revision(const void *lhs,
+                       const void *rhs)
+{
+  const manifest_entry_t *entry = lhs;
+  const svn_revnum_t *revision = rhs;
+
+  if (entry->start_rev < *revision)
+    return -1;
+
+  return entry->start_rev == *revision ? 0 : 1;
+}
+
+/* Return the index in MANIFEST that has the info for the pack file
+ * containing REVISION. */
+static int
+get_entry(apr_array_header_t *manifest,
+          svn_revnum_t revision)
+{
+  manifest_entry_t *entry;
+  int idx = svn_sort__bsearch_lower_bound(manifest, &revision,
+                                          compare_entry_revision);
+
+  assert(manifest->nelts > 0);
+  if (idx >= manifest->nelts)
+    return idx - 1;
+
+  entry = &APR_ARRAY_IDX(manifest, idx, manifest_entry_t);
+  if (entry->start_rev > revision && idx > 0)
+    return idx - 1;
+
+  return idx;
+}
+
+/* Return the full path of the revprop pack file given by ENTRY within
+ * REVPROPS.  Allocate the result in RESULT_POOL. */
+static const char *
+get_revprop_pack_filepath(packed_revprops_t *revprops,
+                          manifest_entry_t *entry,
+                          apr_pool_t *result_pool)
+{
+  const char *filename = apr_psprintf(result_pool, "%ld.%" APR_UINT64_T_FMT,
+                                      entry->start_rev, entry->tag);
+  return svn_dirent_join(revprops->folder, filename, result_pool);
 }
 
 /* Given FS and REVPROPS->REVISION, fill the FILENAME, FOLDER and MANIFEST
@@ -495,98 +644,59 @@ get_revprop_packname(svn_fs_t *fs,
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stringbuf_t *content = NULL;
   const char *manifest_file_path;
-  int idx, rev_count;
-  char *buffer, *buffer_end;
-  const char **filenames, **filenames_end;
-  apr_size_t min_filename_len;
+  int idx;
+  svn_revnum_t previous_start_rev;
+  int i;
 
   /* Determine the dimensions. Rev 0 is excluded from the first shard. */
-  rev_count = ffd->max_files_per_dir;
-  revprops->manifest_start
+  int rev_count = ffd->max_files_per_dir;
+  svn_revnum_t manifest_start
     = revprops->revision - (revprops->revision % rev_count);
-  if (revprops->manifest_start == 0)
+  if (manifest_start == 0)
     {
-      ++revprops->manifest_start;
+      ++manifest_start;
       --rev_count;
     }
-
-  revprops->manifest = apr_array_make(result_pool, rev_count,
-                                      sizeof(const char*));
-
-  /* No line in the file can be less than this number of chars long. */
-  min_filename_len = get_min_filename_len(revprops);
 
   /* Read the content of the manifest file */
   revprops->folder = svn_fs_x__path_pack_shard(fs, revprops->revision,
                                                result_pool);
   manifest_file_path = svn_dirent_join(revprops->folder, PATH_MANIFEST,
                                        result_pool);
-
   SVN_ERR(svn_fs_x__read_content(&content, manifest_file_path, result_pool));
+  SVN_ERR(read_manifest(&revprops->manifest, content, revprops->revision,
+                        result_pool, scratch_pool));
 
-  /* There CONTENT must have a certain minimal size and there no
-   * unterminated lines at the end of the file.  Both guarantees also
-   * simplify the parser loop below.
-   */
-  if (   content->len < rev_count * (min_filename_len + 1)
-      || content->data[content->len - 1] != '\n')
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Packed revprop manifest for r%ld not "
-                               "properly terminated"), revprops->revision);
+  /* Verify the manifest data. */
+  if (revprops->manifest->nelts == 0)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT_REVPROP_MANIFEST, NULL,
+                             "Revprop manifest for r%ld is empty",
+                             revprops->revision);
 
-  /* Chop (parse) the manifest CONTENT into filenames, one per line.
-   * We only have to replace all newlines with NUL and add all line
-   * starts to REVPROPS->MANIFEST.
-   *
-   * There must be exactly REV_COUNT lines and that is the number of
-   * lines we parse from BUFFER to FILENAMES.  Set the end pointer for
-   * the source BUFFER such that BUFFER+MIN_FILENAME_LEN is still valid
-   * BUFFER_END is always valid due to CONTENT->LEN > MIN_FILENAME_LEN.
-   *
-   * Please note that this loop is performance critical for e.g. 'svn log'.
-   * It is run 1000x per revprop access, i.e. per revision and about
-   * 50 million times per sec (and CPU core).
-   */
-  for (filenames = (const char **)revprops->manifest->elts,
-       filenames_end = filenames + rev_count,
-       buffer = content->data,
-       buffer_end = buffer + content->len - min_filename_len;
-       (filenames < filenames_end) && (buffer < buffer_end);
-       ++filenames)
+  previous_start_rev = 0;
+  for (i = 0; i < revprops->manifest->nelts; ++i)
     {
-      /* BUFFER always points to the start of the next line / filename. */
-      *filenames = buffer;
+      svn_revnum_t start_rev = APR_ARRAY_IDX(revprops->manifest, i,
+                                             manifest_entry_t).start_rev;
+      if (   start_rev < manifest_start
+          || start_rev >= manifest_start + rev_count)
+        return svn_error_createf(SVN_ERR_FS_CORRUPT_REVPROP_MANIFEST, NULL,
+                                 "Revprop manifest for r%ld contains "
+                                 "out-of-range revision r%ld",
+                                 revprops->revision, start_rev);
 
-      /* Find the next EOL.  This is guaranteed to stay within the CONTENT
-       * buffer because we left enough room after BUFFER_END and we know
-       * we will always see a newline as the last non-NUL char. */
-      buffer += min_filename_len;
-      while (*buffer != '\n')
-        ++buffer;
+      if (start_rev < previous_start_rev)
+        return svn_error_createf(SVN_ERR_FS_CORRUPT_REVPROP_MANIFEST, NULL,
+                                 "Entries in revprop manifest for r%ld "
+                                 "are not ordered", revprops->revision);
 
-      /* Found EOL.  Turn it into the filename terminator and move BUFFER
-       * to the start of the next line or CONTENT buffer end. */
-      *buffer = '\0';
-      ++buffer;
+      previous_start_rev = start_rev;
     }
 
-  /* We must have reached the end of both buffers. */
-  if (buffer < content->data + content->len)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Packed revprop manifest for r%ld "
-                               "has too many entries"), revprops->revision);
-
-  if (filenames < filenames_end)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Packed revprop manifest for r%ld "
-                               "has too few entries"), revprops->revision);
-
-  /* The target array has now exactly one entry per revision. */
-  revprops->manifest->nelts = rev_count;
-
-  /* Now get the file name */
-  idx = (int)(revprops->revision - revprops->manifest_start);
-  revprops->filename = APR_ARRAY_IDX(revprops->manifest, idx, const char*);
+  /* Now get the pack file description */
+  idx = get_entry(revprops->manifest, revprops->revision);
+  revprops->entry = APR_ARRAY_IDX(revprops->manifest, idx,
+                                  manifest_entry_t);
 
   return SVN_NO_ERROR;
 }
@@ -602,10 +712,9 @@ same_shard(svn_fs_t *fs,
   return (r1 / ffd->max_files_per_dir) == (r2 / ffd->max_files_per_dir);
 }
 
-/* Given FS and the full packed file content in REVPROPS->PACKED_REVPROPS,
- * fill the START_REVISION member, and make PACKED_REVPROPS point to the
- * first serialized revprop.  If READ_ALL is set, initialize the SIZES
- * and OFFSETS members as well.
+/* Given FS and the full packed file content in REVPROPS->PACKED_REVPROPS
+ * and make PACKED_REVPROPS point to the first serialized revprop.  If
+ * READ_ALL is set, initialize the SIZES and OFFSETS members as well.
  *
  * Parse the revprops for REVPROPS->REVISION and set the PROPERTIES as
  * well as the SERIALIZED_SIZE member.  If revprop caching has been
@@ -673,7 +782,7 @@ parse_packed_revprops(svn_fs_t *fs,
   revprops->packed_revprops->blocksize = (apr_size_t)(uncompressed->blocksize - offset);
 
   /* STREAM still points to the first entry in the sizes list. */
-  revprops->start_revision = (svn_revnum_t)first_rev;
+  SVN_ERR_ASSERT(revprops->entry.start_rev = (svn_revnum_t)first_rev);
   if (read_all)
     {
       /* Init / construct REVPROPS members. */
@@ -782,9 +891,8 @@ read_pack_revprop(packed_revprops_t **revprops,
        * Re-read the manifest and the pack file.
        */
       SVN_ERR(get_revprop_packname(fs, result, result_pool, iterpool));
-      file_path  = svn_dirent_join(result->folder,
-                                   result->filename,
-                                   iterpool);
+      file_path = get_revprop_pack_filepath(result, &result->entry,
+                                            iterpool);
       SVN_ERR(svn_fs_x__try_stringbuf_from_file(&result->packed_revprops,
                                 &missing,
                                 file_path,
@@ -1052,7 +1160,8 @@ repack_revprops(svn_fs_t *fs,
   stream = svn_stream_from_stringbuf(uncompressed, scratch_pool);
 
   /* write the header*/
-  SVN_ERR(serialize_revprops_header(stream, revprops->start_revision + start,
+  SVN_ERR(serialize_revprops_header(stream,
+                                    revprops->entry.start_rev + start,
                                     revprops->sizes, start, end,
                                     scratch_pool));
 
@@ -1093,9 +1202,8 @@ repack_revprops(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Allocate a new pack file name for revisions
- *     [REVPROPS->START_REVISION + START, REVPROPS->START_REVISION + END - 1]
- * of REVPROPS->MANIFEST.  Add the name of old file to FILES_TO_DELETE,
+/* Allocate a new pack file name for revisions starting at START_REV in
+ * REVPROPS->MANIFEST.  Add the name of old file to FILES_TO_DELETE,
  * auto-create that array if necessary.  Return an open file *FILE that is
  * allocated in RESULT_POOL.  Allocate the paths in *FILES_TO_DELETE from
  * the same pool that contains the array itself.  Schedule necessary fsync
@@ -1107,55 +1215,43 @@ static svn_error_t *
 repack_file_open(apr_file_t **file,
                  svn_fs_t *fs,
                  packed_revprops_t *revprops,
-                 int start,
-                 int end,
+                 svn_revnum_t start_rev,
                  apr_array_header_t **files_to_delete,
                  svn_fs_x__batch_fsync_t *batch,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  apr_int64_t tag;
-  const char *tag_string;
-  svn_string_t *new_filename;
-  int i;
-  int manifest_offset
-    = (int)(revprops->start_revision - revprops->manifest_start);
+  manifest_entry_t new_entry;
+  const char *new_path;
+  int idx;
 
-  /* get the old (= current) file name and enlist it for later deletion */
-  const char *old_filename = APR_ARRAY_IDX(revprops->manifest,
-                                           start + manifest_offset,
-                                           const char*);
+  /* We always replace whole pack files - possibly by more than one new file.
+   * When we create the file for the first part of the pack, enlist the old
+   * one for later deletion */
+  SVN_ERR_ASSERT(start_rev >= revprops->entry.start_rev);
 
   if (*files_to_delete == NULL)
     *files_to_delete = apr_array_make(result_pool, 3, sizeof(const char*));
 
-  APR_ARRAY_PUSH(*files_to_delete, const char*)
-    = svn_dirent_join(revprops->folder, old_filename,
-                      (*files_to_delete)->pool);
+  if (revprops->entry.start_rev == start_rev)
+    APR_ARRAY_PUSH(*files_to_delete, const char*)
+      = get_revprop_pack_filepath(revprops, &revprops->entry,
+                                  (*files_to_delete)->pool);
 
-  /* increase the tag part, i.e. the counter after the dot */
-  tag_string = strchr(old_filename, '.');
-  if (tag_string == NULL)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Packed file '%s' misses a tag"),
-                             old_filename);
-
-  SVN_ERR(svn_cstring_atoi64(&tag, tag_string + 1));
-  new_filename = svn_string_createf((*files_to_delete)->pool,
-                                    "%ld.%" APR_INT64_T_FMT,
-                                    revprops->start_revision + start,
-                                    ++tag);
+  /* Initialize the new manifest entry. Bump the tag part. */
+  new_entry.start_rev = start_rev;
+  new_entry.tag = revprops->entry.tag + 1;
 
   /* update the manifest to point to the new file */
-  for (i = start; i < end; ++i)
-    APR_ARRAY_IDX(revprops->manifest, i + manifest_offset, const char*)
-      = new_filename->data;
+  idx = get_entry(revprops->manifest, start_rev);
+  if (revprops->entry.start_rev == start_rev)
+    APR_ARRAY_IDX(revprops->manifest, idx, manifest_entry_t) = new_entry;
+  else
+    svn_sort__array_insert(revprops->manifest, &new_path, idx + 1);
 
   /* open the file */
-  SVN_ERR(svn_fs_x__batch_fsync_open_file(file, batch,
-                                          svn_dirent_join(revprops->folder,
-                                                          new_filename->data,
-                                                          scratch_pool),
+  new_path = get_revprop_pack_filepath(revprops, &new_entry, scratch_pool);
+  SVN_ERR(svn_fs_x__batch_fsync_open_file(file, batch, new_path,
                                           scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1205,7 +1301,7 @@ write_packed_revprop(const char **final_path,
   SVN_ERR(svn_stream_close(stream));
 
   /* calculate the size of the new data */
-  changed_index = (int)(rev - revprops->start_revision);
+  changed_index = (int)(rev - revprops->entry.start_rev);
   new_total_size = revprops->total_size - revprops->serialized_size
                  + serialized->len
                  + (revprops->offsets->nelts + 2) * SVN_INT64_BUFFER_SIZE;
@@ -1219,8 +1315,8 @@ write_packed_revprop(const char **final_path,
       /* simply replace the old pack file with new content as we do it
        * in the non-packed case */
 
-      *final_path = svn_dirent_join(revprops->folder, revprops->filename,
-                                    result_pool);
+      *final_path = get_revprop_pack_filepath(revprops, &revprops->entry,
+                                              result_pool);
       *tmp_path = apr_pstrcat(result_pool, *final_path, ".tmp", SVN_VA_NULL);
       SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, *tmp_path,
                                               scratch_pool));
@@ -1231,7 +1327,7 @@ write_packed_revprop(const char **final_path,
   else
     {
       /* split the pack file into two of roughly equal size */
-      int right_count, left_count, i;
+      int right_count, left_count;
 
       int left = 0;
       int right = revprops->sizes->nelts - 1;
@@ -1278,8 +1374,9 @@ write_packed_revprop(const char **final_path,
       /* write the new, split files */
       if (left_count)
         {
-          SVN_ERR(repack_file_open(&file, fs, revprops, 0,
-                                   left_count, files_to_delete, batch,
+          SVN_ERR(repack_file_open(&file, fs, revprops,
+                                   revprops->entry.start_rev,
+                                   files_to_delete, batch,
                                    scratch_pool, scratch_pool));
           SVN_ERR(repack_revprops(fs, revprops, 0, left_count,
                                   changed_index, serialized, new_total_size,
@@ -1288,9 +1385,9 @@ write_packed_revprop(const char **final_path,
 
       if (left_count + right_count < revprops->sizes->nelts)
         {
-          SVN_ERR(repack_file_open(&file, fs, revprops, changed_index,
-                                   changed_index + 1, files_to_delete,
-                                   batch, scratch_pool, scratch_pool));
+          SVN_ERR(repack_file_open(&file, fs, revprops, rev,
+                                   files_to_delete, batch,
+                                   scratch_pool, scratch_pool));
           SVN_ERR(repack_revprops(fs, revprops, changed_index,
                                   changed_index + 1,
                                   changed_index, serialized, new_total_size,
@@ -1299,9 +1396,7 @@ write_packed_revprop(const char **final_path,
 
       if (right_count)
         {
-          SVN_ERR(repack_file_open(&file, fs, revprops,
-                                   revprops->sizes->nelts - right_count,
-                                   revprops->sizes->nelts,
+          SVN_ERR(repack_file_open(&file, fs, revprops, rev + 1,
                                    files_to_delete,  batch,
                                    scratch_pool, scratch_pool));
           SVN_ERR(repack_revprops(fs, revprops,
@@ -1317,15 +1412,7 @@ write_packed_revprop(const char **final_path,
       *tmp_path = apr_pstrcat(result_pool, *final_path, ".tmp", SVN_VA_NULL);
       SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, *tmp_path,
                                               scratch_pool));
-
-      stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
-      for (i = 0; i < revprops->manifest->nelts; ++i)
-        {
-          const char *filename = APR_ARRAY_IDX(revprops->manifest, i,
-                                               const char*);
-          SVN_ERR(svn_stream_printf(stream, scratch_pool, "%s\n", filename));
-        }
-      SVN_ERR(svn_stream_close(stream));
+      SVN_ERR(write_manifest(file, revprops->manifest, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1406,19 +1493,14 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
                                    svn_revnum_t revision,
                                    apr_pool_t *scratch_pool)
 {
-  svn_fs_x__data_t *ffd = fs->fsap_data;
-  svn_stringbuf_t *content = NULL;
+  svn_node_kind_t kind;
+  packed_revprops_t *revprops;
+  svn_error_t *err;
 
   /* try to read the manifest file */
-  const char *folder = svn_fs_x__path_pack_shard(fs, revision, scratch_pool);
-  const char *manifest_path = svn_dirent_join(folder, PATH_MANIFEST,
-                                              scratch_pool);
-
-  svn_error_t *err = svn_fs_x__try_stringbuf_from_file(&content,
-                                                       missing,
-                                                       manifest_path,
-                                                       FALSE,
-                                                       scratch_pool);
+  revprops = apr_pcalloc(scratch_pool, sizeof(*revprops));
+  revprops->revision = revision;
+  err = get_revprop_packname(fs, revprops, scratch_pool, scratch_pool);
 
   /* if the manifest cannot be read, consider the pack files inaccessible
    * even if the file itself exists. */
@@ -1428,44 +1510,19 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
       return FALSE;
     }
 
-  if (*missing)
-    return FALSE;
-
-  /* parse manifest content until we find the entry for REVISION.
-   * Revision 0 is never packed. */
-  revision = revision < ffd->max_files_per_dir
-           ? revision - 1
-           : revision % ffd->max_files_per_dir;
-  while (content->data)
+  /* the respective pack file must exist (and be a file) */
+  err = svn_io_check_path(get_revprop_pack_filepath(revprops,
+                                                    &revprops->entry,
+                                                    scratch_pool),
+                          &kind, scratch_pool);
+  if (err)
     {
-      char *next = strchr(content->data, '\n');
-      if (next)
-        {
-          *next = 0;
-          ++next;
-        }
-
-      if (revision-- == 0)
-        {
-          /* the respective pack file must exist (and be a file) */
-          svn_node_kind_t kind;
-          err = svn_io_check_path(svn_dirent_join(folder, content->data,
-                                                  scratch_pool),
-                                  &kind, scratch_pool);
-          if (err)
-            {
-              svn_error_clear(err);
-              return FALSE;
-            }
-
-          *missing = kind == svn_node_none;
-          return kind == svn_node_file;
-        }
-
-      content->data = next;
+      svn_error_clear(err);
+      return FALSE;
     }
 
-  return FALSE;
+  *missing = kind == svn_node_none;
+  return kind == svn_node_file;
 }
 
 
@@ -1573,21 +1630,19 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
 {
   const char *manifest_file_path, *pack_filename = NULL;
   apr_file_t *manifest_file;
-  svn_stream_t *manifest_stream;
   svn_revnum_t start_rev, end_rev, rev;
   apr_off_t total_size;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *sizes;
+  apr_array_header_t *manifest;
 
   /* Some useful paths. */
   manifest_file_path = svn_dirent_join(pack_file_dir, PATH_MANIFEST,
                                        scratch_pool);
 
-  /* Create the manifest file stream. */
+  /* Create the manifest file. */
   SVN_ERR(svn_fs_x__batch_fsync_open_file(&manifest_file, batch,
                                           manifest_file_path, scratch_pool));
-  manifest_stream = svn_stream_from_aprfile2(manifest_file, TRUE,
-                                             scratch_pool);
 
   /* revisions to handle. Special case: revision 0 */
   start_rev = (svn_revnum_t) (shard * max_files_per_dir);
@@ -1610,6 +1665,8 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
   /* initialize the revprop size info */
   sizes = apr_array_make(scratch_pool, max_files_per_dir, sizeof(apr_off_t));
   total_size = 2 * SVN_INT64_BUFFER_SIZE;
+
+  manifest = apr_array_make(scratch_pool, 4, sizeof(manifest_entry_t));
 
   /* Iterate over the revisions in this shard, determine their size and
    * squashing them together into pack files. */
@@ -1644,10 +1701,13 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
       /* Update the manifest. Allocate a file name for the current pack
        * file if it is a new one */
       if (sizes->nelts == 0)
-        pack_filename = apr_psprintf(scratch_pool, "%ld.0", rev);
+        {
+          manifest_entry_t *entry = apr_array_push(manifest);
+          entry->start_rev = rev;
+          entry->tag = 0;
 
-      SVN_ERR(svn_stream_printf(manifest_stream, iterpool, "%s\n",
-                                pack_filename));
+          pack_filename = apr_psprintf(scratch_pool, "%ld.0", rev);
+        }
 
       /* add to list of files to put into the current pack file */
       APR_ARRAY_PUSH(sizes, apr_off_t) = finfo.size;
@@ -1661,8 +1721,9 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
                           (apr_size_t)total_size, compression_level,
                           batch, cancel_func, cancel_baton, iterpool));
 
+  SVN_ERR(write_manifest(manifest_file, manifest, iterpool));
+
   /* flush all data to disk and update permissions */
-  SVN_ERR(svn_stream_close(manifest_stream));
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, iterpool));
   svn_pool_destroy(iterpool);
 

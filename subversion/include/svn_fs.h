@@ -1081,7 +1081,7 @@ svn_fs_unparse_id(const svn_fs_id_t *id,
  * database.  Each new transaction increments the counter.  The
  * current value of the counter is not serialized into a filesystem
  * dump file, so dumping and restoring the repository will reset the
- * sequence and reuse transaction names.
+ * sequence and so may reuse transaction names.
  *
  * @defgroup svn_fs_txns Filesystem transactions
  * @{

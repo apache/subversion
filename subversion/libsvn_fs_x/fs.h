@@ -60,7 +60,6 @@ extern "C" {
 #define PATH_TXNS_DIR         "transactions"     /* Directory of transactions */
 #define PATH_TXN_PROTOS_DIR   "txn-protorevs"    /* Directory of proto-revs */
 #define PATH_TXN_CURRENT      "txn-current"      /* File with next txn key */
-#define PATH_TXN_NEXT         "txn-next"         /* Will become txn-current */
 #define PATH_TXN_CURRENT_LOCK "txn-current-lock" /* Lock for txn-current */
 #define PATH_LOCKS_DIR        "locks"            /* Directory of locks */
 #define PATH_MIN_UNPACKED_REV "min-unpacked-rev" /* Oldest revision which
@@ -403,9 +402,6 @@ typedef struct svn_fs_x__data_t
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
                                apr_pool_t *, apr_pool_t *);
 
-  /* If not 0, this is a pre-allocated transaction ID that can just be
-     used for a new txn without needing to consult 'txn-current'. */
-  apr_uint64_t next_txn_id;
 } svn_fs_x__data_t;
 
 

@@ -370,6 +370,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
   svn_fs_x__data_t *ffd = fs->fsap_data;
   const char *prefix = apr_pstrcat(scratch_pool,
                                    "fsx:", fs->uuid,
+                                   "--", ffd->instance_id,
                                    "/", normalize_key_part(fs->path,
                                                            scratch_pool),
                                    ":",

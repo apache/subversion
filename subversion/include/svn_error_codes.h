@@ -868,6 +868,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 63,
              "Invalid generation number data.")
 
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_FS_CORRUPT_REVPROP_MANIFEST,
+             SVN_ERR_FS_CATEGORY_START + 64,
+             "Revprop manifest corrupt.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
