@@ -31,13 +31,12 @@
 #include "svn_props.h"
 #include "svn_pools.h"
 
+#include "private/svn_branch_impl.h"
 #include "private/svn_branch_repos.h"
 #include "private/svn_branch_nested.h"
 #include "private/svn_delta_private.h"
 #include "private/svn_branch_compat.h"
 #include "../libsvn_delta/debug_editor.h"
-
-#include "branch_private.h"
 
 #include "svn_private_config.h"
 
