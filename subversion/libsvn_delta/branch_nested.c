@@ -31,9 +31,8 @@
 #include "svn_pools.h"
 
 #include "private/svn_branch_nested.h"
+#include "private/svn_branch_impl.h"
 #include "private/svn_branch_repos.h"
-
-#include "branch_private.h"
 
 #include "svn_private_config.h"
 

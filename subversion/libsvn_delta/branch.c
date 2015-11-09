@@ -32,9 +32,8 @@
 
 #include "private/svn_element.h"
 #include "private/svn_branch.h"
+#include "private/svn_branch_impl.h"
 #include "private/svn_sorts_private.h"
-
-#include "branch_private.h"
 
 #include "svn_private_config.h"
 

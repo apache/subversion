@@ -20,16 +20,18 @@
  * ====================================================================
  * @endcopyright
  *
- * @file branch_private.h
- * @brief Nested branches and subbranch-root elements
+ * @file svn_branch_impl.h
+ * @brief Declarations needed by implementators of branch classes
  *
  * @since New in 1.10.
  */
 
-#ifndef BRANCH_PRIVATE_H
-#define	BRANCH_PRIVATE_H
+#ifndef SVN_BRANCH_IMPL_H
+#define SVN_BRANCH_IMPL_H
 
-#ifdef	__cplusplus
+#include "private/svn_branch.h"
+
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -212,9 +214,9 @@ struct svn_branch_state_vtable_t
 };
 
 
-#ifdef	__cplusplus
+#ifdef __cplusplus
 }
 #endif
 
-#endif	/* BRANCH_PRIVATE_H */
+#endif /* SVN_BRANCH_IMPL_H */
 
