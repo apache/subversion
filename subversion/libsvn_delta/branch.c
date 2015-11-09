@@ -821,15 +821,6 @@ branch_state_copy_tree(svn_branch_state_t *to_branch,
   return SVN_NO_ERROR;
 }
 
-/* An #svn_branch_state_t method. */
-static svn_error_t *
-branch_state_payload_resolve(svn_branch_state_t *branch,
-                             svn_element_content_t *element,
-                             apr_pool_t *scratch_pool)
-{
-  return SVN_NO_ERROR;
-}
-
 const char *
 svn_branch_get_id(svn_branch_state_t *branch,
                   apr_pool_t *result_pool)
@@ -1338,7 +1329,6 @@ branch_state_create(const char *bid,
     branch_state_copy_one,
     branch_state_copy_tree,
     branch_state_delete_one,
-    branch_state_payload_resolve,
     branch_state_purge,
   };
   svn_branch_state_t *b
