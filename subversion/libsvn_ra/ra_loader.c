@@ -743,7 +743,7 @@ txn_fetch_payloads(svn_branch_txn_t *txn,
                       scratch_pool))
     {
       svn_branch_state_t *branch = bi->val;
-      const svn_element_tree_t *element_tree;
+      svn_element_tree_t *element_tree;
       SVN_ITER_T(svn_element_content_t) *hi;
 
       SVN_ERR(svn_branch_state_get_elements(branch, &element_tree,

@@ -401,7 +401,7 @@ txn_is_changed(svn_branch_txn_t *edit_txn,
       svn_branch_state_t *base_branch
         = svn_branch_txn_get_branch_by_id(base_txn, edit_branch->bid,
                                           scratch_pool);
-      const svn_element_tree_t *edit_branch_elements, *base_branch_elements;
+      svn_element_tree_t *edit_branch_elements, *base_branch_elements;
       apr_hash_t *diff;
 
       if (! base_branch)
@@ -539,8 +539,8 @@ svn_branch_replay(svn_branch_txn_t *edit_txn,
   if (right_branch)
     {
       /* Replay this branch */
-      const svn_element_tree_t *s_left = NULL;
-      const svn_element_tree_t *s_right = NULL;
+      svn_element_tree_t *s_left = NULL;
+      svn_element_tree_t *s_right = NULL;
 
       if (left_branch)
         SVN_ERR(svn_branch_state_get_elements(left_branch, &s_left,
@@ -1052,7 +1052,7 @@ list_branch_elements(svn_branch_state_t *branch,
                      apr_pool_t *scratch_pool)
 {
   apr_hash_t *paths_to_eid = apr_hash_make(scratch_pool);
-  const svn_element_tree_t *elements;
+  svn_element_tree_t *elements;
   apr_hash_index_t *hi;
   SVN_ITER_T(int) *pi;
 
@@ -1115,7 +1115,7 @@ static svn_error_t *
 list_branch_elements_by_eid(svn_branch_state_t *branch,
                             apr_pool_t *scratch_pool)
 {
-  const svn_element_tree_t *elements;
+  svn_element_tree_t *elements;
   SVN_ITER_T(svn_element_content_t) *pi;
 
   svnmover_notify_v("%s", elements_by_eid_header);

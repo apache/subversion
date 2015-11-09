@@ -151,7 +151,7 @@ struct svn_branch_txn_vtable_t
 
 typedef svn_error_t *(*branch_state_v_get_elements_t)(
   svn_branch_state_t *branch,
-  const svn_element_tree_t **element_tree_p,
+  svn_element_tree_t **element_tree_p,
   apr_pool_t *result_pool);
 
 typedef svn_error_t *(*branch_state_v_get_element_t)(

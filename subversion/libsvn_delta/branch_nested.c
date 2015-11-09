@@ -128,7 +128,7 @@ svn_branch_get_immediate_subbranches(svn_branch_state_t *branch,
 {
   svn_array_t *subbranches = svn_array_make(result_pool);
   const char *branch_id = svn_branch_get_id(branch, scratch_pool);
-  const svn_element_tree_t *elements;
+  svn_element_tree_t *elements;
   apr_hash_index_t *hi;
 
   SVN_ERR(svn_branch_state_get_elements(branch, &elements, scratch_pool));
@@ -172,16 +172,16 @@ svn_branch_get_subtree(svn_branch_state_t *branch,
                        int eid,
                        apr_pool_t *result_pool)
 {
+  svn_element_tree_t *element_tree;
   svn_branch_subtree_t *new_subtree;
   apr_array_header_t *subbranches;
   SVN_ITER_T(svn_branch_state_t) *bi;
 
-  SVN_BRANCH_SEQUENCE_POINT(branch);
-
+  SVN_ERR(svn_branch_state_get_elements(branch, &element_tree, result_pool));
+  element_tree = svn_element_tree_get_subtree_at_eid(element_tree, eid,
+                                                     result_pool);
   new_subtree
-    = svn_branch_subtree_create(
-        svn_branch_get_element_tree_at_eid(branch, eid, result_pool)->e_map,
-        eid, result_pool);
+    = svn_branch_subtree_create(element_tree->e_map, eid, result_pool);
   new_subtree->predecessor = svn_branch_rev_bid_dup(branch->predecessor,
                                                     result_pool);
 

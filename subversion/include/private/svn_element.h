@@ -333,6 +333,17 @@ svn_element_tree_get_path_by_eid(const svn_element_tree_t *tree,
                                  int eid,
                                  apr_pool_t *result_pool);
 
+/* Return the subtree rooted at EID within ELEMENT_TREE.
+ *
+ * The result is limited by the lifetime of ELEMENT_TREE. It includes a
+ * shallow copy of the mapping in ELEMENT_TREE: the hash table is
+ * duplicated but the keys and values (element content data) are not.
+ */
+svn_element_tree_t *
+svn_element_tree_get_subtree_at_eid(svn_element_tree_t *element_tree,
+                                    int eid,
+                                    apr_pool_t *result_pool);
+
 /** @} */
 
 
