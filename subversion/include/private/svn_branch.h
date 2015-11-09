@@ -488,31 +488,11 @@ svn_branch_rev_bid_dup(const svn_branch_rev_bid_t *old_id,
                        apr_pool_t *result_pool);
 
 
-/* Return the element-tree within BRANCH rooted at EID.
- *
- * The result is limited by the lifetime of BRANCH. It includes a shallow
- * copy of the element maps in BRANCH: the hash table is
- * duplicated but the keys and values (element content data) are not.
- * It assumes that modifications on a svn_branch_state_t treat element
- * map keys and values as immutable -- which they do.
- */
-svn_element_tree_t *
-svn_branch_get_element_tree_at_eid(svn_branch_state_t *branch,
-                                   int eid,
-                                   apr_pool_t *result_pool);
-
-/* Declare that the following function requires/implies that in BRANCH's
- * mapping, for each existing element, the parent also exists.
- *
- * ### Find a better word? flattened, canonical, finalized, ...
- */
-#define SVN_BRANCH_SEQUENCE_POINT(branch)
-
 /* Return the mapping of elements in branch BRANCH.
  */
 svn_error_t *
 svn_branch_state_get_elements(svn_branch_state_t *branch,
-                              const svn_element_tree_t **element_tree_p,
+                              svn_element_tree_t **element_tree_p,
                               apr_pool_t *result_pool);
 
 /* In BRANCH, get element EID (parent, name, payload).

@@ -405,3 +405,28 @@ svn_element_tree_get_path_by_eid(const svn_element_tree_t *tree,
   return path;
 }
 
+svn_element_tree_t *
+svn_element_tree_get_subtree_at_eid(svn_element_tree_t *element_tree,
+                                    int eid,
+                                    apr_pool_t *result_pool)
+{
+  svn_element_tree_t *new_subtree;
+  svn_element_content_t *subtree_root_element;
+
+  new_subtree = svn_element_tree_create(element_tree->e_map, eid,
+                                        result_pool);
+
+  /* Purge orphans */
+  svn_element_tree_purge_orphans(new_subtree->e_map,
+                                 new_subtree->root_eid, result_pool);
+
+  /* Remove 'parent' and 'name' attributes from subtree root element */
+  subtree_root_element
+    = svn_element_tree_get(new_subtree, new_subtree->root_eid);
+  svn_element_tree_set(new_subtree, new_subtree->root_eid,
+                       svn_element_content_create(
+                         -1, "", subtree_root_element->payload, result_pool));
+
+  return new_subtree;
+}
+

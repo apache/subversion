@@ -791,7 +791,7 @@ detect_clashes(apr_hash_t **clashes_p,
                apr_pool_t *scratch_pool)
 {
   apr_hash_t *clashes = apr_hash_make(result_pool);
-  const svn_element_tree_t *elements;
+  svn_element_tree_t *elements;
   SVN_ITER_T(svn_element_content_t) *pi;
   int prev_eid = -1;
   svn_element_content_t *prev_element = NULL;
@@ -844,7 +844,7 @@ detect_cycles(apr_hash_t **cycles_p,
 {
   apr_hash_t *cycles = apr_hash_make(result_pool);
   SVN_ITER_T(svn_element_content_t) *pi;
-  const svn_element_tree_t *elements;
+  svn_element_tree_t *elements;
 
   SVN_ERR(svn_branch_state_get_elements(branch, &elements, scratch_pool));
   for (SVN_HASH_ITER(pi, scratch_pool, elements->e_map))
@@ -885,7 +885,7 @@ detect_orphans(apr_hash_t **orphans_p,
 {
   apr_hash_t *orphans = apr_hash_make(result_pool);
   SVN_ITER_T(svn_element_content_t) *pi;
-  const svn_element_tree_t *elements;
+  svn_element_tree_t *elements;
 
   SVN_ERR(svn_branch_state_get_elements(branch, &elements, scratch_pool));
   for (SVN_HASH_ITER(pi, scratch_pool, elements->e_map))
@@ -925,7 +925,7 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
   apr_hash_t *e_conflicts = apr_hash_make(scratch_pool);
   conflict_storage_t *conflict_storage = conflict_storage_create(result_pool);
   SVN_ITER_T(svn_element_content_t *) *pi;
-  const svn_element_tree_t *src_elements, *tgt_elements, *yca_elements;
+  svn_element_tree_t *src_elements, *tgt_elements, *yca_elements;
   apr_hash_t *all_elements;
   const merge_conflict_policy_t policy = { TRUE, TRUE, TRUE, TRUE, TRUE };
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);

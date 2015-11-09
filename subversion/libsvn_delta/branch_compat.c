@@ -1149,7 +1149,7 @@ convert_branch_to_paths(apr_hash_t *paths,
                         apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
-  const svn_element_tree_t *elements;
+  svn_element_tree_t *elements;
 
   /* assert(branch is at a sequence point); */
 
