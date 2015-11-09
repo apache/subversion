@@ -355,7 +355,7 @@ svn_branch_state_create(const svn_branch_state_vtable_t *vtable,
  * See also: svn_branch_txn_get_branch_by_id().
  */
 const char *
-svn_branch_get_id(svn_branch_state_t *branch,
+svn_branch_get_id(const svn_branch_state_t *branch,
                   apr_pool_t *result_pool);
 
 /* Return the element id of the root element of BRANCH.
@@ -491,7 +491,7 @@ svn_branch_rev_bid_dup(const svn_branch_rev_bid_t *old_id,
 /* Return the mapping of elements in branch BRANCH.
  */
 svn_error_t *
-svn_branch_state_get_elements(svn_branch_state_t *branch,
+svn_branch_state_get_elements(const svn_branch_state_t *branch,
                               svn_element_tree_t **element_tree_p,
                               apr_pool_t *result_pool);
 
@@ -500,7 +500,7 @@ svn_branch_state_get_elements(svn_branch_state_t *branch,
  * If element EID is not present, return null.
  */
 svn_error_t *
-svn_branch_state_get_element(svn_branch_state_t *branch,
+svn_branch_state_get_element(const svn_branch_state_t *branch,
                              svn_element_content_t **element_p,
                              int eid,
                              apr_pool_t *result_pool);
