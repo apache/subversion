@@ -831,7 +831,7 @@ branch_state_copy_tree(svn_branch_state_t *to_branch,
 }
 
 const char *
-svn_branch_get_id(svn_branch_state_t *branch,
+svn_branch_get_id(const svn_branch_state_t *branch,
                   apr_pool_t *result_pool)
 {
   return branch->bid;
@@ -950,7 +950,7 @@ branch_validate_element(const svn_branch_state_t *branch,
 }
 
 static svn_error_t *
-branch_state_get_elements(svn_branch_state_t *branch,
+branch_state_get_elements(const svn_branch_state_t *branch,
                           svn_element_tree_t **element_tree_p,
                           apr_pool_t *result_pool)
 {
@@ -972,7 +972,7 @@ branch_get_element(const svn_branch_state_t *branch,
 }
 
 static svn_error_t *
-branch_state_get_element(svn_branch_state_t *branch,
+branch_state_get_element(const svn_branch_state_t *branch,
                          svn_element_content_t **element_p,
                          int eid,
                          apr_pool_t *result_pool)
@@ -1202,7 +1202,7 @@ branch_instantiate_elements(svn_branch_state_t *to_branch,
  */
 
 svn_error_t *
-svn_branch_state_get_elements(svn_branch_state_t *branch,
+svn_branch_state_get_elements(const svn_branch_state_t *branch,
                               svn_element_tree_t **element_tree_p,
                               apr_pool_t *result_pool)
 {
@@ -1213,7 +1213,7 @@ svn_branch_state_get_elements(svn_branch_state_t *branch,
 }
 
 svn_error_t *
-svn_branch_state_get_element(svn_branch_state_t *branch,
+svn_branch_state_get_element(const svn_branch_state_t *branch,
                              svn_element_content_t **element_p,
                              int eid,
                              apr_pool_t *result_pool)
