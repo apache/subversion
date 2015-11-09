@@ -147,6 +147,17 @@ struct svn_branch_txn_vtable_t
  * See the corresponding public API functions for details.
  */
 
+typedef svn_error_t *(*branch_state_v_get_elements_t)(
+  svn_branch_state_t *branch,
+  const svn_element_tree_t **element_tree_p,
+  apr_pool_t *result_pool);
+
+typedef svn_error_t *(*branch_state_v_get_element_t)(
+  svn_branch_state_t *branch,
+  svn_element_content_t **element_p,
+  int eid,
+  apr_pool_t *result_pool);
+
 typedef svn_error_t *(*branch_state_v_alter_one_t)(
   svn_branch_state_t *branch,
   svn_branch_eid_t eid,
@@ -189,6 +200,8 @@ struct svn_branch_state_vtable_t
 {
   svn_vtable_priv_t vpriv;
 
+  branch_state_v_get_elements_t get_elements;
+  branch_state_v_get_element_t get_element;
   branch_state_v_alter_one_t alter_one;
   branch_state_v_copy_one_t copy_one;
   branch_state_v_copy_tree_t copy_tree;

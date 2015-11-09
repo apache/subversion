@@ -1143,17 +1143,19 @@ payload_resolve(svn_element_payload_t *payload,
 /* Update *PATHS, a hash of (storage_rrpath -> svn_branch_el_rev_id_t),
  * creating or filling in entries for all elements in BRANCH.
  */
-static void
+static svn_error_t *
 convert_branch_to_paths(apr_hash_t *paths,
                         svn_branch_state_t *branch,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
   apr_hash_index_t *hi;
+  const svn_element_tree_t *elements;
 
   /* assert(branch is at a sequence point); */
 
-  for (hi = apr_hash_first(scratch_pool, svn_branch_get_elements(branch));
+  SVN_ERR(svn_branch_state_get_elements(branch, &elements, scratch_pool));
+  for (hi = apr_hash_first(scratch_pool, elements->e_map);
        hi; hi = apr_hash_next(hi))
     {
       int eid = *(const int *)apr_hash_this_key(hi);
@@ -1181,6 +1183,7 @@ convert_branch_to_paths(apr_hash_t *paths,
                    svn_branch_get_id(branch, scratch_pool), eid, rrpath));
         }
     }
+  return SVN_NO_ERROR;
 }
 
 /* Produce a mapping from paths to element ids, covering all elements in
@@ -1190,26 +1193,30 @@ convert_branch_to_paths(apr_hash_t *paths,
  * creating or filling in entries for all elements in all branches at and
  * under BRANCH, recursively.
  */
-static void
+static svn_error_t *
 convert_branch_to_paths_r(apr_hash_t *paths_union,
                           svn_branch_state_t *branch,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
+  apr_array_header_t *subbranches;
   SVN_ITER_T(svn_branch_state_t) *bi;
 
   /*SVN_DBG(("[%d] branch={b%s e%d at '%s'}", idx,
            svn_branch_get_id(branch, scratch_pool), branch->root_eid,
            svn_branch_get_root_rrpath(branch, scratch_pool)));*/
-  convert_branch_to_paths(paths_union, branch,
-                          result_pool, scratch_pool);
+  SVN_ERR(convert_branch_to_paths(paths_union, branch,
+                                  result_pool, scratch_pool));
 
+  SVN_ERR(svn_branch_get_immediate_subbranches(branch, &subbranches,
+                                               scratch_pool, scratch_pool));
   /* Rercurse into sub-branches */
-  for (SVN_ARRAY_ITER(bi, svn_branch_get_immediate_subbranches(
-                            branch, scratch_pool, scratch_pool), scratch_pool))
+  for (SVN_ARRAY_ITER(bi, subbranches, scratch_pool))
     {
-      convert_branch_to_paths_r(paths_union, bi->val, result_pool, bi->iterpool);
+      SVN_ERR(convert_branch_to_paths_r(paths_union, bi->val, result_pool,
+                                        bi->iterpool));
     }
+  return SVN_NO_ERROR;
 }
 
 /* Return TRUE iff INITIAL_PAYLOAD and FINAL_PAYLOAD are both non-null
@@ -1346,15 +1353,17 @@ drive_changes_r(const char *rrpath,
 
   SVN_ERR_ASSERT(!pred_loc
                  || (pred_loc->relpath && SVN_IS_VALID_REVNUM(pred_loc->rev)));
-  /* A non-null FINAL address means an element exists there. */
-  SVN_ERR_ASSERT(!final_el_rev
-                 || svn_branch_get_element(final_el_rev->branch,
-                                           final_el_rev->eid));
 
   if (final_el_rev)
     {
-      final_payload = svn_branch_get_element(final_el_rev->branch,
-                                             final_el_rev->eid)->payload;
+      svn_element_content_t *final_element;
+
+      SVN_ERR(svn_branch_state_get_element(final_el_rev->branch, &final_element,
+                                           final_el_rev->eid, scratch_pool));
+      /* A non-null FINAL address means an element exists there. */
+      SVN_ERR_ASSERT(final_element);
+
+      final_payload = final_element->payload;
 
       /* Decide whether the state at this path should be a copy (incl. a
          copy-child) */
@@ -1592,9 +1601,9 @@ drive_changes(svn_branch_txn_priv_t *eb,
       branch_is_new = !base_root_branch;
 
       paths_final = apr_hash_make(scratch_pool);
-      convert_branch_to_paths_r(paths_final,
-                                root_branch,
-                                scratch_pool, scratch_pool);
+      SVN_ERR(convert_branch_to_paths_r(paths_final,
+                                        root_branch,
+                                        scratch_pool, scratch_pool));
 
       current.rev = eb->txn->base_rev;
       current.relpath = top_path;

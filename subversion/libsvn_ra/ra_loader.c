@@ -743,15 +743,18 @@ txn_fetch_payloads(svn_branch_txn_t *txn,
                       scratch_pool))
     {
       svn_branch_state_t *branch = bi->val;
-      const svn_element_tree_t *element_tree
-        = svn_branch_get_element_tree(branch);
+      const svn_element_tree_t *element_tree;
       SVN_ITER_T(svn_element_content_t) *hi;
 
+      SVN_ERR(svn_branch_state_get_elements(branch, &element_tree,
+                                            scratch_pool));
       for (SVN_HASH_ITER(hi, scratch_pool, element_tree->e_map))
         {
           int eid = *(const int *)hi->key;
-          svn_element_content_t *element = svn_branch_get_element(branch, eid);
+          svn_element_content_t *element;
 
+          SVN_ERR(svn_branch_state_get_element(branch, &element,
+                                               eid, scratch_pool));
           if (! element->payload->is_subbranch_root)
             {
               SVN_ERR(svn_payload_fetch(&element->payload,
