@@ -189,11 +189,6 @@ typedef svn_error_t *(*branch_state_v_delete_one_t)(
   svn_branch_eid_t eid,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_state_v_payload_resolve_t)(
-  svn_branch_state_t *branch,
-  svn_element_content_t *element,
-  apr_pool_t *scratch_pool);
-
 typedef svn_error_t *(*branch_state_v_purge_t)(
   svn_branch_state_t *branch,
   apr_pool_t *scratch_pool);
@@ -208,7 +203,6 @@ struct svn_branch_state_vtable_t
   branch_state_v_copy_one_t copy_one;
   branch_state_v_copy_tree_t copy_tree;
   branch_state_v_delete_one_t delete_one;
-  branch_state_v_payload_resolve_t payload_resolve;
   branch_state_v_purge_t purge;
 
 };
