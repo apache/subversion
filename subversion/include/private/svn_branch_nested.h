@@ -93,7 +93,7 @@ svn_branch_get_eid_by_rrpath(svn_branch_state_t *branch,
  *
  * ### TODO: Clarify sequencing requirements.
  */
-void
+svn_error_t *
 svn_branch_find_nested_branch_element_by_relpath(
                                 svn_branch_state_t **branch_p,
                                 int *eid_p,
@@ -122,19 +122,21 @@ svn_branch_repos_find_el_rev_by_path_rev(svn_branch_el_rev_id_t **el_rev_p,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
-/* Return an array of pointers to the branches that are immediate
+/* Set *SUBBRANCHES_P an array of pointers to the branches that are immediate
  * sub-branches of BRANCH.
  */
-apr_array_header_t *
+svn_error_t *
 svn_branch_get_immediate_subbranches(svn_branch_state_t *branch,
+                                     apr_array_header_t **subbranches_p,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool);
 
 /* Return the subbranch rooted at BRANCH:EID, or NULL if that is
  * not a subbranch root.
  */
-svn_branch_state_t *
+svn_error_t *
 svn_branch_get_subbranch_at_eid(svn_branch_state_t *branch,
+                                svn_branch_state_t **subbranch_p,
                                 int eid,
                                 apr_pool_t *scratch_pool);
 
@@ -173,8 +175,9 @@ svn_branch_subtree_create(apr_hash_t *e_map,
  * It assumes that modifications on a svn_branch_state_t treat element
  * map keys and values as immutable -- which they do.
  */
-svn_branch_subtree_t *
+svn_error_t *
 svn_branch_get_subtree(svn_branch_state_t *branch,
+                       svn_branch_subtree_t **subtree_p,
                        int eid,
                        apr_pool_t *result_pool);
 

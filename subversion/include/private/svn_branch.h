@@ -488,11 +488,6 @@ svn_branch_rev_bid_dup(const svn_branch_rev_bid_t *old_id,
                        apr_pool_t *result_pool);
 
 
-/* Return the element-tree of BRANCH.
- */
-const svn_element_tree_t *
-svn_branch_get_element_tree(svn_branch_state_t *branch);
-
 /* Return the element-tree within BRANCH rooted at EID.
  *
  * The result is limited by the lifetime of BRANCH. It includes a shallow
@@ -514,20 +509,21 @@ svn_branch_get_element_tree_at_eid(svn_branch_state_t *branch,
 #define SVN_BRANCH_SEQUENCE_POINT(branch)
 
 /* Return the mapping of elements in branch BRANCH.
- *
- * The mapping is from pointer-to-eid to
- * pointer-to-svn_branch_el_rev_content_t.
  */
-apr_hash_t *
-svn_branch_get_elements(svn_branch_state_t *branch);
+svn_error_t *
+svn_branch_state_get_elements(svn_branch_state_t *branch,
+                              const svn_element_tree_t **element_tree_p,
+                              apr_pool_t *result_pool);
 
 /* In BRANCH, get element EID (parent, name, payload).
  *
  * If element EID is not present, return null.
  */
-svn_element_content_t *
-svn_branch_get_element(const svn_branch_state_t *branch,
-                       int eid);
+svn_error_t *
+svn_branch_state_get_element(svn_branch_state_t *branch,
+                             svn_element_content_t **element_p,
+                             int eid,
+                             apr_pool_t *result_pool);
 
 /** Specify that the element of @a branch identified by @a eid shall not
  * be present.

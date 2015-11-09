@@ -110,12 +110,15 @@ svn_branch_repos_find_el_rev_by_id(svn_branch_el_rev_id_t **el_rev_p,
                                    apr_pool_t *scratch_pool)
 {
   svn_branch_el_rev_id_t *el_rev = apr_palloc(result_pool, sizeof(*el_rev));
+  svn_element_content_t *element;
 
   el_rev->rev = revnum;
   SVN_ERR(svn_branch_repos_get_branch_by_id(&el_rev->branch,
                                             repos, revnum, branch_id,
                                             scratch_pool));
-  if (svn_branch_get_element(el_rev->branch, eid))
+  SVN_ERR(svn_branch_state_get_element(el_rev->branch, &element,
+                                       eid, scratch_pool));
+  if (element)
     {
       el_rev->eid = eid;
     }

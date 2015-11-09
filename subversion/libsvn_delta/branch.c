@@ -919,12 +919,6 @@ svn_branch_rev_bid_dup(const svn_branch_rev_bid_t *old_id,
  * ========================================================================
  */
 
-const svn_element_tree_t *
-svn_branch_get_element_tree(svn_branch_state_t *branch)
-{
-  return branch->priv->element_tree;
-}
-
 /* Validate that ELEMENT is suitable for a mapping of BRANCH:EID.
  * ELEMENT->payload may be null.
  */
@@ -956,15 +950,18 @@ branch_validate_element(const svn_branch_state_t *branch,
     }
 }
 
-apr_hash_t *
-svn_branch_get_elements(svn_branch_state_t *branch)
+static svn_error_t *
+branch_state_get_elements(svn_branch_state_t *branch,
+                          const svn_element_tree_t **element_tree_p,
+                          apr_pool_t *result_pool)
 {
-  return branch->priv->element_tree->e_map;
+  *element_tree_p = branch->priv->element_tree;
+  return SVN_NO_ERROR;
 }
 
-svn_element_content_t *
-svn_branch_get_element(const svn_branch_state_t *branch,
-                       int eid)
+static svn_element_content_t *
+branch_get_element(const svn_branch_state_t *branch,
+                   int eid)
 {
   svn_element_content_t *element;
 
@@ -973,6 +970,16 @@ svn_branch_get_element(const svn_branch_state_t *branch,
   if (element)
     branch_validate_element(branch, eid, element);
   return element;
+}
+
+static svn_error_t *
+branch_state_get_element(svn_branch_state_t *branch,
+                         svn_element_content_t **element_p,
+                         int eid,
+                         apr_pool_t *result_pool)
+{
+  *element_p = branch_get_element(branch, eid);
+  return SVN_NO_ERROR;
 }
 
 /* In BRANCH, set element EID to ELEMENT.
@@ -1099,7 +1106,7 @@ svn_branch_get_path_by_eid(const svn_branch_state_t *branch,
 
   for (; ! IS_BRANCH_ROOT_EID(branch, eid); eid = element->parent_eid)
     {
-      element = svn_branch_get_element(branch, eid);
+      element = branch_get_element(branch, eid);
       if (! element)
         return NULL;
       path = svn_relpath_join(element->name, path, result_pool);
@@ -1223,6 +1230,28 @@ branch_instantiate_elements(svn_branch_state_t *to_branch,
  */
 
 svn_error_t *
+svn_branch_state_get_elements(svn_branch_state_t *branch,
+                              const svn_element_tree_t **element_tree_p,
+                              apr_pool_t *result_pool)
+{
+  SVN_ERR(branch->vtable->get_elements(branch,
+                                       element_tree_p,
+                                       result_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_branch_state_get_element(svn_branch_state_t *branch,
+                             svn_element_content_t **element_p,
+                             int eid,
+                             apr_pool_t *result_pool)
+{
+  SVN_ERR(branch->vtable->get_element(branch,
+                                      element_p, eid, result_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_branch_state_alter_one(svn_branch_state_t *branch,
                            svn_branch_eid_t eid,
                            svn_branch_eid_t new_parent_eid,
@@ -1304,6 +1333,8 @@ branch_state_create(const char *bid,
 {
   static const svn_branch_state_vtable_t vtable = {
     {0},
+    branch_state_get_elements,
+    branch_state_get_element,
     branch_state_alter,
     branch_state_copy_one,
     branch_state_copy_tree,
@@ -1587,7 +1618,7 @@ svn_branch_state_serialize(svn_stream_t *stream,
                             sort_compare_items_by_eid, scratch_pool))
     {
       int eid = *(const int *)hi->key;
-      svn_element_content_t *element = svn_branch_get_element(branch, eid);
+      svn_element_content_t *element = branch_get_element(branch, eid);
       int parent_eid;
       const char *name;
 
