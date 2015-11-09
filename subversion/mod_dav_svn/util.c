@@ -620,7 +620,7 @@ dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
   wb->output = output;
   svn_stream_set_write(stream, brigade_write_fn);
 
-  return svn_base64_encode2(stream, TRUE, pool);
+  return svn_base64_encode2(stream, FALSE, pool);
 }
 
 void

@@ -82,6 +82,17 @@ svn__encode_uint(unsigned char *p, apr_uint64_t val)
   return p;
 }
 
+unsigned char *
+svn__encode_int(unsigned char *p, apr_int64_t val)
+{
+  apr_uint64_t value = val;
+  value = value & APR_UINT64_C(0x8000000000000000)
+        ? APR_UINT64_MAX - (2 * value)
+        : 2 * value;
+
+  return svn__encode_uint(p, value);
+}
+
 const unsigned char *
 svn__decode_uint(apr_uint64_t *val,
                  const unsigned char *p,
@@ -109,6 +120,22 @@ svn__decode_uint(apr_uint64_t *val,
     }
 
   return NULL;
+}
+
+const unsigned char *
+svn__decode_int(apr_int64_t *val,
+                const unsigned char *p,
+                const unsigned char *end)
+{
+  apr_uint64_t value;
+  const unsigned char *result = svn__decode_uint(&value, p, end);
+
+  value = value & 1
+        ? (APR_UINT64_MAX - value / 2)
+        : value / 2;
+  *val = (apr_int64_t)value;
+
+  return result;
 }
 
 /* If IN is a string that is >= MIN_COMPRESS_SIZE and the COMPRESSION_LEVEL

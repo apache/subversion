@@ -308,7 +308,7 @@ unmap_uint(apr_uint64_t value)
  * are no sub-streams).
  */
 static void
-svn_packed__data_flush_buffer(svn_packed__int_stream_t *stream)
+data_flush_buffer(svn_packed__int_stream_t *stream)
 {
   packed_int_private_t *private_data = stream->private_data;
   apr_size_t i;
@@ -382,7 +382,7 @@ svn_packed__add_uint(svn_packed__int_stream_t *stream,
 {
   stream->buffer[stream->buffer_used] = value;
   if (++stream->buffer_used == SVN__PACKED_DATA_BUFFER_SIZE)
-    svn_packed__data_flush_buffer(stream);
+    data_flush_buffer(stream);
 }
 
 void
@@ -435,7 +435,7 @@ write_int_stream_structure(svn_stringbuf_t* tree_struct,
                                    + (private_data->is_signed ? 2 : 0));
 
       /* store item count and length their of packed representation */
-      svn_packed__data_flush_buffer(stream);
+      data_flush_buffer(stream);
 
       write_packed_uint(tree_struct, private_data->item_count);
       write_packed_uint(tree_struct, private_data->packed
