@@ -965,7 +965,7 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
 {
   svn_branch_subtree_t *s_src, *s_tgt, *s_yca;
   apr_hash_t *diff_yca_src, *diff_yca_tgt;
-  apr_hash_t *e_conflicts = apr_hash_make(scratch_pool);
+  apr_hash_t *e_conflicts = apr_hash_make(result_pool);
   conflict_storage_t *conflict_storage = conflict_storage_create(result_pool);
   SVN_ITER_T(svn_element_content_t *) *pi;
   svn_element_tree_t *src_elements, *tgt_elements, *yca_elements;
