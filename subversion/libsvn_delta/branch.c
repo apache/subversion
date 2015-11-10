@@ -877,7 +877,7 @@ svn_branch_rev_bid_eid_create(svn_revnum_t rev,
 {
   svn_branch_rev_bid_eid_t *id = apr_palloc(result_pool, sizeof(*id));
 
-  id->bid = branch_id;
+  id->bid = apr_pstrdup(result_pool, branch_id);
   id->eid = eid;
   id->rev = rev;
   return id;
@@ -904,7 +904,7 @@ svn_branch_rev_bid_create(svn_revnum_t rev,
 {
   svn_branch_rev_bid_t *id = apr_palloc(result_pool, sizeof(*id));
 
-  id->bid = branch_id;
+  id->bid = apr_pstrdup(result_pool, branch_id);
   id->rev = rev;
   return id;
 }
