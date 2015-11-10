@@ -21,10 +21,15 @@
  * ====================================================================
  */
 
-#include "svn_private_config.h"
-#include "svn_client.h"
+#include "svn_types.h"
+#include "svn_error.h"
+#include "svn_delta.h"
+#include "svn_ra.h"
 
-#include "private/svn_editor3e.h"
+#include "private/svn_branch.h"
+#include "private/svn_branch_compat.h"
+
+#include "svn_private_config.h"
 
 
 struct edit_baton
@@ -36,12 +41,12 @@ struct edit_baton
 
 struct dir_baton
 {
-  void *edit_baton;
+  struct edit_baton *edit_baton;
 };
 
 struct file_baton
 {
-  void *edit_baton;
+  struct edit_baton *edit_baton;
 };
 
 static svn_error_t *
@@ -49,7 +54,7 @@ set_target_revision(void *edit_baton,
                     svn_revnum_t target_revision,
                     apr_pool_t *pool)
 {
-  struct edit_baton *eb = edit_baton;
+  /*struct edit_baton *eb = edit_baton;*/
 
   /*SVN_ERR(eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
                                                  target_revision,
@@ -71,7 +76,7 @@ open_root(void *edit_baton,
                                         pool,
                                         &dir_baton->wrapped_dir_baton));*/
 
-  dir_baton->edit_baton = edit_baton;
+  dir_baton->edit_baton = eb;
 
   *root_baton = dir_baton;
 
@@ -84,8 +89,8 @@ delete_entry(const char *path,
              void *parent_baton,
              apr_pool_t *pool)
 {
-  struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->edit_baton;
+  /*struct dir_baton *pb = parent_baton;
+  struct edit_baton *eb = pb->edit_baton;*/
 
   /*SVN_ERR(eb->wrapped_editor->delete_entry(path,
                                           base_revision,
@@ -197,8 +202,8 @@ apply_textdelta(void *file_baton,
                 svn_txdelta_window_handler_t *handler,
                 void **handler_baton)
 {
-  struct file_baton *fb = file_baton;
-  struct edit_baton *eb = fb->edit_baton;
+  /*struct file_baton *fb = file_baton;
+  struct edit_baton *eb = fb->edit_baton;*/
 
   /*SVN_ERR(eb->wrapped_editor->apply_textdelta(fb->wrapped_file_baton,
                                               base_checksum,
@@ -214,8 +219,8 @@ close_file(void *file_baton,
            const char *text_checksum,
            apr_pool_t *pool)
 {
-  struct file_baton *fb = file_baton;
-  struct edit_baton *eb = fb->edit_baton;
+  /*struct file_baton *fb = file_baton;
+  struct edit_baton *eb = fb->edit_baton;*/
 
   /*SVN_ERR(eb->wrapped_editor->close_file(fb->wrapped_file_baton,
                                          text_checksum, pool));*/
@@ -228,8 +233,8 @@ absent_file(const char *path,
             void *file_baton,
             apr_pool_t *pool)
 {
-  struct file_baton *fb = file_baton;
-  struct edit_baton *eb = fb->edit_baton;
+  /*struct file_baton *fb = file_baton;
+  struct edit_baton *eb = fb->edit_baton;*/
 
   /*SVN_ERR(eb->wrapped_editor->absent_file(path, fb->wrapped_file_baton,
                                           pool));*/
@@ -241,8 +246,8 @@ static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
 {
-  struct dir_baton *db = dir_baton;
-  struct edit_baton *eb = db->edit_baton;
+  /*struct dir_baton *db = dir_baton;
+  struct edit_baton *eb = db->edit_baton;*/
 
   /*SVN_ERR(eb->wrapped_editor->close_directory(db->wrapped_dir_baton,
                                               pool));*/
@@ -255,8 +260,8 @@ absent_directory(const char *path,
                  void *dir_baton,
                  apr_pool_t *pool)
 {
-  struct dir_baton *db = dir_baton;
-  struct edit_baton *eb = db->edit_baton;
+  /*struct dir_baton *db = dir_baton;
+  struct edit_baton *eb = db->edit_baton;*/
 
   /*SVN_ERR(eb->wrapped_editor->absent_directory(path, db->wrapped_dir_baton,
                                                pool));*/
@@ -270,8 +275,8 @@ change_file_prop(void *file_baton,
                  const svn_string_t *value,
                  apr_pool_t *pool)
 {
-  struct file_baton *fb = file_baton;
-  struct edit_baton *eb = fb->edit_baton;
+  /*struct file_baton *fb = file_baton;
+  struct edit_baton *eb = fb->edit_baton;*/
 
   /*SVN_ERR(eb->wrapped_editor->change_file_prop(fb->wrapped_file_baton,
                                                name,
@@ -287,8 +292,8 @@ change_dir_prop(void *dir_baton,
                 const svn_string_t *value,
                 apr_pool_t *pool)
 {
-  struct dir_baton *db = dir_baton;
-  struct edit_baton *eb = db->edit_baton;
+  /*struct dir_baton *db = dir_baton;
+  struct edit_baton *eb = db->edit_baton;*/
 
   /*SVN_ERR(eb->wrapped_editor->change_dir_prop(db->wrapped_dir_baton,
                                               name,
@@ -302,7 +307,7 @@ static svn_error_t *
 close_edit(void *edit_baton,
            apr_pool_t *pool)
 {
-  struct edit_baton *eb = edit_baton;
+  /*struct edit_baton *eb = edit_baton;*/
 
   /*SVN_ERR(eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool));*/
 
@@ -313,7 +318,7 @@ static svn_error_t *
 abort_edit(void *edit_baton,
            apr_pool_t *pool)
 {
-  struct edit_baton *eb = edit_baton;
+  /*struct edit_baton *eb = edit_baton;*/
 
   /*SVN_ERR(eb->wrapped_editor->abort_edit(eb->wrapped_edit_baton, pool));*/
 
