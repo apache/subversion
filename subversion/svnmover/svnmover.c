@@ -2415,6 +2415,8 @@ commit(svn_revnum_t *new_rev_p,
        apr_hash_t *revprops,
        apr_pool_t *scratch_pool)
 {
+  apr_pool_t *subpool;
+  
   if (svnmover_any_conflicts(wc->conflicts))
     {
       return svn_error_createf(SVN_ERR_BRANCHING, NULL,
@@ -2425,8 +2427,10 @@ commit(svn_revnum_t *new_rev_p,
   /* Complete the old edit drive (into the 'WC') */
   SVN_ERR(svn_branch_txn_sequence_point(wc->edit_txn, scratch_pool));
 
-  /* Commit */
-  SVN_ERR(wc_commit(new_rev_p, wc, revprops, scratch_pool));
+  /* Just as in execute() the pool must be a subpool of wc->pool. */
+  subpool = svn_pool_create(wc->pool);
+  SVN_ERR(wc_commit(new_rev_p, wc, revprops, subpool));
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
