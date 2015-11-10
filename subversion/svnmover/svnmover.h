@@ -52,7 +52,6 @@ svnmover_notify_v(const char *fmt,
 typedef struct svnmover_wc_version_t
 {
   svn_revnum_t revision;  /* always SVN_INVALID_REVNUM in working version */
-  const char *branch_id;
   svn_branch_state_t *branch;
 } svnmover_wc_version_t;
 
