@@ -137,6 +137,17 @@ subbranch_str(svn_branch_state_t *branch,
   return branch_str(subbranch, result_pool);
 }
 
+/*  */
+static const char *
+brief_eid_and_name_or_nil(svn_element_content_t *e,
+                          apr_pool_t *result_pool)
+{
+  return e ? apr_psprintf(result_pool, "%d/%s", e->parent_eid, e->name)
+           : "<nil>";
+
+  return SVN_NO_ERROR;
+}
+
 /* Options to control how strict the merge is about detecting conflicts.
  *
  * The options affect cases that, depending on the user's preference, could
@@ -194,6 +205,19 @@ element_merge3_conflict_dup(element_merge3_conflict_t *old_conflict,
                                         old_conflict->side2, result_pool);
 }
 
+static const char *
+element_merge3_conflict_str(element_merge3_conflict_t *c,
+                            int eid,
+                            apr_pool_t *result_pool)
+{
+  return apr_psprintf(result_pool,
+                      "single-element conflict: e%d: yca=%s, side1=%s, side2=%s",
+                      eid,
+                      brief_eid_and_name_or_nil(c->yca, result_pool),
+                      brief_eid_and_name_or_nil(c->side1, result_pool),
+                      brief_eid_and_name_or_nil(c->side2, result_pool));
+}
+
 /* A name-clash conflict description.
  */
 typedef struct name_clash_conflict_t
@@ -217,6 +241,27 @@ name_clash_conflict_create(int parent_eid,
   return c;
 }
 
+static const char *
+name_clash_conflict_str(name_clash_conflict_t *c,
+                        apr_pool_t *result_pool)
+{
+  apr_hash_index_t *hi2;
+  const char *s;
+
+  s = apr_psprintf(result_pool,
+                   "name-clash conflict: peid %d, name '%s', %d elements",
+                   c->parent_eid, c->name, apr_hash_count(c->elements));
+
+  for (hi2 = apr_hash_first(result_pool, c->elements);
+       hi2; hi2 = apr_hash_next(hi2))
+    {
+      int eid = svn_int_hash_this_key(hi2);
+
+      apr_psprintf(result_pool, "%s\n    element %d", s, eid);
+    }
+  return s;
+}
+
 /* A cycle conflict description.
  */
 typedef struct cycle_conflict_t
@@ -232,6 +277,27 @@ cycle_conflict_create(apr_pool_t *result_pool)
 
   c->elements = apr_hash_make(result_pool);
   return c;
+}
+
+static const char *
+cycle_conflict_str(cycle_conflict_t *c,
+                   int eid,
+                   apr_pool_t *result_pool)
+{
+  const char *s = "elements";
+  apr_hash_index_t *hi2;
+
+  for (hi2 = apr_hash_first(result_pool, c->elements);
+       hi2; hi2 = apr_hash_next(hi2))
+    {
+      int eid2 = svn_int_hash_this_key(hi2);
+
+      s = apr_psprintf(result_pool, "%s e%d", s, eid2);
+    }
+
+  s = apr_psprintf(result_pool, "cycle conflict: e%d: %s",
+                   eid, s);
+  return s;
 }
 
 /* An orphan conflict description.
@@ -251,6 +317,17 @@ orphan_conflict_create(svn_element_content_t *element,
   return c;
 }
 
+static const char *
+orphan_conflict_str(orphan_conflict_t *c,
+                    int eid,
+                    apr_pool_t *result_pool)
+{
+  return apr_psprintf(result_pool,
+                      "orphan conflict: e%d: %d/%s: parent e%d does not exist",
+                      eid, c->element->parent_eid, c->element->name,
+                      c->element->parent_eid);
+}
+
 /*  */
 static conflict_storage_t *
 conflict_storage_create(apr_pool_t *result_pool)
@@ -258,17 +335,6 @@ conflict_storage_create(apr_pool_t *result_pool)
   conflict_storage_t *c = apr_pcalloc(result_pool, sizeof(*c));
 
   return c;
-}
-
-/*  */
-static const char *
-brief_eid_and_name_or_nil(svn_element_content_t *e,
-                          apr_pool_t *result_pool)
-{
-  return e ? apr_psprintf(result_pool, "%d/%s", e->parent_eid, e->name)
-           : "<nil>";
-
-  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -286,11 +352,8 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
       int eid = svn_int_hash_this_key(hi);
       element_merge3_conflict_t *c = apr_hash_this_val(hi);
 
-      svnmover_notify("  single-element conflict: e%d: yca=%s, side1=%s, side2=%s",
-                      eid,
-                      brief_eid_and_name_or_nil(c->yca, scratch_pool),
-                      brief_eid_and_name_or_nil(c->side1, scratch_pool),
-                      brief_eid_and_name_or_nil(c->side2, scratch_pool));
+      svnmover_notify("  %s",
+                      element_merge3_conflict_str(c, eid, scratch_pool));
     }
   for (hi = apr_hash_first(scratch_pool,
                            conflict_storage->name_clash_conflicts);
@@ -298,17 +361,9 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
     {
       /*const char *key = apr_hash_this_key(hi);*/
       name_clash_conflict_t *c = apr_hash_this_val(hi);
-      apr_hash_index_t *hi2;
 
-      svnmover_notify("  name-clash conflict: peid %d, name '%s', %d elements",
-                      c->parent_eid, c->name, apr_hash_count(c->elements));
-      for (hi2 = apr_hash_first(scratch_pool, c->elements);
-           hi2; hi2 = apr_hash_next(hi2))
-        {
-          int eid = svn_int_hash_this_key(hi2);
-
-          svnmover_notify("    element %d", eid);
-        }
+      svnmover_notify("  %s",
+                      name_clash_conflict_str(c, scratch_pool));
     }
   for (hi = apr_hash_first(scratch_pool,
                            conflict_storage->cycle_conflicts);
@@ -316,19 +371,9 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
     {
       int eid = svn_int_hash_this_key(hi);
       cycle_conflict_t *c = apr_hash_this_val(hi);
-      const char *desc = "elements";
-      apr_hash_index_t *hi2;
 
-      for (hi2 = apr_hash_first(scratch_pool, c->elements);
-           hi2; hi2 = apr_hash_next(hi2))
-        {
-          int eid2 = svn_int_hash_this_key(hi2);
-
-          desc = apr_psprintf(scratch_pool, "%s e%d", desc, eid2);
-        }
-
-      svnmover_notify("  cycle conflict: e%d: %s",
-                      eid, desc);
+      svnmover_notify("  %s",
+                      cycle_conflict_str(c, eid, scratch_pool));
     }
   for (hi = apr_hash_first(scratch_pool,
                            conflict_storage->orphan_conflicts);
@@ -337,9 +382,8 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
       int eid = svn_int_hash_this_key(hi);
       orphan_conflict_t *c = apr_hash_this_val(hi);
 
-      svnmover_notify("  orphan conflict: e%d: %d/%s: parent e%d does not exist",
-                      eid, c->element->parent_eid, c->element->name,
-                      c->element->parent_eid);
+      svnmover_notify("  %s",
+                      orphan_conflict_str(c, eid, scratch_pool));
     }
 
   svnmover_notify(_("Summary of conflicts:\n"
