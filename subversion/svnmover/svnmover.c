@@ -1360,18 +1360,12 @@ do_switch(svnmover_wc_t *wc,
       if (svnmover_any_conflicts(wc->conflicts))
         {
           SVN_ERR(svnmover_display_conflicts(wc->conflicts, scratch_pool));
-          return svn_error_createf(
-                   SVN_ERR_BRANCHING, NULL,
-                   _("Switch failed because of conflicts"));
-        }
-      else
-        {
-          SVN_DBG(("Switch completed: no conflicts"));
         }
 
-      /* ### TODO: If the merge raises conflicts, either revert to the
-             pre-update state or store and handle the conflicts. Currently
-             this just leaves the merge partially done and raises an error. */
+      /* ### TODO: If the merge raises conflicts, allow the user to revert
+             to the pre-update state or resolve the conflicts. Currently
+             this leaves the merge partially done and the pre-update state
+             is lost. */
     }
 
   return SVN_NO_ERROR;
@@ -2468,6 +2462,7 @@ do_revert(svnmover_wc_t *wc,
                  wc->working->branch,
                  wc->base->branch,
                  scratch_pool));
+  wc->conflicts = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -2965,18 +2960,11 @@ execute(svnmover_wc_t *wc,
                                           arg[0]->el_rev /*from*/,
                                           arg[1]->el_rev /*to*/,
                                           arg[2]->el_rev /*yca*/,
-                                          iterpool, iterpool));
+                                          wc->pool, iterpool));
 
             if (svnmover_any_conflicts(wc->conflicts))
               {
                 SVN_ERR(svnmover_display_conflicts(wc->conflicts, iterpool));
-                return svn_error_createf(
-                         SVN_ERR_BRANCHING, NULL,
-                         _("Merge failed because of conflicts"));
-              }
-            else
-              {
-                SVN_DBG(("Merge completed: no conflicts"));
               }
 
           }
