@@ -848,7 +848,11 @@ svn_branch_get_id(const svn_branch_state_t *branch,
 int
 svn_branch_root_eid(const svn_branch_state_t *branch)
 {
-  return branch->priv->element_tree->root_eid;
+  svn_element_tree_t *elements;
+
+  svn_error_clear(svn_branch_state_get_elements(branch, &elements,
+                                                NULL/*scratch_pool*/));
+  return elements->root_eid;
 }
 
 svn_branch_el_rev_id_t *
@@ -1078,21 +1082,13 @@ svn_branch_get_path_by_eid(const svn_branch_state_t *branch,
                            int eid,
                            apr_pool_t *result_pool)
 {
-  const char *path = "";
-  svn_element_content_t *element;
+  svn_element_tree_t *elements;
 
   SVN_ERR_ASSERT_NO_RETURN(EID_IS_ALLOCATED(branch, eid));
-  SVN_ERR_ASSERT_NO_RETURN(branch->priv->is_flat);
+  /*SVN_ERR_ASSERT_NO_RETURN(branch->priv->is_flat);*/
 
-  for (; ! IS_BRANCH_ROOT_EID(branch, eid); eid = element->parent_eid)
-    {
-      element = branch_get_element(branch, eid);
-      if (! element)
-        return NULL;
-      path = svn_relpath_join(element->name, path, result_pool);
-    }
-  SVN_ERR_ASSERT_NO_RETURN(IS_BRANCH_ROOT_EID(branch, eid));
-  return path;
+  svn_error_clear(svn_branch_state_get_elements(branch, &elements, result_pool));
+  return svn_element_tree_get_path_by_eid(elements, eid, result_pool);
 }
 
 int
@@ -1100,17 +1096,19 @@ svn_branch_get_eid_by_path(const svn_branch_state_t *branch,
                            const char *path,
                            apr_pool_t *scratch_pool)
 {
+  svn_element_tree_t *elements;
   apr_hash_index_t *hi;
 
-  SVN_ERR_ASSERT_NO_RETURN(branch->priv->is_flat);
+  /*SVN_ERR_ASSERT_NO_RETURN(branch->priv->is_flat);*/
 
   /* ### This is a crude, linear search */
-  for (hi = apr_hash_first(scratch_pool, branch->priv->element_tree->e_map);
+  svn_error_clear(svn_branch_state_get_elements(branch, &elements, scratch_pool));
+  for (hi = apr_hash_first(scratch_pool, elements->e_map);
        hi; hi = apr_hash_next(hi))
     {
       int eid = svn_int_hash_this_key(hi);
-      const char *this_path = svn_branch_get_path_by_eid(branch, eid,
-                                                         scratch_pool);
+      const char *this_path = svn_element_tree_get_path_by_eid(elements, eid,
+                                                               scratch_pool);
 
       if (! this_path)
         {
