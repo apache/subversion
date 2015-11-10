@@ -253,10 +253,8 @@ wc_checkout(svnmover_wc_t *wc,
   base_txn = svn_branch_repos_get_base_revision_root(wc->edit_txn);
   wc->base = apr_pcalloc(wc->pool, sizeof(*wc->base));
   wc->base->revision = base_revision;
-  wc->base->branch_id = apr_pstrdup(wc->pool, base_branch_id);
   wc->base->branch
-    = svn_branch_txn_get_branch_by_id(base_txn, wc->base->branch_id,
-                                      scratch_pool);
+    = svn_branch_txn_get_branch_by_id(base_txn, base_branch_id, scratch_pool);
   if (! wc->base->branch)
     return svn_error_createf(SVN_ERR_BRANCHING, NULL,
                              "Cannot check out WC: branch %s not found in r%ld",
@@ -264,9 +262,8 @@ wc_checkout(svnmover_wc_t *wc,
 
   wc->working = apr_pcalloc(wc->pool, sizeof(*wc->working));
   wc->working->revision = SVN_INVALID_REVNUM;
-  wc->working->branch_id = wc->base->branch_id;
   wc->working->branch
-    = svn_branch_txn_get_branch_by_id(wc->edit_txn, wc->working->branch_id,
+    = svn_branch_txn_get_branch_by_id(wc->edit_txn, base_branch_id,
                                       scratch_pool);
   SVN_ERR_ASSERT(wc->working->branch);
 
@@ -731,9 +728,9 @@ wc_commit(svn_revnum_t *new_rev_p,
                                 scratch_pool));
   /*SVN_ERR(svn_branch_txn__get_debug(&wc->edit_txn, wc->edit_txn, scratch_pool));*/
 
-  edit_root_branch_id = wc->working->branch_id;
+  edit_root_branch_id = wc->working->branch->bid;
   edit_root_branch = svn_branch_txn_get_branch_by_id(
-                       commit_txn, wc->working->branch_id, scratch_pool);
+                       commit_txn, wc->working->branch->bid, scratch_pool);
 
   /* We might be creating a new top-level branch in this commit. That is the
      only case in which the working branch will not be found in EDIT_TXN.
@@ -744,7 +741,8 @@ wc_commit(svn_revnum_t *new_rev_p,
       /* Create a new top-level branch in the edited state. (It will have
          an independent new top-level branch number.) */
       svn_branch_rev_bid_eid_t *from
-        = svn_branch_rev_bid_eid_create(wc->base->revision, wc->base->branch_id,
+        = svn_branch_rev_bid_eid_create(wc->base->revision,
+                                        wc->base->branch->bid,
                                         svn_branch_root_eid(wc->base->branch),
                                         scratch_pool);
 
@@ -763,7 +761,7 @@ wc_commit(svn_revnum_t *new_rev_p,
   if (change_detected)
     {
       ccbb.edit_txn = commit_txn;
-      ccbb.wc_base_branch_id = wc->base->branch_id;
+      ccbb.wc_base_branch_id = wc->base->branch->bid;
       ccbb.wc_commit_branch_id = edit_root_branch_id;
 
       SVN_ERR(svn_branch_txn_complete(commit_txn, scratch_pool));
@@ -938,7 +936,7 @@ find_el_rev_by_rrpath_rev(svn_branch_el_rev_id_t **el_rev_p,
       const svn_branch_repos_t *repos = wc->working->branch->txn->repos;
 
       if (! branch_id)
-        branch_id = wc->base->branch_id;
+        branch_id = wc->base->branch->bid;
       SVN_ERR(svn_branch_repos_find_el_rev_by_path_rev(el_rev_p, repos,
                                                        revnum,
                                                        branch_id,
@@ -2457,7 +2455,7 @@ do_commit(svn_revnum_t *new_rev_p,
      (Instead, we could perhaps just get a new WC editor.) */
   SVN_ERR(wc_checkout(wc, SVN_IS_VALID_REVNUM(new_rev) ? new_rev
                                                        : wc->base->revision,
-                      wc->working->branch_id, scratch_pool));
+                      wc->working->branch->bid, scratch_pool));
 
   if (new_rev_p)
     *new_rev_p = new_rev;
@@ -2766,8 +2764,8 @@ execute(svnmover_wc_t *wc,
                                    iterpool));
             svnmover_notify("Repository Root: %s", wc->repos_root_url);
             svnmover_notify("Base Revision: %ld", wc->base->revision);
-            svnmover_notify("Base Branch:    %s", wc->base->branch_id);
-            svnmover_notify("Working Branch: %s", wc->working->branch_id);
+            svnmover_notify("Base Branch:    %s", wc->base->branch->bid);
+            svnmover_notify("Working Branch: %s", wc->working->branch->bid);
             svnmover_notify("Modified:       %s", is_modified ? "yes" : "no");
           }
           break;
@@ -2905,7 +2903,6 @@ execute(svnmover_wc_t *wc,
                                  from,
                                  iterpool, iterpool));
             /* Switch the WC working state to this new branch */
-            wc->working->branch_id = new_branch->bid;
             wc->working->branch = new_branch;
           }
           break;
