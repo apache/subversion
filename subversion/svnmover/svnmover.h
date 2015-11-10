@@ -37,6 +37,22 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* Like apr_hash_overlay() and apr_hash_merge() except allocating the
+ * result in the pool of the first input hash (OVERLAY and H1 respectively).
+ *
+ * When APR pool debugging is enabled, these functions require that the
+ * result pool does not have greater lifetime than the inputs, so passing
+ * an arbitrary result pool doesn't work well.
+ *
+ * If the second hash's pool has a shorter lifetime than that of the first,
+ * you're out of luck.
+ */
+#define hash_overlay(overlay, base) \
+  apr_hash_overlay(apr_hash_pool_get(overlay), overlay, base)
+#define hash_merge(overlay, h1) \
+  apr_hash_merge(apr_hash_pool_get(overlay), h1, h2, merger, data)
+
+
 /* Print a verbose notification: in 'quiet' mode, don't print it. */
 __attribute__((format(printf, 1, 2)))
 void

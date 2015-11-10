@@ -333,8 +333,7 @@ element_differences(apr_hash_t **diff_p,
            right->eid));*/
 
   for (SVN_HASH_ITER(hi, scratch_pool,
-                     apr_hash_overlay(scratch_pool,
-                                      left->e_map, right->e_map)))
+                     hash_overlay(left->e_map, right->e_map)))
     {
       int e = svn_int_hash_this_key(hi->apr_hi);
       svn_element_content_t *element_left
@@ -508,8 +507,7 @@ get_union_of_subbranches(apr_hash_t **all_subbranches_p,
                                    svn_branch_root_eid(right_branch),
                                    result_pool));
   all_subbranches
-    = left_branch ? apr_hash_overlay(result_pool,
-                                     s_left->subbranches, s_right->subbranches)
+    = left_branch ? hash_overlay(s_left->subbranches, s_right->subbranches)
                   : s_right->subbranches;
 
   *all_subbranches_p = all_subbranches;
@@ -1650,8 +1648,7 @@ subtree_diff_r(svn_branch_subtree_t *left,
   /* recurse into each subbranch that exists in LEFT and/or in RIGHT */
   subbranches_l = left ? left->subbranches : apr_hash_make(scratch_pool);
   subbranches_r = right ? right->subbranches : apr_hash_make(scratch_pool);
-  subbranches_all = apr_hash_overlay(scratch_pool,
-                                     subbranches_l, subbranches_r);
+  subbranches_all = hash_overlay(subbranches_l, subbranches_r);
 
   for (hi = apr_hash_first(scratch_pool, subbranches_all);
        hi; hi = apr_hash_next(hi))
@@ -2415,8 +2412,6 @@ commit(svn_revnum_t *new_rev_p,
        apr_hash_t *revprops,
        apr_pool_t *scratch_pool)
 {
-  apr_pool_t *subpool;
-  
   if (svnmover_any_conflicts(wc->conflicts))
     {
       return svn_error_createf(SVN_ERR_BRANCHING, NULL,
@@ -2428,9 +2423,7 @@ commit(svn_revnum_t *new_rev_p,
   SVN_ERR(svn_branch_txn_sequence_point(wc->edit_txn, scratch_pool));
 
   /* Just as in execute() the pool must be a subpool of wc->pool. */
-  subpool = svn_pool_create(wc->pool);
-  SVN_ERR(wc_commit(new_rev_p, wc, revprops, subpool));
-  svn_pool_destroy(subpool);
+  SVN_ERR(wc_commit(new_rev_p, wc, revprops, wc->pool));
 
   return SVN_NO_ERROR;
 }
@@ -2689,12 +2682,7 @@ execute(svnmover_wc_t *wc,
         apr_pool_t *pool)
 {
   const char *base_relpath;
-  /* This pool is passed to svn_branch_merge() and needs to be a
-     subpool of the pool used to allocate the e_map members of the
-     data passed to the function.  The pool relationship is required
-     by apr_hash_overlay() to guarantee the lifetime of the resulting
-     hash. */
-  apr_pool_t *iterpool = svn_pool_create(wc->pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
 
   base_relpath = svn_uri_skip_ancestor(wc->repos_root_url, anchor_url, pool);

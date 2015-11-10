@@ -82,8 +82,7 @@ element_differences(apr_hash_t **diff_p,
            right->eid));*/
 
   for (SVN_HASH_ITER(hi, scratch_pool,
-                     apr_hash_overlay(scratch_pool,
-                                      left->e_map, right->e_map)))
+                     hash_overlay(left->e_map, right->e_map)))
     {
       int e = svn_int_hash_this_key(hi->apr_hi);
       svn_element_content_t *element_left
@@ -969,12 +968,10 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
                                         scratch_pool));
   SVN_ERR(svn_branch_state_get_elements(yca->branch, &yca_elements,
                                         scratch_pool));
-  all_elements = apr_hash_overlay(scratch_pool,
-                                  src_elements->e_map,
-                                  tgt_elements->e_map);
-  all_elements = apr_hash_overlay(scratch_pool,
-                                  yca_elements->e_map,
-                                  all_elements);
+  all_elements = hash_overlay(src_elements->e_map,
+                              tgt_elements->e_map);
+  all_elements = hash_overlay(yca_elements->e_map,
+                              all_elements);
   for (SVN_HASH_ITER_SORTED(pi, all_elements,
                             sort_compare_items_by_eid, scratch_pool))
     {
