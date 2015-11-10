@@ -149,7 +149,6 @@ static svn_boolean_t use_coloured_output = FALSE;
 
 #endif
 
-/* Print a notification. */
 __attribute__((format(printf, 1, 2)))
 void
 svnmover_notify(const char *fmt,
@@ -165,7 +164,6 @@ svnmover_notify(const char *fmt,
   printf("\n");
 }
 
-/* Print a verbose notification: in 'quiet' mode, don't print it. */
 __attribute__((format(printf, 1, 2)))
 void
 svnmover_notify_v(const char *fmt,

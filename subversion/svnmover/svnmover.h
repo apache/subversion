@@ -53,7 +53,7 @@ extern "C" {
   apr_hash_merge(apr_hash_pool_get(overlay), h1, h2, merger, data)
 
 
-/* Print a verbose notification: in 'quiet' mode, don't print it. */
+/* Print a notification. */
 __attribute__((format(printf, 1, 2)))
 void
 svnmover_notify(const char *fmt,
