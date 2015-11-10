@@ -85,6 +85,14 @@ branch_instantiate_elements(svn_branch_state_t *to_branch,
                             const svn_element_tree_t *elements,
                             apr_pool_t *scratch_pool);
 
+static svn_error_t *
+svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
+                           int to_eid,
+                           svn_branch_eid_t new_parent_eid,
+                           const char *new_name,
+                           svn_element_tree_t *new_subtree,
+                           apr_pool_t *scratch_pool);
+
 /*  */
 static apr_pool_t *
 branch_state_pool_get(svn_branch_state_t *branch)
@@ -1118,7 +1126,18 @@ svn_branch_get_eid_by_path(const svn_branch_state_t *branch,
   return -1;
 }
 
-svn_error_t *
+/* Create a copy of NEW_SUBTREE in TO_BRANCH.
+ *
+ * For each non-root element in NEW_SUBTREE, create a new element with
+ * a new EID, no matter what EID is used to represent it in NEW_SUBTREE.
+ *
+ * For the new subtree root element, if TO_EID is -1, generate a new EID,
+ * otherwise alter (if it exists) or instantiate the element TO_EID.
+ *
+ * Set the new subtree root element's parent to NEW_PARENT_EID and name to
+ * NEW_NAME.
+ */
+static svn_error_t *
 svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
                            int to_eid,
                            svn_branch_eid_t new_parent_eid,

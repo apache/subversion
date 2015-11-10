@@ -589,25 +589,6 @@ svn_error_t *
 svn_branch_state_purge(svn_branch_state_t *branch,
                        apr_pool_t *scratch_pool);
 
-/* Create a copy of NEW_SUBTREE in TO_BRANCH.
- *
- * For each non-root element in NEW_SUBTREE, create a new element with
- * a new EID, no matter what EID is used to represent it in NEW_SUBTREE.
- *
- * For the new subtree root element, if TO_EID is -1, generate a new EID,
- * otherwise alter (if it exists) or instantiate the element TO_EID.
- *
- * Set the new subtree root element's parent to NEW_PARENT_EID and name to
- * NEW_NAME.
- */
-svn_error_t *
-svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
-                           int to_eid,
-                           svn_branch_eid_t new_parent_eid,
-                           const char *new_name,
-                           svn_element_tree_t *new_subtree,
-                           apr_pool_t *scratch_pool);
-
 /* Return the branch-relative path of element EID in BRANCH.
  *
  * If the element EID does not currently exist in BRANCH, return NULL.
