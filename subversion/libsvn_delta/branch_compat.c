@@ -1178,8 +1178,8 @@ convert_branch_to_paths(apr_hash_t *paths,
         }
       else
         {
-          SVN_DBG(("branch-to-path: b%s e%d -> <already present; not overwriting> (%s)",
-                   svn_branch_get_id(branch, scratch_pool), eid, rrpath));
+          /*SVN_DBG(("branch-to-path: b%s e%d -> <already present; not overwriting> (%s)",
+                   svn_branch_get_id(branch, scratch_pool), eid, rrpath));*/
         }
     }
   return SVN_NO_ERROR;
@@ -1347,10 +1347,10 @@ drive_changes_r(const char *rrpath,
   svn_pathrev_t final_copy_from;
   svn_boolean_t succession;
 
-  SVN_DBG(("rrpath '%s' current=%s, final=e%d)",
+  /*SVN_DBG(("rrpath '%s' current=%s, final=e%d)",
            rrpath,
            pred_loc ? peg_path_str(*pred_loc, scratch_pool) : "<nil>",
-           final_el_rev ? final_el_rev->eid : -1));
+           final_el_rev ? final_el_rev->eid : -1));*/
 
   SVN_ERR_ASSERT(!pred_loc
                  || (pred_loc->relpath && SVN_IS_VALID_REVNUM(pred_loc->rev)));
@@ -1412,14 +1412,16 @@ drive_changes_r(const char *rrpath,
          we've already issued a delete. */
       if (check_existence(eb->changes, rrpath) != svn_tristate_false)
         {
-          SVN_DBG(("ev1:del(%s)", rrpath));
+          /*SVN_DBG(("ev1:del(%s)", rrpath));*/
           /* ### We don't need "delete_subtree", we only need to insert a
              single delete operation, as we know we haven't
              inserted any changes inside this subtree. */
           SVN_ERR(delete_subtree(eb->changes, rrpath, pred_loc->rev));
         }
       else
-        SVN_DBG(("ev1:del(%s): parent is already deleted", rrpath));
+        {
+          /*SVN_DBG(("ev1:del(%s): parent is already deleted", rrpath))*/
+        }
     }
 
   /* If there's a final node, it's being added or modified.
@@ -1448,11 +1450,11 @@ drive_changes_r(const char *rrpath,
           if (svn_element_payload_equal(current_payload,
                                              final_payload, scratch_pool))
             {
-              SVN_DBG(("ev1:no-op(%s)", rrpath));
+              /*SVN_DBG(("ev1:no-op(%s)", rrpath));*/
             }
           else
             {
-              SVN_DBG(("ev1:mod(%s)", rrpath));
+              /*SVN_DBG(("ev1:mod(%s)", rrpath));*/
               SVN_ERR(insert_change(&change, eb->changes, rrpath,
                                     RESTRUCTURE_NONE));
               change->changing_rev = pred_loc->rev;
@@ -1460,7 +1462,7 @@ drive_changes_r(const char *rrpath,
         }
       else /* add or copy/move */
         {
-          SVN_DBG(("ev1:add(%s)", rrpath));
+          /*SVN_DBG(("ev1:add(%s)", rrpath));*/
           SVN_ERR(insert_change(&change, eb->changes, rrpath,
                                 RESTRUCTURE_ADD));
 
@@ -1539,7 +1541,7 @@ drive_changes_r(const char *rrpath,
                       child_pred->relpath = this_rrpath;
                     }
                }
-              SVN_DBG(("child '%s' current=%s final? %d%s",
+              /*(("child '%s' current=%s final? %d%s",
                        name,
                        child_pred ? peg_path_str(*child_pred, scratch_pool)
                                   : "<nil>",
@@ -1547,7 +1549,7 @@ drive_changes_r(const char *rrpath,
                        final_copy_from.relpath
                          ? apr_psprintf(scratch_pool, " parent-cp-from=%s@%ld",
                                         final_copy_from.relpath,
-                                        final_copy_from.rev) : ""));
+                                        final_copy_from.rev) : ""));*/
 
               SVN_ERR(drive_changes_r(this_rrpath,
                                       child_pred,
@@ -1999,8 +2001,8 @@ svn_branch_compat_txn_from_delta_for_update(
     = apr_pcalloc(result_pool, sizeof(*update_editor));
   svn_branch_compat__shim_connector_t *shim_connector;
 
-  SVN_DBG(("svn_delta__ev3_from_delta_for_update(base='%s')...",
-           base_repos_relpath));
+  /*(("svn_delta__ev3_from_delta_for_update(base='%s')...",
+           base_repos_relpath));*/
 
   /*SVN_ERR(svn_delta__get_debug_editor(&deditor, &dedit_baton,
                                       deditor, dedit_baton,

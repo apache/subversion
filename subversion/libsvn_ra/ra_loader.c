@@ -699,8 +699,8 @@ svn_branch_revision_fetch_info(svn_branch_txn_t **txn_p,
   if (! value && revision == 0)
     {
       value = svn_branch_get_default_r0_metadata(scratch_pool);
-      SVN_DBG(("fetch_per_revision_info(r%ld): LOADED DEFAULT INFO:\n%s",
-               revision, value->data));
+      /*SVN_DBG(("fetch_per_revision_info(r%ld): LOADED DEFAULT INFO:\n%s",
+               revision, value->data));*/
       SVN_ERR(write_rev_prop(ra_session, branch_info_dir, revision, value,
                              scratch_pool));
     }

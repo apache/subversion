@@ -1052,9 +1052,6 @@ fetch_func(svn_node_kind_t *kind_p,
 
         }
     }
-  if (props_p)
-    SVN_DBG(("ra-local-fetch-func(%s@%ld): fetched %d props",
-             session_relpath, revision, apr_hash_count(*props_p)));
   return SVN_NO_ERROR;
 }
 
