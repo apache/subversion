@@ -104,16 +104,6 @@ svn_eid__hash_sort_compare_items_by_eid(const struct svn_sort__item_t *a,
 
 /* ====================================================================== */
 
-/** A location in a committed revision.
- *
- * @a rev shall not be #SVN_INVALID_REVNUM unless the interface using this
- * type specifically allows it and defines its meaning. */
-typedef struct svn_pathrev_t
-{
-  svn_revnum_t rev;
-  const char *relpath;
-} svn_pathrev_t;
-
 /**
  */
 typedef struct svn_element_branch_ref_t
@@ -122,17 +112,6 @@ typedef struct svn_element_branch_ref_t
   const char *branch_id;
   int eid;
 } svn_element_branch_ref_t;
-
-/* Return a duplicate of OLD, allocated in RESULT_POOL. */
-svn_pathrev_t
-svn_pathrev_dup(svn_pathrev_t old,
-                apr_pool_t *result_pool);
-
-/* Return true iff PEG_PATH1 and PEG_PATH2 are both the same location.
- */
-svn_boolean_t
-svn_pathrev_equal(svn_pathrev_t *peg_path1,
-                  svn_pathrev_t *peg_path2);
 
 /** Versioned payload of an element, excluding tree structure information.
  *

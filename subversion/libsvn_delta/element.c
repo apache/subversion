@@ -103,34 +103,6 @@ svn_eid__hash_sort_compare_items_by_eid(const svn_sort__item_t *a,
 
 /*
  * ===================================================================
- * Minor data types
- * ===================================================================
- */
-
-svn_pathrev_t
-svn_pathrev_dup(svn_pathrev_t p,
-                apr_pool_t *result_pool)
-{
-  /* The object P is passed by value so we can modify it in place */
-  p.relpath = apr_pstrdup(result_pool, p.relpath);
-  return p;
-}
-
-svn_boolean_t
-svn_pathrev_equal(svn_pathrev_t *peg_path1,
-                  svn_pathrev_t *peg_path2)
-{
-  if (peg_path1->rev != peg_path2->rev)
-    return FALSE;
-  if (strcmp(peg_path1->relpath, peg_path2->relpath) != 0)
-    return FALSE;
-
-  return TRUE;
-}
-
-
-/*
- * ===================================================================
  * Element payload
  * ===================================================================
  */

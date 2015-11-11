@@ -45,15 +45,45 @@
 #define VERIFY(expr) SVN_ERR_ASSERT(expr)
 
 
+/*
+ * ===================================================================
+ * Minor data types
+ * ===================================================================
+ */
+
+/** A location in a committed revision.
+ *
+ * @a rev shall not be #SVN_INVALID_REVNUM unless the interface using this
+ * type specifically allows it and defines its meaning. */
+typedef struct svn_pathrev_t
+{
+  svn_revnum_t rev;
+  const char *relpath;
+} svn_pathrev_t;
+
+/* Return true iff PEG_PATH1 and PEG_PATH2 are both the same location.
+ */
+static svn_boolean_t
+pathrev_equal(const svn_pathrev_t *p1,
+              const svn_pathrev_t *p2)
+{
+  if (p1->rev != p2->rev)
+    return FALSE;
+  if (strcmp(p1->relpath, p2->relpath) != 0)
+    return FALSE;
+
+  return TRUE;
+}
+
 #ifdef SVN_DEBUG
 /* Return a human-readable string representation of LOC. */
-static const char *
-peg_path_str(svn_pathrev_t loc,
-             apr_pool_t *result_pool)
+/*static const char *
+pathrev_str(svn_pathrev_t loc,
+            apr_pool_t *result_pool)
 {
   return apr_psprintf(result_pool, "%s@%ld",
                       loc.relpath, loc.rev);
-}
+}*/
 #endif
 
 
@@ -1349,7 +1379,7 @@ drive_changes_r(const char *rrpath,
 
   /*SVN_DBG(("rrpath '%s' current=%s, final=e%d)",
            rrpath,
-           pred_loc ? peg_path_str(*pred_loc, scratch_pool) : "<nil>",
+           pred_loc ? pathrev_str(*pred_loc, scratch_pool) : "<nil>",
            final_el_rev ? final_el_rev->eid : -1));*/
 
   SVN_ERR_ASSERT(!pred_loc
@@ -1384,7 +1414,7 @@ drive_changes_r(const char *rrpath,
                                    (which also implies the same kind) */
   if (pred_loc && final_copy_from.relpath)
     {
-      succession = svn_pathrev_equal(pred_loc, &final_copy_from);
+      succession = pathrev_equal(pred_loc, &final_copy_from);
     }
   else if (pred_loc && final_el_rev)
     {
@@ -1543,7 +1573,7 @@ drive_changes_r(const char *rrpath,
                }
               /*(("child '%s' current=%s final? %d%s",
                        name,
-                       child_pred ? peg_path_str(*child_pred, scratch_pool)
+                       child_pred ? pathrev_str(*child_pred, scratch_pool)
                                   : "<nil>",
                        (svn_hash_gets(final_children, name) != NULL),
                        final_copy_from.relpath
