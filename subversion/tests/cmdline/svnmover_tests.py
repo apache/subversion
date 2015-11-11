@@ -1477,7 +1477,7 @@ def tree_conflict_detect(sbox,
     test_svnmover2(sbox, 'br1', None,
                    side2_cmds)
   # merge
-  xtest_svnmover(sbox.repo_url, 'E123456: Merge failed because of conflicts',
+  xtest_svnmover(sbox.repo_url, 'E123456: Cannot commit because there are unresolved conflicts',
                  'merge trunk br1 trunk@2')
 
 # A simple single-element tree conflict
