@@ -47,18 +47,6 @@
 #include "svn_private_config.h"
 
 
-/*  */
-static int
-sort_compare_items_by_eid(const svn_sort__item_t *a,
-                          const svn_sort__item_t *b)
-{
-  int eid_a = *(const int *)a->key;
-  int eid_b = *(const int *)b->key;
-
-  return eid_a - eid_b;
-}
-
-
 /* ====================================================================== */
 
 /* Return (left, right) pairs of element content that differ between
@@ -74,17 +62,18 @@ element_differences(apr_hash_t **diff_p,
                     apr_pool_t *scratch_pool)
 {
   apr_hash_t *diff = apr_hash_make(result_pool);
-  SVN_ITER_T(int) *hi;
+  apr_hash_index_t *hi;
 
   /*SVN_DBG(("svn_branch_subtree_differences(b%s r%ld, b%s r%ld, e%d)",
            svn_branch_get_id(left->branch, scratch_pool), left->rev,
            svn_branch_get_id(right->branch, scratch_pool), right->rev,
            right->eid));*/
 
-  for (SVN_HASH_ITER(hi, scratch_pool,
-                     hash_overlay(left->e_map, right->e_map)))
+  for (hi = apr_hash_first(scratch_pool,
+                           hash_overlay(left->e_map, right->e_map));
+       hi; hi = apr_hash_next(hi))
     {
-      int e = svn_int_hash_this_key(hi->apr_hi);
+      int e = svn_eid_hash_this_key(hi);
       svn_element_content_t *element_left
         = svn_element_tree_get(left, e);
       svn_element_content_t *element_right
@@ -98,7 +87,7 @@ element_differences(apr_hash_t **diff_p,
 
           contents[0] = element_left;
           contents[1] = element_right;
-          svn_int_hash_set(diff, e, contents);
+          svn_eid_hash_set(diff, e, contents);
         }
     }
 
@@ -255,7 +244,7 @@ name_clash_conflict_str(name_clash_conflict_t *c,
   for (hi2 = apr_hash_first(result_pool, c->elements);
        hi2; hi2 = apr_hash_next(hi2))
     {
-      int eid = svn_int_hash_this_key(hi2);
+      int eid = svn_eid_hash_this_key(hi2);
 
       apr_psprintf(result_pool, "%s\n    element %d", s, eid);
     }
@@ -290,7 +279,7 @@ cycle_conflict_str(cycle_conflict_t *c,
   for (hi2 = apr_hash_first(result_pool, c->elements);
        hi2; hi2 = apr_hash_next(hi2))
     {
-      int eid2 = svn_int_hash_this_key(hi2);
+      int eid2 = svn_eid_hash_this_key(hi2);
 
       s = apr_psprintf(result_pool, "%s e%d", s, eid2);
     }
@@ -349,7 +338,7 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
                            conflict_storage->single_element_conflicts);
        hi; hi = apr_hash_next(hi))
     {
-      int eid = svn_int_hash_this_key(hi);
+      int eid = svn_eid_hash_this_key(hi);
       element_merge3_conflict_t *c = apr_hash_this_val(hi);
 
       svnmover_notify("  %s",
@@ -369,7 +358,7 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
                            conflict_storage->cycle_conflicts);
        hi; hi = apr_hash_next(hi))
     {
-      int eid = svn_int_hash_this_key(hi);
+      int eid = svn_eid_hash_this_key(hi);
       cycle_conflict_t *c = apr_hash_this_val(hi);
 
       svnmover_notify("  %s",
@@ -379,7 +368,7 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
                            conflict_storage->orphan_conflicts);
        hi; hi = apr_hash_next(hi))
     {
-      int eid = svn_int_hash_this_key(hi);
+      int eid = svn_eid_hash_this_key(hi);
       orphan_conflict_t *c = apr_hash_this_val(hi);
 
       svnmover_notify("  %s",
@@ -441,21 +430,21 @@ find_conflict(conflict_object_t **conflict_p,
     {
       int which_eid = atoi(id_string + 1);
 
-      if (svn_int_hash_get(conflicts->single_element_conflicts, which_eid))
+      if (svn_eid_hash_get(conflicts->single_element_conflicts, which_eid))
         {
           *conflict_p
             = conflict_object_create(conflict_kind_single_element,
                                      conflicts->single_element_conflicts,
                                      &which_eid, result_pool);
         }
-      if (svn_int_hash_get(conflicts->cycle_conflicts, which_eid))
+      if (svn_eid_hash_get(conflicts->cycle_conflicts, which_eid))
         {
           *conflict_p
             = conflict_object_create(conflict_kind_cycle,
                                      conflicts->cycle_conflicts,
                                      &which_eid, result_pool);
         }
-      if (svn_int_hash_get(conflicts->orphan_conflicts, which_eid))
+      if (svn_eid_hash_get(conflicts->orphan_conflicts, which_eid))
         {
           *conflict_p
             = conflict_object_create(conflict_kind_orphan,
@@ -835,16 +824,17 @@ detect_clashes(apr_hash_t **clashes_p,
 {
   apr_hash_t *clashes = apr_hash_make(result_pool);
   svn_element_tree_t *elements;
-  SVN_ITER_T(svn_element_content_t) *pi;
+  svn_eid__hash_iter_t *ei;
   int prev_eid = -1;
   svn_element_content_t *prev_element = NULL;
 
   SVN_ERR(svn_branch_state_get_elements(branch, &elements, scratch_pool));
-  for (SVN_HASH_ITER_SORTED(pi, elements->e_map,
-                            sort_compare_items_by_peid_and_name, scratch_pool))
+  for (SVN_EID__HASH_ITER_SORTED(ei, elements->e_map,
+                                 sort_compare_items_by_peid_and_name,
+                                 scratch_pool))
     {
-      int eid = *(const int *)(pi->key);
-      svn_element_content_t *element = pi->val;
+      int eid = ei->eid;
+      svn_element_content_t *element = ei->val;
 
       if (prev_element
           && element->parent_eid == prev_element->parent_eid
@@ -862,8 +852,8 @@ detect_clashes(apr_hash_t **clashes_p,
                     result_pool);
               svn_hash_sets(clashes, key, c);
             }
-          svn_int_hash_set(c->elements, eid, &c);
-          svn_int_hash_set(c->elements, prev_eid, &c);
+          svn_eid_hash_set(c->elements, eid, &c);
+          svn_eid_hash_set(c->elements, prev_eid, &c);
         }
       prev_eid = eid;
       prev_element = element;
@@ -886,31 +876,32 @@ detect_cycles(apr_hash_t **cycles_p,
               apr_pool_t *scratch_pool)
 {
   apr_hash_t *cycles = apr_hash_make(result_pool);
-  SVN_ITER_T(svn_element_content_t) *pi;
+  apr_hash_index_t *hi;
   svn_element_tree_t *elements;
 
   SVN_ERR(svn_branch_state_get_elements(branch, &elements, scratch_pool));
-  for (SVN_HASH_ITER(pi, scratch_pool, elements->e_map))
+  for (hi = apr_hash_first(scratch_pool, elements->e_map);
+       hi; hi = apr_hash_next(hi))
     {
-      int eid = *(const int *)(pi->key);
-      svn_element_content_t *element = pi->val;
+      int eid = svn_eid_hash_this_key(hi);
+      svn_element_content_t *element = apr_hash_this_val(hi);
       cycle_conflict_t *c = cycle_conflict_create(result_pool);
 
-      svn_int_hash_set(c->elements, eid, c);
+      svn_eid_hash_set(c->elements, eid, c);
 
       /* See if we can trace the parentage of EID back to the branch root
          without finding a cycle. If we find a cycle, store a conflict. */
       for (; element && (element->parent_eid != -1);
-           element = svn_int_hash_get(elements->e_map, element->parent_eid))
+           element = svn_eid_hash_get(elements->e_map, element->parent_eid))
         {
           /* If this parent-eid is already in the path from EID to the root,
              then we have found a cycle. */
-          if (svn_int_hash_get(c->elements, element->parent_eid))
+          if (svn_eid_hash_get(c->elements, element->parent_eid))
             {
-              svn_int_hash_set(cycles, eid, c);
+              svn_eid_hash_set(cycles, eid, c);
               break;
             }
-          svn_int_hash_set(c->elements, element->parent_eid, c);
+          svn_eid_hash_set(c->elements, element->parent_eid, c);
         }
     }
 
@@ -927,14 +918,15 @@ detect_orphans(apr_hash_t **orphans_p,
                apr_pool_t *scratch_pool)
 {
   apr_hash_t *orphans = apr_hash_make(result_pool);
-  SVN_ITER_T(svn_element_content_t) *pi;
+  apr_hash_index_t *hi;
   svn_element_tree_t *elements;
 
   SVN_ERR(svn_branch_state_get_elements(branch, &elements, scratch_pool));
-  for (SVN_HASH_ITER(pi, scratch_pool, elements->e_map))
+  for (hi = apr_hash_first(scratch_pool, elements->e_map);
+       hi; hi = apr_hash_next(hi))
     {
-      int eid = *(const int *)(pi->key);
-      svn_element_content_t *element = pi->val;
+      int eid = svn_eid_hash_this_key(hi);
+      svn_element_content_t *element = apr_hash_this_val(hi);
 
       if (eid != elements->root_eid
           && ! svn_element_tree_get(elements, element->parent_eid))
@@ -942,7 +934,7 @@ detect_orphans(apr_hash_t **orphans_p,
           orphan_conflict_t *c;
 
           c = orphan_conflict_create(element, result_pool);
-          svn_int_hash_set(orphans, eid, c);
+          svn_eid_hash_set(orphans, eid, c);
         }
     }
 
@@ -967,9 +959,9 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
   apr_hash_t *diff_yca_src, *diff_yca_tgt;
   apr_hash_t *e_conflicts = apr_hash_make(result_pool);
   conflict_storage_t *conflict_storage = conflict_storage_create(result_pool);
-  SVN_ITER_T(svn_element_content_t *) *pi;
   svn_element_tree_t *src_elements, *tgt_elements, *yca_elements;
   apr_hash_t *all_elements;
+  svn_eid__hash_iter_t *ei;
   const merge_conflict_policy_t policy = { TRUE, TRUE, TRUE, TRUE, TRUE };
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
@@ -1016,14 +1008,13 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
                               tgt_elements->e_map);
   all_elements = hash_overlay(yca_elements->e_map,
                               all_elements);
-  for (SVN_HASH_ITER_SORTED(pi, all_elements,
-                            sort_compare_items_by_eid, scratch_pool))
+  for (SVN_EID__HASH_ITER_SORTED_BY_EID(ei, all_elements, scratch_pool))
     {
-      int eid = *(const int *)(pi->key);
+      int eid = ei->eid;
       svn_element_content_t **e_yca_src
-        = svn_int_hash_get(diff_yca_src, eid);
+        = svn_eid_hash_get(diff_yca_src, eid);
       svn_element_content_t **e_yca_tgt
-        = svn_int_hash_get(diff_yca_tgt, eid);
+        = svn_eid_hash_get(diff_yca_tgt, eid);
       svn_element_content_t *e_yca;
       svn_element_content_t *e_src;
       svn_element_content_t *e_tgt;
@@ -1058,7 +1049,7 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
       if (conflict)
         {
           svnmover_notify_v("!    e%d <conflict>", eid);
-          svn_int_hash_set(e_conflicts, eid,
+          svn_eid_hash_set(e_conflicts, eid,
                            element_merge3_conflict_dup(conflict, result_pool));
         }
       else if (e_tgt && result)

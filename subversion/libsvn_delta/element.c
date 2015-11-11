@@ -30,9 +30,75 @@
 #include "svn_props.h"
 #include "svn_dirent_uri.h"
 #include "svn_iter.h"
+#include "private/svn_sorts_private.h"
 
 #include "private/svn_element.h"
 #include "svn_private_config.h"
+
+
+void *
+svn_eid_hash_get(apr_hash_t *ht,
+                 int key)
+{
+  return apr_hash_get(ht, &key, sizeof(key));
+}
+
+void
+svn_eid_hash_set(apr_hash_t *ht,
+                 int key,
+                 const void *val)
+{
+  int *id_p = apr_pmemdup(apr_hash_pool_get(ht), &key, sizeof(key));
+
+  apr_hash_set(ht, id_p, sizeof(key), val);
+}
+
+int
+svn_eid_hash_this_key(apr_hash_index_t *hi)
+{
+  return *(const int *)apr_hash_this_key(hi);
+}
+
+svn_eid__hash_iter_t *
+svn_eid__hash_sorted_first(apr_pool_t *pool,
+                           apr_hash_t *ht,
+                           int (*comparison_func)(const svn_sort__item_t *,
+                                                  const svn_sort__item_t *))
+{
+  svn_eid__hash_iter_t *hi = apr_palloc(pool, sizeof(*hi));
+
+  if (apr_hash_count(ht) == 0)
+    return NULL;
+
+  hi->array = svn_sort__hash(ht, comparison_func, pool);
+  hi->i = 0;
+  hi->eid = *(int *)(APR_ARRAY_IDX(hi->array, hi->i, svn_sort__item_t).key);
+  hi->val = APR_ARRAY_IDX(hi->array, hi->i, svn_sort__item_t).value;
+  return hi;
+}
+
+svn_eid__hash_iter_t *
+svn_eid__hash_sorted_next(svn_eid__hash_iter_t *hi)
+{
+  hi->i++;
+  if (hi->i >= hi->array->nelts)
+    {
+      return NULL;
+    }
+  hi->eid = *(int *)(APR_ARRAY_IDX(hi->array, hi->i, svn_sort__item_t).key);
+  hi->val = APR_ARRAY_IDX(hi->array, hi->i, svn_sort__item_t).value;
+  return hi;
+}
+
+int
+svn_eid__hash_sort_compare_items_by_eid(const svn_sort__item_t *a,
+                                        const svn_sort__item_t *b)
+{
+  int eid_a = *(const int *)a->key;
+  int eid_b = *(const int *)b->key;
+
+  return eid_a - eid_b;
+}
 
 
 /*
@@ -332,7 +398,7 @@ svn_element_content_t *
 svn_element_tree_get(const svn_element_tree_t *tree,
                      int eid)
 {
-  return svn_int_hash_get(tree->e_map, eid);
+  return svn_eid_hash_get(tree->e_map, eid);
 }
 
 svn_error_t *
@@ -340,7 +406,7 @@ svn_element_tree_set(svn_element_tree_t *tree,
                      int eid,
                      svn_element_content_t *element)
 {
-  svn_int_hash_set(tree->e_map, eid, element);
+  svn_eid_hash_set(tree->e_map, eid, element);
 
   return SVN_NO_ERROR;
 }
@@ -353,7 +419,7 @@ svn_element_tree_purge_orphans(apr_hash_t *e_map,
   apr_hash_index_t *hi;
   svn_boolean_t changed;
 
-  SVN_ERR_ASSERT_NO_RETURN(svn_int_hash_get(e_map, root_eid));
+  SVN_ERR_ASSERT_NO_RETURN(svn_eid_hash_get(e_map, root_eid));
 
   do
     {
@@ -362,19 +428,19 @@ svn_element_tree_purge_orphans(apr_hash_t *e_map,
       for (hi = apr_hash_first(scratch_pool, e_map);
            hi; hi = apr_hash_next(hi))
         {
-          int this_eid = svn_int_hash_this_key(hi);
+          int this_eid = svn_eid_hash_this_key(hi);
           svn_element_content_t *this_element = apr_hash_this_val(hi);
 
           if (this_eid != root_eid)
             {
               svn_element_content_t *parent_element
-                = svn_int_hash_get(e_map, this_element->parent_eid);
+                = svn_eid_hash_get(e_map, this_element->parent_eid);
 
               /* Purge if parent is deleted */
               if (! parent_element)
                 {
                   SVN_DBG(("purge orphan: e%d", this_eid));
-                  svn_int_hash_set(e_map, this_eid, NULL);
+                  svn_eid_hash_set(e_map, this_eid, NULL);
                   changed = TRUE;
                 }
               else

@@ -564,13 +564,13 @@ static const apr_array_header_t *
 get_unsorted_paths(apr_hash_t *changes,
                    apr_pool_t *scratch_pool)
 {
-  svn_array_t *paths = svn_array_make(scratch_pool);
+  apr_array_header_t *paths = apr_array_make(scratch_pool, 0, sizeof(void *));
   apr_hash_index_t *hi;
 
   for (hi = apr_hash_first(scratch_pool, changes); hi; hi = apr_hash_next(hi))
     {
       const char *this_path = apr_hash_this_key(hi);
-      SVN_ARRAY_PUSH(paths) = this_path;
+      APR_ARRAY_PUSH(paths, const char *) = this_path;
     }
 
   return paths;
@@ -1199,7 +1199,7 @@ convert_branch_to_paths_r(apr_hash_t *paths_union,
                           apr_pool_t *scratch_pool)
 {
   apr_array_header_t *subbranches;
-  SVN_ITER_T(svn_branch_state_t) *bi;
+  int i;
 
   /*SVN_DBG(("[%d] branch={b%s e%d at '%s'}", idx,
            svn_branch_get_id(branch, scratch_pool), branch->root_eid,
@@ -1210,10 +1210,12 @@ convert_branch_to_paths_r(apr_hash_t *paths_union,
   SVN_ERR(svn_branch_get_immediate_subbranches(branch, &subbranches,
                                                scratch_pool, scratch_pool));
   /* Rercurse into sub-branches */
-  for (SVN_ARRAY_ITER(bi, subbranches, scratch_pool))
+  for (i = 0; i < subbranches->nelts; i++)
     {
-      SVN_ERR(convert_branch_to_paths_r(paths_union, bi->val, result_pool,
-                                        bi->iterpool));
+      svn_branch_state_t *b = APR_ARRAY_IDX(subbranches, i, void *);
+
+      SVN_ERR(convert_branch_to_paths_r(paths_union, b, result_pool,
+                                        scratch_pool));
     }
   return SVN_NO_ERROR;
 }

@@ -147,7 +147,7 @@ branch_txn_add_branch(svn_branch_txn_t *txn,
                       svn_branch_state_t *branch,
                       apr_pool_t *scratch_pool)
 {
-  SVN_ARRAY_PUSH(txn->priv->branches) = branch;
+  APR_ARRAY_PUSH(txn->priv->branches, void *) = branch;
 
   return SVN_NO_ERROR;
 }
@@ -167,7 +167,7 @@ branch_txn_add_new_branch(svn_branch_txn_t *txn,
   new_branch = branch_state_create(bid, predecessor, root_eid, txn,
                                    txn->priv->branches->pool);
 
-  SVN_ARRAY_PUSH(txn->priv->branches) = new_branch;
+  APR_ARRAY_PUSH(txn->priv->branches, void *) = new_branch;
 
   return new_branch;
 }
@@ -178,17 +178,17 @@ branch_txn_delete_branch(svn_branch_txn_t *txn,
                          const char *bid,
                          apr_pool_t *scratch_pool)
 {
-  SVN_ITER_T(svn_branch_state_t) *bi;
+  int i;
 
-  for (SVN_ARRAY_ITER(bi, txn->priv->branches, scratch_pool))
+  for (i = 0; i < txn->priv->branches->nelts; i++)
     {
-      svn_branch_state_t *b = bi->val;
+      svn_branch_state_t *b = APR_ARRAY_IDX(txn->priv->branches, i, void *);
 
       if (strcmp(b->bid, bid) == 0)
         {
           SVN_DBG(("deleting branch b%s e%d",
                    bid, b->priv->element_tree->root_eid));
-          svn_sort__array_delete(txn->priv->branches, bi->i, 1);
+          svn_sort__array_delete(txn->priv->branches, i, 1);
           break;
         }
     }
@@ -569,7 +569,7 @@ branch_finalize_eids(svn_branch_state_t *branch,
   for (hi = apr_hash_first(scratch_pool, branch->priv->element_tree->e_map);
        hi; hi = apr_hash_next(hi))
     {
-      int old_eid = svn_int_hash_this_key(hi);
+      int old_eid = svn_eid_hash_this_key(hi);
       svn_element_content_t *element = apr_hash_this_val(hi);
 
       if (old_eid < -1)
@@ -627,7 +627,7 @@ branch_txn_serialize(svn_branch_txn_t *txn,
                      apr_pool_t *scratch_pool)
 {
   apr_array_header_t *branches = branch_txn_get_branches(txn, scratch_pool);
-  SVN_ITER_T(svn_branch_state_t) *bi;
+  int i;
 
   SVN_ERR(svn_stream_printf(stream, scratch_pool,
                             "r%ld: eids %d %d "
@@ -636,16 +636,16 @@ branch_txn_serialize(svn_branch_txn_t *txn,
                             txn->priv->first_eid, txn->priv->next_eid,
                             branches->nelts));
 
-  for (SVN_ARRAY_ITER(bi, branches, scratch_pool))
+  for (i = 0; i < branches->nelts; i++)
     {
-      svn_branch_state_t *branch = bi->val;
+      svn_branch_state_t *branch = APR_ARRAY_IDX(branches, i, void *);
 
       if (branch->predecessor && branch->predecessor->rev < 0)
         {
           branch->predecessor->rev = txn->rev;
         }
 
-      SVN_ERR(svn_branch_state_serialize(stream, bi->val, bi->iterpool));
+      SVN_ERR(svn_branch_state_serialize(stream, branch, scratch_pool));
     }
   return SVN_NO_ERROR;
 }
@@ -660,12 +660,12 @@ svn_branch_txn_get_branch_by_id(const svn_branch_txn_t *txn,
                                 apr_pool_t *scratch_pool)
 {
   apr_array_header_t *branches = svn_branch_txn_get_branches(txn, scratch_pool);
-  SVN_ITER_T(svn_branch_state_t) *bi;
+  int i;
   svn_branch_state_t *branch = NULL;
 
-  for (SVN_ARRAY_ITER(bi, branches, scratch_pool))
+  for (i = 0; i < branches->nelts; i++)
     {
-      svn_branch_state_t *b = bi->val;
+      svn_branch_state_t *b = APR_ARRAY_IDX(branches, i, void *);
 
       if (strcmp(svn_branch_get_id(b, scratch_pool), branch_id) == 0)
         {
@@ -713,7 +713,7 @@ branch_txn_create(svn_branch_repos_t *repos,
   txn->repos = repos;
   txn->rev = rev;
   txn->base_rev = base_rev;
-  txn->priv->branches = svn_array_make(result_pool);
+  txn->priv->branches = apr_array_make(result_pool, 0, sizeof(void *));
   return txn;
 }
 
@@ -743,7 +743,7 @@ assert_branch_state_invariants(const svn_branch_state_t *branch,
   for (hi = apr_hash_first(scratch_pool, branch->priv->element_tree->e_map);
        hi; hi = apr_hash_next(hi))
     {
-      branch_validate_element(branch, svn_int_hash_this_key(hi),
+      branch_validate_element(branch, svn_eid_hash_this_key(hi),
                               apr_hash_this_val(hi));
     }
 }
@@ -1106,7 +1106,7 @@ svn_branch_get_eid_by_path(const svn_branch_state_t *branch,
   for (hi = apr_hash_first(scratch_pool, elements->e_map);
        hi; hi = apr_hash_next(hi))
     {
-      int eid = svn_int_hash_this_key(hi);
+      int eid = svn_eid_hash_this_key(hi);
       const char *this_path = svn_element_tree_get_path_by_eid(elements, eid,
                                                                scratch_pool);
 
@@ -1164,7 +1164,7 @@ svn_branch_map_add_subtree(svn_branch_state_t *to_branch,
   for (hi = apr_hash_first(scratch_pool, new_subtree->e_map);
        hi; hi = apr_hash_next(hi))
     {
-      int this_from_eid = svn_int_hash_this_key(hi);
+      int this_from_eid = svn_eid_hash_this_key(hi);
       svn_element_content_t *from_element = apr_hash_this_val(hi);
 
       if (from_element->parent_eid == new_subtree->root_eid)
@@ -1200,7 +1200,7 @@ branch_instantiate_elements(svn_branch_state_t *to_branch,
   for (hi = apr_hash_first(scratch_pool, elements->e_map);
        hi; hi = apr_hash_next(hi))
     {
-      int this_eid = svn_int_hash_this_key(hi);
+      int this_eid = svn_eid_hash_this_key(hi);
       svn_element_content_t *this_element = apr_hash_this_val(hi);
 
       branch_map_set(to_branch, this_eid,
@@ -1564,17 +1564,6 @@ svn_branch_txn_parse(svn_branch_txn_t **txn_p,
   return SVN_NO_ERROR;
 }
 
-/* ### Duplicated in svnmover.c. */
-static int
-sort_compare_items_by_eid(const svn_sort__item_t *a,
-                          const svn_sort__item_t *b)
-{
-  int eid_a = *(const int *)a->key;
-  int eid_b = *(const int *)b->key;
-
-  return eid_a - eid_b;
-}
-
 /* Write to STREAM a parseable representation of BRANCH.
  */
 svn_error_t *
@@ -1582,8 +1571,8 @@ svn_branch_state_serialize(svn_stream_t *stream,
                            svn_branch_state_t *branch,
                            apr_pool_t *scratch_pool)
 {
-  SVN_ITER_T(svn_element_content_t) *hi;
   const char *predecessor_str = "";
+  svn_eid__hash_iter_t *ei;
 
   SVN_ERR_ASSERT(branch->priv->is_flat);
 
@@ -1602,10 +1591,10 @@ svn_branch_state_serialize(svn_stream_t *stream,
                             apr_hash_count(branch->priv->element_tree->e_map),
                             predecessor_str));
 
-  for (SVN_HASH_ITER_SORTED(hi, branch->priv->element_tree->e_map,
-                            sort_compare_items_by_eid, scratch_pool))
+  for (SVN_EID__HASH_ITER_SORTED_BY_EID(ei, branch->priv->element_tree->e_map,
+                                        scratch_pool))
     {
-      int eid = *(const int *)hi->key;
+      int eid = ei->eid;
       svn_element_content_t *element = branch_get_element(branch, eid);
       int parent_eid;
       const char *name;

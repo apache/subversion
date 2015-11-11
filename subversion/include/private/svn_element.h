@@ -30,6 +30,7 @@
 #define SVN_ELEMENT_H
 
 #include <apr_pools.h>
+#include <apr_tables.h>
 
 #include "svn_types.h"
 
@@ -37,6 +38,71 @@
 extern "C" {
 #endif /* __cplusplus */
 
+
+/* ====================================================================== */
+
+/** Like apr_hash_get() but the hash key is an integer. */
+void *
+svn_eid_hash_get(apr_hash_t *ht,
+                 int key);
+
+/** Like apr_hash_set() but the hash key is an integer. */
+void
+svn_eid_hash_set(apr_hash_t *ht,
+                 int key,
+                 const void *val);
+
+/** Like apr_hash_this_key() but the hash key is an integer. */
+int
+svn_eid_hash_this_key(apr_hash_index_t *hi);
+
+struct svn_sort__item_t;
+
+/** A hash iterator for iterating over an array or a hash table in
+ * its natural order or in sorted order.
+ *
+ * For an array, the @a i and @a val members provide the index and value
+ * of the current item.
+ */
+typedef struct svn_eid__hash_iter_t
+{
+  /* private: an array of (svn_sort__item_t) hash items for sorted iteration */
+  const apr_array_header_t *array;
+
+  /* current element: iteration order index */
+  int i;
+  /* current element: key */
+  int eid;
+  /* current element: value */
+  void *val;
+} svn_eid__hash_iter_t;
+
+svn_eid__hash_iter_t *
+svn_eid__hash_sorted_first(apr_pool_t *pool,
+                           apr_hash_t *ht,
+                           int (*comparison_func)(const struct svn_sort__item_t *,
+                                                  const struct svn_sort__item_t *));
+
+svn_eid__hash_iter_t *
+svn_eid__hash_sorted_next(svn_eid__hash_iter_t *hi);
+
+/** A sort ordering callback function that returns an indication whether
+ * A sorts before or after or equal to B, by comparing their keys as EIDs.
+ */
+int
+svn_eid__hash_sort_compare_items_by_eid(const struct svn_sort__item_t *a,
+                                        const struct svn_sort__item_t *b);
+
+#define SVN_EID__HASH_ITER_SORTED(i, ht, comparison_func, pool) \
+  i = (void *)svn_eid__hash_sorted_first(pool, ht, comparison_func); \
+  i; \
+  i = (void *)svn_eid__hash_sorted_next((void *)i)
+
+#define SVN_EID__HASH_ITER_SORTED_BY_EID(i, ht, pool) \
+  SVN_EID__HASH_ITER_SORTED(i, ht, svn_eid__hash_sort_compare_items_by_eid, pool)
+
+
+/* ====================================================================== */
 
 /** A location in a committed revision.
  *
