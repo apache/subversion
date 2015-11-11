@@ -735,23 +735,24 @@ txn_fetch_payloads(svn_branch_txn_t *txn,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
-  SVN_ITER_T(svn_branch_state_t) *bi;
+  apr_array_header_t *branches = svn_branch_txn_get_branches(txn, scratch_pool);
+  int i;
 
   /* Read payload of each element.
      (In a real implementation, of course, we'd delay this until demanded.) */
-  for (SVN_ARRAY_ITER(bi, svn_branch_txn_get_branches(txn, scratch_pool),
-                      scratch_pool))
+  for (i = 0; i < branches->nelts; i++)
     {
-      svn_branch_state_t *branch = bi->val;
+      svn_branch_state_t *branch = APR_ARRAY_IDX(branches, i, void *);
       svn_element_tree_t *element_tree;
-      SVN_ITER_T(svn_element_content_t) *hi;
+      apr_hash_index_t *hi;
 
       SVN_ERR(svn_branch_state_get_elements(branch, &element_tree,
                                             scratch_pool));
-      for (SVN_HASH_ITER(hi, scratch_pool, element_tree->e_map))
+      for (hi = apr_hash_first(scratch_pool, element_tree->e_map);
+           hi; hi = apr_hash_next(hi))
         {
-          int eid = *(const int *)hi->key;
-          svn_element_content_t *element;
+          int eid = svn_eid_hash_this_key(hi);
+          svn_element_content_t *element /*= apr_hash_this_val(hi)*/;
 
           SVN_ERR(svn_branch_state_get_element(branch, &element,
                                                eid, scratch_pool));

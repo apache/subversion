@@ -49,7 +49,7 @@ svn_branch_repos_create(apr_pool_t *result_pool)
 {
   svn_branch_repos_t *repos = apr_pcalloc(result_pool, sizeof(*repos));
 
-  repos->rev_roots = svn_array_make(result_pool);
+  repos->rev_roots = apr_array_make(result_pool, 0, sizeof(void *));
   repos->pool = result_pool;
   return repos;
 }
@@ -68,7 +68,7 @@ svn_branch_repos_get_revision(const svn_branch_repos_t *repos,
                               svn_revnum_t revnum)
 {
   assert(revnum < repos->rev_roots->nelts);
-  return svn_array_get(repos->rev_roots, revnum);
+  return APR_ARRAY_IDX(repos->rev_roots, revnum, void *);
 }
 
 svn_branch_txn_t *
