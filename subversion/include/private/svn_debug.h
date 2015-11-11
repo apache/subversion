@@ -63,17 +63,6 @@ svn_dbg__print_props(apr_hash_t *props,
 #define SVN_DBG_OUTPUT stdout
 
 
-/* If QUIET_MODE is true, switch debug output off; if false, let it be
- * controlled by the presence of the environment variable SVN_DBG_QUIET.
- */
-void svn_dbg__set_quiet_mode(svn_boolean_t quiet_mode);
-
-/* Return true iff debug output is turned off, either by a call to
- * svn_dbg__set_quiet_mode(TRUE) or by the environment variable
- * SVN_DBG_QUIET being present.
- */
-svn_boolean_t svn_dbg__quiet_mode(void);
-
 /* Defining this symbol in the source file, BEFORE INCLUDING THIS HEADER,
    will switch off the output. Calls will still be made to svn_dbg__preamble()
    for breakpoints.  */
