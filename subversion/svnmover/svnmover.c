@@ -3403,11 +3403,8 @@ parse_actions(apr_array_header_t **actions,
       if (! strcmp(action_string, "--verbose")
           || ! strcmp(action_string, "-v"))
         {
-          svn_boolean_t be_quiet = svn_dbg__quiet_mode();
-
-          be_quiet = !be_quiet;
-          svn_dbg__set_quiet_mode(be_quiet);
-          svnmover_notify("verbose debug messages %s", be_quiet ? "off" : "on");
+          quiet = !quiet;
+          svnmover_notify("verbose mode %s", quiet ? "off" : "on");
           continue;
         }
       for (j = 0; j < sizeof(action_defn) / sizeof(action_defn[0]); j++)
@@ -3644,9 +3641,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* Check library versions */
   SVN_ERR(check_lib_versions());
 
-  /* Suppress debug message unless '-v' given. */
-  svn_dbg__set_quiet_mode(TRUE);
-
   config_options = apr_array_make(pool, 0,
                                   sizeof(svn_cmdline__config_argument_t*));
 
@@ -3666,7 +3660,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       switch(opt)
         {
         case 'v':
-          svn_dbg__set_quiet_mode(FALSE);
+          quiet = FALSE;
           break;
         case 'q':
           quiet = TRUE;
