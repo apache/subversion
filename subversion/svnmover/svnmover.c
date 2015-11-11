@@ -462,20 +462,17 @@ subtree_replay(svn_branch_state_t *edit_branch,
         {
           if (e0 && e1)
             {
-              SVN_DBG(("replay: alter e%d", eid));
               SVN_ERR(svn_branch_state_alter_one(edit_branch, eid,
                                                  e1->parent_eid, e1->name,
                                                  e1->payload, scratch_pool));
             }
           else if (e0)
             {
-              SVN_DBG(("replay: delete e%d", eid));
               SVN_ERR(svn_branch_state_delete_one(edit_branch, eid,
                                                   scratch_pool));
             }
           else
             {
-              SVN_DBG(("replay: instan. e%d", eid));
               SVN_ERR(svn_branch_state_alter_one(edit_branch, eid,
                                                  e1->parent_eid, e1->name,
                                                  e1->payload, scratch_pool));
@@ -1608,10 +1605,6 @@ subtree_diff_r(svn_branch_subtree_t *left,
   apr_hash_t *subbranches_l, *subbranches_r, *subbranches_all;
   apr_hash_index_t *hi;
 
-  SVN_DBG(("subtree_diff_r: l='%s' r='%s'",
-           left ? left_rrpath : "<nil>",
-           right ? right_rrpath : "<nil>"));
-
   if (!left)
     {
       header = apr_psprintf(scratch_pool,
@@ -2498,7 +2491,7 @@ migrate_replay_rev_started(svn_revnum_t revision,
   const svn_delta_editor_t *old_editor;
   void *old_edit_baton;
 
-  SVN_DBG(("migrate: start r%ld", revision));
+  svnmover_notify("migrate: start r%ld", revision);
 
   SVN_ERR(svn_branch_get_migration_editor(&old_editor, &old_edit_baton,
                                           rb->edit_txn,
@@ -2531,7 +2524,7 @@ migrate_replay_rev_finished(svn_revnum_t revision,
 
   SVN_ERR(editor->close_edit(edit_baton, pool));
 
-  SVN_DBG(("migrate: moves in revision r%ld:", revision));
+  svnmover_notify("migrate: moves in revision r%ld:", revision);
 
   if (moves_in_revision)
     {

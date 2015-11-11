@@ -186,8 +186,6 @@ branch_txn_delete_branch(svn_branch_txn_t *txn,
 
       if (strcmp(b->bid, bid) == 0)
         {
-          SVN_DBG(("deleting branch b%s e%d",
-                   bid, b->priv->element_tree->root_eid));
           svn_sort__array_delete(txn->priv->branches, i, 1);
           break;
         }
@@ -793,9 +791,6 @@ copy_subtree(const svn_branch_el_rev_id_t *from_el_rev,
 {
   svn_element_tree_t *new_subtree;
 
-  SVN_DBG(("cp subtree from e%d to e%d/%s",
-           from_el_rev->eid, to_parent_eid, to_name));
-
   SVN_ERR_ASSERT(from_el_rev->branch->priv->is_flat);
 
   SVN_ERR(svn_branch_state_get_elements(from_el_rev->branch, &new_subtree,
@@ -824,9 +819,6 @@ branch_state_copy_tree(svn_branch_state_t *to_branch,
   svn_branch_txn_t *txn = to_branch->txn;
   svn_branch_state_t *src_branch;
   svn_branch_el_rev_id_t *from_el_rev;
-
-  SVN_DBG(("copy_tree(e%d -> e%d/%s)",
-           src_el_rev->eid, new_parent_eid, new_name));
 
   SVN_ERR(branch_in_rev_or_txn(&src_branch, src_el_rev, txn, scratch_pool));
   from_el_rev = svn_branch_el_rev_id_create(src_branch, src_el_rev->eid,
@@ -1022,9 +1014,6 @@ branch_state_delete_one(svn_branch_state_t *branch,
                         apr_pool_t *scratch_pool)
 {
   SVN_ERR_ASSERT(EID_IS_ALLOCATED(branch, eid));
-
-  SVN_DBG(("delete(b%s e%d)",
-           svn_branch_get_id(branch, scratch_pool), eid));
 
   branch_map_set(branch, eid, NULL);
 

@@ -439,7 +439,6 @@ svn_element_tree_purge_orphans(apr_hash_t *e_map,
               /* Purge if parent is deleted */
               if (! parent_element)
                 {
-                  SVN_DBG(("purge orphan: e%d", this_eid));
                   svn_eid_hash_set(e_map, this_eid, NULL);
                   changed = TRUE;
                 }

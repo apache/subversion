@@ -540,16 +540,16 @@ payload_merge(svn_element_payload_t **result_p,
       else if (policy->merge_double_modify
                && svn_element_payload_equal(side1, side2, scratch_pool))
         {
-          SVN_DBG(("e%d double modify: ... -> { ... | ... }",
-                   eid));
+          /*SVN_DBG(("e%d double modify: ... -> { ... | ... }",
+                   eid));*/
           result = side1;
         }
       else
         {
           /* ### Need not conflict if can merge props and text separately. */
 
-          SVN_DBG(("e%d conflict: payload: ... -> { ... | ... }",
-                   eid));
+          /*SVN_DBG(("e%d conflict: payload: ... -> { ... | ... }",
+                   eid));*/
           conflict = TRUE;
         }
     }
@@ -609,14 +609,14 @@ element_merge(svn_element_content_t **result_p,
       else if (policy->merge_double_reparent
                && side1->parent_eid == side2->parent_eid)
         {
-          SVN_DBG(("e%d double reparent: e%d -> { e%d | e%d }",
-                   eid, yca->parent_eid, side1->parent_eid, side2->parent_eid));
+          /*SVN_DBG(("e%d double reparent: e%d -> { e%d | e%d }",
+                   eid, yca->parent_eid, side1->parent_eid, side2->parent_eid));*/
           result->parent_eid = side1->parent_eid;
         }
       else
         {
-          SVN_DBG(("e%d conflict: parent: e%d -> { e%d | e%d }",
-                   eid, yca->parent_eid, side1->parent_eid, side2->parent_eid));
+          /*SVN_DBG(("e%d conflict: parent: e%d -> { e%d | e%d }",
+                   eid, yca->parent_eid, side1->parent_eid, side2->parent_eid));*/
           conflict = TRUE;
         }
 
@@ -632,14 +632,14 @@ element_merge(svn_element_content_t **result_p,
       else if (policy->merge_double_rename
                && strcmp(side1->name, side2->name) == 0)
         {
-          SVN_DBG(("e%d double rename: %s -> { %s | %s }",
-                   eid, yca->name, side1->name, side2->name));
+          /*SVN_DBG(("e%d double rename: %s -> { %s | %s }",
+                   eid, yca->name, side1->name, side2->name));*/
           result->name = side1->name;
         }
       else
         {
-          SVN_DBG(("e%d conflict: name: %s -> { %s | %s }",
-                   eid, yca->name, side1->name, side2->name));
+          /*SVN_DBG(("e%d conflict: name: %s -> { %s | %s }",
+                   eid, yca->name, side1->name, side2->name));*/
           conflict = TRUE;
         }
 
@@ -659,14 +659,14 @@ element_merge(svn_element_content_t **result_p,
       /* Double delete (as we assume at least one of YCA/SIDE1/SIDE2 exists) */
       if (policy->merge_double_delete)
         {
-          SVN_DBG(("e%d double delete",
-                   eid));
+          /*SVN_DBG(("e%d double delete",
+                   eid));*/
           result = side1;
         }
       else
         {
-          SVN_DBG(("e%d conflict: delete vs. delete",
-                   eid));
+          /*SVN_DBG(("e%d conflict: delete vs. delete",
+                   eid));*/
           conflict = TRUE;
         }
     }
@@ -679,24 +679,24 @@ element_merge(svn_element_content_t **result_p,
           && !side2->payload->is_subbranch_root
           && svn_element_content_equal(side1, side2, scratch_pool))
         {
-          SVN_DBG(("e%d double add",
-                   eid));
+          /*SVN_DBG(("e%d double add",
+                   eid));*/
           result = side1;
         }
       else
         {
-          SVN_DBG(("e%d conflict: add vs. add (%s)",
+          /*SVN_DBG(("e%d conflict: add vs. add (%s)",
                    eid,
                    svn_element_content_equal(side1, side2, scratch_pool)
-                     ? "same content" : "different content"));
+                     ? "same content" : "different content"));*/
           conflict = TRUE;
         }
     }
   else
     {
       /* The remaining cases must be delete vs. modify */
-      SVN_DBG(("e%d conflict: delete vs. modify: %d -> { %d | %d }",
-               eid, !!yca, !!side1, !!side2));
+      /*SVN_DBG(("e%d conflict: delete vs. modify: %d -> { %d | %d }",
+               eid, !!yca, !!side1, !!side2));*/
       conflict = TRUE;
     }
 
@@ -965,15 +965,15 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
   const merge_conflict_policy_t policy = { TRUE, TRUE, TRUE, TRUE, TRUE };
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  SVN_DBG(("merge src: r%2ld %s e%3d",
+  /*SVN_DBG(("merge src: r%2ld %s e%3d",
            src->rev,
-           svn_branch_get_id(src->branch, scratch_pool), src->eid));
-  SVN_DBG(("merge tgt: r%2ld %s e%3d",
+           svn_branch_get_id(src->branch, scratch_pool), src->eid));*/
+  /*SVN_DBG(("merge tgt: r%2ld %s e%3d",
            tgt->rev,
-           svn_branch_get_id(tgt->branch, scratch_pool), tgt->eid));
-  SVN_DBG(("merge yca: r%2ld %s e%3d",
+           svn_branch_get_id(tgt->branch, scratch_pool), tgt->eid));*/
+  /*SVN_DBG(("merge yca: r%2ld %s e%3d",
            yca->rev,
-           svn_branch_get_id(yca->branch, scratch_pool), yca->eid));
+           svn_branch_get_id(yca->branch, scratch_pool), yca->eid));*/
 
   svnmover_notify_v("merging into branch %s",
                     svn_branch_get_id(tgt->branch, scratch_pool));

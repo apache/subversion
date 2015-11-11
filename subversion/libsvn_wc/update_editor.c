@@ -5114,8 +5114,8 @@ make_editor3(svn_revnum_t *target_revision,
     sfb->base_abspath = eb->anchor_abspath;
     sfb->base_rrpath = anchor_repos_relpath;
     sfb->fetch_base = TRUE;
-    SVN_DBG(("wc make up/sw editor: base_rrpath='%s'; base_abspath=%s",
-             sfb->base_rrpath, sfb->base_abspath));
+    /*SVN_DBG(("wc make up/sw editor: base_rrpath='%s'; base_abspath=%s",
+             sfb->base_rrpath, sfb->base_abspath));*/
 
     SVN_ERR(svn_branch_compat_txn_from_delta_for_update(
                         editor,
