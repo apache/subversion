@@ -23,7 +23,7 @@
  * @file svn_branch.h
  * @brief Operating on a branched version history
  *
- * @since New in 1.10.
+ * @since New in ???.
  */
 
 /* Transactions

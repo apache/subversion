@@ -23,7 +23,7 @@
  * @file svn_branch_impl.h
  * @brief Declarations needed by implementators of branch classes
  *
- * @since New in 1.10.
+ * @since New in ???.
  */
 
 #ifndef SVN_BRANCH_IMPL_H

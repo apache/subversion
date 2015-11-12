@@ -23,7 +23,7 @@
  * @file svn_element.h
  * @brief Tree elements
  *
- * @since New in 1.10.
+ * @since New in ???.
  */
 
 #ifndef SVN_BRANCH_ELEMENT_H
