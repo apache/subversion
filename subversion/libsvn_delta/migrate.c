@@ -34,7 +34,7 @@
 
 struct edit_baton
 {
-  svn_branch_txn_t *edit_txn;
+  svn_branch__txn_t *edit_txn;
   svn_ra_session_t *from_session;
   svn_revnum_t revision;
 };
@@ -326,12 +326,13 @@ abort_edit(void *edit_baton,
 }
 
 svn_error_t *
-svn_branch_get_migration_editor(const svn_delta_editor_t **old_editor,
-                                void **old_edit_baton,
-                                svn_branch_txn_t *edit_txn,
-                                svn_ra_session_t *from_session,
-                                svn_revnum_t revision,
-                                apr_pool_t *result_pool)
+svn_branch__compat_get_migration_editor(
+                        const svn_delta_editor_t **old_editor,
+                        void **old_edit_baton,
+                        svn_branch__txn_t *edit_txn,
+                        svn_ra_session_t *from_session,
+                        svn_revnum_t revision,
+                        apr_pool_t *result_pool)
 {
   static const svn_delta_editor_t editor = {
     set_target_revision,

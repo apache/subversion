@@ -311,8 +311,8 @@ svn_ra__replay_ev2(svn_ra_session_t *session,
 /* Load branching info.
  */
 svn_error_t *
-svn_ra_load_branching_state(svn_branch_txn_t **branching_txn_p,
-                            svn_branch_compat__shim_fetch_func_t *fetch_func,
+svn_ra_load_branching_state(svn_branch__txn_t **branching_txn_p,
+                            svn_branch__compat_fetch_func_t *fetch_func,
                             void **fetch_baton,
                             svn_ra_session_t *session,
                             const char *branch_info_dir,
@@ -327,7 +327,7 @@ svn_ra_load_branching_state(svn_branch_txn_t **branching_txn_p,
  */
 svn_error_t *
 svn_ra_get_commit_txn(svn_ra_session_t *session,
-                      svn_branch_txn_t **edit_txn_p,
+                      svn_branch__txn_t **edit_txn_p,
                       apr_hash_t *revprop_table,
                       svn_commit_callback2_t commit_callback,
                       void *commit_baton,
@@ -346,7 +346,7 @@ svn_ra_do_update4(svn_ra_session_t *session,
                   svn_depth_t depth,
                   svn_boolean_t send_copyfrom_args,
                   svn_boolean_t ignore_ancestry,
-                  svn_update_editor3_t *update_editor,
+                  svn_branch__compat_update_editor3_t *update_editor,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
 
@@ -361,7 +361,7 @@ svn_ra_do_switch4(svn_ra_session_t *session,
                   const char *switch_url,
                   svn_boolean_t send_copyfrom_args,
                   svn_boolean_t ignore_ancestry,
-                  svn_update_editor3_t *switch_editor,
+                  svn_branch__compat_update_editor3_t *switch_editor,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
 

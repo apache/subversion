@@ -68,7 +68,7 @@ svnmover_notify_v(const char *fmt,
 typedef struct svnmover_wc_version_t
 {
   svn_revnum_t revision;  /* always SVN_INVALID_REVNUM in working version */
-  svn_branch_state_t *branch;
+  svn_branch__state_t *branch;
 } svnmover_wc_version_t;
 
 /*  */
@@ -82,7 +82,7 @@ typedef struct svnmover_wc_t
   svn_revnum_t head_revision;
 
   svn_ra_session_t *ra_session;
-  svn_branch_txn_t *edit_txn;
+  svn_branch__txn_t *edit_txn;
   conflict_storage_t *conflicts;
 
   /* Base and working versions. */
@@ -130,11 +130,11 @@ struct conflict_storage_t
  * Nested subbranches will also be merged.
  */
 svn_error_t *
-svnmover_branch_merge(svn_branch_txn_t *edit_txn,
+svnmover_branch_merge(svn_branch__txn_t *edit_txn,
                       conflict_storage_t **conflict_storage_p,
-                      svn_branch_el_rev_id_t *src,
-                      svn_branch_el_rev_id_t *tgt,
-                      svn_branch_el_rev_id_t *yca,
+                      svn_branch__el_rev_id_t *src,
+                      svn_branch__el_rev_id_t *tgt,
+                      svn_branch__el_rev_id_t *yca,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 

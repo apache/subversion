@@ -679,8 +679,8 @@ write_rev_prop(svn_ra_session_t *ra_session,
  * branch-tracking metadata from the repository into it.
  */
 static svn_error_t *
-svn_branch_revision_fetch_info(svn_branch_txn_t **txn_p,
-                               svn_branch_repos_t *repos,
+svn_branch_revision_fetch_info(svn_branch__txn_t **txn_p,
+                               svn_branch__repos_t *repos,
                                svn_ra_session_t *ra_session,
                                const char *branch_info_dir,
                                svn_revnum_t revision,
@@ -689,7 +689,7 @@ svn_branch_revision_fetch_info(svn_branch_txn_t **txn_p,
 {
   svn_string_t *value;
   svn_stream_t *stream;
-  svn_branch_txn_t *txn;
+  svn_branch__txn_t *txn;
 
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(revision));
 
@@ -698,7 +698,7 @@ svn_branch_revision_fetch_info(svn_branch_txn_t **txn_p,
                         scratch_pool));
   if (! value && revision == 0)
     {
-      value = svn_branch_get_default_r0_metadata(scratch_pool);
+      value = svn_branch__get_default_r0_metadata(scratch_pool);
       /*SVN_DBG(("fetch_per_revision_info(r%ld): LOADED DEFAULT INFO:\n%s",
                revision, value->data));*/
       SVN_ERR(write_rev_prop(ra_session, branch_info_dir, revision, value,
@@ -707,15 +707,15 @@ svn_branch_revision_fetch_info(svn_branch_txn_t **txn_p,
   SVN_ERR_ASSERT(value);
   stream = svn_stream_from_string(value, scratch_pool);
 
-  SVN_ERR(svn_branch_txn_parse(&txn, repos, stream,
-                               result_pool, scratch_pool));
+  SVN_ERR(svn_branch__txn_parse(&txn, repos, stream,
+                                result_pool, scratch_pool));
 
   /* Self-test: writing out the info should produce exactly the same string. */
   {
     svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
 
     stream = svn_stream_from_stringbuf(buf, scratch_pool);
-    SVN_ERR(svn_branch_txn_serialize(txn, stream, scratch_pool));
+    SVN_ERR(svn_branch__txn_serialize(txn, stream, scratch_pool));
     SVN_ERR(svn_stream_close(stream));
 
     SVN_ERR_ASSERT(svn_string_compare(value,
@@ -729,39 +729,40 @@ svn_branch_revision_fetch_info(svn_branch_txn_t **txn_p,
 /* Fetch all element payloads in TXN.
  */
 static svn_error_t *
-txn_fetch_payloads(svn_branch_txn_t *txn,
-                   svn_branch_compat__shim_fetch_func_t fetch_func,
+txn_fetch_payloads(svn_branch__txn_t *txn,
+                   svn_branch__compat_fetch_func_t fetch_func,
                    void *fetch_baton,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *branches = svn_branch_txn_get_branches(txn, scratch_pool);
+  apr_array_header_t *branches = svn_branch__txn_get_branches(txn, scratch_pool);
   int i;
 
   /* Read payload of each element.
      (In a real implementation, of course, we'd delay this until demanded.) */
   for (i = 0; i < branches->nelts; i++)
     {
-      svn_branch_state_t *branch = APR_ARRAY_IDX(branches, i, void *);
-      svn_element_tree_t *element_tree;
+      svn_branch__state_t *branch = APR_ARRAY_IDX(branches, i, void *);
+      svn_element__tree_t *element_tree;
       apr_hash_index_t *hi;
 
-      SVN_ERR(svn_branch_state_get_elements(branch, &element_tree,
-                                            scratch_pool));
+      SVN_ERR(svn_branch__state_get_elements(branch, &element_tree,
+                                             scratch_pool));
       for (hi = apr_hash_first(scratch_pool, element_tree->e_map);
            hi; hi = apr_hash_next(hi))
         {
-          int eid = svn_eid_hash_this_key(hi);
-          svn_element_content_t *element /*= apr_hash_this_val(hi)*/;
+          int eid = svn_eid__hash_this_key(hi);
+          svn_element__content_t *element /*= apr_hash_this_val(hi)*/;
 
-          SVN_ERR(svn_branch_state_get_element(branch, &element,
-                                               eid, scratch_pool));
+          SVN_ERR(svn_branch__state_get_element(branch, &element,
+                                                eid, scratch_pool));
           if (! element->payload->is_subbranch_root)
             {
-              SVN_ERR(svn_payload_fetch(&element->payload,
-                                        txn, element->payload->branch_ref,
-                                        fetch_func, fetch_baton,
-                                        result_pool, scratch_pool));
+              SVN_ERR(svn_branch__compat_fetch(&element->payload,
+                                               txn,
+                                               element->payload->branch_ref,
+                                               fetch_func, fetch_baton,
+                                               result_pool, scratch_pool));
             }
         }
     }
@@ -773,16 +774,16 @@ txn_fetch_payloads(svn_branch_txn_t *txn,
  * branch-tracking metadata from the repository into it.
  */
 static svn_error_t *
-svn_branch_repos_fetch_info(svn_branch_repos_t **repos_p,
+svn_branch_repos_fetch_info(svn_branch__repos_t **repos_p,
                             svn_ra_session_t *ra_session,
                             const char *branch_info_dir,
-                            svn_branch_compat__shim_fetch_func_t fetch_func,
+                            svn_branch__compat_fetch_func_t fetch_func,
                             void *fetch_baton,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  svn_branch_repos_t *repos
-    = svn_branch_repos_create(result_pool);
+  svn_branch__repos_t *repos
+    = svn_branch__repos_create(result_pool);
   svn_revnum_t base_revision;
   svn_revnum_t r;
 
@@ -790,13 +791,13 @@ svn_branch_repos_fetch_info(svn_branch_repos_t **repos_p,
 
   for (r = 0; r <= base_revision; r++)
     {
-      svn_branch_txn_t *txn;
+      svn_branch__txn_t *txn;
 
       SVN_ERR(svn_branch_revision_fetch_info(&txn,
                                              repos, ra_session, branch_info_dir,
                                              r,
                                              result_pool, scratch_pool));
-      SVN_ERR(svn_branch_repos_add_revision(repos, txn));
+      SVN_ERR(svn_branch__repos_add_revision(repos, txn));
       SVN_ERR(txn_fetch_payloads(txn, fetch_func, fetch_baton,
                                  result_pool, scratch_pool));
       }
@@ -808,17 +809,17 @@ svn_branch_repos_fetch_info(svn_branch_repos_t **repos_p,
 /* Return a mutable state based on revision BASE_REVISION in REPOS.
  */
 static svn_error_t *
-svn_branch_get_mutable_state(svn_branch_txn_t **txn_p,
-                             svn_branch_repos_t *repos,
+svn_branch_get_mutable_state(svn_branch__txn_t **txn_p,
+                             svn_branch__repos_t *repos,
                              svn_ra_session_t *ra_session,
                              const char *branch_info_dir,
                              svn_revnum_t base_revision,
-                             svn_branch_compat__shim_fetch_func_t fetch_func,
+                             svn_branch__compat_fetch_func_t fetch_func,
                              void *fetch_baton,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  svn_branch_txn_t *txn;
+  svn_branch__txn_t *txn;
   apr_array_header_t *branches;
   int i;
 
@@ -837,15 +838,15 @@ svn_branch_get_mutable_state(svn_branch_txn_t **txn_p,
   txn->base_rev = base_revision;
   txn->rev = SVN_INVALID_REVNUM;
 
-  branches = svn_branch_txn_get_branches(txn, scratch_pool);
+  branches = svn_branch__txn_get_branches(txn, scratch_pool);
   for (i = 0; i < branches->nelts; i++)
     {
-      svn_branch_state_t *b = APR_ARRAY_IDX(branches, i, void *);
+      svn_branch__state_t *b = APR_ARRAY_IDX(branches, i, void *);
 
       b->predecessor
-        = svn_branch_rev_bid_create(base_revision,
-                                    svn_branch_get_id(b, scratch_pool),
-                                    result_pool);
+        = svn_branch__rev_bid_create(base_revision,
+                                     svn_branch__get_id(b, scratch_pool),
+                                     result_pool);
     }
 
   *txn_p = txn;
@@ -856,7 +857,7 @@ svn_branch_get_mutable_state(svn_branch_txn_t **txn_p,
  * repository. TXN->rev is the newly committed revision number.
  */
 static svn_error_t *
-store_repos_info(svn_branch_txn_t *txn,
+store_repos_info(svn_branch__txn_t *txn,
                  svn_ra_session_t *ra_session,
                  const char *branch_info_dir,
                  apr_pool_t *scratch_pool)
@@ -864,7 +865,7 @@ store_repos_info(svn_branch_txn_t *txn,
   svn_stringbuf_t *buf = svn_stringbuf_create_empty(scratch_pool);
   svn_stream_t *stream = svn_stream_from_stringbuf(buf, scratch_pool);
 
-  SVN_ERR(svn_branch_txn_serialize(txn, stream, scratch_pool));
+  SVN_ERR(svn_branch__txn_serialize(txn, stream, scratch_pool));
 
   SVN_ERR(svn_stream_close(stream));
   /*SVN_DBG(("store_repos_info: %s", buf->data));*/
@@ -881,7 +882,7 @@ struct ccw_baton
 
   svn_ra_session_t *session;
   const char *branch_info_dir;
-  svn_branch_txn_t *branching_txn;
+  svn_branch__txn_t *branching_txn;
 };
 
 /* Wrapper which stores the branching/move-tracking info.
@@ -896,10 +897,10 @@ commit_callback_wrapper(const svn_commit_info_t *commit_info,
   /* if this commit used element-branching info, store the new info */
   if (ccwb->branching_txn)
     {
-      svn_branch_repos_t *repos = ccwb->branching_txn->repos;
+      svn_branch__repos_t *repos = ccwb->branching_txn->repos;
 
       ccwb->branching_txn->rev = commit_info->revision;
-      SVN_ERR(svn_branch_repos_add_revision(repos, ccwb->branching_txn));
+      SVN_ERR(svn_branch__repos_add_revision(repos, ccwb->branching_txn));
       SVN_ERR(store_repos_info(ccwb->branching_txn, ccwb->session,
                                ccwb->branch_info_dir, pool));
     }
@@ -921,7 +922,7 @@ static void
 remap_commit_callback(svn_commit_callback2_t *callback,
                       void **callback_baton,
                       svn_ra_session_t *session,
-                      svn_branch_txn_t *branching_txn,
+                      svn_branch__txn_t *branching_txn,
                       const char *branch_info_dir,
                       svn_commit_callback2_t original_callback,
                       void *original_baton,
@@ -1018,8 +1019,8 @@ svn_ra_fetch(svn_node_kind_t *kind_p,
 }
 
 svn_error_t *
-svn_ra_load_branching_state(svn_branch_txn_t **branching_txn_p,
-                            svn_branch_compat__shim_fetch_func_t *fetch_func,
+svn_ra_load_branching_state(svn_branch__txn_t **branching_txn_p,
+                            svn_branch__compat_fetch_func_t *fetch_func,
                             void **fetch_baton,
                             svn_ra_session_t *session,
                             const char *branch_info_dir,
@@ -1027,7 +1028,7 @@ svn_ra_load_branching_state(svn_branch_txn_t **branching_txn_p,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  svn_branch_repos_t *repos;
+  svn_branch__repos_t *repos;
   const char *repos_root_url, *session_url, *base_relpath;
   struct fb_baton *fbb = apr_palloc(result_pool, sizeof (*fbb));
 
@@ -1061,7 +1062,7 @@ svn_ra_load_branching_state(svn_branch_txn_t **branching_txn_p,
 
 svn_error_t *
 svn_ra_get_commit_txn(svn_ra_session_t *session,
-                      svn_branch_txn_t **edit_txn_p,
+                      svn_branch__txn_t **edit_txn_p,
                       apr_hash_t *revprop_table,
                       svn_commit_callback2_t commit_callback,
                       void *commit_baton,
@@ -1070,12 +1071,12 @@ svn_ra_get_commit_txn(svn_ra_session_t *session,
                       const char *branch_info_dir,
                       apr_pool_t *pool)
 {
-  svn_branch_txn_t *branching_txn;
-  svn_branch_compat__shim_fetch_func_t fetch_func;
+  svn_branch__txn_t *branching_txn;
+  svn_branch__compat_fetch_func_t fetch_func;
   void *fetch_baton;
   const svn_delta_editor_t *deditor;
   void *dedit_baton;
-  svn_branch_compat__shim_connector_t *shim_connector;
+  svn_branch__compat_shim_connector_t *shim_connector;
 
   /* load branching info
    * ### Currently we always start from a single base revision, never from
@@ -1104,7 +1105,7 @@ svn_ra_get_commit_txn(svn_ra_session_t *session,
     /*if (! svn_dbg__quiet_mode())
       SVN_ERR(svn_delta__get_debug_editor(&deditor, &dedit_baton,
                                           deditor, dedit_baton, "", pool));*/
-    SVN_ERR(svn_branch_compat_txn_from_delta_for_commit(
+    SVN_ERR(svn_branch__compat_txn_from_delta_for_commit(
                         edit_txn_p,
                         &shim_connector,
                         deditor, dedit_baton, branching_txn,
@@ -1143,7 +1144,7 @@ svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
     SVN_ERR(svn_ra__dup_session(&fbb->session, session, repos_root_url, pool, pool));
     fbb->session_path = base_relpath;
     fbb->repos_root_url = repos_root_url;
-    SVN_ERR(svn_branch_compat__insert_shims(editor, edit_baton,
+    SVN_ERR(svn_branch__compat_insert_shims(editor, edit_baton,
                                             *editor, *edit_baton,
                                             repos_root_url, base_relpath,
                                             svn_ra_fetch, fbb, pool, pool));
@@ -1219,7 +1220,7 @@ svn_ra_do_update4(svn_ra_session_t *session,
                   svn_depth_t depth,
                   svn_boolean_t send_copyfrom_args,
                   svn_boolean_t ignore_ancestry,
-                  svn_update_editor3_t *update_editor,
+                  svn_branch__compat_update_editor3_t *update_editor,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
@@ -1269,7 +1270,7 @@ svn_ra_do_switch4(svn_ra_session_t *session,
                   const char *switch_url,
                   svn_boolean_t send_copyfrom_args,
                   svn_boolean_t ignore_ancestry,
-                  svn_update_editor3_t *switch_editor,
+                  svn_branch__compat_update_editor3_t *switch_editor,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {

@@ -1050,7 +1050,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   *edit_baton = eb;
   *editor = e;
 
-  SVN_ERR(svn_branch_compat__insert_shims(editor, edit_baton, *editor, *edit_baton,
+  SVN_ERR(svn_branch__compat_insert_shims(editor, edit_baton, *editor, *edit_baton,
                                     repos_url,
                                     svn_relpath_canonicalize(eb->base_path, pool),
                                     fetch_func, eb, pool, pool));

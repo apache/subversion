@@ -52,42 +52,42 @@
 /* Return (left, right) pairs of element content that differ between
  * subtrees LEFT and RIGHT.
  *
- * Set *DIFF_P to a hash of (eid -> (svn_branch_el_rev_content_t *)[2]).
+ * Set *DIFF_P to a hash of (eid -> (svn_element__content_t *)[2]).
  */
 static svn_error_t *
 element_differences(apr_hash_t **diff_p,
-                    const svn_element_tree_t *left,
-                    const svn_element_tree_t *right,
+                    const svn_element__tree_t *left,
+                    const svn_element__tree_t *right,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
   apr_hash_t *diff = apr_hash_make(result_pool);
   apr_hash_index_t *hi;
 
-  /*SVN_DBG(("svn_branch_subtree_differences(b%s r%ld, b%s r%ld, e%d)",
-           svn_branch_get_id(left->branch, scratch_pool), left->rev,
-           svn_branch_get_id(right->branch, scratch_pool), right->rev,
+  /*SVN_DBG(("element_differences(b%s r%ld, b%s r%ld, e%d)",
+           svn_branch__get_id(left->branch, scratch_pool), left->rev,
+           svn_branch__get_id(right->branch, scratch_pool), right->rev,
            right->eid));*/
 
   for (hi = apr_hash_first(scratch_pool,
                            hash_overlay(left->e_map, right->e_map));
        hi; hi = apr_hash_next(hi))
     {
-      int e = svn_eid_hash_this_key(hi);
-      svn_element_content_t *element_left
-        = svn_element_tree_get(left, e);
-      svn_element_content_t *element_right
-        = svn_element_tree_get(right, e);
+      int e = svn_eid__hash_this_key(hi);
+      svn_element__content_t *element_left
+        = svn_element__tree_get(left, e);
+      svn_element__content_t *element_right
+        = svn_element__tree_get(right, e);
 
-      if (! svn_element_content_equal(element_left, element_right,
-                                      scratch_pool))
+      if (! svn_element__content_equal(element_left, element_right,
+                                       scratch_pool))
         {
-          svn_element_content_t **contents
+          svn_element__content_t **contents
             = apr_palloc(result_pool, 2 * sizeof(void *));
 
           contents[0] = element_left;
           contents[1] = element_right;
-          svn_eid_hash_set(diff, e, contents);
+          svn_eid__hash_set(diff, e, contents);
         }
     }
 
@@ -100,13 +100,13 @@ element_differences(apr_hash_t **diff_p,
  * Return "" if SUBBRANCH is null.
  */
 static const char *
-branch_str(svn_branch_state_t *subbranch,
+branch_str(svn_branch__state_t *subbranch,
            apr_pool_t *result_pool)
 {
   if (subbranch)
     return apr_psprintf(result_pool,
                       " (branch %s)",
-                      svn_branch_get_id(subbranch, result_pool));
+                      svn_branch__get_id(subbranch, result_pool));
   return "";
 }
 
@@ -115,20 +115,20 @@ branch_str(svn_branch_state_t *subbranch,
  * Return "" if the element is not a subbranch root element.
  */
 static const char *
-subbranch_str(svn_branch_state_t *branch,
+subbranch_str(svn_branch__state_t *branch,
               int eid,
               apr_pool_t *result_pool)
 {
-  svn_branch_state_t *subbranch;
+  svn_branch__state_t *subbranch;
 
-  svn_error_clear(svn_branch_get_subbranch_at_eid(branch, &subbranch, eid,
-                                                  result_pool));
+  svn_error_clear(svn_branch__get_subbranch_at_eid(branch, &subbranch, eid,
+                                                   result_pool));
   return branch_str(subbranch, result_pool);
 }
 
 /*  */
 static const char *
-brief_eid_and_name_or_nil(svn_element_content_t *e,
+brief_eid_and_name_or_nil(svn_element__content_t *e,
                           apr_pool_t *result_pool)
 {
   return e ? apr_psprintf(result_pool, "%d/%s", e->parent_eid, e->name)
@@ -166,22 +166,22 @@ typedef struct merge_conflict_policy_t
  */
 typedef struct element_merge3_conflict_t
 {
-  svn_element_content_t *yca;
-  svn_element_content_t *side1;
-  svn_element_content_t *side2;
+  svn_element__content_t *yca;
+  svn_element__content_t *side1;
+  svn_element__content_t *side2;
 } element_merge3_conflict_t;
 
 static element_merge3_conflict_t *
-element_merge3_conflict_create(svn_element_content_t *yca,
-                               svn_element_content_t *side1,
-                               svn_element_content_t *side2,
+element_merge3_conflict_create(svn_element__content_t *yca,
+                               svn_element__content_t *side1,
+                               svn_element__content_t *side2,
                                apr_pool_t *result_pool)
 {
   element_merge3_conflict_t *c = apr_pcalloc(result_pool, sizeof(*c));
 
-  c->yca = yca ? svn_element_content_dup(yca, result_pool) : NULL;
-  c->side1 = side1 ? svn_element_content_dup(side1, result_pool) : NULL;
-  c->side2 = side2 ? svn_element_content_dup(side2, result_pool) : NULL;
+  c->yca = yca ? svn_element__content_dup(yca, result_pool) : NULL;
+  c->side1 = side1 ? svn_element__content_dup(side1, result_pool) : NULL;
+  c->side2 = side2 ? svn_element__content_dup(side2, result_pool) : NULL;
   return c;
 }
 
@@ -244,7 +244,7 @@ name_clash_conflict_str(name_clash_conflict_t *c,
   for (hi2 = apr_hash_first(result_pool, c->elements);
        hi2; hi2 = apr_hash_next(hi2))
     {
-      int eid = svn_eid_hash_this_key(hi2);
+      int eid = svn_eid__hash_this_key(hi2);
 
       apr_psprintf(result_pool, "%s\n    element %d", s, eid);
     }
@@ -279,7 +279,7 @@ cycle_conflict_str(cycle_conflict_t *c,
   for (hi2 = apr_hash_first(result_pool, c->elements);
        hi2; hi2 = apr_hash_next(hi2))
     {
-      int eid2 = svn_eid_hash_this_key(hi2);
+      int eid2 = svn_eid__hash_this_key(hi2);
 
       s = apr_psprintf(result_pool, "%s e%d", s, eid2);
     }
@@ -293,16 +293,16 @@ cycle_conflict_str(cycle_conflict_t *c,
  */
 typedef struct orphan_conflict_t
 {
-  svn_element_content_t *element;
+  svn_element__content_t *element;
 } orphan_conflict_t;
 
 static orphan_conflict_t *
-orphan_conflict_create(svn_element_content_t *element,
+orphan_conflict_create(svn_element__content_t *element,
                        apr_pool_t *result_pool)
 {
   orphan_conflict_t *c = apr_pcalloc(result_pool, sizeof(*c));
 
-  c->element = svn_element_content_dup(element, result_pool);
+  c->element = svn_element__content_dup(element, result_pool);
   return c;
 }
 
@@ -338,7 +338,7 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
                            conflict_storage->single_element_conflicts);
        hi; hi = apr_hash_next(hi))
     {
-      int eid = svn_eid_hash_this_key(hi);
+      int eid = svn_eid__hash_this_key(hi);
       element_merge3_conflict_t *c = apr_hash_this_val(hi);
 
       svnmover_notify("  %s",
@@ -358,7 +358,7 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
                            conflict_storage->cycle_conflicts);
        hi; hi = apr_hash_next(hi))
     {
-      int eid = svn_eid_hash_this_key(hi);
+      int eid = svn_eid__hash_this_key(hi);
       cycle_conflict_t *c = apr_hash_this_val(hi);
 
       svnmover_notify("  %s",
@@ -368,7 +368,7 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
                            conflict_storage->orphan_conflicts);
        hi; hi = apr_hash_next(hi))
     {
-      int eid = svn_eid_hash_this_key(hi);
+      int eid = svn_eid__hash_this_key(hi);
       orphan_conflict_t *c = apr_hash_this_val(hi);
 
       svnmover_notify("  %s",
@@ -430,21 +430,21 @@ find_conflict(conflict_object_t **conflict_p,
     {
       int which_eid = atoi(id_string + 1);
 
-      if (svn_eid_hash_get(conflicts->single_element_conflicts, which_eid))
+      if (svn_eid__hash_get(conflicts->single_element_conflicts, which_eid))
         {
           *conflict_p
             = conflict_object_create(conflict_kind_single_element,
                                      conflicts->single_element_conflicts,
                                      &which_eid, result_pool);
         }
-      if (svn_eid_hash_get(conflicts->cycle_conflicts, which_eid))
+      if (svn_eid__hash_get(conflicts->cycle_conflicts, which_eid))
         {
           *conflict_p
             = conflict_object_create(conflict_kind_cycle,
                                      conflicts->cycle_conflicts,
                                      &which_eid, result_pool);
         }
-      if (svn_eid_hash_get(conflicts->orphan_conflicts, which_eid))
+      if (svn_eid__hash_get(conflicts->orphan_conflicts, which_eid))
         {
           *conflict_p
             = conflict_object_create(conflict_kind_orphan,
@@ -477,7 +477,7 @@ svnmover_conflict_resolved(conflict_storage_t *conflicts,
                         scratch_pool, scratch_pool));
   if (! conflict)
     {
-      return svn_error_createf(SVN_ERR_BRANCHING, NULL,
+      return svn_error_createf(SVN_BRANCH__ERR, NULL,
                                _("Conflict '%s' not found"), id_string);
     }
 
@@ -514,31 +514,31 @@ svnmover_any_conflicts(const conflict_storage_t *conflicts)
  * Allocate the result in RESULT_POOL and/or as pointers to the inputs.
  */
 static void
-payload_merge(svn_element_payload_t **result_p,
+payload_merge(svn_element__payload_t **result_p,
               svn_boolean_t *conflict_p,
               int eid,
-              svn_element_payload_t *side1,
-              svn_element_payload_t *side2,
-              svn_element_payload_t *yca,
+              svn_element__payload_t *side1,
+              svn_element__payload_t *side2,
+              svn_element__payload_t *yca,
               const merge_conflict_policy_t *policy,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
   svn_boolean_t conflict = FALSE;
-  svn_element_payload_t *result = NULL;
+  svn_element__payload_t *result = NULL;
 
   if (yca && side1 && side2)
     {
-      if (svn_element_payload_equal(side1, yca, scratch_pool))
+      if (svn_element__payload_equal(side1, yca, scratch_pool))
         {
           result = side2;
         }
-      else if (svn_element_payload_equal(side2, yca, scratch_pool))
+      else if (svn_element__payload_equal(side2, yca, scratch_pool))
         {
           result = side1;
         }
       else if (policy->merge_double_modify
-               && svn_element_payload_equal(side1, side2, scratch_pool))
+               && svn_element__payload_equal(side1, side2, scratch_pool))
         {
           /*SVN_DBG(("e%d double modify: ... -> { ... | ... }",
                    eid));*/
@@ -569,20 +569,20 @@ payload_merge(svn_element_payload_t **result_p,
  * Allocate the result in RESULT_POOL and/or as pointers to the inputs.
  */
 static void
-element_merge(svn_element_content_t **result_p,
+element_merge(svn_element__content_t **result_p,
               element_merge3_conflict_t **conflict_p,
               int eid,
-              svn_element_content_t *side1,
-              svn_element_content_t *side2,
-              svn_element_content_t *yca,
+              svn_element__content_t *side1,
+              svn_element__content_t *side2,
+              svn_element__content_t *yca,
               const merge_conflict_policy_t *policy,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  svn_boolean_t same1 = svn_element_content_equal(yca, side1, scratch_pool);
-  svn_boolean_t same2 = svn_element_content_equal(yca, side2, scratch_pool);
+  svn_boolean_t same1 = svn_element__content_equal(yca, side1, scratch_pool);
+  svn_boolean_t same2 = svn_element__content_equal(yca, side2, scratch_pool);
   svn_boolean_t conflict = FALSE;
-  svn_element_content_t *result = NULL;
+  svn_element__content_t *result = NULL;
 
   if (same1)
     {
@@ -677,7 +677,7 @@ element_merge(svn_element_content_t **result_p,
       if (policy->merge_double_add
           && !side1->payload->is_subbranch_root
           && !side2->payload->is_subbranch_root
-          && svn_element_content_equal(side1, side2, scratch_pool))
+          && svn_element__content_equal(side1, side2, scratch_pool))
         {
           /*SVN_DBG(("e%d double add",
                    eid));*/
@@ -707,48 +707,48 @@ element_merge(svn_element_content_t **result_p,
 }
 
 static svn_error_t *
-branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
+branch_merge_subtree_r(svn_branch__txn_t *edit_txn,
                        conflict_storage_t **conflict_storage_p,
-                       const svn_branch_el_rev_id_t *src,
-                       const svn_branch_el_rev_id_t *tgt,
-                       const svn_branch_el_rev_id_t *yca,
+                       const svn_branch__el_rev_id_t *src,
+                       const svn_branch__el_rev_id_t *tgt,
+                       const svn_branch__el_rev_id_t *yca,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
 /* Merge the subbranch of {SRC, TGT, YCA} found at EID.
  */
 static svn_error_t *
-merge_subbranch(svn_branch_txn_t *edit_txn,
-                const svn_branch_el_rev_id_t *src,
-                const svn_branch_el_rev_id_t *tgt,
-                const svn_branch_el_rev_id_t *yca,
+merge_subbranch(svn_branch__txn_t *edit_txn,
+                const svn_branch__el_rev_id_t *src,
+                const svn_branch__el_rev_id_t *tgt,
+                const svn_branch__el_rev_id_t *yca,
                 int eid,
                 apr_pool_t *scratch_pool)
 {
-  svn_branch_state_t *src_subbranch;
-  svn_branch_state_t *tgt_subbranch;
-  svn_branch_state_t *yca_subbranch;
-  svn_branch_el_rev_id_t *subbr_src = NULL;
-  svn_branch_el_rev_id_t *subbr_tgt = NULL;
-  svn_branch_el_rev_id_t *subbr_yca = NULL;
+  svn_branch__state_t *src_subbranch;
+  svn_branch__state_t *tgt_subbranch;
+  svn_branch__state_t *yca_subbranch;
+  svn_branch__el_rev_id_t *subbr_src = NULL;
+  svn_branch__el_rev_id_t *subbr_tgt = NULL;
+  svn_branch__el_rev_id_t *subbr_yca = NULL;
 
-  SVN_ERR(svn_branch_get_subbranch_at_eid(src->branch, &src_subbranch,
-                                          eid, scratch_pool));
-  SVN_ERR(svn_branch_get_subbranch_at_eid(tgt->branch, &tgt_subbranch,
-                                          eid, scratch_pool));
-  SVN_ERR(svn_branch_get_subbranch_at_eid(yca->branch, &yca_subbranch,
-                                          eid, scratch_pool));
+  SVN_ERR(svn_branch__get_subbranch_at_eid(src->branch, &src_subbranch,
+                                           eid, scratch_pool));
+  SVN_ERR(svn_branch__get_subbranch_at_eid(tgt->branch, &tgt_subbranch,
+                                           eid, scratch_pool));
+  SVN_ERR(svn_branch__get_subbranch_at_eid(yca->branch, &yca_subbranch,
+                                           eid, scratch_pool));
   if (src_subbranch)
-    subbr_src = svn_branch_el_rev_id_create(
-                  src_subbranch, svn_branch_root_eid(src_subbranch),
+    subbr_src = svn_branch__el_rev_id_create(
+                  src_subbranch, svn_branch__root_eid(src_subbranch),
                   src->rev, scratch_pool);
   if (tgt_subbranch)
-    subbr_tgt = svn_branch_el_rev_id_create(
-                  tgt_subbranch, svn_branch_root_eid(tgt_subbranch),
+    subbr_tgt = svn_branch__el_rev_id_create(
+                  tgt_subbranch, svn_branch__root_eid(tgt_subbranch),
                   tgt->rev, scratch_pool);
   if (yca_subbranch)
-    subbr_yca = svn_branch_el_rev_id_create(
-                  yca_subbranch, svn_branch_root_eid(yca_subbranch),
+    subbr_yca = svn_branch__el_rev_id_create(
+                  yca_subbranch, svn_branch__root_eid(yca_subbranch),
                   yca->rev, scratch_pool);
 
   if (subbr_src && subbr_tgt && subbr_yca)  /* ?edit vs. ?edit */
@@ -777,17 +777,17 @@ merge_subbranch(svn_branch_txn_t *edit_txn,
   else if (subbr_src)  /* added on source branch */
     {
       const char *new_branch_id
-        = svn_branch_id_nest(svn_branch_get_id(tgt->branch, scratch_pool),
-                             eid, scratch_pool);
-      svn_branch_rev_bid_eid_t *from
-        = svn_branch_rev_bid_eid_create(src_subbranch->txn->rev,
-                                        svn_branch_get_id(src_subbranch,
-                                                          scratch_pool),
-                                        svn_branch_root_eid(src_subbranch),
-                                        scratch_pool);
+        = svn_branch__id_nest(svn_branch__get_id(tgt->branch, scratch_pool),
+                              eid, scratch_pool);
+      svn_branch__rev_bid_eid_t *from
+        = svn_branch__rev_bid_eid_create(src_subbranch->txn->rev,
+                                         svn_branch__get_id(src_subbranch,
+                                                            scratch_pool),
+                                         svn_branch__root_eid(src_subbranch),
+                                         scratch_pool);
 
-      SVN_ERR(svn_branch_txn_branch(edit_txn, NULL /*new_branch_id_p*/, from,
-                                    new_branch_id, scratch_pool, scratch_pool));
+      SVN_ERR(svn_branch__txn_branch(edit_txn, NULL /*new_branch_id_p*/, from,
+                                     new_branch_id, scratch_pool, scratch_pool));
     }
   else if (subbr_tgt)  /* added on target branch */
     {
@@ -806,8 +806,8 @@ static int
 sort_compare_items_by_peid_and_name(const svn_sort__item_t *a,
                                     const svn_sort__item_t *b)
 {
-  svn_element_content_t *element_a = a->value;
-  svn_element_content_t *element_b = b->value;
+  svn_element__content_t *element_a = a->value;
+  svn_element__content_t *element_b = b->value;
 
   if (element_a->parent_eid != element_b->parent_eid)
     return element_a->parent_eid - element_b->parent_eid;
@@ -818,23 +818,23 @@ sort_compare_items_by_peid_and_name(const svn_sort__item_t *a,
  */
 static svn_error_t *
 detect_clashes(apr_hash_t **clashes_p,
-               svn_branch_state_t *branch,
+               svn_branch__state_t *branch,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
   apr_hash_t *clashes = apr_hash_make(result_pool);
-  svn_element_tree_t *elements;
+  svn_element__tree_t *elements;
   svn_eid__hash_iter_t *ei;
   int prev_eid = -1;
-  svn_element_content_t *prev_element = NULL;
+  svn_element__content_t *prev_element = NULL;
 
-  SVN_ERR(svn_branch_state_get_elements(branch, &elements, scratch_pool));
+  SVN_ERR(svn_branch__state_get_elements(branch, &elements, scratch_pool));
   for (SVN_EID__HASH_ITER_SORTED(ei, elements->e_map,
                                  sort_compare_items_by_peid_and_name,
                                  scratch_pool))
     {
       int eid = ei->eid;
-      svn_element_content_t *element = ei->val;
+      svn_element__content_t *element = ei->val;
 
       if (prev_element
           && element->parent_eid == prev_element->parent_eid
@@ -852,8 +852,8 @@ detect_clashes(apr_hash_t **clashes_p,
                     result_pool);
               svn_hash_sets(clashes, key, c);
             }
-          svn_eid_hash_set(c->elements, eid, &c);
-          svn_eid_hash_set(c->elements, prev_eid, &c);
+          svn_eid__hash_set(c->elements, eid, &c);
+          svn_eid__hash_set(c->elements, prev_eid, &c);
         }
       prev_eid = eid;
       prev_element = element;
@@ -871,37 +871,37 @@ detect_clashes(apr_hash_t **clashes_p,
  */
 static svn_error_t *
 detect_cycles(apr_hash_t **cycles_p,
-              svn_branch_state_t *branch,
+              svn_branch__state_t *branch,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
   apr_hash_t *cycles = apr_hash_make(result_pool);
   apr_hash_index_t *hi;
-  svn_element_tree_t *elements;
+  svn_element__tree_t *elements;
 
-  SVN_ERR(svn_branch_state_get_elements(branch, &elements, scratch_pool));
+  SVN_ERR(svn_branch__state_get_elements(branch, &elements, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, elements->e_map);
        hi; hi = apr_hash_next(hi))
     {
-      int eid = svn_eid_hash_this_key(hi);
-      svn_element_content_t *element = apr_hash_this_val(hi);
+      int eid = svn_eid__hash_this_key(hi);
+      svn_element__content_t *element = apr_hash_this_val(hi);
       cycle_conflict_t *c = cycle_conflict_create(result_pool);
 
-      svn_eid_hash_set(c->elements, eid, c);
+      svn_eid__hash_set(c->elements, eid, c);
 
       /* See if we can trace the parentage of EID back to the branch root
          without finding a cycle. If we find a cycle, store a conflict. */
       for (; element && (element->parent_eid != -1);
-           element = svn_eid_hash_get(elements->e_map, element->parent_eid))
+           element = svn_eid__hash_get(elements->e_map, element->parent_eid))
         {
           /* If this parent-eid is already in the path from EID to the root,
              then we have found a cycle. */
-          if (svn_eid_hash_get(c->elements, element->parent_eid))
+          if (svn_eid__hash_get(c->elements, element->parent_eid))
             {
-              svn_eid_hash_set(cycles, eid, c);
+              svn_eid__hash_set(cycles, eid, c);
               break;
             }
-          svn_eid_hash_set(c->elements, element->parent_eid, c);
+          svn_eid__hash_set(c->elements, element->parent_eid, c);
         }
     }
 
@@ -913,28 +913,28 @@ detect_cycles(apr_hash_t **cycles_p,
  */
 static svn_error_t *
 detect_orphans(apr_hash_t **orphans_p,
-               svn_branch_state_t *branch,
+               svn_branch__state_t *branch,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
   apr_hash_t *orphans = apr_hash_make(result_pool);
   apr_hash_index_t *hi;
-  svn_element_tree_t *elements;
+  svn_element__tree_t *elements;
 
-  SVN_ERR(svn_branch_state_get_elements(branch, &elements, scratch_pool));
+  SVN_ERR(svn_branch__state_get_elements(branch, &elements, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, elements->e_map);
        hi; hi = apr_hash_next(hi))
     {
-      int eid = svn_eid_hash_this_key(hi);
-      svn_element_content_t *element = apr_hash_this_val(hi);
+      int eid = svn_eid__hash_this_key(hi);
+      svn_element__content_t *element = apr_hash_this_val(hi);
 
       if (eid != elements->root_eid
-          && ! svn_element_tree_get(elements, element->parent_eid))
+          && ! svn_element__tree_get(elements, element->parent_eid))
         {
           orphan_conflict_t *c;
 
           c = orphan_conflict_create(element, result_pool);
-          svn_eid_hash_set(orphans, eid, c);
+          svn_eid__hash_set(orphans, eid, c);
         }
     }
 
@@ -947,19 +947,19 @@ detect_orphans(apr_hash_t **orphans_p,
  * Merge any sub-branches in the same way, recursively.
  */
 static svn_error_t *
-branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
+branch_merge_subtree_r(svn_branch__txn_t *edit_txn,
                        conflict_storage_t **conflict_storage_p,
-                       const svn_branch_el_rev_id_t *src,
-                       const svn_branch_el_rev_id_t *tgt,
-                       const svn_branch_el_rev_id_t *yca,
+                       const svn_branch__el_rev_id_t *src,
+                       const svn_branch__el_rev_id_t *tgt,
+                       const svn_branch__el_rev_id_t *yca,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  svn_branch_subtree_t *s_src, *s_tgt, *s_yca;
+  svn_branch__subtree_t *s_src, *s_tgt, *s_yca;
   apr_hash_t *diff_yca_src, *diff_yca_tgt;
   apr_hash_t *e_conflicts = apr_hash_make(result_pool);
   conflict_storage_t *conflict_storage = conflict_storage_create(result_pool);
-  svn_element_tree_t *src_elements, *tgt_elements, *yca_elements;
+  svn_element__tree_t *src_elements, *tgt_elements, *yca_elements;
   apr_hash_t *all_elements;
   svn_eid__hash_iter_t *ei;
   const merge_conflict_policy_t policy = { TRUE, TRUE, TRUE, TRUE, TRUE };
@@ -967,16 +967,16 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
 
   /*SVN_DBG(("merge src: r%2ld %s e%3d",
            src->rev,
-           svn_branch_get_id(src->branch, scratch_pool), src->eid));*/
+           svn_branch__get_id(src->branch, scratch_pool), src->eid));*/
   /*SVN_DBG(("merge tgt: r%2ld %s e%3d",
            tgt->rev,
-           svn_branch_get_id(tgt->branch, scratch_pool), tgt->eid));*/
+           svn_branch__get_id(tgt->branch, scratch_pool), tgt->eid));*/
   /*SVN_DBG(("merge yca: r%2ld %s e%3d",
            yca->rev,
-           svn_branch_get_id(yca->branch, scratch_pool), yca->eid));*/
+           svn_branch__get_id(yca->branch, scratch_pool), yca->eid));*/
 
   svnmover_notify_v("merging into branch %s",
-                    svn_branch_get_id(tgt->branch, scratch_pool));
+                    svn_branch__get_id(tgt->branch, scratch_pool));
   /*
       for (eid, diff1) in element_differences(YCA, FROM):
         diff2 = element_diff(eid, YCA, TO)
@@ -986,9 +986,9 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
           result := diff1.right
         # else no change
    */
-  SVN_ERR(svn_branch_get_subtree(src->branch, &s_src, src->eid, scratch_pool));
-  SVN_ERR(svn_branch_get_subtree(tgt->branch, &s_tgt, tgt->eid, scratch_pool));
-  SVN_ERR(svn_branch_get_subtree(yca->branch, &s_yca, yca->eid, scratch_pool));
+  SVN_ERR(svn_branch__get_subtree(src->branch, &s_src, src->eid, scratch_pool));
+  SVN_ERR(svn_branch__get_subtree(tgt->branch, &s_tgt, tgt->eid, scratch_pool));
+  SVN_ERR(svn_branch__get_subtree(yca->branch, &s_yca, yca->eid, scratch_pool));
   SVN_ERR(element_differences(&diff_yca_src,
                               s_yca->tree, s_src->tree,
                               scratch_pool, scratch_pool));
@@ -998,12 +998,12 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
                               s_yca->tree, s_tgt->tree,
                               scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_branch_state_get_elements(src->branch, &src_elements,
-                                        scratch_pool));
-  SVN_ERR(svn_branch_state_get_elements(tgt->branch, &tgt_elements,
-                                        scratch_pool));
-  SVN_ERR(svn_branch_state_get_elements(yca->branch, &yca_elements,
-                                        scratch_pool));
+  SVN_ERR(svn_branch__state_get_elements(src->branch, &src_elements,
+                                         scratch_pool));
+  SVN_ERR(svn_branch__state_get_elements(tgt->branch, &tgt_elements,
+                                         scratch_pool));
+  SVN_ERR(svn_branch__state_get_elements(yca->branch, &yca_elements,
+                                         scratch_pool));
   all_elements = hash_overlay(src_elements->e_map,
                               tgt_elements->e_map);
   all_elements = hash_overlay(yca_elements->e_map,
@@ -1011,14 +1011,14 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
   for (SVN_EID__HASH_ITER_SORTED_BY_EID(ei, all_elements, scratch_pool))
     {
       int eid = ei->eid;
-      svn_element_content_t **e_yca_src
-        = svn_eid_hash_get(diff_yca_src, eid);
-      svn_element_content_t **e_yca_tgt
-        = svn_eid_hash_get(diff_yca_tgt, eid);
-      svn_element_content_t *e_yca;
-      svn_element_content_t *e_src;
-      svn_element_content_t *e_tgt;
-      svn_element_content_t *result;
+      svn_element__content_t **e_yca_src
+        = svn_eid__hash_get(diff_yca_src, eid);
+      svn_element__content_t **e_yca_tgt
+        = svn_eid__hash_get(diff_yca_tgt, eid);
+      svn_element__content_t *e_yca;
+      svn_element__content_t *e_src;
+      svn_element__content_t *e_tgt;
+      svn_element__content_t *result;
       element_merge3_conflict_t *conflict;
 
       svn_pool_clear(iterpool);
@@ -1049,8 +1049,8 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
       if (conflict)
         {
           svnmover_notify_v("!    e%d <conflict>", eid);
-          svn_eid_hash_set(e_conflicts, eid,
-                           element_merge3_conflict_dup(conflict, result_pool));
+          svn_eid__hash_set(e_conflicts, eid,
+                            element_merge3_conflict_dup(conflict, result_pool));
         }
       else if (e_tgt && result)
         {
@@ -1058,9 +1058,9 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
                             eid, result->name,
                             subbranch_str(tgt->branch, eid, iterpool));
 
-          SVN_ERR(svn_branch_state_alter_one(tgt->branch, eid,
-                                             result->parent_eid, result->name,
-                                             result->payload, iterpool));
+          SVN_ERR(svn_branch__state_alter_one(tgt->branch, eid,
+                                              result->parent_eid, result->name,
+                                              result->payload, iterpool));
 
           SVN_ERR(merge_subbranch(edit_txn, src, tgt, yca, eid, iterpool));
         }
@@ -1069,7 +1069,7 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
           svnmover_notify_v("D    e%d %s%s",
                             eid, e_yca->name,
                             subbranch_str(yca->branch, eid, iterpool));
-          SVN_ERR(svn_branch_state_delete_one(tgt->branch, eid, iterpool));
+          SVN_ERR(svn_branch__state_delete_one(tgt->branch, eid, iterpool));
 
           /* ### If this is a subbranch-root element being deleted, shouldn't
              we see if there were any changes to be merged in the subbranch,
@@ -1088,9 +1088,9 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
            * (which is not specified here, but will need to be),
            * which may be in this branch or in another branch.
            */
-          SVN_ERR(svn_branch_state_alter_one(tgt->branch, eid,
-                                             result->parent_eid, result->name,
-                                             result->payload, iterpool));
+          SVN_ERR(svn_branch__state_alter_one(tgt->branch, eid,
+                                              result->parent_eid, result->name,
+                                              result->payload, iterpool));
 
           SVN_ERR(merge_subbranch(edit_txn, src, tgt, yca, eid, iterpool));
         }
@@ -1114,18 +1114,18 @@ branch_merge_subtree_r(svn_branch_txn_t *edit_txn,
                          result_pool, scratch_pool));
 
   svnmover_notify_v("merging into branch %s -- finished",
-                    svn_branch_get_id(tgt->branch, scratch_pool));
+                    svn_branch__get_id(tgt->branch, scratch_pool));
 
   *conflict_storage_p = conflict_storage;
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svnmover_branch_merge(svn_branch_txn_t *edit_txn,
+svnmover_branch_merge(svn_branch__txn_t *edit_txn,
                       conflict_storage_t **conflict_storage_p,
-                      svn_branch_el_rev_id_t *src,
-                      svn_branch_el_rev_id_t *tgt,
-                      svn_branch_el_rev_id_t *yca,
+                      svn_branch__el_rev_id_t *src,
+                      svn_branch__el_rev_id_t *tgt,
+                      svn_branch__el_rev_id_t *yca,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {

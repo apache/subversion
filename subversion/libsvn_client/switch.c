@@ -111,7 +111,7 @@ switch_internal(svn_revnum_t *result_rev,
   apr_array_header_t *inherited_props;
   svn_boolean_t use_commit_times;
 #if 0
-  svn_update_editor3_t *switch_editor;
+  svn_branch__compat_update_editor3_t *switch_editor;
 #else
   const svn_delta_editor_t *switch_editor;
   void *switch_edit_baton;

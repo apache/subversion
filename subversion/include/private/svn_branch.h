@@ -66,11 +66,11 @@
  * - modify (not involving paths)
  *   => requires a txn
  *
- * Currently, a txn is represented by 'svn_branch_txn_t', with
- * 'svn_branch_state_t' for the individual branches in it. A flat tree is
- * represented by 'svn_branch_subtree_t'. But there is currently not a
+ * Currently, a txn is represented by 'svn_branch__txn_t', with
+ * 'svn_branch__state_t' for the individual branches in it. A flat tree is
+ * represented by 'svn_branch__subtree_t'. But there is currently not a
  * clean separation; there is some overlap and some warts such as the
- * 'svn_branch_txn_sequence_point' method.
+ * 'svn_branch__txn_sequence_point' method.
  */
 
 
@@ -92,7 +92,7 @@ extern "C" {
 
 
 /* ### */
-#define SVN_ERR_BRANCHING 123456
+#define SVN_BRANCH__ERR 123456
 
 /** Element Identifier (EID).
  *
@@ -109,43 +109,43 @@ extern "C" {
  *
  * ### In most places the code currently says 'int', verbatim.
  */
-typedef int svn_branch_eid_t;
+typedef int svn_branch__eid_t;
 
-typedef struct svn_branch_el_rev_id_t svn_branch_el_rev_id_t;
+typedef struct svn_branch__el_rev_id_t svn_branch__el_rev_id_t;
 
-typedef struct svn_branch_rev_bid_eid_t svn_branch_rev_bid_eid_t;
+typedef struct svn_branch__rev_bid_eid_t svn_branch__rev_bid_eid_t;
 
-typedef struct svn_branch_rev_bid_t svn_branch_rev_bid_t;
+typedef struct svn_branch__rev_bid_t svn_branch__rev_bid_t;
 
-typedef struct svn_branch_state_t svn_branch_state_t;
+typedef struct svn_branch__state_t svn_branch__state_t;
 
 /* Per-repository branching info.
  */
-typedef struct svn_branch_repos_t svn_branch_repos_t;
+typedef struct svn_branch__repos_t svn_branch__repos_t;
 
 /* Methods (conceptually public, but called indirectly) for a transaction.
  */
-typedef struct svn_branch_txn_vtable_t svn_branch_txn_vtable_t;
+typedef struct svn_branch__txn_vtable_t svn_branch__txn_vtable_t;
 
 /* Private data for a transaction.
  */
-typedef struct svn_branch_txn_priv_t svn_branch_txn_priv_t;
+typedef struct svn_branch__txn_priv_t svn_branch__txn_priv_t;
 
 /* A container for all the branching metadata for a specific revision (or
  * an uncommitted transaction).
  */
-typedef struct svn_branch_txn_t
+typedef struct svn_branch__txn_t
 {
   /* Methods (conceptually public, but called indirectly). */
-  svn_branch_txn_vtable_t *vtable;
+  svn_branch__txn_vtable_t *vtable;
 
   /* Private data. */
-  svn_branch_txn_priv_t *priv;
+  svn_branch__txn_priv_t *priv;
 
   /* Public data. */
 
   /* The repository in which this revision exists. */
-  svn_branch_repos_t *repos;
+  svn_branch__repos_t *repos;
 
   /* If committed, the revision number; else SVN_INVALID_REVNUM. */
   svn_revnum_t rev;
@@ -154,23 +154,23 @@ typedef struct svn_branch_txn_t
      on which this transaction is based. */
   svn_revnum_t base_rev;
 
-} svn_branch_txn_t;
+} svn_branch__txn_t;
 
 /* Create a new branch txn object.
  */
-svn_branch_txn_t *
-svn_branch_txn_create(const svn_branch_txn_vtable_t *vtable,
-                      svn_cancel_func_t cancel_func,
-                      void *cancel_baton,
-                      apr_pool_t *result_pool);
+svn_branch__txn_t *
+svn_branch__txn_create(const svn_branch__txn_vtable_t *vtable,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       apr_pool_t *result_pool);
 
 /* Return all the branches in TXN.
  *
  * Return an empty array if there are none.
  */
 apr_array_header_t *
-svn_branch_txn_get_branches(const svn_branch_txn_t *txn,
-                            apr_pool_t *result_pool);
+svn_branch__txn_get_branches(const svn_branch__txn_t *txn,
+                             apr_pool_t *result_pool);
 
 /* Return the branch whose id is BRANCH_ID in TXN.
  *
@@ -180,24 +180,24 @@ svn_branch_txn_get_branches(const svn_branch_txn_t *txn,
  * current implementation it is constructed from the hierarchy of subbranch
  * root EIDs leading to the branch, but that may be changed in future.
  *
- * See also: svn_branch_get_id().
+ * See also: svn_branch__get_id().
  */
-svn_branch_state_t *
-svn_branch_txn_get_branch_by_id(const svn_branch_txn_t *txn,
-                                const char *branch_id,
-                                apr_pool_t *scratch_pool);
+svn_branch__state_t *
+svn_branch__txn_get_branch_by_id(const svn_branch__txn_t *txn,
+                                 const char *branch_id,
+                                 apr_pool_t *scratch_pool);
 
 svn_error_t *
-svn_branch_txn_get_num_new_eids(const svn_branch_txn_t *txn,
-                                int *num_new_eids_p,
-                                apr_pool_t *scratch_pool);
+svn_branch__txn_get_num_new_eids(const svn_branch__txn_t *txn,
+                                 int *num_new_eids_p,
+                                 apr_pool_t *scratch_pool);
 
 /* Assign a new txn-scope element id in TXN.
  */
 svn_error_t *
-svn_branch_txn_new_eid(svn_branch_txn_t *txn,
-                       int *new_eid_p,
-                       apr_pool_t *scratch_pool);
+svn_branch__txn_new_eid(svn_branch__txn_t *txn,
+                        int *new_eid_p,
+                        apr_pool_t *scratch_pool);
 
 /** Create a new branch or access an existing branch.
  *
@@ -220,21 +220,21 @@ svn_branch_txn_new_eid(svn_branch_txn_t *txn,
  *     ancestor?
  */
 svn_error_t *
-svn_branch_txn_open_branch(svn_branch_txn_t *txn,
-                           svn_branch_state_t **new_branch_p,
-                           svn_branch_rev_bid_t *predecessor,
-                           const char *new_branch_id,
-                           int root_eid,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
+svn_branch__txn_open_branch(svn_branch__txn_t *txn,
+                            svn_branch__state_t **new_branch_p,
+                            svn_branch__rev_bid_t *predecessor,
+                            const char *new_branch_id,
+                            int root_eid,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 svn_error_t *
-svn_branch_txn_branch(svn_branch_txn_t *txn,
-                      svn_branch_state_t **new_branch_p,
-                      svn_branch_rev_bid_eid_t *from,
-                      const char *new_branch_id,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool);
+svn_branch__txn_branch(svn_branch__txn_t *txn,
+                       svn_branch__state_t **new_branch_p,
+                       svn_branch__rev_bid_eid_t *from,
+                       const char *new_branch_id,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool);
 
 /** Register a sequence point.
  *
@@ -247,27 +247,27 @@ svn_branch_txn_branch(svn_branch_txn_t *txn,
  * state that is not a sequence point.
  *
  * The new transaction begins at a sequence point. Completion of editing
- * (svn_branch_txn_complete()) also creates a sequence point.
+ * (svn_branch__txn_complete()) also creates a sequence point.
  */
 svn_error_t *
-svn_branch_txn_sequence_point(svn_branch_txn_t *txn,
-                              apr_pool_t *scratch_pool);
+svn_branch__txn_sequence_point(svn_branch__txn_t *txn,
+                               apr_pool_t *scratch_pool);
 
 /** Finalize this transaction.
  *
  * Notify that the edit has been completed successfully.
  */
 svn_error_t *
-svn_branch_txn_complete(svn_branch_txn_t *txn,
-                        apr_pool_t *scratch_pool);
+svn_branch__txn_complete(svn_branch__txn_t *txn,
+                         apr_pool_t *scratch_pool);
 
 /** Abandon this transaction.
  *
  * Notify that editing this transaction was not successful.
  */
 svn_error_t *
-svn_branch_txn_abort(svn_branch_txn_t *txn,
-                     apr_pool_t *scratch_pool);
+svn_branch__txn_abort(svn_branch__txn_t *txn,
+                      apr_pool_t *scratch_pool);
 
 /* Change txn-local EIDs (negative integers) in TXN to revision EIDs, by
  * assigning a new revision-EID (positive integer) for each one.
@@ -275,8 +275,8 @@ svn_branch_txn_abort(svn_branch_txn_t *txn,
  * Rewrite TXN->first_eid and TXN->next_eid accordingly.
  */
 svn_error_t *
-svn_branch_txn_finalize_eids(svn_branch_txn_t *txn,
-                             apr_pool_t *scratch_pool);
+svn_branch__txn_finalize_eids(svn_branch__txn_t *txn,
+                              apr_pool_t *scratch_pool);
 
 /* Often, branches have the same root element. For example,
  * branching /trunk to /branches/br1 results in:
@@ -303,23 +303,23 @@ svn_branch_txn_finalize_eids(svn_branch_txn_t *txn,
 
 /* Methods (conceptually public, but called indirectly) for a branch state.
  */
-typedef struct svn_branch_state_vtable_t svn_branch_state_vtable_t;
+typedef struct svn_branch__state_vtable_t svn_branch__state_vtable_t;
 
 /* Private data for a branch state.
  */
-typedef struct svn_branch_state_priv_t svn_branch_state_priv_t;
+typedef struct svn_branch__state_priv_t svn_branch__state_priv_t;
 
 /* A branch state.
  *
  * A branch state object describes one version of one branch.
  */
-struct svn_branch_state_t
+struct svn_branch__state_t
 {
   /* Methods (conceptually public, but called indirectly). */
-  svn_branch_state_vtable_t *vtable;
+  svn_branch__state_vtable_t *vtable;
 
   /* Private data. */
-  svn_branch_state_priv_t *priv;
+  svn_branch__state_priv_t *priv;
 
   /* Public data. */
 
@@ -328,20 +328,20 @@ struct svn_branch_state_t
 
   /* The previous location in the lifeline of this branch. */
   /* (REV = -1 means "in this txn") */
-  svn_branch_rev_bid_t *predecessor;
+  svn_branch__rev_bid_t *predecessor;
 
   /* The revision to which this branch state belongs */
-  svn_branch_txn_t *txn;
+  svn_branch__txn_t *txn;
 
 };
 
 /* Create a new branch state object.
  */
-svn_branch_state_t *
-svn_branch_state_create(const svn_branch_state_vtable_t *vtable,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        apr_pool_t *result_pool);
+svn_branch__state_t *
+svn_branch__state_create(const svn_branch__state_vtable_t *vtable,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *result_pool);
 
 /* Get the full id of branch BRANCH.
  *
@@ -352,16 +352,16 @@ svn_branch_state_create(const svn_branch_state_vtable_t *vtable,
  * current implementation it is constructed from the hierarchy of subbranch
  * root EIDs leading to the branch, but that may be changed in future.
  *
- * See also: svn_branch_txn_get_branch_by_id().
+ * See also: svn_branch__txn_get_branch_by_id().
  */
 const char *
-svn_branch_get_id(const svn_branch_state_t *branch,
-                  apr_pool_t *result_pool);
+svn_branch__get_id(const svn_branch__state_t *branch,
+                   apr_pool_t *result_pool);
 
 /* Return the element id of the root element of BRANCH.
  */
 int
-svn_branch_root_eid(const svn_branch_state_t *branch);
+svn_branch__root_eid(const svn_branch__state_t *branch);
 
 /* Return the id of the branch nested in OUTER_BID at element OUTER_EID.
  *
@@ -373,9 +373,9 @@ svn_branch_root_eid(const svn_branch_state_t *branch);
  * element id.)
  */
 const char *
-svn_branch_id_nest(const char *outer_bid,
-                   int outer_eid,
-                   apr_pool_t *result_pool);
+svn_branch__id_nest(const char *outer_bid,
+                    int outer_eid,
+                    apr_pool_t *result_pool);
 
 /* Given a nested branch id BID, set *OUTER_BID to the outer branch's id
  * and *OUTER_EID to the nesting element in the outer branch.
@@ -388,17 +388,17 @@ svn_branch_id_nest(const char *outer_bid,
  * element id.)
  */
 void
-svn_branch_id_unnest(const char **outer_bid,
-                     int *outer_eid,
-                     const char *bid,
-                     apr_pool_t *result_pool);
+svn_branch__id_unnest(const char **outer_bid,
+                      int *outer_eid,
+                      const char *bid,
+                      apr_pool_t *result_pool);
 
 /* Register the existence of BRANCH in TXN.
  */
 svn_error_t *
-svn_branch_txn_add_branch(svn_branch_txn_t *txn,
-                          svn_branch_state_t *branch,
-                          apr_pool_t *scratch_pool);
+svn_branch__txn_add_branch(svn_branch__txn_t *txn,
+                           svn_branch__state_t *branch,
+                           apr_pool_t *scratch_pool);
 
 /* Create a new branch with branch id BID, with no elements
  * (not even a root element).
@@ -407,25 +407,25 @@ svn_branch_txn_add_branch(svn_branch_txn_t *txn,
  *
  * Set the root element to ROOT_EID.
  */
-svn_branch_state_t *
-svn_branch_txn_add_new_branch(svn_branch_txn_t *txn,
-                              const char *bid,
-                              svn_branch_rev_bid_t *predecessor,
-                              int root_eid,
-                              apr_pool_t *scratch_pool);
+svn_branch__state_t *
+svn_branch__txn_add_new_branch(svn_branch__txn_t *txn,
+                               const char *bid,
+                               svn_branch__rev_bid_t *predecessor,
+                               int root_eid,
+                               apr_pool_t *scratch_pool);
 
 /* Remove the branch with id BID from the list of branches in TXN.
  */
 svn_error_t *
-svn_branch_txn_delete_branch(svn_branch_txn_t *txn,
-                             const char *bid,
-                             apr_pool_t *scratch_pool);
+svn_branch__txn_delete_branch(svn_branch__txn_t *txn,
+                              const char *bid,
+                              apr_pool_t *scratch_pool);
 
 /* Branch-Element-Revision */
-struct svn_branch_el_rev_id_t
+struct svn_branch__el_rev_id_t
 {
   /* The branch state that applies to REV. */
-  svn_branch_state_t *branch;
+  svn_branch__state_t *branch;
   /* Element. */
   int eid;
   /* Revision. SVN_INVALID_REVNUM means 'in this transaction', not 'head'.
@@ -435,7 +435,7 @@ struct svn_branch_el_rev_id_t
 };
 
 /* Revision-branch-element id. */
-struct svn_branch_rev_bid_eid_t
+struct svn_branch__rev_bid_eid_t
 {
   /* Revision. SVN_INVALID_REVNUM means 'in this transaction', not 'head'. */
   svn_revnum_t rev;
@@ -447,7 +447,7 @@ struct svn_branch_rev_bid_eid_t
 };
 
 /* Revision-branch id. */
-struct svn_branch_rev_bid_t
+struct svn_branch__rev_bid_t
 {
   /* Revision. SVN_INVALID_REVNUM means 'in this transaction', not 'head'. */
   svn_revnum_t rev;
@@ -459,51 +459,51 @@ struct svn_branch_rev_bid_t
 /* Return a new el_rev_id object constructed with *shallow* copies of BRANCH,
  * EID and REV, allocated in RESULT_POOL.
  */
-svn_branch_el_rev_id_t *
-svn_branch_el_rev_id_create(svn_branch_state_t *branch,
-                            int eid,
-                            svn_revnum_t rev,
-                            apr_pool_t *result_pool);
+svn_branch__el_rev_id_t *
+svn_branch__el_rev_id_create(svn_branch__state_t *branch,
+                             int eid,
+                             svn_revnum_t rev,
+                             apr_pool_t *result_pool);
 
 /* Return a new id object constructed with deep copies of REV, BRANCH_ID
  * and EID, allocated in RESULT_POOL.
  */
-svn_branch_rev_bid_eid_t *
-svn_branch_rev_bid_eid_create(svn_revnum_t rev,
-                              const char *branch_id,
-                              int eid,
-                              apr_pool_t *result_pool);
-svn_branch_rev_bid_t *
-svn_branch_rev_bid_create(svn_revnum_t rev,
-                          const char *branch_id,
-                          apr_pool_t *result_pool);
+svn_branch__rev_bid_eid_t *
+svn_branch__rev_bid_eid_create(svn_revnum_t rev,
+                               const char *branch_id,
+                               int eid,
+                               apr_pool_t *result_pool);
+svn_branch__rev_bid_t *
+svn_branch__rev_bid_create(svn_revnum_t rev,
+                           const char *branch_id,
+                           apr_pool_t *result_pool);
 
 /* Return a new id object constructed with a deep copy of OLD_ID,
  * allocated in RESULT_POOL. */
-svn_branch_rev_bid_eid_t *
-svn_branch_rev_bid_eid_dup(const svn_branch_rev_bid_eid_t *old_id,
-                           apr_pool_t *result_pool);
-svn_branch_rev_bid_t *
-svn_branch_rev_bid_dup(const svn_branch_rev_bid_t *old_id,
-                       apr_pool_t *result_pool);
+svn_branch__rev_bid_eid_t *
+svn_branch__rev_bid_eid_dup(const svn_branch__rev_bid_eid_t *old_id,
+                            apr_pool_t *result_pool);
+svn_branch__rev_bid_t *
+svn_branch__rev_bid_dup(const svn_branch__rev_bid_t *old_id,
+                        apr_pool_t *result_pool);
 
 
 /* Return the mapping of elements in branch BRANCH.
  */
 svn_error_t *
-svn_branch_state_get_elements(const svn_branch_state_t *branch,
-                              svn_element_tree_t **element_tree_p,
-                              apr_pool_t *result_pool);
+svn_branch__state_get_elements(const svn_branch__state_t *branch,
+                               svn_element__tree_t **element_tree_p,
+                               apr_pool_t *result_pool);
 
 /* In BRANCH, get element EID (parent, name, payload).
  *
  * If element EID is not present, return null.
  */
 svn_error_t *
-svn_branch_state_get_element(const svn_branch_state_t *branch,
-                             svn_element_content_t **element_p,
-                             int eid,
-                             apr_pool_t *result_pool);
+svn_branch__state_get_element(const svn_branch__state_t *branch,
+                              svn_element__content_t **element_p,
+                              int eid,
+                              apr_pool_t *result_pool);
 
 /** Specify that the element of @a branch identified by @a eid shall not
  * be present.
@@ -543,9 +543,9 @@ svn_branch_state_get_element(const svn_branch_state_t *branch,
  *   granularity, which option to use.
  */
 svn_error_t *
-svn_branch_state_delete_one(svn_branch_state_t *branch,
-                           svn_branch_eid_t eid,
-                           apr_pool_t *scratch_pool);
+svn_branch__state_delete_one(svn_branch__state_t *branch,
+                             svn_branch__eid_t eid,
+                             apr_pool_t *scratch_pool);
 
 /** Specify the tree position and payload of the element of @a branch
  * identified by @a eid.
@@ -569,25 +569,25 @@ svn_branch_state_delete_one(svn_branch_state_t *branch,
  * Duplicate @a new_name and @a new_payload into the branch's pool.
  */
 svn_error_t *
-svn_branch_state_alter_one(svn_branch_state_t *branch,
-                           svn_branch_eid_t eid,
-                           svn_branch_eid_t new_parent_eid,
-                           const char *new_name,
-                           const svn_element_payload_t *new_payload,
-                           apr_pool_t *scratch_pool);
+svn_branch__state_alter_one(svn_branch__state_t *branch,
+                            svn_branch__eid_t eid,
+                            svn_branch__eid_t new_parent_eid,
+                            const char *new_name,
+                            const svn_element__payload_t *new_payload,
+                            apr_pool_t *scratch_pool);
 
 svn_error_t *
-svn_branch_state_copy_tree(svn_branch_state_t *branch,
-                           const svn_branch_rev_bid_eid_t *src_el_rev,
-                           svn_branch_eid_t new_parent_eid,
-                           const char *new_name,
-                           apr_pool_t *scratch_pool);
+svn_branch__state_copy_tree(svn_branch__state_t *branch,
+                            const svn_branch__rev_bid_eid_t *src_el_rev,
+                            svn_branch__eid_t new_parent_eid,
+                            const char *new_name,
+                            apr_pool_t *scratch_pool);
 
 /* Purge orphaned elements in BRANCH.
  */
 svn_error_t *
-svn_branch_state_purge(svn_branch_state_t *branch,
-                       apr_pool_t *scratch_pool);
+svn_branch__state_purge(svn_branch__state_t *branch,
+                        apr_pool_t *scratch_pool);
 
 /* Return the branch-relative path of element EID in BRANCH.
  *
@@ -596,9 +596,9 @@ svn_branch_state_purge(svn_branch_state_t *branch,
  * ### TODO: Clarify sequencing requirements.
  */
 const char *
-svn_branch_get_path_by_eid(const svn_branch_state_t *branch,
-                           int eid,
-                           apr_pool_t *result_pool);
+svn_branch__get_path_by_eid(const svn_branch__state_t *branch,
+                            int eid,
+                            apr_pool_t *result_pool);
 
 /* Return the EID for the branch-relative path PATH in BRANCH.
  *
@@ -607,38 +607,38 @@ svn_branch_get_path_by_eid(const svn_branch_state_t *branch,
  * ### TODO: Clarify sequencing requirements.
  */
 int
-svn_branch_get_eid_by_path(const svn_branch_state_t *branch,
-                           const char *path,
-                           apr_pool_t *scratch_pool);
+svn_branch__get_eid_by_path(const svn_branch__state_t *branch,
+                            const char *path,
+                            apr_pool_t *scratch_pool);
 
 /* Get the default branching metadata for r0 of a new repository.
  */
 svn_string_t *
-svn_branch_get_default_r0_metadata(apr_pool_t *result_pool);
+svn_branch__get_default_r0_metadata(apr_pool_t *result_pool);
 
 /* Create a new txn object *TXN_P, initialized with info
  * parsed from STREAM, allocated in RESULT_POOL.
  */
 svn_error_t *
-svn_branch_txn_parse(svn_branch_txn_t **txn_p,
-                     svn_branch_repos_t *repos,
-                     svn_stream_t *stream,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool);
+svn_branch__txn_parse(svn_branch__txn_t **txn_p,
+                      svn_branch__repos_t *repos,
+                      svn_stream_t *stream,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
 /* Write to STREAM a parseable representation of TXN.
  */
 svn_error_t *
-svn_branch_txn_serialize(svn_branch_txn_t *txn,
-                         svn_stream_t *stream,
-                         apr_pool_t *scratch_pool);
+svn_branch__txn_serialize(svn_branch__txn_t *txn,
+                          svn_stream_t *stream,
+                          apr_pool_t *scratch_pool);
 
 /* Write to STREAM a parseable representation of BRANCH.
  */
 svn_error_t *
-svn_branch_state_serialize(svn_stream_t *stream,
-                           svn_branch_state_t *branch,
-                           apr_pool_t *scratch_pool);
+svn_branch__state_serialize(svn_stream_t *stream,
+                            svn_branch__state_t *branch,
+                            apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus
