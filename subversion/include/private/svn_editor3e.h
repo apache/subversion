@@ -23,7 +23,7 @@
  * @file svn_editor3e.h
  * @brief Tree editing
  *
- * @since New in 1.10.
+ * @since New in ???.
  */
 
 #ifndef SVN_EDITOR3E_H

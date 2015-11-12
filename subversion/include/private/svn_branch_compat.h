@@ -23,7 +23,7 @@
  * @file svn_branch_compat.h
  * @brief Compatibility with svn_delta_editor_t etc.
  *
- * @since New in 1.10.
+ * @since New in ???.
  */
 
 #ifndef SVN_BRANCH_COMPAT_H

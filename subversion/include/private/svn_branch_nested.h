@@ -23,7 +23,7 @@
  * @file svn_branch_nested.h
  * @brief Nested branches and subbranch-root elements
  *
- * @since New in 1.10.
+ * @since New in ???.
  */
 
 #ifndef SVN_BRANCH_NESTED_H

@@ -23,7 +23,7 @@
  * @file svn_branch_repos.h
  * @brief Operating on a repository
  *
- * @since New in 1.10.
+ * @since New in ???.
  */
 
 
