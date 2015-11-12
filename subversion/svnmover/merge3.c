@@ -49,52 +49,6 @@
 
 /* ====================================================================== */
 
-/* Return (left, right) pairs of element content that differ between
- * subtrees LEFT and RIGHT.
- *
- * Set *DIFF_P to a hash of (eid -> (svn_element__content_t *)[2]).
- */
-static svn_error_t *
-element_differences(apr_hash_t **diff_p,
-                    const svn_element__tree_t *left,
-                    const svn_element__tree_t *right,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
-{
-  apr_hash_t *diff = apr_hash_make(result_pool);
-  apr_hash_index_t *hi;
-
-  /*SVN_DBG(("element_differences(b%s r%ld, b%s r%ld, e%d)",
-           svn_branch__get_id(left->branch, scratch_pool), left->rev,
-           svn_branch__get_id(right->branch, scratch_pool), right->rev,
-           right->eid));*/
-
-  for (hi = apr_hash_first(scratch_pool,
-                           hash_overlay(left->e_map, right->e_map));
-       hi; hi = apr_hash_next(hi))
-    {
-      int e = svn_eid__hash_this_key(hi);
-      svn_element__content_t *element_left
-        = svn_element__tree_get(left, e);
-      svn_element__content_t *element_right
-        = svn_element__tree_get(right, e);
-
-      if (! svn_element__content_equal(element_left, element_right,
-                                       scratch_pool))
-        {
-          svn_element__content_t **contents
-            = apr_palloc(result_pool, 2 * sizeof(void *));
-
-          contents[0] = element_left;
-          contents[1] = element_right;
-          svn_eid__hash_set(diff, e, contents);
-        }
-    }
-
-  *diff_p = diff;
-  return SVN_NO_ERROR;
-}
-
 /* Return a string suitable for appending to a displayed element name or
  * element id to indicate that it is a subbranch root element for SUBBRANCH.
  * Return "" if SUBBRANCH is null.
@@ -989,14 +943,14 @@ branch_merge_subtree_r(svn_branch__txn_t *edit_txn,
   SVN_ERR(svn_branch__get_subtree(src->branch, &s_src, src->eid, scratch_pool));
   SVN_ERR(svn_branch__get_subtree(tgt->branch, &s_tgt, tgt->eid, scratch_pool));
   SVN_ERR(svn_branch__get_subtree(yca->branch, &s_yca, yca->eid, scratch_pool));
-  SVN_ERR(element_differences(&diff_yca_src,
-                              s_yca->tree, s_src->tree,
-                              scratch_pool, scratch_pool));
+  SVN_ERR(svnmover_element_differences(&diff_yca_src,
+                                       s_yca->tree, s_src->tree,
+                                       scratch_pool, scratch_pool));
   /* ### We only need to query for YCA:TO differences in elements that are
          different in YCA:FROM, but right now we ask for all differences. */
-  SVN_ERR(element_differences(&diff_yca_tgt,
-                              s_yca->tree, s_tgt->tree,
-                              scratch_pool, scratch_pool));
+  SVN_ERR(svnmover_element_differences(&diff_yca_tgt,
+                                       s_yca->tree, s_tgt->tree,
+                                       scratch_pool, scratch_pool));
 
   SVN_ERR(svn_branch__state_get_elements(src->branch, &src_elements,
                                          scratch_pool));
