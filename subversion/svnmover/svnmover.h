@@ -28,6 +28,7 @@
 #define SVNMOVER_H
 
 #include "svn_types.h"
+#include "svn_client.h"
 #include "svn_ra.h"
 
 #include "private/svn_branch.h"
@@ -52,6 +53,15 @@ extern "C" {
 #define hash_merge(overlay, h1) \
   apr_hash_merge(apr_hash_pool_get(overlay), h1, h2, merger, data)
 
+
+/* Display PROMPT_STR, read a line of text, and set *RESULT to that line.
+ *
+ * The interface here is similar to svn_cmdline_prompt_user2().
+ */
+svn_error_t *
+svnmover_prompt_user(const char **result,
+                     const char *prompt_str,
+                     apr_pool_t *pool);
 
 /* Print a notification. */
 __attribute__((format(printf, 1, 2)))

@@ -57,7 +57,7 @@
 
 #define HAVE_LINENOISE
 #ifdef HAVE_LINENOISE
-#include "../libsvn_subr/linenoise/linenoise.h"
+#include "linenoise/linenoise.h"
 #endif
 
 /* Version compatibility check */
@@ -3535,7 +3535,7 @@ read_words(apr_array_header_t **words,
   const char *input;
 
   settext(TEXT_FG_YELLOW);
-  err = svn_cmdline_prompt_user2(&input, prompt, NULL, result_pool);
+  err = svnmover_prompt_user(&input, prompt, result_pool);
   settext(TEXT_RESET);
   if (err && (err->apr_err == SVN_ERR_CANCELLED || err->apr_err == APR_EOF))
     {
