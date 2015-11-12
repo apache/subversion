@@ -42,8 +42,8 @@ extern "C" {
 
 
 /* Create a new branching metadata object */
-svn_branch_repos_t *
-svn_branch_repos_create(apr_pool_t *result_pool);
+svn_branch__repos_t *
+svn_branch__repos_create(apr_pool_t *result_pool);
 
 /* Add REV_ROOT as the next revision in the repository REPOS.
  *
@@ -51,31 +51,31 @@ svn_branch_repos_create(apr_pool_t *result_pool);
  * caller should set those, before or after this call.)
  */
 svn_error_t *
-svn_branch_repos_add_revision(svn_branch_repos_t *repos,
-                              svn_branch_txn_t *rev_root);
+svn_branch__repos_add_revision(svn_branch__repos_t *repos,
+                               svn_branch__txn_t *rev_root);
 
 /* Return a pointer to revision REVNUM of the repository REPOS.
  */
-struct svn_branch_txn_t *
-svn_branch_repos_get_revision(const svn_branch_repos_t *repos,
-                              svn_revnum_t revnum);
+struct svn_branch__txn_t *
+svn_branch__repos_get_revision(const svn_branch__repos_t *repos,
+                               svn_revnum_t revnum);
 
 /* Return the revision root that represents the base revision (or,
  * potentially, txn) of the revision or txn REV_ROOT.
  */
-svn_branch_txn_t *
-svn_branch_repos_get_base_revision_root(svn_branch_txn_t *rev_root);
+svn_branch__txn_t *
+svn_branch__repos_get_base_revision_root(svn_branch__txn_t *rev_root);
 
 /* Set *BRANCH_P to the branch found in REPOS : REVNUM : BRANCH_ID.
  *
  * Return an error if REVNUM or BRANCH_ID is not found.
  */
 svn_error_t *
-svn_branch_repos_get_branch_by_id(svn_branch_state_t **branch_p,
-                                  const svn_branch_repos_t *repos,
-                                  svn_revnum_t revnum,
-                                  const char *branch_id,
-                                  apr_pool_t *scratch_pool);
+svn_branch__repos_get_branch_by_id(svn_branch__state_t **branch_p,
+                                   const svn_branch__repos_t *repos,
+                                   svn_revnum_t revnum,
+                                   const char *branch_id,
+                                   apr_pool_t *scratch_pool);
 
 /* Set *EL_REV_P to the el-rev-id of the element at branch id BRANCH_ID,
  * element id EID, in revision REVNUM in REPOS.
@@ -88,13 +88,13 @@ svn_branch_repos_get_branch_by_id(svn_branch_state_t **branch_p,
  * RESULT_POOL.
  */
 svn_error_t *
-svn_branch_repos_find_el_rev_by_id(svn_branch_el_rev_id_t **el_rev_p,
-                                   const svn_branch_repos_t *repos,
-                                   svn_revnum_t revnum,
-                                   const char *branch_id,
-                                   int eid,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool);
+svn_branch__repos_find_el_rev_by_id(svn_branch__el_rev_id_t **el_rev_p,
+                                    const svn_branch__repos_t *repos,
+                                    svn_revnum_t revnum,
+                                    const char *branch_id,
+                                    int eid,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

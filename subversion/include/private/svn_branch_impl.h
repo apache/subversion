@@ -37,7 +37,7 @@ extern "C" {
 
 
 /* Common aspects od a txn/branch 'editor' class (derived from Ev2) */
-typedef struct svn_vtable_priv_t
+typedef struct svn_branch__vtable_priv_t
 {
   /* Standard cancellation function. Called before each callback.  */
   svn_cancel_func_t cancel_func;
@@ -49,161 +49,161 @@ typedef struct svn_vtable_priv_t
   apr_pool_t *state_pool;
 #endif
 
-} svn_vtable_priv_t;
+} svn_branch__vtable_priv_t;
 
-/* The methods of svn_branch_txn_t.
+/* The methods of svn_branch__txn_t.
  * See the corresponding public API functions for details.
  */
 
-typedef apr_array_header_t *(*branch_txn_v_get_branches_t)(
-  const svn_branch_txn_t *txn,
+typedef apr_array_header_t *(*svn_branch__txn_v_get_branches_t)(
+  const svn_branch__txn_t *txn,
   apr_pool_t *result_pool);
 
-typedef svn_error_t *(*branch_txn_v_add_branch_t)(
-  svn_branch_txn_t *txn,
-  svn_branch_state_t *branch,
+typedef svn_error_t *(*svn_branch__txn_v_add_branch_t)(
+  svn_branch__txn_t *txn,
+  svn_branch__state_t *branch,
   apr_pool_t *scratch_pool);
 
-typedef svn_branch_state_t *(*branch_txn_v_add_new_branch_t)(
-  svn_branch_txn_t *txn,
+typedef svn_branch__state_t *(*svn_branch__txn_v_add_new_branch_t)(
+  svn_branch__txn_t *txn,
   const char *bid,
-  svn_branch_rev_bid_t *predecessor,
+  svn_branch__rev_bid_t *predecessor,
   int root_eid,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_txn_v_delete_branch_t)(
-  svn_branch_txn_t *txn,
+typedef svn_error_t *(*svn_branch__txn_v_delete_branch_t)(
+  svn_branch__txn_t *txn,
   const char *bid,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_txn_v_get_num_new_eids_t)(
-  const svn_branch_txn_t *txn,
+typedef svn_error_t *(*svn_branch__txn_v_get_num_new_eids_t)(
+  const svn_branch__txn_t *txn,
   int *num_new_eids_p,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_txn_v_new_eid_t)(
-  svn_branch_txn_t *txn,
-  svn_branch_eid_t *eid_p,
+typedef svn_error_t *(*svn_branch__txn_v_new_eid_t)(
+  svn_branch__txn_t *txn,
+  svn_branch__eid_t *eid_p,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_txn_v_open_branch_t)(
-  svn_branch_txn_t *txn,
-  svn_branch_state_t **new_branch_p,
-  svn_branch_rev_bid_t *predecessor,
+typedef svn_error_t *(*svn_branch__txn_v_open_branch_t)(
+  svn_branch__txn_t *txn,
+  svn_branch__state_t **new_branch_p,
+  svn_branch__rev_bid_t *predecessor,
   const char *new_branch_id,
   int root_eid,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_txn_v_branch_t)(
-  svn_branch_txn_t *txn,
-  svn_branch_state_t **new_branch_p,
-  svn_branch_rev_bid_eid_t *from,
+typedef svn_error_t *(*svn_branch__txn_v_branch_t)(
+  svn_branch__txn_t *txn,
+  svn_branch__state_t **new_branch_p,
+  svn_branch__rev_bid_eid_t *from,
   const char *new_branch_id,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_txn_v_finalize_eids_t)(
-  svn_branch_txn_t *txn,
+typedef svn_error_t *(*svn_branch__txn_v_finalize_eids_t)(
+  svn_branch__txn_t *txn,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_txn_v_serialize_t)(
-  svn_branch_txn_t *txn,
+typedef svn_error_t *(*svn_branch__txn_v_serialize_t)(
+  svn_branch__txn_t *txn,
   svn_stream_t *stream,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_txn_v_sequence_point_t)(
-  svn_branch_txn_t *txn,
+typedef svn_error_t *(*svn_branch__txn_v_sequence_point_t)(
+  svn_branch__txn_t *txn,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_txn_v_complete_t)(
-  svn_branch_txn_t *txn,
+typedef svn_error_t *(*svn_branch__txn_v_complete_t)(
+  svn_branch__txn_t *txn,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_txn_v_abort_t)(
-  svn_branch_txn_t *txn,
+typedef svn_error_t *(*svn_branch__txn_v_abort_t)(
+  svn_branch__txn_t *txn,
   apr_pool_t *scratch_pool);
 
-struct svn_branch_txn_vtable_t
+struct svn_branch__txn_vtable_t
 {
-  svn_vtable_priv_t vpriv;
+  svn_branch__vtable_priv_t vpriv;
 
   /* Methods. */
-  branch_txn_v_get_branches_t get_branches;
-  branch_txn_v_add_branch_t add_branch;
-  branch_txn_v_add_new_branch_t add_new_branch;
-  branch_txn_v_delete_branch_t delete_branch;
-  branch_txn_v_get_num_new_eids_t get_num_new_eids;
-  branch_txn_v_new_eid_t new_eid;
-  branch_txn_v_open_branch_t open_branch;
-  branch_txn_v_branch_t branch;
-  branch_txn_v_finalize_eids_t finalize_eids;
-  branch_txn_v_serialize_t serialize;
-  branch_txn_v_sequence_point_t sequence_point;
-  branch_txn_v_complete_t complete;
-  branch_txn_v_complete_t abort;
+  svn_branch__txn_v_get_branches_t get_branches;
+  svn_branch__txn_v_add_branch_t add_branch;
+  svn_branch__txn_v_add_new_branch_t add_new_branch;
+  svn_branch__txn_v_delete_branch_t delete_branch;
+  svn_branch__txn_v_get_num_new_eids_t get_num_new_eids;
+  svn_branch__txn_v_new_eid_t new_eid;
+  svn_branch__txn_v_open_branch_t open_branch;
+  svn_branch__txn_v_branch_t branch;
+  svn_branch__txn_v_finalize_eids_t finalize_eids;
+  svn_branch__txn_v_serialize_t serialize;
+  svn_branch__txn_v_sequence_point_t sequence_point;
+  svn_branch__txn_v_complete_t complete;
+  svn_branch__txn_v_complete_t abort;
 
 };
 
-/* The methods of svn_branch_state_t.
+/* The methods of svn_branch__state_t.
  * See the corresponding public API functions for details.
  */
 
-typedef svn_error_t *(*branch_state_v_get_elements_t)(
-  const svn_branch_state_t *branch,
-  svn_element_tree_t **element_tree_p,
+typedef svn_error_t *(*svn_branch__state_v_get_elements_t)(
+  const svn_branch__state_t *branch,
+  svn_element__tree_t **element_tree_p,
   apr_pool_t *result_pool);
 
-typedef svn_error_t *(*branch_state_v_get_element_t)(
-  const svn_branch_state_t *branch,
-  svn_element_content_t **element_p,
+typedef svn_error_t *(*svn_branch__state_v_get_element_t)(
+  const svn_branch__state_t *branch,
+  svn_element__content_t **element_p,
   int eid,
   apr_pool_t *result_pool);
 
-typedef svn_error_t *(*branch_state_v_alter_one_t)(
-  svn_branch_state_t *branch,
-  svn_branch_eid_t eid,
-  svn_branch_eid_t new_parent_eid,
+typedef svn_error_t *(*svn_branch__state_v_alter_one_t)(
+  svn_branch__state_t *branch,
+  svn_branch__eid_t eid,
+  svn_branch__eid_t new_parent_eid,
   const char *new_name,
-  const svn_element_payload_t *new_payload,
+  const svn_element__payload_t *new_payload,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_state_v_copy_one_t)(
-  svn_branch_state_t *branch,
-  const svn_branch_rev_bid_eid_t *src_el_rev,
-  svn_branch_eid_t local_eid,
-  svn_branch_eid_t new_parent_eid,
+typedef svn_error_t *(*svn_branch__state_v_copy_one_t)(
+  svn_branch__state_t *branch,
+  const svn_branch__rev_bid_eid_t *src_el_rev,
+  svn_branch__eid_t local_eid,
+  svn_branch__eid_t new_parent_eid,
   const char *new_name,
-  const svn_element_payload_t *new_payload,
+  const svn_element__payload_t *new_payload,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_state_v_copy_tree_t)(
-  svn_branch_state_t *branch,
-  const svn_branch_rev_bid_eid_t *src_el_rev,
-  svn_branch_eid_t new_parent_eid,
+typedef svn_error_t *(*svn_branch__state_v_copy_tree_t)(
+  svn_branch__state_t *branch,
+  const svn_branch__rev_bid_eid_t *src_el_rev,
+  svn_branch__eid_t new_parent_eid,
   const char *new_name,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_state_v_delete_one_t)(
-  svn_branch_state_t *branch,
-  svn_branch_eid_t eid,
+typedef svn_error_t *(*svn_branch__state_v_delete_one_t)(
+  svn_branch__state_t *branch,
+  svn_branch__eid_t eid,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*branch_state_v_purge_t)(
-  svn_branch_state_t *branch,
+typedef svn_error_t *(*svn_branch__state_v_purge_t)(
+  svn_branch__state_t *branch,
   apr_pool_t *scratch_pool);
 
-struct svn_branch_state_vtable_t
+struct svn_branch__state_vtable_t
 {
-  svn_vtable_priv_t vpriv;
+  svn_branch__vtable_priv_t vpriv;
 
-  branch_state_v_get_elements_t get_elements;
-  branch_state_v_get_element_t get_element;
-  branch_state_v_alter_one_t alter_one;
-  branch_state_v_copy_one_t copy_one;
-  branch_state_v_copy_tree_t copy_tree;
-  branch_state_v_delete_one_t delete_one;
-  branch_state_v_purge_t purge;
+  svn_branch__state_v_get_elements_t get_elements;
+  svn_branch__state_v_get_element_t get_element;
+  svn_branch__state_v_alter_one_t alter_one;
+  svn_branch__state_v_copy_one_t copy_one;
+  svn_branch__state_v_copy_tree_t copy_tree;
+  svn_branch__state_v_delete_one_t delete_one;
+  svn_branch__state_v_purge_t purge;
 
 };
 

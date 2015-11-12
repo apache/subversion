@@ -3557,7 +3557,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_update_editor3_t *editor3;
+  svn_branch__compat_update_editor3_t *editor3;
   const char *repos_root_url;
   const char *anchor_repos_relpath;
   struct svn_wc__shim_fetch_baton_t *sfb;
@@ -3595,7 +3595,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
   sfb->base_rrpath = anchor_repos_relpath;
   sfb->fetch_base = TRUE;
 
-  SVN_ERR(svn_branch_compat_delta_from_txn_for_update(
+  SVN_ERR(svn_branch__compat_delta_from_txn_for_update(
                       editor, edit_baton,
                       editor3,
                       repos_root_url, anchor_repos_relpath,

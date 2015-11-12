@@ -692,7 +692,7 @@ update_internal(svn_revnum_t *result_rev,
                 apr_pool_t *scratch_pool)
 {
 #if 0
-  svn_update_editor3_t *update_editor;
+  svn_branch__compat_update_editor3_t *update_editor;
 #else
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton;

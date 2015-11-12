@@ -152,7 +152,7 @@ typedef struct svn_ra__vtable_t {
                             svn_depth_t depth,
                             svn_boolean_t send_copyfrom_args,
                             svn_boolean_t ignore_ancestry,
-                            svn_update_editor3_t *update_editor,
+                            svn_branch__compat_update_editor3_t *update_editor,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
   /* See svn_ra_do_update3(). */
@@ -178,7 +178,7 @@ typedef struct svn_ra__vtable_t {
                             const char *switch_url,
                             svn_boolean_t send_copyfrom_args,
                             svn_boolean_t ignore_ancestry,
-                            svn_update_editor3_t *switch_editor,
+                            svn_branch__compat_update_editor3_t *switch_editor,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
   /* See svn_ra_do_switch3(). */

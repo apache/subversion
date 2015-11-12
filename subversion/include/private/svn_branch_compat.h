@@ -67,7 +67,7 @@ extern "C" {
  * file therein, lives at least for the life time of @a result_pool.
  * @a scratch_pool is provided for temporary allocations.
  */
-typedef svn_error_t *(*svn_branch_compat__shim_fetch_func_t)(
+typedef svn_error_t *(*svn_branch__compat_fetch_func_t)(
   svn_node_kind_t *kind,
   apr_hash_t **props,
   svn_stringbuf_t **file_text,
@@ -82,17 +82,17 @@ typedef svn_error_t *(*svn_branch_compat__shim_fetch_func_t)(
 /*
  */
 svn_error_t *
-svn_payload_fetch(svn_element_payload_t **payload_p,
-                  svn_branch_txn_t *txn,
-                  svn_element_branch_ref_t branch_ref,
-                  svn_branch_compat__shim_fetch_func_t fetch_func,
-                  void *fetch_baton,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool);
+svn_branch__compat_fetch(svn_element__payload_t **payload_p,
+                         svn_branch__txn_t *txn,
+                         svn_element__branch_ref_t branch_ref,
+                         svn_branch__compat_fetch_func_t fetch_func,
+                         void *fetch_baton,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 /* An object for communicating out-of-band details between an Ev1-to-Ev3
  * shim and an Ev3-to-Ev1 shim. */
-typedef struct svn_branch_compat__shim_connector_t svn_branch_compat__shim_connector_t;
+typedef struct svn_branch__compat_shim_connector_t svn_branch__compat_shim_connector_t;
 
 /* Return an Ev3 editor in *EDITOR_P which will drive the Ev1 delta
  * editor DEDITOR/DEDIT_BATON.
@@ -132,14 +132,14 @@ typedef struct svn_branch_compat__shim_connector_t svn_branch_compat__shim_conne
  * allocations.
  */
 svn_error_t *
-svn_branch_compat_txn_from_delta_for_commit(
-                        svn_branch_txn_t **txn_p,
-                        svn_branch_compat__shim_connector_t **shim_connector,
+svn_branch__compat_txn_from_delta_for_commit(
+                        svn_branch__txn_t **txn_p,
+                        svn_branch__compat_shim_connector_t **shim_connector,
                         const svn_delta_editor_t *deditor,
                         void *dedit_baton,
-                        svn_branch_txn_t *branching_txn,
+                        svn_branch__txn_t *branching_txn,
                         const char *repos_root_url,
-                        svn_branch_compat__shim_fetch_func_t fetch_func,
+                        svn_branch__compat_fetch_func_t fetch_func,
                         void *fetch_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
@@ -164,15 +164,15 @@ svn_branch_compat_txn_from_delta_for_commit(
  * allocations.
  */
 svn_error_t *
-svn_branch_compat_delta_from_txn_for_commit(
+svn_branch__compat_delta_from_txn_for_commit(
                         const svn_delta_editor_t **deditor,
                         void **dedit_baton,
-                        svn_branch_txn_t *edit_txn,
+                        svn_branch__txn_t *edit_txn,
                         const char *repos_root_url,
                         const char *base_relpath,
-                        svn_branch_compat__shim_fetch_func_t fetch_func,
+                        svn_branch__compat_fetch_func_t fetch_func,
                         void *fetch_baton,
-                        const svn_branch_compat__shim_connector_t *shim_connector,
+                        const svn_branch__compat_shim_connector_t *shim_connector,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
@@ -187,21 +187,21 @@ svn_branch_compat_delta_from_txn_for_commit(
  * original or copy-from kind/properties/text for a path being committed.
  */
 svn_error_t *
-svn_branch_compat__insert_shims(
+svn_branch__compat_insert_shims(
                         const svn_delta_editor_t **new_deditor,
                         void **new_dedit_baton,
                         const svn_delta_editor_t *old_deditor,
                         void *old_dedit_baton,
                         const char *repos_root,
                         const char *base_relpath,
-                        svn_branch_compat__shim_fetch_func_t fetch_func,
+                        svn_branch__compat_fetch_func_t fetch_func,
                         void *fetch_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
 /* A callback for declaring the target revision of an update or switch.
  */
-typedef svn_error_t *(*svn_branch_compat__set_target_revision_func_t)(
+typedef svn_error_t *(*svn_branch__compat_set_target_revision_func_t)(
   void *baton,
   svn_revnum_t target_revision,
   apr_pool_t *scratch_pool);
@@ -211,29 +211,29 @@ typedef svn_error_t *(*svn_branch_compat__set_target_revision_func_t)(
  * This consists of a plain Ev3 editor and the additional methods or
  * resources needed for use as an update or switch editor.
  */
-typedef struct svn_update_editor3_t {
+typedef struct svn_branch__compat_update_editor3_t {
   /* The txn we're driving. */
-  svn_branch_txn_t *edit_txn;
+  svn_branch__txn_t *edit_txn;
 
   /* A method to communicate the target revision of the update (or switch),
    * to be called before driving the editor. It has its own baton, rather
    * than using the editor's baton, so that the editor can be replaced (by
    * a wrapper editor, typically) without having to wrap this callback. */
-  svn_branch_compat__set_target_revision_func_t set_target_revision_func;
+  svn_branch__compat_set_target_revision_func_t set_target_revision_func;
   void *set_target_revision_baton;
-} svn_update_editor3_t;
+} svn_branch__compat_update_editor3_t;
 
 /* Like svn_delta__ev3_from_delta_for_commit() but for an update editor.
  */
 svn_error_t *
-svn_branch_compat_txn_from_delta_for_update(
-                        svn_update_editor3_t **editor_p,
+svn_branch__compat_txn_from_delta_for_update(
+                        svn_branch__compat_update_editor3_t **editor_p,
                         const svn_delta_editor_t *deditor,
                         void *dedit_baton,
-                        svn_branch_txn_t *branching_txn,
+                        svn_branch__txn_t *branching_txn,
                         const char *repos_root_url,
                         const char *base_repos_relpath,
-                        svn_branch_compat__shim_fetch_func_t fetch_func,
+                        svn_branch__compat_fetch_func_t fetch_func,
                         void *fetch_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
@@ -243,13 +243,13 @@ svn_branch_compat_txn_from_delta_for_update(
 /* Like svn_delta__delta_from_ev3_for_commit() but for an update editor.
  */
 svn_error_t *
-svn_branch_compat_delta_from_txn_for_update(
+svn_branch__compat_delta_from_txn_for_update(
                         const svn_delta_editor_t **deditor,
                         void **dedit_baton,
-                        svn_update_editor3_t *update_editor,
+                        svn_branch__compat_update_editor3_t *update_editor,
                         const char *repos_root_url,
                         const char *base_repos_relpath,
-                        svn_branch_compat__shim_fetch_func_t fetch_func,
+                        svn_branch__compat_fetch_func_t fetch_func,
                         void *fetch_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
@@ -257,12 +257,13 @@ svn_branch_compat_delta_from_txn_for_update(
 /* An Ev1 editor that drives (heuristically) a move-tracking editor.
  */
 svn_error_t *
-svn_branch_get_migration_editor(const svn_delta_editor_t **old_editor,
-                                void **old_edit_baton,
-                                svn_branch_txn_t *edit_txn,
-                                svn_ra_session_t *from_session,
-                                svn_revnum_t revision,
-                                apr_pool_t *result_pool);
+svn_branch__compat_get_migration_editor(
+                        const svn_delta_editor_t **old_editor,
+                        void **old_edit_baton,
+                        svn_branch__txn_t *edit_txn,
+                        svn_ra_session_t *from_session,
+                        svn_revnum_t revision,
+                        apr_pool_t *result_pool);
 
 
 #ifdef __cplusplus

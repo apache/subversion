@@ -1064,7 +1064,7 @@ svn_ra_local__do_update_ev3(svn_ra_session_t *session,
                         svn_depth_t depth,
                         svn_boolean_t send_copyfrom_args,
                         svn_boolean_t ignore_ancestry,
-                        svn_update_editor3_t *update_editor3,
+                        svn_branch__compat_update_editor3_t *update_editor3,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
@@ -1074,7 +1074,7 @@ svn_ra_local__do_update_ev3(svn_ra_session_t *session,
   void *update_baton;
 
   fb->session = session;
-  SVN_ERR(svn_branch_compat_delta_from_txn_for_update(
+  SVN_ERR(svn_branch__compat_delta_from_txn_for_update(
                         &update_editor, &update_baton,
                         update_editor3,
                         sess->repos_url, sess->fs_path->data + 1,
@@ -1136,7 +1136,7 @@ svn_ra_local__do_switch_ev3(svn_ra_session_t *session,
                         const char *switch_url,
                         svn_boolean_t send_copyfrom_args,
                         svn_boolean_t ignore_ancestry,
-                        svn_update_editor3_t *switch_editor,
+                        svn_branch__compat_update_editor3_t *switch_editor,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
@@ -1146,7 +1146,7 @@ svn_ra_local__do_switch_ev3(svn_ra_session_t *session,
   void *update_baton;
 
   fb->session = session;
-  SVN_ERR(svn_branch_compat_delta_from_txn_for_update(
+  SVN_ERR(svn_branch__compat_delta_from_txn_for_update(
                         &update_editor, &update_baton,
                         switch_editor,
                         sess->repos_url, sess->fs_path->data + 1,

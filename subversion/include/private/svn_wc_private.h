@@ -1455,7 +1455,7 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
  * @since New in 1.8.
  */
 svn_error_t *
-svn_wc__get_update_editor_ev3(svn_update_editor3_t **update_editor,
+svn_wc__get_update_editor_ev3(svn_branch__compat_update_editor3_t **update_editor,
                           svn_revnum_t *target_revision,
                           svn_wc_context_t *wc_ctx,
                           const char *anchor_abspath,
@@ -1526,7 +1526,7 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
  * @since New in 1.8.
  */
 svn_error_t *
-svn_wc__get_switch_editor_ev3(svn_update_editor3_t **update_editor,
+svn_wc__get_switch_editor_ev3(svn_branch__compat_update_editor3_t **update_editor,
                           svn_revnum_t *target_revision,
                           svn_wc_context_t *wc_ctx,
                           const char *anchor_abspath,

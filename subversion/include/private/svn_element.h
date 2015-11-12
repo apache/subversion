@@ -26,8 +26,8 @@
  * @since New in 1.10.
  */
 
-#ifndef SVN_ELEMENT_H
-#define SVN_ELEMENT_H
+#ifndef SVN_BRANCH_ELEMENT_H
+#define SVN_BRANCH_ELEMENT_H
 
 #include <apr_pools.h>
 #include <apr_tables.h>
@@ -43,18 +43,18 @@ extern "C" {
 
 /** Like apr_hash_get() but the hash key is an integer. */
 void *
-svn_eid_hash_get(apr_hash_t *ht,
-                 int key);
+svn_eid__hash_get(apr_hash_t *ht,
+                  int key);
 
 /** Like apr_hash_set() but the hash key is an integer. */
 void
-svn_eid_hash_set(apr_hash_t *ht,
-                 int key,
-                 const void *val);
+svn_eid__hash_set(apr_hash_t *ht,
+                  int key,
+                  const void *val);
 
 /** Like apr_hash_this_key() but the hash key is an integer. */
 int
-svn_eid_hash_this_key(apr_hash_index_t *hi);
+svn_eid__hash_this_key(apr_hash_index_t *hi);
 
 struct svn_sort__item_t;
 
@@ -106,12 +106,12 @@ svn_eid__hash_sort_compare_items_by_eid(const struct svn_sort__item_t *a,
 
 /**
  */
-typedef struct svn_element_branch_ref_t
+typedef struct svn_element__branch_ref_t
 {
   svn_revnum_t rev;
   const char *branch_id;
   int eid;
-} svn_element_branch_ref_t;
+} svn_element__branch_ref_t;
 
 /** Versioned payload of an element, excluding tree structure information.
  *
@@ -126,7 +126,7 @@ typedef struct svn_element_branch_ref_t
  *     payload and the client may record an 'absent' WC node. (This
  *     would not make sense in a commit.)
  */
-typedef struct svn_element_payload_t svn_element_payload_t;
+typedef struct svn_element__payload_t svn_element__payload_t;
 
 /*
  * ========================================================================
@@ -150,7 +150,7 @@ typedef struct svn_element_payload_t svn_element_payload_t;
  * ### Idea for the future: Specify payload as an (optional) reference
  *     plus (optional) overrides or deltas against the reference?
  */
-struct svn_element_payload_t
+struct svn_element__payload_t
 {
   /* Is this a subbranch-root element, in other words a link to a nested
    * branch? If so, all other fields are irrelevant. */
@@ -162,7 +162,7 @@ struct svn_element_payload_t
   /* Reference an existing, committed payload. (Use with kind=unknown if
    * there is no content in props/text/targe fields.)
    * The 'null' value is (SVN_INVALID_REVNUM, NULL, *). */
-  svn_element_branch_ref_t branch_ref;
+  svn_element__branch_ref_t branch_ref;
 
   /* The pool in which the payload's content is allocated. Used when
    * resolving (populating the props/text/target in) a payload that was
@@ -186,29 +186,29 @@ struct svn_element_payload_t
 /* Return true iff PAYLOAD satisfies all its invariants.
  */
 svn_boolean_t
-svn_element_payload_invariants(const svn_element_payload_t *payload);
+svn_element__payload_invariants(const svn_element__payload_t *payload);
 
 /** Duplicate a node-payload @a old into @a result_pool.
  */
-svn_element_payload_t *
-svn_element_payload_dup(const svn_element_payload_t *old,
-                        apr_pool_t *result_pool);
+svn_element__payload_t *
+svn_element__payload_dup(const svn_element__payload_t *old,
+                         apr_pool_t *result_pool);
 
 /* Return true iff the payload of LEFT is identical to that of RIGHT.
  * References are not supported. Node kind 'unknown' is not supported.
  */
 svn_boolean_t
-svn_element_payload_equal(const svn_element_payload_t *left,
-                          const svn_element_payload_t *right,
-                          apr_pool_t *scratch_pool);
+svn_element__payload_equal(const svn_element__payload_t *left,
+                           const svn_element__payload_t *right,
+                           apr_pool_t *scratch_pool);
 
 /** Create a new node-payload object for a subbranch-root (link to a
  * nested branch).
  *
  * Allocate the result in @a result_pool.
  */
-svn_element_payload_t *
-svn_element_payload_create_subbranch(apr_pool_t *result_pool);
+svn_element__payload_t *
+svn_element__payload_create_subbranch(apr_pool_t *result_pool);
 
 /** Create a new node-payload object by reference to an existing payload.
  *
@@ -216,37 +216,37 @@ svn_element_payload_create_subbranch(apr_pool_t *result_pool);
  *
  * Allocate the result in @a result_pool.
  */
-svn_element_payload_t *
-svn_element_payload_create_ref(svn_revnum_t rev,
-                               const char *branch_id,
-                               int eid,
-                               apr_pool_t *result_pool);
+svn_element__payload_t *
+svn_element__payload_create_ref(svn_revnum_t rev,
+                                const char *branch_id,
+                                int eid,
+                                apr_pool_t *result_pool);
 
 /** Create a new node-payload object for a directory node.
  *
  * Allocate the result in @a result_pool.
  */
-svn_element_payload_t *
-svn_element_payload_create_dir(apr_hash_t *props,
-                               apr_pool_t *result_pool);
+svn_element__payload_t *
+svn_element__payload_create_dir(apr_hash_t *props,
+                                apr_pool_t *result_pool);
 
 /** Create a new node-payload object for a file node.
  *
  * Allocate the result in @a result_pool.
  */
-svn_element_payload_t *
-svn_element_payload_create_file(apr_hash_t *props,
-                                svn_stringbuf_t *text,
-                                apr_pool_t *result_pool);
+svn_element__payload_t *
+svn_element__payload_create_file(apr_hash_t *props,
+                                 svn_stringbuf_t *text,
+                                 apr_pool_t *result_pool);
 
 /** Create a new node-payload object for a symlink node.
  *
  * Allocate the result in @a result_pool.
  */
-svn_element_payload_t *
-svn_element_payload_create_symlink(apr_hash_t *props,
-                                   const char *target,
-                                   apr_pool_t *result_pool);
+svn_element__payload_t *
+svn_element__payload_create_symlink(apr_hash_t *props,
+                                    const char *target,
+                                    apr_pool_t *result_pool);
 
 /** @} */
 
@@ -263,37 +263,37 @@ svn_element_payload_create_symlink(apr_hash_t *props,
 /* The content (parent, name and payload) of an element-revision.
  * In other words, an el-rev node in a (mixed-rev) directory-tree.
  */
-typedef struct svn_element_content_t
+typedef struct svn_element__content_t
 {
   /* eid of the parent element, or -1 if this is the root element */
   int parent_eid;
   /* element name, or "" for root element; never null */
   const char *name;
   /* payload (kind, props, text, ...) */
-  svn_element_payload_t *payload;
+  svn_element__payload_t *payload;
 
-} svn_element_content_t;
+} svn_element__content_t;
 
 /* Return a new content object constructed with deep copies of PARENT_EID,
  * NAME and PAYLOAD, allocated in RESULT_POOL.
  */
-svn_element_content_t *
-svn_element_content_create(int parent_eid,
-                           const char *name,
-                           const svn_element_payload_t *payload,
-                           apr_pool_t *result_pool);
+svn_element__content_t *
+svn_element__content_create(int parent_eid,
+                            const char *name,
+                            const svn_element__payload_t *payload,
+                            apr_pool_t *result_pool);
 
 /* Return a deep copy of OLD, allocated in RESULT_POOL.
  */
-svn_element_content_t *
-svn_element_content_dup(const svn_element_content_t *old,
-                        apr_pool_t *result_pool);
+svn_element__content_t *
+svn_element__content_dup(const svn_element__content_t *old,
+                         apr_pool_t *result_pool);
 
 /* Return TRUE iff CONTENT_LEFT is the same as CONTENT_RIGHT. */
 svn_boolean_t
-svn_element_content_equal(const svn_element_content_t *content_left,
-                          const svn_element_content_t *content_right,
-                          apr_pool_t *scratch_pool);
+svn_element__content_equal(const svn_element__content_t *content_left,
+                           const svn_element__content_t *content_right,
+                           apr_pool_t *scratch_pool);
 
 /** @} */
 
@@ -324,34 +324,34 @@ svn_element_content_equal(const svn_element_content_t *content_left,
  * the repo), or as local stand-alone EIDs (in their own local name-space),
  * according to the context.
  */
-typedef struct svn_element_tree_t
+typedef struct svn_element__tree_t
 {
-  /* EID -> svn_branch_el_rev_content_t mapping. */
+  /* EID -> svn_element__content_t mapping. */
   apr_hash_t *e_map;
 
   /* Subtree root EID. (ROOT_EID must be an existing key in E_MAP.) */
   int root_eid;
 
-} svn_element_tree_t;
+} svn_element__tree_t;
 
 /* Create an element tree object.
  *
  * The result contains a *shallow* copy of E_MAP, or a new empty mapping
  * if E_MAP is null.
  */
-svn_element_tree_t *
-svn_element_tree_create(apr_hash_t *e_map,
-                        int root_eid,
-                        apr_pool_t *result_pool);
+svn_element__tree_t *
+svn_element__tree_create(apr_hash_t *e_map,
+                         int root_eid,
+                         apr_pool_t *result_pool);
 
-svn_element_content_t *
-svn_element_tree_get(const svn_element_tree_t *tree,
-                     int eid);
+svn_element__content_t *
+svn_element__tree_get(const svn_element__tree_t *tree,
+                      int eid);
 
 svn_error_t *
-svn_element_tree_set(svn_element_tree_t *tree,
-                     int eid,
-                     svn_element_content_t *element);
+svn_element__tree_set(svn_element__tree_t *tree,
+                      int eid,
+                      svn_element__content_t *element);
 
 /* Purge entries from E_MAP that don't connect, via parent directory hierarchy,
  * to ROOT_EID. In other words, remove elements that have been implicitly
@@ -363,9 +363,9 @@ svn_element_tree_set(svn_element_tree_t *tree,
  *     that is disconnected from ROOT_EID. This could be a problem.
  */
 void
-svn_element_tree_purge_orphans(apr_hash_t *e_map,
-                               int root_eid,
-                               apr_pool_t *scratch_pool);
+svn_element__tree_purge_orphans(apr_hash_t *e_map,
+                                int root_eid,
+                                apr_pool_t *scratch_pool);
 
 /* Return the subtree-relative path of element EID in TREE.
  *
@@ -374,9 +374,9 @@ svn_element_tree_purge_orphans(apr_hash_t *e_map,
  * ### TODO: Clarify sequencing requirements.
  */
 const char *
-svn_element_tree_get_path_by_eid(const svn_element_tree_t *tree,
-                                 int eid,
-                                 apr_pool_t *result_pool);
+svn_element__tree_get_path_by_eid(const svn_element__tree_t *tree,
+                                  int eid,
+                                  apr_pool_t *result_pool);
 
 /* Return the subtree rooted at EID within ELEMENT_TREE.
  *
@@ -384,10 +384,10 @@ svn_element_tree_get_path_by_eid(const svn_element_tree_t *tree,
  * shallow copy of the mapping in ELEMENT_TREE: the hash table is
  * duplicated but the keys and values (element content data) are not.
  */
-svn_element_tree_t *
-svn_element_tree_get_subtree_at_eid(svn_element_tree_t *element_tree,
-                                    int eid,
-                                    apr_pool_t *result_pool);
+svn_element__tree_t *
+svn_element__tree_get_subtree_at_eid(svn_element__tree_t *element_tree,
+                                     int eid,
+                                     apr_pool_t *result_pool);
 
 /** @} */
 
@@ -396,4 +396,4 @@ svn_element_tree_get_subtree_at_eid(svn_element_tree_t *element_tree,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_ELEMENT_H */
+#endif /* SVN_BRANCH_ELEMENT_H */
