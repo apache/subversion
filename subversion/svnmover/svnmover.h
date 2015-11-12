@@ -71,6 +71,18 @@ typedef struct svnmover_wc_version_t
   svn_branch__state_t *branch;
 } svnmover_wc_version_t;
 
+/* Return (left, right) pairs of element content that differ between
+ * subtrees LEFT and RIGHT.
+ *
+ * Set *DIFF_P to a hash of (eid -> (svn_element__content_t *)[2]).
+ */
+svn_error_t *
+svnmover_element_differences(apr_hash_t **diff_p,
+                             const svn_element__tree_t *left,
+                             const svn_element__tree_t *right,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
 /*  */
 typedef struct conflict_storage_t conflict_storage_t;
 
