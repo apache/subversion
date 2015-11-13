@@ -679,13 +679,13 @@ write_rev_prop(svn_ra_session_t *ra_session,
  * branch-tracking metadata from the repository into it.
  */
 static svn_error_t *
-svn_branch_revision_fetch_info(svn_branch__txn_t **txn_p,
-                               svn_branch__repos_t *repos,
-                               svn_ra_session_t *ra_session,
-                               const char *branch_info_dir,
-                               svn_revnum_t revision,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
+branch_revision_fetch_info(svn_branch__txn_t **txn_p,
+                           svn_branch__repos_t *repos,
+                           svn_ra_session_t *ra_session,
+                           const char *branch_info_dir,
+                           svn_revnum_t revision,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   svn_string_t *value;
   svn_stream_t *stream;
@@ -774,13 +774,13 @@ txn_fetch_payloads(svn_branch__txn_t *txn,
  * branch-tracking metadata from the repository into it.
  */
 static svn_error_t *
-svn_branch_repos_fetch_info(svn_branch__repos_t **repos_p,
-                            svn_ra_session_t *ra_session,
-                            const char *branch_info_dir,
-                            svn_branch__compat_fetch_func_t fetch_func,
-                            void *fetch_baton,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
+branch_repos_fetch_info(svn_branch__repos_t **repos_p,
+                        svn_ra_session_t *ra_session,
+                        const char *branch_info_dir,
+                        svn_branch__compat_fetch_func_t fetch_func,
+                        void *fetch_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   svn_branch__repos_t *repos
     = svn_branch__repos_create(result_pool);
@@ -793,10 +793,10 @@ svn_branch_repos_fetch_info(svn_branch__repos_t **repos_p,
     {
       svn_branch__txn_t *txn;
 
-      SVN_ERR(svn_branch_revision_fetch_info(&txn,
-                                             repos, ra_session, branch_info_dir,
-                                             r,
-                                             result_pool, scratch_pool));
+      SVN_ERR(branch_revision_fetch_info(&txn,
+                                         repos, ra_session, branch_info_dir,
+                                         r,
+                                         result_pool, scratch_pool));
       SVN_ERR(svn_branch__repos_add_revision(repos, txn));
       SVN_ERR(txn_fetch_payloads(txn, fetch_func, fetch_baton,
                                  result_pool, scratch_pool));
@@ -809,15 +809,15 @@ svn_branch_repos_fetch_info(svn_branch__repos_t **repos_p,
 /* Return a mutable state based on revision BASE_REVISION in REPOS.
  */
 static svn_error_t *
-svn_branch_get_mutable_state(svn_branch__txn_t **txn_p,
-                             svn_branch__repos_t *repos,
-                             svn_ra_session_t *ra_session,
-                             const char *branch_info_dir,
-                             svn_revnum_t base_revision,
-                             svn_branch__compat_fetch_func_t fetch_func,
-                             void *fetch_baton,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool)
+branch_get_mutable_state(svn_branch__txn_t **txn_p,
+                         svn_branch__repos_t *repos,
+                         svn_ra_session_t *ra_session,
+                         const char *branch_info_dir,
+                         svn_revnum_t base_revision,
+                         svn_branch__compat_fetch_func_t fetch_func,
+                         void *fetch_baton,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   svn_branch__txn_t *txn;
   apr_array_header_t *branches;
@@ -825,10 +825,10 @@ svn_branch_get_mutable_state(svn_branch__txn_t **txn_p,
 
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(base_revision));
 
-  SVN_ERR(svn_branch_revision_fetch_info(&txn,
-                                         repos, ra_session, branch_info_dir,
-                                         base_revision,
-                                         result_pool, scratch_pool));
+  SVN_ERR(branch_revision_fetch_info(&txn,
+                                     repos, ra_session, branch_info_dir,
+                                     base_revision,
+                                     result_pool, scratch_pool));
   SVN_ERR_ASSERT(txn->rev == base_revision);
   SVN_ERR(txn_fetch_payloads(txn, fetch_func, fetch_baton,
                              result_pool, scratch_pool));
@@ -1047,15 +1047,15 @@ svn_ra_load_branching_state(svn_branch__txn_t **branching_txn_p,
   *fetch_func = svn_ra_fetch;
   *fetch_baton = fbb;
 
-  SVN_ERR(svn_branch_repos_fetch_info(&repos,
-                                      session, branch_info_dir,
-                                      *fetch_func, *fetch_baton,
-                                      result_pool, scratch_pool));
-  SVN_ERR(svn_branch_get_mutable_state(branching_txn_p,
-                                       repos, session, branch_info_dir,
-                                       base_revision,
-                                       *fetch_func, *fetch_baton,
-                                       result_pool, scratch_pool));
+  SVN_ERR(branch_repos_fetch_info(&repos,
+                                  session, branch_info_dir,
+                                  *fetch_func, *fetch_baton,
+                                  result_pool, scratch_pool));
+  SVN_ERR(branch_get_mutable_state(branching_txn_p,
+                                   repos, session, branch_info_dir,
+                                   base_revision,
+                                   *fetch_func, *fetch_baton,
+                                   result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
