@@ -23,7 +23,6 @@
 
 #include "svnmover.h"
 
-#define HAVE_LINENOISE
 #ifdef HAVE_LINENOISE
 #include "linenoise/linenoise.c"
 #endif

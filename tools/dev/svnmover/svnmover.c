@@ -55,7 +55,6 @@
 #include "private/svn_client_private.h"
 #include "../libsvn_delta/debug_editor.h"
 
-#define HAVE_LINENOISE
 #ifdef HAVE_LINENOISE
 #include "linenoise/linenoise.h"
 #endif
@@ -99,6 +98,8 @@ static const svn_token_map_t ui_mode_map[]
   (strcmp(svn_branch__get_id(branch1, scratch_pool), \
           svn_branch__get_id(branch2, scratch_pool)) == 0)
 
+static svn_boolean_t use_coloured_output = FALSE;
+
 #ifndef WIN32
 
 /* Some ANSI escape codes for controlling text colour in terminal output. */
@@ -119,8 +120,6 @@ static const svn_token_map_t ui_mode_map[]
 #define TEXT_BG_MAGENTA "\x1b[45m"
 #define TEXT_BG_CYAN    "\x1b[46m"
 #define TEXT_BG_WHITE   "\x1b[47m"
-
-static svn_boolean_t use_coloured_output = FALSE;
 
 #define settext(text_attr) \
   do { \

@@ -33,6 +33,13 @@
 
 #include "private/svn_branch.h"
 
+/* Decide whether to use the 'linenoise' library for command-line input
+   editing and completion. */
+#ifndef WIN32
+#define HAVE_LINENOISE
+#endif
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
