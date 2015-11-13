@@ -25,6 +25,8 @@
 
 #ifdef HAVE_LINENOISE
 #include "linenoise/linenoise.c"
+#else
+#include "svn_cmdline.h"
 #endif
 
 
@@ -33,6 +35,7 @@ svnmover_prompt_user(const char **result,
                      const char *prompt_str,
                      apr_pool_t *pool)
 {
+#ifdef HAVE_LINENOISE
   char *input;
 
   input = linenoise(prompt_str);
@@ -47,6 +50,9 @@ svnmover_prompt_user(const char **result,
     }
   *result = apr_pstrdup(pool, input);
   free(input);
+#else
+  SVN_ERR(svn_cmdline_prompt_user2(result, prompt_str, NULL, pool));
+#endif
   return SVN_NO_ERROR;
 }
 
