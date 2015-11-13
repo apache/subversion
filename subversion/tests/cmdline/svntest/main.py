@@ -162,7 +162,6 @@ svnrdump_binary = P('svnrdump/svnrdump')
 svnsync_binary = P('svnsync/svnsync')
 svnversion_binary = P('svnversion/svnversion')
 svndumpfilter_binary = P('svndumpfilter/svndumpfilter')
-svnmover_binary = P('svnmover/svnmover')
 svnmucc_binary = P('svnmucc/svnmucc')
 svnfsfs_binary = P('svnfsfs/svnfsfs')
 entriesdump_binary = P('tests/cmdline/entries-dump')
@@ -180,6 +179,7 @@ svnauthz_binary = os.path.abspath('../../../tools/server-side/svnauthz' + _exe)
 svnauthz_validate_binary = os.path.abspath(
     '../../../tools/server-side/svnauthz-validate' + _exe
 )
+svnmover_binary = os.path.abspath('../../../tools/dev/svnmover/svnmover' + _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -2277,7 +2277,6 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                                         'jsvndumpfilter' + _bat)
     svnversion_binary = os.path.join(options.svn_bin,
                                      'jsvnversion' + _bat)
-    svnmover_binary = os.path.join(options.svn_bin, 'jsvnmover' + _bat)
     svnmucc_binary = os.path.join(options.svn_bin, 'jsvnmucc' + _bat)
   else:
     if options.svn_bin:
@@ -2289,13 +2288,13 @@ def execute_tests(test_list, serial_only = False, test_name = None,
       svndumpfilter_binary = os.path.join(options.svn_bin,
                                           'svndumpfilter' + _exe)
       svnversion_binary = os.path.join(options.svn_bin, 'svnversion' + _exe)
-      svnmover_binary = os.path.join(options.svn_bin, 'svnmover' + _exe)
       svnmucc_binary = os.path.join(options.svn_bin, 'svnmucc' + _exe)
 
   if options.tools_bin:
     svnauthz_binary = os.path.join(options.tools_bin, 'svnauthz' + _exe)
     svnauthz_validate_binary = os.path.join(options.tools_bin,
                                             'svnauthz-validate' + _exe)
+    svnmover_binary = os.path.join(options.tools_bin, 'svnmover' + _exe)
 
   ######################################################################
 
