@@ -367,7 +367,7 @@ svn_ra_do_switch4(svn_ra_session_t *session,
 
 /* Fetch kind and/or props and/or text.
  *
- * Implements svn_branch_compat__shim_fetch_func_t. */
+ * Implements svn_branch__compat_fetch_func_t. */
 svn_error_t *
 svn_ra_fetch(svn_node_kind_t *kind_p,
       apr_hash_t **props_p,
