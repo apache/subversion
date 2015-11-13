@@ -87,8 +87,6 @@ brief_eid_and_name_or_nil(svn_element__content_t *e,
 {
   return e ? apr_psprintf(result_pool, "%d/%s", e->parent_eid, e->name)
            : "<nil>";
-
-  return SVN_NO_ERROR;
 }
 
 /* Options to control how strict the merge is about detecting conflicts.

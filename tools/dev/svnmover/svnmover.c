@@ -3476,6 +3476,7 @@ parse_actions(apr_array_header_t **actions,
   return SVN_NO_ERROR;
 }
 
+#ifdef HAVE_LINENOISE
 /* A command-line completion callback for the 'Line Noise' interactive
  * prompting.
  *
@@ -3520,6 +3521,7 @@ linenoise_completion(const char *buf, linenoiseCompletions *lc)
         }
     }
 }
+#endif
 
 /* Display a prompt, read a line of input and split it into words.
  *
@@ -3889,7 +3891,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   if (interactive_actions)
     {
+#ifdef HAVE_LINENOISE
       linenoiseSetCompletionCallback(linenoise_completion);
+#endif
     }
 
   SVN_ERR(wc_create(&wc,
