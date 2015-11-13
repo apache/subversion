@@ -367,7 +367,7 @@ subversion/libsvn_subr/x509.h
  *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-For the (modified) 'linenoise' library in subversion/svnmover/linenoise
+For the (modified) 'linenoise' library in tools/dev/svnmover/linenoise
 
   Copyright (c) 2010-2014, Salvatore Sanfilippo <antirez at gmail dot com>
   Copyright (c) 2010-2013, Pieter Noordhuis <pcnoordhuis at gmail dot com>
