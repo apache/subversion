@@ -189,13 +189,34 @@ typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
  * It defines the number of bytes that must have been sent since the last
  * check before the next check will be made.
  *
+ * If @a max_in is not 0, error out and close the connection whenever more
+ * than @a max_in bytes are received for a command (e.g. a client request).
+ * The limit enforced may be slightly different, +/- the I/O buffer size. 
+ *
  * @note If @a out_stream is an wrapped apr_file_t* the backing file will be
  * used for some operations.
  *
  * Allocate the result in @a pool.
  *
- * @since New in 1.9
+ * @since New in 1.10
  */
+svn_ra_svn_conn_t *svn_ra_svn_create_conn5(apr_socket_t *sock,
+                                           svn_stream_t *in_stream,
+                                           svn_stream_t *out_stream,
+                                           int compression_level,
+                                           apr_size_t zero_copy_limit,
+                                           apr_size_t error_check_interval,
+                                           apr_uint64_t max_in,
+                                           apr_pool_t *result_pool);
+
+
+/** Similar to svn_ra_svn_create_conn5() but with @a max_in and @a max_out
+ * set to 0.
+ *
+ * @since New in 1.9
+ * @deprecated Provided for backward compatibility with the 1.9 API.
+ */
+SVN_DEPRECATED
 svn_ra_svn_conn_t *svn_ra_svn_create_conn4(apr_socket_t *sock,
                                            svn_stream_t *in_stream,
                                            svn_stream_t *out_stream,

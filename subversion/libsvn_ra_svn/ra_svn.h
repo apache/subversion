@@ -96,6 +96,10 @@ struct svn_ra_svn_conn_st {
   apr_size_t error_check_interval;
   svn_boolean_t may_check_for_error;
 
+  /* I/O limits and tracking */
+  apr_uint64_t max_in;
+  apr_uint64_t current_in;
+
   /* repository info */
   const char *uuid;
   const char *repos_root;
@@ -150,6 +154,12 @@ void svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
 /* Return true if there is input waiting on conn. */
 svn_error_t *svn_ra_svn__data_available(svn_ra_svn_conn_t *conn,
                                        svn_boolean_t *data_available);
+
+/* Signal a new request / response pair on CONN.  That resets the I/O
+ * counters we use to limit the size of individual requests / response pairs.
+ */
+void
+svn_ra_svn__reset_command_io_counters(svn_ra_svn_conn_t *conn);
 
 /* CRAM-MD5 client implementation. */
 svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,

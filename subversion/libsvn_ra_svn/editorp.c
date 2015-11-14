@@ -1106,6 +1106,10 @@ svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
   while (!state.done)
     {
       svn_pool_clear(subpool);
+
+      /* WRT to applying I/O limits, treat each editor command as a separate
+       * protocol command. */
+      svn_ra_svn__reset_command_io_counters(conn);
       if (editor)
         {
           cmd_handler_t handler;

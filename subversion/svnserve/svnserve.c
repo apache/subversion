@@ -155,6 +155,15 @@ enum run_mode {
  */
 #define ACCEPT_BACKLOG 128
 
+/* Default limit to the client request size in MBytes.  This effectively
+ * limits the size of a paths and individual property values to about
+ * this value.
+ *
+ * Note that (MAX_REQUEST_SIZE + 4M) * THREADPOOL_MAX_SIZE is roughly
+ * the peak memory usage of the RA layer.
+ */
+#define MAX_REQUEST_SIZE 16
+
 #ifdef WIN32
 static apr_os_sock_t winservice_svnserve_accept_socket = INVALID_SOCKET;
 
@@ -210,6 +219,7 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_MIN_THREADS     271
 #define SVNSERVE_OPT_MAX_THREADS     272
 #define SVNSERVE_OPT_BLOCK_READ      273
+#define SVNSERVE_OPT_MAX_REQUEST     274
 
 /* Text macro because we can't use #ifdef sections inside a N_("...")
    macro expansion. */
@@ -345,6 +355,19 @@ static const apr_getopt_option_t svnserve__options[] =
         "Default is " APR_STRINGIFY(THREADPOOL_MAX_SIZE) "."
         ONLY_AVAILABLE_WITH_THEADS)},
 #endif
+    {"max-request-size", SVNSERVE_OPT_MAX_REQUEST, 1,
+     N_("Maximum acceptable size of a client request in MB.\n"
+        "                             "
+        "This implicitly limits the length of paths and\n"
+        "                             "
+        "property values that can be sent to the server.\n"
+        "                             "
+        "Also the peak memory usage for protocol handling\n"
+        "                             "
+        "per server thread or sub-process.\n"
+        "                             "
+        "0 disables the size check; default is "
+        APR_STRINGIFY(MAX_REQUEST_SIZE) ".")},
     {"foreground",        SVNSERVE_OPT_FOREGROUND, 0,
      N_("run in foreground (useful for debugging)\n"
         "                             "
@@ -728,6 +751,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   params.memory_cache_size = (apr_uint64_t)-1;
   params.zero_copy_limit = 0;
   params.error_check_interval = 4096;
+  params.max_request_size = MAX_REQUEST_SIZE * 0x100000;
 
   while (1)
     {
@@ -891,6 +915,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           }
           break;
 
+        case SVNSERVE_OPT_MAX_REQUEST:
+          params.max_request_size = 0x100000 * apr_strtoi64(arg, NULL, 0);
+          break;
+
         case SVNSERVE_OPT_MIN_THREADS:
           min_thread_count = (apr_size_t)apr_strtoi64(arg, NULL, 0);
           break;
@@ -1039,10 +1067,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
        * the pool cleanup handlers that call sasl_dispose() (connection_pool)
        * and sasl_done() (pool) are run in the right order. See issue #3664. */
       connection_pool = svn_pool_create(pool);
-      conn = svn_ra_svn_create_conn4(NULL, stdin_stream, stdout_stream,
+      conn = svn_ra_svn_create_conn5(NULL, stdin_stream, stdout_stream,
                                      params.compression_level,
                                      params.zero_copy_limit,
                                      params.error_check_interval,
+                                     params.max_request_size,
                                      connection_pool);
       err = serve(conn, &params, connection_pool);
       svn_pool_destroy(connection_pool);
