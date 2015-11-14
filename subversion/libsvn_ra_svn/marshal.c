@@ -1204,6 +1204,16 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else
     {
+      svn_stringbuf_t *stringbuf;
+
+      /* Don't even attempt to read anything that exceeds the I/O limit.
+       * So, we can terminate the transfer at an early point, saving
+       * everybody's time and resources. */
+      if (conn->max_in && (conn->max_in < len64))
+        return svn_error_create(SVN_ERR_RA_SVN_REQUEST_SIZE, NULL,
+                                "The client request size exceeds the "
+                                "configured limit");
+
       /* Read the string in chunks.  The chunk size is large enough to avoid
        * re-allocation in typical cases, and small enough to ensure we do
        * not pre-allocate an unreasonable amount of memory if (perhaps due
@@ -1212,7 +1222,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
        * start small and wait for all that data to actually show up.  This
        * does not fully prevent DOS attacks but makes them harder (you have
        * to actually send gigabytes of data). */
-      svn_stringbuf_t *stringbuf = svn_stringbuf_create_empty(pool);
+      stringbuf = svn_stringbuf_create_empty(pool);
 
       /* Read string data directly into the string structure.
        * Do it iteratively.  */
