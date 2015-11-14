@@ -3372,6 +3372,11 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
   prefix_orig_len = strlen(prefix) + 1;
   prefix_len = ALIGN_VALUE(prefix_orig_len);
 
+  /* Paranoia check to ensure pointer arithmetics work as expected. */
+  if (prefix_orig_len >= SVN_MAX_OBJECT_SIZE)
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                            _("Prefix too long"));
+
   /* Construct the folded prefix key. */
   SVN_ERR(svn_checksum(&checksum,
                        svn_checksum_md5,
