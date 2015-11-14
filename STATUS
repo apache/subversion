@@ -85,7 +85,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.9.x-r1706428
    Votes:
-     +1: kotkov
+     +1: kotkov, ivan
      -0.1: rhuijben (Touches far more cases than issue #4598 without properly
                      argumenting why,
                      without r1711507, r1711510)
