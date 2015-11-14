@@ -492,9 +492,13 @@ static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   apr_size_t len;
 
   SVN_ERR_ASSERT(conn->read_ptr == conn->read_end);
+
+  /* Make sure we tell the other side everything we have to say before
+   * reading / waiting for an answer. */
   if (conn->write_pos)
     SVN_ERR(writebuf_flush(conn, pool));
 
+  /* Fill (some of the) buffer. */
   len = sizeof(conn->read_buf);
   SVN_ERR(readbuf_input(conn, conn->read_buf, &len, pool));
   conn->read_ptr = conn->read_buf;
