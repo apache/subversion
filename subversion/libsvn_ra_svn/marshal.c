@@ -186,6 +186,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn5(apr_socket_t *sock,
                                            apr_size_t zero_copy_limit,
                                            apr_size_t error_check_interval,
                                            apr_uint64_t max_in,
+                                           apr_uint64_t max_out,
                                            apr_pool_t *result_pool)
 {
   svn_ra_svn_conn_t *conn;
@@ -207,6 +208,8 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn5(apr_socket_t *sock,
   conn->may_check_for_error = error_check_interval == 0;
   conn->max_in = max_in;
   conn->current_in = 0;
+  conn->max_out = max_out;
+  conn->current_out = 0;
   conn->block_handler = NULL;
   conn->block_baton = NULL;
   conn->capabilities = apr_hash_make(result_pool);
@@ -319,18 +322,24 @@ void
 svn_ra_svn__reset_command_io_counters(svn_ra_svn_conn_t *conn)
 {
   conn->current_in = 0;
+  conn->current_out = 0;
 }
 
 
 /* --- WRITE BUFFER MANAGEMENT --- */
 
-/* Return an error object if CONN exceeded its send limits. */
+/* Return an error object if CONN exceeded its send or receive limits. */
 static svn_error_t *
 check_io_limits(svn_ra_svn_conn_t *conn)
 {
   if (conn->max_in && (conn->current_in > conn->max_in))
     return svn_error_create(SVN_ERR_RA_SVN_REQUEST_SIZE, NULL,
                             "The client request size exceeds the "
+                            "configured limit");
+
+  if (conn->max_out && (conn->current_out > conn->max_out))
+    return svn_error_create(SVN_ERR_RA_SVN_RESPONSE_SIZE, NULL,
+                            "The server response size exceeds the "
                             "configured limit");
 
   return SVN_NO_ERROR;
@@ -344,6 +353,12 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_size_t count;
   apr_pool_t *subpool = NULL;
   svn_ra_svn__session_baton_t *session = conn->session;
+
+  /* Limit the size of the response, if a limit has been configured.
+   * This is to limit the server load in case users e.g. accidentally ran
+   * an export on the root folder. */
+  conn->current_out += len;
+  SVN_ERR(check_io_limits(conn));
 
   while (data < end)
     {

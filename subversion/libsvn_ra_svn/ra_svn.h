@@ -99,6 +99,8 @@ struct svn_ra_svn_conn_st {
   /* I/O limits and tracking */
   apr_uint64_t max_in;
   apr_uint64_t current_in;
+  apr_uint64_t max_out;
+  apr_uint64_t current_out;
 
   /* repository info */
   const char *uuid;

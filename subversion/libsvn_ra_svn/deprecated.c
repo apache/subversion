@@ -272,7 +272,7 @@ svn_ra_svn_create_conn4(apr_socket_t *sock,
 {
   return svn_ra_svn_create_conn5(sock, in_stream, out_stream,
                                  compression_level, zero_copy_limit,
-                                 error_check_interval, 0, pool);
+                                 error_check_interval, 0, 0, pool);
 }
 
 svn_ra_svn_conn_t *
