@@ -678,19 +678,26 @@ internal_auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   svn_boolean_t success;
   const char *mech, *mecharg;
+  apr_pool_t *iterpool;
 
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w((!", "success"));
   SVN_ERR(send_mechs(conn, pool, b, required, needs_username));
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!)c)", b->repository->realm));
+
+  iterpool = svn_pool_create(pool);
   do
     {
+      svn_pool_clear(iterpool);
+
       SVN_ERR(svn_ra_svn__read_tuple(conn, pool, "w(?c)", &mech, &mecharg));
       if (!*mech)
         break;
       SVN_ERR(auth(&success, conn, mech, mecharg, b, required,
-                   needs_username, pool));
+                   needs_username, iterpool));
     }
   while (!success);
+  svn_pool_destroy(iterpool);
+
   return SVN_NO_ERROR;
 }
 

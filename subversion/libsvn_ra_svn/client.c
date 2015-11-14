@@ -1956,6 +1956,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   svn_revnum_t revision;
   svn_boolean_t is_done;
+  apr_pool_t *iterpool;
   int i;
 
   /* Transmit the parameters. */
@@ -1976,12 +1977,14 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
   /* Read the hash items. */
   is_done = FALSE;
   *locations = apr_hash_make(pool);
+  iterpool = svn_pool_create(pool);
   while (!is_done)
     {
       svn_ra_svn__item_t *item;
       const char *ret_path;
 
-      SVN_ERR(svn_ra_svn__read_item(conn, pool, &item));
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_ra_svn__read_item(conn, iterpool, &item));
       if (is_done_response(item))
         is_done = 1;
       else if (item->kind != SVN_RA_SVN_LIST)
@@ -1991,12 +1994,16 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
         {
           SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list, "rc",
                                           &revision, &ret_path));
+
+          /* This also makes RET_PATH live in POOL rather than ITERPOOL. */
           ret_path = svn_fspath__canonicalize(ret_path, pool);
           apr_hash_set(*locations, apr_pmemdup(pool, &revision,
                                                sizeof(revision)),
                        sizeof(revision), ret_path);
         }
     }
+
+  svn_pool_destroy(iterpool);
 
   /* Read the response. This is so the server would have a chance to
    * report an error. */
