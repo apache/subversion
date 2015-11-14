@@ -100,7 +100,7 @@ svn__decode_uint(apr_uint64_t *val,
 {
   apr_uint64_t temp = 0;
 
-  if (p + SVN__MAX_ENCODED_UINT_LEN < end)
+  if (end - p > SVN__MAX_ENCODED_UINT_LEN)
     end = p + SVN__MAX_ENCODED_UINT_LEN;
 
   /* Decode bytes until we're done. */
