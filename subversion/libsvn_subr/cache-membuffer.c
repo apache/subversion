@@ -1670,7 +1670,7 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
 
       /* Don't be too eager to cache data.  If a lot of data has been moved
        * around, the current item has probably a relatively low priority.
-       * We must also limit the effort spent here (if even in case of faulty
+       * We must also limit the effort spent here (even in case of faulty
        * heuristics).  Therefore, give up after some time.
        */
       if (moved_size > 4 * to_fit_in->size && moved_count > 7)
