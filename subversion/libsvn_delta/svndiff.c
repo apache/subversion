@@ -689,8 +689,8 @@ write_handler(void *baton,
           /* Check for source windows which slide backwards.  */
           if (sview_len > 0
               && (sview_offset < db->last_sview_offset
-              || (sview_offset + sview_len
-                  < db->last_sview_offset + db->last_sview_len)))
+                  || (sview_offset + sview_len
+                      < db->last_sview_offset + db->last_sview_len)))
             return svn_error_create(
                      SVN_ERR_SVNDIFF_BACKWARD_VIEW, NULL,
                      _("Svndiff has backwards-sliding source views"));
@@ -710,7 +710,7 @@ write_handler(void *baton,
         }
 
       /* Wait for more data if we don't have enough bytes for the
-         whole window.  */
+         whole window. */
       if ((apr_size_t) (end - p) < db->inslen + db->newlen)
         return SVN_NO_ERROR;
 
