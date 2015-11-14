@@ -1665,7 +1665,7 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
 
       /* leave function as soon as the insertion window is large enough
        */
-      if (end >= to_fit_in->size + cache->l2.current_data)
+      if (end - cache->l2.current_data >= to_fit_in->size)
         return TRUE;
 
       /* Don't be too eager to cache data.  If a lot of data has been moved
@@ -1790,7 +1790,7 @@ ensure_data_insertable_l1(svn_membuffer_t *cache, apr_size_t size)
 
       /* leave function as soon as the insertion window is large enough
        */
-      if (end >= size + cache->l1.current_data)
+      if (end - cache->l1.current_data >= size)
         return TRUE;
 
       /* Enlarge the insertion window
@@ -2679,9 +2679,11 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
           if (item_data != orig_data)
             {
               /* Remove the old entry and try to make space for the new one.
+               * Note that the key has already been stored in the past, i.e.
+               * it is shorter than the MAX_ENTRY_SIZE.
                */
               drop_entry(cache, entry);
-              if (   (cache->max_entry_size >= item_size + key_len)
+              if (   (cache->max_entry_size - key_len >= item_size)
                   && ensure_data_insertable_l1(cache, item_size + key_len))
                 {
                   /* Write the new entry.

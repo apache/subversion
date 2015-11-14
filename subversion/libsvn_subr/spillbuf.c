@@ -242,7 +242,7 @@ svn_spillbuf__write(svn_spillbuf_t *buf,
      will grow too large. Create the file and place the pending data into
      the temporary file.  */
   if (buf->spill == NULL
-      && (buf->memory_size + len) > buf->maxsize)
+      && ((buf->maxsize - buf->memory_size) < len))
     {
       SVN_ERR(svn_io_open_unique_file3(&buf->spill,
                                        &buf->filename,
