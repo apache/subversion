@@ -152,6 +152,9 @@ typedef struct serve_params_t {
      coming in from the client. */
   apr_size_t error_check_interval;
 
+  /* If not 0, error out on requests exceeding this value. */
+  apr_uint64_t max_request_size;
+
   /* Use virtual-host-based path to repo. */
   svn_boolean_t vhost;
 } serve_params_t;
