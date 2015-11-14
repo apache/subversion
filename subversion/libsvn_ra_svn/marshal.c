@@ -1189,7 +1189,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   char *dest;
 
   /* We can't store strings longer than the maximum size of apr_size_t,
-   * so check for wrapping */
+   * so check before using the truncated value. */
   if (len64 > APR_SIZE_MAX)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("String length larger than maximum"));
