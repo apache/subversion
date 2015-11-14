@@ -90,14 +90,6 @@ Candidate changes:
                      argumenting why,
                      without r1711507, r1711510)
 
- * r1711346
-   Properly remove tempfiles in svnlook on diff errors such as EPIPE.
-   Justification:
-     Simple fix makes it far less likely that tempfiles are left behind
-     on the server.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1668625
    Fix 'svn diff --summarize --ignore-properties'.
    Justification:
@@ -135,3 +127,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1711346
+   Properly remove tempfiles in svnlook on diff errors such as EPIPE.
+   Justification:
+     Simple fix makes it far less likely that tempfiles are left behind
+     on the server.
+   Votes:
+     +1: rhuijben, stefan2, ivan
