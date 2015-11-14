@@ -220,6 +220,7 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_MAX_THREADS     272
 #define SVNSERVE_OPT_BLOCK_READ      273
 #define SVNSERVE_OPT_MAX_REQUEST     274
+#define SVNSERVE_OPT_MAX_RESPONSE    275
 
 /* Text macro because we can't use #ifdef sections inside a N_("...")
    macro expansion. */
@@ -368,6 +369,16 @@ static const apr_getopt_option_t svnserve__options[] =
         "                             "
         "0 disables the size check; default is "
         APR_STRINGIFY(MAX_REQUEST_SIZE) ".")},
+    {"max-response-size", SVNSERVE_OPT_MAX_RESPONSE, 1,
+     N_("Maximum acceptable server response size in MB.\n"
+        "                             "
+        "Longer responses get truncated and return an\n"
+        "                             "
+        "error.  This limits the server load e.g. when\n"
+        "                             "
+        "checking out at the wrong path level.\n"
+        "                             "
+        "Default is 0 (disabled).")},
     {"foreground",        SVNSERVE_OPT_FOREGROUND, 0,
      N_("run in foreground (useful for debugging)\n"
         "                             "
@@ -752,6 +763,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   params.zero_copy_limit = 0;
   params.error_check_interval = 4096;
   params.max_request_size = MAX_REQUEST_SIZE * 0x100000;
+  params.max_response_size = 0;
 
   while (1)
     {
@@ -919,6 +931,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           params.max_request_size = 0x100000 * apr_strtoi64(arg, NULL, 0);
           break;
 
+        case SVNSERVE_OPT_MAX_RESPONSE:
+          params.max_response_size = 0x100000 * apr_strtoi64(arg, NULL, 0);
+          break;
+
         case SVNSERVE_OPT_MIN_THREADS:
           min_thread_count = (apr_size_t)apr_strtoi64(arg, NULL, 0);
           break;
@@ -1072,6 +1088,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                      params.zero_copy_limit,
                                      params.error_check_interval,
                                      params.max_request_size,
+                                     params.max_response_size,
                                      connection_pool);
       err = serve(conn, &params, connection_pool);
       svn_pool_destroy(connection_pool);

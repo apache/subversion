@@ -1547,6 +1547,11 @@ SVN_ERROR_START
              SVN_ERR_RA_SVN_CATEGORY_START + 9,
              "Client request too long")
 
+  /** @since New in 1.10  */
+  SVN_ERRDEF(SVN_ERR_RA_SVN_RESPONSE_SIZE,
+             SVN_ERR_RA_SVN_CATEGORY_START + 10,
+             "Server response too long")
+
   /* libsvn_auth errors */
 
        /* this error can be used when an auth provider doesn't have

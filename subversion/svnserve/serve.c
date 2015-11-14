@@ -4128,6 +4128,7 @@ serve_interruptable(svn_boolean_t *terminate_p,
                                   connection->params->zero_copy_limit,
                                   connection->params->error_check_interval,
                                   connection->params->max_request_size,
+                                  connection->params->max_response_size,
                                   connection->pool);
 
       /* Construct server baton and open the repository for the first time. */

@@ -155,6 +155,9 @@ typedef struct serve_params_t {
   /* If not 0, error out on requests exceeding this value. */
   apr_uint64_t max_request_size;
 
+  /* If not 0, stop sending a response once it exceeds this value. */
+  apr_uint64_t max_response_size;
+
   /* Use virtual-host-based path to repo. */
   svn_boolean_t vhost;
 } serve_params_t;
