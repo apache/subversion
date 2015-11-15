@@ -122,6 +122,20 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1714317
+   Don't ignore some of the parameters to svn_ra_svn_create_conn3.
+   Justification:
+     This is a regresssion against 1.8 but the fix is trivial.
+   Votes:
+     +1: stefan2
+
+ * r1714358
+   Fix overflow detection in svn_stringbuf_remove and svn_stringbuf_replace.
+   Justification:
+     Using the public API as documented may result in undefined behavior.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
