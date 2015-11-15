@@ -776,7 +776,7 @@ def run_svnversion(*varargs):
 
 def run_svnmover(*varargs):
   """Run svnmover with VARARGS, returns exit code as int; stdout, stderr as
-  list of lines (including line terminators).  Use binary mode for output."""
+  list of lines (including line terminators)."""
   return run_command(svnmover_binary, 1, False,
                      *(_with_auth(_with_config_dir(varargs))))
 
