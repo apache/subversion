@@ -122,7 +122,7 @@ Candidate changes:
    Votes:
      +1: ivan
 
- * r1714317
+ * r1714313
    Don't ignore some of the parameters to svn_ra_svn_create_conn3.
    Justification:
      This is a regresssion against 1.8 but the fix is trivial.
