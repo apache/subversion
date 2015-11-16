@@ -1600,7 +1600,7 @@ def url_to_non_existent_url_path(sbox):
   msg = ".*: (" + \
         "|".join(["Path 'G(/C/E)?' not present",
                   ".*G(/C/E)?' path not found",
-                  "File not found.*'/G/C/E(/I)?'",
+                  "File not found.*'/G/C/E/I'",
                   ]) + ")"
 
   # Expect failure on 'svn cp SRC DST' where one or more ancestor
