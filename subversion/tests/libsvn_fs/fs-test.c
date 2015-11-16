@@ -5960,6 +5960,9 @@ purge_txn_test(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Test svn_fs_{contents,props}_{different,changed}().
+ * ### This currently only tests them on revision roots, not on txn roots.
+ */
 static svn_error_t *
 compare_contents(const svn_test_opts_t *opts,
                  apr_pool_t *pool)

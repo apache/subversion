@@ -228,7 +228,7 @@ svn_prefix_string__create(svn_prefix_tree__t *tree,
     }
 
   /* add sub-node(s) and final string */
-  while (node->length + 7 < len)
+  while (len - node->length > 7)
     {
       new_node = apr_pcalloc(tree->pool, sizeof(*new_node));
       new_node->key.prefix = node;

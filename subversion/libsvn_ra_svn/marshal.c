@@ -179,12 +179,14 @@ svn_ra_svn__to_private_array(const apr_array_header_t *source,
 
 /* --- CONNECTION INITIALIZATION --- */
 
-svn_ra_svn_conn_t *svn_ra_svn_create_conn4(apr_socket_t *sock,
+svn_ra_svn_conn_t *svn_ra_svn_create_conn5(apr_socket_t *sock,
                                            svn_stream_t *in_stream,
                                            svn_stream_t *out_stream,
                                            int compression_level,
                                            apr_size_t zero_copy_limit,
                                            apr_size_t error_check_interval,
+                                           apr_uint64_t max_in,
+                                           apr_uint64_t max_out,
                                            apr_pool_t *result_pool)
 {
   svn_ra_svn_conn_t *conn;
@@ -204,6 +206,10 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn4(apr_socket_t *sock,
   conn->written_since_error_check = 0;
   conn->error_check_interval = error_check_interval;
   conn->may_check_for_error = error_check_interval == 0;
+  conn->max_in = max_in;
+  conn->current_in = 0;
+  conn->max_out = max_out;
+  conn->current_out = 0;
   conn->block_handler = NULL;
   conn->block_baton = NULL;
   conn->capabilities = apr_hash_make(result_pool);
@@ -312,7 +318,32 @@ svn_error_t *svn_ra_svn__data_available(svn_ra_svn_conn_t *conn,
   return svn_ra_svn__stream_data_available(conn->stream, data_available);
 }
 
+void
+svn_ra_svn__reset_command_io_counters(svn_ra_svn_conn_t *conn)
+{
+  conn->current_in = 0;
+  conn->current_out = 0;
+}
+
+
 /* --- WRITE BUFFER MANAGEMENT --- */
+
+/* Return an error object if CONN exceeded its send or receive limits. */
+static svn_error_t *
+check_io_limits(svn_ra_svn_conn_t *conn)
+{
+  if (conn->max_in && (conn->current_in > conn->max_in))
+    return svn_error_create(SVN_ERR_RA_SVN_REQUEST_SIZE, NULL,
+                            "The client request size exceeds the "
+                            "configured limit");
+
+  if (conn->max_out && (conn->current_out > conn->max_out))
+    return svn_error_create(SVN_ERR_RA_SVN_RESPONSE_SIZE, NULL,
+                            "The server response size exceeds the "
+                            "configured limit");
+
+  return SVN_NO_ERROR;
+}
 
 /* Write data to socket or output file as appropriate. */
 static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -322,6 +353,12 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_size_t count;
   apr_pool_t *subpool = NULL;
   svn_ra_svn__session_baton_t *session = conn->session;
+
+  /* Limit the size of the response, if a limit has been configured.
+   * This is to limit the server load in case users e.g. accidentally ran
+   * an export on the root folder. */
+  conn->current_out += len;
+  SVN_ERR(check_io_limits(conn));
 
   while (data < end)
     {
@@ -441,12 +478,19 @@ static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
 {
   svn_ra_svn__session_baton_t *session = conn->session;
 
+  /* First, give the user a chance to cancel the request before we do. */
   if (session && session->callbacks && session->callbacks->cancel_func)
     SVN_ERR((session->callbacks->cancel_func)(session->callbacks_baton));
 
+  /* Limit our memory usage, if a limit has been configured.  Note that
+   * we first read the whole request into memory before process it. */
+  SVN_ERR(check_io_limits(conn));
+
+  /* Actually fill the buffer. */
   SVN_ERR(svn_ra_svn__stream_read(conn->stream, data, len));
   if (*len == 0)
     return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL, NULL);
+  conn->current_in += *len;
 
   if (session)
     {
@@ -492,9 +536,13 @@ static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   apr_size_t len;
 
   SVN_ERR_ASSERT(conn->read_ptr == conn->read_end);
+
+  /* Make sure we tell the other side everything we have to say before
+   * reading / waiting for an answer. */
   if (conn->write_pos)
     SVN_ERR(writebuf_flush(conn, pool));
 
+  /* Fill (some of the) buffer. */
   len = sizeof(conn->read_buf);
   SVN_ERR(readbuf_input(conn, conn->read_buf, &len, pool));
   conn->read_ptr = conn->read_buf;
@@ -1141,7 +1189,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   char *dest;
 
   /* We can't store strings longer than the maximum size of apr_size_t,
-   * so check for wrapping */
+   * so check before using the truncated value. */
   if (len64 > APR_SIZE_MAX)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("String length larger than maximum"));
@@ -1156,6 +1204,16 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else
     {
+      svn_stringbuf_t *stringbuf;
+
+      /* Don't even attempt to read anything that exceeds the I/O limit.
+       * So, we can terminate the transfer at an early point, saving
+       * everybody's time and resources. */
+      if (conn->max_in && (conn->max_in < len64))
+        return svn_error_create(SVN_ERR_RA_SVN_REQUEST_SIZE, NULL,
+                                "The client request size exceeds the "
+                                "configured limit");
+
       /* Read the string in chunks.  The chunk size is large enough to avoid
        * re-allocation in typical cases, and small enough to ensure we do
        * not pre-allocate an unreasonable amount of memory if (perhaps due
@@ -1164,7 +1222,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
        * start small and wait for all that data to actually show up.  This
        * does not fully prevent DOS attacks but makes them harder (you have
        * to actually send gigabytes of data). */
-      svn_stringbuf_t *stringbuf = svn_stringbuf_create_empty(pool);
+      stringbuf = svn_stringbuf_create_empty(pool);
 
       /* Read string data directly into the string structure.
        * Do it iteratively.  */
@@ -1791,7 +1849,12 @@ svn_ra_svn__has_command(svn_boolean_t *has_command,
                         svn_ra_svn_conn_t *conn,
                         apr_pool_t *pool)
 {
-  svn_error_t *err = svn_ra_svn__has_item(has_command, conn, pool);
+  svn_error_t *err;
+
+  /* Don't make whitespace between commands trigger I/O limitiations. */
+  svn_ra_svn__reset_command_io_counters(conn);
+
+  err = svn_ra_svn__has_item(has_command, conn, pool);
   if (err && err->apr_err == SVN_ERR_RA_SVN_CONNECTION_CLOSED)
     {
       *terminated = TRUE;
@@ -1817,6 +1880,10 @@ svn_ra_svn__handle_command(svn_boolean_t *terminate,
   const svn_ra_svn__cmd_entry_t *command;
 
   *terminate = FALSE;
+
+  /* Limit I/O for every command separately. */
+  svn_ra_svn__reset_command_io_counters(conn);
+
   err = svn_ra_svn__read_tuple(conn, pool, "wl", &cmdname, &params);
   if (err)
     {
@@ -1847,6 +1914,13 @@ svn_ra_svn__handle_command(svn_boolean_t *terminate,
           err = (*command->deprecated_handler)(conn, pool, deprecated_params,
                                                baton);
         }
+
+      /* The command implementation may have swallowed or wrapped the I/O
+       * error not knowing that we may no longer be able to send data.
+       *
+       * So, check again for the limit violations and exit the command
+       * processing quickly if we may have truncated data. */
+      err = svn_error_compose_create(check_io_limits(conn), err);
 
       *terminate = command->terminate;
     }

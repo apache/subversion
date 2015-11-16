@@ -471,9 +471,9 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
   in_stream = svn_stream_from_aprfile2(in_file, FALSE, pool);
   out_stream = svn_stream_from_aprfile2(out_file, FALSE, pool);
 
-  conn = svn_ra_svn_create_conn4(NULL, in_stream, out_stream,
+  conn = svn_ra_svn_create_conn5(NULL, in_stream, out_stream,
                                  SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, 0,
-                                 0, pool);
+                                 0, 0, 0, pool);
   err = svn_error_wrap_apr(status, _("Error in child process: %s"), desc);
   svn_error_clear(svn_ra_svn__write_cmd_failure(conn, pool, err));
   svn_error_clear(err);
@@ -542,13 +542,13 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   apr_file_inherit_unset(proc->out);
 
   /* Guard against dotfile output to stdout on the server. */
-  *conn = svn_ra_svn_create_conn4(NULL,
+  *conn = svn_ra_svn_create_conn5(NULL,
                                   svn_stream_from_aprfile2(proc->out, FALSE,
                                                            pool),
                                   svn_stream_from_aprfile2(proc->in, FALSE,
                                                            pool),
                                   SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
-                                  0, 0, pool);
+                                  0, 0, 0, 0, pool);
   err = svn_ra_svn__skip_leading_garbage(*conn, pool);
   if (err)
     return svn_error_quick_wrap(
@@ -674,9 +674,9 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
           apr_pool_cleanup_register(pool, td, close_tunnel_cleanup,
                                     apr_pool_cleanup_null);
 
-          conn = svn_ra_svn_create_conn4(NULL, td->response, td->request,
+          conn = svn_ra_svn_create_conn5(NULL, td->response, td->request,
                                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
-                                         0, 0, pool);
+                                         0, 0, 0, 0, pool);
           SVN_ERR(svn_ra_svn__skip_leading_garbage(conn, pool));
         }
     }
@@ -688,9 +688,9 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
       SVN_ERR(make_connection(uri->hostname,
                               uri->port ? uri->port : SVN_RA_SVN_PORT,
                               &sock, pool));
-      conn = svn_ra_svn_create_conn4(sock, NULL, NULL,
+      conn = svn_ra_svn_create_conn5(sock, NULL, NULL,
                                      SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
-                                     0, 0, pool);
+                                     0, 0, 0, 0, pool);
     }
 
   /* Build the useragent string, querying the client for any
@@ -1956,6 +1956,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   svn_revnum_t revision;
   svn_boolean_t is_done;
+  apr_pool_t *iterpool;
   int i;
 
   /* Transmit the parameters. */
@@ -1976,12 +1977,14 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
   /* Read the hash items. */
   is_done = FALSE;
   *locations = apr_hash_make(pool);
+  iterpool = svn_pool_create(pool);
   while (!is_done)
     {
       svn_ra_svn__item_t *item;
       const char *ret_path;
 
-      SVN_ERR(svn_ra_svn__read_item(conn, pool, &item));
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_ra_svn__read_item(conn, iterpool, &item));
       if (is_done_response(item))
         is_done = 1;
       else if (item->kind != SVN_RA_SVN_LIST)
@@ -1991,12 +1994,16 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
         {
           SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list, "rc",
                                           &revision, &ret_path));
+
+          /* This also makes RET_PATH live in POOL rather than ITERPOOL. */
           ret_path = svn_fspath__canonicalize(ret_path, pool);
           apr_hash_set(*locations, apr_pmemdup(pool, &revision,
                                                sizeof(revision)),
                        sizeof(revision), ret_path);
         }
     }
+
+  svn_pool_destroy(iterpool);
 
   /* Read the response. This is so the server would have a chance to
    * report an error. */
