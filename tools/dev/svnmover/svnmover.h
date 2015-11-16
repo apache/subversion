@@ -210,6 +210,63 @@ svn_ra_get_commit_txn(svn_ra_session_t *session,
                       const char *branch_info_dir,
                       apr_pool_t *pool);
 
+/** Describes a server-side move (really a copy+delete within the same
+ * revision) which has been identified by scanning the revision log.
+ */
+typedef struct svn_repos_move_info_t {
+  /* The repository relpath the node was moved from. */
+  const char *moved_from_repos_relpath;
+
+  /* The repository relpath the node was moved to. */
+  const char *moved_to_repos_relpath;
+
+  /* The revision in which the move happened. */
+  svn_revnum_t revision;
+
+  /* The copyfrom revision of the moved-to path. */
+  svn_revnum_t copyfrom_rev;
+
+  /* Pointers to previous or subsequent moves of the same node
+   * within interesting history. */
+  struct svn_repos_move_info_t *prev;
+  struct svn_repos_move_info_t *next;
+
+  /* @note Fields may be added to the end of this structure in future
+   * versions.  Therefore, to preserve binary compatibility, users
+   * should not directly allocate structures of this type but should use
+   * svn_wc_create_repos_move_info(). */
+} svn_repos_move_info_t;
+
+/** Create a svn_wc_repos_move_info_t structure.
+ * @see svn_wc_repos_move_info_t
+ */
+svn_repos_move_info_t *
+svn_repos_move_info_create(const char *moved_from_repos_relpath,
+                              const char *moved_to_repos_relpath,
+                              svn_revnum_t revision,
+                              svn_revnum_t copyfrom_rev,
+                              svn_repos_move_info_t *prev,
+                              svn_repos_move_info_t *next,
+                              apr_pool_t *result_pool);
+
+/* ...
+ */
+const char *
+svn_client__format_move_chain_for_display(svn_repos_move_info_t *first_move,
+                                          const char *indent,
+                                          apr_pool_t *result_pool);
+/* ...
+ */
+svn_error_t *
+svn_client__get_repos_moves(apr_hash_t **moves,
+                            const char *anchor_abspath,
+                            svn_ra_session_t *ra_session,
+                            svn_revnum_t start,
+                            svn_revnum_t end,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 
 #ifdef __cplusplus
 }
