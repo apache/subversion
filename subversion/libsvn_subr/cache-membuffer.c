@@ -353,7 +353,8 @@ prefix_pool_get_internal(apr_uint32_t *prefix_idx,
     }
 
   bytes_needed = prefix_len + 1 + OVERHEAD;
-  if (prefix_pool->bytes_used + bytes_needed > prefix_pool->values_max)
+  assert(prefix_pool->bytes_max >= prefix_pool->bytes_used);
+  if (prefix_pool->bytes_max - prefix_pool->bytes_used > bytes_needed)
     {
       *prefix_idx = NO_INDEX;
       return SVN_NO_ERROR;
@@ -1664,12 +1665,12 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
 
       /* leave function as soon as the insertion window is large enough
        */
-      if (end >= to_fit_in->size + cache->l2.current_data)
+      if (end - cache->l2.current_data >= to_fit_in->size)
         return TRUE;
 
       /* Don't be too eager to cache data.  If a lot of data has been moved
        * around, the current item has probably a relatively low priority.
-       * We must also limit the effort spent here (if even in case of faulty
+       * We must also limit the effort spent here (even in case of faulty
        * heuristics).  Therefore, give up after some time.
        */
       if (moved_size > 4 * to_fit_in->size && moved_count > 7)
@@ -1789,7 +1790,7 @@ ensure_data_insertable_l1(svn_membuffer_t *cache, apr_size_t size)
 
       /* leave function as soon as the insertion window is large enough
        */
-      if (end >= size + cache->l1.current_data)
+      if (end - cache->l1.current_data >= size)
         return TRUE;
 
       /* Enlarge the insertion window
@@ -2678,9 +2679,11 @@ membuffer_cache_set_partial_internal(svn_membuffer_t *cache,
           if (item_data != orig_data)
             {
               /* Remove the old entry and try to make space for the new one.
+               * Note that the key has already been stored in the past, i.e.
+               * it is shorter than the MAX_ENTRY_SIZE.
                */
               drop_entry(cache, entry);
-              if (   (cache->max_entry_size >= item_size + key_len)
+              if (   (cache->max_entry_size - key_len >= item_size)
                   && ensure_data_insertable_l1(cache, item_size + key_len))
                 {
                   /* Write the new entry.
@@ -3370,6 +3373,11 @@ svn_cache__create_membuffer_cache(svn_cache__t **cache_p,
    * Don't forget to include the terminating NUL. */
   prefix_orig_len = strlen(prefix) + 1;
   prefix_len = ALIGN_VALUE(prefix_orig_len);
+
+  /* Paranoia check to ensure pointer arithmetics work as expected. */
+  if (prefix_orig_len >= SVN_MAX_OBJECT_SIZE)
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                            _("Prefix too long"));
 
   /* Construct the folded prefix key. */
   SVN_ERR(svn_checksum(&checksum,

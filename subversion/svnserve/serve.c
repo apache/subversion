@@ -627,11 +627,12 @@ create_fs_access(server_baton_t *b, apr_pool_t *pool)
  * On authentication failure, report failure to the client and set
  * *success to FALSE.  On communications failure, return an error.
  * If NEEDS_USERNAME is TRUE, don't allow anonymous authentication. */
-static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+static svn_error_t *auth(svn_boolean_t *success,
+                         svn_ra_svn_conn_t *conn,
                          const char *mech, const char *mecharg,
                          server_baton_t *b, enum access_type required,
                          svn_boolean_t needs_username,
-                         svn_boolean_t *success)
+                         apr_pool_t *scratch_pool)
 {
   const char *user;
   *success = FALSE;
@@ -640,10 +641,10 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       && b->client_info->tunnel_user && strcmp(mech, "EXTERNAL") == 0)
     {
       if (*mecharg && strcmp(mecharg, b->client_info->tunnel_user) != 0)
-        return svn_ra_svn__write_tuple(conn, pool, "w(c)", "failure",
+        return svn_ra_svn__write_tuple(conn, scratch_pool, "w(c)", "failure",
                                        "Requested username does not match");
       b->client_info->user = b->client_info->tunnel_user;
-      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w()", "success"));
+      SVN_ERR(svn_ra_svn__write_tuple(conn, scratch_pool, "w()", "success"));
       *success = TRUE;
       return SVN_NO_ERROR;
     }
@@ -651,7 +652,7 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (b->repository->anon_access >= required
       && strcmp(mech, "ANONYMOUS") == 0 && ! needs_username)
     {
-      SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w()", "success"));
+      SVN_ERR(svn_ra_svn__write_tuple(conn, scratch_pool, "w()", "success"));
       *success = TRUE;
       return SVN_NO_ERROR;
     }
@@ -659,13 +660,13 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (b->repository->auth_access >= required
       && b->repository->pwdb && strcmp(mech, "CRAM-MD5") == 0)
     {
-      SVN_ERR(svn_ra_svn_cram_server(conn, pool, b->repository->pwdb,
+      SVN_ERR(svn_ra_svn_cram_server(conn, scratch_pool, b->repository->pwdb,
                                      &user, success));
       b->client_info->user = apr_pstrdup(b->pool, user);
       return SVN_NO_ERROR;
     }
 
-  return svn_ra_svn__write_tuple(conn, pool, "w(c)", "failure",
+  return svn_ra_svn__write_tuple(conn, scratch_pool, "w(c)", "failure",
                                 "Must authenticate with listed mechanism");
 }
 
@@ -677,19 +678,26 @@ internal_auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   svn_boolean_t success;
   const char *mech, *mecharg;
+  apr_pool_t *iterpool;
 
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w((!", "success"));
   SVN_ERR(send_mechs(conn, pool, b, required, needs_username));
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!)c)", b->repository->realm));
+
+  iterpool = svn_pool_create(pool);
   do
     {
+      svn_pool_clear(iterpool);
+
       SVN_ERR(svn_ra_svn__read_tuple(conn, pool, "w(?c)", &mech, &mecharg));
       if (!*mech)
         break;
-      SVN_ERR(auth(conn, pool, mech, mecharg, b, required, needs_username,
-                   &success));
+      SVN_ERR(auth(&success, conn, mech, mecharg, b, required,
+                   needs_username, iterpool));
     }
   while (!success);
+  svn_pool_destroy(iterpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -4115,10 +4123,12 @@ serve_interruptable(svn_boolean_t *terminate_p,
 
       /* create the connection, configure ports etc. */
       connection->conn
-        = svn_ra_svn_create_conn4(connection->usock, NULL, NULL,
+        = svn_ra_svn_create_conn5(connection->usock, NULL, NULL,
                                   connection->params->compression_level,
                                   connection->params->zero_copy_limit,
                                   connection->params->error_check_interval,
+                                  connection->params->max_request_size,
+                                  connection->params->max_response_size,
                                   connection->pool);
 
       /* Construct server baton and open the repository for the first time. */
