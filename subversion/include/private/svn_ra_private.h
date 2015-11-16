@@ -308,34 +308,6 @@ svn_ra__replay_ev2(svn_ra_session_t *session,
                    svn_editor_t *editor,
                    apr_pool_t *scratch_pool);
 
-/* Load branching info.
- */
-svn_error_t *
-svn_ra_load_branching_state(svn_branch__txn_t **branching_txn_p,
-                            svn_branch__compat_fetch_func_t *fetch_func,
-                            void **fetch_baton,
-                            svn_ra_session_t *session,
-                            const char *branch_info_dir,
-                            svn_revnum_t base_revision,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
-
-/* Ev3 version of svn_ra_get_commit_editor().
- *
- * If BRANCH_INFO_DIR is non-null, store branching info in that local
- * directory, otherwise store branching info in revprops.
- */
-svn_error_t *
-svn_ra_get_commit_txn(svn_ra_session_t *session,
-                      svn_branch__txn_t **edit_txn_p,
-                      apr_hash_t *revprop_table,
-                      svn_commit_callback2_t commit_callback,
-                      void *commit_baton,
-                      apr_hash_t *lock_tokens,
-                      svn_boolean_t keep_locks,
-                      const char *branch_info_dir,
-                      apr_pool_t *pool);
-
 /* Ev3 version of svn_ra_do_update3(). */
 svn_error_t *
 svn_ra_do_update4(svn_ra_session_t *session,
@@ -364,20 +336,6 @@ svn_ra_do_switch4(svn_ra_session_t *session,
                   svn_branch__compat_update_editor3_t *switch_editor,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool);
-
-/* Fetch kind and/or props and/or text.
- *
- * Implements svn_branch__compat_fetch_func_t. */
-svn_error_t *
-svn_ra_fetch(svn_node_kind_t *kind_p,
-      apr_hash_t **props_p,
-      svn_stringbuf_t **file_text,
-      apr_hash_t **children_names,
-      void *baton,
-      const char *repos_relpath,
-      svn_revnum_t revision,
-      apr_pool_t *result_pool,
-      apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

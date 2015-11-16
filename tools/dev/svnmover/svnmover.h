@@ -32,6 +32,7 @@
 #include "svn_ra.h"
 
 #include "private/svn_branch.h"
+#include "private/svn_branch_compat.h"
 
 /* Decide whether to use the 'linenoise' library for command-line input
    editing and completion. */
@@ -180,6 +181,34 @@ svnmover_conflict_resolved(conflict_storage_t *conflicts,
 /*  */
 svn_boolean_t
 svnmover_any_conflicts(const conflict_storage_t *conflicts);
+
+/* Load branching info.
+ */
+svn_error_t *
+svn_ra_load_branching_state(svn_branch__txn_t **branching_txn_p,
+                            svn_branch__compat_fetch_func_t *fetch_func,
+                            void **fetch_baton,
+                            svn_ra_session_t *session,
+                            const char *branch_info_dir,
+                            svn_revnum_t base_revision,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
+/* Ev3 version of svn_ra_get_commit_editor().
+ *
+ * If BRANCH_INFO_DIR is non-null, store branching info in that local
+ * directory, otherwise store branching info in revprops.
+ */
+svn_error_t *
+svn_ra_get_commit_txn(svn_ra_session_t *session,
+                      svn_branch__txn_t **edit_txn_p,
+                      apr_hash_t *revprop_table,
+                      svn_commit_callback2_t commit_callback,
+                      void *commit_baton,
+                      apr_hash_t *lock_tokens,
+                      svn_boolean_t keep_locks,
+                      const char *branch_info_dir,
+                      apr_pool_t *pool);
 
 
 #ifdef __cplusplus
