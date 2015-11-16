@@ -1,0 +1,1266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+<meta name="generator" content="http://www.nongnu.org/elyxer/"/>
+<meta name="create-date" content="2015-06-18"/>
+<link rel="stylesheet" href="http://elyxer.nongnu.org/lyx.css" type="text/css" media="all"/>
+<title>Element Model</title>
+</head>
+<body>
+<div id="globalWrapper">
+<h1 class="title">
+Element Model
+</h1>
+<h2 class="author">
+Julian Foad
+</h2>
+<div class="fulltoc">
+<div class="tocheader">
+Table of Contents
+</div>
+<div class="toc">
+<a class="Link" href="#toc-Part-I">Part I: Overview</a>
+</div>
+<div class="tocindent">
+<div class="toc">
+<a class="Link" href="#toc-Section-1">Section 1: Introduction</a>
+</div>
+<div class="toc">
+<a class="Link" href="#toc-Section-2">Section 2: Glossary</a>
+</div>
+</div>
+<div class="toc">
+<a class="Link" href="#toc-Part-II">Part II: The Model</a>
+</div>
+<div class="tocindent">
+<div class="toc">
+<a class="Link" href="#toc-Section-3">Section 3: Layers</a>
+</div>
+<div class="toc">
+<a class="Link" href="#toc-Section-4">Section 4: Element Model</a>
+</div>
+<div class="toc">
+<a class="Link" href="#toc-Section-5">Section 5: 3-way Merging</a>
+</div>
+<div class="toc">
+<a class="Link" href="#toc-Section-6">Section 6: Merge History</a>
+</div>
+<div class="toc">
+<a class="Link" href="#toc-Section-7">Section 7: Copying</a>
+</div>
+<div class="toc">
+<a class="Link" href="#toc-Section-8">Section 8: Branch Management</a>
+</div>
+<div class="toc">
+<a class="Link" href="#toc-Section-9">Section 9: The Working Copy</a>
+</div>
+</div>
+
+</div>
+<h1 class="Part">
+<a class="toc" name="toc-Part-I">Part I.</a> Overview
+</h1>
+<h1 class="Section">
+<a class="toc" name="toc-Section-1">1</a> Introduction
+</h1>
+<div class="Standard">
+Imagine a user who:
+</div>
+<ul>
+<li>
+is familiar with version control concepts 
+</li>
+<li>
+is not familiar with Subversion specifics 
+</li>
+<li>
+expects directories to be versioned (not just files) 
+</li>
+<li>
+expects move tracking (as opposed to move ’detection’)
+</li>
+
+</ul>
+<div class="Standard">
+The design aims to satisfy such a user. 
+</div>
+<div class="Standard">
+Move tracking is intimately related to merging. The original goal was to make merging work well in the presence of moves. A move tracking model is required in order to support merging.
+</div>
+<div class="Standard">
+The purpose for this design is to explore how Subversion could support move tracking, so that we can evaluate its advantages and disadvantages and decide whether we want to implement something based on this idea or to go in a different direction.
+</div>
+<div class="Standard">
+The presentation here pretends that we have free rein to redesign Subversion from the ground up. As such it is best to read this with the idea in mind of implementing a new prototype and seeing how it works, and not to think in terms of adapting the existing Subversion.
+</div>
+<div class="Standard">
+The ’svnmover’ prototype on the ’move-tracking-2’ branch already implements much of this model.
+</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-1.1">1.1</a> Key Features
+</h2>
+<ul>
+<li>
+Simple and powerful model of moves<ul>
+<li>
+easy to understand (for users and developers)
+</li>
+<li>
+moves are atomic and never ’broken’ into two halves
+</li>
+<li>
+deterministic result for arbitrary combinations of moving and other operations
+</li>
+
+</ul>
+
+</li>
+<li>
+Symmetry between the ’revisions’ dimension and the ’branches’ dimension<ul>
+<li>
+a diff between two branches has the same form and capabilities as a diff between two revisions of a branch
+</li>
+<li>
+unlike historical Subversion
+</li>
+<li>
+enables uniform definition of 3-way merge given any 3 points in a merge DAG
+</li>
+
+</ul>
+
+</li>
+<li>
+Flexible nested branching<ul>
+<li>
+branching at arbitrary paths
+</li>
+<li>
+flexible subbranching, inside and/or outside the parent branch<ul>
+<li>
+e.g. /trunk/foo-branch1, /trunk/foo-branch2, /branches/foo-branch3
+</li>
+
+</ul>
+
+</li>
+
+</ul>
+
+</li>
+<li>
+Simpler tree conflicts<ul>
+<li>
+the possible kinds of tree conflicts are easily enumerated
+</li>
+
+</ul>
+
+</li>
+
+</ul>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-1.2">1.2</a> Other Potential Benefits
+</h2>
+<ul>
+<li>
+Repository entropy reduction
+</li>
+<li>
+Orthogonal branching namespace at the root path level
+</li>
+<li>
+Cross-repository branching and merging
+</li>
+
+</ul>
+<h3 class="Subsubsection">
+<a class="toc" name="toc-Subsubsection-1.2.1">1.2.1</a> Repository Entropy Reduction
+</h3>
+<div class="Standard">
+Often a Subversion repository contains metadata that conveys no intentional information but only accidental information. Examples:
+</div>
+<ul>
+<li>
+move with a copy-from revision older than (new rev - 1)
+</li>
+<li>
+move with the delete half and the copy half committed in separate revisions
+</li>
+<li>
+copy/branch from revision (new rev - N) where there is no change between that and (new rev - 1)
+</li>
+<li>
+copy/branch with a subtree replaced with a different revision of itself, e.g. r122645 in ASF repo
+</li>
+<li>
+no-op roll-back: replace with self copied from (new rev - 1)
+</li>
+
+</ul>
+<div class="Standard">
+In the new model, many such cases can be reduced to a true no-op.
+</div>
+<ul>
+<li>
+move is atomic
+</li>
+<li>
+branching from R &lt; (new rev - 1)<ul>
+<li>
+### TBD whether and how it will store copy-from revision
+</li>
+
+</ul>
+
+</li>
+<li>
+copy from R &lt; (new rev - 1)<ul>
+<li>
+### TBD how it will store copy-from revision
+</li>
+<li>
+if wanted, the new design could encourage updating the copy-from on update and on commit
+</li>
+
+</ul>
+
+</li>
+<li>
+no-op roll-back can be a true no-op if the UI encourages ’resurrect’ or ’roll-back’ command semantics rather than plain ’copy’
+</li>
+
+</ul>
+<h3 class="Subsubsection">
+<a class="toc" name="toc-Subsubsection-1.2.2">1.2.2</a> Orthogonal Branching
+</h3>
+<div class="Standard">
+While it is designed for path-addressed branches, this model itself does not require that each branch is attached to a unique path. With little or no change to the basic model, we could support branching at the root path level within a repository, where branches are addressed in a name-space orthogonal to the path namespace, as used in popular DVCSs.
+</div>
+<div class="Standard">
+More or less the only addition that would be required is a method for addressing the branches: an extension to the branch id scheme, and extensions to the APIs for converting to and from path-space.
+</div>
+<div class="Standard">
+This could be useful both on its own and for greater compatibility with DVCSs.
+</div>
+<h3 class="Subsubsection">
+<a class="toc" name="toc-Subsubsection-1.2.3">1.2.3</a> Cross-Repository Branching
+</h3>
+<div class="Standard">
+The model supports, in principle, cross-repository branching and merging. Element identifiers would need to be extended to include a repository identifier.
+</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-1.3">1.3</a> Potential Cons
+</h2>
+<ul>
+<li>
+No built-in way to retrospectively convert separately created subtrees to related branches.
+</li>
+<li>
+The mental model will be unfamiliar to users, at first.
+</li>
+
+</ul>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-1.4">1.4</a> Unfinished Design
+</h2>
+<div class="Standard">
+Branching — how to track the ’from’ branch and revision.
+</div>
+<div class="Standard">
+3-way merge — how to deal with a subtree root node.
+</div>
+<div class="Standard">
+Merge history.
+</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-1.5">1.5</a> TODO (in the document)
+</h2>
+<ul>
+<li>
+rename ’subbranch-root’ to something less like ’branch root’: perhaps ’branch-point’ or ’subbranch-element’?
+</li>
+
+</ul>
+<h1 class="Section">
+<a class="toc" name="toc-Section-2">2</a> Glossary
+</h1>
+<div class="Description">
+<span class="Description-entry">branch</span> a set of elements arranged in a tree, with a branch-root element at the root of the tree; a leaf node of the tree can be a file node element or a subbranch-root element; a subbranch-root element is part of this branch but the subbranch it links to is not
+</div>
+<div class="Description">
+<span class="Description-entry">branch-root</span> the root element of a branch; carries its own payload, but its location is determined solely by the corresponding (linked) subbranch-root element of the outer branch; see also subbranch-root
+</div>
+<div class="Description">
+<span class="Description-entry">eid</span> element identifier, uniquely identifying an element within a branch and matching the equivalent element in another branch; an arbitrary token that supports comparison for equality and being used as an index key
+</div>
+<div class="Description">
+<span class="Description-entry">element</span> a file or directory or subbranch-root; the smallest unit of merging; versioned content is (depending on context) its parent element id and name, and/or its payload;
+</div>
+<div class="Description">
+<span class="Description-entry">location</span> the tree-structure part of the versioned content of an element: that is, the element’s parent-eid and name
+</div>
+<div class="Description">
+<span class="Description-entry">payload</span> the non-tree-structure part of the versioned content of an element: that is, the element’s properties (for a file or directory) and text (for a file)
+</div>
+<div class="Description">
+<span class="Description-entry">subbranch-root</span> the kind of element that links a subbranch to an outer branch; has a versioned parent-eid and name
+</div>
+<div class="Description">
+<span class="Description-entry">target</span> may refer to the target of a merge; or to the target path of a symlink, if symlinks are supported
+</div>
+<h1 class="Part">
+<a class="toc" name="toc-Part-II">Part II.</a> The Model
+</h1>
+<h1 class="Section">
+<a class="toc" name="toc-Section-3">3</a> Layers
+</h1>
+<div class="Standard">
+<div class="float">
+<a class="Label" name="Table-1"> </a><div class="table">
+<div class="caption">
+Table 1 Layers of modelling
+</div>
+<table>
+<tr>
+<td align="center" valign="top">
+(client/UI)
+</td>
+<td align="center" valign="top">
+
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+Branch Management
+</td>
+<td align="center" valign="top">
+possible future addition
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+Merge History
+</td>
+<td align="center" valign="top">
+TBD; to be described here
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+Element Model
+</td>
+<td align="center" valign="top">
+described here
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+Repository Storage
+</td>
+<td align="center" valign="top">
+TBD; to be described elsewhere
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+(server/fs)
+</td>
+<td align="center" valign="top">
+
+</td>
+
+</tr>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+<h1 class="Section">
+<a class="toc" name="toc-Section-4">4</a> Element Model
+</h1>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-4.1">4.1</a> Introduction
+</h2>
+<div class="Standard">
+Subversion fundamentally tracks versions of a tree of the user’s primary data, or of multiple trees if the repository is used to version multiple projects. A versioned tree consists of:
+</div>
+<ul>
+<li>
+nodes (files, directories) with their user properties and other user content
+</li>
+<li>
+the tree structure
+</li>
+
+</ul>
+<div class="Standard">
+Subversion also tracks metadata describing the versions of and changes to the versioned tree, including:
+</div>
+<ul>
+<li>
+branches
+</li>
+<li>
+merge history
+</li>
+
+</ul>
+<div class="Standard">
+Historically, Subversion tracked the branches by using part of the pathname within the repository. In the element model, we must think of the user’s versioned content as being clearly distinct from the branch identification prefix of the in-repository path.
+</div>
+<div class="Standard">
+The structure and content of a versioned tree can be precisely defined as comprising the following attributes on each node:
+</div>
+<ul>
+<li>
+payload:<ul>
+<li>
+kind (file or directory), properties, text
+</li>
+
+</ul>
+
+</li>
+<li>
+location within versioned tree (except for the root of the versioned tree):<ul>
+<li>
+parent node identifier
+</li>
+<li>
+name
+</li>
+
+</ul>
+
+</li>
+
+</ul>
+<div class="Standard">
+We no longer think of a directory as holding a list of its children; instead, each child holds a single reference that identifies its parent. In this way, the high level conceptual idea of a &ldquo;move&rdquo; is modeled by a change to exactly one element.
+</div>
+<div class="Standard">
+The root node of a versioned tree must be treated specially. When merging changes from one branch of this versioned tree to another, only the payload of this root node must be merged; its parent and name are part of the external structure of the repository, the branching metadata, not part of this versioned tree.
+</div>
+<div class="Standard">
+Each branch root is modeled by a linked pair of elements: a subbranch-root element which belongs to the outer branch (and has a location but no payload), linked to a node element which is the root element of the inner branch (and has only a payload).
+</div>
+<div class="Standard">
+The root path of the repository is defined as being a root node of a branch. In typical Subversion work flows this would not be thought of as a branch. Any normal branch in a typical Subversion work flow would be modeled as a subbranch of the root branch. For example, we might create a subbranch-root element at the path ’trunk’, linked to a branch root node of the kind ’directory’ and having a (possibly empty) set of properties.
+</div>
+<div class="Standard">
+A subbranch-root element acts like a container that contains a nested subbranch. When merging such an element, the whole nested subbranch is treated as a unit and handled by a recursive application of the merge algorithm.
+</div>
+<div class="Standard">
+The term ’elements’ refers collectively to nodes and to subbranch-root elements.
+</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-4.2">4.2</a> Elements, Nodes, Paths, Payloads
+</h2>
+<div class="Standard">
+An element is either a node element or a subbranch-root element.
+</div>
+<div class="Standard">
+A node element represents a file or a directory, or maybe in future a symlink. Each node element has versioned content called its payload. The payload for a file is its text and properties; the payload for a symlink is its target and properties. The payload for a directory is its properties only.
+</div>
+<div class="Standard">
+The children of a directory do not belong to the directory in this model. Instead, the child-parent relationships are modeled by each element having a &ldquo;parent element&rdquo; attribute and a &ldquo;name&rdquo; attribute.
+</div>
+<div class="Standard">
+The (parent, name, payload) of an element is its versioned content. The basic unit of change tracking (including merge tracking) is the change to the content of one element in one revision.
+</div>
+<div class="Standard">
+A subbranch-root element carries a location but no explicit payload. Instead, it represents the connection of a subbranch with its outer branch. The subbranch-root element’s fixed attribute &ldquo;subbranch-root-eid&rdquo; specifies the element id acting as root of the subbranch.
+</div>
+<h3 class="Subsubsection">
+<a class="toc" name="toc-Subsubsection-4.2.1">4.2.1</a> attributes of an element 
+</h3>
+<div class="Standard">
+fixed attributes:
+</div>
+<ul>
+<li>
+eid
+</li>
+<li>
+kind: ’node’ | ’subbranch-root’
+</li>
+<li>
+node-kind: ’file’ | ’dir’ # iff kind=node
+</li>
+<li>
+subbranch-root-eid # iff kind=subbranch-root
+</li>
+
+</ul>
+<div class="Standard">
+versioned attributes:
+</div>
+<ul>
+<li>
+location: (parent-eid, name) # or &lt;nil&gt; when acting as a branch root
+</li>
+<li>
+payload: (props, [text | target]) # iff kind=node
+</li>
+
+</ul>
+<h3 class="Subsubsection">
+<a class="toc" name="toc-Subsubsection-4.2.2">4.2.2</a> Repository Root
+</h3>
+<div class="Standard">
+An new repository in Subversion is given a single directory node as its root element.
+</div>
+<ul>
+<li>
+(eid=0, kind=’node’, node-kind=’dir’)
+</li>
+
+</ul>
+<div class="Standard">
+As a branch root element, the repository root element has no parent-eid or name and no outer branch, and so it cannot be moved away from the repository root path. However, it can be branched to another path, although in typical work flows that would not be done.
+</div>
+<h3 class="Subsubsection">
+<a class="toc" name="toc-Subsubsection-4.2.3">4.2.3</a> Paths
+</h3>
+<div class="Standard">
+At each path there is exactly one node element (if there is anything at all). This carries the payload at that path, and in most cases carries the location information (parent and name) of that path as well.
+</div>
+<div class="Standard">
+At a branch boundary path there are two elements involved. The root element of the inner branch is a node and carries the payload only. A subbranch-root element belonging to the outer branch carries the location information (parent and name).
+</div>
+<div class="Standard">
+### &ldquo;Within a revision, elements map to paths as follows:&rdquo; [table showing an example] ?
+</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-4.3">4.3</a> Branch
+</h2>
+<div class="Standard">
+A branch is addressed by the sequence of subbranch-root elements that must be followed, starting from the repository root, to reach it. The repository root branch is addressed by a zero-length sequence.
+</div>
+<div class="Standard">
+For example, with integer EIDs, the repository root branch address is ’’, while each first-level subbranch within it is addressed by a length-one sequence of EIDs such as ’53’ or ’12001’, and a second-level subbranch is ’53.14141’ or ’12001.12345’.
+</div>
+<div class="Standard">
+### Example as a table of paths and their branch ids?
+</div>
+<div class="Standard">
+The branching model supports whole-repository branching, as used in many DVCSs. While it has been assumed in the descriptions above that each branch root is mapped to a different path in a single repository-wide path-space, we could also provide a way to map branches to a new branching name-space orthogonal to paths.
+</div>
+<h1 class="Section">
+<a class="toc" name="toc-Section-5">5</a> 3-way Merging
+</h1>
+<div class="Standard">
+Here we cover the rules for calculating the result of a 3-way merge.
+</div>
+<div class="Standard">
+We assume the base state (usually a youngest common ancestor) and the other two states (variously called ’source’ and ’target’, or ’side 1’ and ’side 2’) are already known. The section on Merge History covers the higher layer of merging: deciding what changes need to be merged and what three-way merges (with which bases) will be used to accomplish it.
+</div>
+<div class="Standard">
+It is characteristic of this model that elements are uniquely paired across branches by their element id; there is no ambiguity about which element in one branch or state should be merged with which element in another.
+</div>
+<div class="Standard">
+The aspect of 3-way merging most relevant to the element branching model is how the tree shapes are merged. The payload of each element (such as its properties and text) can be merged with a traditional 3-way text merge. The merging of payload is not described here because it need not differ from traditional practice.
+</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-5.1">5.1</a> Stages of Tree Shape Merge
+</h2>
+<div class="Standard">
+Calculation of a 3-way merge is largely per element in this model. For each element, we specify how to merge any two changes to that element. In the second stage we specify how to combine the per-element merges into a whole tree merge. In both stages we specify which combinations should be regarded as conflicting.
+</div>
+<div class="Standard">
+The two main stages:
+</div>
+<ul>
+<li>
+Per element, 3-way merge the element’s content (parent-eid, name, payload). Identify in-element conflicts.
+</li>
+<li>
+Check the result for multi-element conflicts (clashes, cycles and orphans).
+</li>
+
+</ul>
+<div class="Standard">
+It may be useful to (partially) order the merging of elements, so as to build up the result tree in parent-to-child order. This would ensure we don’t cause the user to spend effort in resolving conflicts in a subtree when a tree conflict occurring higher up the hierarchy might make them decide to throw away the whole subtree. However, it is impossible to determine a complete top-down ordering of the result tree in advance, in general, when the result will depend on conflict resolution choices.
+</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-5.2">5.2</a> Per element, 3-way merge
+</h2>
+<div class="Standard">
+For each element that appears in any of the three sides of the merge, we merge the two changes to the element’s (parent-eid, name) pair according to <a class="Reference" href="#tab:3-way-mg-single">Table 2↓</a>.
+</div>
+<div class="Standard">
+In this table, each row represents an element, and a letter (O, R, X, Y) represents a particular value of the element’s (parent-eid, name) pair: different letters mean the parent-eid differs and/or the name differs. The semantics are symmetric with respect to Side 1 and Side 2; only one row of a symmetric pair is shown.
+</div>
+<div class="Standard">
+<div class="float">
+<a class="Label" name="tab:3-way-mg-single"> </a><div class="table">
+<div class="center">
+<table>
+<tr>
+<td align="center" valign="top">
+Base
+</td>
+<td align="center" valign="top">
+Side 1
+</td>
+<td align="center" valign="top">
+Side 2
+</td>
+<td align="center" valign="top">
+Permissive Result
+</td>
+<td align="center" valign="top">
+Strict Result
+</td>
+<td align="center" valign="top">
+Notes
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+-
+</td>
+<td align="center" valign="top">
+-
+</td>
+<td align="center" valign="top">
+R
+</td>
+<td align="center" valign="top">
+R
+</td>
+<td align="center" valign="top">
+R
+</td>
+<td align="center" valign="top">
+only add [1]
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+O
+</td>
+<td align="center" valign="top">
+O
+</td>
+<td align="center" valign="top">
+R
+</td>
+<td align="center" valign="top">
+R
+</td>
+<td align="center" valign="top">
+R
+</td>
+<td align="center" valign="top">
+only mv [1]
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+O
+</td>
+<td align="center" valign="top">
+O
+</td>
+<td align="center" valign="top">
+-
+</td>
+<td align="center" valign="top">
+-
+</td>
+<td align="center" valign="top">
+-
+</td>
+<td align="center" valign="top">
+only del [2]
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+-
+</td>
+<td align="center" valign="top">
+R
+</td>
+<td align="center" valign="top">
+R
+</td>
+<td align="center" valign="top">
+R
+</td>
+<td align="center" valign="top">
+conflict
+</td>
+<td align="center" valign="top">
+duplicate add [1]
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+O
+</td>
+<td align="center" valign="top">
+R
+</td>
+<td align="center" valign="top">
+R
+</td>
+<td align="center" valign="top">
+R
+</td>
+<td align="center" valign="top">
+conflict
+</td>
+<td align="center" valign="top">
+duplicate mv [1]
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+O
+</td>
+<td align="center" valign="top">
+-
+</td>
+<td align="center" valign="top">
+-
+</td>
+<td align="center" valign="top">
+-
+</td>
+<td align="center" valign="top">
+conflict
+</td>
+<td align="center" valign="top">
+duplicate del
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+-
+</td>
+<td align="center" valign="top">
+X
+</td>
+<td align="center" valign="top">
+Y
+</td>
+<td align="center" valign="top">
+conflict
+</td>
+<td align="center" valign="top">
+conflict
+</td>
+<td align="center" valign="top">
+add vs. add
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+O
+</td>
+<td align="center" valign="top">
+X
+</td>
+<td align="center" valign="top">
+Y
+</td>
+<td align="center" valign="top">
+conflict
+</td>
+<td align="center" valign="top">
+conflict
+</td>
+<td align="center" valign="top">
+mv vs. mv
+</td>
+
+</tr>
+<tr>
+<td align="center" valign="top">
+O
+</td>
+<td align="center" valign="top">
+X
+</td>
+<td align="center" valign="top">
+-
+</td>
+<td align="center" valign="top">
+conflict
+</td>
+<td align="center" valign="top">
+conflict
+</td>
+<td align="center" valign="top">
+mv vs. del
+</td>
+
+</tr>
+
+</table>
+
+</div>
+<div class="caption">
+Table 2 3-way merge of a single element
+</div>
+
+</div>
+
+</div>
+
+</div>
+<div class="Standard">
+Notes:
+</div>
+<ul>
+<li>
+&ldquo;add&rdquo; — includes a copy, for these purposes.
+</li>
+<li>
+&ldquo;conflict&rdquo; — consider this a conflict, unless the user preconfigured what to do with it.
+</li>
+<li>
+[1] — conflict if we detect a clash
+</li>
+<li>
+[2] — conflict if we detect an orphaned subtree
+</li>
+
+</ul>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-5.3">5.3</a> Merging Parent and Name Separately
+</h2>
+<div class="Standard">
+Table 2 suggests that an element’s location (parent-eid and name) should be treated as a unit. If a conflict occurs, the conflict relates to the parent-eid and name together. An alternative is to merge the two parts separately. This implies allowing a conflict to be raised and resolved for either or both parts independently.
+</div>
+<div class="Standard">
+Each part independently:
+</div>
+<ul>
+<li>
+merge (’foo’ renamed to ’bar’) with (’foo’ moved to ’D/foo’): result is ’D/bar’.
+</li>
+
+</ul>
+<div class="Standard">
+Both parts together:
+</div>
+<ul>
+<li>
+merge (’foo’ renamed to ’bar’) with (’foo’ moved to ’D/foo’): conflict.
+</li>
+
+</ul>
+<div class="Standard">
+The choice of whether a conflict should apply to both parts together or each part separately is one of user preference and the best choice would depend on the scenario. In essence it is a user interface issue. If the merge logic is to be provided in a library, this should be designed to handle the two parts separately so that the UI layer has the choice to treat them either together or separately.
+</div>
+<div class="Standard">
+The idea is exactly the same as allowing text and property conflicts on the same element to be handled separately.
+</div>
+<div class="Standard">
+It is logical to generalize the idea to treating any or all of the component parts of an element’s content (parent-eid, name, properties, text, ...) together or separately for the purposes of conflict handling.
+</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-5.4">5.4</a> Conflict Policies
+</h2>
+<div class="Standard">
+Conflict detection is fundamentally subjective: any two changes could conflict semantically. The job of a good merge tool is to help the user by flagging combinations of changes that are likely to need human intervention, while quietly resolving the rest in a way that is likely to be satisfactory. Because the needs of users and the degree of semantic coupling depend on the use case, the tool therefore should not be configurable in what cases are reported as a conflict.
+</div>
+<div class="Standard">
+Configurability is provided by a merge policy. The policy is a statement of what combinations should be flagged as a conflict and what should be resolved automatically. As a starting point, one ’strict’ policy and one ’permissive’ policy are suggested. The policies suggested here differ only in their treatment of duplicate changes — cases where both sides of the merge are making the same change. In some merge scenarios it is known and intentional that many of the same changes are being made on both sides, and in those scenarios the permissive policy may be more helpful. In scenarios where a duplicate change is not expected and may indicate an error has been made, then the strict policy may be more helpful.
+</div>
+<div class="Standard">
+It is also helpful to have a different policy for user-initiated merges than for rebase-on-commit merges. The latter has historically been implemented in Subversion with a fairly strict policy. (Note also that due to the architecture of the commit process there is no option to store conflicts and have the user resolve them. Any conflict results in immediate failure of the commit.)
+</div>
+<div class="Standard">
+A merge policy can also specify which parts of an element’s content are merged together, as discussed in the section ’Merging Parent and Name Separately’ above.
+</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-5.5">5.5</a> Per-Element Conflicts
+</h2>
+<div class="Standard">
+As seen in Table 2 above.
+</div>
+<ul>
+<li>
+Duplicate add: the same element is added on both sides, at the same location/parent-eid/name.
+</li>
+<li>
+Duplicate mv: the same element is moved on both sides, to the same location/parent-eid/name.
+</li>
+<li>
+Duplicate del: the same element is deleted on both sides.
+</li>
+<li>
+Add vs. add: the same element is added on both sides, at different locations/parent-eids/names.
+</li>
+<li>
+Move vs. move: the same element is moved on both sides, to different locations/parent-eids/names.
+</li>
+<li>
+Move vs. delete: the same element is moved on one side and deleted on the other side.
+</li>
+
+</ul>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-5.6">5.6</a> Multi-Element Conflicts
+</h2>
+<div class="Standard">
+After or during the per-element merge, it is necessary to check for the following kinds of conflict that affect more than one element.
+</div>
+<h3 class="Subsubsection">
+<a class="toc" name="toc-Subsubsection-5.6.1">5.6.1</a> Clashes
+</h3>
+<div class="Standard">
+There is a clash if two or more elements have the same parent-eid and the same name.
+</div>
+<div class="Standard">
+This is always a conflict.
+</div>
+<h3 class="Subsubsection">
+<a class="toc" name="toc-Subsubsection-5.6.2">5.6.2</a> Orphans
+</h3>
+<div class="Standard">
+An element is an orphan if its parent is not present (is deleted or is not added) in the merge result.
+</div>
+<div class="Standard">
+When this applies to an element that is modified as a result of the merge, that is a conflict.
+</div>
+<div class="Standard">
+When this applies to an element that is not modified as a result of the merge, the element is silently deleted. This means that deleting a parent directory causes all its children in the target to be deleted, not only the children that it had in the source.
+</div>
+<div class="Standard">
+A merge policy option could enable a stricter option here.
+</div>
+<h3 class="Subsubsection">
+<a class="toc" name="toc-Subsubsection-5.6.3">5.6.3</a> Cycles
+</h3>
+<div class="Standard">
+There is a cycle if following the parent-eid chain from an element leads, sooner or later, back to itself rather than to the branch root.
+</div>
+<div class="Standard">
+This is always a conflict.
+</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-5.7">5.7</a> Subtree Merge
+</h2>
+<div class="Standard">
+When merging a ’subtree’ it is necessary to decide what exactly is meant by a ’subtree’. Historically a subtree was defined by specifying a subtree root element. Now that moves are supported, a given element can be inside the given subtree root element on one ’side’ of the merge and outside it on another side of the merge.
+</div>
+<div class="Standard">
+Suggestions:
+</div>
+<ul>
+<li>
+merge changes to whole elements: never merge ’half’ of a move
+</li>
+<li>
+take the union of the elements in the subtrees at each side of the merge
+</li>
+<li>
+if the merged result for any element ’moves’ the element outside the target, in other words to a parent that does not exist in the target, that is a conflict
+</li>
+
+</ul>
+<div class="Standard">
+The ’location’ attributes of the subtree root element must be ignored when merging.
+</div>
+<ul>
+<li>
+### That’s inconsistent.
+</li>
+
+</ul>
+<div class="Standard">
+Note that a given element may be the root of one branch and a subtree in another branch.
+</div>
+<h1 class="Section">
+<a class="toc" name="toc-Section-6">6</a> Merge History
+</h1>
+<div class="Standard">
+Merge history is required to track which changes are present in which branches.
+</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-6.1">6.1</a> Requirements
+</h2>
+<div class="Standard">
+Merge history should:
+</div>
+<ul>
+<li>
+track <i>original </i>changes separately from merges
+</li>
+<li>
+track changes that originated in <i>this branch</i> as well as in other branches
+</li>
+<li>
+track changes at the granularity of <i>branch-element-revs</i>
+</li>
+
+</ul>
+<div class="Standard">
+The system should enable merge history to be treated as a DAG in cases where ’complete’ merging is being performed. In other words, after a complete merge, it should be clear from the merge history that there is a point that can be treated as a youngest common ancestor.
+</div>
+<div class="Standard">
+Merge history also provides the metadata necessary to answer &ldquo;from which branch and revision was this branch branched?&rdquo; — see the section on Copying.
+</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-6.2">6.2</a> Subtree Merge History
+</h2>
+<div class="Standard">
+Merge history shall indicate that a change is logically present in the branch. This means the effect of the change is in the branch, even if no longer in the same form as the original change. Therefore mergeinfo does not inherently belong at the element level, but at the whole branch level.
+</div>
+<div class="Standard">
+### Is mergeinfo attached to a &ldquo;subtree&rdquo; or rather a subset of elements, in order to track subtree merges?
+</div>
+<div class="Standard">
+The smallest unit of tracked changes shall be the change to the versioned content of one element (parent-eid, name, payload) in one revision.
+</div>
+<ul>
+<li>
+### How to deal with merging only the payload of the subtree root element in a subtree merge, separately from merging the location change of the same element in an outer merge? Perhaps complain if both the payload and the location of that node changed, as it’s an unlikely scenario in many use cases. But that’s not rigorous.
+</li>
+
+</ul>
+<div class="Standard">
+### ...
+</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-6.3">6.3</a> Design
+</h2>
+<div class="Standard">
+### TBD
+</div>
+<h1 class="Section">
+<a class="toc" name="toc-Section-7">7</a> Copying
+</h1>
+<div class="Standard">
+In old svn, copying inserted metadata that said &ldquo;node-rev foo@100 was copied from /bar@95&rdquo;. Apart from being visible in &ldquo;log -v&rdquo; and &ldquo;info&rdquo;, the only way this affected behaviour was that commands such as &ldquo;log&rdquo; or &ldquo;merge&rdquo; with this node as the target would follow copies backwards. This could be useful for simulating moves, to a degree. But a copy was not recognized as an operation that could be merged to another branch. Instead, merge treated a copy the same as a simple add; in both cases, the result was a copy from the source branch.
+</div>
+<div class="Standard">
+Copying as a separate concept is no longer much needed, as the model natively supports the following cases where a ’copy’ was previously used:
+</div>
+<ul>
+<li>
+moving
+</li>
+<li>
+branching
+</li>
+<li>
+merging a node creation into another branch
+</li>
+<li>
+resurrecting (the latest version or an older version, including roll-back by resurrecting an older version to replace the current version)
+</li>
+
+</ul>
+<div class="Standard">
+The only remaining case for copying is:
+</div>
+<ul>
+<li>
+making a new node or subtree <ul>
+<li>
+that starts off identical to an existing (past or present) one
+</li>
+<li>
+and that records a historical link to it
+</li>
+
+</ul>
+
+</li>
+
+</ul>
+<div class="Standard">
+There is no need for this kind of ’plain’ copying to be modeled explicitly at this level.
+</div>
+<div class="Standard">
+Recommendation:
+</div>
+<ul>
+<li>
+the copy-from for a plain copy is recorded as revision-property metadata, or at a higher layer of model
+</li>
+
+</ul>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-7.1">7.1</a> How New Features Replace Copying
+</h2>
+<div class="Standard">
+The copy-from metadata is replaced in the following way in the new model, for each case that was previously represented by a copy:
+</div>
+<div class="Standard">
+### DIAGRAMS
+</div>
+<ul>
+<li>
+moving<ul>
+<li>
+normal (in-branch) — history is perfectly represented
+</li>
+<li>
+cross-branch — use merge history to represent from-branch
+</li>
+<li>
+copy from older version — treat as move plus roll-back (use merge history to represent from-revision)
+</li>
+
+</ul>
+
+</li>
+<li>
+branching — use merge history to represent from-branch; copying from non-head: treat as roll-back?
+</li>
+<li>
+merging a creation — use merge history to represent from-branch; from-revision is meaningless
+</li>
+<li>
+ressurecting<ul>
+<li>
+normal (in branch) — use merge history to represent any roll-back
+</li>
+<li>
+cross-branch — similar to merging a creation
+</li>
+
+</ul>
+
+</li>
+<li>
+making a new node or subtree — use merge history?
+</li>
+
+</ul>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-7.2">7.2</a> Merge History as Copy-From Metadata
+</h2>
+<div class="Standard">
+Merge history can replace much of the semantics of copy-from metadata.
+</div>
+<div class="Standard">
+### basically:
+</div>
+<ul>
+<li>
+on copying, set the history to ’COPYFROMPATH : all revs up to COPYFROMREV’
+</li>
+<li>
+on reading, if the history looks like this (ignoring further merges) then report the history as ’copied from ...’, else don’t
+</li>
+
+</ul>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-7.3">7.3</a> Translating from new model back to ’copy-from’ metadata
+</h2>
+<div class="Standard">
+###
+</div>
+<h1 class="Section">
+<a class="toc" name="toc-Section-8">8</a> Branch Management
+</h1>
+<div class="Standard">
+The ’elements’ model deliberately does not address branch management. By branch management I mean things such as
+</div>
+<ul>
+<li>
+whether each project contains its own branches, or each branch contains multiple projects;
+</li>
+<li>
+branch promotion models, governing which kinds of merge are allowed between which branches;
+</li>
+<li>
+designating branches as ’dev’ or ’release’ or ’mainline’;
+</li>
+<li>
+where/when/whether subbranching is allowed.
+</li>
+
+</ul>
+<div class="Standard">
+Branch management should be modelled and implemented at a higher layer.
+</div>
+<h1 class="Section">
+<a class="toc" name="toc-Section-9">9</a> The Working Copy
+</h1>
+<div class="Standard">
+The fundamental purpose of the working copy (WC) is to hold a base state and local changes against that state, in order to build (offline) a new commit. A single commit, in Subversion so far.
+</div>
+<div class="Standard">
+As such, the design of the WC must match the design of the repository. A move-tracking WC will work with the element model. The WC represents a base state and a working state, each comprising a set of elements. It may be stored as a complete base state and a difference.
+</div>
+<div class="Standard">
+Special considerations:
+</div>
+<ul>
+<li>
+mixed-rev: each element at its own rev; each element appears only once (no ’appears at two paths’ confusion)
+</li>
+<li>
+...
+</li>
+
+</ul>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-9.1">9.1</a> Checkout, Update, Switch, Commit
+</h2>
+<div class="Standard">
+Basic WC state operations including Checkout, Update, Switch, Commit, Diff and Merge shall all make use of basic element-mode diff or edit APIs. For most of these operations a contextual diff is required in order to provide a good merge.
+</div>
+<div class="Standard">
+(Commit requires less context because its rebase merge is more restricted: for example, it does not merge text or properties so no context is required for them. Update and Switch perhaps do not need context in areas where there are no local changes. Checkout probably does not require any context.)
+</div>
+<h2 class="Subsection">
+<a class="toc" name="toc-Subsection-9.2">9.2</a> Mixed-Rev WC Operation
+</h2>
+<div class="Standard">
+Each element in the WC has its own base revision. A commit will update only the elements for which it commits a change, resulting in a mixed-rev WC. Any element of set of elements can be updated separately, resulting in a mixed-rev WC.
+</div>
+<div class="Standard">
+An update shall convey a set of per-element changes. These can include moving elements. When an update attempts to transform the base state into a non-tree configuration (such as with a cycle or a name clash or a deleted parent) the update shall be rejected and the WC unchanged. An update shall only succeed if it results in a tree configuration for the new base state.
+</div>
+<div class="Standard">
+A successful update to the base state shall be merged with the working state to produce the new working state. Any resulting tree conflicts shall be recorded in the WC to be resolved by the user, like in old Subversion except the kinds of conflicts are different.
+</div>
+<div class="Standard">
+Consequences:
+</div>
+<ul>
+<li>
+elements may be at different base revisions without ambiguity in the semantics
+</li>
+<li>
+there is no such thing as a broken/split/half move
+</li>
+
+</ul>
+
+<hr class="footer"/>
+<div class="footer" id="generated-by">
+Document generated by <a href="http://elyxer.nongnu.org/">eLyXer 1.2.5 (2013-03-10)</a> on <span class="create-date">2015-06-18T09:16:56.348899</span>
+</div>
+</div>
+</body>
+</html>

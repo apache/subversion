@@ -402,6 +402,27 @@ def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
   return output
 
 
+def run_and_verify_svnmover(expected_stdout, expected_stderr,
+                            *varargs):
+  """Run svnmover command and check its output"""
+
+  expected_exit = 0
+  if expected_stderr is not None and expected_stderr != []:
+    expected_exit = 1
+  return run_and_verify_svnmover2(expected_stdout, expected_stderr,
+                                  expected_exit, *varargs)
+
+def run_and_verify_svnmover2(expected_stdout, expected_stderr,
+                             expected_exit, *varargs):
+  """Run svnmover command and check its output and exit code."""
+
+  exit_code, out, err = main.run_svnmover(*varargs)
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
+  return exit_code, out, err
+
+
 def run_and_verify_svnmucc(expected_stdout, expected_stderr,
                            *varargs):
   """Run svnmucc command and check its output"""
