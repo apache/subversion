@@ -1171,6 +1171,36 @@ svn_cmdline__print_xml_prop_hash(svn_stringbuf_t **outstr,
 }
 
 svn_boolean_t
+svn_cmdline__stdin_is_a_terminal(void)
+{
+#ifdef WIN32
+  return (_isatty(STDIN_FILENO) != 0);
+#else
+  return (isatty(STDIN_FILENO) != 0);
+#endif
+}
+
+svn_boolean_t
+svn_cmdline__stdout_is_a_terminal(void)
+{
+#ifdef WIN32
+  return (_isatty(STDOUT_FILENO) != 0);
+#else
+  return (isatty(STDOUT_FILENO) != 0);
+#endif
+}
+
+svn_boolean_t
+svn_cmdline__stderr_is_a_terminal(void)
+{
+#ifdef WIN32
+  return (_isatty(STDERR_FILENO) != 0);
+#else
+  return (isatty(STDERR_FILENO) != 0);
+#endif
+}
+
+svn_boolean_t
 svn_cmdline__be_interactive(svn_boolean_t non_interactive,
                             svn_boolean_t force_interactive)
 {

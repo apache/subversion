@@ -116,6 +116,14 @@ _re_parse_co_restored = re.compile('^(Restored)\s+\'(.+)\'')
 _re_parse_commit_ext = re.compile('^(([A-Za-z]+( [a-z]+)*)) \'(.+)\'( --.*)?')
 _re_parse_commit = re.compile('^(\w+(  \(bin\))?)\s+(.+)')
 
+#rN: eids 0 15 branches 4
+_re_parse_eid_header = re.compile('^r(-1|[0-9]+): eids ([0-9]+) ([0-9]+) '
+                                  'branches ([0-9]+)$')
+# B0.2 root-eid 3
+_re_parse_eid_branch = re.compile('^(B[0-9.]+) root-eid ([0-9]+) num-eids ([0-9]+)( from [^ ]*)?$')
+# e4: normal 6 C
+_re_parse_eid_ele = re.compile('^e([0-9]+): (none|normal|subbranch) '
+                               '(-1|[0-9]+) (.*)$')
 
 class State:
   """Describes an existing or expected state of a working copy.
@@ -205,6 +213,30 @@ class State:
     for path, item in self.desc.items():
       if list(filter(path, item)):
         item.tweak(**kw)
+
+  def rename(self, moves):
+    """Change the path of some items.
+
+    MOVES is a dictionary mapping source path to destination
+    path. Children move with moved parents.  All subtrees are moved in
+    reverse depth order to temporary storage before being moved in
+    depth order to the final location.  This allows nested moves.
+
+    """
+    temp = {}
+    for src, dst in sorted(moves.items(), key=lambda (src, dst): src)[::-1]:
+      temp[src] = {}
+      for path, item in self.desc.items():
+        if path == src or path[:len(src) + 1] == src + '/':
+          temp[src][path] = item;
+          del self.desc[path]
+    for src, dst in sorted(moves.items(), key=lambda (src, dst): dst):
+      for path, item in temp[src].items():
+        if path == src:
+          new_path = dst
+        else:
+          new_path = dst + path[len(src):]
+        self.desc[new_path] = item
 
   def subtree(self, subtree_path):
     """Return a State object which is a deep copy of the sub-tree
@@ -750,6 +782,58 @@ class State:
 
     return cls('', desc)
 
+  @classmethod
+  def from_eids(cls, lines):
+
+    # Need to read all elements in a branch before we can construct
+    # the full path to an element.
+    # For the full path we use <branch-id>/<path-within-branch>.
+
+    def eid_path(eids, eid):
+      ele = eids[eid]
+      if ele[0] == '-1':
+        return ele[1]
+      parent_path = eid_path(eids, ele[0])
+      if parent_path == '':
+        return ele[1]
+      return parent_path + '/' + ele[1]
+
+    def eid_full_path(eids, eid, branch_id):
+      path = eid_path(eids, eid)
+      if path == '':
+        return branch_id
+      return branch_id + '/' + path
+
+    def add_to_desc(eids, desc, branch_id):
+      for k, v in eids.items():
+        desc[eid_full_path(eids, k, branch_id)] = StateItem(eid=k)
+
+    branch_id = None
+    eids = {}
+    desc = {}
+    for line in lines:
+
+      match = _re_parse_eid_ele.search(line)
+      if match and match.group(2) != 'none':
+        eid = match.group(1)
+        parent_eid = match.group(3) 
+        path = match.group(4)
+        if path == '.':
+          path = ''
+        eids[eid] = [parent_eid, path]
+
+      match = _re_parse_eid_branch.search(line)
+      if match:
+        if branch_id:
+          add_to_desc(eids, desc, branch_id)
+          eids = {}
+        branch_id = match.group(1)
+        root_eid = match.group(2)
+
+    add_to_desc(eids, desc, branch_id)
+
+    return cls('', desc)
+  
 
 class StateItem:
   """Describes an individual item within a working copy.
@@ -764,7 +848,8 @@ class StateItem:
                entry_rev=None, entry_status=None, entry_copied=None,
                locked=None, copied=None, switched=None, writelocked=None,
                treeconflict=None, moved_from=None, moved_to=None,
-               prev_status=None, prev_verb=None, prev_treeconflict=None):
+               prev_status=None, prev_verb=None, prev_treeconflict=None,
+               eid=None):
     # provide an empty prop dict if it wasn't provided
     if props is None:
       props = { }
@@ -772,6 +857,8 @@ class StateItem:
     ### keep/make these ints one day?
     if wc_rev is not None:
       wc_rev = str(wc_rev)
+    if eid is not None:
+      eid = str(eid)
 
     # Any attribute can be None if not relevant, unless otherwise stated.
 
@@ -807,6 +894,7 @@ class StateItem:
     # Relative paths to the move locations
     self.moved_from = moved_from
     self.moved_to = moved_to
+    self.eid = eid
 
   def copy(self):
     "Make a deep copy of self."
@@ -819,6 +907,8 @@ class StateItem:
     for name, value in kw.items():
       # Refine the revision args (for now) to ensure they are strings.
       if value is not None and name == 'wc_rev':
+        value = str(value)
+      if value is not None and name == 'eid':
         value = str(value)
       setattr(self, name, value)
 
@@ -867,6 +957,8 @@ class StateItem:
       atts['moved_from'] = self.moved_from
     if self.moved_to is not None:
       atts['moved_to'] = self.moved_to
+    if self.eid is not None:
+      atts['eid'] = self.eid
 
     return (os.path.normpath(path), self.contents, self.props, atts)
 
