@@ -36,7 +36,6 @@
 #include "private/svn_branch_nested.h"
 #include "private/svn_delta_private.h"
 #include "private/svn_branch_compat.h"
-#include "../libsvn_delta/debug_editor.h"
 
 #include "svn_private_config.h"
 
