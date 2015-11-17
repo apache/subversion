@@ -154,7 +154,14 @@ branch_revision_fetch_info(svn_branch__txn_t **txn_p,
       SVN_ERR(write_rev_prop(ra_session, branch_info_dir, revision, value,
                              scratch_pool));
     }
-  SVN_ERR_ASSERT(value);
+  else if (! value)
+    {
+      return svn_error_createf(SVN_BRANCH__ERR, NULL,
+                               _("Move-tracking metadata not found in r%ld "
+                                 "in this repository. Run svnmover on an "
+                                 "empty repository to initialize the "
+                                 "metadata"), revision);
+    }
   stream = svn_stream_from_string(value, scratch_pool);
 
   SVN_ERR(svn_branch__txn_parse(&txn, repos, stream,
