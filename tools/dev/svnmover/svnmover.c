@@ -53,7 +53,7 @@
 #include "private/svn_sorts_private.h"
 #include "private/svn_token.h"
 #include "private/svn_client_private.h"
-#include "../libsvn_delta/debug_editor.h"
+#include "private/svn_delta_private.h"
 
 #ifdef HAVE_LINENOISE
 #include "linenoise/linenoise.h"
