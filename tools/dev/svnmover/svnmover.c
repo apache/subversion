@@ -685,6 +685,16 @@ wc_commit(svn_revnum_t *new_rev_p,
   const char *edit_root_branch_id;
   svn_branch__state_t *edit_root_branch;
 
+  SVN_ERR(txn_is_changed(wc->working->branch->txn, &change_detected,
+                         scratch_pool));
+  if (! change_detected)
+    {
+      wc->list_of_commands = NULL;
+      if (new_rev_p)
+        *new_rev_p = SVN_INVALID_REVNUM;
+      return SVN_NO_ERROR;
+    }
+
   /* If no log msg provided, use the list of commands */
   if (! svn_hash_gets(revprops, SVN_PROP_REVISION_LOG) && wc->list_of_commands)
     {
@@ -745,27 +755,17 @@ wc_commit(svn_revnum_t *new_rev_p,
                  wc->base->branch,
                  wc->working->branch,
                  scratch_pool));
-  SVN_ERR(txn_is_changed(commit_txn, &change_detected,
-                         scratch_pool));
-  if (change_detected)
-    {
-      ccbb.edit_txn = commit_txn;
-      ccbb.wc_base_branch_id = wc->base->branch->bid;
-      ccbb.wc_commit_branch_id = edit_root_branch_id;
 
-      SVN_ERR(svn_branch__txn_complete(commit_txn, scratch_pool));
-      SVN_ERR(display_diff_of_commit(&ccbb, scratch_pool));
+  ccbb.edit_txn = commit_txn;
+  ccbb.wc_base_branch_id = wc->base->branch->bid;
+  ccbb.wc_commit_branch_id = edit_root_branch_id;
 
-      wc->head_revision = ccbb.revision;
-      if (new_rev_p)
-        *new_rev_p = ccbb.revision;
-    }
-  else
-    {
-      SVN_ERR(svn_branch__txn_abort(commit_txn, scratch_pool));
-      if (new_rev_p)
-        *new_rev_p = SVN_INVALID_REVNUM;
-    }
+  SVN_ERR(svn_branch__txn_complete(commit_txn, scratch_pool));
+  SVN_ERR(display_diff_of_commit(&ccbb, scratch_pool));
+
+  wc->head_revision = ccbb.revision;
+  if (new_rev_p)
+    *new_rev_p = ccbb.revision;
 
   wc->list_of_commands = NULL;
 
