@@ -73,10 +73,10 @@ svn_branch__get_rrpath_by_eid(const svn_branch__state_t *branch,
  *
  * ### TODO: Clarify sequencing requirements.
  */
-/*int
-svn_branch__get_eid_by_rrpath(svn_branch__state_t *branch,
-                              const char *rrpath,
-                              apr_pool_t *scratch_pool);*/
+/*int*/
+/*svn_branch__get_eid_by_rrpath(svn_branch__state_t *branch,*/
+/*                              const char *rrpath,*/
+/*                              apr_pool_t *scratch_pool);*/
 
 /* Find the (deepest) branch of which the path RELPATH is either the root
  * path or a normal, non-sub-branch path. An element need not exist at
