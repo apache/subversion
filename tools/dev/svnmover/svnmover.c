@@ -3233,8 +3233,8 @@ usage(FILE *stream, apr_pool_t *pool)
       "Valid options:\n"
       "  --ui={eids|e|paths|p}  : display information as elements or as paths\n"
       "  --colo[u]r={always|never|auto}\n"
-      "                         : use coloured output; 'auto' (the default)\n"
-      "                           means when standard output goes to a terminal\n"
+      "                         : use coloured output; 'auto' means when standard\n"
+      "                           output goes to a terminal; default: never\n"
       "  -h, -? [--help]        : display this text\n"
       "  -v [--verbose]         : display debugging messages\n"
       "  -q [--quiet]           : suppress notifications\n"
@@ -3625,7 +3625,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_config_t *cfg_config;
   svn_client_ctx_t *ctx;
   const char *log_msg;
-  svn_tristate_t coloured_output = svn_tristate_unknown;
+  svn_tristate_t coloured_output = svn_tristate_false;
   svnmover_wc_t *wc;
 
   /* Check library versions */
