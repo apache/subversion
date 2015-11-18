@@ -130,7 +130,7 @@ struct conflict_storage_t
 {
   /* Single-element conflicts */
   /* (eid -> element_merge3_conflict_t) */
-  apr_hash_t *single_element_conflicts;
+  apr_hash_t *element_merge_conflicts;
 
   /* Name-clash conflicts */
   /* ("%{parent_eid}d/%{name}s" -> name_clash_conflict_t) */
