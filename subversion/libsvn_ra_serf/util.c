@@ -480,6 +480,36 @@ load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
   return SVN_NO_ERROR;
 }
 
+#if SERF_VERSION_AT_LEAST(1, 4, 0) && defined(SVN__SERF_TEST_HTTP2)
+/* Implements serf_ssl_protocol_result_cb_t */
+static apr_status_t
+conn_negotiate_protocol(void *data,
+                        const char *protocol)
+{
+  svn_ra_serf__connection_t *conn = data;
+
+  if (!strcmp(protocol, "h2"))
+    {
+      serf_connection_set_framing_type(
+            conn->conn,
+            SERF_CONNECTION_FRAMING_TYPE_HTTP2);
+
+      /* Disable generating content-length headers. */
+      conn->session->http10 = FALSE;
+      conn->session->using_chunked_requests = TRUE;
+    }
+  else
+    {
+      /* protocol should be "" or "http/1.1" */
+      serf_connection_set_framing_type(
+            conn->conn,
+            SERF_CONNECTION_FRAMING_TYPE_HTTP1);
+    }
+
+  return APR_SUCCESS;
+}
+#endif
+
 static svn_error_t *
 conn_setup(apr_socket_t *sock,
            serf_bucket_t **read_bkt,
@@ -525,6 +555,16 @@ conn_setup(apr_socket_t *sock,
               SVN_ERR(load_authorities(conn, conn->session->ssl_authorities,
                                        conn->session->pool));
             }
+#if SERF_VERSION_AT_LEAST(1, 4, 0) && defined(SVN__SERF_TEST_HTTP2)
+          if (APR_SUCCESS ==
+                serf_ssl_negotiate_protocol(conn->ssl_context, "h2,http/1.1",
+                                            conn_negotiate_protocol, conn))
+            {
+                serf_connection_set_framing_type(
+                            conn->conn,
+                            SERF_CONNECTION_FRAMING_TYPE_NONE);
+            }
+#endif
         }
 
       if (write_bkt)
