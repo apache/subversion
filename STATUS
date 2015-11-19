@@ -136,6 +136,13 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1715224, r1715232, r1715262
+   ra_serf: Fix setting Content-Type header in 3 outgoing xml requests
+   Justification:
+     We should properly implement our wire protocol.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
