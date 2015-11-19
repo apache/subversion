@@ -841,6 +841,7 @@ proppatch_resource(svn_ra_serf__session_t *session,
 
   handler->body_delegate = create_proppatch_body;
   handler->body_delegate_baton = proppatch;
+  handler->body_type = "text/xml";
 
   handler->response_handler = svn_ra_serf__handle_multistatus_only;
   handler->response_baton = handler;
