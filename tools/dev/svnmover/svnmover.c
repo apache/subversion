@@ -78,8 +78,7 @@ check_lib_versions(void)
 static svn_boolean_t quiet = FALSE;
 
 /* UI mode: whether to display output in terms of paths or elements */
-enum { UI_MODE_EIDS, UI_MODE_PATHS, UI_MODE_SERIAL };
-static int the_ui_mode = UI_MODE_EIDS;
+int the_ui_mode = UI_MODE_EIDS;
 static const svn_token_map_t ui_mode_map[]
   = { {"eids", UI_MODE_EIDS},
       {"e", UI_MODE_EIDS},

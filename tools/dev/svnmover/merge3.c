@@ -34,6 +34,7 @@
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_string.h"
+#include "svn_dirent_uri.h"
 
 #include "private/svn_subr_private.h"
 #include "private/svn_branch_repos.h"
@@ -87,6 +88,122 @@ brief_eid_and_name_or_nil(svn_element__content_t *e,
 {
   return e ? apr_psprintf(result_pool, "%d/%s", e->parent_eid, e->name)
            : "<nil>";
+}
+
+/* Return the longest known relative path leading to element EID in ELEMENTS.
+ *
+ * Set *BASE_EID_P to -1 if this path is rooted at the branch root;
+ * otherwise, set *BASE_EID_P to the EID from which the path is relative,
+ * In the latter case, element *BASE_EID_P is not found in ELEMENTS.
+ *
+ * If CYCLE_CONFLICTS is non-null, it maps each EID involved in a cycle to
+ * [something]. If null, assume there are no cycles.
+ *
+ * If there is a cycle, return a special string indicating so.
+ * ### Presently the special string doesn't indicate which part of the
+ *     path is cyclic. TODO: return only the out-of-cycle part, plus the
+ *     EID where it attaches to the cycle.
+ */
+static const char *
+partial_relpath(int *base_eid_p,
+                svn_element__tree_t *elements,
+                apr_hash_t *cycle_conflicts,
+                int eid,
+                apr_pool_t *result_pool)
+{
+  const char *s = "";
+  int this_eid = eid;
+  svn_element__content_t *e;
+
+  while ((e = svn_element__tree_get(elements, this_eid))
+         && (e->parent_eid != -1))
+    {
+      s = svn_relpath_join(e->name, s, result_pool);
+
+      this_eid = e->parent_eid;
+
+      /* Detect cycles */
+      if (cycle_conflicts && svn_eid__hash_get(cycle_conflicts, this_eid))
+        {
+          /* Cycle detected */
+          e = NULL;
+          break;
+        }
+    }
+
+  if (base_eid_p)
+    {
+      if (e)
+        {
+          /* We reached the root element */
+          *base_eid_p = -1;
+        }
+      else
+        {
+          /* We came to this nonexistent or cyclic parent element */
+          *base_eid_p = this_eid;
+        }
+    }
+  return s;
+}
+
+/*  */
+static svn_error_t *
+display_relpath(const char **s_p,
+                svn_branch__state_t *branch,
+                apr_hash_t *cycle_conflicts,
+                int eid,
+                apr_pool_t *result_pool)
+{
+  svn_element__tree_t *elements;
+  int base_eid;
+  const char *s;
+
+  SVN_ERR(svn_branch__state_get_elements(branch, &elements, result_pool));
+  s = partial_relpath(&base_eid, elements, cycle_conflicts, eid, result_pool);
+
+  if (base_eid == -1)
+    s = apr_psprintf(result_pool, "/%s", s);
+  else if (base_eid == eid)
+    s = "<nil>";
+  else if (the_ui_mode == UI_MODE_PATHS)
+    s = svn_relpath_join("...", s, result_pool);
+  else
+    {
+      const char *eid_str = apr_psprintf(result_pool, "<e%d>", base_eid);
+      s = svn_relpath_join(eid_str, s, result_pool);
+    }
+  *s_p = s;
+  return SVN_NO_ERROR;
+}
+
+/* Set *S_P to a string describing the identity of element EID. */
+static svn_error_t *
+merged_element_id_str(const char **s_p,
+                      conflict_storage_t *conflict_storage,
+                      int eid,
+                      apr_pool_t *result_pool)
+{
+  const char *s_yca, *s_src, *s_tgt, *s_merged;
+
+  SVN_ERR(display_relpath(&s_yca, conflict_storage->yca_branch, NULL,
+                          eid, result_pool));
+  SVN_ERR(display_relpath(&s_src, conflict_storage->src_branch, NULL,
+                          eid, result_pool));
+  SVN_ERR(display_relpath(&s_tgt, conflict_storage->tgt_branch, conflict_storage->cycle_conflicts,
+                          eid, result_pool));
+  SVN_ERR(display_relpath(&s_merged, conflict_storage->merged_branch,
+                          conflict_storage->cycle_conflicts,
+                          eid, result_pool));
+  *s_p = apr_psprintf(result_pool,
+                      "yca=%s, side1=%s, side2=%s, merged=%s",
+                      s_yca, s_src, s_tgt, s_merged);
+  if (the_ui_mode == UI_MODE_EIDS)
+    {
+      *s_p = apr_psprintf(result_pool,
+                          "e%d (%s)", eid, *s_p);
+    }
+  return SVN_NO_ERROR;
 }
 
 /* Options to control how strict the merge is about detecting conflicts.
@@ -146,16 +263,22 @@ element_merge3_conflict_dup(element_merge3_conflict_t *old_conflict,
                                         old_conflict->side2, result_pool);
 }
 
-static const char *
-element_merge3_conflict_str(element_merge3_conflict_t *c,
+static svn_error_t *
+element_merge3_conflict_str(const char **s_p,
+                            conflict_storage_t *conflict_storage,
+                            element_merge3_conflict_t *c,
                             int eid,
                             apr_pool_t *result_pool)
 {
-  return apr_psprintf(result_pool,
-                      "element-merge conflict: yca=%s, side1=%s, side2=%s",
-                      brief_eid_and_name_or_nil(c->yca, result_pool),
-                      brief_eid_and_name_or_nil(c->side1, result_pool),
-                      brief_eid_and_name_or_nil(c->side2, result_pool));
+  const char *id_str;
+
+  SVN_ERR(merged_element_id_str(&id_str, conflict_storage,
+                                eid, result_pool));
+  *s_p = apr_psprintf(result_pool,
+                      "element-merge conflict:\n"
+                      "    %s",
+                      id_str);
+  return SVN_NO_ERROR;
 }
 
 /* A name-clash conflict description.
@@ -181,8 +304,10 @@ name_clash_conflict_create(int parent_eid,
   return c;
 }
 
-static const char *
-name_clash_conflict_str(name_clash_conflict_t *c,
+static svn_error_t *
+name_clash_conflict_str(const char **s_p,
+                        conflict_storage_t *conflict_storage,
+                        name_clash_conflict_t *c,
                         apr_pool_t *result_pool)
 {
   apr_hash_index_t *hi2;
@@ -192,10 +317,17 @@ name_clash_conflict_str(name_clash_conflict_t *c,
        hi2; hi2 = apr_hash_next(hi2))
     {
       int eid = svn_eid__hash_this_key(hi2);
+      const char *id_str;
 
-      s = apr_psprintf(result_pool, "%s e%d", s, eid);
+      SVN_ERR(merged_element_id_str(&id_str, conflict_storage,
+                                    eid, result_pool));
+      s = apr_psprintf(result_pool,
+                       "%s\n"
+                       "    %s",
+                       s, id_str);
     }
-  return s;
+  *s_p = s;
+  return SVN_NO_ERROR;
 }
 
 /* A cycle conflict description.
@@ -215,23 +347,36 @@ cycle_conflict_create(apr_pool_t *result_pool)
   return c;
 }
 
-static const char *
-cycle_conflict_str(cycle_conflict_t *c,
+static svn_error_t *
+cycle_conflict_str(const char **s_p,
+                   conflict_storage_t *conflict_storage,
+                   cycle_conflict_t *c,
                    int eid,
                    apr_pool_t *result_pool)
 {
-  const char *s = "cycle conflict: elements";
-  apr_hash_index_t *hi2;
+  svn_element__content_t *element = svn_eid__hash_get(c->elements, eid);
+  const char *s
+    = apr_psprintf(result_pool, "element '%s' has cyclic parentage",
+                   element->name);
+  int this_eid = eid;
 
-  for (hi2 = apr_hash_first(result_pool, c->elements);
-       hi2; hi2 = apr_hash_next(hi2))
+  do
     {
-      int eid2 = svn_eid__hash_this_key(hi2);
+      const char *id_str;
 
-      s = apr_psprintf(result_pool, "%s e%d", s, eid2);
+      SVN_ERR(merged_element_id_str(&id_str, conflict_storage,
+                                    this_eid, result_pool));
+      s = apr_psprintf(result_pool,
+                       "%s\n"
+                       "    %s",
+                       s, id_str);
+      element = svn_eid__hash_get(c->elements, this_eid);
+      this_eid = element->parent_eid;
     }
+  while (this_eid != eid);
 
-  return s;
+  *s_p = s;
+  return SVN_NO_ERROR;
 }
 
 /* An orphan conflict description.
@@ -251,14 +396,26 @@ orphan_conflict_create(svn_element__content_t *element,
   return c;
 }
 
-static const char *
-orphan_conflict_str(orphan_conflict_t *c,
+static svn_error_t *
+orphan_conflict_str(const char **s_p,
+                    conflict_storage_t *conflict_storage,
+                    orphan_conflict_t *c,
                     int eid,
                     apr_pool_t *result_pool)
 {
-  return apr_psprintf(result_pool,
-                      "orphan conflict: name '%s': parent e%d does not exist",
-                      c->element->name, c->element->parent_eid);
+  const char *id_str;
+  const char *parent_id_str;
+
+  SVN_ERR(merged_element_id_str(&id_str, conflict_storage,
+                                eid, result_pool));
+  SVN_ERR(merged_element_id_str(&parent_id_str, conflict_storage,
+                                c->element->parent_eid, result_pool));
+  *s_p = apr_psprintf(result_pool,
+                      "orphan conflict: parent (%s) does not exist "
+                      "for the following child:\n"
+                      "    %s",
+                      parent_id_str, id_str);
+  return SVN_NO_ERROR;
 }
 
 /*  */
@@ -285,10 +442,18 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
       int eid = svn_eid__hash_this_key(hi);
       element_merge3_conflict_t *c = apr_hash_this_val(hi);
       const char *id_string = apr_psprintf(scratch_pool, "e%d", eid);
+      const char *c_str;
 
-      svnmover_notify("  %s: %s",
-                      id_string,
-                      element_merge3_conflict_str(c, eid, scratch_pool));
+      SVN_ERR(element_merge3_conflict_str(&c_str, conflict_storage,
+                                          c, eid, scratch_pool));
+      if (the_ui_mode == UI_MODE_EIDS)
+        {
+          svnmover_notify("  %s: %s", id_string, c_str);
+        }
+      else
+        {
+          svnmover_notify("  %s", c_str);
+        }
     }
   for (hi = apr_hash_first(scratch_pool,
                            conflict_storage->name_clash_conflicts);
@@ -296,10 +461,18 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
     {
       const char *id_string = apr_hash_this_key(hi);
       name_clash_conflict_t *c = apr_hash_this_val(hi);
+      const char *c_str;
 
-      svnmover_notify("  %s: %s",
-                      id_string,
-                      name_clash_conflict_str(c, scratch_pool));
+      SVN_ERR(name_clash_conflict_str(&c_str, conflict_storage,
+                                      c, scratch_pool));
+      if (the_ui_mode == UI_MODE_EIDS)
+        {
+          svnmover_notify("  %s: %s", id_string, c_str);
+        }
+      else
+        {
+          svnmover_notify("  %s", c_str);
+        }
     }
   for (hi = apr_hash_first(scratch_pool,
                            conflict_storage->cycle_conflicts);
@@ -308,10 +481,18 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
       int eid = svn_eid__hash_this_key(hi);
       cycle_conflict_t *c = apr_hash_this_val(hi);
       const char *id_string = apr_psprintf(scratch_pool, "e%d", eid);
+      const char *c_str;
 
-      svnmover_notify("  %s: %s",
-                      id_string,
-                      cycle_conflict_str(c, eid, scratch_pool));
+      SVN_ERR(cycle_conflict_str(&c_str, conflict_storage,
+                                 c, eid, scratch_pool));
+      if (the_ui_mode == UI_MODE_EIDS)
+        {
+          svnmover_notify("  %s: %s", id_string, c_str);
+        }
+      else
+        {
+          svnmover_notify("  %s", c_str);
+        }
     }
   for (hi = apr_hash_first(scratch_pool,
                            conflict_storage->orphan_conflicts);
@@ -320,10 +501,18 @@ svnmover_display_conflicts(conflict_storage_t *conflict_storage,
       int eid = svn_eid__hash_this_key(hi);
       orphan_conflict_t *c = apr_hash_this_val(hi);
       const char *id_string = apr_psprintf(scratch_pool, "e%d", eid);
+      const char *c_str;
 
-      svnmover_notify("  %s: %s",
-                      id_string,
-                      orphan_conflict_str(c, eid, scratch_pool));
+      SVN_ERR(orphan_conflict_str(&c_str, conflict_storage,
+                                  c, eid, scratch_pool));
+      if (the_ui_mode == UI_MODE_EIDS)
+        {
+          svnmover_notify("  %s: %s", id_string, c_str);
+        }
+      else
+        {
+          svnmover_notify("  %s", c_str);
+        }
     }
 
   svnmover_notify(_("Summary of conflicts:\n"
@@ -814,6 +1003,39 @@ detect_clashes(apr_hash_t **clashes_p,
   return SVN_NO_ERROR;
 }
 
+/* For each element in the cycle starting at ONE_EID in EIDS_VISITED,
+ * record an entry in CYCLES[this_eid] mapping to a cycle_conflict_t.
+ * Each such new entry will point to the same cycle_conflict_t. This
+ * cycle_conflict_t will contain the list of elements in the cycle.
+ *
+ * ONE_EID should identify a member of a simple cycle, not an element
+ * that merely has a parent or ancestor in a simple cycle.
+ */
+static svn_error_t *
+record_cycle(apr_hash_t *cycles,
+             apr_hash_t *eids_visited,
+             int one_eid,
+             apr_pool_t *result_pool)
+{
+  cycle_conflict_t *c = cycle_conflict_create(result_pool);
+  int this_eid = one_eid;
+
+  do
+    {
+      svn_element__content_t *element
+        = svn_eid__hash_get(eids_visited, this_eid);
+
+      svn_eid__hash_set(cycles, this_eid, c);
+      svn_eid__hash_set(c->elements, this_eid, element);
+
+      this_eid = element->parent_eid;
+      assert(this_eid != -1);
+    }
+  while (this_eid != one_eid);
+
+  return SVN_NO_ERROR;
+}
+
 /* Return all (eid -> cycle_conflict_t) cycle conflicts in BRANCH.
 
  * ### This implementation is crude: it finds all cycles, but doesn't
@@ -836,23 +1058,41 @@ detect_cycles(apr_hash_t **cycles_p,
     {
       int eid = svn_eid__hash_this_key(hi);
       svn_element__content_t *element = apr_hash_this_val(hi);
-      cycle_conflict_t *c = cycle_conflict_create(result_pool);
+      apr_hash_t *eids_visited;
+      int this_eid;
 
-      svn_eid__hash_set(c->elements, eid, c);
+      /* If the element EID is already recorded as a member of a cycle,
+         there's nothing more to do for it. */
+      if (svn_eid__hash_get(cycles, eid))
+        {
+          continue;
+        }
+
+      eids_visited = apr_hash_make(scratch_pool);
 
       /* See if we can trace the parentage of EID back to the branch root
          without finding a cycle. If we find a cycle, store a conflict. */
-      for (; element && (element->parent_eid != -1);
-           element = svn_eid__hash_get(elements->e_map, element->parent_eid))
+      for (this_eid = eid;
+           element = svn_eid__hash_get(elements->e_map, this_eid),
+             element && element->parent_eid != -1;
+           this_eid = element->parent_eid)
         {
-          /* If this parent-eid is already in the path from EID to the root,
-             then we have found a cycle. */
-          if (svn_eid__hash_get(c->elements, element->parent_eid))
+          svn_eid__hash_set(eids_visited, this_eid, element);
+
+          /* If the element EID is attached to an element of a previously
+             detected cycle, then it's not interesting in itself. */
+          if (svn_eid__hash_get(cycles, element->parent_eid))
             {
-              svn_eid__hash_set(cycles, eid, c);
               break;
             }
-          svn_eid__hash_set(c->elements, element->parent_eid, c);
+          /* If this element's parent-EID is already in the path of EIDs
+             visited from EID to the root, then we have found a cycle. */
+          if (svn_eid__hash_get(eids_visited, element->parent_eid))
+            {
+              SVN_ERR(record_cycle(cycles, eids_visited, this_eid,
+                                   result_pool));
+              break;
+            }
         }
     }
 
@@ -896,6 +1136,10 @@ detect_orphans(apr_hash_t **orphans_p,
 /* Merge ...
  *
  * Merge any sub-branches in the same way, recursively.
+ *
+ * ### TODO: Store the merge result separately, without overwriting the
+ *     target input state, so that the three input states are all available
+ *     for reference while resolving conflicts.
  */
 static svn_error_t *
 branch_merge_subtree_r(svn_branch__txn_t *edit_txn,
@@ -1048,11 +1292,10 @@ branch_merge_subtree_r(svn_branch__txn_t *edit_txn,
     }
   svn_pool_destroy(iterpool);
 
-  /* Detect clashes.
-     ### TODO: Detect clashes, cycles and orphans; and report full conflict
-               info (including the relevant incoming changes) for each
-               kind of conflict. If there are no conflicts, flatten the
-               merge result into a tree. */
+  conflict_storage->yca_branch = yca->branch;
+  conflict_storage->src_branch = src->branch;
+  conflict_storage->tgt_branch = tgt->branch;
+  conflict_storage->merged_branch = tgt->branch; /* ### should be != tgt */
   conflict_storage->element_merge_conflicts = e_conflicts;
   SVN_ERR(detect_clashes(&conflict_storage->name_clash_conflicts,
                          tgt->branch,

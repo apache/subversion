@@ -62,6 +62,10 @@ extern "C" {
   apr_hash_merge(apr_hash_pool_get(overlay), h1, h2, merger, data)
 
 
+enum { UI_MODE_EIDS, UI_MODE_PATHS, UI_MODE_SERIAL };
+extern int the_ui_mode;
+
+
 /* Display PROMPT_STR, read a line of text, and set *RESULT to that line.
  *
  * The interface here is similar to svn_cmdline_prompt_user2().
@@ -128,6 +132,8 @@ typedef struct svnmover_wc_t
 
 struct conflict_storage_t
 {
+  svn_branch__state_t *yca_branch, *src_branch, *tgt_branch, *merged_branch;
+
   /* Single-element conflicts */
   /* (eid -> element_merge3_conflict_t) */
   apr_hash_t *element_merge_conflicts;
