@@ -81,15 +81,6 @@ subbranch_str(svn_branch__state_t *branch,
   return branch_str(subbranch, result_pool);
 }
 
-/*  */
-static const char *
-brief_eid_and_name_or_nil(svn_element__content_t *e,
-                          apr_pool_t *result_pool)
-{
-  return e ? apr_psprintf(result_pool, "%d/%s", e->parent_eid, e->name)
-           : "<nil>";
-}
-
 /* Return the longest known relative path leading to element EID in ELEMENTS.
  *
  * Set *BASE_EID_P to -1 if this path is rooted at the branch root;
@@ -99,10 +90,8 @@ brief_eid_and_name_or_nil(svn_element__content_t *e,
  * If CYCLE_CONFLICTS is non-null, it maps each EID involved in a cycle to
  * [something]. If null, assume there are no cycles.
  *
- * If there is a cycle, return a special string indicating so.
- * ### Presently the special string doesn't indicate which part of the
- *     path is cyclic. TODO: return only the out-of-cycle part, plus the
- *     EID where it attaches to the cycle.
+ * If there is a cycle, set *BASE_EID_P to the EID of the nearest element
+ * that is part of a cycle and return the path relative to that element.
  */
 static const char *
 partial_relpath(int *base_eid_p,
