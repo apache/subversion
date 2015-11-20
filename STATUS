@@ -46,15 +46,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1704847
-   Report both built- and run-time versions of libserf, like we do for
-   everything else.
-   Justification:
-     Easier debugging. Consistency with version-reporting of other runtime
-     dependencies.
-   Votes:
-     +1: danielsh, stefan2
-
  * r1703470, r1703475, r1703476, r1703477, r1703544
    Updated INSTALL documentation.
    Justification:
@@ -120,31 +111,40 @@ Candidate changes:
      Allow administrators to setup configurable limits on the size of
      skel-encoded requests.
    Votes:
-     +1: ivan
+     +1: ivan, gstein
 
  * r1714314
    Don't ignore some of the parameters to svn_ra_svn_create_conn3.
    Justification:
      This is a regresssion against 1.8 but the fix is trivial.
    Votes:
-     +1: stefan2
+     +1: stefan2, gstein
 
  * r1714358
    Fix overflow detection in svn_stringbuf_remove and svn_stringbuf_replace.
    Justification:
      Using the public API as documented may result in undefined behavior.
    Votes:
-     +1: stefan2
+     +1: stefan2, gstein
 
  * r1715224, r1715232, r1715262
    ra_serf: Fix setting Content-Type header in 3 outgoing xml requests
    Justification:
      We should properly implement our wire protocol.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, gstein
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1704847
+   Report both built- and run-time versions of libserf, like we do for
+   everything else.
+   Justification:
+     Easier debugging. Consistency with version-reporting of other runtime
+     dependencies.
+   Votes:
+     +1: danielsh, stefan2, gstein
