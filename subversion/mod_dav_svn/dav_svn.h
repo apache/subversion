@@ -296,6 +296,10 @@ struct dav_resource_private {
   /* was keyword substitution requested using our public CGI interface
      (ie: /path/to/item?kw=1)? */
   svn_boolean_t keyword_subst;
+
+  /* whether this resource parameters are fixed and won't change
+     between requests. */
+  svn_boolean_t idempotent;
 };
 
 

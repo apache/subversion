@@ -173,6 +173,9 @@ parse_version_uri(dav_resource_combined *comb,
   if (comb->priv.root.rev == SVN_INVALID_REVNUM)
     return TRUE;
 
+  /* We have idempotent resource. */
+  comb->priv.idempotent = TRUE;
+
   return FALSE;
 }
 
@@ -446,6 +449,9 @@ parse_revstub_uri(dav_resource_combined *comb,
 
   /* which baseline (revision tree) to access */
   comb->priv.root.rev = revnum;
+
+  /* all resource parameters are fixed in URI. */
+  comb->priv.idempotent = TRUE;
 
   /* NOTE: comb->priv.repos_path == NULL */
   /* NOTE: comb->priv.created_rev == SVN_INVALID_REVNUM */
@@ -812,6 +818,12 @@ prep_regular(dav_resource_combined *comb)
                                       "revision to access",
                                       pool);
         }
+    }
+  else
+    {
+      /* Mark resource as 'idempotent' since we have specific revision
+         in URI. */
+      comb->priv.idempotent = TRUE;
     }
 
   /* get the root of the tree */
@@ -3096,6 +3108,29 @@ getetag_pathetic(const dav_resource *resource)
   return dav_svn__getetag(resource, resource->pool);
 }
 
+/* Helper for set_headers(). Returns TRUE if request R to RESOURCE can be
+ * cached. Returns FALSe otherwise. */
+static svn_boolean_t
+is_cacheable(request_rec *r, const dav_resource *resource)
+{
+  /* Non-idempotent resource cannot be cached because actual
+     target could change when youngest revision or transacation
+     will change. */
+  if (!resource->info->idempotent)
+    return FALSE;
+
+  /* Our GET requests on collections include dynamic data (the
+     HEAD revision, the build version of Subversion, etc.).
+     Directory content is also subject of authz filtering.*/
+  if (resource->collection)
+    return FALSE;
+
+  if (resource->type == DAV_RESOURCE_TYPE_REGULAR ||
+      resource->type == DAV_RESOURCE_TYPE_VERSION)
+      return TRUE;
+  else
+      return FALSE;
+}
 
 static dav_error *
 set_headers(request_rec *r, const dav_resource *resource)
@@ -3104,6 +3139,13 @@ set_headers(request_rec *r, const dav_resource *resource)
   svn_filesize_t length;
   const char *mimetype = NULL;
   apr_time_t last_modified;
+
+  /* As version resources don't change, encourage caching. */
+  if (is_cacheable(r, resource))
+    /* Cache resource for one week (specified in seconds). */
+    apr_table_setn(r->headers_out, "Cache-Control", "max-age=604800");
+  else
+    apr_table_setn(r->headers_out, "Cache-Control", "max-age=0");
 
   if (!resource->exists)
     return NULL;
@@ -3120,13 +3162,6 @@ set_headers(request_rec *r, const dav_resource *resource)
   /* generate our etag and place it into the output */
   apr_table_setn(r->headers_out, "ETag",
                  dav_svn__getetag(resource, resource->pool));
-
-  /* As version resources don't change, encourage caching. */
-  if ((resource->type == DAV_RESOURCE_TYPE_REGULAR
-       && resource->versioned && !resource->collection)
-      || resource->type == DAV_RESOURCE_TYPE_VERSION)
-    /* Cache resource for one week (specified in seconds). */
-    apr_table_setn(r->headers_out, "Cache-Control", "max-age=604800");
 
   /* we accept byte-ranges */
   apr_table_setn(r->headers_out, "Accept-Ranges", "bytes");
