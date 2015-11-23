@@ -447,7 +447,9 @@ class Svnserve:
       args = [self.name] + self.args
     print('Starting %s %s' % (self.kind, self.name))
 
-    self.proc = subprocess.Popen([self.path] + args[1:])
+    env = os.environ.copy()
+    env['SVN_DBG_STACKTRACES_TO_STDERR'] = 'y'
+    self.proc = subprocess.Popen([self.path] + args[1:], env=env)
 
   def stop(self):
     if self.proc is not None:
@@ -597,9 +599,9 @@ class Httpd:
       fp.write('SSLCertificateKeyFile %s\n' % self._quote(self.certkeyfile))
 
     if use_ssl and use_http2:
-      fp.write('Protocols h2 http/1.1\n')
+      fp.write('Protocols h2\n')
     elif use_http2:
-      fp.write('Protocols h2c http/1.1\n')
+      fp.write('Protocols h2c\n')
       fp.write('H2Direct on\n')
 
     # Don't handle .htaccess, symlinks, etc.
