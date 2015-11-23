@@ -77,9 +77,6 @@ Candidate changes:
      ^/subversion/branches/1.9.x-r1706428
    Votes:
      +1: kotkov, ivan
-     -0.1: rhuijben (Touches far more cases than issue #4598 without properly
-                     argumenting why,
-                     without r1711507, r1711510)
 
  * r1668625
    Fix 'svn diff --summarize --ignore-properties'.
@@ -104,22 +101,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1687812
-   mod_dav_svn: Use LimitXMLRequestBody httpd directive to control maximum
-   length of skel-encoded request bodies.
-   Justification:
-     Allow administrators to setup configurable limits on the size of
-     skel-encoded requests.
-   Votes:
-     +1: ivan, gstein
-
- * r1714314
-   Don't ignore some of the parameters to svn_ra_svn_create_conn3.
-   Justification:
-     This is a regresssion against 1.8 but the fix is trivial.
-   Votes:
-     +1: stefan2, gstein
-
  * r1715793
    Do not read TXN props on every svn_fs_txn_open() call in libsvn_fs_fs: FSFS
    doesn't use transaction_t.proplist (and never used). This code seems to
@@ -130,7 +111,7 @@ Candidate changes:
      http:// protocol on Windows, because mod_dav_svn opens TXN for every
      request on transaction.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -151,3 +132,19 @@ Approved changes:
      We should properly implement our wire protocol.
    Votes:
      +1: rhuijben, gstein, ivan
+
+ * r1714314
+   Don't ignore some of the parameters to svn_ra_svn_create_conn3.
+   Justification:
+     This is a regresssion against 1.8 but the fix is trivial.
+   Votes:
+     +1: stefan2, gstein, rhuijben
+
+ * r1687812
+   mod_dav_svn: Use LimitXMLRequestBody httpd directive to control maximum
+   length of skel-encoded request bodies.
+   Justification:
+     Allow administrators to setup configurable limits on the size of
+     skel-encoded requests.
+   Votes:
+     +1: ivan, gstein, rhuijben
