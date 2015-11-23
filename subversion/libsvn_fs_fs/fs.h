@@ -485,10 +485,6 @@ typedef struct fs_fs_data_t
 /*** Filesystem Transaction ***/
 typedef struct transaction_t
 {
-  /* property list (const char * name, svn_string_t * value).
-     may be NULL if there are no properties.  */
-  apr_hash_t *proplist;
-
   /* node revision id of the root node.  */
   const svn_fs_id_t *root_id;
 
