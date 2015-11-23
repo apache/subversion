@@ -1354,7 +1354,7 @@ do_switch(svnmover_wc_t *wc,
                                          svn_branch__root_eid(wc->working->branch),
                                          SVN_INVALID_REVNUM, scratch_pool);
       SVN_ERR(svnmover_branch_merge(wc->edit_txn, &wc->conflicts,
-                                    src, tgt, yca, scratch_pool, scratch_pool));
+                                    src, tgt, yca, wc->pool, scratch_pool));
 
       if (svnmover_any_conflicts(wc->conflicts))
         {
@@ -1365,6 +1365,35 @@ do_switch(svnmover_wc_t *wc,
              to the pre-update state or resolve the conflicts. Currently
              this leaves the merge partially done and the pre-update state
              is lost. */
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/*
+ */
+static svn_error_t *
+do_merge(svnmover_wc_t *wc,
+         svn_branch__el_rev_id_t *src,
+         svn_branch__el_rev_id_t *tgt,
+         svn_branch__el_rev_id_t *yca,
+         apr_pool_t *scratch_pool)
+{
+  if (src->eid != tgt->eid || src->eid != yca->eid)
+    {
+      svnmover_notify(_("Warning: root elements differ in the requested merge "
+                        "(from: e%d, to: e%d, yca: e%d)"),
+                      src->eid, tgt->eid, yca->eid);
+    }
+
+  SVN_ERR(svnmover_branch_merge(wc->edit_txn,
+                                &wc->conflicts,
+                                src, tgt, yca,
+                                wc->pool, scratch_pool));
+
+  if (svnmover_any_conflicts(wc->conflicts))
+    {
+      SVN_ERR(svnmover_display_conflicts(wc->conflicts, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1961,13 +1990,13 @@ do_log(svn_branch__el_rev_id_t *left,
  * The subbranch will consist of a single element given by PAYLOAD.
  */
 static svn_error_t *
-mk_branch(const char **new_branch_id_p,
-          svn_branch__txn_t *txn,
-          svn_branch__state_t *outer_branch,
-          int outer_parent_eid,
-          const char *outer_name,
-          svn_element__payload_t *payload,
-          apr_pool_t *scratch_pool)
+do_mkbranch(const char **new_branch_id_p,
+            svn_branch__txn_t *txn,
+            svn_branch__state_t *outer_branch,
+            int outer_parent_eid,
+            const char *outer_name,
+            svn_element__payload_t *payload,
+            apr_pool_t *scratch_pool)
 {
   const char *outer_branch_id = svn_branch__get_id(outer_branch, scratch_pool);
   int new_outer_eid, new_inner_eid;
@@ -2767,6 +2796,11 @@ execute(svnmover_wc_t *wc,
                                                    action->relpath[0],
                                                    iterpool));
               }
+            else
+              {
+                return svn_error_create(SVN_BRANCH__ERR, NULL,
+                                        _("No conflicts are currently flagged"));
+              }
           }
           break;
 
@@ -2930,10 +2964,10 @@ execute(svnmover_wc_t *wc,
             svn_element__payload_t *payload
               = svn_element__payload_create_dir(props, iterpool);
 
-            SVN_ERR(mk_branch(NULL, wc->edit_txn,
-                              arg[0]->parent_el_rev->branch,
-                              arg[0]->parent_el_rev->eid, arg[0]->path_name,
-                              payload, iterpool));
+            SVN_ERR(do_mkbranch(NULL, wc->edit_txn,
+                                arg[0]->parent_el_rev->branch,
+                                arg[0]->parent_el_rev->eid, arg[0]->path_name,
+                                payload, iterpool));
           }
           break;
 
@@ -2942,26 +2976,12 @@ execute(svnmover_wc_t *wc,
             VERIFY_EID_EXISTS("merge", 0);
             VERIFY_EID_EXISTS("merge", 1);
             VERIFY_EID_EXISTS("merge", 2);
-            if (arg[0]->el_rev->eid != arg[1]->el_rev->eid
-                || arg[0]->el_rev->eid != arg[2]->el_rev->eid)
-              {
-                svnmover_notify(
-                  _("Warning: root elements differ in the requested merge "
-                    "(from: e%d, to: e%d, yca: e%d)"),
-                  arg[0]->el_rev->eid, arg[1]->el_rev->eid, arg[2]->el_rev->eid);
-              }
-            SVN_ERR(svnmover_branch_merge(wc->edit_txn,
-                                          &wc->conflicts,
-                                          arg[0]->el_rev /*from*/,
-                                          arg[1]->el_rev /*to*/,
-                                          arg[2]->el_rev /*yca*/,
-                                          wc->pool, iterpool));
 
-            if (svnmover_any_conflicts(wc->conflicts))
-              {
-                SVN_ERR(svnmover_display_conflicts(wc->conflicts, iterpool));
-              }
-
+            SVN_ERR(do_merge(wc,
+                             arg[0]->el_rev /*from*/,
+                             arg[1]->el_rev /*to*/,
+                             arg[2]->el_rev /*yca*/,
+                             iterpool));
           }
           break;
 
