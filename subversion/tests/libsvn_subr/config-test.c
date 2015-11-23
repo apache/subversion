@@ -382,6 +382,27 @@ test_expand(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_invalid_bom(apr_pool_t *pool)
+{
+  svn_config_t *cfg;
+  svn_error_t *err;
+  svn_string_t *cfg_string;
+  svn_stream_t *stream;
+
+  cfg_string = svn_string_create("\xEF", pool);
+  stream = svn_stream_from_string(cfg_string, pool);
+  err = svn_config_parse(&cfg, stream, TRUE, TRUE, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_MALFORMED_FILE);
+
+  cfg_string = svn_string_create("\xEF\xBB", pool);
+  stream = svn_stream_from_string(cfg_string, pool);
+  err = svn_config_parse(&cfg, stream, TRUE, TRUE, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_MALFORMED_FILE);
+
+  return SVN_NO_ERROR;
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -414,6 +435,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test r/o mode"),
     SVN_TEST_OPTS_PASS(test_expand,
                        "test variable expansion"),
+    SVN_TEST_PASS2(test_invalid_bom,
+                   "test parsing config file with invalid BOM"),
     SVN_TEST_NULL
   };
 
