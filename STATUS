@@ -120,13 +120,6 @@ Candidate changes:
    Votes:
      +1: stefan2, gstein
 
- * r1714358
-   Fix overflow detection in svn_stringbuf_remove and svn_stringbuf_replace.
-   Justification:
-     Using the public API as documented may result in undefined behavior.
-   Votes:
-     +1: stefan2, gstein
-
  * r1715224, r1715232, r1715262
    ra_serf: Fix setting Content-Type header in 3 outgoing xml requests
    Justification:
@@ -151,3 +144,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1714358
+   Fix overflow detection in svn_stringbuf_remove and svn_stringbuf_replace.
+   Justification:
+     Using the public API as documented may result in undefined behavior.
+   Votes:
+     +1: stefan2, gstein, ivan
