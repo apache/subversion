@@ -120,13 +120,6 @@ Candidate changes:
    Votes:
      +1: stefan2, gstein
 
- * r1715224, r1715232, r1715262
-   ra_serf: Fix setting Content-Type header in 3 outgoing xml requests
-   Justification:
-     We should properly implement our wire protocol.
-   Votes:
-     +1: rhuijben, gstein
-
  * r1715793
    Do not read TXN props on every svn_fs_txn_open() call in libsvn_fs_fs: FSFS
    doesn't use transaction_t.proplist (and never used). This code seems to
@@ -151,3 +144,10 @@ Approved changes:
      Using the public API as documented may result in undefined behavior.
    Votes:
      +1: stefan2, gstein, ivan
+
+ * r1715224, r1715232, r1715262
+   ra_serf: Fix setting Content-Type header in 3 outgoing xml requests
+   Justification:
+     We should properly implement our wire protocol.
+   Votes:
+     +1: rhuijben, gstein, ivan
