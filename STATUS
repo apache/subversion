@@ -119,13 +119,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1714314
-   Don't ignore some of the parameters to svn_ra_svn_create_conn3.
-   Justification:
-     This is a regresssion against 1.8 but the fix is trivial.
-   Votes:
-     +1: stefan2, gstein, rhuijben
-
  * r1687812
    mod_dav_svn: Use LimitXMLRequestBody httpd directive to control maximum
    length of skel-encoded request bodies.
