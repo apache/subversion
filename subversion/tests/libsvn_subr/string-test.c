@@ -634,7 +634,15 @@ test_stringbuf_remove(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(a->data, "stell");
 
   svn_stringbuf_remove(a, 1200, 393);
-  return expect_stringbuf_equal(a, "stell", pool);
+  SVN_ERR(expect_stringbuf_equal(a, "stell", pool));
+
+  svn_stringbuf_remove(a, APR_SIZE_MAX, 2);
+  SVN_ERR(expect_stringbuf_equal(a, "stell", pool));
+
+  svn_stringbuf_remove(a, 1, APR_SIZE_MAX);
+  SVN_ERR(expect_stringbuf_equal(a, "s", pool));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -671,6 +679,12 @@ test_stringbuf_replace(apr_pool_t *pool)
   SVN_TEST_ASSERT(svn_stringbuf_compare(a,
                     svn_stringbuf_ncreate("test hello\0-\0world!\0-\0!",
                                           23, pool)));
+
+  svn_stringbuf_replace(a, 1, APR_SIZE_MAX, "x", 1);
+  SVN_ERR(expect_stringbuf_equal(a, "tx", pool));
+
+  svn_stringbuf_replace(a, APR_SIZE_MAX, APR_SIZE_MAX, "y", 1);
+  SVN_ERR(expect_stringbuf_equal(a, "txy", pool));
 
   return SVN_NO_ERROR;
 }
