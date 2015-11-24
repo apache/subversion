@@ -558,6 +558,9 @@ def reported_br_params(path1, path2):
     subbranch_fullpath = path1 + '/' + path2
   return subbranch_rpath, subbranch_fullpath
 
+def reported_mg_diff():
+  return [r'--- .*merge history.*']
+
 def reported_br_diff(path1, path2=None):
   """Return expected header lines for diff of a branch, or subtree in a branch.
 
@@ -704,12 +707,14 @@ def merge_edits_with_move(sbox):
 
   # merge the move to trunk (r6)
   test_svnmover2(sbox, '',
+                 reported_mg_diff() +
                  reported_br_diff('trunk') +
                  reported_move('lib/foo', 'bar'),
                 'merge branches/br1@5 trunk trunk@2')
 
   # merge the edits in trunk (excluding the merge r6) to branch (r7)
   test_svnmover2(sbox, '',
+                 reported_mg_diff() +
                  reported_br_diff('branches/br1') +
                  reported_del('bar/x') +
                  reported_move('bar/y', 'bar/y2') +
@@ -983,6 +988,7 @@ def restructure_repo_ttb_projects_to_projects_ttb(sbox):
 
   # merge the branch to trunk (r7)
   test_svnmover2(sbox, '',
+                 reported_mg_diff() +
                  reported_br_diff('trunk') +
                  reported_move('proj1/lib/foo', 'proj1/bar') +
                  reported_add('proj2') +
@@ -992,6 +998,7 @@ def restructure_repo_ttb_projects_to_projects_ttb(sbox):
 
   # merge the edits in trunk (excluding the merge r6) to branch (r7)
   test_svnmover2(sbox, '',
+                 reported_mg_diff() +
                  reported_br_diff('branches/br1') +
                  reported_del('proj1/bar/x') +
                  reported_move('proj1/bar/y', 'proj1/bar/y2') +
@@ -1078,6 +1085,7 @@ def restructure_repo_projects_ttb_to_ttb_projects(sbox):
 
     # merge trunk to branch
     test_svnmover2(sbox, proj,
+                   reported_mg_diff() +
                    reported_br_diff(proj + '/branches/br1') +
                    reported_del('bar/x') +
                    reported_move('bar/y', 'bar/y2') +
@@ -1187,6 +1195,7 @@ def subbranches1(sbox):
 
   # merge 'branches/foo' to 'trunk'
   test_svnmover2(sbox, '',
+                 reported_mg_diff() +
                  reported_br_diff('trunk') +
                  reported_add('docs') +
                  reported_move('libsvn_fs_fs/file.c', 'libsvn_fs_fs/file2.c') +
@@ -1197,6 +1206,7 @@ def subbranches1(sbox):
 
   # merge 'trunk/libsvn_fs_fs' to 'trunk/libsvn_fs_x'
   test_svnmover2(sbox, '',
+                 reported_mg_diff() +
                  reported_br_diff('trunk/libsvn_fs_x') +
                  reported_move('reps/file.c', 'reps/file2.c'),
                  'merge trunk/libsvn_fs_fs trunk/libsvn_fs_x trunk/libsvn_fs_fs@4')
@@ -1224,6 +1234,7 @@ def merge_deleted_subbranch(sbox):
   #
   # This should delete the subbranch 'lib2'
   test_svnmover2(sbox, '',
+                 reported_mg_diff() +
                  reported_br_diff('branches/foo') +
                  reported_br_del('branches/foo', 'lib2'),
                  'merge trunk branches/foo trunk@' + str(yca_rev))
@@ -1247,6 +1258,7 @@ def merge_added_subbranch(sbox):
   #
   # This should add the subbranch 'lib2'
   test_svnmover2(sbox, '',
+                 reported_mg_diff() +
                  reported_br_diff('branches/foo') +
                  reported_br_add('branches/foo', 'lib2'),
                  'merge trunk branches/foo trunk@' + str(yca_rev))
@@ -1299,6 +1311,7 @@ def merge_from_subbranch_to_subtree(sbox):
   # nil on the merge source-right, and tried to make that same change in the
   # target.
   test_svnmover2(sbox, '',
+                 reported_mg_diff() +
                  reported_br_diff('') +
                  reported_add('A/B1/C1/D'),
                  'merge A/B1/C2 A/B1/C1 A/B1/C1@2')
@@ -1375,6 +1388,7 @@ def merge_swap_abc(sbox):
     'B0.8/A/B/C' : 'B0.8/A',
   })
   test_svnmover3(sbox, '',
+                 reported_mg_diff() +
                  reported_br_diff('Y') +
                  reported_move('A/B/C', 'A') +
                  reported_move('A/B', 'A/B') +

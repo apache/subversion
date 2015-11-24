@@ -193,6 +193,16 @@ typedef svn_error_t *(*svn_branch__state_v_purge_t)(
   svn_branch__state_t *branch,
   apr_pool_t *scratch_pool);
 
+typedef svn_error_t *(*svn_branch__state_v_get_merge_ancestor_t)(
+  svn_branch__state_t *branch,
+  svn_branch__rev_bid_t **merge_ancestor_p,
+  apr_pool_t *scratch_pool);
+
+typedef svn_error_t *(*svn_branch__state_v_add_merge_ancestor_t)(
+  svn_branch__state_t *branch,
+  const svn_branch__rev_bid_t *merge_ancestor,
+  apr_pool_t *scratch_pool);
+
 struct svn_branch__state_vtable_t
 {
   svn_branch__vtable_priv_t vpriv;
@@ -204,6 +214,8 @@ struct svn_branch__state_vtable_t
   svn_branch__state_v_copy_tree_t copy_tree;
   svn_branch__state_v_delete_one_t delete_one;
   svn_branch__state_v_purge_t purge;
+  svn_branch__state_v_get_merge_ancestor_t get_merge_ancestor;
+  svn_branch__state_v_add_merge_ancestor_t add_merge_ancestor;
 
 };
 

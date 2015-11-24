@@ -487,6 +487,9 @@ svn_branch__rev_bid_t *
 svn_branch__rev_bid_dup(const svn_branch__rev_bid_t *old_id,
                         apr_pool_t *result_pool);
 
+svn_boolean_t
+svn_branch__rev_bid_equal(const svn_branch__rev_bid_t *id1,
+                          const svn_branch__rev_bid_t *id2);
 
 /* Return the mapping of elements in branch BRANCH.
  */
@@ -588,6 +591,27 @@ svn_branch__state_copy_tree(svn_branch__state_t *branch,
 svn_error_t *
 svn_branch__state_purge(svn_branch__state_t *branch,
                         apr_pool_t *scratch_pool);
+
+/* Get the merge ancestor(s).
+ */
+svn_error_t *
+svn_branch__state_get_merge_ancestor(svn_branch__state_t *branch,
+                                     svn_branch__rev_bid_t **merge_ancestor_p,
+                                     apr_pool_t *result_pool);
+
+/* Set a merge ancestor.
+ *
+ * Currently only one is allowed; this overwrites it if it was already set.
+ *
+ * TODO: Allow adding multiple ancestors on different branches. When
+ * there is an existing ancestor that is earlier along the same branch
+ * (line of history) as MERGE_ANCESTOR, then update (replace) it instead
+ * of just adding another one.
+ */
+svn_error_t *
+svn_branch__state_add_merge_ancestor(svn_branch__state_t *branch,
+                                     const svn_branch__rev_bid_t *merge_ancestor,
+                                     apr_pool_t *scratch_pool);
 
 /* Return the branch-relative path of element EID in BRANCH.
  *

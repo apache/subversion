@@ -69,6 +69,11 @@ struct svn_branch__state_priv_t
   /* EID -> svn_element__content_t mapping. */
   svn_element__tree_t *element_tree;
 
+  /* Youngest ancestor, with respect to a complete merge, on another branch.
+     (REV = -1 means "in this txn".)
+     ### TODO: Multiple ancestors, corresponding to multiple source branches. */
+  svn_branch__rev_bid_t *merge_ancestor;
+
   svn_boolean_t is_flat;
 
 };
@@ -915,6 +920,14 @@ svn_branch__rev_bid_dup(const svn_branch__rev_bid_t *old_id,
   return id;
 }
 
+svn_boolean_t
+svn_branch__rev_bid_equal(const svn_branch__rev_bid_t *id1,
+                          const svn_branch__rev_bid_t *id2)
+{
+  return (id1->rev == id2->rev
+          && strcmp(id1->bid, id2->bid) == 0);
+}
+
 
 /*
  * ========================================================================
@@ -1063,6 +1076,30 @@ branch_state_purge(svn_branch__state_t *branch,
                                   branch->priv->element_tree->root_eid,
                                   scratch_pool);
   branch->priv->is_flat = TRUE;
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_branch__state_t method. */
+static svn_error_t *
+branch_state_get_merge_ancestor(svn_branch__state_t *branch,
+                                svn_branch__rev_bid_t **merge_ancestor_p,
+                                apr_pool_t *result_pool)
+{
+  *merge_ancestor_p = svn_branch__rev_bid_dup(branch->priv->merge_ancestor,
+                                              result_pool);
+  return SVN_NO_ERROR;
+}
+
+/* An #svn_branch__state_t method. */
+static svn_error_t *
+branch_state_add_merge_ancestor(svn_branch__state_t *branch,
+                                const svn_branch__rev_bid_t *merge_ancestor,
+                                apr_pool_t *scratch_pool)
+{
+  apr_pool_t *branch_pool = branch_state_pool_get(branch);
+
+  branch->priv->merge_ancestor = svn_branch__rev_bid_dup(merge_ancestor,
+                                                         branch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -1276,6 +1313,28 @@ svn_branch__state_purge(svn_branch__state_t *branch,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_branch__state_get_merge_ancestor(svn_branch__state_t *branch,
+                                     svn_branch__rev_bid_t **merge_ancestor_p,
+                                     apr_pool_t *result_pool)
+{
+  SVN_ERR(branch->vtable->get_merge_ancestor(branch,
+                                             merge_ancestor_p,
+                                             result_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_branch__state_add_merge_ancestor(svn_branch__state_t *branch,
+                                     const svn_branch__rev_bid_t *merge_ancestor,
+                                     apr_pool_t *scratch_pool)
+{
+  SVN_ERR(branch->vtable->add_merge_ancestor(branch,
+                                             merge_ancestor,
+                                             scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 svn_branch__state_t *
 svn_branch__state_create(const svn_branch__state_vtable_t *vtable,
                          svn_cancel_func_t cancel_func,
@@ -1318,6 +1377,8 @@ branch_state_create(const char *bid,
     branch_state_copy_tree,
     branch_state_delete_one,
     branch_state_purge,
+    branch_state_get_merge_ancestor,
+    branch_state_add_merge_ancestor,
   };
   svn_branch__state_t *b
     = svn_branch__state_create(&vtable, NULL, NULL, result_pool);
@@ -1344,6 +1405,7 @@ svn_branch__get_default_r0_metadata(apr_pool_t *result_pool)
   static const char *default_repos_info
     = "r0: eids 0 1 branches 1\n"
       "B0 root-eid 0 num-eids 1\n"
+      "merge-history: merge-ancestors 0\n"
       "e0: normal -1 .\n";
 
   return svn_string_create(default_repos_info, result_pool);
@@ -1385,13 +1447,56 @@ parse_branch_line(char *bid_p,
   return SVN_NO_ERROR;
 }
 
-/*  */
+/* Parse the merge history for BRANCH.
+ */
+static svn_error_t *
+merge_history_parse(svn_branch__state_t *branch_state,
+                    svn_stream_t *stream,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *line;
+  svn_boolean_t eof;
+  int n;
+  int num_merge_ancestors;
+  int i;
+
+  /* Read a line */
+  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
+  SVN_ERR_ASSERT(!eof);
+
+  n = sscanf(line->data, "merge-history: merge-ancestors %d",
+             &num_merge_ancestors);
+  SVN_ERR_ASSERT(n == 1);
+
+  for (i = 0; i < num_merge_ancestors; i++)
+    {
+      svn_revnum_t rev;
+      char bid[100];
+
+      SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
+      SVN_ERR_ASSERT(!eof);
+
+      n = sscanf(line->data, "merge-ancestor: r%ld.%99s",
+                 &rev, bid);
+      SVN_ERR_ASSERT(n == 2);
+
+      branch_state->priv->merge_ancestor
+        = svn_branch__rev_bid_create(rev, bid, result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Parse the mapping for one element.
+ */
 static svn_error_t *
 parse_element_line(int *eid_p,
                    svn_boolean_t *is_subbranch_p,
                    int *parent_eid_p,
                    const char **name_p,
                    svn_stream_t *stream,
+                   apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *line;
@@ -1409,8 +1514,8 @@ parse_element_line(int *eid_p,
              kind, parent_eid_p, &offset);
   SVN_ERR_ASSERT(n >= 3);  /* C std is unclear on whether '%n' counts */
   SVN_ERR_ASSERT(line->data[offset] == ' ');
-  *name_p = line->data + offset + 1;
 
+  *name_p = apr_pstrdup(result_pool, line->data + offset + 1);
   *is_subbranch_p = (strcmp(kind, "subbranch") == 0);
 
   if (strcmp(*name_p, "(null)") == 0)
@@ -1474,6 +1579,10 @@ svn_branch__state_parse(svn_branch__state_t **new_branch,
   branch_state = branch_state_create(bid, predecessor, root_eid, txn,
                                      result_pool);
 
+  /* Read in the merge history. */
+  SVN_ERR(merge_history_parse(branch_state,
+                              stream, result_pool, scratch_pool));
+
   /* Read in the structure. Set the payload of each normal element to a
      (branch-relative) reference. */
   for (i = 0; i < num_eids; i++)
@@ -1484,7 +1593,7 @@ svn_branch__state_parse(svn_branch__state_t **new_branch,
 
       SVN_ERR(parse_element_line(&eid,
                                  &is_subbranch, &this_parent_eid, &this_name,
-                                 stream, scratch_pool));
+                                 stream, scratch_pool, scratch_pool));
 
       if (this_name)
         {
@@ -1553,6 +1662,30 @@ svn_branch__txn_parse(svn_branch__txn_t **txn_p,
   return SVN_NO_ERROR;
 }
 
+/* Serialize the merge history information for BRANCH.
+ */
+static svn_error_t *
+merge_history_serialize(svn_stream_t *stream,
+                        svn_branch__state_t *branch,
+                        apr_pool_t *scratch_pool)
+{
+  int num_merge_ancestors = (branch->priv->merge_ancestor) ? 1 : 0;
+  int i;
+
+  SVN_ERR(svn_stream_printf(stream, scratch_pool,
+                            "merge-history: merge-ancestors %d\n",
+                            num_merge_ancestors));
+  for (i = 0; i < num_merge_ancestors; i++)
+    {
+      SVN_ERR(svn_stream_printf(stream, scratch_pool,
+                                "merge-ancestor: r%ld.%s\n",
+                                branch->priv->merge_ancestor->rev,
+                                branch->priv->merge_ancestor->bid));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Write to STREAM a parseable representation of BRANCH.
  */
 svn_error_t *
@@ -1579,6 +1712,8 @@ svn_branch__state_serialize(svn_stream_t *stream,
                             branch->priv->element_tree->root_eid,
                             apr_hash_count(branch->priv->element_tree->e_map),
                             predecessor_str));
+
+  SVN_ERR(merge_history_serialize(stream, branch, scratch_pool));
 
   for (SVN_EID__HASH_ITER_SORTED_BY_EID(ei, branch->priv->element_tree->e_map,
                                         scratch_pool))
