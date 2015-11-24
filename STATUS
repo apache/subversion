@@ -119,13 +119,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1715224, r1715232, r1715262
-   ra_serf: Fix setting Content-Type header in 3 outgoing xml requests
-   Justification:
-     We should properly implement our wire protocol.
-   Votes:
-     +1: rhuijben, gstein, ivan
-
  * r1714314
    Don't ignore some of the parameters to svn_ra_svn_create_conn3.
    Justification:
