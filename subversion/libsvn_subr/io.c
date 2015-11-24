@@ -1531,14 +1531,17 @@ reown_file(const char *path,
 }
 
 /* Determine what the PERMS for a new file should be by looking at the
-   permissions of a temporary file that we create.
+   permissions of a temporary file that we create in DIRECTORY.  
+   DIRECTORY can be NULL in which case the system temporary dir is used.
    Unfortunately, umask() as defined in POSIX provides no thread-safe way
    to get at the current value of the umask, so what we're doing here is
    the only way we have to determine which combination of write bits
    (User/Group/World) should be set by default.
    Make temporary allocations in SCRATCH_POOL.  */
 static svn_error_t *
-get_default_file_perms(apr_fileperms_t *perms, apr_pool_t *scratch_pool)
+get_default_file_perms(apr_fileperms_t *perms,
+                       const char *directory,
+                       apr_pool_t *scratch_pool)
 {
   /* the default permissions as read from the temp folder */
   static apr_fileperms_t default_perms = 0;
@@ -1570,7 +1573,7 @@ get_default_file_perms(apr_fileperms_t *perms, apr_pool_t *scratch_pool)
                    + (apr_uint32_t)apr_time_now());
       fname_base = apr_psprintf(scratch_pool, "svn-%08x", randomish);
 
-      SVN_ERR(svn_io_open_uniquely_named(&fd, &fname, NULL, fname_base,
+      SVN_ERR(svn_io_open_uniquely_named(&fd, &fname, directory, fname_base,
                                          NULL, svn_io_file_del_none,
                                          scratch_pool, scratch_pool));
       err = svn_io_file_info_get(&finfo, APR_FINFO_PROT, fd, scratch_pool);
@@ -1588,16 +1591,19 @@ get_default_file_perms(apr_fileperms_t *perms, apr_pool_t *scratch_pool)
 }
 
 /* OR together permission bits of the file FD and the default permissions
-   of a file as determined by get_default_file_perms(). Do temporary
+   of a file as determined by get_default_file_perms().  DIRECTORY is used
+   to create temporary files, DIRECTORY can be NULL.  Do temporary
    allocations in SCRATCH_POOL. */
 static svn_error_t *
-merge_default_file_perms(apr_file_t *fd, apr_fileperms_t *perms,
+merge_default_file_perms(apr_file_t *fd,
+                         apr_fileperms_t *perms,
+                         const char *directory,
                          apr_pool_t *scratch_pool)
 {
   apr_finfo_t finfo;
   apr_fileperms_t default_perms;
 
-  SVN_ERR(get_default_file_perms(&default_perms, scratch_pool));
+  SVN_ERR(get_default_file_perms(&default_perms, directory, scratch_pool));
   SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_PROT, fd, scratch_pool));
 
   /* Glom the perms together. */
@@ -5280,7 +5286,8 @@ svn_io_open_unique_file3(apr_file_t **file,
     {
       svn_error_t *err;
 
-      SVN_ERR(merge_default_file_perms(tempfile, &perms, scratch_pool));
+      SVN_ERR(merge_default_file_perms(tempfile, &perms, dirpath,
+                                       scratch_pool));
       err = file_perms_set2(tempfile, perms, scratch_pool);
       if (err)
         {
