@@ -816,18 +816,7 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
                                  apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-
-  /* Transaction content needs to be carefully prefixed to virtually
-     eliminate any chance for conflicts. The (repo, txn_id) pair
-     should be unique but if a transaction fails, it might be possible
-     to start a new transaction later that receives the same id.
-     Therefore, throw in a uuid as well - just to be sure. */
-  const char *prefix = apr_pstrcat(pool,
-                                   "fsfs:", fs->uuid,
-                                   "/", fs->path,
-                                   ":", txn_id,
-                                   ":", svn_uuid_generate(pool), ":",
-                                   SVN_VA_NULL);
+  const char *prefix;
 
   /* We don't support caching for concurrent transactions in the SAME
    * FSFS session. Maybe, you forgot to clean POOL. */
@@ -839,6 +828,19 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
       return SVN_NO_ERROR;
     }
 
+  /* Transaction content needs to be carefully prefixed to virtually
+     eliminate any chance for conflicts. The (repo, txn_id) pair
+     should be unique but if a transaction fails, it might be possible
+     to start a new transaction later that receives the same id.
+     Therefore, throw in a uuid as well - just to be sure. */
+  prefix = apr_pstrcat(pool,
+                       "fsfs:", fs->uuid,
+                       "/", fs->path,
+                       ":", txn_id,
+                       ":", svn_uuid_generate(pool),
+                       ":", "TXNDIR",
+                       SVN_VA_NULL);
+
   /* create a txn-local directory cache */
   SVN_ERR(create_cache(&ffd->txn_dir_cache,
                        NULL,
@@ -847,8 +849,7 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
                        svn_fs_fs__serialize_dir_entries,
                        svn_fs_fs__deserialize_dir_entries,
                        APR_HASH_KEY_STRING,
-                       apr_pstrcat(pool, prefix, "TXNDIR",
-                                   SVN_VA_NULL),
+                       prefix,
                        0,
                        TRUE, /* The TXN-ID is our namespace. */
                        fs,
