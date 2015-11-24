@@ -3841,6 +3841,47 @@ trace_node_locations_authz(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+commit_aborted_txn(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  const char *conflict;
+  svn_revnum_t new_rev;
+  svn_revnum_t youngest_rev;
+
+  /* Create a filesystem and repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-commit-aborted-txn",
+                                 opts, pool));
+
+  /* Create and abort the transaction. */
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit2(&txn, repos, 0,
+                                             apr_hash_make(pool), pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/A", pool));
+  SVN_ERR(svn_fs_abort_txn(txn, pool));
+
+  /* Committing the aborted transaction should fail. */
+  SVN_TEST_ASSERT_ANY_ERROR(svn_repos_fs_commit_txn(&conflict, repos,
+                                                    &new_rev, txn, pool));
+
+  /* Ensure that output arguments follow svn_repos_fs_commit_txn()'s
+     contract -- NEW_REV should be set to SVN_INVALID_REVNUM and
+     CONFLICT should be NULL. */
+  SVN_TEST_ASSERT(new_rev == SVN_INVALID_REVNUM);
+  SVN_TEST_ASSERT(conflict == NULL);
+
+  /* Re-open repository and verify that it's still empty. */
+  SVN_ERR(svn_repos_open3(&repos, svn_repos_path(repos, pool), NULL,
+                          pool, pool));
+  SVN_ERR(svn_fs_youngest_rev(&youngest_rev, svn_repos_fs(repos), pool));
+  SVN_TEST_ASSERT(youngest_rev == 0);
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 static int max_threads = 4;
@@ -3898,6 +3939,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test deprecated access context api"),
     SVN_TEST_OPTS_PASS(trace_node_locations_authz,
                        "authz for svn_repos_trace_node_locations"),
+    SVN_TEST_OPTS_PASS(commit_aborted_txn,
+                       "test committing a previously aborted txn"),
     SVN_TEST_NULL
   };
 

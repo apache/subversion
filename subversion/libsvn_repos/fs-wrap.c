@@ -58,6 +58,8 @@ svn_repos_fs_commit_txn(const char **conflict_p,
   apr_hash_t *hooks_env;
 
   *new_rev = SVN_INVALID_REVNUM;
+  if (conflict_p)
+    *conflict_p = NULL;
 
   /* Parse the hooks-env file (if any). */
   SVN_ERR(svn_repos__parse_hooks_env(&hooks_env, repos->hooks_env_path,
