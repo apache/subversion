@@ -2421,12 +2421,12 @@ compare_dirent_name(const void *a, const void *b)
   return strcmp(lhs->name, rhs);
 }
 
-/* Into ENTRIES, read all directories entries from the key-value text in
+/* Into *ENTRIES_P, read all directories entries from the key-value text in
  * STREAM.  If INCREMENTAL is TRUE, read until the end of the STREAM and
  * update the data.  ID is provided for nicer error messages.
  */
 static svn_error_t *
-read_dir_entries(apr_array_header_t *entries,
+read_dir_entries(apr_array_header_t **entries_p,
                  svn_stream_t *stream,
                  svn_boolean_t incremental,
                  const svn_fs_id_t *id,
@@ -2434,8 +2434,14 @@ read_dir_entries(apr_array_header_t *entries,
                  apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_hash_t *hash = incremental ? svn_hash__make(scratch_pool) : NULL;
+  apr_hash_t *hash = NULL;
   const char *terminator = SVN_HASH_TERMINATOR;
+  apr_array_header_t *entries = NULL;
+
+  if (incremental)
+    hash = svn_hash__make(scratch_pool);
+  else
+    entries = apr_array_make(result_pool, 16, sizeof(svn_fs_dirent_t *));
 
   /* Read until the terminator (non-incremental) or the end of STREAM
      (incremental mode).  In the latter mode, we use a temporary HASH
@@ -2516,6 +2522,9 @@ read_dir_entries(apr_array_header_t *entries,
   if (incremental)
     {
       apr_hash_index_t *hi;
+
+      entries = apr_array_make(result_pool, apr_hash_count(hash),
+                               sizeof(svn_fs_dirent_t *));
       for (hi = apr_hash_first(iterpool, hash); hi; hi = apr_hash_next(hi))
         APR_ARRAY_PUSH(entries, svn_fs_dirent_t *) = apr_hash_this_val(hi);
     }
@@ -2525,6 +2534,7 @@ read_dir_entries(apr_array_header_t *entries,
 
   svn_pool_destroy(iterpool);
 
+  *entries_p = entries;
   return SVN_NO_ERROR;
 }
 
@@ -2571,7 +2581,6 @@ get_dir_contents(svn_fs_fs__dir_data_t *dir,
   svn_stream_t *contents;
 
   /* Initialize the result. */
-  dir->entries = apr_array_make(result_pool, 16, sizeof(svn_fs_dirent_t *));
   dir->txn_filesize = SVN_INVALID_FILESIZE;
 
   /* Read dir contents - unless there is none in which case we are done. */
@@ -2594,7 +2603,7 @@ get_dir_contents(svn_fs_fs__dir_data_t *dir,
       SVN_ERR(svn_io_file_size_get(&dir->txn_filesize, file, scratch_pool));
 
       contents = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
-      SVN_ERR(read_dir_entries(dir->entries, contents, TRUE, noderev->id,
+      SVN_ERR(read_dir_entries(&dir->entries, contents, TRUE, noderev->id,
                                result_pool, scratch_pool));
       SVN_ERR(svn_stream_close(contents));
     }
@@ -2614,8 +2623,12 @@ get_dir_contents(svn_fs_fs__dir_data_t *dir,
 
       /* de-serialize hash */
       contents = svn_stream_from_stringbuf(text, scratch_pool);
-      SVN_ERR(read_dir_entries(dir->entries, contents, FALSE, noderev->id,
+      SVN_ERR(read_dir_entries(&dir->entries, contents, FALSE, noderev->id,
                                result_pool, scratch_pool));
+    }
+  else
+    {
+       dir->entries = apr_array_make(result_pool, 0, sizeof(svn_fs_dirent_t *));
     }
 
   return SVN_NO_ERROR;
