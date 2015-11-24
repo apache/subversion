@@ -121,6 +121,7 @@ _re_parse_eid_header = re.compile('^r(-1|[0-9]+): eids ([0-9]+) ([0-9]+) '
                                   'branches ([0-9]+)$')
 # B0.2 root-eid 3
 _re_parse_eid_branch = re.compile('^(B[0-9.]+) root-eid ([0-9]+) num-eids ([0-9]+)( from [^ ]*)?$')
+_re_parse_eid_merge_history = re.compile('merge-history: merge-ancestors ([0-9]+)')
 # e4: normal 6 C
 _re_parse_eid_ele = re.compile('^e([0-9]+): (none|normal|subbranch) '
                                '(-1|[0-9]+) (.*)$')
@@ -829,6 +830,11 @@ class State:
           eids = {}
         branch_id = match.group(1)
         root_eid = match.group(2)
+
+      match = _re_parse_eid_merge_history.search(line)
+      if match:
+        ### TODO: store the merge history
+        pass
 
     add_to_desc(eids, desc, branch_id)
 

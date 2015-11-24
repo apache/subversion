@@ -349,6 +349,39 @@ svnmover_element_differences(apr_hash_t **diff_p,
   return SVN_NO_ERROR;
 }
 
+/*  */
+static const char *
+rev_bid_str(const svn_branch__rev_bid_t *rev_bid,
+            apr_pool_t *result_pool)
+{
+  if (!rev_bid)
+    return "<nil>";
+  return apr_psprintf(result_pool, "r%ld.%s", rev_bid->rev, rev_bid->bid);
+}
+
+/* Set *DIFFERENCE_P to some sort of indication of the difference between
+ * MERGE_HISTORY1 and MERGE_HISTORY2, or to null if there is no difference.
+ *
+ * Inputs may be null.
+ */
+static svn_error_t *
+merge_history_diff(const char **difference_p,
+                   svn_branch__rev_bid_t *merge_history1,
+                   svn_branch__rev_bid_t *merge_history2,
+                   apr_pool_t *result_pool)
+{
+  *difference_p = NULL;
+  if ((merge_history1 || merge_history2)
+      && !(merge_history1 && merge_history2
+           && svn_branch__rev_bid_equal(merge_history1, merge_history2)))
+    {
+      *difference_p = apr_psprintf(result_pool, "%s -> %s",
+                                   rev_bid_str(merge_history1, result_pool),
+                                   rev_bid_str(merge_history2, result_pool));
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Set *IS_CHANGED to true if EDIT_TXN differs from its base txn, else to
  * false.
  */
@@ -389,6 +422,9 @@ txn_is_changed(svn_branch__txn_t *edit_txn,
       svn_branch__state_t *base_branch
         = svn_branch__txn_get_branch_by_id(base_txn, edit_branch->bid,
                                            scratch_pool);
+      svn_branch__rev_bid_t *edit_branch_merge_history;
+      svn_branch__rev_bid_t *base_branch_merge_history;
+      const char *merge_history_difference;
       svn_element__tree_t *edit_branch_elements, *base_branch_elements;
       apr_hash_t *diff;
 
@@ -398,6 +434,22 @@ txn_is_changed(svn_branch__txn_t *edit_txn,
           return SVN_NO_ERROR;
         }
 
+      /* Compare merge histories */
+      SVN_ERR(svn_branch__state_get_merge_ancestor(
+                edit_branch, &edit_branch_merge_history, scratch_pool));
+      SVN_ERR(svn_branch__state_get_merge_ancestor(
+                base_branch, &base_branch_merge_history, scratch_pool));
+      SVN_ERR(merge_history_diff(&merge_history_difference,
+                                 edit_branch_merge_history,
+                                 base_branch_merge_history,
+                                 scratch_pool));
+      if (merge_history_difference)
+        {
+          *is_changed = TRUE;
+          return SVN_NO_ERROR;
+        }
+
+      /* Compare elements */
       SVN_ERR(svn_branch__state_get_elements(edit_branch, &edit_branch_elements,
                                              scratch_pool));
       SVN_ERR(svn_branch__state_get_elements(base_branch, &base_branch_elements,
@@ -590,6 +642,27 @@ svn_branch__replay(svn_branch__txn_t *edit_txn,
             }
         }
     }
+
+  /* Replay any change in merge history */
+  {
+    svn_branch__rev_bid_t *left_merge_history = NULL;
+    svn_branch__rev_bid_t *right_merge_history = NULL;
+    const char *merge_history_difference;
+
+    if (left_branch)
+      SVN_ERR(svn_branch__state_get_merge_ancestor(
+                left_branch, &left_merge_history, scratch_pool));
+    if (right_branch)
+      SVN_ERR(svn_branch__state_get_merge_ancestor(
+                right_branch, &right_merge_history, scratch_pool));
+    SVN_ERR(merge_history_diff(&merge_history_difference,
+              left_merge_history, right_merge_history, scratch_pool));
+    if (merge_history_difference)
+      {
+        SVN_ERR(svn_branch__state_add_merge_ancestor(
+                  edit_branch, right_merge_history, scratch_pool));
+      }
+  }
 
   return SVN_NO_ERROR;
 }
@@ -784,7 +857,8 @@ typedef enum action_code_t {
   ACTION_BRANCH,
   ACTION_BRANCH_INTO,
   ACTION_MKBRANCH,
-  ACTION_MERGE,
+  ACTION_MERGE3,
+  ACTION_AUTO_MERGE,
   ACTION_MV,
   ACTION_MKDIR,
   ACTION_PUT_FILE,
@@ -841,8 +915,10 @@ static const action_defn_t action_defn[] =
     "make a directory that's the root of a new subbranch"},
   {ACTION_DIFF,             "diff", 2, "LEFT@REV RIGHT@REV",
     "show differences from subtree LEFT to subtree RIGHT"},
-  {ACTION_MERGE,            "merge", 3, "FROM TO YCA@REV",
+  {ACTION_MERGE3,           "merge", 3, "FROM TO YCA@REV",
     "3-way merge YCA->FROM into TO"},
+  {ACTION_AUTO_MERGE,       "automerge", 2, "FROM TO",
+    "automatic merge FROM into TO"},
   {ACTION_CP,               "cp", 2, "REV SRC DST",
     "copy SRC@REV to DST"},
   {ACTION_MV,               "mv", 2, "SRC DST",
@@ -1379,6 +1455,8 @@ do_merge(svnmover_wc_t *wc,
          svn_branch__el_rev_id_t *yca,
          apr_pool_t *scratch_pool)
 {
+  svn_branch__rev_bid_t *new_ancestor;
+
   if (src->eid != tgt->eid || src->eid != yca->eid)
     {
       svnmover_notify(_("Warning: root elements differ in the requested merge "
@@ -1391,9 +1469,56 @@ do_merge(svnmover_wc_t *wc,
                                 src, tgt, yca,
                                 wc->pool, scratch_pool));
 
+  /* Update the merge history */
+  /* ### Assume this was a complete merge -- i.e. all changes up to YCA were
+     previously merged, so now SRC is a new ancestor. */
+  new_ancestor = svn_branch__rev_bid_create(src->rev, src->branch->bid,
+                                              scratch_pool);
+  SVN_ERR(svn_branch__state_add_merge_ancestor(wc->working->branch, new_ancestor,
+                                               scratch_pool));
+  svnmover_notify_v(_("--- recorded merge ancestor as: %ld.%s"),
+                    new_ancestor->rev, new_ancestor->bid);
+
   if (svnmover_any_conflicts(wc->conflicts))
     {
       SVN_ERR(svnmover_display_conflicts(wc->conflicts, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/*
+ */
+static svn_error_t *
+do_auto_merge(svnmover_wc_t *wc,
+              svn_branch__el_rev_id_t *src,
+              svn_branch__el_rev_id_t *tgt,
+              apr_pool_t *scratch_pool)
+{
+  svn_branch__rev_bid_t *yca;
+
+  SVN_ERR(svn_branch__state_get_merge_ancestor(tgt->branch, &yca,
+                                               scratch_pool));
+  if (yca)
+    {
+      svn_branch__repos_t *repos = wc->working->branch->txn->repos;
+      svn_branch__state_t *yca_branch;
+      svn_branch__el_rev_id_t *_yca;
+
+      SVN_ERR(svn_branch__repos_get_branch_by_id(&yca_branch, repos,
+                                                 yca->rev, yca->bid,
+                                                 scratch_pool));
+      _yca = svn_branch__el_rev_id_create(yca_branch,
+                                          svn_branch__root_eid(yca_branch),
+                                          yca->rev, scratch_pool);
+
+      SVN_ERR(do_merge(wc, src, tgt, _yca, scratch_pool));
+    }
+  else
+    {
+      return svn_error_create(SVN_BRANCH__ERR, NULL,
+                              _("Cannot perform automatic merge: "
+                                "no YCA found"));
     }
 
   return SVN_NO_ERROR;
@@ -1721,8 +1846,22 @@ branch_diff_r(svn_branch__el_rev_id_t *left,
               const char *prefix,
               apr_pool_t *scratch_pool)
 {
+  svn_branch__rev_bid_t *merge_history1, *merge_history2;
+  const char *merge_history_difference;
   svn_branch__subtree_t *s_left;
   svn_branch__subtree_t *s_right;
+
+  /* ### This should be done for each branch, e.g. in subtree_diff_r(). */
+  /* ### This notification should start with a '--- diff branch ...' line. */
+  SVN_ERR(svn_branch__state_get_merge_ancestor(left->branch, &merge_history1,
+                                               scratch_pool));
+  SVN_ERR(svn_branch__state_get_merge_ancestor(right->branch, &merge_history2,
+                                               scratch_pool));
+  SVN_ERR(merge_history_diff(&merge_history_difference,
+                             merge_history1, merge_history2, scratch_pool));
+  if (merge_history_difference)
+    svnmover_notify("%s--- merge history is different: %s", prefix,
+                    merge_history_difference);
 
   SVN_ERR(svn_branch__get_subtree(left->branch, &s_left, left->eid,
                                   scratch_pool));
@@ -2768,14 +2907,25 @@ execute(svnmover_wc_t *wc,
         case ACTION_INFO_WC:
           {
             svn_boolean_t is_modified;
+            svn_branch__rev_bid_t *merge_ancestor;
 
             SVN_ERR(txn_is_changed(wc->working->branch->txn, &is_modified,
                                    iterpool));
             svnmover_notify("Repository Root: %s", wc->repos_root_url);
             svnmover_notify("Base Revision: %ld", wc->base->revision);
             svnmover_notify("Base Branch:    %s", wc->base->branch->bid);
+            SVN_ERR(svn_branch__state_get_merge_ancestor(
+                      wc->base->branch, &merge_ancestor, iterpool));
+            if (merge_ancestor)
+              svnmover_notify("  merge ancestor: %ld.%s",
+                              merge_ancestor->rev, merge_ancestor->bid);
             svnmover_notify("Working Branch: %s", wc->working->branch->bid);
             svnmover_notify("Modified:       %s", is_modified ? "yes" : "no");
+            SVN_ERR(svn_branch__state_get_merge_ancestor(
+                      wc->working->branch, &merge_ancestor, iterpool));
+            if (merge_ancestor)
+              svnmover_notify("  merge ancestor: %ld.%s",
+                              merge_ancestor->rev, merge_ancestor->bid);
           }
           break;
 
@@ -2971,7 +3121,7 @@ execute(svnmover_wc_t *wc,
           }
           break;
 
-        case ACTION_MERGE:
+        case ACTION_MERGE3:
           {
             VERIFY_EID_EXISTS("merge", 0);
             VERIFY_EID_EXISTS("merge", 1);
@@ -2982,6 +3132,18 @@ execute(svnmover_wc_t *wc,
                              arg[1]->el_rev /*to*/,
                              arg[2]->el_rev /*yca*/,
                              iterpool));
+          }
+          break;
+
+        case ACTION_AUTO_MERGE:
+          {
+            VERIFY_EID_EXISTS("merge", 0);
+            VERIFY_EID_EXISTS("merge", 1);
+
+            SVN_ERR(do_auto_merge(wc,
+                                  arg[0]->el_rev /*from*/,
+                                  arg[1]->el_rev /*to*/,
+                                  iterpool));
           }
           break;
 
