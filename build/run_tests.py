@@ -340,9 +340,10 @@ class TestHarness:
     jobs objects for them.  in  in  test cases in their own processes.
     Receives test numbers to run from the queue, and saves results into
     the results field.'''
-    def __init__(self, srcdir, testcase):
+    def __init__(self, srcdir, builddir, testcase):
       threading.Thread.__init__(self)
       self.srcdir = srcdir
+      self.builddir = builddir
       self.testcase = testcase
       self.result = []
 
@@ -371,10 +372,12 @@ class TestHarness:
 
       progdir, progbase, test_nums = self.testcase
 
-      progabs = os.path.abspath(os.path.join(self.srcdir, progdir, progbase))
       if progbase[-3:] == '.py':
+        progabs = os.path.abspath(os.path.join(self.srcdir, progdir, progbase))
         self._count_py_tests(progabs, progdir, progbase)
       else:
+        progabs = os.path.abspath(os.path.join(self.builddir, progdir,
+                                               progbase))
         self._count_c_tests(progabs, progdir, progbase)
 
     def get_result(self):
@@ -412,7 +415,8 @@ class TestHarness:
     # mask latency.  This takes .5s instead of about 3s.
     threads = [ ]
     for count, testcase in enumerate(testlist):
-      threads.append(self.CollectingThread(self.srcdir, testcase))
+      threads.append(self.CollectingThread(self.srcdir, self.builddir,
+                                           testcase))
 
     for t in threads:
       t.start()
