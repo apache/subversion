@@ -541,7 +541,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # PART 2: Load a series of incremental dumps to an empty repository.
   #
   # Incrementally dump the repository into three dump files:
-  dump_file_r1_10 = svntest.main.temp_dir + "-r1-10.dump"
+  dump_file_r1_10 = svntest.main.temp_dir + "-r1-10.rdump"
   output = svntest.actions.run_and_verify_svnrdump(None,
                                                    svntest.verify.AnyOutput,
                                                    [], 0, '-q', 'dump', '-r1:10',
@@ -550,7 +550,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   dump_fp.writelines(output)
   dump_fp.close()
 
-  dump_file_r11_13 = svntest.main.temp_dir + "-r11-13.dump"
+  dump_file_r11_13 = svntest.main.temp_dir + "-r11-13.rdump"
   output = svntest.actions.run_and_verify_svnrdump(None,
                                                    svntest.verify.AnyOutput,
                                                    [], 0, '-q', 'dump',
@@ -560,7 +560,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   dump_fp.writelines(output)
   dump_fp.close()
 
-  dump_file_r14_15 = svntest.main.temp_dir + "-r14-15.dump"
+  dump_file_r14_15 = svntest.main.temp_dir + "-r14-15.rdump"
   output = svntest.actions.run_and_verify_svnrdump(None,
                                                    svntest.verify.AnyOutput,
                                                    [], 0, '-q', 'dump',
