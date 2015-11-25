@@ -479,6 +479,34 @@ class TestHarness:
       self.log.close()
       self.log = None
 
+  def _process_test_output_line(self, line):
+    if sys.platform == 'win32':
+      # Remove CRs inserted because we parse the output as binary.
+      line = line.replace('\r', '')
+
+    # If using --log-to-stdout self.log in None.
+    if self.log:
+      self.log.write(line)
+
+    if line.startswith('PASS') or line.startswith('FAIL') \
+        or line.startswith('XFAIL') or line.startswith('XPASS') \
+        or line.startswith('SKIP'):
+      return 1
+
+    return 0
+
+  def _check_for_unknown_failure(self, log, progbase, test_failed):
+    # We always return 1 for failed tests. Some other failure than 1
+    # probably means the test didn't run at all and probably didn't
+    # output any failure info. In that case, log a generic failure message.
+    # ### Even if failure==1 it could be that the test didn't run at all.
+    if test_failed and test_failed != 1:
+      if self.log:
+        log.write('FAIL:  %s: Unknown test failure; see tests.log.\n' % progbase)
+        log.flush()
+      else:
+        log.write('FAIL:  %s: Unknown test failure.\n' % progbase)
+
   def _run_c_test(self, progabs, progdir, progbase, test_nums, dot_count):
     'Run a c test, escaping parameters as required.'
     if self.opts.list_tests and self.opts.milestone_filter:
@@ -518,17 +546,7 @@ class TestHarness:
                             stderr=self.log)
     line = prog.stdout.readline()
     while line:
-      if sys.platform == 'win32':
-        # Remove CRs inserted because we parse the output as binary.
-        line = line.replace('\r', '')
-
-      # If using --log-to-stdout self.log in None.
-      if self.log:
-        self.log.write(line)
-
-      if line.startswith('PASS') or line.startswith('FAIL') \
-           or line.startswith('XFAIL') or line.startswith('XPASS') \
-           or line.startswith('SKIP'):
+      if self._process_test_output_line(line):
         tests_completed += 1
         progress_func(tests_completed)
 
@@ -659,16 +677,7 @@ class TestHarness:
     else:
       os.chdir(old_cwd)
 
-    # We always return 1 for failed tests. Some other failure than 1
-    # probably means the test didn't run at all and probably didn't
-    # output any failure info. In that case, log a generic failure message.
-    # ### Even if failure==1 it could be that the test didn't run at all.
-    if failed and failed != 1:
-      if self.log:
-        log.write('FAIL:  %s: Unknown test failure; see tests.log.\n' % progbase)
-        log.flush()
-      else:
-        log.write('FAIL:  %s: Unknown test failure.\n' % progbase)
+    self._check_for_unknown_failure(log, progbase, failed)
 
     if not self.opts.list_tests:
       # Log the elapsed time.
