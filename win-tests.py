@@ -86,6 +86,7 @@ def _usage_exit():
   print("  --ssl-cert             : Path to SSL server certificate to trust.")
   print("  --https                : Run Apache httpd with an https setup.")
   print("  --http2                : Enable http2 in Apache Httpd (>= 2.4.17).")
+  print("  --global-scheduler     : Enable global scheduler.")
   print("  --exclusive-wc-locks   : Enable exclusive working copy locks")
   print("  --memcached-dir=DIR    : Run memcached from dir")
   print("  --memcached-server=    : Enable usage of the specified memcached server")
@@ -137,6 +138,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'disable-http-v2', 'disable-bulk-updates', 'help',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl', 'swig=',
                         'list', 'enable-sasl', 'bin=', 'parallel', 'http2',
+                        'global-scheduler',
                         'config-file=', 'server-minor-version=', 'log-level=',
                         'log-to-stdout', 'mode-filter=', 'milestone-filter=',
                         'ssl-cert=', 'exclusive-wc-locks', 'memcached-server=',
@@ -147,6 +149,7 @@ if len(args) > 1:
 
 # Interpret the options and set parameters
 base_url, fs_type, verbose, cleanup = None, None, None, None
+global_scheduler = None
 repo_loc = 'local repository.'
 objdir = 'Debug'
 log = 'tests.log'
@@ -235,6 +238,8 @@ for opt, val in opts:
     fsfs_packing = 1
   elif opt == '--javahl':
     test_javahl = 1
+  elif opt == '--global-scheduler':
+    global_scheduler = 1
   elif opt == '--swig':
     if val not in ['perl', 'python', 'ruby']:
       sys.stderr.write('Running \'%s\' swig tests not supported (yet).\n'
@@ -544,9 +549,10 @@ class Httpd:
     fp = open(self.httpd_config, 'w')
 
     # Limit the number of threads (default = 64)
-    fp.write('<IfModule mpm_winnt.c>\n')
-    fp.write('ThreadsPerChild 16\n')
-    fp.write('</IfModule>\n')
+    if not use_http2:
+      fp.write('<IfModule mpm_winnt.c>\n')
+      fp.write('ThreadsPerChild 16\n')
+      fp.write('</IfModule>\n')
 
     # Global Environment
     fp.write('ServerRoot   ' + self._quote(self.root) + '\n')
@@ -599,9 +605,9 @@ class Httpd:
       fp.write('SSLCertificateKeyFile %s\n' % self._quote(self.certkeyfile))
 
     if use_ssl and use_http2:
-      fp.write('Protocols h2\n')
+      fp.write('Protocols h2 http/1.1\n')
     elif use_http2:
-      fp.write('Protocols h2c\n')
+      fp.write('Protocols h2c http/1.1\n')
       fp.write('H2Direct on\n')
 
     # Don't handle .htaccess, symlinks, etc.
@@ -1072,6 +1078,7 @@ if not test_javahl and not test_swig:
   opts, args = run_tests.create_parser().parse_args([])
   opts.url = base_url
   opts.fs_type = fs_type
+  opts.global_scheduler = global_scheduler
   opts.http_library = 'serf'
   opts.server_minor_version = server_minor_version
   opts.cleanup = cleanup
