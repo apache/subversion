@@ -782,7 +782,7 @@ def authz_locking(sbox):
                                       sbox.ospath('A/mu'))
 
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*svn: warning: W160039: Unlock.*[Ff]orbidden.*"
+    expected_err = ".*svn: warning: W160039: .*([Aa]uth.*perf|[Ff]orbidden).*"
   else:
     expected_err = ".*svn: warning: W170001: Authorization failed.*"
 

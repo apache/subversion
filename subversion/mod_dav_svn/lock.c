@@ -487,6 +487,18 @@ get_locks(dav_lockdb *lockdb,
       svn_lock_to_dav_lock(&lock, slock, info->lock_break,
                            resource->exists, resource->pool);
 
+      /* If we are talking to an svn client that wants to unlock a
+         path, tell mod_dav that the lock is owned by the user trying
+         to unlock. This stops it from returning an error that we
+         can't use in the client, and allows us to return the actual
+         unlock error */
+      if (info->r->method_number == M_UNLOCK
+          && resource->info->repos->is_svn_client
+          && resource->info->repos->username)
+        {
+          lock->auth_user = resource->info->repos->username;
+        }
+
       /* Let svn clients know the creationdate of the slock. */
       apr_table_setn(info->r->headers_out, SVN_DAV_CREATIONDATE_HEADER,
                      svn_time_to_cstring(slock->creation_date,
@@ -936,6 +948,11 @@ remove_lock(dav_lockdb *lockdb,
                                                 resource->pool),
                            APLOG_WARNING);
 
+        }
+      else if (serr && serr->apr_err == SVN_ERR_FS_LOCK_OWNER_MISMATCH)
+        {
+            return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        NULL, resource->pool);
         }
       else if (serr)
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
