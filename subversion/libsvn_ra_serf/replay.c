@@ -649,6 +649,24 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
   svn_boolean_t done;
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
+  if (session->http20) {
+      /* ### Auch... this doesn't work yet... 
+
+         This code relies on responses coming in in an exact order, while
+         http2 does everything to deliver responses as fast as possible.
+
+         With http/1.1 we were quite lucky that this worked, as serf doesn't
+         promise in order delivery.... (Please do not use authz with keys
+         that expire)
+
+         For now fall back to the legacy callback in libsvn_ra that is
+         used by all the other ra layers as workaround.
+
+         ### TODO: Optimize
+         */
+      return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+  }
+
   SVN_ERR(svn_ra_serf__report_resource(&report_target, session,
                                        subpool));
 
