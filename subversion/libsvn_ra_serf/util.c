@@ -496,7 +496,9 @@ conn_negotiate_protocol(void *data,
 
       /* Disable generating content-length headers. */
       conn->session->http10 = FALSE;
+      conn->session->http20 = TRUE;
       conn->session->using_chunked_requests = TRUE;
+      conn->session->detect_chunking = FALSE;
     }
   else
     {
@@ -1335,6 +1337,10 @@ handle_response(serf_request_t *request,
       /* HTTP/1.1? (or later)  */
       if (sl.version != SERF_HTTP_10)
         handler->session->http10 = FALSE;
+
+      if (sl.version >= SERF_HTTP_VERSION(2, 0)) {
+        handler->session->http20 = TRUE;
+      }
     }
 
   /* Keep reading from the network until we've read all the headers.  */
