@@ -494,8 +494,8 @@ class TestHarness:
     return failed
 
   def _run_local_schedulers(self, testlist):
-  '''Serial execution of all test suites using their respective internal
-  schedulers.'''
+    '''Serial execution of all test suites using their respective internal
+    schedulers.'''
     testcount = len(testlist)
 
     failed = 0
