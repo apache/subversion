@@ -60,24 +60,6 @@ Candidate changes:
    Votes:
      +1: philip, stefan2
 
- * r1706428, r1706437, r1709388, r1711250, r1711507, r1711510
-   Fix issue #4598, "No-op changes no longer dumped by 'svnadmin dump' in 1.9"
-   Justification:
-     Possible loss of information, different dumps produced by svnadmin and
-     svnrdump.  Repository dumps can be used for backup purposes.  Regression
-     from 1.8.
-   Notes:
-     Whole discussion is in http://svn.haxx.se/dev/archive-2015-09/0269.shtml
-     (Subject: "No-op changes no longer dumped by 'svnadmin dump' in 1.9").
-     .
-     r1706428, r1706437 add a regression test.  r1709388, r1711507 fix the
-     issue.  r1711250, r1711510 update documentation.  Backport branch is
-     required due to conflict in /subversion/tests/cmdline/svnadmin_tests.py
-   Branch:
-     ^/subversion/branches/1.9.x-r1706428
-   Votes:
-     +1: kotkov, ivan
-
  * r1668625
    Fix 'svn diff --summarize --ignore-properties'.
    Justification:
@@ -101,6 +83,30 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
+ * r1706428, r1706437, r1709388, r1711250, r1711507, r1711510
+   Fix issue #4598, "No-op changes no longer dumped by 'svnadmin dump' in 1.9"
+   Justification:
+     Possible loss of information, different dumps produced by svnadmin and
+     svnrdump.  Repository dumps can be used for backup purposes.  Regression
+     from 1.8.
+   Notes:
+     Whole discussion is in http://svn.haxx.se/dev/archive-2015-09/0269.shtml
+     (Subject: "No-op changes no longer dumped by 'svnadmin dump' in 1.9").
+     .
+     r1706428, r1706437 add a regression test.  r1709388, r1711507 fix the
+     issue.  r1711250, r1711510 update documentation.  Backport branch is
+     required due to conflict in /subversion/tests/cmdline/svnadmin_tests.py
+   Branch:
+     ^/subversion/branches/1.9.x-r1706428
+   Votes:
+     +1: kotkov, ivan, stefan2
+
  * r1715793
    Do not read TXN props on every svn_fs_txn_open() call in libsvn_fs_fs: FSFS
    doesn't use transaction_t.proplist (and never used). This code seems to
@@ -111,10 +117,5 @@ Candidate changes:
      http:// protocol on Windows, because mod_dav_svn opens TXN for every
      request on transaction.
    Votes:
-     +1: ivan, rhuijben
+     +1: ivan, rhuijben, stefan2
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
