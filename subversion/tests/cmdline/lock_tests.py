@@ -1360,11 +1360,8 @@ def unlocked_lock_of_other_user(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # now try to unlock with user jconstant, should fail but exit 0.
-  if sbox.repo_url.startswith("http"):
-    expected_err = "svn: warning: W160039: .*[Uu]nlock of .*403 Forbidden.*"
-  else:
-    expected_err = "svn: warning: W160039: User '%s' is trying to use a lock owned by "\
-                   "'%s'.*" % (svntest.main.wc_author2, svntest.main.wc_author)
+  expected_err = "svn: warning: W160039: User '%s' is trying to use a lock owned by "\
+                 "'%s'.*" % (svntest.main.wc_author2, svntest.main.wc_author)
   svntest.actions.run_and_verify_svn([], expected_err,
                                      'unlock',
                                      '--username', svntest.main.wc_author2,
