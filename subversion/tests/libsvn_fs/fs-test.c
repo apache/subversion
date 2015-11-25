@@ -225,6 +225,8 @@ reopen_trivial_transaction(const svn_test_opts_t *opts,
   /* Don't use the subpool, txn_name must persist beyond the current txn */
   SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool));
 
+  SVN_TEST_ASSERT(svn_fs_txn_base_revision(txn) == 0);
+
   /* Create a third transaction - we don't want that one to reopen. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, subpool));
 
@@ -238,7 +240,43 @@ reopen_trivial_transaction(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_txn_root(&root, txn, subpool));
   SVN_TEST_STRING_ASSERT(svn_fs_txn_root_name(root, subpool), txn_name);
 
+  SVN_TEST_ASSERT(svn_fs_txn_base_revision(txn) == 0);
+
+  {
+    const char *conflict;
+    svn_revnum_t new_rev;
+    SVN_ERR(svn_fs_commit_txn(&conflict, &new_rev, txn, subpool));
+    SVN_TEST_STRING_ASSERT(conflict, NULL);
+    SVN_TEST_ASSERT(new_rev == 1);
+  }
+
   /* Close the transaction ... again. */
+  svn_pool_clear(subpool);
+
+  /* Begin another transaction that is based on revision 1.  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 1, subpool));
+
+  /* Don't use the subpool, txn_name must persist beyond the current txn */
+  SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool));
+
+  SVN_TEST_ASSERT(svn_fs_txn_base_revision(txn) == 1);
+
+  /* Keep the txn name in pool */
+  SVN_ERR(svn_fs_txn_name(&txn_name, txn, pool));
+
+  /* Close the transaction ... again. */
+  svn_pool_clear(subpool);
+
+  /* Reopen the transaction by name ... again */
+  SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, subpool));
+
+  /* Does it have the same name? ... */
+  SVN_ERR(svn_fs_txn_root(&root, txn, subpool));
+  SVN_TEST_STRING_ASSERT(svn_fs_txn_root_name(root, subpool), txn_name);
+
+  /* And the same base revision? */
+  SVN_TEST_ASSERT(svn_fs_txn_base_revision(txn) == 1);
+
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
