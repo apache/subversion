@@ -24,7 +24,8 @@
 #
 
 '''usage: python run_tests.py
-            [--verbose] [--log-to-stdout] [--cleanup] [--parallel]
+            [--verbose] [--log-to-stdout] [--cleanup]
+            [--parallel | --parallel=<n>] [--global-scheduler]
             [--url=<base-url>] [--http-library=<http-library>] [--enable-sasl]
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
             [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
@@ -44,11 +45,18 @@ and filename of a test program, optionally followed by '#' and a comma-
 separated list of test numbers; the default is to run all the tests in it.
 '''
 
-import os, sys
+import os, sys, shutil
 import re
 import logging
 import optparse, subprocess, imp, threading, traceback, exceptions
 from datetime import datetime
+
+try:
+  # Python >=3.0
+  import queue
+except ImportError:
+  # Python <3.0
+  import Queue as queue
 
 # Ensure the compiled C tests use a known locale (Python tests set the locale
 # explicitly).
@@ -256,6 +264,8 @@ class TestHarness:
     if self.opts.memcached_server is not None:
       cmdline.append('--memcached-server=%s' % self.opts.memcached_server)
 
+    self.py_test_cmdline = cmdline
+
     # The svntest module is very pedantic about the current working directory
     old_cwd = os.getcwd()
     try:
@@ -274,6 +284,225 @@ class TestHarness:
       svntest.testcase.TextColors.disable()
     finally:
       os.chdir(old_cwd)
+
+  class Job:
+    '''A single test or test suite to execute. After execution, the results
+    can be taken from the respective data fields.'''
+
+    def __init__(self, number, is_python, progabs, progdir, progbase):
+      '''number is the test count for C tests and the test nr for Python.'''
+      self.number = number
+      self.is_python = is_python
+      self.progabs = progabs
+      self.progdir = progdir
+      self.progbase = progbase
+      self.result = None
+      self.stdout_lines = []
+      self.stderr_lines = []
+      self.taken = 0
+
+    def test_count(self):
+      if self.is_python:
+        return 1
+      else:
+        return self.number
+
+    def _command_line(self, harness):
+      if self.is_python:
+        cmdline = list(harness.py_test_cmdline)
+        cmdline.insert(0, 'python')
+        cmdline.insert(1, self.progabs)
+        # Run the test apps in "child process" mode,
+        # i.e. w/o cleaning up global directories etc.
+        cmdline.append('-c')
+        cmdline.append(str(self.number))
+      else:
+        cmdline = list(harness.c_test_cmdline)
+        cmdline[0] = self.progabs
+        cmdline[1] = '--srcdir=%s' % os.path.join(harness.srcdir, self.progdir)
+      return cmdline
+
+    def execute(self, harness):
+      start_time = datetime.now()
+      prog = subprocess.Popen(self._command_line(harness),
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE,
+                              cwd=self.progdir)
+
+      self.stdout_lines = prog.stdout.readlines()
+      self.stderr_lines = prog.stderr.readlines()
+      prog.wait()
+      self.result = prog.returncode
+      self.taken = datetime.now() - start_time
+
+  class CollectingThread(threading.Thread):
+    '''A thread that lists the individual tests in a given case and creates
+    jobs objects for them.  in  in  test cases in their own processes.
+    Receives test numbers to run from the queue, and saves results into
+    the results field.'''
+    def __init__(self, srcdir, testcase):
+      threading.Thread.__init__(self)
+      self.srcdir = srcdir
+      self.testcase = testcase
+      self.result = []
+
+    def _count_c_tests(self, progabs, progdir, progbase):
+      'Run a c test, escaping parameters as required.'
+      cmdline = [ progabs, '--list' ]
+      prog = subprocess.Popen(cmdline, stdout=subprocess.PIPE, cwd=progdir)
+      lines = prog.stdout.readlines()
+      self.result.append(TestHarness.Job(len(lines) - 2, False, progabs,
+                                         progdir, progbase))
+      prog.wait()
+
+    def _count_py_tests(self, progabs, progdir, progbase):
+      'Run a c test, escaping parameters as required.'
+      cmdline = [ 'python', progabs, '--list' ]
+      prog = subprocess.Popen(cmdline, stdout=subprocess.PIPE, cwd=progdir)
+      lines = prog.stdout.readlines()
+
+      for i in range(0, len(lines) - 2):
+        self.result.append(TestHarness.Job(i + 1, True, progabs, 
+                                           progdir, progbase))
+      prog.wait()
+
+    def run(self):
+      "Run a single test. Return the test's exit code."
+
+      progdir, progbase, test_nums = self.testcase
+
+      progabs = os.path.abspath(os.path.join(self.srcdir, progdir, progbase))
+      if progbase[-3:] == '.py':
+        self._count_py_tests(progabs, progdir, progbase)
+      else:
+        self._count_c_tests(progabs, progdir, progbase)
+
+    def get_result(self):
+      return self.result
+
+  class TestSpawningThread(threading.Thread):
+    '''A thread that runs test cases in their own processes.
+    Receives test jobs to run from the queue, and shows some progress
+    indication on stdout.  The detailed test results are stored inside
+    the job objects.'''
+    def __init__(self, queue, harness):
+      threading.Thread.__init__(self)
+      self.queue = queue
+      self.harness = harness
+      self.results = []
+
+    def run(self):
+      while True:
+        try:
+          job = self.queue.get_nowait()
+        except queue.Empty:
+          return
+
+        job.execute(self.harness)
+
+        if job.result:
+          os.write(sys.stdout.fileno(), '!' * job.test_count())
+        else:
+          os.write(sys.stdout.fileno(), '.' * job.test_count())
+
+
+  def _run_global_sheduler(self, testlist, has_py_tests):
+    # Collect all tests to execute (separate jobs for each test in python
+    # test cases, one job for each c test case).  Do that concurrently to
+    # mask latency.  This takes .5s instead of about 3s.
+    threads = [ ]
+    for count, testcase in enumerate(testlist):
+      threads.append(self.CollectingThread(self.srcdir, testcase))
+
+    for t in threads:
+      t.start()
+
+    jobs = []
+    for t in threads:
+      t.join()
+      jobs.extend(t.result)
+
+    # Put all jobs into our "todo" queue.
+    # Scramble them for a more even resource utilization.
+    job_queue = queue.Queue()
+    total_count = 0
+    scrambled = list(jobs)
+    scrambled.sort(key=lambda x: x.number)
+    for job in scrambled:
+      total_count += job.test_count()
+      job_queue.put(job)
+
+    # Use the svntest infrastructure to initialize the common test template
+    # wc and repos.
+    if has_py_tests:
+      old_cwd = os.getcwd()
+      os.chdir(jobs[-1].progdir)
+      svntest.main.options.keep_local_tmp = True
+      svntest.main.execute_tests([])
+      os.chdir(old_cwd)
+
+    # Some more prep work
+    if self.log:
+      log = self.log
+    else:
+      log = sys.stdout
+
+    if self.opts.parallel is None:
+      thread_count = 1
+    else:
+      if self.opts.parallel == 1:
+        thread_count = 5
+      else:
+        thread_count = self.opts.parallel
+
+    # Actually run the tests in concurrent sub-processes
+    print('Tests to execute: %d' % total_count)
+
+    threads = [ TestHarness.TestSpawningThread(job_queue, self)
+                for i in range(thread_count) ]
+    for t in threads:
+      t.start()
+    for t in threads:
+      t.join()
+
+    print
+
+    # Aggregate and log the results
+    failed = 0
+    taken = 0
+    last_test_name = ""
+    for job in jobs:
+      if last_test_name != job.progbase:
+        if last_test_name != "":
+          log.write('ELAPSED: %s %s\n' % (last_test_name, str(taken)))
+          log.write('\n')
+        last_test_name = job.progbase
+        taken = job.taken
+      else:
+        taken += job.taken
+
+      log.writelines(job.stderr_lines)
+      for line in job.stdout_lines:
+        self._process_test_output_line(line)
+
+      self._check_for_unknown_failure(log, job.progbase, job.result)
+      failed = job.result or failed
+
+    log.write('ELAPSED: %s %s\n' % (last_test_name, str(taken)))
+    log.write('\n')
+
+    return failed
+
+  def _run_local_schedulers(self, testlist):
+  '''Serial execution of all test suites using their respective internal
+  schedulers.'''
+    testcount = len(testlist)
+
+    failed = 0
+    for count, testcase in enumerate(testlist):
+      failed = self._run_test(testcase, count, testcount) or failed
+
+    return failed
 
   def run(self, testlist):
     '''Run all test programs given in TESTLIST. Print a summary of results, if
@@ -324,12 +553,10 @@ class TestHarness:
 
     # Run the tests
     testlist = c_tests + py_tests
-    testcount = len(testlist)
-    for count, testcase in enumerate(testlist):
-      failed = self._run_test(testcase, count, testcount) or failed
-
-    if self.log is None:
-      return failed
+    if self.opts.global_scheduler is None:
+      failed = self._run_local_schedulers(testlist)
+    else:
+      failed = self._run_global_sheduler(testlist, len(py_tests) > 0)
 
     # Open the log in binary mode because it can contain binary data
     # from diff_tests.py's testing of svnpatch. This may prevent
@@ -722,6 +949,8 @@ def create_parser():
                     help='Base url to the repos (e.g. svn://localhost)')
   parser.add_option('-f', '--fs-type', action='store',
                     help='Subversion file system type (fsfs(-v[46]), bdb or fsx)')
+  parser.add_option('-g', '--global-scheduler', action='store_true',
+                    help='Run tests from all scripts together')
   parser.add_option('--http-library', action='store',
                     help="Make svn use this DAV library (neon or serf)")
   parser.add_option('--bin', action='store', dest='svn_bin',
