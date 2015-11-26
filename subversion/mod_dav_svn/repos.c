@@ -821,9 +821,18 @@ prep_regular(dav_resource_combined *comb)
     }
   else
     {
-      /* Mark resource as 'idempotent' since we have specific revision
-         in URI. */
-      comb->priv.idempotent = TRUE;
+      /* Did we have a query for this REGULAR resource? */
+      if (comb->priv.r->parsed_uri.query)
+        {
+          /* If yes, it's 'idempotent' only if peg revision is specified. */
+          comb->priv.idempotent = comb->priv.pegged;
+        }
+      else
+        {
+          /* Otherwise, we have the specific revision in URI, so the resource
+             is 'idempotent'. */
+          comb->priv.idempotent = TRUE;
+        }
     }
 
   /* get the root of the tree */

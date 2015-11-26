@@ -1200,6 +1200,30 @@ def create_python_hook_script(hook_path, hook_script_code,
     file_write(hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
     os.chmod(hook_path, 0755)
 
+def create_http_connection(url, debuglevel=9):
+  """Create an http(s) connection to the host specified by URL.
+     Set the debugging level (the amount of debugging output printed when
+     working with this connection) to DEBUGLEVEL.  By default, all debugging
+     output is printed. """
+
+  import httplib
+  from urlparse import urlparse
+
+  loc = urlparse(url)
+  if loc.scheme == 'http':
+    h = httplib.HTTPConnection(loc.hostname, loc.port)
+  else:
+    try:
+      import ssl # new in python 2.6
+      c = ssl.create_default_context()
+      c.check_hostname = False
+      c.verify_mode = ssl.CERT_NONE
+      h = httplib.HTTPSConnection(loc.hostname, loc.port, context=c)
+    except:
+      h = httplib.HTTPSConnection(loc.hostname, loc.port)
+  h.set_debuglevel(debuglevel)
+  return h
+
 def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
   "Create a restrictive authz file ( no anynomous access )."
 
