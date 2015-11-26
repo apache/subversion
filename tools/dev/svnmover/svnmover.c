@@ -188,50 +188,153 @@ svnmover_notify_v(const char *fmt,
 /* Set the WC base revision of element EID to BASE_REV.
  */
 static void
-svnmover_wc_set_base_rev(svnmover_wc_t *wc, int eid, svn_revnum_t base_rev)
+svnmover_wc_set_base_rev(svnmover_wc_t *wc,
+                         svn_branch__state_t *branch,
+                         int eid,
+                         svn_revnum_t base_rev)
 {
+  apr_hash_t *branch_base_revs = svn_hash_gets(wc->base_revs, branch->bid);
   void *val = apr_pmemdup(wc->pool, &base_rev, sizeof(base_rev));
 
-  svn_eid__hash_set(wc->base_revs, eid, val);
+  if (!branch_base_revs)
+    {
+      branch_base_revs = apr_hash_make(wc->pool);
+      svn_hash_sets(wc->base_revs, apr_pstrdup(wc->pool, branch->bid),
+                    branch_base_revs);
+    }
+  svn_eid__hash_set(branch_base_revs, eid, val);
 }
 
 /* Get the WC base revision of element EID, or SVN_INVALID_REVNUM if
  * element EID is not present in the WC base.
  */
 static svn_revnum_t
-svnmover_wc_get_base_rev(svnmover_wc_t *wc, int eid, apr_pool_t *scratch_pool)
+svnmover_wc_get_base_rev(svnmover_wc_t *wc,
+                         svn_branch__state_t *branch,
+                         int eid,
+                         apr_pool_t *scratch_pool)
 {
+  apr_hash_t *branch_base_revs = svn_hash_gets(wc->base_revs, branch->bid);
   svn_error_t *err;
   svn_element__content_t *element;
+  svn_revnum_t *base_rev_p;
 
-  err = svn_branch__state_get_element(wc->base->branch, &element, eid,
-                                      scratch_pool);
+  if (!branch_base_revs)
+    {
+      return SVN_INVALID_REVNUM;
+    }
+  err = svn_branch__state_get_element(branch, &element, eid, scratch_pool);
   if (err || !element)
     {
       svn_error_clear(err);
       return SVN_INVALID_REVNUM;
     }
 
-  return *(svn_revnum_t *)svn_eid__hash_get(wc->base_revs, eid);
+  base_rev_p = svn_eid__hash_get(branch_base_revs, eid);
+  if (! base_rev_p)
+    return SVN_INVALID_REVNUM;
+  return *base_rev_p;
 }
 
-/* Set the WC base revision of each element in ELEMENTS to BASE_REV.
+/* Set the WC base revision to BASE_REV for each element in WC base branch
+ * BRANCH, including nested branches.
  */
 static svn_error_t *
-svnmover_wc_set_base_revs(svnmover_wc_t *wc,
-                          svn_element__tree_t *elements,
-                          svn_revnum_t base_rev,
-                          apr_pool_t *scratch_pool)
+svnmover_wc_set_base_revs_r(svnmover_wc_t *wc,
+                            svn_branch__state_t *branch,
+                            svn_revnum_t base_rev,
+                            apr_pool_t *scratch_pool)
 {
+  svn_element__tree_t *elements;
   apr_hash_index_t *hi;
 
-  wc->base_revs = apr_hash_make(wc->pool);
+  SVN_ERR(svn_branch__state_get_elements(branch, &elements, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, elements->e_map);
        hi; hi = apr_hash_next(hi))
     {
       int eid = svn_eid__hash_this_key(hi);
+      svn_element__content_t *element;
 
-      svnmover_wc_set_base_rev(wc, eid, base_rev);
+      svnmover_wc_set_base_rev(wc, branch, eid, base_rev);
+
+      /* recurse into nested branches */
+      SVN_ERR(svn_branch__state_get_element(branch, &element, eid,
+                                            scratch_pool));
+      if (element->payload->is_subbranch_root)
+        {
+          const char *subbranch_id
+            = svn_branch__id_nest(branch->bid, eid, scratch_pool);
+          svn_branch__state_t *subbranch
+            = svn_branch__txn_get_branch_by_id(branch->txn, subbranch_id,
+                                               scratch_pool);
+
+          SVN_ERR(svnmover_wc_set_base_revs_r(wc, subbranch,
+                                              base_rev, scratch_pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Set the WC base revision to BASE_REV for each element in WC base branch
+ * BRANCH, including nested branches.
+ */
+static svn_error_t *
+svnmover_wc_set_base_revs(svnmover_wc_t *wc,
+                          svn_branch__state_t *branch,
+                          svn_revnum_t base_rev,
+                          apr_pool_t *scratch_pool)
+{
+  wc->base_revs = apr_hash_make(wc->pool);
+  SVN_ERR(svnmover_wc_set_base_revs_r(wc, branch, base_rev, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Get the lowest and highest base revision numbers in WC base branch
+ * BRANCH, including nested branches.
+ */
+static svn_error_t *
+svnmover_wc_get_base_revs_r(svnmover_wc_t *wc,
+                            svn_revnum_t *base_rev_min,
+                            svn_revnum_t *base_rev_max,
+                            svn_branch__state_t *branch,
+                            apr_pool_t *scratch_pool)
+{
+  svn_element__tree_t *base_elements;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_branch__state_get_elements(branch, &base_elements,
+                                         scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, base_elements->e_map);
+       hi; hi = apr_hash_next(hi))
+    {
+      int eid = svn_eid__hash_this_key(hi);
+      svn_revnum_t rev = svnmover_wc_get_base_rev(wc, branch, eid,
+                                                  scratch_pool);
+      svn_element__content_t *element;
+
+      if (*base_rev_min == SVN_INVALID_REVNUM
+          || rev < *base_rev_min)
+        *base_rev_min = rev;
+      if (*base_rev_max == SVN_INVALID_REVNUM
+          || rev > *base_rev_max)
+        *base_rev_max = rev;
+
+      /* recurse into nested branches */
+      SVN_ERR(svn_branch__state_get_element(branch, &element, eid,
+                                            scratch_pool));
+      if (element->payload->is_subbranch_root)
+        {
+          const char *subbranch_id
+            = svn_branch__id_nest(branch->bid, eid, scratch_pool);
+          svn_branch__state_t *subbranch
+            = svn_branch__txn_get_branch_by_id(branch->txn, subbranch_id,
+                                               scratch_pool);
+
+          SVN_ERR(svnmover_wc_get_base_revs_r(wc, base_rev_min, base_rev_max,
+                                              subbranch, scratch_pool));
+        }
     }
 
   return SVN_NO_ERROR;
@@ -245,28 +348,10 @@ svnmover_wc_get_base_revs(svnmover_wc_t *wc,
                           svn_revnum_t *base_rev_max,
                           apr_pool_t *scratch_pool)
 {
-  svn_element__tree_t *base_elements;
-  apr_hash_index_t *hi;
-
-  SVN_ERR(svn_branch__state_get_elements(wc->base->branch, &base_elements,
-                                         scratch_pool));
-
   *base_rev_min = SVN_INVALID_REVNUM;
   *base_rev_max = SVN_INVALID_REVNUM;
-  for (hi = apr_hash_first(scratch_pool, base_elements->e_map);
-       hi; hi = apr_hash_next(hi))
-    {
-      int eid = svn_eid__hash_this_key(hi);
-      svn_revnum_t rev = svnmover_wc_get_base_rev(wc, eid, scratch_pool);
-
-      if (*base_rev_min == SVN_INVALID_REVNUM
-          || rev < *base_rev_min)
-        *base_rev_min = rev;
-      if (*base_rev_max == SVN_INVALID_REVNUM
-          || rev > *base_rev_max)
-        *base_rev_max = rev;
-    }
-
+  SVN_ERR(svnmover_wc_get_base_revs_r(wc, base_rev_min, base_rev_max,
+                                      wc->base->branch, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -299,7 +384,6 @@ wc_checkout(svnmover_wc_t *wc,
   svn_branch__compat_fetch_func_t fetch_func;
   void *fetch_baton;
   svn_branch__txn_t *base_txn;
-  svn_element__tree_t *base_elements;
 
   /* Validate and store the new base revision number */
   if (! SVN_IS_VALID_REVNUM(base_revision))
@@ -341,9 +425,7 @@ wc_checkout(svnmover_wc_t *wc,
     return svn_error_createf(SVN_BRANCH__ERR, NULL,
                              "Cannot check out WC: branch %s not found in r%ld",
                              base_branch_id, base_revision);
-  SVN_ERR(svn_branch__state_get_elements(wc->base->branch, &base_elements,
-                                         scratch_pool));
-  SVN_ERR(svnmover_wc_set_base_revs(wc, base_elements,
+  SVN_ERR(svnmover_wc_set_base_revs(wc, wc->base->branch,
                                     base_revision, scratch_pool));
 
   wc->working = apr_pcalloc(wc->pool, sizeof(*wc->working));
@@ -849,20 +931,30 @@ update_wc_eids(svnmover_wc_t *wc,
  * The committed elements are determined by diffing base against working.
  * ### TODO: When we allow committing a subset of the WC, we'll need to
  *     pass in a list of the committed elements.
+ *
+ * BASE_BRANCH and/or WORK_BRANCH may be null.
  */
 static svn_error_t *
-update_wc_base(svnmover_wc_t *wc,
-               svn_revnum_t new_rev,
-               apr_pool_t *scratch_pool)
+update_wc_base_r(svnmover_wc_t *wc,
+                 svn_branch__state_t *base_branch,
+                 svn_branch__state_t *work_branch,
+                 svn_revnum_t new_rev,
+                 apr_pool_t *scratch_pool)
 {
   svn_element__tree_t *base_elements, *working_elements;
   apr_hash_t *committed_elements;
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_branch__state_get_elements(wc->base->branch, &base_elements,
-                                         scratch_pool));
-  SVN_ERR(svn_branch__state_get_elements(wc->working->branch, &working_elements,
-                                         scratch_pool));
+  if (base_branch)
+    SVN_ERR(svn_branch__state_get_elements(base_branch, &base_elements,
+                                           scratch_pool));
+  else
+    base_elements = svn_element__tree_create(NULL, 0, scratch_pool);
+  if (work_branch)
+    SVN_ERR(svn_branch__state_get_elements(work_branch, &working_elements,
+                                           scratch_pool));
+  else
+    working_elements = svn_element__tree_create(NULL, 0, scratch_pool);
   SVN_ERR(svnmover_element_differences(&committed_elements,
                                        base_elements, working_elements,
                                        scratch_pool, scratch_pool));
@@ -871,19 +963,81 @@ update_wc_base(svnmover_wc_t *wc,
        hi; hi = apr_hash_next(hi))
     {
       int eid = svn_eid__hash_this_key(hi);
-      svn_element__content_t *content;
+      svn_element__content_t *content = NULL;
 
-      SVN_ERR(svn_branch__state_get_element(wc->working->branch, &content,
-                                            eid, scratch_pool));
+      if (work_branch)
+        SVN_ERR(svn_branch__state_get_element(work_branch, &content,
+                                              eid, scratch_pool));
       if (content)
-        SVN_ERR(svn_branch__state_alter_one(wc->base->branch, eid,
+        SVN_ERR(svn_branch__state_alter_one(base_branch, eid,
                                             content->parent_eid, content->name,
                                             content->payload, scratch_pool));
       else
-        SVN_ERR(svn_branch__state_delete_one(wc->base->branch, eid, scratch_pool));
-      svnmover_wc_set_base_rev(wc, eid, new_rev);
+        SVN_ERR(svn_branch__state_delete_one(base_branch, eid, scratch_pool));
+      svnmover_wc_set_base_rev(wc, base_branch, eid, new_rev);
+
+      /* recurse into nested branches that exist in working */
+      if (content && content->payload->is_subbranch_root)
+        {
+          svn_branch__state_t *base_subbranch = NULL;
+          svn_branch__state_t *work_subbranch = NULL;
+
+          if (base_branch)
+            {
+              base_subbranch
+                = svn_branch__txn_get_branch_by_id(
+                    base_branch->txn,
+                    svn_branch__id_nest(base_branch->bid, eid, scratch_pool),
+                    scratch_pool);
+            }
+          if (work_branch)
+            {
+              work_subbranch
+                = svn_branch__txn_get_branch_by_id(
+                    work_branch->txn,
+                    svn_branch__id_nest(work_branch->bid, eid, scratch_pool),
+                    scratch_pool);
+            }
+          if (work_subbranch && !base_subbranch)
+            {
+              const char *new_branch_id
+                = svn_branch__id_nest(base_branch->bid, eid, scratch_pool);
+
+              SVN_ERR(svn_branch__txn_open_branch(base_branch->txn,
+                                                  &base_subbranch,
+                                                  work_subbranch->predecessor,
+                                                  new_branch_id,
+                                                  svn_branch__root_eid(work_subbranch),
+                                                  scratch_pool, scratch_pool));
+            }
+          SVN_ERR(update_wc_base_r(wc, base_subbranch, work_subbranch,
+                                   new_rev, scratch_pool));
+        }
     }
 
+  return SVN_NO_ERROR;
+}
+
+/* Update the WC base value of each committed element to match the
+ * corresponding WC working element value.
+ * Update the WC base revision for each committed element to NEW_REV.
+ *
+ * The committed elements are determined by diffing base against working.
+ * ### TODO: When we allow committing a subset of the WC, we'll need to
+ *     pass in a list of the committed elements.
+ *
+ * ### This should be equivalent to 'replay(base, base, working)'. Use that
+ *     instead.
+ */
+static svn_error_t *
+update_wc_base(svnmover_wc_t *wc,
+               svn_revnum_t new_rev,
+               apr_pool_t *scratch_pool)
+{
+  svn_branch__state_t *base_branch = wc->base->branch;
+  svn_branch__state_t *work_branch = wc->working->branch;
+  SVN_ERR(update_wc_base_r(wc, base_branch, work_branch,
+                           new_rev, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1003,6 +1157,7 @@ wc_commit(svn_revnum_t *new_rev_p,
 
 typedef enum action_code_t {
   ACTION_INFO_WC,
+  ACTION_INFO,
   ACTION_LIST_CONFLICTS,
   ACTION_RESOLVED_CONFLICT,
   ACTION_DIFF,
@@ -1046,6 +1201,8 @@ static const action_defn_t action_defn[] =
 {
   {ACTION_INFO_WC,          "info-wc", 0, "",
     "print information about the WC"},
+  {ACTION_INFO,             "info", 1, "PATH",
+    "show info about the element at PATH"},
   {ACTION_LIST_CONFLICTS,   "conflicts", 0, "",
     "list unresolved conflicts"},
   {ACTION_RESOLVED_CONFLICT,"resolved", 1, "CONFLICT_ID",
@@ -1194,7 +1351,8 @@ find_el_rev_by_rrpath_rev(svn_branch__el_rev_id_t **el_rev_p,
         }
       else
         {
-          el_rev->rev = svnmover_wc_get_base_rev(wc, el_rev->eid, scratch_pool);
+          el_rev->rev = svnmover_wc_get_base_rev(wc, el_rev->branch,
+                                                 el_rev->eid, scratch_pool);
         }
       *el_rev_p = el_rev;
     }
@@ -2918,6 +3076,54 @@ do_migrate(svnmover_wc_t *wc,
   return SVN_NO_ERROR;
 }
 
+/* Show info about element E.
+ *
+ * TODO: Show different info for a repo element versus a WC element.
+ */
+static svn_error_t *
+do_info(svnmover_wc_t *wc,
+        svn_branch__el_rev_id_t *e,
+        apr_pool_t *scratch_pool)
+{
+  svnmover_notify("Element Id: %d%s",
+                  e->eid,
+                  is_branch_root_element(e->branch, e->eid)
+                    ? " (branch root)" : "");
+
+  /* Show WC info for a WC working element, or repo info for a repo element */
+  if (e->rev == SVN_INVALID_REVNUM)
+    {
+      svn_branch__state_t *base_branch, *work_branch;
+      svn_revnum_t base_rev;
+      svn_element__content_t *e_base, *e_work;
+      svn_boolean_t is_modified;
+
+      base_branch = svn_branch__txn_get_branch_by_id(
+                      wc->base->branch->txn, e->branch->bid, scratch_pool);
+      work_branch = svn_branch__txn_get_branch_by_id(
+                      wc->working->branch->txn, e->branch->bid, scratch_pool);
+      base_rev = svnmover_wc_get_base_rev(wc, base_branch, e->eid, scratch_pool);
+      SVN_ERR(svn_branch__state_get_element(base_branch, &e_base,
+                                            e->eid, scratch_pool));
+      SVN_ERR(svn_branch__state_get_element(work_branch, &e_work,
+                                            e->eid, scratch_pool));
+      is_modified = !svn_element__content_equal(e_base, e_work,
+                                                scratch_pool);
+
+      svnmover_notify("Base Revision: %ld", base_rev);
+      svnmover_notify("Base Branch:    %s", base_branch->bid);
+      svnmover_notify("Working Branch: %s", work_branch->bid);
+      svnmover_notify("Modified:       %s", is_modified ? "yes" : "no");
+    }
+  else
+    {
+      svnmover_notify("Revision: %ld", e->rev);
+      svnmover_notify("Branch:    %s", e->branch->bid);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 typedef struct arg_t
 {
@@ -3084,6 +3290,33 @@ execute(svnmover_wc_t *wc,
             if (merge_ancestor)
               svnmover_notify("  merge ancestor: %ld.%s",
                               merge_ancestor->rev, merge_ancestor->bid);
+          }
+          break;
+
+        case ACTION_INFO:
+          VERIFY_EID_EXISTS("info", 0);
+          {
+            /* If it's a nested branch root, show info for the outer element
+               first, and then for the inner element. */
+            if (is_branch_root_element(arg[0]->el_rev->branch,
+                                       arg[0]->el_rev->eid))
+              {
+                svn_branch__state_t *outer_branch;
+                int outer_eid;
+
+                svn_branch__get_outer_branch_and_eid(&outer_branch, &outer_eid,
+                                                     arg[0]->el_rev->branch,
+                                                     iterpool);
+                if (outer_branch)
+                  {
+                    svn_branch__el_rev_id_t *outer_e
+                      = svn_branch__el_rev_id_create(outer_branch, outer_eid,
+                                                     arg[0]->el_rev->rev,
+                                                     iterpool);
+                    SVN_ERR(do_info(wc, outer_e, iterpool));
+                  }
+              }
+            SVN_ERR(do_info(wc, arg[0]->el_rev, iterpool));
           }
           break;
 
