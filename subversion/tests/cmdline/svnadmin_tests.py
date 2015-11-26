@@ -3066,6 +3066,48 @@ def hotcopy_read_only(sbox):
     logger.warn("Error: hotcopy failed")
     raise SVNUnexpectedStderr(errput)
 
+@XFail(svntest.main.is_fs_type_fsx)
+@Issue(4598)
+def dump_no_op_change(sbox):
+  "svnadmin dump with no-op changes"
+
+  sbox.build(create_wc=False, empty=True)
+  empty_file = sbox.get_tempname()
+  svntest.main.file_write(empty_file, '')
+
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', svntest.main.make_log_msg(),
+                                         'put', empty_file, 'bar')
+  # Commit a no-op change.
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', svntest.main.make_log_msg(),
+                                         'put', empty_file, 'bar')
+  # Dump and load the repository.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       sbox.repo_dir)
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # We expect svn log -v to yield identical results for both original and
+  # reconstructed repositories.  This used to fail as described in the
+  # Issue 4598 (https://issues.apache.org/jira/browse/SVN-4598), at least
+  # around r1706415.
+  #
+  # Test svn log -v for r2:
+  _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
+                                                      '-r2', sbox.repo_url)
+  svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
+                                     '-r2', sbox2.repo_url)
+  # Test svn log -v for /bar:
+  _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
+                                                      sbox.repo_url + '/bar')
+  svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
+                                     sbox2.repo_url + '/bar')
+
 ########################################################################
 # Run the tests
 
@@ -3123,6 +3165,7 @@ test_list = [ None,
               load_txdelta,
               load_no_svndate_r0,
               hotcopy_read_only,
+              dump_no_op_change,
              ]
 
 if __name__ == '__main__':
