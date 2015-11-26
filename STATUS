@@ -88,15 +88,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1715793
-   Do not read TXN props on every svn_fs_txn_open() call in libsvn_fs_fs: FSFS
-   doesn't use transaction_t.proplist (and never used). This code seems to
-   inherited from BDB.
-   Justification:
-     It's not regression, but it's obvious removal of dead code that is
-     responsible for about 5% of I/O operations when running testsuite over
-     http:// protocol on Windows, because mod_dav_svn opens TXN for every
-     request on transaction.
-   Votes:
-     +1: ivan, rhuijben, stefan2
