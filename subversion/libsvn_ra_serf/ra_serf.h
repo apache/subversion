@@ -1522,6 +1522,11 @@ svn_ra_serf__error_on_status(serf_status_line sline,
 svn_error_t *
 svn_ra_serf__unexpected_status(svn_ra_serf__handler_t *handler);
 
+/* Make sure handler is no longer scheduled on its connection. Resetting
+   the connection if necessary */
+void
+svn_ra_serf__unschedule_handler(svn_ra_serf__handler_t *handler);
+
 
 /* ###? */
 svn_error_t *
