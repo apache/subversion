@@ -1257,7 +1257,6 @@ open_root(void *edit_baton,
   const char *proppatch_target = NULL;
   apr_pool_t *scratch_pool = svn_pool_create(dir_pool);
 
-  SVN_DBG(("Root open: %d", base_revision));
   commit_ctx->open_batons++;
 
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(commit_ctx->session))
@@ -1446,8 +1445,6 @@ delete_entry(const char *path,
   svn_ra_serf__handler_t *handler;
   const char *delete_target;
   svn_error_t *err;
-
-  SVN_DBG(("Rev: %d", (int)revision));
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit_ctx))
     {
