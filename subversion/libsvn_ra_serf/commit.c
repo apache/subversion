@@ -1984,7 +1984,6 @@ close_file(void *file_baton,
 {
   file_context_t *ctx = file_baton;
   svn_boolean_t put_empty_file = FALSE;
-  svn_ra_serf__handler_t *handler = NULL;
 
   ctx->result_checksum = text_checksum;
 
@@ -1997,6 +1996,9 @@ close_file(void *file_baton,
   /* If we had a stream of changes, push them to the server... */
   if (ctx->svndiff || put_empty_file)
     {
+      svn_ra_serf__handler_t *handler;
+      int expected_result;
+
       handler = svn_ra_serf__create_handler(ctx->commit_ctx->session,
                                             scratch_pool);
 
@@ -2022,9 +2024,19 @@ close_file(void *file_baton,
       handler->header_delegate = setup_put_headers;
       handler->header_delegate_baton = ctx;
 
-      /* And schedule the request. We'll check the result later */
-      svn_ra_serf__request_create(handler);
+      SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
+
+      if (ctx->added && ! ctx->copy_path)
+        expected_result = 201; /* Created */
+      else
+        expected_result = 204; /* Updated */
+
+      if (handler->sline.code != expected_result)
+        return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
+
+  if (ctx->svndiff)
+    SVN_ERR(svn_io_file_close(ctx->svndiff, scratch_pool));
 
   /* If we had any prop changes, push them via PROPPATCH. */
   if (apr_hash_count(ctx->prop_changes))
@@ -2042,37 +2054,6 @@ close_file(void *file_baton,
       SVN_ERR(proppatch_resource(ctx->commit_ctx->session,
                                  proppatch, scratch_pool));
     }
-
-  if (handler)
-    {
-      /* We sent a PUT... Let's check the result */
-      svn_error_t *err;
-      int expected_result;
-
-      err = svn_ra_serf__context_run_wait(&handler->done, handler->session,
-                                          scratch_pool);
-
-      if (handler->scheduled)
-        {
-          /* We reset the connection (breaking  pipelining, etc.), as
-          if we didn't the next data would still be handled by this handler,
-          which is done as far as our caller is concerned. */
-          svn_ra_serf__unschedule_handler(handler);
-        }
-
-      SVN_ERR(err);
-
-      if (ctx->added && !ctx->copy_path)
-          expected_result = 201; /* Created */
-      else
-          expected_result = 204; /* Updated */
-
-      if (handler->sline.code != expected_result)
-          return svn_error_trace(svn_ra_serf__unexpected_status(handler));
-    }
-
-  if (ctx->svndiff)
-      SVN_ERR(svn_io_file_close(ctx->svndiff, scratch_pool));
 
   ctx->commit_ctx->open_batons--;
 
