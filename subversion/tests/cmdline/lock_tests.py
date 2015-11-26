@@ -2074,25 +2074,6 @@ def dav_lock_timeout(sbox):
   expected_status.tweak('iota', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-def http_connection(repo_url):
-
-  import httplib
-  from urlparse import urlparse
-
-  loc = urlparse(repo_url)
-  if loc.scheme == 'http':
-    h = httplib.HTTPConnection(loc.hostname, loc.port)
-  else:
-    try:
-      import ssl # new in python 2.6
-      c = ssl.create_default_context()
-      c.check_hostname = False
-      c.verify_mode = ssl.CERT_NONE
-      h = httplib.HTTPSConnection(loc.hostname, loc.port, context=c)
-    except:
-      h = httplib.HTTPSConnection(loc.hostname, loc.port)
-  return h
-
 @SkipUnless(svntest.main.is_ra_type_dav)
 def create_dav_lock_timeout(sbox):
   "create generic DAV lock with timeout"
@@ -2103,7 +2084,7 @@ def create_dav_lock_timeout(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  h = http_connection(sbox.repo_url)
+  h = svntest.main.create_http_connection(sbox.repo_url)
 
   lock_body = '<?xml version="1.0" encoding="utf-8" ?>' \
               '<D:lockinfo xmlns:D="DAV:">' \
@@ -2118,9 +2099,6 @@ def create_dav_lock_timeout(sbox):
     'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
     'Timeout': 'Second-86400'
   }
-
-  # Enabling the following line makes this test easier to debug
-  h.set_debuglevel(9)
 
   h.request('LOCK', sbox.repo_url + '/iota', lock_body, lock_headers)
 
@@ -2248,7 +2226,7 @@ def dav_lock_refresh(sbox):
                                      sbox.repo_url + '/iota')
 
   # Try to refresh lock using 'If' header
-  h = http_connection(sbox.repo_url)
+  h = svntest.main.create_http_connection(sbox.repo_url)
 
   lock_token = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Token']
 
@@ -2257,9 +2235,6 @@ def dav_lock_refresh(sbox):
     'If': '(<' + lock_token + '>)',
     'Timeout': 'Second-7200'
   }
-
-  # Enabling the following line makes this test easier to debug
-  h.set_debuglevel(9)
 
   h.request('LOCK', sbox.repo_url + '/iota', '', lock_headers)
 
