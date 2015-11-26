@@ -1383,21 +1383,21 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # PART 2: Load a a series of incremental dumps to an empty repository.
   #
   # Incrementally dump the repository into three dump files:
-  dump_file_r1_10 = svntest.main.temp_dir + "-r1-10.dump"
+  dump_file_r1_10 = sbox.get_tempname("r1-10-dump")
   exit_code, output, errput = svntest.main.run_svnadmin(
     'dump', sbox.repo_dir, '-r1:10')
   dump_fp = open(dump_file_r1_10, 'wb')
   dump_fp.writelines(output)
   dump_fp.close()
 
-  dump_file_r11_13 = svntest.main.temp_dir + "-r11-13.dump"
+  dump_file_r11_13 = sbox.get_tempname("r11-13-dump")
   exit_code, output, errput = svntest.main.run_svnadmin(
     'dump', sbox.repo_dir, '--incremental', '-r11:13')
   dump_fp = open(dump_file_r11_13, 'wb')
   dump_fp.writelines(output)
   dump_fp.close()
 
-  dump_file_r14_15 = svntest.main.temp_dir + "-r14-15.dump"
+  dump_file_r14_15 = sbox.get_tempname("r14-15-dump")
   exit_code, output, errput = svntest.main.run_svnadmin(
     'dump', sbox.repo_dir, '--incremental', '-r14:15')
   dump_fp = open(dump_file_r14_15, 'wb')
