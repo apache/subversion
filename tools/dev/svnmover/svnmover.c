@@ -185,6 +185,91 @@ svnmover_notify_v(const char *fmt,
 
 /* ====================================================================== */
 
+/* Set the WC base revision of element EID to BASE_REV.
+ */
+static void
+svnmover_wc_set_base_rev(svnmover_wc_t *wc, int eid, svn_revnum_t base_rev)
+{
+  void *val = apr_pmemdup(wc->pool, &base_rev, sizeof(base_rev));
+
+  svn_eid__hash_set(wc->base_revs, eid, val);
+}
+
+/* Get the WC base revision of element EID, or SVN_INVALID_REVNUM if
+ * element EID is not present in the WC base.
+ */
+static svn_revnum_t
+svnmover_wc_get_base_rev(svnmover_wc_t *wc, int eid, apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_element__content_t *element;
+
+  err = svn_branch__state_get_element(wc->base->branch, &element, eid,
+                                      scratch_pool);
+  if (err || !element)
+    {
+      svn_error_clear(err);
+      return SVN_INVALID_REVNUM;
+    }
+
+  return *(svn_revnum_t *)svn_eid__hash_get(wc->base_revs, eid);
+}
+
+/* Set the WC base revision of each element in ELEMENTS to BASE_REV.
+ */
+static svn_error_t *
+svnmover_wc_set_base_revs(svnmover_wc_t *wc,
+                          svn_element__tree_t *elements,
+                          svn_revnum_t base_rev,
+                          apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  wc->base_revs = apr_hash_make(wc->pool);
+  for (hi = apr_hash_first(scratch_pool, elements->e_map);
+       hi; hi = apr_hash_next(hi))
+    {
+      int eid = svn_eid__hash_this_key(hi);
+
+      svnmover_wc_set_base_rev(wc, eid, base_rev);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Get the lowest and highest base revision numbers in WC.
+ */
+static svn_error_t *
+svnmover_wc_get_base_revs(svnmover_wc_t *wc,
+                          svn_revnum_t *base_rev_min,
+                          svn_revnum_t *base_rev_max,
+                          apr_pool_t *scratch_pool)
+{
+  svn_element__tree_t *base_elements;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_branch__state_get_elements(wc->base->branch, &base_elements,
+                                         scratch_pool));
+
+  *base_rev_min = SVN_INVALID_REVNUM;
+  *base_rev_max = SVN_INVALID_REVNUM;
+  for (hi = apr_hash_first(scratch_pool, base_elements->e_map);
+       hi; hi = apr_hash_next(hi))
+    {
+      int eid = svn_eid__hash_this_key(hi);
+      svn_revnum_t rev = svnmover_wc_get_base_rev(wc, eid, scratch_pool);
+
+      if (*base_rev_min == SVN_INVALID_REVNUM
+          || rev < *base_rev_min)
+        *base_rev_min = rev;
+      if (*base_rev_max == SVN_INVALID_REVNUM
+          || rev > *base_rev_max)
+        *base_rev_max = rev;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Update the WC to revision BASE_REVISION (SVN_INVALID_REVNUM means HEAD).
  *
  * Requires these fields in WC:
@@ -214,6 +299,7 @@ wc_checkout(svnmover_wc_t *wc,
   svn_branch__compat_fetch_func_t fetch_func;
   void *fetch_baton;
   svn_branch__txn_t *base_txn;
+  svn_element__tree_t *base_elements;
 
   /* Validate and store the new base revision number */
   if (! SVN_IS_VALID_REVNUM(base_revision))
@@ -255,6 +341,10 @@ wc_checkout(svnmover_wc_t *wc,
     return svn_error_createf(SVN_BRANCH__ERR, NULL,
                              "Cannot check out WC: branch %s not found in r%ld",
                              base_branch_id, base_revision);
+  SVN_ERR(svn_branch__state_get_elements(wc->base->branch, &base_elements,
+                                         scratch_pool));
+  SVN_ERR(svnmover_wc_set_base_revs(wc, base_elements,
+                                    base_revision, scratch_pool));
 
   wc->working = apr_pcalloc(wc->pool, sizeof(*wc->working));
   wc->working->revision = SVN_INVALID_REVNUM;
@@ -733,9 +823,74 @@ allocate_eids(svn_branch__txn_t *new_txn,
   return SVN_NO_ERROR;
 }
 
+/* Update the EIDs, given that a commit has translated all new EIDs
+ * (negative numbers) to regular EIDs (positive numbers).
+ *
+ * ### TODO: This will need to take and use a new-EID-translation rule
+ *     that must be returned by the commit, as we must not guess (as we
+ *     presently do) what translation the server performed. This guess
+ *     will fail once the server does rebasing on commit.
+ */
+static svn_error_t *
+update_wc_eids(svnmover_wc_t *wc,
+               apr_pool_t *scratch_pool)
+{
+  SVN_ERR(allocate_eids(wc->base->branch->txn, wc->working->branch->txn,
+                        scratch_pool));
+  SVN_ERR(svn_branch__txn_finalize_eids(wc->base->branch->txn, scratch_pool));
+  SVN_ERR(svn_branch__txn_finalize_eids(wc->working->branch->txn, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Update the WC base value of each committed element to match the
+ * corresponding WC working element value.
+ * Update the WC base revision for each committed element to NEW_REV.
+ *
+ * The committed elements are determined by diffing base against working.
+ * ### TODO: When we allow committing a subset of the WC, we'll need to
+ *     pass in a list of the committed elements.
+ */
+static svn_error_t *
+update_wc_base(svnmover_wc_t *wc,
+               svn_revnum_t new_rev,
+               apr_pool_t *scratch_pool)
+{
+  svn_element__tree_t *base_elements, *working_elements;
+  apr_hash_t *committed_elements;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_branch__state_get_elements(wc->base->branch, &base_elements,
+                                         scratch_pool));
+  SVN_ERR(svn_branch__state_get_elements(wc->working->branch, &working_elements,
+                                         scratch_pool));
+  SVN_ERR(svnmover_element_differences(&committed_elements,
+                                       base_elements, working_elements,
+                                       scratch_pool, scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, committed_elements);
+       hi; hi = apr_hash_next(hi))
+    {
+      int eid = svn_eid__hash_this_key(hi);
+      svn_element__content_t *content;
+
+      SVN_ERR(svn_branch__state_get_element(wc->working->branch, &content,
+                                            eid, scratch_pool));
+      if (content)
+        SVN_ERR(svn_branch__state_alter_one(wc->base->branch, eid,
+                                            content->parent_eid, content->name,
+                                            content->payload, scratch_pool));
+      else
+        SVN_ERR(svn_branch__state_delete_one(wc->base->branch, eid, scratch_pool));
+      svnmover_wc_set_base_rev(wc, eid, new_rev);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Commit the changes from WC into the repository.
  *
  * Open a new commit txn to the repo. Replay the changes from WC into it.
+ * Update the WC base for the committed elements.
  *
  * Set WC->head_revision and *NEW_REV_P to the committed revision number.
  *
@@ -833,6 +988,8 @@ wc_commit(svn_revnum_t *new_rev_p,
   ccbb.wc_commit_branch_id = edit_root_branch_id;
 
   SVN_ERR(svn_branch__txn_complete(commit_txn, scratch_pool));
+  SVN_ERR(update_wc_eids(wc, scratch_pool));
+  SVN_ERR(update_wc_base(wc, ccbb.revision, scratch_pool));
   SVN_ERR(display_diff_of_commit(&ccbb, scratch_pool));
 
   wc->head_revision = ccbb.revision;
@@ -989,14 +1146,18 @@ typedef struct action_t {
 static svn_error_t *
 find_el_rev_by_rrpath_rev(svn_branch__el_rev_id_t **el_rev_p,
                           svnmover_wc_t *wc,
-                          svn_revnum_t revnum,
+                          const svn_opt_revision_t *rev_spec,
                           const char *branch_id,
                           const char *relpath,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  if (SVN_IS_VALID_REVNUM(revnum))
+  if (rev_spec->kind == svn_opt_revision_number
+      || rev_spec->kind == svn_opt_revision_head)
     {
+      svn_revnum_t revnum
+        = (rev_spec->kind == svn_opt_revision_number)
+           ? rev_spec->value.number : wc->head_revision;
       const svn_branch__repos_t *repos = wc->working->branch->txn->repos;
 
       if (! branch_id)
@@ -1008,7 +1169,10 @@ find_el_rev_by_rrpath_rev(svn_branch__el_rev_id_t **el_rev_p,
                                                         result_pool,
                                                         scratch_pool));
     }
-  else
+  else if (rev_spec->kind == svn_opt_revision_unspecified
+           || rev_spec->kind == svn_opt_revision_working
+           || rev_spec->kind == svn_opt_revision_base
+           || rev_spec->kind == svn_opt_revision_committed)
     {
       svn_branch__state_t *branch
         = branch_id ? svn_branch__txn_get_branch_by_id(
@@ -1023,8 +1187,24 @@ find_el_rev_by_rrpath_rev(svn_branch__el_rev_id_t **el_rev_p,
       SVN_ERR(svn_branch__find_nested_branch_element_by_relpath(
         &el_rev->branch, &el_rev->eid,
         branch, relpath, scratch_pool));
-      el_rev->rev = SVN_INVALID_REVNUM;
+      if (rev_spec->kind == svn_opt_revision_unspecified
+          || rev_spec->kind == svn_opt_revision_working)
+        {
+          el_rev->rev = SVN_INVALID_REVNUM;
+        }
+      else
+        {
+          el_rev->rev = svnmover_wc_get_base_rev(wc, el_rev->eid, scratch_pool);
+        }
       *el_rev_p = el_rev;
+    }
+  else
+    {
+      return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                               "'%s@...': revision specifier "
+                               "must be a number or 'head', 'base' "
+                               "or 'committed'",
+                               relpath);
     }
   SVN_ERR_ASSERT(*el_rev_p);
   return SVN_NO_ERROR;
@@ -1730,11 +1910,9 @@ svn_branch__diff_func_t(svn_branch__subtree_t *left,
  */
 static svn_error_t *
 subtree_diff_r(svn_branch__subtree_t *left,
-               svn_revnum_t left_rev,
                const char *left_bid,
                const char *left_rrpath,
                svn_branch__subtree_t *right,
-               svn_revnum_t right_rev,
                const char *right_bid,
                const char *right_rrpath,
                svn_branch__diff_func_t diff_func,
@@ -1742,12 +1920,12 @@ subtree_diff_r(svn_branch__subtree_t *left,
                apr_pool_t *scratch_pool)
 {
   const char *left_str
-    = left ? apr_psprintf(scratch_pool, "r%ld:%s:e%d at /%s",
-                          left_rev, left_bid, left->tree->root_eid, left_rrpath)
+    = left ? apr_psprintf(scratch_pool, "%s:e%d at /%s",
+                          left_bid, left->tree->root_eid, left_rrpath)
            : NULL;
   const char *right_str
-    = right ? apr_psprintf(scratch_pool, "r%ld:%s:e%d at /%s",
-                           right_rev, right_bid, right->tree->root_eid, right_rrpath)
+    = right ? apr_psprintf(scratch_pool, "%s:e%d at /%s",
+                           right_bid, right->tree->root_eid, right_rrpath)
             : NULL;
   const char *header;
   apr_hash_t *subbranches_l, *subbranches_r, *subbranches_all;
@@ -1828,8 +2006,8 @@ subtree_diff_r(svn_branch__subtree_t *left,
                                                   scratch_pool);
             }
         }
-      SVN_ERR(subtree_diff_r(sub_left, left_rev, sub_left_bid, sub_left_rrpath,
-                             sub_right, right_rev, sub_right_bid, sub_right_rrpath,
+      SVN_ERR(subtree_diff_r(sub_left, sub_left_bid, sub_left_rrpath,
+                             sub_right, sub_right_bid, sub_right_rrpath,
                              diff_func, prefix, scratch_pool));
     }
   return SVN_NO_ERROR;
@@ -1869,11 +2047,9 @@ branch_diff_r(svn_branch__el_rev_id_t *left,
                                   scratch_pool));
 
   SVN_ERR(subtree_diff_r(s_left,
-                         left->rev,
                          svn_branch__get_id(left->branch, scratch_pool),
                          svn_branch__get_root_rrpath(left->branch, scratch_pool),
                          s_right,
-                         right->rev,
                          svn_branch__get_id(right->branch, scratch_pool),
                          svn_branch__get_root_rrpath(right->branch, scratch_pool),
                          diff_func, prefix, scratch_pool));
@@ -2574,7 +2750,7 @@ commit(svn_revnum_t *new_rev_p,
                                  "unresolved conflicts"));
     }
 
-  /* Complete the old edit drive (into the 'WC') */
+  /* Complete the old edit drive (editing the WC working state) */
   SVN_ERR(svn_branch__txn_sequence_point(wc->edit_txn, scratch_pool));
 
   /* Just as in execute() the pool must be a subpool of wc->pool. */
@@ -2583,13 +2759,13 @@ commit(svn_revnum_t *new_rev_p,
   return SVN_NO_ERROR;
 }
 
-/* Commit and update WC.
+/* Commit.
  *
- * Set *NEW_REV_P to the committed revision number, and update the WC to
- * that revision.
+ * Set *NEW_REV_P to the committed revision number. Update the WC base of
+ * each committed element to that revision.
  *
  * If there are no changes to commit, set *NEW_REV_P to SVN_INVALID_REVNUM
- * and do not make a commit and do not update the WC.
+ * and do not make a commit.
  *
  * NEW_REV_P may be null if not wanted.
  */
@@ -2602,12 +2778,6 @@ do_commit(svn_revnum_t *new_rev_p,
   svn_revnum_t new_rev;
 
   SVN_ERR(commit(&new_rev, wc, revprops, scratch_pool));
-
-  /* Check out a new WC.
-     (Instead, we could perhaps just get a new WC editor.) */
-  SVN_ERR(wc_checkout(wc, SVN_IS_VALID_REVNUM(new_rev) ? new_rev
-                                                       : wc->base->revision,
-                      wc->working->branch->bid, scratch_pool));
 
   if (new_rev_p)
     *new_rev_p = new_rev;
@@ -2752,7 +2922,6 @@ do_migrate(svnmover_wc_t *wc,
 typedef struct arg_t
 {
   const char *path_name;
-  svn_revnum_t revnum;
   svn_branch__el_rev_id_t *el_rev, *parent_el_rev;
 } arg_t;
 
@@ -2865,37 +3034,18 @@ execute(svnmover_wc_t *wc,
               const char *rrpath, *parent_rrpath;
 
               arg[j] = apr_palloc(iterpool, sizeof(*arg[j]));
-              if (action->rev_spec[j].kind == svn_opt_revision_unspecified)
-                arg[j]->revnum = SVN_INVALID_REVNUM;
-              else if (action->rev_spec[j].kind == svn_opt_revision_number)
-                arg[j]->revnum = action->rev_spec[j].value.number;
-              else if (action->rev_spec[j].kind == svn_opt_revision_head)
-                {
-                  arg[j]->revnum = wc->head_revision;
-                }
-              else if (action->rev_spec[j].kind == svn_opt_revision_base
-                       || action->rev_spec[j].kind == svn_opt_revision_committed)
-                {
-                  arg[j]->revnum = wc->base->revision;
-                }
-              else
-                return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                         "'%s@...': revision specifier "
-                                         "must be a number or 'head', 'base' "
-                                         "or 'committed'",
-                                         action->relpath[j]);
 
               rrpath = svn_relpath_join(base_relpath, action->relpath[j], iterpool);
               parent_rrpath = svn_relpath_dirname(rrpath, iterpool);
 
               arg[j]->path_name = svn_relpath_basename(rrpath, NULL);
               SVN_ERR(find_el_rev_by_rrpath_rev(&arg[j]->el_rev, wc,
-                                                arg[j]->revnum,
+                                                &action->rev_spec[j],
                                                 action->branch_id[j],
                                                 rrpath,
                                                 iterpool, iterpool));
               SVN_ERR(find_el_rev_by_rrpath_rev(&arg[j]->parent_el_rev, wc,
-                                                arg[j]->revnum,
+                                                &action->rev_spec[j],
                                                 action->branch_id[j],
                                                 parent_rrpath,
                                                 iterpool, iterpool));
@@ -2907,12 +3057,22 @@ execute(svnmover_wc_t *wc,
         case ACTION_INFO_WC:
           {
             svn_boolean_t is_modified;
+            svn_revnum_t base_rev_min, base_rev_max;
             svn_branch__rev_bid_t *merge_ancestor;
 
             SVN_ERR(txn_is_changed(wc->working->branch->txn, &is_modified,
                                    iterpool));
+            SVN_ERR(svnmover_wc_get_base_revs(wc, &base_rev_min, &base_rev_max,
+                                              iterpool));
+            SVN_ERR(svn_branch__state_get_merge_ancestor(
+                      wc->working->branch, &merge_ancestor, iterpool));
+
             svnmover_notify("Repository Root: %s", wc->repos_root_url);
-            svnmover_notify("Base Revision: %ld", wc->base->revision);
+            if (base_rev_min == base_rev_max)
+              svnmover_notify("Base Revision: %ld", base_rev_min);
+            else
+              svnmover_notify("Base Revisions: %ld to %ld",
+                              base_rev_min, base_rev_max);
             svnmover_notify("Base Branch:    %s", wc->base->branch->bid);
             SVN_ERR(svn_branch__state_get_merge_ancestor(
                       wc->base->branch, &merge_ancestor, iterpool));
@@ -2921,8 +3081,6 @@ execute(svnmover_wc_t *wc,
                               merge_ancestor->rev, merge_ancestor->bid);
             svnmover_notify("Working Branch: %s", wc->working->branch->bid);
             svnmover_notify("Modified:       %s", is_modified ? "yes" : "no");
-            SVN_ERR(svn_branch__state_get_merge_ancestor(
-                      wc->working->branch, &merge_ancestor, iterpool));
             if (merge_ancestor)
               svnmover_notify("  merge ancestor: %ld.%s",
                               merge_ancestor->rev, merge_ancestor->bid);
@@ -2971,7 +3129,7 @@ execute(svnmover_wc_t *wc,
 
             from = svn_branch__el_rev_id_create(wc->base->branch,
                                                 svn_branch__root_eid(wc->base->branch),
-                                                wc->base->revision, iterpool);
+                                                SVN_INVALID_REVNUM, iterpool);
             to = svn_branch__el_rev_id_create(wc->working->branch,
                                               svn_branch__root_eid(wc->working->branch),
                                               SVN_INVALID_REVNUM, iterpool);
@@ -3302,9 +3460,12 @@ execute(svnmover_wc_t *wc,
              Presently it would try to update to a state of nonexistence. */
           /* path (or eid) is currently required for syntax, but ignored */
           VERIFY_EID_EXISTS("update", 0);
+          /* We require a rev to be specified because an unspecified rev
+             currently always means 'working version', whereas we would
+             want it to mean 'head' for this subcommand. */
           VERIFY_REV_SPECIFIED("update", 0);
           {
-            SVN_ERR(do_switch(wc, arg[0]->revnum, wc->base->branch,
+            SVN_ERR(do_switch(wc, arg[0]->el_rev->rev, wc->base->branch,
                               iterpool));
           }
           break;
@@ -3312,7 +3473,7 @@ execute(svnmover_wc_t *wc,
         case ACTION_SWITCH:
           VERIFY_EID_EXISTS("switch", 0);
           {
-            SVN_ERR(do_switch(wc, arg[0]->revnum, arg[0]->el_rev->branch,
+            SVN_ERR(do_switch(wc, arg[0]->el_rev->rev, arg[0]->el_rev->branch,
                               iterpool));
           }
           break;
@@ -3329,7 +3490,7 @@ execute(svnmover_wc_t *wc,
           VERIFY_REV_SPECIFIED("migrate", 0);
           {
             SVN_ERR(do_migrate(wc,
-                               arg[0]->revnum, arg[0]->revnum,
+                               arg[0]->el_rev->rev, arg[0]->el_rev->rev,
                                iterpool));
           }
           break;

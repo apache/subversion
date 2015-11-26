@@ -120,6 +120,7 @@ typedef struct svnmover_wc_t
   conflict_storage_t *conflicts;
 
   /* Base and working versions. */
+  apr_hash_t *base_revs;  /* eid -> revnum, for (at least) all eids in BASE */
   svnmover_wc_version_t *base, *working;
 
   /* Textual list of commands the commands that were executed, suitable
