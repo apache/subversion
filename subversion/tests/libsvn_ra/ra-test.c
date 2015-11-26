@@ -1572,7 +1572,51 @@ tunnel_run_checkout(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-
+static svn_error_t *
+commit_empty_last_change(const svn_test_opts_t *opts,
+                         apr_pool_t *pool)
+{
+    svn_ra_session_t *session;
+    apr_hash_t *revprop_table = apr_hash_make(pool);
+    svn_delta_editor_t *editor;
+    void *edit_baton;
+    const char *repos_root_url;
+    void *root_baton;
+    apr_pool_t *tmp_pool = svn_pool_create(pool);
+    svn_dirent_t *dirent;
+
+    SVN_ERR(make_and_open_repos(&session,
+                                "commit_empty_last_change", opts,
+                                pool));
+
+    SVN_ERR(commit_changes(session, tmp_pool));
+    svn_pool_clear(tmp_pool);
+
+    SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, pool));
+    SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                      revprop_table,
+                                      NULL, NULL, NULL, TRUE, tmp_pool));
+
+    SVN_ERR(editor->open_root(edit_baton, 1, tmp_pool, &root_baton));
+    SVN_ERR(editor->close_directory(root_baton, tmp_pool));
+    SVN_ERR(editor->close_edit(edit_baton, tmp_pool));
+
+    SVN_ERR(svn_ra_stat(session, "", 2, &dirent, tmp_pool));
+
+    SVN_TEST_ASSERT(dirent != NULL);
+    SVN_TEST_STRING_ASSERT(dirent->last_author, "jrandom");
+
+    /* BDB only updates last_changed on the repos_root when there is an
+       actual change. Our other filesystems handle this differently */
+    if (!opts->fs_type || !strcasecmp(opts->fs_type, "BDB"))
+        SVN_TEST_ASSERT(dirent->created_rev == 1);
+    else
+        SVN_TEST_ASSERT(dirent->created_rev == 2);
+
+    return SVN_NO_ERROR;
+}
+
+
 /* The test table.  */
 
 static int max_threads = 4;
@@ -1604,6 +1648,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "check list has_props performance"),
     SVN_TEST_OPTS_PASS(tunnel_run_checkout,
                        "verify checkout over a tunnel"),
+    SVN_TEST_OPTS_PASS(commit_empty_last_change,
+                       "check how last change applies to empty commit"),
     SVN_TEST_NULL
   };
 
