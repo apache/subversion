@@ -1848,6 +1848,8 @@ synced_pack_shard(void *baton,
   /* if enabled, pack the revprops in an equivalent way */
   if (pb->revsprops_dir)
     {
+      apr_int64_t pack_size_limit = 0.9 * ffd->revprop_pack_size;
+
       revprops_pack_file_dir = svn_dirent_join(pb->revsprops_dir,
                    apr_psprintf(pool,
                                 "%" APR_INT64_T_FMT PATH_EXT_PACKED_SHARD,
@@ -1861,7 +1863,7 @@ synced_pack_shard(void *baton,
                                              revprops_shard_path,
                                              pb->shard,
                                              ffd->max_files_per_dir,
-                                             (int)(0.9*ffd->revprop_pack_size),
+                                             pack_size_limit,
                                              ffd->compress_packed_revprops
                                                ? SVN__COMPRESSION_ZLIB_DEFAULT
                                                : SVN__COMPRESSION_NONE,
