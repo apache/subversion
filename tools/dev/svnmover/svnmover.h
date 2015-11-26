@@ -119,8 +119,11 @@ typedef struct svnmover_wc_t
   svn_branch__txn_t *edit_txn;
   conflict_storage_t *conflicts;
 
+  /* The base revisions, for (at least) all EIDs in BASE:
+     branch_id -> hash { eid -> revnum } */
+  apr_hash_t *base_revs;
+
   /* Base and working versions. */
-  apr_hash_t *base_revs;  /* eid -> revnum, for (at least) all eids in BASE */
   svnmover_wc_version_t *base, *working;
 
   /* Textual list of commands the commands that were executed, suitable
