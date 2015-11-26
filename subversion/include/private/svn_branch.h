@@ -465,6 +465,12 @@ svn_branch__el_rev_id_create(svn_branch__state_t *branch,
                              svn_revnum_t rev,
                              apr_pool_t *result_pool);
 
+/* Return a new id object constructed with a deep copy of OLD_ID,
+ * allocated in RESULT_POOL. */
+svn_branch__el_rev_id_t *
+svn_branch__el_rev_id_dup(const svn_branch__el_rev_id_t *old_id,
+                          apr_pool_t *result_pool);
+
 /* Return a new id object constructed with deep copies of REV, BRANCH_ID
  * and EID, allocated in RESULT_POOL.
  */

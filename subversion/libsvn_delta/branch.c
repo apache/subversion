@@ -866,6 +866,19 @@ svn_branch__el_rev_id_create(svn_branch__state_t *branch,
   return id;
 }
 
+svn_branch__el_rev_id_t *
+svn_branch__el_rev_id_dup(const svn_branch__el_rev_id_t *old_id,
+                          apr_pool_t *result_pool)
+{
+  if (! old_id)
+    return NULL;
+
+  return svn_branch__el_rev_id_create(old_id->branch,
+                                      old_id->eid,
+                                      old_id->rev,
+                                      result_pool);
+}
+
 svn_branch__rev_bid_eid_t *
 svn_branch__rev_bid_eid_create(svn_revnum_t rev,
                                const char *branch_id,
