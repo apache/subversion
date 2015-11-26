@@ -1257,6 +1257,7 @@ open_root(void *edit_baton,
   const char *proppatch_target = NULL;
   apr_pool_t *scratch_pool = svn_pool_create(dir_pool);
 
+  SVN_DBG(("Root open: %d", base_revision));
   commit_ctx->open_batons++;
 
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(commit_ctx->session))
@@ -1445,6 +1446,8 @@ delete_entry(const char *path,
   svn_ra_serf__handler_t *handler;
   const char *delete_target;
   svn_error_t *err;
+
+  SVN_DBG(("Rev: %d", (int)revision));
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit_ctx))
     {
@@ -1912,6 +1915,15 @@ apply_textdelta(void *file_baton,
    * writing to a temporary file (ugh). A special svn stream serf bucket
    * that returns EAGAIN until we receive the done call?  But, when
    * would we run through the serf context?  Grr.
+   *
+   * BH: If you wait to a specific event... why not use that event to
+   *     trigger the operation?
+   *     Having a request (body) bucket return EAGAIN until done stalls
+   *     the entire HTTP pipeline after writing the first part of the
+   *     request. It is not like we can interrupt some part of a request
+   *     and continue later. Or somebody else must use tempfiles and
+   *     always assume that clients work this bad... as it only knows
+   *     for sure after the request is completely available.
    */
 
   ctx->stream = svn_stream_lazyopen_create(delayed_commit_stream_open,
@@ -1975,6 +1987,7 @@ close_file(void *file_baton,
 {
   file_context_t *ctx = file_baton;
   svn_boolean_t put_empty_file = FALSE;
+  svn_ra_serf__handler_t *handler = NULL;
 
   ctx->result_checksum = text_checksum;
 
@@ -1987,9 +2000,6 @@ close_file(void *file_baton,
   /* If we had a stream of changes, push them to the server... */
   if (ctx->svndiff || put_empty_file)
     {
-      svn_ra_serf__handler_t *handler;
-      int expected_result;
-
       handler = svn_ra_serf__create_handler(ctx->commit_ctx->session,
                                             scratch_pool);
 
@@ -2015,19 +2025,9 @@ close_file(void *file_baton,
       handler->header_delegate = setup_put_headers;
       handler->header_delegate_baton = ctx;
 
-      SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
-
-      if (ctx->added && ! ctx->copy_path)
-        expected_result = 201; /* Created */
-      else
-        expected_result = 204; /* Updated */
-
-      if (handler->sline.code != expected_result)
-        return svn_error_trace(svn_ra_serf__unexpected_status(handler));
+      /* And schedule the request. We'll check the result later */
+      svn_ra_serf__request_create(handler);
     }
-
-  if (ctx->svndiff)
-    SVN_ERR(svn_io_file_close(ctx->svndiff, scratch_pool));
 
   /* If we had any prop changes, push them via PROPPATCH. */
   if (apr_hash_count(ctx->prop_changes))
@@ -2045,6 +2045,37 @@ close_file(void *file_baton,
       SVN_ERR(proppatch_resource(ctx->commit_ctx->session,
                                  proppatch, scratch_pool));
     }
+
+  if (handler)
+    {
+      /* We sent a PUT... Let's check the result */
+      svn_error_t *err;
+      int expected_result;
+
+      err = svn_ra_serf__context_run_wait(&handler->done, handler->session,
+                                          scratch_pool);
+
+      if (handler->scheduled)
+        {
+          /* We reset the connection (breaking  pipelining, etc.), as
+          if we didn't the next data would still be handled by this handler,
+          which is done as far as our caller is concerned. */
+          svn_ra_serf__unschedule_handler(handler);
+        }
+
+      SVN_ERR(err);
+
+      if (ctx->added && !ctx->copy_path)
+          expected_result = 201; /* Created */
+      else
+          expected_result = 204; /* Updated */
+
+      if (handler->sline.code != expected_result)
+          return svn_error_trace(svn_ra_serf__unexpected_status(handler));
+    }
+
+  if (ctx->svndiff)
+      SVN_ERR(svn_io_file_close(ctx->svndiff, scratch_pool));
 
   ctx->commit_ctx->open_batons--;
 

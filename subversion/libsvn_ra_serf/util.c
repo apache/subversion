@@ -1001,7 +1001,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
    will cancel all outstanding requests and prepare the connection
    for re-use.
 */
-static void
+void
 svn_ra_serf__unschedule_handler(svn_ra_serf__handler_t *handler)
 {
   serf_connection_reset(handler->conn->conn);
