@@ -79,7 +79,7 @@ read_rev_prop(svn_string_t **value,
           return SVN_NO_ERROR;
         }
       SVN_ERR(err);
-      SVN_ERR(svn_string_from_stream(value, stream, result_pool, scratch_pool));
+      SVN_ERR(svn_string_from_stream2(value, stream, 0, result_pool));
     }
   else
     {
