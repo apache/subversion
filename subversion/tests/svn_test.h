@@ -143,7 +143,7 @@ extern "C" {
           "Integers not equal\n"                                  \
           "  Expected: %" APR_INT64_T_FMT "\n"                    \
           "     Found: %" APR_INT64_T_FMT "\n"                    \
-          "\n  at %s:%d",                                         \
+          "  at %s:%d",                                           \
           tst_int2, tst_int1, __FILE__, __LINE__);                \
   } while(0)
 
