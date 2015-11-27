@@ -31,7 +31,7 @@ export LD_PRELOAD_64
 if [ $SVN_VER_MINOR -ge 10 ]; then
   echo "============ make svnserveautocheck"
   make svnserveautocheck CLEANUP=1 PARALLEL=30 THREADED=1 GLOBAL_SCHEDULER=1 || exit $?
-else if [ $SVN_VER_MINOR -ge 9 ]; then
+elif [ $SVN_VER_MINOR -ge 9 ]; then
   echo "============ make svnserveautocheck"
   make svnserveautocheck CLEANUP=1 PARALLEL=30 THREADED=1 || exit $?
 else
