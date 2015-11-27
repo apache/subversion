@@ -1600,7 +1600,7 @@ commit_empty_last_change(const svn_test_opts_t *opts,
 {
   svn_ra_session_t *session;
   apr_hash_t *revprop_table = apr_hash_make(pool);
-  svn_delta_editor_t *editor;
+  const svn_delta_editor_t *editor;
   void *edit_baton;
   const char *repos_root_url;
   void *root_baton, *aa_baton;
