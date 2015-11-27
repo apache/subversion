@@ -1572,48 +1572,103 @@ tunnel_run_checkout(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_log_entry_receiver_t for commit_empty_last_change */
+static svn_error_t *
+AA_receiver(void *baton,
+            svn_log_entry_t *log_entry,
+            apr_pool_t *pool)
+{
+  svn_log_changed_path2_t *p;
+  apr_hash_index_t *hi;
+
+  SVN_TEST_ASSERT(log_entry->changed_paths2 != NULL);
+  SVN_TEST_ASSERT(apr_hash_count(log_entry->changed_paths2) == 1);
+
+  hi = apr_hash_first(pool, log_entry->changed_paths2);
+
+  SVN_TEST_STRING_ASSERT(apr_hash_this_key(hi), "/AA");
+  p = apr_hash_this_val(hi);
+  SVN_TEST_STRING_ASSERT(p->copyfrom_path, "/A");
+  SVN_TEST_INT_ASSERT(p->copyfrom_rev, 3);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 commit_empty_last_change(const svn_test_opts_t *opts,
                          apr_pool_t *pool)
 {
-    svn_ra_session_t *session;
-    apr_hash_t *revprop_table = apr_hash_make(pool);
-    svn_delta_editor_t *editor;
-    void *edit_baton;
-    const char *repos_root_url;
-    void *root_baton;
-    apr_pool_t *tmp_pool = svn_pool_create(pool);
-    svn_dirent_t *dirent;
+  svn_ra_session_t *session;
+  apr_hash_t *revprop_table = apr_hash_make(pool);
+  svn_delta_editor_t *editor;
+  void *edit_baton;
+  const char *repos_root_url;
+  void *root_baton, *aa_baton;
+  apr_pool_t *tmp_pool = svn_pool_create(pool);
+  svn_dirent_t *dirent;
+  int i;
 
-    SVN_ERR(make_and_open_repos(&session,
-                                "commit_empty_last_change", opts,
-                                pool));
+  SVN_ERR(make_and_open_repos(&session,
+                              "commit_empty_last_change", opts,
+                              pool));
 
-    SVN_ERR(commit_changes(session, tmp_pool));
-    svn_pool_clear(tmp_pool);
+  SVN_ERR(commit_changes(session, tmp_pool));
 
-    SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, pool));
-    SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
-                                      revprop_table,
-                                      NULL, NULL, NULL, TRUE, tmp_pool));
+  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, pool));
+  for (i = 0; i < 2; i++)
+    {
+      svn_pool_clear(tmp_pool);
 
-    SVN_ERR(editor->open_root(edit_baton, 1, tmp_pool, &root_baton));
-    SVN_ERR(editor->close_directory(root_baton, tmp_pool));
-    SVN_ERR(editor->close_edit(edit_baton, tmp_pool));
+      SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                        revprop_table,
+                                        NULL, NULL, NULL, TRUE, tmp_pool));
+      
+      SVN_ERR(editor->open_root(edit_baton, 1, tmp_pool, &root_baton));
+      SVN_ERR(editor->close_directory(root_baton, tmp_pool));
+      SVN_ERR(editor->close_edit(edit_baton, tmp_pool));
+      
+      SVN_ERR(svn_ra_stat(session, "", 2+i, &dirent, tmp_pool));
+      
+      SVN_TEST_ASSERT(dirent != NULL);
+      SVN_TEST_STRING_ASSERT(dirent->last_author, "jrandom");
+      
+      /* BDB only updates last_changed on the repos_root when there is an
+         actual change. Our other filesystems handle this differently */
+      if (!opts->fs_type || !strcasecmp(opts->fs_type, "BDB"))
+        SVN_TEST_INT_ASSERT(dirent->created_rev, 1);
+      else
+        SVN_TEST_INT_ASSERT(dirent->created_rev, 2+i);
+    }
 
-    SVN_ERR(svn_ra_stat(session, "", 2, &dirent, tmp_pool));
+  svn_pool_clear(tmp_pool);
 
-    SVN_TEST_ASSERT(dirent != NULL);
-    SVN_TEST_STRING_ASSERT(dirent->last_author, "jrandom");
+  SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                    revprop_table,
+                                    NULL, NULL, NULL, TRUE, tmp_pool));
 
-    /* BDB only updates last_changed on the repos_root when there is an
-       actual change. Our other filesystems handle this differently */
-    if (!opts->fs_type || !strcasecmp(opts->fs_type, "BDB"))
-        SVN_TEST_ASSERT(dirent->created_rev == 1);
-    else
-        SVN_TEST_ASSERT(dirent->created_rev == 2);
+  SVN_ERR(editor->open_root(edit_baton, 1, tmp_pool, &root_baton));
+  SVN_ERR(editor->add_directory("AA", root_baton,
+                                svn_path_url_add_component2(repos_root_url,
+                                                            "A", tmp_pool),
+                                3, tmp_pool,
+                                &aa_baton));
+  SVN_ERR(editor->close_directory(aa_baton, tmp_pool));
+  SVN_ERR(editor->close_directory(root_baton, tmp_pool));
+  SVN_ERR(editor->close_edit(edit_baton, tmp_pool));
 
-    return SVN_NO_ERROR;
+  svn_pool_clear(tmp_pool);
+
+  {
+    apr_array_header_t *paths = apr_array_make(tmp_pool, 1, sizeof(const char*));
+    APR_ARRAY_PUSH(paths, const char *) = "AA";
+
+    SVN_ERR(svn_ra_get_log2(session, paths, 4, 4, 1, TRUE, FALSE, FALSE, NULL,
+                            AA_receiver, NULL, tmp_pool));
+  }
+
+  svn_pool_destroy(tmp_pool);
+
+  return SVN_NO_ERROR;
 }
 
 
