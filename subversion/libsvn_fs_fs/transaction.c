@@ -1785,7 +1785,7 @@ allocate_item_index(apr_uint64_t *item_index,
       /* read number, increment it and write it back to disk */
       SVN_ERR(svn_io_file_open(&file,
                          svn_fs_fs__path_txn_item_index(fs, txn_id, pool),
-                         APR_READ | APR_WRITE | APR_CREATE | APR_BUFFERED,
+                         APR_READ | APR_WRITE | APR_CREATE,
                          APR_OS_DEFAULT, pool));
       SVN_ERR(svn_io_file_read_full2(file, buffer, sizeof(buffer)-1,
                                      &bytes_read, &eof, pool));
