@@ -1789,7 +1789,13 @@ allocate_item_index(apr_uint64_t *item_index,
                          APR_OS_DEFAULT, pool));
       SVN_ERR(svn_io_file_read_full2(file, buffer, sizeof(buffer)-1,
                                      &bytes_read, &eof, pool));
-      if (bytes_read)
+
+      /* Item index file should be shorter than SVN_INT64_BUFFER_SIZE,
+         otherwise we truncate data. */
+      if (!eof)
+          return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                  _("Unexpected itemidx file length"));
+      else if (bytes_read)
         SVN_ERR(svn_cstring_atoui64(item_index, buffer));
       else
         *item_index = SVN_FS_FS__ITEM_INDEX_FIRST_USER;
