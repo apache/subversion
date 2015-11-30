@@ -27,14 +27,17 @@ exit 1
 EOF
 $ chmod +x dest/hooks/pre-revprop-change
 
-$ svnsync init --username svnsync file://`pwd`/dest \
-                                  http://svn.example.org/source/repos
+$ svnsync init --sync-username svnsync file://`pwd`/dest \
+               --source-username user  http://svn.example.org/source/repos
 Copied properties for revision 0
 $
 
 Note that the arguments to 'svnsync init' are two arbitrary repository
 URLs.  The first is the destination, which must be empty, and the second
-is the source.
+is the source.  Credentials for the source repository can be provided
+using --source-username/--source-password and for the destination using
+--sync-username/--sync-password.  These credentials are cached in the
+same way other credentials are cached.
 
 Now you can just run the 'svnsync sync' command to synchronize pending
 revisions.  This will copy any revisions that exist in the source repos

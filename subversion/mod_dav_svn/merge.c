@@ -268,16 +268,16 @@ dav_svn__merge_response(ap_filter_t *output,
 
 
   /* get the creationdate and creator-displayname of the new revision, too. */
-  serr = svn_fs_revision_prop(&creationdate, repos->fs, new_rev,
-                              SVN_PROP_REVISION_DATE, pool);
+  serr = svn_fs_revision_prop2(&creationdate, repos->fs, new_rev,
+                               SVN_PROP_REVISION_DATE, TRUE, pool, pool);
   if (serr != NULL)
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                   "Could not get date of newest revision",
                                   repos->pool);
     }
-  serr = svn_fs_revision_prop(&creator_displayname, repos->fs, new_rev,
-                              SVN_PROP_REVISION_AUTHOR, pool);
+  serr = svn_fs_revision_prop2(&creator_displayname, repos->fs, new_rev,
+                               SVN_PROP_REVISION_AUTHOR, TRUE, pool, pool);
   if (serr != NULL)
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -307,7 +307,8 @@ dav_svn__merge_response(ap_filter_t *output,
                      "<D:version-name>", rev, "</D:version-name>" DEBUG_CR,
                      NULL);
   if (status != APR_SUCCESS)
-    return dav_svn__new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+    return dav_svn__new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR,
+                              0, status,
                               "Could not write output");
 
   if (creationdate)
@@ -318,7 +319,8 @@ dav_svn__merge_response(ap_filter_t *output,
                          "</D:creationdate>" DEBUG_CR,
                          NULL);
       if (status != APR_SUCCESS)
-        return dav_svn__new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+        return dav_svn__new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                  0, status,
                                   "Could not write output");
     }
   if (creator_displayname)
@@ -330,7 +332,8 @@ dav_svn__merge_response(ap_filter_t *output,
                          "</D:creator-displayname>" DEBUG_CR,
                          NULL);
       if (status != APR_SUCCESS)
-        return dav_svn__new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+        return dav_svn__new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                  0, status,
                                   "Could not write output");
     }
   status = ap_fputstrs(output, bb,
@@ -341,7 +344,8 @@ dav_svn__merge_response(ap_filter_t *output,
 
                      NULL);
   if (status != APR_SUCCESS)
-    return dav_svn__new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+    return dav_svn__new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR,
+                              0, status,
                               "Could not write output");
 
   /* ONLY have dir_delta drive the editor if the caller asked us to
@@ -375,13 +379,15 @@ dav_svn__merge_response(ap_filter_t *output,
                   "</D:updated-set>" DEBUG_CR
                   "</D:merge-response>" DEBUG_CR);
   if (status != APR_SUCCESS)
-    return dav_svn__new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+    return dav_svn__new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR,
+                              0, status,
                               "Could not write output");
 
   /* send whatever is left in the brigade */
   status = ap_pass_brigade(output, bb);
   if (status != APR_SUCCESS)
-    return dav_svn__new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+    return dav_svn__new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR,
+                              0, status,
                               "Could not write output");
 
   return NULL;

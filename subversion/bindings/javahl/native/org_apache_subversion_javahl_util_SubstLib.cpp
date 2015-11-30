@@ -61,7 +61,7 @@ build_keywords_common(Java::Env env, const SVN::Pool& pool,
   svn_string_t* keywords_string = keywords_contents.get_string(pool);
   const char* revision = (jrevision < 0 ? NULL
                           : apr_psprintf(pool.getPool(),
-                                         "%"APR_UINT64_T_FMT,
+                                         "%" APR_UINT64_T_FMT,
                                          apr_uint64_t(jrevision)));
   const Java::String::Contents url_contents(url);
   const Java::String::Contents root_url_contents(repos_root_url);

@@ -498,6 +498,40 @@ svn_fs_fs__dag_get_proplist(apr_hash_t **proplist_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__dag_has_props(svn_boolean_t *has_props,
+                         dag_node_t *node,
+                         apr_pool_t *scratch_pool)
+{
+  node_revision_t *noderev;
+
+  SVN_ERR(get_node_revision(&noderev, node));
+
+  if (! noderev->prop_rep)
+    {
+      *has_props = FALSE; /* Easy out */
+      return SVN_NO_ERROR;
+    }
+
+  if (svn_fs_fs__id_txn_used(&noderev->prop_rep->txn_id))
+    {
+      /* We are in a commit or something. Check actual properties */
+      apr_hash_t *proplist;
+
+      SVN_ERR(svn_fs_fs__get_proplist(&proplist, node->fs,
+                                      noderev, scratch_pool));
+
+      *has_props = proplist ? (0 < apr_hash_count(proplist)) : FALSE;
+    }
+  else
+    {
+      /* Properties are stored as a standard hash stream,
+         always ending with "END\n" (4 bytes) */
+      *has_props = noderev->prop_rep->expanded_size > 4;
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_fs__dag_set_proplist(dag_node_t *node,
@@ -1271,34 +1305,58 @@ svn_fs_fs__dag_things_different(svn_boolean_t *props_changed,
                                 apr_pool_t *pool)
 {
   node_revision_t *noderev1, *noderev2;
-  svn_fs_t *fs;
-  svn_boolean_t same;
 
   /* If we have no place to store our results, don't bother doing
      anything. */
   if (! props_changed && ! contents_changed)
     return SVN_NO_ERROR;
 
-  fs = svn_fs_fs__dag_get_fs(node1);
-
   /* The node revision skels for these two nodes. */
   SVN_ERR(get_node_revision(&noderev1, node1));
   SVN_ERR(get_node_revision(&noderev2, node2));
 
-  /* Compare property keys. */
-  if (props_changed != NULL)
+  if (strict)
     {
-      SVN_ERR(svn_fs_fs__prop_rep_equal(&same, fs, noderev1, noderev2,
-                                        strict, pool));
-      *props_changed = !same;
-    }
+      /* In strict mode, compare text and property representations in the
+         svn_fs_contents_different() / svn_fs_props_different() manner.
 
-  /* Compare contents keys. */
-  if (contents_changed != NULL)
+         See the "No-op changes no longer dumped by 'svnadmin dump' in 1.9"
+         discussion (http://svn.haxx.se/dev/archive-2015-09/0269.shtml) and
+         issue #4598 (https://issues.apache.org/jira/browse/SVN-4598). */
+      svn_fs_t *fs = svn_fs_fs__dag_get_fs(node1);
+      svn_boolean_t same;
+
+      /* Compare property keys. */
+      if (props_changed != NULL)
+        {
+          SVN_ERR(svn_fs_fs__prop_rep_equal(&same, fs, noderev1,
+                                            noderev2, pool));
+          *props_changed = !same;
+        }
+
+      /* Compare contents keys. */
+      if (contents_changed != NULL)
+        {
+          SVN_ERR(svn_fs_fs__file_text_rep_equal(&same, fs, noderev1,
+                                                 noderev2, pool));
+          *contents_changed = !same;
+        }
+    }
+  else
     {
-      SVN_ERR(svn_fs_fs__file_text_rep_equal(&same, fs, noderev1, noderev2,
-                                             strict, pool));
-      *contents_changed = !same;
+      /* Otherwise, compare representation keys -- as in Subversion 1.8. */
+
+      /* Compare property keys. */
+      if (props_changed != NULL)
+        *props_changed =
+          !svn_fs_fs__noderev_same_rep_key(noderev1->prop_rep,
+                                           noderev2->prop_rep);
+
+      /* Compare contents keys. */
+      if (contents_changed != NULL)
+        *contents_changed =
+          !svn_fs_fs__noderev_same_rep_key(noderev1->data_rep,
+                                           noderev2->data_rep);
     }
 
   return SVN_NO_ERROR;

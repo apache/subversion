@@ -85,11 +85,7 @@ enum svn_svnrdump__longopt_t
     opt_force_interactive,
     opt_incremental,
     opt_trust_server_cert,
-    opt_trust_server_cert_unknown_ca,
-    opt_trust_server_cert_cn_mismatch,
-    opt_trust_server_cert_expired,
-    opt_trust_server_cert_not_yet_valid,
-    opt_trust_server_cert_other_failure,
+    opt_trust_server_cert_failures,
     opt_version
   };
 
@@ -99,11 +95,7 @@ enum svn_svnrdump__longopt_t
                                    opt_auth_password, \
                                    opt_auth_nocache, \
                                    opt_trust_server_cert, \
-                                   opt_trust_server_cert_unknown_ca, \
-                                   opt_trust_server_cert_cn_mismatch, \
-                                   opt_trust_server_cert_expired, \
-                                   opt_trust_server_cert_not_yet_valid, \
-                                   opt_trust_server_cert_other_failure, \
+                                   opt_trust_server_cert_failures, \
                                    opt_non_interactive, \
                                    opt_force_interactive
 
@@ -164,30 +156,24 @@ static const apr_getopt_option_t svnrdump__options[] =
                          "For example:\n"
                          "                             "
                          "    servers:global:http-library=serf")},
-    {"trust-server-cert", opt_trust_server_cert, 0,
-                      N_("deprecated; same as --trust-unknown-ca")},
-    {"trust-unknown-ca", opt_trust_server_cert_unknown_ca, 0,
-                      N_("with --non-interactive, accept SSL server\n"
-                         "                             "
-                         "certificates from unknown certificate authorities")},
-    {"trust-cn-mismatch", opt_trust_server_cert_cn_mismatch, 0,
-                      N_("with --non-interactive, accept SSL server\n"
-                         "                             "
-                         "certificates even if the server hostname does not\n"
-                         "                             "
-                         "match the certificate's common name attribute")},
-    {"trust-expired", opt_trust_server_cert_expired, 0,
-                      N_("with --non-interactive, accept expired SSL server\n"
-                         "                             "
-                         "certificates")},
-    {"trust-not-yet-valid", opt_trust_server_cert_not_yet_valid, 0,
-                      N_("with --non-interactive, accept SSL server\n"
-                         "                             "
-                         "certificates from the future")},
-    {"trust-other-failure", opt_trust_server_cert_other_failure, 0,
-                      N_("with --non-interactive, accept SSL server\n"
-                         "                             "
-                         "certificates with failures other than the above")},
+  {"trust-server-cert", opt_trust_server_cert, 0,
+                    N_("deprecated; same as\n"
+                       "                             "
+                       "--trust-server-cert-failures=unknown-ca")},
+  {"trust-server-cert-failures", opt_trust_server_cert_failures, 1,
+                    N_("with --non-interactive, accept SSL server\n"
+                       "                             "
+                       "certificates with failures; ARG is comma-separated\n"
+                       "                             "
+                       "list of 'unknown-ca' (Unknown Authority),\n"
+                       "                             "
+                       "'cn-mismatch' (Hostname mismatch), 'expired'\n"
+                       "                             "
+                       "(Expired certificate), 'not-yet-valid' (Not yet\n"
+                       "                             "
+                       "valid certificate) and 'other' (all other not\n"
+                       "                             "
+                       "separately classified certificate errors).")},
     {0, 0, 0, 0}
   };
 
@@ -560,7 +546,6 @@ replay_revisions(svn_ra_session_t *session,
 #endif
     }
 
-  SVN_ERR(svn_stream_close(stdout_stream));
   return SVN_NO_ERROR;
 }
 
@@ -578,17 +563,13 @@ load_revisions(svn_ra_session_t *session,
                apr_hash_t *skip_revprops,
                apr_pool_t *pool)
 {
-  apr_file_t *stdin_file;
   svn_stream_t *stdin_stream;
 
-  apr_file_open_stdin(&stdin_file, pool);
-  stdin_stream = svn_stream_from_aprfile2(stdin_file, FALSE, pool);
+  SVN_ERR(svn_stream_for_stdin2(&stdin_stream, TRUE, pool));
 
   SVN_ERR(svn_rdump__load_dumpstream(stdin_stream, session, aux_session,
                                      quiet, skip_revprops,
                                      check_cancel, NULL, pool));
-
-  SVN_ERR(svn_stream_close(stdin_stream));
 
   return SVN_NO_ERROR;
 }
@@ -927,20 +908,17 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           svn_hash_sets(opt_baton->skip_revprops, opt_arg, opt_arg);
           break;
         case opt_trust_server_cert: /* backward compat */
-        case opt_trust_server_cert_unknown_ca:
           trust_unknown_ca = TRUE;
           break;
-        case opt_trust_server_cert_cn_mismatch:
-          trust_cn_mismatch = TRUE;
-          break;
-        case opt_trust_server_cert_expired:
-          trust_expired = TRUE;
-          break;
-        case opt_trust_server_cert_not_yet_valid:
-          trust_not_yet_valid = TRUE;
-          break;
-        case opt_trust_server_cert_other_failure:
-          trust_other_failure = TRUE;
+        case opt_trust_server_cert_failures:
+          SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
+          SVN_ERR(svn_cmdline__parse_trust_options(
+                      &trust_unknown_ca,
+                      &trust_cn_mismatch,
+                      &trust_expired,
+                      &trust_not_yet_valid,
+                      &trust_other_failure,
+                      opt_arg, pool));
           break;
         case opt_config_option:
           if (!config_options)
@@ -950,7 +928,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
             SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
             SVN_ERR(svn_cmdline__parse_config_option(config_options,
-                                                     opt_arg, pool));
+                                                     opt_arg, 
+                                                     "svnrdump: ",
+                                                     pool));
         }
     }
 
@@ -1059,25 +1039,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* --trust-* can only be used with --non-interactive */
   if (!non_interactive)
     {
-      if (trust_unknown_ca)
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("--trust-unknown-ca requires "
-                                "--non-interactive"));
-      if (trust_cn_mismatch)
+      if (trust_unknown_ca || trust_cn_mismatch || trust_expired
+          || trust_not_yet_valid || trust_other_failure)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-cn-mismatch requires "
-                                  "--non-interactive"));
-      if (trust_expired)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-expired requires "
-                                  "--non-interactive"));
-      if (trust_not_yet_valid)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-not-yet-valid requires "
-                                  "--non-interactive"));
-      if (trust_other_failure)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-other-failure requires "
+                                _("--trust-server-cert-failures requires "
                                   "--non-interactive"));
     }
 

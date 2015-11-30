@@ -258,8 +258,9 @@ copy_versioned_file(svn_wc__db_t *db,
           svn_error_t *err;
 
           /* Is there a text conflict at the source path? */
-          SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, db, src_abspath,
-                                         scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, NULL,
+                                           db, src_abspath,
+                                           scratch_pool, scratch_pool));
 
           err = svn_wc__conflict_read_text_conflict(&conflict_working, NULL, NULL,
                                                     db, src_abspath, conflict,
@@ -945,7 +946,8 @@ remove_node_conflict_markers(svn_wc__db_t *db,
 {
   svn_skel_t *conflict;
 
-  SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, db, src_abspath,
+  SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, NULL,
+                                   db, src_abspath,
                                    scratch_pool, scratch_pool));
 
   /* Do we have conflict markers that should be removed? */
@@ -1102,8 +1104,8 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
     {
       svn_error_t *err;
 
-      err = svn_error_trace(svn_io_file_rename(src_abspath, dst_abspath,
-                                               scratch_pool));
+      err = svn_error_trace(svn_io_file_rename2(src_abspath, dst_abspath,
+                                                FALSE, scratch_pool));
 
       /* Let's try if we can keep wc.db consistent even when the move
          fails. Deleting the target is a wc.db only operation, while

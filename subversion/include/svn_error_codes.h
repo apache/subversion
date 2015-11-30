@@ -868,6 +868,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 63,
              "Invalid generation number data.")
 
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_FS_CORRUPT_REVPROP_MANIFEST,
+             SVN_ERR_FS_CATEGORY_START + 64,
+             "Revprop manifest corrupt.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
@@ -921,11 +926,6 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_REPOS_UNSUPPORTED_UPGRADE,
              SVN_ERR_REPOS_CATEGORY_START + 10,
              "Repository upgrade is not supported")
-
-  /** @since New in 1.9. */
-  SVN_ERRDEF(SVN_ERR_REPOS_CORRUPTED,
-             SVN_ERR_REPOS_CATEGORY_START + 11,
-             "Repository is corrupt")
 
   /* generic RA errors */
 
@@ -1065,6 +1065,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_DAV_PRECONDITION_FAILED,
              SVN_ERR_RA_DAV_CATEGORY_START + 14,
              "The server state conflicts with the requested preconditions")
+
+  /** @since New in 1.9 */
+  SVN_ERRDEF(SVN_ERR_RA_DAV_METHOD_NOT_ALLOWED,
+             SVN_ERR_RA_DAV_CATEGORY_START + 15,
+             "The URL doesn't allow the requested method")
 
   /* ra_local errors */
 
@@ -1492,6 +1497,11 @@ SVN_ERROR_START
              SVN_ERR_CL_CATEGORY_START + 11,
              "Failed processing one or more externals definitions")
 
+  /** @since New in 1.9. */
+  SVN_ERRDEF(SVN_ERR_CL_REPOS_VERIFY_FAILED,
+             SVN_ERR_CL_CATEGORY_START + 12,
+             "Repository verification failed")
+
   /* ra_svn errors */
 
   SVN_ERRDEF(SVN_ERR_RA_SVN_CMD_ERR,
@@ -1531,6 +1541,16 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_SVN_EDIT_ABORTED,
              SVN_ERR_RA_SVN_CATEGORY_START + 8,
              "Editor drive was aborted")
+
+  /** @since New in 1.10  */
+  SVN_ERRDEF(SVN_ERR_RA_SVN_REQUEST_SIZE,
+             SVN_ERR_RA_SVN_CATEGORY_START + 9,
+             "Client request too long")
+
+  /** @since New in 1.10  */
+  SVN_ERRDEF(SVN_ERR_RA_SVN_RESPONSE_SIZE,
+             SVN_ERR_RA_SVN_CATEGORY_START + 10,
+             "Server response too long")
 
   /* libsvn_auth errors */
 
@@ -1589,12 +1609,20 @@ SVN_ERROR_START
              SVN_ERR_DIFF_CATEGORY_START + 0,
              "Diff data source modified unexpectedly")
 
+  /** @since New in 1.10 */
+  SVN_ERRDEF(SVN_ERR_DIFF_UNEXPECTED_DATA,
+             SVN_ERR_DIFF_CATEGORY_START + 1,
+             "Diff data unexpected")
+
   /* libsvn_ra_serf errors */
-  /** @since New in 1.5. */
+  /** @since New in 1.5.
+      @deprecated SSPI now handled by serf rather than libsvn_ra_serf. */
   SVN_ERRDEF(SVN_ERR_RA_SERF_SSPI_INITIALISATION_FAILED,
              SVN_ERR_RA_SERF_CATEGORY_START + 0,
              "Initialization of SSPI library failed")
-  /** @since New in 1.5. */
+  /** @since New in 1.5.
+      @deprecated Certificate verification now handled by serf rather
+                  than libsvn_ra_serf. */
   SVN_ERRDEF(SVN_ERR_RA_SERF_SSL_CERT_UNTRUSTED,
              SVN_ERR_RA_SERF_CATEGORY_START + 1,
              "Server SSL certificate untrusted")

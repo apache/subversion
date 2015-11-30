@@ -30,6 +30,18 @@
 
 
 
+/* Resolve a FSFS quirk: if REP in FS is a "PLAIN" representation, its
+ * EXPANDED_SIZE element may be 0, in which case its value has to be taken
+ * from SIZE.
+ *
+ * This function ensures that EXPANDED_SIZE in REP always contains the
+ * actual value. No-op if REP is NULL.  Uses SCRATCH_POOL for temporaries.
+ */
+svn_error_t *
+svn_fs_fs__fixup_expanded_size(svn_fs_t *fs,
+                               representation_t *rep,
+                               apr_pool_t *scratch_pool);
+
 /* Set *NODEREV_P to the node-revision for the node ID in FS.  Do any
    allocations in POOL. */
 svn_error_t *

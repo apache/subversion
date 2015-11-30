@@ -1055,7 +1055,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         CFLAGS="$CFLAGS_KEEP"
 
         dnl Add flags that all versions of GCC (should) support
-        CMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Winline -Wno-long-long -Wbad-function-cast $CMAINTAINERFLAGS"
+        CMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wformat=2 -Wunused -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Winline -Wno-long-long -Wbad-function-cast $CMAINTAINERFLAGS"
       fi
       if test "$GXX" = "yes"; then
         AC_MSG_NOTICE([maintainer-mode: adding G++ warning flags])
@@ -1276,7 +1276,7 @@ AS_HELP_STRING([--enable-gprof],
 
 PYTHON="`$abs_srcdir/build/find_python.sh`"
 if test -z "$PYTHON"; then
-  AC_MSG_WARN([Python 2.5 or later is required to run the testsuite])
+  AC_MSG_WARN([Python 2.7 or later is required to run the testsuite])
   AC_MSG_WARN([or to use the Subversion Python bindings])
   AC_MSG_WARN([])
   AC_MSG_WARN([If you have a suitable Python installed, but not on the])
@@ -1286,7 +1286,7 @@ fi
 AC_PATH_PROGS(PYTHON, "$PYTHON", none)
 
 # The minimum version for the JVM runtime for our Java bytecode.
-JAVA_OLDEST_WORKING_VER='1.5'
+JAVA_OLDEST_WORKING_VER='1.6'
 # SVN_CHECK_JDK sets $JAVA_CLASSPATH
 SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
@@ -1357,6 +1357,19 @@ AS_HELP_STRING([--enable-runtime-module-search],
       fi
       AC_DEFINE(SVN_USE_DSO, 1,
                 [Defined if svn should try to load DSOs])
+
+      dnl Mac OS X uses libname.MAJOR.SOVERSION.dylib
+      dnl Most other unixes use libname.MAJOR.so.SOVERSION
+      case "$host" in
+        *-*-darwin*)
+          AC_DEFINE(SVN_DSO_SUFFIX_FMT, ["%d.%d.dylib"],
+                    [Shared library file name suffix format])
+          ;;
+        *)
+          AC_DEFINE(SVN_DSO_SUFFIX_FMT, ["%d.so.%d"],
+                    [Shared library file name suffix format])
+          ;;
+      esac
     fi
 ])
 
@@ -1503,7 +1516,7 @@ AC_SUBST(JAVAHL_COMPAT_TESTS_TARGET)
 
 # ==== Miscellaneous bits ====================================================
 
-AC_CHECK_HEADERS([stdbool.h inttypes.h])
+AC_CHECK_HEADERS([stdbool.h stdint.h])
 
 # Strip '-no-cpp-precomp' from CPPFLAGS for the clang compiler
 ### I think we get this flag from APR, so the fix probably belongs there

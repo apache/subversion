@@ -209,17 +209,15 @@ auto_clear_dag_cache(fs_fs_dag_cache_t* cache)
     }
 }
 
-/* For the given REVISION and PATH, return the respective entry in CACHE.
-   If the entry is empty, its NODE member will be NULL and the caller
-   may then set it to the corresponding DAG node allocated in CACHE->POOL.
+/* Returns a 32 bit hash value for the given REVISION and PATH of exactly
+ * PATH_LEN chars.
  */
-static cache_entry_t *
-cache_lookup( fs_fs_dag_cache_t *cache
-            , svn_revnum_t revision
-            , const char *path)
+static apr_uint32_t
+hash_func(svn_revnum_t revision,
+          const char *path,
+          apr_size_t path_len)
 {
-  apr_size_t i, bucket_index;
-  apr_size_t path_len = strlen(path);
+  apr_size_t i;
   apr_uint32_t hash_value = (apr_uint32_t)revision;
 
 #if SVN_UNALIGNED_ACCESS_IS_OK
@@ -227,20 +225,7 @@ cache_lookup( fs_fs_dag_cache_t *cache
   const apr_uint32_t factor = 0xd1f3da69;
 #endif
 
-  /* optimistic lookup: hit the same bucket again? */
-  cache_entry_t *result = &cache->buckets[cache->last_hit];
-  if (   (result->revision == revision)
-      && (result->path_len == path_len)
-      && !memcmp(result->path, path, path_len))
-    {
-      /* Remember the position of the last node we found in this cache. */
-      if (result->node)
-        cache->last_non_empty = cache->last_hit;
-
-      return result;
-    }
-
-  /* need to do a full lookup.  Calculate the hash value
+  /* Calculate the hash value
      (HASH_VALUE has been initialized to REVISION).
 
      Note that the actual hash function is arbitrary as long as its result
@@ -283,6 +268,37 @@ cache_lookup( fs_fs_dag_cache_t *cache
      */
     hash_value = hash_value * 32 + (hash_value + (unsigned char)path[i]);
 
+  return hash_value;
+}
+
+/* For the given REVISION and PATH, return the respective node found in
+ * CACHE.  If there is none, return NULL.
+ */
+static dag_node_t *
+cache_lookup( fs_fs_dag_cache_t *cache
+            , svn_revnum_t revision
+            , const char *path)
+{
+  apr_size_t bucket_index;
+  apr_size_t path_len = strlen(path);
+  apr_uint32_t hash_value;
+
+  /* optimistic lookup: hit the same bucket again? */
+  cache_entry_t *result = &cache->buckets[cache->last_hit];
+  if (   (result->revision == revision)
+      && (result->path_len == path_len)
+      && !memcmp(result->path, path, path_len))
+    {
+      /* Remember the position of the last node we found in this cache. */
+      if (result->node)
+        cache->last_non_empty = cache->last_hit;
+
+      return result->node;
+    }
+
+  /* need to do a full lookup. */
+  hash_value = hash_func(revision, path, path_len);
+
   bucket_index = hash_value + (hash_value >> 16);
   bucket_index = (bucket_index + (bucket_index >> 8)) % BUCKET_COUNT;
 
@@ -297,16 +313,7 @@ cache_lookup( fs_fs_dag_cache_t *cache
       || (result->path_len != path_len)
       || memcmp(result->path, path, path_len))
     {
-      result->hash_value = hash_value;
-      result->revision = revision;
-      if (result->path_len < path_len)
-        result->path = apr_palloc(cache->pool, path_len + 1);
-      result->path_len = path_len;
-      memcpy(result->path, path, path_len + 1);
-
-      result->node = NULL;
-
-      cache->insertions++;
+      return NULL;
     }
   else if (result->node)
     {
@@ -315,7 +322,46 @@ cache_lookup( fs_fs_dag_cache_t *cache
       cache->last_non_empty = bucket_index;
     }
 
-  return result;
+  return result->node;
+}
+
+/* Store a copy of NODE in CACHE, taking  REVISION and PATH as key.
+ * This function will clean the cache at regular intervals.
+ */
+static void
+cache_insert(fs_fs_dag_cache_t *cache,
+             svn_revnum_t revision,
+             const char *path,
+             dag_node_t *node)
+{
+  apr_size_t bucket_index;
+  apr_size_t path_len = strlen(path);
+  apr_uint32_t hash_value;
+  cache_entry_t *entry;
+
+  auto_clear_dag_cache(cache);
+
+  /* calculate the bucket index to use */
+  hash_value = hash_func(revision, path, path_len);
+
+  bucket_index = hash_value + (hash_value >> 16);
+  bucket_index = (bucket_index + (bucket_index >> 8)) % BUCKET_COUNT;
+
+  /* access the corresponding bucket and remember its location */
+  entry = &cache->buckets[bucket_index];
+  cache->last_hit = bucket_index;
+
+  /* if it is *NOT* a match,  clear the bucket, expect the caller to fill
+     in the node and count it as an insertion */
+  entry->hash_value = hash_value;
+  entry->revision = revision;
+  if (entry->path_len < path_len)
+    entry->path = apr_palloc(cache->pool, path_len + 1);
+  entry->path_len = path_len;
+  memcpy(entry->path, path, path_len + 1);
+
+  entry->node = svn_fs_fs__dag_dup(node, cache->pool);
+  cache->insertions++;
 }
 
 /* Optimistic lookup using the last seen non-empty location in CACHE.
@@ -393,11 +439,9 @@ dag_node_cache_get(dag_node_t **node_p,
       /* immutable DAG node. use the global caches for it */
 
       fs_fs_data_t *ffd = root->fs->fsap_data;
-      cache_entry_t *bucket;
 
-      auto_clear_dag_cache(ffd->dag_node_cache);
-      bucket = cache_lookup(ffd->dag_node_cache, root->rev, path);
-      if (bucket->node == NULL)
+      node = cache_lookup(ffd->dag_node_cache, root->rev, path);
+      if (node == NULL)
         {
           locate_cache(&cache, &key, root, path, pool);
           SVN_ERR(svn_cache__get((void **)&node, &found, cache, key, pool));
@@ -408,14 +452,13 @@ dag_node_cache_get(dag_node_t **node_p,
               svn_fs_fs__dag_set_fs(node, root->fs);
 
               /* Retain the DAG node in L1 cache. */
-              bucket->node = svn_fs_fs__dag_dup(node,
-                                                ffd->dag_node_cache->pool);
+              cache_insert(ffd->dag_node_cache, root->rev, path, node);
             }
         }
       else
         {
           /* Copy the node from L1 cache into the passed-in POOL. */
-          node = svn_fs_fs__dag_dup(bucket->node, pool);
+          node = svn_fs_fs__dag_dup(node, pool);
         }
     }
   else
@@ -1232,11 +1275,15 @@ get_dag(dag_node_t **dag_node_p,
     {
       /* Canonicalize the input PATH.  As it turns out, >95% of all paths
        * seen here during e.g. svnadmin verify are non-canonical, i.e.
-       * miss the leading '/'.  Unconditional canonicalization has a net
-       * performance benefit over previously checking path for being
-       * canonical. */
-      path = svn_fs__canonicalize_abspath(path, pool);
-      SVN_ERR(dag_node_cache_get(&node, root, path, pool));
+       * miss the leading '/'.  Check for those quickly.
+       *
+       * For normalized paths, it is much faster to check the path than
+       * to attempt a second cache lookup (which would fail). */
+      if (*path != '/' || !svn_fs__is_canonical_abspath(path))
+        {
+          path = svn_fs__canonicalize_abspath(path, pool);
+          SVN_ERR(dag_node_cache_get(&node, root, path, pool));
+        }
 
       if (! node)
         {
@@ -1328,8 +1375,8 @@ fs_node_relation(svn_fs_node_relation_t *relation,
                  apr_pool_t *pool)
 {
   dag_node_t *node;
-  const svn_fs_id_t *id;
-  svn_fs_fs__id_part_t rev_item_a, rev_item_b, node_id_a, node_id_b;
+  const svn_fs_id_t *id_a, *id_b;
+  svn_fs_fs__id_part_t node_id_a, node_id_b;
 
   /* Root paths are a common special case. */
   svn_boolean_t a_is_root_dir
@@ -1337,16 +1384,13 @@ fs_node_relation(svn_fs_node_relation_t *relation,
   svn_boolean_t b_is_root_dir
     = (path_b[0] == '\0') || ((path_b[0] == '/') && (path_b[1] == '\0'));
 
+  /* Another useful thing to know: Both are txns but not the same txn. */
+  svn_boolean_t different_txn
+    = root_a->is_txn_root && root_b->is_txn_root
+        && strcmp(root_a->txn, root_b->txn);
+
   /* Path from different repository are always unrelated. */
   if (root_a->fs != root_b->fs)
-    {
-      *relation = svn_fs_node_unrelated;
-      return SVN_NO_ERROR;
-    }
-
-  /* Nodes from different transactions are never related. */
-  if (root_a->is_txn_root && root_b->is_txn_root
-      && strcmp(root_a->txn, root_b->txn))
     {
       *relation = svn_fs_node_unrelated;
       return SVN_NO_ERROR;
@@ -1356,8 +1400,11 @@ fs_node_relation(svn_fs_node_relation_t *relation,
    * direct the relation is. */
   if (a_is_root_dir && b_is_root_dir)
     {
-      *relation = root_a->rev == root_b->rev
-                ? svn_fs_node_same
+      /* For txn roots, root->REV is the base revision of that TXN. */
+      *relation = (   (root_a->rev == root_b->rev)
+                   && (root_a->is_txn_root == root_b->is_txn_root)
+                   && !different_txn)
+                ? svn_fs_node_unchanged
                 : svn_fs_node_common_ancestor;
       return SVN_NO_ERROR;
     }
@@ -1365,21 +1412,35 @@ fs_node_relation(svn_fs_node_relation_t *relation,
   /* We checked for all separations between ID spaces (repos, txn).
    * Now, we can simply test for the ID values themselves. */
   SVN_ERR(get_dag(&node, root_a, path_a, pool));
-  id = svn_fs_fs__dag_get_id(node);
-  rev_item_a = *svn_fs_fs__id_rev_item(id);
-  node_id_a = *svn_fs_fs__id_node_id(id);
+  id_a = svn_fs_fs__dag_get_id(node);
+  node_id_a = *svn_fs_fs__id_node_id(id_a);
 
   SVN_ERR(get_dag(&node, root_b, path_b, pool));
-  id = svn_fs_fs__dag_get_id(node);
-  rev_item_b = *svn_fs_fs__id_rev_item(id);
-  node_id_b = *svn_fs_fs__id_node_id(id);
+  id_b = svn_fs_fs__dag_get_id(node);
+  node_id_b = *svn_fs_fs__id_node_id(id_b);
 
-  if (svn_fs_fs__id_part_eq(&rev_item_a, &rev_item_b))
-    *relation = svn_fs_node_same;
-  else if (svn_fs_fs__id_part_eq(&node_id_a, &node_id_b))
-    *relation = svn_fs_node_common_ancestor;
+  /* Noderevs from different nodes are unrelated. */
+  if (!svn_fs_fs__id_part_eq(&node_id_a, &node_id_b))
+    {
+      *relation = svn_fs_node_unrelated;
+      return SVN_NO_ERROR;
+    }
+
+  /* Noderevs have the same node-ID now. So, they *seem* to be related.
+   *
+   * Special case: Different txns may create the same (txn-local) node ID.
+   * These are not related to each other, nor to any other node ID so far. */
+  if (different_txn && node_id_a.revision == SVN_INVALID_REVNUM)
+    {
+      *relation = svn_fs_node_unrelated;
+      return SVN_NO_ERROR;
+    }
+
+  /* The noderevs are actually related.  Are they the same? */
+  if (svn_fs_fs__id_eq(id_a, id_b))
+    *relation = svn_fs_node_unchanged;
   else
-    *relation = svn_fs_node_unrelated;
+    *relation = svn_fs_node_common_ancestor;
 
   return SVN_NO_ERROR;
 }
@@ -1501,6 +1562,19 @@ fs_node_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+fs_node_has_props(svn_boolean_t *has_props,
+                  svn_fs_root_t *root,
+                  const char *path,
+                  apr_pool_t *scratch_pool)
+{
+  dag_node_t *node;
+
+  SVN_ERR(get_dag(&node, root, path, scratch_pool));
+
+  return svn_error_trace(svn_fs_fs__dag_has_props(has_props, node,
+                                                  scratch_pool));
+}
 
 static svn_error_t *
 increment_mergeinfo_up_tree(parent_path_t *pp,
@@ -1873,13 +1947,13 @@ merge(svn_stringbuf_t *conflict_p,
     /* Now compare the prop-keys of the skels.  Note that just because
        the keys are different -doesn't- mean the proplists have
        different contents. */
-    SVN_ERR(svn_fs_fs__prop_rep_equal(&same, fs, src_nr, anc_nr, TRUE, pool));
+    SVN_ERR(svn_fs_fs__prop_rep_equal(&same, fs, src_nr, anc_nr, pool));
     if (! same)
       return conflict_err(conflict_p, target_path);
 
     /* The directory entries got changed in the repository but the directory
        properties did not. */
-    SVN_ERR(svn_fs_fs__prop_rep_equal(&same, fs, tgt_nr, anc_nr, TRUE, pool));
+    SVN_ERR(svn_fs_fs__prop_rep_equal(&same, fs, tgt_nr, anc_nr, pool));
     if (! same)
       {
         /* There is an incoming prop change for this directory.
@@ -2378,9 +2452,11 @@ static svn_error_t *
 fs_dir_optimal_order(apr_array_header_t **ordered_p,
                      svn_fs_root_t *root,
                      apr_hash_t *entries,
-                     apr_pool_t *pool)
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
-  *ordered_p = svn_fs_fs__order_dir_entries(root->fs, entries, pool);
+  *ordered_p = svn_fs_fs__order_dir_entries(root->fs, entries, result_pool,
+                                            scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -3159,23 +3235,18 @@ fs_contents_changed(svn_boolean_t *changed_p,
       (SVN_ERR_FS_GENERAL, NULL,
        _("Cannot compare file contents between two different filesystems"));
 
-  /* Check that both paths are files. */
-  {
-    svn_node_kind_t kind;
-
-    SVN_ERR(svn_fs_fs__check_path(&kind, root1, path1, pool));
-    if (kind != svn_node_file)
-      return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path1);
-
-    SVN_ERR(svn_fs_fs__check_path(&kind, root2, path2, pool));
-    if (kind != svn_node_file)
-      return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path2);
-  }
-
   SVN_ERR(get_dag(&node1, root1, path1, pool));
+  /* Make sure that path is file. */
+  if (svn_fs_fs__dag_node_kind(node1) != svn_node_file)
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_FILE, NULL, _("'%s' is not a file"), path1);
+
   SVN_ERR(get_dag(&node2, root2, path2, pool));
+  /* Make sure that path is file. */
+  if (svn_fs_fs__dag_node_kind(node2) != svn_node_file)
+    return svn_error_createf
+      (SVN_ERR_FS_NOT_FILE, NULL, _("'%s' is not a file"), path2);
+
   return svn_fs_fs__dag_things_different(NULL, changed_p,
                                          node1, node2, strict, pool);
 }
@@ -3244,6 +3315,14 @@ typedef struct fs_history_data_t
 
   /* FALSE until the first call to svn_fs_history_prev(). */
   svn_boolean_t is_interesting;
+
+  /* If not SVN_INVALID_REVISION, we know that the next copy operation
+     is at this revision. */
+  svn_revnum_t next_copy;
+
+  /* If not NULL, this is the noderev ID of PATH@REVISION. */
+  const svn_fs_id_t *current_id;
+
 } fs_history_data_t;
 
 static svn_fs_history_t *
@@ -3253,6 +3332,8 @@ assemble_history(svn_fs_t *fs,
                  svn_boolean_t is_interesting,
                  const char *path_hint,
                  svn_revnum_t rev_hint,
+                 svn_revnum_t next_copy,
+                 const svn_fs_id_t *current_id,
                  apr_pool_t *pool);
 
 
@@ -3279,7 +3360,8 @@ fs_node_history(svn_fs_history_t **history_p,
 
   /* Okay, all seems well.  Build our history object and return it. */
   *history_p = assemble_history(root->fs, path, root->rev, FALSE, NULL,
-                                SVN_INVALID_REVNUM, result_pool);
+                                SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
+                                NULL, result_pool);
   return SVN_NO_ERROR;
 }
 
@@ -3580,9 +3662,49 @@ history_prev(svn_fs_history_t **prev_history,
   svn_boolean_t reported = fhd->is_interesting;
   svn_revnum_t copyroot_rev;
   const char *copyroot_path;
+  const svn_fs_id_t *pred_id = NULL;
 
   /* Initialize our return value. */
   *prev_history = NULL;
+
+  /* When following history, there tend to be long sections of linear
+     history where there are no copies at PATH or its parents.  Within
+     these sections, we only need to follow the node history. */
+  if (   SVN_IS_VALID_REVNUM(fhd->next_copy)
+      && revision > fhd->next_copy
+      && fhd->current_id)
+    {
+      /* We know the last reported node (CURRENT_ID) and the NEXT_COPY
+         revision is somewhat further in the past. */
+      node_revision_t *noderev;
+      assert(reported);
+
+      /* Get the previous node change.  If there is none, then we already
+         reported the initial addition and this history traversal is done. */
+      SVN_ERR(svn_fs_fs__get_node_revision(&noderev, fs, fhd->current_id,
+                                           scratch_pool, scratch_pool));
+      if (! noderev->predecessor_id)
+        return SVN_NO_ERROR;
+
+      /* If the previous node change is younger than the next copy, it is
+         part of the linear history section. */
+      commit_rev = svn_fs_fs__id_rev(noderev->predecessor_id);
+      if (commit_rev > fhd->next_copy)
+        {
+          /* Within the linear history, simply report all node changes and
+             continue with the respective predecessor. */
+          *prev_history = assemble_history(fs, noderev->created_path,
+                                           commit_rev, TRUE, NULL,
+                                           SVN_INVALID_REVNUM,
+                                           fhd->next_copy,
+                                           noderev->predecessor_id,
+                                           result_pool);
+
+          return SVN_NO_ERROR;
+        }
+
+     /* We hit a copy. Fall back to the standard code path. */
+    }
 
   /* If our last history report left us hints about where to pickup
      the chase, then our last report was on the destination of a
@@ -3622,7 +3744,9 @@ history_prev(svn_fs_history_t **prev_history,
              need now to do so) ... */
           *prev_history = assemble_history(fs, commit_path,
                                            commit_rev, TRUE, NULL,
-                                           SVN_INVALID_REVNUM, result_pool);
+                                           SVN_INVALID_REVNUM,
+                                           SVN_INVALID_REVNUM, NULL,
+                                           result_pool);
           return SVN_NO_ERROR;
         }
       else
@@ -3630,8 +3754,6 @@ history_prev(svn_fs_history_t **prev_history,
           /* ... or we *have* reported on this revision, and must now
              progress toward this node's predecessor (unless there is
              no predecessor, in which case we're all done!). */
-          const svn_fs_id_t *pred_id;
-
           SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, node));
           if (! pred_id)
             return SVN_NO_ERROR;
@@ -3702,12 +3824,18 @@ history_prev(svn_fs_history_t **prev_history,
         retry = TRUE;
 
       *prev_history = assemble_history(fs, path, dst_rev, ! retry,
-                                       src_path, src_rev, result_pool);
+                                       src_path, src_rev,
+                                       SVN_INVALID_REVNUM, NULL,
+                                       result_pool);
     }
   else
     {
+      /* We know the next copy revision.  If we are not at the copy rev
+         itself, we will also know the predecessor node ID and the next
+         invocation will use the optimized "linear history" code path. */
       *prev_history = assemble_history(fs, commit_path, commit_rev, TRUE,
-                                       NULL, SVN_INVALID_REVNUM, result_pool);
+                                       NULL, SVN_INVALID_REVNUM,
+                                       copyroot_rev, pred_id, result_pool);
     }
 
   return SVN_NO_ERROR;
@@ -3738,10 +3866,12 @@ fs_history_prev(svn_fs_history_t **prev_history_p,
       if (! fhd->is_interesting)
         prev_history = assemble_history(fs, "/", fhd->revision,
                                         1, NULL, SVN_INVALID_REVNUM,
+                                        SVN_INVALID_REVNUM, NULL,
                                         result_pool);
       else if (fhd->revision > 0)
         prev_history = assemble_history(fs, "/", fhd->revision - 1,
                                         1, NULL, SVN_INVALID_REVNUM,
+                                        SVN_INVALID_REVNUM, NULL,
                                         result_pool);
     }
   else
@@ -3801,6 +3931,8 @@ assemble_history(svn_fs_t *fs,
                  svn_boolean_t is_interesting,
                  const char *path_hint,
                  svn_revnum_t rev_hint,
+                 svn_revnum_t next_copy,
+                 const svn_fs_id_t *current_id,
                  apr_pool_t *pool)
 {
   svn_fs_history_t *history = apr_pcalloc(pool, sizeof(*history));
@@ -3811,6 +3943,8 @@ assemble_history(svn_fs_t *fs,
   fhd->path_hint = path_hint ? svn_fs__canonicalize_abspath(path_hint, pool)
                              : NULL;
   fhd->rev_hint = rev_hint;
+  fhd->next_copy = next_copy;
+  fhd->current_id = current_id ? svn_fs_fs__id_copy(current_id, pool) : NULL;
   fhd->fs = fs;
 
   history->vtable = &history_vtable;
@@ -4222,6 +4356,7 @@ static root_vtable_t root_vtable = {
   fs_closest_copy,
   fs_node_prop,
   fs_node_proplist,
+  fs_node_has_props,
   fs_change_node_prop,
   fs_props_changed,
   fs_dir_entries,

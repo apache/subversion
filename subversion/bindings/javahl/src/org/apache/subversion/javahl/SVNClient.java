@@ -294,7 +294,7 @@ public class SVNClient implements ISVNClient
 
     public void cleanup(String path) throws ClientException
     {
-        cleanup(path, false, true, true, true, false);
+        cleanup(path, true, true, true, true, false);
     }
 
     public native void resolve(String path, Depth depth,

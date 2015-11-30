@@ -327,7 +327,8 @@ svn_wc_merge_props3(svn_wc_notify_state_t *state,
     {
       svn_boolean_t prop_conflicted;
 
-      SVN_ERR(svn_wc__conflict_invoke_resolver(db, local_abspath, conflict_skel,
+      SVN_ERR(svn_wc__conflict_invoke_resolver(db, local_abspath, kind,
+                                               conflict_skel,
                                                NULL /* merge_options */,
                                                conflict_func, conflict_baton,
                                                cancel_func, cancel_baton,
@@ -750,7 +751,8 @@ svn_wc__create_prejfile(const char **tmp_prejfile_abspath,
       apr_hash_t *conflicted_props;
       svn_skel_t *conflicts;
 
-      SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, db, local_abspath,
+      SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, NULL,
+                                       db, local_abspath,
                                       scratch_pool, scratch_pool));
 
       SVN_ERR(svn_wc__conflict_read_info(&operation, NULL, NULL, NULL, NULL,
@@ -2168,11 +2170,8 @@ svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
 
   /* Keep this static, it may get stored (for read-only purposes) in a
      hash that outlives this function. */
-  static const svn_string_t boolean_value =
-    {
-      SVN_PROP_BOOLEAN_TRUE,
-      sizeof(SVN_PROP_BOOLEAN_TRUE) - 1
-    };
+  static const svn_string_t boolean_value
+    = SVN__STATIC_STRING(SVN_PROP_BOOLEAN_TRUE);
 
   SVN_ERR(validate_prop_against_node_kind(propname, path, kind, pool));
 

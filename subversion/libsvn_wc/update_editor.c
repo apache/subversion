@@ -1812,6 +1812,7 @@ delete_entry(const char *path,
     {
       if (eb->conflict_func)
         SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, local_abspath,
+                                                 kind,
                                                  tree_conflict,
                                                  NULL /* merge_options */,
                                                  eb->conflict_func,
@@ -1862,12 +1863,13 @@ add_directory(const char *path,
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
   SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
-  SVN_ERR(calculate_repos_relpath(&db->new_repos_relpath, db->local_abspath,
-                                  NULL, eb, pb, db->pool, scratch_pool));
   *child_baton = db;
 
   if (db->skip_this)
     return SVN_NO_ERROR;
+
+  SVN_ERR(calculate_repos_relpath(&db->new_repos_relpath, db->local_abspath,
+                                  NULL, eb, pb, db->pool, scratch_pool));
 
   SVN_ERR(mark_directory_edited(db, pool));
 
@@ -1935,7 +1937,8 @@ add_directory(const char *path,
       SVN_ERR_ASSERT(conflicted);
       versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
     }
-  else if (status == svn_wc__db_status_normal)
+  else if (status == svn_wc__db_status_normal
+           || status == svn_wc__db_status_incomplete)
     {
       svn_boolean_t root;
 
@@ -2752,7 +2755,8 @@ close_directory(void *dir_baton,
                                     db->old_revision,
                                     db->new_repos_relpath,
                                     svn_node_dir, svn_node_dir,
-                                    db->parent_baton->deletion_conflicts
+                                    (db->parent_baton
+                                     && db->parent_baton->deletion_conflicts)
                                       ? svn_hash_gets(
                                             db->parent_baton->deletion_conflicts,
                                             db->name)
@@ -2813,6 +2817,7 @@ close_directory(void *dir_baton,
 
   if (conflict_skel && eb->conflict_func)
     SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, db->local_abspath,
+                                             svn_node_dir,
                                              conflict_skel,
                                              NULL /* merge_options */,
                                              eb->conflict_func,
@@ -2998,6 +3003,7 @@ absent_node(const char *path,
       {
         if (eb->conflict_func)
           SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, local_abspath,
+                                                   kind,
                                                    tree_conflict,
                                                    NULL /* merge_options */,
                                                    eb->conflict_func,
@@ -3061,13 +3067,13 @@ add_file(const char *path,
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
   SVN_ERR(make_file_baton(&fb, pb, path, TRUE, pool));
-  SVN_ERR(calculate_repos_relpath(&fb->new_repos_relpath, fb->local_abspath,
-                                  NULL, eb, pb, fb->pool, pool));
   *file_baton = fb;
 
   if (fb->skip_this)
     return SVN_NO_ERROR;
 
+  SVN_ERR(calculate_repos_relpath(&fb->new_repos_relpath, fb->local_abspath,
+                                  NULL, eb, pb, fb->pool, pool));
   SVN_ERR(mark_file_edited(fb, pool));
 
   /* The file_pool can stick around for a *long* time, so we want to
@@ -3118,7 +3124,8 @@ add_file(const char *path,
       SVN_ERR_ASSERT(conflicted);
       versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
     }
-  else if (status == svn_wc__db_status_normal)
+  else if (status == svn_wc__db_status_normal
+           || status == svn_wc__db_status_incomplete)
     {
       svn_boolean_t root;
 
@@ -3545,14 +3552,22 @@ lazy_open_target(svn_stream_t **stream,
                  apr_pool_t *scratch_pool)
 {
   struct handler_baton *hb = baton;
+  svn_wc__db_install_data_t *install_data;
 
+  /* By convention return value is undefined on error, but we rely
+     on HB->INSTALL_DATA value in window_handler() and abort
+     INSTALL_STREAM if is not NULL on error.
+     So we store INSTALL_DATA to local variable first, to leave
+     HB->INSTALL_DATA unchanged on error. */
   SVN_ERR(svn_wc__db_pristine_prepare_install(stream,
-                                              &hb->install_data,
+                                              &install_data,
                                               &hb->new_text_base_sha1_checksum,
                                               NULL,
                                               hb->fb->edit_baton->db,
                                               hb->fb->dir_baton->local_abspath,
                                               result_pool, scratch_pool));
+
+  hb->install_data = install_data;
 
   return SVN_NO_ERROR;
 }
@@ -4536,6 +4551,7 @@ close_file(void *file_baton,
 
   if (conflict_skel && eb->conflict_func)
     SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, fb->local_abspath,
+                                             svn_node_file,
                                              conflict_skel,
                                              NULL /* merge_options */,
                                              eb->conflict_func,

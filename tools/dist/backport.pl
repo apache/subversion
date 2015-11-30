@@ -11,8 +11,10 @@ use v5.10.0; # needed for $^V
 #
 # As of Perl v5.20.1, the semantics of given/when provided by Perl are
 # compatible with those expected by the script, so disable the warning for
-# those Perls.
-no if $^V le v5.20.1, warnings => 'experimental::smartmatch';
+# those Perls.  But don't try to disable the the warning category on Perls
+# that don't know that category, since that breaks compilation.
+no if (v5.17.0 le $^V and $^V le v5.20.1),
+   warnings => 'experimental::smartmatch';
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -133,6 +135,39 @@ $SVNq = "$SVN -q ";
 $SVNq =~ s/-q// if $DEBUG;
 
 
+my $BACKPORT_OPTIONS_HELP = <<EOF;
+y:   Run a merge.  It will not be committed.
+     WARNING: This will run 'update' and 'revert -R ./'.
+l:   Show logs for the entries being nominated.
+v:   Show the full entry (the prompt only shows an abridged version).
+q:   Quit the "for each entry" loop.  If you have entered any votes or
+     approvals, you will be prompted to commit them.
+±1:  Enter a +1 or -1 vote
+     You will be prompted to commit your vote at the end.
+±0:  Enter a +0 or -0 vote
+     You will be prompted to commit your vote at the end.
+a:   Move the entry to the "Approved changes" section.
+     When both approving and voting on an entry, approve first: for example,
+     to enter a third +1 vote, type "a" "+" "1".
+e:   Edit the entry in \$EDITOR, which is '$EDITOR'.
+     You will be prompted to commit your edits at the end.
+N:   Move to the next entry.  Do not prompt for the current entry again, even
+     in future runs, unless the STATUS nomination has been modified (e.g.,
+     revisions added, justification changed) in the repository.
+     (This is a local action that will not affect other people or bots.)
+ :   Move to the next entry.  Prompt for the current entry again in the next
+     run of backport.pl. 
+     (That's a space character, ASCII 0x20.)
+?:   Display this list.
+EOF
+
+my $BACKPORT_OPTIONS_MERGE_OPTIONS_HELP = <<EOF;
+y:   Open a shell.
+d:   View a diff.
+N:   Move to the next entry.
+?:   Display this list.
+EOF
+
 sub backport_usage {
   my $basename = basename $0;
   print <<EOF;
@@ -162,30 +197,11 @@ sense of "match" is either substring (fgrep) or Perl regexp (with /msi).
 In interactive mode (the default), you will be prompted once per STATUS entry.
 At a prompt, you have the following options:
 
-y:   Run a merge.  It will not be committed.
-     WARNING: This will run 'update' and 'revert -R ./'.
-l:   Show logs for the entries being nominated.
-v:   Show the full entry (the prompt only shows an abridged version).
-q:   Quit the "for each nomination" loop.
-±1:  Enter a +1 or -1 vote
-     You will be prompted to commit your vote at the end.
-±0:  Enter a +0 or -0 vote
-     You will be prompted to commit your vote at the end.
-a:   Move the entry to the "Approved changes" section.
-     When both approving and voting on an entry, approve first: for example,
-     to enter a third +1 vote, type "a" "+" "1".
-e:   Edit the entry in $EDITOR.
-     You will be prompted to commit your edits at the end.
-N:   Move to the next entry.  Cache the entry in '$STATEFILE' and do not
-     prompt for it again (even across runs) until it is changed.
- :   Move to the next entry, without adding the current one to the cache.
-     (That's a space character, ASCII 0x20.)
+$BACKPORT_OPTIONS_HELP
 
 After running a merge, you have the following options:
 
-y:   Open a shell.
-d:   View a diff.
-N:   Move to the next entry.
+$BACKPORT_OPTIONS_MERGE_OPTIONS_HELP
 
 To commit a merge, you have two options: either answer 'y' to the second prompt
 to open a shell, and manually run 'svn commit' therein; or set \$MAY_COMMIT=1
@@ -229,7 +245,7 @@ sub nominate_usage {
   print <<EOF;
 nominate.pl: a tool for adding entries to STATUS.
 
-Usage: $0 "foo r42 bar r43 qux 45." "\$Some_justification"
+Usage: $0 "r42, r43, r45" "\$Some_justification"
 
 Will add:
  * r42, r43, r45
@@ -239,6 +255,15 @@ Will add:
    Votes:
      +1: $availid
 to STATUS.  Backport branches are detected automatically.
+
+The revisions argument may contain arbitrary text (besides the revision
+numbers); it will be ignored.  For example,
+    $0 "Committed revision 42." "\$Some_justification"
+will nominate r42.
+
+The justification can be an arbitrarily-long string; if it is wider than the
+available width, this script will wrap it for you (and allow you to review
+the result before committing).
 
 The STATUS file in the current directory is used (unless argv[0] is "n", in
 which case the STATUS file in the directory of argv[0] is used; the intent
@@ -415,7 +440,7 @@ fi
 $SVNq up
 $SVNq merge @mergeargs
 if [ "`$SVN status -q | wc -l`" -eq 1 ]; then
-  if [ -n "`$SVN diff | perl -lne 'print if s/^(Added|Deleted|Modified): //' | grep -vx svn:mergeinfo`" ]; then
+  if [ -z "`$SVN diff | perl -lne 'print if s/^(Added|Deleted|Modified): //' | grep -vx svn:mergeinfo`" ]; then
     # This check detects STATUS entries that name non-^/subversion/ revnums.
     # ### Q: What if we actually commit a mergeinfo fix to trunk and then want
     # ###    to backport it?
@@ -562,7 +587,7 @@ sub parse_entry {
   # summary
   do {
     push @logsummary, shift
-  } until $_[0] =~ /^\s*[][\w]+:/ or not defined $_[0];
+  } until $_[0] =~ /^\s*[A-Z][][\w]*:/ or not defined $_[0];
 
   # votes
   unshift @votes, pop until $_[-1] =~ /^\s*Votes:/ or not defined $_[-1];
@@ -749,7 +774,7 @@ sub vote {
         "Approve $_->{entry}->{header}."
       } @votesarray;
     (@sentences == 1)
-    ? $sentences[0]
+    ? "* STATUS: $sentences[0]"
     : "* STATUS:\n" . join "", map "  $_\n", @sentences;
   };
 
@@ -1015,13 +1040,13 @@ sub handle_entry {
     # See above for why the while(1).
     QUESTION: while (1) {
     my $key = $entry{digest};
-    given (prompt 'Run a merge? [y,l,v,±1,±0,q,e,a, ,N] ',
+    given (prompt 'Run a merge? [y,l,v,±1,±0,q,e,a, ,N,?] ',
                    verbose => 1, extra => qr/[+-]/) {
       when (/^y/i) {
-        #validate_branch_contains_named_revisions %entry;
+        # TODO: validate_branch_contains_named_revisions %entry;
         merge \%entry;
         while (1) {
-          given (prompt "Shall I open a subshell? [ydN] ", verbose => 1) {
+          given (prompt "Shall I open a subshell? [ydN?] ", verbose => 1) {
             when (/^y/i) {
               # TODO: if $MAY_COMMIT, save the log message to a file (say,
               #       backport.logmsg in the wcroot).
@@ -1031,6 +1056,10 @@ sub handle_entry {
             when (/^d/) {
               system("$SVN diff | $PAGER") == 0
                 or warn "diff failed ($?): $!";
+              next;
+            }
+            when (/^[?]/i) {
+              print $BACKPORT_OPTIONS_MERGE_OPTIONS_HELP;
               next;
             }
             when (/^N/i) {
@@ -1095,6 +1124,10 @@ sub handle_entry {
       }
       when (/^\x20/) {
         last PROMPT; # Fall off the end of the given/when block.
+      }
+      when (/^[?]/i) {
+        print $BACKPORT_OPTIONS_HELP;
+        next QUESTION;
       }
       default {
         say "Please use one of the options in brackets (q to quit)!";
@@ -1231,7 +1264,7 @@ sub nominate_main {
   }
 
   my @lines;
-  warn "Wrapping [$logmsg]\n";
+  warn "Wrapping [$logmsg]\n" if $DEBUG;
   push @lines, wrap " * ", ' 'x3, join ', ', map "r$_", @revnums;
   push @lines, wrap ' 'x3, ' 'x3, split /\n/, $logmsg;
   push @lines, "   Justification:";
@@ -1263,7 +1296,7 @@ sub nominate_main {
   # Done!
   system "$SVN diff -- $STATUS";
   if (prompt "Commit this nomination? ") {
-    system "$SVN commit -m 'Nominate r$revnums[0].' -- $STATUS";
+    system "$SVN commit -m '* STATUS: Nominate r$revnums[0].' -- $STATUS";
     exit $?;
   }
   elsif (!$had_local_mods or prompt "Revert STATUS (destroying local mods)? ") {

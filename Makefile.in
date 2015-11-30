@@ -500,17 +500,17 @@ clean-javahl:
 check-tigris-javahl: javahl-compat
 	@FIX_JAVAHL_LIB@
 	$(TEST_SHLIB_VAR_JAVAHL) \
-	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_compat_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
+	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_compat_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.cleanup=$(JAVAHL_CLEANUP)" "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
 
 check-apache-javahl: javahl
 	@FIX_JAVAHL_LIB@
 	$(TEST_SHLIB_VAR_JAVAHL) \
-	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.tests=$(JAVAHL_TESTS)" org.apache.subversion.javahl.RunTests
+	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.cleanup=$(JAVAHL_CLEANUP)" "-Dtest.tests=$(JAVAHL_TESTS)" org.apache.subversion.javahl.RunTests
 
 check-deprecated-authn-javahl: javahl
 	@FIX_JAVAHL_LIB@
 	$(TEST_SHLIB_VAR_JAVAHL) \
-	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.tests=$(JAVAHL_TESTS)" "-Dtest.authn.deprecated=true" org.apache.subversion.javahl.RunTests
+	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.cleanup=$(JAVAHL_CLEANUP)" "-Dtest.tests=$(JAVAHL_TESTS)" "-Dtest.authn.deprecated=true" org.apache.subversion.javahl.RunTests
 
 check-javahl: check-apache-javahl
 
@@ -521,7 +521,6 @@ check-all-javahl: check-apache-javahl check-tigris-javahl check-deprecated-authn
 #  will perform only basic tests (likewise for other tests).
 check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	@if test "$(PYTHON)" != "none"; then                                 \
-	  flags="--verbose";                                                 \
 	  if test "$(CLEANUP)" != ""; then                                   \
 	    flags="--cleanup $$flags";                                       \
 	  fi;                                                                \
@@ -558,6 +557,9 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(PARALLEL)" != ""; then                                  \
 	    flags="--parallel $(PARALLEL) $$flags";                          \
 	  fi;                                                                \
+	  if test "$(GLOBAL_SCHEDULER)" != ""; then                          \
+	    flags="--global-scheduler $$flags";                              \
+	  fi;                                                                \
 	  if test "$(LOG_TO_STDOUT)" != ""; then                             \
 	    flags="--log-to-stdout $$flags";                                 \
 	  fi;                                                                \
@@ -586,7 +588,7 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	            $$flags                                                  \
 	            '$(abs_srcdir)' '$(abs_builddir)' $(TESTS);              \
 	else                                                                 \
-	  echo "make check: Python 2.5 or greater is required,";             \
+	  echo "make check: Python 2.7 or greater is required,";             \
 	  echo "            but was not detected during configure";          \
 	  exit 1;                                                            \
 	fi;
@@ -851,7 +853,11 @@ swig-pl_DEPS = autogen-swig-pl libsvn_swig_perl \
   $(SWIG_PL_DIR)/native/Makefile
 swig-pl: $(swig-pl_DEPS)
 	if test "`$(READLINK_PL) $(SWIG_PL_DIR)`" != "`$(READLINK_PL) $(SWIG_PL_SRC_DIR)`"; then \
-	  ln -sf $(SWIG_PL_SRC_DIR)/native/*.c $(SWIG_PL_DIR)/native; \
+	  for f in $(SWIG_PL_SRC_DIR)/native/*.c ; do \
+	     if [ -e "$$f" ] ; then \
+	       ln -sf "$$f" $(SWIG_PL_DIR)/native; \
+	    fi; \
+	  done; \
 	fi
 	cd $(SWIG_PL_DIR)/native; $(MAKE) OPTIMIZE="" OTHERLDFLAGS="$(SWIG_LDFLAGS)"
 
@@ -920,13 +926,15 @@ swig-rb: autogen-swig-rb
 check-swig-rb: swig-rb svnserve
 	$(TEST_SHLIB_VAR_SWIG_RB) \
 	cd $(SWIG_RB_DIR); \
-          if [ "$(RUBY_MAJOR)" -eq 1 -a "$(RUBY_MINOR)" -lt 9 ] ; then \
-            $(RUBY) -I $(SWIG_RB_SRC_DIR) \
-              $(SWIG_RB_SRC_DIR)/test/run-test.rb \
-	      --verbose=$(SWIG_RB_TEST_VERBOSE); \
-          else \
-	    $(RUBY) -I $(SWIG_RB_SRC_DIR) \
-	      $(SWIG_RB_SRC_DIR)/test/run-test.rb; \
+	  check_rb() { \
+	    $(RUBY) -I $(SWIG_RB_SRC_DIR) $(SWIG_RB_SRC_DIR)/test/run-test.rb "$$@"; \
+	  }; \
+	  if check_rb --help 2>&1 | grep -q -- --collector; then \
+	    check_rb --collector=dir --verbose=$(SWIG_RB_TEST_VERBOSE); \
+	  elif [ "$(RUBY_MAJOR)" -eq 1 -a "$(RUBY_MINOR)" -lt 9 ] ; then \
+	    check_rb --verbose=$(SWIG_RB_TEST_VERBOSE); \
+	  else \
+	    check_rb; \
           fi
 
 EXTRACLEAN_SWIG_RB=rm -f $(SWIG_RB_SRC_DIR)/svn_*.c $(SWIG_RB_SRC_DIR)/core.c

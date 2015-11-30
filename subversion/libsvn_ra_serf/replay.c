@@ -427,10 +427,11 @@ replay_closed(svn_ra_serf__xml_estate_t *xes,
     {
       struct replay_node_t *node = ctx->current_node;
 
-      if (! node || ! node->file || ! node->stream)
+      if (! node || ! node->file)
         return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
 
-      SVN_ERR(svn_stream_close(node->stream));
+      if (node->stream)
+        SVN_ERR(svn_stream_close(node->stream));
 
       node->stream = NULL;
     }
@@ -565,10 +566,10 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, scratch_pool));
 
-  return svn_error_trace(
-              svn_ra_serf__error_on_status(handler->sline,
-                                           handler->path,
-                                           handler->location));
+  if (handler->sline.code != 200)
+    SVN_ERR(svn_ra_serf__unexpected_status(handler));
+
+  return SVN_NO_ERROR;
 }
 
 /* The maximum number of outstanding requests at any time. When this
@@ -646,9 +647,28 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
   int active_reports = 0;
   const char *include_path;
   svn_boolean_t done;
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
+
+  if (session->http20) {
+      /* ### Auch... this doesn't work yet... 
+
+         This code relies on responses coming in in an exact order, while
+         http2 does everything to deliver responses as fast as possible.
+
+         With http/1.1 we were quite lucky that this worked, as serf doesn't
+         promise in order delivery.... (Please do not use authz with keys
+         that expire)
+
+         For now fall back to the legacy callback in libsvn_ra that is
+         used by all the other ra layers as workaround.
+
+         ### TODO: Optimize
+         */
+      return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+  }
 
   SVN_ERR(svn_ra_serf__report_resource(&report_target, session,
-                                       scratch_pool));
+                                       subpool));
 
   /* Prior to 1.8, mod_dav_svn expect to get replay REPORT requests
      aimed at the session URL.  But that's incorrect -- these reports
@@ -671,7 +691,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
     {
       SVN_ERR(svn_ra_serf__get_relative_path(&include_path,
                                              session->session_url.path,
-                                             session, scratch_pool));
+                                             session, subpool));
     }
   else
     {
@@ -689,7 +709,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
         {
           struct revision_report_t *rev_ctx;
           svn_ra_serf__handler_t *handler;
-          apr_pool_t *rev_pool = svn_pool_create(scratch_pool);
+          apr_pool_t *rev_pool = svn_pool_create(subpool);
           svn_ra_serf__xml_context_t *xmlctx;
           const char *replay_target;
 
@@ -756,6 +776,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           handler->path = replay_target;
           handler->body_delegate = create_replay_body;
           handler->body_delegate_baton = rev_ctx;
+          handler->body_type = "text/xml";
 
           handler->done_delegate = replay_done;
           handler->done_delegate_baton = rev_ctx;
@@ -769,13 +790,23 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
 
       /* Run the serf loop. */
       done = FALSE;
-      SVN_ERR(svn_ra_serf__context_run_wait(&done, session, scratch_pool));
+      {
+        svn_error_t *err = svn_ra_serf__context_run_wait(&done, session,
+                                                         subpool);
+
+        if (err)
+          {
+            svn_pool_destroy(subpool); /* Unregister all requests! */
+            return svn_error_trace(err);
+          }
+      }
 
       /* The done handler of reports decrements active_reports when a report
          is done. This same handler reports (fatal) report errors, so we can
          just loop here. */
     }
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 #undef MAX_OUTSTANDING_REQUESTS

@@ -82,6 +82,8 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  const char *recorded_url,
                                  const svn_opt_revision_t *recorded_peg_rev,
                                  const svn_opt_revision_t *recorded_rev,
+                                 svn_wc_conflict_resolver_func2_t conflict_func,
+                                 void *conflict_baton,
                                  svn_cancel_func_t cancel_func,
                                  void *cancel_baton,
                                  svn_wc_notify_func2_t notify_func,
@@ -1846,6 +1848,17 @@ svn_wc__diff7(const char **root_relpath,
               void *cancel_baton,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool);
+
+/**
+ * Read all conflicts at LOCAL_ABSPATH into an array containing pointers to
+ * svn_wc_conflict_description2_t data structures alloated in RESULT_POOL.
+ */
+svn_error_t *
+svn_wc__read_conflict_descriptions2_t(const apr_array_header_t **conflicts,
+                                      svn_wc_context_t *wc_ctx,
+                                      const char *local_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

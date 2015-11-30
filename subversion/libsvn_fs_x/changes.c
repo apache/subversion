@@ -222,7 +222,7 @@ svn_error_t *
 svn_fs_x__changes_get_list(apr_array_header_t **list,
                            const svn_fs_x__changes_t *changes,
                            apr_size_t idx,
-                           apr_pool_t *pool)
+                           apr_pool_t *result_pool)
 {
   int first;
   int last;
@@ -235,7 +235,7 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
   /* validate index */
   if (idx + 1 >= (apr_size_t)changes->offsets->nelts)
     return svn_error_createf(SVN_ERR_FS_CONTAINER_INDEX, NULL,
-                             apr_psprintf(pool,
+                             apr_psprintf(result_pool,
                                           _("Changes list index %%%s"
                                             " exceeds container size %%d"),
                                           APR_SIZE_T_FMT),
@@ -246,18 +246,19 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
   last = APR_ARRAY_IDX(changes->offsets, (int)idx + 1, int);
 
   /* construct result */
-  *list = apr_array_make(pool, last - first, sizeof(svn_fs_x__change_t*));
+  *list = apr_array_make(result_pool, last - first,
+                         sizeof(svn_fs_x__change_t*));
   for (i = first; i < last; ++i)
     {
       const binary_change_t *binary_change
         = &APR_ARRAY_IDX(changes->changes, i, binary_change_t);
 
       /* convert BINARY_CHANGE into a standard FSX svn_fs_x__change_t */
-      svn_fs_x__change_t *change = apr_pcalloc(pool, sizeof(*change));
+      svn_fs_x__change_t *change = apr_pcalloc(result_pool, sizeof(*change));
       change->path.data = svn_fs_x__string_table_get(changes->paths,
                                                      binary_change->path,
                                                      &change->path.len,
-                                                     pool);
+                                                     result_pool);
 
       if (binary_change->noderev_id.change_set != SVN_FS_X__INVALID_CHANGE_SET)
         change->noderev_id = binary_change->noderev_id;
@@ -276,7 +277,7 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
           = svn_fs_x__string_table_get(changes->paths,
                                         binary_change->copyfrom_path,
                                         NULL,
-                                        pool);
+                                        result_pool);
 
       /* add it to the result */
       APR_ARRAY_PUSH(*list, svn_fs_x__change_t*) = change;
@@ -437,14 +438,14 @@ svn_error_t *
 svn_fs_x__deserialize_changes_container(void **out,
                                          void *data,
                                          apr_size_t data_len,
-                                         apr_pool_t *pool)
+                                         apr_pool_t *result_pool)
 {
   svn_fs_x__changes_t *changes = (svn_fs_x__changes_t *)data;
 
   /* de-serialize sub-structures */
   svn_fs_x__deserialize_string_table(changes, &changes->paths);
-  svn_fs_x__deserialize_apr_array(changes, &changes->changes, pool);
-  svn_fs_x__deserialize_apr_array(changes, &changes->offsets, pool);
+  svn_fs_x__deserialize_apr_array(changes, &changes->changes, result_pool);
+  svn_fs_x__deserialize_apr_array(changes, &changes->offsets, result_pool);
 
   /* done */
   *out = changes;

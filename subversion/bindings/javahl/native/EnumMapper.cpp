@@ -37,13 +37,13 @@ jobject EnumMapper::mapChangePathAction(const char action)
   switch (action)
     {
       case 'A':
-        return mapEnum(JAVA_PACKAGE"/types/ChangePath$Action", 0);
+        return mapEnum(JAVAHL_CLASS("/types/ChangePath$Action"), 0);
       case 'D':
-        return mapEnum(JAVA_PACKAGE"/types/ChangePath$Action", 1);
+        return mapEnum(JAVAHL_CLASS("/types/ChangePath$Action"), 1);
       case 'R':
-        return mapEnum(JAVA_PACKAGE"/types/ChangePath$Action", 2);
+        return mapEnum(JAVAHL_CLASS("/types/ChangePath$Action"), 2);
       case 'M':
-        return mapEnum(JAVA_PACKAGE"/types/ChangePath$Action", 3);
+        return mapEnum(JAVAHL_CLASS("/types/ChangePath$Action"), 3);
       default:
         return NULL;
     }
@@ -55,7 +55,7 @@ jobject EnumMapper::mapChangePathAction(const char action)
 jobject EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/ClientNotifyInformation$Status",
+  return mapEnum(JAVAHL_CLASS("/ClientNotifyInformation$Status"),
                  static_cast<int>(state));
 }
 
@@ -65,14 +65,14 @@ jobject EnumMapper::mapNotifyState(svn_wc_notify_state_t state)
 jobject EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/ClientNotifyInformation$Action",
+  return mapEnum(JAVAHL_CLASS("/ClientNotifyInformation$Action"),
                  static_cast<int>(action));
 }
 
 jobject EnumMapper::mapReposNotifyNodeAction(svn_node_action action)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/ReposNotifyInformation$NodeAction",
+  return mapEnum(JAVAHL_CLASS("/ReposNotifyInformation$NodeAction"),
                  static_cast<int>(action));
 }
 
@@ -82,7 +82,7 @@ jobject EnumMapper::mapReposNotifyNodeAction(svn_node_action action)
 jobject EnumMapper::mapReposNotifyAction(svn_repos_notify_action_t action)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/ReposNotifyInformation$Action",
+  return mapEnum(JAVAHL_CLASS("/ReposNotifyInformation$Action"),
                  static_cast<int>(action));
 }
 
@@ -92,7 +92,7 @@ jobject EnumMapper::mapReposNotifyAction(svn_repos_notify_action_t action)
 jobject EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/types/NodeKind",
+  return mapEnum(JAVAHL_CLASS("/types/NodeKind"),
                  static_cast<int>(nodeKind));
 }
 
@@ -102,7 +102,7 @@ jobject EnumMapper::mapNodeKind(svn_node_kind_t nodeKind)
 jobject EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/ClientNotifyInformation$LockStatus",
+  return mapEnum(JAVAHL_CLASS("/ClientNotifyInformation$LockStatus"),
                  static_cast<int>(state));
 }
 
@@ -112,7 +112,7 @@ jobject EnumMapper::mapNotifyLockState(svn_wc_notify_lock_state_t state)
 jobject EnumMapper::mapScheduleKind(svn_wc_schedule_t schedule)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/types/Info$ScheduleKind",
+  return mapEnum(JAVAHL_CLASS("/types/Info$ScheduleKind"),
                  static_cast<int>(schedule));
 }
 
@@ -123,63 +123,63 @@ jobject EnumMapper::mapStatusKind(svn_wc_status_kind svnKind)
 {
   // We're assuming a valid value for the C enum above
   // The offset here is +1
-  return mapEnum(JAVA_PACKAGE"/types/Status$Kind",
+  return mapEnum(JAVAHL_CLASS("/types/Status$Kind"),
                  static_cast<int>(svnKind) - 1);
 }
 
 jobject EnumMapper::mapChecksumKind(svn_checksum_kind_t kind)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/types/Checksum$Kind",
+  return mapEnum(JAVAHL_CLASS("/types/Checksum$Kind"),
                  static_cast<int>(kind));
 }
 
 jobject EnumMapper::mapConflictKind(svn_wc_conflict_kind_t kind)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Kind",
+  return mapEnum(JAVAHL_CLASS("/ConflictDescriptor$Kind"),
                  static_cast<int>(kind));
 }
 
 jobject EnumMapper::mapConflictAction(svn_wc_conflict_action_t action)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Action",
+  return mapEnum(JAVAHL_CLASS("/ConflictDescriptor$Action"),
                  static_cast<int>(action));
 }
 
 jobject EnumMapper::mapConflictReason(svn_wc_conflict_reason_t reason)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Reason",
+  return mapEnum(JAVAHL_CLASS("/ConflictDescriptor$Reason"),
                  static_cast<int>(reason));
 }
 
 int EnumMapper::toMergeinfoLogKind(jobject jLogKind)
 {
-  return getOrdinal(JAVA_PACKAGE"/types/Mergeinfo$LogKind", jLogKind);
+  return getOrdinal(JAVAHL_CLASS("/types/Mergeinfo$LogKind"), jLogKind);
 }
 
 int EnumMapper::toLogLevel(jobject jLogLevel)
 {
-  return getOrdinal(JAVA_PACKAGE"/SVNClient$ClientLogLevel", jLogLevel);
+  return getOrdinal(JAVAHL_CLASS("/SVNClient$ClientLogLevel"), jLogLevel);
 }
 
 svn_node_kind_t EnumMapper::toNodeKind(jobject jNodeKind)
 {
   return svn_node_kind_t(
-      getOrdinal(JAVA_PACKAGE"/types/NodeKind", jNodeKind));
+      getOrdinal(JAVAHL_CLASS("/types/NodeKind"), jNodeKind));
 }
 
 svn_checksum_kind_t EnumMapper::toChecksumKind(jobject jChecksumKind)
 {
   return svn_checksum_kind_t(
-      getOrdinal(JAVA_PACKAGE"/types/Checksum$Kind", jChecksumKind));
+      getOrdinal(JAVAHL_CLASS("/types/Checksum$Kind"), jChecksumKind));
 }
 
 svn_tristate_t EnumMapper::toTristate(jobject jTristate)
 {
-  switch (getOrdinal(JAVA_PACKAGE"/types/Tristate", jTristate))
+  switch (getOrdinal(JAVAHL_CLASS("/types/Tristate"), jTristate))
     {
     case 1: return svn_tristate_false;
     case 2: return svn_tristate_true;
@@ -190,14 +190,14 @@ svn_tristate_t EnumMapper::toTristate(jobject jTristate)
 svn_depth_t EnumMapper::toDepth(jobject jdepth)
 {
   // The offset for depths is -2
-  return static_cast<svn_depth_t>(getOrdinal(JAVA_PACKAGE"/types/Depth", jdepth) - 2);
+  return static_cast<svn_depth_t>(getOrdinal(JAVAHL_CLASS("/types/Depth"), jdepth) - 2);
 }
 
 svn_mergeinfo_inheritance_t
 EnumMapper::toMergeinfoInheritance(jobject jInheritance)
 {
   return static_cast<svn_mergeinfo_inheritance_t>(
-      getOrdinal(JAVA_PACKAGE"/types/Mergeinfo$Inheritance", jInheritance));
+      getOrdinal(JAVAHL_CLASS("/types/Mergeinfo$Inheritance"), jInheritance));
 }
 
 
@@ -205,39 +205,39 @@ jobject EnumMapper::mapDepth(svn_depth_t depth)
 {
   // We're assuming a valid value for the C enum above
   // The offset for depths is -2
-  return mapEnum(JAVA_PACKAGE"/types/Depth", static_cast<int>(depth) + 2);
+  return mapEnum(JAVAHL_CLASS("/types/Depth"), static_cast<int>(depth) + 2);
 }
 
 jobject EnumMapper::mapOperation(svn_wc_operation_t operation)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/ConflictDescriptor$Operation",
+  return mapEnum(JAVAHL_CLASS("/ConflictDescriptor$Operation"),
                  static_cast<int>(operation));
 }
 
 jobject EnumMapper::mapTristate(svn_tristate_t tristate)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/types/Tristate",
+  return mapEnum(JAVAHL_CLASS("/types/Tristate"),
                  static_cast<int>(tristate - svn_tristate_false));
 }
 
 svn_wc_conflict_choice_t EnumMapper::toConflictChoice(jobject jchoice)
 {
   return static_cast<svn_wc_conflict_choice_t>
-             (getOrdinal(JAVA_PACKAGE"/ConflictResult$Choice", jchoice));
+             (getOrdinal(JAVAHL_CLASS("/ConflictResult$Choice"), jchoice));
 }
 
 svn_opt_revision_kind EnumMapper::toRevisionKind(jobject jkind)
 {
   return static_cast<svn_opt_revision_kind>
-             (getOrdinal(JAVA_PACKAGE"/types/Revision$Kind", jkind));
+             (getOrdinal(JAVAHL_CLASS("/types/Revision$Kind"), jkind));
 }
 
 jobject EnumMapper::mapSummarizeKind(svn_client_diff_summarize_kind_t sKind)
 {
   // We're assuming a valid value for the C enum above
-  return mapEnum(JAVA_PACKAGE"/DiffSummary$DiffKind",
+  return mapEnum(JAVAHL_CLASS("/DiffSummary$DiffKind"),
                  static_cast<int>(sKind));
 }
 

@@ -117,8 +117,9 @@ fuzzing_1_byte_1_rev(const char *repo_name,
       svn_fs_set_warning_func(svn_repos_fs(repos), dont_filter_warnings, NULL);
 
       /* This shall detect the corruption and return an error. */
-      err = svn_repos_verify_fs3(repos, revision, revision, TRUE, FALSE, FALSE,
-                                 NULL, NULL, NULL, NULL, iterpool);
+      err = svn_repos_verify_fs3(repos, revision, revision, FALSE, FALSE,
+                                 NULL, NULL, NULL, NULL, NULL, NULL,
+                                 iterpool);
 
       /* Case-only changes in checksum digests are not an error.
        * We allow upper case chars to be used in MD5 checksums in all other

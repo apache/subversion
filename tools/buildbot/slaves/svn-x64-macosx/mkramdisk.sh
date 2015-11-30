@@ -53,7 +53,7 @@ mount | grep "^/dev/disk[0-9][0-9]* on ${volume} (hfs" >/dev/null || {
 
     # Make sure we strip trailing spaces from the result of older
     # versions of hduitil.
-    device=$(echo $(hdiutil attach -nomount ram://900000))
+    device=$(echo $(hdiutil attach -nomount ram://1000000))
     newfs_hfs -M 0700 -v "$1" "${device}"
     hdiutil mountvol "${device}"
 

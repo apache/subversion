@@ -27,6 +27,6 @@
 namespace JavaHL {
 
 const char* const SubversionException::m_class_name =
-  JAVA_PACKAGE"/SubversionException";
+  JAVAHL_CLASS("/SubversionException");
 
 } // namespace JavaHL

@@ -1859,11 +1859,11 @@ typedef struct svn_wc_conflict_description2_t
   /** Info on the "merge-right source" or "their" version of incoming change. */
   const svn_wc_conflict_version_t *src_right_version;
 
-  /* For property conflicts, the absolute path to the .prej file.
+  /** For property conflicts, the absolute path to the .prej file.
    * @since New in 1.9. */
   const char *prop_reject_abspath;
 
-  /* For property conflicts, the local base value of the property, i.e. the
+  /** For property conflicts, the local base value of the property, i.e. the
    * value of the property as of the BASE revision of the working copy.
    * For conflicts created during update/switch this contains the
    * post-update/switch property value. The pre-update/switch value can
@@ -1872,20 +1872,20 @@ typedef struct svn_wc_conflict_description2_t
    * @since New in 1.9. */
   const svn_string_t *prop_value_base;
 
-  /* For property conflicts, the local working value of the property,
+  /** For property conflicts, the local working value of the property,
    * i.e. the value of the property in the working copy, possibly with
    * local modiciations.
    * Only set if available, so might be @c NULL.
    * @since New in 1.9. */
   const svn_string_t *prop_value_working;
 
-  /* For property conflicts, the incoming old value of the property,
+  /** For property conflicts, the incoming old value of the property,
    * i.e. the value the property had at @c src_left_version.
    * Only set if available, so might be @c NULL.
    * @since New in 1.9 */
   const svn_string_t *prop_value_incoming_old;
 
-  /* For property conflicts, the incoming new value of the property,
+  /** For property conflicts, the incoming new value of the property,
    * i.e. the value the property had at @c src_right_version.
    * Only set if available, so might be @c NULL.
    * @since New in 1.9 */
@@ -1911,8 +1911,9 @@ typedef struct svn_wc_conflict_description_t
   /** The path that is in conflict (for a tree conflict, it is the victim) */
   const char *path;
 
-  /** The node type of the path being operated on (for a tree conflict,
-   *  ### which version?) */
+  /** The local node type of the path being operated on (for a tree conflict,
+   *  this specifies the local node kind, which may be (and typically is)
+   *  different than the left and right kind) */
   svn_node_kind_t node_kind;
 
   /** What sort of conflict are we describing? */
@@ -2063,7 +2064,7 @@ svn_wc_conflict_description_create_prop(const char *path,
  *
  * Set the @c local_abspath field of the created struct to @a local_abspath
  * (which must be an absolute path), the @c kind field to
- * #svn_wc_conflict_kind_tree, the @c local_node_kind to @a local_node_kind,
+ * #svn_wc_conflict_kind_tree, the @c node_kind to @a node_kind,
  * the @c operation to @a operation, the @c src_left_version field to
  * @a src_left_version, and the @c src_right_version field to
  * @a src_right_version.
@@ -2104,7 +2105,7 @@ svn_wc_conflict_description_create_tree(
 /** Return a duplicate of @a conflict, allocated in @a result_pool.
  * A deep copy of all members will be made.
  *
- * @since New in 1.7.
+ * @since New in 1.9.
  */
 svn_wc_conflict_description2_t *
 svn_wc_conflict_description2_dup(
@@ -2131,8 +2132,11 @@ svn_wc__conflict_description2_dup(
  */
 typedef enum svn_wc_conflict_choice_t
 {
-  /** Undefined; for internal use only.
-      This value is never returned in svn_wc_conflict_result_t.
+  /** Undefined; for private use only.
+      This value must never be returned in svn_wc_conflict_result_t,
+      but a separate value, unequal to all other pre-defined values may
+      be useful in conflict resolver implementations to signal that no
+      choice is made yet.
    * @since New in 1.9
    */
   svn_wc_conflict_choose_undefined = -1,
@@ -3836,8 +3840,8 @@ typedef struct svn_wc_status3_t
   svn_boolean_t file_external;
 
 
-  /** The actual kind of the node in the working copy. May differ from kind
-   * on obstructions, deletes, etc. svn_node_unknown if unavailable.
+  /** The actual kind of the node in the working copy. May differ from
+   * @a kind on obstructions, deletes, etc. #svn_node_unknown if unavailable.
    *
    * @since New in 1.9 */
   svn_node_kind_t actual_kind;
@@ -4657,6 +4661,9 @@ svn_wc_delete(const char *path,
  * If @a local_abspath does not exist as file, directory or symlink, return
  * #SVN_ERR_WC_PATH_NOT_FOUND.
  *
+ * If @a notify_func is non-NULL, invoke it with @a notify_baton to report
+ * the item being added.
+ *
  * ### TODO: Split into add_dir, add_file, add_symlink?
  *
  * @since New in 1.9.
@@ -4672,7 +4679,7 @@ svn_wc_add_from_disk3(svn_wc_context_t *wc_ctx,
 
 /**
  * Similar to svn_wc_add_from_disk3(), but always passes FALSE for
- * @a skip_som_prop_canon
+ * @a skip_checks
  *
  * @since New in 1.8.
  * @deprecated Provided for backward compatibility with the 1.8 API.
@@ -7303,6 +7310,12 @@ svn_wc_get_pristine_copy_path(const char *path,
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
  * points during the operation.  If it returns an error (typically
  * #SVN_ERR_CANCELLED), return that error immediately.
+ *
+ * If @a notify_func is non-NULL, invoke it with @a notify_baton to report
+ * the progress of the operation.
+ *
+ * @note In 1.9, @a notify_func does not get called at all.  This may change
+ * in later releases.
  *
  * @since New in 1.9.
  */

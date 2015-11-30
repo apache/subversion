@@ -860,7 +860,6 @@ svn_utf_string_from_utf8(const svn_string_t **dest,
                          const svn_string_t *src,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *dbuf;
   xlate_handle_node_t *node;
   svn_error_t *err;
 
@@ -870,10 +869,15 @@ svn_utf_string_from_utf8(const svn_string_t **dest,
     {
       err = check_utf8(src->data, src->len, pool);
       if (! err)
-        err = convert_to_stringbuf(node, src->data, src->len,
-                                   &dbuf, pool);
-      if (! err)
-        *dest = svn_stringbuf__morph_into_string(dbuf);
+        {
+          svn_stringbuf_t *dbuf;
+
+          err = convert_to_stringbuf(node, src->data, src->len,
+                                     &dbuf, pool);
+
+          if (! err)
+            *dest = svn_stringbuf__morph_into_string(dbuf);
+        }
     }
   else
     {
@@ -991,7 +995,6 @@ svn_utf_cstring_from_utf8_string(const char **dest,
                                  const svn_string_t *src,
                                  apr_pool_t *pool)
 {
-  svn_stringbuf_t *dbuf;
   xlate_handle_node_t *node;
   svn_error_t *err;
 
@@ -1001,10 +1004,14 @@ svn_utf_cstring_from_utf8_string(const char **dest,
     {
       err = check_utf8(src->data, src->len, pool);
       if (! err)
-        err = convert_to_stringbuf(node, src->data, src->len,
-                                   &dbuf, pool);
-      if (! err)
-        *dest = dbuf->data;
+        {
+          svn_stringbuf_t *dbuf;
+
+          err = convert_to_stringbuf(node, src->data, src->len,
+                                     &dbuf, pool);
+          if (! err)
+            *dest = dbuf->data;
+        }
     }
   else
     {

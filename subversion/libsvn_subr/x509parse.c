@@ -685,12 +685,13 @@ x509_get_ext(apr_array_header_t *dnsnames,
                   *p += len;
                   continue;
                 }
+
+              return svn_error_trace(err);
             }
           else
             {
               /* We found a dNSName entry */
-              x509_buf *dnsname = apr_palloc(dnsnames->pool,
-                                             sizeof(x509_buf));
+              x509_buf *dnsname = apr_palloc(dnsnames->pool, sizeof(*dnsname));
               dnsname->tag = ASN1_IA5_STRING; /* implicit based on dNSName */
               dnsname->len = len;
               dnsname->p = *p;
@@ -917,8 +918,7 @@ x509_name_to_certinfo(apr_array_header_t **result,
     svn_x509_name_attr_t *attr = apr_palloc(result_pool, sizeof(svn_x509_name_attr_t));
 
     attr->oid_len = name->oid.len;
-    attr->oid = apr_palloc(result_pool, attr->oid_len);
-    memcpy(attr->oid, name->oid.p, attr->oid_len);
+    attr->oid = apr_pmemdup(result_pool, name->oid.p, attr->oid_len);
     attr->utf8_value = x509name_to_utf8_string(name, result_pool);
     if (!attr->utf8_value)
       /* this should never happen */
@@ -1052,7 +1052,7 @@ svn_x509_parse_cert(svn_x509_certinfo_t **certinfo,
    */
   err = asn1_get_tag(&p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
   if (err)
-    return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, NULL, NULL);
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_FORMAT, err, NULL);
 
   if (len != (end - p))
     {

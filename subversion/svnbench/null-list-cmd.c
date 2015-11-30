@@ -48,6 +48,12 @@ struct print_baton {
   svn_client_ctx_t *ctx;
 };
 
+/* Field flags required for this function */
+static const apr_uint32_t print_dirent_fields = SVN_DIRENT_KIND;
+static const apr_uint32_t print_dirent_fields_verbose = (
+    SVN_DIRENT_KIND  | SVN_DIRENT_SIZE | SVN_DIRENT_TIME |
+    SVN_DIRENT_CREATED_REV | SVN_DIRENT_LAST_AUTHOR);
+
 /* This implements the svn_client_list_func2_t API, printing a single
    directory entry in text format. */
 static svn_error_t *
@@ -100,9 +106,9 @@ svn_cl__null_list(apr_getopt_t *os,
   svn_opt_push_implicit_dot_target(targets, pool);
 
   if (opt_state->verbose)
-    dirent_fields = SVN_DIRENT_ALL;
+    dirent_fields = print_dirent_fields_verbose;
   else
-    dirent_fields = SVN_DIRENT_KIND; /* the only thing we actually need... */
+    dirent_fields = print_dirent_fields;
 
   pb.ctx = ctx;
   pb.verbose = opt_state->verbose;

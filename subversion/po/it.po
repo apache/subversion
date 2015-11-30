@@ -10134,7 +10134,7 @@ msgstr ""
 #: ../svn/propedit-cmd.c:158
 #, c-format
 msgid "Set new value for property '%s' on revision %ld\n"
-msgstr "Impostazione di un nuovo volore per la proprietà '%s' nella revisione %ld\n"
+msgstr "Impostazione di un nuovo valore per la proprietà '%s' nella revisione %ld\n"
 
 #: ../svn/propedit-cmd.c:164
 #, c-format
@@ -10286,13 +10286,11 @@ msgid "local %s, incoming %s upon %s"
 msgstr ""
 
 #: ../svn/util.c:74
-#, fuzzy, c-format
+#, c-format
 msgid ""
-"\n"
 "Committed revision %ld%s.\n"
 msgstr ""
-"\n"
-"Commit della Revisione %ld eseguito.\n"
+"Commit della Revisione %ld%s eseguito.\n"
 
 #: ../svn/util.c:78
 msgid " (the answer to life, the universe, and everything)"

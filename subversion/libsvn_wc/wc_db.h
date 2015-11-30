@@ -1644,7 +1644,12 @@ svn_wc__db_op_mark_conflict(svn_wc__db_t *db,
                             apr_pool_t *scratch_pool);
 
 
-/* ### caller maintains ACTUAL, and how the resolution occurred. we're just
+/* Clear all or some of the conflicts stored on LOCAL_ABSPATH, if any.
+
+   Any work items that are necessary as part of resolving this node
+   can be passed in WORK_ITEMS.
+
+### caller maintains ACTUAL, and how the resolution occurred. we're just
    ### recording state.
    ###
    ### I'm not sure that these three values are the best way to do this,
@@ -2364,7 +2369,9 @@ svn_wc__db_get_conflict_marker_files(apr_hash_t **markers,
 
 /* Read the conflict information recorded on LOCAL_ABSPATH in *CONFLICT,
    an editable conflict skel. If kind is not NULL, also read the node kind
-   in *KIND. (SHOW_HIDDEN: false, SHOW_DELETED: true)
+   in *KIND. (SHOW_HIDDEN: false, SHOW_DELETED: true). If props is not NULL
+   read the actual properties in this value if they exist. (Set to NULL in case
+   the node is deleted, etc.)
 
    If the node exists, but does not have a conflict set *CONFLICT to NULL,
    otherwise return a SVN_ERR_WC_PATH_NOT_FOUND error.
@@ -2374,6 +2381,7 @@ svn_wc__db_get_conflict_marker_files(apr_hash_t **markers,
 svn_error_t *
 svn_wc__db_read_conflict(svn_skel_t **conflict,
                          svn_node_kind_t *kind,
+                         apr_hash_t **props,
                          svn_wc__db_t *db,
                          const char *local_abspath,
                          apr_pool_t *result_pool,

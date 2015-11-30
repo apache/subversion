@@ -131,6 +131,22 @@ extern "C" {
           tst_str2, tst_str1, __FILE__, __LINE__);                  \
   } while(0)
 
+ /** Handy macro for testing integer equality.
+  */
+#define SVN_TEST_INT_ASSERT(expr, expected_expr)                  \
+  do {                                                            \
+    apr_int64_t tst_int1 = (expr);                                \
+    apr_int64_t tst_int2 = (expected_expr);                       \
+                                                                  \
+    if (tst_int1 != tst_int2)                                     \
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,         \
+          "Integers not equal\n"                                  \
+          "  Expected: %" APR_INT64_T_FMT "\n"                    \
+          "     Found: %" APR_INT64_T_FMT "\n"                    \
+          "  at %s:%d",                                           \
+          tst_int2, tst_int1, __FILE__, __LINE__);                \
+  } while(0)
+
 
 /* Baton for any arguments that need to be passed from main() to svn
  * test functions.
@@ -149,6 +165,8 @@ typedef struct svn_test_opts_t
   const char *repos_dir;
   /* Repository url: The url to access REPOS_DIR as */
   const char *repos_url;
+  /* Memcached server. */
+  const char *memcached_server;
   /* Repository template: pre-created repository to copy for tests */
   const char *repos_template;
   /* Minor version to use for servers and FS backends, or zero to use

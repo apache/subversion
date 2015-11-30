@@ -412,6 +412,9 @@ typedef enum svn_diff_conflict_display_style_t
 /** Given a vtable of @a output_fns/@a output_baton for consuming
  * differences, output the differences in @a diff.
  *
+ * If not @c NULL, call @a cancel_func with @a cancel_baton once or multiple
+ * times while processing larger diffs.
+ *
  * @since New in 1.9.
  */
 svn_error_t *
@@ -628,6 +631,9 @@ svn_diff_file_diff4(svn_diff_t **diff,
  * will be used in the generated diff output. Otherwise the legacy compile
  * time default will be used.
  *
+ * If not @c NULL, call @a cancel_func with @a cancel_baton once or multiple
+ * times while processing larger diffs.
+ *
  * @since New in 1.9.
  */
 svn_error_t *
@@ -645,7 +651,7 @@ svn_diff_file_output_unified4(svn_stream_t *output_stream,
                               void *cancel_baton,
                               apr_pool_t *scratch_pool);
 
-/** Similar to svn_diff_file_output_unified3(), but without cancel
+/** Similar to svn_diff_file_output_unified4(), but without cancel
  * support and with @a context_size set to -1.
  *
  * @since New in 1.5.
@@ -705,7 +711,11 @@ svn_diff_file_output_unified(svn_stream_t *output_stream,
  * @a conflict_latest to be displayed as conflict markers in the output.
  * If @a conflict_original, @a conflict_modified, @a conflict_latest and/or
  * @a conflict_separator is @c NULL, a default marker will be displayed.
- * @a conflict_style dictates how conflicts are displayed.
+ * @a conflict_style dictates how conflicts are displayed. 
+ * Uses @a scratch_pool for temporary allocations.
+ *
+ * If not @c NULL, call @a cancel_func with @a cancel_baton once or multiple
+ * times while processing larger diffs.
  *
  * @since New in 1.9.
  */
@@ -722,7 +732,7 @@ svn_diff_file_output_merge3(svn_stream_t *output_stream,
                             svn_diff_conflict_display_style_t conflict_style,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
-                            apr_pool_t *pool);
+                            apr_pool_t *scratch_pool);
 
 /** Similar to svn_diff_file_output_merge3, but without cancel support.
  *
@@ -782,7 +792,10 @@ svn_diff_file_output_merge(svn_stream_t *output_stream,
  * Either @a original or @a latest may be NULL to describe that the version
  * didn't exist.
  *
- * Writes the ouput to @a output_stream.
+ * Writes the output to @a output_stream.
+ *
+ * If not @c NULL, call @a cancel_func with @a cancel_baton once or multiple
+ * times while processing larger diffs.
  *
  * @since New in 1.9.
  */
@@ -858,6 +871,11 @@ svn_diff_mem_string_diff4(svn_diff_t **diff,
  * will be used in the generated diff output. Otherwise the legacy compile
  * time default will be used.
  *
+ * If not @c NULL, call @a cancel_func with @a cancel_baton once or multiple
+ * times while processing larger diffs.
+ *
+ * Uses @a scratch_pool for temporary allocations.
+ *
  * @since New in 1.9
  */
 svn_error_t *
@@ -873,7 +891,7 @@ svn_diff_mem_string_output_unified3(svn_stream_t *output_stream,
                                     int context_size,
                                     svn_cancel_func_t cancel_func,
                                     void *cancel_baton,
-                                    apr_pool_t *pool);
+                                    apr_pool_t *scratch_pool);
 
 /** Similar to svn_diff_mem_string_output_unified3() but without
  * cancel support and with @a context_size set to -1.
@@ -924,6 +942,11 @@ svn_diff_mem_string_output_unified(svn_stream_t *output_stream,
  *
  * @a conflict_style dictates how conflicts are displayed.
  *
+ * If not @c NULL, call @a cancel_func with @a cancel_baton once or multiple
+ * times while processing larger diffs.
+ *
+ * Uses @a scratch_pool for temporary allocations.
+ *
  * @since New in 1.9.
  */
 svn_error_t *
@@ -939,7 +962,7 @@ svn_diff_mem_string_output_merge3(svn_stream_t *output_stream,
                                   svn_diff_conflict_display_style_t style,
                                   svn_cancel_func_t cancel_func,
                                   void *cancel_baton,
-                                  apr_pool_t *pool);
+                                  apr_pool_t *scratch_pool);
 
 /** Similar to svn_diff_mem_string_output_merge2(), but without cancel support.
  *
@@ -1189,6 +1212,39 @@ typedef struct svn_prop_patch_t {
 } svn_prop_patch_t;
 
 /**
+ * A binary patch representation. This basically describes replacing one
+ * exact binary representation with another one.
+ *
+ * @since New in 1.10. */
+typedef struct svn_diff_binary_patch_t svn_diff_binary_patch_t;
+
+/**
+ * Creates a stream allocated in @a result_pool from which the original
+ * (pre-patch-application) version of the binary patched file can be read.
+ *
+ * @note Like many svn_diff_get functions over patches, this is implemented
+ * as reading from the backing patch file. Therefore it is recommended to
+ * read the whole stream before using other functions on the same patch file.
+ *
+ * @since New in 1.10 */
+svn_stream_t *
+svn_diff_get_binary_diff_original_stream(const svn_diff_binary_patch_t *bpatch,
+                                         apr_pool_t *result_pool);
+
+/**
+ * Creates a stream allocated in @a result_pool from which the resulting
+ * (post-patch-application) version of the binary patched file can be read.
+ *
+ * @note Like many svn_diff_get functions over patches, this is implemented
+ * as reading from the backing patch file. Therefore it is recommended to
+ * read the whole stream before using other functions on the same patch file.
+ *
+ * @since New in 1.10 */
+svn_stream_t *
+svn_diff_get_binary_diff_result_stream(const svn_diff_binary_patch_t *bpatch,
+                                       apr_pool_t *result_pool);
+
+/**
  * Data type to manage parsing of patches.
  * API users should not allocate structures of this type directly.
  *
@@ -1226,6 +1282,45 @@ typedef struct svn_patch_t {
    * @since New in 1.9. */
   svn_mergeinfo_t mergeinfo;
   svn_mergeinfo_t reverse_mergeinfo;
+
+  /**
+   * Declares that there is a binary conflict and contains the information
+   * to apply it as parsed from the file.
+   * @since New in 1.10. */
+  svn_diff_binary_patch_t *binary_patch;
+
+  /** The old and new executability bits, as retrieved from the patch file, from
+   * the git-like mode headers.
+   *
+   * A patch may specify an executability change via @a old_executable_bit and
+   * @a new_executable_bit, via a #SVN_PROP_EXECUTABLE propchange hunk, or both
+   * ways. It is upto caller how to decide how conflicting information is
+   * handled.
+   *
+   * #svn_tristate_unknown indicates the patch does not specify the
+   * corresponding bit.
+   *
+   * @since New in 1.10.
+   */
+  svn_tristate_t old_executable_bit;
+  svn_tristate_t new_executable_bit;
+
+  /** The old and new symlink bits, as retrieved from the patch file, from
+  * the git-like mode headers.
+  *
+  * A patch may specify a symlink change via @a old_symlink_bit and
+  * @a new_symlink_bit, via a #SVN_PROP_SPECIAL propchange hunk, or both
+  * ways. It is upto caller how to decide how conflicting information is
+  * handled. Most implementations will currently just describe a replacement
+  * of the file though.
+  *
+  * #svn_tristate_unknown indicates the patch does not specify the
+  * corresponding bit.
+  *
+  * @since New in 1.10.
+  */
+  svn_tristate_t old_symlink_bit;
+  svn_tristate_t new_symlink_bit;
 } svn_patch_t;
 
 /** An opaque type representing an open patch file.

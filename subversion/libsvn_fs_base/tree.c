@@ -68,6 +68,7 @@
 #include "private/svn_fspath.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_sorts_private.h"
 
 
 /* ### I believe this constant will become internal to reps-strings.c.
@@ -1285,6 +1286,21 @@ base_node_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+base_node_has_props(svn_boolean_t *has_props,
+                    svn_fs_root_t *root,
+                    const char *path,
+                    apr_pool_t *scratch_pool)
+{
+  apr_hash_t *props;
+
+  SVN_ERR(base_node_proplist(&props, root, path, scratch_pool));
+
+  *has_props = (0 < apr_hash_count(props));
+
+  return SVN_NO_ERROR;
+}
+
 
 struct change_node_prop_args {
   svn_fs_root_t *root;
@@ -1608,13 +1624,15 @@ static svn_error_t *
 base_dir_optimal_order(apr_array_header_t **ordered_p,
                        svn_fs_root_t *root,
                        apr_hash_t *entries,
-                       apr_pool_t *pool)
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   /* 1:1 copy of entries with no differnce in ordering */
   apr_hash_index_t *hi;
-  apr_array_header_t *result = apr_array_make(pool, apr_hash_count(entries),
-                                              sizeof(svn_fs_dirent_t *));
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  apr_array_header_t *result
+    = apr_array_make(result_pool, apr_hash_count(entries),
+                     sizeof(svn_fs_dirent_t *));
+  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
     APR_ARRAY_PUSH(result, svn_fs_dirent_t *) = apr_hash_this_val(hi);
 
   *ordered_p = result;
@@ -2563,8 +2581,7 @@ verify_locks(const char *txn_name,
       apr_hash_this(hi, &key, NULL, NULL);
       APR_ARRAY_PUSH(changed_paths, const char *) = key;
     }
-  qsort(changed_paths->elts, changed_paths->nelts,
-        changed_paths->elt_size, svn_sort_compare_paths);
+  svn_sort__array(changed_paths, svn_sort_compare_paths);
 
   /* Now, traverse the array of changed paths, verify locks.  Note
      that if we need to do a recursive verification a path, we'll skip
@@ -3164,7 +3181,8 @@ txn_body_copy(void *baton,
   if ((to_parent_path->node)
       && (svn_fs_base__id_compare(svn_fs_base__dag_get_id(from_node),
                                   svn_fs_base__dag_get_id
-                                  (to_parent_path->node)) == svn_fs_node_same))
+                                  (to_parent_path->node))
+          == svn_fs_node_unchanged))
     return SVN_NO_ERROR;
 
   if (! from_root->is_txn_root)
@@ -5489,6 +5507,7 @@ static root_vtable_t root_vtable = {
   base_closest_copy,
   base_node_prop,
   base_node_proplist,
+  base_node_has_props,
   base_change_node_prop,
   base_props_changed,
   base_dir_entries,

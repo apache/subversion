@@ -535,7 +535,7 @@ svn_wc__wipe_postupgrade(const char *dir_abspath,
   int i;
 
   if (cancel_func)
-    SVN_ERR((*cancel_func)(cancel_baton));
+    SVN_ERR(cancel_func(cancel_baton));
 
   err = get_versioned_subdirs(&subdirs, &delete_dir, dir_abspath, TRUE,
                               scratch_pool, iterpool);
@@ -1434,7 +1434,7 @@ rename_pristine_file(void *baton,
       const char *new_abspath
         = apr_pstrcat(pool, abspath, PRISTINE_STORAGE_EXT, SVN_VA_NULL);
 
-      SVN_ERR(svn_io_file_rename(abspath, new_abspath, pool));
+      SVN_ERR(svn_io_file_rename2(abspath, new_abspath, FALSE, pool));
     }
   return SVN_NO_ERROR;
 }
@@ -2513,7 +2513,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   /* Renaming the db file is what makes the pre-wcng into a wcng */
   db_from = svn_wc__adm_child(data.root_abspath, SDB_FILE, scratch_pool);
   db_to = svn_wc__adm_child(local_abspath, SDB_FILE, scratch_pool);
-  SVN_ERR(svn_io_file_rename(db_from, db_to, scratch_pool));
+  SVN_ERR(svn_io_file_rename2(db_from, db_to, FALSE, scratch_pool));
 
   /* Now we have a working wcng, tidy up the droppings */
   SVN_ERR(svn_wc__db_open(&db, NULL /* ### config */, FALSE, FALSE,

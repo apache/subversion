@@ -35,7 +35,7 @@ public class ReposNotifyInformation extends EventObject
     // Update the serialVersionUID when there is a incompatible change made to
     // this class.  See the java documentation for when a change is incompatible.
     // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 2L;
 
     /**
      * The {@link Action} which triggered this event.
@@ -197,12 +197,6 @@ public class ReposNotifyInformation extends EventObject
          * @since 1.8
          */
         verify_rev_structure,
-
-        /**
-         * A revision is found with corruption/errors.
-         * @since 1.9
-         */
-        failure,
 
         /**
          * A revprop shard got packed. @

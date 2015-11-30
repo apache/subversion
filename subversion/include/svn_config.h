@@ -63,6 +63,12 @@ typedef struct svn_config_t svn_config_t;
  * @{
  */
 
+/* If you add a new SVN_CONFIG_* category/section/option macro to this group,
+ * you have to re-run gen-make.py manually.
+ *
+ * ### This should be fixed in the build system; see issue #4581.
+ */
+
  /* This list of #defines is intentionally presented as a nested list
     that matches the in-config hierarchy.  */
 
@@ -76,18 +82,27 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS     "http-proxy-exceptions"
 #define SVN_CONFIG_OPTION_HTTP_TIMEOUT              "http-timeout"
 #define SVN_CONFIG_OPTION_HTTP_COMPRESSION          "http-compression"
+/** @deprecated Not used since 1.8. */
 #define SVN_CONFIG_OPTION_NEON_DEBUG_MASK           "neon-debug-mask"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_HTTP_AUTH_TYPES           "http-auth-types"
 #define SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES       "ssl-authority-files"
 #define SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA      "ssl-trust-default-ca"
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE      "ssl-client-cert-file"
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_PASSWORD  "ssl-client-cert-password"
+/** @deprecated Not used since 1.8.
+ * @since New in 1.5. */
 #define SVN_CONFIG_OPTION_SSL_PKCS11_PROVIDER       "ssl-pkcs11-provider"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_HTTP_LIBRARY              "http-library"
+/** @since New in 1.1. */
 #define SVN_CONFIG_OPTION_STORE_PASSWORDS           "store-passwords"
+/** @since New in 1.6. */
 #define SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS "store-plaintext-passwords"
 #define SVN_CONFIG_OPTION_STORE_AUTH_CREDS          "store-auth-creds"
+/** @since New in 1.6. */
 #define SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP  "store-ssl-client-cert-pp"
+/** @since New in 1.6. */
 #define SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT \
                                           "store-ssl-client-cert-pp-plaintext"
 #define SVN_CONFIG_OPTION_USERNAME                  "username"
@@ -123,6 +138,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_DIFF_EXTENSIONS           "diff-extensions"
 #define SVN_CONFIG_OPTION_DIFF3_CMD                 "diff3-cmd"
 #define SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG     "diff3-has-program-arg"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_MERGE_TOOL_CMD            "merge-tool-cmd"
 #define SVN_CONFIG_SECTION_MISCELLANY           "miscellany"
 #define SVN_CONFIG_OPTION_GLOBAL_IGNORES            "global-ignores"
@@ -133,8 +149,11 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS         "enable-auto-props"
 /** @since New in 1.9. */
 #define SVN_CONFIG_OPTION_ENABLE_MAGIC_FILE         "enable-magic-file"
+/** @since New in 1.2. */
 #define SVN_CONFIG_OPTION_NO_UNLOCK                 "no-unlock"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_MIMETYPES_FILE            "mime-types-file"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_PRESERVED_CF_EXTS         "preserved-conflict-file-exts"
 /** @since New in 1.7. */
 #define SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS     "interactive-conflicts"
@@ -172,9 +191,13 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_FORCE_USERNAME_CASE       "force-username-case"
 /** @since New in 1.8. */
 #define SVN_CONFIG_OPTION_HOOKS_ENV                 "hooks-env"
+/** @since New in 1.5. */
 #define SVN_CONFIG_SECTION_SASL                 "sasl"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_USE_SASL                  "use-sasl"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_MIN_SSF                   "min-encryption"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_MAX_SSF                   "max-encryption"
 
 /* For repository password database */
@@ -782,7 +805,8 @@ svn_config_write_auth_data(apr_hash_t *hash,
  * fully purged) to allow perusal and selective removal of credentials.
  *
  * @a cred_kind and @a realmstring specify the key of the credential.
- * @a hash contains the hash data associated with the record.
+ * @a hash contains the hash data associated with the record. @a walk_baton
+ * is the baton passed to svn_config_walk_auth_data().
  *
  * Before returning set @a *delete_cred to TRUE to remove the credential from
  * the cache; leave @a *delete_cred unchanged or set it to FALSE to keep the

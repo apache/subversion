@@ -538,19 +538,20 @@ trust_server_cert_non_interactive(svn_auth_cred_ssl_server_trust_t **cred_p,
                                   apr_pool_t *pool)
 {
   struct trust_server_cert_non_interactive_baton *b = baton;
+  apr_uint32_t non_ignored_failures;
   *cred_p = NULL;
 
-  if (failures == 0 ||
-      (b->trust_server_cert_unknown_ca &&
-       (failures & SVN_AUTH_SSL_UNKNOWNCA)) ||
-      (b->trust_server_cert_cn_mismatch &&
-       (failures & SVN_AUTH_SSL_CNMISMATCH)) ||
-      (b->trust_server_cert_expired &&
-       (failures & SVN_AUTH_SSL_EXPIRED)) ||
-      (b->trust_server_cert_not_yet_valid &&
-        (failures & SVN_AUTH_SSL_NOTYETVALID)) ||
-      (b->trust_server_cert_other_failure &&
-        (failures & SVN_AUTH_SSL_OTHER)))
+  /* Mask away bits we are instructed to ignore. */
+  non_ignored_failures = failures & ~(
+        (b->trust_server_cert_unknown_ca ? SVN_AUTH_SSL_UNKNOWNCA : 0)
+      | (b->trust_server_cert_cn_mismatch ? SVN_AUTH_SSL_CNMISMATCH : 0)
+      | (b->trust_server_cert_expired ? SVN_AUTH_SSL_EXPIRED : 0)
+      | (b->trust_server_cert_not_yet_valid ? SVN_AUTH_SSL_NOTYETVALID : 0)
+      | (b->trust_server_cert_other_failure ? SVN_AUTH_SSL_OTHER : 0)
+  );
+
+  /* If no failures remain, accept the certificate. */
+  if (non_ignored_failures == 0)
     {
       *cred_p = apr_pcalloc(pool, sizeof(**cred_p));
       (*cred_p)->may_save = FALSE;
@@ -810,9 +811,124 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
   return;
 }
 
+/* Return the most similar string to NEEDLE in HAYSTACK, which contains
+ * HAYSTACK_LEN elements.  Return NULL if no string is sufficiently similar.
+ */
+/* See svn_cl__similarity_check() for a more general solution. */
+static const char *
+most_similar(const char *needle_cstr,
+             const char **haystack,
+             apr_size_t haystack_len,
+             apr_pool_t *scratch_pool)
+{
+  const char *max_similar;
+  apr_size_t max_score = 0;
+  apr_size_t i;
+  svn_membuf_t membuf;
+  svn_string_t *needle_str = svn_string_create(needle_cstr, scratch_pool);
+
+  svn_membuf__create(&membuf, 64, scratch_pool);
+
+  for (i = 0; i < haystack_len; i++)
+    {
+      apr_size_t score;
+      svn_string_t *hay = svn_string_create(haystack[i], scratch_pool);
+
+      score = svn_string__similarity(needle_str, hay, &membuf, NULL);
+
+      /* If you update this factor, consider updating
+       * svn_cl__similarity_check(). */
+      if (score >= (2 * SVN_STRING__SIM_RANGE_MAX + 1) / 3
+          && score > max_score)
+        {
+          max_score = score;
+          max_similar = haystack[i];
+        }
+    }
+
+  if (max_score)
+    return max_similar;
+  else
+    return NULL;
+}
+
+/* Verify that NEEDLE is in HAYSTACK, which contains HAYSTACK_LEN elements. */
+static svn_error_t *
+string_in_array(const char *needle,
+                const char **haystack,
+                apr_size_t haystack_len,
+                apr_pool_t *scratch_pool)
+{
+  const char *next_of_kin;
+  apr_size_t i;
+  for (i = 0; i < haystack_len; i++)
+    {
+      if (!strcmp(needle, haystack[i]))
+        return SVN_NO_ERROR;
+    }
+
+  /* Error. */
+  next_of_kin = most_similar(needle, haystack, haystack_len, scratch_pool);
+  if (next_of_kin)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Ignoring unknown value '%s'; "
+                               "did you mean '%s'?"),
+                             needle, next_of_kin);
+  else
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Ignoring unknown value '%s'"),
+                             needle);
+}
+
+#include "config_keys.inc"
+
+/* Validate the FILE, SECTION, and OPTION components of CONFIG_OPTION are
+ * known.  Return an error if not.  (An unknown value may be either a typo
+ * or added in a newer minor version of Subversion.) */
+static svn_error_t *
+validate_config_option(svn_cmdline__config_argument_t *config_option,
+                       apr_pool_t *scratch_pool)
+{
+  svn_boolean_t arbitrary_keys = FALSE;
+
+  /* TODO: some day, we could also verify that OPTION is valid for SECTION;
+     i.e., forbid invalid combinations such as config:auth:diff-extensions. */
+
+#define ARRAYLEN(x) ( sizeof((x)) / sizeof((x)[0]) )
+
+  SVN_ERR(string_in_array(config_option->file, svn__valid_config_files,
+                          ARRAYLEN(svn__valid_config_files),
+                          scratch_pool));
+  SVN_ERR(string_in_array(config_option->section, svn__valid_config_sections,
+                          ARRAYLEN(svn__valid_config_sections),
+                          scratch_pool));
+
+  /* Don't validate option names for sections such as servers[group],
+   * config[tunnels], and config[auto-props] that permit arbitrary options. */
+    {
+      int i;
+
+      for (i = 0; i < ARRAYLEN(svn__empty_config_sections); i++)
+        {
+        if (!strcmp(config_option->section, svn__empty_config_sections[i]))
+          arbitrary_keys = TRUE;
+        }
+    }
+
+  if (! arbitrary_keys)
+    SVN_ERR(string_in_array(config_option->option, svn__valid_config_options,
+                            ARRAYLEN(svn__valid_config_options),
+                            scratch_pool));
+
+#undef ARRAYLEN
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_cmdline__parse_config_option(apr_array_header_t *config_options,
                                  const char *opt_arg,
+                                 const char *prefix,
                                  apr_pool_t *pool)
 {
   svn_cmdline__config_argument_t *config_option;
@@ -826,6 +942,8 @@ svn_cmdline__parse_config_option(apr_array_header_t *config_options,
           if ((equals_sign = strchr(second_colon + 1, '=')) &&
               (equals_sign != second_colon + 1))
             {
+              svn_error_t *warning;
+
               config_option = apr_pcalloc(pool, sizeof(*config_option));
               config_option->file = apr_pstrndup(pool, opt_arg,
                                                  first_colon - opt_arg);
@@ -833,6 +951,13 @@ svn_cmdline__parse_config_option(apr_array_header_t *config_options,
                                                     second_colon - first_colon - 1);
               config_option->option = apr_pstrndup(pool, second_colon + 1,
                                                    equals_sign - second_colon - 1);
+
+              warning = validate_config_option(config_option, pool);
+              if (warning)
+                {
+                  svn_handle_warning2(stderr, warning, prefix);
+                  svn_error_clear(warning);
+                }
 
               if (! (strchr(config_option->option, ':')))
                 {
@@ -1043,6 +1168,36 @@ svn_cmdline__print_xml_prop_hash(svn_stringbuf_t **outstr,
     }
 
     return SVN_NO_ERROR;
+}
+
+svn_boolean_t
+svn_cmdline__stdin_is_a_terminal(void)
+{
+#ifdef WIN32
+  return (_isatty(STDIN_FILENO) != 0);
+#else
+  return (isatty(STDIN_FILENO) != 0);
+#endif
+}
+
+svn_boolean_t
+svn_cmdline__stdout_is_a_terminal(void)
+{
+#ifdef WIN32
+  return (_isatty(STDOUT_FILENO) != 0);
+#else
+  return (isatty(STDOUT_FILENO) != 0);
+#endif
+}
+
+svn_boolean_t
+svn_cmdline__stderr_is_a_terminal(void)
+{
+#ifdef WIN32
+  return (_isatty(STDERR_FILENO) != 0);
+#else
+  return (isatty(STDERR_FILENO) != 0);
+#endif
 }
 
 svn_boolean_t
@@ -1403,4 +1558,51 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
     }
 
   return svn_error_trace(err);
+}
+
+svn_error_t *
+svn_cmdline__parse_trust_options(
+                        svn_boolean_t *trust_server_cert_unknown_ca,
+                        svn_boolean_t *trust_server_cert_cn_mismatch,
+                        svn_boolean_t *trust_server_cert_expired,
+                        svn_boolean_t *trust_server_cert_not_yet_valid,
+                        svn_boolean_t *trust_server_cert_other_failure,
+                        const char *opt_arg,
+                        apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *failures;
+  int i;
+
+  *trust_server_cert_unknown_ca = FALSE;
+  *trust_server_cert_cn_mismatch = FALSE;
+  *trust_server_cert_expired = FALSE;
+  *trust_server_cert_not_yet_valid = FALSE;
+  *trust_server_cert_other_failure = FALSE;
+
+  failures = svn_cstring_split(opt_arg, ", \n\r\t\v", TRUE, scratch_pool);
+
+  for (i = 0; i < failures->nelts; i++)
+    {
+      const char *value = APR_ARRAY_IDX(failures, i, const char *);
+      if (!strcmp(value, "unknown-ca"))
+        *trust_server_cert_unknown_ca = TRUE;
+      else if (!strcmp(value, "cn-mismatch"))
+        *trust_server_cert_cn_mismatch = TRUE;
+      else if (!strcmp(value, "expired"))
+        *trust_server_cert_expired = TRUE;
+      else if (!strcmp(value, "not-yet-valid"))
+        *trust_server_cert_not_yet_valid = TRUE;
+      else if (!strcmp(value, "other"))
+        *trust_server_cert_other_failure = TRUE;
+      else
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                  _("Unknown value '%s' for %s.\n"
+                                    "Supported values: %s"),
+                                  value,
+                                  "--trust-server-cert-failures",
+                                  "unknown-ca, cn-mismatch, expired, "
+                                  "not-yet-valid, other");
+    }
+
+  return SVN_NO_ERROR;
 }

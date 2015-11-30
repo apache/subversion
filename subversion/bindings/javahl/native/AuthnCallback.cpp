@@ -38,39 +38,39 @@ namespace JavaHL {
 
 // Class JavaHL::AuthnCallback
 const char* const AuthnCallback::m_class_name =
-  JAVA_PACKAGE"/callback/AuthnCallback";
+  JAVAHL_CLASS("/callback/AuthnCallback");
 
 AuthnCallback::ClassImpl::ClassImpl(::Java::Env env, jclass cls)
   : ::Java::Object::ClassImpl(env, cls),
     m_mid_username_prompt(
         env.GetMethodID(cls, "usernamePrompt",
                         "(Ljava/lang/String;Z)"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                        JAVAHL_ARG("/callback/AuthnCallback")
                         "$UsernameResult;")),
     m_mid_user_password_prompt(
         env.GetMethodID(cls, "userPasswordPrompt",
                         "(Ljava/lang/String;Ljava/lang/String;Z)"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                        JAVAHL_ARG("/callback/AuthnCallback")
                         "$UserPasswordResult;")),
     m_mid_ssl_server_trust_prompt(
         env.GetMethodID(cls, "sslServerTrustPrompt",
                         "(Ljava/lang/String;"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                        JAVAHL_ARG("/callback/AuthnCallback")
                         "$SSLServerCertFailures;"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                        JAVAHL_ARG("/callback/AuthnCallback")
                         "$SSLServerCertInfo;"
                         "Z)"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                        JAVAHL_ARG("/callback/AuthnCallback")
                         "$SSLServerTrustResult;")),
     m_mid_ssl_client_cert_prompt(
         env.GetMethodID(cls, "sslClientCertPrompt",
                         "(Ljava/lang/String;Z)"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                        JAVAHL_ARG("/callback/AuthnCallback")
                         "$SSLClientCertResult;")),
     m_mid_ssl_client_cert_passphrase_prompt(
         env.GetMethodID(cls, "sslClientCertPassphrasePrompt",
                         "(Ljava/lang/String;Z)"
-                        "L"JAVA_PACKAGE"/callback/AuthnCallback"
+                        JAVAHL_ARG("/callback/AuthnCallback")
                         "$SSLClientCertPassphraseResult;")),
     m_mid_allow_store_plaintext_password(
         env.GetMethodID(cls, "allowStorePlaintextPassword",
@@ -143,7 +143,7 @@ bool AuthnCallback::allow_store_plaintext_passphrase(const ::Java::String& realm
 
 // Class JavaHL::AuthnCallback::AuthnResult
 const char* const AuthnCallback::AuthnResult::m_class_name =
-  JAVA_PACKAGE"/callback/AuthnCallback$AuthnResult";
+  JAVAHL_CLASS("/callback/AuthnCallback$AuthnResult");
 
 AuthnCallback::AuthnResult::ClassImpl::ClassImpl(::Java::Env env, jclass cls)
   : ::Java::Object::ClassImpl(env, cls),
@@ -157,7 +157,7 @@ AuthnCallback::AuthnResult::ClassImpl::~ClassImpl() {}
 
 // Class JavaHL::AuthnCallback::SSLServerCertFailures
 const char* const AuthnCallback::SSLServerCertFailures::m_class_name =
-  JAVA_PACKAGE"/callback/AuthnCallback$SSLServerCertFailures";
+  JAVAHL_CLASS("/callback/AuthnCallback$SSLServerCertFailures");
 
 AuthnCallback::SSLServerCertFailures::ClassImpl::ClassImpl(
     ::Java::Env env, jclass cls)
@@ -178,7 +178,7 @@ AuthnCallback::SSLServerCertFailures::SSLServerCertFailures(
 
 // Class JavaHL::AuthnCallback::SSLServerCertInfo
 const char* const AuthnCallback::SSLServerCertInfo::m_class_name =
-  JAVA_PACKAGE"/callback/AuthnCallback$SSLServerCertInfo";
+  JAVAHL_CLASS("/callback/AuthnCallback$SSLServerCertInfo");
 
 AuthnCallback::SSLServerCertInfo::ClassImpl::ClassImpl(
     ::Java::Env env, jclass cls)
@@ -259,7 +259,7 @@ AuthnCallback::SSLServerCertInfo::SSLServerCertInfo(
 
 // Class JavaHL::UserPasswordCallback
 const char* const UserPasswordCallback::m_class_name =
-  JAVA_PACKAGE"/callback/UserPasswordCallback";
+  JAVAHL_CLASS("/callback/UserPasswordCallback");
 
 UserPasswordCallback::ClassImpl::ClassImpl(::Java::Env env, jclass cls)
   : ::Java::Object::ClassImpl(env, cls),

@@ -39,6 +39,7 @@
 #include "private/svn_fs_util.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_dep_compat.h"
+#include "revs-txns.h"
 
 
 /* Add LOCK and its associated LOCK_TOKEN (associated with PATH) as
@@ -107,7 +108,7 @@ txn_body_lock(void *baton, trail_t *trail)
   SVN_ERR(svn_fs_base__get_path_kind(&kind, args->path, trail, trail->pool));
 
   /* Until we implement directory locks someday, we only allow locks
-     on files or non-existent paths. */
+     on files. */
   if (kind == svn_node_dir)
     return SVN_FS__ERR_NOT_FILE(trail->fs, args->path);
 
@@ -241,8 +242,11 @@ svn_fs_base__lock(svn_fs_t *fs,
 {
   apr_hash_index_t *hi;
   svn_error_t *cb_err = SVN_NO_ERROR;
+  svn_revnum_t youngest_rev = SVN_INVALID_REVNUM;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
+  SVN_ERR(svn_fs_base__youngest_rev(&youngest_rev, fs, scratch_pool));
 
   for (hi = apr_hash_first(scratch_pool, targets); hi; hi = apr_hash_next(hi))
     {
@@ -250,8 +254,9 @@ svn_fs_base__lock(svn_fs_t *fs,
       const char *path = apr_hash_this_key(hi);
       const svn_fs_lock_target_t *target = apr_hash_this_val(hi);
       svn_lock_t *lock;
-      svn_error_t *err;
+      svn_error_t *err = NULL;
 
+      svn_pool_clear(iterpool);
       args.lock_p = &lock;
       args.path = svn_fs__canonicalize_abspath(path, result_pool);
       args.token = target->token;
@@ -262,12 +267,22 @@ svn_fs_base__lock(svn_fs_t *fs,
       args.current_rev = target->current_rev;
       args.result_pool = result_pool;
 
-      err = svn_fs_base__retry_txn(fs, txn_body_lock, &args, TRUE,
-                                   scratch_pool);
+      if (SVN_IS_VALID_REVNUM(target->current_rev))
+        {
+          if (target->current_rev > youngest_rev)
+            err = svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                    _("No such revision %ld"),
+                                    target->current_rev);
+        }
+
+      if (!err)
+        err = svn_fs_base__retry_txn(fs, txn_body_lock, &args, TRUE,
+                                     iterpool);
       if (!cb_err && lock_callback)
-        cb_err = lock_callback(lock_baton, args.path, lock, err, scratch_pool);
+        cb_err = lock_callback(lock_baton, args.path, lock, err, iterpool);
       svn_error_clear(err);
     }
+  svn_pool_destroy(iterpool);
 
   return svn_error_trace(cb_err);
 }
@@ -356,6 +371,7 @@ svn_fs_base__unlock(svn_fs_t *fs,
 {
   apr_hash_index_t *hi;
   svn_error_t *cb_err = SVN_NO_ERROR;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
@@ -366,16 +382,18 @@ svn_fs_base__unlock(svn_fs_t *fs,
       const char *token = apr_hash_this_val(hi);
       svn_error_t *err;
 
+      svn_pool_clear(iterpool);
       args.path = svn_fs__canonicalize_abspath(path, result_pool);
       args.token = token;
       args.break_lock = break_lock;
 
       err = svn_fs_base__retry_txn(fs, txn_body_unlock, &args, TRUE,
-                                   scratch_pool);
+                                   iterpool);
       if (!cb_err && lock_callback)
-        cb_err = lock_callback(lock_baton, path, NULL, err, scratch_pool);
+        cb_err = lock_callback(lock_baton, path, NULL, err, iterpool);
       svn_error_clear(err);
     }
+  svn_pool_destroy(iterpool);
 
   return svn_error_trace(cb_err);
 }

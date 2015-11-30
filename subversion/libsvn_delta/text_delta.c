@@ -180,8 +180,7 @@ svn_txdelta_window_dup(const svn_txdelta_window_t *window,
   build_baton.num_ops = window->num_ops;
   build_baton.src_ops = window->src_ops;
   build_baton.ops_size = window->num_ops;
-  build_baton.ops = apr_palloc(pool, ops_size);
-  memcpy(build_baton.ops, window->ops, ops_size);
+  build_baton.ops = apr_pmemdup(pool, window->ops, ops_size);
   build_baton.new_data =
     svn_stringbuf_create_from_string(window->new_data, pool);
 

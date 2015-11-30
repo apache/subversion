@@ -64,6 +64,28 @@ svn_fs_begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev,
 }
 
 svn_error_t *
+svn_fs_revision_prop(svn_string_t **value_p,
+                     svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     const char *propname,
+                     apr_pool_t *pool)
+{
+  return svn_error_trace(
+           svn_fs_revision_prop2(value_p, fs, rev, propname, TRUE, pool,
+                                 pool));
+}
+
+svn_error_t *
+svn_fs_revision_proplist(apr_hash_t **table_p,
+                         svn_fs_t *fs,
+                         svn_revnum_t rev,
+                         apr_pool_t *pool)
+{
+  return svn_error_trace(
+           svn_fs_revision_proplist2(table_p, fs, rev, TRUE, pool, pool));
+}
+
+svn_error_t *
 svn_fs_change_rev_prop(svn_fs_t *fs, svn_revnum_t rev, const char *name,
                        const svn_string_t *value, apr_pool_t *pool)
 {
@@ -79,6 +101,55 @@ svn_fs_get_locks(svn_fs_t *fs, const char *path,
   return svn_error_trace(svn_fs_get_locks2(fs, path, svn_depth_infinity,
                                            get_locks_func, get_locks_baton,
                                            pool));
+}
+
+svn_error_t *
+svn_fs_create(svn_fs_t **fs_p,
+              const char *path,
+              apr_hash_t *fs_config,
+              apr_pool_t *pool)
+{
+  return svn_fs_create2(fs_p, path, fs_config, pool, pool);
+}
+
+svn_error_t *
+svn_fs_open(svn_fs_t **fs_p,
+            const char *path,
+            apr_hash_t *fs_config,
+            apr_pool_t *pool)
+{
+  return svn_fs_open2(fs_p, path, fs_config, pool, pool);
+}
+
+svn_error_t *
+svn_fs_node_history(svn_fs_history_t **history_p, svn_fs_root_t *root,
+                    const char *path, apr_pool_t *pool)
+{
+  return svn_error_trace(svn_fs_node_history2(history_p, root, path,
+                                              pool, pool));
+}
+
+svn_error_t *
+svn_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
+                     svn_fs_root_t *root,
+                     const apr_array_header_t *paths,
+                     svn_mergeinfo_inheritance_t inherit,
+                     svn_boolean_t include_descendants,
+                     apr_pool_t *pool)
+{
+  return svn_error_trace(svn_fs_get_mergeinfo2(catalog, root, paths,
+                                               inherit,
+                                               include_descendants,
+                                               TRUE, pool, pool));
+}
+
+svn_error_t *
+svn_fs_history_prev(svn_fs_history_t **prev_history_p,
+                    svn_fs_history_t *history, svn_boolean_t cross_copies,
+                    apr_pool_t *pool)
+{
+  return svn_error_trace(svn_fs_history_prev2(prev_history_p, history,
+                                              cross_copies, pool, pool));
 }
 
 /*** From access.c ***/

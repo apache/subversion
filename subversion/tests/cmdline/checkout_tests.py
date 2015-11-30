@@ -1044,6 +1044,7 @@ def co_with_obstructing_local_adds(sbox):
 
 #----------------------------------------------------------------------
 # Test if checking out from a Windows driveroot is supported.
+@SkipUnless(svntest.main.is_os_windows)
 def checkout_wc_from_drive(sbox):
   "checkout from the root of a Windows drive"
 
@@ -1070,10 +1071,6 @@ def checkout_wc_from_drive(sbox):
 
     return None
 
-  # Skip the test if not on Windows
-  if not svntest.main.windows:
-    raise svntest.Skip
-
   # just create an empty folder, we'll checkout later.
   sbox.build(create_wc = False)
   svntest.main.safe_rmtree(sbox.wc_dir)
@@ -1082,7 +1079,7 @@ def checkout_wc_from_drive(sbox):
   # create a virtual drive to the repository folder
   drive = find_the_next_available_drive_letter()
   if drive is None:
-    raise svntest.Skip
+    raise svntest.Skip('No drive letter available')
 
   subprocess.call(['subst', drive +':', sbox.repo_dir])
   repo_url = 'file:///' + drive + ':/'

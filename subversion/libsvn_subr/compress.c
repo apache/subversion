@@ -31,6 +31,21 @@
 
 #include "svn_private_config.h"
 
+const char *
+svn_zlib__compiled_version(void)
+{
+  static const char zlib_version_str[] = ZLIB_VERSION;
+
+  return zlib_version_str;
+}
+
+const char *
+svn_zlib__runtime_version(void)
+{
+  return zlibVersion();
+}
+
+
 /* The zlib compressBound function was not exported until 1.2.0. */
 #if ZLIB_VERNUM >= 0x1200
 #define svnCompressBound(LEN) compressBound(LEN)
@@ -67,6 +82,17 @@ svn__encode_uint(unsigned char *p, apr_uint64_t val)
   return p;
 }
 
+unsigned char *
+svn__encode_int(unsigned char *p, apr_int64_t val)
+{
+  apr_uint64_t value = val;
+  value = value & APR_UINT64_C(0x8000000000000000)
+        ? APR_UINT64_MAX - (2 * value)
+        : 2 * value;
+
+  return svn__encode_uint(p, value);
+}
+
 const unsigned char *
 svn__decode_uint(apr_uint64_t *val,
                  const unsigned char *p,
@@ -74,7 +100,7 @@ svn__decode_uint(apr_uint64_t *val,
 {
   apr_uint64_t temp = 0;
 
-  if (p + SVN__MAX_ENCODED_UINT_LEN < end)
+  if (end - p > SVN__MAX_ENCODED_UINT_LEN)
     end = p + SVN__MAX_ENCODED_UINT_LEN;
 
   /* Decode bytes until we're done. */
@@ -94,6 +120,22 @@ svn__decode_uint(apr_uint64_t *val,
     }
 
   return NULL;
+}
+
+const unsigned char *
+svn__decode_int(apr_int64_t *val,
+                const unsigned char *p,
+                const unsigned char *end)
+{
+  apr_uint64_t value;
+  const unsigned char *result = svn__decode_uint(&value, p, end);
+
+  value = value & 1
+        ? (APR_UINT64_MAX - value / 2)
+        : value / 2;
+  *val = (apr_int64_t)value;
+
+  return result;
 }
 
 /* If IN is a string that is >= MIN_COMPRESS_SIZE and the COMPRESSION_LEVEL
@@ -220,7 +262,7 @@ zlib_decode(const unsigned char *in, apr_size_t inLen, svn_stringbuf_t *out,
 }
 
 svn_error_t *
-svn__compress(svn_stringbuf_t *in,
+svn__compress(const void *data, apr_size_t len,
               svn_stringbuf_t *out,
               int compression_method)
 {
@@ -230,13 +272,13 @@ svn__compress(svn_stringbuf_t *in,
                              _("Unsupported compression method %d"),
                              compression_method);
 
-  return zlib_encode(in->data, in->len, out, compression_method);
+  return zlib_encode(data, len, out, compression_method);
 }
 
 svn_error_t *
-svn__decompress(svn_stringbuf_t *in,
+svn__decompress(const void *data, apr_size_t len,
                 svn_stringbuf_t *out,
                 apr_size_t limit)
 {
-  return zlib_decode((const unsigned char*)in->data, in->len, out, limit);
+  return zlib_decode(data, len, out, limit);
 }

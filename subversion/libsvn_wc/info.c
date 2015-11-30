@@ -283,9 +283,10 @@ build_info_for_node(svn_wc__info2_t **info,
                                 local_abspath, result_pool, scratch_pool));
 
   if (conflicted)
-    SVN_ERR(svn_wc__read_conflicts(&wc_info->conflicts, db,
-                                   local_abspath,
-                                   TRUE /* ### create tempfiles */,
+    SVN_ERR(svn_wc__read_conflicts(&wc_info->conflicts, NULL,
+                                   db, local_abspath,
+                                   FALSE /* create tempfiles */,
+                                   FALSE /* only tree conflicts */,
                                    result_pool, scratch_pool));
   else
     wc_info->conflicts = NULL;
@@ -530,9 +531,10 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
       info->repos_root_URL = repos_root_url;
       info->repos_UUID = repos_uuid;
 
-      SVN_ERR(svn_wc__read_conflicts(&conflicts,
+      SVN_ERR(svn_wc__read_conflicts(&conflicts, NULL,
                                      wc_ctx->db, this_abspath,
-                                     TRUE /* ### create tempfiles */,
+                                     FALSE /* create tempfiles */,
+                                     FALSE /* only tree conflicts */,
                                      iterpool, iterpool));
       if (! conflicts || ! conflicts->nelts)
         continue;

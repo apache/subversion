@@ -51,7 +51,7 @@ Blanket commit access:
       rhuijben   Bert Huijben <rhuijben@collab.net>
       stylesen   Senthil Kumaran S <stylesen@gmail.com>
      steveking   Stefan Küng <tortoisesvn@gmail.com>
-         neels   Neels J. Hofmeyr <neels@elego.de>
+         neels   Neels J. Hofmeyr <neels@hofmeyr.de>
      jwhitlock   Jeremy Whitlock <jcscoobyrs@gmail.com>
        sbutler   Stephen Butler <sbutler@elego.de>
         dannas   Daniel Näslund <dannas@dannas.name>
@@ -59,6 +59,7 @@ Blanket commit access:
        jcorvel   Johan Corveleyn <jcorvel@gmail.com>
          trent   Trent Nelson <trent@snakebite.org>
         kotkov   Evgeny Kotkov <evgeny.kotkov@visualsvn.com>
+      astieger   Andreas Stieger <andreas.stieger@gmx.de>
 
 [[END ACTIVE FULL COMMITTERS.  LEAVE THIS LINE HERE; SCRIPTS LOOK FOR IT.]]
 
@@ -164,14 +165,14 @@ Commit access for specific areas:
      humbedooh   Daniel Gruno <humbedooh@apache.org>         (svnpubsub)
       prabhugs   Prabhu Gnana Sundar <pprabhugs@gmail.com>   (verify-keep-going)
         schabi   Markus Schaber <schabi@apache.org>          (testsuite)
-           gbg   Gabriela Gibson <gabriela.gibson@gmail.com> (gtest) 
+           gbg   Gabriela Gibson <gabriela.gibson@gmail.com> (gtest)
+      luke1410   Stefan Hett <luke1410@gmx.de>               (doc)
 
   Translation of message files:
 
        niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (po: es)
         luebbe   Lübbe Onken <luebbe@tigris.org>             (po: de)
     jensseidel   Jens Seidel <jensseidel@users.sf.net>       (po: de)
-      astieger   Andreas Stieger <andreas.stieger@gmx.de>    (po: de)
       oyvindmo   Øyvind Møll <svn@moll.no>                   (po: nb)
       sunny256   Øyvind A. Holm <sunny@sunbase.org>          (po: nb)
         jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl)

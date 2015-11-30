@@ -239,7 +239,7 @@ get_last_modified_time(const char **datestring,
     }
 
   if (timeval)
-    memcpy(timeval, &timeval_tmp, sizeof(*timeval));
+    *timeval = timeval_tmp;
 
   if (! datestring)
     return 0;
@@ -787,20 +787,30 @@ insert_prop_internal(const dav_resource *resource,
 
     case SVN_PROPID_deadprop_count:
       {
-        unsigned int propcount;
-        apr_hash_t *proplist;
+        svn_boolean_t has_props;
 
         if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
           return DAV_PROP_INSERT_NOTSUPP;
 
-        serr = svn_fs_node_proplist(&proplist,
-                                    resource->info->root.root,
-                                    resource->info->repos_path, scratch_pool);
+        /* Retrieving the actual properties is quite expensive while
+           svn clients only want to know if there are properties, by
+           using this svn defined property.
+
+           Our and and SvnKit's implementation of the ra layer check
+           for '> 0' to provide the boolean if the node has custom
+           properties or not, so starting with 1.9 we just provide
+           "1" or "0".
+         */
+        serr = svn_fs_node_has_props(&has_props,
+                                      resource->info->root.root,
+                                      resource->info->repos_path,
+                                      scratch_pool);
+
         if (serr != NULL)
           {
             ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err,
                           resource->info->r,
-                          "Can't fetch proplist of '%s': "
+                          "Can't fetch has properties on '%s': "
                           "%s",
                           resource->info->repos_path,
                           serr->message);
@@ -809,8 +819,7 @@ insert_prop_internal(const dav_resource *resource,
             break;
           }
 
-        propcount = apr_hash_count(proplist);
-        value = apr_psprintf(scratch_pool, "%u", propcount);
+        value = has_props ? "1" : "0";
         break;
       }
 

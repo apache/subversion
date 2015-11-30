@@ -253,6 +253,13 @@ notify_body(struct notify_baton *nb,
                     _("Skipped target: '%s' -- copy-source is missing\n"),
                     path_local));
         }
+      else if (n->content_state == svn_wc_notify_state_obstructed)
+        {
+          SVN_ERR(svn_cmdline_printf(
+                    pool,
+                    _("Skipped '%s' -- obstructed by unversioned node\n"),
+                    path_local));
+        }
       else
         {
           SVN_ERR(svn_cmdline_printf(pool, _("Skipped '%s'\n"), path_local));
@@ -415,8 +422,10 @@ notify_body(struct notify_baton *nb,
             store_path(nb, nb->conflict_stats->prop_conflicts, path_local);
             statchar_buf[1] = 'C';
           }
+        else if (n->prop_state == svn_wc_notify_state_merged)
+          statchar_buf[1] = 'G';
         else if (n->prop_state == svn_wc_notify_state_changed)
-              statchar_buf[1] = 'U';
+          statchar_buf[1] = 'U';
 
         if (statchar_buf[0] != ' ' || statchar_buf[1] != ' ')
           {

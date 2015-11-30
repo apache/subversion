@@ -481,10 +481,12 @@ get_revision_info(report_baton_t *b,
     {
       /* Info is not available, yet.
          Get all revprops. */
-      SVN_ERR(svn_fs_revision_proplist(&r_props,
-                                       b->repos->fs,
-                                       rev,
-                                       scratch_pool));
+      SVN_ERR(svn_fs_revision_proplist2(&r_props,
+                                        b->repos->fs,
+                                        rev,
+                                        FALSE,
+                                        scratch_pool,
+                                        scratch_pool));
 
       /* Extract the committed-date. */
       cdate = svn_hash_gets(r_props, SVN_PROP_REVISION_DATE);
@@ -1282,7 +1284,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
       /* Loop over the dirents in the target. */
       SVN_ERR(svn_fs_dir_optimal_order(&t_ordered_entries, b->t_root,
-                                       t_entries, subpool));
+                                       t_entries, subpool, iterpool));
       for (i = 0; i < t_ordered_entries->nelts; ++i)
         {
           const svn_fs_dirent_t *t_entry
@@ -1548,6 +1550,7 @@ svn_repos_finish_report(void *baton, apr_pool_t *pool)
 {
   report_baton_t *b = baton;
 
+  SVN_ERR(svn_fs_refresh_revision_props(svn_repos_fs(b->repos), pool));
   return svn_error_trace(finish_report(b, pool));
 }
 

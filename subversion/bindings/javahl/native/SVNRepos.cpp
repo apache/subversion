@@ -26,7 +26,6 @@
 
 #include "SVNRepos.h"
 #include "CreateJ.h"
-#include "ReposNotifyCallback.h"
 #include "JNIUtil.h"
 #include "svn_error_codes.h"
 #include "svn_repos.h"
@@ -50,14 +49,14 @@ SVNRepos *SVNRepos::getCppObject(jobject jthis)
 {
   static jfieldID fid = 0;
   jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
-                                                 JAVA_PACKAGE"/SVNRepos");
+                                                 JAVAHL_CLASS("/SVNRepos"));
   return (cppAddr == 0 ? NULL : reinterpret_cast<SVNRepos *>(cppAddr));
 }
 
 void SVNRepos::dispose(jobject jthis)
 {
   static jfieldID fid = 0;
-  SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNRepos");
+  SVNBase::dispose(jthis, &fid, JAVAHL_CLASS("/SVNRepos"));
 }
 
 void SVNRepos::cancelOperation()
@@ -241,8 +240,9 @@ void SVNRepos::dump(File &path, OutputStream &dataOut,
                      " (%ld)"), youngest), );
     }
 
-  SVN_JNI_ERR(svn_repos_dump_fs3(repos, dataOut.getStream(requestPool),
+  SVN_JNI_ERR(svn_repos_dump_fs4(repos, dataOut.getStream(requestPool),
                                  lower, upper, incremental, useDeltas,
+                                 true, true,
                                  notifyCallback != NULL
                                     ? ReposNotifyCallback::notify
                                     : NULL,
@@ -594,8 +594,9 @@ SVNRepos::getRevnum(svn_revnum_t *revnum, const svn_opt_revision_t *revision,
 
 void
 SVNRepos::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
-                 bool keepGoing, bool checkNormalization, bool metadataOnly,
-                 ReposNotifyCallback *notifyCallback)
+                 bool checkNormalization, bool metadataOnly,
+                 ReposNotifyCallback *notifyCallback,
+                 ReposVerifyCallback *verifyCallback)
 {
   SVN::Pool requestPool;
   svn_repos_t *repos;
@@ -639,13 +640,14 @@ SVNRepos::verify(File &path, Revision &revisionStart, Revision &revisionEnd,
        _("Start revision cannot be higher than end revision")), );
 
   SVN_JNI_ERR(svn_repos_verify_fs3(repos, lower, upper,
-                                   keepGoing,
                                    checkNormalization,
                                    metadataOnly,
-                                   notifyCallback != NULL
-                                    ? ReposNotifyCallback::notify
-                                    : NULL,
+                                   (!notifyCallback ? NULL
+                                    : ReposNotifyCallback::notify),
                                    notifyCallback,
+                                   (!verifyCallback ? NULL
+                                    : ReposVerifyCallback::callback),
+                                   verifyCallback,
                                    checkCancel, this /* cancel callback/baton */,
                                    requestPool.getPool()), );
 }
@@ -716,7 +718,7 @@ jobject SVNRepos::lslocks(File &path, svn_depth_t depth)
               NULL);
 
   JNIEnv *env = JNIUtil::getEnv();
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/Lock");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/Lock"));
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 

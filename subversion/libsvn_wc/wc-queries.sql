@@ -1286,7 +1286,10 @@ WHERE (wc_id = ?1 AND local_relpath = ?2)
    OR (wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
 
 -- STMT_PRAGMA_LOCKING_MODE
-PRAGMA locking_mode = exclusive
+PRAGMA locking_mode = exclusive;
+/* Testing shows DELETE is faster than TRUNCATE on NFS and
+   exclusive-locking is mostly used on remote file systems. */
+PRAGMA journal_mode = DELETE
 
 /* ------------------------------------------------------------------------- */
 
@@ -1780,6 +1783,10 @@ WHERE wc_id = ?1
   AND parent_relpath = ?2
   AND op_depth = 0
   AND (inherited_props not null)
+
+-- STMT_HAVE_STAT1_TABLE
+SELECT 1 FROM sqlite_master WHERE name='sqlite_stat1' AND type='table'
+LIMIT 1
 
 /* ------------------------------------------------------------------------- */
 

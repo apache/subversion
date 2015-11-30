@@ -114,7 +114,7 @@ struct svn_ra_serf__session_t {
   /* Are we using ssl */
   svn_boolean_t using_ssl;
 
-  /* Should we ask for compressed responses? */
+  /* Should we use compression for network transmissions? */
   svn_boolean_t using_compression;
 
   /* The user agent string */
@@ -137,6 +137,10 @@ struct svn_ra_serf__session_t {
      HTTP/1.0. Thus, we cannot send chunked requests.  */
   svn_boolean_t http10;
 
+  /* We are talking to the server via http/2. Responses of scheduled
+     requests may come in any order */
+  svn_boolean_t http20;
+
   /* Should we use Transfer-Encoding: chunked for HTTP/1.1 servers. */
   svn_boolean_t using_chunked_requests;
 
@@ -154,6 +158,7 @@ struct svn_ra_serf__session_t {
   /* Callback functions to get info from WC */
   const svn_ra_callbacks2_t *wc_callbacks;
   void *wc_callback_baton;
+  svn_auth_baton_t *auth_baton;
 
   /* Callback function to send progress info to the client */
   svn_ra_progress_notify_func_t progress_func;
@@ -254,6 +259,9 @@ struct svn_ra_serf__session_t {
   /* Indicates whether the server supports issuing replay REPORTs
      against rev resources (children of `rev_stub', elsestruct). */
   svn_boolean_t supports_rev_rsrc_replay;
+
+  /* Indicates whether the server can understand svndiff version 1. */
+  svn_boolean_t supports_svndiff1;
 };
 
 #define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)
@@ -1514,6 +1522,11 @@ svn_ra_serf__error_on_status(serf_status_line sline,
 svn_error_t *
 svn_ra_serf__unexpected_status(svn_ra_serf__handler_t *handler);
 
+/* Make sure handler is no longer scheduled on its connection. Resetting
+   the connection if necessary */
+void
+svn_ra_serf__unschedule_handler(svn_ra_serf__handler_t *handler);
+
 
 /* ###? */
 svn_error_t *
@@ -1544,6 +1557,17 @@ svn_ra_serf__create_bucket_with_eagain(const char *data,
                                        apr_size_t len,
                                        serf_bucket_alloc_t *allocator);
 
+/* Parse a given URL_STR, fill in all supplied fields of URI
+ * structure.
+ *
+ * This function is a compatibility wrapper around apr_uri_parse().
+ * Different apr-util versions set apr_uri_t.path to either NULL or ""
+ * for root paths, and serf expects to see "/". This function always
+ * sets URI.path to "/" for these paths. */
+svn_error_t *
+svn_ra_serf__uri_parse(apr_uri_t *uri,
+                       const char *url_str,
+                       apr_pool_t *result_pool);
 
 
 #if defined(SVN_DEBUG)

@@ -80,7 +80,7 @@ cd ${absbld}
 env CC=clang CXX=clang++ \
 ${abssrc}/configure \
     --prefix="${absbld}/.install-prefix" \
-    --disable-debug${optimizeconfig} \
+    --enable-debug${optimizeconfig} \
     --disable-nls \
     --disable-mod-activation \
     ${aprconfig}${serfconfig} \

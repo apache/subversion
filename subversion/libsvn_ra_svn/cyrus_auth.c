@@ -828,7 +828,7 @@ svn_error_t *svn_ra_svn__get_addresses(const char **local_addrport,
 
 svn_error_t *
 svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
-                          const apr_array_header_t *mechlist,
+                          const svn_ra_svn__list_t *mechlist,
                           const char *realm, apr_pool_t *pool)
 {
   apr_pool_t *subpool;
@@ -856,18 +856,18 @@ svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
       /* Create a string containing the list of mechanisms, separated by spaces. */
       for (i = 0; i < mechlist->nelts; i++)
         {
-          svn_ra_svn_item_t *elt = &APR_ARRAY_IDX(mechlist, i, svn_ra_svn_item_t);
+          svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(mechlist, i);
           mechstring = apr_pstrcat(pool,
                                    mechstring,
                                    i == 0 ? "" : " ",
-                                   elt->u.word, SVN_VA_NULL);
+                                   elt->u.word.data, SVN_VA_NULL);
         }
     }
 
   realmstring = apr_psprintf(pool, "%s %s", sess->realm_prefix, realm);
 
   /* Initialize the credential baton. */
-  cred_baton.auth_baton = sess->callbacks->auth_baton;
+  cred_baton.auth_baton = sess->auth_baton;
   cred_baton.realmstring = realmstring;
   cred_baton.pool = pool;
 

@@ -43,6 +43,7 @@
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_sorts_private.h"
+#include "private/svn_string_private.h"
 
 
 
@@ -1122,7 +1123,8 @@ fill_log_entry(svn_log_entry_t *log_entry,
   if (get_revprops && want_revprops)
     {
       /* User is allowed to see at least some revprops. */
-      SVN_ERR(svn_fs_revision_proplist(&r_props, fs, rev, pool));
+      SVN_ERR(svn_fs_revision_proplist2(&r_props, fs, rev, FALSE, pool,
+                                        pool));
       if (revprops == NULL)
         {
           /* Requested all revprops... */
@@ -1150,9 +1152,9 @@ fill_log_entry(svn_log_entry_t *log_entry,
              we want static initialization here and must therefore emulate
              strlen(x) by sizeof(x)-1. */
           static const svn_string_t svn_prop_revision_author
-            = {SVN_PROP_REVISION_AUTHOR, sizeof(SVN_PROP_REVISION_AUTHOR)-1};
+            = SVN__STATIC_STRING(SVN_PROP_REVISION_AUTHOR);
           static const svn_string_t svn_prop_revision_date
-            = {SVN_PROP_REVISION_DATE, sizeof(SVN_PROP_REVISION_DATE)-1};
+            = SVN__STATIC_STRING(SVN_PROP_REVISION_DATE);
 
           /* often only the standard revprops got requested and delivered.
              In that case, we can simply pass the hash on. */
@@ -1907,8 +1909,7 @@ store_search(svn_mergeinfo_t processed,
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       svn_rangelist_t *ranges = apr_array_make(processed_pool, 1,
                                                sizeof(svn_merge_range_t*));
-      svn_merge_range_t *range = apr_palloc(processed_pool,
-                                            sizeof(svn_merge_range_t));
+      svn_merge_range_t *range = apr_palloc(processed_pool, sizeof(*range));
 
       range->start = start;
       range->end = end;
@@ -2176,7 +2177,7 @@ do_logs(svn_fs_t *fs,
           if (rev_mergeinfo)
             {
               struct added_deleted_mergeinfo *add_and_del_mergeinfo =
-                apr_hash_get(rev_mergeinfo, &current, sizeof(svn_revnum_t));
+                apr_hash_get(rev_mergeinfo, &current, sizeof(current));
               added_mergeinfo = add_and_del_mergeinfo->added_mergeinfo;
               deleted_mergeinfo = add_and_del_mergeinfo->deleted_mergeinfo;
               has_children = (apr_hash_count(added_mergeinfo) > 0
@@ -2340,6 +2341,10 @@ svn_repos_get_logs4(svn_repos_t *repos,
 
       revprops = new_revprops;
     }
+
+  /* Make sure we catch up on the latest revprop changes.  This is the only
+   * time we will refresh the revprop data in this query. */
+  SVN_ERR(svn_fs_refresh_revision_props(fs, pool));
 
   /* Setup log range. */
   SVN_ERR(svn_fs_youngest_rev(&head, fs, pool));

@@ -48,41 +48,7 @@
 #include "private/svn_cmdline_private.h"
 #include "private/svn_sorts_private.h"
 
-#ifdef _WIN32
-typedef apr_status_t (__stdcall *open_fn_t)(apr_file_t **, apr_pool_t *);
-#else
-typedef apr_status_t (*open_fn_t)(apr_file_t **, apr_pool_t *);
-#endif
-
 /*** Code. ***/
-
-/* Helper to open stdio streams */
-
-/* NOTE: we used to call svn_stream_from_stdio(), which wraps a stream
-   around a standard stdio.h FILE pointer.  The problem is that these
-   pointers operate through C Run Time (CRT) on Win32, which does all
-   sorts of translation on them: LF's become CRLF's, and ctrl-Z's
-   embedded in Word documents are interpreted as premature EOF's.
-
-   So instead, we use apr_file_open_std*, which bypass the CRT and
-   directly wrap the OS's file-handles, which don't know or care about
-   translation.  Thus dump/load works correctly on Win32.
-*/
-static svn_error_t *
-create_stdio_stream(svn_stream_t **stream,
-                    open_fn_t open_fn,
-                    apr_pool_t *pool)
-{
-  apr_file_t *stdio_file;
-  apr_status_t apr_err = open_fn(&stdio_file, pool);
-
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't open stdio file"));
-
-  *stream = svn_stream_from_aprfile2(stdio_file, TRUE, pool);
-  return SVN_NO_ERROR;
-}
-
 
 /* Writes a property in dumpfile format to given stringbuf. */
 static void
@@ -640,7 +606,7 @@ new_node_record(void **node_baton,
               cf_orig_rev = SVN_STR_TO_REV(val);
               cf_renum_val = apr_hash_get(pb->renumber_history,
                                           &cf_orig_rev,
-                                          sizeof(svn_revnum_t));
+                                          sizeof(cf_orig_rev));
               if (! (cf_renum_val && SVN_IS_VALID_REVNUM(cf_renum_val->rev)))
                 return svn_error_createf
                   (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
@@ -730,14 +696,14 @@ adjust_mergeinfo(svn_string_t **final_val, const svn_string_t *initial_val,
                                                        svn_merge_range_t *);
 
               revmap_start = apr_hash_get(pb->renumber_history,
-                                          &range->start, sizeof(svn_revnum_t));
+                                          &range->start, sizeof(range->start));
               if (! (revmap_start && SVN_IS_VALID_REVNUM(revmap_start->rev)))
                 return svn_error_createf
                   (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                    _("No valid revision range 'start' in filtered stream"));
 
               revmap_end = apr_hash_get(pb->renumber_history,
-                                        &range->end, sizeof(svn_revnum_t));
+                                        &range->end, sizeof(range->end));
               if (! (revmap_end && SVN_IS_VALID_REVNUM(revmap_end->rev)))
                 return svn_error_createf
                   (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
@@ -1065,12 +1031,10 @@ parse_baton_initialize(struct parse_baton_t **pb,
   struct parse_baton_t *baton = apr_palloc(pool, sizeof(*baton));
 
   /* Read the stream from STDIN.  Users can redirect a file. */
-  SVN_ERR(create_stdio_stream(&(baton->in_stream),
-                              apr_file_open_stdin, pool));
+  SVN_ERR(svn_stream_for_stdin2(&baton->in_stream, TRUE, pool));
 
   /* Have the parser dump results to STDOUT. Users can redirect a file. */
-  SVN_ERR(create_stdio_stream(&(baton->out_stream),
-                              apr_file_open_stdout, pool));
+  SVN_ERR(svn_stream_for_stdout(&baton->out_stream, pool));
 
   baton->do_exclude = do_exclude;
 

@@ -2666,13 +2666,37 @@ def xml_unsafe_author2(sbox):
   else:
     expected_author = 'foo\bbar'
 
-  expected_output = svntest.verify.UnorderedOutput([
-    '      1 %-8s              Jan 01  2000 ./\n' % expected_author,
-    '      1 %-8s              Jan 01  2000 A/\n' % expected_author,
-    '      1 %-8s           25 Jan 01  2000 iota\n' % expected_author
-  ])
+  # Use svn ls in --xml mode to test locale independent output.
+  expected_output = [
+    '<?xml version="1.0" encoding="UTF-8"?>\n',
+    '<lists>\n',
+    '<list\n',
+    '   path="%s">\n' % sbox.repo_url,
+    '<entry\n',
+    '   kind="dir">\n',
+    '<name>A</name>\n',
+    '<commit\n',
+    '   revision="1">\n',
+    '<author>%s</author>\n' % expected_author,
+    '<date>2000-01-01T12:00:00.000000Z</date>\n',
+    '</commit>\n',
+    '</entry>\n',
+    '<entry\n',
+    '   kind="file">\n',
+    '<name>iota</name>\n',
+    '<size>25</size>\n',
+    '<commit\n',
+    '   revision="1">\n',
+    '<author>%s</author>\n' % expected_author,
+    '<date>2000-01-01T12:00:00.000000Z</date>\n',
+    '</commit>\n',
+    '</entry>\n',
+    '</list>\n',
+    '</lists>\n'
+    ]
+
   svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'ls', '-v', repo_url)
+                                     'ls', '--xml', repo_url)
 
   expected_info = [{
       'Repository Root' : sbox.repo_url,
@@ -2716,11 +2740,8 @@ def dir_prop_conflict_details(sbox):
                                         None,
                                         expected_status,
                                         check_props=True)
-
-  # The conflict properties file line was shown for previous versions, but the
-  # conflict source urls are new since 1.8.
   expected_info = {
-    'Conflict Properties File' : re.escape(sbox.ospath('A/dir_conflicts.prej')),
+    'Conflicted Properties' : 'my-prop',
     'Conflict Details': re.escape('incoming dir edit upon update'
                                            + ' Source  left: (dir) ^/A@1'
                                            + ' Source right: (dir) ^/A@2')
@@ -2783,6 +2804,31 @@ def wc_propop_on_url(sbox):
                                      'pg', 'my:Q', '-r', 'PREV',
                                      sbox.repo_url)
 
+def prop_conflict_root(sbox):
+  """property conflict on wc root"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('propname', 'propval1', '')
+  sbox.simple_commit()
+  sbox.simple_propset('propname', 'propval2', '')
+  sbox.simple_commit()
+  sbox.simple_update(revision=2)
+  sbox.simple_propset('propname', 'propvalconflict', '')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    '' : Item(status=' C'),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak('', status=' C')
+  extra_files = ['dir_conflicts.prej']
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        extra_files=extra_files)
 
 ########################################################################
 # Run the tests
@@ -2834,6 +2880,7 @@ test_list = [ None,
               dir_prop_conflict_details,
               iprops_list_abspath,
               wc_propop_on_url,
+              prop_conflict_root,
              ]
 
 if __name__ == '__main__':

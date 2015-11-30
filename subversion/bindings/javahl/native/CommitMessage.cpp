@@ -73,7 +73,7 @@ CommitMessage::getCommitMessage(const char **log_msg,
   static jmethodID midCallback = 0;
   if (midCallback == 0)
     {
-      jclass clazz2 = env->FindClass(JAVA_PACKAGE"/callback/CommitMessageCallback");
+      jclass clazz2 = env->FindClass(JAVAHL_CLASS("/callback/CommitMessageCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
@@ -106,7 +106,7 @@ CommitMessage::getCommitMessage(const char **log_msg,
                                                     midCallback,
                                                     CreateJ::Set(jitems));
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
+    POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 
   if (jmessage != NULL)
     {

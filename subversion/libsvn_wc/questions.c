@@ -369,7 +369,8 @@ internal_conflicted_p(svn_boolean_t *text_conflicted_p,
   svn_boolean_t resolved_text = FALSE;
   svn_boolean_t resolved_props = FALSE;
 
-  SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, db, local_abspath,
+  SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, NULL,
+                                   db, local_abspath,
                                    scratch_pool, scratch_pool));
 
   if (!conflicts)

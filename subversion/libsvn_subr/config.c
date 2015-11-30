@@ -55,6 +55,27 @@ struct cfg_section_t
 };
 
 
+/* States that a config option value can assume. */
+typedef enum option_state_t
+{
+  /* Value still needs to be expanded.
+     This is the initial state for *all* values. */
+  option_state_needs_expanding,
+
+  /* Value is currently being expanded.
+     This transitional state allows for detecting cyclic dependencies. */
+  option_state_expanding,
+
+  /* Expanded value is available.
+     Values that never needed expanding directly go into that state
+     skipping option_state_expanding. */
+  option_state_expanded,
+
+  /* The value expansion is cyclic which results in "undefined" behavior.
+     This is to return a defined value ("") in that case. */
+  option_state_cyclic
+} option_state_t;
+
 /* Option table entries. */
 typedef struct cfg_option_t cfg_option_t;
 struct cfg_option_t
@@ -71,10 +92,10 @@ struct cfg_option_t
   /* The expanded option value. */
   const char *x_value;
 
-  /* Expansion flag. If this is TRUE, this value has already been expanded.
-     In this case, if x_value is NULL, no expansions were necessary,
-     and value should be used directly. */
-  svn_boolean_t expanded;
+  /* Expansion state. If this is option_state_expanded, VALUE has already
+     been expanded.  In this case, if x_value is NULL, no expansions were
+     necessary, and value should be used directly. */
+  option_state_t state;
 };
 
 
@@ -338,22 +359,14 @@ for_each_option(svn_config_t *cfg, void *baton, apr_pool_t *pool,
        sec_ndx != NULL;
        sec_ndx = apr_hash_next(sec_ndx))
     {
-      void *sec_ptr;
-      cfg_section_t *sec;
+      cfg_section_t *sec = apr_hash_this_val(sec_ndx);
       apr_hash_index_t *opt_ndx;
-
-      apr_hash_this(sec_ndx, NULL, NULL, &sec_ptr);
-      sec = sec_ptr;
 
       for (opt_ndx = apr_hash_first(pool, sec->options);
            opt_ndx != NULL;
            opt_ndx = apr_hash_next(opt_ndx))
         {
-          void *opt_ptr;
-          cfg_option_t *opt;
-
-          apr_hash_this(opt_ndx, NULL, NULL, &opt_ptr);
-          opt = opt_ptr;
+          cfg_option_t *opt = apr_hash_this_val(opt_ndx);
 
           if (callback(baton, sec, opt))
             return;
@@ -396,12 +409,13 @@ svn_config_merge(svn_config_t *cfg, const char *file,
 static svn_boolean_t
 rmex_callback(void *baton, cfg_section_t *section, cfg_option_t *option)
 {
-  /* Only clear the `expanded' flag if the value actually contains
+  /* Only reset the expansion state if the value actually contains
      variable expansions. */
-  if (option->expanded && option->x_value != NULL)
+  if (   (option->state == option_state_expanded && option->x_value != NULL)
+      || option->state == option_state_cyclic)
     {
       option->x_value = NULL;
-      option->expanded = FALSE;
+      option->state = option_state_needs_expanding;
     }
 
   return FALSE;
@@ -482,7 +496,7 @@ find_option(svn_config_t *cfg, const char *section, const char *option,
 
 
 /* Has a bi-directional dependency with make_string_from_option(). */
-static void
+static svn_boolean_t
 expand_option_value(svn_config_t *cfg, cfg_section_t *section,
                     const char *opt_value, const char **opt_x_valuep,
                     apr_pool_t *x_pool);
@@ -496,7 +510,20 @@ make_string_from_option(const char **valuep, svn_config_t *cfg,
                         apr_pool_t* x_pool)
 {
   /* Expand the option value if necessary. */
-  if (!opt->expanded)
+  if (   opt->state == option_state_expanding
+      || opt->state == option_state_cyclic)
+    {
+      /* Recursion is not supported.  Since we can't produce an error
+       * nor should we abort the process, the next best thing is to
+       * report the recursive part as an empty string. */
+      *valuep = "";
+
+      /* Go into "value undefined" state. */
+      opt->state = option_state_cyclic;
+
+      return;
+    }
+  else if (opt->state == option_state_needs_expanding)
     {
       /* before attempting to expand an option, check for the placeholder.
        * If none is there, there is no point in calling expand_option_value.
@@ -511,9 +538,16 @@ make_string_from_option(const char **valuep, svn_config_t *cfg,
 
           tmp_pool = (x_pool ? x_pool : svn_pool_create(cfg->x_pool));
 
-          expand_option_value(cfg, section, opt->value, &opt->x_value, tmp_pool);
-          opt->expanded = TRUE;
+          /* Expand the value. During that process, have the option marked
+           * as "expanding" to detect cycles. */
+          opt->state = option_state_expanding;
+          if (expand_option_value(cfg, section, opt->value, &opt->x_value,
+                                  tmp_pool))
+            opt->state = option_state_expanded;
+          else
+            opt->state = option_state_cyclic;
 
+          /* Ensure the expanded value is allocated in a permanent pool. */
           if (x_pool != cfg->x_pool)
             {
               /* Grab the fully expanded value from tmp_pool before its
@@ -527,7 +561,7 @@ make_string_from_option(const char **valuep, svn_config_t *cfg,
         }
       else
         {
-          opt->expanded = TRUE;
+          opt->state = option_state_expanded;
         }
     }
 
@@ -549,8 +583,9 @@ make_string_from_option(const char **valuep, svn_config_t *cfg,
 
 /* Expand OPT_VALUE (which may be NULL) in SECTION into *OPT_X_VALUEP.
    If no variable replacements are done, set *OPT_X_VALUEP to
-   NULL. Allocate from X_POOL. */
-static void
+   NULL.  Return TRUE if the expanded value is defined and FALSE
+   for recursive definitions.  Allocate from X_POOL. */
+static svn_boolean_t
 expand_option_value(svn_config_t *cfg, cfg_section_t *section,
                     const char *opt_value, const char **opt_x_valuep,
                     apr_pool_t *x_pool)
@@ -586,6 +621,18 @@ expand_option_value(svn_config_t *cfg, cfg_section_t *section,
                  make_string_from_option() as an indication of when it
                  should terminate. */
               make_string_from_option(&cstring, cfg, section, x_opt, x_pool);
+
+              /* Values depending on cyclic values must also be marked as
+               * "undefined" because they might themselves form cycles with
+               * the one cycle we just detected.  Due to the early abort of
+               * the recursion, we won't follow and thus detect dependent
+               * cycles anymore.
+               */
+              if (x_opt->state == option_state_cyclic)
+                {
+                  *opt_x_valuep = "";
+                  return FALSE;
+                }
 
               /* Append the plain text preceding the expansion. */
               len = name_start - FMT_START_LEN - copy_from;
@@ -625,6 +672,9 @@ expand_option_value(svn_config_t *cfg, cfg_section_t *section,
     }
   else
     *opt_x_valuep = NULL;
+
+  /* Expansion has a well-defined answer. */
+  return TRUE;
 }
 
 static cfg_section_t *
@@ -664,7 +714,7 @@ svn_config_create_option(cfg_option_t **opt,
 
   o->value = apr_pstrdup(pool, value);
   o->x_value = NULL;
-  o->expanded = FALSE;
+  o->state = option_state_needs_expanding;
 
   *opt = o;
 }
@@ -685,7 +735,8 @@ svn_config__is_expanded(svn_config_t *cfg,
     return FALSE;
 
   /* already expanded? */
-  if (opt->expanded)
+  if (   opt->state == option_state_expanded
+      || opt->state == option_state_cyclic)
     return TRUE;
 
   /* needs expansion? */
@@ -719,8 +770,14 @@ svn_config_get(svn_config_t *cfg, const char **valuep,
           {
             apr_pool_t *tmp_pool = svn_pool_create(cfg->pool);
             const char *x_default;
-            expand_option_value(cfg, sec, default_value, &x_default, tmp_pool);
-            if (x_default)
+            if (!expand_option_value(cfg, sec, default_value, &x_default,
+                                     tmp_pool))
+              {
+                /* Recursive definitions are not supported.
+                   Normalize the answer in that case. */
+                *valuep = "";
+              }
+            else if (x_default)
               {
                 svn_stringbuf_set(cfg->tmp_value, x_default);
                 *valuep = cfg->tmp_value->data;
@@ -758,7 +815,7 @@ svn_config_set(svn_config_t *cfg,
     {
       /* Replace the option's value. */
       opt->value = apr_pstrdup(cfg->pool, value);
-      opt->expanded = FALSE;
+      opt->state = option_state_needs_expanding;
       return;
     }
 
@@ -965,11 +1022,8 @@ svn_config_enumerate_sections2(svn_config_t *cfg,
        sec_ndx != NULL;
        sec_ndx = apr_hash_next(sec_ndx))
     {
-      void *sec_ptr;
-      cfg_section_t *sec;
+      cfg_section_t *sec = apr_hash_this_val(sec_ndx);
 
-      apr_hash_this(sec_ndx, NULL, NULL, &sec_ptr);
-      sec = sec_ptr;
       ++count;
       svn_pool_clear(iteration_pool);
       if (!callback(sec->name, baton, iteration_pool))
@@ -1001,12 +1055,8 @@ svn_config_enumerate(svn_config_t *cfg, const char *section,
        opt_ndx != NULL;
        opt_ndx = apr_hash_next(opt_ndx))
     {
-      void *opt_ptr;
-      cfg_option_t *opt;
+      cfg_option_t *opt = apr_hash_this_val(opt_ndx);
       const char *temp_value;
-
-      apr_hash_this(opt_ndx, NULL, NULL, &opt_ptr);
-      opt = opt_ptr;
 
       ++count;
       make_string_from_option(&temp_value, cfg, sec, opt, NULL);
@@ -1039,12 +1089,8 @@ svn_config_enumerate2(svn_config_t *cfg, const char *section,
        opt_ndx != NULL;
        opt_ndx = apr_hash_next(opt_ndx))
     {
-      void *opt_ptr;
-      cfg_option_t *opt;
+      cfg_option_t *opt = apr_hash_this_val(opt_ndx);
       const char *temp_value;
-
-      apr_hash_this(opt_ndx, NULL, NULL, &opt_ptr);
-      opt = opt_ptr;
 
       ++count;
       make_string_from_option(&temp_value, cfg, sec, opt, NULL);
@@ -1171,7 +1217,7 @@ svn_config_dup(svn_config_t **cfgp,
 
       destopt->value = apr_pstrdup(pool, srcopt->value);
       destopt->x_value = apr_pstrdup(pool, srcopt->x_value);
-      destopt->expanded = srcopt->expanded;
+      destopt->state = srcopt->state;
       apr_hash_set(destsec->options,
                    apr_pstrdup(pool, (const char*)optkey),
                    optkeyLength, destopt);

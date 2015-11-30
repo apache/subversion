@@ -959,6 +959,8 @@ use SVN::Base qw(Core svn_log_entry_t_);
 
 =head2 svn_log_entry_t
 
+=over 4
+
 =item $entry-E<gt>revision()
 
 The revision of the commit.
@@ -987,6 +989,8 @@ in the same sense of C<_p_svn_merge_range_t>.
 
 Whether C<$entry-E<gt>revision()> is a merged revision resulting 
 from a reverse merge.
+
+=back
 
 =cut
 

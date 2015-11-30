@@ -3849,8 +3849,8 @@ def copy_pin_externals_wc_mixed_revisions(sbox):
                                      '--pin-externals')
 
 @Issue(4558)
-def copy_pin_externals_whitepace_dir(sbox):
-  "copy --pin-externals with whitepace dir"
+def copy_pin_externals_whitespace_dir(sbox):
+  "copy --pin-externals with whitespace dir"
 
   sbox.build(empty=True)
   repo_url = sbox.repo_url
@@ -4155,6 +4155,204 @@ def file_external_to_normal_file(sbox):
   svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
                                         expected_status)
 
+@Issue(4580)
+def file_external_recorded_info(sbox):
+  "check file external recorded info"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # r2 - Create file external
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', '',
+                                         'propset', 'svn:externals',
+                                         '^/iota i', '')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    ''                  : Item(status=' U'),
+    'i'                 : Item(status='A '),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'i'                 : Item(status='  ', wc_rev='2', switched='X')
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status, [], False,
+                                        '-r', 2, wc_dir)
+
+  expected_infos = [{
+    'Path': re.escape(sbox.ospath('i')),
+    'Relative URL': re.escape('^/iota'),
+    'Revision': '2',
+    'Last Changed Rev': '1',
+    'Last Changed Author': 'jrandom'
+  }]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('i'))
+
+  # r3 - No-op change
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', '',
+                                         'cp', '1', 'iota', 'iotb')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'iotb'              : Item(status='A '),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'i'                 : Item(status='  ', wc_rev='3', switched='X'),
+    'iotb'              : Item(status='  ', wc_rev='3')
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status, [], False,
+                                        '-r', 3, wc_dir)
+
+  expected_infos = [{
+    'Path': re.escape(sbox.ospath('i')),
+    'Relative URL': re.escape('^/iota'),
+    'Revision': '3',
+    'Last Changed Rev': '1',
+    'Last Changed Author': 'jrandom'
+  }]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('i'))
+
+  # r4 - Update url
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', '',
+                                         'propset', 'svn:externals',
+                                         '^/iotb i', '')
+
+
+  expected_output = svntest.wc.State(wc_dir, {
+    ''                  : Item(status=' U'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
+  expected_status.add({
+    'i'                 : Item(status='  ', wc_rev='4', switched='X'),
+    'iotb'              : Item(status='  ', wc_rev='4')
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status, [], False,
+                                        '-r', 4, wc_dir)
+
+  expected_infos = [{
+    'Path': re.escape(sbox.ospath('i')),
+    'Relative URL': re.escape('^/iotb'),
+    'Revision': '4',
+    'Last Changed Rev': '3',
+    'Last Changed Author': 'jrandom'
+  }]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('i'))
+
+  # r5 - Replace file
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', '',
+                                         'rm', 'iotb',
+                                         'cp', '3', 'A/mu', 'iotb')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'i'                 : Item(status='U '),
+    'iotb'              : Item(status='A ', prev_status='D '),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 5)
+  expected_status.add({
+    'i'                 : Item(status='  ', wc_rev='5', switched='X'),
+    'iotb'              : Item(status='  ', wc_rev='5')
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status, [], False,
+                                        '-r', 5, wc_dir)
+
+  expected_infos = [{
+    'Path': re.escape(sbox.ospath('i')),
+    'Relative URL': re.escape('^/iotb'),
+    'Revision': '5',
+    'Last Changed Rev': '5',
+    'Last Changed Author': 'jrandom'
+  }]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('i'))
+
+  # Back to r2. But with a conflict
+  sbox.simple_append('i', 'i')
+  expected_output = svntest.wc.State(wc_dir, {
+    ''                  : Item(status=' U'),
+    'iotb'              : Item(status='D '),
+    'i'                 : Item(status='C '),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'i'                 : Item(status='C ', wc_rev='5', switched='X'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, None,
+                                        expected_status, [], False,
+                                        '-r', 2, wc_dir)
+
+  expected_infos = [{
+    'Path': re.escape(sbox.ospath('i')),
+    'Relative URL': re.escape('^/iota'),
+    'Revision': '5',
+    'Last Changed Rev': '1',
+    'Last Changed Author': 'jrandom',
+    'Conflict Details': re.escape('incoming file edit upon switch'
+                                  ' Source  left: (file) ^/iotb@5'
+                                  ' Source right: (file) ^/iota@5')
+  }]
+  svntest.actions.run_and_verify_info(expected_infos, sbox.ospath('i'))
+
+def external_externally_removed(sbox):
+  "external externally removed"
+
+  sbox.build(read_only = True)
+
+  sbox.simple_propset('svn:externals', '^/A/B B', '')
+
+  # Try fetching the external with a versioned obstruction
+  sbox.simple_mkdir('B')
+  expected_err = ".*W155035: The external.*B' is already a versioned path"
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'up', sbox.wc_dir)
+  sbox.simple_rm('B')
+
+
+  os.makedirs(sbox.ospath('B'))
+  expected_err2 = "svn: warning: W155007:.*B'"
+  svntest.actions.run_and_verify_svn(None, expected_err2,
+                                     'up', sbox.wc_dir)
+  os.rmdir(sbox.ospath('B'))
+
+  # Fetch the external
+  sbox.simple_update()
+
+  svntest.main.safe_rmtree(sbox.ospath('B'))
+  sbox.simple_update() # Fetched again
+  if not os.path.isdir(sbox.ospath('B')):
+    raise svntest.Failure("B not recreated")
+
+  svntest.main.safe_rmtree(sbox.ospath('B'))
+  sbox.simple_propdel('svn:externals', '')
+
+  expected_output = [
+    "Updating '%s':\n" % sbox.wc_dir,
+    "Removed external '%s'\n" % sbox.ospath('B'),
+    "Updated to revision 1.\n"
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'up', sbox.wc_dir)
+
+
+  sbox.simple_propset('svn:externals', '^/A/B B', '')
+  sbox.simple_update()
+  svntest.main.safe_rmtree(sbox.ospath('B'))
+  sbox.simple_mkdir('B')
+
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'up', sbox.wc_dir)
+
+  sbox.simple_propdel('svn:externals', '')
+  sbox.simple_update() # Should succeed
 
 ########################################################################
 # Run the tests
@@ -4226,9 +4424,11 @@ test_list = [ None,
               copy_pin_externals_wc_local_mods,
               copy_pin_externals_wc_switched_subtrees,
               copy_pin_externals_wc_mixed_revisions,
-              copy_pin_externals_whitepace_dir,
+              copy_pin_externals_whitespace_dir,
               nested_notification,
               file_external_to_normal_file,
+              file_external_recorded_info,
+              external_externally_removed,
              ]
 
 if __name__ == '__main__':

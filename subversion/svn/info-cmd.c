@@ -391,15 +391,24 @@ print_info_xml(void *baton,
   if (info->wc_info && info->wc_info->conflicts)
     {
       int i;
+      apr_pool_t *iterpool;
 
+      iterpool = svn_pool_create(pool);
       for (i = 0; i < info->wc_info->conflicts->nelts; i++)
         {
-          const svn_wc_conflict_description2_t *conflict =
+          const svn_wc_conflict_description2_t *desc =
                       APR_ARRAY_IDX(info->wc_info->conflicts, i,
                                     const svn_wc_conflict_description2_t *);
+          svn_client_conflict_t *conflict;
 
-          SVN_ERR(svn_cl__append_conflict_info_xml(sb, conflict, pool));
+          svn_pool_clear(iterpool);
+
+          SVN_ERR(svn_client_conflict_from_wc_description2_t(&conflict, desc,
+                                                             iterpool,
+                                                             iterpool));
+          SVN_ERR(svn_cl__append_conflict_info_xml(sb, conflict, iterpool));
         }
+      svn_pool_destroy(iterpool);
     }
 
   if (info->lock)
@@ -581,54 +590,75 @@ print_info(void *baton,
 
       if (info->wc_info->conflicts)
         {
-          svn_boolean_t printed_prop_conflict_file = FALSE;
           svn_boolean_t printed_tc = FALSE;
+          svn_stringbuf_t *conflicted_props = NULL;
           int i;
+          apr_pool_t *iterpool;
 
+          iterpool = svn_pool_create(pool);
           for (i = 0; i < info->wc_info->conflicts->nelts; i++)
             {
-              const svn_wc_conflict_description2_t *conflict =
+              const svn_wc_conflict_description2_t *desc2 =
                     APR_ARRAY_IDX(info->wc_info->conflicts, i,
                                   const svn_wc_conflict_description2_t *);
               const char *desc;
+              const char *base_abspath = NULL;
+              const char *my_abspath = NULL;
+              const char *their_abspath = NULL;
+              svn_client_conflict_t *conflict;
 
-              switch (conflict->kind)
+              svn_pool_clear(iterpool);
+
+              SVN_ERR(svn_client_conflict_from_wc_description2_t(&conflict,
+                                                                 desc2,
+                                                                 iterpool,
+                                                                 iterpool));
+              switch (svn_client_conflict_get_kind(conflict))
                 {
                   case svn_wc_conflict_kind_text:
-                    if (conflict->base_abspath)
+
+                    SVN_ERR(svn_client_conflict_text_get_contents(
+                              NULL, &my_abspath, &base_abspath, &their_abspath,
+                              conflict, pool, pool));
+
+                    if (base_abspath)
                       SVN_ERR(svn_cmdline_printf(pool,
                                 _("Conflict Previous Base File: %s\n"),
                                 svn_cl__local_style_skip_ancestor(
                                         receiver_baton->path_prefix,
-                                        conflict->base_abspath,
+                                        base_abspath,
                                         pool)));
 
-                    if (conflict->my_abspath)
+                    if (my_abspath)
                       SVN_ERR(svn_cmdline_printf(pool,
                                 _("Conflict Previous Working File: %s\n"),
                                 svn_cl__local_style_skip_ancestor(
                                         receiver_baton->path_prefix,
-                                        conflict->my_abspath,
+                                        my_abspath,
                                         pool)));
 
-                    if (conflict->their_abspath)
+                    if (their_abspath)
                       SVN_ERR(svn_cmdline_printf(pool,
                                 _("Conflict Current Base File: %s\n"),
                                 svn_cl__local_style_skip_ancestor(
                                         receiver_baton->path_prefix,
-                                        conflict->their_abspath,
+                                        their_abspath,
                                         pool)));
                   break;
 
                   case svn_wc_conflict_kind_property:
-                    if (! printed_prop_conflict_file)
-                      SVN_ERR(svn_cmdline_printf(pool,
-                                _("Conflict Properties File: %s\n"),
-                                svn_cl__local_style_skip_ancestor(
-                                        receiver_baton->path_prefix,
-                                        conflict->prop_reject_abspath,
-                                        pool)));
-                    printed_prop_conflict_file = TRUE;
+                    {
+                      const char *name;
+
+                      name = svn_client_conflict_prop_get_propname(conflict);
+                      if (conflicted_props == NULL)
+                        conflicted_props = svn_stringbuf_create(name, pool);
+                      else
+                        {
+                          svn_stringbuf_appendbyte(conflicted_props, ' ');
+                          svn_stringbuf_appendcstr(conflicted_props, name);
+                        }
+                    }
                   break;
 
                   case svn_wc_conflict_kind_tree:
@@ -642,6 +672,11 @@ print_info(void *baton,
                   break;
                 }
             }
+          svn_pool_destroy(iterpool);
+
+          if (conflicted_props)
+            SVN_ERR(svn_cmdline_printf(pool, _("Conflicted Properties: %s\n"),
+                                       conflicted_props->data));
 
           /* We only store one left and right version for all conflicts, which is
              referenced from all conflicts.
@@ -650,30 +685,47 @@ print_info(void *baton,
           {
             const char *src_left_version;
             const char *src_right_version;
-            const svn_wc_conflict_description2_t *conflict =
+            const char *repos_root_url;
+            const char *repos_relpath;
+            svn_revnum_t peg_rev;
+            svn_node_kind_t node_kind;
+            const svn_wc_conflict_description2_t *desc2 =
                   APR_ARRAY_IDX(info->wc_info->conflicts, 0,
                                 const svn_wc_conflict_description2_t *);
 
+            svn_client_conflict_t *conflict;
+
+            SVN_ERR(svn_client_conflict_from_wc_description2_t(&conflict, desc2,
+                                                               pool, pool));
             if (!printed_tc)
               {
                 const char *desc;
 
                 SVN_ERR(svn_cl__get_human_readable_action_description(&desc,
-                                        svn_wc_conflict_action_edit,
-                                        conflict->operation,
-                                        conflict->node_kind, pool));
+                          svn_wc_conflict_action_edit,
+                          svn_client_conflict_get_operation(conflict),
+                          info->kind,
+                          pool));
 
                 SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n",
                                                _("Conflict Details"), desc));
               }
 
+            SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL,
+                                                       conflict, pool, pool));
+            SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+                      &repos_relpath, &peg_rev, &node_kind, conflict,
+                      pool, pool));
             src_left_version =
-                        svn_cl__node_description(conflict->src_left_version,
-                                                 info->repos_root_URL, pool);
+                        svn_cl__node_description(repos_root_url, repos_relpath,
+                          peg_rev, node_kind, info->repos_root_URL, pool);
 
+            SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+                      &repos_relpath, &peg_rev, &node_kind, conflict,
+                      pool, pool));
             src_right_version =
-                        svn_cl__node_description(conflict->src_right_version,
-                                                 info->repos_root_URL, pool);
+                        svn_cl__node_description(repos_root_url, repos_relpath,
+                          peg_rev, node_kind, info->repos_root_URL, pool);
 
             if (src_left_version)
               SVN_ERR(svn_cmdline_printf(pool, "  %s: %s\n",

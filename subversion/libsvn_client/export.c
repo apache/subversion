@@ -432,7 +432,7 @@ export_node(void *baton,
                                                              scratch_pool));
 
   /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  SVN_ERR(svn_io_file_rename(dst_tmp, to_abspath, scratch_pool));
+  SVN_ERR(svn_io_file_rename2(dst_tmp, to_abspath, FALSE, scratch_pool));
 
   if (eib->notify_func)
     {
@@ -816,7 +816,7 @@ close_file(void *file_baton,
 
   if ((! fb->eol_style_val) && (! fb->keywords_val) && (! fb->special))
     {
-      SVN_ERR(svn_io_file_rename(fb->tmppath, fb->path, pool));
+      SVN_ERR(svn_io_file_rename2(fb->tmppath, fb->path, FALSE, pool));
     }
   else
     {
@@ -1035,7 +1035,7 @@ add_file_ev2(void *baton,
                                eb->cancel_baton, scratch_pool));
 
       /* Move the file into place. */
-      SVN_ERR(svn_io_file_rename(tmppath, full_path, scratch_pool));
+      SVN_ERR(svn_io_file_rename2(tmppath, full_path, FALSE, scratch_pool));
     }
 
   if (executable_val)
@@ -1508,7 +1508,7 @@ svn_client_export5(svn_revnum_t *result_rev,
       eib.ignore_keywords = ignore_keywords;
       eib.wc_ctx = ctx->wc_ctx;
       eib.native_eol = native_eol;
-      eib.notify_func = ctx->notify_func2;;
+      eib.notify_func = ctx->notify_func2;
       eib.notify_baton = ctx->notify_baton2;
       eib.origin_abspath = from_path_or_url;
       eib.exported = FALSE;

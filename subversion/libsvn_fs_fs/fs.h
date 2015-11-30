@@ -82,8 +82,6 @@ extern "C" {
 /* Names of special files and file extensions for transactions */
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
 #define PATH_TXN_PROPS     "props"         /* Transaction properties */
-#define PATH_TXN_PROPS_FINAL "props-final" /* Final transaction properties
-                                              before moving to revprops */
 #define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
 #define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
 #define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
@@ -353,6 +351,15 @@ typedef struct fs_fs_data_t
      rep key (revision/offset) to svn_stringbuf_t. */
   svn_cache__t *fulltext_cache;
 
+  /* The current prefix to be used for revprop cache entries.
+     If this is 0, a new unique prefix must be chosen. */
+  apr_uint64_t revprop_prefix;
+
+  /* Revision property cache.  Maps from (rev,prefix) to apr_hash_t.
+     Unparsed svn_string_t representations of the serialized hash
+     will be written to the cache but the getter returns apr_hash_t. */
+  svn_cache__t *revprop_cache;
+
   /* Node properties cache.  Maps from rep key to apr_hash_t. */
   svn_cache__t *properties_cache;
 
@@ -478,10 +485,6 @@ typedef struct fs_fs_data_t
 /*** Filesystem Transaction ***/
 typedef struct transaction_t
 {
-  /* property list (const char * name, svn_string_t * value).
-     may be NULL if there are no properties.  */
-  apr_hash_t *proplist;
-
   /* node revision id of the root node.  */
   const svn_fs_id_t *root_id;
 
@@ -527,7 +530,14 @@ typedef struct representation_t
   svn_filesize_t size;
 
   /* The size of the fulltext of the representation. If this is 0,
-   * the fulltext size is equal to representation size in the rev file, */
+   * for a plain rep, the real fulltext size is equal to the SIZE field.
+   * For a delta rep, this field is always the real fulltext size.
+   *
+   * Note that svn_fs_fs__fixup_expanded_size() checks for these special
+   * cases and ensures that this field contains the actual value.  We call
+   * it early after reading a representation struct, so most code does not
+   * have to worry about it.
+   */
   svn_filesize_t expanded_size;
 
   /* Is this a representation (still) within a transaction? */
@@ -536,13 +546,7 @@ typedef struct representation_t
   /* For rep-sharing, we need a way of uniquifying node-revs which share the
      same representation (see svn_fs_fs__noderev_same_rep_key() ).  So, we
      store the original txn of the node rev (not the rep!), along with some
-     intra-node uniqification content.
-
-     This is no longer used by the 1.9 code but we have to keep
-     reading and writing it for old formats to remain compatible with
-     1.8, and earlier, that require it.  We also read/write it in
-     format 7 even though it is not currently required by any code
-     that handles that format. */
+     intra-node uniqification content. */
   struct
     {
       /* unique context, i.e. txn ID, in which the noderev (!) got created */
@@ -615,6 +619,18 @@ typedef struct change_t
   /* API compatible change description */
   svn_fs_path_change2_t info;
 } change_t;
+
+
+/*** Directory (only used at the cache interface) ***/
+typedef struct svn_fs_fs__dir_data_t
+{
+  /* Contents, i.e. all directory entries, sorted by name. */
+  apr_array_header_t *entries;
+
+  /* SVN_INVALID_FILESIZE for committed data, otherwise the length of the
+   * in-txn on-disk representation of that directory. */
+  svn_filesize_t txn_filesize;
+} svn_fs_fs__dir_data_t;
 
 
 #ifdef __cplusplus

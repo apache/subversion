@@ -941,8 +941,17 @@ headers_fetch(serf_bucket_t *headers,
     {
       serf_bucket_headers_setn(headers, SVN_DAV_DELTA_BASE_HEADER,
                                fetch_ctx->delta_base);
-      serf_bucket_headers_setn(headers, "Accept-Encoding",
-                               "svndiff1;q=0.9,svndiff;q=0.8");
+      if (fetch_ctx->using_compression)
+        {
+          serf_bucket_headers_setn(headers, "Accept-Encoding",
+                                   "svndiff1;q=0.9,svndiff;q=0.8");
+        }
+      else
+        {
+          /* Do not advertise svndiff1 support if we're not interested in
+             compression. */
+          serf_bucket_headers_setn(headers, "Accept-Encoding", "svndiff");
+        }
     }
   else if (fetch_ctx->using_compression)
     {
@@ -1129,7 +1138,15 @@ handle_fetch(serf_request_t *request,
           /* Validate the delta base claimed by the server matches
              what we asked for! */
           val = serf_bucket_headers_get(hdrs, SVN_DAV_DELTA_BASE_HEADER);
-          if (val && (strcmp(val, fetch_ctx->delta_base) != 0))
+          if (val && fetch_ctx->delta_base == NULL)
+            {
+              /* We recieved response with delta base header while we didn't
+                 requested it -- report it as error. */
+              return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                       _("GET request returned unexpected "
+                                         "delta base: %s"), val);
+            }
+          else if (val && (strcmp(val, fetch_ctx->delta_base) != 0))
             {
               return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                        _("GET request returned unexpected "
@@ -2343,8 +2360,9 @@ setup_update_report_headers(serf_bucket_t *headers,
     }
   else
     {
-      serf_bucket_headers_setn(headers, "Accept-Encoding",
-                               "svndiff1;q=0.9,svndiff;q=0.8");
+      /* Do not advertise svndiff1 support if we're not interested in
+         compression. */
+      serf_bucket_headers_setn(headers, "Accept-Encoding", "svndiff");
     }
 
   return SVN_NO_ERROR;
@@ -2759,7 +2777,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
                                             update_editor,
                                             update_baton,
                                             depth, has_target,
-                                            sess->pool));
+                                            result_pool));
       update_editor = filter_editor;
       update_baton = filter_baton;
     }

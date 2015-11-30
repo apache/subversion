@@ -1101,9 +1101,10 @@ obtain_write_lock_failure(const svn_test_opts_t *opts,
   apr_hash_t *lock_paths, *unlock_paths;
 
   /* The test makes sense only for FSFS. */
-  if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) != 0)
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) != 0
+      && strcmp(opts->fs_type, SVN_FS_TYPE_FSX) != 0)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
-                            "this will test FSFS repositories only");
+                            "this will test FSFS/FSX repositories only");
 
   SVN_ERR(create_greek_fs(&fs, &newrev, "test-obtain-write-lock-failure",
                           opts, pool));

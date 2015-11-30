@@ -34,9 +34,6 @@
 # It'd be kind of nice to use the Subversion python bindings in this script,
 # but people.apache.org doesn't currently have them installed
 
-# Futures (Python 2.5 compatibility)
-from __future__ import with_statement
-
 # Stuff we need
 import os
 import re
@@ -86,13 +83,13 @@ except AttributeError:
 tool_versions = {
   'trunk' : {
             'autoconf' : '2.69',
-            'libtool'  : '2.4.3',
-            'swig'     : '3.0.0',
+            'libtool'  : '2.4.6',
+            'swig'     : '2.0.12',
   },
   '1.9' : {
             'autoconf' : '2.69',
-            'libtool'  : '2.4.3',
-            'swig'     : '3.0.0'
+            'libtool'  : '2.4.6',
+            'swig'     : '2.0.12'
   },
   '1.8' : {
             'autoconf' : '2.69',
@@ -356,6 +353,13 @@ class LibtoolDep(RollDep):
         # system libtool (I'm looking at you, Debian).
         return False
 
+    def build(self):
+        RollDep.build(self)
+        # autogen.sh looks for glibtoolize before libtoolize
+        bin_dir = os.path.join(get_prefix(self._base_dir), "bin")
+        os.symlink("libtoolize", os.path.join(bin_dir, "glibtoolize"))
+        os.symlink("libtool", os.path.join(bin_dir, "glibtool"))
+
 
 class SwigDep(RollDep):
     def __init__(self, base_dir, use_existing, verbose, swig_ver, sf_mirror):
@@ -421,6 +425,29 @@ def compare_changes(repos, branch, revision):
       logging.warning('CHANGES has unmerged revisions: %s' %
                       stdout.replace("\n", " "))
 
+
+_current_year = str(datetime.datetime.now().year)
+_copyright_re = re.compile(r'Copyright (?:\(C\) )?(?P<year>[0-9]+)'
+                           r' The Apache Software Foundation',
+                           re.MULTILINE)
+
+def check_copyright_year(repos, branch, revision):
+    def check_file(branch_relpath):
+        file_url = (repos + '/' + branch + '/'
+                    + branch_relpath + '@' + str(revision))
+        cat_cmd = ['svn', 'cat', file_url]
+        stdout = subprocess.check_output(cat_cmd)
+        m = _copyright_re.search(stdout)
+        if m:
+            year = m.group('year')
+        else:
+            year = None
+        if year != _current_year:
+            logging.warning('Copyright year in ' + branch_relpath
+                            + ' is not the current year')
+    check_file('NOTICE')
+    check_file('subversion/libsvn_subr/version.c')
+
 def roll_tarballs(args):
     'Create the release artifacts.'
 
@@ -431,6 +458,8 @@ def roll_tarballs(args):
 
     logging.info('Rolling release %s from branch %s@%d' % (args.version,
                                                            branch, args.revnum))
+
+    check_copyright_year(repos, args.branch, args.revnum)
 
     # Ensure we've got the appropriate rolling dependencies available
     autoconf = AutoconfDep(args.base_dir, False, args.verbose,
@@ -774,7 +803,7 @@ def get_siginfo(args, quiet=False):
     try:
         import gnupg
     except ImportError:
-        import _gnupg as gnupg
+        import security._gnupg as gnupg
     gpg = gnupg.GPG()
 
     target = get_target(args)

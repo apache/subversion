@@ -20,8 +20,8 @@
  * ====================================================================
  */
 
-#ifndef SVN_LIBSVN_FS__CHANGES_H
-#define SVN_LIBSVN_FS__CHANGES_H
+#ifndef SVN_LIBSVN_FS_X_CHANGES_H
+#define SVN_LIBSVN_FS_X_CHANGES_H
 
 #include "svn_io.h"
 #include "fs.h"
@@ -78,7 +78,7 @@ svn_error_t *
 svn_fs_x__changes_get_list(apr_array_header_t **list,
                            const svn_fs_x__changes_t *changes,
                            apr_size_t idx,
-                           apr_pool_t *pool);
+                           apr_pool_t *result_pool);
 
 /* I/O interface. */
 
@@ -114,7 +114,7 @@ svn_error_t *
 svn_fs_x__deserialize_changes_container(void **out,
                                         void *data,
                                         apr_size_t data_len,
-                                        apr_pool_t *pool);
+                                        apr_pool_t *result_pool);
 
 /* Implements svn_cache__partial_getter_func_t for svn_fs_x__changes_t,
  * setting *OUT to the change list (apr_array_header_t *) selected by

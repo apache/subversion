@@ -1,8 +1,9 @@
 usage: svn <subcommand> [options] [args]
 Subversion command-line client.
 Type 'svn help <subcommand>' for help on a specific subcommand.
-Type 'svn --version' to see the program version and RA modules
-  or 'svn --version --quiet' to see just the version number.
+Type 'svn --version' to see the program version and RA modules,
+     'svn --version --verbose' to see dependency versions as well,
+     'svn --version --quiet' to see just the version number.
 
 Most subcommands take file and/or directory arguments, recursing
 on the directories.  If no arguments are supplied to such a

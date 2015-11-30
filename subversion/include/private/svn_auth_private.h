@@ -234,10 +234,12 @@ svn_auth__ssl_client_cert_pw_set(svn_boolean_t *done,
 /* Apply the specified configuration for connecting with SERVER_NAME
    to the auth baton */
 svn_error_t *
-svn_auth__apply_config_for_server(svn_auth_baton_t *ab,
-                                  apr_hash_t *config,
-                                  const char *server_name,
-                                  apr_pool_t *scratch_pool);
+svn_auth__make_session_auth(svn_auth_baton_t **session_auth_baton,
+                            const svn_auth_baton_t *auth_baton,
+                            apr_hash_t *config,
+                            const char *server_name,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 #if (defined(WIN32) && !defined(__MINGW32__)) || defined(DOXYGEN)
 /**

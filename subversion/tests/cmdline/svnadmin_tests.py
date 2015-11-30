@@ -147,7 +147,7 @@ def check_hotcopy_fsfs_fsx(src, dst):
         # the hotcopy destination (i.e. a fresh cache generation)
         if src_file == 'revprop-generation':
           f2 = open(dst_path, 'r')
-          revprop_gen = int(f2.read().strip().split()[1])
+          revprop_gen = int(f2.read().strip())
           if revprop_gen != 0:
               raise svntest.Failure("Hotcopy destination has non-zero " +
                                     "revprop generation")
@@ -248,6 +248,18 @@ def patch_format(repo_dir, shard_size):
   new_contents = "\n".join(processed_lines)
   os.chmod(format_path, 0666)
   open(format_path, 'wb').write(new_contents)
+
+def is_sharded(repo_dir):
+  """Return whether the FSFS repository REPO_DIR is sharded."""
+
+  format_path = os.path.join(repo_dir, "db", "format")
+  contents = open(format_path, 'rb').read()
+
+  for line in contents.split("\n"):
+    if line.startswith("layout sharded"):
+      return True
+
+  return False
 
 def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
                                revs, check_props, dump, *varargs):
@@ -589,8 +601,8 @@ def dump_quiet(sbox):
 
   sbox.build(create_wc = False)
 
-  exit_code, output, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir,
-                                                        '--quiet')
+  exit_code, dump, errput = svntest.main.run_svnadmin("dump", sbox.repo_dir,
+                                                      '--quiet')
   svntest.verify.compare_and_display_lines(
     "Output of 'svnadmin dump --quiet' is unexpected.",
     'STDERR', [], errput)
@@ -792,7 +804,7 @@ def verify_incremental_fsfs(sbox):
   # the listing itself is valid.
   r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
   if r2.endswith('pack'):
-    raise svntest.Skip
+    raise svntest.Skip('Test doesn\'t handle packed revisions')
 
   fp = open(r2, 'wb')
   fp.write("""id: 0-2.0.r2/0
@@ -1215,7 +1227,7 @@ def fsfs_recover_handle_missing_revs_or_revprops_file(sbox):
 
 #----------------------------------------------------------------------
 
-@Skip(svntest.main.tests_use_prepacakaged_repository)
+@Skip(svntest.main.tests_use_prepackaged_repository)
 def create_in_repo_subdir(sbox):
   "'svnadmin create /path/to/repo/subdir'"
 
@@ -1371,21 +1383,21 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   # PART 2: Load a a series of incremental dumps to an empty repository.
   #
   # Incrementally dump the repository into three dump files:
-  dump_file_r1_10 = svntest.main.temp_dir + "-r1-10.dump"
+  dump_file_r1_10 = sbox.get_tempname("r1-10-dump")
   exit_code, output, errput = svntest.main.run_svnadmin(
     'dump', sbox.repo_dir, '-r1:10')
   dump_fp = open(dump_file_r1_10, 'wb')
   dump_fp.writelines(output)
   dump_fp.close()
 
-  dump_file_r11_13 = svntest.main.temp_dir + "-r11-13.dump"
+  dump_file_r11_13 = sbox.get_tempname("r11-13-dump")
   exit_code, output, errput = svntest.main.run_svnadmin(
     'dump', sbox.repo_dir, '--incremental', '-r11:13')
   dump_fp = open(dump_file_r11_13, 'wb')
   dump_fp.writelines(output)
   dump_fp.close()
 
-  dump_file_r14_15 = svntest.main.temp_dir + "-r14-15.dump"
+  dump_file_r14_15 = sbox.get_tempname("r14-15-dump")
   exit_code, output, errput = svntest.main.run_svnadmin(
     'dump', sbox.repo_dir, '--incremental', '-r14:15')
   dump_fp = open(dump_file_r14_15, 'wb')
@@ -2000,6 +2012,14 @@ def mergeinfo_race(sbox):
   "concurrent mergeinfo commits invalidate pred-count"
   sbox.build()
 
+  # This test exercises two commit-time race condition bugs:
+  #
+  # (a) metadata corruption when concurrent commits change svn:mergeinfo (issue #4129)
+  # (b) false positive SVN_ERR_FS_CONFLICT error with httpv1 commits
+  #     https://mail-archives.apache.org/mod_mbox/subversion-dev/201507.mbox/%3C20150731234536.GA5395@tarsus.local2%3E
+  #
+  # Both bugs are timing-dependent and might not reproduce 100% of the time.
+
   wc_dir = sbox.wc_dir
   wc2_dir = sbox.add_wc_path('2')
 
@@ -2046,6 +2066,10 @@ def recover_old_empty(sbox):
 def verify_keep_going(sbox):
   "svnadmin verify --keep-going test"
 
+  # No support for modifying pack files
+  if svntest.main.options.fsfs_packing:
+    raise svntest.Skip('fsfs packing set')
+
   sbox.build(create_wc = False)
   repo_url = sbox.repo_url
   B_url = sbox.repo_url + '/B'
@@ -2070,19 +2094,27 @@ def verify_keep_going(sbox):
 
   exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
                                             ".*Verified revision 1.",
-                                            ".*Error verifying revision 2.",
-                                            ".*Error verifying revision 3.",
                                             ".*",
                                             ".*Summary.*",
                                             ".*r2: E160004:.*",
                                             ".*r2: E160004:.*",
                                             ".*r3: E160004:.*",
                                             ".*r3: E160004:.*"])
-  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
-                                            "svnadmin: E165011:.*"], False)
 
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
+
+  exp_err = svntest.verify.RegexListOutput([".*Error verifying revision 2.",
+                                            "svnadmin: E160004:.*",
+                                            "svnadmin: E160004:.*",
+                                            ".*Error verifying revision 3.",
+                                            "svnadmin: E160004:.*",
+                                            "svnadmin: E160004:.*",
+                                            "svnadmin: E205012:.*"], False)
+
+  if (svntest.main.is_fs_log_addressing()):
+    exp_err.insert(0, ".*Error verifying repository metadata.")
+    exp_err.insert(1, "svnadmin: E160004:.*")
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
@@ -2095,10 +2127,18 @@ def verify_keep_going(sbox):
     exp_out = svntest.verify.RegexListOutput([".*Verifying metadata at revision 0"])
   else:
     exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
-                                             ".*Verified revision 1.",
-                                             ".*Error verifying revision 2."])
+                                              ".*Verified revision 1."])
     if (svntest.main.fs_has_rep_sharing()):
       exp_out.insert(0, ".*Verifying repository metadata.*")
+
+  if (svntest.main.is_fs_log_addressing()):
+    exp_err = svntest.verify.RegexListOutput([
+                                     ".*Error verifying repository metadata.",
+                                     "svnadmin: E160004:.*"], False)
+  else:
+    exp_err = svntest.verify.RegexListOutput([".*Error verifying revision 2.",
+                                              "svnadmin: E160004:.*",
+                                              "svnadmin: E160004:.*"], False)
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
@@ -2109,16 +2149,84 @@ def verify_keep_going(sbox):
                                                         "--quiet",
                                                         sbox.repo_dir)
 
+  if (svntest.main.is_fs_log_addressing()):
+    exp_err = svntest.verify.RegexListOutput([
+                                      ".*Error verifying repository metadata.",
+                                      "svnadmin: E160004:.*"], False)
+  else:
+    exp_err = svntest.verify.RegexListOutput([".*Error verifying revision 2.",
+                                              "svnadmin: E160004:.*",
+                                              "svnadmin: E160004:.*"], False)
+
   if svntest.verify.verify_outputs("Output of 'svnadmin verify' is unexpected.",
-                                   None, errput, None, "svnadmin: E165011:.*"):
+                                   None, errput, None, exp_err):
     raise svntest.Failure
 
   # Don't leave a corrupt repository
   svntest.main.safe_rmtree(sbox.repo_dir, True)
 
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def verify_keep_going_quiet(sbox):
+  "svnadmin verify --keep-going --quiet test"
+
+  # No support for modifying pack files
+  if svntest.main.options.fsfs_packing:
+    raise svntest.Skip('fsfs packing set')
+
+  sbox.build(create_wc = False)
+  repo_url = sbox.repo_url
+  B_url = sbox.repo_url + '/B'
+  C_url = sbox.repo_url + '/C'
+
+  # Create A/B/E/bravo in r2.
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'mkdir', '-m', 'log_msg',
+                                     B_url)
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'mkdir', '-m', 'log_msg',
+                                     C_url)
+
+  r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
+  fp = open(r2, 'r+b')
+  fp.write("""inserting junk to corrupt the rev""")
+  fp.close()
+
+  exit_code, output, errput = svntest.main.run_svnadmin("verify",
+                                                        "--keep-going",
+                                                        "--quiet",
+                                                        sbox.repo_dir)
+
+  exp_err = svntest.verify.RegexListOutput([".*Error verifying revision 2.",
+                                            "svnadmin: E160004:.*",
+                                            "svnadmin: E160004:.*",
+                                            ".*Error verifying revision 3.",
+                                            "svnadmin: E160004:.*",
+                                            "svnadmin: E160004:.*",
+                                            "svnadmin: E205012:.*"], False)
+
+  # Insert another expected error from checksum verification
+  if (svntest.main.is_fs_log_addressing()):
+    exp_err.insert(0, ".*Error verifying repository metadata.")
+    exp_err.insert(1, "svnadmin: E160004:.*")
+
+  if svntest.verify.verify_outputs(
+          "Unexpected error while running 'svnadmin verify'.",
+          output, errput, None, exp_err):
+    raise svntest.Failure
+
+  # Don't leave a corrupt repository
+  svntest.main.safe_rmtree(sbox.repo_dir, True)
+
+
 @SkipUnless(svntest.main.is_fs_type_fsfs)
 def verify_invalid_path_changes(sbox):
   "detect invalid changed path list entries"
+
+  # No support for modifying pack files
+  if svntest.main.options.fsfs_packing:
+    raise svntest.Skip('fsfs packing set')
 
   sbox.build(create_wc = False)
   repo_url = sbox.repo_url
@@ -2180,23 +2288,15 @@ def verify_invalid_path_changes(sbox):
 
   exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
                                            ".*Verified revision 1.",
-                                           ".*Error verifying revision 2.",
                                            ".*Verified revision 3.",
-                                           ".*Error verifying revision 4.",
                                            ".*Verified revision 5.",
-                                           ".*Error verifying revision 6.",
                                            ".*Verified revision 7.",
                                            ".*Verified revision 8.",
                                            ".*Verified revision 9.",
-                                           ".*Error verifying revision 10.",
                                            ".*Verified revision 11.",
-                                           ".*Error verifying revision 12.",
                                            ".*Verified revision 13.",
-                                           ".*Error verifying revision 14.",
                                            ".*Verified revision 15.",
-                                           ".*Error verifying revision 16.",
                                            ".*Verified revision 17.",
-                                           ".*Error verifying revision 18.",
                                            ".*Verified revision 19.",
                                            ".*",
                                            ".*Summary.*",
@@ -2217,12 +2317,36 @@ def verify_invalid_path_changes(sbox):
                                            ".*r18: E160013:.*"])
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
-    if svntest.main.is_fs_log_addressing():
-      exp_out.insert(1, ".*Verifying.*metadata.*")
+  if svntest.main.options.fsfs_sharding is not None:
+    for x in range(0, 19 / svntest.main.options.fsfs_sharding):
+      exp_out.insert(0, ".*Verifying.*metadata.*")
+  if svntest.main.is_fs_log_addressing():
+    exp_out.insert(0, ".*Verifying.*metadata.*")
 
-  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*",
+  exp_err = svntest.verify.RegexListOutput([".*Error verifying revision 2.",
+                                            "svnadmin: E160020:.*",
+                                            "svnadmin: E160020:.*",
+                                            ".*Error verifying revision 4.",
+                                            "svnadmin: E160013:.*",
+                                            ".*Error verifying revision 6.",
+                                            "svnadmin: E160013:.*",
+                                            "svnadmin: E160013:.*",
+                                            ".*Error verifying revision 10.",
+                                            "svnadmin: E160013:.*",
+                                            "svnadmin: E160013:.*",
+                                            ".*Error verifying revision 12.",
                                             "svnadmin: E145001:.*",
-                                            "svnadmin: E160013:.*"], False)
+                                            "svnadmin: E145001:.*",
+                                            ".*Error verifying revision 14.",
+                                            "svnadmin: E160013:.*",
+                                            "svnadmin: E160013:.*",
+                                            ".*Error verifying revision 16.",
+                                            "svnadmin: E145001:.*",
+                                            "svnadmin: E145001:.*",
+                                            ".*Error verifying revision 18.",
+                                            "svnadmin: E160013:.*",
+                                            "svnadmin: E160013:.*",
+                                            "svnadmin: E205012:.*"], False)
 
 
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
@@ -2233,15 +2357,19 @@ def verify_invalid_path_changes(sbox):
                                                         sbox.repo_dir)
 
   exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
-                                            ".*Verified revision 1.",
-                                            ".*Error verifying revision 2."])
-  exp_err = svntest.verify.RegexListOutput(["svnadmin: E160020:.*",
-                                            "svnadmin: E165011:.*"], False)
+                                            ".*Verified revision 1."])
+  exp_err = svntest.verify.RegexListOutput([".*Error verifying revision 2.",
+                                            "svnadmin: E160020:.*",
+                                            "svnadmin: E160020:.*"], False)
 
   if (svntest.main.fs_has_rep_sharing()):
     exp_out.insert(0, ".*Verifying.*metadata.*")
-    if svntest.main.is_fs_log_addressing():
-      exp_out.insert(1, ".*Verifying.*metadata.*")
+  if svntest.main.options.fsfs_sharding is not None:
+    for x in range(0, 19 / svntest.main.options.fsfs_sharding):
+      exp_out.insert(0, ".*Verifying.*metadata.*")
+  if svntest.main.is_fs_log_addressing():
+    exp_out.insert(0, ".*Verifying.*metadata.*")
+
   if svntest.verify.verify_outputs("Unexpected error while running 'svnadmin verify'.",
                                    output, errput, exp_out, exp_err):
     raise svntest.Failure
@@ -2251,8 +2379,13 @@ def verify_invalid_path_changes(sbox):
                                                         "--quiet",
                                                         sbox.repo_dir)
 
+  exp_out = []
+  exp_err = svntest.verify.RegexListOutput([".*Error verifying revision 2.",
+                                            "svnadmin: E160020:.*",
+                                            "svnadmin: E160020:.*"], False)
+
   if svntest.verify.verify_outputs("Output of 'svnadmin verify' is unexpected.",
-                                   None, errput, None, "svnadmin: E165011:.*"):
+                                   output, errput, exp_out, exp_err):
     raise svntest.Failure
 
   # Don't leave a corrupt repository
@@ -2291,6 +2424,10 @@ def verify_denormalized_names(sbox):
   # The BDB backend doesn't do global metadata verification.
   if (svntest.main.fs_has_rep_sharing()):
     expected_output_regex_list.insert(0, ".*Verifying repository metadata.*")
+
+  if svntest.main.options.fsfs_sharding is not None:
+    for x in range(0, 7 / svntest.main.options.fsfs_sharding):
+      expected_output_regex_list.insert(0, ".*Verifying.*metadata.*")
 
   if svntest.main.is_fs_log_addressing():
     expected_output_regex_list.insert(0, ".* Verifying metadata at revision 0.*")
@@ -2606,7 +2743,10 @@ def verify_quickly(sbox):
   "verify quickly using metadata"
 
   sbox.build(create_wc = False)
-  rev_file = open(fsfs_file(sbox.repo_dir, 'revs', '1'), 'r+b')
+  if svntest.main.is_fs_type_fsfs():
+    rev_file = open(fsfs_file(sbox.repo_dir, 'revs', '1'), 'r+b')
+  else:
+    rev_file = open(fsfs_file(sbox.repo_dir, 'revs', 'r1'), 'r+b')
 
   # set new contents
   rev_file.seek(8)
@@ -2621,8 +2761,7 @@ def verify_quickly(sbox):
   # resulting in different progress output
   if svntest.main.is_fs_log_addressing():
     exp_out = svntest.verify.RegexListOutput([])
-    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*",
-                                              "svnadmin: E165011:.*"], False)
+    exp_err = svntest.verify.RegexListOutput(["svnadmin: E160004:.*"], False)
   else:
     exp_out = svntest.verify.RegexListOutput([])
     exp_err = svntest.verify.RegexListOutput([])
@@ -2646,7 +2785,7 @@ def fsfs_hotcopy_progress(sbox):
   # and incremental scenarios.  The progress output can be affected by
   # the --fsfs-packing option, so skip the test if that is the case.
   if svntest.main.options.fsfs_packing:
-    raise svntest.Skip
+    raise svntest.Skip('fsfs packing set')
 
   # Create an empty repository, configure three files per shard.
   sbox.build(create_wc=False, empty=True)
@@ -2760,7 +2899,7 @@ def fsfs_hotcopy_progress_with_revprop_changes(sbox):
   # The progress output can be affected by the --fsfs-packing
   # option, so skip the test if that is the case.
   if svntest.main.options.fsfs_packing:
-    raise svntest.Skip
+    raise svntest.Skip('fsfs packing set')
 
   # Create an empty repository, commit several revisions and hotcopy it.
   sbox.build(create_wc=False, empty=True)
@@ -2954,6 +3093,206 @@ def load_no_svndate_r0(sbox):
                                          'proplist', '--revprop', '-r0',
                                          sbox.repo_dir)
 
+# This is only supported for FSFS
+# The port to FSX is still pending, BDB won't support it.
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+def hotcopy_read_only(sbox):
+  "'svnadmin hotcopy' a read-only source repository"
+  sbox.build()
+  svntest.main.chmod_tree(sbox.repo_dir, 0, 0222)
+
+  backup_dir, backup_url = sbox.add_repo_path('backup')
+  exit_code, output, errput = svntest.main.run_svnadmin("hotcopy",
+                                                        sbox.repo_dir,
+                                                        backup_dir)
+
+  # r/o repos are hard to clean up. Make it writable again.
+  svntest.main.chmod_tree(sbox.repo_dir, 0222, 0222)
+  if errput:
+    logger.warn("Error: hotcopy failed")
+    raise SVNUnexpectedStderr(errput)
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipUnless(svntest.main.fs_has_pack)
+def fsfs_pack_non_sharded(sbox):
+  "'svnadmin pack' on a non-sharded repository"
+
+  # Configure two files per shard to trigger packing.
+  sbox.build(create_wc = False,
+             minor_version = min(svntest.main.options.server_minor_version,3))
+
+  # Skip for pre-cooked sharded repositories
+  if is_sharded(sbox.repo_dir):
+    raise svntest.Skip('sharded pre-cooked repository')
+
+  svntest.actions.run_and_verify_svnadmin(
+      None, [], "upgrade", sbox.repo_dir)
+  svntest.actions.run_and_verify_svnadmin(
+      ['svnadmin: Warning - this repository is not sharded. Packing has no effect.\n'],
+      [], "pack", sbox.repo_dir)
+
+def load_revprops(sbox):
+  "svnadmin load-revprops"
+
+  sbox.build(create_wc=False, empty=True)
+
+  dump_path = os.path.join(os.path.dirname(sys.argv[0]),
+                                           'svnadmin_tests_data',
+                                           'skeleton_repos.dump')
+  dump_contents = open(dump_path, 'rb').readlines()
+  load_and_verify_dumpstream(sbox, None, [], None, False, dump_contents)
+
+  svntest.actions.run_and_verify_svnlook(['Initial setup...\n', '\n'],
+                                         [], 'log', '-r1', sbox.repo_dir)
+
+  # After loading the dump, amend one of the log message in the repository.
+  input_file = sbox.get_tempname()
+  svntest.main.file_write(input_file, 'Modified log message...\n')
+
+  svntest.actions.run_and_verify_svnadmin([], [], 'setlog', '--bypass-hooks',
+                                          '-r1', sbox.repo_dir, input_file)
+  svntest.actions.run_and_verify_svnlook(['Modified log message...\n', '\n'],
+                                         [], 'log', '-r1', sbox.repo_dir)
+
+  # Load the same dump, but with 'svnadmin load-revprops'.  Doing so should
+  # restore the log message to its original state.
+  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0,
+                                 True, dump_contents, 'load-revprops',
+                                 sbox.repo_dir)
+
+  svntest.actions.run_and_verify_svnlook(['Initial setup...\n', '\n'],
+                                         [], 'log', '-r1', sbox.repo_dir)
+
+def dump_revprops(sbox):
+  "svnadmin dump-revprops"
+
+  sbox.build(create_wc=False)
+
+  # Dump revprops only.
+  exit_code, dump_contents, errput = \
+    svntest.actions.run_and_verify_svnadmin(None, [], "dump-revprops", "-q",
+                                            sbox.repo_dir)
+
+  # We expect the dump to contain no path changes
+  for line in dump_contents:
+    if line.find("Node-path: ") > -1:
+      logger.warn("Error: path change found in revprops-only dump.")
+      raise svntest.Failure
+
+  # Remember the current log message for r1
+  exit_code, log_msg, errput = \
+    svntest.actions.run_and_verify_svnlook(None, [], 'log', '-r1',
+                                           sbox.repo_dir)
+
+  # Now, change the log message in the repository.
+  input_file = sbox.get_tempname()
+  svntest.main.file_write(input_file, 'Modified log message...\n')
+
+  svntest.actions.run_and_verify_svnadmin([], [], 'setlog', '--bypass-hooks',
+                                          '-r1', sbox.repo_dir, input_file)
+  svntest.actions.run_and_verify_svnlook(['Modified log message...\n', '\n'],
+                                         [], 'log', '-r1', sbox.repo_dir)
+
+  # Load the same dump with 'svnadmin load-revprops'.  Doing so should
+  # restore the log message to its original state.
+  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0,
+                                 True, dump_contents, 'load-revprops',
+                                 sbox.repo_dir)
+
+  svntest.actions.run_and_verify_svnlook(log_msg, [], 'log', '-r1',
+                                         sbox.repo_dir)
+
+@XFail(svntest.main.is_fs_type_fsx)
+@Issue(4598)
+def dump_no_op_change(sbox):
+  "svnadmin dump with no-op changes"
+
+  sbox.build(create_wc=False, empty=True)
+  empty_file = sbox.get_tempname()
+  svntest.main.file_write(empty_file, '')
+
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', svntest.main.make_log_msg(),
+                                         'put', empty_file, 'bar')
+  # Commit a no-op change.
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', svntest.main.make_log_msg(),
+                                         'put', empty_file, 'bar')
+  # Dump and load the repository.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       sbox.repo_dir)
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # We expect svn log -v to yield identical results for both original and
+  # reconstructed repositories.  This used to fail as described in the
+  # Issue 4598 (https://issues.apache.org/jira/browse/SVN-4598), at least
+  # around r1706415.
+  #
+  # Test svn log -v for r2:
+  _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
+                                                      '-r2', sbox.repo_url)
+  found = [True for line in expected if line.find('M /bar\n') != -1]
+  if not found:
+    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
+                                     '-r2', sbox2.repo_url)
+  # Test svn log -v for /bar:
+  _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
+                                                      sbox.repo_url + '/bar')
+  found = [True for line in expected if line.find('M /bar\n') != -1]
+  if not found:
+    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
+                                     sbox2.repo_url + '/bar')
+
+@XFail()
+def dump_no_op_prop_change(sbox):
+  "svnadmin dump with no-op property change"
+
+  sbox.build(create_wc=False, empty=True)
+  empty_file = sbox.get_tempname()
+  svntest.main.file_write(empty_file, '')
+
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', svntest.main.make_log_msg(),
+                                         'put', empty_file, 'bar',
+                                         'propset', 'pname', 'pval', 'bar')
+  # Commit a no-op property change.
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         '-m', svntest.main.make_log_msg(),
+                                         'propset', 'pname', 'pval', 'bar')
+  # Dump and load the repository.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       sbox.repo_dir)
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Test svn log -v for r2:
+  _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
+                                                      '-r2', sbox.repo_url)
+  found = [True for line in expected if line.find('M /bar\n') != -1]
+  if not found:
+    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
+                                     '-r2', sbox2.repo_url)
+  # Test svn log -v for /bar:
+  _, expected, _ = svntest.actions.run_and_verify_svn(None, [], 'log', '-v',
+                                                      sbox.repo_url + '/bar')
+  found = [True for line in expected if line.find('M /bar\n') != -1]
+  if not found:
+    raise svntest.Failure
+  svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
+                                     sbox2.repo_url + '/bar')
+
 ########################################################################
 # Run the tests
 
@@ -2992,6 +3331,7 @@ test_list = [ None,
               mergeinfo_race,
               recover_old_empty,
               verify_keep_going,
+              verify_keep_going_quiet,
               verify_invalid_path_changes,
               verify_denormalized_names,
               fsfs_recover_old_non_empty,
@@ -3009,6 +3349,12 @@ test_list = [ None,
               upgrade,
               load_txdelta,
               load_no_svndate_r0,
+              hotcopy_read_only,
+              fsfs_pack_non_sharded,
+              load_revprops,
+              dump_revprops,
+              dump_no_op_change,
+              dump_no_op_prop_change
              ]
 
 if __name__ == '__main__':

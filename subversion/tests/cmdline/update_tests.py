@@ -2227,6 +2227,7 @@ def forced_update_failures(sbox):
 # Test for issue #2556. The tests maps a virtual drive to a working copy
 # and tries some basic update, commit and status actions on the virtual
 # drive.
+@SkipUnless(svntest.main.is_os_windows)
 def update_wc_on_windows_drive(sbox):
   "update wc on the root of a Windows (virtual) drive"
 
@@ -2253,10 +2254,6 @@ def update_wc_on_windows_drive(sbox):
 
     return None
 
-  # Skip the test if not on Windows
-  if not svntest.main.windows:
-    raise svntest.Skip
-
   # just create an empty folder, we'll checkout later.
   sbox.build(create_wc = False)
   svntest.main.safe_rmtree(sbox.wc_dir)
@@ -2265,7 +2262,7 @@ def update_wc_on_windows_drive(sbox):
   # create a virtual drive to the working copy folder
   drive = find_the_next_available_drive_letter()
   if drive is None:
-    raise svntest.Skip
+    raise svntest.Skip('No drive letter available')
 
   subprocess.call(['subst', drive +':', sbox.wc_dir])
   wc_dir = drive + ':/'
@@ -5137,7 +5134,7 @@ def skip_access_denied(sbox):
   try:
     import msvcrt
   except ImportError:
-    raise svntest.Skip
+    raise svntest.Skip('python msvcrt library not available')
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -6626,8 +6623,7 @@ def update_conflict_details(sbox):
     {
       "Path" : re.escape(sbox.ospath('A/B')),
 
-      "Conflict Properties File" :
-            re.escape(sbox.ospath('A/B/dir_conflicts.prej')) + '.*',
+      "Conflicted Properties" : "key",
       "Conflict Details": re.escape(
             'incoming dir edit upon update' +
             ' Source  left: (dir) ^/A/B@1' +
@@ -6696,6 +6692,128 @@ def update_conflict_details(sbox):
 
   svntest.actions.run_and_verify_info(expected_info, sbox.ospath('A/B'),
                                       '--depth', 'infinity')
+
+# Keywords should be updated in local file even if text change is shortcut
+# (due to the local change being the same as the incoming change, for example).
+@XFail()
+def update_keywords_on_shortcut(sbox):
+  "update_keywords_on_shortcut"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Start with a file with keywords expanded
+  mu_path = sbox.ospath('A/mu')
+  svntest.main.file_append(mu_path, '$LastChangedRevision$\n')
+  svntest.main.run_svn(None, 'ps', 'svn:keywords', 'LastChangedRevision', mu_path)
+  sbox.simple_commit('A/mu')
+
+  # Modify the text, and commit
+  svntest.main.file_append(mu_path, 'New line.\n')
+  sbox.simple_commit('A/mu')
+
+  # Update back to the previous revision
+  sbox.simple_update('A/mu', 2)
+
+  # Make the same change again locally
+  svntest.main.file_append(mu_path, 'New line.\n')
+
+  # Update, so that merging the text change is a short-cut merge
+  text_before_up = open(sbox.ospath('A/mu'), 'r').readlines()
+  sbox.simple_update('A/mu')
+  text_after_up = open(sbox.ospath('A/mu'), 'r').readlines()
+
+  # Check the keywords have been updated
+  if not any(['$LastChangedRevision: 2 $' in line
+              for line in text_before_up]):
+    raise svntest.Failure("keyword not as expected in test set-up phase")
+  if not any(['$LastChangedRevision: 3 $' in line
+              for line in text_after_up]):
+    raise svntest.Failure("update did not update the LastChangedRevision keyword")
+
+def update_add_conflicted_deep(sbox):
+  "deep add conflicted"
+
+  sbox.build()
+  repo_url = sbox.repo_url
+
+  svntest.actions.run_and_verify_svnmucc(
+                        None, [], '-U', repo_url, '-m', '',
+                        'mkdir', 'A/z',
+                        'mkdir', 'A/z/z',
+                        'mkdir', 'A/z/z/z')
+
+  svntest.actions.run_and_verify_svnmucc(
+                        None, [], '-U', repo_url, '-m', '',
+                        'rm', 'A/z',
+                        'mkdir', 'A/z',
+                        'mkdir', 'A/z/z',
+                        'mkdir', 'A/z/z/z')
+
+  sbox.simple_append('A/z', 'A/z')
+  sbox.simple_add('A/z')
+  sbox.simple_update('A', 2)
+  # This final update used to segfault using 1.9.0 and 1.9.1
+  sbox.simple_update('A/z/z', 3)
+
+def missing_tmp_update(sbox):
+  "missing tmp update caused segfault"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None, [], False,
+                                        wc_dir, '--set-depth', 'empty')
+
+  os.rmdir(sbox.ospath(svntest.main.get_admin_name() + '/tmp'))
+
+  svntest.actions.run_and_verify_svn(None, '.*Unable to create.*',
+                                     'up', wc_dir, '--set-depth', 'infinity')
+
+  svntest.actions.run_and_verify_svn(None, [], 'cleanup', wc_dir)
+
+  svntest.actions.run_and_verify_update(wc_dir, None, None, None, [], False,
+                                        wc_dir, '--set-depth', 'infinity')
+
+def update_delete_switched(sbox):
+  "update delete switched"
+
+  sbox.build(read_only = True)
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_switch(wc_dir, sbox.ospath('A/B/E'),
+                                        sbox.repo_url + '/A/D/G',
+                                        None, None, None, [], False,
+                                        '--ignore-ancestry')
+
+  # Introduce some change somewhere...
+  sbox.simple_propset('A', 'A', 'A')
+
+  expected_status = svntest.wc.State(wc_dir, {
+      ''                  : Item(status='  ', wc_rev='1'),
+      'A'                 : Item(status='A ', copied='+', treeconflict='C', wc_rev='-'),
+      'A/B'               : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B/E'             : Item(status='A ', copied='+', wc_rev='-'),
+      'A/B/E/rho'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B/E/pi'          : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B/E/tau'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B/lambda'        : Item(status='  ', copied='+', wc_rev='-'),
+      'A/B/F'             : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D'               : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/G'             : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/G/pi'          : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/G/tau'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/G/rho'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/gamma'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H'             : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H/omega'       : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H/psi'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/D/H/chi'         : Item(status='  ', copied='+', wc_rev='-'),
+      'A/mu'              : Item(status='  ', copied='+', wc_rev='-'),
+      'A/C'               : Item(status='  ', copied='+', wc_rev='-'),
+      'iota'              : Item(status='  ', wc_rev='1'),
+  })
+  svntest.actions.run_and_verify_update(wc_dir, None, None, expected_status,
+                                        [], False, sbox.ospath('A'), '-r', 0)
 
 #######################################################################
 # Run the tests
@@ -6783,6 +6901,10 @@ test_list = [ None,
               bump_below_tree_conflict,
               update_child_below_add,
               update_conflict_details,
+              update_keywords_on_shortcut,
+              update_add_conflicted_deep,
+              missing_tmp_update,
+              update_delete_switched,
              ]
 
 if __name__ == '__main__':

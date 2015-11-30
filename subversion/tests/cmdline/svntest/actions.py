@@ -249,6 +249,28 @@ def run_and_verify_svnadmin2(expected_stdout, expected_stderr,
   return exit_code, out, err
 
 
+def run_and_verify_svnfsfs(expected_stdout,
+                           expected_stderr, *varargs):
+  """Like run_and_verify_svnfsfs2, but the expected exit code is
+  assumed to be 0 if no output is expected on stderr, and 1 otherwise."""
+
+  expected_exit = 0
+  if expected_stderr is not None and expected_stderr != []:
+    expected_exit = 1
+  return run_and_verify_svnfsfs2(expected_stdout, expected_stderr,
+                                 expected_exit, *varargs)
+
+def run_and_verify_svnfsfs2(expected_stdout, expected_stderr,
+                            expected_exit, *varargs):
+  """Run svnfsfs command and check its output and exit code."""
+
+  exit_code, out, err = main.run_svnfsfs(*varargs)
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
+  return exit_code, out, err
+
+
 def run_and_verify_svnversion(wc_dir, trail_url,
                               expected_stdout, expected_stderr, *varargs):
   """like run_and_verify_svnversion2, but the expected exit code is
@@ -378,6 +400,27 @@ def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
                         expected_stdout, expected_stderr)
   verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return output
+
+
+def run_and_verify_svnmover(expected_stdout, expected_stderr,
+                            *varargs):
+  """Run svnmover command and check its output"""
+
+  expected_exit = 0
+  if expected_stderr is not None and expected_stderr != []:
+    expected_exit = 1
+  return run_and_verify_svnmover2(expected_stdout, expected_stderr,
+                                  expected_exit, *varargs)
+
+def run_and_verify_svnmover2(expected_stdout, expected_stderr,
+                             expected_exit, *varargs):
+  """Run svnmover command and check its output and exit code."""
+
+  exit_code, out, err = main.run_svnmover(*varargs)
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_stdout, expected_stderr)
+  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
+  return exit_code, out, err
 
 
 def run_and_verify_svnmucc(expected_stdout, expected_stderr,
@@ -1646,7 +1689,7 @@ def run_and_verify_diff_summarize_xml(error_re_string = [],
   for path in paths:
     modified_path = path.childNodes[0].data
 
-    if (expected_prefix is not None
+    if (expected_prefix
         and modified_path.find(expected_prefix) == 0):
       modified_path = modified_path.replace(expected_prefix, '')[1:].strip()
 

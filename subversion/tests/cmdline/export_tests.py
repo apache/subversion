@@ -1102,7 +1102,7 @@ test_list = [ None,
               export_file_overwrite_with_force,
               export_custom_keywords,
               export_file_external,
-              export_file_externals2
+              export_file_externals2,
              ]
 
 if __name__ == '__main__':
