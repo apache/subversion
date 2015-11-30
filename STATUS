@@ -83,6 +83,13 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1717154
+   Clarify documentation of svn_fs_node_created_rev().
+   Justification:
+     Have up-to-date documentation.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
