@@ -20,11 +20,27 @@
 * ====================================================================
 */
 
+#include <git2.h>
+#include "private/svn_sqlite.h"
+
 #ifndef SVN_LIBSVN_FS__FS_GIT_H
 #define SVN_LIBSVN_FS__FS_GIT_H
 
+svn_error_t *
+svn_fs_git__wrap_git_error(int err);
+
+#define GIT2_ERR(expr)                                          \
+  do {                                                          \
+    int svn_err__git_temp = (expr);                             \
+    if (svn_err__git_temp)                                      \
+      return svn_error_trace(                                   \
+              svn_fs_git__wrap_git_error(svn_err__git_temp));   \
+  } while (0)
+
 typedef struct svn_fs_git_fs_t
 {
+  git_repository *repos;
+  svn_sqlite__db_t *sdb;
 
   svn_error_t *(*svn_fs_open)(svn_fs_t **,
                               const char *,
@@ -48,5 +64,19 @@ svn_fs_git__open(svn_fs_t *fs,
                  const char *path,
                  apr_pool_t *scratch_pool);
 
+
+/* From gitdb.c */
+svn_error_t *
+svn_fs_git__db_open(svn_fs_t *fs,
+                    apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_fs_git__db_create(svn_fs_t *fs,
+                      apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_fs_git__db_youngest_rev(svn_revnum_t *youngest_p,
+                            svn_fs_t *fs,
+                            apr_pool_t *pool);
 
 #endif

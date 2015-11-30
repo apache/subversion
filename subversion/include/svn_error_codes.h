@@ -152,6 +152,9 @@ extern "C" {
                                          + (23 * SVN_ERR_CATEGORY_SIZE))
 #define SVN_ERR_X509_CATEGORY_START     (APR_OS_START_USERERR \
                                          + (24 * SVN_ERR_CATEGORY_SIZE))
+/** @since New in 1.1.0 */
+#define SVN_ERR_FS_GIT_CATEGORY_START   (APR_OS_START_USERERR \
+                                         + (25 * SVN_ERR_CATEGORY_SIZE))
 
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
@@ -1730,6 +1733,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_X509_CERT_VERIFY_FAILED,
              SVN_ERR_X509_CATEGORY_START + 19,
              "Certficate verification failed")
+
+  /** @since New in 1.10 */
+  SVN_ERRDEF(SVN_ERR_FS_GIT_LIBGIT2_ERROR,
+             SVN_ERR_FS_GIT_CATEGORY_START + 0,
+             "Libgit2 reported some error")
 
 SVN_ERROR_END
 

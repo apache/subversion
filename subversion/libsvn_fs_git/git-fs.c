@@ -26,10 +26,8 @@
 
 #include <apr_general.h>
 #include <apr_pools.h>
-#include <apr_file_io.h>
 
 #include "svn_fs.h"
-#include "svn_delta.h"
 #include "svn_version.h"
 #include "svn_pools.h"
 
@@ -44,7 +42,9 @@
 static svn_error_t *
 fs_git_youngest_rev(svn_revnum_t *youngest_p, svn_fs_t *fs, apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  SVN_ERR(svn_fs_git__db_youngest_rev(youngest_p, fs, pool));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -145,7 +145,15 @@ fs_git_get_locks(svn_fs_t *fs, const char *path, svn_depth_t depth, svn_fs_get_l
 static svn_error_t *
 fs_git_info_format(int *fs_format, svn_version_t **supports_version, svn_fs_t *fs, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  *fs_format = 0;
+  *supports_version = apr_palloc(result_pool, sizeof(svn_version_t));
+
+  (*supports_version)->major = SVN_VER_MAJOR;
+  (*supports_version)->minor = 10;
+  (*supports_version)->patch = 0;
+  (*supports_version)->tag = "";
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -205,6 +213,21 @@ static fs_vtable_t fs_vtable =
   fs_git_bdb_set_errcall
 };
 
+static apr_status_t
+fs_git_cleanup(void *baton)
+{
+  svn_fs_t *fs = baton;
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+
+  if (fgf->repos)
+    {
+      git_repository_free(fgf->repos);
+      fgf->repos = NULL;
+    }
+
+  return APR_SUCCESS;
+}
+
 svn_error_t *
 svn_fs_git__initialize_fs_struct(svn_fs_t *fs,
                                  apr_pool_t *scratch_pool)
@@ -213,6 +236,10 @@ svn_fs_git__initialize_fs_struct(svn_fs_t *fs,
 
   fs->vtable = &fs_vtable;
   fs->fsap_data = fgf;
+
+  apr_pool_cleanup_register(fs->pool, fs, fs_git_cleanup,
+                            apr_pool_cleanup_null);
+
   return SVN_NO_ERROR;
 }
 
@@ -221,7 +248,15 @@ svn_fs_git__create(svn_fs_t *fs,
                    const char *path,
                    apr_pool_t *scratch_pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+
+  fs->path = apr_pstrdup(fs->pool, path);
+
+  GIT2_ERR(git_repository_init(&fgf->repos, path, TRUE /* is_bare */));
+
+  SVN_ERR(svn_fs_git__db_create(fs, scratch_pool));
+
+  return APR_SUCCESS;
 }
 
 svn_error_t *
@@ -229,5 +264,14 @@ svn_fs_git__open(svn_fs_t *fs,
                  const char *path,
                  apr_pool_t *scratch_pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+
+  fs->path = apr_pstrdup(fs->pool, path);
+
+  GIT2_ERR(git_repository_open(&fgf->repos, path));
+
+  SVN_ERR(svn_fs_git__db_open(fs, scratch_pool));
+
+  return APR_SUCCESS;
 }
+
