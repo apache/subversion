@@ -2207,12 +2207,12 @@ x_contents_changed(svn_boolean_t *changed_p,
     SVN_ERR(svn_fs_x__check_path(&kind, root1, path1, subpool));
     if (kind != svn_node_file)
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path1);
+        (SVN_ERR_FS_NOT_FILE, NULL, _("'%s' is not a file"), path1);
 
     SVN_ERR(svn_fs_x__check_path(&kind, root2, path2, subpool));
     if (kind != svn_node_file)
       return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path2);
+        (SVN_ERR_FS_NOT_FILE, NULL, _("'%s' is not a file"), path2);
   }
 
   SVN_ERR(svn_fs_x__get_dag_node(&node1, root1, path1, subpool, subpool));
