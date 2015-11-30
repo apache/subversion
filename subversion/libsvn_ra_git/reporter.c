@@ -896,7 +896,7 @@ compare_files(svn_boolean_t *changed,
   b.parent_is_repos_root = FALSE; /* can be set to anything for our purposes */
   git_err = git_diff_blobs(blob, svn_relpath_basename(path, NULL),
                            other_blob, svn_relpath_basename(other_path, NULL),
-                           NULL, blob_relatedness_cb, NULL, NULL, &b);
+                           NULL, blob_relatedness_cb, NULL, NULL, NULL, &b);
   if (git_err)
     {
       if (git_err == GIT_EUSER)
@@ -1179,7 +1179,7 @@ detect_blob_relatedness(int *distance, git_repository *repos,
     {
       b.parent_is_repos_root = TRUE;
       git_err = git_diff_blobs(blob, "", other_blob, "", NULL,
-                               blob_relatedness_cb, NULL, NULL, &b);
+                               blob_relatedness_cb, NULL, NULL, NULL, &b);
       if (git_err)
         {
           if (git_err == GIT_EUSER)
@@ -1204,7 +1204,7 @@ detect_blob_relatedness(int *distance, git_repository *repos,
     return svn_error_trace(svn_ra_git__wrap_git_error());
 
   /* Loop over changes, detect adds/deletes/mods of the blob in question. */
-  git_err = git_diff_foreach(diff, blob_relatedness_cb, NULL, NULL, &b);
+  git_err = git_diff_foreach(diff, blob_relatedness_cb, NULL, NULL, NULL, &b);
   if (git_err)
     {
       if (git_err == GIT_EUSER)

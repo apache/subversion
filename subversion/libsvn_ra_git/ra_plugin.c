@@ -129,12 +129,13 @@ split_url(const char **remote_url,
           svn_stringbuf_t *fs_path,
           git_repository *repos,
           const char *session_url,
+          git_remote_callbacks *callbacks,
           apr_pool_t *result_pool,
           apr_pool_t *scratch_pool)
 {
   svn_boolean_t found_remote = FALSE;
   svn_stringbuf_t *remote_url_buf;
-  
+
   remote_url_buf = svn_stringbuf_create(make_git_url(session_url), scratch_pool);
   while (!found_remote)
     {
@@ -145,13 +146,12 @@ split_url(const char **remote_url,
 
       /* Create an in-memory remote... */
       git_err = git_remote_create_anonymous(&remote, repos,
-                                            remote_url_buf->data,
-                                            RA_GIT_DEFAULT_REFSPEC);
+                                            remote_url_buf->data);
       if (git_err)
         return svn_error_trace(svn_ra_git__wrap_git_error());
 
       /* ... and try to connect to it. */
-      git_err = git_remote_connect(remote, GIT_DIRECTION_FETCH);
+      git_err = git_remote_connect(remote, GIT_DIRECTION_FETCH, callbacks);
       if (git_err)
         {
           apr_size_t slash_pos;
@@ -866,12 +866,15 @@ svn_ra_git__get_schemes(apr_pool_t *pool)
 static svn_error_t *
 svn_ra_git__open(svn_ra_session_t *session,
                  const char **corrected_url,
-                 const char *repos_url,
+                 const char *session_URL,
                  const svn_ra_callbacks2_t *callbacks,
                  void *callback_baton,
+                 svn_auth_baton_t *auth_baton,
                  apr_hash_t *config,
-                 apr_pool_t *pool)
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
 {
+  apr_pool_t *pool = result_pool;
   const char *client_string;
   svn_ra_git__session_baton_t *sess;
   static volatile svn_atomic_t libgit_initialized = 0;
@@ -913,7 +916,7 @@ svn_ra_git__open(svn_ra_session_t *session,
   sess->fetch_done = FALSE;
   sess->scratch_pool = svn_pool_create(session->pool);
 
-  sess->session_url = apr_pstrdup(pool, repos_url);
+  sess->session_url = apr_pstrdup(pool, session_URL);
   session->priv = sess;
 
   /* Store the git repository within the working copy's admin area,
@@ -950,11 +953,20 @@ svn_ra_git__open(svn_ra_session_t *session,
   if (git_err)
     return svn_error_trace(svn_ra_git__wrap_git_error());
 
+
+  remote_callbacks = apr_pcalloc(session->pool, sizeof(*remote_callbacks));
+  remote_callbacks->version = GIT_REMOTE_CALLBACKS_VERSION;
+  remote_callbacks->sideband_progress = remote_sideband_progress_cb;
+  remote_callbacks->transfer_progress = remote_transfer_progress_cb;
+  remote_callbacks->update_tips = remote_update_tips_cb;
+  remote_callbacks->payload = sess;
+
   /* Split the session URL into a git remote URL and, possibly, a path within
    * the repository (in sess->fs_path). */
   svn_pool_clear(sess->scratch_pool);
   SVN_ERR(split_url(&sess->remote_url, sess->fs_path, sess->repos,
-                    sess->session_url, session->pool, sess->scratch_pool));
+                    sess->session_url, remote_callbacks,
+                    session->pool, sess->scratch_pool));
 
   /* Check if our remote already exists. */
   git_err = git_remote_lookup(&sess->remote, sess->repos,
@@ -978,14 +990,6 @@ svn_ra_git__open(svn_ra_session_t *session,
       if (git_err)
         return svn_error_trace(svn_ra_git__wrap_git_error());
     }
-
-  remote_callbacks = apr_pcalloc(session->pool, sizeof(*remote_callbacks));
-  remote_callbacks->version = GIT_REMOTE_CALLBACKS_VERSION;
-  remote_callbacks->sideband_progress = remote_sideband_progress_cb;
-  remote_callbacks->transfer_progress = remote_transfer_progress_cb;
-  remote_callbacks->update_tips = remote_update_tips_cb;
-  remote_callbacks->payload = sess;
-  git_remote_set_callbacks(sess->remote, remote_callbacks);
 
   git_err = git_revwalk_new(&sess->revwalk, sess->repos);
   if (git_err)
@@ -2066,7 +2070,7 @@ svn_ra_git__get_file(svn_ra_session_t *session,
 
   if (stream)
     {
-      apr_size_t total_size;
+      svn_filesize_t total_size;
       const char *data;
       apr_size_t bytes_copied;
 

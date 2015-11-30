@@ -1376,7 +1376,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       inc_dir = os.path.join(self.libgit2_path, 'include')
       lib_dir = os.path.join(self.libgit2_path, 'lib')
 
-      lib_name = 'libgit2.lib'
+      lib_name = 'git2.lib'
     else:
       if (show_warnings):
         print('WARNING: \'git2/version.h\' not found')
@@ -1407,7 +1407,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       return
 
     self._libraries['libgit2'] = SVNCommonLibrary('libgit2', inc_dir, lib_dir,
-                                                   'libgit2.lib', libgit2_version)
+                                                   lib_name, libgit2_version)
 
   def _find_sqlite(self, show_warnings):
     "Find the Sqlite library and version"
