@@ -23,6 +23,30 @@
 #ifndef SVN_LIBSVN_FS__FS_GIT_H
 #define SVN_LIBSVN_FS__FS_GIT_H
 
+typedef struct svn_fs_git_fs_t
+{
+
+  svn_error_t *(*svn_fs_open)(svn_fs_t **,
+                              const char *,
+                              apr_hash_t *,
+                              apr_pool_t *,
+                              apr_pool_t *);
+
+} svn_fs_git_fs_t;
+
+svn_error_t *
+svn_fs_git__initialize_fs_struct(svn_fs_t *fs,
+                                 apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_fs_git__create(svn_fs_t *fs,
+                   const char *path,
+                   apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_fs_git__open(svn_fs_t *fs,
+                 const char *path,
+                 apr_pool_t *scratch_pool);
 
 
 #endif

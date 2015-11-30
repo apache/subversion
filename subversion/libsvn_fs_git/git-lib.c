@@ -1,4 +1,4 @@
-/* fs.c --- creating, opening and closing filesystems
+/* git-lib.c --- fs library level operations
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -28,6 +28,8 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
+#include <git2.h>
+
 #include "svn_fs.h"
 #include "svn_delta.h"
 #include "svn_version.h"
@@ -35,6 +37,7 @@
 
 #include "svn_private_config.h"
 
+#include "private/svn_atomic.h"
 #include "private/svn_fs_util.h"
 
 #include "../libsvn_fs/fs-loader.h"
@@ -53,15 +56,28 @@ fs_git_create(svn_fs_t *fs,
               apr_pool_t *scratch_pool,
               apr_pool_t *common_pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  SVN_ERR(svn_fs__check_fs(fs, FALSE));
+
+  SVN_ERR(svn_fs_git__initialize_fs_struct(fs, scratch_pool));
+
+  SVN_ERR(svn_fs_git__create(fs, path, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-fs_git_open_fs(svn_fs_t *fs, const char *path,
+fs_git_open_fs(svn_fs_t *fs,
+               const char *path,
                svn_mutex__t *common_pool_lock,
                apr_pool_t *scratch_pool,
                apr_pool_t *common_pool)
 {
+  SVN_ERR(svn_fs__check_fs(fs, FALSE));
+
+  SVN_ERR(svn_fs_git__initialize_fs_struct(fs, scratch_pool));
+
+  SVN_ERR(svn_fs_git__open(fs, path, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -72,6 +88,16 @@ fs_git_open_fs_for_recovery(svn_fs_t *fs,
                             apr_pool_t *pool,
                             apr_pool_t *common_pool)
 {
+  apr_pool_t * subpool = svn_pool_create(pool);
+
+  SVN_ERR(svn_fs__check_fs(fs, FALSE));
+
+  SVN_ERR(svn_fs_git__initialize_fs_struct(fs, subpool));
+
+  SVN_ERR(svn_fs_git__open(fs, path, subpool));
+
+  svn_pool_destroy(subpool);
+
   return SVN_NO_ERROR;
 }
 
@@ -86,6 +112,8 @@ fs_git_upgrade_fs(svn_fs_t *fs,
                   apr_pool_t *scratch_pool,
                   apr_pool_t *common_pool)
 {
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
+
   return SVN_NO_ERROR;
 }
 
@@ -102,6 +130,8 @@ fs_git_verify_fs(svn_fs_t *fs,
                  apr_pool_t *pool,
                  apr_pool_t *common_pool)
 {
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
+
   return SVN_NO_ERROR;
 }
 
@@ -127,6 +157,9 @@ fs_git_hotcopy(svn_fs_t *src_fs,
                apr_pool_t *pool,
                apr_pool_t *common_pool)
 {
+  SVN_ERR(svn_fs__check_fs(src_fs, TRUE));
+  SVN_ERR(svn_fs__check_fs(dst_fs, TRUE));
+
   return svn_error_create(APR_ENOTIMPL, NULL, NULL);
 }
 
@@ -141,6 +174,8 @@ fs_git_recover(svn_fs_t *fs,
                svn_cancel_func_t cancel_func, void *cancel_baton,
                apr_pool_t *pool)
 {
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
+
   return SVN_NO_ERROR;
 }
 
@@ -155,6 +190,8 @@ fs_git_pack_fs(svn_fs_t *fs,
                apr_pool_t *pool,
                apr_pool_t *common_pool)
 {
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
+
   return SVN_NO_ERROR;
 }
 
@@ -178,6 +215,11 @@ fs_git_set_svn_fs_open(svn_fs_t *fs,
                                                     apr_pool_t *,
                                                     apr_pool_t *))
 {
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
+
+  fgf->svn_fs_open = svn_fs_open_;
+
   return SVN_NO_ERROR;
 }
 
@@ -200,6 +242,17 @@ static fs_library_vtable_t library_vtable =
   NULL /* info_fsap_dup */
 };
 
+static volatile svn_atomic_t libgit2_init_state = 0;
+
+static svn_error_t *
+initialize_libgit2(void *baton,
+                   apr_pool_t *pool)
+{
+  git_libgit2_init();
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_git__init(const svn_version_t *loader_version,
                  fs_library_vtable_t **vtable,
@@ -220,6 +273,9 @@ svn_fs_git__init(const svn_version_t *loader_version,
                              _("Unsupported FS loader version (%d) for fsx"),
                              loader_version->major);
   SVN_ERR(svn_ver_check_list2(fs_git_get_version(), checklist, svn_ver_equal));
+
+  SVN_ERR(svn_atomic__init_once(&libgit2_init_state, initialize_libgit2, NULL,
+                                common_pool));
 
   *vtable = &library_vtable;
   return SVN_NO_ERROR;
