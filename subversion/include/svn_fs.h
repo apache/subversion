@@ -87,6 +87,18 @@ typedef struct svn_fs_t svn_fs_t;
  */
 #define SVN_FS_TYPE_FSX                         "fsx"
 
+
+/**
+ * EXPERIMENTAL read-only filesystem backend.
+ *
+ * It is not ready for general production use.  Please consult the
+ * respective release notes on suggested usage scenarios.
+ *
+ * @since New in 1.10.
+ */
+#define SVN_FS_TYPE_GIT                         "git"
+
+
 /** @} */
 
 

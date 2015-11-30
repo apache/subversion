@@ -187,6 +187,7 @@ typedef svn_error_t *(*fs_init_func_t)(const svn_version_t *loader_version,
 #include "../libsvn_fs_base/fs_init.h"
 #include "../libsvn_fs_fs/fs_init.h"
 #include "../libsvn_fs_x/fs_init.h"
+#include "../libsvn_fs_git/fs_init.h"
 
 
 

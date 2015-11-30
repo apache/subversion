@@ -1392,10 +1392,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     vermatch = re.search(r'^\s*#define\s+LIBGIT2_VER_MINOR\s+(\d+)', txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+LIBGIT2_VER_PATCH\s+(\d+)', txt, re.M)
-    patch = int(vermatch.group(1))
+    vermatch = re.search(r'^\s*#define\s+LIBGIT2_VER_REVISION\s+(\d+)', txt, re.M)
+    revision = int(vermatch.group(1))
 
-    version = (major, minor, patch)
+    #vermatch = re.search(r'^\s*#define\s+LIBGIT2_VER_PATCH\s+(\d+)', txt, re.M)
+    #patch = int(vermatch.group(1))
+
+    version = (major, minor, revision)
 
     libgit2_version = '.'.join(str(v) for v in version)
 
@@ -1406,8 +1409,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                '.'.join(str(v) for v in minimal_libgit2_version)))
       return
 
+    defines = ['SVN_LIBSVN_FS_LINKS_FS_GIT']
+
     self._libraries['libgit2'] = SVNCommonLibrary('libgit2', inc_dir, lib_dir,
-                                                   lib_name, libgit2_version)
+                                                   lib_name, libgit2_version,
+                                                   defines=defines)
 
   def _find_sqlite(self, show_warnings):
     "Find the Sqlite library and version"
