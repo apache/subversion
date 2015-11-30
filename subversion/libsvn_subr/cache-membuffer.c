@@ -1631,7 +1631,7 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
   /* accumulated size of the entries that have been removed to make
    * room for the new one.
    */
-  apr_size_t moved_size = 0;
+  apr_uint64_t moved_size = 0;
 
   /* count the number of entries that got moved.  A single large entry
    * being moved is not enough to reject an insertion.
@@ -1673,7 +1673,7 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
        * We must also limit the effort spent here (even in case of faulty
        * heuristics).  Therefore, give up after some time.
        */
-      if (moved_size > 4 * to_fit_in->size && moved_count > 7)
+      if (moved_size / 4 > to_fit_in->size && moved_count > 7)
         return FALSE;
 
       /* if the net worth (in weighted hits) of items removed is already
