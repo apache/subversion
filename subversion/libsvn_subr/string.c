@@ -1421,7 +1421,7 @@ svn_cstring__match_length(const char *a,
    * because A and B will probably have different alignment. So, skipping
    * the first few chars until alignment is reached is not an option.
    */
-  for (; pos + sizeof(apr_size_t) <= max_len; pos += sizeof(apr_size_t))
+  for (; max_len - pos >= sizeof(apr_size_t); pos += sizeof(apr_size_t))
     if (*(const apr_size_t*)(a + pos) != *(const apr_size_t*)(b + pos))
       break;
 

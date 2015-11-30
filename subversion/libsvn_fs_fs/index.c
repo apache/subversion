@@ -1736,7 +1736,7 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
       apr_uint64_t item_count;
       apr_size_t first_page_index, last_page_index;
 
-      if (revision >= header->first_revision + header->revision_count)
+      if (revision - header->first_revision >= header->revision_count)
         {
           /* need to read the next index. Clear up memory used for the
            * previous one.  Note that intermittent pack runs do not change

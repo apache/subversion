@@ -524,7 +524,7 @@ parse_packed_revprops(svn_fs_t *fs,
       /* read & check the serialized size */
       SVN_ERR(svn_fs_fs__read_number_from_stream(&size, NULL, stream,
                                                  iterpool));
-      if (size + offset > (apr_int64_t)revprops->packed_revprops->len)
+      if (size > (apr_int64_t)revprops->packed_revprops->len - offset)
         return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                         _("Packed revprop size exceeds pack file size"));
 
