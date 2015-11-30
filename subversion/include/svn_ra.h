@@ -613,11 +613,6 @@ typedef struct svn_ra_callbacks2_t
    */
   svn_ra_get_wc_contents_func_t get_wc_contents;
 
-  /** Working copy adm subdir fetching function.
-   * @since New in 1.9.
-   */
-  svn_ra_get_wc_adm_subdir_func_t get_wc_adm_subdir;
-
   /** Check-tunnel callback
    *
    * If not @c NULL, and open_tunnel_func is also not @c NULL, this
@@ -643,6 +638,12 @@ typedef struct svn_ra_callbacks2_t
    * @since New in 1.9.
    */
   void *tunnel_baton;
+
+  /** Working copy adm subdir fetching function.
+   * @since New in 1.10.
+   */
+  svn_ra_get_wc_adm_subdir_func_t get_wc_adm_subdir;
+
 } svn_ra_callbacks2_t;
 
 /** Similar to svn_ra_callbacks2_t, except that the progress
