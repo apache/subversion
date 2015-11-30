@@ -2422,6 +2422,13 @@ read_entry(svn_fs_fs__packed_number_stream_t *stream,
       return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                  _("Empty regions must have item number 0 and checksum 0"));
 
+  /* Corrupted SIZE values might cause arithmetic overflow.
+   * The same can happen if you copy a repository from a system with 63 bit
+   * file lengths to one with 31 bit file lengths. */
+  if ((apr_uint64_t)entry.offset + (apr_uint64_t)entry.size > off_t_max)
+    return svn_error_create(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
+                            _("P2L index entry size overflow."));
+
   APR_ARRAY_PUSH(result, svn_fs_fs__p2l_entry_t) = entry;
   *item_offset += entry.size;
 

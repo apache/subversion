@@ -1377,10 +1377,13 @@ svn_fs_fs__pack_revprops_shard(const char *pack_file_dir,
                              iterpool);
       SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, iterpool));
 
-      /* if we already have started a pack file and this revprop cannot be
-       * appended to it, write the previous pack file. */
-      if (sizes->nelts != 0 &&
-          total_size + SVN_INT64_BUFFER_SIZE + finfo.size > max_size)
+      /* If we already have started a pack file and this revprop cannot be
+       * appended to it, write the previous pack file.  Note this overflow
+       * check works because we enforced MAX_SIZE <= SVN_MAX_OBJECT_SIZE. */
+      if (sizes->nelts != 0
+          && (   finfo.size > max_size
+              || total_size > max_size
+              || SVN_INT64_BUFFER_SIZE + finfo.size > max_size - total_size))
         {
           SVN_ERR(svn_fs_fs__copy_revprops(pack_file_dir, pack_filename,
                                            shard_path, start_rev, rev-1,
