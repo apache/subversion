@@ -62,7 +62,36 @@ svn_fs_git__db_youngest_rev(svn_revnum_t *youngest_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_git__db_ensure_commit(svn_fs_t *fs,
+                             git_oid *oid,
+                             svn_revnum_t *latest_rev,
+                             git_reference *ref)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
+  svn_revnum_t new_rev;
 
+  SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb, STMT_SELECT_REV_BY_COMMITID));
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 1, oid, sizeof(*oid)));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (got_row)
+    return SVN_NO_ERROR;
+
+  new_rev = *latest_rev + 1;
+  SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb, STMT_INSERT_COMMIT));
+  SVN_ERR(svn_sqlite__bind_revnum(stmt, 1, new_rev));
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 2, oid, sizeof(*oid)));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, "trunk"));
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
+
+  *latest_rev = new_rev;
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_git__db_open(svn_fs_t *fs,

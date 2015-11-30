@@ -174,7 +174,13 @@ fs_git_recover(svn_fs_t *fs,
                svn_cancel_func_t cancel_func, void *cancel_baton,
                apr_pool_t *pool)
 {
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
+
+  SVN_ERR(svn_fs_git__revmap_update(fs, fgf,
+                                    cancel_func, cancel_baton,
+                                    pool));
 
   return SVN_NO_ERROR;
 }

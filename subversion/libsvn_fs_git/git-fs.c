@@ -50,7 +50,7 @@ fs_git_youngest_rev(svn_revnum_t *youngest_p, svn_fs_t *fs, apr_pool_t *pool)
 static svn_error_t *
 fs_git_refresh_revprops(svn_fs_t *fs, apr_pool_t *scratch_pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -62,7 +62,8 @@ fs_git_revision_prop(svn_string_t **value_p, svn_fs_t *fs, svn_revnum_t rev, con
 static svn_error_t *
 fs_git_revision_proplist(apr_hash_t **table_p, svn_fs_t *fs, svn_revnum_t rev, svn_boolean_t refresh, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  *table_p = apr_hash_make(result_pool);
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *fs_git_change_rev_prop(svn_fs_t *fs, svn_revnum_t rev, const char *name, const svn_string_t *const *old_value_p, const svn_string_t *value, apr_pool_t *pool)
@@ -218,6 +219,12 @@ fs_git_cleanup(void *baton)
 {
   svn_fs_t *fs = baton;
   svn_fs_git_fs_t *fgf = fs->fsap_data;
+
+  if (fgf->revwalk)
+    {
+      git_revwalk_free(fgf->revwalk);
+      fgf->revwalk = NULL;
+    }
 
   if (fgf->repos)
     {

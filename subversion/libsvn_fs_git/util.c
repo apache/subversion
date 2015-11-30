@@ -27,8 +27,10 @@
 #include "svn_private_config.h"
 #include "fs_git.h"
 
+
+#undef svn_fs_git__wrap_git_error
 svn_error_t *
-svn_fs_git__wrap_git_error(int err)
+svn_fs_git__wrap_git_error(void)
 {
   git_error git_err;
 
@@ -39,4 +41,3 @@ svn_fs_git__wrap_git_error(int err)
   return svn_error_createf(SVN_ERR_FS_GIT_LIBGIT2_ERROR, NULL,
                            _("git: %s"), git_err.message);
 }
-

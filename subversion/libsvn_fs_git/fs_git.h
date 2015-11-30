@@ -27,20 +27,24 @@
 #define SVN_LIBSVN_FS__FS_GIT_H
 
 svn_error_t *
-svn_fs_git__wrap_git_error(int err);
+svn_fs_git__wrap_git_error(void);
 
-#define GIT2_ERR(expr)                                          \
-  do {                                                          \
-    int svn_err__git_temp = (expr);                             \
-    if (svn_err__git_temp)                                      \
-      return svn_error_trace(                                   \
-              svn_fs_git__wrap_git_error(svn_err__git_temp));   \
+#define svn_fs_git__wrap_git_error() \
+          svn_error_trace(svn_fs_git__wrap_git_error())
+
+#define GIT2_ERR(expr)                        \
+  do {                                        \
+    int svn_err__git_temp = (expr);           \
+    if (svn_err__git_temp)                    \
+      return svn_fs_git__wrap_git_error();    \
   } while (0)
 
 typedef struct svn_fs_git_fs_t
 {
   git_repository *repos;
   svn_sqlite__db_t *sdb;
+
+  git_revwalk *revwalk;
 
   svn_error_t *(*svn_fs_open)(svn_fs_t **,
                               const char *,
@@ -78,5 +82,21 @@ svn_error_t *
 svn_fs_git__db_youngest_rev(svn_revnum_t *youngest_p,
                             svn_fs_t *fs,
                             apr_pool_t *pool);
+
+svn_error_t *
+svn_fs_git__db_ensure_commit(svn_fs_t *fs,
+                             git_oid *oid,
+                             svn_revnum_t *latest_rev,
+                             git_reference *ref);
+
+/* From revmap.c */
+/* Until there is a formal api, this will synchronize the revisions */
+svn_error_t *
+svn_fs_git__revmap_update(svn_fs_t *fs,
+                          svn_fs_git_fs_t *fgf,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          apr_pool_t *scratch_pool);
+
 
 #endif
