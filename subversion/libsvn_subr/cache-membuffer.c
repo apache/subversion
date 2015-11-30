@@ -2214,14 +2214,29 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
                              apr_pool_t *scratch_pool)
 {
   cache_level_t *level;
-  apr_size_t size = item_size + to_find->entry_key.key_len;
+  apr_size_t size;
 
   /* first, look for a previous entry for the given key */
   entry_t *entry = find_entry(cache, group_index, to_find, FALSE);
 
+  /* Quick size check to make sure arithmetics will work further down
+   * the road. */
+  if (   cache->max_entry_size >= item_size
+      && cache->max_entry_size - item_size >= to_find->entry_key.key_len)
+    {
+      size = item_size + to_find->entry_key.key_len;
+    }
+  else
+    {
+      /* The combination of serialized ITEM and KEY does not fit, so the
+       * the insertion attempt will fail and simply remove any old entry
+       * if that exists. */
+      buffer = NULL;
+    }
+
   /* if there is an old version of that entry and the new data fits into
    * the old spot, just re-use that space. */
-  if (entry && ALIGN_VALUE(entry->size) >= size && buffer)
+  if (entry && buffer && ALIGN_VALUE(entry->size) >= size)
     {
       /* Careful! We need to cast SIZE to the full width of CACHE->DATA_USED
        * lest we run into trouble with 32 bit underflow *not* treated as a
