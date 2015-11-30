@@ -112,6 +112,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         'db',
         'intl',
         'serf',
+        'libgit2',
         'sasl',
         'swig',
         'perl',
@@ -139,6 +140,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self.serf_path = None
     self.bdb_path = None
     self.httpd_path = None
+    self.libgit2_path = None
     self.libintl_path = None
     self.zlib_path = 'zlib'
     self.openssl_path = None
@@ -201,6 +203,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         self.sasl_path = val
       elif opt == '--with-openssl':
         self.openssl_path = val
+      elif opt == '--with-libgit2':
+        self.libgit2_path = val
       elif opt == '--enable-purify':
         self.instrument_purify_quantify = 1
         self.instrument_apr_pools = 1
@@ -308,6 +312,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._find_serf(show_warnings)
     self._find_sasl(show_warnings)
     self._find_libintl(show_warnings)
+    self._find_libgit2(show_warnings)
 
     self._find_jdk(show_warnings)
 
@@ -1358,6 +1363,51 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                lib_name, libintl_version,
                                                dll_dir=dll_dir,
                                                dll_name=dll_name)
+
+  def _find_libgit2(self, show_warnings):
+    "Find gettext support"
+    minimal_libgit2_version = (0, 22, 0)
+
+    if not self.libgit2_path:
+      return;
+
+    if os.path.isfile(os.path.join(self.libgit2_path, \
+                                     'include', 'git2', 'version.h')):
+      inc_dir = os.path.join(self.libgit2_path, 'include')
+      lib_dir = os.path.join(self.libgit2_path, 'lib')
+
+      lib_name = 'libgit2.lib'
+    else:
+      if (show_warnings):
+        print('WARNING: \'git2/version.h\' not found')
+        print("Use '--with-libgit2' to configure libgit2 location.")
+      return
+
+    version_file_path = os.path.join(inc_dir, 'git2/version.h')
+    txt = open(version_file_path).read()
+
+    vermatch = re.search(r'^\s*#define\s+LIBGIT2_VER_MAJOR\s+(\d+)', txt, re.M)
+    major = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+LIBGIT2_VER_MINOR\s+(\d+)', txt, re.M)
+    minor = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+LIBGIT2_VER_PATCH\s+(\d+)', txt, re.M)
+    patch = int(vermatch.group(1))
+
+    version = (major, minor, patch)
+
+    libgit2_version = '.'.join(str(v) for v in version)
+
+    if version < minimal_libgit2_version:
+      if show_warnings:
+        print('Found libgit2 %s, but >= %s is required.\n' % \
+              (libgit2_version,
+               '.'.join(str(v) for v in minimal_libgit2_version)))
+      return
+
+    self._libraries['libgit2'] = SVNCommonLibrary('libgit2', inc_dir, lib_dir,
+                                                   'libgit2.lib', libgit2_version)
 
   def _find_sqlite(self, show_warnings):
     "Find the Sqlite library and version"

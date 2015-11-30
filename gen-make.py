@@ -180,6 +180,9 @@ def _usage_exit(err=None):
   print("  --with-sqlite=DIR")
   print("           look for sqlite in DIR")
   print("")
+  print("  --with-libgit2=DIR")
+  print("           look for sqlite in DIR")
+  print("")
   print("  --with-sasl=DIR")
   print("           look for the sasl headers and libs in DIR")
   print("")
@@ -246,6 +249,7 @@ if __name__ == '__main__':
                             'with-berkeley-db=',
                             'with-serf=',
                             'with-httpd=',
+                            'with-libgit2=',
                             'with-libintl=',
                             'with-openssl=',
                             'with-zlib=',

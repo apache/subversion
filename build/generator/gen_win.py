@@ -201,6 +201,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if 'serf' not in self._libraries:
       install_targets = [x for x in install_targets if x.name != 'libsvn_ra_serf']
 
+    # Drop git support if we don't have libgit2
+    if 'libgit2' not in self._libraries:
+      install_targets = [x for x in install_targets if x.name != 'libsvn_fs_git']
+      install_targets = [x for x in install_targets if x.name != 'libsvn_ra_git']
+      install_targets = [x for x in install_targets if not (isinstance(x, gen_base.TargetExe)
+                                                            and x.install == 'git-test')]
+
     # Drop the swig targets if we don't have swig or language support
     install_targets = [x for x in install_targets
                        if (not (isinstance(x, gen_base.TargetSWIG)
