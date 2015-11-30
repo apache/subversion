@@ -1801,10 +1801,10 @@ get_contents_from_windows(struct rep_read_baton *rb,
              This is where we need the pseudo rep_state created
              by build_rep_list(). */
           apr_size_t offset = (apr_size_t)rs->current;
-          if (copy_len + offset > rb->base_window->len)
-            copy_len = offset < rb->base_window->len
-                     ? rb->base_window->len - offset
-                     : 0ul;
+          if (offset >= rb->base_window->len)
+            copy_len = 0ul;
+          else if (copy_len > rb->base_window->len - offset)
+            copy_len = rb->base_window->len - offset;
 
           memcpy (cur, rb->base_window->data + offset, copy_len);
         }
