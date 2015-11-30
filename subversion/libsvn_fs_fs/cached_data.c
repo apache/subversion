@@ -3540,7 +3540,7 @@ block_read(void **result,
               /* if we crossed a block boundary, read the remainder of
                * the last block as well */
               offset = entry->offset + entry->size;
-              if (offset > block_start + ffd->block_size)
+              if (offset - block_start > ffd->block_size)
                 ++run_count;
             }
         }

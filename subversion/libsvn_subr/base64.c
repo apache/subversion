@@ -141,7 +141,7 @@ encode_bytes(svn_stringbuf_t *str, const void *data, apr_size_t len,
   svn_stringbuf_ensure(str, str->len + buflen);
 
   /* Keep encoding three-byte groups until we run out.  */
-  while (*inbuflen + (end - p) >= 3)
+  while ((end - p) >= (3 - *inbuflen))
     {
       /* May we encode BYTES_PER_LINE bytes without caring about
          line breaks, data in the temporary INBUF or running out
@@ -430,7 +430,7 @@ decode_bytes(svn_stringbuf_t *str, const char *data, apr_size_t len,
       /* If no data is left in temporary INBUF and there is at least
          one line-sized chunk left to decode, we may use the optimized
          code path. */
-      if ((*inbuflen == 0) && (p + BASE64_LINELEN <= end))
+      if ((*inbuflen == 0) && (end - p >= BASE64_LINELEN))
         if (decode_line(str, &p))
           continue;
 

@@ -1560,7 +1560,8 @@ pack_log_addressed(svn_fs_t *fs,
 
   /* pack revisions in ranges that don't exceed MAX_MEM */
   for (i = 0; i < max_ids->nelts; ++i)
-    if (APR_ARRAY_IDX(max_ids, i, apr_uint64_t) + item_count <= max_items)
+    if (   APR_ARRAY_IDX(max_ids, i, apr_uint64_t)
+        <= (apr_uint64_t)max_items - item_count)
       {
         context.end_rev++;
       }
