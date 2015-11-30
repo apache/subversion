@@ -288,14 +288,13 @@ get_node_revision_body(svn_fs_x__noderev_t **noderev_p,
                                                          scratch_pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                              scratch_pool);
-      if (err)
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         {
-          if (APR_STATUS_IS_ENOENT(err->apr_err))
-            {
-              svn_error_clear(err);
-              return svn_error_trace(err_dangling_id(fs, id));
-            }
-
+          svn_error_clear(err);
+          return svn_error_trace(err_dangling_id(fs, id));
+        }
+      else if (err)
+        {
           return svn_error_trace(err);
         }
 
@@ -1748,10 +1747,10 @@ get_contents_from_windows(rep_read_baton_t *rb,
              This is where we need the pseudo rep_state created
              by build_rep_list(). */
           apr_size_t offset = (apr_size_t)rs->current;
-          if (copy_len + offset > rb->base_window->len)
-            copy_len = offset < rb->base_window->len
-                     ? rb->base_window->len - offset
-                     : 0ul;
+          if (offset >= rb->base_window->len)
+            copy_len = 0ul;
+          else if (copy_len > rb->base_window->len - offset)
+            copy_len = rb->base_window->len - offset;
 
           memcpy (cur, rb->base_window->data + offset, copy_len);
         }
@@ -3318,7 +3317,7 @@ block_read(void **result,
               /* if we crossed a block boundary, read the remainder of
                * the last block as well */
               offset = entry->offset + entry->size;
-              if (offset > block_start + ffd->block_size)
+              if (offset - block_start > ffd->block_size)
                 ++run_count;
 
               svn_pool_clear(iterpool);
