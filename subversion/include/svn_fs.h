@@ -1772,12 +1772,15 @@ svn_fs_node_relation(svn_fs_node_relation_t *relation,
                      const char *path_b,
                      apr_pool_t *scratch_pool);
 
-/** Set @a *revision to the revision in which @a path under @a root was
- * created.  Use @a pool for any temporary allocations.  @a *revision will
+/** Set @a *revision to the revision in which the node-revision identified
+ * by @a path under @a root was created; that is, to the revision in which
+ * @a path under @a root was last modified.  @a *revision will
  * be set to #SVN_INVALID_REVNUM for uncommitted nodes (i.e. modified nodes
  * under a transaction root).  Note that the root of an unmodified transaction
  * is not itself considered to be modified; in that case, return the revision
  * upon which the transaction was based.
+ *
+ * Use @a pool for any temporary allocations.
  */
 svn_error_t *
 svn_fs_node_created_rev(svn_revnum_t *revision,
