@@ -708,11 +708,15 @@ svn_ra_svn__write_ncstring(svn_ra_svn_conn_t *conn,
                            const char *s,
                            apr_size_t len)
 {
-  apr_size_t needed = SVN_INT64_BUFFER_SIZE + len + 1;
+  /* Apart from LEN bytes of string contents, we need room for a number,
+     a colon and a space. */
+  apr_size_t max_fill = sizeof(conn->write_buf) - SVN_INT64_BUFFER_SIZE - 2;
 
   /* In most cases, there is enough left room in the WRITE_BUF
-     the we can serialize directly into it. */
-  if (conn->write_pos + needed < sizeof(conn->write_buf))
+     the we can serialize directly into it.  On platforms with
+     segmented memory, LEN might actually be close to APR_SIZE_MAX.
+     Blindly doing arithmetic on it might cause an overflow. */
+  if ((len <= max_fill) && (conn->write_pos <= max_fill - len))
     {
       /* Quick path. */
       conn->write_pos = write_ncstring_quick(conn->write_buf
@@ -960,20 +964,23 @@ write_tuple_string_opt_list(svn_ra_svn_conn_t *conn,
                             apr_pool_t *pool,
                             const svn_string_t *str)
 {
-  apr_size_t needed;
+  apr_size_t max_fill;
 
   /* Special case. */
   if (!str)
     return writebuf_write(conn, pool, "( ) ", 4);
 
-  /* If there is at least this much the room left in the WRITE_BUF,
-     we can serialize directly into it. */
-  needed = 2                       /* open list */
-         + SVN_INT64_BUFFER_SIZE   /* string length + separator */
-         + str->len                /* string contents */
-         + 2;                      /* close list */
+  /* If this how far we can fill the WRITE_BUF with string data and still
+     guarantee that the length info will fit in as well. */
+  max_fill = sizeof(conn->write_buf)
+           - 2                       /* open list */
+           - SVN_INT64_BUFFER_SIZE   /* string length + separator */
+           - 2;                      /* close list */
 
-  if (conn->write_pos + needed <= sizeof(conn->write_buf))
+   /* On platforms with segmented memory, STR->LEN might actually be
+      close to APR_SIZE_MAX.  Blindly doing arithmetic on it might
+      cause an overflow. */
+  if ((str->len <= max_fill) && (conn->write_pos <= max_fill - str->len))
     {
       /* Quick path. */
       /* Open list. */
@@ -2808,20 +2815,26 @@ svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
   const svn_string_t *flags_str = changed_path_flags(node_kind,
                                                      text_modified,
                                                      props_modified);
+  apr_size_t flags_len = flags_str->len;
 
-  /* How much buffer space do we need (worst case)? */
-  apr_size_t needed = 2                 /* list start */
-                    + path_len + SVN_INT64_BUFFER_SIZE
-                                        /* path */
-                    + 2                 /* action */
-                    + 2 + copyfrom_len + 2 * SVN_INT64_BUFFER_SIZE
-                                        /* list start + copy-from info */
-                    + flags_str->len;   /* flags and closing lists */
+  /* How much buffer space can we use for non-string data (worst case)? */
+  apr_size_t max_fill = sizeof(conn->write_buf)
+                      - 2                          /* list start */
+                      - 2 - SVN_INT64_BUFFER_SIZE  /* path */
+                      - 2                          /* action */
+                      - 2                          /* list start */
+                      - 2 - SVN_INT64_BUFFER_SIZE  /* copy-from path */
+                      - 1 - SVN_INT64_BUFFER_SIZE; /* copy-from rev */
 
   /* If the remaining buffer is big enough and we've got all parts,
-     directly copy into the buffer. */
-  if (   (conn->write_pos + needed <= sizeof(conn->write_buf))
-      && (flags_str->len > 0))
+     directly copy into the buffer.   On platforms with segmented memory,
+     PATH_LEN + COPYFROM_LEN might actually be close to APR_SIZE_MAX.
+     Blindly doing arithmetic on them might cause an overflow.
+     The sum in here cannot overflow because WRITE_BUF is small, i.e.
+     MAX_FILL and WRITE_POS are much smaller than APR_SIZE_MAX. */
+  if (   (path_len <= max_fill) && (copyfrom_len <= max_fill)
+      && (conn->write_pos + path_len + copyfrom_len + flags_len <= max_fill)
+      && (flags_len > 0))
     {
       /* Quick path. */
       /* Open list. */
