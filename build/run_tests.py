@@ -431,7 +431,7 @@ class TestHarness:
     job_queue = queue.Queue()
     total_count = 0
     scrambled = list(jobs)
-    scrambled.sort(key=lambda x: x.number)
+    scrambled.sort(key=lambda x: str(x.number))
     for job in scrambled:
       total_count += job.test_count()
       job_queue.put(job)
