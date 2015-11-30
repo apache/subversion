@@ -229,6 +229,18 @@ fs_git_set_svn_fs_open(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+static void *
+fs_git_info_fsap_dup(const void *fsap_info,
+                      apr_pool_t *result_pool)
+{
+  const svn_fs_git_info_t *fs_info = fsap_info;
+  svn_fs_git_info_t *dup_info;
+
+  dup_info = apr_pmemdup(result_pool, fs_info, sizeof(*fs_info));
+
+  return dup_info;
+}
+
 static fs_library_vtable_t library_vtable =
 {
   fs_git_get_version,
@@ -245,7 +257,7 @@ static fs_library_vtable_t library_vtable =
   fs_git_logfiles,
   NULL /* parse_id */,
   fs_git_set_svn_fs_open,
-  NULL /* info_fsap_dup */
+  fs_git_info_fsap_dup
 };
 
 static volatile svn_atomic_t libgit2_init_state = 0;

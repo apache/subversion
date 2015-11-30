@@ -89,6 +89,14 @@ svn_fs_git__db_ensure_commit(svn_fs_t *fs,
                              svn_revnum_t *latest_rev,
                              git_reference *ref);
 
+/* */
+svn_error_t *
+svn_fs_git__revision_root(svn_fs_root_t **root_p,
+                          svn_fs_t *fs,
+                          svn_revnum_t rev,
+                          apr_pool_t *pool);
+
+
 /* From revmap.c */
 /* Until there is a formal api, this will synchronize the revisions */
 svn_error_t *

@@ -78,12 +78,6 @@ fs_git_set_uuid(svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
 }
 
 static svn_error_t *
-fs_git_revision_root(svn_fs_root_t **root_p, svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
-{
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
-}
-
-static svn_error_t *
 fs_git_begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev, apr_uint32_t flags, apr_pool_t *pool)
 {
   return svn_error_create(APR_ENOTIMPL, NULL, NULL);
@@ -146,7 +140,10 @@ fs_git_get_locks(svn_fs_t *fs, const char *path, svn_depth_t depth, svn_fs_get_l
 static svn_error_t *
 fs_git_info_format(int *fs_format, svn_version_t **supports_version, svn_fs_t *fs, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
   *fs_format = 0;
+
+  SVN_ERR(svn_sqlite__read_schema_version(fs_format, fgf->sdb, scratch_pool));
   *supports_version = apr_palloc(result_pool, sizeof(svn_version_t));
 
   (*supports_version)->major = SVN_VER_MAJOR;
@@ -160,13 +157,20 @@ fs_git_info_format(int *fs_format, svn_version_t **supports_version, svn_fs_t *f
 static svn_error_t *
 fs_git_info_config_files(apr_array_header_t **files, svn_fs_t *fs, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  *files = apr_array_make(result_pool, 0, sizeof(const char*));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 fs_git_info_fsap(const void **fsap_info, svn_fs_t *fs, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  svn_fs_git_info_t *fs_info = apr_pcalloc(result_pool, sizeof(*fs_info));
+  fs_info->fs_type = SVN_FS_TYPE_GIT;
+
+  *fsap_info = fs_info;
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -195,7 +199,7 @@ static fs_vtable_t fs_vtable =
   fs_git_revision_proplist,
   fs_git_change_rev_prop,
   fs_git_set_uuid,
-  fs_git_revision_root,
+  svn_fs_git__revision_root,
   fs_git_begin_txn,
   fs_git_open_txn,
   fs_git_purge_txn,

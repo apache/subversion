@@ -3282,6 +3282,24 @@ typedef struct svn_fs_fsx_info_t {
 
 } svn_fs_fsx_info_t;
 
+/**
+ * A structure that provides some information about a filesystem.
+ * Returned by svn_fs_info() for #SVN_FS_TYPE_GIT filesystems.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.10.
+ */
+typedef struct svn_fs_git_info_t {
+
+  /** Filesystem backend (#fs_type), i.e., the string #SVN_FS_TYPE_FSX. */
+  const char *fs_type;
+
+} svn_fs_git_info_t;
+
+
 /** @see svn_fs_info
  * @since New in 1.9. */
 typedef struct svn_fs_info_placeholder_t {
