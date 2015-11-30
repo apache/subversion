@@ -408,10 +408,6 @@ typedef struct svn_fs_x__data_t
 /*** Filesystem Transaction ***/
 typedef struct svn_fs_x__transaction_t
 {
-  /* property list (const char * name, svn_string_t * value).
-     may be NULL if there are no properties.  */
-  apr_hash_t *proplist;
-
   /* revision upon which this txn is base.  (unfinished only) */
   svn_revnum_t base_rev;
 

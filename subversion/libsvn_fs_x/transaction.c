@@ -1511,9 +1511,6 @@ svn_fs_x__get_txn(svn_fs_x__transaction_t **txn_p,
   svn_fs_x__id_t root_id;
 
   txn = apr_pcalloc(pool, sizeof(*txn));
-  txn->proplist = apr_hash_make(pool);
-
-  SVN_ERR(get_txn_proplist(txn->proplist, fs, txn_id, pool));
   svn_fs_x__init_txn_root(&root_id, txn_id);
 
   SVN_ERR(svn_fs_x__get_node_revision(&noderev, fs, &root_id, pool, pool));
@@ -1585,8 +1582,7 @@ allocate_item_index(apr_uint64_t *item_index,
   SVN_ERR(svn_io_file_open(&file,
                             svn_fs_x__path_txn_item_index(fs, txn_id,
                                                           scratch_pool),
-                            APR_READ | APR_WRITE
-                            | APR_CREATE | APR_BUFFERED,
+                            APR_READ | APR_WRITE | APR_CREATE,
                             APR_OS_DEFAULT, scratch_pool));
   SVN_ERR(svn_io_file_read_full2(file, buffer, sizeof(buffer)-1,
                                   &bytes_read, &eof, scratch_pool));
