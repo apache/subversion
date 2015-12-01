@@ -2761,17 +2761,14 @@ svn_fs_x__get_proplist(apr_hash_t **proplist,
       svn_fs_x__representation_t *rep = noderev->prop_rep;
       svn_fs_x__pair_cache_key_t key = { 0 };
       svn_string_t *content;
+      svn_boolean_t is_cached;
 
       key.revision = svn_fs_x__get_revnum(rep->id.change_set);
       key.second = rep->id.number;
-      if (SVN_IS_VALID_REVNUM(key.revision))
-        {
-          svn_boolean_t is_cached;
-          SVN_ERR(svn_cache__get((void **) proplist, &is_cached,
-                                 ffd->properties_cache, &key, result_pool));
-          if (is_cached)
-            return SVN_NO_ERROR;
-        }
+      SVN_ERR(svn_cache__get((void **) proplist, &is_cached,
+                             ffd->properties_cache, &key, result_pool));
+      if (is_cached)
+        return SVN_NO_ERROR;
 
       SVN_ERR(svn_fs_x__get_contents(&stream, fs, rep, FALSE, scratch_pool));
       SVN_ERR(svn_string_from_stream2(&content, stream, rep->expanded_size,
@@ -2783,9 +2780,8 @@ svn_fs_x__get_proplist(apr_hash_t **proplist,
                     svn_fs_x__id_unparse(&noderev->noderev_id,
                                          scratch_pool)->data));
 
-      if (SVN_IS_VALID_REVNUM(rep->id.change_set))
-        SVN_ERR(svn_cache__set(ffd->properties_cache, &key, *proplist,
-                               scratch_pool));
+      SVN_ERR(svn_cache__set(ffd->properties_cache, &key, *proplist,
+                             scratch_pool));
     }
   else
     {
