@@ -873,6 +873,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 64,
              "Revprop manifest corrupt.")
 
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_FS_CORRUPT_PROPLIST,
+             SVN_ERR_FS_CATEGORY_START + 65,
+             "Property list is corrupt.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

@@ -2680,7 +2680,7 @@ svn_fs_x__set_proplist(svn_fs_t *fs,
                            APR_WRITE | APR_CREATE | APR_TRUNCATE
                            | APR_BUFFERED, APR_OS_DEFAULT, scratch_pool));
   out = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
-  SVN_ERR(svn_hash_write2(proplist, out, SVN_HASH_TERMINATOR, scratch_pool));
+  SVN_ERR(svn_fs_x__write_properties(out, proplist, scratch_pool));
   SVN_ERR(svn_io_file_close(file, scratch_pool));
 
   /* Mark the node-rev's prop rep as mutable, if not already done. */
@@ -2747,7 +2747,7 @@ write_hash_to_stream(svn_stream_t *stream,
                      apr_pool_t *scratch_pool)
 {
   apr_hash_t *hash = baton;
-  SVN_ERR(svn_hash_write2(hash, stream, SVN_HASH_TERMINATOR, scratch_pool));
+  SVN_ERR(svn_fs_x__write_properties(stream, hash, scratch_pool));
 
   return SVN_NO_ERROR;
 }
