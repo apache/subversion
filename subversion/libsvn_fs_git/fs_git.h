@@ -69,6 +69,15 @@ svn_fs_git__open(svn_fs_t *fs,
                  apr_pool_t *scratch_pool);
 
 
+/* From util.c */
+/* Gets a stream to read the file with the specified OID. */
+svn_error_t *
+svn_fs_git__get_blob_stream(svn_stream_t **stream,
+                            svn_fs_t *fs,
+                            const git_oid *oid,
+                            apr_pool_t *result_pool);
+
+
 /* From gitdb.c */
 svn_error_t *
 svn_fs_git__db_open(svn_fs_t *fs,
@@ -91,12 +100,20 @@ svn_fs_git__db_ensure_commit(svn_fs_t *fs,
 
 svn_error_t *
 svn_fs_git__db_fetch_oid(svn_boolean_t *found,
-                         git_oid **oid,
+                         const git_oid **oid,
                          const char **path,
                          svn_fs_t *fs,
                          svn_revnum_t revnum,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_fs_git__db_fetch_checksum(svn_checksum_t **checksum,
+                              svn_fs_t *fs,
+                              const git_oid *oid,
+                              svn_checksum_kind_t kind,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 /* */
 svn_error_t *

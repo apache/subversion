@@ -274,13 +274,13 @@ fs_git_paths_changed(apr_hash_t **changed_paths_p,
     {
       svn_fs_path_change2_t *ch;
 
-      ch = svn_fs__path_change_create_internal(make_id(root, "/trunk", pool),
+      ch = svn_fs__path_change_create_internal(make_id(root, "trunk", pool),
                                                svn_fs_path_change_add,
                                                pool);
       ch->node_kind = svn_node_dir;
       svn_hash_sets(changed_paths, "/trunk", ch);
 
-      ch = svn_fs__path_change_create_internal(make_id(root, "/branches",
+      ch = svn_fs__path_change_create_internal(make_id(root, "branches",
                                                        pool),
                                                svn_fs_path_change_add,
                                                pool);
@@ -365,6 +365,9 @@ static svn_error_t *
 fs_git_node_id(const svn_fs_id_t **id_p, svn_fs_root_t *root,
                const char *path, apr_pool_t *pool)
 {
+  if (*path == '/')
+    path++;
+
   *id_p = make_id(root, path, pool);
   return SVN_NO_ERROR;
 }
@@ -472,7 +475,8 @@ fs_git_node_origin_rev(svn_revnum_t *revision,
                        svn_fs_root_t *root, const char *path,
                        apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  *revision = root->rev; /* No common ancestry */
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -642,8 +646,9 @@ fs_git_dir_entries(apr_hash_t **entries_p, svn_fs_root_t *root,
       const git_tree_entry *e = git_tree_entry_byindex(tree, idx);
 
       de = apr_pcalloc(pool, sizeof(*de));
-      de->id = make_id(root, path, pool);
       de->name = git_tree_entry_name(e);
+      de->id = make_id(root, svn_relpath_join(path, de->name, pool),
+                       pool);
 
       if (git_tree_entry_type(e) == GIT_OBJ_TREE)
         de->kind = svn_node_dir;
@@ -706,6 +711,12 @@ fs_git_file_length(svn_filesize_t *length_p, svn_fs_root_t *root,
   if (!entry || git_tree_entry_type(entry) != GIT_OBJ_BLOB)
     return SVN_FS__ERR_NOT_FILE(root->fs, path);
 
+  if ((git_tree_entry_filemode(entry) & GIT_FILEMODE_LINK)
+      == GIT_FILEMODE_LINK)
+    {
+      /* ### TODO */
+    }
+
   SVN_ERR(get_entry_object(&obj, tree, entry, pool));
 
   blob = (git_blob*)obj;
@@ -722,8 +733,6 @@ fs_git_file_checksum(svn_checksum_t **checksum,
   const git_commit *commit;
   git_tree *tree;
   git_tree_entry *entry;
-  git_object *obj;
-  git_blob *blob;
   const char *relpath;
 
   SVN_ERR(find_branch(&commit, &relpath, root, path, pool));
@@ -738,11 +747,15 @@ fs_git_file_checksum(svn_checksum_t **checksum,
   if (!entry || git_tree_entry_type(entry) != GIT_OBJ_BLOB)
     return SVN_FS__ERR_NOT_FILE(root->fs, path);
 
-  SVN_ERR(get_entry_object(&obj, tree, entry, pool));
+  if ((git_tree_entry_filemode(entry) & GIT_FILEMODE_LINK)
+      == GIT_FILEMODE_LINK)
+    {
+      /* ### TODO */
+    }
 
-  blob = (git_blob*)obj;
-
-  *checksum = NULL; /* ### TODO: Get via DB cache */
+  SVN_ERR(svn_fs_git__db_fetch_checksum(checksum, root->fs,
+                                        git_tree_entry_id(entry),
+                                        kind, pool, pool));
   return SVN_NO_ERROR;
 }
 
@@ -754,10 +767,7 @@ fs_git_file_contents(svn_stream_t **contents,
   const git_commit *commit;
   git_tree *tree;
   git_tree_entry *entry;
-  git_object *obj;
-  git_blob *blob;
   const char *relpath;
-  svn_filesize_t sz;
 
   SVN_ERR(find_branch(&commit, &relpath, root, path, pool));
 
@@ -771,22 +781,15 @@ fs_git_file_contents(svn_stream_t **contents,
   if (!entry || git_tree_entry_type(entry) != GIT_OBJ_BLOB)
     return SVN_FS__ERR_NOT_FILE(root->fs, path);
 
-  SVN_ERR(get_entry_object(&obj, tree, entry, pool));
-
-  blob = (git_blob*)obj;
-
-  sz = git_blob_rawsize(blob);
-
-  /* For now use the github 10 MB limit */
-  if (sz < (10 * 1024 * 1024))
+  if ((git_tree_entry_filemode(entry) & GIT_FILEMODE_LINK)
+      == GIT_FILEMODE_LINK)
     {
-      svn_string_t *s = svn_string_ncreate(
-        git_blob_rawcontent(blob), (apr_size_t)sz, pool);
-
-      *contents = svn_stream_from_string(s, pool);
+      /* ### TODO */
     }
-  else
-    *contents = svn_stream_empty(pool);
+
+  SVN_ERR(svn_fs_git__get_blob_stream(contents, root->fs,
+                                      git_tree_entry_id(entry),
+                                      pool));
 
   return SVN_NO_ERROR;
 }

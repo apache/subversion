@@ -36,7 +36,7 @@ CREATE TABLE REVMAP (
   revnum INTEGER PRIMARY KEY AUTOINCREMENT,
 
   /* The git commit mapped to the revision */
-  commit_id TEXT NOT NULL,
+  commit_id BINARY NOT NULL,
 
   /* The relpath below which we express this commit (E.g. 'trunk') */
   relpath TEXT NOT NULL
@@ -66,6 +66,13 @@ CREATE TABLE BRANCHMAP (
 
 CREATE UNIQUE INDEX I_BRANCHMAP_RELPATH ON BRANCHMAP (relpath, from_rev);
 CREATE UNIQUE INDEX I_BRANCHMAP_FROM_REV ON BRANCHMAP (from_rev, relpath);
+
+CREATE TABLE CHECKSUMMAP (
+  blob_id BINARY NOT NULL PRIMARY KEY,
+
+  md5_checksum TEXT NOT NULL,
+  sha1_checksum TEXT NOT NULL
+)
 
 PRAGMA user_version =
 -- define: SVN_FS_GIT__VERSION

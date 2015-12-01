@@ -95,7 +95,7 @@ svn_fs_git__db_ensure_commit(svn_fs_t *fs,
 
 svn_error_t *
 svn_fs_git__db_fetch_oid(svn_boolean_t *found,
-                         git_oid **oid,
+                         const git_oid **oid,
                          const char **path,
                          svn_fs_t *fs,
                          svn_revnum_t revnum,
@@ -105,7 +105,6 @@ svn_fs_git__db_fetch_oid(svn_boolean_t *found,
   svn_fs_git_fs_t *fgf = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t got_row;
-  svn_revnum_t new_rev;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
                                     STMT_SELECT_COMMIT_BY_REV));
@@ -136,6 +135,89 @@ svn_fs_git__db_fetch_oid(svn_boolean_t *found,
         *path = NULL;
     }
   SVN_ERR(svn_sqlite__reset(stmt));
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+db_fetch_checksum(svn_checksum_t **checksum,
+                  svn_fs_t *fs,
+                  const git_oid *oid,
+                  int idx,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
+  svn_stream_t *stream;
+  svn_checksum_t *sha1_checksum, *md5_checksum;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
+                                    STMT_SELECT_CHECKSUM));
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 1, oid, sizeof(*oid)));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+
+  if (got_row)
+    SVN_ERR(svn_sqlite__column_checksum(checksum, stmt, idx,
+                                        result_pool));
+  else
+    *checksum = NULL;
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  if (got_row)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_fs_git__get_blob_stream(&stream, fs, oid, scratch_pool));
+
+  stream = svn_stream_checksummed2(stream, &sha1_checksum, NULL,
+                                   svn_checksum_sha1, TRUE, scratch_pool);
+  stream = svn_stream_checksummed2(stream, &md5_checksum, NULL,
+                                   svn_checksum_md5, TRUE, scratch_pool);
+
+  SVN_ERR(svn_stream_copy3(stream, svn_stream_empty(scratch_pool),
+                           NULL, NULL, scratch_pool));
+
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
+                                    STMT_INSERT_CHECKSUM));
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 1, oid, sizeof(*oid)));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 3, sha1_checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
+
+  if (idx == 1)
+    *checksum = svn_checksum_dup(md5_checksum, result_pool);
+  else
+    *checksum = svn_checksum_dup(sha1_checksum, result_pool);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_git__db_fetch_checksum(svn_checksum_t **checksum,
+                              svn_fs_t *fs,
+                              const git_oid *oid,
+                              svn_checksum_kind_t kind,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+  int idx;
+
+  if (kind == svn_checksum_md5)
+    idx = 1;
+  else if (kind == svn_checksum_sha1)
+    idx = 2;
+  else
+    {
+      *checksum = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_SQLITE__WITH_LOCK(db_fetch_checksum(checksum, fs, oid, idx,
+                                          result_pool, scratch_pool),
+                        fgf->sdb);
+
   return SVN_NO_ERROR;
 }
 

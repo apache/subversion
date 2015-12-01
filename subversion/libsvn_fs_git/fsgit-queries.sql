@@ -51,6 +51,14 @@ LIMIT 1
 -- STMT_INSERT_COMMIT
 INSERT INTO REVMAP (revnum, commit_id, relpath) VALUES (?1, ?2, ?3)
 
+-- STMT_SELECT_CHECKSUM
+SELECT md5_checksum, sha1_checksum
+FROM CHECKSUMMAP
+WHERE blob_id = ?1
+
+-- STMT_INSERT_CHECKSUM
+INSERT INTO CHECKSUMMAP (blob_id, md5_checksum, sha1_checksum)
+VALUES (?1, ?2, ?3)
 
 /* Grab all the statements related to the schema.  */
 
