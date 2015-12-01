@@ -461,6 +461,7 @@ class TestHarness:
 
     # Actually run the tests in concurrent sub-processes
     print('Tests to execute: %d' % total_count)
+    sys.stdout.flush()
 
     threads = [ TestHarness.TestSpawningThread(job_queue, self)
                 for i in range(thread_count) ]
