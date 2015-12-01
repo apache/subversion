@@ -1596,6 +1596,34 @@ def see_the_revision_just_committed(sbox):
                  'commit')  # r4
 
 
+@XFail()
+def simple_branch(sbox):
+  """simple branch"""
+  sbox_build_svnmover(sbox)
+
+  expected_eids = svntest.wc.State('', {
+    'B0'     : Item(eid=0),
+    'B0/X'   : Item(eid=1),
+    'B0.1'   : Item(eid=2),
+    'B0.1/A' : Item(eid=3),
+    'B0/Y'   : Item(eid=4),
+    'B0.4'   : Item(eid=2),
+    'B0.4/A' : Item(eid=3),
+  })
+  test_svnmover3(sbox, '',
+                 reported_br_diff('') +
+                 reported_br_add('X'),
+                 expected_eids,
+                 'mkbranch X ' +
+                 'commit ' +
+                 'mkdir X/A ' +
+                 'commit ' +
+                 'branch X Y')
+
+  # The compatibility layer doesn't record the copy properly
+  test_svnmover_verify_log(sbox.repo_url,
+                           ['A /top0/Y (from /top0/X:2)'])
+
 ######################################################################
 
 test_list = [ None,
@@ -1625,6 +1653,7 @@ test_list = [ None,
               tree_conflict_orphan_1,
               replace_via_rm_cp,
               see_the_revision_just_committed,
+              simple_branch,
             ]
 
 if __name__ == '__main__':
