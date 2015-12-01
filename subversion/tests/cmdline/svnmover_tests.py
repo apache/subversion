@@ -1573,6 +1573,28 @@ def replace_via_rm_cp(sbox):
                            ['D /top0/X/A',
                             'A /top0/X/A (from /top0/X/A:1)'])
                  
+@XFail()
+# After making a commit, svnmover currently can't (within the same execution)
+# look up paths in the revision it just committed.
+def see_the_revision_just_committed(sbox):
+  """see the revision just committed"""
+
+  sbox_build_svnmover(sbox)
+  # Make a commit, and then check we can copy something from that committed
+  # revision.
+  test_svnmover2(sbox, '', None,
+                 'mkdir A '
+                 'commit '  # r1
+                 'cp 1 A A2 '
+                 'commit')  # r2
+  # Conversely, check we cannot copy something from a revision after a newly
+  # committed revision.
+  xtest_svnmover(sbox.repo_url, 'No such revision 4',
+                 'mkdir B '
+                 'commit '  # r3
+                 'cp 4 B B2 '
+                 'commit')  # r4
+
 
 ######################################################################
 
@@ -1602,6 +1624,7 @@ test_list = [ None,
               tree_conflict_cycle_1,
               tree_conflict_orphan_1,
               replace_via_rm_cp,
+              see_the_revision_just_committed,
             ]
 
 if __name__ == '__main__':
