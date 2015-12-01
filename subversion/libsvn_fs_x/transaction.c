@@ -1373,16 +1373,16 @@ create_txn(svn_fs_txn_t **txn_p,
   return SVN_NO_ERROR;
 }
 
-/* Store the property list for transaction TXN_ID in PROPLIST.
-   Perform temporary allocations in SCRATCH_POOL. */
+/* Store the property list for transaction TXN_ID in *PROPLIST, allocated
+   from RESULT_POOL. Perform temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
-get_txn_proplist(apr_hash_t *proplist,
+get_txn_proplist(apr_hash_t **proplist,
                  svn_fs_t *fs,
                  svn_fs_x__txn_id_t txn_id,
+                 apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  svn_stream_t *stream;
-  svn_error_t *err;
+  svn_stringbuf_t *content;
 
   /* Check for issue #3696. (When we find and fix the cause, we can change
    * this to an assertion.) */
@@ -1392,23 +1392,20 @@ get_txn_proplist(apr_hash_t *proplist,
                               "passed to get_txn_proplist()"));
 
   /* Open the transaction properties file. */
-  SVN_ERR(svn_stream_open_readonly(&stream,
+  SVN_ERR(svn_stringbuf_from_file2(&content,
                                    svn_fs_x__path_txn_props(fs, txn_id,
                                                             scratch_pool),
-                                   scratch_pool, scratch_pool));
+                                   result_pool));
 
   /* Read in the property list. */
-  err = svn_hash_read2(proplist, stream, SVN_HASH_TERMINATOR,
-                       scratch_pool);
-  if (err)
-    {
-      err = svn_error_compose_create(err, svn_stream_close(stream));
-      return svn_error_quick_wrapf(err,
-               _("malformed property list in transaction '%s'"),
-               svn_fs_x__path_txn_props(fs, txn_id, scratch_pool));
-    }
+  SVN_ERR_W(svn_fs_x__parse_properties(proplist,
+                                   svn_stringbuf__morph_into_string(content),
+                                   result_pool),
+            apr_psprintf(scratch_pool,
+                         _("malformed property list in transaction '%s'"),
+                         svn_fs_x__path_txn_props(fs, txn_id, scratch_pool)));
 
-  return svn_stream_close(stream);
+  return SVN_NO_ERROR;
 }
 
 /* Save the property list PROPS as the revprops for transaction TXN_ID
@@ -1428,7 +1425,7 @@ set_txn_proplist(svn_fs_t *fs,
                                                         scratch_pool),
                                  svn_io_file_del_none,
                                  scratch_pool, scratch_pool));
-  SVN_ERR(svn_hash_write2(props, stream, SVN_HASH_TERMINATOR, scratch_pool));
+  SVN_ERR(svn_fs_x__write_properties(stream, props, scratch_pool));
   SVN_ERR(svn_stream_close(stream));
 
   /* Replace the old file with the new one. */
@@ -1466,11 +1463,11 @@ svn_fs_x__change_txn_props(svn_fs_txn_t *txn,
 {
   fs_txn_data_t *ftd = txn->fsap_data;
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
-  apr_hash_t *txn_prop = apr_hash_make(subpool);
+  apr_hash_t *txn_prop;
   int i;
   svn_error_t *err;
 
-  err = get_txn_proplist(txn_prop, txn->fs, ftd->txn_id, subpool);
+  err = get_txn_proplist(&txn_prop, txn->fs, ftd->txn_id, subpool, subpool);
   /* Here - and here only - we need to deal with the possibility that the
      transaction property file doesn't yet exist.  The rest of the
      implementation assumes that the file exists, but we're called to set the
@@ -3467,7 +3464,7 @@ write_final_revprop(const char **path,
 
   /* Write the new contents to the final revprops file. */
   stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
-  SVN_ERR(svn_hash_write2(props, stream, SVN_HASH_TERMINATOR, scratch_pool));
+  SVN_ERR(svn_fs_x__write_properties(stream, props, scratch_pool));
   SVN_ERR(svn_stream_close(stream));
 
   return SVN_NO_ERROR;
@@ -4031,10 +4028,8 @@ svn_fs_x__txn_proplist(apr_hash_t **table_p,
                        svn_fs_txn_t *txn,
                        apr_pool_t *pool)
 {
-  apr_hash_t *proplist = apr_hash_make(pool);
-  SVN_ERR(get_txn_proplist(proplist, txn->fs, svn_fs_x__txn_get_id(txn),
-                           pool));
-  *table_p = proplist;
+  SVN_ERR(get_txn_proplist(table_p, txn->fs, svn_fs_x__txn_get_id(txn),
+                           pool, pool));
 
   return SVN_NO_ERROR;
 }

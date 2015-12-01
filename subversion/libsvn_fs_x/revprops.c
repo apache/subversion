@@ -29,6 +29,7 @@
 #include "svn_sorts.h"
 
 #include "fs_x.h"
+#include "low_level.h"
 #include "revprops.h"
 #include "util.h"
 #include "transaction.h"
@@ -412,13 +413,10 @@ parse_revprop(apr_hash_t **properties,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  svn_stream_t *stream = svn_stream_from_string(content, scratch_pool);
-  *properties = apr_hash_make(result_pool);
-
-  SVN_ERR_W(svn_hash_read2(*properties, stream, SVN_HASH_TERMINATOR,
-                           result_pool),
+  SVN_ERR_W(svn_fs_x__parse_properties(properties, content, result_pool),
             apr_psprintf(scratch_pool, "Failed to parse revprops for r%ld.",
                          revision));
+
   if (has_revprop_cache(fs, scratch_pool))
     {
       svn_fs_x__data_t *ffd = fs->fsap_data;
@@ -1023,9 +1021,9 @@ write_non_packed_revprop(const char **final_path,
   *tmp_path = apr_pstrcat(result_pool, *final_path, ".tmp", SVN_VA_NULL);
   SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, *tmp_path,
                                           scratch_pool));
+
   stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
-  SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR,
-                          scratch_pool));
+  SVN_ERR(svn_fs_x__write_properties(stream, proplist, scratch_pool));
   SVN_ERR(svn_stream_close(stream));
 
   return SVN_NO_ERROR;
@@ -1295,8 +1293,7 @@ write_packed_revprop(const char **final_path,
   /* serialize the new revprops */
   serialized = svn_stringbuf_create_empty(scratch_pool);
   stream = svn_stream_from_stringbuf(serialized, scratch_pool);
-  SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR,
-                          scratch_pool));
+  SVN_ERR(svn_fs_x__write_properties(stream, proplist, scratch_pool));
   SVN_ERR(svn_stream_close(stream));
 
   /* calculate the size of the new data */
