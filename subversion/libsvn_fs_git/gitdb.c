@@ -139,6 +139,43 @@ svn_fs_git__db_fetch_oid(svn_boolean_t *found,
 }
 
 
+svn_error_t *
+svn_fs_git__db_fetch_rev(svn_revnum_t *revnum,
+                         const char **path,
+                         svn_fs_t *fs,
+                         const git_oid *oid,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
+                                    STMT_SELECT_REV_BY_COMMITID));
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 1, oid, sizeof(*oid)));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+
+  if (got_row)
+    {
+      if (revnum)
+        *revnum = svn_sqlite__column_revnum(stmt, 0);
+      if (path)
+        *path = svn_sqlite__column_text(stmt, 1, result_pool);
+    }
+  else
+    {
+      if (revnum)
+        *revnum = SVN_INVALID_REVNUM;
+      if (path)
+        *path = NULL;
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+  return SVN_NO_ERROR;
+}
+
+
+
 static svn_error_t *
 db_fetch_checksum(svn_checksum_t **checksum,
                   svn_fs_t *fs,

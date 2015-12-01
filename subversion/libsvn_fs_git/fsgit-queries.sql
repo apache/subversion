@@ -39,7 +39,7 @@ SELECT MAX(
    IFNULL((SELECT MAX(from_rev) FROM BRANCHMAP), 0))
 
 -- STMT_SELECT_REV_BY_COMMITID
-SELECT revnum FROM REVMAP WHERE commit_id = ?1
+SELECT revnum, relpath FROM REVMAP WHERE commit_id = ?1
 
 -- STMT_SELECT_COMMIT_BY_REV
 SELECT commit_id, relpath, revnum

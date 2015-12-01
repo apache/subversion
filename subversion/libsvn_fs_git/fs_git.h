@@ -108,6 +108,15 @@ svn_fs_git__db_fetch_oid(svn_boolean_t *found,
                          apr_pool_t *scratch_pool);
 
 svn_error_t *
+svn_fs_git__db_fetch_rev(svn_revnum_t *revnum,
+                         const char **path,
+                         svn_fs_t *fs,
+                         const git_oid *oid,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
+
+svn_error_t *
 svn_fs_git__db_fetch_checksum(svn_checksum_t **checksum,
                               svn_fs_t *fs,
                               const git_oid *oid,

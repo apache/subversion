@@ -77,6 +77,13 @@ cleanup_git_object(void *baton)
   return APR_SUCCESS;
 }
 
+static apr_status_t
+cleanup_git_commit(void *baton)
+{
+  git_commit_free(baton);
+  return APR_SUCCESS;
+}
+
 /* Gets the raw git object behind an entry. Takes care of the 'will free'
    promise via the pool */
 static svn_error_t *
@@ -210,6 +217,22 @@ find_branch(const git_commit **commit, const char **relpath,
 
   *commit = NULL;
   *relpath = NULL;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+find_commit(git_commit **commit, svn_fs_root_t *root,
+            const git_oid *oid, apr_pool_t *result_pool)
+{
+  svn_fs_git_fs_t *fgf = root->fs->fsap_data;
+
+  GIT2_ERR(git_commit_lookup(commit, fgf->repos, oid));
+
+  if (commit)
+    {
+      apr_pool_cleanup_register(result_pool, *commit, cleanup_git_commit,
+                                apr_pool_cleanup_null);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -458,14 +481,85 @@ fs_git_node_created_rev(svn_revnum_t *revision,
                         svn_fs_root_t *root, const char *path,
                         apr_pool_t *pool)
 {
-  /*svn_fs_git_root_t *fgr = root->fsap_data;*/
-  if (*path == '/' && path[1] == '\0')
+  svn_fs_git_root_t *fgr = root->fsap_data;
+  const git_commit *rev_commit;
+  const char *relpath;
+  git_tree *rev_tree;
+  git_tree_entry *rev_entry;
+  apr_pool_t *iterpool;
+  git_oid oid, last_oid;
+  const git_oid *oid_p;
+
+  if (*path == '/')
+    path++;
+
+  if (*path == '\0')
     {
       *revision = root->rev;
       return SVN_NO_ERROR;
     }
 
-  *revision = root->rev; /* ### Needs path walk */
+  SVN_ERR(find_branch(&rev_commit, &relpath, root, path, pool));
+  if (!rev_commit)
+    {
+      /* Handle 'branches' and 'tags' dirs */
+      *revision = root->rev;
+      return SVN_NO_ERROR;
+    }
+  else if (!*relpath && fgr->rev_path && !strcmp(fgr->rev_path, path))
+    {
+      /* The root of what has committed, changed... */
+      *revision = root->rev;
+      return SVN_NO_ERROR;
+    }
+  iterpool = svn_pool_create(pool);
+
+  GIT2_ERR(git_commit_tree(&rev_tree, rev_commit));
+  SVN_ERR(find_tree_entry(&rev_entry, rev_tree, relpath, pool, iterpool));
+
+  last_oid = *git_commit_id(rev_commit);
+  oid_p = git_commit_parent_id(rev_commit, 0);
+
+
+  while (oid_p)
+    {
+      git_commit *cmt;
+      git_tree *cmt_tree;
+      git_tree_entry *cmt_entry;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(find_commit(&cmt, root, oid_p, iterpool));
+
+      GIT2_ERR(git_commit_tree(&cmt_tree, cmt));
+
+      SVN_ERR(find_tree_entry(&cmt_entry, cmt_tree, relpath,
+                              iterpool, iterpool));
+
+      if (!cmt_entry || git_oid_cmp(git_tree_entry_id(rev_entry),
+                                    git_tree_entry_id(cmt_entry)))
+        {
+          break;
+        }
+
+      git_commit_message(cmt);
+
+      last_oid = *git_commit_id(cmt);
+
+      oid_p = git_commit_parent_id(cmt, 0);
+      if (!oid_p)
+        break;
+
+      /* And prepare for pool cleanup */
+      oid = *oid_p;
+      oid_p = &oid;
+    }
+
+  SVN_ERR(svn_fs_git__db_fetch_rev(revision, NULL,
+                                   root->fs, &last_oid,
+                                   pool, iterpool));
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
