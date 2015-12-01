@@ -161,21 +161,8 @@ def test_svnmover2(sbox, relpath, expected_changes, *varargs):
     outlines = [l.strip() for l in outlines]
     svntest.verify.verify_outputs(None, outlines, None, expected_changes, None)
 
-
-def test_svnmover(repo_url, expected_path_changes, *varargs):
-  """Run svnmover with the list of SVNMOVER_ARGS arguments.  Verify that
-  its run results in a new commit with 'svn log -rHEAD' changed paths
-  that match the list of EXPECTED_PATH_CHANGES."""
-
-  # Split arguments at spaces
-  varargs = ' '.join(varargs).split()
-  # First, run svnmover.
-  exit_code, outlines, errlines = svntest.main.run_svnmover('-U', repo_url,
-                                                            *varargs)
-  if exit_code or errlines:
-    raise svntest.main.SVNCommitFailure(str(errlines))
-  if not any(map(_commit_re.match, outlines)):
-    raise svntest.main.SVNLineUnequal(str(outlines))
+def test_svnmover_verify_log(repo_url, expected_path_changes):
+  """Run 'svn log' and verify the output"""
 
   if expected_path_changes is not None:
     # Now, run 'svn log -vq -rHEAD'
@@ -197,6 +184,23 @@ def test_svnmover(repo_url, expected_path_changes, *varargs):
                             "   expected: %s\n"
                             "     actual: %s" % (str(expected_path_changes),
                                                  str(changed_paths)))
+
+def test_svnmover(repo_url, expected_path_changes, *varargs):
+  """Run svnmover with the list of SVNMOVER_ARGS arguments.  Verify that
+  its run results in a new commit with 'svn log -rHEAD' changed paths
+  that match the list of EXPECTED_PATH_CHANGES."""
+
+  # Split arguments at spaces
+  varargs = ' '.join(varargs).split()
+  # First, run svnmover.
+  exit_code, outlines, errlines = svntest.main.run_svnmover('-U', repo_url,
+                                                            *varargs)
+  if exit_code or errlines:
+    raise svntest.main.SVNCommitFailure(str(errlines))
+  if not any(map(_commit_re.match, outlines)):
+    raise svntest.main.SVNLineUnequal(str(outlines))
+
+  test_svnmover_verify_log(repo_url, expected_path_changes)
 
 def xtest_svnmover(repo_url, error_re_string, *varargs):
   """Run svnmover with the list of VARARGS arguments.  Verify that
@@ -1536,6 +1540,40 @@ def tree_conflict_orphan_1(sbox):
                        'mkdir orphan-parent/orphan',
                        'rm orphan-parent')
 
+@XFail()
+def replace_via_rm_cp(sbox):
+  """replace by deleting and copying"""
+
+  sbox_build_svnmover(sbox)
+                 
+  expected_eids = svntest.wc.State('', {
+    'B0'     : Item(eid=0),
+    'B0/X'   : Item(eid=1),
+    'B0.1'   : Item(eid=2),
+    'B0.1/A' : Item(eid=3),
+  })
+  test_svnmover3(sbox, '',
+                 reported_br_diff('') +
+                 reported_br_add('X'),
+                 expected_eids,
+                 'mkbranch X ' +
+                 'mkdir X/A')
+
+  expected_eids.tweak('B0.1/A', eid=4)
+  test_svnmover3(sbox, '',
+                 reported_br_diff('') +
+                 reported_del('A') +
+                 reported_add('A'),
+                 expected_eids,
+                 'rm X/A ' +
+                 'cp 1 X/A X/A')
+
+  # The compatibility layer doesn't record the replace.
+  test_svnmover_verify_log(sbox.repo_url,
+                           ['D /top0/X/A',
+                            'A /top0/X/A (from /top0/X/A:1)'])
+                 
+
 ######################################################################
 
 test_list = [ None,
@@ -1563,6 +1601,7 @@ test_list = [ None,
               tree_conflict_clash_2,
               tree_conflict_cycle_1,
               tree_conflict_orphan_1,
+              replace_via_rm_cp,
             ]
 
 if __name__ == '__main__':
