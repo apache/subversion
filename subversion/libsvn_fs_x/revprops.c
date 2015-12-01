@@ -466,9 +466,14 @@ read_non_packed_revprop(apr_hash_t **properties,
     }
 
   if (content)
-    SVN_ERR(parse_revprop(properties, fs, rev,
-                          svn_stringbuf__morph_into_string(content),
-                          result_pool, iterpool));
+    {
+      /* The contents string becomes part of the *PROPERTIES structure, i.e.
+       * we must make sure it lives at least as long as the latter. */
+      svn_string_t *as_string = svn_string_create_from_buf(content,
+                                                           result_pool);
+      SVN_ERR(parse_revprop(properties, fs, rev, as_string,
+                            result_pool, iterpool));
+    }
 
   svn_pool_clear(iterpool);
 
