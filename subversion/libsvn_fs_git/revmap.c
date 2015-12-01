@@ -53,6 +53,9 @@ revmap_update_branch(svn_fs_t *fs,
 
   while (!(git_err = git_revwalk_next(&oid, revwalk)))
     {
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
       SVN_ERR(svn_fs_git__db_ensure_commit(fs, &oid, latest_rev, ref));
     }
 
@@ -77,6 +80,11 @@ revmap_update(svn_fs_t *fs,
   svn_revnum_t latest_rev, youngest;
 
   SVN_ERR(svn_fs_git__db_youngest_rev(&youngest, fs, scratch_pool));
+
+  if (youngest == 0)
+    youngest = 1; /* We use r1 to create /trunk, /branches and /tags.
+                     Let's not add other changes in the same rev */
+
   latest_rev = youngest;
 
   GIT2_ERR(git_branch_iterator_new(&iter, fgf->repos, GIT_BRANCH_ALL));

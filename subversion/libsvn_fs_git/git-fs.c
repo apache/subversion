@@ -30,6 +30,8 @@
 #include "svn_fs.h"
 #include "svn_version.h"
 #include "svn_pools.h"
+#include "svn_hash.h"
+#include "svn_time.h"
 
 #include "svn_private_config.h"
 
@@ -62,7 +64,43 @@ fs_git_revision_prop(svn_string_t **value_p, svn_fs_t *fs, svn_revnum_t rev, con
 static svn_error_t *
 fs_git_revision_proplist(apr_hash_t **table_p, svn_fs_t *fs, svn_revnum_t rev, svn_boolean_t refresh, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+  svn_boolean_t found;
+  git_oid *oid;
   *table_p = apr_hash_make(result_pool);
+
+  SVN_ERR(svn_fs_git__db_fetch_oid(&found, &oid, NULL, fs, rev,
+                                   scratch_pool, scratch_pool));
+
+  if (found)
+    {
+      git_commit *commit;
+      const git_signature *author;
+      git_time_t c_time;
+      const char *msg;
+      GIT2_ERR(git_commit_lookup(&commit, fgf->repos, oid));
+
+      c_time = git_commit_time(commit);
+      author = git_commit_author(commit);
+      msg = git_commit_message(commit);
+
+      if (ctime)
+        svn_hash_sets(*table_p, SVN_PROP_REVISION_DATE,
+                      svn_string_create(
+                        svn_time_to_cstring(
+                          apr_time_from_sec(git_commit_time(commit)),
+                          scratch_pool),
+                        result_pool));
+      if (author)
+        svn_hash_sets(*table_p, SVN_PROP_REVISION_AUTHOR,
+                      svn_string_create(author->email, result_pool));
+      if (msg)
+        svn_hash_sets(*table_p, SVN_PROP_REVISION_LOG,
+                      svn_string_create(msg, result_pool));
+
+      git_commit_free(commit);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -128,13 +166,14 @@ fs_git_unlock(svn_fs_t *fs, apr_hash_t *targets, svn_boolean_t break_lock, svn_f
 static svn_error_t *
 fs_git_get_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  *lock = NULL;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 fs_git_get_locks(svn_fs_t *fs, const char *path, svn_depth_t depth, svn_fs_get_locks_callback_t get_locks_func, void *get_locks_baton, apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

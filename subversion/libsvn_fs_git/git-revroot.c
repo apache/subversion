@@ -27,6 +27,7 @@
 #include <apr_pools.h>
 
 #include "svn_fs.h"
+#include "svn_hash.h"
 #include "svn_version.h"
 #include "svn_pools.h"
 
@@ -36,6 +37,35 @@
 
 #include "../libsvn_fs/fs-loader.h"
 #include "fs_git.h"
+
+typedef struct svn_fs_git_root_t
+{
+  git_commit *commit;
+  const char *rev_path;
+  svn_boolean_t exact;
+} svn_fs_git_root_t;
+
+static apr_status_t
+git_root_cleanup(void *baton)
+{
+  svn_fs_git_root_t *fgr = baton;
+
+  if (fgr->commit)
+    {
+      git_commit_free(fgr->commit);
+      fgr->commit = NULL;
+    }
+
+  return APR_SUCCESS;
+}
+
+static svn_fs_id_t *
+make_id(svn_fs_root_t *root,
+        const char *path,
+        apr_pool_t *result_pool)
+{
+  return NULL;
+}
 
  /* Determining what has changed in a root */
 static svn_error_t *
@@ -51,6 +81,14 @@ static svn_error_t *
 fs_git_check_path(svn_node_kind_t *kind_p, svn_fs_root_t *root,
                   const char *path, apr_pool_t *pool)
 {
+  if (*path == '/')
+    path++;
+  if (!*path)
+    {
+      *kind_p = svn_node_dir;
+      return SVN_NO_ERROR;
+    }
+
   return svn_error_create(APR_ENOTIMPL, NULL, NULL);
 }
 
@@ -84,7 +122,16 @@ fs_git_node_created_rev(svn_revnum_t *revision,
                         svn_fs_root_t *root, const char *path,
                         apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  /*svn_fs_git_root_t *fgr = root->fsap_data;*/
+  if (*path == '/' && path[1] == '\0')
+    {
+      *revision = root->rev;
+      return SVN_NO_ERROR;
+    }
+
+  *revision = root->rev; /* ### Needs path walk */
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -157,11 +204,13 @@ fs_git_node_proplist(apr_hash_t **table_p, svn_fs_root_t *root,
 {
   return svn_error_create(APR_ENOTIMPL, NULL, NULL);
 }
+
 static svn_error_t *
 fs_git_node_has_props(svn_boolean_t *has_props, svn_fs_root_t *root,
                       const char *path, apr_pool_t *scratch_pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  *has_props = FALSE;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -187,6 +236,33 @@ static svn_error_t *
 fs_git_dir_entries(apr_hash_t **entries_p, svn_fs_root_t *root,
                    const char *path, apr_pool_t *pool)
 {
+  svn_fs_dirent_t *de;
+
+  *entries_p = apr_hash_make(pool);
+  if (!root->rev)
+    return SVN_NO_ERROR;
+  else if (*path == '/' && path[1] == '\0')
+    {
+      de = apr_pcalloc(pool, sizeof(*de));
+      de->kind = svn_node_dir;
+      de->id = make_id(root, path, pool);
+      de->name = "trunk";
+      svn_hash_sets(*entries_p, "trunk", de);
+
+      de = apr_pcalloc(pool, sizeof(*de));
+      de->kind = svn_node_dir;
+      de->id = make_id(root, path, pool);
+      de->name = "branches";
+      svn_hash_sets(*entries_p, "branches", de);
+
+      de = apr_pcalloc(pool, sizeof(*de));
+      de->kind = svn_node_dir;
+      de->id = make_id(root, path, pool);
+      de->name = "tags";
+      svn_hash_sets(*entries_p, "tags", de);
+
+      return SVN_NO_ERROR;
+    }
   return svn_error_create(APR_ENOTIMPL, NULL, NULL);
 }
 
@@ -354,10 +430,14 @@ static root_vtable_t root_vtable =
 svn_error_t *
 svn_fs_git__revision_root(svn_fs_root_t **root_p, svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
   svn_fs_root_t *root;
+  svn_fs_git_root_t *fgr;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
+
+  fgr = apr_pcalloc(pool, sizeof(*fgr));
   root = apr_pcalloc(pool, sizeof(*root));
 
   root->pool = pool;
@@ -365,10 +445,23 @@ svn_fs_git__revision_root(svn_fs_root_t **root_p, svn_fs_t *fs, svn_revnum_t rev
   root->is_txn_root = FALSE;
   root->txn = NULL;
   root->txn_flags = 0;
-  root->rev = 0;
+  root->rev = rev;
 
   root->vtable = &root_vtable;
-  root->fsap_data = NULL;
+  root->fsap_data = fgr;
+
+  if (rev > 0)
+    {
+      git_oid *oid;
+      SVN_ERR(svn_fs_git__db_fetch_oid(&fgr->exact, &oid, &fgr->rev_path,
+                                       fs, rev, pool, pool));
+
+      if (oid)
+        GIT2_ERR(git_commit_lookup(&fgr->commit, fgf->repos, oid));
+
+      apr_pool_cleanup_register(pool, fgr, git_root_cleanup,
+                                apr_pool_cleanup_null);
+    }
 
   *root_p = root;
 

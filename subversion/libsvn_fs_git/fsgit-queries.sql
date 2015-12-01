@@ -41,6 +41,13 @@ SELECT MAX(
 -- STMT_SELECT_REV_BY_COMMITID
 SELECT revnum FROM REVMAP WHERE commit_id = ?1
 
+-- STMT_SELECT_COMMIT_BY_REV
+SELECT commit_id, relpath, revnum
+FROM REVMAP
+WHERE revnum <= ?1
+ORDER BY revnum DESC
+LIMIT 1
+
 -- STMT_INSERT_COMMIT
 INSERT INTO REVMAP (revnum, commit_id, relpath) VALUES (?1, ?2, ?3)
 

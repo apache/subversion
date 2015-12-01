@@ -89,6 +89,15 @@ svn_fs_git__db_ensure_commit(svn_fs_t *fs,
                              svn_revnum_t *latest_rev,
                              git_reference *ref);
 
+svn_error_t *
+svn_fs_git__db_fetch_oid(svn_boolean_t *found,
+                         git_oid **oid,
+                         const char **path,
+                         svn_fs_t *fs,
+                         svn_revnum_t revnum,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
 /* */
 svn_error_t *
 svn_fs_git__revision_root(svn_fs_root_t **root_p,

@@ -94,6 +94,53 @@ svn_fs_git__db_ensure_commit(svn_fs_t *fs,
 }
 
 svn_error_t *
+svn_fs_git__db_fetch_oid(svn_boolean_t *found,
+                         git_oid **oid,
+                         const char **path,
+                         svn_fs_t *fs,
+                         svn_revnum_t revnum,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
+  svn_revnum_t new_rev;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
+                                    STMT_SELECT_COMMIT_BY_REV));
+  SVN_ERR(svn_sqlite__bind_revnum(stmt, 1, revnum));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+
+  if (got_row)
+    {
+      if (found)
+        *found = (revnum == svn_sqlite__column_revnum(stmt, 2));
+      if (oid)
+        {
+          apr_size_t len;
+          *oid = svn_sqlite__column_blob(stmt, 0, &len, result_pool);
+          if (len != sizeof(**oid))
+            *oid = NULL;
+        }
+      if (path)
+        *path = svn_sqlite__column_text(stmt, 1, result_pool);
+    }
+  else
+    {
+      if (found)
+        *found = FALSE;
+      if (oid)
+        *oid = NULL;
+      if (path)
+        *path = NULL;
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_fs_git__db_open(svn_fs_t *fs,
                     apr_pool_t *scratch_pool)
 {
