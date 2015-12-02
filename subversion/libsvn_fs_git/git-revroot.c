@@ -489,6 +489,7 @@ fs_git_paths_changed(apr_hash_t **changed_paths_p,
   const git_commit *commit, *parent_commit;
   git_tree *tree, *parent_tree;
   const git_oid *parent_oid;
+  svn_boolean_t found;
 
   *changed_paths_p = changed_paths;
 
@@ -514,11 +515,11 @@ fs_git_paths_changed(apr_hash_t **changed_paths_p,
 
   /* TODO: Add branch + tag changes */
 
-  SVN_ERR(svn_fs_git__db_fetch_oid(NULL, &cmt_oid, &branch_path,
+  SVN_ERR(svn_fs_git__db_fetch_oid(&found, &cmt_oid, &branch_path,
                                    root->fs, root->rev,
                                    pool, pool));
 
-  if (!cmt_oid)
+  if (!found || !cmt_oid)
     return SVN_NO_ERROR; /* No actual changes in this revision*/
 
   SVN_ERR(find_commit(&commit, root, cmt_oid, pool));
@@ -975,11 +976,11 @@ fs_git_dir_entries(apr_hash_t **entries_p, svn_fs_root_t *root,
       for (hi = apr_hash_first(pool, branches); hi; hi = apr_hash_next(hi))
         {
           const char *name = apr_hash_this_key(hi);
-          const char *relpath = apr_hash_this_val(hi);
+          const char *itempath = apr_hash_this_val(hi);
 
           de = apr_pcalloc(pool, sizeof(*de));
           de->kind = svn_node_dir;
-          de->id = make_id(root, relpath, pool);
+          de->id = make_id(root, itempath, pool);
           de->name = name;
           svn_hash_sets(*entries_p, name, de);
         }
