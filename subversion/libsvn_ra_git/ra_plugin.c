@@ -2482,7 +2482,7 @@ static const svn_ra__vtable_t ra_git_vtable =
   svn_ra_git__replay_range,
   svn_ra_git__get_deleted_rev,
   svn_ra_git__get_inherited_props,
-  svn_ra_git__set_ra_open,
+  svn_ra_git__set_svn_ra_open,
 
   svn_ra_git__register_editor_shim_callbacks,
   NULL /* get_commit_ev2 */,

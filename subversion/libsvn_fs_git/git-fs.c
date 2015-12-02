@@ -131,7 +131,7 @@ fs_git_set_uuid(svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
 {
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
-  SVN_ERR(svn_fs_git_db_set_uuid(fs, uuid, pool));
+  SVN_ERR(svn_fs_git__db_set_uuid(fs, uuid, pool));
 
   return SVN_NO_ERROR;
 }

@@ -1248,7 +1248,7 @@ fs_git_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
 }
 
-static root_vtable_t root_vtable =
+static const root_vtable_t root_vtable =
 {
   fs_git_paths_changed,
   fs_git_check_path,
