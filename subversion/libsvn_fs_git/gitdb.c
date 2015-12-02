@@ -258,7 +258,6 @@ svn_fs_git__db_fetch_checksum(svn_checksum_t **checksum,
   return SVN_NO_ERROR;
 }
 
-
 svn_error_t *
 svn_fs_git__db_open(svn_fs_t *fs,
                     apr_pool_t *scratch_pool)
@@ -281,24 +280,34 @@ svn_fs_git__db_open(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-create_schema(svn_fs_t *fs,
-              apr_pool_t *scratch_pool)
+svn_error_t *
+svn_fs_git__db_set_uuid(svn_fs_t *fs,
+                        const char *uuid,
+                        apr_pool_t *scratch_pool)
 {
   svn_fs_git_fs_t *fgf = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
-  const char *uuid;
-
-  SVN_ERR(svn_sqlite__exec_statements(fgf->sdb,
-                                      STMT_CREATE_SCHEMA));
-
-  uuid = svn_uuid_generate(fs->pool);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb, STMT_INSERT_UUID));
   SVN_ERR(svn_sqlite__bind_text(stmt, 1, uuid));
   SVN_ERR(svn_sqlite__update(NULL, stmt));
 
-  fs->uuid = uuid;
+  fs->uuid = apr_pstrdup(fs->pool, uuid);
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+create_schema(svn_fs_t *fs,
+              apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+
+  SVN_ERR(svn_sqlite__exec_statements(fgf->sdb,
+                                      STMT_CREATE_SCHEMA));
+
+  SVN_ERR(svn_fs_git__db_set_uuid(fs, svn_uuid_generate(scratch_pool),
+                                  scratch_pool));
 
   return SVN_NO_ERROR;
 }

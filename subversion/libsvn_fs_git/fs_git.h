@@ -32,6 +32,11 @@ svn_fs_git__wrap_git_error(void);
 #define svn_fs_git__wrap_git_error() \
           svn_error_trace(svn_fs_git__wrap_git_error())
 
+#define svn_fs_git__read_only_error()                                         \
+          svn_error_create(SVN_ERR_FS_REP_NOT_MUTABLE, NULL,                  \
+                           _("The Subversion git filesystem doesn't support " \
+                             "write operations"))
+
 #define GIT2_ERR(expr)                        \
   do {                                        \
     int svn_err__git_temp = (expr);           \
@@ -123,6 +128,11 @@ svn_fs_git__db_fetch_checksum(svn_checksum_t **checksum,
                               svn_checksum_kind_t kind,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_fs_git__db_set_uuid(svn_fs_t *fs,
+                        const char *uuid,
+                        apr_pool_t *scratch_pool);
 
 /* */
 svn_error_t *

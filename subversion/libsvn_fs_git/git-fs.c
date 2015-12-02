@@ -44,6 +44,8 @@
 static svn_error_t *
 fs_git_youngest_rev(svn_revnum_t *youngest_p, svn_fs_t *fs, apr_pool_t *pool)
 {
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
+
   SVN_ERR(svn_fs_git__db_youngest_rev(youngest_p, fs, pool));
 
   return SVN_NO_ERROR;
@@ -52,13 +54,9 @@ fs_git_youngest_rev(svn_revnum_t *youngest_p, svn_fs_t *fs, apr_pool_t *pool)
 static svn_error_t *
 fs_git_refresh_revprops(svn_fs_t *fs, apr_pool_t *scratch_pool)
 {
-  return SVN_NO_ERROR;
-}
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
 
-static svn_error_t *
-fs_git_revision_prop(svn_string_t **value_p, svn_fs_t *fs, svn_revnum_t rev, const char *propname, svn_boolean_t refresh, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
-{
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -104,63 +102,89 @@ fs_git_revision_proplist(apr_hash_t **table_p, svn_fs_t *fs, svn_revnum_t rev, s
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+fs_git_revision_prop(svn_string_t **value_p, svn_fs_t *fs, svn_revnum_t rev, const char *propname, svn_boolean_t refresh, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  apr_hash_t *props;
+  svn_string_t *value;
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
+
+  SVN_ERR(fs_git_revision_proplist(&props, fs, rev, refresh, scratch_pool, scratch_pool));
+
+  value = svn_hash_gets(props, propname);
+  if (value)
+    *value_p = svn_string_dup(value, result_pool);
+  else
+    *value_p = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *fs_git_change_rev_prop(svn_fs_t *fs, svn_revnum_t rev, const char *name, const svn_string_t *const *old_value_p, const svn_string_t *value, apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  return svn_fs_git__read_only_error();
 }
 
 static svn_error_t *
 fs_git_set_uuid(svn_fs_t *fs, const char *uuid, apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
+
+  SVN_ERR(svn_fs_git_db_set_uuid(fs, uuid, pool));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 fs_git_begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs, svn_revnum_t rev, apr_uint32_t flags, apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  return svn_fs_git__read_only_error();
 }
 
 static svn_error_t *
 fs_git_open_txn(svn_fs_txn_t **txn, svn_fs_t *fs, const char *name, apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  return svn_fs_git__read_only_error();
 }
 
 static svn_error_t *
 fs_git_purge_txn(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  return svn_fs_git__read_only_error();
 }
 
 static svn_error_t *
 fs_git_list_transactions(apr_array_header_t **names_p, svn_fs_t *fs, apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  *names_p = apr_array_make(pool, 0, sizeof(void*));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 fs_git_deltify(svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 fs_git_lock(svn_fs_t *fs, apr_hash_t *targets, const char *comment, svn_boolean_t is_dav_comment, apr_time_t expiration_date, svn_boolean_t steal_lock, svn_fs_lock_callback_t lock_callback, void *lock_baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  return svn_fs_git__read_only_error();
 }
 
 static svn_error_t *
 fs_git_generate_lock_token(const char **token, svn_fs_t *fs, apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  *token = "static-token";
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 fs_git_unlock(svn_fs_t *fs, apr_hash_t *targets, svn_boolean_t break_lock, svn_fs_lock_callback_t lock_callback, void *lock_baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  return svn_fs_git__read_only_error();
 }
 
 static svn_error_t *
@@ -180,6 +204,9 @@ static svn_error_t *
 fs_git_info_format(int *fs_format, svn_version_t **supports_version, svn_fs_t *fs, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
   svn_fs_git_fs_t *fgf = fs->fsap_data;
+
+  SVN_ERR(svn_fs__check_fs(fs, TRUE));
+
   *fs_format = 0;
 
   SVN_ERR(svn_sqlite__read_schema_version(fs_format, fgf->sdb, scratch_pool));
@@ -215,13 +242,13 @@ fs_git_info_fsap(const void **fsap_info, svn_fs_t *fs, apr_pool_t *result_pool, 
 static svn_error_t *
 fs_git_verify_root(svn_fs_root_t *root, apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
 fs_git_freeze(svn_fs_t *fs, svn_fs_freeze_func_t freeze_func, void *freeze_baton, apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  return svn_fs_git__read_only_error();
 }
 
 static svn_error_t *
@@ -230,7 +257,7 @@ fs_git_bdb_set_errcall(svn_fs_t *fs, void(*handler)(const char *errpfx, char *ms
   return SVN_NO_ERROR;
 }
 
-static fs_vtable_t fs_vtable =
+static const fs_vtable_t fs_vtable =
 {
   fs_git_youngest_rev,
   fs_git_refresh_revprops,
