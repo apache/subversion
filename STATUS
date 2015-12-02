@@ -30,14 +30,6 @@ Candidate changes:
      +0: julianfoad, rhuijben (he says it works, but I haven't reviewed or tested)
      +0: danielsh (not tested; would be nice to have a $ anchor in the pattern)
 
- * r1703688, 1703689
-   Fix merging deletes of svn:eol-style CRLF or CR files
-   Justification:
-     Resolves unnecessary tree conflicts.
-     Any more reasons needed? :-)
-   Votes:
-     +1: rhuijben, ivan
-
  * r1704292, r1704573
    Make svn diff --git produce proper forward binary diffs
    Justification:
@@ -102,3 +94,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1703688, 1703689
+   Fix merging deletes of svn:eol-style CRLF or CR files
+   Justification:
+     Resolves unnecessary tree conflicts.
+     Any more reasons needed? :-)
+   Votes:
+     +1: rhuijben, ivan, philip
