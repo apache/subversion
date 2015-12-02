@@ -45,15 +45,6 @@ Candidate changes:
      +0: danielsh (hard to review all potential causes of expanded_size==0 in
                    7*3*2 cases (1.1…1.8) × (file/dir/prop rep) × (plain/delta))
 
- * r1687812
-   mod_dav_svn: Use LimitXMLRequestBody httpd directive to control maximum
-   length of skel-encoded request bodies.
-   Justification:
-     Allow administrators to setup configurable limits on the size of
-     skel-encoded requests.
-   Votes:
-     +1: ivan, rhuijben
-
  * r1701488
    Issue #4592 "fix contrib check-mime-type.pl for changes to 'svnlook proplist'
      output", http://subversion.tigris.org/issues/show_bug.cgi?id=4592
@@ -116,3 +107,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1687812
+   mod_dav_svn: Use LimitXMLRequestBody httpd directive to control maximum
+   length of skel-encoded request bodies.
+   Justification:
+     Allow administrators to setup configurable limits on the size of
+     skel-encoded requests.
+   Votes:
+     +1: ivan, rhuijben, kotkov
