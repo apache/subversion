@@ -227,7 +227,7 @@ db_fetch_checksum(svn_checksum_t **checksum,
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 3, sha1_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__update(NULL, stmt));
 
-  if (idx == 1)
+  if (idx == 0)
     *checksum = svn_checksum_dup(md5_checksum, result_pool);
   else
     *checksum = svn_checksum_dup(sha1_checksum, result_pool);
@@ -243,19 +243,14 @@ svn_fs_git__db_fetch_checksum(svn_checksum_t **checksum,
                               apr_pool_t *scratch_pool)
 {
   svn_fs_git_fs_t *fgf = fs->fsap_data;
-  int idx;
 
-  if (kind == svn_checksum_md5)
-    idx = 1;
-  else if (kind == svn_checksum_sha1)
-    idx = 2;
-  else
+  if (kind != svn_checksum_md5 && kind != svn_checksum_sha1)
     {
-      *checksum = NULL;
+      checksum = NULL;
       return SVN_NO_ERROR;
     }
 
-  SVN_SQLITE__WITH_LOCK(db_fetch_checksum(checksum, fs, oid, idx,
+  SVN_SQLITE__WITH_LOCK(db_fetch_checksum(checksum, fs, oid, (kind + 0),
                                           result_pool, scratch_pool),
                         fgf->sdb);
 
