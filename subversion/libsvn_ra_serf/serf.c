@@ -1050,8 +1050,11 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__has_capability,
   svn_ra_serf__replay_range,
   svn_ra_serf__get_deleted_rev,
+  svn_ra_serf__get_inherited_props,
+  NULL /* set_svn_ra_open */,
   svn_ra_serf__register_editor_shim_callbacks,
-  svn_ra_serf__get_inherited_props
+  NULL /* commit_ev2 */,
+  NULL /* replay_range_ev2 */
 };
 
 svn_error_t *
