@@ -39,7 +39,9 @@ CREATE TABLE REVMAP (
   commit_id BINARY NOT NULL,
 
   /* The relpath below which we express this commit (E.g. 'trunk') */
-  relpath TEXT NOT NULL
+  relpath TEXT NOT NULL,
+
+  prev_revnum INTEGER NULL
 );
 
 CREATE UNIQUE INDEX I_REVMAP_COMMIT_ID ON REVMAP (commit_id);
@@ -72,7 +74,7 @@ CREATE TABLE CHECKSUMMAP (
 
   md5_checksum TEXT NOT NULL,
   sha1_checksum TEXT NOT NULL
-)
+);
 
 PRAGMA user_version =
 -- define: SVN_FS_GIT__VERSION

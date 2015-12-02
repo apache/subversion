@@ -98,9 +98,12 @@ svn_fs_git__db_youngest_rev(svn_revnum_t *youngest_p,
                             apr_pool_t *pool);
 
 svn_error_t *
-svn_fs_git__db_ensure_commit(svn_fs_t *fs,
+svn_fs_git__db_ensure_commit(svn_revnum_t *commit_rev,
+                             svn_fs_t *fs,
                              git_oid *oid,
-                             svn_revnum_t *latest_rev,
+                             svn_revnum_t youngest_rev,
+                             svn_revnum_t prev_rev,
+                             const char *relpath,
                              git_reference *ref);
 
 svn_error_t *

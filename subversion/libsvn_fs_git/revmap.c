@@ -25,17 +25,22 @@
 #include <string.h>
 
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_fs.h"
+#include "svn_ctype.h"
 
 #include "private/svn_fs_private.h"
 #include "private/svn_sqlite.h"
 
 #include "fs_git.h"
 
+
 static svn_error_t *
 revmap_update_branch(svn_fs_t *fs,
                      svn_fs_git_fs_t *fgf,
                      git_reference *ref,
+                     const git_oid *walk_oid,
+                     const char *relpath,
                      svn_revnum_t *latest_rev,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
@@ -45,24 +50,181 @@ revmap_update_branch(svn_fs_t *fs,
   git_revwalk *revwalk = fgf->revwalk;
   int git_err;
   git_oid oid;
+  svn_revnum_t last_rev = SVN_INVALID_REVNUM;
+
+
+  /* ### TODO: Return if walk_oid is already mapped */
+
+  if (!relpath)
+    {
+      const char *n = strrchr(name, '/');
+
+      /* ### TODO: Improve algorithm */
+      if (n)
+        n++;
+      else
+        n = name;
+
+      relpath = svn_relpath_join("branches", n, scratch_pool);
+    }
 
   git_revwalk_reset(revwalk);
-  git_revwalk_push_ref(revwalk, name);
+  git_revwalk_push(revwalk, walk_oid);
   git_revwalk_simplify_first_parent(revwalk);
   git_revwalk_sorting(revwalk, GIT_SORT_REVERSE);
 
   while (!(git_err = git_revwalk_next(&oid, revwalk)))
     {
+      svn_revnum_t y_rev, rev;
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      SVN_ERR(svn_fs_git__db_ensure_commit(fs, &oid, latest_rev, ref));
+      y_rev = *latest_rev;
+
+      SVN_ERR(svn_fs_git__db_ensure_commit(&rev, fs, &oid,
+                                           y_rev, last_rev,
+                                           relpath, ref));
+
+      if (rev > y_rev)
+        {
+          *latest_rev = rev;
+        }
+
+      last_rev = rev;
     }
 
   if (git_err != GIT_ITEROVER)
     return svn_fs_git__wrap_git_error();
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+revmap_update_tag(svn_fs_t *fs,
+                  svn_fs_git_fs_t *fgf,
+                  const char *name,
+                  const git_oid *oid,
+                  svn_revnum_t *latest_rev,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *scratch_pool)
+{
+  svn_revnum_t rev;
+  const char *path;
+  git_object *obj;
+  git_oid walk_oid;
+  char *tagname = apr_pstrdup(scratch_pool, name);
+
+  if (!strncmp(tagname, "refs/tags/", 10))
+    tagname += 10;
+
+  {
+    char *c = tagname;
+
+    /* ### TODO: Improve algorithm */
+    while (*c)
+    {
+      if (!svn_ctype_isprint(*c))
+        *c = '_';
+      else if (strchr("/\\\"<>", *c))
+        *c = '_';
+
+      c++;
+    }
+  }
+
+  GIT2_ERR(git_object_lookup(&obj, fgf->repos, oid, GIT_OBJ_ANY));
+
+  if (git_object_type(obj) != GIT_OBJ_COMMIT)
+    {
+      git_object *commit;
+      int git_err = git_object_peel(&commit, obj,
+                                    GIT_OBJ_COMMIT);
+
+      if (!git_err)
+        {
+          git_object_free(obj);
+          obj = commit;
+        }
+    }
+
+  walk_oid = *git_object_id(obj);
+  git_object_free(obj);
+
+  SVN_ERR(svn_fs_git__db_fetch_rev(&rev, &path, fs, &walk_oid,
+                                   scratch_pool, scratch_pool));
+
+  if (!SVN_IS_VALID_REVNUM(rev))
+    {
+      const char *branchname;
+      svn_revnum_t y_rev = *latest_rev;
+
+      /* This commit doesn't exist on trunk or one of the branches...
+         Let's create a temporary branch.
+
+         The easiest to get 'free' path in the repository itself
+         is the tag itself */
+
+      branchname = svn_relpath_join("tags", tagname,
+                                    scratch_pool);
+
+      SVN_ERR(revmap_update_branch(fs, fgf, NULL, oid,
+                                   branchname,
+                                   latest_rev,
+                                   cancel_func, cancel_baton,
+                                   scratch_pool));
+
+      if (*latest_rev > y_rev)
+        {
+          rev = *latest_rev;
+          path = branchname;
+        }
+      else
+        {
+          /* The tag wasn't copied from a commit, and
+             doesn't have any unique commits */
+          SVN_ERR_MALFUNCTION();
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Baton for revmap_update_tag_cb */
+typedef struct tag_update_baton_t
+{
+  svn_error_t *err;
+
+  svn_fs_t *fs;
+  svn_fs_git_fs_t *fgf;
+  svn_revnum_t *latest_rev;
+
+  apr_pool_t *iterpool;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+
+} tag_update_baton_t;
+
+/* git_tag_foreach callback around revmap_update_tag */
+static int
+revmap_update_tag_cb(const char *name, git_oid *oid, void *payload)
+{
+  tag_update_baton_t *tub = payload;
+
+  if (!tub->err && tub->cancel_func)
+    tub->err = tub->cancel_func(tub->cancel_baton);
+
+  if (tub->err)
+    return 0;
+
+  svn_pool_clear(tub->iterpool);
+
+  tub->err = revmap_update_tag(tub->fs, tub->fgf,
+                               name, oid, tub->latest_rev,
+                               tub->cancel_func, tub->cancel_baton,
+                               tub->iterpool);
+
+  return 0;
 }
 
 static svn_error_t *
@@ -78,6 +240,7 @@ revmap_update(svn_fs_t *fs,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_error_t *err = NULL;
   svn_revnum_t latest_rev, youngest;
+  git_oid tmp_oid;
 
   SVN_ERR(svn_fs_git__db_youngest_rev(&youngest, fs, scratch_pool));
 
@@ -87,17 +250,66 @@ revmap_update(svn_fs_t *fs,
 
   latest_rev = youngest;
 
-  GIT2_ERR(git_branch_iterator_new(&iter, fgf->repos, GIT_BRANCH_ALL));
+  if (!git_repository_head_unborn(fgf->repos))
+    {
+      GIT2_ERR(git_repository_head(&ref, fgf->repos));
 
+      err = revmap_update_branch(fs, fgf, ref, git_reference_target(ref),
+                                 "trunk", &latest_rev,
+                                 cancel_func, cancel_baton,
+                                 iterpool);
+      git_reference_free(ref);
+      SVN_ERR(err);
+    }
+
+  GIT2_ERR(git_branch_iterator_new(&iter, fgf->repos, GIT_BRANCH_ALL));
   while (!git_branch_next(&ref, &branch_t, iter) && !err)
     {
+      const git_oid *walk_oid;
       svn_pool_clear(iterpool);
-      err = revmap_update_branch(fs, fgf, ref, &latest_rev,
+
+      walk_oid = git_reference_target(ref);
+
+      if (!walk_oid) {
+        git_reference *rr;
+        int git_err = git_reference_resolve(&rr, ref);
+
+        if (!git_err && rr)
+          {
+            tmp_oid = *git_reference_target(rr);
+            walk_oid = &tmp_oid;
+            git_reference_free(rr);
+          }
+      }
+
+      err = revmap_update_branch(fs, fgf, ref, walk_oid,
+                                 NULL, &latest_rev,
                                  cancel_func, cancel_baton,
                                  iterpool);
     }
 
   git_branch_iterator_free(iter);
+
+  {
+    int git_err;
+    tag_update_baton_t tub;
+
+    tub.fs = fs;
+    tub.fgf = fgf;
+    tub.latest_rev = &latest_rev;
+    tub.iterpool = iterpool;
+
+    tub.cancel_func = cancel_func;
+    tub.cancel_baton = cancel_baton;
+
+    tub.err = NULL;
+
+    git_err = git_tag_foreach(fgf->repos, revmap_update_tag_cb, &tub);
+
+    if (tub.err)
+      return svn_error_trace(tub.err);
+    GIT2_ERR(git_err);
+  }
 
   if (youngest < latest_rev) {
     /* TODO: Make sqlite optimize the order a bit */

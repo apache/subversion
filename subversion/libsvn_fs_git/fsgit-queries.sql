@@ -50,7 +50,8 @@ ORDER BY revnum DESC
 LIMIT 1
 
 -- STMT_INSERT_COMMIT
-INSERT INTO REVMAP (revnum, commit_id, relpath) VALUES (?1, ?2, ?3)
+INSERT INTO REVMAP (revnum, commit_id, relpath, prev_revnum)
+VALUES (?1, ?2, ?3, ?4)
 
 -- STMT_SELECT_CHECKSUM
 SELECT md5_checksum, sha1_checksum
