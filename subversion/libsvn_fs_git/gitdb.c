@@ -74,7 +74,6 @@ svn_fs_git__db_ensure_commit(svn_revnum_t *commit_rev,
   svn_fs_git_fs_t *fgf = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t got_row;
-  svn_revnum_t new_rev;
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb, STMT_SELECT_REV_BY_COMMITID));
   SVN_ERR(svn_sqlite__bind_blob(stmt, 1, oid, sizeof(*oid)));
@@ -261,6 +260,87 @@ svn_fs_git__db_fetch_checksum(svn_checksum_t **checksum,
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+db_find_branch(const char **branch_path,
+               const git_oid **oid,
+               svn_revnum_t *from_rev,
+               svn_fs_t *fs,
+               const char *relpath,
+               svn_revnum_t rev,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
+
+  if (branch_path)
+    *branch_path = NULL;
+  if (oid)
+    *oid = NULL;
+  if (from_rev)
+    *from_rev = SVN_INVALID_REVNUM;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
+                                    STMT_SELECT_BRANCH_NAME));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 1, relpath));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+  if (got_row)
+    {
+      relpath = svn_sqlite__column_text(stmt, 0, scratch_pool);
+
+      if (branch_path)
+        *branch_path = apr_pstrdup(result_pool, relpath);
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+  if (!got_row || (!oid && !from_rev))
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
+                                    STMT_SELECT_BRANCH));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 1, relpath));
+  SVN_ERR(svn_sqlite__bind_revnum(stmt, 2, rev));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+
+  if (got_row)
+    {
+      if (oid)
+        {
+          apr_size_t len;
+          *oid = svn_sqlite__column_blob(stmt, 1, &len, result_pool);
+          if (len != sizeof(**oid))
+            *oid = NULL;
+        }
+      if (from_rev)
+        *from_rev = svn_sqlite__column_revnum(stmt, 2);
+    }
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_git__db_find_branch(const char **branch_path,
+                           const git_oid **oid,
+                           svn_revnum_t *from_rev,
+                           svn_fs_t *fs,
+                           const char *relpath,
+                           svn_revnum_t rev,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+
+  SVN_SQLITE__WITH_LOCK(db_find_branch(branch_path, oid, from_rev,
+                                       fs, relpath, rev,
+                                       result_pool, scratch_pool),
+                        fgf->sdb);
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_fs_git__db_open(svn_fs_t *fs,

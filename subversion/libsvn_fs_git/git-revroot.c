@@ -55,20 +55,6 @@ typedef struct svn_fs_git_fs_id_t
   svn_fs_root_t *root;
 } svn_fs_git_fs_id_t;
 
-static apr_status_t
-git_root_cleanup(void *baton)
-{
-  svn_fs_git_root_t *fgr = baton;
-
-  if (fgr->commit)
-    {
-      git_commit_free(fgr->commit);
-      fgr->commit = NULL;
-    }
-
-  return APR_SUCCESS;
-}
-
 /* Helper for get_entry_object */
 static apr_status_t
 cleanup_git_object(void *baton)
@@ -219,46 +205,20 @@ relpath_reverse_split(const char **root, const char **remaining,
 }
 
 static svn_error_t *
-find_branch(const git_commit **commit, const char **relpath,
-            svn_fs_root_t *root, const char *path, apr_pool_t *pool)
-{
-  svn_fs_git_root_t *fgr = root->fsap_data;
-
-  if (*path == '/')
-    path++;
-
-  if (fgr->rev_path)
-    {
-      apr_size_t len;
-      len = strlen(fgr->rev_path);
-
-      if (!strncmp(path, fgr->rev_path, len)
-          && (!path[len] || path[len] == '/'))
-        {
-          *commit = fgr->commit;
-          *relpath = path[len] ? &path[len + 1] : "";
-          return SVN_NO_ERROR;
-        }
-    }
-
-  *commit = NULL;
-  *relpath = NULL;
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-find_commit(git_commit **commit, svn_fs_root_t *root,
+find_commit(const git_commit **commit, svn_fs_root_t *root,
             const git_oid *oid, apr_pool_t *result_pool)
 {
   svn_fs_git_fs_t *fgf = root->fs->fsap_data;
+  git_commit *cmt;
 
-  GIT2_ERR(git_commit_lookup(commit, fgf->repos, oid));
+  GIT2_ERR(git_commit_lookup(&cmt, fgf->repos, oid));
 
-  if (commit)
+  if (cmt)
     {
-      apr_pool_cleanup_register(result_pool, *commit, cleanup_git_commit,
+      apr_pool_cleanup_register(result_pool, cmt, cleanup_git_commit,
                                 apr_pool_cleanup_null);
     }
+  *commit = cmt;
   return SVN_NO_ERROR;
 }
 
@@ -306,6 +266,76 @@ find_tree_entry(const git_tree_entry **entry, git_tree *tree,
         SVN_ERR_MALFUNCTION();
     }
 
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+find_branch(const git_commit **commit, const char **relpath,
+            svn_fs_root_t *root, const char *path, apr_pool_t *pool)
+{
+  svn_fs_git_root_t *fgr = root->fsap_data;
+  const char *branch_path;
+  const git_oid *oid;
+
+  if (*path == '/')
+    path++;
+
+  if (fgr->rev_path)
+    {
+      const char *rp = svn_relpath_skip_ancestor(fgr->rev_path, path);
+
+      if (rp)
+        {
+          *relpath = rp;
+          *commit = fgr->commit;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  if (apr_hash_count(fgr->branch_map))
+    {
+      apr_hash_index_t *hi;
+
+      for (hi = apr_hash_first(pool, fgr->branch_map);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *rp;
+
+          branch_path = apr_hash_this_key(hi);
+          rp = svn_relpath_skip_ancestor(branch_path, path);
+          if (rp)
+            {
+              *relpath = rp;
+              *commit = apr_hash_this_val(hi);
+              return SVN_NO_ERROR;
+            }
+        }
+    }
+
+  SVN_ERR(svn_fs_git__db_find_branch(&branch_path, &oid, NULL,
+                                     root->fs, path, root->rev,
+                                     pool, pool));
+
+  if (branch_path)
+    {
+      apr_pool_t *result_pool = apr_hash_pool_get(fgr->branch_map);
+
+      SVN_ERR(find_commit(commit, root, oid, result_pool));
+
+      if (*commit)
+        {
+          svn_hash_sets(fgr->branch_map,
+                        apr_pstrdup(result_pool, branch_path),
+                        *commit);
+
+          *relpath = svn_relpath_skip_ancestor(branch_path, path);
+          return SVN_NO_ERROR;
+        }
+    }
+
+  *commit = NULL;
+  *relpath = NULL;
   return SVN_NO_ERROR;
 }
 
@@ -456,7 +486,7 @@ fs_git_paths_changed(apr_hash_t **changed_paths_p,
   apr_hash_t *changed_paths = apr_hash_make(pool);
   const git_oid *cmt_oid;
   const char *branch_path;
-  git_commit *commit, *parent_commit;
+  const git_commit *commit, *parent_commit;
   git_tree *tree, *parent_tree;
   const git_oid *parent_oid;
 
@@ -722,7 +752,7 @@ fs_git_node_created_rev(svn_revnum_t *revision,
 
   while (oid_p)
     {
-      git_commit *cmt;
+      const git_commit *cmt;
       git_tree *cmt_tree;
       git_tree_entry *cmt_entry;
 
@@ -1287,7 +1317,6 @@ static const root_vtable_t root_vtable =
 svn_error_t *
 svn_fs_git__revision_root(svn_fs_root_t **root_p, svn_fs_t *fs, svn_revnum_t rev, apr_pool_t *pool)
 {
-  svn_fs_git_fs_t *fgf = fs->fsap_data;
   svn_fs_root_t *root;
   svn_fs_git_root_t *fgr;
 
@@ -1315,11 +1344,7 @@ svn_fs_git__revision_root(svn_fs_root_t **root_p, svn_fs_t *fs, svn_revnum_t rev
       SVN_ERR(svn_fs_git__db_fetch_oid(&fgr->exact, &oid, &fgr->rev_path,
                                        fs, rev, pool, pool));
 
-      if (oid)
-        GIT2_ERR(git_commit_lookup(&fgr->commit, fgf->repos, oid));
-
-      apr_pool_cleanup_register(pool, fgr, git_root_cleanup,
-                                apr_pool_cleanup_null);
+      SVN_ERR(find_commit(&fgr->commit, root, oid, pool));
     }
 
   *root_p = root;

@@ -133,6 +133,16 @@ svn_fs_git__db_fetch_checksum(svn_checksum_t **checksum,
                               apr_pool_t *scratch_pool);
 
 svn_error_t *
+svn_fs_git__db_find_branch(const char **branch_path,
+                           const git_oid **oid,
+                           svn_revnum_t *from_rev,
+                           svn_fs_t *fs,
+                           const char *relpath,
+                           svn_revnum_t rev,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+svn_error_t *
 svn_fs_git__db_set_uuid(svn_fs_t *fs,
                         const char *uuid,
                         apr_pool_t *scratch_pool);

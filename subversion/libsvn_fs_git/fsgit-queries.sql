@@ -62,6 +62,27 @@ WHERE blob_id = ?1
 INSERT INTO CHECKSUMMAP (blob_id, md5_checksum, sha1_checksum)
 VALUES (?1, ?2, ?3)
 
+-- STMT_SELECT_BRANCH_NAME
+SELECT relpath
+FROM REVMAP
+WHERE (relpath <= ?1 AND relpath || '0' > ?1) AND (relpath = ?1 OR relpath || '/' < ?1)
+UNION ALL
+SELECT relpath
+FROM TAGMAP
+WHERE (relpath <= ?1 AND relpath || '0' > ?1) AND (relpath = ?1 OR relpath || '/' < ?1)
+LIMIT 1
+
+-- STMT_SELECT_BRANCH
+SELECT relpath, (SELECT commit_id FROM revmap r WHERE r.revnum=t.revnum),
+       from_rev
+FROM TAGMAP t WHERE relpath = ?1 AND revnum <= ?2
+UNION ALL
+SELECT relpath, commit_id, revnum
+FROM REVMAP
+WHERE relpath = ?1 AND revnum <= ?2
+ORDER BY relpath DESC, revnum DESC
+LIMIT 1
+
 /* Grab all the statements related to the schema.  */
 
 -- include: fsgit-metadata
