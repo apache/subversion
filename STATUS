@@ -90,6 +90,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1705038
+   Fix issue 4607, patch with missing newline removes newline when applied.
+   Justification:
+     Silently makes unexpected changes.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
