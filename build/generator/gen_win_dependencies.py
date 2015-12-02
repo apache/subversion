@@ -1238,7 +1238,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     else:
       lib_name = 'serf.lib'
 
-    defines = ['SVN_HAVE_SERF', 'SVN_LIBSVN_CLIENT_LINKS_RA_SERF']
+    defines = ['SVN_HAVE_SERF', 'SVN_LIBSVN_RA_LINKS_RA_SERF']
 
     self._libraries['serf'] = SVNCommonLibrary('serf', inc_dir, lib_dir,
                                                 lib_name, serf_version,
