@@ -524,7 +524,7 @@ struct svn_fs_root_t
   svn_revnum_t rev;
 
   /* FSAP-specific vtable and private data */
-  root_vtable_t *vtable;
+  const root_vtable_t *vtable;
   void *fsap_data;
 };
 
@@ -532,7 +532,7 @@ struct svn_fs_root_t
 struct svn_fs_history_t
 {
   /* FSAP-specific vtable and private data */
-  history_vtable_t *vtable;
+  const history_vtable_t *vtable;
   void *fsap_data;
 };
 
@@ -540,7 +540,7 @@ struct svn_fs_history_t
 struct svn_fs_id_t
 {
   /* FSAP-specific vtable and private data */
-  id_vtable_t *vtable;
+  const id_vtable_t *vtable;
   void *fsap_data;
 };
 
