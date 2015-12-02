@@ -30,6 +30,7 @@
 #include "svn_fs.h"
 #include "svn_version.h"
 #include "svn_pools.h"
+#include "svn_hash.h"
 #include "svn_dirent_uri.h"
 
 #include "svn_private_config.h"
@@ -394,6 +395,88 @@ svn_fs_git__db_tag_create(svn_revnum_t *tag_rev,
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+db_get_tags_branches(apr_hash_t **tags,
+                     apr_hash_t **branches,
+                     svn_fs_t *fs,
+                     const char *relpath,
+                     svn_revnum_t rev,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
+
+  if (branches)
+    {
+      *branches = apr_hash_make(result_pool);
+      SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
+                                        STMT_SELECT_BRANCHES));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 1, relpath));
+      SVN_ERR(svn_sqlite__bind_revnum(stmt, 2, rev));
+      SVN_ERR(svn_sqlite__step(&got_row, stmt));
+      while (got_row)
+        {
+          const char *name;
+          const char *path;
+
+          path = svn_sqlite__column_text(stmt, 0, result_pool);
+          name = svn_relpath_skip_ancestor(relpath, path);
+
+          if (!strchr(name, '/'))
+            svn_hash_sets(*tags, name, path);
+
+          SVN_ERR(svn_sqlite__step(&got_row, stmt));
+        }
+      SVN_ERR(svn_sqlite__reset(stmt));
+    }
+  if (tags)
+    {
+      *tags = apr_hash_make(result_pool);
+      SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
+                                        STMT_SELECT_TAGS));
+      SVN_ERR(svn_sqlite__bind_text(stmt, 1, relpath));
+      SVN_ERR(svn_sqlite__bind_revnum(stmt, 2, rev));
+      SVN_ERR(svn_sqlite__step(&got_row, stmt));
+      while (got_row)
+        {
+          const char *name;
+          const char *path;
+
+          path = svn_sqlite__column_text(stmt, 0, result_pool);
+          name = svn_relpath_skip_ancestor(relpath, path);
+
+          if (!strchr(name, '/'))
+            svn_hash_sets(*tags, name, path);
+
+          SVN_ERR(svn_sqlite__step(&got_row, stmt));
+        }
+      SVN_ERR(svn_sqlite__reset(stmt));
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_git__db_get_tags_branches(apr_hash_t **tags,
+                                 apr_hash_t **branches,
+                                 svn_fs_t *fs,
+                                 const char *relpath,
+                                 svn_revnum_t rev,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+
+  SVN_SQLITE__WITH_LOCK(db_get_tags_branches(tags, branches,
+                                             fs, relpath, rev,
+                                             result_pool, scratch_pool),
+                        fgf->sdb);
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_fs_git__db_open(svn_fs_t *fs,

@@ -73,7 +73,7 @@ WHERE (relpath <= ?1 AND relpath || '0' > ?1) AND (relpath = ?1 OR relpath || '/
 LIMIT 1
 
 -- STMT_SELECT_BRANCH
-SELECT relpath, (SELECT commit_id FROM revmap r WHERE r.revnum=t.revnum),
+SELECT relpath, (SELECT commit_id FROM revmap r WHERE r.revnum=t.from_rev),
        from_rev
 FROM TAGMAP t WHERE relpath = ?1 AND revnum <= ?2
 UNION ALL
@@ -88,6 +88,16 @@ SELECT revnum, from_rev, relpath FROM TAGMAP where relpath = ?1
 
 -- STMT_INSERT_TAG
 INSERT INTO TAGMAP (revnum, from_rev, relpath) VALUES (?1, ?2, ?3)
+
+-- STMT_SELECT_BRANCHES
+SELECT DISTINCT relpath FROM BRANCHMAP
+WHERE relpath > ?1 || '/' AND relpath < ?1 || '0'
+AND from_rev <= ?2 AND (to_rev > ?2 OR to_rev IS NULL)
+
+-- STMT_SELECT_TAGS
+SELECT DISTINCT relpath FROM TAGMAP
+WHERE relpath > ?1 || '/' AND relpath < ?1 || '0'
+AND revnum <= ?2
 
 /* Grab all the statements related to the schema.  */
 

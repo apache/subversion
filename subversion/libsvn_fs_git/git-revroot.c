@@ -317,7 +317,7 @@ find_branch(const git_commit **commit, const char **relpath,
                                      root->fs, path, root->rev,
                                      pool, pool));
 
-  if (branch_path)
+  if (branch_path && oid)
     {
       apr_pool_t *result_pool = apr_hash_pool_get(fgr->branch_map);
 
@@ -964,7 +964,26 @@ fs_git_dir_entries(apr_hash_t **entries_p, svn_fs_root_t *root,
   SVN_ERR(find_branch(&commit, &relpath, root, path, pool));
   if (!commit)
     {
-      /* TODO: List 'tags' and 'branches' */
+      apr_hash_t *tags, *branches;
+      apr_hash_index_t *hi;
+
+      SVN_ERR(svn_fs_git__db_get_tags_branches(&tags, &branches,
+                                               root->fs, path, root->rev,
+                                               pool, pool));
+
+      branches = apr_hash_overlay(pool, branches, tags);
+      for (hi = apr_hash_first(pool, branches); hi; hi = apr_hash_next(hi))
+        {
+          const char *name = apr_hash_this_key(hi);
+          const char *relpath = apr_hash_this_val(hi);
+
+          de = apr_pcalloc(pool, sizeof(*de));
+          de->kind = svn_node_dir;
+          de->id = make_id(root, relpath, pool);
+          de->name = name;
+          svn_hash_sets(*entries_p, name, de);
+        }
+
       return SVN_NO_ERROR;
     }
 
