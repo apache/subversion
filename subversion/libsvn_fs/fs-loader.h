@@ -475,7 +475,7 @@ struct svn_fs_t
   svn_fs_access_t *access_ctx;
 
   /* FSAP-specific vtable and private data */
-  fs_vtable_t *vtable;
+  const fs_vtable_t *vtable;
   void *fsap_data;
 
   /* UUID, stored by open(), create(), and set_uuid(). */
@@ -497,7 +497,7 @@ struct svn_fs_txn_t
   const char *id;
 
   /* FSAP-specific vtable and private data */
-  txn_vtable_t *vtable;
+  const txn_vtable_t *vtable;
   void *fsap_data;
 };
 
