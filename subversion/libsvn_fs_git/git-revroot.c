@@ -658,18 +658,23 @@ fs_git_node_relation(svn_fs_node_relation_t *relation,
   SVN_ERR(find_branch(&commit_a, &relpath_a, root_a, path_a, scratch_pool));
   SVN_ERR(find_branch(&commit_b, &relpath_b, root_b, path_b, scratch_pool));
 
-  if (!(commit_a && commit_b))
-    {
-      *relation = svn_fs_node_unrelated;
-      return SVN_NO_ERROR;
-    }
-  else if ((*relpath_a == '\0') || (*relpath_b == '\0'))
+  if ((*relpath_a == '\0') || (*relpath_b == '\0'))
     {
       if ((*relpath_a == '\0') && (*relpath_b == '\0'))
         *relation = svn_fs_node_common_ancestor;
       else
         *relation = svn_fs_node_unrelated;
 
+      return SVN_NO_ERROR;
+    }
+  else if (!(commit_a && commit_b))
+    {
+      if (root_a->rev == root_b->rev && !strcmp(path_a, path_b))
+        *relation = svn_fs_node_unchanged;
+      else if (!commit_a && !commit_b && !strcmp(path_a, path_b))
+        *relation = svn_fs_node_common_ancestor;
+      else
+        *relation = svn_fs_node_unrelated;
       return SVN_NO_ERROR;
     }
 
