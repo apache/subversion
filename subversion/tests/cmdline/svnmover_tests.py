@@ -1622,7 +1622,8 @@ def simple_branch(sbox):
 
   # The compatibility layer doesn't record the copy properly
   test_svnmover_verify_log(sbox.repo_url,
-                           ['A /top0/Y (from /top0/X:2)'])
+                           ['A /top0/Y (from /top0/X:1)',
+                            'A /top0/Y/A (from /top0/X/A:2)'])
 
 ######################################################################
 
