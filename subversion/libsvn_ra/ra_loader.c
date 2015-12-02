@@ -107,7 +107,7 @@ static const struct ra_lib_defn {
   {
     "git",
     git_schemes,
-#ifdef SVN_LIBSVN_CLIENT_LINKS_RA_GIT
+#ifdef SVN_LIBSVN_RA_LINKS_RA_GIT
     svn_ra_git__init,
     svn_ra_git__deprecated_init,
 #endif
