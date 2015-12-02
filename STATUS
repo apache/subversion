@@ -81,7 +81,7 @@ Candidate changes:
      two file contents as being different.  This may result in incomplete
      reports and dump files.
    Votes:
-     +1: stefan2
+     +1: stefan2, philip
 
  * r1717154
    Clarify documentation of svn_fs_node_created_rev().
