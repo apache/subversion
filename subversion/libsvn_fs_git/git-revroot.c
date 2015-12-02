@@ -788,7 +788,7 @@ fs_git_node_created_rev(svn_revnum_t *revision,
                                    root->fs, &last_oid,
                                    pool, iterpool));
 
-  if (SVN_IS_VALID_REVNUM(*revision))
+  if (!SVN_IS_VALID_REVNUM(*revision))
     *revision = root->rev;
 
   svn_pool_destroy(iterpool);
