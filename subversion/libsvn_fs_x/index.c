@@ -1932,7 +1932,7 @@ svn_fs_x__l2p_get_max_ids(apr_array_header_t **max_ids,
       apr_uint64_t item_count;
       apr_size_t first_page_index, last_page_index;
 
-      if (revision >= header->first_revision + header->revision_count)
+      if (revision - header->first_revision >= header->revision_count)
         {
           /* need to read the next index. Clear up memory used for the
            * previous one.  Note that intermittent pack runs do not change
@@ -2649,6 +2649,13 @@ read_entry(svn_fs_x__packed_number_stream_t *stream,
                             _("Changed path list must have item number 1"));
         }
     }
+
+  /* Corrupted SIZE values might cause arithmetic overflow.
+   * The same can happen if you copy a repository from a system with 63 bit
+   * file lengths to one with 31 bit file lengths. */
+  if ((apr_uint64_t)entry.offset + (apr_uint64_t)entry.size > off_t_max)
+    return svn_error_create(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
+                            _("P2L index entry size overflow."));
 
   APR_ARRAY_PUSH(result, svn_fs_x__p2l_entry_t) = entry;
   *item_offset += entry.size;

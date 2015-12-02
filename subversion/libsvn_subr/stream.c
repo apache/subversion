@@ -1513,7 +1513,7 @@ svn_stringbuf_from_stream(svn_stringbuf_t **result,
       if (actually_read < to_read)
         break;
 
-      if (text->blocksize < text->len + MIN_READ_SIZE)
+      if (text->blocksize - text->len < MIN_READ_SIZE)
         svn_stringbuf_ensure(text, text->blocksize * 2);
     }
 

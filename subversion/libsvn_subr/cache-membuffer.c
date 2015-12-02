@@ -1631,7 +1631,7 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
   /* accumulated size of the entries that have been removed to make
    * room for the new one.
    */
-  apr_size_t moved_size = 0;
+  apr_uint64_t moved_size = 0;
 
   /* count the number of entries that got moved.  A single large entry
    * being moved is not enough to reject an insertion.
@@ -1673,7 +1673,7 @@ ensure_data_insertable_l2(svn_membuffer_t *cache,
        * We must also limit the effort spent here (even in case of faulty
        * heuristics).  Therefore, give up after some time.
        */
-      if (moved_size > 4 * to_fit_in->size && moved_count > 7)
+      if (moved_size / 4 > to_fit_in->size && moved_count > 7)
         return FALSE;
 
       /* if the net worth (in weighted hits) of items removed is already
@@ -2214,14 +2214,29 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
                              apr_pool_t *scratch_pool)
 {
   cache_level_t *level;
-  apr_size_t size = item_size + to_find->entry_key.key_len;
+  apr_size_t size;
 
   /* first, look for a previous entry for the given key */
   entry_t *entry = find_entry(cache, group_index, to_find, FALSE);
 
+  /* Quick size check to make sure arithmetics will work further down
+   * the road. */
+  if (   cache->max_entry_size >= item_size
+      && cache->max_entry_size - item_size >= to_find->entry_key.key_len)
+    {
+      size = item_size + to_find->entry_key.key_len;
+    }
+  else
+    {
+      /* The combination of serialized ITEM and KEY does not fit, so the
+       * the insertion attempt will fail and simply remove any old entry
+       * if that exists. */
+      buffer = NULL;
+    }
+
   /* if there is an old version of that entry and the new data fits into
    * the old spot, just re-use that space. */
-  if (entry && ALIGN_VALUE(entry->size) >= size && buffer)
+  if (entry && buffer && ALIGN_VALUE(entry->size) >= size)
     {
       /* Careful! We need to cast SIZE to the full width of CACHE->DATA_USED
        * lest we run into trouble with 32 bit underflow *not* treated as a

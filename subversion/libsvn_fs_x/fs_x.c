@@ -33,6 +33,7 @@
 
 #include "cached_data.h"
 #include "id.h"
+#include "low_level.h"
 #include "rep-cache.h"
 #include "revprops.h"
 #include "transaction.h"
@@ -935,12 +936,13 @@ write_revision_zero(svn_fs_t *fs,
 
   revprops = svn_stringbuf_create_empty(scratch_pool);
   stream = svn_stream_from_stringbuf(revprops, scratch_pool);
-  SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR,
-                          scratch_pool));
+  SVN_ERR(svn_fs_x__write_properties(stream, proplist, scratch_pool));
   SVN_ERR(svn_stream_close(stream));
 
-  SVN_ERR(svn_io_file_create(svn_fs_x__path_revprops(fs, 0, scratch_pool),
-                             revprops->data, scratch_pool));
+  SVN_ERR(svn_io_file_create_bytes(svn_fs_x__path_revprops(fs, 0,
+                                                           scratch_pool),
+                                   revprops->data, revprops->len,
+                                   scratch_pool));
 
   return SVN_NO_ERROR;
 }

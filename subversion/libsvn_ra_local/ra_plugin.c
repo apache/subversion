@@ -1833,9 +1833,11 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__has_capability,
   svn_ra_local__replay_range,
   svn_ra_local__get_deleted_rev,
-  svn_ra_local__register_editor_shim_callbacks,
   svn_ra_local__get_inherited_props,
-  svn_ra_local__get_commit_ev2
+  NULL /* set_svn_ra_open */,
+  svn_ra_local__register_editor_shim_callbacks,
+  svn_ra_local__get_commit_ev2,
+  NULL /* replay_range_ev2 */
 };
 
 
@@ -1868,7 +1870,7 @@ svn_ra_local__init(const svn_version_t *loader_version,
 
   SVN_ERR(svn_ver_check_list2(ra_local_version(), checklist, svn_ver_equal));
 
-#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
+#ifndef SVN_LIBSVN_RA_LINKS_RA_LOCAL
   /* This means the library was loaded as a DSO, so use the DSO pool. */
   SVN_ERR(svn_fs_initialize(svn_dso__pool()));
 #endif
