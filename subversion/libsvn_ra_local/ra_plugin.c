@@ -1870,7 +1870,7 @@ svn_ra_local__init(const svn_version_t *loader_version,
 
   SVN_ERR(svn_ver_check_list2(ra_local_version(), checklist, svn_ver_equal));
 
-#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
+#ifndef SVN_LIBSVN_RA_LINKS_RA_LOCAL
   /* This means the library was loaded as a DSO, so use the DSO pool. */
   SVN_ERR(svn_fs_initialize(svn_dso__pool()));
 #endif
