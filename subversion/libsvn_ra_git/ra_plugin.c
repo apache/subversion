@@ -50,6 +50,10 @@ typedef struct svn_ra_git__session_baton_t
 {
   /* The URL of the session. */
   const char *session_url;
+  const char *repos_root_url;
+
+  svn_ra_session_t *local_session;
+  const char *local_repos_root_url;
 
   /* The user accessing the repository. */
   const char *username;
@@ -82,6 +86,8 @@ typedef struct svn_ra_git__session_baton_t
   void *callback_baton;
 
   const char *useragent;
+
+  svn_ra__open_func_t svn_ra_open;
 
   /* Scratch pool for routines that cannot otherwise get one. */
   apr_pool_t *scratch_pool;
@@ -994,6 +1000,19 @@ svn_ra_git__open(svn_ra_session_t *session,
   git_err = git_revwalk_new(&sess->revwalk, sess->repos);
   if (git_err)
     return svn_error_trace(svn_ra_git__wrap_git_error());
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svn_ra_git__set_svn_ra_open(svn_ra_session_t *session,
+                            svn_ra__open_func_t func)
+{
+  svn_ra_git__session_baton_t *sess = session->priv;
+
+  sess->svn_ra_open = func;
+
+  /* TODO: Open ra_local session, etc. */
 
   return SVN_NO_ERROR;
 }
@@ -2413,25 +2432,6 @@ svn_ra_git__register_editor_shim_callbacks(svn_ra_session_t *session,
 }
 
 
-static svn_error_t *
-svn_ra_git__get_commit_ev2(svn_editor_t **editor,
-                           svn_ra_session_t *session,
-                           apr_hash_t *revprops,
-                           svn_commit_callback2_t commit_cb,
-                           void *commit_baton,
-                           apr_hash_t *lock_tokens,
-                           svn_boolean_t keep_locks,
-                           svn_ra__provide_base_cb_t provide_base_cb,
-                           svn_ra__provide_props_cb_t provide_props_cb,
-                           svn_ra__get_copysrc_kind_cb_t get_copysrc_kind_cb,
-                           void *cb_baton,
-                           svn_cancel_func_t cancel_func,
-                           void *cancel_baton,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
-{
-  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
-}
 
 /*----------------------------------------------------------------*/
 
@@ -2481,9 +2481,12 @@ static const svn_ra__vtable_t ra_git_vtable =
   svn_ra_git__has_capability,
   svn_ra_git__replay_range,
   svn_ra_git__get_deleted_rev,
-  svn_ra_git__register_editor_shim_callbacks,
   svn_ra_git__get_inherited_props,
-  svn_ra_git__get_commit_ev2
+  svn_ra_git__set_ra_open,
+
+  svn_ra_git__register_editor_shim_callbacks,
+  NULL /* get_commit_ev2 */,
+  NULL /* replay_range_ev2 */
 };
 
 
