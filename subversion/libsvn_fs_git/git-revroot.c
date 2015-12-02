@@ -1344,7 +1344,8 @@ svn_fs_git__revision_root(svn_fs_root_t **root_p, svn_fs_t *fs, svn_revnum_t rev
       SVN_ERR(svn_fs_git__db_fetch_oid(&fgr->exact, &oid, &fgr->rev_path,
                                        fs, rev, pool, pool));
 
-      SVN_ERR(find_commit(&fgr->commit, root, oid, pool));
+      if (oid)
+        SVN_ERR(find_commit(&fgr->commit, root, oid, pool));
     }
 
   *root_p = root;

@@ -134,7 +134,6 @@ revmap_update_tag(svn_fs_t *fs,
   }
 
   GIT2_ERR(git_object_lookup(&obj, fgf->repos, oid, GIT_OBJ_ANY));
-
   if (git_object_type(obj) != GIT_OBJ_COMMIT)
     {
       git_object *commit;
@@ -186,6 +185,18 @@ revmap_update_tag(svn_fs_t *fs,
           SVN_ERR_MALFUNCTION();
         }
     }
+
+  {
+    svn_revnum_t tag_rev;
+
+    SVN_ERR(svn_fs_git__db_tag_create(&tag_rev,
+                                      fs, svn_relpath_join("tags", tagname,
+                                                           scratch_pool),
+                                      *latest_rev, rev, scratch_pool));
+
+    if (tag_rev > *latest_rev)
+      *latest_rev = tag_rev;
+  }
 
   return SVN_NO_ERROR;
 }

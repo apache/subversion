@@ -341,6 +341,59 @@ svn_fs_git__db_find_branch(const char **branch_path,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+db_tag_create(svn_revnum_t *tag_rev,
+              svn_fs_t *fs,
+              const char *relpath,
+              svn_revnum_t youngest_rev,
+              svn_revnum_t from_rev,
+              apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
+                                    STMT_SELECT_TAG));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 1, relpath));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+  if (got_row)
+    {
+      *tag_rev = svn_sqlite__column_revnum(stmt, 0);
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+  if (got_row)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
+                                    STMT_INSERT_TAG));
+  SVN_ERR(svn_sqlite__bind_revnum(stmt, 1, ++youngest_rev));
+  SVN_ERR(svn_sqlite__bind_revnum(stmt, 2, from_rev));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 3, relpath));
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
+
+  *tag_rev = youngest_rev;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_git__db_tag_create(svn_revnum_t *tag_rev,
+                          svn_fs_t *fs,
+                          const char *relpath,
+                          svn_revnum_t youngest_rev,
+                          svn_revnum_t from_rev,
+                          apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+
+  SVN_SQLITE__WITH_LOCK(db_tag_create(tag_rev, fs, relpath,
+                                      youngest_rev, from_rev,
+                                      scratch_pool),
+                        fgf->sdb);
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_git__db_open(svn_fs_t *fs,

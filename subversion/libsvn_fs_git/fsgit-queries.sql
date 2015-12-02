@@ -83,6 +83,12 @@ WHERE relpath = ?1 AND revnum <= ?2
 ORDER BY relpath DESC, revnum DESC
 LIMIT 1
 
+-- STMT_SELECT_TAG
+SELECT revnum, from_rev, relpath FROM TAGMAP where relpath = ?1
+
+-- STMT_INSERT_TAG
+INSERT INTO TAGMAP (revnum, from_rev, relpath) VALUES (?1, ?2, ?3)
+
 /* Grab all the statements related to the schema.  */
 
 -- include: fsgit-metadata
