@@ -268,7 +268,7 @@ svn_fs_git__db_open(svn_fs_t *fs,
 {
   svn_fs_git_fs_t *fgf = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
-  const char *db_path = svn_dirent_join(fs->path, ".svn-git-fs.db",
+  const char *db_path = svn_dirent_join(fs->path, "svn-git-fs.db",
                                         scratch_pool);
 
   SVN_ERR(svn_sqlite__open(&fgf->sdb, db_path, svn_sqlite__mode_readwrite,
@@ -321,7 +321,7 @@ svn_fs_git__db_create(svn_fs_t *fs,
                       apr_pool_t *scratch_pool)
 {
   svn_fs_git_fs_t *fgf = fs->fsap_data;
-  const char *db_path = svn_dirent_join(fs->path, ".svn-git-fs.db",
+  const char *db_path = svn_dirent_join(fs->path, "svn-git-fs.db",
                                         scratch_pool);
 
   SVN_ERR(svn_sqlite__open(&fgf->sdb, db_path, svn_sqlite__mode_rwcreate,

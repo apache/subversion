@@ -28,6 +28,7 @@
 #include <apr_pools.h>
 
 #include "svn_fs.h"
+#include "svn_dirent_uri.h"
 #include "svn_version.h"
 #include "svn_pools.h"
 #include "svn_hash.h"
@@ -329,7 +330,9 @@ svn_fs_git__create(svn_fs_t *fs,
 
   fs->path = apr_pstrdup(fs->pool, path);
 
-  GIT2_ERR(git_repository_init(&fgf->repos, path, TRUE /* is_bare */));
+  GIT2_ERR(git_repository_init(&fgf->repos,
+                               svn_dirent_join(path, "git", scratch_pool),
+                               TRUE /* is_bare */));
 
   SVN_ERR(svn_fs_git__db_create(fs, scratch_pool));
 
@@ -345,7 +348,8 @@ svn_fs_git__open(svn_fs_t *fs,
 
   fs->path = apr_pstrdup(fs->pool, path);
 
-  GIT2_ERR(git_repository_open(&fgf->repos, path));
+  GIT2_ERR(git_repository_open(&fgf->repos,
+                               svn_dirent_join(path, "git", scratch_pool)));
 
   SVN_ERR(svn_fs_git__db_open(fs, scratch_pool));
 
