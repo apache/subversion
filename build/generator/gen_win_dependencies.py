@@ -1409,7 +1409,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                '.'.join(str(v) for v in minimal_libgit2_version)))
       return
 
-    defines = ['SVN_LIBSVN_FS_LINKS_FS_GIT']
+    defines = ['SVN_LIBSVN_FS_LINKS_FS_GIT', 'SVN_LIBSVN_RA_LINKS_RA_GIT']
 
     self._libraries['libgit2'] = SVNCommonLibrary('libgit2', inc_dir, lib_dir,
                                                    lib_name, libgit2_version,
