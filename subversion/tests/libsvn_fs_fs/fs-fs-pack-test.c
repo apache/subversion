@@ -1664,11 +1664,11 @@ compare_0_length_rep(const svn_test_opts_t *opts,
   apr_hash_t *fs_config;
 
   /* Test expectations. */
-  const char * const no_rep_file = "no-rep";
-  const char * const empty_plain_file = "empty-plain";
-  const char * const plain_file = "plain";
-  const char * const empty_delta_file = "empty-delta";
-  const char * const delta_file = "delta";
+#define no_rep_file      "no-rep"
+#define empty_plain_file "empty-plain"
+#define plain_file       "plain"
+#define empty_delta_file "empty-delta"
+#define delta_file       "delta"
 
   enum { COUNT = 5 };
   const char *file_names[COUNT] = { no_rep_file,
