@@ -1648,6 +1648,98 @@ delta_chain_with_plain(const svn_test_opts_t *opts,
 
 #undef REPO_NAME
 
+/* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "test-repo-compare_0_length_rep"
+
+static svn_error_t *
+compare_0_length_rep(const svn_test_opts_t *opts,
+                     apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  svn_revnum_t rev;
+  int i, k;
+  apr_hash_t *fs_config;
+
+  /* Test expectations. */
+  const char *no_rep_file = "no-rep";
+  const char *empty_plain_file = "empty-plain";
+  const char *plain_file = "plain";
+  const char *empty_delta_file = "empty-delta";
+  const char *delta_file = "delta";
+
+  enum { COUNT = 5 };
+  const char *file_names[COUNT] = { no_rep_file,
+                                    empty_delta_file, 
+                                    plain_file,
+                                    empty_delta_file,
+                                    delta_file };
+
+  int equal[COUNT][COUNT] = { { 1, 1, 0, 1, 0 },
+                              { 1, 1, 0, 1, 0 },
+                              { 0, 0, 1, 0, 1 },
+                              { 1, 1, 0, 1, 0 },
+                              { 0, 0, 1, 0, 1 } };
+
+  /* Well, this club is FSFS only ... */
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  /* We want to check that whether NULL reps, empty PLAIN reps and empty
+   * DELTA reps are all considered equal, yet different from non-empty reps.
+   *
+   * Because we can't create empty PLAIN reps with recent formats anymore,
+   * some format selection & upgrade gymnastics is needed. */
+
+  /* Create a format 1 repository.
+   * This one does not support DELTA reps, so all is PLAIN. */
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE, "x");
+  SVN_ERR(svn_test__create_fs2(&fs, REPO_NAME, opts, fs_config, pool));
+
+  /* Revision 1, create 3 files:
+   * One with no rep, one with an empty rep and a non-empty one. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_file(root, no_rep_file, pool));
+  SVN_ERR(svn_fs_make_file(root, empty_plain_file, pool));
+  SVN_ERR(svn_test__set_file_contents(root, empty_plain_file, "", pool));
+  SVN_ERR(svn_fs_make_file(root, plain_file, pool));
+  SVN_ERR(svn_test__set_file_contents(root, plain_file, "x", pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Upgrade the file system format. */
+  SVN_ERR(svn_fs_upgrade2(REPO_NAME, NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, NULL, pool, pool));
+
+  /* Revision 2, create two more files:
+   * a file with an empty DELTA rep and a non-empty one. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_make_file(root, empty_delta_file, pool));
+  SVN_ERR(svn_test__set_file_contents(root, empty_delta_file, "", pool));
+  SVN_ERR(svn_fs_make_file(root, delta_file, pool));
+  SVN_ERR(svn_test__set_file_contents(root, delta_file, "x", pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Now compare. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+  for (i = 0; i < COUNT; ++i)
+    for (k = 0; k < COUNT; ++k)
+      {
+        svn_boolean_t different;
+        SVN_ERR(svn_fs_contents_different(&different, root, file_names[i],
+                                          root, file_names[k], pool));
+        SVN_TEST_ASSERT(different != equal[i][k]);
+      }
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
 
 /* The test table.  */
 
@@ -1696,6 +1788,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "rep-sharing effectiveness"),
     SVN_TEST_OPTS_PASS(delta_chain_with_plain,
                        "delta chains starting with PLAIN, issue #4577"),
+    SVN_TEST_OPTS_PASS(compare_0_length_rep,
+                       "compare empty PLAIN and non-existent reps"),
     SVN_TEST_NULL
   };
 
