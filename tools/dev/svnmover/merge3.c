@@ -50,6 +50,9 @@
 
 /* ====================================================================== */
 
+#define is_branch_root_element(branch, eid) \
+  (svn_branch__root_eid(branch) == (eid))
+
 /* Return a string suitable for appending to a displayed element name or
  * element id to indicate that it is a subbranch root element for SUBBRANCH.
  * Return "" if SUBBRANCH is null.
@@ -1124,6 +1127,9 @@ detect_orphans(apr_hash_t **orphans_p,
 
 /* Merge ...
  *
+ * The elements to merge are the union of the elements in the three input
+ * subtrees (SRC, TGT, YCA).
+ *
  * Merge any sub-branches in the same way, recursively.
  *
  * ### TODO: Store the merge result separately, without overwriting the
@@ -1173,14 +1179,12 @@ branch_merge_subtree_r(svn_branch__txn_t *edit_txn,
   SVN_ERR(svn_branch__get_subtree(src->branch, &s_src, src->eid, scratch_pool));
   SVN_ERR(svn_branch__get_subtree(tgt->branch, &s_tgt, tgt->eid, scratch_pool));
   SVN_ERR(svn_branch__get_subtree(yca->branch, &s_yca, yca->eid, scratch_pool));
-  SVN_ERR(svnmover_element_differences(&diff_yca_src,
-                                       s_yca->tree, s_src->tree,
-                                       scratch_pool, scratch_pool));
-  /* ### We only need to query for YCA:TO differences in elements that are
-         different in YCA:FROM, but right now we ask for all differences. */
-  SVN_ERR(svnmover_element_differences(&diff_yca_tgt,
-                                       s_yca->tree, s_tgt->tree,
-                                       scratch_pool, scratch_pool));
+
+  /* ALL_ELEMENTS enumerates the elements in union of subtrees YCA,SRC,TGT. */
+  all_elements = hash_overlay(s_src->tree->e_map,
+                              s_tgt->tree->e_map);
+  all_elements = hash_overlay(s_yca->tree->e_map,
+                              all_elements);
 
   SVN_ERR(svn_branch__state_get_elements(src->branch, &src_elements,
                                          scratch_pool));
@@ -1188,10 +1192,21 @@ branch_merge_subtree_r(svn_branch__txn_t *edit_txn,
                                          scratch_pool));
   SVN_ERR(svn_branch__state_get_elements(yca->branch, &yca_elements,
                                          scratch_pool));
-  all_elements = hash_overlay(src_elements->e_map,
-                              tgt_elements->e_map);
-  all_elements = hash_overlay(yca_elements->e_map,
-                              all_elements);
+
+  /* Find the two changes for each element that is in any of the subtrees,
+     even for an element that is (for example) not in YCA or SRC but has
+     been moved into TGT. */
+  SVN_ERR(svnmover_element_differences(&diff_yca_src,
+                                       yca_elements, src_elements,
+                                       all_elements,
+                                       scratch_pool, scratch_pool));
+  /* ### We only need to know about YCA:TGT differences for elements that
+         differ in YCA:SRC, but right now we ask for all differences. */
+  SVN_ERR(svnmover_element_differences(&diff_yca_tgt,
+                                       yca_elements, tgt_elements,
+                                       all_elements,
+                                       scratch_pool, scratch_pool));
+
   for (SVN_EID__HASH_ITER_SORTED_BY_EID(ei, all_elements, scratch_pool))
     {
       int eid = ei->eid;
@@ -1224,6 +1239,24 @@ branch_merge_subtree_r(svn_branch__txn_t *edit_txn,
       e_yca = e_yca_src[0];
       e_src = e_yca_src[1];
       e_tgt = e_yca_tgt ? e_yca_tgt[1] : e_yca_src[0];
+
+      /* If some but not all of the three subtree-root elements are branch
+         roots, then we will see the parentage of this element changing to
+         or from 'no parent' in one or both sides of the merge. We want to
+         ignore this part of the difference, as parentage of a subtree root
+         element is by definition not part of a 'subtree', so blank it out.
+         (If we merged it, it could break the single-rooted-tree invariant
+         of the target branch.)
+       */
+      if (is_branch_root_element(src->branch, eid)
+          || is_branch_root_element(tgt->branch, eid)
+          || is_branch_root_element(yca->branch, eid))
+        {
+          e_src = svn_element__content_create(
+                    e_tgt->parent_eid, e_tgt->name, e_src->payload, iterpool);
+          e_yca = svn_element__content_create(
+                    e_tgt->parent_eid, e_tgt->name, e_yca->payload, iterpool);
+        }
 
       element_merge(&result, &conflict,
                     eid, e_src, e_tgt, e_yca,

@@ -94,7 +94,12 @@ typedef struct svnmover_wc_version_t
 } svnmover_wc_version_t;
 
 /* Return (left, right) pairs of element content that differ between
- * subtrees LEFT and RIGHT.
+ * LEFT and RIGHT.
+ *
+ * Examine only the elements listed in ELEMENTS, a hash of (eid ->
+ * [anything]). If ELEMENTS is NULL, use the union of LEFT and RIGHT.
+ *
+ * LEFT and/or RIGHT may be null, meaning an empty set of elements.
  *
  * Set *DIFF_P to a hash of (eid -> (svn_element__content_t *)[2]).
  */
@@ -102,6 +107,7 @@ svn_error_t *
 svnmover_element_differences(apr_hash_t **diff_p,
                              const svn_element__tree_t *left,
                              const svn_element__tree_t *right,
+                             apr_hash_t *elements,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
@@ -157,8 +163,10 @@ struct conflict_storage_t
 
 /* Merge SRC into TGT, using the common ancestor YCA.
  *
- * Merge the two sets of changes: YCA -> SRC and YCA -> TGT, applying
- * the result to the transaction at TGT.
+ * The elements to merge are the union of the elements in the three input
+ * subtrees (SRC, TGT, YCA). For each such element, merge the two changes:
+ * YCA -> SRC and YCA -> TGT, applying the result to TGT which is assumed
+ * to be a branch in EDIT_TXN.
  *
  * If conflicts arise, return them in *CONFLICT_STORAGE_P; otherwise set
  * that to null.
