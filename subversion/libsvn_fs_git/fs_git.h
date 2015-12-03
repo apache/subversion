@@ -20,7 +20,12 @@
 * ====================================================================
 */
 
+/* We compile in C89 mode, so the 'inline' keyword used by libgit2 isn't supported. */
+#define inline APR_INLINE
 #include <git2.h>
+#undef inline
+
+#include "svn_fs.h"
 #include "private/svn_sqlite.h"
 
 #ifndef SVN_LIBSVN_FS__FS_GIT_H
@@ -170,6 +175,31 @@ svn_fs_git__revision_root(svn_fs_root_t **root_p,
                           svn_fs_t *fs,
                           svn_revnum_t rev,
                           apr_pool_t *pool);
+
+/* From git-history.c */
+svn_error_t *
+svn_fs_git__make_history_simple(svn_fs_history_t **history_p,
+                                svn_fs_root_t *root,
+                                svn_revnum_t rev_start,
+                                svn_revnum_t rev_end,
+                                const char *path,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_fs_git__make_history_commit(svn_fs_history_t **history_p,
+                                svn_fs_root_t *root,
+                                const git_commit *commit,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_fs_git__make_history_node(svn_fs_history_t **history_p,
+                              svn_fs_root_t *root,
+                              const git_commit *commit,
+                              const char *relpath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 
 /* From revmap.c */

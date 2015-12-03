@@ -611,7 +611,55 @@ fs_git_node_history(svn_fs_history_t **history_p,
                     apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  const git_commit *commit;
+  const char *relpath;
+  git_tree *tree;
+  git_tree_entry *entry;
+
+  if (*path == '/')
+    path++;
+  if (!*path)
+    {
+      SVN_ERR(svn_fs_git__make_history_simple(history_p,
+                                              root, root->rev, 0, NULL,
+                                              result_pool, scratch_pool));
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(find_branch(&commit, &relpath, root, path, result_pool));
+  if (!commit)
+    {
+      if (root->rev > 0
+          && !strcmp(path, "branches") || !strcmp(path, "tags"))
+        {
+          /* Branches and tags subdirs were created in r1 */
+          SVN_ERR(svn_fs_git__make_history_simple(history_p,
+                                                  root, root->rev, 1, path,
+                                                  result_pool, scratch_pool));
+          return SVN_NO_ERROR;
+        }
+
+      return SVN_FS__NOT_FOUND(root, path);
+    }
+
+  if (!relpath[0])
+    {
+      SVN_ERR(svn_fs_git__make_history_commit(history_p,
+                                              root, commit,
+                                              result_pool, scratch_pool));
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(get_commit_tree(&tree, commit, scratch_pool));
+  SVN_ERR(find_tree_entry(&entry, tree, relpath, scratch_pool, scratch_pool));
+
+  if (!entry)
+    return SVN_FS__NOT_FOUND(root, path);
+
+  SVN_ERR(svn_fs_git__make_history_node(history_p,
+                                        root, commit, relpath,
+                                        result_pool, scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
