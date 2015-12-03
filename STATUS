@@ -94,11 +94,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1703688, 1703689
-   Fix merging deletes of svn:eol-style CRLF or CR files
-   Justification:
-     Resolves unnecessary tree conflicts.
-     Any more reasons needed? :-)
-   Votes:
-     +1: rhuijben, ivan, philip
