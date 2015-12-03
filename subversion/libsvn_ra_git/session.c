@@ -27,7 +27,6 @@
 #include "svn_fs.h"
 #include "svn_path.h"
 #include "svn_version.h"
-#include "svn_sorts.h"
 #include "svn_repos.h"
 
 #include "svn_private_config.h"
@@ -52,7 +51,119 @@ cleanup_temporary_repos(void *data)
 }
 
 /*----------------------------------------------------------------*/
+typedef struct ra_git_reporter_baton_t
+{
+  const svn_ra_reporter3_t *reporter;
+  void *report_baton;
 
+  svn_ra_session_t *session;
+} ra_git_reporter_baton_t;
+
+static svn_error_t *
+ra_git_reporter_set_path(void *report_baton,
+                         const char *path,
+                         svn_revnum_t revision,
+                         svn_depth_t depth,
+                         svn_boolean_t start_empty,
+                         const char *lock_token,
+                         apr_pool_t *pool)
+{
+  ra_git_reporter_baton_t *grb = report_baton;
+
+  return svn_error_trace(
+    grb->reporter->set_path(grb->report_baton, path, revision, depth,
+                            start_empty, lock_token, pool));
+}
+
+static svn_error_t *
+ra_git_reporter_delete_path(void *report_baton,
+                            const char *path,
+                            apr_pool_t *pool)
+{
+  ra_git_reporter_baton_t *grb = report_baton;
+
+  return svn_error_trace(
+    grb->reporter->delete_path(grb->report_baton, path, pool));
+}
+
+static svn_error_t *
+ra_git_reporter_link_path(void *report_baton,
+                          const char *path,
+                          const char *url,
+                          svn_revnum_t revision,
+                          svn_depth_t depth,
+                          svn_boolean_t start_empty,
+                          const char *lock_token,
+                          apr_pool_t *pool)
+{
+  ra_git_reporter_baton_t *grb = report_baton;
+
+  if (url && svn_path_is_url(url))
+    {
+      svn_ra_git__session_t *sess = grb->session->priv;
+      const char *repos_relpath;
+
+      SVN_ERR(svn_ra_get_path_relative_to_root(grb->session,
+                                               &repos_relpath,
+                                               url, pool));
+      url = svn_path_url_add_component2(sess->local_repos_root_url,
+                                        repos_relpath, pool);
+    }
+
+  return svn_error_trace(
+    grb->reporter->link_path(grb->report_baton, path, url, revision, depth,
+                             start_empty, lock_token, pool));
+}
+
+static svn_error_t *
+ra_git_reporter_finish_report(void *report_baton,
+                              apr_pool_t *pool)
+{
+  ra_git_reporter_baton_t *grb = report_baton;
+
+  return svn_error_trace(
+    grb->reporter->finish_report(grb->report_baton, pool));
+}
+
+static svn_error_t *
+ra_git_reporter_abort_report(void *report_baton,
+                             apr_pool_t *pool)
+{
+  ra_git_reporter_baton_t *grb = report_baton;
+
+  return svn_error_trace(
+    grb->reporter->abort_report(grb->report_baton, pool));
+}
+
+static const svn_ra_reporter3_t ra_git_reporter_vtable =
+{
+  ra_git_reporter_set_path,
+  ra_git_reporter_delete_path,
+  ra_git_reporter_link_path,
+  ra_git_reporter_finish_report,
+  ra_git_reporter_abort_report
+};
+
+svn_error_t *
+ra_git_wrap_reporter(const svn_ra_reporter3_t **reporter_p,
+                     void **reporter_baton_p,
+                     const svn_ra_reporter3_t *reporter,
+                     void *reporter_baton,
+                     svn_ra_session_t *session,
+                     apr_pool_t *result_pool)
+{
+  ra_git_reporter_baton_t *grb = apr_pcalloc(result_pool, sizeof(*grb));
+  grb->reporter = reporter;
+  grb->report_baton = reporter_baton;
+  grb->session = session;
+
+  *reporter_p = &ra_git_reporter_vtable;
+  *reporter_baton_p = grb;
+  return SVN_NO_ERROR;
+}
+
+
+/*----------------------------------------------------------------*/
 /*** The RA vtable routines ***/
 
 #define RA_GIT_DESCRIPTION \
@@ -392,7 +503,7 @@ ra_git_get_repos_root(svn_ra_session_t *session,
 {
   svn_ra_git__session_t *sess = session->priv;
 
-  *url = apr_pstrdup(pool, sess->repos_root_url);
+  *url = sess->repos_root_url;
   return SVN_NO_ERROR;
 }
 
@@ -478,13 +589,17 @@ ra_git_do_update(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, scratch_pool));
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, scratch_pool));
 
-  return svn_error_trace(
-    svn_ra_do_update3(sess->local_session,
-                      reporter, report_baton,
-                      update_revision, update_target, depth,
-                      send_copyfrom_args, ignore_ancestry,
-                      update_editor, update_baton,
-                      result_pool, scratch_pool));
+  SVN_ERR(svn_ra_do_update3(sess->local_session,
+                            reporter, report_baton,
+                            update_revision, update_target, depth,
+                            send_copyfrom_args, ignore_ancestry,
+                            update_editor, update_baton,
+                            result_pool, scratch_pool));
+
+  SVN_ERR(ra_git_wrap_reporter(reporter, report_baton,
+                               *reporter, *report_baton,
+                               session, result_pool));
+  return SVN_NO_ERROR;
 }
 
 
@@ -504,18 +619,29 @@ ra_git_do_switch(svn_ra_session_t *session,
                  apr_pool_t *scratch_pool)
 {
   svn_ra_git__session_t *sess = session->priv;
+  const char *repos_relpath;
 
   SVN_ERR(ensure_local_session(session, scratch_pool));
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, scratch_pool));
 
-  return svn_error_trace(
-    svn_ra_do_switch3(sess->local_session,
-                      reporter, report_baton,
-                      update_revision, update_target, depth,
-                      switch_url, send_copyfrom_args,
-                      ignore_ancestry,
-                      update_editor, update_baton,
-                      result_pool, scratch_pool));
+  SVN_ERR(svn_ra_get_path_relative_to_root(session, &repos_relpath,
+                                           switch_url, scratch_pool));
+
+  switch_url = svn_path_url_add_component2(sess->local_repos_root_url,
+                                           repos_relpath, scratch_pool);
+
+  SVN_ERR(svn_ra_do_switch3(sess->local_session,
+                            reporter, report_baton,
+                            update_revision, update_target, depth,
+                            switch_url, send_copyfrom_args,
+                            ignore_ancestry,
+                            update_editor, update_baton,
+                            result_pool, scratch_pool));
+
+  SVN_ERR(ra_git_wrap_reporter(reporter, report_baton,
+                               *reporter, *report_baton,
+                               session, result_pool));
+  return SVN_NO_ERROR;
 }
 
 
@@ -537,11 +663,15 @@ ra_git_do_status(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, sess->scratch_pool));
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, sess->scratch_pool));
 
-  return svn_error_trace(
-    svn_ra_do_status2(sess->local_session,
-                      reporter, report_baton,
-                      status_target, revision, depth,
-                      status_editor, status_baton, pool));
+  SVN_ERR(svn_ra_do_status2(sess->local_session,
+                            reporter, report_baton,
+                            status_target, revision, depth,
+                            status_editor, status_baton, pool));
+
+  SVN_ERR(ra_git_wrap_reporter(reporter, report_baton,
+                               *reporter, *report_baton,
+                               session, pool));
+  return SVN_NO_ERROR;
 }
 
 
@@ -560,18 +690,31 @@ ra_git_do_diff(svn_ra_session_t *session,
                apr_pool_t *pool)
 {
   svn_ra_git__session_t *sess = session->priv;
+  const char *repos_relpath;
 
   svn_pool_clear(sess->scratch_pool);
 
   SVN_ERR(ensure_local_session(session, sess->scratch_pool));
   SVN_ERR(svn_ra_git__git_fetch(session, TRUE, sess->scratch_pool));
 
-  return svn_error_trace(
-    svn_ra_do_diff3(sess->local_session,
-                    reporter, report_baton,
-                    update_revision, update_target, depth,
-                    ignore_ancestry, text_deltas, switch_url,
-                    update_editor, update_baton, pool));
+
+  SVN_ERR(svn_ra_get_path_relative_to_root(session, &repos_relpath,
+                                           switch_url, sess->scratch_pool));
+
+  switch_url = svn_path_url_add_component2(sess->local_repos_root_url,
+                                           repos_relpath, sess->scratch_pool);
+
+  SVN_ERR(svn_ra_do_diff3(sess->local_session,
+                          reporter, report_baton,
+                          update_revision, update_target, depth,
+                          ignore_ancestry, text_deltas, switch_url,
+                          update_editor, update_baton, pool));
+
+  SVN_ERR(ra_git_wrap_reporter(reporter, report_baton,
+                               *reporter, *report_baton,
+                               session, pool));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
