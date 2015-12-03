@@ -123,6 +123,9 @@ AC_PATH_PROG(PKG_CONFIG, pkg-config)
 dnl Search for serf
 SVN_LIB_SERF(1,3,4)
 
+dnl Search for libgit2
+SVN_LIB_GIT2(0,23,4)
+
 if test "$svn_lib_serf" = "yes"; then
   AC_DEFINE([SVN_HAVE_SERF], 1,
             [Defined if support for Serf is enabled])
@@ -1005,6 +1008,7 @@ AC_SUBST([libsvn_diff_LDFLAGS])
 AC_SUBST([libsvn_fs_LDFLAGS])
 AC_SUBST([libsvn_fs_base_LDFLAGS])
 AC_SUBST([libsvn_fs_fs_LDFLAGS])
+AC_SUBST([libsvn_fs_git_LDFLAGS])
 AC_SUBST([libsvn_fs_util_LDFLAGS])
 AC_SUBST([libsvn_ra_LDFLAGS])
 AC_SUBST([libsvn_ra_local_LDFLAGS])
@@ -1201,8 +1205,6 @@ AS_HELP_STRING([--with-editor=PATH],
 
 SVN_LIB_Z
 
-SVN_LIB_GIT2
-
 MOD_ACTIVATION=""
 AC_ARG_ENABLE(mod-activation,
 AS_HELP_STRING([--enable-mod-activation],
@@ -1375,30 +1377,31 @@ AS_HELP_STRING([--enable-runtime-module-search],
 
 if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
   AC_DEFINE(SVN_LIBSVN_RA_LINKS_RA_LOCAL, 1,
-      [Defined if libsvn_client should link against libsvn_ra_local])
+      [Defined if libsvn_ra should link against libsvn_ra_local])
   svn_ra_lib_deps="\$(RA_LOCAL_DEPS)"
   svn_ra_lib_install_deps="install-ramod-lib"
   svn_ra_lib_link="\$(RA_LOCAL_LINK)"
 
   AC_DEFINE(SVN_LIBSVN_RA_LINKS_RA_SVN, 1,
-      [Defined if libsvn_client should link against libsvn_ra_svn])
+      [Defined if libsvn_ra should link against libsvn_ra_svn])
   svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_SVN_DEPS)"
   svn_ra_lib_link="$svn_ra_lib_link \$(RA_SVN_LINK)"
 
   if test "$svn_lib_serf" = "yes"; then
     AC_DEFINE(SVN_LIBSVN_RA_LINKS_RA_SERF, 1,
-          [Defined if libsvn_client should link against libsvn_ra_serf])
+          [Defined if libsvn_ra should link against libsvn_ra_serf])
     svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_SERF_DEPS)"
     svn_ra_lib_install_deps="$svn_ra_lib_install_deps install-serf-lib"
     svn_ra_lib_link="$svn_ra_lib_link \$(RA_SERF_LINK)"
   fi
 
-  # TODO: make libgit2 support optional?
-  AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_GIT, 1,
-        [Defined if libsvn_client should link against libsvn_ra_git])
-  svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_GIT_DEPS)"
-  svn_ra_lib_install_deps="$svn_ra_lib_install_deps install-ramod-lib"
-  svn_ra_lib_link="$svn_ra_lib_link \$(RA_GIT_LINK)"
+  if test "$svn_lib_git" = "yes"; then
+    AC_DEFINE(SVN_LIBSVN_RA_LINKS_RA_GIT, 1,
+        [Defined if libsvn_ra should link against libsvn_ra_git])
+    svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_GIT_DEPS)"
+    svn_ra_lib_install_deps="$svn_ra_lib_install_deps install-ramod-lib"
+    svn_ra_lib_link="$svn_ra_lib_link \$(RA_GIT_LINK)"
+  fi
 
   SVN_RA_LIB_DEPS=$svn_ra_lib_deps
   SVN_RA_LIB_INSTALL_DEPS=$svn_ra_lib_install_deps

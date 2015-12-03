@@ -27,6 +27,11 @@ AC_DEFUN(SVN_LIB_GIT2,
 [
   libgit2_found=no
 
+  git2_check_major="$1"
+  git2_check_minor="$2"
+  git2_check_patch="$3"
+  git2_check_version="$1.$2.$3"
+
   AC_ARG_WITH(libgit2,AS_HELP_STRING([--with-libgit2=PREFIX],
                                   [libgit2 library]),
   [
