@@ -64,7 +64,7 @@ Candidate changes:
    Justification:
      Impossible to run tests with older repository formats.
    Votes:
-     +1: ivan
+     +1: ivan, kotkov
 
  * r1712927
    Fix svn_fs_contents_different on FSFS producing false negatives.
