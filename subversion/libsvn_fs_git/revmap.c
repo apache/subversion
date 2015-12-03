@@ -51,7 +51,7 @@ revmap_update_branch(svn_fs_t *fs,
   int git_err;
   git_oid oid;
   svn_revnum_t last_rev = SVN_INVALID_REVNUM;
-
+  svn_boolean_t ensured_branch = (relpath != NULL);
 
   /* ### TODO: Return if walk_oid is already mapped */
 
@@ -88,6 +88,14 @@ revmap_update_branch(svn_fs_t *fs,
       if (rev > y_rev)
         {
           *latest_rev = rev;
+
+          if (!ensured_branch)
+            {
+              SVN_ERR(svn_fs_git__db_branch_ensure(fs, relpath,
+                                                   rev, rev,
+                                                   scratch_pool));
+              ensured_branch = TRUE;
+            }
         }
 
       last_rev = rev;

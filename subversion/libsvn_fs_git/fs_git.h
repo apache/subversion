@@ -144,6 +144,13 @@ svn_fs_git__db_get_tags_branches(apr_hash_t **tags,
                                  apr_pool_t *scratch_pool);
 
 svn_error_t *
+svn_fs_git__db_branch_ensure(svn_fs_t *fs,
+                             const char *relpath,
+                             svn_revnum_t youngest_rev,
+                             svn_revnum_t from_rev,
+                             apr_pool_t *scratch_pool);
+
+svn_error_t *
 svn_fs_git__db_set_uuid(svn_fs_t *fs,
                         const char *uuid,
                         apr_pool_t *scratch_pool);

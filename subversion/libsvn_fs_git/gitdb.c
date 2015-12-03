@@ -392,6 +392,54 @@ svn_fs_git__db_tag_create(svn_revnum_t *tag_rev,
 }
 
 static svn_error_t *
+db_branch_ensure(svn_fs_t *fs,
+                 const char *relpath,
+                 svn_revnum_t youngest_rev,
+                 svn_revnum_t from_rev,
+                 apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
+                                    STMT_SELECT_BRANCH_EXACT));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 1, relpath));
+  SVN_ERR(svn_sqlite__bind_revnum(stmt, 2, youngest_rev));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+  SVN_ERR(svn_sqlite__reset(stmt));
+  if (got_row)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
+                                    STMT_INSERT_BRANCH));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 1, relpath));
+  SVN_ERR(svn_sqlite__bind_revnum(stmt, 2, youngest_rev));
+  /* 3: to_rev */
+  SVN_ERR(svn_sqlite__bind_revnum(stmt, 4, from_rev));
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_git__db_branch_ensure(svn_fs_t *fs,
+                             const char *relpath,
+                             svn_revnum_t youngest_rev,
+                             svn_revnum_t from_rev,
+                             apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+
+  SVN_SQLITE__WITH_LOCK(db_branch_ensure(fs, relpath,
+                                         youngest_rev, from_rev,
+                                         scratch_pool),
+                        fgf->sdb);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 db_get_tags_branches(apr_hash_t **tags,
                      apr_hash_t **branches,
                      svn_fs_t *fs,
@@ -421,7 +469,7 @@ db_get_tags_branches(apr_hash_t **tags,
           name = svn_relpath_skip_ancestor(relpath, path);
 
           if (!strchr(name, '/'))
-            svn_hash_sets(*tags, name, path);
+            svn_hash_sets(*branches, name, path);
 
           SVN_ERR(svn_sqlite__step(&got_row, stmt));
         }

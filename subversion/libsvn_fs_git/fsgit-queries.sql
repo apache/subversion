@@ -37,7 +37,7 @@ INSERT OR REPLACE INTO REPOSITORY(id, uuid) VALUES (1, ?1)
 SELECT MAX(
    IFNULL((SELECT MAX(revnum) FROM REVMAP), 0),
    IFNULL((SELECT MAX(revnum) FROM TAGMAP), 0),
-   IFNULL((SELECT MAX(from_rev) FROM BRANCHMAP), 0))
+   IFNULL((SELECT MAX(revnum) FROM BRANCHMAP), 0))
 
 -- STMT_SELECT_REV_BY_COMMITID
 SELECT revnum, relpath FROM REVMAP WHERE commit_id = ?1
@@ -83,6 +83,15 @@ WHERE relpath = ?1 AND revnum <= ?2
 ORDER BY relpath DESC, revnum DESC
 LIMIT 1
 
+-- STMT_SELECT_BRANCH_EXACT
+SELECT relpath, revnum, to_rev, from_rev
+FROM BRANCHMAP
+WHERE relpath =?1 AND revnum <= ?2 AND (to_rev > ?2 OR to_rev IS NULL)
+
+-- STMT_INSERT_BRANCH
+INSERT INTO BRANCHMAP (relpath, revnum, to_rev, from_rev)
+VALUES (?1, ?2, ?3, ?4)
+
 -- STMT_SELECT_TAG
 SELECT revnum, from_rev, relpath FROM TAGMAP where relpath = ?1
 
@@ -92,7 +101,7 @@ INSERT INTO TAGMAP (revnum, from_rev, relpath) VALUES (?1, ?2, ?3)
 -- STMT_SELECT_BRANCHES
 SELECT DISTINCT relpath FROM BRANCHMAP
 WHERE relpath > ?1 || '/' AND relpath < ?1 || '0'
-AND from_rev <= ?2 AND (to_rev > ?2 OR to_rev IS NULL)
+AND revnum <= ?2 AND (to_rev > ?2 OR to_rev IS NULL)
 
 -- STMT_SELECT_TAGS
 SELECT DISTINCT relpath FROM TAGMAP
