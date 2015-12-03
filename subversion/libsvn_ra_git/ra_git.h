@@ -24,88 +24,96 @@
 #ifndef SVN_LIBSVN_RA_GIT_H
 #define SVN_LIBSVN_RA_GIT_H
 
-/* We compile in C89 mode, so the 'inline' keyword used by libgit2 isn't supported. */
-#define inline APR_INLINE
+typedef struct svn_ra_git__session_t
+{
+  /* Callbacks/baton passed to svn_ra_open. */
+  const svn_ra_callbacks2_t *callbacks;
+  void *callback_baton;
 
-#include <git2.h>
+  /* Stashed config */
+  apr_hash_t *config;
+
+  /* The URL of the session. */
+  const char *repos_root_url;
+
+  /* The file:/// session backing the git session*/
+  svn_ra_session_t *local_session;
+  const char *local_repos_abspath;
+  const char *local_repos_root_url;
+
+  /* The UUID associated with REPOS (faked) */
+  const char *uuid;
+
+  /* The URL of the remote in git format. */
+  const char *git_remote_url;
+  svn_boolean_t fetch_done;
+
+  /* The relative path in the tree the session is rooted at. */
+  svn_stringbuf_t *repos_relpath_buf;
+
+  /* The relative path in the tree the session is rooted at. */
+  svn_stringbuf_t *session_url_buf;
+
+  apr_pool_t *scratch_pool;
+
+  /* Cached reference to svn_ra_open() to allow opening our
+     ra_local session */
+  svn_ra__open_func_t svn_ra_open;
+
+  apr_uint64_t progress_bytes;
+} svn_ra_git__session_t;
 
 svn_error_t *
 svn_ra_git__wrap_git_error(void);
 
-svn_error_t *
-svn_ra_git__check_path(svn_node_kind_t *kind, git_tree *tree, const char *path);
+#define GIT2_ERR(expr)                        \
+  do {                                        \
+    int svn_err__git_temp = (expr);           \
+    if (svn_err__git_temp)                    \
+      return svn_ra_git__wrap_git_error();    \
+  } while (0)
 
-apr_hash_t *
-svn_ra_git__make_revprops_hash(git_commit *commit, apr_pool_t *pool);
-
-svn_error_t *
-svn_ra_git__find_last_changed(svn_revnum_t *last_changed,
-                              apr_hash_t *revmap,
-                              const char *path,
-                              svn_revnum_t pegrev,
-                              git_repository *repos,
-                              apr_pool_t *pool);
+#define GIT2_ERR_NOTFOUND(x, expr)            \
+  do {                                        \
+    int svn_err__git_temp = (expr);           \
+    if (svn_err__git_temp == GIT_ENOTFOUND)   \
+      {                                       \
+        giterr_clear();                       \
+        *x = NULL;                            \
+      }                                       \
+    else if (svn_err__git_temp)               \
+      return svn_ra_git__wrap_git_error();    \
+  } while (0)
 
 /* Git repositories don't have a UUID so a static UUID is as good as any. */
 #define RA_GIT_UUID "a62d4ba0-b83e-11e3-8621-8f162a3365eb"
 
 /* ---------------------------------------------------------------*/
-
-/* Reporting the state of a working copy, for updates. */
 
-/* Like svn_repos_begin_report3() but for git repositories. */
-svn_error_t *
-svn_ra_git__reporter_begin_report(void **report_baton,
-                                  svn_revnum_t revnum,
-                                  git_repository *repos,
-                                  apr_hash_t *revmap,
-                                  const char *fs_base,
-                                  const char *target,
-                                  const char *tgt_path,
-                                  svn_boolean_t text_deltas,
-                                  svn_depth_t depth,
-                                  svn_boolean_t ignore_ancestry,
-                                  svn_boolean_t send_copyfrom_args,
-                                  const svn_delta_editor_t *editor,
-                                  void *edit_baton,
-                                  apr_size_t zero_copy_limit,
-                                  apr_pool_t *pool);
+typedef struct svn_ra_git_branch_t
+{
+  const char *name;
+  const char *symref_target;
+} svn_ra_git_branch_t;
 
-/* Like svn_repos_set_path3() but for git repositories. */
-svn_error_t *
-svn_ra_git__reporter_set_path(void *report_baton,
-                              const char *path,
-                              svn_revnum_t revision,
-                              svn_depth_t depth,
-                              svn_boolean_t start_empty,
-                              const char *lock_token,
-                              apr_pool_t *pool);
 
-/* Like svn_repos_link_path3() but for git repositories. */
 svn_error_t *
-svn_ra_git__reporter_link_path(void *report_baton,
-                               const char *path,
-                               const char *link_path,
-                               svn_revnum_t revision,
-                               svn_depth_t depth,
-                               svn_boolean_t start_empty,
-                               const char *lock_token,
-                               apr_pool_t *pool);
+svn_ra_git__split_url(const char **repos_root_url,
+                      const char **repos_relpath,
+                      const char **git_remote_url,
+                      apr_array_header_t **branches,
+                      svn_ra_git__session_t *session,
+                      const char *url,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
-/* Like svn_repos_delete_path() but for git repositories. */
 svn_error_t *
-svn_ra_git__reporter_delete_path(void *report_baton,
-                                 const char *path,
-                                 apr_pool_t *pool);
+svn_ra_git__ensure_local_session(svn_ra_session_t *session,
+                                 apr_pool_t *scratch_pool);
 
-/* Like svn_repos_finish_report() but for git repositories. */
 svn_error_t *
-svn_ra_git__reporter_finish_report(void *report_baton,
-                                   apr_pool_t *pool);
-
-/* Like svn_repos_finish_report() but for git repositories. */
-svn_error_t *
-svn_ra_git__reporter_abort_report(void *report_baton,
-                                  apr_pool_t *pool);
+svn_ra_git__git_fetch(svn_ra_session_t *session,
+                      svn_boolean_t refresh,
+                      apr_pool_t *scratch_pool);
 
 #endif /* SVN_LIBSVN_RA_GIT_H */
