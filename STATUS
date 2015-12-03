@@ -107,12 +107,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1687812
-   mod_dav_svn: Use LimitXMLRequestBody httpd directive to control maximum
-   length of skel-encoded request bodies.
-   Justification:
-     Allow administrators to setup configurable limits on the size of
-     skel-encoded requests.
-   Votes:
-     +1: ivan, rhuijben, kotkov
