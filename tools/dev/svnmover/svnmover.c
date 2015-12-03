@@ -484,19 +484,27 @@ svn_error_t *
 svnmover_element_differences(apr_hash_t **diff_p,
                              const svn_element__tree_t *left,
                              const svn_element__tree_t *right,
+                             apr_hash_t *elements,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
   apr_hash_t *diff = apr_hash_make(result_pool);
   apr_hash_index_t *hi;
 
+  if (! left)
+    left = svn_element__tree_create(NULL, 0 /*root_eid*/, scratch_pool);
+  if (! right)
+    right = svn_element__tree_create(NULL, 0 /*root_eid*/, scratch_pool);
+
   /*SVN_DBG(("element_differences(b%s r%ld, b%s r%ld, e%d)",
            svn_branch__get_id(left->branch, scratch_pool), left->rev,
            svn_branch__get_id(right->branch, scratch_pool), right->rev,
            right->eid));*/
 
-  for (hi = apr_hash_first(scratch_pool,
-                           hash_overlay(left->e_map, right->e_map));
+  if (!elements)
+    elements = hash_overlay(left->e_map, right->e_map);
+
+  for (hi = apr_hash_first(scratch_pool, elements);
        hi; hi = apr_hash_next(hi))
     {
       int e = svn_eid__hash_this_key(hi);
@@ -629,6 +637,7 @@ txn_is_changed(svn_branch__txn_t *edit_txn,
       SVN_ERR(svnmover_element_differences(&diff,
                                            edit_branch_elements,
                                            base_branch_elements,
+                                           NULL /*all elements*/,
                                            scratch_pool, scratch_pool));
       if (apr_hash_count(diff))
         {
@@ -640,28 +649,42 @@ txn_is_changed(svn_branch__txn_t *edit_txn,
   return SVN_NO_ERROR;
 }
 
-/* Replay differences between S_LEFT and S_RIGHT into EDITOR:EDIT_BRANCH.
+/* Replay the whole-element changes between LEFT_BRANCH and RIGHT_BRANCH
+ * into EDIT_BRANCH.
  *
- * S_LEFT and/or S_RIGHT may be null meaning an empty set.
+ * Replaying means, for each element E that is changed (added, modified
+ * or deleted) between left and right branches, we set element E in
+ * EDIT_BRANCH to whole value of E in RIGHT_BRANCH. This is not like
+ * merging: each change resets an element's whole value.
+ *
+ * ELEMENTS_TO_DIFF (eid -> [anything]) says which elements to diff; if
+ * null, diff all elements in the union of left & right branches.
+ *
+ * LEFT_BRANCH and/or RIGHT_BRANCH may be null which means the equivalent
+ * of an empty branch.
  *
  * Non-recursive: single branch only.
  */
 static svn_error_t *
-subtree_replay(svn_branch__state_t *edit_branch,
-               const svn_element__tree_t *s_left,
-               const svn_element__tree_t *s_right,
-               apr_pool_t *scratch_pool)
+branch_elements_replay(svn_branch__state_t *edit_branch,
+                       const svn_branch__state_t *left_branch,
+                       const svn_branch__state_t *right_branch,
+                       apr_hash_t *elements_to_diff,
+                       apr_pool_t *scratch_pool)
 {
+  svn_element__tree_t *s_left = NULL, *s_right = NULL;
   apr_hash_t *diff_left_right;
   apr_hash_index_t *hi;
 
-  if (! s_left)
-    s_left = svn_element__tree_create(NULL, 0 /*root_eid*/, scratch_pool);
-  if (! s_right)
-    s_right = svn_element__tree_create(NULL, 0 /*root_eid*/, scratch_pool);
-
+  if (left_branch)
+    SVN_ERR(svn_branch__state_get_elements(left_branch, &s_left,
+                                           scratch_pool));
+  if (right_branch)
+    SVN_ERR(svn_branch__state_get_elements(right_branch, &s_right,
+                                           scratch_pool));
   SVN_ERR(svnmover_element_differences(&diff_left_right,
                                        s_left, s_right,
+                                       elements_to_diff,
                                        scratch_pool, scratch_pool));
 
   /* Go through the per-element differences. */
@@ -676,25 +699,16 @@ subtree_replay(svn_branch__state_t *edit_branch,
                      || svn_element__payload_invariants(e0->payload));
       SVN_ERR_ASSERT(!e1
                      || svn_element__payload_invariants(e1->payload));
-      if (e0 || e1)
+      if (e1)
         {
-          if (e0 && e1)
-            {
-              SVN_ERR(svn_branch__state_alter_one(edit_branch, eid,
-                                                  e1->parent_eid, e1->name,
-                                                  e1->payload, scratch_pool));
-            }
-          else if (e0)
-            {
-              SVN_ERR(svn_branch__state_delete_one(edit_branch, eid,
-                                                   scratch_pool));
-            }
-          else
-            {
-              SVN_ERR(svn_branch__state_alter_one(edit_branch, eid,
-                                                  e1->parent_eid, e1->name,
-                                                  e1->payload, scratch_pool));
-            }
+          SVN_ERR(svn_branch__state_alter_one(edit_branch, eid,
+                                              e1->parent_eid, e1->name,
+                                              e1->payload, scratch_pool));
+        }
+      else
+        {
+          SVN_ERR(svn_branch__state_delete_one(edit_branch, eid,
+                                               scratch_pool));
         }
     }
 
@@ -748,17 +762,10 @@ svn_branch__replay(svn_branch__txn_t *edit_txn,
   if (right_branch)
     {
       /* Replay this branch */
-      svn_element__tree_t *s_left = NULL;
-      svn_element__tree_t *s_right = NULL;
+      apr_hash_t *elements_to_diff = NULL;  /*means the union of left & right*/
 
-      if (left_branch)
-        SVN_ERR(svn_branch__state_get_elements(left_branch, &s_left,
-                                               scratch_pool));
-      if (right_branch)
-        SVN_ERR(svn_branch__state_get_elements(right_branch, &s_right,
-                                               scratch_pool));
-      SVN_ERR(subtree_replay(edit_branch, s_left, s_right,
-                             scratch_pool));
+      SVN_ERR(branch_elements_replay(edit_branch, left_branch, right_branch,
+                                     elements_to_diff, scratch_pool));
     }
   else
     {
@@ -941,22 +948,19 @@ update_wc_base_r(svnmover_wc_t *wc,
                  svn_revnum_t new_rev,
                  apr_pool_t *scratch_pool)
 {
-  svn_element__tree_t *base_elements, *working_elements;
+  svn_element__tree_t *base_elements = NULL, *working_elements = NULL;
   apr_hash_t *committed_elements;
   apr_hash_index_t *hi;
 
   if (base_branch)
     SVN_ERR(svn_branch__state_get_elements(base_branch, &base_elements,
                                            scratch_pool));
-  else
-    base_elements = svn_element__tree_create(NULL, 0, scratch_pool);
   if (work_branch)
     SVN_ERR(svn_branch__state_get_elements(work_branch, &working_elements,
                                            scratch_pool));
-  else
-    working_elements = svn_element__tree_create(NULL, 0, scratch_pool);
   SVN_ERR(svnmover_element_differences(&committed_elements,
                                        base_elements, working_elements,
+                                       NULL /*all elements*/,
                                        scratch_pool, scratch_pool));
 
   for (hi = apr_hash_first(scratch_pool, committed_elements);
@@ -1872,6 +1876,7 @@ typedef struct diff_item_t
 } diff_item_t;
 
 /* Return differences between branch subtrees S_LEFT and S_RIGHT.
+ * Diff the union of S_LEFT's and S_RIGHT's elements.
  *
  * Set *DIFF_CHANGES to a hash of (eid -> diff_item_t).
  *
@@ -1893,6 +1898,7 @@ subtree_diff(apr_hash_t **diff_changes,
 
   SVN_ERR(svnmover_element_differences(&diff_left_right,
                                        s_left->tree, s_right->tree,
+                                       NULL /*union of s_left & s_right*/,
                                        result_pool, scratch_pool));
 
   for (hi = apr_hash_first(scratch_pool, diff_left_right);
@@ -1949,6 +1955,8 @@ diff_ordering_major_paths(const struct svn_sort__item_t *a,
 
 /* Display differences between subtrees LEFT and RIGHT, which are subtrees
  * of branches LEFT_BID and RIGHT_BID respectively.
+ *
+ * Diff the union of LEFT's and RIGHT's elements.
  *
  * Use EDITOR to fetch content when needed.
  *

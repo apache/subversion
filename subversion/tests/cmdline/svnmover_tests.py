@@ -1625,6 +1625,55 @@ def simple_branch(sbox):
                            ['A /top0/Y (from /top0/X:1)',
                             'A /top0/Y/A (from /top0/X/A:2)'])
 
+def merge_move_into_subtree(sbox):
+  "merge move into subtree"
+  sbox_build_svnmover(sbox, content=initial_content_ttb)
+  repo_url = sbox.repo_url
+
+  # This tests the behaviour of merging a subtree. In this case, we expect
+  # each element in the union of (YCA subtree, source subtree, target subtree)
+  # to be merged. (Other behaviours -- such as merging only the elements in
+  # the intersection of those three subtrees -- could be provided in future.)
+  #
+  # This test tests a merge with no conflicts.
+
+  # create initial state in trunk
+  # (r2)
+  test_svnmover2(sbox, '/trunk',
+                 reported_br_diff('trunk') +
+                 reported_add('A') +
+                 reported_add('B2') +
+                 reported_add('B2/C2'),
+                'mkdir A',
+                'mkdir B2',
+                'mkdir B2/C2')
+
+  # branch (r3)
+  test_svnmover2(sbox, '',
+                 reported_br_diff('') +
+                 reported_br_add('branches/br1'),
+                'branch trunk branches/br1')
+
+  # on trunk: move B2 into subtree A (r4)
+  test_svnmover2(sbox, 'trunk',
+                 reported_br_diff('trunk') +
+                 reported_move('B2', 'A/B2'),
+                'mv B2 A/B2')
+
+  # on branch: make a non-conflicting change to 'B2' (r5)
+  test_svnmover2(sbox, 'branches/br1',
+                 reported_br_diff('branches/br1') +
+                 reported_move('B2', 'B3'),
+                'mv B2 B3')
+
+  # merge subtree 'A' from trunk to branch (r6)
+  # expect the move-into-subtree to be merged with the rename-outside-subtree
+  test_svnmover2(sbox, '',
+                 reported_mg_diff() +
+                 reported_br_diff('branches/br1') +
+                 reported_move('B3', 'A/B3'),
+                'merge trunk/A@4 branches/br1/A trunk/A@2')
+
 ######################################################################
 
 test_list = [ None,
@@ -1655,6 +1704,7 @@ test_list = [ None,
               replace_via_rm_cp,
               see_the_revision_just_committed,
               simple_branch,
+              merge_move_into_subtree,
             ]
 
 if __name__ == '__main__':
