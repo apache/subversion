@@ -108,10 +108,6 @@ svn_ra_git__split_url(const char **repos_root_url,
                       apr_pool_t *scratch_pool);
 
 svn_error_t *
-svn_ra_git__ensure_local_session(svn_ra_session_t *session,
-                                 apr_pool_t *scratch_pool);
-
-svn_error_t *
 svn_ra_git__git_fetch(svn_ra_session_t *session,
                       svn_boolean_t refresh,
                       apr_pool_t *scratch_pool);
