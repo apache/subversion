@@ -21,6 +21,7 @@
  */
 
 #include "svn_types.h"
+#include "svn_pools.h"
 #include "svn_fs.h"
 
 #include "fs_git.h"
@@ -145,18 +146,14 @@ fs_git_commit_history_prev(svn_fs_history_t **prev_history_p,
       cht = apr_pcalloc(result_pool, sizeof(*cht));
 
       /* Copy same commit to new result pool */
-      SVN_ERR(svn_git__commit_lookup(&cht->commit,
-                                     git_commit_owner(prev_commit),
-                                     git_commit_id(prev_commit),
-                                     result_pool));
+      SVN_ERR(svn_git__copy_commit(&cht->commit, prev_commit,
+                                   result_pool));
     }
   else if (git_commit_parentcount(prev_commit) > 0)
     {
       cht = apr_pcalloc(result_pool, sizeof(*cht));
 
-      SVN_ERR(svn_git__commit_lookup(&cht->commit,
-                                     git_commit_owner(prev_commit),
-                                     git_commit_parent_id(prev_commit, 0),
+      SVN_ERR(svn_git__commit_parent(&cht->commit, prev_commit, 0,
                                      result_pool));
     }
   else
@@ -208,7 +205,7 @@ fs_git_commit_history_location(const char **path,
                                        cht->pool, pool));
       if (cht->path && cht->path[0] != '/')
         {
-          cht->path = apr_pstrcat(pool, "/", cht->path, SVN_VA_NULL);
+          cht->path = apr_pstrcat(cht->pool, "/", cht->path, SVN_VA_NULL);
         }
     }
 
@@ -244,6 +241,161 @@ svn_fs_git__make_history_commit(svn_fs_history_t **history_p,
 }
 
 /* ------------------------------------------------------- */
+typedef struct fs_git_node_history_t
+{
+  apr_pool_t *pool;
+  svn_fs_t *fs;
+  const git_commit *commit;
+  const char *relpath;
+
+  svn_revnum_t rev;
+  const char *path;
+  svn_boolean_t last, first;
+} fs_git_node_history_t;
+
+static svn_error_t *
+fs_git_node_history_prev(svn_fs_history_t **prev_history_p,
+                         svn_fs_history_t *history,
+                         svn_boolean_t cross_copies,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  fs_git_node_history_t *p_gnh = history->fsap_data;
+  fs_git_node_history_t *gnh;
+  apr_pool_t *cur_pool = svn_pool_create(result_pool);
+  apr_pool_t *last_pool = svn_pool_create(result_pool);
+
+  /* ### cross_copies is still unused! */
+
+  if (p_gnh->last)
+    {
+      *prev_history_p = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  const git_commit *commit = p_gnh->commit;
+  const git_tree_entry *entry;
+  const char *relpath = p_gnh->relpath;
+
+  if (!p_gnh->first)
+    SVN_ERR(svn_git__commit_parent(&commit, commit, 0, last_pool));
+
+  SVN_ERR(svn_git__commit_tree_entry(&entry, commit, relpath,
+                                     last_pool, cur_pool));
+
+  while (TRUE)
+    {
+      const git_commit *pcommit;
+      const git_tree_entry *pentry;
+      svn_boolean_t modified = FALSE;
+
+      svn_pool_clear(cur_pool);
+
+      if (git_commit_parentcount(commit) == 0)
+        {
+          /* And finally report the revision in which the branch
+             and this path were created */
+          gnh = apr_pcalloc(result_pool, sizeof(*gnh));
+          gnh->pool = result_pool;
+          gnh->fs = p_gnh->fs;
+          gnh->last = TRUE;
+          gnh->rev = SVN_INVALID_REVNUM;
+
+          SVN_ERR(svn_git__copy_commit(&gnh->commit, commit,
+                                       result_pool));
+
+          svn_pool_destroy(cur_pool);
+          svn_pool_destroy(last_pool);
+
+          *prev_history_p = history_make(history->vtable, gnh,
+                                         result_pool);
+          return SVN_NO_ERROR;
+        }
+
+      SVN_ERR(svn_git__commit_parent(&pcommit, commit, 0, cur_pool));
+      SVN_ERR(svn_git__commit_tree_entry(&pentry, pcommit, relpath,
+                                         cur_pool, last_pool));
+
+      if (!pentry)
+        {
+          /* TODO: Follow renames */
+        }
+
+      if (pentry
+          && (git_tree_entry_filemode(pentry) != git_tree_entry_filemode(entry)
+              || git_oid_cmp(git_tree_entry_id(pentry),
+                             git_tree_entry_id(entry))))
+        {
+          modified = TRUE; /* Report as changed */
+        }
+
+      if (modified || !pentry)
+        {
+          /* TODO: Follow in-branch renames */
+
+          /* Report the revision in which this path was created */
+          gnh = apr_pcalloc(result_pool, sizeof(*gnh));
+          gnh->pool = result_pool;
+          gnh->fs = p_gnh->fs;
+          gnh->last = !pentry;
+          gnh->relpath = apr_pstrdup(result_pool, relpath);
+          gnh->rev = SVN_INVALID_REVNUM;
+
+          SVN_ERR(svn_git__copy_commit(&gnh->commit, commit,
+                                       result_pool));
+
+          svn_pool_destroy(cur_pool);
+          svn_pool_destroy(last_pool);
+
+          *prev_history_p = history_make(history->vtable, gnh,
+                                         result_pool);
+          return SVN_NO_ERROR;
+        }
+
+      {
+        apr_pool_t *tmp_pool;
+        commit = pcommit;
+        entry = pentry;
+
+        tmp_pool = last_pool;
+        last_pool = cur_pool;
+        cur_pool = tmp_pool;
+      }
+    }
+}
+
+static svn_error_t *
+fs_git_node_history_location(const char **path,
+                               svn_revnum_t *revision,
+                               svn_fs_history_t *history,
+                               apr_pool_t *pool)
+{
+  fs_git_node_history_t *gnh = history->fsap_data;
+
+  if (!SVN_IS_VALID_REVNUM(gnh->rev))
+    {
+      SVN_ERR(svn_fs_git__db_fetch_rev(&gnh->rev,
+                                       &gnh->path,
+                                       gnh->fs,
+                                       git_commit_id(gnh->commit),
+                                       gnh->pool, pool));
+      if (gnh->path && gnh->path[0] != '/')
+        {
+          gnh->path = apr_pstrcat(pool, "/", gnh->path, SVN_VA_NULL);
+        }
+    }
+
+  *path = apr_pstrdup(pool, gnh->path);
+  *revision = gnh->rev;
+  return SVN_NO_ERROR;
+}
+
+static const history_vtable_t fs_git_node_history_vtable =
+{
+  fs_git_node_history_prev,
+  fs_git_node_history_location
+};
+
 svn_error_t *
 svn_fs_git__make_history_node(svn_fs_history_t **history_p,
                               svn_fs_root_t *root,
@@ -252,5 +404,17 @@ svn_fs_git__make_history_node(svn_fs_history_t **history_p,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  fs_git_node_history_t *gnh = apr_pcalloc(result_pool, sizeof(*gnh));
+
+  gnh->pool = result_pool;
+  gnh->fs = root->fs;
+  gnh->commit = commit;
+  gnh->relpath = apr_pstrdup(result_pool, relpath);
+  gnh->rev = SVN_INVALID_REVNUM;
+  /*gnh->path = NULL;
+  gnh->last = FALSE;*/
+  gnh->first = TRUE;
+
+  *history_p = history_make(&fs_git_node_history_vtable, gnh, result_pool);
+  return SVN_NO_ERROR;
 }
