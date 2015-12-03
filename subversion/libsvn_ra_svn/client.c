@@ -1232,9 +1232,7 @@ parse_iproplist(apr_array_header_t **inherited_props,
       SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "cl",
                                       &parent_rel_path, &iprop_list));
       SVN_ERR(svn_ra_svn__parse_proplist(iprop_list, iterpool, &iprops));
-      new_iprop->path_or_url = svn_path_url_add_component2(repos_root_url,
-                                                           parent_rel_path,
-                                                           result_pool);
+      new_iprop->path_or_url = parent_rel_path;
       new_iprop->prop_hash = svn_hash__make(result_pool);
       for (hi = apr_hash_first(iterpool, iprops);
            hi;
