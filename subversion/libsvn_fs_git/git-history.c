@@ -118,6 +118,111 @@ svn_fs_git__make_history_simple(svn_fs_history_t **history_p,
 }
 
 /* ------------------------------------------------------- */
+typedef struct fs_git_commit_history_t
+{
+  apr_pool_t *pool;
+  svn_fs_t *fs;
+  const git_commit *commit;
+  svn_revnum_t rev;
+  const char *path;
+  svn_boolean_t initial_item;
+} fs_git_commit_history_t;
+
+static svn_error_t *
+fs_git_commit_history_prev(svn_fs_history_t **prev_history_p,
+                           svn_fs_history_t *history,
+                           svn_boolean_t cross_copies,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  fs_git_commit_history_t *p_cht = history->fsap_data;
+  fs_git_commit_history_t *cht;
+  const git_commit *prev_commit;
+
+  prev_commit = p_cht->commit;
+  if (p_cht->initial_item)
+    {
+      cht = apr_pcalloc(result_pool, sizeof(*cht));
+
+      /* Copy same commit to new result pool */
+      SVN_ERR(svn_git__commit_lookup(&cht->commit,
+                                     git_commit_owner(prev_commit),
+                                     git_commit_id(prev_commit),
+                                     result_pool));
+    }
+  else if (git_commit_parentcount(prev_commit) > 0)
+    {
+      cht = apr_pcalloc(result_pool, sizeof(*cht));
+
+      SVN_ERR(svn_git__commit_lookup(&cht->commit,
+                                     git_commit_owner(prev_commit),
+                                     git_commit_parent_id(prev_commit, 0),
+                                     result_pool));
+    }
+  else
+    {
+      *prev_history_p = NULL;
+      return SVN_NO_ERROR; /* End of history */
+    }
+
+  cht->rev = SVN_INVALID_REVNUM;
+  cht->pool = result_pool;
+  cht->fs = p_cht->fs;
+
+  *prev_history_p = history_make(history->vtable, cht, result_pool);
+
+  if (!cross_copies)
+    {
+      const char *path1, *path2;
+      svn_revnum_t rev_dummy;
+
+      SVN_ERR(svn_fs_history_location(&path1, &rev_dummy, history,
+                                      scratch_pool));
+      SVN_ERR(svn_fs_history_location(&path2, &rev_dummy, *prev_history_p,
+                                      scratch_pool));
+
+      if (path1 && path2 && strcmp(path1, path2) != 0)
+        {
+          *prev_history_p = NULL;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fs_git_commit_history_location(const char **path,
+                               svn_revnum_t *revision,
+                               svn_fs_history_t *history,
+                               apr_pool_t *pool)
+{
+  fs_git_commit_history_t *cht = history->fsap_data;
+
+  if (!SVN_IS_VALID_REVNUM(cht->rev))
+    {
+      SVN_ERR(svn_fs_git__db_fetch_rev(&cht->rev,
+                                       &cht->path,
+                                       cht->fs,
+                                       git_commit_id(cht->commit),
+                                       cht->pool, pool));
+      if (cht->path && cht->path[0] != '/')
+        {
+          cht->path = apr_pstrcat(pool, "/", cht->path, SVN_VA_NULL);
+        }
+    }
+
+  *path = apr_pstrdup(pool, cht->path);
+  *revision = cht->rev;
+  return SVN_NO_ERROR;
+}
+
+static const history_vtable_t fs_git_commit_history_vtable =
+{
+  fs_git_commit_history_prev,
+  fs_git_commit_history_location
+};
+
 svn_error_t *
 svn_fs_git__make_history_commit(svn_fs_history_t **history_p,
                                 svn_fs_root_t *root,
@@ -125,7 +230,17 @@ svn_fs_git__make_history_commit(svn_fs_history_t **history_p,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  fs_git_commit_history_t *cht = apr_palloc(result_pool, sizeof(*cht));
+
+  cht->pool = result_pool;
+  cht->fs = root->fs;
+  cht->commit = commit;
+  cht->rev = SVN_INVALID_REVNUM;
+  cht->path = NULL;
+  cht->initial_item = TRUE;
+
+  *history_p = history_make(&fs_git_commit_history_vtable, cht, result_pool);
+  return SVN_NO_ERROR;
 }
 
 /* ------------------------------------------------------- */
