@@ -79,6 +79,22 @@ Candidate changes:
      Silently makes unexpected changes.
    Votes:
      +1: philip
+     +0: rhuijben (while I agree that this patch fixes a problem, I don't
+                   think this is the right backport. This patch changes the
+                   behavior of a public api (with no known users except
+                   libsvn_client) in a specific way for this issue. On trunk
+                   this behavior change was reverted when a better fix was
+                   implemented)
+
+ * r1717874, r1717875, r1717878
+   Make inherited property api consistent over all ra layers
+   Justification:
+     Our ra implementations should follow the documentation... and should
+     be as consistent as possible between each other. Only because the
+     caller uses svn_path_url_add_component2() this wasn't noticed by
+     our code.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
