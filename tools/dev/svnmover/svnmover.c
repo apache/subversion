@@ -699,17 +699,8 @@ branch_elements_replay(svn_branch__state_t *edit_branch,
                      || svn_element__payload_invariants(e0->payload));
       SVN_ERR_ASSERT(!e1
                      || svn_element__payload_invariants(e1->payload));
-      if (e1)
-        {
-          SVN_ERR(svn_branch__state_alter_one(edit_branch, eid,
-                                              e1->parent_eid, e1->name,
-                                              e1->payload, scratch_pool));
-        }
-      else
-        {
-          SVN_ERR(svn_branch__state_delete_one(edit_branch, eid,
-                                               scratch_pool));
-        }
+      SVN_ERR(svn_branch__state_set_element(edit_branch, eid,
+                                            e1, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -972,12 +963,8 @@ update_wc_base_r(svnmover_wc_t *wc,
       if (work_branch)
         SVN_ERR(svn_branch__state_get_element(work_branch, &content,
                                               eid, scratch_pool));
-      if (content)
-        SVN_ERR(svn_branch__state_alter_one(base_branch, eid,
-                                            content->parent_eid, content->name,
-                                            content->payload, scratch_pool));
-      else
-        SVN_ERR(svn_branch__state_delete_one(base_branch, eid, scratch_pool));
+      SVN_ERR(svn_branch__state_set_element(base_branch, eid,
+                                            content, scratch_pool));
       svnmover_wc_set_base_rev(wc, base_branch, eid, new_rev);
 
       /* recurse into nested branches that exist in working */

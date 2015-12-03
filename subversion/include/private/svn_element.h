@@ -351,7 +351,7 @@ svn_element__tree_get(const svn_element__tree_t *tree,
 svn_error_t *
 svn_element__tree_set(svn_element__tree_t *tree,
                       int eid,
-                      svn_element__content_t *element);
+                      const svn_element__content_t *element);
 
 /* Purge entries from E_MAP that don't connect, via parent directory hierarchy,
  * to ROOT_EID. In other words, remove elements that have been implicitly

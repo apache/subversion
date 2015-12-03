@@ -1020,7 +1020,7 @@ branch_state_get_element(const svn_branch__state_t *branch,
 static void
 branch_map_set(svn_branch__state_t *branch,
                int eid,
-               svn_element__content_t *element)
+               const svn_element__content_t *element)
 {
   apr_pool_t *map_pool = apr_hash_pool_get(branch->priv->element_tree->e_map);
 
@@ -1035,44 +1035,32 @@ branch_map_set(svn_branch__state_t *branch,
 
 /* An #svn_branch__state_t method. */
 static svn_error_t *
-branch_state_delete_one(svn_branch__state_t *branch,
-                        svn_branch__eid_t eid,
-                        apr_pool_t *scratch_pool)
-{
-  SVN_ERR_ASSERT(EID_IS_ALLOCATED(branch, eid));
-
-  branch_map_set(branch, eid, NULL);
-
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_branch__state_t method. */
-static svn_error_t *
-branch_state_alter(svn_branch__state_t *branch,
-                   svn_branch__eid_t eid,
-                   svn_branch__eid_t new_parent_eid,
-                   const char *new_name,
-                   const svn_element__payload_t *new_payload,
-                   apr_pool_t *scratch_pool)
+branch_state_set_element(svn_branch__state_t *branch,
+                         svn_branch__eid_t eid,
+                         const svn_element__content_t *element,
+                         apr_pool_t *scratch_pool)
 {
   apr_pool_t *map_pool = apr_hash_pool_get(branch->priv->element_tree->e_map);
-  svn_element__content_t *element
-    = svn_element__content_create(new_parent_eid, new_name, new_payload,
-                                  map_pool);
 
   /* EID must be a valid element id */
   SVN_ERR_ASSERT(EID_IS_ALLOCATED(branch, eid));
-  /* NEW_PAYLOAD must be specified, either in full or by reference */
-  SVN_ERR_ASSERT(new_payload);
 
-  if ((new_parent_eid == -1) != IS_BRANCH_ROOT_EID(branch, eid)
-      || (*new_name == '\0') != IS_BRANCH_ROOT_EID(branch, eid))
+  if (element)
     {
-      return svn_error_createf(SVN_BRANCH__ERR, NULL,
-                               _("Cannot set e%d to (parent=e%d, name='%s'): "
-                                 "branch root is e%d"),
-                               eid, new_parent_eid, new_name,
-                               branch->priv->element_tree->root_eid);
+      element = svn_element__content_dup(element, map_pool);
+
+      /* NEW_PAYLOAD must be specified, either in full or by reference */
+      SVN_ERR_ASSERT(element->payload);
+
+      if ((element->parent_eid == -1) != IS_BRANCH_ROOT_EID(branch, eid)
+          || (*element->name == '\0') != IS_BRANCH_ROOT_EID(branch, eid))
+        {
+          return svn_error_createf(SVN_BRANCH__ERR, NULL,
+                                   _("Cannot set e%d to (parent=e%d, name='%s'): "
+                                     "branch root is e%d"),
+                                   eid, element->parent_eid, element->name,
+                                   branch->priv->element_tree->root_eid);
+        }
     }
 
   /* Insert the new version */
@@ -1194,10 +1182,11 @@ svn_branch__map_add_subtree(svn_branch__state_t *to_branch,
 
   /* Create the new subtree root element */
   new_root_content = svn_element__tree_get(new_subtree, new_subtree->root_eid);
-  SVN_ERR(branch_state_alter(to_branch, to_eid,
-                             new_parent_eid, new_name,
-                             new_root_content->payload,
-                             scratch_pool));
+  new_root_content = svn_element__content_create(new_parent_eid, new_name,
+                                                 new_root_content->payload,
+                                                 scratch_pool);
+  SVN_ERR(branch_state_set_element(to_branch, to_eid, new_root_content,
+                                   scratch_pool));
 
   /* Process its immediate children */
   for (hi = apr_hash_first(scratch_pool, new_subtree->e_map);
@@ -1280,6 +1269,18 @@ svn_branch__state_get_element(const svn_branch__state_t *branch,
 }
 
 svn_error_t *
+svn_branch__state_set_element(svn_branch__state_t *branch,
+                              int eid,
+                              const svn_element__content_t *element,
+                              apr_pool_t *scratch_pool)
+{
+  SVN_ERR(branch->vtable->set_element(branch,
+                                      eid, element,
+                                      scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_branch__state_alter_one(svn_branch__state_t *branch,
                             svn_branch__eid_t eid,
                             svn_branch__eid_t new_parent_eid,
@@ -1287,9 +1288,11 @@ svn_branch__state_alter_one(svn_branch__state_t *branch,
                             const svn_element__payload_t *new_payload,
                             apr_pool_t *scratch_pool)
 {
-  SVN_ERR(branch->vtable->alter_one(branch,
-                                    eid, new_parent_eid, new_name, new_payload,
-                                    scratch_pool));
+  svn_element__content_t *element
+    = svn_element__content_create(new_parent_eid, new_name, new_payload,
+                                  scratch_pool);
+
+  SVN_ERR(svn_branch__state_set_element(branch, eid, element, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1311,9 +1314,7 @@ svn_branch__state_delete_one(svn_branch__state_t *branch,
                              svn_branch__eid_t eid,
                              apr_pool_t *scratch_pool)
 {
-  SVN_ERR(branch->vtable->delete_one(branch,
-                                     eid,
-                                     scratch_pool));
+  SVN_ERR(svn_branch__state_set_element(branch, eid, NULL, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1385,10 +1386,9 @@ branch_state_create(const char *bid,
     {0},
     branch_state_get_elements,
     branch_state_get_element,
-    branch_state_alter,
+    branch_state_set_element,
     branch_state_copy_one,
     branch_state_copy_tree,
-    branch_state_delete_one,
     branch_state_purge,
     branch_state_get_merge_ancestor,
     branch_state_add_merge_ancestor,
@@ -1611,6 +1611,8 @@ svn_branch__state_parse(svn_branch__state_t **new_branch,
       if (this_name)
         {
           svn_element__payload_t *payload;
+          svn_element__content_t *element;
+
           if (! is_subbranch)
             {
               payload = svn_element__payload_create_ref(txn->rev, bid, eid,
@@ -1621,9 +1623,11 @@ svn_branch__state_parse(svn_branch__state_t **new_branch,
               payload
                 = svn_element__payload_create_subbranch(result_pool);
             }
-          SVN_ERR(branch_state_alter(
-            branch_state, eid, this_parent_eid, this_name, payload,
-            scratch_pool));
+          element = svn_element__content_create(this_parent_eid,
+                                                this_name, payload,
+                                                scratch_pool);
+          SVN_ERR(branch_state_set_element(branch_state, eid, element,
+                                           scratch_pool));
         }
     }
 

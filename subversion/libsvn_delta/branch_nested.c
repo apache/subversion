@@ -244,11 +244,8 @@ branch_instantiate_elements(svn_branch__state_t *to_branch,
       int this_eid = svn_eid__hash_this_key(hi);
       svn_element__content_t *this_element = apr_hash_this_val(hi);
 
-      svn_branch__state_alter_one(to_branch, this_eid,
-                                  this_element->parent_eid,
-                                  this_element->name,
-                                  this_element->payload,
-                                  scratch_pool);
+      SVN_ERR(svn_branch__state_set_element(to_branch, this_eid,
+                                            this_element, scratch_pool));
     }
 
   return SVN_NO_ERROR;
