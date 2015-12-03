@@ -160,12 +160,10 @@ typedef svn_error_t *(*svn_branch__state_v_get_element_t)(
   int eid,
   apr_pool_t *result_pool);
 
-typedef svn_error_t *(*svn_branch__state_v_alter_one_t)(
+typedef svn_error_t *(*svn_branch__state_v_set_element_t)(
   svn_branch__state_t *branch,
   svn_branch__eid_t eid,
-  svn_branch__eid_t new_parent_eid,
-  const char *new_name,
-  const svn_element__payload_t *new_payload,
+  const svn_element__content_t *element,
   apr_pool_t *scratch_pool);
 
 typedef svn_error_t *(*svn_branch__state_v_copy_one_t)(
@@ -182,11 +180,6 @@ typedef svn_error_t *(*svn_branch__state_v_copy_tree_t)(
   const svn_branch__rev_bid_eid_t *src_el_rev,
   svn_branch__eid_t new_parent_eid,
   const char *new_name,
-  apr_pool_t *scratch_pool);
-
-typedef svn_error_t *(*svn_branch__state_v_delete_one_t)(
-  svn_branch__state_t *branch,
-  svn_branch__eid_t eid,
   apr_pool_t *scratch_pool);
 
 typedef svn_error_t *(*svn_branch__state_v_purge_t)(
@@ -209,10 +202,9 @@ struct svn_branch__state_vtable_t
 
   svn_branch__state_v_get_elements_t get_elements;
   svn_branch__state_v_get_element_t get_element;
-  svn_branch__state_v_alter_one_t alter_one;
+  svn_branch__state_v_set_element_t set_element;
   svn_branch__state_v_copy_one_t copy_one;
   svn_branch__state_v_copy_tree_t copy_tree;
-  svn_branch__state_v_delete_one_t delete_one;
   svn_branch__state_v_purge_t purge;
   svn_branch__state_v_get_merge_ancestor_t get_merge_ancestor;
   svn_branch__state_v_add_merge_ancestor_t add_merge_ancestor;

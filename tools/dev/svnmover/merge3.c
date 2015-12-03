@@ -1275,9 +1275,8 @@ branch_merge_subtree_r(svn_branch__txn_t *edit_txn,
                             eid, result->name,
                             subbranch_str(tgt->branch, eid, iterpool));
 
-          SVN_ERR(svn_branch__state_alter_one(tgt->branch, eid,
-                                              result->parent_eid, result->name,
-                                              result->payload, iterpool));
+          SVN_ERR(svn_branch__state_set_element(tgt->branch, eid,
+                                                result, iterpool));
 
           SVN_ERR(merge_subbranch(edit_txn, src, tgt, yca, eid, iterpool));
         }
@@ -1305,9 +1304,8 @@ branch_merge_subtree_r(svn_branch__txn_t *edit_txn,
            * (which is not specified here, but will need to be),
            * which may be in this branch or in another branch.
            */
-          SVN_ERR(svn_branch__state_alter_one(tgt->branch, eid,
-                                              result->parent_eid, result->name,
-                                              result->payload, iterpool));
+          SVN_ERR(svn_branch__state_set_element(tgt->branch, eid,
+                                                result, iterpool));
 
           SVN_ERR(merge_subbranch(edit_txn, src, tgt, yca, eid, iterpool));
         }
