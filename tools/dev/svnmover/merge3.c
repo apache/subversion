@@ -1269,45 +1269,38 @@ branch_merge_subtree_r(svn_branch__txn_t *edit_txn,
           svn_eid__hash_set(e_conflicts, eid,
                             element_merge3_conflict_dup(conflict, result_pool));
         }
-      else if (e_tgt && result)
+      else
         {
-          svnmover_notify_v("M/V  e%d %s%s",
-                            eid, result->name,
-                            subbranch_str(tgt->branch, eid, iterpool));
+          if (e_tgt && result)
+            {
+              svnmover_notify_v("M/V  e%d %s%s",
+                                eid, result->name,
+                                subbranch_str(tgt->branch, eid, iterpool));
+            }
+          else if (e_tgt)
+            {
+              svnmover_notify_v("D    e%d %s%s",
+                                eid, e_yca->name,
+                                subbranch_str(yca->branch, eid, iterpool));
+
+              /* ### If this is a subbranch-root element being deleted, shouldn't
+                 we see if there were any changes to be merged in the subbranch,
+                 and raise a delete-vs-edit conflict if so? */
+            }
+          else if (result)
+            {
+              svnmover_notify_v("A    e%d %s%s",
+                                eid, result->name,
+                                subbranch_str(src->branch, eid, iterpool));
+            }
 
           SVN_ERR(svn_branch__state_set_element(tgt->branch, eid,
                                                 result, iterpool));
 
-          SVN_ERR(merge_subbranch(edit_txn, src, tgt, yca, eid, iterpool));
-        }
-      else if (e_tgt)
-        {
-          svnmover_notify_v("D    e%d %s%s",
-                            eid, e_yca->name,
-                            subbranch_str(yca->branch, eid, iterpool));
-          SVN_ERR(svn_branch__state_delete_one(tgt->branch, eid, iterpool));
-
-          /* ### If this is a subbranch-root element being deleted, shouldn't
-             we see if there were any changes to be merged in the subbranch,
-             and raise a delete-vs-edit conflict if so? */
-        }
-      else if (result)
-        {
-          svnmover_notify_v("A    e%d %s%s",
-                            eid, result->name,
-                            subbranch_str(src->branch, eid, iterpool));
-
-          /* In BRANCH, create an instance of the element EID with new content.
-           *
-           * Translated to old language, this means create a new node-copy
-           * copied (branched) from the source-right version of the merge
-           * (which is not specified here, but will need to be),
-           * which may be in this branch or in another branch.
-           */
-          SVN_ERR(svn_branch__state_set_element(tgt->branch, eid,
-                                                result, iterpool));
-
-          SVN_ERR(merge_subbranch(edit_txn, src, tgt, yca, eid, iterpool));
+          if (result)
+            {
+              SVN_ERR(merge_subbranch(edit_txn, src, tgt, yca, eid, iterpool));
+            }
         }
     }
   svn_pool_destroy(iterpool);
