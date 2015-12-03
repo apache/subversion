@@ -514,6 +514,17 @@ svn_branch__state_get_element(const svn_branch__state_t *branch,
                               int eid,
                               apr_pool_t *result_pool);
 
+/** Equivalent to
+ *    alter_one(..., element->parent_eid, element->name, element->payload),
+ * or, if @a element is null, to
+ *    delete_one(...).
+ */
+svn_error_t *
+svn_branch__state_set_element(svn_branch__state_t *branch,
+                              int eid,
+                              const svn_element__content_t *element,
+                              apr_pool_t *result_pool);
+
 /** Specify that the element of @a branch identified by @a eid shall not
  * be present.
  *
