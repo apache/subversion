@@ -66,15 +66,6 @@ Candidate changes:
    Votes:
      +1: ivan, kotkov
 
- * r1712927
-   Fix svn_fs_contents_different on FSFS producing false negatives.
-   Justification:
-     Under rare circumstances, see issue #4554, the API may not recognize
-     two file contents as being different.  This may result in incomplete
-     reports and dump files.
-   Votes:
-     +1: stefan2, philip
-
  * r1717154
    Clarify documentation of svn_fs_node_created_rev().
    Justification:
