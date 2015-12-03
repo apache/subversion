@@ -127,32 +127,6 @@ make_fspath(const char *relpath, apr_pool_t *result_pool)
   return apr_pstrcat(result_pool, "/", relpath, SVN_VA_NULL);
 }
 
-/* svn_relpath_split, but then for the first component instead of the last */
-static svn_error_t *
-relpath_reverse_split(const char **root, const char **remaining,
-                      const char *relpath,
-                      apr_pool_t *result_pool)
-{
-  const char *ch = strchr(relpath, '/');
-  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
-
-  if (!ch)
-    {
-      if (root)
-        *root = apr_pstrdup(result_pool, relpath);
-      if (remaining)
-        *remaining = "";
-    }
-  else
-    {
-      if (root)
-        *root = apr_pstrmemdup(result_pool, relpath, ch - relpath);
-      if (remaining)
-        *remaining = apr_pstrdup(result_pool, ch + 1);
-    }
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 find_commit(const git_commit **commit, svn_fs_root_t *root,
             const git_oid *oid, apr_pool_t *result_pool)
@@ -163,52 +137,6 @@ find_commit(const git_commit **commit, svn_fs_root_t *root,
     svn_git__commit_lookup(commit, fgf->repos, oid, result_pool));
 }
 
-static svn_error_t *
-find_tree_entry(const git_tree_entry **entry, git_tree *tree,
-                const char *relpath,
-                apr_pool_t *result_pool, apr_pool_t *scratch_pool)
-{
-  const char *basename, *tail;
-  const git_tree_entry *e;
-
-  SVN_ERR(relpath_reverse_split(&basename, &tail, relpath, scratch_pool));
-
-  e = git_tree_entry_byname(tree, basename);
-  if (e && !*tail)
-    {
-      *entry = e;
-      return SVN_NO_ERROR;
-    }
-  else if (!e)
-    {
-      *entry = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  switch (git_tree_entry_type(e))
-    {
-      case GIT_OBJ_TREE:
-        {
-          git_object *obj;
-          git_tree *sub_tree;
-
-          SVN_ERR(svn_git__tree_entry_to_object(&obj, tree, e, result_pool));
-
-          sub_tree = (git_tree*)obj;
-
-          SVN_ERR(find_tree_entry(entry, sub_tree, tail,
-                                  result_pool, scratch_pool));
-          break;
-        }
-      case GIT_OBJ_BLOB:
-        *entry = NULL;
-        break;
-      default:
-        SVN_ERR_MALFUNCTION();
-    }
-
-  return SVN_NO_ERROR;
-}
 
 static svn_error_t *
 find_branch(const git_commit **commit, const char **relpath,
@@ -523,7 +451,7 @@ fs_git_check_path(svn_node_kind_t *kind_p, svn_fs_root_t *root,
     }
 
   SVN_ERR(svn_git__commit_tree(&tree, commit, pool));
-  SVN_ERR(find_tree_entry(&entry, tree, relpath, pool, pool));
+  SVN_ERR(svn_git__find_tree_entry(&entry, tree, relpath, pool, pool));
 
   if (!entry)
     *kind_p = svn_node_none;
@@ -592,7 +520,8 @@ fs_git_node_history(svn_fs_history_t **history_p,
     }
 
   SVN_ERR(svn_git__commit_tree(&tree, commit, scratch_pool));
-  SVN_ERR(find_tree_entry(&entry, tree, relpath, scratch_pool, scratch_pool));
+  SVN_ERR(svn_git__find_tree_entry(&entry, tree, relpath,
+                                   scratch_pool, scratch_pool));
 
   if (!entry)
     return SVN_FS__NOT_FOUND(root, path);
@@ -681,10 +610,10 @@ fs_git_node_relation(svn_fs_node_relation_t *relation,
   SVN_ERR(svn_git__commit_tree(&tree_a, commit_a, scratch_pool));
   SVN_ERR(svn_git__commit_tree(&tree_b, commit_b, scratch_pool));
 
-  SVN_ERR(find_tree_entry(&entry_a, tree_a, relpath_a,
-                          scratch_pool, scratch_pool));
-  SVN_ERR(find_tree_entry(&entry_b, tree_b, relpath_b,
-                          scratch_pool, scratch_pool));
+  SVN_ERR(svn_git__find_tree_entry(&entry_a, tree_a, relpath_a,
+                                   scratch_pool, scratch_pool));
+  SVN_ERR(svn_git__find_tree_entry(&entry_b, tree_b, relpath_b,
+                                   scratch_pool, scratch_pool));
 
   if (!entry_a || !entry_b)
     {
@@ -713,7 +642,6 @@ fs_git_node_created_rev(svn_revnum_t *revision,
   svn_fs_git_root_t *fgr = root->fsap_data;
   const git_commit *rev_commit;
   const char *relpath;
-  git_tree *rev_tree;
   git_tree_entry *rev_entry;
   apr_pool_t *iterpool;
   git_oid oid, last_oid;
@@ -743,8 +671,8 @@ fs_git_node_created_rev(svn_revnum_t *revision,
     }
   iterpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_git__commit_tree(&rev_tree, rev_commit, iterpool));
-  SVN_ERR(find_tree_entry(&rev_entry, rev_tree, relpath, pool, iterpool));
+  SVN_ERR(svn_git__commit_tree_entry(&rev_entry, rev_commit, relpath,
+                                   pool, iterpool));
 
   last_oid = *git_commit_id(rev_commit);
   oid_p = git_commit_parent_id(rev_commit, 0);
@@ -753,17 +681,14 @@ fs_git_node_created_rev(svn_revnum_t *revision,
   while (oid_p)
     {
       const git_commit *cmt;
-      git_tree *cmt_tree;
       git_tree_entry *cmt_entry;
 
       svn_pool_clear(iterpool);
 
       SVN_ERR(find_commit(&cmt, root, oid_p, iterpool));
 
-      SVN_ERR(svn_git__commit_tree(&cmt_tree, cmt, iterpool));
-
-      SVN_ERR(find_tree_entry(&cmt_entry, cmt_tree, relpath,
-                              iterpool, iterpool));
+      SVN_ERR(svn_git__commit_tree_entry(&cmt_entry, cmt, relpath,
+                                         iterpool, iterpool));
 
       if (!cmt_entry || git_oid_cmp(git_tree_entry_id(rev_entry),
                                     git_tree_entry_id(cmt_entry)))
@@ -994,7 +919,8 @@ fs_git_dir_entries(apr_hash_t **entries_p, svn_fs_root_t *root,
       const git_tree_entry *entry;
       git_object *obj;
 
-      SVN_ERR(find_tree_entry(&entry, tree, relpath, pool, pool));
+      SVN_ERR(svn_git__find_tree_entry(&entry, tree, relpath,
+                                       pool, pool));
 
       if (!entry || git_tree_entry_type(entry) != GIT_OBJ_TREE)
         return SVN_FS__ERR_NOT_DIRECTORY(root->fs, path);
@@ -1071,7 +997,7 @@ fs_git_file_length(svn_filesize_t *length_p, svn_fs_root_t *root,
 
   SVN_ERR(svn_git__commit_tree(&tree, commit, pool));
 
-  SVN_ERR(find_tree_entry(&entry, tree, relpath, pool, pool));
+  SVN_ERR(svn_git__find_tree_entry(&entry, tree, relpath, pool, pool));
 
   if (!entry || git_tree_entry_type(entry) != GIT_OBJ_BLOB)
     return SVN_FS__ERR_NOT_FILE(root->fs, path);
@@ -1096,7 +1022,6 @@ fs_git_file_checksum(svn_checksum_t **checksum,
                      const char *path, apr_pool_t *pool)
 {
   const git_commit *commit;
-  git_tree *tree;
   git_tree_entry *entry;
   const char *relpath;
 
@@ -1105,9 +1030,8 @@ fs_git_file_checksum(svn_checksum_t **checksum,
   if (!commit)
     return SVN_FS__ERR_NOT_FILE(root->fs, path);
 
-  SVN_ERR(svn_git__commit_tree(&tree, commit, pool));
-
-  SVN_ERR(find_tree_entry(&entry, tree, relpath, pool, pool));
+  SVN_ERR(svn_git__commit_tree_entry(&entry, commit, relpath,
+                                      pool, pool));
 
   if (!entry || git_tree_entry_type(entry) != GIT_OBJ_BLOB)
     return SVN_FS__ERR_NOT_FILE(root->fs, path);
@@ -1130,7 +1054,6 @@ fs_git_file_contents(svn_stream_t **contents,
                      apr_pool_t *pool)
 {
   const git_commit *commit;
-  git_tree *tree;
   git_tree_entry *entry;
   const char *relpath;
 
@@ -1139,9 +1062,8 @@ fs_git_file_contents(svn_stream_t **contents,
   if (!commit)
     return SVN_FS__ERR_NOT_FILE(root->fs, path);
 
-  SVN_ERR(svn_git__commit_tree(&tree, commit, pool));
-
-  SVN_ERR(find_tree_entry(&entry, tree, relpath, pool, pool));
+  SVN_ERR(svn_git__commit_tree_entry(&entry, commit, relpath,
+                                      pool, pool));
 
   if (!entry || git_tree_entry_type(entry) != GIT_OBJ_BLOB)
     return SVN_FS__ERR_NOT_FILE(root->fs, path);
@@ -1207,7 +1129,6 @@ fs_git_contents_changed(int *changed_p,
 {
   const git_commit *commit_a, *commit_b;
   const char *relpath_a, *relpath_b;
-  git_tree *tree_a, *tree_b;
   const git_tree_entry *entry_a, *entry_b;
 
   SVN_ERR(find_branch(&commit_a, &relpath_a, root_a, path_a, scratch_pool));
@@ -1218,13 +1139,10 @@ fs_git_contents_changed(int *changed_p,
   else if (!commit_b)
     return SVN_FS__ERR_NOT_FILE(root_b->fs, path_b);
 
-  SVN_ERR(svn_git__commit_tree(&tree_a, commit_a, scratch_pool));
-  SVN_ERR(svn_git__commit_tree(&tree_b, commit_b, scratch_pool));
-
-  SVN_ERR(find_tree_entry(&entry_a, tree_a, relpath_a,
-                          scratch_pool, scratch_pool));
-  SVN_ERR(find_tree_entry(&entry_b, tree_b, relpath_b,
-                          scratch_pool, scratch_pool));
+  SVN_ERR(svn_git__commit_tree_entry(&entry_a, commit_a, relpath_a,
+                                     scratch_pool, scratch_pool));
+  SVN_ERR(svn_git__commit_tree_entry(&entry_b, commit_b, relpath_b,
+                                     scratch_pool, scratch_pool));
 
   if (!entry_a)
     return SVN_FS__ERR_NOT_FILE(root_a->fs, path_a);

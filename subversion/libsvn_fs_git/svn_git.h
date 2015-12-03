@@ -30,6 +30,25 @@
 #ifndef SVN_LIBSVN_FS__SVN_GIT_H
 #define SVN_LIBSVN_FS__SVN_GIT_H
 
+svn_error_t *
+svn_fs_git__wrap_git_error(void);
+
+#define svn_fs_git__wrap_git_error() \
+          svn_error_trace(svn_fs_git__wrap_git_error())
+
+#define svn_fs_git__read_only_error()                                         \
+          svn_error_create(SVN_ERR_FS_REP_NOT_MUTABLE, NULL,                  \
+                           _("The Subversion git filesystem doesn't support " \
+                             "write operations"))
+
+#define GIT2_ERR(expr)                        \
+  do {                                        \
+    int svn_err__git_temp = (expr);           \
+    if (svn_err__git_temp)                    \
+      return svn_fs_git__wrap_git_error();    \
+  } while (0)
+
+
 
 /* Like git_repository_open() but lifetime limited by pool */
 svn_error_t *
@@ -46,10 +65,23 @@ svn_git__repository_init(const git_repository **repo_p,
 
 /* Like git_commit_lookup() but lifetime limited by pool */
 svn_error_t *
-svn_git__commit_lookup(const git_commit **commit,
+svn_git__commit_lookup(const git_commit **commit_,
                        git_repository *repo,
                        const git_oid *id,
                        apr_pool_t *result_pool);
+
+/* Like git_commit_parent() but lifetime limited by pool */
+svn_error_t *
+svn_git__commit_parent(const git_commit **commit_p,
+                       const git_commit *commit,
+                       int idx,
+                       apr_pool_t *result_pool);
+
+/* Makes (copy of) commit live as long as result_pool */
+svn_error_t *
+svn_git__copy_commit(const git_commit **commit_p,
+                     const git_commit *commit,
+                     apr_pool_t *result_pool);
 
 /* Like git_commit_tree() but lifetime limited by pool */
 svn_error_t *
@@ -63,6 +95,19 @@ svn_git__tree_entry_to_object(const git_object **object_p,
                               const git_tree *tree,
                               const git_tree_entry *entry,
                               apr_pool_t *result_pool);
+
+svn_error_t *
+svn_git__find_tree_entry(const git_tree_entry **entry, git_tree *tree,
+                         const char *relpath,
+                         apr_pool_t *result_pool, apr_pool_t *scratch_pool);
+
+/* Combination of svn_git__commit_tree() + svn_git__find_tree_entry() */
+svn_error_t *
+svn_git__commit_tree_entry(const git_tree_entry **entry_p,
+                           const git_commit *commit,
+                           const char *relpath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
 
 
 #endif /* SVN_LIBSVN_FS__SVN_GIT_H*/

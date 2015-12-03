@@ -28,24 +28,6 @@
 #ifndef SVN_LIBSVN_FS__FS_GIT_H
 #define SVN_LIBSVN_FS__FS_GIT_H
 
-svn_error_t *
-svn_fs_git__wrap_git_error(void);
-
-#define svn_fs_git__wrap_git_error() \
-          svn_error_trace(svn_fs_git__wrap_git_error())
-
-#define svn_fs_git__read_only_error()                                         \
-          svn_error_create(SVN_ERR_FS_REP_NOT_MUTABLE, NULL,                  \
-                           _("The Subversion git filesystem doesn't support " \
-                             "write operations"))
-
-#define GIT2_ERR(expr)                        \
-  do {                                        \
-    int svn_err__git_temp = (expr);           \
-    if (svn_err__git_temp)                    \
-      return svn_fs_git__wrap_git_error();    \
-  } while (0)
-
 typedef struct svn_fs_git_fs_t
 {
   git_repository *repos;

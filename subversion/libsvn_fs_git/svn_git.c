@@ -20,7 +20,8 @@
  * ====================================================================
  */
 
-#include "fs_git.h"
+#include "svn_dirent_uri.h"
+
 #include "svn_git.h"
 
 #define DECLARE_GIT_CLEANUP(type,func)              \
@@ -94,6 +95,45 @@ svn_git__commit_lookup(const git_commit **commit_p,
 }
 
 svn_error_t *
+svn_git__copy_commit(const git_commit **commit_p,
+                     const git_commit *commit,
+                     apr_pool_t *result_pool)
+{
+  git_object *object;
+  git_commit *cmt;
+
+  /* libgit2 objects are reference counted... so this
+     is just syntactic sugar over an increment value */
+
+  GIT2_ERR(git_object_dup(&object, (git_object*)commit));
+
+  cmt = (git_commit*)object;
+
+  if (object)
+    GIT_RELEASE_AT_CLEANUP(git_commit, cmt, result_pool);
+
+  *commit_p = cmt;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_git__commit_parent(const git_commit **commit_p,
+                       const git_commit *commit,
+                       int idx,
+                       apr_pool_t *result_pool)
+{
+  git_commit *parent_cmt;
+
+  GIT2_ERR(git_commit_parent(&parent_cmt, commit, idx));
+
+  if (parent_cmt)
+    GIT_RELEASE_AT_CLEANUP(git_commit, parent_cmt, result_pool);
+
+  *commit_p = parent_cmt;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_git__commit_tree(const git_tree **tree_p,
                      const git_commit *commit,
                      apr_pool_t *result_pool)
@@ -125,6 +165,102 @@ svn_git__tree_entry_to_object(const git_object **object_p,
     GIT_RELEASE_AT_CLEANUP(git_object, object, result_pool);
 
   *object_p = object;
+
+  return SVN_NO_ERROR;
+}
+
+/* svn_relpath_split, but then for the first component instead of the last */
+static svn_error_t *
+relpath_reverse_split(const char **root, const char **remaining,
+                      const char *relpath,
+                      apr_pool_t *result_pool)
+{
+  const char *ch = strchr(relpath, '/');
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
+
+  if (!ch)
+    {
+      if (root)
+        *root = apr_pstrdup(result_pool, relpath);
+      if (remaining)
+        *remaining = "";
+    }
+  else
+    {
+      if (root)
+        *root = apr_pstrmemdup(result_pool, relpath, ch - relpath);
+      if (remaining)
+        *remaining = apr_pstrdup(result_pool, ch + 1);
+    }
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_git__find_tree_entry(const git_tree_entry **entry, git_tree *tree,
+                         const char *relpath,
+                         apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  const char *basename, *tail;
+  const git_tree_entry *e;
+
+  SVN_ERR(relpath_reverse_split(&basename, &tail, relpath, scratch_pool));
+
+  e = git_tree_entry_byname(tree, basename);
+  if (e && !*tail)
+    {
+      *entry = e;
+      return SVN_NO_ERROR;
+    }
+  else if (!e)
+    {
+      *entry = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  switch (git_tree_entry_type(e))
+    {
+      case GIT_OBJ_TREE:
+        {
+          git_object *obj;
+          git_tree *sub_tree;
+
+          SVN_ERR(svn_git__tree_entry_to_object(&obj, tree, e, result_pool));
+
+          sub_tree = (git_tree*)obj;
+
+          SVN_ERR(svn_git__find_tree_entry(entry, sub_tree, tail,
+                                           result_pool, scratch_pool));
+          break;
+        }
+      case GIT_OBJ_BLOB:
+        *entry = NULL;
+        break;
+      default:
+        SVN_ERR_MALFUNCTION();
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_git__commit_tree_entry(const git_tree_entry **entry_p,
+                           const git_commit *commit,
+                           const char *relpath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  git_tree *tree;
+
+  SVN_ERR(svn_git__commit_tree(&tree, commit, result_pool));
+  if (!tree)
+    {
+      /* Corrupt commit */
+      *entry_p = NULL;
+      return SVN_NO_ERROR;
+    }
+  SVN_ERR(svn_git__find_tree_entry(entry_p, tree, relpath,
+                                   result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
