@@ -1372,19 +1372,19 @@ AS_HELP_STRING([--enable-runtime-module-search],
 
 if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
   AC_DEFINE(SVN_LIBSVN_RA_LINKS_RA_LOCAL, 1,
-      [Defined if libsvn_client should link against libsvn_ra_local])
+      [Defined if libsvn_ra should link against libsvn_ra_local])
   svn_ra_lib_deps="\$(RA_LOCAL_DEPS)"
   svn_ra_lib_install_deps="install-ramod-lib"
   svn_ra_lib_link="\$(RA_LOCAL_LINK)"
 
   AC_DEFINE(SVN_LIBSVN_RA_LINKS_RA_SVN, 1,
-      [Defined if libsvn_client should link against libsvn_ra_svn])
+      [Defined if libsvn_ra should link against libsvn_ra_svn])
   svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_SVN_DEPS)"
   svn_ra_lib_link="$svn_ra_lib_link \$(RA_SVN_LINK)"
 
   if test "$svn_lib_serf" = "yes"; then
     AC_DEFINE(SVN_LIBSVN_RA_LINKS_RA_SERF, 1,
-          [Defined if libsvn_client should link against libsvn_ra_serf])
+          [Defined if libsvn_ra should link against libsvn_ra_serf])
     svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_SERF_DEPS)"
     svn_ra_lib_install_deps="$svn_ra_lib_install_deps install-serf-lib"
     svn_ra_lib_link="$svn_ra_lib_link \$(RA_SERF_LINK)"
