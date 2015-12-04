@@ -161,12 +161,12 @@ struct conflict_storage_t
   apr_hash_t *orphan_conflicts;
 };
 
-/* Merge SRC into TGT, using the common ancestor YCA.
+/* Three-way-merge the changes from YCA to SRC and YCA to TGT. YCA is
+ * notionally the youngest common ancestor of SRC and TGT.
  *
  * The elements to merge are the union of the elements in the three input
  * subtrees (SRC, TGT, YCA). For each such element, merge the two changes:
- * YCA -> SRC and YCA -> TGT, applying the result to TGT which is assumed
- * to be a branch in EDIT_TXN.
+ * YCA -> SRC and YCA -> TGT, applying the result to EDIT_TXN:EDIT_BRANCH.
  *
  * If conflicts arise, return them in *CONFLICT_STORAGE_P; otherwise set
  * that to null.
@@ -179,6 +179,7 @@ struct conflict_storage_t
  */
 svn_error_t *
 svnmover_branch_merge(svn_branch__txn_t *edit_txn,
+                      svn_branch__state_t *edit_branch,
                       conflict_storage_t **conflict_storage_p,
                       svn_branch__el_rev_id_t *src,
                       svn_branch__el_rev_id_t *tgt,
