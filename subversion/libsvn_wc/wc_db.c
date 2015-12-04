@@ -10618,68 +10618,6 @@ svn_wc__db_prop_retrieve_recursive(apr_hash_t **values,
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
-/* The body of svn_wc__db_read_cached_iprops(). */
-static svn_error_t *
-db_read_cached_iprops(apr_array_header_t **iprops,
-                      svn_wc__db_wcroot_t *wcroot,
-                      const char *local_relpath,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  svn_boolean_t have_row;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_IPROPS));
-  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, local_relpath));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (!have_row)
-    {
-      return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,
-                               svn_sqlite__reset(stmt),
-                               _("The node '%s' was not found."),
-                               path_for_error_message(wcroot, local_relpath,
-                                                      scratch_pool));
-    }
-
-  SVN_ERR(svn_sqlite__column_iprops(iprops, stmt, 0,
-                                    result_pool, scratch_pool));
-
-  SVN_ERR(svn_sqlite__reset(stmt));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool)
-{
-  svn_wc__db_wcroot_t *wcroot;
-  const char *local_relpath;
-
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
-                                                db, local_abspath,
-                                                scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
-
-  /* Don't use with_txn yet, as we perform just a single transaction */
-  SVN_ERR(db_read_cached_iprops(iprops, wcroot, local_relpath,
-                                result_pool, scratch_pool));
-
-  if (!*iprops)
-    {
-      *iprops = apr_array_make(result_pool, 0,
-                               sizeof(svn_prop_inherited_item_t *));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Remove all prop name value pairs from PROP_HASH where the property
    name is not PROPNAME. */
 static void
