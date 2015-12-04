@@ -120,15 +120,17 @@ svn_branch__get_subbranch_at_eid(svn_branch__state_t *branch,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_branch__get_immediate_subbranches(svn_branch__state_t *branch,
-                                      apr_array_header_t **subbranches_p,
-                                      apr_pool_t *result_pool,
-                                      apr_pool_t *scratch_pool)
+/* Set *SUBBRANCH_EIDS_P an array of EIDs of the subbranch-root elements in
+ * BRANCH.
+ */
+static svn_error_t *
+svn_branch__get_immediate_subbranch_eids(svn_branch__state_t *branch,
+                                         apr_array_header_t **subbranch_eids_p,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool)
 {
-  apr_array_header_t *subbranches
-    = apr_array_make(result_pool, 0, sizeof(void *));
-  const char *branch_id = svn_branch__get_id(branch, scratch_pool);
+  apr_array_header_t *subbranch_eids
+    = apr_array_make(result_pool, 0, sizeof(int));
   svn_element__tree_t *elements;
   apr_hash_index_t *hi;
 
@@ -141,15 +143,38 @@ svn_branch__get_immediate_subbranches(svn_branch__state_t *branch,
 
       if (element->payload->is_subbranch_root)
         {
-          const char *subbranch_id
-            = svn_branch__id_nest(branch_id, eid, scratch_pool);
-          svn_branch__state_t *subbranch
-            = svn_branch__txn_get_branch_by_id(branch->txn, subbranch_id,
-                                               scratch_pool);
-
-          SVN_ERR_ASSERT_NO_RETURN(subbranch);
-          APR_ARRAY_PUSH(subbranches, void *) = subbranch;
+          APR_ARRAY_PUSH(subbranch_eids, int) = eid;
         }
+    }
+  *subbranch_eids_p = subbranch_eids;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_branch__get_immediate_subbranches(svn_branch__state_t *branch,
+                                      apr_array_header_t **subbranches_p,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *subbranch_eids;
+  apr_array_header_t *subbranches
+    = apr_array_make(result_pool, 0, sizeof(void *));
+  const char *branch_id = svn_branch__get_id(branch, scratch_pool);
+  int i;
+
+  SVN_ERR(svn_branch__get_immediate_subbranch_eids(branch, &subbranch_eids,
+                                                   scratch_pool, scratch_pool));
+  for (i = 0; i < subbranch_eids->nelts; i++)
+    {
+      int eid = APR_ARRAY_IDX(subbranch_eids, i, int);
+      const char *subbranch_id
+        = svn_branch__id_nest(branch_id, eid, scratch_pool);
+      svn_branch__state_t *subbranch
+        = svn_branch__txn_get_branch_by_id(branch->txn, subbranch_id,
+                                           scratch_pool);
+
+      SVN_ERR_ASSERT_NO_RETURN(subbranch);
+      APR_ARRAY_PUSH(subbranches, void *) = subbranch;
     }
   *subbranches_p = subbranches;
   return SVN_NO_ERROR;
@@ -175,7 +200,7 @@ svn_branch__get_subtree(svn_branch__state_t *branch,
 {
   svn_element__tree_t *element_tree;
   svn_branch__subtree_t *new_subtree;
-  apr_array_header_t *subbranches;
+  apr_array_header_t *subbranch_eids;
   int i;
   apr_pool_t *iterpool = result_pool;  /* ### not a proper iterpool */
 
@@ -188,17 +213,13 @@ svn_branch__get_subtree(svn_branch__state_t *branch,
                                                      result_pool);
 
   /* Add subbranches */
-  SVN_ERR(svn_branch__get_immediate_subbranches(branch, &subbranches,
-                                                result_pool, result_pool));
-  for (i = 0; i < subbranches->nelts; i++)
+  SVN_ERR(svn_branch__get_immediate_subbranch_eids(branch, &subbranch_eids,
+                                                   result_pool, result_pool));
+  for (i = 0; i < subbranch_eids->nelts; i++)
     {
-      svn_branch__state_t *subbranch = APR_ARRAY_IDX(subbranches, i, void *);
-      const char *outer_bid;
-      int outer_eid;
+      int outer_eid = APR_ARRAY_IDX(subbranch_eids, i, int);
       const char *subbranch_relpath_in_subtree;
 
-      svn_branch__id_unnest(&outer_bid, &outer_eid, subbranch->bid,
-                            iterpool);
       subbranch_relpath_in_subtree
         = svn_element__tree_get_path_by_eid(new_subtree->tree, outer_eid,
                                             iterpool);
@@ -206,13 +227,19 @@ svn_branch__get_subtree(svn_branch__state_t *branch,
       /* Is it pathwise at or below EID? If so, add it into the subtree. */
       if (subbranch_relpath_in_subtree)
         {
+          svn_branch__state_t *subbranch;
           svn_branch__subtree_t *this_subtree;
 
-          SVN_ERR(svn_branch__get_subtree(subbranch, &this_subtree,
-                                          svn_branch__root_eid(subbranch),
-                                          result_pool));
-          svn_eid__hash_set(new_subtree->subbranches, outer_eid,
-                            this_subtree);
+          SVN_ERR(svn_branch__get_subbranch_at_eid(branch, &subbranch,
+                                                   outer_eid, iterpool));
+          if (subbranch)
+            {
+              SVN_ERR(svn_branch__get_subtree(subbranch, &this_subtree,
+                                              svn_branch__root_eid(subbranch),
+                                              result_pool));
+              svn_eid__hash_set(new_subtree->subbranches, outer_eid,
+                                this_subtree);
+            }
         }
     }
   *subtree_p = new_subtree;
@@ -302,36 +329,45 @@ svn_branch__find_nested_branch_element_by_relpath(
 {
   /* The path we're looking for is (path-wise) in this branch. See if it
      is also in a sub-branch. */
+  /* Loop invariants: RELPATH is the path we're looking for, relative to
+     ROOT_BRANCH which is the current level of nesting that we've descended
+     into. */
   while (TRUE)
     {
-      apr_array_header_t *subbranches;
+      apr_array_header_t *subbranch_eids;
       int i;
       svn_boolean_t found = FALSE;
 
-      SVN_ERR(svn_branch__get_immediate_subbranches(root_branch, &subbranches,
-                                                    scratch_pool, scratch_pool));
-      for (i = 0; i < subbranches->nelts; i++)
+      SVN_ERR(svn_branch__get_immediate_subbranch_eids(
+                root_branch, &subbranch_eids, scratch_pool, scratch_pool));
+      for (i = 0; i < subbranch_eids->nelts; i++)
         {
-          svn_branch__state_t *subbranch = APR_ARRAY_IDX(subbranches, i, void *);
-          svn_branch__state_t *outer_branch;
-          int outer_eid;
+          int outer_eid = APR_ARRAY_IDX(subbranch_eids, i, int);
           const char *relpath_to_subbranch;
           const char *relpath_in_subbranch;
 
-          svn_branch__get_outer_branch_and_eid(&outer_branch, &outer_eid,
-                                               subbranch, scratch_pool);
-
+          /* Check whether the RELPATH we're looking for is within this
+             subbranch at OUTER_EID. If it is, recurse in the subbranch. */
           relpath_to_subbranch
             = svn_branch__get_path_by_eid(root_branch, outer_eid, scratch_pool);
-
           relpath_in_subbranch
             = svn_relpath_skip_ancestor(relpath_to_subbranch, relpath);
           if (relpath_in_subbranch)
             {
-              root_branch = subbranch;
-              relpath = relpath_in_subbranch;
-              found = TRUE;
-              break;
+              svn_branch__state_t *subbranch;
+
+              SVN_ERR(svn_branch__get_subbranch_at_eid(
+                        root_branch, &subbranch, outer_eid, scratch_pool));
+              /* If the branch hierarchy is not 'flat' then we might find
+                 there is no actual branch where the subbranch-root element
+                 says there should be one. In that case, ignore it. */
+              if (subbranch)
+                {
+                  root_branch = subbranch;
+                  relpath = relpath_in_subbranch;
+                  found = TRUE;
+                  break;
+                }
             }
         }
       if (! found)
