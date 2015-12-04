@@ -673,6 +673,7 @@ svn_branch__txn_get_branch_by_id(const svn_branch__txn_t *txn,
       if (strcmp(svn_branch__get_id(b, scratch_pool), branch_id) == 0)
         {
           branch = b;
+          return branch;
           break;
         }
     }
