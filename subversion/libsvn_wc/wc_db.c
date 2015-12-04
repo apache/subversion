@@ -11340,7 +11340,9 @@ relocate_txn(svn_wc__db_wcroot_t *wcroot,
 
   SVN_ERR(svn_wc__db_fetch_repos_info(NULL, &repos_uuid, wcroot,
                                       old_repos_id, scratch_pool));
-  SVN_ERR_ASSERT(repos_uuid);  /* This function affects all the children of the given local_relpath,
+  SVN_ERR_ASSERT(repos_uuid);
+
+  /* This function affects all the children of the given local_relpath,
      but the way that it does this is through the repos inheritance mechanism.
      So, we only need to rewrite the repos_id of the given local_relpath,
      as well as any children with a non-null repos_id, as well as various
@@ -11366,6 +11368,11 @@ relocate_txn(svn_wc__db_wcroot_t *wcroot,
       SVN_ERR(svn_sqlite__bindf(stmt, "ii", old_repos_id, new_repos_id));
       SVN_ERR(svn_sqlite__step_done(stmt));
     }
+
+  /* ### TODO: Update urls stored in inherited properties...
+               What about urls in conflicts?
+                 # We can probably keep these as they are only used
+                   for showing full urls to the user */
 
   return SVN_NO_ERROR;
 }
