@@ -1186,30 +1186,27 @@ convert_branch_to_paths(apr_hash_t *paths,
   for (hi = apr_hash_first(scratch_pool, elements->e_map);
        hi; hi = apr_hash_next(hi))
     {
-      int eid = *(const int *)apr_hash_this_key(hi);
+      int eid = svn_eid__hash_this_key(hi);
+      svn_element__content_t *element = apr_hash_this_val(hi);
       const char *rrpath
         = branch_get_storage_rrpath_by_eid(branch, eid, result_pool);
-      svn_branch__el_rev_id_t *ba = svn_hash_gets(paths, rrpath);
+      svn_branch__el_rev_id_t *ba;
 
-      /* Fill in the details. If it's already been filled in, then let a
-         branch-root element override a sub-branch element of an outer
-         branch, because the branch-root element is the one that should
-         be specifying the element's payload.
-       */
-      if (! ba
-          || eid == svn_branch__root_eid(branch))
-        {
-          ba = svn_branch__el_rev_id_create(branch, eid, branch->txn->rev,
-                                            result_pool);
-          svn_hash_sets(paths, rrpath, ba);
-          /*SVN_DBG(("branch-to-path[%d]: b%s e%d -> %s",
-                   i, svn_branch__get_id(branch, scratch_pool), eid, rrpath));*/
-        }
-      else
-        {
-          /*SVN_DBG(("branch-to-path: b%s e%d -> <already present; not overwriting> (%s)",
-                   svn_branch__get_id(branch, scratch_pool), eid, rrpath));*/
-        }
+      /* A subbranch-root element carries no payload; the corresponding
+         inner branch root element will provide the payload for this path. */
+      if (element->payload->is_subbranch_root)
+        continue;
+
+      /* No other element should exist at this path, given that we avoid
+         storing anything for a subbranch-root element. */
+      SVN_ERR_ASSERT(! svn_hash_gets(paths, rrpath));
+
+      /* Fill in the details. */
+      ba = svn_branch__el_rev_id_create(branch, eid, branch->txn->rev,
+                                        result_pool);
+      svn_hash_sets(paths, rrpath, ba);
+      /*SVN_DBG(("branch-to-path[%d]: b%s e%d -> %s",
+               i, svn_branch__get_id(branch, scratch_pool), eid, rrpath));*/
     }
   return SVN_NO_ERROR;
 }
