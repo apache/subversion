@@ -1747,13 +1747,6 @@ WHERE wc_id = ?1
 
 /* Queries for cached inherited properties. */
 
-/* Select the inherited properties of a single base node. */
--- STMT_SELECT_IPROPS
-SELECT inherited_props FROM nodes
-WHERE wc_id = ?1
-  AND local_relpath = ?2
-  AND op_depth = 0
-
 /* Update the inherited properties of a single base node. */
 -- STMT_UPDATE_IPROP
 UPDATE nodes
