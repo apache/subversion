@@ -34,12 +34,11 @@ class MailingList(object):
     Parses ^/pmc/subversion/security/pre-notifications.txt
     """
 
-    __PRE_NOTIFICATIONS = 'pre-notifications.txt'
     __ADDRESS_LINE = re.compile(r'^\s{6}(?:[^<]+)?<[^<>]+>\s*$')
 
-    def __init__(self, rootdir):
+    def __init__(self, mailing_list):
         self.__addresses = []
-        self.__parse_addresses(rootdir)
+        self.__parse_addresses(mailing_list)
 
     def __iter__(self):
         return self.__addresses.__iter__()
@@ -47,9 +46,8 @@ class MailingList(object):
     def __len__(self):
         return len(self.__addresses)
 
-    def __parse_addresses(self, rootdir):
-        pre_notifications = os.path.join(rootdir, self.__PRE_NOTIFICATIONS)
-        with open(pre_notifications, 'rt') as pn:
+    def __parse_addresses(self, mailing_list):
+        with open(mailing_list, 'rt') as pn:
             for line in pn:
                 m = self.__ADDRESS_LINE.match(line)
                 if not m:
