@@ -13,11 +13,11 @@ Step 2: Prepare the website update
 
   $ cd ${PMC_AREA_WC}/security
   $ ${TRUNK_WC}/tools/dist/advisory.py generate \
-        --destinatio=${SITE_WC}/publish/security \
+        --destination=${SITE_WC}/publish/security \
         CVE-2015-5259 CVE-2015-5343 ...
 
 This will generate a plain-text version of the advisories, including
-patches etc., suiatble for publishing on our web site. Once these
+patches etc., suitable for publishing on our web site. Once these
 are generated, make sure you add the links to the new files to:
 
     ${SITE_WC}/publish/security/index.html
@@ -54,11 +54,11 @@ Note the arguments:
 
 
 ----------------------
-Step 4: Send teh mails
+Step 4: Send the mails
 ----------------------
 
   $ cd ${PMC_AREA_WC}/security
-  $ ${TRUNK_WC}/tools/dist/advisory.py test \
+  $ ${TRUNK_WC}/tools/dist/advisory.py send \
         (the rest of the arguments are as in step 3).
 
 The mails will be sent one at a time to each recipient separately.
