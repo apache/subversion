@@ -1,3 +1,28 @@
+Version 1.8.15
+(15 Dec 2015, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.15
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * gpg-agent: fix crash with non-canonical $HOME (r1691928, issue #4584)
+
+  - Client-side and server-side bugfixes:
+    * fix a segfault with old style text delta (r1618472 et al)
+
+  - Server-side bugfixes:
+    * fsfs: reduce memory allocation with Apache (r1591005 et al)
+    * mod_dav_svn: emit first log items as soon as possible (r1666965 et al)
+    * mod_dav_svn: use LimitXMLRequestBody for skel-encoded requests (r1687812)
+
+  - Bindings bugfixes:
+    * swig: fix memory corruption in svn_client_copy_source_t (r1694929)
+
+ Developer-visible changes:
+  - General:
+    * better configure-time detection of httpd authz fix (r1687304 et al)
+    * fix compilation with apr 1.2.x (r1701237)
+
+
 Version 1.8.14
 (5 Aug 2015, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.14
@@ -13,6 +38,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.14
       of user and revision after 'svn up' (r1680242)
 
   - Server-side bugfixes:
+    * mod_authz_svn: do not leak information in mixed anonymous/authenticated
+      httpd (dav) configurations (CVE-2015-3184)
+    * do not leak paths that were hidden by path-based authz (CVE-2015-3187)
     * mod_dav_svn: do not ignore skel parsing errors (r1658168)
     * detect invalid svndiff data earlier (r1684077)
     * prevent possible repository corruption on power/disk failures (r1680819)
@@ -863,10 +891,17 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * add missing API functions to JavaHL bindings (issue #4326)
     * fix some reference counting bugs in swig-py bindings (r1464899, r1466524)
 
+Version 1.7.22
+(12 Aug 2015, from /branches/1.7.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.7.22
+
+ Developer-visible changes:
+  - General:
+    * fix the regression test suite which was broken in 1.7.21 (r1694012)
 
 Version 1.7.21
 (5 Aug 2015, from /branches/1.7.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.8.21
+http://svn.apache.org/repos/asf/subversion/tags/1.7.21
 
  User-visible changes:
   - Client-side bugfixes:
@@ -875,6 +910,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.21
       non-deltas dumpfile (r1652182 et al.)
 
   - Server-side bugfixes:
+    * mod_authz_svn: do not leak information in mixed anonymous/authenticated
+      httpd (dav) configurations (CVE-2015-3184)
+    * do not leak paths that were hidden by path-based authz (CVE-2015-3187)
     * fix 'svnadmin recover' for pre-1.4 FSFS repositories (r1561419)
 
  Developer-visible changes:
