@@ -53,17 +53,16 @@ AC_DEFUN(SVN_LIB_GIT2,
   ],
   [ ])
 
-  if test "$libgit2_found" = "no"; then
-    AC_MSG_ERROR([subversion requires libgit2])
-  fi
-
   if test "$libgit2_found" = "yes"; then
     SVN_LIBGIT2_INCLUDES="-I$libgit2_prefix/include"
     LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS(-L$libgit2_prefix/lib)`"
+
+    SVN_LIBGIT2_LIBS="-lgit2"
+
+    AC_SUBST(SVN_LIBGIT2_INCLUDES)
+    AC_SUBST(SVN_LIBGIT2_LIBS)
+    svn_lib_git=yes
+  else
+    svn_lib_git=no
   fi
-
-  SVN_LIBGIT2_LIBS="-lgit2"
-
-  AC_SUBST(SVN_LIBGIT2_INCLUDES)
-  AC_SUBST(SVN_LIBGIT2_LIBS)
 ])
