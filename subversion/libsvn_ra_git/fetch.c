@@ -242,9 +242,10 @@ svn_ra_git__git_fetch(svn_ra_session_t *session,
   git_repository *repos;
   git_remote *remote;
   git_remote_callbacks *callbacks;
-  svn_revnum_t youngest;
   apr_pool_t *subpool;
-
+#ifdef SVN_DEBUG
+  svn_revnum_t youngest;
+#endif
 
   /* Do one fetch per session. */
   if (sess->fetch_done && !refresh)
@@ -276,11 +277,13 @@ svn_ra_git__git_fetch(svn_ra_session_t *session,
                              NULL, NULL,
                              session->cancel_func, session->cancel_baton,
                              subpool));
-
-  SVN_ERR(svn_ra_get_latest_revnum(sess->local_session, &youngest,
+#ifdef SVN_DEBUG
+  SVN_ERR(sess->local_session->vtable->get_latest_revnum(
+                                   sess->local_session, &youngest,
                                    subpool));
 
   SVN_DBG(("Latest revision r%ld\n", youngest));
+#endif
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
