@@ -1024,6 +1024,7 @@ fs_git_file_checksum(svn_checksum_t **checksum,
   const git_commit *commit;
   git_tree_entry *entry;
   const char *relpath;
+  const svn_checksum_t *csum;
 
   SVN_ERR(find_branch(&commit, &relpath, root, path, pool));
 
@@ -1042,9 +1043,12 @@ fs_git_file_checksum(svn_checksum_t **checksum,
       /* ### TODO */
     }
 
-  SVN_ERR(svn_fs_git__db_fetch_checksum(checksum, root->fs,
+  SVN_ERR(svn_fs_git__db_fetch_checksum(&csum, root->fs,
                                         git_tree_entry_id(entry),
                                         kind, pool, pool));
+
+  /* Nice.. sqlite returns const... fs returns non-const */
+  *checksum = csum ? svn_checksum_dup(csum, pool) : NULL;
   return SVN_NO_ERROR;
 }
 

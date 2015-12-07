@@ -181,7 +181,7 @@ svn_fs_git__db_fetch_rev(svn_revnum_t *revnum,
 
 
 static svn_error_t *
-db_fetch_checksum(svn_checksum_t **checksum,
+db_fetch_checksum(const svn_checksum_t **checksum,
                   svn_fs_t *fs,
                   const git_oid *oid,
                   int idx,
@@ -235,7 +235,7 @@ db_fetch_checksum(svn_checksum_t **checksum,
 }
 
 svn_error_t *
-svn_fs_git__db_fetch_checksum(svn_checksum_t **checksum,
+svn_fs_git__db_fetch_checksum(const svn_checksum_t **checksum,
                               svn_fs_t *fs,
                               const git_oid *oid,
                               svn_checksum_kind_t kind,
