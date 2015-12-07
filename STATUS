@@ -122,7 +122,7 @@ Candidate changes:
      svn_ra_do_update3(), are aware of this limitation and pass-in
      the delta editor that doesn't access FSFS or caches.
    Votes:
-     +1: kotkov
+     +1: kotkov, ivan
 
 Veto-blocked changes:
 =====================
