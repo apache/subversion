@@ -102,10 +102,4 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1717154
-   Clarify documentation of svn_fs_node_created_rev().
-   Justification:
-     Have up-to-date documentation.
-   Votes:
-     +1: danielsh, stefan2
 
