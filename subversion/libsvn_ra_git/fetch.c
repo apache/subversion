@@ -51,7 +51,6 @@
 
 #define RA_GIT_DEFAULT_REFSPEC      "+refs/*:refs/*"
 #define RA_GIT_DEFAULT_REMOTE_NAME  "origin"
-#define RA_GIT_DEFAULT_REF          "refs/remotes/origin/master"
 
 /*----------------------------------------------------------------*/
 
@@ -291,18 +290,13 @@ svn_ra_git__git_fetch(svn_ra_session_t *session,
 
 
 
-/* Fetch a username for use with SESSION, and store it in SESSION->username.
- *
- * Allocate the username in SESSION->pool.  Use SCRATCH_POOL for temporary
- * allocations. */
+/* Fetch a username for use with SESS */
 static svn_error_t *
 get_username(const char **username,
-             svn_ra_session_t *session,
+             svn_ra_git__session_t *sess,
              apr_pool_t *result_pool,
              apr_pool_t *scratch_pool)
 {
-  svn_ra_git__session_t *sess = session->priv;
-
   *username = NULL;
 
   /* Get a username somehow, so we have some svn:author property to
@@ -352,6 +346,7 @@ typedef struct ra_git_remote_baton_t
 
   apr_pool_t *scratch_pool;
   svn_auth_iterstate_t *auth_iter;
+  unsigned int authtypes_done;
 
   svn_boolean_t stopped;
   svn_ra_git__session_t *sess;
@@ -391,6 +386,72 @@ remote_credentials_acquire(git_cred **cred,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
+  const char *realm;
+  *cred = NULL;
+
+  allowed_types &= ~grb->authtypes_done;
+
+  realm = apr_pstrcat(scratch_pool, "<", url, "> git repository", SVN_VA_NULL);
+
+  if (allowed_types & GIT_CREDTYPE_DEFAULT)
+    {
+      GIT2_ERR(git_cred_default_new(cred));
+      grb->authtypes_done |= GIT_CREDTYPE_DEFAULT; /* Only do this once */
+      return SVN_NO_ERROR;
+    }
+
+  if (allowed_types & GIT_CREDTYPE_USERPASS_PLAINTEXT)
+    {
+      void *svn_creds;
+      if (!grb->auth_iter)
+        SVN_ERR(svn_auth_first_credentials(&svn_creds, &grb->auth_iter,
+                                           SVN_AUTH_CRED_SIMPLE,
+                                           apr_pstrdup(grb->remote_pool, realm),
+                                           grb->sess->callbacks->auth_baton,
+                                           grb->remote_pool));
+      else
+        SVN_ERR(svn_auth_next_credentials(&svn_creds, grb->auth_iter,
+                                          result_pool));
+
+      if (svn_creds)
+        {
+          svn_auth_cred_simple_t *simple_creds = svn_creds;
+
+          GIT2_ERR(git_cred_userpass_plaintext_new(cred,
+                                                   simple_creds->username,
+                                                   simple_creds->password));
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          grb->auth_iter = NULL; /* Don't save on success */
+          grb->authtypes_done |= GIT_CREDTYPE_USERPASS_PLAINTEXT;
+          /* And fall through to try other cred types */
+        }
+    }
+
+  if (allowed_types & GIT_CREDTYPE_USERNAME)
+    {
+      const char *username;
+      SVN_ERR(get_username(&username, grb->sess, scratch_pool,
+                           scratch_pool));
+
+      if (username)
+        {
+          GIT2_ERR(git_cred_username_new(cred, username));
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          grb->authtypes_done |= GIT_CREDTYPE_USERNAME;
+          /* And fall through */
+        }
+    }
+
+  /* TODO: GIT_CREDTYPE_SSH_KEY,
+           GIT_CREDTYPE_SSH_CUSTOM,
+           GIT_CREDTYPE_SSH_INTERACTIVE,
+           GIT_CREDTYPE_SSH_MEMORY */
 
   return SVN_NO_ERROR;
 }
@@ -403,6 +464,7 @@ remote_transport_certificate_check(ra_git_remote_baton_t *grb,
                                    const char *host,
                                    void *payload)
 {
+  /* ### TODO: */
   return SVN_NO_ERROR;
 }
 
@@ -509,6 +571,12 @@ git_remote_completion_cb(git_remote_completion_type type, void *data)
     {
       grb->stopped = TRUE;
       git_remote_stop(grb->remote);
+    }
+
+  if (!grb->err && grb->auth_iter)
+    {
+      grb->err = svn_auth_save_credentials(grb->auth_iter, grb->scratch_pool);
+      grb->auth_iter = NULL;
     }
 
   return (grb->err ? 1 : 0);
