@@ -1427,6 +1427,14 @@ dnl  svn_fs_lib_install_deps="$svn_fs_lib_install_deps install-fsmod-lib"
     svn_fs_lib_install_deps="$svn_fs_lib_install_deps install-bdb-lib"
     svn_fs_lib_link="$svn_fs_lib_link \$(FS_BASE_LINK)"
   fi
+  
+  if test "$svn_lib_git" = "yes"; then
+  AC_DEFINE(SVN_LIBSVN_FS_LINKS_FS_GIT, 1,
+      [Defined if libsvn_fs should link against libsvn_fs_git])
+    svn_fs_lib_deps="$svn_fs_lib_deps \$(FS_GIT_DEPS)"
+    svn_fs_lib_install_deps="$svn_fs_lib_install_deps install-git-lib"
+    svn_fs_lib_link="$svn_fs_lib_link \$(FS_GIT_LINK)"
+  fi
 
   SVN_FS_LIB_DEPS=$svn_fs_lib_deps
   SVN_FS_LIB_INSTALL_DEPS=$svn_fs_lib_install_deps
