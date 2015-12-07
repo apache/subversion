@@ -724,3 +724,12 @@ open_git_repos(git_repository **repos,
   return SVN_NO_ERROR;
 }
 
+void
+svn_ra_git__libgit2_version(int *major,
+                            int *minor,
+                            int *rev,
+                            const char **compiled)
+{
+  git_libgit2_version(major, minor, rev);
+  *compiled = LIBGIT2_VERSION;
+}

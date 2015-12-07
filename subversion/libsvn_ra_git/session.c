@@ -171,19 +171,29 @@ ra_git_wrap_reporter(const svn_ra_reporter3_t **reporter_p,
 /*** The RA vtable routines ***/
 
 #define RA_GIT_DESCRIPTION \
-        N_("Module for accessing a git repository.")
+        N_("Module for accessing a git repository using libgit2.")
 
+#define RA_GIT_DESCRIPTION_VER \
+        N_("Module for accessing a git repository using libgit2.\n" \
+           "  - using libgit2 %d.%d.%d (compiled with %s)")
+
+/* Implements svn_ra__vtable_t.get_description(). */
 static const char *
 ra_git_get_description(apr_pool_t *pool)
 {
-  return _(RA_GIT_DESCRIPTION);
+  int major, minor, rev;
+  const char *compiled;
+
+  svn_ra_git__libgit2_version(&major, &minor, &rev, &compiled);
+
+  return apr_psprintf(pool, _(RA_GIT_DESCRIPTION_VER),
+                      major, minor, rev, compiled);
 }
 
 static const char * const *
 ra_git_get_schemes(apr_pool_t *pool)
 {
-  /* TODO: git+ssh requires optional libssh dependency -- do we want that as well? */
-  static const char *schemes[] = { "git", "git+file", "git+http", "git+https", NULL };
+  static const char *schemes[] = { "git", NULL };
 
   return schemes;
 }

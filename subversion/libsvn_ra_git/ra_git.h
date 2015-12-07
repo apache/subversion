@@ -112,4 +112,11 @@ svn_ra_git__git_fetch(svn_ra_session_t *session,
                       svn_boolean_t refresh,
                       apr_pool_t *scratch_pool);
 
+void
+svn_ra_git__libgit2_version(int *major,
+                            int *minor,
+                            int *rev,
+                            const char **compiled);
+
+
 #endif /* SVN_LIBSVN_RA_GIT_H */

@@ -69,10 +69,11 @@ del_lines_res = [
                  re.compile(r'\s+compiled\s+'),
 
                  # Also for 'svn --version':
-                 re.compile(r"\* ra_(neon|local|svn|serf) :"),
-                 re.compile(r"  - handles '(https?|file|svn)' scheme"),
+                 re.compile(r"\* ra_(local|svn|serf|git) :"),
+                 re.compile(r"  - handles '(https?|file|svn|git)' scheme"),
                  re.compile(r"  - with Cyrus SASL authentication"),
                  re.compile(r"  - using serf \d+\.\d+\.\d+"),
+                 re.compile(r"  - using libgit2 \d+\.\d+\.\d+"),
                  re.compile(r"\* fs_(base|fs) :"),
 
                  # Remove 'svn --version' list of platform-specific
