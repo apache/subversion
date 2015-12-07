@@ -110,9 +110,6 @@ ra_git_reporter_link_path(void *report_baton,
                                  _("'%s' isn't a child of repository root "
                                    "URL '%s'"),
                                  url, sess->repos_root_url);
-      SVN_ERR(svn_ra_get_path_relative_to_root(grb->session,
-                                               &repos_relpath,
-                                               url, pool));
       url = svn_path_url_add_component2(sess->local_repos_root_url,
                                         repos_relpath, pool);
     }
