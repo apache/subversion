@@ -102,20 +102,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1718167
-   Disable zero-copy code path for ra_local update reporters.
-   Justification:
-     Using zero-copy code path within ra_local is not safe.
-     .
-     The known and documented limitation of svn_repos_begin_report3()
-     is that with zero-copy enabled, the delta editor callbacks cannot
-     access FSFS or use Subversion caches directly.  Within ra_local,
-     we cannot be sure that arbitrary callers of our RA API, such as
-     svn_ra_do_update3(), are aware of this limitation and pass-in
-     the delta editor that doesn't access FSFS or caches.
-   Votes:
-     +1: kotkov, ivan, stefan2
-
  * r1717154
    Clarify documentation of svn_fs_node_created_rev().
    Justification:
