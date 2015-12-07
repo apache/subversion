@@ -102,13 +102,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1706375
-   Following up on r1700215: unbreak the test runner's compabitility mode.
-   Justification:
-     Impossible to run tests with older repository formats.
-   Votes:
-     +1: ivan, kotkov, stefan2
-
  * r1718167
    Disable zero-copy code path for ra_local update reporters.
    Justification:
