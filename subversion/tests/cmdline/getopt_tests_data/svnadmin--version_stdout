@@ -1,0 +1,15 @@
+svnadmin, version 1.10.0-dev (under development)
+   compiled Dec  4 2015, 00:19:41 on x86/x86_64-microsoft-windows6.2.9200
+
+Copyright (C) 2015 The Apache Software Foundation.
+This software consists of contributions made by many people;
+see the NOTICE file for more information.
+Subversion is open source software, see http://subversion.apache.org/
+
+The following repository back-end (FS) modules are available:
+
+* fs_fs : Module for working with a plain file (FSFS) repository.
+* fs_x : Module for working with an experimental (FSX) repository.
+* fs_base : Module for working with a Berkeley DB repository.
+* fs_git : Experimental module for reading a GIT repository.
+

@@ -74,7 +74,7 @@ del_lines_res = [
                  re.compile(r"  - with Cyrus SASL authentication"),
                  re.compile(r"  - using serf \d+\.\d+\.\d+"),
                  re.compile(r"  - using libgit2 \d+\.\d+\.\d+"),
-                 re.compile(r"\* fs_(base|fs) :"),
+                 re.compile(r"\* fs_(base|fs|x|git) :"),
 
                  # Remove 'svn --version' list of platform-specific
                  # auth cache providers.
@@ -192,6 +192,35 @@ def run_one_test(sbox, basename, *varargs):
   svntest.verify.compare_and_display_lines("Standard error does not match.",
                                            "STDERR", exp_stderr, actual_stderr)
 
+def run_one_admin_test(sbox, basename, *varargs):
+  "run svn with args and compare against the specified output files"
+
+  ### no need to use sbox.build() -- we don't need a repos or working copy
+  ### for these tests.
+
+  exp_stdout, exp_stderr = load_expected_output(basename)
+
+  # special case the 'svn' test so that no extra arguments are added
+  if basename != 'svnadmin':
+    exit_code, actual_stdout, actual_stderr = svntest.main.run_svnadmin(*varargs)
+  else:
+    exit_code, actual_stdout, actual_stderr = svntest.main.run_command(svntest.main.svnadmin_binary,
+                                                                       1, False, *varargs)
+
+  # Delete and perform search and replaces on the lines from the
+  # actual and expected output that may differ between build
+  # environments.
+  exp_stdout    = process_lines(exp_stdout)
+  exp_stderr    = process_lines(exp_stderr)
+  actual_stdout = process_lines(actual_stdout)
+  actual_stderr = process_lines(actual_stderr)
+
+  svntest.verify.compare_and_display_lines("Standard output does not match.",
+                                           "STDOUT", exp_stdout, actual_stdout)
+
+  svntest.verify.compare_and_display_lines("Standard error does not match.",
+                                           "STDERR", exp_stderr, actual_stderr)
+
 def getopt_no_args(sbox):
   "run svn with no arguments"
   run_one_test(sbox, 'svn')
@@ -236,6 +265,14 @@ def getopt_config_option(sbox):
                                         '-u -p',
                                       sbox.repo_url)
 
+def getopt_admin__version(sbox):
+  "run svnadmin --version"
+  run_one_admin_test(sbox, 'svnadmin--version', '--version')
+
+def getopt_admin__version__quiet(sbox):
+  "run svnadmin --version --quiet"
+  run_one_admin_test(sbox, 'svnadmin--version--quiet', '--version', '--quiet')
+
 ########################################################################
 # Run the tests
 
@@ -251,6 +288,8 @@ test_list = [ None,
               getopt_help_bogus_cmd,
               getopt_help_log_switch,
               getopt_config_option,
+              getopt_admin__version,
+              getopt_admin__version__quiet,
             ]
 
 if __name__ == '__main__':
