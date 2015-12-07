@@ -103,6 +103,13 @@ ra_git_reporter_link_path(void *report_baton,
       svn_ra_git__session_t *sess = grb->session->priv;
       const char *repos_relpath;
 
+      repos_relpath = svn_uri_skip_ancestor(sess->repos_root_url, url,
+                                            pool);
+      if (!repos_relpath)
+        return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                 _("'%s' isn't a child of repository root "
+                                   "URL '%s'"),
+                                 url, sess->repos_root_url);
       SVN_ERR(svn_ra_get_path_relative_to_root(grb->session,
                                                &repos_relpath,
                                                url, pool));
@@ -323,14 +330,16 @@ ensure_local_session(svn_ra_session_t *session,
                                 sess->config, session->pool));
 
       if (sess->repos_relpath_buf->len)
-        SVN_ERR(svn_ra_reparent(sess->local_session,
+        SVN_ERR(sess->local_session->vtable->reparent(
+                                sess->local_session,
                                 svn_path_url_add_component2(
                                   sess->local_repos_root_url,
                                   sess->repos_relpath_buf->data,
                                   scratch_pool),
                                 scratch_pool));
 
-      SVN_ERR(svn_ra_get_latest_revnum(sess->local_session, &rev, scratch_pool));
+      SVN_ERR(sess->local_session->vtable->get_latest_revnum(
+                                sess->local_session, &rev, scratch_pool));
 
       if (rev <= 0)
         SVN_ERR(svn_ra_git__git_fetch(session, TRUE, scratch_pool));
@@ -399,7 +408,8 @@ ra_git_reparent(svn_ra_session_t *session,
   if (strcmp(sess->session_url_buf->data, url) == 0)
     return NULL;
 
-  SVN_ERR(svn_ra_reparent(sess->local_session,
+  SVN_ERR(sess->local_session->vtable->reparent(
+                          sess->local_session,
                           svn_path_url_add_component2(sess->local_repos_root_url,
                                                       relpath, pool),
                           pool));
@@ -431,7 +441,8 @@ ra_git_get_latest_revnum(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, pool));
 
   return svn_error_trace(
-    svn_ra_get_latest_revnum(sess->local_session, latest_revnum, pool));
+    sess->local_session->vtable->get_latest_revnum(sess->local_session,
+                                                   latest_revnum, pool));
 }
 
 static svn_error_t *
@@ -465,7 +476,8 @@ ra_git_get_dated_revision(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, pool));
 
   return svn_error_trace(
-    svn_ra_get_dated_revision(sess->local_session, revision, tm, pool));
+    sess->local_session->vtable->get_dated_revision(sess->local_session,
+                                                    revision, tm, pool));
 }
 
 static svn_error_t *
@@ -481,7 +493,8 @@ ra_git_change_rev_prop(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, pool));
 
   return svn_error_trace(
-    svn_ra_change_rev_prop2(sess->local_session, rev, name, old_value_p,
+    sess->local_session->vtable->change_rev_prop(
+                            sess->local_session, rev, name, old_value_p,
                             value, pool));
 }
 
@@ -518,7 +531,8 @@ ra_git_rev_proplist(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, pool));
 
   return svn_error_trace(
-    svn_ra_rev_proplist(sess->local_session, rev, props, pool));
+    sess->local_session->vtable->rev_proplist(sess->local_session, rev, props,
+                                              pool));
 }
 
 static svn_error_t *
@@ -533,7 +547,8 @@ ra_git_rev_prop(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, pool));
 
   return svn_error_trace(
-    svn_ra_rev_prop(sess->local_session, rev, name, value, pool));
+    sess->local_session->vtable->rev_prop(sess->local_session, rev, name,
+                                          value, pool));
 }
 
 static svn_error_t *
@@ -565,8 +580,9 @@ ra_git_get_mergeinfo(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, pool));
 
   return svn_error_trace(
-    svn_ra_get_mergeinfo(sess->local_session, catalog, paths, revision,
-                         inherit, include_descendants, pool));
+    sess->local_session->vtable->get_mergeinfo(sess->local_session, catalog,
+                                               paths, revision, inherit,
+                                               include_descendants, pool));
 }
 
 
@@ -589,7 +605,8 @@ ra_git_do_update(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, scratch_pool));
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, scratch_pool));
 
-  SVN_ERR(svn_ra_do_update3(sess->local_session,
+  SVN_ERR(sess->local_session->vtable->do_update(
+                            sess->local_session,
                             reporter, report_baton,
                             update_revision, update_target, depth,
                             send_copyfrom_args, ignore_ancestry,
@@ -624,13 +641,19 @@ ra_git_do_switch(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, scratch_pool));
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, scratch_pool));
 
-  SVN_ERR(svn_ra_get_path_relative_to_root(session, &repos_relpath,
-                                           switch_url, scratch_pool));
+  repos_relpath = svn_uri_skip_ancestor(sess->repos_root_url, switch_url,
+                                        scratch_pool);
+  if (!repos_relpath)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't a child of repository root "
+                               "URL '%s'"),
+                             switch_url, sess->repos_root_url);
 
   switch_url = svn_path_url_add_component2(sess->local_repos_root_url,
                                            repos_relpath, scratch_pool);
 
-  SVN_ERR(svn_ra_do_switch3(sess->local_session,
+  SVN_ERR(sess->local_session->vtable->do_switch(
+                            sess->local_session,
                             reporter, report_baton,
                             update_revision, update_target, depth,
                             switch_url, send_copyfrom_args,
@@ -663,7 +686,8 @@ ra_git_do_status(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, sess->scratch_pool));
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, sess->scratch_pool));
 
-  SVN_ERR(svn_ra_do_status2(sess->local_session,
+  SVN_ERR(sess->local_session->vtable->do_status(
+                            sess->local_session,
                             reporter, report_baton,
                             status_target, revision, depth,
                             status_editor, status_baton, pool));
@@ -698,13 +722,19 @@ ra_git_do_diff(svn_ra_session_t *session,
   SVN_ERR(svn_ra_git__git_fetch(session, TRUE, sess->scratch_pool));
 
 
-  SVN_ERR(svn_ra_get_path_relative_to_root(session, &repos_relpath,
-                                           switch_url, sess->scratch_pool));
+  repos_relpath = svn_uri_skip_ancestor(sess->repos_root_url, switch_url,
+                                        sess->scratch_pool);
+  if (!repos_relpath)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s' isn't a child of repository root "
+                               "URL '%s'"),
+                             switch_url, sess->repos_root_url);
 
   switch_url = svn_path_url_add_component2(sess->local_repos_root_url,
                                            repos_relpath, sess->scratch_pool);
 
-  SVN_ERR(svn_ra_do_diff3(sess->local_session,
+  SVN_ERR(sess->local_session->vtable->do_diff(
+                          sess->local_session,
                           reporter, report_baton,
                           update_revision, update_target, depth,
                           ignore_ancestry, text_deltas, switch_url,
@@ -739,7 +769,8 @@ ra_git_get_log(svn_ra_session_t *session,
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra_get_log2(sess->local_session, paths, start, end,
+    sess->local_session->vtable->get_log(
+                    sess->local_session, paths, start, end,
                     limit, discover_changed_paths, strict_node_history,
                     include_merged_revisions, revprops,
                     receiver, receiver_baton, pool));
@@ -761,7 +792,8 @@ ra_git_do_check_path(svn_ra_session_t *session,
   /* ### TODO: Check if we can use the branch name cache for easy result */
 
   return svn_error_trace(
-    svn_ra_check_path(sess->local_session, path, revision, kind, pool));
+    sess->local_session->vtable->check_path(sess->local_session, path,
+                                            revision, kind, pool));
 }
 
 
@@ -779,7 +811,8 @@ ra_git_stat(svn_ra_session_t *session,
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra_stat(sess->local_session, path, revision, dirent, pool));
+    sess->local_session->vtable->stat(sess->local_session, path, revision,
+                                      dirent, pool));
 }
 
 /* Getting just one file. */
@@ -799,8 +832,8 @@ ra_git_get_file(svn_ra_session_t *session,
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra_get_file(sess->local_session, path, revision, stream, fetched_rev,
-                    props, pool));
+    sess->local_session->vtable->get_file(sess->local_session, path, revision,
+                                          stream, fetched_rev, props, pool));
 }
 
 /* Getting a directory's entries */
@@ -821,8 +854,9 @@ ra_git_get_dir(svn_ra_session_t *session,
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra_get_dir2(sess->local_session, dirents, fetched_rev, props,
-                    path, revision, dirent_fields, pool));
+    sess->local_session->vtable->get_dir(sess->local_session, dirents,
+                                         fetched_rev, props, path, revision,
+                                         dirent_fields, pool));
 }
 
 
@@ -841,8 +875,9 @@ ra_git_get_locations(svn_ra_session_t *session,
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra_get_locations(sess->local_session, locations, path, peg_revision,
-                         location_revisions, pool));
+    sess->local_session->vtable->get_locations(sess->local_session, locations,
+                                               path, peg_revision,
+                                               location_revisions, pool));
 }
 
 
@@ -863,7 +898,8 @@ ra_git_get_location_segments(svn_ra_session_t *session,
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra_get_location_segments(sess->local_session, path, peg_revision,
+    sess->local_session->vtable->get_location_segments(
+                                 sess->local_session, path, peg_revision,
                                  start_rev, end_rev, receiver, receiver_baton,
                                  pool));
 }
@@ -883,8 +919,9 @@ ra_git_lock(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra_lock(sess->local_session, path_revs, comment, steal_lock, lock_func,
-                lock_baton, pool));
+    sess->local_session->vtable->lock(sess->local_session, path_revs, comment,
+                                      steal_lock, lock_func, lock_baton,
+                                      pool));
 }
 
 
@@ -902,8 +939,9 @@ ra_git_unlock(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra_unlock(sess->local_session, path_tokens, break_lock,
-                  lock_func, lock_baton, pool));
+    sess->local_session->vtable->unlock(sess->local_session, path_tokens,
+                                        break_lock, lock_func, lock_baton,
+                                        pool));
 }
 
 static svn_error_t *
@@ -918,7 +956,8 @@ ra_git_get_lock(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra_get_lock(sess->local_session, lock, path, pool));
+    sess->local_session->vtable->get_lock(sess->local_session, lock, path,
+                                          pool));
 }
 
 static svn_error_t *
@@ -934,7 +973,8 @@ ra_git_get_locks(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra_get_locks2(sess->local_session, locks, path, depth, pool));
+    sess->local_session->vtable->get_locks(sess->local_session, locks, path,
+                                           depth, pool));
 }
 
 
@@ -954,8 +994,9 @@ ra_git_replay(svn_ra_session_t *session,
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra_replay(sess->local_session, revision, low_water_mark, send_deltas,
-                  editor, edit_baton, pool));
+    sess->local_session->vtable->replay(sess->local_session, revision,
+                                        low_water_mark, send_deltas,
+                                        editor, edit_baton, pool));
 }
 
 
@@ -977,10 +1018,11 @@ ra_git_replay_range(svn_ra_session_t *session,
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra_replay_range(sess->local_session, start_revision, end_revision,
-                        low_water_mark, send_deltas,
-                        revstart_func, revfinish_func, replay_baton,
-                        pool));
+    sess->local_session->vtable->replay_range(sess->local_session,
+                                              start_revision, end_revision,
+                                              low_water_mark, send_deltas,
+                                              revstart_func, revfinish_func,
+                                              replay_baton, pool));
 }
 
 static svn_error_t *
@@ -1004,7 +1046,8 @@ ra_git_has_capability(svn_ra_session_t *session,
   }
 
   return svn_error_trace(
-    svn_ra_has_capability(sess->local_session, has, capability, pool));
+    sess->local_session->vtable->has_capability(sess->local_session, has,
+                                                capability, pool));
 }
 
 static svn_error_t *
@@ -1022,9 +1065,9 @@ ra_git_get_deleted_rev(svn_ra_session_t *session,
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra_get_deleted_rev(sess->local_session, path,
-                           peg_revision, end_revision,
-                           revision_deleted, pool));
+    sess->local_session->vtable->get_deleted_rev(sess->local_session, path,
+                                                 peg_revision, end_revision,
+                                                 revision_deleted, pool));
 }
 
 static svn_error_t *
@@ -1042,7 +1085,8 @@ ra_git_get_inherited_props(svn_ra_session_t *session,
   SVN_ERR(svn_ra_git__git_fetch(session, FALSE, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra_get_inherited_props(sess->local_session, iprops, path, revision,
+    sess->local_session->vtable->get_inherited_props(
+                               sess->local_session, iprops, path, revision,
                                result_pool, scratch_pool));
 }
 
@@ -1056,7 +1100,8 @@ ra_git_register_editor_shim_callbacks(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, sess->scratch_pool));
 
   return svn_error_trace(
-    svn_ra__register_editor_shim_callbacks(sess->local_session, callbacks));
+    sess->local_session->vtable->register_editor_shim_callbacks(
+                                          sess->local_session, callbacks));
 }
 
 
