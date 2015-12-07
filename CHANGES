@@ -1,3 +1,46 @@
+Version 1.9.3
+(15 Dec 2015, from /branches/1.9.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.9.3
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * svn: fix possible crash in auth credentials cache (r1705328)
+    * cleanup: avoid unneeded memory growth during pristine cleanup (r1706241)
+    * diff: fix crash when repository is on server root (r1705060 et al)
+    * fix translations for commit notifications (r1709389, r1709562)
+    * ra_serf: fix crash in multistatus parser (r1706323, r1706324)
+    * svn: report lock/unlock errors as failures (r1701598 et al)
+    * svn: cleanup user deleted external registrations (r1705843, r1710558)
+    * svn: allow simple resolving of binary file text conflicts (r1703581)
+    * svnlook: properly remove tempfiles on diff errors (r1711346)
+    * ra_serf: report built- and run-time versions of libserf (r1704847)
+    * ra_serf: set Content-Type header in outgoing requests (r1715224 et al)
+    * svn: fix merging deletes of svn:eol-style CRLF/CR files (r1703689 et al)
+    * ra_local: disable zero-copy code path (r1718167)
+
+  - Server-side bugfixes:
+    * mod_authz_svn: fix authz with mod_auth_kerb/mod_auth_ntlm (issue #4602)
+    * mod_dav_svn: fix display of process ID in cache statistics (r1709553)
+    * mod_dav_svn: use LimitXMLRequestBody for skel-encoded requests (r1687812)
+    * svnadmin dump: preserve no-op changes (r1709388 et al, issue #4598)
+    * fsfs: avoid unneeded I/O when opening transactions (r1715793)
+
+  - Bindings bugfixes:
+    * javahl: fix ABI incompatibilty with 1.8 (r1710104)
+    * javahl: allow non-absolute paths in SVNClient.vacuum (r1710215, r1710290)
+
+ Developer-visible changes:
+  - General:
+    * fix patch filter invocation in svn_client_patch() (r1706783)
+    * add @since information to config defines (r1706983, r1706999)
+    * fix running the tests in compatibility mode (r1706375)
+    * clarify documentation of svn_fs_node_created_rev() (r1717154)
+
+  - API changes:
+    * fix overflow detection in svn_stringbuf_remove and _replace (r1714358)
+    * don't ignore some of the parameters to svn_ra_svn_create_conn3 (r1714314)
+
+
 Version 1.9.2
 (30 Sep 2015, from /branches/1.9.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.9.2
@@ -792,6 +835,31 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: requires Java 1.6 (r1677003)
     * javahl: on OS X use /usr/libexec/java_home to find the JDK (r1675774)
     * javahl: allow compiling with a C++11 compiler (r1684412)
+
+
+Version 1.8.15
+(15 Dec 2015, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.15
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * gpg-agent: fix crash with non-canonical $HOME (r1691928, issue #4584)
+
+  - Client-side and server-side bugfixes:
+    * fix a segfault with old style text delta (r1618472 et al)
+
+  - Server-side bugfixes:
+    * fsfs: reduce memory allocation with Apache (r1591005 et al)
+    * mod_dav_svn: emit first log items as soon as possible (r1666965 et al)
+    * mod_dav_svn: use LimitXMLRequestBody for skel-encoded requests (r1687812)
+
+  - Bindings bugfixes:
+    * swig: fix memory corruption in svn_client_copy_source_t (r1694929)
+
+ Developer-visible changes:
+  - General:
+    * better configure-time detection of httpd authz fix (r1687304 et al)
+    * fix compilation with apr 1.2.x (r1701237)
 
 
 Version 1.8.14
