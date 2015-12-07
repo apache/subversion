@@ -59,13 +59,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1706375
-   Following up on r1700215: unbreak the test runner's compabitility mode.
-   Justification:
-     Impossible to run tests with older repository formats.
-   Votes:
-     +1: ivan, kotkov
-
  * r1717876, r1717877
    Fix svn_fs_contents_different on FSFS producing false negatives.
    Justification:
@@ -79,13 +72,6 @@ Candidate changes:
      ^/subversion/branches/1.9.x-fsfs-rep-comparison
    Votes:
      +1: stefan2
-
- * r1717154
-   Clarify documentation of svn_fs_node_created_rev().
-   Justification:
-     Have up-to-date documentation.
-   Votes:
-     +1: danielsh
 
  * r1705038
    Fix issue 4607, patch with missing newline removes newline when applied.
@@ -110,6 +96,19 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
+ * r1706375
+   Following up on r1700215: unbreak the test runner's compabitility mode.
+   Justification:
+     Impossible to run tests with older repository formats.
+   Votes:
+     +1: ivan, kotkov, stefan2
+
  * r1718167
    Disable zero-copy code path for ra_local update reporters.
    Justification:
@@ -122,10 +121,12 @@ Candidate changes:
      svn_ra_do_update3(), are aware of this limitation and pass-in
      the delta editor that doesn't access FSFS or caches.
    Votes:
-     +1: kotkov, ivan
+     +1: kotkov, ivan, stefan2
 
-Veto-blocked changes:
-=====================
+ * r1717154
+   Clarify documentation of svn_fs_node_created_rev().
+   Justification:
+     Have up-to-date documentation.
+   Votes:
+     +1: danielsh, stefan2
 
-Approved changes:
-=================
