@@ -779,7 +779,12 @@ request_body_to_string(svn_string_t **request_str,
 
   if (content_length)
     {
-      buf = svn_stringbuf_create_ensure(content_length, pool);
+      /* Do not allocate more than 1 MB until we receive request body. */
+      apr_size_t alloc_len = 1 * 1024 *1024;
+      if (content_length < alloc_len)
+        alloc_len = (apr_size_t) content_length;
+
+      buf = svn_stringbuf_create_ensure(alloc_len, pool);
     }
   else
     {
