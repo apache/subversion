@@ -457,7 +457,8 @@ ra_git_get_file_revs(svn_ra_session_t *session,
   SVN_ERR(ensure_local_session(session, pool));
 
   return svn_error_trace(
-    svn_ra_get_file_revs2(sess->local_session, path, start, end,
+    sess->local_session->vtable->get_file_revs(
+                          sess->local_session, path, start, end,
                           include_merged_revisions,
                           handler, handler_baton, pool));
 }
