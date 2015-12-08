@@ -33,6 +33,10 @@
 #include <unistd.h>   /* For getpid() */
 #endif
 
+#if APR_HAVE_PROCESS_H
+#include <process.h>
+#endif
+
 /* The apache headers define these and they conflict with our definitions. */
 #ifdef PACKAGE_BUGREPORT
 #undef PACKAGE_BUGREPORT
@@ -94,7 +98,7 @@ int dav_svn__status(request_rec *r)
             ap_ht_time(r->pool, apr_time_now(), DEFAULT_TIME_FORMAT, 0),
             "</dt>\n", SVN_VA_NULL);
 
-#if !defined(WIN32) && defined(HAVE_UNISTD_H) && defined(HAVE_GETPID)
+#if defined(WIN32) || (defined(HAVE_UNISTD_H) && defined(HAVE_GETPID))
   /* On Unix the server is generally multiple processes and this
      request only shows the status of the single process that handles
      the request. Ideally we would iterate over all processes but that
