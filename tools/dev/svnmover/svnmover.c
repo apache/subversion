@@ -1758,7 +1758,8 @@ do_switch(svnmover_wc_t *wc,
       tgt = svn_branch__el_rev_id_create(wc->working->branch,
                                          svn_branch__root_eid(wc->working->branch),
                                          SVN_INVALID_REVNUM, scratch_pool);
-      SVN_ERR(svnmover_branch_merge(wc->edit_txn, &wc->conflicts,
+      SVN_ERR(svnmover_branch_merge(wc->edit_txn, tgt->branch,
+                                    &wc->conflicts,
                                     src, tgt, yca, wc->pool, scratch_pool));
 
       if (svnmover_any_conflicts(wc->conflicts))
@@ -1793,7 +1794,7 @@ do_merge(svnmover_wc_t *wc,
                       src->eid, tgt->eid, yca->eid);
     }
 
-  SVN_ERR(svnmover_branch_merge(wc->edit_txn,
+  SVN_ERR(svnmover_branch_merge(wc->edit_txn, tgt->branch,
                                 &wc->conflicts,
                                 src, tgt, yca,
                                 wc->pool, scratch_pool));
@@ -3511,6 +3512,7 @@ execute(svnmover_wc_t *wc,
           {
             VERIFY_EID_EXISTS("merge", 0);
             VERIFY_EID_EXISTS("merge", 1);
+            VERIFY_REV_UNSPECIFIED("merge", 1);
             VERIFY_EID_EXISTS("merge", 2);
 
             SVN_ERR(do_merge(wc,
@@ -3525,6 +3527,7 @@ execute(svnmover_wc_t *wc,
           {
             VERIFY_EID_EXISTS("merge", 0);
             VERIFY_EID_EXISTS("merge", 1);
+            VERIFY_REV_UNSPECIFIED("merge", 1);
 
             SVN_ERR(do_auto_merge(wc,
                                   arg[0]->el_rev /*from*/,
