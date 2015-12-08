@@ -248,12 +248,9 @@ def load_index_sharded(sbox):
   sbox.build(create_wc=False)
   patch_format(sbox.repo_dir, shard_size=2)
 
-  # With --fsfs-packing, everything is already packed and we
-  # can skip this part.
-  if not svntest.main.options.fsfs_packing:
-    expected_output = ["Packing revisions in shard 0...done.\n"]
-    svntest.actions.run_and_verify_svnadmin(expected_output, [],
-                                            "pack", sbox.repo_dir)
+  expected_output = ["Packing revisions in shard 0...done.\n"]
+  svntest.actions.run_and_verify_svnadmin(expected_output, [],
+                                          "pack", sbox.repo_dir)
 
   # Read P2L index using svnfsfs.
   exit_code, items, errput = \
