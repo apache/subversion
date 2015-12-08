@@ -102,4 +102,10 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1718484
+   mod_dav_svn/status.c: Include unistd.h in the manner used in other files.
+   Justification:
+     Unbreaks the build on some of the platforms.
+   Votes:
+     +1: kotkov, rhuijben, philip
 
