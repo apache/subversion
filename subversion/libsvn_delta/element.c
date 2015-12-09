@@ -72,7 +72,8 @@ svn_eid__hash_sorted_first(apr_pool_t *pool,
 
   hi->array = svn_sort__hash(ht, comparison_func, pool);
   hi->i = 0;
-  hi->eid = *(int *)(APR_ARRAY_IDX(hi->array, hi->i, svn_sort__item_t).key);
+  hi->eid = *(const int *)(APR_ARRAY_IDX(hi->array, hi->i,
+                                         svn_sort__item_t).key);
   hi->val = APR_ARRAY_IDX(hi->array, hi->i, svn_sort__item_t).value;
   return hi;
 }
@@ -85,7 +86,8 @@ svn_eid__hash_sorted_next(svn_eid__hash_iter_t *hi)
     {
       return NULL;
     }
-  hi->eid = *(int *)(APR_ARRAY_IDX(hi->array, hi->i, svn_sort__item_t).key);
+  hi->eid = *(const int *)(APR_ARRAY_IDX(hi->array, hi->i,
+                                         svn_sort__item_t).key);
   hi->val = APR_ARRAY_IDX(hi->array, hi->i, svn_sort__item_t).value;
   return hi;
 }
