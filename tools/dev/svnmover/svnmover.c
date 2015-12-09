@@ -2063,27 +2063,42 @@ svn_branch__diff_func_t(svn_branch__subtree_t *left,
  * Recurse into sub-branches.
  */
 static svn_error_t *
-subtree_diff_r(svn_branch__subtree_t *left,
-               const char *left_bid,
-               const char *left_rrpath,
-               svn_branch__subtree_t *right,
-               const char *right_bid,
-               const char *right_rrpath,
+subtree_diff_r(svn_branch__state_t *left_branch,
+               int left_root_eid,
+               svn_branch__state_t *right_branch,
+               int right_root_eid,
                svn_branch__diff_func_t diff_func,
                const char *prefix,
                apr_pool_t *scratch_pool)
 {
+  svn_branch__subtree_t *left = NULL;
+  svn_branch__subtree_t *right = NULL;
   const char *left_str
-    = left ? apr_psprintf(scratch_pool, "%s:e%d at /%s",
-                          left_bid, left->tree->root_eid, left_rrpath)
-           : NULL;
+    = left_branch
+        ? apr_psprintf(scratch_pool, "%s:e%d at /%s",
+                       left_branch->bid, left_root_eid,
+                       svn_branch__get_root_rrpath(left_branch, scratch_pool))
+        : NULL;
   const char *right_str
-    = right ? apr_psprintf(scratch_pool, "%s:e%d at /%s",
-                           right_bid, right->tree->root_eid, right_rrpath)
+    = right_branch
+        ? apr_psprintf(scratch_pool, "%s:e%d at /%s",
+                       right_branch->bid, right_root_eid,
+                       svn_branch__get_root_rrpath(right_branch, scratch_pool))
             : NULL;
   const char *header;
   apr_hash_t *subbranches_l, *subbranches_r, *subbranches_all;
   apr_hash_index_t *hi;
+
+  if (left_branch)
+    {
+      SVN_ERR(svn_branch__get_subtree(left_branch, &left, left_root_eid,
+                                      scratch_pool));
+    }
+  if (right_branch)
+    {
+      SVN_ERR(svn_branch__get_subtree(right_branch, &right, right_root_eid,
+                                      scratch_pool));
+    }
 
   if (!left)
     {
@@ -2113,7 +2128,7 @@ subtree_diff_r(svn_branch__subtree_t *left,
                      scratch_pool, "--- diff branch %s : %s",
                      left_str, right_str);
         }
-      SVN_ERR(diff_func(left, left_bid, right, right_bid,
+      SVN_ERR(diff_func(left, left_branch->bid, right, right_branch->bid,
                         prefix, header,
                         scratch_pool));
     }
@@ -2127,41 +2142,30 @@ subtree_diff_r(svn_branch__subtree_t *left,
        hi; hi = apr_hash_next(hi))
     {
       int e = svn_eid__hash_this_key(hi);
-      svn_branch__subtree_t *sub_left = NULL, *sub_right = NULL;
-      const char *sub_left_bid = NULL, *sub_right_bid = NULL;
-      const char *sub_left_rrpath = NULL, *sub_right_rrpath = NULL;
+      svn_branch__state_t *left_subbranch = NULL, *right_subbranch = NULL;
+      int left_subbranch_eid = -1, right_subbranch_eid = -1;
 
       /* recurse */
-      if (left)
+      if (left_branch)
         {
-          sub_left = svn_branch__subtree_get_subbranch_at_eid(left, e,
-                                                              scratch_pool);
-          if (sub_left)
+          SVN_ERR(svn_branch__get_subbranch_at_eid(left_branch, &left_subbranch, e,
+                                                   scratch_pool));
+          if (left_subbranch)
             {
-              const char *relpath
-                = svn_element__tree_get_path_by_eid(left->tree, e, scratch_pool);
-
-              sub_left_bid = svn_branch__id_nest(left_bid, e, scratch_pool);
-              sub_left_rrpath = svn_relpath_join(left_rrpath, relpath,
-                                                 scratch_pool);
+              left_subbranch_eid = svn_branch__root_eid(left_subbranch);
             }
         }
-      if (right)
+      if (right_branch)
         {
-          sub_right = svn_branch__subtree_get_subbranch_at_eid(right, e,
-                                                               scratch_pool);
-          if (sub_right)
+          SVN_ERR(svn_branch__get_subbranch_at_eid(right_branch, &right_subbranch, e,
+                                                   scratch_pool));
+          if (right_subbranch)
             {
-              const char *relpath
-                = svn_element__tree_get_path_by_eid(right->tree, e, scratch_pool);
-
-              sub_right_bid = svn_branch__id_nest(right_bid, e, scratch_pool);
-              sub_right_rrpath = svn_relpath_join(right_rrpath, relpath,
-                                                  scratch_pool);
+              right_subbranch_eid = svn_branch__root_eid(right_subbranch);
             }
         }
-      SVN_ERR(subtree_diff_r(sub_left, sub_left_bid, sub_left_rrpath,
-                             sub_right, sub_right_bid, sub_right_rrpath,
+      SVN_ERR(subtree_diff_r(left_subbranch, left_subbranch_eid,
+                             right_subbranch, right_subbranch_eid,
                              diff_func, prefix, scratch_pool));
     }
   return SVN_NO_ERROR;
@@ -2180,8 +2184,6 @@ branch_diff_r(svn_branch__el_rev_id_t *left,
 {
   svn_branch__rev_bid_t *merge_history1, *merge_history2;
   const char *merge_history_difference;
-  svn_branch__subtree_t *s_left;
-  svn_branch__subtree_t *s_right;
 
   /* ### This should be done for each branch, e.g. in subtree_diff_r(). */
   /* ### This notification should start with a '--- diff branch ...' line. */
@@ -2195,17 +2197,8 @@ branch_diff_r(svn_branch__el_rev_id_t *left,
     svnmover_notify("%s--- merge history is different: %s", prefix,
                     merge_history_difference);
 
-  SVN_ERR(svn_branch__get_subtree(left->branch, &s_left, left->eid,
-                                  scratch_pool));
-  SVN_ERR(svn_branch__get_subtree(right->branch, &s_right, right->eid,
-                                  scratch_pool));
-
-  SVN_ERR(subtree_diff_r(s_left,
-                         svn_branch__get_id(left->branch, scratch_pool),
-                         svn_branch__get_root_rrpath(left->branch, scratch_pool),
-                         s_right,
-                         svn_branch__get_id(right->branch, scratch_pool),
-                         svn_branch__get_root_rrpath(right->branch, scratch_pool),
+  SVN_ERR(subtree_diff_r(left->branch, svn_branch__root_eid(left->branch),
+                         right->branch, svn_branch__root_eid(right->branch),
                          diff_func, prefix, scratch_pool));
   return SVN_NO_ERROR;
 }
