@@ -324,7 +324,6 @@ add_file_or_directory(const char *path,
       const char *fs_path;
       svn_fs_root_t *copy_root;
       svn_node_kind_t kind;
-      size_t repos_url_len;
       svn_repos_authz_access_t required;
 
       /* Copy requires recursive write access to the destination path
@@ -346,13 +345,11 @@ add_file_or_directory(const char *path,
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
       copy_path = svn_path_uri_decode(copy_path, subpool);
-      repos_url_len = strlen(eb->repos_url_decoded);
-      if (strncmp(copy_path, eb->repos_url_decoded, repos_url_len) != 0)
+      fs_path = svn_cstring_skip_prefix(copy_path, eb->repos_url_decoded);
+      if (!fs_path)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
            _("Source url '%s' is from different repository"), copy_path);
-
-      fs_path = apr_pstrdup(subpool, copy_path + repos_url_len);
 
       /* Now use the "fs_path" as an absolute path within the
          repository to make the copy from. */
