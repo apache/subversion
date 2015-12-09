@@ -22,6 +22,7 @@
 
 #include "svn_types.h"
 #include "svn_pools.h"
+#include "svn_dirent_uri.h"
 #include "svn_fs.h"
 
 #include "fs_git.h"
@@ -366,9 +367,9 @@ fs_git_node_history_prev(svn_fs_history_t **prev_history_p,
 
 static svn_error_t *
 fs_git_node_history_location(const char **path,
-                               svn_revnum_t *revision,
-                               svn_fs_history_t *history,
-                               apr_pool_t *pool)
+                             svn_revnum_t *revision,
+                             svn_fs_history_t *history,
+                             apr_pool_t *pool)
 {
   fs_git_node_history_t *gnh = history->fsap_data;
 
@@ -379,10 +380,11 @@ fs_git_node_history_location(const char **path,
                                        gnh->fs,
                                        git_commit_id(gnh->commit),
                                        gnh->pool, pool));
-      if (gnh->path && gnh->path[0] != '/')
-        {
-          gnh->path = apr_pstrcat(pool, "/", gnh->path, SVN_VA_NULL);
-        }
+
+      gnh->path = apr_pstrcat(gnh->pool, "/",
+                              svn_relpath_join(gnh->path, gnh->relpath,
+                                               pool),
+                              SVN_VA_NULL);
     }
 
   *path = apr_pstrdup(pool, gnh->path);
