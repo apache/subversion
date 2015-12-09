@@ -124,8 +124,8 @@ svn_element__payload_invariants(const svn_element__payload_t *payload)
        || payload->kind == svn_node_file
        || payload->kind == svn_node_symlink)
       && (payload->props
-          && (!payload->text == (payload->kind != svn_node_file))
-          && (!payload->target == (payload->kind != svn_node_symlink))))
+          && ((payload->kind == svn_node_file) == !!payload->text)
+          && ((payload->kind == svn_node_symlink) == !!payload->target)))
     return TRUE;
   return FALSE;
 }
