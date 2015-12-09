@@ -28,8 +28,6 @@
 #include <apr_pools.h>
 #include <apr_file_io.h>
 
-#include <git2.h>
-
 #include "svn_fs.h"
 #include "svn_delta.h"
 #include "svn_version.h"

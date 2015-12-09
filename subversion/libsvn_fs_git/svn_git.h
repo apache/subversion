@@ -20,10 +20,7 @@
  * ====================================================================
  */
 
-/* We compile in C89 mode, so the 'inline' keyword used by libgit2 isn't supported. */
-#define inline APR_INLINE
 #include <git2.h>
-#undef inline
 
 #include "svn_types.h"
 
