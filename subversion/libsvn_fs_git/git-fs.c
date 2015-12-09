@@ -68,7 +68,9 @@ fs_git_revision_proplist(apr_hash_t **table_p, svn_fs_t *fs, svn_revnum_t rev, s
   git_oid *oid;
   *table_p = apr_hash_make(result_pool);
 
-  SVN_ERR(svn_fs_git__db_fetch_oid(&found, &oid, NULL, fs, rev,
+  SVN_ERR(svn_fs_git__db_fetch_oid(&found, &oid, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   fs, rev,
                                    scratch_pool, scratch_pool));
 
   if (found)

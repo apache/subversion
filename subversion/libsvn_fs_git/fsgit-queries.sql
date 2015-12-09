@@ -49,6 +49,34 @@ WHERE revnum <= ?1
 ORDER BY revnum DESC
 LIMIT 1
 
+-- STMT_SELECT_COMMIT_BY_REV_WITH_SRC
+SELECT r.commit_id, r.relpath, r.revnum, p.revnum, o.revnum, o.relpath
+FROM REVMAP r
+LEFT JOIN REVMAP p ON p.revnum = (SELECT MAX(x.revnum) FROM
+                                  REVMAP x
+                                  WHERE x.revnum < r.revnum
+                                    AND x.relpath = r.relpath)
+LEFT JOIN REVMAP o ON o.revnum=r.prev_revnum AND o.relpath != r.relpath
+WHERE r.revnum <= ?1
+ORDER BY r.revnum DESC
+LIMIT 1
+
+/* Selects the target of the closest copy */
+-- STMT_SELECT_CLOSEST_BRANCH_COPY
+SELECT r.revnum AS revnum, r.relpath AS relpath
+FROM REVMAP r
+WHERE r.relpath != (SELECT o.relpath
+                    FROM revmap o
+                    WHERE o.revnum = r.prev_revnum)
+  AND r.relpath = ?1
+  AND r.revnum <= ?2
+UNION ALL
+SELECT t.revnum AS revnum, t.relpath AS relpath
+FROM TAGMAP t
+WHERE t.relpath= ?1 AND t.revnum >= ?2
+ORDER BY revnum DESC
+LIMIT 1
+
 -- STMT_INSERT_COMMIT
 INSERT INTO REVMAP (revnum, commit_id, relpath, prev_revnum)
 VALUES (?1, ?2, ?3, ?4)

@@ -94,6 +94,10 @@ svn_error_t *
 svn_fs_git__db_fetch_oid(svn_boolean_t *found,
                          const git_oid **oid,
                          const char **path,
+                         svn_boolean_t *is_add,
+                         svn_boolean_t *is_replace,
+                         const char **copyfrom_path,
+                         svn_revnum_t *copyfrom_rev,
                          svn_fs_t *fs,
                          svn_revnum_t revnum,
                          apr_pool_t *result_pool,
@@ -154,6 +158,15 @@ svn_error_t *
 svn_fs_git__db_set_uuid(svn_fs_t *fs,
                         const char *uuid,
                         apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_fs_git__db_branch_closest_copy(svn_revnum_t *revnum_p,
+                                   const char **relpath_p,
+                                   svn_fs_t *fs,
+                                   const char *relpath,
+                                   svn_revnum_t rev,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
 
 /* */
 svn_error_t *

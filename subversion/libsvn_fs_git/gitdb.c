@@ -101,6 +101,10 @@ svn_error_t *
 svn_fs_git__db_fetch_oid(svn_boolean_t *found,
                          const git_oid **oid,
                          const char **path,
+                         svn_boolean_t *is_add,
+                         svn_boolean_t *is_replace,
+                         const char **copyfrom_path,
+                         svn_revnum_t *copyfrom_rev,
                          svn_fs_t *fs,
                          svn_revnum_t revnum,
                          apr_pool_t *result_pool,
@@ -109,9 +113,13 @@ svn_fs_git__db_fetch_oid(svn_boolean_t *found,
   svn_fs_git_fs_t *fgf = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t got_row;
+  svn_boolean_t fetch_origin = (is_add || is_replace
+                                || copyfrom_path || copyfrom_rev);
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
-                                    STMT_SELECT_COMMIT_BY_REV));
+                                    fetch_origin
+                                    ? STMT_SELECT_COMMIT_BY_REV_WITH_SRC
+                                    : STMT_SELECT_COMMIT_BY_REV));
   SVN_ERR(svn_sqlite__bind_revnum(stmt, 1, revnum));
   SVN_ERR(svn_sqlite__step(&got_row, stmt));
 
@@ -128,6 +136,26 @@ svn_fs_git__db_fetch_oid(svn_boolean_t *found,
         }
       if (path)
         *path = svn_sqlite__column_text(stmt, 1, result_pool);
+
+      if (fetch_origin)
+        {
+          svn_boolean_t have_prev;
+          svn_boolean_t have_origin;
+
+          if (copyfrom_path)
+            *copyfrom_path = svn_sqlite__column_text(stmt, 5, result_pool);
+          if (copyfrom_rev)
+            *copyfrom_rev = svn_sqlite__column_revnum(stmt, 4);
+
+          have_prev = !svn_sqlite__column_is_null(stmt, 3);
+          have_origin = !svn_sqlite__column_is_null(stmt, 4);
+
+          if (is_add)
+            *is_add = !have_prev || have_origin;
+
+          if (is_replace)
+            *is_replace = have_origin && have_prev;
+        }
     }
   else
     {
@@ -137,6 +165,14 @@ svn_fs_git__db_fetch_oid(svn_boolean_t *found,
         *oid = NULL;
       if (path)
         *path = NULL;
+      if (is_add)
+        *is_add = FALSE;
+      if (is_replace)
+        *is_replace = FALSE;
+      if (copyfrom_path)
+        *copyfrom_path = NULL;
+      if (copyfrom_rev)
+        *copyfrom_rev = SVN_INVALID_REVNUM;
     }
   SVN_ERR(svn_sqlite__reset(stmt));
   return SVN_NO_ERROR;
@@ -336,6 +372,58 @@ svn_fs_git__db_find_branch(const char **branch_path,
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+db_branch_closest_copy(svn_revnum_t *revnum_p,
+                       const char **relpath_p,
+                       svn_fs_t *fs,
+                       const char *relpath,
+                       svn_revnum_t rev,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t got_row;
+
+  *revnum_p = SVN_INVALID_REVNUM;
+  *relpath_p = NULL;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, fgf->sdb,
+                                    STMT_SELECT_CLOSEST_BRANCH_COPY));
+  SVN_ERR(svn_sqlite__bind_text(stmt, 1, relpath));
+  SVN_ERR(svn_sqlite__bind_revnum(stmt, 1, rev));
+  SVN_ERR(svn_sqlite__step(&got_row, stmt));
+  if (got_row)
+    {
+      *revnum_p = svn_sqlite__column_revnum(stmt, 0);
+      *relpath_p = svn_sqlite__column_text(stmt, 1, result_pool);
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_git__db_branch_closest_copy(svn_revnum_t *revnum_p,
+                                   const char **relpath_p,
+                                   svn_fs_t *fs,
+                                   const char *relpath,
+                                   svn_revnum_t rev,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  svn_fs_git_fs_t *fgf = fs->fsap_data;
+
+  SVN_SQLITE__WITH_LOCK(db_branch_closest_copy(revnum_p, relpath_p,
+                                               fs, relpath, rev,
+                                               result_pool, scratch_pool),
+                        fgf->sdb);
+
+  return SVN_NO_ERROR;
+
+}
+
 
 static svn_error_t *
 db_tag_create(svn_revnum_t *tag_rev,

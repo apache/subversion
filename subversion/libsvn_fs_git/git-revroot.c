@@ -359,6 +359,9 @@ fs_git_paths_changed(apr_hash_t **changed_paths_p,
   git_tree *tree, *parent_tree;
   const git_oid *parent_oid;
   svn_boolean_t found;
+  const char *copyfrom_relpath;
+  svn_revnum_t copyfrom_rev;
+  svn_boolean_t is_add, is_replace;
 
   *changed_paths_p = changed_paths;
 
@@ -380,13 +383,46 @@ fs_git_paths_changed(apr_hash_t **changed_paths_p,
                                                pool);
       ch->node_kind = svn_node_dir;
       svn_hash_sets(changed_paths, "/branches", ch);
+
+      ch = svn_fs__path_change_create_internal(make_id(root, "tags",
+                                                       pool),
+                                               svn_fs_path_change_add,
+                                               pool);
+      ch->node_kind = svn_node_dir;
+      svn_hash_sets(changed_paths, "/tags", ch);
     }
 
   /* TODO: Add branch + tag changes */
 
   SVN_ERR(svn_fs_git__db_fetch_oid(&found, &cmt_oid, &branch_path,
+                                   &is_add, &is_replace,
+                                   &copyfrom_relpath, &copyfrom_rev,
                                    root->fs, root->rev,
                                    pool, pool));
+
+  if ((is_add || is_replace)
+      && (root->rev > 2 || strcmp(branch_path, "trunk") != 0))
+    {
+      svn_fs_path_change2_t *ch;
+
+      ch = svn_fs__path_change_create_internal(make_id(root, branch_path, pool),
+                                               svn_fs_path_change_add,
+                                               pool);
+      ch->node_kind = svn_node_dir;
+
+      if (is_replace)
+        ch->change_kind = svn_fs_path_change_replace;
+
+      ch->copyfrom_known = svn_tristate_true;
+
+      if (copyfrom_relpath)
+        {
+          ch->copyfrom_path = make_fspath(copyfrom_relpath, pool);
+          ch->copyfrom_rev = copyfrom_rev;
+        }
+
+      svn_hash_sets(changed_paths, make_fspath(branch_path, pool), ch);
+    }
 
   if (!found || !cmt_oid)
     return SVN_NO_ERROR; /* No actual changes in this revision*/
@@ -726,7 +762,44 @@ fs_git_node_origin_rev(svn_revnum_t *revision,
                        svn_fs_root_t *root, const char *path,
                        apr_pool_t *pool)
 {
-  *revision = root->rev; /* No common ancestry */
+  apr_pool_t *cur_pool = svn_pool_create(pool);
+  apr_pool_t *last_pool = svn_pool_create(pool);
+  svn_fs_history_t *hist;
+
+  /* For now, just fall back on the history walker which already handles
+     most (if not all) of the cases for specific paths */
+  SVN_ERR(fs_git_node_history(&hist, root, path, last_pool, cur_pool));
+
+  while (hist)
+    {
+      apr_pool_t *tmp_pool;
+      svn_fs_history_t *next;
+
+      svn_pool_clear(cur_pool);
+
+      SVN_ERR(svn_fs_history_prev2(&next, hist, TRUE, cur_pool, last_pool));
+
+      if (!next)
+        break;
+
+      hist = next;
+
+      tmp_pool = last_pool;
+      last_pool = cur_pool;
+      cur_pool = tmp_pool;
+    }
+
+  if (hist)
+    {
+      const char *path_dummy;
+      SVN_ERR(svn_fs_history_location(&path_dummy, revision, hist, last_pool));
+    }
+  else
+    *revision = root->rev;
+
+  svn_pool_destroy(last_pool);
+  svn_pool_destroy(cur_pool);
+
   return SVN_NO_ERROR;
 }
 
@@ -748,7 +821,9 @@ fs_git_node_created_path(const char **created_path,
     }
 
   SVN_ERR(find_branch(&commit, &relpath, root, path, pool));
-  SVN_ERR(svn_fs_git__db_fetch_oid(NULL, NULL, &basepath, root->fs, rev,
+  SVN_ERR(svn_fs_git__db_fetch_oid(NULL, NULL, &basepath,
+                                   NULL, NULL, NULL, NULL,
+                                   root->fs, rev,
                                    pool, pool));
 
   *created_path = make_fspath(svn_relpath_join(basepath, relpath, pool), pool);
@@ -784,8 +859,42 @@ fs_git_copied_from(svn_revnum_t *rev_p, const char **path_p,
                    svn_fs_root_t *root, const char *path,
                    apr_pool_t *pool)
 {
+  const git_commit *commit;
+  const char *relpath;
+
+  if (*path == '/')
+    path++;
+
   *rev_p = SVN_INVALID_REVNUM;
   *path_p = NULL;
+
+  SVN_ERR(find_branch(&commit, &relpath, root, path, pool));
+
+  if (!relpath)
+    return SVN_NO_ERROR; /* No history*/
+
+  if (!relpath[0])
+    {
+      svn_boolean_t found;
+      const char *rev_path;
+      const char *copyfrom_relpath;
+      svn_revnum_t copyfrom_rev;
+
+      SVN_ERR(svn_fs_git__db_fetch_oid(&found, NULL, &rev_path,
+                                       NULL, NULL,
+                                       &copyfrom_relpath, &copyfrom_rev,
+                                       root->fs, root->rev,
+                                       pool, pool));
+
+      if (!found || strcmp(rev_path, path) != 0)
+        return SVN_NO_ERROR; /* Not copied in this revision */
+
+      *rev_p = copyfrom_rev;
+      *path_p = make_fspath(copyfrom_relpath, pool);
+      return SVN_NO_ERROR;
+    }
+
+  /* TODO: Handle in-branch copies */
 
   return SVN_NO_ERROR;
 }
@@ -795,8 +904,40 @@ fs_git_closest_copy(svn_fs_root_t **root_p, const char **path_p,
                     svn_fs_root_t *root, const char *path,
                     apr_pool_t *pool)
 {
+  const git_commit *commit;
+  const char *relpath;
+  svn_revnum_t br_rev;
+  const char *br_relpath;
+
   *root_p = NULL;
   *path_p = NULL;
+
+  if (*path == '/')
+    path++;
+
+  if (*path == '\0')
+    return SVN_NO_ERROR; /* Root can't be copied */
+
+  SVN_ERR(find_branch(&commit, &relpath, root, path, pool));
+  if (!commit)
+    return SVN_NO_ERROR; /* Not inside a branch */
+
+  SVN_ERR(svn_fs_git__db_branch_closest_copy(&br_rev, &br_relpath,
+                                             root->fs, path,
+                                             root->rev,
+                                             pool, pool));
+
+  if (relpath && *relpath)
+    {
+      /* TODO: Check if we have a copy in the branch */
+    }
+  else if (SVN_IS_VALID_REVNUM(br_rev))
+    {
+      SVN_ERR(root->fs->vtable->revision_root(root_p, root->fs, br_rev,
+                                              pool));
+      *path_p = make_fspath(br_relpath, pool);
+      return SVN_NO_ERROR;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -807,7 +948,9 @@ fs_git_node_prop(svn_string_t **value_p, svn_fs_root_t *root,
                  const char *path, const char *propname,
                  apr_pool_t *pool)
 {
-  return svn_error_create(APR_ENOTIMPL, NULL, NULL);
+  *value_p = NULL;
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -1283,6 +1426,7 @@ svn_fs_git__revision_root(svn_fs_root_t **root_p, svn_fs_t *fs, svn_revnum_t rev
     {
       git_oid *oid;
       SVN_ERR(svn_fs_git__db_fetch_oid(&fgr->exact, &oid, &fgr->rev_path,
+                                       NULL, NULL, NULL, NULL,
                                        fs, rev, pool, pool));
 
       if (oid)
