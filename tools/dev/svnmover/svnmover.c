@@ -2197,8 +2197,8 @@ branch_diff_r(svn_branch__el_rev_id_t *left,
     svnmover_notify("%s--- merge history is different: %s", prefix,
                     merge_history_difference);
 
-  SVN_ERR(subtree_diff_r(left->branch, svn_branch__root_eid(left->branch),
-                         right->branch, svn_branch__root_eid(right->branch),
+  SVN_ERR(subtree_diff_r(left->branch, left->eid,
+                         right->branch, right->eid,
                          diff_func, prefix, scratch_pool));
   return SVN_NO_ERROR;
 }
