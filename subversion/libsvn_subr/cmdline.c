@@ -149,8 +149,12 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 #ifdef SVN_USE_WIN32_CRASHHANDLER
   if (!getenv("SVN_CMDLINE_DISABLE_CRASH_HANDLER"))
     {
+      ULONG stackGuarantee = 4096;
       /* Attach (but don't load) the crash handler */
       SetUnhandledExceptionFilter(svn__unhandled_exception_filter);
+
+      /* Guarantee 4 KB of stack in exception filter (for stack overflow) */
+      SetThreadStackGuarantee(&stackGuarantee); 
 
 #if _MSC_VER >= 1400
       /* ### This should work for VC++ 2002 (=1300) and later */
