@@ -209,8 +209,6 @@ svn_branch__get_subtree(svn_branch__state_t *branch,
                                                       result_pool);
   new_subtree
     = svn_branch__subtree_create(element_tree->e_map, eid, result_pool);
-  new_subtree->predecessor = svn_branch__rev_bid_dup(branch->predecessor,
-                                                     result_pool);
 
   /* Add subbranches */
   SVN_ERR(svn_branch__get_immediate_subbranch_eids(branch, &subbranch_eids,
@@ -303,7 +301,6 @@ svn_branch__instantiate_elements_r(svn_branch__state_t *to_branch,
                                             scratch_pool);
         new_branch = svn_branch__txn_add_new_branch(to_branch->txn,
                                                     new_branch_id,
-                                                    this_subtree->predecessor,
                                                     this_subtree->tree->root_eid,
                                                     scratch_pool);
 
@@ -480,14 +477,13 @@ nested_branch_txn_add_branch(svn_branch__txn_t *txn,
 static svn_branch__state_t *
 nested_branch_txn_add_new_branch(svn_branch__txn_t *txn,
                                  const char *bid,
-                                 svn_branch__rev_bid_t *predecessor,
                                  int root_eid,
                                  apr_pool_t *scratch_pool)
 {
   /* Just forwarding: nothing more is needed. */
   svn_branch__state_t *new_branch
     = svn_branch__txn_add_new_branch(txn->priv->wrapped_txn,
-                                     bid, predecessor, root_eid,
+                                     bid, root_eid,
                                      scratch_pool);
 
   return new_branch;
@@ -539,7 +535,6 @@ nested_branch_txn_new_eid(svn_branch__txn_t *txn,
 static svn_error_t *
 nested_branch_txn_open_branch(svn_branch__txn_t *txn,
                               svn_branch__state_t **new_branch_p,
-                              svn_branch__rev_bid_t *predecessor,
                               const char *new_branch_id,
                               int root_eid,
                               apr_pool_t *result_pool,
@@ -547,10 +542,10 @@ nested_branch_txn_open_branch(svn_branch__txn_t *txn,
 {
   /* Just forwarding: nothing more is needed. */
   SVN_ERR(svn_branch__txn_open_branch(txn->priv->wrapped_txn,
-                                      new_branch_p, predecessor,
+                                      new_branch_p,
                                       new_branch_id, root_eid,
                                       result_pool,
-                                     scratch_pool));
+                                      scratch_pool));
   return SVN_NO_ERROR;
 }
 

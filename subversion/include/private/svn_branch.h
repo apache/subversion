@@ -211,18 +211,14 @@ svn_branch__txn_new_eid(svn_branch__txn_t *txn,
  * This method returns a mutable 'branch state' object which is a part of
  * the txn.
  *
- * When adding a new branch, PREDECESSOR and ROOT_EID are used.
+ * When adding a new branch, ROOT_EID is used.
  *
- * ### When opening ('finding') an existing branch, they must match it
- *     (else throw an error)? But this is problematic: we should't care
- *     exactly where it was branched from, as long as it was branched from
- *     ... roughly 'the right branch'? ... perhaps meaning one with a common
- *     ancestor?
+ * ### When opening ('finding') an existing branch, ROOT_EID should match
+ *     it. (Should we check, and throw an error if not?)
  */
 svn_error_t *
 svn_branch__txn_open_branch(svn_branch__txn_t *txn,
                             svn_branch__state_t **new_branch_p,
-                            svn_branch__rev_bid_t *predecessor,
                             const char *new_branch_id,
                             int root_eid,
                             apr_pool_t *result_pool,
@@ -326,10 +322,6 @@ struct svn_branch__state_t
   /* The branch identifier (starting with 'B') */
   const char *bid;
 
-  /* The previous location in the lifeline of this branch. */
-  /* (REV = -1 means "in this txn") */
-  svn_branch__rev_bid_t *predecessor;
-
   /* The revision to which this branch state belongs */
   svn_branch__txn_t *txn;
 
@@ -410,7 +402,6 @@ svn_branch__txn_add_branch(svn_branch__txn_t *txn,
 svn_branch__state_t *
 svn_branch__txn_add_new_branch(svn_branch__txn_t *txn,
                                const char *bid,
-                               svn_branch__rev_bid_t *predecessor,
                                int root_eid,
                                apr_pool_t *scratch_pool);
 
@@ -496,6 +487,24 @@ svn_branch__rev_bid_dup(const svn_branch__rev_bid_t *old_id,
 svn_boolean_t
 svn_branch__rev_bid_equal(const svn_branch__rev_bid_t *id1,
                           const svn_branch__rev_bid_t *id2);
+
+typedef struct svn_branch__history_t
+{
+  /* The immediate parents of this state in the branch/merge graph.
+     Hash of (BID -> svn_branch__rev_bid_t). */
+  apr_hash_t *parents;
+} svn_branch__history_t;
+
+svn_branch__history_t *
+svn_branch__history_create_empty(apr_pool_t *result_pool);
+
+svn_branch__history_t *
+svn_branch__history_create(apr_hash_t *parents,
+                           apr_pool_t *result_pool);
+
+svn_branch__history_t *
+svn_branch__history_dup(const svn_branch__history_t *old,
+                        apr_pool_t *result_pool);
 
 /* Return the mapping of elements in branch BRANCH.
  */
@@ -609,26 +618,19 @@ svn_error_t *
 svn_branch__state_purge(svn_branch__state_t *branch,
                         apr_pool_t *scratch_pool);
 
-/* Get the merge ancestor(s).
+/* Get the merge history of BRANCH.
  */
 svn_error_t *
-svn_branch__state_get_merge_ancestor(svn_branch__state_t *branch,
-                                     svn_branch__rev_bid_t **merge_ancestor_p,
-                                     apr_pool_t *result_pool);
+svn_branch__state_get_history(svn_branch__state_t *branch,
+                              svn_branch__history_t **merge_history_p,
+                              apr_pool_t *result_pool);
 
-/* Set a merge ancestor.
- *
- * Currently only one is allowed; this overwrites it if it was already set.
- *
- * TODO: Allow adding multiple ancestors on different branches. When
- * there is an existing ancestor that is earlier along the same branch
- * (line of history) as MERGE_ANCESTOR, then update (replace) it instead
- * of just adding another one.
+/* Set the merge history of BRANCH.
  */
 svn_error_t *
-svn_branch__state_add_merge_ancestor(svn_branch__state_t *branch,
-                                     const svn_branch__rev_bid_t *merge_ancestor,
-                                     apr_pool_t *scratch_pool);
+svn_branch__state_set_history(svn_branch__state_t *branch,
+                              const svn_branch__history_t *merge_history,
+                              apr_pool_t *scratch_pool);
 
 /* Return the branch-relative path of element EID in BRANCH.
  *

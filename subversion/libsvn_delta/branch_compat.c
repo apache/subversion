@@ -1801,14 +1801,13 @@ compat_branch_txn_add_branch(svn_branch__txn_t *txn,
 static svn_branch__state_t *
 compat_branch_txn_add_new_branch(svn_branch__txn_t *txn,
                                  const char *bid,
-                                 svn_branch__rev_bid_t *predecessor,
                                  int root_eid,
                                  apr_pool_t *scratch_pool)
 {
   /* Just forwarding: nothing more is needed. */
   svn_branch__state_t *new_branch
     = svn_branch__txn_add_new_branch(txn->priv->txn,
-                                     bid, predecessor, root_eid,
+                                     bid, root_eid,
                                      scratch_pool);
 
   return new_branch;
@@ -1868,7 +1867,6 @@ compat_branch_txn_finalize_eids(svn_branch__txn_t *txn,
 static svn_error_t *
 compat_branch_txn_open_branch(svn_branch__txn_t *txn,
                               svn_branch__state_t **new_branch_p,
-                              svn_branch__rev_bid_t *predecessor,
                               const char *new_branch_id,
                               int root_eid,
                               apr_pool_t *result_pool,
@@ -1876,7 +1874,7 @@ compat_branch_txn_open_branch(svn_branch__txn_t *txn,
 {
   /* Just forwarding: nothing more is needed. */
   SVN_ERR(svn_branch__txn_open_branch(txn->priv->txn,
-                                      new_branch_p, predecessor,
+                                      new_branch_p,
                                       new_branch_id, root_eid,
                                       result_pool,
                                       scratch_pool));

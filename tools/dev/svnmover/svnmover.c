@@ -539,31 +539,115 @@ rev_bid_str(const svn_branch__rev_bid_t *rev_bid,
   return apr_psprintf(result_pool, "r%ld.%s", rev_bid->rev, rev_bid->bid);
 }
 
+/*  */
+static const char *
+list_parents(svn_branch__history_t *history,
+             apr_pool_t *result_pool)
+{
+  const char *result = "";
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(result_pool, history->parents);
+       hi; hi = apr_hash_next(hi))
+    {
+      svn_branch__rev_bid_t *parent = apr_hash_this_val(hi);
+      const char *parent_str = rev_bid_str(parent, result_pool);
+
+      result = apr_psprintf(result_pool, "%s%s%s",
+                            result, result[0] ? ", " : "", parent_str);
+    }
+  return result;
+}
+
+/* Return a string representation of HISTORY.
+ */
+static const char *
+history_str(svn_branch__history_t *history,
+            apr_pool_t *result_pool)
+{
+  const char *result
+    = list_parents(history, result_pool);
+
+  return apr_psprintf(result_pool, "parents={%s}", result);
+}
+
+/*
+ */
+static svn_error_t *
+svn_branch__history_add_parent(svn_branch__history_t *history,
+                               svn_revnum_t rev,
+                               const char *branch_id,
+                               apr_pool_t *scratch_pool)
+{
+  apr_pool_t *pool = apr_hash_pool_get(history->parents);
+  svn_branch__rev_bid_t *new_parent;
+
+  new_parent = svn_branch__rev_bid_create(rev, branch_id, pool);
+  svn_hash_sets(history->parents, apr_pstrdup(pool, branch_id), new_parent);
+  return SVN_NO_ERROR;
+}
+
 /* Set *DIFFERENCE_P to some sort of indication of the difference between
- * MERGE_HISTORY1 and MERGE_HISTORY2, or to null if there is no difference.
+ * HISTORY1 and HISTORY2, or to null if there is no difference.
  *
  * Inputs may be null.
  */
 static svn_error_t *
-merge_history_diff(const char **difference_p,
-                   svn_branch__rev_bid_t *merge_history1,
-                   svn_branch__rev_bid_t *merge_history2,
-                   apr_pool_t *result_pool)
+history_diff(const char **difference_p,
+             svn_branch__history_t *history1,
+             svn_branch__history_t *history2,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
 {
-  *difference_p = NULL;
-  if ((merge_history1 || merge_history2)
-      && !(merge_history1 && merge_history2
-           && svn_branch__rev_bid_equal(merge_history1, merge_history2)))
+  apr_hash_t *combined;
+  apr_hash_index_t *hi;
+  svn_boolean_t different = FALSE;
+
+  if (! history1)
+    history1 = svn_branch__history_create_empty(scratch_pool);
+  if (! history2)
+    history2 = svn_branch__history_create_empty(scratch_pool);
+  combined = hash_overlay(history1->parents,
+                          history2->parents);
+
+  for (hi = apr_hash_first(scratch_pool, combined);
+       hi; hi = apr_hash_next(hi))
+    {
+      const char *bid = apr_hash_this_key(hi);
+      svn_branch__rev_bid_t *parent1 = svn_hash_gets(history1->parents, bid);
+      svn_branch__rev_bid_t *parent2 = svn_hash_gets(history2->parents, bid);
+
+      if (!(parent1 && parent2
+            && svn_branch__rev_bid_equal(parent1, parent2)))
+        {
+          different = TRUE;
+          break;
+        }
+    }
+  if (different)
     {
       *difference_p = apr_psprintf(result_pool, "%s -> %s",
-                                   rev_bid_str(merge_history1, result_pool),
-                                   rev_bid_str(merge_history2, result_pool));
+                                   history_str(history1, scratch_pool),
+                                   history_str(history2, scratch_pool));
+    }
+  else
+    {
+      *difference_p = NULL;
     }
   return SVN_NO_ERROR;
 }
 
 /* Set *IS_CHANGED to true if EDIT_TXN differs from its base txn, else to
  * false.
+ *
+ * Notice only a difference in content: branches deleted or added, or branch
+ * contents different. Ignore any differences in branch history metadata.
+ *
+ * ### At least we must ignore the "this branch" parent changing from
+ *     old-revision to new-revision. However we should probably notice
+ *     if a merge parent is added (which means we want to make a commit
+ *     recording this merge, even if no content changed), and perhaps
+ *     other cases.
  */
 static svn_error_t *
 txn_is_changed(svn_branch__txn_t *edit_txn,
@@ -602,9 +686,6 @@ txn_is_changed(svn_branch__txn_t *edit_txn,
       svn_branch__state_t *base_branch
         = svn_branch__txn_get_branch_by_id(base_txn, edit_branch->bid,
                                            scratch_pool);
-      svn_branch__rev_bid_t *edit_branch_merge_history;
-      svn_branch__rev_bid_t *base_branch_merge_history;
-      const char *merge_history_difference;
       svn_element__tree_t *edit_branch_elements, *base_branch_elements;
       apr_hash_t *diff;
 
@@ -614,20 +695,29 @@ txn_is_changed(svn_branch__txn_t *edit_txn,
           return SVN_NO_ERROR;
         }
 
-      /* Compare merge histories */
-      SVN_ERR(svn_branch__state_get_merge_ancestor(
-                edit_branch, &edit_branch_merge_history, scratch_pool));
-      SVN_ERR(svn_branch__state_get_merge_ancestor(
-                base_branch, &base_branch_merge_history, scratch_pool));
-      SVN_ERR(merge_history_diff(&merge_history_difference,
-                                 edit_branch_merge_history,
-                                 base_branch_merge_history,
-                                 scratch_pool));
-      if (merge_history_difference)
+#if 0
+      /* Compare histories */
+      /* ### No, don't. Ignore any differences in branch history metadata. */
+      {
+      svn_branch__history_t *edit_branch_history;
+      svn_branch__history_t *base_branch_history;
+      const char *history_difference;
+
+      SVN_ERR(svn_branch__state_get_history(edit_branch, &edit_branch_history,
+                                            scratch_pool));
+      SVN_ERR(svn_branch__state_get_history(base_branch, &base_branch_history,
+                                            scratch_pool));
+      SVN_ERR(history_diff(&history_difference,
+                           edit_branch_history,
+                           base_branch_history,
+                           scratch_pool, scratch_pool));
+      if (history_difference)
         {
           *is_changed = TRUE;
           return SVN_NO_ERROR;
         }
+      }
+#endif
 
       /* Compare elements */
       SVN_ERR(svn_branch__state_get_elements(edit_branch, &edit_branch_elements,
@@ -726,8 +816,11 @@ get_union_of_subbranches(apr_hash_t **all_subbranches_p,
                                     svn_branch__root_eid(right_branch),
                                     result_pool));
   all_subbranches
-    = left_branch ? hash_overlay(s_left->subbranches, s_right->subbranches)
-                  : s_right->subbranches;
+    = (s_left && s_right) ? hash_overlay(s_left->subbranches,
+                                         s_right->subbranches)
+        : s_left ? s_left->subbranches
+        : s_right ? s_right->subbranches
+        : apr_hash_make(result_pool);
 
   *all_subbranches_p = all_subbranches;
   return SVN_NO_ERROR;
@@ -765,6 +858,31 @@ svn_branch__replay(svn_branch__txn_t *edit_txn,
          element where it was attached */
     }
 
+  /* Replay any change in history */
+  /* ### Actually, here we just set the output history to the right-hand-side
+     history if that differs from left-hand-side.
+     This doesn't seem right, in general. It's OK if we're just copying
+     a txn into a fresh txn, as for example we do during commit. */
+  {
+    svn_branch__history_t *left_history = NULL;
+    svn_branch__history_t *right_history = NULL;
+    const char *history_difference;
+
+    if (left_branch)
+      SVN_ERR(svn_branch__state_get_history(left_branch, &left_history,
+                                            scratch_pool));
+    if (right_branch)
+      SVN_ERR(svn_branch__state_get_history(right_branch, &right_history,
+                                            scratch_pool));
+    SVN_ERR(history_diff(&history_difference, left_history, right_history,
+                         scratch_pool, scratch_pool));
+    if (history_difference)
+      {
+        SVN_ERR(svn_branch__state_set_history(edit_branch, right_history,
+                                              scratch_pool));
+      }
+  }
+
   /* Replay its subbranches, recursively.
      (If we're deleting the current branch, we don't also need to
      explicitly delete its subbranches... do we?) */
@@ -797,7 +915,6 @@ svn_branch__replay(svn_branch__txn_t *edit_txn,
                 = svn_branch__id_nest(edit_branch->bid, this_eid, scratch_pool);
 
               SVN_ERR(svn_branch__txn_open_branch(edit_txn, &edit_subbranch,
-                                                  right_subbranch->predecessor,
                                                   new_branch_id,
                                                   svn_branch__root_eid(right_subbranch),
                                                   scratch_pool, scratch_pool));
@@ -812,27 +929,6 @@ svn_branch__replay(svn_branch__txn_t *edit_txn,
             }
         }
     }
-
-  /* Replay any change in merge history */
-  {
-    svn_branch__rev_bid_t *left_merge_history = NULL;
-    svn_branch__rev_bid_t *right_merge_history = NULL;
-    const char *merge_history_difference;
-
-    if (left_branch)
-      SVN_ERR(svn_branch__state_get_merge_ancestor(
-                left_branch, &left_merge_history, scratch_pool));
-    if (right_branch)
-      SVN_ERR(svn_branch__state_get_merge_ancestor(
-                right_branch, &right_merge_history, scratch_pool));
-    SVN_ERR(merge_history_diff(&merge_history_difference,
-              left_merge_history, right_merge_history, scratch_pool));
-    if (merge_history_difference)
-      {
-        SVN_ERR(svn_branch__state_add_merge_ancestor(
-                  edit_branch, right_merge_history, scratch_pool));
-      }
-  }
 
   return SVN_NO_ERROR;
 }
@@ -993,13 +1089,17 @@ update_wc_base_r(svnmover_wc_t *wc,
             {
               const char *new_branch_id
                 = svn_branch__id_nest(base_branch->bid, eid, scratch_pool);
+              svn_branch__history_t *history;
 
               SVN_ERR(svn_branch__txn_open_branch(base_branch->txn,
                                                   &base_subbranch,
-                                                  work_subbranch->predecessor,
                                                   new_branch_id,
                                                   svn_branch__root_eid(work_subbranch),
                                                   scratch_pool, scratch_pool));
+              SVN_ERR(svn_branch__state_get_history(
+                        work_subbranch, &history, scratch_pool));
+              SVN_ERR(svn_branch__state_set_history(
+                        base_subbranch, history, scratch_pool));
             }
           SVN_ERR(update_wc_base_r(wc, base_subbranch, work_subbranch,
                                    new_rev, scratch_pool));
@@ -1785,7 +1885,7 @@ do_merge(svnmover_wc_t *wc,
          svn_branch__el_rev_id_t *yca,
          apr_pool_t *scratch_pool)
 {
-  svn_branch__rev_bid_t *new_ancestor;
+  svn_branch__history_t *history;
 
   if (src->eid != tgt->eid || src->eid != yca->eid)
     {
@@ -1799,15 +1899,15 @@ do_merge(svnmover_wc_t *wc,
                                 src, tgt, yca,
                                 wc->pool, scratch_pool));
 
-  /* Update the merge history */
+  /* Update the history */
+  SVN_ERR(svn_branch__state_get_history(tgt->branch, &history, scratch_pool));
   /* ### Assume this was a complete merge -- i.e. all changes up to YCA were
-     previously merged, so now SRC is a new ancestor. */
-  new_ancestor = svn_branch__rev_bid_create(src->rev, src->branch->bid,
-                                              scratch_pool);
-  SVN_ERR(svn_branch__state_add_merge_ancestor(wc->working->branch, new_ancestor,
-                                               scratch_pool));
-  svnmover_notify_v(_("--- recorded merge ancestor as: %ld.%s"),
-                    new_ancestor->rev, new_ancestor->bid);
+     previously merged, so now SRC is a new parent. */
+  SVN_ERR(svn_branch__history_add_parent(history, src->rev, src->branch->bid,
+                                         scratch_pool));
+  SVN_ERR(svn_branch__state_set_history(tgt->branch, history, scratch_pool));
+  svnmover_notify_v(_("--- recorded merge parent as: %ld.%s"),
+                    src->rev, src->branch->bid);
 
   if (svnmover_any_conflicts(wc->conflicts))
     {
@@ -1827,8 +1927,10 @@ do_auto_merge(svnmover_wc_t *wc,
 {
   svn_branch__rev_bid_t *yca;
 
-  SVN_ERR(svn_branch__state_get_merge_ancestor(tgt->branch, &yca,
-                                               scratch_pool));
+  /* Find the Youngest Common Ancestor.
+     ### TODO */
+  yca = NULL;
+
   if (yca)
     {
       svn_branch__repos_t *repos = wc->working->branch->txn->repos;
@@ -1851,6 +1953,48 @@ do_auto_merge(svnmover_wc_t *wc,
                                 "no YCA found"));
     }
 
+  return SVN_NO_ERROR;
+}
+
+/* Show the difference in history metadata between BRANCH1 and BRANCH2.
+ *
+ * If HEADER is non-null, print *HEADER and then set *HEADER to null.
+ *
+ * BRANCH1 and/or BRANCH2 may be null.
+ */
+static svn_error_t *
+show_history_r(svn_branch__state_t *branch,
+               const char *prefix,
+               apr_pool_t *scratch_pool)
+{
+  svn_branch__history_t *history = NULL;
+  svn_branch__subtree_t *subtree = NULL;
+  apr_hash_index_t *hi;
+
+  if (! branch)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_branch__state_get_history(branch, &history, scratch_pool));
+  svnmover_notify("%s%s: %s", prefix,
+                  branch->bid, history_str(history, scratch_pool));
+
+  /* recurse into each subbranch */
+  SVN_ERR(svn_branch__get_subtree(branch, &subtree,
+                                  svn_branch__root_eid(branch),
+                                  scratch_pool));
+   for (hi = apr_hash_first(scratch_pool, subtree->subbranches);
+       hi; hi = apr_hash_next(hi))
+    {
+      int e = svn_eid__hash_this_key(hi);
+      svn_branch__state_t *subbranch = NULL;
+
+      SVN_ERR(svn_branch__get_subbranch_at_eid(branch, &subbranch, e,
+                                               scratch_pool));
+      if (subbranch)
+        {
+          SVN_ERR(show_history_r(subbranch, prefix, scratch_pool));
+        }
+    }
   return SVN_NO_ERROR;
 }
 
@@ -2182,21 +2326,6 @@ branch_diff_r(svn_branch__el_rev_id_t *left,
               const char *prefix,
               apr_pool_t *scratch_pool)
 {
-  svn_branch__rev_bid_t *merge_history1, *merge_history2;
-  const char *merge_history_difference;
-
-  /* ### This should be done for each branch, e.g. in subtree_diff_r(). */
-  /* ### This notification should start with a '--- diff branch ...' line. */
-  SVN_ERR(svn_branch__state_get_merge_ancestor(left->branch, &merge_history1,
-                                               scratch_pool));
-  SVN_ERR(svn_branch__state_get_merge_ancestor(right->branch, &merge_history2,
-                                               scratch_pool));
-  SVN_ERR(merge_history_diff(&merge_history_difference,
-                             merge_history1, merge_history2, scratch_pool));
-  if (merge_history_difference)
-    svnmover_notify("%s--- merge history is different: %s", prefix,
-                    merge_history_difference);
-
   SVN_ERR(subtree_diff_r(left->branch, left->eid,
                          right->branch, right->eid,
                          diff_func, prefix, scratch_pool));
@@ -2380,8 +2509,40 @@ do_cat(svn_branch__el_rev_id_t *file_el_rev,
   return SVN_NO_ERROR;
 }
 
+/* Find the main parent of branch-state BRANCH. That means:
+ *   - the only parent (in the case of straight history or branching), else
+ *   - the parent with the same branch id (in the case of normal merging), else
+ *   - none (in the case of a new unrelated branch, or a new branch formed
+ *     by merging two or more other branches).
+ */
+static svn_error_t *
+find_branch_main_parent(svn_branch__state_t *branch,
+                        svn_branch__rev_bid_t **predecessor_p,
+                        apr_pool_t *result_pool)
+{
+  svn_branch__history_t *history;
+  svn_branch__rev_bid_t *our_own_history;
+  svn_branch__rev_bid_t *predecessor = NULL;
+
+  SVN_ERR(svn_branch__state_get_history(branch, &history, result_pool));
+  if (apr_hash_count(history->parents) == 1)
+    {
+      apr_hash_index_t *hi = apr_hash_first(result_pool, history->parents);
+
+      predecessor = apr_hash_this_val(hi);
+    }
+  else if ((our_own_history = svn_hash_gets(history->parents, branch->bid)))
+    {
+      predecessor = our_own_history;
+    }
+
+  if (predecessor_p)
+    *predecessor_p = predecessor;
+  return SVN_NO_ERROR;
+}
+
 /* Set *NEW_EL_REV_P to the location where OLD_EL_REV was in the previous
- * revision. Branching is followed.
+ * revision. Follow the "main line" of any branching in its history.
  *
  * If the same EID...
  */
@@ -2391,22 +2552,15 @@ svn_branch__find_predecessor_el_rev(svn_branch__el_rev_id_t **new_el_rev_p,
                                     apr_pool_t *result_pool)
 {
   const svn_branch__repos_t *repos = old_el_rev->branch->txn->repos;
-  svn_branch__rev_bid_t *predecessor = old_el_rev->branch->predecessor;
+  svn_branch__rev_bid_t *predecessor;
   svn_branch__state_t *branch;
 
+  SVN_ERR(find_branch_main_parent(old_el_rev->branch,
+                                  &predecessor, result_pool));
   if (! predecessor)
     {
       *new_el_rev_p = NULL;
       return SVN_NO_ERROR;
-    }
-
-  /* A predecessor can point at another branch within the same revision.
-     We don't want that result, so iterate until we find another revision. */
-  while (predecessor->rev == old_el_rev->rev)
-    {
-      branch = svn_branch__txn_get_branch_by_id(
-                 old_el_rev->branch->txn, predecessor->bid, result_pool);
-      predecessor = branch->predecessor;
     }
 
   SVN_ERR(svn_branch__repos_get_branch_by_id(&branch,
@@ -2437,6 +2591,8 @@ do_log(svn_branch__el_rev_id_t *left,
 
       svnmover_notify(SVN_CL__LOG_SEP_STRING "r%ld | ...",
                       right->rev);
+      svnmover_notify("History:");
+      SVN_ERR(show_history_r(right->branch, "   ", scratch_pool));
       svnmover_notify("Changed elements:");
       SVN_ERR(branch_diff_r(el_rev_left, right,
                             show_subtree_diff, "   ",
@@ -2477,8 +2633,8 @@ do_mkbranch(const char **new_branch_id_p,
   new_branch_id = svn_branch__id_nest(outer_branch_id, new_outer_eid,
                                       scratch_pool);
   SVN_ERR(svn_branch__txn_open_branch(txn, &new_branch,
-                                      NULL /*predecessor*/, new_branch_id,
-                                      new_inner_eid, scratch_pool, scratch_pool));
+                                      new_branch_id, new_inner_eid,
+                                      scratch_pool, scratch_pool));
   SVN_ERR(svn_branch__state_alter_one(new_branch, new_inner_eid,
                                       -1, "", payload, scratch_pool));
 
@@ -2517,6 +2673,7 @@ do_branch(svn_branch__state_t **new_branch_p,
   int to_outer_eid;
   const char *new_branch_id;
   svn_branch__state_t *new_branch;
+  svn_branch__history_t *history;
   const char *to_path
     = branch_peid_name_to_path(to_outer_branch,
                                to_outer_parent_eid, new_name, scratch_pool);
@@ -2529,6 +2686,10 @@ do_branch(svn_branch__state_t **new_branch_p,
   SVN_ERR(svn_branch__txn_branch(txn, &new_branch,
                                  from, new_branch_id,
                                  result_pool, scratch_pool));
+  history = svn_branch__history_create_empty(scratch_pool);
+  SVN_ERR(svn_branch__history_add_parent(history, from->rev, from->bid,
+                                         scratch_pool));
+  SVN_ERR(svn_branch__state_set_history(new_branch, history, scratch_pool));
   SVN_ERR(svn_branch__state_alter_one(to_outer_branch, to_outer_eid,
                                       to_outer_parent_eid, new_name,
                                       svn_element__payload_create_subbranch(
@@ -3065,6 +3226,45 @@ do_migrate(svnmover_wc_t *wc,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+show_branch_history(svn_branch__state_t *branch,
+                    apr_pool_t *scratch_pool)
+{
+  svn_branch__history_t *history;
+  svn_branch__rev_bid_t *main_parent;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_branch__state_get_history(branch, &history, scratch_pool));
+
+  SVN_ERR(find_branch_main_parent(branch, &main_parent, scratch_pool));
+  if (main_parent)
+    {
+      if (strcmp(main_parent->bid, branch->bid) == 0)
+        {
+          svnmover_notify("  main parent: r%ld.%s",
+                          main_parent->rev, main_parent->bid);
+        }
+      else
+        {
+          svnmover_notify("  main parent (branched from): r%ld.%s",
+                          main_parent->rev, main_parent->bid);
+        }
+    }
+  for (hi = apr_hash_first(scratch_pool, history->parents);
+       hi; hi = apr_hash_next(hi))
+    {
+      svn_branch__rev_bid_t *parent = apr_hash_this_val(hi);
+
+      if (! svn_branch__rev_bid_equal(parent, main_parent))
+        {
+          svnmover_notify("  other parent (complete merge): r%ld.%s",
+                          parent->rev, parent->bid);
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Show info about element E.
  *
  * TODO: Show different info for a repo element versus a WC element.
@@ -3253,14 +3453,11 @@ execute(svnmover_wc_t *wc,
           {
             svn_boolean_t is_modified;
             svn_revnum_t base_rev_min, base_rev_max;
-            svn_branch__rev_bid_t *merge_ancestor;
 
             SVN_ERR(txn_is_changed(wc->working->branch->txn, &is_modified,
                                    iterpool));
             SVN_ERR(svnmover_wc_get_base_revs(wc, &base_rev_min, &base_rev_max,
                                               iterpool));
-            SVN_ERR(svn_branch__state_get_merge_ancestor(
-                      wc->working->branch, &merge_ancestor, iterpool));
 
             svnmover_notify("Repository Root: %s", wc->repos_root_url);
             if (base_rev_min == base_rev_max)
@@ -3269,16 +3466,9 @@ execute(svnmover_wc_t *wc,
               svnmover_notify("Base Revisions: %ld to %ld",
                               base_rev_min, base_rev_max);
             svnmover_notify("Base Branch:    %s", wc->base->branch->bid);
-            SVN_ERR(svn_branch__state_get_merge_ancestor(
-                      wc->base->branch, &merge_ancestor, iterpool));
-            if (merge_ancestor)
-              svnmover_notify("  merge ancestor: %ld.%s",
-                              merge_ancestor->rev, merge_ancestor->bid);
             svnmover_notify("Working Branch: %s", wc->working->branch->bid);
+            SVN_ERR(show_branch_history(wc->working->branch, iterpool));
             svnmover_notify("Modified:       %s", is_modified ? "yes" : "no");
-            if (merge_ancestor)
-              svnmover_notify("  merge ancestor: %ld.%s",
-                              merge_ancestor->rev, merge_ancestor->bid);
           }
           break;
 
