@@ -74,6 +74,7 @@ pathrev_equal(const svn_pathrev_t *p1,
   return TRUE;
 }
 
+#if 0
 /* Return a human-readable string representation of LOC. */
 static const char *
 pathrev_str(const svn_pathrev_t *loc,
@@ -108,18 +109,25 @@ hash_keys_str(apr_hash_t *hash)
     }
   return apr_psprintf(pool, "{%s}", str);
 }
+#endif
 
-/* Like apr_hash_overlay() but returning the result in the same pool as HASH1.
+/**
+ * Merge two hash tables into one new hash table. The values of the overlay
+ * hash override the values of the base if both have the same key.
  *
+ * Unlike apr_hash_overlay(), this doesn't care whether the input hashes use
+ * the same hash function, nor about the relationship between the three pools.
+ *
+ * @param p The pool to use for the new hash table
+ * @param overlay The table to add to the initial table
+ * @param base The table that represents the initial values of the new table
+ * @return A new hash table containing all of the data from the two passed in
+ * @remark Makes a shallow copy: keys and values are not copied
  */
 static apr_hash_t *
 hash_overlay(apr_hash_t *overlay,
              apr_hash_t *base)
 {
-  /* ### This implementation, avoiding apr_hash_overlay(), is to see if
-     apr_hash_overlay() is the cause of an observed bug on the Mac OS
-     buildbots. We observed two entries apparently having the same key
-     when this function's caller called apr_hash_overlay directly. */
   apr_pool_t *pool = apr_hash_pool_get(base);
   apr_hash_t *result = apr_hash_copy(pool, base);
   apr_hash_index_t *hi;
@@ -312,6 +320,7 @@ typedef struct change_node_t
 #endif
 } change_node_t;
 
+#if 0
 /* Return a string representation of CHANGE. */
 static const char *
 change_node_str(change_node_t *change,
@@ -334,6 +343,7 @@ change_node_str(change_node_t *change,
                      copyfrom);
   return str;
 }
+#endif
 
 /* Check whether RELPATH is known to exist, known to not exist, or unknown. */
 static svn_tristate_t
@@ -407,14 +417,6 @@ insert_change(change_node_t **change_p, apr_hash_t *changes,
         {
           /* Add or copy is allowed after delete (and replaces the delete),
            * but not allowed after an add or a no-restructure change. */
-          if (change->action != RESTRUCTURE_DELETE)
-            {
-              return svn_error_createf(SVN_ERR_ASSERTION_FAIL, NULL,
-                     "### insert_change(relpath='%s', action=%d): "
-                     "unexpected previous change (%s)",
-                     relpath, action,
-                     change_node_str(change, changes_pool));
-            }
           VERIFY(change->action == RESTRUCTURE_DELETE);
           change->action = action;
         }
@@ -1623,7 +1625,6 @@ drive_changes_r(const char *rrpath,
               svn_boolean_t child_in_current
                 = current_children && svn_hash_gets(current_children, name);
               svn_pathrev_t *child_pred = NULL;
-              svn_error_t *err;
 
               if (child_in_current)
                 {
@@ -1644,35 +1645,11 @@ drive_changes_r(const char *rrpath,
                       child_pred->relpath = this_rrpath;
                     }
                }
-              /*(("child '%s' current=%s final? %d%s",
-                       name,
-                       child_pred ? pathrev_str(*child_pred, scratch_pool)
-                                  : "<nil>",
-                       (svn_hash_gets(final_children, name) != NULL),
-                       final_copy_from.relpath
-                         ? apr_psprintf(scratch_pool, " parent-cp-from=%s@%ld",
-                                        final_copy_from.relpath,
-                                        final_copy_from.rev) : ""));*/
 
-              err = drive_changes_r(this_rrpath,
-                                    child_pred,
-                                    paths_final, top_branch_id,
-                                    eb, scratch_pool);
-              if (err && err->apr_err == SVN_ERR_ASSERTION_FAIL)
-                {
-                  return svn_error_createf(SVN_ERR_ASSERTION_FAIL, NULL,
-                         "### recursive drive_changes_r('%s', %s, ...) failed: "
-                         "name='%s', child_in_current=%d, "
-                         "current_children=%s, "
-                         "final_children=%s, "
-                         "union_children=%s",
-                         this_rrpath, pathrev_str(child_pred, scratch_pool),
-                         name, child_in_current,
-                         hash_keys_str(current_children),
-                         hash_keys_str(final_children),
-                         hash_keys_str(union_children));
-                }
-              SVN_ERR(err);
+              SVN_ERR(drive_changes_r(this_rrpath,
+                                      child_pred,
+                                      paths_final, top_branch_id,
+                                      eb, scratch_pool));
             }
         }
     }
