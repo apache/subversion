@@ -535,6 +535,87 @@ read_length_line_shouldnt_loop(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_read_length_line(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *tmp_file;
+  char buffer[80];
+  apr_size_t buffer_limit;
+  apr_file_t *f;
+  svn_error_t *err;
+
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_read_length_line", pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  /* Test 1: Read empty file. */
+  tmp_file = svn_dirent_join(tmp_dir, "empty", pool);
+  SVN_ERR(svn_io_file_create(tmp_file, "", pool));
+
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  buffer_limit = sizeof(buffer);
+  err = svn_io_read_length_line(f, buffer, &buffer_limit, pool);
+  SVN_TEST_ASSERT_ERROR(err, APR_EOF);
+
+  SVN_ERR(svn_io_file_close(f, pool));
+
+  /* Test 2: Read empty line.*/
+  tmp_file = svn_dirent_join(tmp_dir, "empty-line", pool);
+  SVN_ERR(svn_io_file_create(tmp_file, "\n", pool));
+
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  buffer_limit = sizeof(buffer);
+  err = svn_io_read_length_line(f, buffer, &buffer_limit, pool);
+  SVN_ERR(err);
+  SVN_TEST_ASSERT(buffer_limit == 0);
+  SVN_TEST_STRING_ASSERT(buffer, "");
+  SVN_ERR(svn_io_file_close(f, pool));
+
+  /* Test 3: Read two lines.*/
+  tmp_file = svn_dirent_join(tmp_dir, "lines", pool);
+  SVN_ERR(svn_io_file_create(tmp_file, "first\nsecond\n", pool));
+
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+
+  buffer_limit = sizeof(buffer);
+  err = svn_io_read_length_line(f, buffer, &buffer_limit, pool);
+  SVN_ERR(err);
+  SVN_TEST_ASSERT(buffer_limit == 5);
+  SVN_TEST_STRING_ASSERT(buffer, "first");
+
+  buffer_limit = sizeof(buffer);
+  err = svn_io_read_length_line(f, buffer, &buffer_limit, pool);
+  SVN_ERR(err);
+  SVN_TEST_ASSERT(buffer_limit == 6);
+  SVN_TEST_STRING_ASSERT(buffer, "second");
+
+  buffer_limit = sizeof(buffer);
+  err = svn_io_read_length_line(f, buffer, &buffer_limit, pool);
+  SVN_TEST_ASSERT_ERROR(err, APR_EOF);
+
+  SVN_ERR(svn_io_file_close(f, pool));
+
+  /* Test 4: Content without end-of-line.*/
+  tmp_file = svn_dirent_join(tmp_dir, "no-eol", pool);
+  SVN_ERR(svn_io_file_create(tmp_file, "text", pool));
+
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+
+  buffer_limit = sizeof(buffer);
+  err = svn_io_read_length_line(f, buffer, &buffer_limit, pool);
+  SVN_TEST_ASSERT_ERROR(err, APR_EOF);
+
+  SVN_ERR(svn_io_file_close(f, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Move the read pointer in FILE to absolute position OFFSET and align
  * the read buffer to multiples of BLOCK_SIZE.  BUFFERED is set only if
  * FILE actually uses a read buffer.  Use POOL for allocations.
@@ -948,6 +1029,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_io_file_size_get"),
     SVN_TEST_PASS2(test_file_rename2,
                    "test svn_io_file_rename2"),
+    SVN_TEST_PASS2(test_read_length_line,
+                   "test svn_io_read_length_line()"),
     SVN_TEST_NULL
   };
 
