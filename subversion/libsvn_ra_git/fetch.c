@@ -22,9 +22,7 @@
  * ====================================================================
  */
 
-#include <apr.h>
-
-#include <git2.h>
+#include "../libsvn_fs_git/svn_git.h"
 
 #include "svn_hash.h"
 #include "svn_ra.h"
@@ -75,13 +73,6 @@ svn_ra_git__wrap_git_error(void)
   /* ### TODO: map error code */
   return svn_error_createf(SVN_ERR_FS_GIT_LIBGIT2_ERROR, NULL,
                            _("git: %s"), git_err.message);
-}
-
-static apr_status_t
-cleanup_git_repos(void *baton)
-{
-  git_repository_free(baton);
-  return APR_SUCCESS;
 }
 
 static apr_status_t
@@ -287,6 +278,64 @@ svn_ra_git__git_fetch(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_ra_git__push_commit(svn_ra_session_t *session,
+                        const char *reference,
+                        const char *edit_relpath,
+                        const struct git_oid *commit_oid,
+                        svn_commit_callback2_t callback,
+                        void *callback_baton,
+                        apr_pool_t *scratch_pool)
+{
+  svn_ra_git__session_t *sess = session->priv;
+  git_repository *repos;
+  git_remote *remote;
+  git_remote_callbacks *callbacks;
+  apr_pool_t *subpool;
+
+  /* Create subpool, to allow closing handles early on */
+  subpool = svn_pool_create(scratch_pool);
+
+  SVN_ERR(open_git_repos(&repos, &remote, &callbacks, sess,
+                         subpool, subpool));
+
+  SVN_DBG(("Pushing to %s\n", sess->git_remote_url));
+
+  {
+    git_push_options push_opts = GIT_PUSH_OPTIONS_INIT;
+    git_strarray refspecs;
+    char *refspec;
+    refspecs.count = 1;
+    refspecs.strings = &refspec;
+
+    push_opts.callbacks = *callbacks;
+    refspec = apr_pstrcat(scratch_pool, "+", reference, ":refs/heads/master",
+                          SVN_VA_NULL);
+
+    GIT2_ERR(git_remote_push(remote, &refspecs, &push_opts));
+  }
+
+  svn_pool_clear(subpool);
+
+  SVN_ERR(svn_ra_git__git_fetch(session, TRUE, subpool));
+
+  if (callback)
+    {
+      svn_commit_info_t *info = svn_create_commit_info(subpool);
+
+      info->author = "Q";
+      info->date = svn_time_to_cstring(apr_time_now(), subpool);
+
+      SVN_ERR(sess->local_session->vtable->get_latest_revnum(
+                  sess->local_session, &info->revision,
+                  subpool));
+
+      SVN_ERR(callback(info, callback_baton, scratch_pool));
+    }
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
 
 
 /* Fetch a username for use with SESS */
@@ -669,13 +718,10 @@ open_git_repos(git_repository **repos,
   SVN_ERR(svn_atomic__init_once(&do_libgit2_init_called, do_libgit2_init,
                                 NULL, scratch_pool));
 
-  GIT2_ERR(git_repository_open(repos,
-                               svn_dirent_join(sess->local_repos_abspath,
-                                               "db/git", scratch_pool)));
-
-  if (*repos)
-    apr_pool_cleanup_register(result_pool, *repos, cleanup_git_repos,
-                              apr_pool_cleanup_null);
+  SVN_ERR(svn_git__repository_open(repos,
+                                   svn_dirent_join(sess->local_repos_abspath,
+                                                   "db/git", scratch_pool),
+                                   result_pool));
 
   if (remote)
     {

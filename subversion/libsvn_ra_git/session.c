@@ -570,7 +570,16 @@ ra_git_get_commit_editor(svn_ra_session_t *session,
                          svn_boolean_t keep_locks,
                          apr_pool_t *pool)
 {
-  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+  svn_ra_git__session_t *sess = session->priv;
+
+  SVN_ERR(ensure_local_session(session, pool));
+  SVN_ERR(svn_ra_git__git_fetch(session, TRUE, sess->scratch_pool));
+
+  return svn_error_trace(
+    svn_ra_git__get_commit_editor(editor, edit_baton,
+                                  session, revprop_table,
+                                  callback, callback_baton,
+                                  pool));
 }
 
 

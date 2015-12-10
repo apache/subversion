@@ -63,27 +63,6 @@ typedef struct svn_ra_git__session_t
   apr_uint64_t progress_bytes;
 } svn_ra_git__session_t;
 
-svn_error_t *
-svn_ra_git__wrap_git_error(void);
-
-#define GIT2_ERR(expr)                        \
-  do {                                        \
-    int svn_err__git_temp = (expr);           \
-    if (svn_err__git_temp)                    \
-      return svn_ra_git__wrap_git_error();    \
-  } while (0)
-
-#define GIT2_ERR_NOTFOUND(x, expr)            \
-  do {                                        \
-    int svn_err__git_temp = (expr);           \
-    if (svn_err__git_temp == GIT_ENOTFOUND)   \
-      {                                       \
-        giterr_clear();                       \
-        *x = NULL;                            \
-      }                                       \
-    else if (svn_err__git_temp)               \
-      return svn_ra_git__wrap_git_error();    \
-  } while (0)
 
 /* Git repositories don't have a UUID so a static UUID is as good as any. */
 #define RA_GIT_UUID "a62d4ba0-b83e-11e3-8621-8f162a3365eb"
@@ -111,6 +90,26 @@ svn_error_t *
 svn_ra_git__git_fetch(svn_ra_session_t *session,
                       svn_boolean_t refresh,
                       apr_pool_t *scratch_pool);
+
+struct git_oid;
+
+svn_error_t *
+svn_ra_git__push_commit(svn_ra_session_t *session,
+                        const char *reference,
+                        const char *edit_relpath,
+                        const struct git_oid *commit_oid,
+                        svn_commit_callback2_t callback,
+                        void *callback_baton,
+                        apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_ra_git__get_commit_editor(const svn_delta_editor_t **editor,
+                              void **edit_baton,
+                              svn_ra_session_t *session,
+                              apr_hash_t *revprop_table,
+                              svn_commit_callback2_t callback,
+                              void *callback_baton,
+                              apr_pool_t *pool);
 
 void
 svn_ra_git__libgit2_version(int *major,
