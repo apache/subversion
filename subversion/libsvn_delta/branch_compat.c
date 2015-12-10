@@ -109,6 +109,28 @@ hash_keys_str(apr_hash_t *hash)
   return apr_psprintf(pool, "{%s}", str);
 }
 
+/* Like apr_hash_overlay() but returning the result in the same pool as HASH1.
+ *
+ */
+static apr_hash_t *
+hash_overlay(apr_hash_t *overlay,
+             apr_hash_t *base)
+{
+  /* ### This implementation, avoiding apr_hash_overlay(), is to see if
+     apr_hash_overlay() is the cause of an observed bug on the Mac OS
+     buildbots. We observed two entries apparently having the same key
+     when this function's caller called apr_hash_overlay directly. */
+  apr_pool_t *pool = apr_hash_pool_get(base);
+  apr_hash_t *result = apr_hash_copy(pool, base);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, overlay); hi; hi = apr_hash_next(hi))
+    {
+      svn_hash_sets(result, apr_hash_this_key(hi), apr_hash_this_val(hi));
+    }
+  return result;
+}
+
 
 /*
  * ========================================================================
@@ -1590,8 +1612,7 @@ drive_changes_r(const char *rrpath,
                                                         scratch_pool,
                                                         scratch_pool);
           union_children = (current_children
-                            ? apr_hash_overlay(scratch_pool, current_children,
-                                               final_children)
+                            ? hash_overlay(current_children, final_children)
                             : final_children);
           for (hi = apr_hash_first(scratch_pool, union_children);
                hi; hi = apr_hash_next(hi))
