@@ -592,114 +592,6 @@ test_read_length_line(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-test_file_readline(apr_pool_t *pool)
-{
-  const char *tmp_dir;
-  const char *tmp_file;
-  svn_stringbuf_t *buf;
-  apr_file_t *f;
-  svn_error_t *err;
-  const char *eol;
-  svn_boolean_t eof;
-
-  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir, "test_file_readline",
-                                    pool));
-
-  tmp_file = svn_dirent_join(tmp_dir, "foo", pool);
-
-  SVN_ERR(svn_io_file_create(tmp_file, "CR\rLF\nCRLF\r\nno-eol", pool));
-
-  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
-  err = svn_io_file_readline(f, &buf, &eol, &eof, APR_SIZE_MAX, pool, pool);
-  SVN_ERR(err);
-  SVN_TEST_STRING_ASSERT(buf->data, "CR");
-  SVN_TEST_STRING_ASSERT(eol, "\r");
-  SVN_TEST_ASSERT(!eof);
-
-  err = svn_io_file_readline(f, &buf, &eol, &eof, APR_SIZE_MAX, pool, pool);
-  SVN_ERR(err);
-  SVN_TEST_STRING_ASSERT(buf->data, "LF");
-  SVN_TEST_STRING_ASSERT(eol, "\n");
-  SVN_TEST_ASSERT(!eof);
-
-  err = svn_io_file_readline(f, &buf, &eol, &eof, APR_SIZE_MAX, pool, pool);
-  SVN_ERR(err);
-  SVN_TEST_STRING_ASSERT(buf->data, "CRLF");
-  SVN_TEST_STRING_ASSERT(eol, "\r\n");
-  SVN_TEST_ASSERT(!eof);
-
-  err = svn_io_file_readline(f, &buf, &eol, &eof, APR_SIZE_MAX, pool, pool);
-  SVN_ERR(err);
-  SVN_TEST_STRING_ASSERT(buf->data, "no-eol");
-  SVN_TEST_STRING_ASSERT(eol, NULL);
-  SVN_TEST_ASSERT(eof);
-
-  /* Further reads still returns EOF. */
-  err = svn_io_file_readline(f, &buf, &eol, &eof, APR_SIZE_MAX, pool, pool);
-  SVN_ERR(err);
-  SVN_TEST_STRING_ASSERT(buf->data, "");
-  SVN_TEST_STRING_ASSERT(eol, NULL);
-  SVN_TEST_ASSERT(eof);
-
-  SVN_ERR(svn_io_file_close(f, pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-test_file_ungetc(apr_pool_t *pool)
-{
-  const char *tmp_dir;
-  const char *tmp_file;
-  apr_file_t *f;
-  char c;
-
-  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir, "test_file_ungetc",
-                                    pool));
-
-  tmp_file = svn_dirent_join(tmp_dir, "foo", pool);
-  SVN_ERR(svn_io_file_create(tmp_file, "12", pool));
-
-  /* Test using buffered I/O. */
-  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
-  SVN_ERR(svn_io_file_getc(&c, f, pool));
-  SVN_TEST_ASSERT(c == '1');
-
-  SVN_ERR(svn_io_file_ungetc(c, f, pool));
-
-  SVN_ERR(svn_io_file_getc(&c, f, pool));
-  SVN_TEST_ASSERT(c == '1');
-
-  SVN_ERR(svn_io_file_getc(&c, f, pool));
-  SVN_TEST_ASSERT(c == '2');
-
-  SVN_TEST_ASSERT_ERROR(svn_io_file_getc(&c, f, pool), APR_EOF);
-
-  SVN_ERR(svn_io_file_close(f, pool));
-
-  /* Also make sure that ungetc works fine unbuffered I/O. */
-  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ, APR_OS_DEFAULT, pool));
-  SVN_ERR(svn_io_file_getc(&c, f, pool));
-  SVN_TEST_ASSERT(c == '1');
-
-  SVN_ERR(svn_io_file_ungetc(c, f, pool));
-
-  SVN_ERR(svn_io_file_getc(&c, f, pool));
-  SVN_TEST_ASSERT(c == '1');
-
-  SVN_ERR(svn_io_file_getc(&c, f, pool));
-  SVN_TEST_ASSERT(c == '2');
-
-  SVN_TEST_ASSERT_ERROR(svn_io_file_getc(&c, f, pool), APR_EOF);
-
-  SVN_ERR(svn_io_file_close(f, pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* Move the read pointer in FILE to absolute position OFFSET and align
  * the read buffer to multiples of BLOCK_SIZE.  BUFFERED is set only if
  * FILE actually uses a read buffer.  Use POOL for allocations.
@@ -1098,10 +990,6 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_io_file_rename2"),
     SVN_TEST_PASS2(test_read_length_line,
                    "test svn_io_read_length_line()"),
-    SVN_TEST_PASS2(test_file_readline,
-                   "test svn_io_file_readline()"),
-    SVN_TEST_PASS2(test_file_ungetc,
-                   "test svn_io_file_ungetc()"),
     SVN_TEST_NULL
   };
 

@@ -3722,16 +3722,6 @@ svn_io_file_getc(char *ch, apr_file_t *file, apr_pool_t *pool)
 
 
 svn_error_t *
-svn_io_file_ungetc(char ch, apr_file_t *file, apr_pool_t *pool)
-{
-  return do_io_file_wrapper_cleanup(file, apr_file_ungetc(ch, file),
-                                    N_("Can't unget char to file '%s'"),
-                                    N_("Can't unget char to stream"),
-                                    pool);
-}
-
-
-svn_error_t *
 svn_io_file_putc(char ch, apr_file_t *file, apr_pool_t *pool)
 {
   return do_io_file_wrapper_cleanup(file, apr_file_putc(ch, file),
@@ -5374,7 +5364,11 @@ svn_io_file_readline(apr_file_t *file,
 
           if (!found_eof && len < max_len)
             {
+              apr_off_t pos;
+
               /* Check for "\r\n" by peeking at the next byte. */
+              pos = 0;
+              SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
               SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
                                              &found_eof, scratch_pool));
               if (numbytes == 1 && c == '\n')
@@ -5385,7 +5379,7 @@ svn_io_file_readline(apr_file_t *file,
               else
                 {
                   /* Pretend we never peeked. */
-                  SVN_ERR(svn_io_file_ungetc(c, file, scratch_pool));
+                  SVN_ERR(svn_io_file_seek(file, APR_SET, &pos, scratch_pool));
                   found_eof = FALSE;
                   numbytes = 1;
                 }
