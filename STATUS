@@ -101,11 +101,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1714790
-   Fix ruby test suite to work with test-unit gem.
-   Justification:
-     Ruby test suite would simply not run on Ubuntu 15.10.
-     The patch is limited to rb test suite code only.
-   Votes:
-     +1: stefan2, philip
