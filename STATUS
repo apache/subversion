@@ -123,6 +123,15 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1539230
+   Make JAVAHL tests pass on symlinked ramdiscs.
+   Justification:
+     We will support 1.8.x for quite some time still.  So, if a low-risk
+     patch avoids confusion during release signing etc., I think it is
+     worth it.  The patch is limited to JAVAHL test code only.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
