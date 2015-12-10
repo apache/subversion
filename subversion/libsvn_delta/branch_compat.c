@@ -74,8 +74,6 @@ pathrev_equal(const svn_pathrev_t *p1,
   return TRUE;
 }
 
-#ifdef SVN_DEBUG
-
 /* Return a human-readable string representation of LOC. */
 static const char *
 pathrev_str(const svn_pathrev_t *loc,
@@ -110,8 +108,6 @@ hash_keys_str(apr_hash_t *hash)
     }
   return apr_psprintf(pool, "{%s}", str);
 }
-
-#endif
 
 
 /*
@@ -393,7 +389,6 @@ insert_change(change_node_t **change_p, apr_hash_t *changes,
         {
           /* Add or copy is allowed after delete (and replaces the delete),
            * but not allowed after an add or a no-restructure change. */
-#ifdef SVN_DEBUG
           if (change->action != RESTRUCTURE_DELETE)
             {
               printf("### insert_change(relpath='%s', action=%d): "
@@ -401,7 +396,6 @@ insert_change(change_node_t **change_p, apr_hash_t *changes,
                      relpath, action,
                      change_node_str(change, changes_pool));
             }
-#endif
           VERIFY(change->action == RESTRUCTURE_DELETE);
           change->action = action;
         }
@@ -1646,7 +1640,6 @@ drive_changes_r(const char *rrpath,
                                     child_pred,
                                     paths_final, top_branch_id,
                                     eb, scratch_pool);
-#ifdef SVN_DEBUG
               if (err && err->apr_err == SVN_ERR_ASSERTION_FAIL)
                 {
                   printf("### recursive drive_changes_r('%s', %s, ...) failed: "
@@ -1660,7 +1653,6 @@ drive_changes_r(const char *rrpath,
                          hash_keys_str(final_children),
                          hash_keys_str(union_children));
                 }
-#endif
               SVN_ERR(err);
             }
         }
