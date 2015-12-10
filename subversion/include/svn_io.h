@@ -2206,14 +2206,6 @@ svn_io_file_getc(char *ch,
                  apr_pool_t *pool);
 
 
-/** Wrapper for apr_file_ungetc().
-  * @since New in 1.10
-  */
-svn_error_t *
-svn_io_file_ungetc(char ch,
-                   apr_file_t *file,
-                   apr_pool_t *pool);
-
 /** Wrapper for apr_file_putc().
   * @since New in 1.7
   */
@@ -2229,6 +2221,7 @@ svn_io_file_info_get(apr_finfo_t *finfo,
                      apr_int32_t wanted,
                      apr_file_t *file,
                      apr_pool_t *pool);
+
 
 /** Set @a *filesize_p to the size of @a file. Use @a pool for temporary
   * allocations.
