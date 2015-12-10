@@ -75,14 +75,42 @@ pathrev_equal(const svn_pathrev_t *p1,
 }
 
 #ifdef SVN_DEBUG
+
 /* Return a human-readable string representation of LOC. */
-/*static const char *
-pathrev_str(svn_pathrev_t loc,
+static const char *
+pathrev_str(const svn_pathrev_t *loc,
             apr_pool_t *result_pool)
 {
+  if (! loc)
+    return "<nil>";
   return apr_psprintf(result_pool, "%s@%ld",
-                      loc.relpath, loc.rev);
-}*/
+                      loc->relpath, loc->rev);
+}
+
+/* Return a string representation of the (string) keys of HASH. */
+static const char *
+hash_keys_str(apr_hash_t *hash)
+{
+  const char *str = NULL;
+  apr_pool_t *pool;
+  apr_hash_index_t *hi;
+
+  if (! hash)
+    return "<nil>";
+
+  pool = apr_hash_pool_get(hash);
+  for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
+    {
+      const char *key = apr_hash_this_key(hi);
+
+      if (!str)
+        str = key;
+      else
+        str = apr_psprintf(pool, "%s, %s", str, key);
+    }
+  return apr_psprintf(pool, "{%s}", str);
+}
+
 #endif
 
 
@@ -266,6 +294,33 @@ typedef struct change_node_t
 #endif
 } change_node_t;
 
+#ifdef SVN_DEBUG
+
+/* Return a string representation of CHANGE. */
+static const char *
+change_node_str(change_node_t *change,
+                apr_pool_t *result_pool)
+{
+  const char *copyfrom = "<nil>";
+  const char *str;
+
+  if (change->copyfrom_path)
+    copyfrom = apr_psprintf(result_pool, "'%s'@%ld",
+                            change->copyfrom_path, change->copyfrom_rev);
+  str = apr_psprintf(result_pool,
+                     "action=%d, kind=%s, changing_rev=%ld, "
+                     "deleting=%d, deleting_rev=%ld, ..., "
+                     "copyfrom=%s",
+                     change->action,
+                     svn_node_kind_to_word(change->kind),
+                     change->changing_rev,
+                     change->deleting, change->deleting_rev,
+                     copyfrom);
+  return str;
+}
+
+#endif
+
 /* Check whether RELPATH is known to exist, known to not exist, or unknown. */
 static svn_tristate_t
 check_existence(apr_hash_t *changes,
@@ -338,6 +393,15 @@ insert_change(change_node_t **change_p, apr_hash_t *changes,
         {
           /* Add or copy is allowed after delete (and replaces the delete),
            * but not allowed after an add or a no-restructure change. */
+#ifdef SVN_DEBUG
+          if (change->action != RESTRUCTURE_DELETE)
+            {
+              printf("### insert_change(relpath='%s', action=%d): "
+                     "unexpected previous change (%s)\n",
+                     relpath, action,
+                     change_node_str(change, changes_pool));
+            }
+#endif
           VERIFY(change->action == RESTRUCTURE_DELETE);
           change->action = action;
         }
@@ -1547,6 +1611,7 @@ drive_changes_r(const char *rrpath,
               svn_boolean_t child_in_current
                 = current_children && svn_hash_gets(current_children, name);
               svn_pathrev_t *child_pred = NULL;
+              svn_error_t *err;
 
               if (child_in_current)
                 {
@@ -1577,10 +1642,26 @@ drive_changes_r(const char *rrpath,
                                         final_copy_from.relpath,
                                         final_copy_from.rev) : ""));*/
 
-              SVN_ERR(drive_changes_r(this_rrpath,
-                                      child_pred,
-                                      paths_final, top_branch_id,
-                                      eb, scratch_pool));
+              err = drive_changes_r(this_rrpath,
+                                    child_pred,
+                                    paths_final, top_branch_id,
+                                    eb, scratch_pool);
+#ifdef SVN_DEBUG
+              if (err && err->apr_err == SVN_ERR_ASSERTION_FAIL)
+                {
+                  printf("### recursive drive_changes_r('%s', %s, ...) failed: "
+                         "name='%s', child_in_current=%d, "
+                         "current_children=%s, "
+                         "final_children=%s, "
+                         "union_children=%s\n",
+                         this_rrpath, pathrev_str(child_pred, scratch_pool),
+                         name, child_in_current,
+                         hash_keys_str(current_children),
+                         hash_keys_str(final_children),
+                         hash_keys_str(union_children));
+                }
+#endif
+              SVN_ERR(err);
             }
         }
     }
