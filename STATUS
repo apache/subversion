@@ -130,7 +130,7 @@ Candidate changes:
      patch avoids confusion during release signing etc., I think it is
      worth it.  The patch is limited to JAVAHL test code only.
    Votes:
-     +1: stefan2
+     +1: stefan2, brane
 
 Veto-blocked changes:
 =====================
