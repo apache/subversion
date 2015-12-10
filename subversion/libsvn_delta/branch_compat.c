@@ -290,8 +290,6 @@ typedef struct change_node_t
 #endif
 } change_node_t;
 
-#ifdef SVN_DEBUG
-
 /* Return a string representation of CHANGE. */
 static const char *
 change_node_str(change_node_t *change,
@@ -314,8 +312,6 @@ change_node_str(change_node_t *change,
                      copyfrom);
   return str;
 }
-
-#endif
 
 /* Check whether RELPATH is known to exist, known to not exist, or unknown. */
 static svn_tristate_t
