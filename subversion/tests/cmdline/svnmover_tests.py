@@ -563,7 +563,7 @@ def reported_br_params(path1, path2):
   return subbranch_rpath, subbranch_fullpath
 
 def reported_mg_diff():
-  return [r'--- .*merge history.*']
+  return []  #[r'--- history ...']
 
 def reported_br_diff(path1, path2=None):
   """Return expected header lines for diff of a branch, or subtree in a branch.

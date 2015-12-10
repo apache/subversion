@@ -299,11 +299,18 @@ branch_get_mutable_state(svn_branch__txn_t **txn_p,
   for (i = 0; i < branches->nelts; i++)
     {
       svn_branch__state_t *b = APR_ARRAY_IDX(branches, i, void *);
+      svn_branch__history_t *history
+        = svn_branch__history_create_empty(result_pool);
 
-      b->predecessor
+      /* Set each branch's parent to the branch in the base rev */
+      svn_branch__rev_bid_t *parent
         = svn_branch__rev_bid_create(base_revision,
                                      svn_branch__get_id(b, scratch_pool),
                                      result_pool);
+
+      svn_hash_sets(history->parents,
+                    apr_pstrdup(result_pool, b->bid), parent);
+      SVN_ERR(svn_branch__state_set_history(b, history, scratch_pool));
     }
 
   *txn_p = txn;

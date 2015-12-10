@@ -67,7 +67,6 @@ typedef svn_error_t *(*svn_branch__txn_v_add_branch_t)(
 typedef svn_branch__state_t *(*svn_branch__txn_v_add_new_branch_t)(
   svn_branch__txn_t *txn,
   const char *bid,
-  svn_branch__rev_bid_t *predecessor,
   int root_eid,
   apr_pool_t *scratch_pool);
 
@@ -89,7 +88,6 @@ typedef svn_error_t *(*svn_branch__txn_v_new_eid_t)(
 typedef svn_error_t *(*svn_branch__txn_v_open_branch_t)(
   svn_branch__txn_t *txn,
   svn_branch__state_t **new_branch_p,
-  svn_branch__rev_bid_t *predecessor,
   const char *new_branch_id,
   int root_eid,
   apr_pool_t *result_pool,
@@ -186,14 +184,14 @@ typedef svn_error_t *(*svn_branch__state_v_purge_t)(
   svn_branch__state_t *branch,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*svn_branch__state_v_get_merge_ancestor_t)(
+typedef svn_error_t *(*svn_branch__state_v_get_history_t)(
   svn_branch__state_t *branch,
-  svn_branch__rev_bid_t **merge_ancestor_p,
+  svn_branch__history_t **history_p,
   apr_pool_t *scratch_pool);
 
-typedef svn_error_t *(*svn_branch__state_v_add_merge_ancestor_t)(
+typedef svn_error_t *(*svn_branch__state_v_set_history_t)(
   svn_branch__state_t *branch,
-  const svn_branch__rev_bid_t *merge_ancestor,
+  const svn_branch__history_t *history,
   apr_pool_t *scratch_pool);
 
 struct svn_branch__state_vtable_t
@@ -206,8 +204,8 @@ struct svn_branch__state_vtable_t
   svn_branch__state_v_copy_one_t copy_one;
   svn_branch__state_v_copy_tree_t copy_tree;
   svn_branch__state_v_purge_t purge;
-  svn_branch__state_v_get_merge_ancestor_t get_merge_ancestor;
-  svn_branch__state_v_add_merge_ancestor_t add_merge_ancestor;
+  svn_branch__state_v_get_history_t get_history;
+  svn_branch__state_v_set_history_t set_history;
 
 };
 
