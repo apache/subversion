@@ -387,8 +387,9 @@ insert_change(change_node_t **change_p, apr_hash_t *changes,
            * but not allowed after an add or a no-restructure change. */
           if (change->action != RESTRUCTURE_DELETE)
             {
-              printf("### insert_change(relpath='%s', action=%d): "
-                     "unexpected previous change (%s)\n",
+              return svn_error_createf(SVN_ERR_ASSERTION_FAIL, NULL,
+                     "### insert_change(relpath='%s', action=%d): "
+                     "unexpected previous change (%s)",
                      relpath, action,
                      change_node_str(change, changes_pool));
             }
@@ -1638,11 +1639,12 @@ drive_changes_r(const char *rrpath,
                                     eb, scratch_pool);
               if (err && err->apr_err == SVN_ERR_ASSERTION_FAIL)
                 {
-                  printf("### recursive drive_changes_r('%s', %s, ...) failed: "
+                  return svn_error_createf(SVN_ERR_ASSERTION_FAIL, NULL,
+                         "### recursive drive_changes_r('%s', %s, ...) failed: "
                          "name='%s', child_in_current=%d, "
                          "current_children=%s, "
                          "final_children=%s, "
-                         "union_children=%s\n",
+                         "union_children=%s",
                          this_rrpath, pathrev_str(child_pred, scratch_pool),
                          name, child_in_current,
                          hash_keys_str(current_children),
