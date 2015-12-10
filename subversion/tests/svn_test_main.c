@@ -761,6 +761,23 @@ svn_test__init_auth_baton(svn_auth_baton_t **ab,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_test_make_sandbox_dir(const char **sb_dir_p,
+                          const char *sb_name,
+                          apr_pool_t *pool)
+{
+  const char *sb_dir;
+
+  sb_dir = svn_test_data_path(sb_name, pool);
+  SVN_ERR(svn_io_remove_dir2(sb_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(sb_dir, pool));
+  svn_test_add_dir_cleanup(sb_dir);
+
+  *sb_dir_p = sb_dir;
+
+  return SVN_NO_ERROR;
+}
+
 /* Standard svn test program */
 int
 svn_test_main(int argc, const char *argv[], int max_threads,
