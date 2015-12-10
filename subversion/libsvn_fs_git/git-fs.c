@@ -99,6 +99,9 @@ fs_git_revision_proplist(apr_hash_t **table_p, svn_fs_t *fs, svn_revnum_t rev, s
         svn_hash_sets(*table_p, SVN_PROP_REVISION_LOG,
                       svn_string_create(msg, result_pool));
 
+      svn_hash_sets(*table_p, "svn:git-commit-id",
+                    svn_string_create(git_oid_tostr_s(oid), result_pool));
+
       git_commit_free(commit);
     }
 

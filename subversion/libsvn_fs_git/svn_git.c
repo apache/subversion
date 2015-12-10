@@ -24,6 +24,9 @@
 
 #include "svn_git.h"
 
+#include "svn_private_config.h"
+
+
 #define DECLARE_GIT_CLEANUP(type,func)              \
   static apr_status_t cleanup_##type(void *baton)   \
   {                                                 \
@@ -45,9 +48,10 @@ DECLARE_GIT_CLEANUP(git_repository, git_repository_free)
 DECLARE_GIT_CLEANUP(git_commit, git_commit_free)
 DECLARE_GIT_CLEANUP(git_object, git_object_free)
 DECLARE_GIT_CLEANUP(git_tree, git_tree_free)
+DECLARE_GIT_CLEANUP(git_treebuilder, git_treebuilder_free)
 
 svn_error_t *
-svn_git__repository_open(const git_repository **repo_p,
+svn_git__repository_open(git_repository **repo_p,
                          const char *local_abspath,
                          apr_pool_t *result_pool)
 {
@@ -93,6 +97,24 @@ svn_git__commit_lookup(const git_commit **commit_p,
   *commit_p = commit;
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_git__tree_lookup(const git_tree **tree_p,
+                     git_repository *repo,
+                     const git_oid *id,
+                     apr_pool_t *result_pool)
+{
+  git_tree *tree;
+
+  GIT2_ERR(git_tree_lookup(&tree, repo, id));
+
+  if (tree)
+    GIT_RELEASE_AT_CLEANUP(git_tree, tree, result_pool);
+
+  *tree_p = tree;
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_git__copy_commit(const git_commit **commit_p,
@@ -151,14 +173,14 @@ svn_git__commit_tree(const git_tree **tree_p,
 
 svn_error_t *
 svn_git__tree_entry_to_object(const git_object **object_p,
-                              const git_tree *tree,
+                              git_repository *repository,
                               const git_tree_entry *entry,
                               apr_pool_t *result_pool)
 {
   git_object *object;
 
   GIT2_ERR(git_tree_entry_to_object(&object,
-                                    git_tree_owner(tree),
+                                    repository,
                                     entry));
 
   if (object)
@@ -225,7 +247,8 @@ svn_git__find_tree_entry(const git_tree_entry **entry, git_tree *tree,
           git_object *obj;
           git_tree *sub_tree;
 
-          SVN_ERR(svn_git__tree_entry_to_object(&obj, tree, e, result_pool));
+          SVN_ERR(svn_git__tree_entry_to_object(&obj, git_tree_owner(tree),
+                                                e, result_pool));
 
           sub_tree = (git_tree*)obj;
 
@@ -263,4 +286,35 @@ svn_git__commit_tree_entry(const git_tree_entry **entry_p,
                                    result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_git__treebuilder_new(git_treebuilder **treebuilder,
+                         git_repository *repo,
+                         const git_tree *source,
+                         apr_pool_t *result_pool)
+{
+  git_treebuilder *tb;
+  GIT2_ERR(git_treebuilder_new(&tb, repo, source));
+  if (tb)
+    {
+      GIT_RELEASE_AT_CLEANUP(git_treebuilder, tb, result_pool);
+    }
+
+  *treebuilder = tb;
+  return SVN_NO_ERROR;
+}
+
+#undef svn_git__wrap_git_error
+svn_error_t *
+svn_git__wrap_git_error(void)
+{
+  git_error git_err;
+
+  if (giterr_detach(&git_err) == -1)
+    SVN_ERR_MALFUNCTION();
+
+  /* ### TODO: map error code */
+  return svn_error_createf(SVN_ERR_FS_GIT_LIBGIT2_ERROR, NULL,
+                           _("git: %s"), git_err.message);
 }

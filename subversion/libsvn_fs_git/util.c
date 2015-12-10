@@ -140,7 +140,7 @@ svn_fs_git__get_blob_stream(svn_stream_t **stream,
       if (git_err)
         {
           git_odb_free(odb);
-          return svn_fs_git__wrap_git_error();
+          return svn_git__wrap_git_error();
         }
 
       subpool = svn_pool_create(result_pool);
@@ -178,18 +178,3 @@ svn_fs_git__get_blob_stream(svn_stream_t **stream,
   return SVN_NO_ERROR;
 }
 
-
-
-#undef svn_fs_git__wrap_git_error
-svn_error_t *
-svn_fs_git__wrap_git_error(void)
-{
-  git_error git_err;
-
-  if (giterr_detach(&git_err) == -1)
-    SVN_ERR_MALFUNCTION();
-
-  /* ### TODO: map error code */
-  return svn_error_createf(SVN_ERR_FS_GIT_LIBGIT2_ERROR, NULL,
-                           _("git: %s"), git_err.message);
-}

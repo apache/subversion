@@ -102,7 +102,7 @@ revmap_update_branch(svn_fs_t *fs,
     }
 
   if (git_err != GIT_ITEROVER)
-    return svn_fs_git__wrap_git_error();
+    return svn_git__wrap_git_error();
 
   return SVN_NO_ERROR;
 }

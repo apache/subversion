@@ -242,9 +242,11 @@ walk_tree_for_changes(apr_hash_t *changed_paths, const char *relpath,
         {
           git_object *e_new_tree, *e_old_tree;
 
-          SVN_ERR(svn_git__tree_entry_to_object(&e_new_tree, new_tree,
+          SVN_ERR(svn_git__tree_entry_to_object(&e_new_tree,
+                                                git_tree_owner(new_tree),
                                                 entry, iterpool));
-          SVN_ERR(svn_git__tree_entry_to_object(&e_old_tree, old_tree,
+          SVN_ERR(svn_git__tree_entry_to_object(&e_old_tree,
+                                                git_tree_owner(old_tree),
                                                 old_entry, iterpool));
 
           SVN_ERR(walk_tree_for_changes(
@@ -298,7 +300,9 @@ walk_tree_for_changes(apr_hash_t *changed_paths, const char *relpath,
           svn_hash_sets(changed_paths, make_fspath(epath, result_pool),
                         ch);
 
-          SVN_ERR(svn_git__tree_entry_to_object(&e_new_tree, new_tree, entry,
+          SVN_ERR(svn_git__tree_entry_to_object(&e_new_tree,
+                                                git_tree_owner(new_tree),
+                                                entry,
                                                 iterpool));
 
           SVN_ERR(walk_tree_for_changes(
@@ -470,7 +474,10 @@ fs_git_check_path(svn_node_kind_t *kind_p, svn_fs_root_t *root,
   SVN_ERR(find_branch(&commit, &relpath, root, path, pool));
   if (!commit)
     {
-      if (!strcmp(path, "branches") || !strcmp(path, "tags"))
+      if (root->rev > 0
+          && (!strcmp(path, "trunk"))
+              || !strcmp(path, "branches")
+              || !strcmp(path, "tags"))
         {
           *kind_p = svn_node_dir;
           return SVN_NO_ERROR;
@@ -1068,7 +1075,8 @@ fs_git_dir_entries(apr_hash_t **entries_p, svn_fs_root_t *root,
       if (!entry || git_tree_entry_type(entry) != GIT_OBJ_TREE)
         return SVN_FS__ERR_NOT_DIRECTORY(root->fs, path);
 
-      SVN_ERR(svn_git__tree_entry_to_object(&obj, tree, entry, pool));
+      SVN_ERR(svn_git__tree_entry_to_object(&obj, git_tree_owner(tree),
+                                            entry, pool));
 
       tree = (git_tree*)obj;
     }
@@ -1151,7 +1159,8 @@ fs_git_file_length(svn_filesize_t *length_p, svn_fs_root_t *root,
       /* ### TODO */
     }
 
-  SVN_ERR(svn_git__tree_entry_to_object(&obj, tree, entry, pool));
+  SVN_ERR(svn_git__tree_entry_to_object(&obj, git_tree_owner(tree),
+                                        entry, pool));
 
   blob = (git_blob*)obj;
 
