@@ -481,7 +481,7 @@ copy_item_to_temp(pack_context_t *context,
   svn_fs_fs__p2l_entry_t *new_entry
     = apr_pmemdup(context->info_pool, entry, sizeof(*entry));
 
-  SVN_ERR(svn_fs_fs__get_file_offset(&new_entry->offset, temp_file, pool));
+  SVN_ERR(svn_io_file_get_offset(&new_entry->offset, temp_file, pool));
   APR_ARRAY_PUSH(entries, svn_fs_fs__p2l_entry_t *) = new_entry;
 
   SVN_ERR(copy_file_data(context, temp_file, rev_file, entry->size, pool));
@@ -568,7 +568,7 @@ copy_rep_to_temp(pack_context_t *context,
   /* create a copy of ENTRY, make it point to the copy destination and
    * store it in CONTEXT */
   entry = apr_pmemdup(context->info_pool, entry, sizeof(*entry));
-  SVN_ERR(svn_fs_fs__get_file_offset(&entry->offset, context->reps_file, pool));
+  SVN_ERR(svn_io_file_get_offset(&entry->offset, context->reps_file, pool));
   add_item_rep_mapping(context, entry);
 
   /* read & parse the representation header */
@@ -719,8 +719,8 @@ copy_node_to_temp(pack_context_t *context,
   /* create a copy of ENTRY, make it point to the copy destination and
    * store it in CONTEXT */
   entry = apr_pmemdup(context->info_pool, entry, sizeof(*entry));
-  SVN_ERR(svn_fs_fs__get_file_offset(&entry->offset, context->reps_file,
-                                     pool));
+  SVN_ERR(svn_io_file_get_offset(&entry->offset, context->reps_file,
+                                 pool));
   add_item_rep_mapping(context, entry);
 
   /* copy the noderev to our temp file */

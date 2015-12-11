@@ -480,7 +480,7 @@ expect_buffer_nul(apr_file_t *file,
         apr_off_t offset;
 
         SVN_ERR(svn_io_file_name_get(&file_name, file, pool));
-        SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
+        SVN_ERR(svn_io_file_get_offset(&offset, file, pool));
         offset -= size - i;
 
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,

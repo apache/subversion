@@ -746,15 +746,15 @@ typedef struct rep_state_t
   int chunk_index;  /* number of the window to read */
 } rep_state_t;
 
-/* Simple wrapper around svn_fs_fs__get_file_offset to simplify callers. */
+/* Simple wrapper around svn_io_file_get_offset to simplify callers. */
 static svn_error_t *
 get_file_offset(apr_off_t *offset,
                 rep_state_t *rs,
                 apr_pool_t *pool)
 {
-  return svn_error_trace(svn_fs_fs__get_file_offset(offset,
-                                                    rs->sfile->rfile->file,
-                                                    pool));
+  return svn_error_trace(svn_io_file_get_offset(offset,
+                                                rs->sfile->rfile->file,
+                                                pool));
 }
 
 /* Simple wrapper around svn_io_file_aligned_seek to simplify callers. */
