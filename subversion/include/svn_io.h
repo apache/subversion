@@ -2235,11 +2235,11 @@ svn_error_t *
 svn_io_file_size_get(svn_filesize_t *filesize_p, apr_file_t *file,
                      apr_pool_t *pool);
 
-/* Fetch the current offset of @a file into @a *offset_p. Use @a pool for
- * temporary allocations.
- *
- * @since New in 1.10
- */
+/** Fetch the current offset of @a file into @a *offset_p. Use @a pool for
+  * temporary allocations.
+  *
+  * @since New in 1.10
+  */
 svn_error_t *
 svn_io_file_get_offset(apr_off_t *offset_p,
                        apr_file_t *file,
