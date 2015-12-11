@@ -1687,7 +1687,6 @@ pack_phys_addressed(const char *pack_file_dir,
   apr_file_t *manifest_file;
   svn_stream_t *manifest_stream;
   svn_revnum_t end_rev, rev;
-  apr_off_t next_offset;
   apr_pool_t *iterpool;
 
   /* Some useful paths. */
@@ -1708,27 +1707,26 @@ pack_phys_addressed(const char *pack_file_dir,
   manifest_stream = svn_stream_from_aprfile2(manifest_file, TRUE, pool);
 
   end_rev = start_rev + max_files_per_dir - 1;
-  next_offset = 0;
   iterpool = svn_pool_create(pool);
 
   /* Iterate over the revisions in this shard, squashing them together. */
   for (rev = start_rev; rev <= end_rev; rev++)
     {
       svn_stream_t *rev_stream;
-      apr_finfo_t finfo;
       const char *path;
+      apr_off_t offset;
 
       svn_pool_clear(iterpool);
 
-      /* Get the size of the file. */
       path = svn_dirent_join(shard_path, apr_psprintf(iterpool, "%ld", rev),
                              iterpool);
-      SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, iterpool));
+
+      /* Obtain current offset in pack file. */
+      SVN_ERR(svn_io_file_get_offset(&offset, pack_file, iterpool));
 
       /* build manifest */
       SVN_ERR(svn_stream_printf(manifest_stream, iterpool,
-                                "%" APR_OFF_T_FMT "\n", next_offset));
-      next_offset += finfo.size;
+                                "%" APR_OFF_T_FMT "\n", offset));
 
       /* Copy all the bits from the rev file to the end of the pack file. */
       SVN_ERR(svn_stream_open_readonly(&rev_stream, path, iterpool, iterpool));
