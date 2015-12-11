@@ -38,13 +38,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1703470, r1703475, r1703476, r1703477, r1703544
-   Updated INSTALL documentation.
-   Justification:
-     Corrects outdated and partially incorrect statements
-   Votes:
-     +1: luke1410
-
  * r1710167
    Set journal-mode in exclusive-locking mode to improve NFS performance.
    Justification:
@@ -101,10 +94,17 @@ Candidate changes:
    Justification:
      Regression introduced in 1.8.10.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1703470, r1703475, r1703476, r1703477, r1703544
+   Updated INSTALL documentation.
+   Justification:
+     Corrects outdated and partially incorrect statements
+   Votes:
+     +1: luke1410, rhuijben
