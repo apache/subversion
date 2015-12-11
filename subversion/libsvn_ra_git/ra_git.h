@@ -110,7 +110,8 @@ svn_ra_git__get_commit_editor(const svn_delta_editor_t **editor,
                               apr_hash_t *revprop_table,
                               svn_commit_callback2_t callback,
                               void *callback_baton,
-                              apr_pool_t *pool);
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 void
 svn_ra_git__libgit2_version(int *major,

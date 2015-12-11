@@ -126,6 +126,45 @@ create_git_repos_greek(const char **repos_url,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_client_list_func2_t */
+static svn_error_t *
+ls_collect_names(void *baton,
+                 const char *path,
+                 const svn_dirent_t *dirent,
+                 const svn_lock_t *lock,
+                 const char *abs_path,
+                 const char *external_parent_url,
+                 const char *external_target,
+                 apr_pool_t *scratch_pool)
+{
+  apr_hash_t *result = baton;
+
+  path = apr_pstrdup(apr_hash_pool_get(result), path);
+  svn_hash_sets(result, path, path);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+ls_recursive(apr_hash_t **entries,
+             const char *url_or_abspath,
+             svn_client_ctx_t *ctx,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  svn_opt_revision_t head;
+  apr_hash_t *result = apr_hash_make(result_pool);
+
+  head.kind = svn_opt_revision_head;
+  SVN_ERR(svn_client_list3(url_or_abspath, &head, &head,
+                           svn_depth_infinity,
+                           SVN_DIRENT_KIND, FALSE, FALSE,
+                           ls_collect_names, result,
+                           ctx, scratch_pool));
+  *entries = result;
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 test_git_mkdir(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
@@ -189,7 +228,6 @@ test_git_checkout(const svn_test_opts_t *opts, apr_pool_t *pool)
   const char *repos_url;
   const char *wc_dir;
   svn_client_ctx_t *ctx;
-  svn_client__mtcc_t *mtcc;
   svn_opt_revision_t head_rev;
   svn_revnum_t rev;
   const char *trunk_url;
@@ -227,6 +265,78 @@ test_git_checkout(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+
+
+static svn_error_t *
+test_git_add_nodes(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  const char *repos_url;
+  svn_client_ctx_t *ctx;
+  svn_client__mtcc_t *mtcc;
+  const char *trunk_url;
+  apr_hash_t *names;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  SVN_ERR(create_git_repos_greek(&repos_url, "git-add-nodes-repos",
+                                 pool, subpool));
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_test__init_auth_baton(&ctx->auth_baton, pool));
+
+  trunk_url = svn_path_url_add_component2(repos_url, "trunk", pool);
+
+  SVN_ERR(ls_recursive(&names, trunk_url, ctx, pool, subpool));
+  SVN_TEST_INT_ASSERT(apr_hash_count(names), 21);
+
+  SVN_ERR(svn_client__mtcc_create(&mtcc, trunk_url, 2, ctx, subpool, subpool));
+  SVN_ERR(svn_client__mtcc_add_delete("A/D/H/chi", mtcc, subpool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("A/subdir", mtcc, subpool));
+  SVN_ERR(svn_client__mtcc_add_add_file("A/new", 
+                                        svn_stream_from_string(
+                                          svn_string_create("new\n", subpool),
+                                          subpool),
+                                        NULL,
+                                        mtcc, subpool));
+
+  SVN_ERR(svn_client__mtcc_commit(apr_hash_make(subpool),
+                                  verify_commit, NULL, mtcc, subpool));
+  svn_pool_clear(subpool);
+
+  SVN_ERR(ls_recursive(&names, trunk_url, ctx, pool, subpool));
+  SVN_TEST_INT_ASSERT(apr_hash_count(names), 22);
+
+
+  SVN_ERR(svn_client__mtcc_create(&mtcc,
+                                  svn_path_url_add_component2(trunk_url, "A/D",
+                                                              subpool),
+                                  3, ctx, subpool, subpool));
+  SVN_ERR(svn_client__mtcc_add_delete("G/tau", mtcc, subpool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("G/subdir", mtcc, subpool));
+  SVN_ERR(svn_client__mtcc_add_add_file("G/subdir/new",
+                                        svn_stream_from_string(
+                                          svn_string_create("new\n", subpool),
+                                          subpool),
+                                        NULL,
+                                        mtcc, subpool));
+  SVN_ERR(svn_client__mtcc_add_update_file("H/psi",
+                                           svn_stream_from_string(
+                                             svn_string_create("updated\n",
+                                                               subpool),
+                                             subpool),
+                                           NULL,
+                                           NULL, NULL,
+                                           mtcc, subpool));
+
+  SVN_ERR(svn_client__mtcc_commit(apr_hash_make(subpool),
+                                  verify_commit, NULL, mtcc, subpool));
+  svn_pool_clear(subpool);
+
+  SVN_ERR(ls_recursive(&names, trunk_url, ctx, pool, subpool));
+  SVN_TEST_INT_ASSERT(apr_hash_count(names), 23);
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -239,6 +349,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                      "test git_mkdir"),
   SVN_TEST_OPTS_PASS(test_git_checkout,
                      "test git_checkout"),
+  SVN_TEST_OPTS_PASS(test_git_add_nodes,
+                     "test git_add_nodes"),
 
   SVN_TEST_NULL
 };

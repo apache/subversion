@@ -49,6 +49,8 @@ typedef struct git_commit_edit_baton_t
   svn_fs_root_t *root;
   svn_revnum_t created_rev;
 
+  apr_array_header_t *extra_builders;
+
   git_repository *repository;
   const git_commit *commit;
 
@@ -101,7 +103,40 @@ setup_change_trees(git_commit_node_baton_t *db,
 
   if (!db->pb)
     {
-      if (strcmp(db->eb->root_path, db->node_path) == 0)
+      const char *relpath;
+
+      relpath = svn_relpath_skip_ancestor(db->eb->root_path, db->node_path);
+
+      if (relpath && *relpath)
+        {
+          const git_tree *tree;
+
+          SVN_ERR(svn_git__commit_tree(&tree, eb->commit, scratch_pool));
+
+          while (*relpath)
+            {
+              const char *item = svn_relpath_prefix(relpath, 1, scratch_pool);
+              git_treebuilder *tb;
+              const git_tree_entry *t_entry;
+
+              SVN_ERR(svn_git__treebuilder_new(&tb, eb->repository, tree, eb->pool));
+              APR_ARRAY_PUSH(eb->extra_builders, git_treebuilder *) = tb;
+
+              t_entry = git_treebuilder_get(tb, item);
+              if (!t_entry)
+                return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL, NULL);
+
+              SVN_ERR(svn_git__tree_lookup(&tree, eb->repository,
+                                           git_tree_entry_id(t_entry),
+                                           eb->pool));
+
+              relpath = svn_relpath_skip_ancestor(item, relpath);
+            }
+
+          SVN_ERR(svn_git__treebuilder_new(&db->dir_builder,
+                                           eb->repository, tree, db->pool));
+        }
+      else if (relpath)
         {
           svn_node_kind_t kind;
 
@@ -133,7 +168,7 @@ setup_change_trees(git_commit_node_baton_t *db,
 
               if (eb->created_rev == 0)
                 tree = NULL;
-              else
+              else if (*root_relpath != '\0')
                 {
                   git_tree_entry *t_entry;
 
@@ -150,6 +185,10 @@ setup_change_trees(git_commit_node_baton_t *db,
                                                git_tree_entry_id(t_entry),
                                                db->pool));
                 }
+              else
+                {
+                  SVN_ERR(svn_git__commit_tree(&tree, eb->commit, db->pool));
+                }
 
               SVN_ERR(svn_git__treebuilder_new(&db->dir_builder, eb->repository,
                                                tree, db->pool));
@@ -164,7 +203,7 @@ setup_change_trees(git_commit_node_baton_t *db,
     {
       const git_tree_entry *entry;
       const git_tree *tree = NULL;
-      entry = git_treebuilder_get(db->dir_builder,
+      entry = git_treebuilder_get(db->pb->dir_builder,
                                   svn_relpath_basename(db->node_path, NULL));
 
       if (entry)
@@ -246,13 +285,10 @@ ensure_mutable(git_commit_node_baton_t *nb,
           svn_fs_t *fs;
           const git_tree *tree = NULL;
 
-          SVN_ERR(svn_repos_open3(&eb->repos, eb->sess->local_repos_abspath, NULL,
-                                  eb->pool, scratch_pool));
-
           fs = svn_repos_fs(eb->repos);
           SVN_ERR(svn_fs_youngest_rev(&youngest, fs, scratch_pool));
 
-          SVN_ERR(svn_fs_revision_root(&eb->root, fs, youngest, scratch_pool));
+          SVN_ERR(svn_fs_revision_root(&eb->root, fs, youngest, eb->pool));
 
           SVN_ERR(svn_fs_node_created_rev(&eb->created_rev, eb->root,
                                           eb->root_path, scratch_pool));
@@ -286,8 +322,6 @@ ensure_mutable(git_commit_node_baton_t *nb,
             }
           else
             tree = NULL;
-
-          SVN_ERR(setup_change_trees(nb, scratch_pool));
         }
     }
 
@@ -297,6 +331,8 @@ ensure_mutable(git_commit_node_baton_t *nb,
         return svn_error_createf(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
                                  _("Can't commit to '%s' and '%s' in one commit"),
                                  eb->root_path, path);
+
+      SVN_ERR(setup_change_trees(nb, scratch_pool));
     }
   else
     {
@@ -318,6 +354,7 @@ git_commit__open_root(void *edit_baton,
 {
   git_commit_node_baton_t *nb = apr_pcalloc(result_pool, sizeof(*nb));
   git_commit_edit_baton_t *eb = edit_baton;
+  svn_node_kind_t kind;
   nb->eb = eb;
   nb->pool = result_pool;
 
@@ -325,8 +362,19 @@ git_commit__open_root(void *edit_baton,
                                         nb->eb->sess->session_url_buf->data,
                                         result_pool);
 
-  nb->root = eb->root;
   nb->root_path = nb->node_path;
+
+  if (!SVN_IS_VALID_REVNUM(base_revision))
+    SVN_ERR(eb->session->vtable->get_latest_revnum(eb->session, &base_revision,
+                                                   result_pool));
+
+  SVN_ERR(svn_fs_revision_root(&eb->root, svn_repos_fs(eb->repos), base_revision,
+                               eb->pool));
+
+  SVN_ERR(svn_fs_check_path(&kind, eb->root, nb->root_path, result_pool));
+
+  if (kind != svn_node_dir)
+    return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL, NULL);
 
   *root_baton = nb;
 
@@ -484,6 +532,7 @@ git_commit__close_directory(void *dir_baton,
                             apr_pool_t *scratch_pool)
 {
   git_commit_node_baton_t *db = dir_baton;
+  git_commit_edit_baton_t *eb = db->eb;
 
   if (db->dir_builder)
     {
@@ -496,8 +545,27 @@ git_commit__close_directory(void *dir_baton,
                                         svn_relpath_basename(db->node_path,
                                                              NULL),
                                         &oid, GIT_FILEMODE_TREE));
-      else if (!strcmp(db->node_path, db->eb->root_path))
+      else
         {
+          const char *relpath = svn_relpath_skip_ancestor(db->eb->root_path,
+                                                          db->node_path);
+
+          while (*relpath && eb->extra_builders->nelts)
+            {
+              git_treebuilder *tb;
+              const char *name;
+
+              svn_relpath_split(&relpath, &name, relpath, scratch_pool);
+              tb = *(void **)apr_array_pop(eb->extra_builders);
+
+              GIT2_ERR(git_treebuilder_insert(NULL, tb, name, &oid,
+                                              GIT_FILEMODE_TREE));
+
+              GIT2_ERR(git_treebuilder_write(&oid, tb));
+            }
+
+          SVN_ERR_ASSERT(!*relpath && !eb->extra_builders->nelts);
+
           db->eb->tree_oid = oid;
           db->eb->tree_written = TRUE;
         }
@@ -756,18 +824,22 @@ svn_ra_git__get_commit_editor(const svn_delta_editor_t **editor_p,
                               apr_hash_t *revprop_table,
                               svn_commit_callback2_t callback,
                               void *callback_baton,
-                              apr_pool_t *pool)
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
   svn_ra_git__session_t *sess = session->priv;
-  git_commit_edit_baton_t *eb = apr_pcalloc(pool, sizeof(*eb));
-  svn_delta_editor_t *editor = svn_delta_default_editor(pool);
+  git_commit_edit_baton_t *eb = apr_pcalloc(result_pool, sizeof(*eb));
+  svn_delta_editor_t *editor = svn_delta_default_editor(result_pool);
 
-  eb->pool = svn_pool_create(pool);
+  eb->pool = svn_pool_create(result_pool);
   eb->revprops = revprop_table;
   eb->commit_cb = callback;
   eb->commit_baton = callback_baton;
   eb->session = session;
   eb->sess = sess;
+
+  eb->extra_builders = apr_array_make(eb->pool, 16,
+                                      sizeof(git_treebuilder *));
 
   editor->open_root        = git_commit__open_root;
   editor->delete_entry     = git_commit__delete_entry;
@@ -786,5 +858,9 @@ svn_ra_git__get_commit_editor(const svn_delta_editor_t **editor_p,
 
   *editor_p = editor;
   *edit_baton_p = eb;
+
+  SVN_ERR(svn_repos_open3(&eb->repos, eb->sess->local_repos_abspath, NULL,
+                          eb->pool, scratch_pool));
+
   return SVN_NO_ERROR;
 }

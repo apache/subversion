@@ -571,14 +571,15 @@ ra_git_get_commit_editor(svn_ra_session_t *session,
 {
   svn_ra_git__session_t *sess = session->priv;
 
-  SVN_ERR(ensure_local_session(session, pool));
+  svn_pool_clear(sess->scratch_pool);
+  SVN_ERR(ensure_local_session(session, sess->scratch_pool));
   SVN_ERR(svn_ra_git__git_fetch(session, TRUE, sess->scratch_pool));
 
   return svn_error_trace(
     svn_ra_git__get_commit_editor(editor, edit_baton,
                                   session, revprop_table,
                                   callback, callback_baton,
-                                  pool));
+                                  pool, sess->scratch_pool));
 }
 
 
