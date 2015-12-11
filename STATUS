@@ -96,6 +96,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1663500
+   Fix issue #4557, "ra_serf fails to delete directory containing many files"
+   Justification:
+     Regression introduced in 1.8.10.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
