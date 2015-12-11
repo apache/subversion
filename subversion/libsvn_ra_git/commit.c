@@ -282,14 +282,7 @@ ensure_mutable(git_commit_node_baton_t *nb,
 
       if (eb->change_mode)
         {
-          svn_revnum_t youngest;
-          svn_fs_t *fs;
-          const git_tree *tree = NULL;
-
-          fs = svn_repos_fs(eb->repos);
-          SVN_ERR(svn_fs_youngest_rev(&youngest, fs, scratch_pool));
-
-          SVN_ERR(svn_fs_revision_root(&eb->root, fs, youngest, eb->pool));
+          svn_fs_t *fs = svn_repos_fs(eb->repos);
 
           SVN_ERR(svn_fs_node_created_rev(&eb->created_rev, eb->root,
                                           eb->root_path, scratch_pool));
@@ -316,13 +309,8 @@ ensure_mutable(git_commit_node_baton_t *nb,
 
                   SVN_ERR(svn_git__commit_lookup(&eb->commit, eb->repository,
                                                  &oid, eb->pool));
-
-                  if (eb->commit)
-                    SVN_ERR(svn_git__commit_tree(&tree, eb->commit, eb->pool));
                 }
             }
-          else
-            tree = NULL;
         }
     }
 
@@ -356,6 +344,9 @@ git_commit__open_root(void *edit_baton,
   git_commit_node_baton_t *nb = apr_pcalloc(result_pool, sizeof(*nb));
   git_commit_edit_baton_t *eb = edit_baton;
   svn_node_kind_t kind;
+  svn_fs_t *fs;
+  svn_revnum_t youngest;
+
   nb->eb = eb;
   nb->pool = result_pool;
 
@@ -363,19 +354,29 @@ git_commit__open_root(void *edit_baton,
                                         nb->eb->sess->session_url_buf->data,
                                         result_pool);
 
+  fs = svn_repos_fs(eb->repos);
+  SVN_ERR(svn_fs_youngest_rev(&youngest, fs, result_pool));
+
+  SVN_ERR(svn_fs_revision_root(&eb->root, fs, youngest, eb->pool));
+
+  nb->root = eb->root;
   nb->root_path = nb->node_path;
-
-  if (!SVN_IS_VALID_REVNUM(base_revision))
-    SVN_ERR(eb->session->vtable->get_latest_revnum(eb->session, &base_revision,
-                                                   result_pool));
-
-  SVN_ERR(svn_fs_revision_root(&eb->root, svn_repos_fs(eb->repos), base_revision,
-                               eb->pool));
 
   SVN_ERR(svn_fs_check_path(&kind, eb->root, nb->root_path, result_pool));
 
   if (kind != svn_node_dir)
     return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL, NULL);
+
+  if (SVN_IS_VALID_REVNUM(base_revision))
+    {
+      svn_revnum_t created_rev;
+
+      SVN_ERR(svn_fs_node_created_rev(&created_rev, nb->root, nb->root_path,
+                                      result_pool));
+
+      if (created_rev > base_revision)
+        return svn_error_create(SVN_ERR_FS_OUT_OF_DATE, NULL, NULL);
+    }
 
   *root_baton = nb;
 
@@ -391,6 +392,8 @@ git_commit__delete_entry(const char *path,
   git_commit_node_baton_t *pb = parent_baton;
   const git_tree_entry *t_entry;
   const char *name;
+  const char *root_relpath;
+  svn_node_kind_t kind;
 
   SVN_ERR(ensure_mutable(pb, path, revision, scratch_pool));
 
@@ -398,6 +401,24 @@ git_commit__delete_entry(const char *path,
     return svn_error_create(APR_ENOTIMPL, NULL, NULL);
 
   name = svn_relpath_basename(path, NULL);
+
+  root_relpath = svn_relpath_join(pb->root_path, name, scratch_pool);
+
+  SVN_ERR(svn_fs_check_path(&kind, pb->root, root_relpath, scratch_pool));
+
+  if (kind != svn_node_dir && kind != svn_node_file)
+    return svn_error_create(SVN_ERR_FS_NOT_FOUND, NULL, NULL);
+
+  if (SVN_IS_VALID_REVNUM(revision))
+    {
+      svn_revnum_t created_rev;
+
+      SVN_ERR(svn_fs_node_created_rev(&created_rev, pb->root, root_relpath,
+                                      scratch_pool));
+
+      if (created_rev > revision)
+        return svn_error_create(SVN_ERR_FS_OUT_OF_DATE, NULL, NULL);
+    }
 
   t_entry = git_treebuilder_get(pb->dir_builder, name);
 
@@ -509,6 +530,17 @@ git_commit__open_directory(const char *path,
 
   if (kind != svn_node_dir)
     return svn_error_create(SVN_ERR_FS_NOT_DIRECTORY, NULL, NULL);
+
+  if (SVN_IS_VALID_REVNUM(base_revision) && db->root)
+    {
+      svn_revnum_t created_rev;
+
+      SVN_ERR(svn_fs_node_created_rev(&created_rev, db->root, db->root_path,
+                                      result_pool));
+
+      if (created_rev > base_revision)
+        return svn_error_create(SVN_ERR_FS_OUT_OF_DATE, NULL, NULL);
+    }
 
   *child_baton = db;
   return SVN_NO_ERROR;
@@ -643,6 +675,17 @@ git_commit__open_file(const char *path,
 
   if (kind != svn_node_file)
     return svn_error_create(SVN_ERR_FS_NOT_FILE, NULL, NULL);
+
+  if (SVN_IS_VALID_REVNUM(base_revision) && fb->root)
+    {
+      svn_revnum_t created_rev;
+
+      SVN_ERR(svn_fs_node_created_rev(&created_rev, fb->root, fb->root_path,
+                                      result_pool));
+
+      if (created_rev > base_revision)
+        return svn_error_create(SVN_ERR_FS_OUT_OF_DATE, NULL, NULL);
+    }
 
   *file_baton = fb;
 
