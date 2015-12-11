@@ -831,8 +831,7 @@ tell_file(void *baton, apr_off_t *offset, apr_pool_t *scratch_pool)
 {
   apr_file_t *file = baton;
 
-  *offset = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, offset, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(offset, file, scratch_pool));
   return SVN_NO_ERROR;
 }
 

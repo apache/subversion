@@ -925,8 +925,7 @@ mark_handler_apr(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
   struct mark_apr *mark_apr;
 
   mark_apr = apr_palloc(pool, sizeof(*mark_apr));
-  mark_apr->off = 0;
-  SVN_ERR(svn_io_file_seek(btn->file, APR_CUR, &mark_apr->off, btn->pool));
+  SVN_ERR(svn_io_file_get_offset(&mark_apr->off, btn->file, btn->pool));
   *mark = (svn_stream_mark_t *)mark_apr;
   return SVN_NO_ERROR;
 }

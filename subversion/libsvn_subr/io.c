@@ -5383,8 +5383,7 @@ svn_io_file_readline(apr_file_t *file,
               apr_off_t pos;
 
               /* Check for "\r\n" by peeking at the next byte. */
-              pos = 0;
-              SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos, scratch_pool));
+              SVN_ERR(svn_io_file_get_offset(&pos, file, scratch_pool));
               SVN_ERR(svn_io_file_read_full2(file, &c, sizeof(c), &numbytes,
                                              &found_eof, scratch_pool));
               if (numbytes == 1 && c == '\n')

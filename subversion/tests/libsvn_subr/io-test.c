@@ -621,8 +621,7 @@ test_file_readline(apr_pool_t *pool)
 
   /* Check that APR file reports correct offset. See r1719196 why it's
      important. */
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(f, APR_CUR, &pos, pool));
+  SVN_ERR(svn_io_file_get_offset(&pos, f, pool));
   SVN_TEST_INT_ASSERT(pos, 3);
 
   err = svn_io_file_readline(f, &buf, &eol, &eof, APR_SIZE_MAX, pool, pool);
@@ -633,8 +632,7 @@ test_file_readline(apr_pool_t *pool)
 
   /* Check that APR file reports correct offset. See r1719196 why it's
      important. */
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(f, APR_CUR, &pos, pool));
+  SVN_ERR(svn_io_file_get_offset(&pos, f, pool));
   SVN_TEST_INT_ASSERT(pos, 6);
 
   err = svn_io_file_readline(f, &buf, &eol, &eof, APR_SIZE_MAX, pool, pool);
@@ -645,8 +643,7 @@ test_file_readline(apr_pool_t *pool)
 
   /* Check that APR file reports correct offset. See r1719196 why it's
      important. */
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(f, APR_CUR, &pos, pool));
+  SVN_ERR(svn_io_file_get_offset(&pos, f, pool));
   SVN_TEST_INT_ASSERT(pos, 12);
 
   err = svn_io_file_readline(f, &buf, &eol, &eof, APR_SIZE_MAX, pool, pool);
@@ -657,8 +654,7 @@ test_file_readline(apr_pool_t *pool)
 
   /* Check that APR file reports correct offset. See r1719196 why it's
      important. */
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(f, APR_CUR, &pos, pool));
+  SVN_ERR(svn_io_file_get_offset(&pos, f, pool));
   SVN_TEST_INT_ASSERT(pos, 18);
 
   /* Further reads still returns EOF. */
@@ -670,8 +666,7 @@ test_file_readline(apr_pool_t *pool)
 
   /* Check that APR file reports correct offset. See r1719196 why it's
      important. */
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(f, APR_CUR, &pos, pool));
+  SVN_ERR(svn_io_file_get_offset(&pos, f, pool));
   SVN_TEST_INT_ASSERT(pos, 18);
 
   SVN_ERR(svn_io_file_close(f, pool));
@@ -706,8 +701,7 @@ aligned_seek(apr_file_t *file,
     }
 
   /* we must be at the desired offset */
-  current = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, &current, pool));
+  SVN_ERR(svn_io_file_get_offset(&current, file, pool));
   SVN_TEST_ASSERT(current == (apr_off_t)offset);
 
   return SVN_NO_ERROR;
