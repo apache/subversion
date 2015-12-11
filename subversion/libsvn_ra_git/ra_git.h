@@ -35,6 +35,7 @@ typedef struct svn_ra_git__session_t
 
   /* The URL of the session. */
   const char *repos_root_url;
+  apr_array_header_t *branches;
 
   /* The file:/// session backing the git session*/
   svn_ra_session_t *local_session;

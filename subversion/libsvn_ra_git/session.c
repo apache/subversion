@@ -291,12 +291,11 @@ ra_git_open(svn_ra_session_t *session,
  * the repository (in sess->fs_path). */
   {
     const char *repos_relpath;
-    apr_array_header_t *branches;
 
     SVN_ERR(svn_ra_git__split_url(&sess->repos_root_url,
                                   &repos_relpath,
                                   &sess->git_remote_url,
-                                  &branches,
+                                  &sess->branches,
                                   sess, session_URL,
                                   result_pool, scratch_pool));
 

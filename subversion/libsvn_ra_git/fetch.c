@@ -210,11 +210,9 @@ svn_ra_git__split_url(const char **repos_root_url,
       *git_remote_url = apr_pstrdup(result_pool, remote_url_buf->data);
     }
   else
-    return svn_error_compose_create(
-      svn_ra_git__wrap_git_error(),
-      svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                        _("No git repository found at URL '%s'"),
-                        url));
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("No git repository found at URL '%s'"),
+                             url);
 
   SVN_DBG(("found remote url '%s', fs_path: '%s'\n",
            *repos_root_url, *repos_relpath));
@@ -292,6 +290,24 @@ svn_ra_git__push_commit(svn_ra_session_t *session,
   git_remote *remote;
   git_remote_callbacks *callbacks;
   apr_pool_t *subpool;
+  const char *to_ref = "refs/heads/master";
+
+  if (strcmp(edit_relpath, "trunk") == 0)
+    {
+      int i;
+      for (i = 0; i < sess->branches->nelts; i++)
+        {
+          svn_ra_git_branch_t *br = APR_ARRAY_IDX(sess->branches, i,
+                                                  svn_ra_git_branch_t *);
+
+          if (br->symref_target && !strcasecmp(br->name, "HEAD"))
+            to_ref = br->symref_target;
+        }
+    }
+  else
+    {
+      /* TODO: Determine proper branch reference from edit path */
+    }
 
   /* Create subpool, to allow closing handles early on */
   subpool = svn_pool_create(scratch_pool);
@@ -309,7 +325,7 @@ svn_ra_git__push_commit(svn_ra_session_t *session,
     refspecs.strings = &refspec;
 
     push_opts.callbacks = *callbacks;
-    refspec = apr_pstrcat(scratch_pool, "+", reference, ":refs/heads/master",
+    refspec = apr_pstrcat(scratch_pool, "+", reference, ":", to_ref,
                           SVN_VA_NULL);
 
     GIT2_ERR(git_remote_push(remote, &refspecs, &push_opts));
@@ -321,14 +337,21 @@ svn_ra_git__push_commit(svn_ra_session_t *session,
 
   if (callback)
     {
+      apr_hash_t *revprops;
       svn_commit_info_t *info = svn_create_commit_info(subpool);
 
-      info->author = "Q";
-      info->date = svn_time_to_cstring(apr_time_now(), subpool);
-
+      /* Should we really handle cases where this isn't the last
+         revision? */
       SVN_ERR(sess->local_session->vtable->get_latest_revnum(
-                  sess->local_session, &info->revision,
-                  subpool));
+        sess->local_session, &info->revision,
+        subpool));
+
+      SVN_ERR(sess->local_session->vtable->rev_proplist(
+        sess->local_session, info->revision, &revprops, subpool));
+
+      info->author = svn_prop_get_value(revprops, SVN_PROP_REVISION_AUTHOR);
+      info->date = svn_prop_get_value(revprops, SVN_PROP_REVISION_DATE);
+      info->repos_root = sess->repos_root_url;
 
       SVN_ERR(callback(info, callback_baton, scratch_pool));
     }
