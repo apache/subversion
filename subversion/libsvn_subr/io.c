@@ -3757,6 +3757,22 @@ svn_io_file_size_get(svn_filesize_t *filesize_p, apr_file_t *file,
 }
 
 svn_error_t *
+svn_io_file_get_offset(apr_off_t *offset_p,
+                       apr_file_t *file,
+                       apr_pool_t *pool)
+{
+  apr_off_t offset;
+
+  /* Note that, for buffered files, one (possibly surprising) side-effect
+     of this call is to flush any unwritten data to disk. */
+  offset = 0;
+  SVN_ERR(svn_io_file_seek(file, APR_CUR, &offset, pool));
+  *offset_p = offset;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_io_file_read(apr_file_t *file, void *buf,
                  apr_size_t *nbytes, apr_pool_t *pool)
 {
