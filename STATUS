@@ -94,7 +94,9 @@ Candidate changes:
    Justification:
      Regression introduced in 1.8.10.
    Votes:
-     +1: stsp, rhuijben
+     +1: rhuijben
+     -1: stsp (this nomination was premature, the associated regression
+               test is still failing)
 
 Veto-blocked changes:
 =====================
