@@ -324,7 +324,12 @@ test_git_add_nodes(const svn_test_opts_t *opts, apr_pool_t *pool)
                                                                subpool),
                                              subpool),
                                            NULL,
-                                           NULL, NULL,
+                                           svn_stream_from_string(
+                                             svn_string_create(
+                                                "This is the file 'pi'.\n",
+                                                               subpool),
+                                             subpool),
+                                           NULL,
                                            mtcc, subpool));
 
   SVN_ERR(svn_client__mtcc_commit(apr_hash_make(subpool),

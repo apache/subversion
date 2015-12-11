@@ -88,7 +88,8 @@ typedef struct git_commit_node_baton_t
   const char *tmp_abspath;
   svn_checksum_t *result_checksum;
   svn_checksum_t *base_checksum;
-  svn_checksum_t *expected_base_checks;
+  svn_stream_t *base_stream;
+  svn_checksum_t *expected_base_checksum;
 
 } git_commit_node_baton_t;
 
@@ -660,7 +661,8 @@ git_commit__apply_textdelta(void *file_baton,
   svn_stream_t *base_stream;
 
   if (base_checksum)
-    SVN_ERR(svn_checksum_parse_hex(&fb->expected_base_checks, svn_checksum_md5,
+    SVN_ERR(svn_checksum_parse_hex(&fb->expected_base_checksum,
+                                   svn_checksum_md5,
                                    base_checksum, fb->pool));
 
   SVN_ERR(svn_io_open_unique_file3(&fnew, &fb->tmp_abspath, NULL,
@@ -673,10 +675,15 @@ git_commit__apply_textdelta(void *file_baton,
     SVN_ERR(svn_fs_file_contents(&base_stream, fb->root, fb->root_path,
                                  result_pool));
 
-  svn_txdelta_apply(svn_stream_checksummed2(
-                        base_stream,
-                        &fb->base_checksum, NULL, svn_checksum_md5, TRUE,
-                        result_pool),
+  if (base_checksum)
+    {
+      base_stream = fb->base_stream =
+        svn_stream_checksummed2(base_stream, &fb->base_checksum,
+                                NULL, svn_checksum_md5, TRUE,
+                                result_pool);
+    }
+
+  svn_txdelta_apply(base_stream,
                     svn_stream_checksummed2(
                         svn_stream_from_aprfile2(fnew, FALSE, result_pool),
                         NULL, &fb->result_checksum, svn_checksum_md5, FALSE,
@@ -702,8 +709,40 @@ git_commit__close_file(void *file_baton,
                        apr_pool_t *scratch_pool)
 {
   git_commit_node_baton_t *fb = file_baton;
+  svn_checksum_t *final_checksum;
 
   /* TODO: Verify checksums! */
+  if (text_checksum)
+    SVN_ERR(svn_checksum_parse_hex(&final_checksum, svn_checksum_md5,
+                                   text_checksum, scratch_pool));
+  else
+    final_checksum = NULL;
+
+  if (final_checksum && fb->result_checksum
+      && !svn_checksum_match(final_checksum, fb->result_checksum))
+    {
+      return svn_error_trace(
+        svn_checksum_mismatch_err(final_checksum, fb->result_checksum,
+                                  scratch_pool,
+                                  _("Result checksum error on '%s'"),
+                                  fb->node_path));
+    }
+
+  if (fb->base_stream)
+    {
+      /* This explicit close sets fb->base_checksum */
+      SVN_ERR(svn_stream_close(fb->base_stream));
+
+      if (!svn_checksum_match(fb->expected_base_checksum, fb->base_checksum))
+        {
+          return svn_error_trace(
+            svn_checksum_mismatch_err(fb->expected_base_checksum,
+                                      fb->base_checksum,
+                                      scratch_pool,
+                                      _("Base checksum mismatch on '%s'"),
+                                      fb->node_path));
+        }
+    }
 
   if (fb->pb->dir_builder && fb->tmp_abspath)
     {
