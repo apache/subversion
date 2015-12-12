@@ -409,7 +409,7 @@ static svn_error_t *
 parse_revprop(apr_hash_t **properties,
               svn_fs_t *fs,
               svn_revnum_t revision,
-              svn_string_t *content,
+              const svn_string_t *content,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
@@ -716,9 +716,9 @@ same_shard(svn_fs_t *fs,
   return (r1 / ffd->max_files_per_dir) == (r2 / ffd->max_files_per_dir);
 }
 
-/* Given FS and the full packed file content in REVPROPS->PACKED_REVPROPS
- * and make PACKED_REVPROPS point to the first serialized revprop.  If
- * READ_ALL is set, initialize the SIZES and OFFSETS members as well.
+/* Given FS and the full packed file content in CONTENT and make
+ * PACKED_REVPROPS point to the first serialized revprop.  If READ_ALL
+ * is set, initialize the SIZES and OFFSETS members as well.
  *
  * Parse the revprops for REVPROPS->REVISION and set the PROPERTIES as
  * well as the SERIALIZED_SIZE member.  If revprop caching has been
@@ -727,6 +727,7 @@ same_shard(svn_fs_t *fs,
 static svn_error_t *
 parse_packed_revprops(svn_fs_t *fs,
                       packed_revprops_t *revprops,
+                      svn_stringbuf_t *content,
                       svn_boolean_t read_all,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
@@ -739,7 +740,7 @@ parse_packed_revprops(svn_fs_t *fs,
 
   /* decompress (even if the data is only "stored", there is still a
    * length header to remove) */
-  svn_stringbuf_t *compressed = revprops->packed_revprops;
+  svn_stringbuf_t *compressed = content;
   svn_stringbuf_t *uncompressed = svn_stringbuf_create_empty(result_pool);
   SVN_ERR(svn__decompress(compressed->data, compressed->len,
                           uncompressed, APR_SIZE_MAX));
@@ -871,7 +872,6 @@ read_pack_revprop(packed_revprops_t **revprops,
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t missing = FALSE;
-  svn_error_t *err;
   packed_revprops_t *result;
   int i;
 
@@ -889,11 +889,11 @@ read_pack_revprop(packed_revprops_t **revprops,
 
   /* try to read the packed revprops. This may require retries if we have
    * concurrent writers. */
-  for (i = 0;
-       i < SVN_FS_X__RECOVERABLE_RETRY_COUNT && !result->packed_revprops;
-       ++i)
+  for (i = 0; i < SVN_FS_X__RECOVERABLE_RETRY_COUNT; ++i)
     {
       const char *file_path;
+      svn_stringbuf_t *contents = NULL;
+
       svn_pool_clear(iterpool);
 
       /* there might have been concurrent writes.
@@ -902,11 +902,21 @@ read_pack_revprop(packed_revprops_t **revprops,
       SVN_ERR(get_revprop_packname(fs, result, result_pool, iterpool));
       file_path = get_revprop_pack_filepath(result, &result->entry,
                                             iterpool);
-      SVN_ERR(svn_fs_x__try_stringbuf_from_file(&result->packed_revprops,
+      SVN_ERR(svn_fs_x__try_stringbuf_from_file(&contents,
                                 &missing,
                                 file_path,
                                 i + 1 < SVN_FS_X__RECOVERABLE_RETRY_COUNT,
-                                result_pool));
+                                iterpool));
+
+      if (contents)
+        {
+          SVN_ERR_W(parse_packed_revprops(fs, result, contents, read_all,
+                                          result_pool, iterpool),
+                    apr_psprintf(iterpool,
+                                 "Revprop pack file for r%ld is corrupt",
+                                 rev));
+          break;
+        }
 
       /* If we could not find the file, there was a write.
        * So, we should refresh our revprop generation info as well such
@@ -921,13 +931,6 @@ read_pack_revprop(packed_revprops_t **revprops,
   if (!result->packed_revprops)
     return svn_error_createf(SVN_ERR_FS_PACKED_REVPROP_READ_FAILURE, NULL,
                   _("Failed to read revprop pack file for r%ld"), rev);
-
-  /* parse it. RESULT will be complete afterwards. */
-  err = parse_packed_revprops(fs, result, read_all, result_pool, iterpool);
-  svn_pool_destroy(iterpool);
-  if (err)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
-                  _("Revprop pack file for r%ld is corrupt"), rev);
 
   *revprops = result;
 
