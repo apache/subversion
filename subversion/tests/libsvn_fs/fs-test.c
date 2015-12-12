@@ -6982,13 +6982,13 @@ freeze_and_commit(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root;
   svn_revnum_t new_rev = 0;
   apr_pool_t *subpool = svn_pool_create(pool);
+  const char *repo_name = "test-repo-freeze-and-commit";
 
   if (!strcmp(opts->fs_type, "bdb"))
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "this will not test BDB repositories");
 
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-freeze-and-commit", opts,
-                              subpool));
+  SVN_ERR(svn_test__create_fs(&fs, repo_name, opts, subpool));
 
   /* This test used to FAIL with an SQLite error since svn_fs_freeze()
    * wouldn't unlock rep-cache.db.  Therefore, part of the role of creating
@@ -7020,7 +7020,7 @@ freeze_and_commit(const svn_test_opts_t *opts,
   SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
 
   /* Re-open FS and make another commit. */
-  SVN_ERR(svn_fs_open(&fs, "test-freeze-and-commit", NULL, subpool));
+  SVN_ERR(svn_fs_open(&fs, repo_name, NULL, subpool));
   SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_change_node_prop(txn_root, "/", "temperature",
