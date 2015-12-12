@@ -676,6 +676,12 @@ svn_packed__byte_count(svn_packed__byte_stream_t *stream)
   return stream->packed->len;
 }
 
+apr_size_t
+svn_packed__byte_block_count(svn_packed__byte_stream_t *stream)
+{
+  return svn_packed__int_count(stream->lengths_stream);
+}
+
 /* Read one 7b/8b encoded value from *P and return it in *RESULT.  Returns
  * the first position after the parsed data.
  *
