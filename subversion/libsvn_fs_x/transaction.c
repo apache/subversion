@@ -3634,36 +3634,30 @@ write_next_file(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Baton type to be used with bump_ids. */
-typedef struct bump_ids_baton_t
-{
-  svn_fs_t *fs;
-  svn_revnum_t new_rev;
-  svn_fs_x__batch_fsync_t *batch;
-} bump_ids_baton_t;
-
-/* Bump the 'current' and 'txn-current' files in BATON->FS. */
+/* Bump the 'current' file in FS to NEW_REV.  Schedule fsyncs in BATCH.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-bump_ids(void *baton,
-         apr_pool_t *scratch_pool)
+bump_current(svn_fs_t *fs,
+             svn_revnum_t new_rev,
+             svn_fs_x__batch_fsync_t *batch,
+             apr_pool_t *scratch_pool)
 {
-  bump_ids_baton_t *b = baton;
   const char *current_filename;
 
   /* Write the 'next' file. */
-  SVN_ERR(write_next_file(b->fs, b->new_rev, b->batch, scratch_pool));
+  SVN_ERR(write_next_file(fs, new_rev, batch, scratch_pool));
 
   /* Commit all changes to disk. */
-  SVN_ERR(svn_fs_x__batch_fsync_run(b->batch, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_run(batch, scratch_pool));
 
   /* Make the revision visible to all processes and threads. */
-  current_filename = svn_fs_x__path_current(b->fs, scratch_pool);
-  SVN_ERR(svn_fs_x__move_into_place(svn_fs_x__path_next(b->fs, scratch_pool),
+  current_filename = svn_fs_x__path_current(fs, scratch_pool);
+  SVN_ERR(svn_fs_x__move_into_place(svn_fs_x__path_next(fs, scratch_pool),
                                     current_filename, current_filename,
-                                    b->batch, scratch_pool));
+                                    batch, scratch_pool));
 
   /* Make the new revision permanently visible. */
-  SVN_ERR(svn_fs_x__batch_fsync_run(b->batch, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_run(batch, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3731,7 +3725,6 @@ commit_body(void *baton,
   svn_fs_x__txn_id_t txn_id = svn_fs_x__txn_get_id(cb->txn);
   apr_hash_t *changed_paths;
   svn_fs_x__batch_fsync_t *batch;
-  bump_ids_baton_t bump_ids_baton;
   apr_array_header_t *directory_ids
     = apr_array_make(scratch_pool, 4, sizeof(svn_fs_x__pair_cache_key_t));
 
@@ -3831,16 +3824,8 @@ commit_body(void *baton,
   SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev,
                                                       subpool));
 
-  /* Bump 'current' and 'txn-current'.
-     The latter is a piggy-back allocation of a new txn ID such that
-     reusing this FS for multiple commits does not involve additional
-     fsync latencies.  If that txn ID goes to waste, it's not a big loss
-     because we've got 18 quintillion of them ... */
-  bump_ids_baton.fs = cb->fs;
-  bump_ids_baton.new_rev = new_rev;
-  bump_ids_baton.batch = batch;
-  SVN_ERR(svn_fs_x__with_txn_current_lock(cb->fs, bump_ids, &bump_ids_baton,
-                                          subpool));
+  /* Bump 'current'. */
+  SVN_ERR(bump_current(cb->fs, new_rev, batch, subpool));
 
   /* At this point the new revision is committed and globally visible
      so let the caller know it succeeded by giving it the new revision
