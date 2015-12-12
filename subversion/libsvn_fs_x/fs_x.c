@@ -860,8 +860,6 @@ write_revision_zero(svn_fs_t *fs,
   const char *path_revision_zero = svn_fs_x__path_rev(fs, 0, scratch_pool);
   apr_hash_t *proplist;
   svn_string_t date;
-  svn_stream_t *stream;
-  svn_stringbuf_t *revprops;
 
   apr_array_header_t *index_entries;
   svn_fs_x__p2l_entry_t *entry;
@@ -934,15 +932,13 @@ write_revision_zero(svn_fs_t *fs,
   proplist = apr_hash_make(scratch_pool);
   svn_hash_sets(proplist, SVN_PROP_REVISION_DATE, &date);
 
-  revprops = svn_stringbuf_create_empty(scratch_pool);
-  stream = svn_stream_from_stringbuf(revprops, scratch_pool);
-  SVN_ERR(svn_fs_x__write_properties(stream, proplist, scratch_pool));
-  SVN_ERR(svn_stream_close(stream));
-
-  SVN_ERR(svn_io_file_create_bytes(svn_fs_x__path_revprops(fs, 0,
-                                                           scratch_pool),
-                                   revprops->data, revprops->len,
-                                   scratch_pool));
+  SVN_ERR(svn_io_file_open(&apr_file,
+                           svn_fs_x__path_revprops(fs, 0, scratch_pool),
+                           APR_WRITE | APR_CREATE, APR_OS_DEFAULT, 
+                           scratch_pool));
+  SVN_ERR(svn_fs_x__write_non_packed_revprops(apr_file, proplist,
+                                              scratch_pool));
+  SVN_ERR(svn_io_file_close(apr_file, scratch_pool));
 
   return SVN_NO_ERROR;
 }

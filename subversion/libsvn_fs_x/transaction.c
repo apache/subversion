@@ -43,6 +43,7 @@
 #include "rep-cache.h"
 #include "index.h"
 #include "batch_fsync.h"
+#include "revprops.h"
 
 #include "private/svn_fs_util.h"
 #include "private/svn_fspath.h"
@@ -3434,7 +3435,6 @@ write_final_revprop(const char **path,
   svn_string_t date;
   svn_string_t *client_date;
   apr_file_t *file;
-  svn_stream_t *stream;
 
   SVN_ERR(svn_fs_x__txn_proplist(&props, txn, scratch_pool));
 
@@ -3463,9 +3463,7 @@ write_final_revprop(const char **path,
   SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, *path, scratch_pool));
 
   /* Write the new contents to the final revprops file. */
-  stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
-  SVN_ERR(svn_fs_x__write_properties(stream, props, scratch_pool));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_fs_x__write_non_packed_revprops(file, props, scratch_pool));
 
   return SVN_NO_ERROR;
 }
