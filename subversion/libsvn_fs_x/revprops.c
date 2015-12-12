@@ -473,6 +473,32 @@ read_non_packed_revprop(apr_hash_t **properties,
   return SVN_NO_ERROR;
 }
 
+/* Serialize ROOT into FILE and append a checksum to it.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+write_packed_data_checksummed(svn_packed__data_root_t *root,
+                              apr_file_t *file,
+                              apr_pool_t *scratch_pool)
+{
+  svn_checksum_t *checksum;
+  svn_stream_t *stream;
+
+  stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
+  stream = svn_checksum__wrap_write_stream(&checksum, stream,
+                                           svn_checksum_fnv1a_32x4,
+                                           scratch_pool);
+  SVN_ERR(svn_packed__data_write(stream, root, scratch_pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Append the checksum */
+  SVN_ERR(svn_io_file_write_full(file, checksum->digest,
+                                 svn_checksum_size(checksum), NULL,
+                                 scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Serialize the packed revprops MANIFEST into FILE.
  * Use SCRATCH_POOL for temporary allocations.
  */
@@ -482,8 +508,6 @@ write_manifest(apr_file_t *file,
                apr_pool_t *scratch_pool)
 {
   int i;
-  svn_checksum_t *checksum;
-  svn_stream_t *stream;
   svn_packed__data_root_t *root = svn_packed__data_create_root(scratch_pool);
 
   /* one top-level stream per struct element */
@@ -501,17 +525,43 @@ write_manifest(apr_file_t *file,
     }
 
   /* Write to file and calculate the checksum. */
-  stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
-  stream = svn_checksum__wrap_write_stream(&checksum, stream,
-                                           svn_checksum_fnv1a_32x4,
-                                           scratch_pool);
-  SVN_ERR(svn_packed__data_write(stream, root, scratch_pool));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(write_packed_data_checksummed(root, file, scratch_pool));
 
-  /* Append the checksum */
-  SVN_ERR(svn_io_file_write_full(file, checksum->digest,
-                                 svn_checksum_size(checksum), NULL,
-                                 scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Read *ROOT from CONTENT and verify its checksum.  Allocate *ROOT in
+ * RESULT_POOL and use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+read_packed_data_checksummed(svn_packed__data_root_t **root,
+                             svn_stringbuf_t *content,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  apr_size_t data_len;
+  const apr_byte_t *digest;
+  svn_checksum_t *actual, *expected;
+  svn_stream_t *stream;
+
+  /* Verify the checksum. */
+  if (content->len < sizeof(apr_uint32_t))
+    return svn_error_create(SVN_ERR_CORRUPT_PACKED_DATA, NULL,
+                            "File too short");
+
+  data_len = content->len - sizeof(apr_uint32_t);
+  digest = (apr_byte_t *)content->data + data_len;
+
+  expected = svn_checksum__from_digest_fnv1a_32x4(digest, scratch_pool);
+  SVN_ERR(svn_checksum(&actual, svn_checksum_fnv1a_32x4, content->data,
+                       data_len, scratch_pool));
+
+  if (!svn_checksum_match(actual, expected))
+    SVN_ERR(svn_checksum_mismatch_err(expected, actual, scratch_pool, 
+                                      "checksum mismatch"));
+
+  stream = svn_stream_from_stringbuf(content, scratch_pool);
+  SVN_ERR(svn_packed__data_read(root, stream, result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -527,39 +577,19 @@ read_manifest(apr_array_header_t **manifest,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
-  apr_size_t data_len;
   apr_size_t i;
   apr_size_t count;
 
-  svn_stream_t *stream;
   svn_packed__data_root_t *root;
   svn_packed__int_stream_t *start_rev_stream;
   svn_packed__int_stream_t *tag_stream;
-  const apr_byte_t *digest;
-  svn_checksum_t *actual, *expected;
 
-  /* Verify the checksum. */
-  if (content->len < sizeof(apr_uint32_t))
-    return svn_error_createf(SVN_ERR_FS_CORRUPT_REVPROP_MANIFEST, NULL,
-                             "Revprop manifest too short for revision r%ld",
-                             revision);
-
-  data_len = content->len - sizeof(apr_uint32_t);
-  digest = (apr_byte_t *)content->data + data_len;
-
-  expected = svn_checksum__from_digest_fnv1a_32x4(digest, scratch_pool);
-  SVN_ERR(svn_checksum(&actual, svn_checksum_fnv1a_32x4, content->data,
-                       data_len, scratch_pool));
-
-  if (!svn_checksum_match(actual, expected))
-    SVN_ERR(svn_checksum_mismatch_err(expected, actual, scratch_pool, 
-                                      _("checksum mismatch in revprop "
-                                        "manifest for revision r%ld"),
-                                      revision));
-
-  /* read everything from the buffer */
-  stream = svn_stream_from_stringbuf(content, scratch_pool);
-  SVN_ERR(svn_packed__data_read(&root, stream, result_pool, scratch_pool));
+  /* Verify the checksum and decode packed data. */
+  SVN_ERR_W(read_packed_data_checksummed(&root, content, result_pool,
+                                         scratch_pool),
+            apr_psprintf(scratch_pool,
+                         "Revprop manifest file for r%ld is corrupt",
+                         revision));
 
   /* get streams */
   start_rev_stream = svn_packed__first_int_stream(root);
@@ -732,9 +762,12 @@ parse_packed_revprops(svn_fs_t *fs,
   svn_packed__byte_stream_t *revprops_stream;
   svn_revnum_t first_rev = revprops->entry.start_rev;
 
-  /* read everything from the buffer */
-  svn_stream_t *stream = svn_stream_from_stringbuf(content, scratch_pool);
-  SVN_ERR(svn_packed__data_read(&root, stream, result_pool, scratch_pool));
+  /* Verify the checksum and decode packed data. */
+  SVN_ERR_W(read_packed_data_checksummed(&root, content, result_pool,
+                                         scratch_pool),
+            apr_psprintf(scratch_pool,
+                         "Revprop pack file for r%ld is corrupt",
+                         first_rev));
 
   /* get streams */
   revprops_stream = svn_packed__first_byte_stream(root);
@@ -1065,7 +1098,6 @@ repack_revprops(svn_fs_t *fs,
                 apr_file_t *file,
                 apr_pool_t *scratch_pool)
 {
-  svn_stream_t *stream;
   int i;
 
   svn_packed__data_root_t *root = svn_packed__data_create_root(scratch_pool);
@@ -1082,9 +1114,7 @@ repack_revprops(svn_fs_t *fs,
     }
 
   /* Write to file. */
-  stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
-  SVN_ERR(svn_packed__data_write(stream, root, scratch_pool));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(write_packed_data_checksummed(root, file, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1447,7 +1477,6 @@ copy_revprops(svn_fs_t *fs,
               void *cancel_baton,
               apr_pool_t *scratch_pool)
 {
-  svn_stream_t *pack_stream;
   apr_file_t *pack_file;
   svn_revnum_t rev;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1481,9 +1510,7 @@ copy_revprops(svn_fs_t *fs,
                                           scratch_pool));
 
   /* write all to disk */
-  pack_stream = svn_stream_from_aprfile2(pack_file, TRUE, scratch_pool);
-  SVN_ERR(svn_packed__data_write(pack_stream, root, scratch_pool));
-  SVN_ERR(svn_stream_close(pack_stream));
+  SVN_ERR(write_packed_data_checksummed(root, pack_file, scratch_pool));
 
   svn_pool_destroy(iterpool);
 
