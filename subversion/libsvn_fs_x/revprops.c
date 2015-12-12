@@ -1263,6 +1263,14 @@ repack_file_open(apr_file_t **file,
   return SVN_NO_ERROR;
 }
 
+/* Return the length of the serialized reprop list of index I in REVPROPS. */
+static apr_size_t
+props_len(packed_revprops_t *revprops,
+          int i)
+{
+  return APR_ARRAY_IDX(revprops->sizes, i, apr_size_t);
+}
+
 /* For revision REV in filesystem FS, set the revision properties to
  * PROPLIST.  Return a new file in *TMP_PATH that the caller shall move
  * to *FINAL_PATH to make the change visible.  Files to be deleted will
@@ -1289,6 +1297,7 @@ write_packed_revprop(const char **final_path,
   svn_stringbuf_t *serialized;
   apr_size_t new_total_size;
   int changed_index;
+  int count;
 
   /* read the current revprop generation. This value will not change
    * while we hold the global write lock to this FS. */
@@ -1306,16 +1315,16 @@ write_packed_revprop(const char **final_path,
   SVN_ERR(svn_stream_close(stream));
 
   /* calculate the size of the new data */
+  count = revprops->sizes->nelts;
   changed_index = (int)(rev - revprops->entry.start_rev);
   new_total_size = revprops->total_size - revprops->serialized_size
                  + serialized->len
-                 + (revprops->offsets->nelts + 2) * SVN_INT64_BUFFER_SIZE;
+                 + (count + 2) * SVN_INT64_BUFFER_SIZE;
 
   APR_ARRAY_IDX(revprops->sizes, changed_index, apr_size_t) = serialized->len;
 
   /* can we put the new data into the same pack as the before? */
-  if (   new_total_size < ffd->revprop_pack_size
-      || revprops->sizes->nelts == 1)
+  if (new_total_size < ffd->revprop_pack_size || count == 1)
     {
       /* simply replace the old pack file with new content as we do it
        * in the non-packed case */
@@ -1325,9 +1334,9 @@ write_packed_revprop(const char **final_path,
       *tmp_path = apr_pstrcat(result_pool, *final_path, ".tmp", SVN_VA_NULL);
       SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, *tmp_path,
                                               scratch_pool));
-      SVN_ERR(repack_revprops(fs, revprops, 0, revprops->sizes->nelts,
-                              changed_index, serialized, new_total_size,
-                              file, scratch_pool));
+      SVN_ERR(repack_revprops(fs, revprops, 0, count,
+                              changed_index, serialized,
+                              new_total_size, file, scratch_pool));
     }
   else
     {
@@ -1335,31 +1344,29 @@ write_packed_revprop(const char **final_path,
       int right_count, left_count;
 
       int left = 0;
-      int right = revprops->sizes->nelts - 1;
+      int right = count - 1;
       apr_size_t left_size = 2 * SVN_INT64_BUFFER_SIZE;
       apr_size_t right_size = 2 * SVN_INT64_BUFFER_SIZE;
 
       /* let left and right side grow such that their size difference
        * is minimal after each step. */
       while (left <= right)
-        if (  left_size + APR_ARRAY_IDX(revprops->sizes, left, apr_size_t)
-            < right_size + APR_ARRAY_IDX(revprops->sizes, right, apr_size_t))
+        if (  left_size + props_len(revprops, left)
+            < right_size + props_len(revprops, right))
           {
-            left_size += APR_ARRAY_IDX(revprops->sizes, left, apr_size_t)
-                      + SVN_INT64_BUFFER_SIZE;
+            left_size += props_len(revprops, left) + SVN_INT64_BUFFER_SIZE;
             ++left;
           }
         else
           {
-            right_size += APR_ARRAY_IDX(revprops->sizes, right, apr_size_t)
-                       + SVN_INT64_BUFFER_SIZE;
+            right_size += props_len(revprops, right) + SVN_INT64_BUFFER_SIZE;
             --right;
           }
 
        /* since the items need much less than SVN_INT64_BUFFER_SIZE
         * bytes to represent their length, the split may not be optimal */
       left_count = left;
-      right_count = revprops->sizes->nelts - left;
+      right_count = count - left;
 
       /* if new_size is large, one side may exceed the pack size limit.
        * In that case, split before and after the modified revprop.*/
@@ -1367,7 +1374,7 @@ write_packed_revprop(const char **final_path,
           || right_size > ffd->revprop_pack_size)
         {
           left_count = changed_index;
-          right_count = revprops->sizes->nelts - left_count - 1;
+          right_count = count - left_count - 1;
         }
 
       /* Allocate this here such that we can call the repack functions with
@@ -1384,19 +1391,19 @@ write_packed_revprop(const char **final_path,
                                    files_to_delete, batch,
                                    scratch_pool, scratch_pool));
           SVN_ERR(repack_revprops(fs, revprops, 0, left_count,
-                                  changed_index, serialized, new_total_size,
-                                  file, scratch_pool));
+                                  changed_index, serialized,
+                                  new_total_size, file, scratch_pool));
         }
 
-      if (left_count + right_count < revprops->sizes->nelts)
+      if (left_count + right_count < count)
         {
           SVN_ERR(repack_file_open(&file, fs, revprops, rev,
                                    files_to_delete, batch,
                                    scratch_pool, scratch_pool));
           SVN_ERR(repack_revprops(fs, revprops, changed_index,
                                   changed_index + 1,
-                                  changed_index, serialized, new_total_size,
-                                  file, scratch_pool));
+                                  changed_index, serialized,
+                                  new_total_size, file, scratch_pool));
         }
 
       if (right_count)
@@ -1404,11 +1411,9 @@ write_packed_revprop(const char **final_path,
           SVN_ERR(repack_file_open(&file, fs, revprops, rev + 1,
                                    files_to_delete,  batch,
                                    scratch_pool, scratch_pool));
-          SVN_ERR(repack_revprops(fs, revprops,
-                                  revprops->sizes->nelts - right_count,
-                                  revprops->sizes->nelts, changed_index,
-                                  serialized, new_total_size, file,
-                                  scratch_pool));
+          SVN_ERR(repack_revprops(fs, revprops, count - right_count, count,
+                                  changed_index, serialized,
+                                  new_total_size, file, scratch_pool));
         }
 
       /* write the new manifest */
