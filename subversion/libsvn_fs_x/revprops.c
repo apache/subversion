@@ -426,6 +426,35 @@ parse_revprop(apr_hash_t **properties,
   return SVN_NO_ERROR;
 }
 
+/* Verify the checksum attached to CONTENT and remove it.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+verify_checksum(svn_stringbuf_t *content,
+                apr_pool_t *scratch_pool)
+{
+  const apr_byte_t *digest;
+  svn_checksum_t *actual, *expected;
+
+  /* Verify the checksum. */
+  if (content->len < sizeof(apr_uint32_t))
+    return svn_error_create(SVN_ERR_CORRUPT_PACKED_DATA, NULL,
+                            "File too short");
+
+  content->len -= sizeof(apr_uint32_t);
+  digest = (apr_byte_t *)content->data + content->len;
+
+  expected = svn_checksum__from_digest_fnv1a_32x4(digest, scratch_pool);
+  SVN_ERR(svn_checksum(&actual, svn_checksum_fnv1a_32x4, content->data,
+                       content->len, scratch_pool));
+
+  if (!svn_checksum_match(actual, expected))
+    SVN_ERR(svn_checksum_mismatch_err(expected, actual, scratch_pool, 
+                                      "checksum mismatch"));
+
+  return SVN_NO_ERROR;
+}
+
 /* Read the non-packed revprops for revision REV in FS, put them into the
  * revprop cache if activated and return them in *PROPERTIES.
  *
@@ -460,10 +489,17 @@ read_non_packed_revprop(apr_hash_t **properties,
 
   if (content)
     {
+      svn_string_t *as_string;
+
+      /* Consistency check. */
+      SVN_ERR_W(verify_checksum(content, scratch_pool),
+                apr_psprintf(scratch_pool,
+                             "Revprop file for r%ld is corrupt",
+                             rev));
+
       /* The contents string becomes part of the *PROPERTIES structure, i.e.
        * we must make sure it lives at least as long as the latter. */
-      svn_string_t *as_string = svn_string_create_from_buf(content,
-                                                           result_pool);
+      as_string = svn_string_create_from_buf(content, result_pool);
       SVN_ERR(parse_revprop(properties, fs, rev, as_string,
                             result_pool, iterpool));
     }
@@ -539,26 +575,9 @@ read_packed_data_checksummed(svn_packed__data_root_t **root,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  apr_size_t data_len;
-  const apr_byte_t *digest;
-  svn_checksum_t *actual, *expected;
   svn_stream_t *stream;
 
-  /* Verify the checksum. */
-  if (content->len < sizeof(apr_uint32_t))
-    return svn_error_create(SVN_ERR_CORRUPT_PACKED_DATA, NULL,
-                            "File too short");
-
-  data_len = content->len - sizeof(apr_uint32_t);
-  digest = (apr_byte_t *)content->data + data_len;
-
-  expected = svn_checksum__from_digest_fnv1a_32x4(digest, scratch_pool);
-  SVN_ERR(svn_checksum(&actual, svn_checksum_fnv1a_32x4, content->data,
-                       data_len, scratch_pool));
-
-  if (!svn_checksum_match(actual, expected))
-    SVN_ERR(svn_checksum_mismatch_err(expected, actual, scratch_pool, 
-                                      "checksum mismatch"));
+  SVN_ERR(verify_checksum(content, scratch_pool));
 
   stream = svn_stream_from_stringbuf(content, scratch_pool);
   SVN_ERR(svn_packed__data_read(root, stream, result_pool, scratch_pool));
@@ -993,6 +1012,29 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_x__write_non_packed_revprops(apr_file_t *file,
+                                    apr_hash_t *proplist,
+                                    apr_pool_t *scratch_pool)
+{
+  svn_stream_t *stream;
+  svn_checksum_t *checksum;
+
+  stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
+  stream = svn_checksum__wrap_write_stream(&checksum, stream,
+                                           svn_checksum_fnv1a_32x4,
+                                           scratch_pool);
+  SVN_ERR(svn_fs_x__write_properties(stream, proplist, scratch_pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Append the checksum */
+  SVN_ERR(svn_io_file_write_full(file, checksum->digest,
+                                 svn_checksum_size(checksum), NULL,
+                                 scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Serialize the revision property list PROPLIST of revision REV in
  * filesystem FS to a non-packed file.  Return the name of that temporary
  * file in *TMP_PATH and the file path that it must be moved to in
@@ -1012,16 +1054,13 @@ write_non_packed_revprop(const char **final_path,
                          apr_pool_t *scratch_pool)
 {
   apr_file_t *file;
-  svn_stream_t *stream;
   *final_path = svn_fs_x__path_revprops(fs, rev, result_pool);
 
   *tmp_path = apr_pstrcat(result_pool, *final_path, ".tmp", SVN_VA_NULL);
   SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, *tmp_path,
                                           scratch_pool));
 
-  stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
-  SVN_ERR(svn_fs_x__write_properties(stream, proplist, scratch_pool));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_fs_x__write_non_packed_revprops(file, proplist, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1499,6 +1538,10 @@ copy_revprops(svn_fs_t *fs,
       /* Copy all the bits from the non-packed revprop file to the end of
        * the pack file. */
       SVN_ERR(svn_stringbuf_from_file2(&props, path, iterpool));
+      SVN_ERR_W(verify_checksum(props, iterpool),
+                apr_psprintf(iterpool, "Failed to read revprops for r%ld.",
+                             rev));
+
       svn_packed__add_bytes(stream, props->data, props->len);
     }
 
