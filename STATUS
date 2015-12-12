@@ -104,10 +104,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1703470, r1703475, r1703476, r1703477, r1703544
-   Updated INSTALL documentation.
-   Justification:
-     Corrects outdated and partially incorrect statements
-   Votes:
-     +1: luke1410, rhuijben
