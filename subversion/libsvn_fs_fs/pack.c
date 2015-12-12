@@ -1046,7 +1046,7 @@ sort_items(apr_array_header_t *entries)
 /* Return the remaining unused bytes in the current block in CONTEXT's
  * pack file.
  */
-static apr_ssize_t
+static apr_off_t
 get_block_left(pack_context_t *context)
 {
   fs_fs_data_t *ffd = context->fs->fsap_data;
