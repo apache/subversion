@@ -339,6 +339,26 @@ test_git_add_nodes(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(ls_recursive(&names, trunk_url, ctx, pool, subpool));
   SVN_TEST_INT_ASSERT(apr_hash_count(names), 23);
 
+  svn_pool_clear(subpool);
+
+  SVN_ERR(svn_client__mtcc_create(&mtcc,
+                                  svn_path_url_add_component2(trunk_url, "A",
+                                                              subpool),
+                                  4, ctx, subpool, subpool));
+  SVN_ERR(svn_client__mtcc_add_copy("D", 2, "DD", mtcc, subpool));
+  SVN_ERR(svn_client__mtcc_add_copy("D/G/rho", 2, "rho", mtcc, subpool));
+  SVN_ERR(svn_client__mtcc_add_copy("D/G/rho", 2, "DD/rho", mtcc, subpool));
+
+  SVN_ERR(svn_client__mtcc_commit(apr_hash_make(subpool),
+                                  verify_commit, NULL, mtcc, subpool));
+
+  svn_pool_clear(subpool);
+
+  SVN_ERR(ls_recursive(&names, trunk_url, ctx, pool, subpool));
+  SVN_TEST_INT_ASSERT(apr_hash_count(names), 35);
+
+  svn_pool_clear(subpool);
+
   return SVN_NO_ERROR;
 }
 
