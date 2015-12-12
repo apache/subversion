@@ -659,6 +659,7 @@ check-clean: gcov-clean
 	rm -rf subversion/tests/libsvn_fs/test-repo-*          \
 	       subversion/tests/libsvn_fs_base/test-repo-*     \
 	       subversion/tests/libsvn_fs_fs/test-repo-*       \
+	       subversion/tests/libsvn_fs_x/test-repo-*        \
 	       subversion/tests/libsvn_ra_local/test-repo-*    \
 	       subversion/tests/libsvn_repos/test-repo-*       \
 	       subversion/tests/libsvn_subr/z                  \
