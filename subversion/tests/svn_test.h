@@ -347,6 +347,12 @@ svn_error_t *
 svn_test__init_auth_baton(svn_auth_baton_t **baton,
                           apr_pool_t *result_pool);
 
+/* Create a temp folder for test & schedule it for automatic cleanup.
+ * Uses POOL for all allocations. */
+svn_error_t *
+svn_test_make_sandbox_dir(const char **sb_dir_p,
+                          const char *sb_name,
+                          apr_pool_t *pool);
 
 /*
  * Test predicates

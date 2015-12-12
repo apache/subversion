@@ -2179,7 +2179,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
                                                              b->scratch_pool),
                                     b->scratch_pool);
 
-  SVN_ERR(svn_fs_fs__get_file_offset(&b->rep_offset, file, b->scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&b->rep_offset, file, b->scratch_pool));
 
   /* Get the base for this delta. */
   SVN_ERR(choose_delta_base(&base_rep, fs, noderev, FALSE, b->scratch_pool));
@@ -2202,8 +2202,8 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
                                       b->scratch_pool));
 
   /* Now determine the offset of the actual svndiff data. */
-  SVN_ERR(svn_fs_fs__get_file_offset(&b->delta_start, file,
-                                     b->scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&b->delta_start, file,
+                                 b->scratch_pool));
 
   /* Cleanup in case something goes wrong. */
   apr_pool_cleanup_register(b->scratch_pool, b, rep_write_cleanup,
@@ -2412,7 +2412,7 @@ rep_write_contents_close(void *baton)
     SVN_ERR(svn_stream_close(b->delta_stream));
 
   /* Determine the length of the svndiff data. */
-  SVN_ERR(svn_fs_fs__get_file_offset(&offset, b->file, b->scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&offset, b->file, b->scratch_pool));
   rep->size = offset - b->delta_start;
 
   /* Fill in the rest of the representation field. */
@@ -2459,7 +2459,7 @@ rep_write_contents_close(void *baton)
       svn_fs_fs__p2l_entry_t entry;
 
       entry.offset = b->rep_offset;
-      SVN_ERR(svn_fs_fs__get_file_offset(&offset, b->file, b->scratch_pool));
+      SVN_ERR(svn_io_file_get_offset(&offset, b->file, b->scratch_pool));
       entry.size = offset - b->rep_offset;
       entry.type = SVN_FS_FS__ITEM_TYPE_FILE_REP;
       entry.item.revision = SVN_INVALID_REVNUM;
@@ -2672,7 +2672,7 @@ write_container_rep(representation_t *rep,
   representation_t *old_rep;
   apr_off_t offset = 0;
 
-  SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&offset, file, scratch_pool));
 
   whb = apr_pcalloc(scratch_pool, sizeof(*whb));
 
@@ -2720,7 +2720,7 @@ write_container_rep(representation_t *rep,
                                   offset, scratch_pool));
 
       entry.offset = offset;
-      SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
+      SVN_ERR(svn_io_file_get_offset(&offset, file, scratch_pool));
       entry.size = offset - entry.offset;
       entry.type = item_type;
       entry.item.revision = SVN_INVALID_REVNUM;
@@ -2787,7 +2787,7 @@ write_container_delta_rep(representation_t *rep,
   SVN_ERR(choose_delta_base(&base_rep, fs, noderev, is_props, scratch_pool));
   SVN_ERR(svn_fs_fs__get_contents(&source, fs, base_rep, FALSE, scratch_pool));
 
-  SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&offset, file, scratch_pool));
 
   /* Write out the rep header. */
   if (base_rep)
@@ -2807,7 +2807,7 @@ write_container_delta_rep(representation_t *rep,
                                                            scratch_pool),
                                   scratch_pool);
   SVN_ERR(svn_fs_fs__write_rep_header(&header, file_stream, scratch_pool));
-  SVN_ERR(svn_fs_fs__get_file_offset(&delta_start, file, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&delta_start, file, scratch_pool));
 
   /* Prepare to write the svndiff data. */
   svn_txdelta_to_svndiff3(&diff_wh,
@@ -2854,14 +2854,14 @@ write_container_delta_rep(representation_t *rep,
       svn_fs_fs__p2l_entry_t entry;
 
       /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_fs_fs__get_file_offset(&rep_end, file, scratch_pool));
+      SVN_ERR(svn_io_file_get_offset(&rep_end, file, scratch_pool));
       SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
 
       SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
                                   offset, scratch_pool));
 
       entry.offset = offset;
-      SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
+      SVN_ERR(svn_io_file_get_offset(&offset, file, scratch_pool));
       entry.size = offset - entry.offset;
       entry.type = item_type;
       entry.item.revision = SVN_INVALID_REVNUM;
@@ -3148,7 +3148,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
     noderev->copyroot_rev = rev;
 
   /* root nodes have a fixed ID in log addressing mode */
-  SVN_ERR(svn_fs_fs__get_file_offset(&my_offset, file, pool));
+  SVN_ERR(svn_io_file_get_offset(&my_offset, file, pool));
   if (svn_fs_fs__use_log_addressing(fs) && at_root)
     {
       /* reference the root noderev from the log-to-phys index */
@@ -3221,7 +3221,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       rev_item.revision = SVN_INVALID_REVNUM;
 
       entry.offset = my_offset;
-      SVN_ERR(svn_fs_fs__get_file_offset(&my_offset, file, pool));
+      SVN_ERR(svn_io_file_get_offset(&my_offset, file, pool));
       entry.size = my_offset - entry.offset;
       entry.type = SVN_FS_FS__ITEM_TYPE_NODEREV;
       entry.item = rev_item;
@@ -3254,7 +3254,7 @@ write_final_changed_path_info(apr_off_t *offset_p,
   svn_stream_t *stream;
   svn_checksum_ctx_t *fnv1a_checksum_ctx;
 
-  SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
+  SVN_ERR(svn_io_file_get_offset(&offset, file, pool));
 
   /* write to target file & calculate checksum */
   stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx,
@@ -3270,7 +3270,7 @@ write_final_changed_path_info(apr_off_t *offset_p,
       svn_fs_fs__p2l_entry_t entry;
 
       entry.offset = offset;
-      SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
+      SVN_ERR(svn_io_file_get_offset(&offset, file, pool));
       entry.size = offset - entry.offset;
       entry.type = SVN_FS_FS__ITEM_TYPE_CHANGES;
       entry.item.revision = SVN_INVALID_REVNUM;
@@ -3642,7 +3642,7 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Get a write handle on the proto revision file. */
   SVN_ERR(get_writable_proto_rev(&proto_file, &proto_file_lockcookie,
                                  cb->fs, txn_id, pool));
-  SVN_ERR(svn_fs_fs__get_file_offset(&initial_offset, proto_file, pool));
+  SVN_ERR(svn_io_file_get_offset(&initial_offset, proto_file, pool));
 
   /* Write out all the node-revisions and directory contents. */
   root_id = svn_fs_fs__id_txn_create_root(txn_id, pool);

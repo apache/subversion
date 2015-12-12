@@ -73,7 +73,7 @@ struct edit_baton
   svn_repos_t *repos;
 
   /* URL to the root of the open repository. */
-  const char *repos_root_url;
+  const char *repos_url_decoded;
 
   /* The name of the repository (here for convenience). */
   const char *repos_name;
@@ -344,15 +344,12 @@ add_file_or_directory(const char *path,
 
       /* For now, require that the url come from the same repository
          that this commit is operating on. */
-      copy_path = svn_uri_canonicalize(copy_path, subpool);
-      copy_path = svn_uri_skip_ancestor(eb->repos_root_url, copy_path,
-                                        subpool);
-      if (!copy_path)
+      copy_path = svn_path_uri_decode(copy_path, subpool);
+      fs_path = svn_cstring_skip_prefix(copy_path, eb->repos_url_decoded);
+      if (!fs_path)
         return svn_error_createf
           (SVN_ERR_FS_GENERAL, NULL,
            _("Source url '%s' is from different repository"), copy_path);
-
-      fs_path = svn_fspath__canonicalize(copy_path, pool);
 
       /* Now use the "fs_path" as an absolute path within the
          repository to make the copy from. */
@@ -1009,9 +1006,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   struct edit_baton *eb;
   svn_delta_shim_callbacks_t *shim_callbacks =
                                     svn_delta_shim_callbacks_default(pool);
-  /* Our api contract explicitly requires a not canonical url here.
-     ### Should fix that when revving this api */
-  const char *repos_url = svn_uri_canonicalize(repos_url_decoded, pool);
+  const char *repos_url = svn_path_uri_encode(repos_url_decoded, pool);
 
   /* Do a global authz access lookup.  Users with no write access
      whatsoever to the repository don't get a commit editor. */
@@ -1053,7 +1048,7 @@ svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
   eb->authz_baton = authz_baton;
   eb->base_path = svn_fspath__canonicalize(base_path, subpool);
   eb->repos = repos;
-  eb->repos_root_url = repos_url;
+  eb->repos_url_decoded = repos_url_decoded;
   eb->repos_name = svn_dirent_basename(svn_repos_path(repos, subpool),
                                        subpool);
   eb->fs = svn_repos_fs(repos);

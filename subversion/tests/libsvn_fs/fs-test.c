@@ -5400,7 +5400,7 @@ test_fs_info_format(const svn_test_opts_t *opts,
   opts2 = *opts;
   opts2.server_minor_version = is_fsx ? 10 : 5;
 
-  SVN_ERR(svn_test__create_fs(&fs, "test-fs-format-info", &opts2, pool));
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-fs-format-info", &opts2, pool));
   SVN_ERR(svn_fs_info_format(&fs_format, &supports_version, fs, pool, pool));
 
   if (is_fsx)
@@ -5442,7 +5442,7 @@ commit_timestamp(const svn_test_opts_t *opts,
   svn_string_t *svn_date;
   svn_string_t *txn_svn_date;
 
-  SVN_ERR(svn_test__create_fs(&fs, "test-fs-commit-timestamp",
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-fs-commit-timestamp",
                               opts, pool));
 
   /* Commit with a specified svn:date. */
@@ -5595,7 +5595,8 @@ dir_prop_merge(const svn_test_opts_t *opts,
   svn_boolean_t is_bdb = strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0;
 
   /* Create test repository. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-fs-dir_prop-merge", opts, pool));
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-fs-dir_prop-merge", opts,
+                              pool));
 
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
   SVN_ERR(svn_fs_txn_root(&root, txn, pool));
@@ -5679,7 +5680,7 @@ upgrade_while_committing(const svn_test_opts_t *opts,
                             "pre-1.6 SVN doesn't support FSFS packing");
 
   /* Create test repository with greek tree. */
-  fs_path = "test-upgrade-while-committing";
+  fs_path = "test-repo-upgrade-while-committing";
 
   svn_hash_sets(fs_config, SVN_FS_CONFIG_COMPATIBLE_VERSION, "1.7");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_SHARD_SIZE, "2");
@@ -5768,7 +5769,7 @@ test_paths_changed(const svn_test_opts_t *opts,
     has_mergeinfo_mod = TRUE;
 
   /* Create test repository with greek tree. */
-  fs_path = "test-paths-changed";
+  fs_path = "test-repo-paths-changed";
 
   SVN_ERR(svn_test__create_fs2(&fs, fs_path, opts, NULL, pool));
 
@@ -5865,7 +5866,7 @@ test_delete_replaced_paths_changed(const svn_test_opts_t *opts,
   const svn_fs_id_t *file_id;
 
   /* Create test repository with greek tree. */
-  fs_path = "test-delete-replace-paths-changed";
+  fs_path = "test-repo-delete-replace-paths-changed";
 
   SVN_ERR(svn_test__create_fs2(&fs, fs_path, opts, NULL, pool));
 
@@ -6707,7 +6708,8 @@ test_fsfs_config_opts(const svn_test_opts_t *opts,
                             "this will test FSFS repositories only");
 
   /* Remove the test directory from previous runs. */
-  SVN_ERR(svn_io_remove_dir2("test-fsfs-config-opts", TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_remove_dir2("test-repo-fsfs-config-opts", TRUE, NULL, NULL,
+                             pool));
 
   /* Create the test directory and add it to the test cleanup list. */
   SVN_ERR(svn_io_dir_make("test-fsfs-config-opts", APR_OS_DEFAULT, pool));
@@ -6813,7 +6815,7 @@ test_modify_txn_being_written(const svn_test_opts_t *opts,
                             "this will not test BDB repositories");
 
   /* Create a new repo. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-modify-txn-being-written",
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-modify-txn-being-written",
                               opts, pool));
 
   /* Create a TXN_ROOT referencing FS. */
@@ -6861,7 +6863,7 @@ test_prop_and_text_rep_sharing_collision(const svn_test_opts_t *opts,
   svn_fs_root_t *rev_root;
   svn_revnum_t new_rev;
   svn_filesize_t length;
-  const char *testdir = "test-prop-and-text-rep-sharing-collision";
+  const char *testdir = "test-repo-prop-and-text-rep-sharing-collision";
 
   /* Create a new repo. */
   SVN_ERR(svn_test__create_fs(&fs, testdir, opts, pool));
@@ -6985,7 +6987,8 @@ freeze_and_commit(const svn_test_opts_t *opts,
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "this will not test BDB repositories");
 
-  SVN_ERR(svn_test__create_fs(&fs, "test-freeze-and-commit", opts, subpool));
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-freeze-and-commit", opts,
+                              subpool));
 
   /* This test used to FAIL with an SQLite error since svn_fs_freeze()
    * wouldn't unlock rep-cache.db.  Therefore, part of the role of creating

@@ -326,7 +326,7 @@ store_delta(apr_file_t **tempfile, svn_filesize_t *len,
             svn_fs_root_t *newroot, const char *newpath, apr_pool_t *pool)
 {
   svn_stream_t *temp_stream;
-  apr_off_t offset = 0;
+  apr_off_t offset;
   svn_txdelta_stream_t *delta_stream;
   svn_txdelta_window_handler_t wh;
   void *whb;
@@ -346,7 +346,7 @@ store_delta(apr_file_t **tempfile, svn_filesize_t *len,
   SVN_ERR(svn_txdelta_send_txstream(delta_stream, wh, whb, pool));
 
   /* Get the length of the temporary file and rewind it. */
-  SVN_ERR(svn_io_file_seek(*tempfile, APR_CUR, &offset, pool));
+  SVN_ERR(svn_io_file_get_offset(&offset, *tempfile, pool));
   *len = offset;
   offset = 0;
   return svn_io_file_seek(*tempfile, APR_SET, &offset, pool);

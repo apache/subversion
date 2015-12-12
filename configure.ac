@@ -1054,6 +1054,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
         SVN_CFLAGS_ADD_IFELSE([-Wno-system-headers])
         SVN_CFLAGS_ADD_IFELSE([-Wno-format-nonliteral])
         SVN_CFLAGS_ADD_IFELSE([-Wmissing-variable-declarations])
+        SVN_CFLAGS_ADD_IFELSE([-Wno-unused-const-variable])
 
         CMAINTAINERFLAGS="$CFLAGS"
         CFLAGS="$CFLAGS_KEEP"

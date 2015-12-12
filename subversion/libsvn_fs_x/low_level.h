@@ -216,7 +216,7 @@ svn_fs_x__write_changes(svn_stream_t *stream,
  */
 svn_error_t *
 svn_fs_x__parse_properties(apr_hash_t **properties,
-                           svn_string_t *content,
+                           const svn_string_t *content,
                            apr_pool_t *result_pool);
 
 /* Write the property list PROPLIST to STREAM in serialized format.

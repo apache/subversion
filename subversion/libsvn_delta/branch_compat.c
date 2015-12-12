@@ -74,16 +74,70 @@ pathrev_equal(const svn_pathrev_t *p1,
   return TRUE;
 }
 
-#ifdef SVN_DEBUG
+#if 0
 /* Return a human-readable string representation of LOC. */
-/*static const char *
-pathrev_str(svn_pathrev_t loc,
+static const char *
+pathrev_str(const svn_pathrev_t *loc,
             apr_pool_t *result_pool)
 {
+  if (! loc)
+    return "<nil>";
   return apr_psprintf(result_pool, "%s@%ld",
-                      loc.relpath, loc.rev);
-}*/
+                      loc->relpath, loc->rev);
+}
+
+/* Return a string representation of the (string) keys of HASH. */
+static const char *
+hash_keys_str(apr_hash_t *hash)
+{
+  const char *str = NULL;
+  apr_pool_t *pool;
+  apr_hash_index_t *hi;
+
+  if (! hash)
+    return "<nil>";
+
+  pool = apr_hash_pool_get(hash);
+  for (hi = apr_hash_first(pool, hash); hi; hi = apr_hash_next(hi))
+    {
+      const char *key = apr_hash_this_key(hi);
+
+      if (!str)
+        str = key;
+      else
+        str = apr_psprintf(pool, "%s, %s", str, key);
+    }
+  return apr_psprintf(pool, "{%s}", str);
+}
 #endif
+
+/**
+ * Merge two hash tables into one new hash table. The values of the overlay
+ * hash override the values of the base if both have the same key.
+ *
+ * Unlike apr_hash_overlay(), this doesn't care whether the input hashes use
+ * the same hash function, nor about the relationship between the three pools.
+ *
+ * @param p The pool to use for the new hash table
+ * @param overlay The table to add to the initial table
+ * @param base The table that represents the initial values of the new table
+ * @return A new hash table containing all of the data from the two passed in
+ * @remark Makes a shallow copy: keys and values are not copied
+ */
+static apr_hash_t *
+hash_overlay(apr_hash_t *overlay,
+             apr_hash_t *base)
+{
+  apr_pool_t *pool = apr_hash_pool_get(base);
+  apr_hash_t *result = apr_hash_copy(pool, base);
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(pool, overlay); hi; hi = apr_hash_next(hi))
+    {
+      svn_hash_sets(result, apr_hash_this_key(hi), apr_hash_this_val(hi));
+    }
+  return result;
+}
 
 
 /*
@@ -265,6 +319,31 @@ typedef struct change_node_t
   svn_boolean_t unlock;
 #endif
 } change_node_t;
+
+#if 0
+/* Return a string representation of CHANGE. */
+static const char *
+change_node_str(change_node_t *change,
+                apr_pool_t *result_pool)
+{
+  const char *copyfrom = "<nil>";
+  const char *str;
+
+  if (change->copyfrom_path)
+    copyfrom = apr_psprintf(result_pool, "'%s'@%ld",
+                            change->copyfrom_path, change->copyfrom_rev);
+  str = apr_psprintf(result_pool,
+                     "action=%d, kind=%s, changing_rev=%ld, "
+                     "deleting=%d, deleting_rev=%ld, ..., "
+                     "copyfrom=%s",
+                     change->action,
+                     svn_node_kind_to_word(change->kind),
+                     change->changing_rev,
+                     change->deleting, change->deleting_rev,
+                     copyfrom);
+  return str;
+}
+#endif
 
 /* Check whether RELPATH is known to exist, known to not exist, or unknown. */
 static svn_tristate_t
@@ -1535,8 +1614,7 @@ drive_changes_r(const char *rrpath,
                                                         scratch_pool,
                                                         scratch_pool);
           union_children = (current_children
-                            ? apr_hash_overlay(scratch_pool, current_children,
-                                               final_children)
+                            ? hash_overlay(current_children, final_children)
                             : final_children);
           for (hi = apr_hash_first(scratch_pool, union_children);
                hi; hi = apr_hash_next(hi))
@@ -1567,15 +1645,6 @@ drive_changes_r(const char *rrpath,
                       child_pred->relpath = this_rrpath;
                     }
                }
-              /*(("child '%s' current=%s final? %d%s",
-                       name,
-                       child_pred ? pathrev_str(*child_pred, scratch_pool)
-                                  : "<nil>",
-                       (svn_hash_gets(final_children, name) != NULL),
-                       final_copy_from.relpath
-                         ? apr_psprintf(scratch_pool, " parent-cp-from=%s@%ld",
-                                        final_copy_from.relpath,
-                                        final_copy_from.rev) : ""));*/
 
               SVN_ERR(drive_changes_r(this_rrpath,
                                       child_pred,
@@ -1709,14 +1778,13 @@ compat_branch_txn_add_branch(svn_branch__txn_t *txn,
 static svn_branch__state_t *
 compat_branch_txn_add_new_branch(svn_branch__txn_t *txn,
                                  const char *bid,
-                                 svn_branch__rev_bid_t *predecessor,
                                  int root_eid,
                                  apr_pool_t *scratch_pool)
 {
   /* Just forwarding: nothing more is needed. */
   svn_branch__state_t *new_branch
     = svn_branch__txn_add_new_branch(txn->priv->txn,
-                                     bid, predecessor, root_eid,
+                                     bid, root_eid,
                                      scratch_pool);
 
   return new_branch;
@@ -1776,7 +1844,6 @@ compat_branch_txn_finalize_eids(svn_branch__txn_t *txn,
 static svn_error_t *
 compat_branch_txn_open_branch(svn_branch__txn_t *txn,
                               svn_branch__state_t **new_branch_p,
-                              svn_branch__rev_bid_t *predecessor,
                               const char *new_branch_id,
                               int root_eid,
                               apr_pool_t *result_pool,
@@ -1784,7 +1851,7 @@ compat_branch_txn_open_branch(svn_branch__txn_t *txn,
 {
   /* Just forwarding: nothing more is needed. */
   SVN_ERR(svn_branch__txn_open_branch(txn->priv->txn,
-                                      new_branch_p, predecessor,
+                                      new_branch_p,
                                       new_branch_id, root_eid,
                                       result_pool,
                                       scratch_pool));

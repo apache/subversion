@@ -345,9 +345,8 @@ read_handler_base85(void *baton, char *buffer, apr_size_t *len)
         b85b->next_pos = b85b->end_pos;
       else
         {
-          b85b->next_pos = 0;
-          SVN_ERR(svn_io_file_seek(b85b->file, APR_CUR, &b85b->next_pos,
-                                   iterpool));
+          SVN_ERR(svn_io_file_get_offset(&b85b->next_pos, b85b->file,
+                                         iterpool));
         }
 
       if (line->len && line->data[0] >= 'A' && line->data[0] <= 'Z')
@@ -669,8 +668,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
       return SVN_NO_ERROR;
     }
 
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos,  scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&pos, file, scratch_pool));
   SVN_ERR(svn_io_file_seek(file, APR_SET, &range->current, scratch_pool));
 
   /* It's not ITERPOOL because we use data allocated in LAST_POOL out
@@ -683,8 +681,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
       max_len = range->end - range->current;
       SVN_ERR(svn_io_file_readline(file, &str, eol, eof, max_len,
                                    last_pool, last_pool));
-      range->current = 0;
-      SVN_ERR(svn_io_file_seek(file, APR_CUR, &range->current, last_pool));
+      SVN_ERR(svn_io_file_get_offset(&range->current, file, last_pool));
       filtered = (str->data[0] == verboten || str->data[0] == '\\');
     }
   while (filtered && ! *eof);
@@ -803,17 +800,15 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
       return SVN_NO_ERROR;
     }
 
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_CUR, &pos, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&pos, hunk->apr_file, scratch_pool));
   SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_SET,
                            &hunk->diff_text_range.current, scratch_pool));
   max_len = hunk->diff_text_range.end - hunk->diff_text_range.current;
   SVN_ERR(svn_io_file_readline(hunk->apr_file, &line, eol, eof, max_len,
                                result_pool,
                    scratch_pool));
-  hunk->diff_text_range.current = 0;
-  SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_CUR,
-                           &hunk->diff_text_range.current, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&hunk->diff_text_range.current,
+                                 hunk->apr_file, scratch_pool));
 
   if (*eof && !*eol && *line->data)
     {
@@ -1088,9 +1083,8 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   modified_end = 0;
   *hunk = apr_pcalloc(result_pool, sizeof(**hunk));
 
-  /* Get current seek position -- APR has no ftell() :( */
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, scratch_pool));
+  /* Get current seek position. */
+  SVN_ERR(svn_io_file_get_offset(&pos, apr_file, scratch_pool));
 
   /* Start out assuming noise. */
   last_line_type = noise_line;
@@ -1107,8 +1101,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                                    iterpool, iterpool));
 
       /* Update line offset for next iteration. */
-      pos = 0;
-      SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, iterpool));
+      SVN_ERR(svn_io_file_get_offset(&pos, apr_file, iterpool));
 
       /* Lines starting with a backslash indicate a missing EOL:
        * "\ No newline at end of file" or "end of property". */
@@ -1966,8 +1959,7 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
 
   patch->prop_patches = apr_hash_make(result_pool);
 
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&pos, apr_file, scratch_pool));
 
   while (!eof)
     {
@@ -1976,8 +1968,7 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
                                iterpool, iterpool));
 
       /* Update line offset for next iteration. */
-      pos = 0;
-      SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, iterpool));
+      SVN_ERR(svn_io_file_get_offset(&pos, apr_file, iterpool));
 
       if (in_blob)
         {
@@ -2158,9 +2149,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
       if (! eof)
         {
           /* Update line offset for next iteration. */
-          pos = 0;
-          SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_CUR, &pos,
-                                   iterpool));
+          SVN_ERR(svn_io_file_get_offset(&pos, patch_file->apr_file,
+                                         iterpool));
         }
 
       /* Run the state machine. */
@@ -2270,9 +2260,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
 
   svn_pool_destroy(iterpool);
 
-  patch_file->next_patch_offset = 0;
-  SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_CUR,
-                           &patch_file->next_patch_offset, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&patch_file->next_patch_offset,
+                                 patch_file->apr_file, scratch_pool));
 
   if (patch && patch->hunks)
     {

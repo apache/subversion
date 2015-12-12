@@ -123,7 +123,7 @@ static struct test_file_definition_t test_file_definitions_template[] =
 
 static svn_error_t *
 create_test_file(struct test_file_definition_t* definition,
-                 const char *testname,
+                 const char *test_dir,
                  apr_pool_t *pool,
                  apr_pool_t *scratch_pool)
 {
@@ -132,7 +132,6 @@ create_test_file(struct test_file_definition_t* definition,
   apr_off_t midpos = definition->size / 2;
   svn_error_t *err = NULL;
   int i;
-  const char *test_dir = apr_pstrcat(pool, TEST_DIR_PREFIX, testname, NULL);
 
   if (definition->size < 5)
     SVN_ERR_ASSERT(strlen(definition->data) >= (apr_size_t)definition->size);
@@ -184,31 +183,13 @@ create_comparison_candidates(struct test_file_definition_t **definitions,
                              const char *testname,
                              apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
   apr_pool_t *iterpool = svn_pool_create(pool);
   struct test_file_definition_t *candidate;
   svn_error_t *err = SVN_NO_ERROR;
   apr_size_t count = 0;
-  const char *test_dir = apr_pstrcat(pool, TEST_DIR_PREFIX,
-                                     testname, NULL);
+  const char *test_dir;
 
-  /* If there's already a directory named io-test-temp, delete it.
-     Doing things this way means that repositories stick around after
-     a failure for postmortem analysis, but also that tests can be
-     re-run without cleaning out the repositories created by prior
-     runs.  */
-  SVN_ERR(svn_io_check_path(test_dir, &kind, pool));
-
-  if (kind == svn_node_dir)
-    SVN_ERR(svn_io_remove_dir2(test_dir, TRUE, NULL, NULL, pool));
-  else if (kind != svn_node_none)
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "There is already a file named '%s'",
-                             test_dir);
-
-  SVN_ERR(svn_io_dir_make(test_dir, APR_OS_DEFAULT, pool));
-
-  svn_test_add_dir_cleanup(test_dir);
+  SVN_ERR(svn_test_make_sandbox_dir(&test_dir, testname, pool));
 
   for (candidate = test_file_definitions_template;
        candidate->name != NULL;
@@ -220,7 +201,7 @@ create_comparison_candidates(struct test_file_definition_t **definitions,
   for (candidate = *definitions; candidate->name != NULL; candidate += 1)
     {
       svn_pool_clear(iterpool);
-      err = create_test_file(candidate, testname, pool, iterpool);
+      err = create_test_file(candidate, test_dir, pool, iterpool);
       if (err)
         break;
     }
@@ -518,10 +499,7 @@ read_length_line_shouldnt_loop(apr_pool_t *pool)
   apr_size_t buffer_limit = sizeof(buffer);
   apr_file_t *f;
 
-  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "read_length_tmp", pool));
-  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
-  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
-  svn_test_add_dir_cleanup(tmp_dir);
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir, "read_length_tmp", pool));
 
   SVN_ERR(svn_io_write_unique(&tmp_file, tmp_dir, "1234\r\n", 6,
                               svn_io_file_del_on_pool_cleanup, pool));
@@ -531,6 +509,167 @@ read_length_line_shouldnt_loop(apr_pool_t *pool)
   SVN_TEST_ASSERT_ERROR(svn_io_read_length_line(f, buffer, &buffer_limit,
                                                 pool), SVN_ERR_MALFORMED_FILE);
   SVN_TEST_ASSERT(buffer_limit == 4);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_read_length_line(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *tmp_file;
+  char buffer[80];
+  apr_size_t buffer_limit;
+  apr_file_t *f;
+  svn_error_t *err;
+
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir, "test_read_length_line",
+                                    pool));
+
+  /* Test 1: Read empty file. */
+  tmp_file = svn_dirent_join(tmp_dir, "empty", pool);
+  SVN_ERR(svn_io_file_create(tmp_file, "", pool));
+
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  buffer_limit = sizeof(buffer);
+  err = svn_io_read_length_line(f, buffer, &buffer_limit, pool);
+  SVN_TEST_ASSERT_ERROR(err, APR_EOF);
+
+  SVN_ERR(svn_io_file_close(f, pool));
+
+  /* Test 2: Read empty line.*/
+  tmp_file = svn_dirent_join(tmp_dir, "empty-line", pool);
+  SVN_ERR(svn_io_file_create(tmp_file, "\n", pool));
+
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  buffer_limit = sizeof(buffer);
+  err = svn_io_read_length_line(f, buffer, &buffer_limit, pool);
+  SVN_ERR(err);
+  SVN_TEST_ASSERT(buffer_limit == 0);
+  SVN_TEST_STRING_ASSERT(buffer, "");
+  SVN_ERR(svn_io_file_close(f, pool));
+
+  /* Test 3: Read two lines.*/
+  tmp_file = svn_dirent_join(tmp_dir, "lines", pool);
+  SVN_ERR(svn_io_file_create(tmp_file, "first\nsecond\n", pool));
+
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+
+  buffer_limit = sizeof(buffer);
+  err = svn_io_read_length_line(f, buffer, &buffer_limit, pool);
+  SVN_ERR(err);
+  SVN_TEST_ASSERT(buffer_limit == 5);
+  SVN_TEST_STRING_ASSERT(buffer, "first");
+
+  buffer_limit = sizeof(buffer);
+  err = svn_io_read_length_line(f, buffer, &buffer_limit, pool);
+  SVN_ERR(err);
+  SVN_TEST_ASSERT(buffer_limit == 6);
+  SVN_TEST_STRING_ASSERT(buffer, "second");
+
+  buffer_limit = sizeof(buffer);
+  err = svn_io_read_length_line(f, buffer, &buffer_limit, pool);
+  SVN_TEST_ASSERT_ERROR(err, APR_EOF);
+
+  SVN_ERR(svn_io_file_close(f, pool));
+
+  /* Test 4: Content without end-of-line.*/
+  tmp_file = svn_dirent_join(tmp_dir, "no-eol", pool);
+  SVN_ERR(svn_io_file_create(tmp_file, "text", pool));
+
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+
+  buffer_limit = sizeof(buffer);
+  err = svn_io_read_length_line(f, buffer, &buffer_limit, pool);
+  SVN_TEST_ASSERT_ERROR(err, APR_EOF);
+
+  SVN_ERR(svn_io_file_close(f, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_file_readline(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *tmp_file;
+  svn_stringbuf_t *buf;
+  apr_file_t *f;
+  svn_error_t *err;
+  const char *eol;
+  svn_boolean_t eof;
+  apr_off_t pos;
+
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir, "test_file_readline",
+                                    pool));
+
+  tmp_file = svn_dirent_join(tmp_dir, "foo", pool);
+
+  SVN_ERR(svn_io_file_create(tmp_file, "CR\rLF\nCRLF\r\nno-eol", pool));
+
+  SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+  err = svn_io_file_readline(f, &buf, &eol, &eof, APR_SIZE_MAX, pool, pool);
+  SVN_ERR(err);
+  SVN_TEST_STRING_ASSERT(buf->data, "CR");
+  SVN_TEST_STRING_ASSERT(eol, "\r");
+  SVN_TEST_ASSERT(!eof);
+
+  /* Check that APR file reports correct offset. See r1719196 why it's
+     important. */
+  SVN_ERR(svn_io_file_get_offset(&pos, f, pool));
+  SVN_TEST_INT_ASSERT(pos, 3);
+
+  err = svn_io_file_readline(f, &buf, &eol, &eof, APR_SIZE_MAX, pool, pool);
+  SVN_ERR(err);
+  SVN_TEST_STRING_ASSERT(buf->data, "LF");
+  SVN_TEST_STRING_ASSERT(eol, "\n");
+  SVN_TEST_ASSERT(!eof);
+
+  /* Check that APR file reports correct offset. See r1719196 why it's
+     important. */
+  SVN_ERR(svn_io_file_get_offset(&pos, f, pool));
+  SVN_TEST_INT_ASSERT(pos, 6);
+
+  err = svn_io_file_readline(f, &buf, &eol, &eof, APR_SIZE_MAX, pool, pool);
+  SVN_ERR(err);
+  SVN_TEST_STRING_ASSERT(buf->data, "CRLF");
+  SVN_TEST_STRING_ASSERT(eol, "\r\n");
+  SVN_TEST_ASSERT(!eof);
+
+  /* Check that APR file reports correct offset. See r1719196 why it's
+     important. */
+  SVN_ERR(svn_io_file_get_offset(&pos, f, pool));
+  SVN_TEST_INT_ASSERT(pos, 12);
+
+  err = svn_io_file_readline(f, &buf, &eol, &eof, APR_SIZE_MAX, pool, pool);
+  SVN_ERR(err);
+  SVN_TEST_STRING_ASSERT(buf->data, "no-eol");
+  SVN_TEST_STRING_ASSERT(eol, NULL);
+  SVN_TEST_ASSERT(eof);
+
+  /* Check that APR file reports correct offset. See r1719196 why it's
+     important. */
+  SVN_ERR(svn_io_file_get_offset(&pos, f, pool));
+  SVN_TEST_INT_ASSERT(pos, 18);
+
+  /* Further reads still returns EOF. */
+  err = svn_io_file_readline(f, &buf, &eol, &eof, APR_SIZE_MAX, pool, pool);
+  SVN_ERR(err);
+  SVN_TEST_STRING_ASSERT(buf->data, "");
+  SVN_TEST_STRING_ASSERT(eol, NULL);
+  SVN_TEST_ASSERT(eof);
+
+  /* Check that APR file reports correct offset. See r1719196 why it's
+     important. */
+  SVN_ERR(svn_io_file_get_offset(&pos, f, pool));
+  SVN_TEST_INT_ASSERT(pos, 18);
+
+  SVN_ERR(svn_io_file_close(f, pool));
 
   return SVN_NO_ERROR;
 }
@@ -562,8 +701,7 @@ aligned_seek(apr_file_t *file,
     }
 
   /* we must be at the desired offset */
-  current = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, &current, pool));
+  SVN_ERR(svn_io_file_get_offset(&current, file, pool));
   SVN_TEST_ASSERT(current == (apr_off_t)offset);
 
   return SVN_NO_ERROR;
@@ -639,11 +777,7 @@ aligned_seek_test(apr_pool_t *pool)
   const apr_size_t file_size = 100000;
 
   /* create a temp folder & schedule it for automatic cleanup */
-
-  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "aligned_seek_tmp", pool));
-  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
-  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
-  svn_test_add_dir_cleanup(tmp_dir);
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir, "aligned_seek_tmp", pool));
 
   /* create a temp file with know contents */
 
@@ -690,10 +824,7 @@ ignore_enoent(apr_pool_t *pool)
   apr_file_t *file;
 
   /* Create an empty directory. */
-  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "ignore_enoent", pool));
-  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
-  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
-  svn_test_add_dir_cleanup(tmp_dir);
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir, "ignore_enoent", pool));
 
   /* Path does not exist. */
   path = svn_dirent_join(tmp_dir, "not-present", pool);
@@ -750,11 +881,9 @@ test_install_stream_to_longpath(apr_pool_t *pool)
   int i;
 
   /* Create an empty directory. */
-  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_install_stream_to_longpath",
-                                  pool));
-  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
-  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
-  svn_test_add_dir_cleanup(tmp_dir);
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir,
+                                    "test_install_stream_to_longpath",
+                                    pool));
 
   deep_dir = tmp_dir;
 
@@ -792,11 +921,9 @@ test_install_stream_over_readonly_file(apr_pool_t *pool)
   svn_stringbuf_t *actual_content;
 
   /* Create an empty directory. */
-  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_install_stream_over_readonly_file",
-                                  pool));
-  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
-  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
-  svn_test_add_dir_cleanup(tmp_dir);
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir,
+                                    "test_install_stream_over_readonly_file",
+                                    pool));
 
   final_abspath = svn_dirent_join(tmp_dir, "stream1", pool);
 
@@ -829,10 +956,7 @@ test_file_size_get(apr_pool_t *pool)
   svn_filesize_t filesize;
 
   /* Create an empty directory. */
-  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_file_size_get", pool));
-  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
-  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
-  svn_test_add_dir_cleanup(tmp_dir);
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir, "test_file_size_get", pool));
 
   /* Path does not exist. */
   path = svn_dirent_join(tmp_dir, "file", pool);
@@ -871,10 +995,7 @@ test_file_rename2(apr_pool_t *pool)
   svn_node_kind_t actual_kind;
 
   /* Create an empty directory. */
-  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_file_rename2", pool));
-  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
-  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
-  svn_test_add_dir_cleanup(tmp_dir);
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir, "test_file_rename2", pool));
 
   foo_path = svn_dirent_join(tmp_dir, "foo", pool);
   bar_path = svn_dirent_join(tmp_dir, "bar", pool);
@@ -948,6 +1069,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_io_file_size_get"),
     SVN_TEST_PASS2(test_file_rename2,
                    "test svn_io_file_rename2"),
+    SVN_TEST_PASS2(test_read_length_line,
+                   "test svn_io_read_length_line()"),
+    SVN_TEST_PASS2(test_file_readline,
+                   "test svn_io_file_readline()"),
     SVN_TEST_NULL
   };
 
