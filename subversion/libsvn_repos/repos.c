@@ -1564,7 +1564,7 @@ svn_repos_has_capability(svn_repos_t *repos,
     {
       *has = svn_fs_supports_concurrent_writes(repos->fs, pool);
       svn_hash_sets(repos->repository_capabilities,
-                    SVN_REPOS_CAPABILITY_MERGEINFO,
+                    SVN_REPOS_CAPABILITY_CONCURRENT_WRITE,
                     *has ? capability_yes : capability_no);
     }
   else
