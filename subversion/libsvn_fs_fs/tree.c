@@ -3072,6 +3072,8 @@ fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
                    svn_checksum_t *result_checksum,
                    apr_pool_t *pool)
 {
+  const svn_fs_fs__id_part_t *txn_id = root_txn_id(root);
+
   txdelta_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
 
   tb->root = root;
@@ -3080,7 +3082,9 @@ fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
   tb->base_checksum = svn_checksum_dup(base_checksum, pool);
   tb->result_checksum = svn_checksum_dup(result_checksum, pool);
 
-  SVN_ERR(apply_textdelta(tb, pool));
+  SVN_ERR(svn_fs_fs__with_txn_auto_lock(root->fs, txn_id,
+                                        apply_textdelta, tb,
+                                        pool));
 
   *contents_p = window_consumer;
   *contents_baton_p = tb;
@@ -3205,6 +3209,8 @@ fs_apply_text(svn_stream_t **contents_p,
               svn_checksum_t *result_checksum,
               apr_pool_t *pool)
 {
+  const svn_fs_fs__id_part_t *txn_id = root_txn_id(root);
+
   struct text_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
 
   tb->root = root;
@@ -3212,7 +3218,9 @@ fs_apply_text(svn_stream_t **contents_p,
   tb->pool = pool;
   tb->result_checksum = svn_checksum_dup(result_checksum, pool);
 
-  SVN_ERR(apply_text(tb, pool));
+  SVN_ERR(svn_fs_fs__with_txn_auto_lock(root->fs, txn_id,
+                                        apply_text, tb,
+                                        pool));
 
   *contents_p = tb->stream;
   return SVN_NO_ERROR;

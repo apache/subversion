@@ -452,6 +452,49 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_fs__with_txn_auto_lock(svn_fs_t *fs,
+                              const svn_fs_fs__id_part_t *txn_id,
+                              svn_error_t *(*body)(void *baton,
+                                                   apr_pool_t *pool),
+                              void *baton,
+                              apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  /* In non-concurrent mode, we only serialize via get_writable_proto_rev
+   * and there shall be no additional locking overhead.  Moreover, that
+   * file lock is being held for a long time and would require us to add
+   * special handling for recursion etc.
+   *
+   * Therefore, we only lock in concurrent mode where locks are blocking
+   * and short-lived.
+   */
+  if (ffd->concurrent_txns)
+    {
+      void *lockcookie;
+
+      struct get_writable_proto_rev_baton b;
+      b.lockcookie = &lockcookie;
+      b.txn_id = *txn_id;
+
+      SVN_ERR(with_txnlist_lock(fs, get_writable_proto_rev_body, &b,
+                                scratch_pool));
+
+      /* Now open the prototype revision file and seek to the end. */
+      SVN_ERR(svn_error_compose_create(body(baton, scratch_pool),
+                                       unlock_proto_rev(fs, txn_id,
+                                                        lockcookie,
+                                                        scratch_pool)));
+    }
+  else
+    {
+      SVN_ERR(body(baton, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Make sure the length ACTUAL_LENGTH of the proto-revision file PROTO_REV
    of transaction TXN_ID in filesystem FS matches the proto-index file.
    Trim any crash / failure related extra data from the proto-rev file.

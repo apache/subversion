@@ -30,6 +30,19 @@
 const svn_fs_fs__id_part_t *
 svn_fs_fs__txn_get_id(svn_fs_txn_t *txn);
 
+/* Acquire the necessary locks for transaction TXN_ID in FS, execute BODY
+   with BATON and release the locks.  Use SCRATCH_POOL for allocations.
+
+   Note that this will only take out any locks when we are in concurrent
+   transaction mode where additional access serialization is needed. */
+svn_error_t *
+svn_fs_fs__with_txn_auto_lock(svn_fs_t *fs,
+                              const svn_fs_fs__id_part_t *txn_id,
+                              svn_error_t *(*body)(void *baton,
+                                                   apr_pool_t *pool),
+                              void *baton,
+                              apr_pool_t *scratch_pool);
+
 /* Store NODEREV as the node-revision for the node whose id is ID in
    FS, after setting its is_fresh_txn_root to FRESH_TXN_ROOT.  Do any
    necessary temporary allocation in POOL. */
