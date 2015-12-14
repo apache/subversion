@@ -1148,8 +1148,8 @@ svn_stream_for_stdout(svn_stream_t **out,
                       apr_pool_t *pool);
 
 /** Read the contents of @a stream into memory, from its current position
- * to its end, returning the data in @a *result. The stream will be closed
- * when it has been successfully and completely read.
+ * to its end, returning the data in @a *result. This function does not
+ * close the @a stream upon completion.
  *
  * @a len_hint gives a hint about the expected length, in bytes, of the
  * actual data that will be read from the stream. It may be 0, meaning no
