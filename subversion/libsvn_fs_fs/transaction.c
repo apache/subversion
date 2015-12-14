@@ -1972,7 +1972,7 @@ struct rep_write_baton
   /* The FS we are writing to. */
   svn_fs_t *fs;
 
-  /* Actual file to which we are writing. */
+  /* Final representation stream that receives the deltified data. */
   svn_stream_t *rep_stream;
 
   /* A stream from the delta combiner.  Data written here gets
@@ -1985,8 +1985,8 @@ struct rep_write_baton
   /* Start of the actual data. */
   apr_off_t delta_start;
 
-  /* How many bytes have been written to this rep already. */
-  svn_filesize_t rep_size;
+  /* How many full-text bytes have been written to this rep already. */
+  svn_filesize_t expanded_size;
 
   /* The node revision for which we're writing out info. */
   node_revision_t *noderev;
@@ -1997,10 +1997,11 @@ struct rep_write_baton
      writing to it. */
   void *lockcookie;
 
+  /* Calculate full-text checksums. */
   svn_checksum_ctx_t *md5_checksum_ctx;
   svn_checksum_ctx_t *sha1_checksum_ctx;
 
-  /* calculate a modified FNV-1a checksum of the on-disk representation */
+  /* Calculate a modified FNV-1a checksum of the on-disk representation. */
   svn_checksum_ctx_t *fnv1a_checksum_ctx;
 
   /* Local / scratch pool, available for temporary allocations. */
@@ -2022,7 +2023,7 @@ rep_write_contents(void *baton,
 
   SVN_ERR(svn_checksum_update(b->md5_checksum_ctx, data, *len));
   SVN_ERR(svn_checksum_update(b->sha1_checksum_ctx, data, *len));
-  b->rep_size += *len;
+  b->expanded_size += *len;
 
   /* If we are writing a delta, use that stream. */
   if (b->delta_stream)
@@ -2249,7 +2250,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   b->fs = fs;
   b->result_pool = pool;
   b->scratch_pool = svn_pool_create(pool);
-  b->rep_size = 0;
+  b->expanded_size = 0;
   b->noderev = noderev;
 
   /* Open the prototype rev file and seek to its end. */
@@ -2487,6 +2488,7 @@ rep_write_contents_close(void *baton)
   representation_t *rep;
   representation_t *old_rep;
   apr_off_t offset;
+  const svn_fs_fs__id_part_t *txn_id = svn_fs_fs__id_txn_id(b->noderev->id);
 
   rep = apr_pcalloc(b->result_pool, sizeof(*rep));
 
@@ -2500,8 +2502,8 @@ rep_write_contents_close(void *baton)
   rep->size = offset - b->delta_start;
 
   /* Fill in the rest of the representation field. */
-  rep->expanded_size = b->rep_size;
-  rep->txn_id = *svn_fs_fs__id_txn_id(b->noderev->id);
+  rep->expanded_size = b->expanded_size;
+  rep->txn_id = *txn_id;
   SVN_ERR(set_uniquifier(b->fs, rep, b->scratch_pool));
   rep->revision = SVN_INVALID_REVNUM;
 
@@ -2526,7 +2528,7 @@ rep_write_contents_close(void *baton)
     {
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_stream_puts(b->rep_stream, "ENDREP\n"));
-      SVN_ERR(allocate_item_index(&rep->item_index, b->fs, &rep->txn_id,
+      SVN_ERR(allocate_item_index(&rep->item_index, b->fs, txn_id,
                                   b->rep_offset, b->scratch_pool));
 
       b->noderev->data_rep = rep;
@@ -2553,13 +2555,13 @@ rep_write_contents_close(void *baton)
                                       b->scratch_pool));
 
       SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->scratch_pool));
-      SVN_ERR(store_p2l_index_entry(b->fs, &rep->txn_id, &entry,
-                                    b->scratch_pool));
+      SVN_ERR(store_p2l_index_entry(b->fs, txn_id, &entry, b->scratch_pool));
     }
 
   SVN_ERR(svn_io_file_close(b->file, b->scratch_pool));
-  SVN_ERR(unlock_proto_rev(b->fs, &rep->txn_id, b->lockcookie,
-                           b->scratch_pool));
+
+  /* Unlock the txn. */
+  SVN_ERR(unlock_proto_rev(b->fs, txn_id, b->lockcookie, b->scratch_pool));
   svn_pool_destroy(b->scratch_pool);
 
   return SVN_NO_ERROR;
