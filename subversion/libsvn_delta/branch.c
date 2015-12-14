@@ -145,36 +145,6 @@ branch_txn_get_branches(const svn_branch__txn_t *txn,
 
 /* An #svn_branch__txn_t method. */
 static svn_error_t *
-branch_txn_add_branch(svn_branch__txn_t *txn,
-                      svn_branch__state_t *branch,
-                      apr_pool_t *scratch_pool)
-{
-  APR_ARRAY_PUSH(txn->priv->branches, void *) = branch;
-
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_branch__txn_t method. */
-static svn_branch__state_t *
-branch_txn_add_new_branch(svn_branch__txn_t *txn,
-                          const char *bid,
-                          int root_eid,
-                          apr_pool_t *scratch_pool)
-{
-  svn_branch__state_t *new_branch;
-
-  SVN_ERR_ASSERT_NO_RETURN(root_eid != -1);
-
-  new_branch = branch_state_create(bid, root_eid, txn,
-                                   txn->priv->branches->pool);
-
-  APR_ARRAY_PUSH(txn->priv->branches, void *) = new_branch;
-
-  return new_branch;
-}
-
-/* An #svn_branch__txn_t method. */
-static svn_error_t *
 branch_txn_delete_branch(svn_branch__txn_t *txn,
                          const char *bid,
                          apr_pool_t *scratch_pool)
@@ -223,25 +193,27 @@ branch_txn_new_eid(svn_branch__txn_t *txn,
 static svn_error_t *
 branch_txn_open_branch(svn_branch__txn_t *txn,
                        svn_branch__state_t **new_branch_p,
-                       const char *new_branch_id,
+                       const char *branch_id,
                        int root_eid,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
   svn_branch__state_t *new_branch;
 
-  /* if the subbranch already exists, just return it */
+  /* if the branch already exists, just return it, else create it */
   new_branch
-    = svn_branch__txn_get_branch_by_id(txn, new_branch_id, scratch_pool);
+    = svn_branch__txn_get_branch_by_id(txn, branch_id, scratch_pool);
   if (new_branch)
     {
       SVN_ERR_ASSERT(root_eid == svn_branch__root_eid(new_branch));
     }
   else
     {
-      new_branch = svn_branch__txn_add_new_branch(txn,
-                                                  new_branch_id,
-                                                  root_eid, scratch_pool);
+      SVN_ERR_ASSERT_NO_RETURN(root_eid != -1);
+
+      new_branch = branch_state_create(branch_id, root_eid, txn,
+                                       txn->priv->branches->pool);
+      APR_ARRAY_PUSH(txn->priv->branches, void *) = new_branch;
     }
 
   if (new_branch_p)
@@ -288,9 +260,8 @@ branch_txn_branch(svn_branch__txn_t *txn,
                                from->rev, from->bid, from->eid);
     }
 
-  new_branch = svn_branch__txn_add_new_branch(txn,
-                                              new_branch_id,
-                                              from->eid, scratch_pool);
+  SVN_ERR(branch_txn_open_branch(txn, &new_branch, new_branch_id,
+                                 from->eid, scratch_pool, scratch_pool));
 
   /* Populate the mapping from the 'from' source */
   SVN_ERR(branch_instantiate_elements(new_branch, from_subtree,
@@ -354,32 +325,6 @@ svn_branch__txn_get_branches(const svn_branch__txn_t *txn,
 }
 
 svn_error_t *
-svn_branch__txn_add_branch(svn_branch__txn_t *txn,
-                           svn_branch__state_t *branch,
-                           apr_pool_t *scratch_pool)
-{
-  SVN_ERR(txn->vtable->add_branch(txn,
-                                  branch,
-                                  scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-svn_branch__state_t *
-svn_branch__txn_add_new_branch(svn_branch__txn_t *txn,
-                               const char *bid,
-                               int root_eid,
-                               apr_pool_t *scratch_pool)
-{
-  svn_branch__state_t *new_branch
-    = txn->vtable->add_new_branch(txn,
-                                  bid, root_eid,
-                                  scratch_pool);
-
-  return new_branch;
-}
-
-svn_error_t *
 svn_branch__txn_delete_branch(svn_branch__txn_t *txn,
                               const char *bid,
                               apr_pool_t *scratch_pool)
@@ -415,14 +360,14 @@ svn_branch__txn_new_eid(svn_branch__txn_t *txn,
 svn_error_t *
 svn_branch__txn_open_branch(svn_branch__txn_t *txn,
                             svn_branch__state_t **new_branch_p,
-                            const char *new_branch_id,
+                            const char *branch_id,
                             int root_eid,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
   SVN_ERR(txn->vtable->open_branch(txn,
                                    new_branch_p,
-                                   new_branch_id,
+                                   branch_id,
                                    root_eid, result_pool,
                                    scratch_pool));
   return SVN_NO_ERROR;
@@ -680,8 +625,6 @@ branch_txn_create(svn_branch__repos_t *repos,
   static const svn_branch__txn_vtable_t vtable = {
     {0},
     branch_txn_get_branches,
-    branch_txn_add_branch,
-    branch_txn_add_new_branch,
     branch_txn_delete_branch,
     branch_txn_get_num_new_eids,
     branch_txn_new_eid,
@@ -1701,7 +1644,7 @@ svn_branch__txn_parse(svn_branch__txn_t **txn_p,
 
       SVN_ERR(svn_branch__state_parse(&branch, txn, stream,
                                       result_pool, scratch_pool));
-      SVN_ERR(svn_branch__txn_add_branch(txn, branch, scratch_pool));
+      APR_ARRAY_PUSH(txn->priv->branches, void *) = branch;
     }
 
   *txn_p = txn;

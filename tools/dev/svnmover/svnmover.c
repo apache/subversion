@@ -2634,6 +2634,7 @@ do_mkbranch(const char **new_branch_id_p,
                                       scratch_pool);
   SVN_ERR(svn_branch__txn_open_branch(txn, &new_branch,
                                       new_branch_id, new_inner_eid,
+                                      /*### reference_tree={empty},*/
                                       scratch_pool, scratch_pool));
   SVN_ERR(svn_branch__state_alter_one(new_branch, new_inner_eid,
                                       -1, "", payload, scratch_pool));

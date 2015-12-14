@@ -295,14 +295,18 @@ svn_branch__instantiate_elements_r(svn_branch__state_t *to_branch,
         svn_branch__subtree_t *this_subtree = apr_hash_this_val(hi);
         const char *new_branch_id;
         svn_branch__state_t *new_branch;
+        /*### svn_branch__history_t *history;*/
 
         /* branch this subbranch into NEW_BRANCH (recursing) */
         new_branch_id = svn_branch__id_nest(to_branch->bid, this_outer_eid,
                                             scratch_pool);
-        new_branch = svn_branch__txn_add_new_branch(to_branch->txn,
-                                                    new_branch_id,
-                                                    this_subtree->tree->root_eid,
-                                                    scratch_pool);
+        SVN_ERR(svn_branch__txn_open_branch(to_branch->txn, &new_branch,
+                                            new_branch_id,
+                                            /*### reference_tree={empty},*/
+                                            this_subtree->tree->root_eid,
+                                            scratch_pool, scratch_pool));
+        /*### SVN_ERR(svn_branch__state_set_history(new_branch, history,
+                                              scratch_pool));*/
 
         SVN_ERR(svn_branch__instantiate_elements_r(new_branch, *this_subtree,
                                                    scratch_pool));
@@ -458,35 +462,6 @@ nested_branch_txn_get_branches(const svn_branch__txn_t *txn,
                                    result_pool);
 
   return branches;
-}
-
-/* An #svn_branch__txn_t method. */
-static svn_error_t *
-nested_branch_txn_add_branch(svn_branch__txn_t *txn,
-                             svn_branch__state_t *branch,
-                             apr_pool_t *scratch_pool)
-{
-  /* Just forwarding: nothing more is needed. */
-  SVN_ERR(svn_branch__txn_add_branch(txn->priv->wrapped_txn,
-                                     branch,
-                                     scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_branch__txn_t method. */
-static svn_branch__state_t *
-nested_branch_txn_add_new_branch(svn_branch__txn_t *txn,
-                                 const char *bid,
-                                 int root_eid,
-                                 apr_pool_t *scratch_pool)
-{
-  /* Just forwarding: nothing more is needed. */
-  svn_branch__state_t *new_branch
-    = svn_branch__txn_add_new_branch(txn->priv->wrapped_txn,
-                                     bid, root_eid,
-                                     scratch_pool);
-
-  return new_branch;
 }
 
 /* An #svn_branch__txn_t method. */
@@ -676,8 +651,6 @@ svn_branch__nested_txn_create(svn_branch__txn_t *wrapped_txn,
   static const svn_branch__txn_vtable_t vtable = {
     {0},
     nested_branch_txn_get_branches,
-    nested_branch_txn_add_branch,
-    nested_branch_txn_add_new_branch,
     nested_branch_txn_delete_branch,
     nested_branch_txn_get_num_new_eids,
     nested_branch_txn_new_eid,
