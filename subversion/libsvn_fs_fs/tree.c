@@ -444,11 +444,13 @@ dag_node_cache_get(dag_node_t **node_p,
       if (node == NULL)
         {
           locate_cache(&cache, &key, root, path, pool);
-          SVN_ERR(svn_cache__get((void **)&node, &found, cache, key, pool));
-          if (found && node)
+          if (cache)
+            SVN_ERR(svn_cache__get((void **)&node, &found, cache, key, pool));
+
+          if (node && found)
             {
-              /* Patch up the FS, since this might have come from an old FS
-               * object. */
+              /* Patch up the FS, since this might have come from an old
+               * FS object. */
               svn_fs_fs__dag_set_fs(node, root->fs);
 
               /* Retain the DAG node in L1 cache. */
@@ -467,8 +469,10 @@ dag_node_cache_get(dag_node_t **node_p,
 
       locate_cache(&cache, &key, root, path, pool);
 
-      SVN_ERR(svn_cache__get((void **) &node, &found, cache, key, pool));
-      if (found && node)
+      if (cache)
+        SVN_ERR(svn_cache__get((void **) &node, &found, cache, key, pool));
+
+      if (node && found)
         {
           /* Patch up the FS, since this might have come from an old FS
            * object. */
@@ -495,7 +499,8 @@ dag_node_cache_set(svn_fs_root_t *root,
   SVN_ERR_ASSERT(*path == '/');
 
   locate_cache(&cache, &key, root, path, pool);
-  return svn_cache__set(cache, key, node, pool);
+  return cache ? svn_cache__set(cache, key, node, pool)
+               : SVN_NO_ERROR;
 }
 
 
@@ -543,7 +548,8 @@ dag_node_cache_invalidate(svn_fs_root_t *root,
 
   SVN_ERR_ASSERT(root->is_txn_root);
   locate_cache(&cache, NULL, root, NULL, b.pool);
-
+  if (!cache)
+    return SVN_NO_ERROR;
 
   SVN_ERR(svn_cache__iter(NULL, cache, find_descendants_in_cache,
                           &b, b.pool));
@@ -4419,6 +4425,7 @@ make_txn_root(svn_fs_root_t **root_p,
               apr_uint32_t flags,
               apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   svn_fs_root_t *root = make_root(fs, pool);
   fs_txn_root_data_t *frd = apr_pcalloc(root->pool, sizeof(*frd));
   frd->txn_id = *txn;
@@ -4433,14 +4440,15 @@ make_txn_root(svn_fs_root_t **root_p,
 
      Note that since dag_node_cache_invalidate uses svn_cache__iter,
      this *cannot* be a memcache-based cache.  */
-  SVN_ERR(svn_cache__create_inprocess(&(frd->txn_node_cache),
-                                      svn_fs_fs__dag_serialize,
-                                      svn_fs_fs__dag_deserialize,
-                                      APR_HASH_KEY_STRING,
-                                      32, 20, FALSE,
-                                      apr_pstrcat(pool, txn, ":TXN",
-                                                  SVN_VA_NULL),
-                                      root->pool));
+  if (!ffd->concurrent_txns)
+    SVN_ERR(svn_cache__create_inprocess(&(frd->txn_node_cache),
+                                        svn_fs_fs__dag_serialize,
+                                        svn_fs_fs__dag_deserialize,
+                                        APR_HASH_KEY_STRING,
+                                        32, 20, FALSE,
+                                        apr_pstrcat(pool, txn, ":TXN",
+                                                    SVN_VA_NULL),
+                                        root->pool));
 
   /* Initialize transaction-local caches in FS.
 
