@@ -1,0 +1,20 @@
+We want to enable Subversion to use multiple concurrent sessions /
+svn_fs_t instances during the data transfer phase of a commit transaction.
+This is to support pipelined processing in http/2, for instance, and should
+eliminate most of the latency penalty for commits with many change or added
+files in them.
+
+Keeping the tree transformation phase of the transaction strictly single-
+threaded, only a small subset of operations needs to support concurrency:
+
+* fs_apply_textdelta
+* fs_apply_text
+* fs_change_node_prop
+
+In concurrent mode, these need to ensure mutally exclusive throughout the
+system, i.e. across threads and processes.  The actual improvement comes
+from the text change functions allowing concurrent writes to the streams
+and delta processors they return.
+
+Because concurrent mode needs a more expensive locking scheme and can't
+use the DAG cache, we want this overhead to be optional.
