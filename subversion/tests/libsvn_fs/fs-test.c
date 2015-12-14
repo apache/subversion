@@ -6808,6 +6808,7 @@ test_modify_txn_being_written(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root;
   svn_stream_t *foo_contents;
   svn_stream_t *bar_contents;
+  svn_boolean_t concurrent_write_supported;
 
   /* Bail (with success) on known-untestable scenarios */
   if (strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0)
@@ -6817,6 +6818,7 @@ test_modify_txn_being_written(const svn_test_opts_t *opts,
   /* Create a new repo. */
   SVN_ERR(svn_test__create_fs(&fs, "test-repo-modify-txn-being-written",
                               opts, pool));
+  concurrent_write_supported = svn_fs_supports_concurrent_writes(fs, pool);
 
   /* Create a TXN_ROOT referencing FS. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
@@ -6829,18 +6831,24 @@ test_modify_txn_being_written(const svn_test_opts_t *opts,
 
   /* Attempt to modify another file '/bar' -- FSFS doesn't allow this. */
   SVN_ERR(svn_fs_make_file(txn_root, "/bar", pool));
-  SVN_TEST_ASSERT_ERROR(
-      svn_fs_apply_text(&bar_contents, txn_root, "/bar", NULL, pool),
-      SVN_ERR_FS_REP_BEING_WRITTEN);
+  if (concurrent_write_supported)
+    SVN_ERR(svn_fs_apply_text(&bar_contents, txn_root, "/bar", NULL, pool));
+  else
+    SVN_TEST_ASSERT_ERROR(
+        svn_fs_apply_text(&bar_contents, txn_root, "/bar", NULL, pool),
+        SVN_ERR_FS_REP_BEING_WRITTEN);
 
   /* *Reopen TXN. */
   SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
 
   /* Check that file '/bar' still cannot be modified */
-  SVN_TEST_ASSERT_ERROR(
-      svn_fs_apply_text(&bar_contents, txn_root, "/bar", NULL, pool),
-      SVN_ERR_FS_REP_BEING_WRITTEN);
+  if (concurrent_write_supported)
+    SVN_ERR(svn_fs_apply_text(&bar_contents, txn_root, "/bar", NULL, pool));
+  else
+    SVN_TEST_ASSERT_ERROR(
+        svn_fs_apply_text(&bar_contents, txn_root, "/bar", NULL, pool),
+        SVN_ERR_FS_REP_BEING_WRITTEN);
 
   /* Close file '/foo'. */
   SVN_ERR(svn_stream_close(foo_contents));
