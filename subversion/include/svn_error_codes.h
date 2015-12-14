@@ -878,6 +878,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 65,
              "Property list is corrupt.")
 
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_FS_TXN_CONCURRENCY_MISMATCH,
+             SVN_ERR_FS_CATEGORY_START + 66,
+             "Transaction accessed with different concurrency.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

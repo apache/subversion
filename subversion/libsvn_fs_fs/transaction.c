@@ -126,13 +126,14 @@ svn_fs_fs__txn_get_id(svn_fs_txn_t *txn)
 
 /* Functions for working with shared transaction data. */
 
-/* Return the transaction object for transaction TXN_ID from the
+/* Set *TXN_P to the transaction object for transaction TXN_ID from the
    transaction list of filesystem FS (which must already be locked via the
    txn_list_lock mutex).  If the transaction does not exist in the list,
    then create a new transaction object and return it (if CREATE_NEW is
    true) or return NULL (otherwise). */
-static fs_fs_shared_txn_data_t *
-get_shared_txn(svn_fs_t *fs,
+static svn_error_t *
+get_shared_txn(fs_fs_shared_txn_data_t **txn_p,
+               svn_fs_t *fs,
                const svn_fs_fs__id_part_t *txn_id,
                svn_boolean_t create_new)
 {
@@ -144,8 +145,59 @@ get_shared_txn(svn_fs_t *fs,
     if (svn_fs_fs__id_part_eq(&txn->txn_id, txn_id))
       break;
 
-  if (txn || !create_new)
-    return txn;
+  if (txn)
+    {
+      /* All users must adhere to the same locking scheme.
+       *
+       * Note that this check is "best effort" because, depending on the
+       * locking scheme, we will not always call this function for all
+       * possible conflicts.  Modifying the same txn with e.g. different
+       * clients _at_the_same_time_ has always been illegal for the non-
+       * current setup.  So, this is just being nice to tool developers ...
+       *
+       * This will also create "false positives" in case where a txn is
+       * being modified through two sessions with different concurrency
+       * setting where some external scheme prevents actual races between
+       * them.  However, we consider such a setup illegal (and theoretical).
+       */
+      if (txn->is_concurrent != ffd->concurrent_txns)
+        {
+          if (txn->is_concurrent)
+            return svn_error_createf(SVN_ERR_FS_TXN_CONCURRENCY_MISMATCH,
+                                     NULL,
+                                     _("Cannot reopen transaction '%s' "
+                                       "without concurrent write support"),
+                                     svn_fs_fs__id_txn_unparse(txn_id,
+                                                               fs->pool));
+          else
+            return svn_error_createf(SVN_ERR_FS_TXN_CONCURRENCY_MISMATCH,
+                                     NULL,
+                                     _("Cannot reopen transaction '%s' "
+                                       "with concurrent write support"),
+                                     svn_fs_fs__id_txn_unparse(txn_id,
+                                                               fs->pool));
+        }
+
+      *txn_p = txn;
+      return SVN_NO_ERROR;
+    }
+ 
+  if (!create_new)
+    {
+      *txn_p = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* We can only reuse txns with the same concurrency settings.
+     It is not much of a loss anyway because creating a new pool etc. is
+     quite cheap. */
+  while (   ffsd->free_txn
+         && (ffsd->free_txn->is_concurrent != ffd->concurrent_txns))
+    {
+      txn = ffsd->free_txn;
+      ffsd->free_txn = txn->next;
+      svn_pool_destroy(txn->pool);
+    }
 
   /* Use the transaction object from the (single-object) freelist,
      if one is available, or otherwise create a new object. */
@@ -159,6 +211,8 @@ get_shared_txn(svn_fs_t *fs,
       apr_pool_t *subpool = svn_pool_create(ffsd->common_pool);
       txn = apr_palloc(subpool, sizeof(*txn));
       txn->pool = subpool;
+      txn->is_concurrent = ffd->concurrent_txns;
+      SVN_ERR(svn_mutex__init(&txn->lock, txn->is_concurrent, txn->pool));
     }
 
   txn->txn_id = *txn_id;
@@ -171,7 +225,10 @@ get_shared_txn(svn_fs_t *fs,
   txn->next = ffsd->txns;
   ffsd->txns = txn;
 
-  return txn;
+  /* Done. */
+  *txn_p = txn;
+
+  return SVN_NO_ERROR;
 }
 
 /* Free the transaction object for transaction TXN_ID, and remove it
@@ -242,8 +299,10 @@ unlock_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 {
   const struct unlock_proto_rev_baton *b = baton;
   apr_file_t *lockfile = b->lockcookie;
-  fs_fs_shared_txn_data_t *txn = get_shared_txn(fs, &b->txn_id, FALSE);
   apr_status_t apr_err;
+  fs_fs_shared_txn_data_t *txn;
+
+  SVN_ERR(get_shared_txn(&txn, fs, &b->txn_id, FALSE));
 
   if (!txn)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -269,6 +328,8 @@ unlock_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 
   txn->being_written = FALSE;
 
+  SVN_ERR(svn_mutex__unlock(txn->lock, NULL));
+ 
   return SVN_NO_ERROR;
 }
 
@@ -298,14 +359,14 @@ struct get_writable_proto_rev_baton
   svn_fs_fs__id_part_t txn_id;
 };
 
-/* Callback used in the implementation of get_writable_proto_rev(). */
+/* Acquire the proto-rev lock for TXN in FS and set *LOCKCOOKIE to cookie. 
+ * Use POOL for all allocations. */
 static svn_error_t *
-get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
-{
-  const struct get_writable_proto_rev_baton *b = baton;
-  void **lockcookie = b->lockcookie;
-  fs_fs_shared_txn_data_t *txn = get_shared_txn(fs, &b->txn_id, TRUE);
-
+lock_proto_rev_body(void **lockcookie,
+                    svn_fs_t *fs,
+                    fs_fs_shared_txn_data_t *txn,
+                    apr_pool_t *pool)
+{  
   /* First, ensure that no thread in this process (including this one)
      is currently writing to this transaction's proto-rev file. */
   if (txn->being_written)
@@ -314,7 +375,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
                                "of transaction '%s' because a previous "
                                "representation is currently being written by "
                                "this process"),
-                             svn_fs_fs__id_txn_unparse(&b->txn_id, pool));
+                             svn_fs_fs__id_txn_unparse(&txn->txn_id, pool));
 
 
   /* We know that no thread in this process is writing to the proto-rev
@@ -327,7 +388,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
     apr_file_t *lockfile;
     apr_status_t apr_err;
     const char *lockfile_path
-      = svn_fs_fs__path_txn_proto_rev_lock(fs, &b->txn_id, pool);
+      = svn_fs_fs__path_txn_proto_rev_lock(fs, &txn->txn_id, pool);
 
     /* Open the proto-rev lockfile, creating it if necessary, as it may
        not exist if the transaction dates from before the lockfiles were
@@ -339,8 +400,12 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
     SVN_ERR(svn_io_file_open(&lockfile, lockfile_path,
                              APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
 
+    /* In concurrent mode, we will wait for our turn to write the file.
+     * Otherwise, an already locked file indicates an error. */
     apr_err = apr_file_lock(lockfile,
-                            APR_FLOCK_EXCLUSIVE | APR_FLOCK_NONBLOCK);
+                            txn->is_concurrent
+                              ? APR_FLOCK_EXCLUSIVE
+                              : APR_FLOCK_EXCLUSIVE | APR_FLOCK_NONBLOCK);
     if (apr_err)
       {
         svn_error_clear(svn_io_file_close(lockfile, pool));
@@ -351,7 +416,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
                                      "file of transaction '%s' because a "
                                      "previous representation is currently "
                                      "being written by another process"),
-                                   svn_fs_fs__id_txn_unparse(&b->txn_id,
+                                   svn_fs_fs__id_txn_unparse(&txn->txn_id,
                                                              pool));
 
         return svn_error_wrap_apr(apr_err,
@@ -364,6 +429,25 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
 
   /* We've successfully locked the transaction; mark it as such. */
   txn->being_written = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+/* Callback used in the implementation of get_writable_proto_rev(). */
+static svn_error_t *
+get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
+{
+  const struct get_writable_proto_rev_baton *b = baton;
+  fs_fs_shared_txn_data_t *txn;
+  svn_error_t *err;
+
+  SVN_ERR(get_shared_txn(&txn, fs, &b->txn_id, TRUE));
+
+  /* Lock mutex (if even enabled) and file. */
+  SVN_ERR(svn_mutex__lock(txn->lock));
+  err = lock_proto_rev_body(b->lockcookie, fs, txn, pool);
+  if (err)
+    return svn_mutex__unlock(txn->lock, err);
 
   return SVN_NO_ERROR;
 }

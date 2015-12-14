@@ -215,6 +215,14 @@ typedef struct fs_fs_shared_txn_data_t
   /* The pool in which this object has been allocated; a subpool of the
      common pool. */
   apr_pool_t *pool;
+
+  /* TRUE, if more than one thread or process may write to this transaction
+     at the same time. */
+  svn_boolean_t is_concurrent;
+
+  /* Transaction lock to be used when SUPPORTS_CONCURRENT_WRITE is set.
+     Otherwise, this becomes a dummy lock. */
+  svn_mutex__t *lock;
 } fs_fs_shared_txn_data_t;
 
 /* Private FSFS-specific data shared between all svn_fs_t objects that
@@ -426,6 +434,10 @@ typedef struct fs_fs_data_t
   /* Temporary cache for changed directories yet to be committed; maps from
      unparsed FS ID to ###x.  NULL outside transactions. */
   svn_cache__t *txn_dir_cache;
+
+  /* TRUE, if more than one thread or process may write to a transaction
+     at the same time. */
+  svn_boolean_t concurrent_txns;
 
   /* Data shared between all svn_fs_t objects for a given filesystem. */
   fs_fs_shared_data_t *shared;
