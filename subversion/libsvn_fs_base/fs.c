@@ -574,6 +574,7 @@ static fs_vtable_t fs_vtable = {
   base_bdb_verify_root,
   base_bdb_freeze,
   base_bdb_set_errcall,
+  NULL,
 };
 
 /* Where the format number is stored. */

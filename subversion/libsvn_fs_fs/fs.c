@@ -47,6 +47,7 @@
 #include "verify.h"
 #include "svn_private_config.h"
 #include "private/svn_fs_util.h"
+#include "private/svn_subr_private.h"
 
 #include "../libsvn_fs/fs-loader.h"
 
@@ -168,6 +169,14 @@ fs_set_errcall(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+static svn_boolean_t
+fs_supports_concurrent_writes(svn_fs_t *fs,
+                              apr_pool_t *scratch_pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  return ffd->concurrent_txns;
+}
+
 struct fs_freeze_baton_t {
   svn_fs_t *fs;
   svn_fs_freeze_func_t freeze_func;
@@ -279,7 +288,8 @@ static fs_vtable_t fs_vtable = {
   fs_info,
   svn_fs_fs__verify_root,
   fs_freeze,
-  fs_set_errcall
+  fs_set_errcall,
+  fs_supports_concurrent_writes
 };
 
 
@@ -292,6 +302,9 @@ initialize_fs_struct(svn_fs_t *fs)
   fs_fs_data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
   ffd->use_log_addressing = FALSE;
   ffd->revprop_prefix = 0;
+  ffd->concurrent_txns = svn_hash__get_bool(fs->config,
+                                            SVN_FS_CONFIG_CONCURRENT_WRITES,
+                                            FALSE);
 
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;

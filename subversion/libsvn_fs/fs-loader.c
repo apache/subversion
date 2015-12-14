@@ -619,6 +619,15 @@ svn_fs_config(svn_fs_t *fs, apr_pool_t *pool)
   return NULL;
 }
 
+svn_boolean_t
+svn_fs_supports_concurrent_writes(svn_fs_t *fs,
+                                  apr_pool_t *scratch_pool)
+{
+  return fs->vtable->supports_concurrent_writes
+    ? fs->vtable->supports_concurrent_writes(fs, scratch_pool)
+    : FALSE;
+}
+
 svn_error_t *
 svn_fs_delete_fs(const char *path, apr_pool_t *pool)
 {

@@ -207,6 +207,18 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.9.
  */
 #define SVN_FS_CONFIG_COMPATIBLE_VERSION        "compatible-version"
+
+/** Transactions created through the respective FS instance will allow
+ * for concurrent text and property modifications.
+ *
+ * This option may not be supported by all backends.
+ * Call #svn_fs_supports_concurrent_writes to check whether it got actually
+ * activated.
+ *
+ * @since New in 1.10.
+ */
+#define SVN_FS_CONFIG_CONCURRENT_WRITES         "concurrent-writes"
+
 /** @} */
 
 
@@ -486,6 +498,19 @@ svn_fs_path(svn_fs_t *fs,
 apr_hash_t *
 svn_fs_config(svn_fs_t *fs,
               apr_pool_t *pool);
+
+/**
+ * Return TRUE if transactions opened through @a fs will support concurrent
+ * writes, i.e. #svn_fs_apply_text, #svn_fs_apply_textdelta and
+ * #svn_fs_change_node_prop from different processes and threads.
+ *
+ * Uses @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.10.
+ */
+svn_boolean_t
+svn_fs_supports_concurrent_writes(svn_fs_t *fs,
+                                  apr_pool_t *scratch_pool);
 
 /**
  * Delete the filesystem at @a path.

@@ -1560,6 +1560,13 @@ svn_repos_has_capability(svn_repos_t *repos,
           *has = TRUE;
         }
     }
+  else if (strcmp(capability, SVN_REPOS_CAPABILITY_CONCURRENT_WRITE) == 0)
+    {
+      *has = svn_fs_supports_concurrent_writes(repos->fs, pool);
+      svn_hash_sets(repos->repository_capabilities,
+                    SVN_REPOS_CAPABILITY_MERGEINFO,
+                    *has ? capability_yes : capability_no);
+    }
   else
     {
       return svn_error_createf(SVN_ERR_UNKNOWN_CAPABILITY, 0,
@@ -1577,6 +1584,7 @@ svn_repos_capabilities(apr_hash_t **capabilities,
 {
   static const char *const queries[] = {
     SVN_REPOS_CAPABILITY_MERGEINFO,
+    SVN_REPOS_CAPABILITY_CONCURRENT_WRITE,
     NULL
   };
   const char *const *i;

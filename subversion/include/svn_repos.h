@@ -585,6 +585,14 @@ svn_repos_capabilities(apr_hash_t **capabilities,
  * @since New in 1.5.
  */
 #define SVN_REPOS_CAPABILITY_MERGEINFO "mergeinfo"
+
+/**
+ * The capability of doing the right thing with merge-tracking
+ * information, both storing it and responding to queries about it.
+ *
+ * @since New in 1.10.
+ */
+#define SVN_REPOS_CAPABILITY_CONCURRENT_WRITE "concurrent-write"
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *
  * @c SVN_REPOS_CAPABILITY_foo strings should not include colons, to

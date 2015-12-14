@@ -266,6 +266,8 @@ typedef struct fs_vtable_t
   svn_error_t *(*bdb_set_errcall)(svn_fs_t *fs,
                                   void (*handler)(const char *errpfx,
                                                   char *msg));
+  svn_boolean_t (*supports_concurrent_writes)(svn_fs_t *fs,
+                                              apr_pool_t *scratch_pool);
 } fs_vtable_t;
 
 

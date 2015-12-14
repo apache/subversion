@@ -310,7 +310,8 @@ static fs_vtable_t fs_vtable = {
   x_info,
   svn_fs_x__verify_root,
   x_freeze,
-  x_set_errcall
+  x_set_errcall,
+  NULL
 };
 
 
