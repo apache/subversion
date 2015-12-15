@@ -7528,6 +7528,59 @@ def patch_move_and_change(sbox):
                                        [], True, True,
                                        '--reverse-diff')
 
+@XFail()
+@Issue(4609)
+def missing_trailing_context(sbox):
+  "missing trailing context"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu',
+                     'a\n'
+                     'b\n'
+                     'c\n'
+                     'd\n'
+                     'e\n',
+                     truncate=True)
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # The hunk is expected to have two lines of trailing context but
+  # only has one.
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 2)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -1,5 +1,5 @@\n",
+    " a\n",
+    " b\n",
+    "-c\n",
+    "+cc\n",
+    " d\n",
+  ]
+  patch_file_path = sbox.get_tempname('my.patch')
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  # GNU patch will apply the hunk with fuzz 1 and modify only the 'c' line.
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+  ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents =
+                     'a\n'
+                     'b\n'
+                     'cc\n'
+                     'd\n'
+                     'e\n')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/mu', status='M ')
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
 ########################################################################
 #Run the tests
 
@@ -7608,6 +7661,7 @@ test_list = [ None,
               patch_add_one_line,
               patch_with_mergeinfo,
               patch_move_and_change,
+              missing_trailing_context,
             ]
 
 if __name__ == '__main__':
