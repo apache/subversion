@@ -7054,11 +7054,14 @@ test_concurrent_txn_write(const svn_test_opts_t *opts,
   svn_stringbuf_t *actual_foo;
   svn_stringbuf_t *actual_bar;
   svn_revnum_t new_rev;
+  apr_hash_t *fs_config;
   int i;
 
   /* Create a new repo. */
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-concurrent-txn-write",
-                              opts, pool));
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_CONCURRENT_WRITES, "1");
+  SVN_ERR(svn_test__create_fs2(&fs, "test-repo-concurrent-txn-write",
+                               opts, fs_config, pool));
 
   /* Bail (with success) on known-untestable scenarios */
   if (!svn_fs_supports_concurrent_writes(fs, pool))
