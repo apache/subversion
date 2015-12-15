@@ -209,9 +209,14 @@ svn_branch__txn_new_eid(svn_branch__txn_t *txn,
  * When creating a new branch, declare its root element id to be ROOT_EID. Do
  * not instantiate the root element, nor any other elements.
  *
- * ### TODO: Change this: Allow specifying the initial tree state, by
- *     reference to a committed tree. (Default / typically: the main
- *     parent in 'history' param.) 'empty' is a common and valid option.
+ * TREE_REF specifies the initial tree content, by reference to a committed
+ * tree. It overwrites any existing tree, even if the branch was already
+ * mutable in the txn.
+ *
+ * If TREE_REF is null, then the initial tree is empty for a new branch
+ * (not already present in the txn), or the branch's current tree if the
+ * branch was already present (readable or mutable) in the txn.
+ *
  * ### TODO: Take a 'history' parameter; 'none' is a valid option.
  *
  * We use a common 'open subbranch' method for both 'find' and 'add'
@@ -229,16 +234,9 @@ svn_branch__txn_open_branch(svn_branch__txn_t *txn,
                             svn_branch__state_t **new_branch_p,
                             const char *branch_id,
                             int root_eid,
+                            svn_branch__rev_bid_eid_t *tree_ref,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
-
-svn_error_t *
-svn_branch__txn_branch(svn_branch__txn_t *txn,
-                       svn_branch__state_t **new_branch_p,
-                       svn_branch__rev_bid_eid_t *from,
-                       const char *new_branch_id,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool);
 
 /** Register a sequence point.
  *
