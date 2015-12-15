@@ -7039,6 +7039,103 @@ freeze_and_commit(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_concurrent_txn_write(const svn_test_opts_t *opts,
+                          apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_fs_root_t *rev_root;
+  svn_stream_t *foo_contents;
+  svn_stream_t *bar_contents;
+  svn_stringbuf_t *expected_foo;
+  svn_stringbuf_t *expected_bar;
+  svn_stringbuf_t *actual_foo;
+  svn_stringbuf_t *actual_bar;
+  svn_revnum_t new_rev;
+  int i;
+
+  /* Create a new repo. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-concurrent-txn-write",
+                              opts, pool));
+
+  /* Bail (with success) on known-untestable scenarios */
+  if (!svn_fs_supports_concurrent_writes(fs, pool))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "concurrent write is not supported by FS");
+
+  /* Create a TXN_ROOT referencing FS. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+
+  /* Make file /foo and open for writing.*/
+  SVN_ERR(svn_fs_make_file(txn_root, "/foo", pool));
+  SVN_ERR(svn_fs_apply_text(&foo_contents, txn_root, "/foo", NULL, pool));
+
+  /* Make file /bar and open for writing.*/
+  SVN_ERR(svn_fs_make_file(txn_root, "/bar", pool));
+  SVN_ERR(svn_fs_apply_text(&bar_contents, txn_root, "/bar", NULL, pool));
+
+  expected_foo = svn_stringbuf_create_ensure(256 * 1024, pool);
+  expected_bar = svn_stringbuf_create_ensure(256 * 1024, pool);
+  /* Write random contents of two files in parallel. */
+  for (i = 0; i < 256 * 1024; i++)
+    {
+      apr_size_t len;
+      char c;
+
+      len = 1;
+      c = (char) rand();
+      SVN_ERR(svn_stream_write(foo_contents, &c, &len));
+      svn_stringbuf_appendbyte(expected_foo, c);
+
+      len = 1;
+      c = (char) rand();
+      SVN_ERR(svn_stream_write(bar_contents, &c, &len));
+      svn_stringbuf_appendbyte(expected_bar, c);
+    }
+
+  /* Close file '/bar'. */
+  SVN_ERR(svn_stream_close(bar_contents));
+
+  /* Close file '/foo'. */
+  SVN_ERR(svn_stream_close(foo_contents));
+
+  /* Compare contents of files in TXN root. */
+  SVN_ERR(svn_fs_file_contents(&foo_contents, txn_root, "/foo", pool));
+  SVN_ERR(svn_stringbuf_from_stream(&actual_foo, foo_contents,
+                                    256 * 1024, pool));
+  SVN_ERR(svn_stream_close(foo_contents));
+  SVN_TEST_ASSERT(svn_stringbuf_compare(actual_foo, expected_foo));
+
+  SVN_ERR(svn_fs_file_contents(&bar_contents, txn_root, "/bar", pool));
+  SVN_ERR(svn_stringbuf_from_stream(&actual_bar, bar_contents,
+                                    256 * 1024, pool));
+  SVN_ERR(svn_stream_close(bar_contents));
+  SVN_TEST_ASSERT(svn_stringbuf_compare(actual_bar, expected_bar));
+
+  /* Commit txn. */
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, new_rev, pool));
+
+  /* Compare contents of files in revision root. */
+  SVN_ERR(svn_fs_file_contents(&foo_contents, rev_root, "/foo", pool));
+  SVN_ERR(svn_stringbuf_from_stream(&actual_foo, foo_contents,
+                                    256 * 1024, pool));
+  SVN_ERR(svn_stream_close(foo_contents));
+  SVN_TEST_ASSERT(svn_stringbuf_compare(actual_foo, expected_foo));
+
+  SVN_ERR(svn_fs_file_contents(&bar_contents, rev_root, "/bar", pool));
+  SVN_ERR(svn_stringbuf_from_stream(&actual_bar, bar_contents,
+                                    256 * 1024, pool));
+  SVN_ERR(svn_stream_close(bar_contents));
+  SVN_TEST_ASSERT(svn_stringbuf_compare(actual_bar, expected_bar));
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -7173,6 +7270,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_check_related for transactions"),
     SVN_TEST_OPTS_PASS(freeze_and_commit,
                        "freeze and commit"),
+    SVN_TEST_OPTS_PASS(test_concurrent_txn_write,
+                       "test concurrent write to txn"),
     SVN_TEST_NULL
   };
 
