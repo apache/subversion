@@ -2661,7 +2661,7 @@ txn_body_commit(void *baton, trail_t *trail)
 
   svn_revnum_t youngest_rev;
   const svn_fs_id_t *y_rev_root_id;
-  dag_node_t *txn_base_root_node;
+  dag_node_t *txn_base_root_node, *txn_root_node;
 
   /* Getting the youngest revision locks the revisions table until
      this trail is done. */
@@ -2693,6 +2693,19 @@ txn_body_commit(void *baton, trail_t *trail)
      to re-examine every changed-path in the txn and re-verify all
      discovered locks. */
   SVN_ERR(verify_locks(txn_name, trail, trail->pool));
+
+  /* Ensure every txn has a mutable root as then the new revision will
+     have a distinct root node-revision-id.  This is necessary as
+     future transactions use the root node-revision-id as a proxy for
+     the transaction base revision. */
+  SVN_ERR(svn_fs_base__dag_txn_root(&txn_root_node, fs, txn_name,
+                                    trail, trail->pool));
+  if (!svn_fs_base__dag_check_mutable(txn_root_node, txn->id))
+    {
+      dag_node_t *clone;
+      SVN_ERR(svn_fs_base__dag_clone_root(&clone, fs, txn->id,
+                                          trail, trail->pool));
+    }
 
   /* Else, commit the txn. */
   return svn_fs_base__dag_commit_txn(&(args->new_rev), txn, trail,
