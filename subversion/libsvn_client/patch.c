@@ -1567,11 +1567,19 @@ match_hunk(svn_boolean_t *matched, target_content_t *content,
   svn_linenum_t hunk_length;
   svn_linenum_t leading_context;
   svn_linenum_t trailing_context;
+  svn_linenum_t fuzz_penalty;
 
   *matched = FALSE;
 
   if (content->eof)
     return SVN_NO_ERROR;
+
+  fuzz_penalty = svn_diff_hunk__get_fuzz_penalty(hunk);
+
+  if (fuzz_penalty > fuzz)
+    return SVN_NO_ERROR;
+  else
+    fuzz -= fuzz_penalty;
 
   saved_line = content->current_line;
   lines_read = 0;
