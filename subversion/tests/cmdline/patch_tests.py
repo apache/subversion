@@ -4518,7 +4518,7 @@ def patch_empty_file(sbox):
     "--- lf.txt\t(revision 2)\n",
     "+++ lf.txt\t(working copy)\n",
     "@@ -1 +1 @@\n",
-    "\n"
+    "-\n"
     "+replacement\n",
 
   # patch a new file 'new.txt\n'
@@ -4553,7 +4553,7 @@ def patch_empty_file(sbox):
   # Current result: lf.txt patched ok, new created, empty succeeds with offset.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'lf.txt'            : Item(contents="\n"),
+    'lf.txt'            : Item(contents="replacement\n"),
     'new.txt'           : Item(contents="new file\n"),
     'empty.txt'         : Item(contents="replacement\n"),
   })
@@ -7582,6 +7582,100 @@ def missing_trailing_context(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+  # Try reverse patch
+  expected_disk.tweak('A/mu', contents =
+                     'a\n'
+                     'b\n'
+                     'c\n'
+                     'd\n'
+                     'e\n')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], False, True, '--reverse-diff')
+
+  # The hunk is expected to have two lines of trailing context but
+  # only has one.
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 2)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -1,4 +1,4 @@\n",
+    " a\n",
+    " b\n",
+    "-c\n",
+    "+cc\n",
+    " d\n",
+    " e\n",
+  ]
+  patch_file_path = sbox.get_tempname('my2.patch')
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -1,5 +1,5 @@ with fuzz 1\n',
+  ]
+  expected_disk.tweak('A/mu', contents =
+                     'a\n'
+                     'b\n'
+                     'cc\n'
+                     'd\n'
+                     'e\n')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Try reverse patch
+  expected_disk.tweak('A/mu', contents =
+                     'a\n'
+                     'b\n'
+                     'c\n'
+                     'd\n'
+                     'e\n')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], False, True, '--reverse-diff')
+
+def patch_missed_trail(sbox):
+  "apply a patch to an empty file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = sbox.get_tempname('my.patch')
+  svntest.main.file_write(patch_file_path, ''.join([
+  # Add a line to a file with just '\n' with bad header (should be +1,2)
+    "Index: lf.txt\n",
+    "===================================================================\n",
+    "--- lf.txt\t(revision 2)\n",
+    "+++ lf.txt\t(working copy)\n",
+    "@@ -1 +1 @@\n",
+    "\n"
+    "+replacement\n",
+  ]))
+
+  sbox.simple_add_text('\n', 'lf.txt')
+  sbox.simple_commit()
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('lf.txt'),
+    '>         applied hunk @@ -1,1 +1,2 @@ with fuzz 1\n',
+  ]
+
+  # Current result: lf.txt patched ok, new created, empty succeeds with offset.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'lf.txt'            : Item(contents="\nreplacement\n"),
+  })
+  expected_skip = wc.State(wc_dir, {})
+  expected_status = None
+
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
 ########################################################################
 #Run the tests
 
@@ -7663,6 +7757,7 @@ test_list = [ None,
               patch_with_mergeinfo,
               patch_move_and_change,
               missing_trailing_context,
+              patch_missed_trail,
             ]
 
 if __name__ == '__main__':

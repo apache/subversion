@@ -67,7 +67,10 @@ typedef struct hunk_info_t {
 
   /* The fuzz factor used when matching this hunk, i.e. how many
    * lines of leading and trailing context to ignore during matching. */
-  svn_linenum_t fuzz;
+  svn_linenum_t match_fuzz;
+
+  /* match_fuzz + the penalty caused by bad patch files */
+  svn_linenum_t report_fuzz;
 } hunk_info_t;
 
 /* A struct carrying information related to the patched and unpatched
@@ -2087,7 +2090,8 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   (*hi)->matched_line = matched_line;
   (*hi)->rejected = (matched_line == 0);
   (*hi)->already_applied = already_applied;
-  (*hi)->fuzz = fuzz;
+  (*hi)->report_fuzz = fuzz;
+  (*hi)->match_fuzz = fuzz - svn_diff_hunk__get_fuzz_penalty(hunk);
 
   return SVN_NO_ERROR;
 }
@@ -2209,6 +2213,7 @@ apply_hunk(patch_target_t *target, target_content_t *content,
   svn_linenum_t lines_read;
   svn_boolean_t eof;
   apr_pool_t *iterpool;
+  svn_linenum_t fuzz = hi->match_fuzz;
 
   /* ### Is there a cleaner way to describe if we have an existing target?
    */
@@ -2220,13 +2225,13 @@ apply_hunk(patch_target_t *target, target_content_t *content,
        * Also copy leading lines of context which matched with fuzz.
        * The target has changed on the fuzzy-matched lines,
        * so we should retain the target's version of those lines. */
-      SVN_ERR(copy_lines_to_target(content, hi->matched_line + hi->fuzz,
+      SVN_ERR(copy_lines_to_target(content, hi->matched_line + fuzz,
                                    pool));
 
       /* Skip the target's version of the hunk.
        * Don't skip trailing lines which matched with fuzz. */
       line = content->current_line +
-             svn_diff_hunk_get_original_length(hi->hunk) - (2 * hi->fuzz);
+             svn_diff_hunk_get_original_length(hi->hunk) - (2 * fuzz);
       SVN_ERR(seek_to_line(content, line, pool));
       if (content->current_line != line && ! content->eof)
         {
@@ -2253,8 +2258,8 @@ apply_hunk(patch_target_t *target, target_content_t *content,
                                                    &eol_str, &eof,
                                                    iterpool, iterpool));
       lines_read++;
-      if (lines_read > hi->fuzz &&
-          lines_read <= svn_diff_hunk_get_modified_length(hi->hunk) - hi->fuzz)
+      if (lines_read > fuzz &&
+          lines_read <= svn_diff_hunk_get_modified_length(hi->hunk) - fuzz)
         {
           apr_size_t len;
 
@@ -2323,7 +2328,7 @@ send_hunk_notification(const hunk_info_t *hi,
   notify->hunk_modified_length =
     svn_diff_hunk_get_modified_length(hi->hunk);
   notify->hunk_matched_line = hi->matched_line;
-  notify->hunk_fuzz = hi->fuzz;
+  notify->hunk_fuzz = hi->report_fuzz;
   notify->prop_name = prop_name;
 
   ctx->notify_func2(ctx->notify_baton2, notify, pool);
