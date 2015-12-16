@@ -1193,24 +1193,38 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
 
           c = line->data[0];
-          if (original_lines > 0 && modified_lines > 0 &&
-              ((c == ' ')
+          if (c == ' '
+              || ((original_lines > 0 && modified_lines > 0)
+                  && ( 
                /* Tolerate chopped leading spaces on empty lines. */
-               || (! eof && line->len == 0)
+                      (! eof && line->len == 0)
                /* Maybe tolerate chopped leading spaces on non-empty lines. */
-               || (ignore_whitespace && c != del && c != add)))
+                      || (ignore_whitespace && c != del && c != add))))
             {
               /* It's a "context" line in the hunk. */
               hunk_seen = TRUE;
-              original_lines--;
-              modified_lines--;
+              if (original_lines > 0)
+                original_lines--;
+              else
+                {
+                  (*hunk)->original_length++;
+                  (*hunk)->original_fuzz++;
+                }
+              if (modified_lines > 0)
+                modified_lines--;
+              else
+                {
+                  (*hunk)->modified_length++;
+                  (*hunk)->modified_fuzz++;
+                }
               if (changed_line_seen)
                 trailing_context++;
               else
                 leading_context++;
               last_line_type = context_line;
             }
-          else if (original_lines > 0 && c == del)
+          else if (c == del
+                   && (original_lines > 0 || line->data[1] != del))
             {
               /* It's a "deleted" line in the hunk. */
               hunk_seen = TRUE;
@@ -1221,10 +1235,17 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
               if (trailing_context > 0)
                 trailing_context = 0;
 
-              original_lines--;
+              if (original_lines > 0)
+                original_lines--;
+              else
+                {
+                  (*hunk)->original_length++;
+                  (*hunk)->original_fuzz++;
+                }
               last_line_type = original_line;
             }
-          else if (modified_lines > 0 && c == add)
+          else if (c == add
+                   && (modified_lines > 0 || line->data[1] != add))
             {
               /* It's an "added" line in the hunk. */
               hunk_seen = TRUE;
@@ -1235,7 +1256,13 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
               if (trailing_context > 0)
                 trailing_context = 0;
 
-              modified_lines--;
+              if (modified_lines > 0)
+                modified_lines--;
+              else
+                {
+                  (*hunk)->modified_length++;
+                  (*hunk)->modified_fuzz++;
+                }
               last_line_type = modified_line;
             }
           else
@@ -1251,7 +1278,6 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                    * after the hunk text. */
                   end = last_line;
                 }
-
               if (original_end == 0)
                 original_end = end;
               if (modified_end == 0)
@@ -1335,12 +1361,12 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
       if (original_lines)
         {
           (*hunk)->original_length -= original_lines;
-          (*hunk)->original_fuzz = original_lines;
+          (*hunk)->original_fuzz += original_lines;
         }
       if (modified_lines)
         {
           (*hunk)->modified_length -= modified_lines;
-          (*hunk)->modified_fuzz = modified_lines;
+          (*hunk)->modified_fuzz += modified_lines;
         }
 
       (*hunk)->patch = patch;
