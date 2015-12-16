@@ -7528,7 +7528,6 @@ def patch_move_and_change(sbox):
                                        [], True, True,
                                        '--reverse-diff')
 
-@XFail()
 @Issue(4609)
 def missing_trailing_context(sbox):
   "missing trailing context"
@@ -7564,8 +7563,10 @@ def missing_trailing_context(sbox):
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
 
   # GNU patch will apply the hunk with fuzz 1 and modify only the 'c' line.
+  # Our patch file finds the length mismatch and applies a penalty.
   expected_output = [
     'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -1,4 +1,4 @@ with fuzz 1\n',
   ]
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.tweak('A/mu', contents =

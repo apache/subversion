@@ -89,6 +89,10 @@ struct svn_diff_hunk_t {
   /* Did we see a 'file does not end with eol' marker in this hunk? */
   svn_boolean_t original_no_final_eol;
   svn_boolean_t modified_no_final_eol;
+
+  /* Fuzz penalty, triggered by bad patch targets */
+  svn_linenum_t original_fuzz;
+  svn_linenum_t modified_fuzz;
 };
 
 struct svn_diff_binary_patch_t {
@@ -122,7 +126,7 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_diff_hunk_t *hunk = apr_palloc(result_pool, sizeof(*hunk));
+  svn_diff_hunk_t *hunk = apr_pcalloc(result_pool, sizeof(*hunk));
   static const char *hunk_header[] = { "@@ -1 +0,0 @@\n", "@@ -0,0 +1 @@\n" };
   const apr_size_t header_len = strlen(hunk_header[add]);
   const apr_size_t len = strlen(line);
@@ -283,6 +287,12 @@ svn_linenum_t
 svn_diff_hunk_get_trailing_context(const svn_diff_hunk_t *hunk)
 {
   return hunk->trailing_context;
+}
+
+svn_linenum_t
+svn_diff_hunk__get_fuzz_penalty(const svn_diff_hunk_t *hunk)
+{
+  return hunk->patch->reverse ? hunk->original_fuzz : hunk->modified_fuzz;
 }
 
 /* Baton for the base85 stream implementation */
@@ -1318,6 +1328,21 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
 
   if (hunk_seen && start < end)
     {
+      /* Did we get the number of context lines announced in the header?
+
+         If not... let's limit the number from the header to what we
+         actually have, and apply a fuzz penalty */
+      if (original_lines)
+        {
+          (*hunk)->original_length -= original_lines;
+          (*hunk)->original_fuzz = original_lines;
+        }
+      if (modified_lines)
+        {
+          (*hunk)->modified_length -= modified_lines;
+          (*hunk)->modified_fuzz = modified_lines;
+        }
+
       (*hunk)->patch = patch;
       (*hunk)->apr_file = apr_file;
       (*hunk)->leading_context = leading_context;
