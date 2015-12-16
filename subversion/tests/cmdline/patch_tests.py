@@ -7560,7 +7560,7 @@ def missing_trailing_context(sbox):
     " d\n",
   ]
   patch_file_path = sbox.get_tempname('my.patch')
-  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch), 'wb')
 
   # GNU patch will apply the hunk with fuzz 1 and modify only the 'c' line.
   # Our patch file finds the length mismatch and applies a penalty.
@@ -7589,6 +7589,7 @@ def missing_trailing_context(sbox):
                      'c\n'
                      'd\n'
                      'e\n')
+  expected_status.tweak('A/mu', status='  ')
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
@@ -7610,7 +7611,7 @@ def missing_trailing_context(sbox):
     " e\n",
   ]
   patch_file_path = sbox.get_tempname('my2.patch')
-  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch), 'wb')
 
   expected_output = [
     'U         %s\n' % sbox.ospath('A/mu'),
@@ -7622,6 +7623,7 @@ def missing_trailing_context(sbox):
                      'cc\n'
                      'd\n'
                      'e\n')
+  expected_status.tweak('A/mu', status='M ')
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
@@ -7633,6 +7635,7 @@ def missing_trailing_context(sbox):
                      'c\n'
                      'd\n'
                      'e\n')
+  expected_status.tweak('A/mu', status='  ')
   svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
                                        expected_output, expected_disk,
                                        expected_status, expected_skip,
