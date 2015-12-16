@@ -160,23 +160,18 @@ get_shared_txn(fs_fs_shared_txn_data_t **txn_p,
        * setting where some external scheme prevents actual races between
        * them.  However, we consider such a setup illegal (and theoretical).
        */
-      if (txn->is_concurrent != ffd->concurrent_txns)
-        {
-          if (txn->is_concurrent)
-            return svn_error_createf(SVN_ERR_FS_TXN_CONCURRENCY_MISMATCH,
-                                     NULL,
-                                     _("Cannot reopen transaction '%s' "
-                                       "without concurrent write support"),
-                                     svn_fs_fs__id_txn_unparse(txn_id,
-                                                               fs->pool));
-          else
-            return svn_error_createf(SVN_ERR_FS_TXN_CONCURRENCY_MISMATCH,
-                                     NULL,
-                                     _("Cannot reopen transaction '%s' "
-                                       "with concurrent write support"),
-                                     svn_fs_fs__id_txn_unparse(txn_id,
-                                                               fs->pool));
-        }
+       if (txn->is_concurrent && !ffd->concurrent_txns)
+         return svn_error_createf(SVN_ERR_FS_TXN_CONCURRENCY_MISMATCH, NULL,
+                                  _("Cannot reopen transaction '%s' "
+                                    "without concurrent write support"),
+                                  svn_fs_fs__id_txn_unparse(txn_id,
+                                                            fs->pool));
+       else if (!txn->is_concurrent && ffd->concurrent_txns)
+         return svn_error_createf(SVN_ERR_FS_TXN_CONCURRENCY_MISMATCH, NULL,
+                                  _("Cannot reopen transaction '%s' "
+                                    "with concurrent write support"),
+                                  svn_fs_fs__id_txn_unparse(txn_id,
+                                                            fs->pool));
 
       *txn_p = txn;
       return SVN_NO_ERROR;
