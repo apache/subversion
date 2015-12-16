@@ -1632,12 +1632,9 @@ commit_empty_last_change(const svn_test_opts_t *opts,
       SVN_TEST_ASSERT(dirent != NULL);
       SVN_TEST_STRING_ASSERT(dirent->last_author, "jrandom");
       
-      /* BDB only updates last_changed on the repos_root when there is an
-         actual change. Our other filesystems handle this differently */
-      if (!opts->fs_type || !strcasecmp(opts->fs_type, "BDB"))
-        SVN_TEST_INT_ASSERT(dirent->created_rev, 1);
-      else
-        SVN_TEST_INT_ASSERT(dirent->created_rev, 2+i);
+      /* BDB used to only updates last_changed on the repos_root when there
+         was an actual change. Now all filesystems behave in the same way */
+      SVN_TEST_INT_ASSERT(dirent->created_rev, 2+i);
     }
 
   svn_pool_clear(tmp_pool);
