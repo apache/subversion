@@ -137,6 +137,11 @@ for o, a in opts:
     usage()
     sys.exit()
 
+if archive_type not in (None, 'bz2', 'gz', 'zip', 'zip64'):
+  sys.stderr.write("ERROR: Bad --archive-type\n")
+  usage(sys.stderr)
+  sys.exit(2)
+
 if len(args) != 2:
   sys.stderr.write("ERROR: only two arguments allowed.\n\n")
   sys.stderr.flush()
