@@ -108,6 +108,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1721174
+   hot-backup.py: Housekeeping.
+   Justification:
+     Do the right thing on repository names that contain '+' or '('.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
