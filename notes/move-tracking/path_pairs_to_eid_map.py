@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# Usage: path_pairs_to_eid_map.py [INITIAL-PATH FINAL-PATH ...]
+#
 # Convert a list of (initial_path, final_path) pairs to a pair of element
 # mappings:
 #   initial_map = {eid: (parent_eid, name), ...}
@@ -15,7 +17,11 @@
 # assume (A -> A) and (X -> X). Another example: for input [(A -> X),
 # (A/B/C -> X/B/D)], assume (A/B -> X/B).
 
+import sys
 import posixpath
+
+class ArgumentsError(Exception):
+  pass
 
 # input: a list of pairs of paths
 input_example_1 = [
@@ -28,6 +34,17 @@ input_example_2 = [
   ("A", "A/B/C/D"),
 ]
 input_path_pairs = input_example_1
+
+# Read input from pairs of command-line arguments, if given.
+if len(sys.argv) > 1:
+  n_args = len(sys.argv) - 1
+  if n_args % 2:
+    raise ArgumentsError("Need an even number (not %d) of paths, to be used in pairs" %
+                         n_args)
+  argv = sys.argv[1:]
+  argv = [None if (a == '' or a == 'None' or a == 'nil') else a
+          for a in argv]
+  input_path_pairs = zip(argv[::2], argv[1::2])
 
 print("Input:")
 for e in input_path_pairs:
