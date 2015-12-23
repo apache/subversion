@@ -16,6 +16,12 @@
 # the same name and the same parent-eid. Continuing the previous example,
 # assume (A -> A) and (X -> X). Another example: for input [(A -> X),
 # (A/B/C -> X/B/D)], assume (A/B -> X/B).
+#
+# When the (parent-eid, name) of an implied path on one side already exists
+# on the other side, don't add a duplicate location; instead, assume it
+# doesn't exist on that other side. Example: for input [(A A2) (A/B A/B2)],
+# don't output [(A -> A2), (A -> A), ...],
+# but rather [(A -> A2), (None -> A), ...].
 
 import sys
 import posixpath
@@ -115,6 +121,16 @@ def find_eid_from_path(out_map, side, path):
 
   return -1
 
+def find_eid_from_loc(out_map, side, loc):
+  """Return the EID for LOC, or -1 if the EID for LOC is not known.
+  """
+  if loc is None:
+    return 0
+  for eid, entry in out_map.items():
+    if loc == entry[side]:
+      return eid
+  return -1
+
 def add_new(out_map, side, path):
   """Add a new EID and (parent_eid, name) entry for PATH, and for each
      of its parents that lacks one.
@@ -126,7 +142,9 @@ def add_new(out_map, side, path):
   parent_eid = find_or_add(out_map, side, parent_path)
   loc = (parent_eid, name)
   map_set(out_map, side, new_eid, loc)
-  map_set(out_map, 1 - side, new_eid, loc)
+  #if loc not in out_map[1 - side]:
+  if find_eid_from_loc(out_map, side, loc) < 0:
+    map_set(out_map, 1 - side, new_eid, loc)
   return new_eid
 
 def find_or_add(out_map, side, path):
