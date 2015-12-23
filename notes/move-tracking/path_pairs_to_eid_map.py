@@ -143,7 +143,7 @@ def add_new(out_map, side, path):
   loc = (parent_eid, name)
   map_set(out_map, side, new_eid, loc)
   #if loc not in out_map[1 - side]:
-  if find_eid_from_loc(out_map, side, loc) < 0:
+  if find_eid_from_loc(out_map, 1 - side, loc) < 0:
     map_set(out_map, 1 - side, new_eid, loc)
   return new_eid
 
