@@ -3057,8 +3057,8 @@ get_last_modified(const dav_resource *resource)
     }
 
   if ((serr = svn_fs_revision_prop2(&date_time, resource->info->repos->fs,
-                                    created_rev, "svn:date", TRUE,
-                                    resource->pool, resource->pool)))
+                                    created_rev, SVN_PROP_REVISION_DATE,
+                                    TRUE, resource->pool, resource->pool)))
     {
       svn_error_clear(serr);
       return -1;
