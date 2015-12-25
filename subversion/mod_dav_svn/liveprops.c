@@ -720,7 +720,6 @@ insert_prop_internal(const dav_resource *resource,
               || resource->type == DAV_RESOURCE_TYPE_WORKING
               || resource->type == DAV_RESOURCE_TYPE_VERSION))
         {
-          svn_node_kind_t kind;
           svn_checksum_t *checksum;
           svn_checksum_kind_t checksum_kind;
 
@@ -733,14 +732,20 @@ insert_prop_internal(const dav_resource *resource,
               checksum_kind = svn_checksum_sha1;
             }
 
-          serr = svn_fs_check_path(&kind, resource->info->root.root,
-                                   resource->info->repos_path, scratch_pool);
-          if (!serr && kind == svn_node_file)
-            serr = svn_fs_file_checksum(&checksum, checksum_kind,
-                                        resource->info->root.root,
-                                        resource->info->repos_path, TRUE,
-                                        scratch_pool);
-          if (serr != NULL)
+          serr = svn_fs_file_checksum(&checksum, checksum_kind,
+                                      resource->info->root.root,
+                                      resource->info->repos_path, TRUE,
+                                      scratch_pool);
+          if (serr && serr->apr_err == SVN_ERR_FS_NOT_FILE)
+            {
+              /* It should not happen since we're already checked
+                 RESOURCE->COLLECTION, but svn_fs_check_path() call
+                 was added in r1239596 for some reason. Keep it for
+                 now. */
+              svn_error_clear(serr);
+              return DAV_PROP_INSERT_NOTSUPP;
+            }
+          else if (serr)
             {
               ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err,
                             resource->info->r,
@@ -755,9 +760,6 @@ insert_prop_internal(const dav_resource *resource,
               value = error_value;
               break;
             }
-
-          if (kind != svn_node_file)
-            return DAV_PROP_INSERT_NOTSUPP;
 
           value = svn_checksum_to_cstring(checksum, scratch_pool);
 
