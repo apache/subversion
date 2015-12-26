@@ -598,8 +598,8 @@ insert_prop_internal(const dav_resource *resource,
         {
           svn_revnum_t revnum;
 
-          serr = svn_fs_youngest_rev(&revnum, resource->info->repos->fs,
-                                     scratch_pool);
+          serr = dav_svn__get_youngest_rev(&revnum, resource->info->repos,
+                                           scratch_pool);
           if (serr != NULL)
             {
               ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err,
