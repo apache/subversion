@@ -810,7 +810,7 @@ prep_regular(dav_resource_combined *comb)
      ### other cases besides a BC? */
   if (comb->priv.root.rev == SVN_INVALID_REVNUM)
     {
-      serr = svn_fs_youngest_rev(&comb->priv.root.rev, repos->fs, pool);
+      serr = dav_svn__get_youngest_rev(&comb->priv.root.rev, repos, pool);
       if (serr != NULL)
         {
           return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -879,9 +879,9 @@ prep_version(dav_resource_combined *comb)
   /* if we don't have a revision, then assume the youngest */
   if (!SVN_IS_VALID_REVNUM(comb->priv.root.rev))
     {
-      serr = svn_fs_youngest_rev(&comb->priv.root.rev,
-                                 comb->priv.repos->fs,
-                                 pool);
+      serr = dav_svn__get_youngest_rev(&comb->priv.root.rev,
+                                       comb->priv.repos,
+                                       pool);
       if (serr != NULL)
         {
           /* ### might not be a baseline */
@@ -1583,6 +1583,7 @@ get_parentpath_resource(request_rec *r,
   repos->special_uri = dav_svn__get_special_uri(r);
   repos->username = r->user;
   repos->client_capabilities = apr_hash_make(repos->pool);
+  repos->youngest_rev = SVN_INVALID_REVNUM;
 
   /* Make sure this type of resource always has a trailing slash; if
      not, redirect to a URI that does. */
@@ -2020,7 +2021,7 @@ parse_querystring(request_rec *r, const char *query,
   else
     {
       /* No peg-rev?  Default to HEAD, just like the cmdline client. */
-      serr = svn_fs_youngest_rev(&peg_rev, comb->priv.repos->fs, pool);
+      serr = dav_svn__get_youngest_rev(&peg_rev, comb->priv.repos, pool);
       if (serr != NULL)
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Couldn't fetch youngest rev.", pool);
@@ -2259,6 +2260,7 @@ get_resource(request_rec *r,
   /* create the repository structure and stash it away */
   repos = apr_pcalloc(r->pool, sizeof(*repos));
   repos->pool = r->pool;
+  repos->youngest_rev = SVN_INVALID_REVNUM;
 
   comb->priv.repos = repos;
 
@@ -4633,7 +4635,7 @@ dav_svn__working_to_regular_resource(dav_resource *resource)
   /* Change the URL into either a baseline-collection or a public one. */
   if (priv->root.rev == SVN_INVALID_REVNUM)
     {
-      serr = svn_fs_youngest_rev(&priv->root.rev, repos->fs, resource->pool);
+      serr = dav_svn__get_youngest_rev(&priv->root.rev, repos, resource->pool);
       if (serr != NULL)
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Could not determine youngest rev.",

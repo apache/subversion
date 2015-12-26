@@ -227,7 +227,7 @@ dav_svn__store_activity(const dav_svn_repos *repos,
 
 
 dav_error *
-dav_svn__create_txn(const dav_svn_repos *repos,
+dav_svn__create_txn(dav_svn_repos *repos,
                     const char **ptxn_name,
                     apr_hash_t *revprops,
                     apr_pool_t *pool)
@@ -248,7 +248,7 @@ dav_svn__create_txn(const dav_svn_repos *repos,
                     svn_string_create(repos->username, pool));
     }
 
-  serr = svn_fs_youngest_rev(&rev, repos->fs, pool);
+  serr = dav_svn__get_youngest_rev(&rev, repos, pool);
   if (serr != NULL)
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
