@@ -226,6 +226,7 @@ dav_svn__merge_response(ap_filter_t *output,
   const char *post_commit_err_elem = NULL,
              *post_commit_header_info = NULL;
   apr_status_t status;
+  apr_hash_t *revprops;
 
   serr = svn_fs_revision_root(&root, repos->fs, new_rev, pool);
   if (serr != NULL)
@@ -268,23 +269,17 @@ dav_svn__merge_response(ap_filter_t *output,
 
 
   /* get the creationdate and creator-displayname of the new revision, too. */
-  serr = svn_fs_revision_prop2(&creationdate, repos->fs, new_rev,
-                               SVN_PROP_REVISION_DATE, TRUE, pool, pool);
+  serr = svn_fs_revision_proplist2(&revprops, repos->fs, new_rev,
+                                   TRUE, pool, pool);
   if (serr != NULL)
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  "Could not get date of newest revision",
-                                  repos->pool);
-    }
-  serr = svn_fs_revision_prop2(&creator_displayname, repos->fs, new_rev,
-                               SVN_PROP_REVISION_AUTHOR, TRUE, pool, pool);
-  if (serr != NULL)
-    {
-      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  "Could not get author of newest revision",
-                                  repos->pool);
+                                  "Could not get date and author of newest "
+                                  "revision", repos->pool);
     }
 
+  creationdate = svn_hash_gets(revprops, SVN_PROP_REVISION_DATE);
+  creator_displayname = svn_hash_gets(revprops, SVN_PROP_REVISION_AUTHOR);
 
   status = ap_fputstrs(output, bb,
                      DAV_XML_HEADER DEBUG_CR
