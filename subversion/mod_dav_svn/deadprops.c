@@ -710,19 +710,14 @@ db_first_name(dav_db *db, dav_prop_name *pname)
         }
       else
         {
-          svn_node_kind_t kind;
           serr = svn_fs_node_proplist(&db->props,
                                       db->resource->info->root.root,
                                       get_repos_path(db->resource->info),
                                       db->p);
-          if (! serr)
-            serr = svn_fs_check_path(&kind, db->resource->info->root.root,
-                                     get_repos_path(db->resource->info),
-                                     db->p);
 
           if (! serr)
             {
-              if (kind == svn_node_dir)
+              if (db->resource->collection)
                 action = svn_log__get_dir(db->resource->info->repos_path,
                                           db->resource->info->root.rev,
                                           FALSE, TRUE, 0, db->resource->pool);
