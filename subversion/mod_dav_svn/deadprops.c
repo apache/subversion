@@ -110,7 +110,12 @@ get_value(dav_db *db, const dav_prop_name *name, svn_string_t **pvalue)
       return NULL;
     }
 
-  /* ### if db->props exists, then try in there first */
+  /* If db->props exists, then use it to obtain property value. */
+  if (db->props)
+    {
+      *pvalue = svn_hash_gets(db->props, propname);
+      return NULL;
+    }
 
   /* We've got three different types of properties (node, txn, and
      revision), and we've got two different protocol versions to deal
