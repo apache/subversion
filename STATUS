@@ -120,10 +120,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1720643
-   Ignore absent nodes during javahl version of svn status -u
-   Justification:
-     Avoids hard to catch exception in user scenarios. User reported.
-   Votes:
-     +1: rhuijben, brane
