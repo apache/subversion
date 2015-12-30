@@ -115,6 +115,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1722164
+   Filter out -Wdate-time from SWIG_CPPFLAGS
+   Justification:
+     Fixes bindings build failure when -Wdate-time is present in $CPPFLAGS
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
