@@ -25,6 +25,7 @@
 
 import sys
 import posixpath
+import collections
 
 class ArgumentsError(Exception):
   pass
@@ -56,34 +57,7 @@ print("Input:")
 for e in input_path_pairs:
   print("  " + str(e))
 
-def split_path(path):
-  """Convert PATH to (parent-path, name), unless it is None.
-  """
-  return posixpath.split(path) if path is not None else None
-
-def split_paths(path_pairs):
-  """Convert each path in PATH_PAIRS to (parent-path, name), unless it is None.
-  """
-  return [[split_path(path) for path in path_pair]
-          for path_pair in path_pairs]
-
-# Convert to (initial, final) mappings by "split path",
-# where split-path is (parent-path, name).
-input_pairs = split_paths(input_path_pairs)
-
-# Assign an EID to each input pair of split-paths, starting at EID 1.
-out_map = dict(enumerate(input_pairs, 1))
-
-# ### Experimental section...
-# Convert to (initial, final) lists of split paths:
-# ([split-path, ...], [split-path, ...])
-input_as_two_lists = zip(*input_pairs)
-# Convert to (initial, final) eid-to-split-path mappings, starting at EID 1:
-# ({ eid:split-path, ... }, { eid:split-path, ... })
-split_path_maps = (dict(enumerate(input_as_two_lists[0], 1)),
-                   dict(enumerate(input_as_two_lists[1], 1)))
-
-next_eid = len(input_pairs) + 1
+next_eid = len(input_path_pairs) + 1
 
 def get_next_eid():
   global next_eid
@@ -91,114 +65,196 @@ def get_next_eid():
   next_eid += 1
   return new_eid
 
-print("Input, as (intial, final) mappings by (parent-path, name):")
-for e in out_map.items():
-  print("  " + str(e))
-
-def map_set(out_map, side, eid, loc):
-  """Set the mapping for EID to LOC. If no mapping for EID already exists,
-     set the other side to None.
-     LOC is either (parent-path, name) or (parent-eid, name).
-   """
-  #print("map_set(%d, %s)" % (eid, str(loc)))
-  entry = out_map.get(eid, [None, None])
-  entry[side] = loc
-  out_map[eid] = entry
-
-def find_eid_from_path(out_map, side, path):
-  """Return the EID for PATH, or -1 if the EID for PATH is not known.
+def split_path(path):
+  """Convert PATH to (parent-path, name), unless it is None.
   """
-  if path == '':
-    return 0
-  for eid, entry in out_map.items():
-    loc = entry[side]
-    if loc:
-      parent_path, name = posixpath.split(path)
-      if loc[1] == name:
-        if (loc[0] == parent_path or
-            loc[0] == find_eid_from_path(out_map, side, parent_path)):
-          return eid
+  return posixpath.split(path) if path is not None else None
 
-  return -1
+class DictWithUniqueValues(dict):
+  # Overriding __setitem__ won't catch all possible ways to set a value
+  # (e.g. __init__, update, setdefault) but is good enough for us here.
+  def __setitem__(self, k, v):
+    """Ensure no duplicate value already exists."""
+    assert v not in self.values(), (k, v)
+    dict.__setitem__(self, k, v)
 
-def find_eid_from_loc(out_map, side, loc):
-  """Return the EID for LOC, or -1 if the EID for LOC is not known.
+class MappingEidToPpathName(DictWithUniqueValues):
+  """A mapping from EID to (parent_path, name).
   """
-  if loc is None:
-    return 0
-  for eid, entry in out_map.items():
-    if loc == entry[side]:
-      return eid
-  return -1
+  def eid_from_relpath(self, relpath):
+    """Return the EID for RELPATH, or -1 if the EID for RELPATH is not known.
+    """
+    if relpath == '':
+      return 0
+    parent_path, name = posixpath.split(relpath)
+    for eid, loc in self.items():
+      if loc == (parent_path, name):
+        return eid
+    return -1
 
-def add_new(out_map, side, path):
-  """Add a new EID and (parent_eid, name) entry for PATH, and for each
-     of its parents that lacks one.
+class MappingEidToPeidName(DictWithUniqueValues):
+  """A mapping from EID to (parent_eid, name).
+  """
+  def eid_from_relpath(self, relpath):
+    """Return the EID for RELPATH, or -1 if the EID for RELPATH is not known.
+    """
+    if relpath == '':
+      return 0
+    parent_path, name = posixpath.split(relpath)
+    for eid, loc in self.items():
+      if loc[1] == name and loc[0] == self.eid_from_relpath(parent_path):
+        return eid
+    return -1
+
+  def eid_from_loc(self, loc):
+    """Return the EID for LOC, or -1 if the EID for LOC is not known.
+       LOC is (parent_eid, name).
+    """
+    if loc is None:
+      return 0
+    for eid, this_loc in self.items():
+      if loc == this_loc:
+        return eid
+    return -1
+
+  def relpath_from_eid(self, eid):
+    """Return the relpath of element EID in a mapping from EID to
+       (parent_eid, name).
+    """
+    if eid == 0:
+      return ''
+    element = self.get(eid)
+    if element is None:
+      return None
+    parent_eid, name = element
+    parent_path = self.relpath_from_eid(parent_eid)
+    if parent_path is None:
+      return None
+    return posixpath.join(parent_path, name)
+
+class InitialFinalConverter:
+  def __init__(self, path_pairs=[]):
+    assert all([path is None or type(path) is str
+                for pair in path_pairs for path in pair])
+    # Convert to a list of pairs of split-path:
+    # [[initial_split_path, final_split_path], ...],
+    # where split-path is (parent-path, name).
+    split_path_pairs = [[split_path(path) for path in path_pair]
+                        for path_pair in path_pairs]
+    # Convert to (initial, final) lists of split paths:
+    # ([split-path, ...], [split-path, ...])
+    two_lists = zip(*split_path_pairs)
+    # Convert to (initial, final) eid-to-split-path mappings, assigning
+    # EIDs starting at EID 1:
+    # ({ eid:split-path, ... }, { eid:split-path, ... })
+    self.path_maps = (MappingEidToPpathName(enumerate(two_lists[0], 1)),
+                      MappingEidToPpathName(enumerate(two_lists[1], 1)))
+    self.peid_maps = (MappingEidToPeidName(), MappingEidToPeidName())
+
+  def path_loc_pairs(self):
+    return { eid: [self.path_maps[0].get(eid), self.path_maps[1].get(eid)]
+             for eid in set(self.path_maps[0]) | set(self.path_maps[1]) }
+
+  def peid_loc_pairs(self):
+    return { eid: [self.peid_maps[0].get(eid), self.peid_maps[1].get(eid)]
+             for eid in set(self.peid_maps[0]) | set(self.peid_maps[1]) }
+
+  def path_locs_for_side(self, side):
+    return self.path_maps[side]
+
+  def peid_locs_for_side(self, side):
+    return self.peid_maps[side]
+
+  def has_peid_loc(self, side, loc):
+    assert loc and type(loc[0]) is int
+    return self.peid_locs_for_side(side).eid_from_loc(loc) >= 0
+
+  def set_peid_loc(self, side, eid, loc):
+    """Set the mapping for SIDE:EID to LOC. (If no mapping for EID already
+       exists, implicitly set the other side to None.)
+       LOC is (parent-eid, name).
+    """
+    assert type(loc[0]) is int
+    self.peid_maps[side][eid] = loc
+
+  def find_eid_from_relpath(self, side, relpath):
+    """Return the EID for SIDE:RELPATH, or -1 if not found.
+    """
+    eid = self.path_locs_for_side(side).eid_from_relpath(relpath)
+    if eid < 0:
+      eid = self.peid_locs_for_side(side).eid_from_relpath(relpath)
+    if eid < 0:
+      # Look up using a combined search in both (parent-eid, name) and
+      # (parent-relpath, name) maps, if necessary.
+      ### Not sure if this would ever be necessary.
+      pass
+    return eid
+
+# Assign an EID to each input pair of split-paths, starting at EID 1.
+converter = InitialFinalConverter(input_path_pairs)
+
+print("Input, as (initial, final) mappings by (parent-path, name):")
+for eid, locs in converter.path_loc_pairs().items():
+  print("  " + str(eid) + ": " + str(locs))
+
+def add_eid_mapping_and_make_parents(mapping, side, eid, parent_path, name):
+  """Add a (parent_eid, name) entry for SIDE:EID, and for each of its parent
+     paths that lacks an EID, up to a path that has an EID.
      Add this same mapping to the other side as well, but without caring
      whether the parent element exists on the other side. ### Is this right?
   """
-  new_eid = get_next_eid()
-  parent_path, name = posixpath.split(path)
-  parent_eid = find_or_add(out_map, side, parent_path)
-  loc = (parent_eid, name)
-  map_set(out_map, side, new_eid, loc)
-  #if loc not in out_map[1 - side]:
-  if find_eid_from_loc(out_map, 1 - side, loc) < 0:
-    map_set(out_map, 1 - side, new_eid, loc)
-  return new_eid
-
-def find_or_add(out_map, side, path):
-  """Find the EID for PATH, creating a new EID and (parent-eid, name) entry
-     for each of PATH and its parents that is not already present.
-  """
-  eid = find_eid_from_path(out_map, side, path)
-  if eid < 0:
+  parent_eid = mapping.find_eid_from_relpath(side, parent_path)
+  if parent_eid < 0:
     # no eid assigned yet for this path: assign a new eid for it
-    eid = add_new(out_map, side, path)
+    parent_eid = add_new(mapping, side, parent_path)
+  loc = (parent_eid, name)
+  mapping.set_peid_loc(side, eid, loc)
+  return loc
+
+def add_new(mapping, side, path):
+  """Add a new EID and (parent_eid, name) entry for PATH, and for each
+     of its parents that lacks an EID.
+
+     Add this same mapping to the other side as well, but without caring
+     whether the parent element exists on the other side.
+       ### Why is this right?
+  """
+  eid = get_next_eid()
+  parent_path, name = posixpath.split(path)
+  loc = add_eid_mapping_and_make_parents(mapping, side, eid, parent_path, name)
+  if not mapping.has_peid_loc(1 - side, loc):
+    mapping.set_peid_loc(1 - side, eid, loc)
   return eid
 
-def write_parent_eid(out_map, side, eid):
-  """Ensure the SIDE mapping for EID (if any) uses a parent_eid rather than
-     a path. (Also ensure that its parent has some sort of mapping.)
-  """
-  entry = out_map[eid]
-  loc = entry[side]
-  if loc:
-    parent, name = loc
-    if type(parent) is int:
-      print("# converting e%d: %s already has a parent-eid" % (eid, str(loc)))
-      return
-    parent_eid = find_or_add(out_map, side, parent)
-    new_loc = (parent_eid, name)
-    print("# converting e%d: %s -> %s" % (eid, str(loc), str(new_loc)))
-    map_set(out_map, side, eid, new_loc)
+def write_parent_eid(mapping, side, eid):
+  """Write a (parent_eid, name) mapping corresponding to the existing
+     (parent-path, name) mapping for SIDE:EID.
 
-# Change parent paths to parent eids (in place). For each location in OUT_MAP,
-# convert its (parent-path, name) to (parent-eid, name), adding new elements as
-# we go for any previously unlisted parent paths.
+     For each of its parent paths in SIDE that lacks an EID, up to a path
+     that has an EID, allocate an EID and write a (parent-eid, name) mapping
+     in BOTH sides.
+  """
+  path_loc = mapping.path_locs_for_side(side)[eid]
+  parent_path, name = path_loc
+  new_loc = add_eid_mapping_and_make_parents(mapping, side, eid, parent_path, name)
+  print("# converting e%d: %s -> %s" % (eid, str(path_loc), str(new_loc)))
+
+# Convert parent-path mappings to parent-EID mappings.
+# Add new elements as we go for any previously unlisted parent paths.
 for side in [0, 1]:
-  for eid, entry in out_map.items():
-    write_parent_eid(out_map, side, eid)
+  for eid in converter.path_locs_for_side(side):
+    # We don't write any of these entries twice, so it shouldn't already be
+    # here:
+    assert eid not in converter.peid_locs_for_side(side)
+    write_parent_eid(converter, side, eid)
 
 print("Output, as (initial, final) mappings by (parent-eid, name):")
-for e in out_map.items():
-  print("  " + str(e))
-
-def map_get_path(eid_map, side, eid):
-  if eid == 0:
-    return ''
-  element = eid_map[eid][side]
-  if element is None:
-    return None
-  parent_eid, name = element
-  parent_path = map_get_path(eid_map, side, parent_eid)
-  if parent_path is None:
-    return None
-  return posixpath.join(parent_path, name)
+for eid, locs in converter.peid_loc_pairs().items():
+  print("  " + str(eid) + ": " + str(locs))
 
 print("Output, as (initial, final) mappings by paths:")
-for eid, entry in out_map.items():
-  relpath0 = map_get_path(out_map, 0, eid)
-  relpath1 = map_get_path(out_map, 1, eid)
+for eid in converter.peid_loc_pairs():
+  relpath0 = converter.peid_locs_for_side(0).relpath_from_eid(eid)
+  relpath1 = converter.peid_locs_for_side(1).relpath_from_eid(eid)
   print "%3d %-12s %-12s" % (eid, relpath0, relpath1)
 
