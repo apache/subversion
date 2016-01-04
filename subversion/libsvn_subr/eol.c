@@ -37,7 +37,7 @@ svn_eol__find_eol_start(char *buf, apr_size_t len)
 
   /* On some systems, we need to make sure that BUF is properly aligned
    * for chunky data access. This overhead is still justified because
-   * only lines tend to be tens of chars long.
+   * lines tend to be tens of chars long.
    */
   for (; (len > 0) && ((apr_uintptr_t)buf) & (sizeof(apr_uintptr_t)-1)
        ; ++buf, --len)
