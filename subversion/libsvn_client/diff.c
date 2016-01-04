@@ -2238,22 +2238,20 @@ diff_repos_wc(const char **root_relpath,
   else
     diff_depth = svn_depth_unknown;
 
-
+  /* Tell the RA layer we want a delta to change our txn to URL1 */
+  SVN_ERR(svn_ra_do_diff3(ra_session,
+                          &reporter, &reporter_baton,
+                          loc1->rev,
+                          target,
+                          diff_depth,
+                          ignore_ancestry,
+                          TRUE, /* text_deltas */
+                          loc1->url,
+                          diff_editor, diff_edit_baton,
+                          scratch_pool));
 
   if (is_copy && revision2_kind != svn_opt_revision_base)
     {
-      /* Tell the RA layer we want a delta to change our txn to URL1 */
-      SVN_ERR(svn_ra_do_diff3(ra_session,
-                              &reporter, &reporter_baton,
-                              loc1->rev,
-                              target,
-                              diff_depth,
-                              ignore_ancestry,
-                              TRUE,  /* text_deltas */
-                              loc1->url,
-                              diff_editor, diff_edit_baton,
-                              scratch_pool));
-
       /* Report the copy source. */
       if (cf_depth == svn_depth_unknown)
         cf_depth = svn_depth_infinity;
@@ -2277,18 +2275,6 @@ diff_repos_wc(const char **root_relpath,
     }
   else
     {
-      /* Tell the RA layer we want a delta to change our txn to URL1 */
-      SVN_ERR(svn_ra_do_diff3(ra_session,
-                              &reporter, &reporter_baton,
-                              loc1->rev,
-                              target,
-                              diff_depth,
-                              ignore_ancestry,
-                              TRUE,  /* text_deltas */
-                              loc1->url,
-                              diff_editor, diff_edit_baton,
-                              scratch_pool));
-
       /* Create a txn mirror of path2;  the diff editor will print
          diffs in reverse.  :-)  */
       SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, abspath2,
