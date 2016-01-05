@@ -122,6 +122,13 @@ Candidate changes:
    Votes:
      +1: jamessan
 
+ * r1721488, r1721648
+   Enable building bindings with SWIG >= 3.0.6
+   Justification:
+     Enable building bindings with SWIG 3.x
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
