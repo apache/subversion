@@ -390,6 +390,35 @@ def relocate_with_relative_externals(sbox):
   svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/H$' }],
                                       os.path.join(other_wc, 'H-ext'))
 
+def prefix_partial_component(sbox):
+  """prefix with a partial component"""
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
+  other1_repo_dir, other1_repo_url = sbox.add_repo_path('xxxother')
+  other2_repo_dir, other2_repo_url = sbox.add_repo_path('yyyother')
+
+  # Relocate to 'xxxother'.
+  svntest.main.copy_repos(repo_dir, other1_repo_dir, 1, 0)
+  svntest.main.safe_rmtree(repo_dir, 1)
+  svntest.actions.run_and_verify_svn(None, [], 'relocate',
+                                     repo_url, other1_repo_url, wc_dir)
+  svntest.actions.run_and_verify_info([{ 'URL' : '.*.xxxother$' }],
+                                      wc_dir)
+
+  # Now relocate from 'xxx' to 'yyy' omitting 'other'.
+  svntest.main.copy_repos(other1_repo_dir, other2_repo_dir, 1, 0)
+  svntest.main.safe_rmtree(other1_repo_url, 1)
+  svntest.actions.run_and_verify_svn(None, [], 'relocate',
+                                     other1_repo_url[:-5],
+                                     other2_repo_url[:-5],
+                                     wc_dir)
+  svntest.actions.run_and_verify_info([{ 'URL' : '.*.yyyother$' }],
+                                      wc_dir)
+  
+  
 ########################################################################
 # Run the tests
 
@@ -401,6 +430,7 @@ test_list = [ None,
               single_file_relocate,
               relocate_with_switched_children,
               relocate_with_relative_externals,
+              prefix_partial_component,
               ]
 
 if __name__ == '__main__':
