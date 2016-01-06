@@ -1341,10 +1341,10 @@ show_elision_result(svn_mergeinfo_t parent_mergeinfo,
           if (parent_mergeinfo)
             SVN_ERR(svn_cmdline_printf(scratch_pool,
                       _("\n    Sub-tree merge info cannot be elided due to "
-                        "the following branche(s):\n")));
+                        "the following branch(es):\n")));
           else
             SVN_ERR(svn_cmdline_printf(scratch_pool,
-                _("\n    Merge info kept for the following branche(s):\n")));
+                _("\n    Merge info kept for the following branch(es):\n")));
 
           sorted_mi = svn_sort__hash(subtree_mergeinfo,
                                     svn_sort_compare_items_lexically,
@@ -1608,7 +1608,7 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
   iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_cmdline_printf(iterpool,
-                             _("\nEncountered %d missing branche(s):\n"),
+                             _("\nEncountered %d missing branch(es):\n"),
                              paths->nelts));
   for (i = 0; i < paths->nelts; ++i)
     {
