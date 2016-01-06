@@ -384,6 +384,18 @@ def relocate_with_relative_externals(sbox):
                                      other_repo_url + '/A/B',
                                      other_wc)
 
+  # Check the URLs of various nodes.
+  info_output = {
+        wc_dir:                                   '.*.other$',
+        os.path.join(wc_dir, 'A', 'B', 'G-ext'):  '.*.other/A/D/G$',
+        other_wc:                                 '.*.other/A/B$',
+        os.path.join(other_wc, 'G-ext'):          '.*.other/A/D/G$',
+    }
+
+  for path, pattern in info_output.items():
+    expected_info = { 'URL' : pattern }
+    svntest.actions.run_and_verify_info([expected_info], path)
+
 ########################################################################
 # Run the tests
 
