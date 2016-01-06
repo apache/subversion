@@ -393,7 +393,7 @@ def relocate_with_relative_externals(sbox):
 def prefix_partial_component(sbox):
   """prefix with a partial component"""
 
-  sbox.build(read_only=True)
+  sbox.build()
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
   repo_url = sbox.repo_url
