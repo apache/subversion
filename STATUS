@@ -92,7 +92,7 @@ Candidate changes:
    Justification:
      Regression introduced in 1.8.14.
    Votes:
-     +1: philip, rhuijben
+     +1: philip, rhuijben, jamessan
 
  * r1711346
    Properly remove tempfiles in svnlook on diff errors such as EPIPE.
@@ -121,7 +121,7 @@ Candidate changes:
      Ruby test suite would simply not run on Ubuntu 15.10.
      The patch is limited to rb test suite code only.
    Votes:
-     +1: stefan2
+     +1: stefan2, jamessan
 
  * r1539230
    Make JAVAHL tests pass on symlinked ramdiscs.
