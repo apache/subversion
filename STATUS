@@ -106,14 +106,14 @@ Candidate changes:
    Justification:
      Do the right thing on repository names that contain '+' or '('.
    Votes:
-     +1: danielsh
+     +1: danielsh, jamessan
 
  * r1721175
    hot-backup.py: Input validation.
    Justification:
      Better failure mode on --archive-type=foobar typos.
    Votes:
-     +1: danielsh
+     +1: danielsh, jamessan
 
  * r1722164
    Filter out -Wdate-time from SWIG_CPPFLAGS
