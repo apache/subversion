@@ -126,6 +126,8 @@ Candidate changes:
    Enable building bindings with SWIG >= 3.0.6
    Justification:
      Enable building bindings with SWIG 3.x
+   Branch:
+     ^/subversion/branches/1.9.x-r1721488
    Votes:
      +1: jamessan
 
