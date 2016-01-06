@@ -26,7 +26,6 @@
 #include <apr.h>
 #include <apr_atomic.h>
 #include <apr_hash.h>
-#include <apr_md5.h>
 #include <apr_uuid.h>
 #include <apr_strings.h>
 
@@ -1048,36 +1047,6 @@ svn_fs_paths_changed2(apr_hash_t **changed_paths_p,
 }
 
 svn_error_t *
-svn_fs_paths_changed(apr_hash_t **changed_paths_p, svn_fs_root_t *root,
-                     apr_pool_t *pool)
-{
-  apr_hash_t *changed_paths_new_structs;
-  apr_hash_index_t *hi;
-
-  SVN_ERR(svn_fs_paths_changed2(&changed_paths_new_structs, root, pool));
-  *changed_paths_p = apr_hash_make(pool);
-  for (hi = apr_hash_first(pool, changed_paths_new_structs);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      const void *vkey;
-      apr_ssize_t klen;
-      void *vval;
-      svn_fs_path_change2_t *val;
-      svn_fs_path_change_t *change;
-      apr_hash_this(hi, &vkey, &klen, &vval);
-      val = vval;
-      change = apr_palloc(pool, sizeof(*change));
-      change->node_rev_id = val->node_rev_id;
-      change->change_kind = val->change_kind;
-      change->text_mod = val->text_mod;
-      change->prop_mod = val->prop_mod;
-      apr_hash_set(*changed_paths_p, vkey, klen, change);
-    }
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_fs_check_path(svn_node_kind_t *kind_p, svn_fs_root_t *root,
                   const char *path, apr_pool_t *pool)
 {
@@ -1372,21 +1341,6 @@ svn_fs_file_checksum(svn_checksum_t **checksum,
          this case) and dump the checksum into checksum->digest. */
       SVN_ERR(svn_stream_close(checksum_contents));
     }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_fs_file_md5_checksum(unsigned char digest[],
-                         svn_fs_root_t *root,
-                         const char *path,
-                         apr_pool_t *pool)
-{
-  svn_checksum_t *md5sum;
-
-  SVN_ERR(svn_fs_file_checksum(&md5sum, svn_checksum_md5, root, path, TRUE,
-                               pool));
-  memcpy(digest, md5sum->digest, APR_MD5_DIGESTSIZE);
 
   return SVN_NO_ERROR;
 }
