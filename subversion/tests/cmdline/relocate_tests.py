@@ -379,22 +379,16 @@ def relocate_with_relative_externals(sbox):
   svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/H$' }],
                                       os.path.join(wc_dir, 'A', 'B', 'H-ext'))
 
+  # Relocate with prefix too long to be valid for externals.
   svntest.actions.run_and_verify_svn(None, [], 'relocate',
                                      repo_url + '/A/B',
                                      other_repo_url + '/A/B',
                                      other_wc)
 
-  # Check the URLs of various nodes.
-  info_output = {
-        wc_dir:                                   '.*.other$',
-        os.path.join(wc_dir, 'A', 'B', 'G-ext'):  '.*.other/A/D/G$',
-        other_wc:                                 '.*.other/A/B$',
-        os.path.join(other_wc, 'G-ext'):          '.*.other/A/D/G$',
-    }
-
-  for path, pattern in info_output.items():
-    expected_info = { 'URL' : pattern }
-    svntest.actions.run_and_verify_info([expected_info], path)
+  svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/G$' }],
+                                      os.path.join(other_wc, 'G-ext'))
+  svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/H$' }],
+                                      os.path.join(other_wc, 'H-ext'))
 
 ########################################################################
 # Run the tests
