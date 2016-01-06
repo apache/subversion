@@ -305,7 +305,7 @@ show_removing_obsoletes(svn_min__opt_state_t *opt_state,
       && progress->needs_header)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                _("\n    Removing obsolete entries ...\n")));
+                       _("\n    Trying to remove obsolete entries ...\n")));
       progress->needs_header = FALSE;
     }
 
@@ -498,9 +498,11 @@ find_surviving_copies(apr_array_header_t *survivors,
  * enabled in it.
  *
  * If LOCAL_ONLY is set, only remove branches that are known to have been
- * deleted as per LOOKUP - this is for quick checks.  Track progress in
- * PROGRESS and update MERGEINFO is we can remove the info for branch PATH
- * from it.
+ * deleted (as per LOOKUP) with no surviving copies etc.  This is for quick
+ * checks.
+ *
+ * Track progress in PROGRESS and update MERGEINFO if we can remove the
+ * info for branch PATH from it.
  *
  * Use SCRATCH_POOL for temporaries.
  */
@@ -1339,10 +1341,10 @@ show_elision_result(svn_mergeinfo_t parent_mergeinfo,
           if (parent_mergeinfo)
             SVN_ERR(svn_cmdline_printf(scratch_pool,
                       _("\n    Sub-tree merge info cannot be elided due to "
-                        "the following branches:\n")));
+                        "the following branche(s):\n")));
           else
             SVN_ERR(svn_cmdline_printf(scratch_pool,
-                  _("\n    Merge info kept for the following branches:\n")));
+                _("\n    Merge info kept for the following branche(s):\n")));
 
           sorted_mi = svn_sort__hash(subtree_mergeinfo,
                                     svn_sort_compare_items_lexically,
@@ -1606,7 +1608,7 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
   iterpool = svn_pool_create(scratch_pool);
 
   SVN_ERR(svn_cmdline_printf(iterpool,
-                             _("\nEncountered %d missing branches:\n"),
+                             _("\nEncountered %d missing branche(s):\n"),
                              paths->nelts));
   for (i = 0; i < paths->nelts; ++i)
     {
