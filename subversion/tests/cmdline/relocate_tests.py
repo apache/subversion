@@ -350,15 +350,20 @@ def relocate_with_relative_externals(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+  repo_url = sbox.repo_url
 
   # Add a relative external.
   change_external(os.path.join(wc_dir, 'A', 'B'),
                   "^/A/D/G G-ext\n../D/H H-ext", commit=True)
   svntest.actions.run_and_verify_svn(None, [], 'update', wc_dir)
 
+  # A second wc not at the repository root
+  other_wc = sbox.add_wc_path('other')
+  svntest.main.safe_rmtree(other_wc, 1)
+  svntest.actions.run_and_verify_svn(None, [], 'checkout',
+                                     repo_url + '/A/B', other_wc)
   # Move our repository to another location.
-  repo_dir = sbox.repo_dir
-  repo_url = sbox.repo_url
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
   svntest.main.copy_repos(repo_dir, other_repo_dir, 2, 0)
   svntest.main.safe_rmtree(repo_dir, 1)
@@ -373,6 +378,11 @@ def relocate_with_relative_externals(sbox):
                                       os.path.join(wc_dir, 'A', 'B', 'G-ext'))
   svntest.actions.run_and_verify_info([{ 'URL' : '.*.other/A/D/H$' }],
                                       os.path.join(wc_dir, 'A', 'B', 'H-ext'))
+
+  svntest.actions.run_and_verify_svn(None, [], 'relocate',
+                                     repo_url + '/A/B',
+                                     other_repo_url + '/A/B',
+                                     other_wc)
 
 ########################################################################
 # Run the tests
