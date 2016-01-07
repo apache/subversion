@@ -522,13 +522,7 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 {
   svn_fs_root_t *s_root;
   apr_hash_t *s_props = NULL, *t_props;
-  apr_array_header_t *prop_diffs;
-  int i;
   svn_revnum_t crev;
-  svn_boolean_t changed;
-  const svn_prop_t *pc;
-  svn_lock_t *lock;
-  apr_hash_index_t *hi;
 
   /* Fetch the created-rev and send entry props. */
   SVN_ERR(svn_fs_node_created_rev(&crev, b->t_root, t_path, pool));
@@ -565,6 +559,7 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   /* Update lock properties. */
   if (lock_token)
     {
+      svn_lock_t *lock;
       SVN_ERR(svn_fs_get_lock(&lock, b->repos->fs, t_path, pool));
 
       /* Delete a defunct lock. */
@@ -575,6 +570,7 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
   if (s_path)
     {
+      svn_boolean_t changed;
       SVN_ERR(get_source_root(b, &s_root, s_rev));
 
       /* Is this deltification worth our time? */
@@ -592,16 +588,20 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
   if (s_props && apr_hash_count(s_props))
     {
+      apr_array_header_t *prop_diffs;
+      int i;
+
       /* Now transmit the differences. */
       SVN_ERR(svn_prop_diffs(&prop_diffs, t_props, s_props, pool));
       for (i = 0; i < prop_diffs->nelts; i++)
         {
-          pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
+          const svn_prop_t *pc = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
           SVN_ERR(change_fn(b, object, pc->name, pc->value, pool));
         }
     }
   else if (apr_hash_count(t_props))
     {
+      apr_hash_index_t *hi;
       /* So source, i.e. all new.  Transmit all target props. */
       for (hi = apr_hash_first(pool, t_props); hi; hi = apr_hash_next(hi))
         {
