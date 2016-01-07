@@ -525,7 +525,6 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   apr_array_header_t *prop_diffs;
   int i;
   svn_revnum_t crev;
-  revision_info_t *revision_info;
   svn_boolean_t changed;
   const svn_prop_t *pc;
   svn_lock_t *lock;
@@ -535,6 +534,7 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   SVN_ERR(svn_fs_node_created_rev(&crev, b->t_root, t_path, pool));
   if (SVN_IS_VALID_REVNUM(crev))
     {
+      revision_info_t *revision_info;
       /* convert committed-rev to  string */
       char buf[SVN_INT64_BUFFER_SIZE];
       svn_string_t cr_str;
