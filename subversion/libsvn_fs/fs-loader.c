@@ -1204,6 +1204,15 @@ svn_fs_node_has_props(svn_boolean_t *has_props,
 }
 
 svn_error_t *
+svn_fs_node_has_props2(svn_boolean_t *has_props,
+                       svn_fs_node_t *node,
+                       apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(node->vtable->node_has_props(has_props, node,
+                                                      scratch_pool));
+}
+
+svn_error_t *
 svn_fs_change_node_prop(svn_fs_root_t *root, const char *path,
                         const char *name, const svn_string_t *value,
                         apr_pool_t *pool)
@@ -1359,6 +1368,13 @@ svn_fs_file_length(svn_filesize_t *length_p, svn_fs_root_t *root,
 {
   return svn_error_trace(root->vtable->file_length(length_p, root, path,
                                                    pool));
+}
+
+svn_error_t *
+svn_fs_file_length2(svn_filesize_t *length_p, svn_fs_node_t *node,
+                    apr_pool_t *pool)
+{
+  return svn_error_trace(node->vtable->file_length(length_p, node, pool));
 }
 
 svn_error_t *

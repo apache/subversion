@@ -1884,11 +1884,23 @@ svn_fs_node_proplist(apr_hash_t **table_p,
                      const char *path,
                      apr_pool_t *pool);
 
-/** Set @a *has_props to TRUE if the node @a path in @a root has properties
- * and to FALSE if it doesn't have properties. Perform temporary allocations
- * in @a scratch_pool.
+/** Set @a *has_props to TRUE if the node @a node has properties and to FALSE
+ * if it doesn't have properties. Perform temporary allocations in
+ * @a scratch_pool.
  *
- * @since New in 1.9.
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_fs_node_has_props2(svn_boolean_t *has_props,
+                       svn_fs_node_t *node,
+                       apr_pool_t *scratch_pool);
+
+
+/**
+ * Same as svn_fs_node_has_props2(), but reference node by @a root and
+ * @a path.
+ *
+ * @since New in 1.9
  */
 svn_error_t *
 svn_fs_node_has_props(svn_boolean_t *has_props,
@@ -2270,8 +2282,17 @@ svn_fs_revision_link(svn_fs_root_t *from_root,
 
 /* Files.  */
 
-/** Set @a *length_p to the length of the file @a path in @a root, in bytes.
+/** Set @a *length_p to the length of the file @a node, in bytes.
  * Do any necessary temporary allocation in @a pool.
+ */
+svn_error_t *
+svn_fs_file_length2(svn_filesize_t *length_p,
+                    svn_fs_node_t *node,
+                    apr_pool_t *pool);
+
+/** Same as svn_fs_file_length2(), but reference node by @a root and
+ * @a path.
+ *
  */
 svn_error_t *
 svn_fs_file_length(svn_filesize_t *length_p,

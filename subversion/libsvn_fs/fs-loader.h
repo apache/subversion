@@ -449,6 +449,14 @@ typedef struct node_vtable_t
   svn_error_t *(*node_kind)(svn_node_kind_t *kind_p,
                             svn_fs_node_t *node,
                             apr_pool_t *scratch_pool);
+  /* Property operations */
+  svn_error_t *(*node_has_props)(svn_boolean_t *has_props,
+                                 svn_fs_node_t *node,
+                                 apr_pool_t *scratch_pool);
+  /* Files */
+  svn_error_t *(*file_length)(svn_filesize_t *length_p,
+                              svn_fs_node_t *node,
+                              apr_pool_t *pool);
 } node_vtable_t;
 
 

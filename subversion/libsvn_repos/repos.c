@@ -2064,25 +2064,24 @@ svn_repos_stat(svn_dirent_t **dirent,
                const char *path,
                apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
   svn_dirent_t *ent;
   const char *datestring;
+  svn_fs_node_t *node;
 
-  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+  SVN_ERR(svn_fs_open_node(&node, root, path, TRUE, pool, pool));
 
-  if (kind == svn_node_none)
+  if (!node)
     {
       *dirent = NULL;
       return SVN_NO_ERROR;
     }
 
   ent = svn_dirent_create(pool);
-  ent->kind = kind;
+  SVN_ERR(svn_fs_node_kind(&ent->kind, node, pool));
+  if (ent->kind == svn_node_file)
+    SVN_ERR(svn_fs_file_length2(&(ent->size), node, pool));
 
-  if (kind == svn_node_file)
-    SVN_ERR(svn_fs_file_length(&(ent->size), root, path, pool));
-
-  SVN_ERR(svn_fs_node_has_props(&ent->has_props, root, path, pool));
+  SVN_ERR(svn_fs_node_has_props2(&ent->has_props, node, pool));
 
   SVN_ERR(svn_repos_get_committed_info(&(ent->created_rev),
                                        &datestring,

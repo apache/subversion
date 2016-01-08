@@ -63,9 +63,40 @@ compat_fs_node_kind(svn_node_kind_t *kind_p,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+compat_fs_node_has_props(svn_boolean_t *has_props,
+                         svn_fs_node_t *node,
+                         apr_pool_t *scratch_pool)
+{
+  compat_node_data_t *fnd = node->fsap_data;
+  svn_fs_root_t *root;
+  SVN_ERR(get_root(&root, fnd, scratch_pool));
+
+  return svn_error_trace(root->vtable->node_has_props(has_props, root,
+                                                      fnd->path,
+                                                      scratch_pool));
+}
+
+static svn_error_t *
+compat_fs_node_file_length(svn_filesize_t *length_p,
+                           svn_fs_node_t *node,
+                           apr_pool_t *pool)
+{
+  compat_node_data_t *fnd = node->fsap_data;
+  svn_fs_root_t *root;
+
+  SVN_ERR(get_root(&root, fnd, pool));
+
+  return svn_error_trace(root->vtable->file_length(length_p, root,
+                                                   fnd->path,
+                                                   pool));
+}
+
 static const node_vtable_t compat_node_vtable = 
 {
   compat_fs_node_kind,
+  compat_fs_node_has_props,
+  compat_fs_node_file_length
 };
 
 svn_fs_node_t *
