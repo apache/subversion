@@ -849,16 +849,26 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
 
   /* Transaction content needs to be carefully prefixed to virtually
      eliminate any chance for conflicts. The (repo, txn_id) pair
-     should be unique but if a transaction fails, it might be possible
-     to start a new transaction later that receives the same id.
-     Therefore, throw in a uuid as well - just to be sure. */
-  prefix = apr_pstrcat(pool,
-                       "fsfs:", fs->uuid,
-                       "/", fs->path,
-                       ":", txn_id,
-                       ":", svn_uuid_generate(pool),
-                       ":", "TXNDIR",
-                       SVN_VA_NULL);
+     should be unique but if the filesystem format doesn't store the
+     global transaction ID via the txn-current file, and a transaction
+     fails, it might be possible to start a new transaction later that
+     receives the same id.  For such older formats, throw in an uuid as
+     well -- just to be sure. */
+  if (ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
+    prefix = apr_pstrcat(pool,
+                         "fsfs:", fs->uuid,
+                         "/", fs->path,
+                         ":", txn_id,
+                         ":", "TXNDIR",
+                         SVN_VA_NULL);
+  else
+    prefix = apr_pstrcat(pool,
+                         "fsfs:", fs->uuid,
+                         "/", fs->path,
+                         ":", txn_id,
+                         ":", svn_uuid_generate(pool),
+                         ":", "TXNDIR",
+                         SVN_VA_NULL);
 
   /* create a txn-local directory cache */
   SVN_ERR(create_cache(&ffd->txn_dir_cache,
