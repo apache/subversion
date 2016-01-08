@@ -1633,6 +1633,23 @@ svn_fs_paths_changed(apr_hash_t **changed_paths_p,
  */
 typedef struct svn_fs_node_t svn_fs_node_t;
 
+/** Open the transaction named @a name in the filesystem @a fs.  Set @a *txn
+ * to the transaction.
+
+/** Open the node present at @a path under @a root. Set @a *node_p to the node
+ * Sets @a *node_p to NULL if @a path does not exist under @a root
+ * and @a ignore_enoent is non-zero. Returns error otherwise.
+ * Allocats @a *node_p in @a result_pool. Use @a scratch_pool for temporary
+ * allocation.
+ */
+svn_error_t *
+svn_fs_open_node(svn_fs_node_t **node_p,
+                 svn_fs_root_t *root,
+                 const char *path,
+                 svn_boolean_t ignore_enoent,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool);
+
 /* Operations appropriate to all kinds of nodes.  */
 
 /** Set @a *kind_p to the type of node present at @a path under @a
@@ -1645,6 +1662,13 @@ svn_fs_check_path(svn_node_kind_t *kind_p,
                   const char *path,
                   apr_pool_t *pool);
 
+/** Set @a *kind_p to the type of node @a node.
+ * Use @a scratch_pool for temporary allocation.
+ */
+svn_error_t *
+svn_fs_node_kind(svn_node_kind_t *kind_p,
+                 svn_fs_node_t *node,
+                 apr_pool_t *scratch_pool);
 
 /** An opaque node history object. */
 typedef struct svn_fs_history_t svn_fs_history_t;

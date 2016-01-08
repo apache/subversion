@@ -451,6 +451,7 @@ validate_tree_entry(svn_fs_root_t *root,
   svn_stringbuf_t *rstring;
   svn_node_kind_t kind;
   svn_boolean_t is_dir, is_file;
+  svn_fs_node_t *node;
 
   /* Verify that node types are reported consistently. */
   SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
@@ -487,6 +488,16 @@ validate_tree_entry(svn_fs_root_t *root,
            "node '%s' in tree had unexpected contents",
            path);
     }
+
+  /* Validate the same using FS node API. */
+  SVN_ERR(svn_fs_open_node(&node, root, path, FALSE, pool, pool));
+  SVN_ERR(svn_fs_node_kind(&kind, node, pool));
+  if ((kind == svn_node_file && !contents) ||
+      (kind == svn_node_dir && contents))
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, NULL,
+       "node '%s' in tree was of unexpected node type",
+       path);
 
   return SVN_NO_ERROR;
 }
@@ -611,6 +622,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
     {
       svn_node_kind_t kind;
       svn_boolean_t is_dir, is_file;
+      svn_fs_node_t *node;
 
       /* Verify that the node is reported as "n/a". */
       SVN_ERR(svn_fs_check_path(&kind, root, na_name, subpool));
@@ -620,6 +632,15 @@ svn_test__validate_tree(svn_fs_root_t *root,
       SVN_TEST_ASSERT(kind == svn_node_none);
       SVN_TEST_ASSERT(!is_file);
       SVN_TEST_ASSERT(!is_dir);
+
+      /* Verify the same using FS node API. */
+      SVN_ERR(svn_fs_open_node(&node, root, na_name, TRUE,
+                               subpool, subpool));
+      SVN_TEST_ASSERT(node == NULL);
+
+      SVN_TEST_ASSERT_ERROR(svn_fs_open_node(&node, root, na_name,
+                                             FALSE, subpool, subpool),
+                            SVN_ERR_FS_NOT_FOUND);
     }
 
   if (missing_entries || extra_entries || corrupt_entries)

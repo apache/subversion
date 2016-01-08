@@ -50,6 +50,7 @@
 #include "private/svn_subr_private.h"
 
 #include "fs-loader.h"
+#include "node_compat.h"
 
 /* This is defined by configure on platforms which use configure, but
    we need to define a fallback for Windows. */
@@ -1051,6 +1052,47 @@ svn_fs_check_path(svn_node_kind_t *kind_p, svn_fs_root_t *root,
                   const char *path, apr_pool_t *pool)
 {
   return svn_error_trace(root->vtable->check_path(kind_p, root, path, pool));
+}
+
+svn_error_t *
+svn_fs_open_node(svn_fs_node_t **node_p,
+                 svn_fs_root_t *root,
+                 const char *path,
+                 svn_boolean_t ignore_enoent,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+#if 0
+  if (root->vtable->open_node)
+    {
+      return svn_error_trace(root->vtable->open_node(...));
+    }
+  else
+#endif
+    {
+      svn_node_kind_t kind;
+      SVN_ERR(svn_fs_check_path(&kind, root, path, scratch_pool));
+      if (kind == svn_node_none && ignore_enoent)
+        {
+          *node_p = NULL;
+          return SVN_NO_ERROR;
+        }
+      else if (kind == svn_node_none && !ignore_enoent)
+        return SVN_FS__NOT_FOUND(root, path);
+      else
+        {
+          *node_p = svn_fs__create_node_shim(root, path, kind, result_pool);
+          return SVN_NO_ERROR;
+        }
+    }
+}
+
+svn_error_t *
+svn_fs_node_kind(svn_node_kind_t *kind_p,
+                 svn_fs_node_t *node,
+                 apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(node->vtable->node_kind(kind_p, node, scratch_pool));
 }
 
 svn_error_t *

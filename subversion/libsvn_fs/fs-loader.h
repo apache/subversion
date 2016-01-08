@@ -444,6 +444,12 @@ typedef struct id_vtable_t
                                     const svn_fs_id_t *b);
 } id_vtable_t;
 
+typedef struct node_vtable_t
+{
+  svn_error_t *(*node_kind)(svn_node_kind_t *kind_p,
+                            svn_fs_node_t *node,
+                            apr_pool_t *scratch_pool);
+} node_vtable_t;
 
 
 /*** Definitions of the abstract FS object types ***/
@@ -564,6 +570,12 @@ struct svn_fs_lock_target_t
   svn_revnum_t current_rev;
 };
 
+struct svn_fs_node_t
+{
+  /* FSAP-specific vtable and private data */
+  const node_vtable_t *vtable;
+  void *fsap_data;
+};
 
 #ifdef __cplusplus
 }
