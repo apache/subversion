@@ -66,8 +66,9 @@ normalize_key_part(const char *original,
   return normalized->data;
 }
 
-/* *CACHE_TXDELTAS, *CACHE_FULLTEXTS flags will be set according to
-   FS->CONFIG.  *CACHE_NAMESPACE receives the cache prefix to use.
+/* *CACHE_TXDELTAS, *CACHE_FULLTEXTS, *CACHE_NODEPROPS flags will be set
+   according to FS->CONFIG. *CACHE_NAMESPACE receives the cache prefix to
+   use.
 
    Use FS->pool for allocating the memcache and CACHE_NAMESPACE, and POOL
    for temporary allocations. */
@@ -75,6 +76,7 @@ static svn_error_t *
 read_config(const char **cache_namespace,
             svn_boolean_t *cache_txdeltas,
             svn_boolean_t *cache_fulltexts,
+            svn_boolean_t *cache_nodeprops,
             svn_fs_t *fs,
             apr_pool_t *pool)
 {
@@ -117,6 +119,14 @@ read_config(const char **cache_namespace,
                          SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                          TRUE);
 
+  /* by default, cache nodeprops: this will match pre-1.10
+   * behavior where node properties caching was controlled
+   * by SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS configuration option.
+   */
+  *cache_nodeprops
+    = svn_hash__get_bool(fs->config,
+                         SVN_FS_CONFIG_FSFS_CACHE_NODEPROPS,
+                         TRUE);
   return SVN_NO_ERROR;
 }
 
@@ -353,6 +363,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   svn_boolean_t no_handler = ffd->fail_stop;
   svn_boolean_t cache_txdeltas;
   svn_boolean_t cache_fulltexts;
+  svn_boolean_t cache_nodeprops;
   const char *cache_namespace;
   svn_boolean_t has_namespace;
 
@@ -360,6 +371,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   SVN_ERR(read_config(&cache_namespace,
                       &cache_txdeltas,
                       &cache_fulltexts,
+                      &cache_nodeprops,
                       fs,
                       pool));
 
@@ -538,21 +550,6 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            no_handler,
                            fs->pool, pool));
 
-      SVN_ERR(create_cache(&(ffd->properties_cache),
-                           NULL,
-                           membuffer,
-                           0, 0, /* Do not use the inprocess cache */
-                           svn_fs_fs__serialize_properties,
-                           svn_fs_fs__deserialize_properties,
-                           sizeof(pair_cache_key_t),
-                           apr_pstrcat(pool, prefix, "PROP",
-                                       SVN_VA_NULL),
-                           SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
-                           has_namespace,
-                           fs,
-                           no_handler,
-                           fs->pool, pool));
-
       SVN_ERR(create_cache(&(ffd->mergeinfo_cache),
                            NULL,
                            membuffer,
@@ -586,9 +583,31 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   else
     {
       ffd->fulltext_cache = NULL;
-      ffd->properties_cache = NULL;
       ffd->mergeinfo_cache = NULL;
       ffd->mergeinfo_existence_cache = NULL;
+    }
+
+  /* if enabled, cache node properties */
+  if (cache_nodeprops)
+    {
+      SVN_ERR(create_cache(&(ffd->properties_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use the inprocess cache */
+                           svn_fs_fs__serialize_properties,
+                           svn_fs_fs__deserialize_properties,
+                           sizeof(pair_cache_key_t),
+                           apr_pstrcat(pool, prefix, "PROP",
+                                       SVN_VA_NULL),
+                           SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                           has_namespace,
+                           fs,
+                           no_handler,
+                           fs->pool, pool));
+    }
+  else
+    {
+      ffd->properties_cache = NULL;
     }
 
   /* if enabled, cache text deltas and their combinations */
