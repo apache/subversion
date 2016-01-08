@@ -105,6 +105,7 @@ typedef struct dir_conf_t {
   enum conf_flag txdelta_cache;      /* whether to enable txdelta caching */
   enum conf_flag fulltext_cache;     /* whether to enable fulltext caching */
   enum conf_flag revprop_cache;      /* whether to enable revprop caching */
+  enum conf_flag nodeprop_cache;     /* whether to enable nodeprop caching */
   enum conf_flag block_read;         /* whether to enable block read mode */
   const char *hooks_env;             /* path to hook script env config file */
 } dir_conf_t;
@@ -240,6 +241,7 @@ create_dir_config(apr_pool_t *p, char *dir)
   conf->v2_protocol = CONF_FLAG_DEFAULT;
   conf->hooks_env = NULL;
   conf->txdelta_cache = CONF_FLAG_DEFAULT;
+  conf->nodeprop_cache = CONF_FLAG_DEFAULT;
 
   return conf;
 }
@@ -270,6 +272,7 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->txdelta_cache = INHERIT_VALUE(parent, child, txdelta_cache);
   newconf->fulltext_cache = INHERIT_VALUE(parent, child, fulltext_cache);
   newconf->revprop_cache = INHERIT_VALUE(parent, child, revprop_cache);
+  newconf->nodeprop_cache = INHERIT_VALUE(parent, child, nodeprop_cache);
   newconf->block_read = INHERIT_VALUE(parent, child, block_read);
   newconf->root_dir = INHERIT_VALUE(parent, child, root_dir);
   newconf->hooks_env = INHERIT_VALUE(parent, child, hooks_env);
@@ -562,6 +565,19 @@ SVNCacheRevProps_cmd(cmd_parms *cmd, void *config, int arg)
     conf->revprop_cache = CONF_FLAG_ON;
   else
     conf->revprop_cache = CONF_FLAG_OFF;
+
+  return NULL;
+}
+
+static const char *
+SVNCacheNodeProps_cmd(cmd_parms *cmd, void *config, int arg)
+{
+  dir_conf_t *conf = config;
+
+  if (arg)
+    conf->nodeprop_cache = CONF_FLAG_ON;
+  else
+    conf->nodeprop_cache = CONF_FLAG_OFF;
 
   return NULL;
 }
@@ -991,6 +1007,15 @@ dav_svn__get_revprop_cache_flag(request_rec *r)
   return conf->revprop_cache == CONF_FLAG_ON;
 }
 
+svn_boolean_t
+dav_svn__get_nodeprop_cache_flag(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  /* node properties caching is enabled by default. */
+  return get_conf_flag(conf->nodeprop_cache, FALSE);
+}
 
 svn_boolean_t
 dav_svn__get_block_read_flag(request_rec *r)
@@ -1341,6 +1366,13 @@ static const command_rec cmds[] =
                "but should only be enabled under the conditions described"
                "in the documentation"
                "(default is Off)."),
+
+  /* per directory/location */
+  AP_INIT_FLAG("SVNCacheNodeProps", SVNCacheNodeProps_cmd, NULL,
+               ACCESS_CONF|RSRC_CONF,
+               "speeds up data access by caching node properties "
+               "if sufficient in-memory cache is available"
+               "(default is On)."),
 
   /* per directory/location */
   AP_INIT_FLAG("SVNBlockRead", SVNBlockRead_cmd, NULL,

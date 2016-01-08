@@ -2369,6 +2369,8 @@ get_resource(request_rec *r,
                     dav_svn__get_fulltext_cache_flag(r) ? "1" :"0");
       svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
                     dav_svn__get_revprop_cache_flag(r) ? "2" :"0");
+      svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NODEPROPS,
+                    dav_svn__get_nodeprop_cache_flag(r) ? "1" :"0");
       svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ,
                     dav_svn__get_block_read_flag(r) ? "1" :"0");
 
