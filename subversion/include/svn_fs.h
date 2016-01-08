@@ -1618,6 +1618,21 @@ svn_fs_paths_changed(apr_hash_t **changed_paths_p,
 /** @} */
 
 
+/** An object representing a node in tree. 
+ *
+ * An #svn_fs_node_t object represents the node in some revision or
+ * transaction in a filesystem.  In nutshell svn_fs_node_t is
+ * svn_fs_root_t and a directory path relative to that root.
+ *
+ * Important facts:
+ * - svn_fs_node_t is depends of svn_fs_t instance created from
+ * - svn_fs_node_t does not depends on svn_fs_root object created from
+ * - svn_fs_node_t always reference existing node in tree (?)
+ *
+ * @since New in 1.10.
+ */
+typedef struct svn_fs_node_t svn_fs_node_t;
+
 /* Operations appropriate to all kinds of nodes.  */
 
 /** Set @a *kind_p to the type of node present at @a path under @a
