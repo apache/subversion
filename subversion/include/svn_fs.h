@@ -2162,7 +2162,25 @@ svn_fs_merge(const char **conflict_p,
 /* Directories.  */
 
 
-/** The type of a Subversion directory entry.  */
+/** The type of a Subversion directory entry.
+ *
+ * @since New in 1.10.
+ */
+typedef struct svn_fs_dirent2_t
+{
+
+  /** The name of this directory entry.  */
+  const char *name;
+
+  /** The node kind. */
+  svn_node_kind_t kind;
+
+  /** The node it names.  */
+  svn_fs_node_t *node;
+
+} svn_fs_dirent2_t;
+
+/* Similar to #svn_fs_dirent2_t but without reference to FS node.*/
 typedef struct svn_fs_dirent_t
 {
 
@@ -2181,8 +2199,20 @@ typedef struct svn_fs_dirent_t
 /** Set @a *entries_p to a newly allocated APR hash table containing the
  * entries of the directory at @a path in @a root.  The keys of the table
  * are entry names, as byte strings, excluding the final NULL
- * character; the table's values are pointers to #svn_fs_dirent_t
- * structures.  Allocate the table and its contents in @a pool.
+ * character; the table's values are pointers to #svn_fs_dirent2_t
+ * structures.  Allocate the table and its contents in @a result_pool. Use
+ * @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_fs_dir_entries2(apr_hash_t **entries_p,
+                    svn_fs_node_t *node,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+/** Same as svn_fs_dir_entries2(), only with #svn_fs_dirent_t* values
+ * in the hash (and thus no FS node objects).
  */
 svn_error_t *
 svn_fs_dir_entries(apr_hash_t **entries_p,

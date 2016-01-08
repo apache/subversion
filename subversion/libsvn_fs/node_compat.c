@@ -20,6 +20,8 @@
  *    under the License.
  * ====================================================================
  */
+#include "private/svn_fspath.h"
+#include "svn_hash.h"
 #include "fs-loader.h"
 #include "node_compat.h"
 
@@ -92,11 +94,49 @@ compat_fs_node_file_length(svn_filesize_t *length_p,
                                                    pool));
 }
 
+static svn_error_t *
+compat_fs_node_dir_entries(apr_hash_t **entries_p,
+                           svn_fs_node_t *node,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  compat_node_data_t *fnd = node->fsap_data;
+  svn_fs_root_t *root;
+  apr_hash_t *entries_v1;
+  apr_hash_t *entries_v2;
+
+  SVN_ERR(get_root(&root, fnd, scratch_pool));
+
+  SVN_ERR(svn_fs_dir_entries(&entries_v1, root, fnd->path, scratch_pool));
+
+  entries_v2 = apr_hash_make(result_pool);
+  for (apr_hash_index_t *hi = apr_hash_first(scratch_pool, entries_v1); hi;
+       hi = apr_hash_next(hi))
+    {
+      svn_fs_dirent_t *dirent_v1 = apr_hash_this_val(hi);
+      svn_fs_dirent2_t *dirent_v2 = apr_pcalloc(result_pool,
+                                                sizeof(*dirent_v2));
+      const char *path = svn_fspath__join(fnd->path, dirent_v1->name,
+                                          result_pool);
+
+      dirent_v2->name = apr_pstrdup(result_pool, dirent_v1->name);
+      dirent_v2->kind = dirent_v1->kind;
+      dirent_v2->node = svn_fs__create_node_shim(root, path,
+                                                 dirent_v1->kind,
+                                                 result_pool);
+      svn_hash_sets(entries_v2, dirent_v2->name, dirent_v2);
+    }
+
+  *entries_p = entries_v2;
+  return SVN_NO_ERROR;
+}
+
 static const node_vtable_t compat_node_vtable = 
 {
   compat_fs_node_kind,
   compat_fs_node_has_props,
-  compat_fs_node_file_length
+  compat_fs_node_file_length,
+  compat_fs_node_dir_entries
 };
 
 svn_fs_node_t *

@@ -457,6 +457,11 @@ typedef struct node_vtable_t
   svn_error_t *(*file_length)(svn_filesize_t *length_p,
                               svn_fs_node_t *node,
                               apr_pool_t *pool);
+  /* Directories */
+  svn_error_t *(*dir_entries)(apr_hash_t **entries_p,
+                              svn_fs_node_t *node,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 } node_vtable_t;
 
 

@@ -1330,9 +1330,11 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
 
   if (dirents)
     {
+      svn_fs_node_t *node;
       apr_pool_t *iterpool = svn_pool_create(pool);
       /* Get the dir's entries. */
-      SVN_ERR(svn_fs_dir_entries(&entries, root, abs_path, pool));
+      SVN_ERR(svn_fs_open_node(&node, root, abs_path, FALSE, pool, iterpool));
+      SVN_ERR(svn_fs_dir_entries2(&entries, node, pool, iterpool));
 
       /* Loop over the fs dirents, and build a hash of general
          svn_dirent_t's. */
@@ -1342,14 +1344,14 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
           const void *key;
           void *val;
           const char *datestring, *entryname, *fullpath;
-          svn_fs_dirent_t *fs_entry;
+          svn_fs_dirent2_t *fs_entry;
           svn_dirent_t *entry = svn_dirent_create(pool);
 
           svn_pool_clear(iterpool);
 
           apr_hash_this(hi, &key, NULL, &val);
           entryname = (const char *) key;
-          fs_entry = (svn_fs_dirent_t *) val;
+          fs_entry = (svn_fs_dirent2_t *) val;
 
           fullpath = svn_dirent_join(abs_path, entryname, iterpool);
 
@@ -1365,16 +1367,16 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
               if (entry->kind == svn_node_dir)
                 entry->size = 0;
               else
-                SVN_ERR(svn_fs_file_length(&(entry->size), root,
-                                           fullpath, iterpool));
+                SVN_ERR(svn_fs_file_length2(&(entry->size), fs_entry->node,
+                                            iterpool));
             }
 
           if (dirent_fields & SVN_DIRENT_HAS_PROPS)
             {
               /* has_props? */
-              SVN_ERR(svn_fs_node_has_props(&entry->has_props,
-                                            root, fullpath,
-                                            iterpool));
+              SVN_ERR(svn_fs_node_has_props2(&entry->has_props,
+                                             fs_entry->node,
+                                             iterpool));
             }
 
           if ((dirent_fields & SVN_DIRENT_TIME)
