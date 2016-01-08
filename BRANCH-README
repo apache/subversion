@@ -1,0 +1,28 @@
+This experimental branch is intended to explore the idea of introducing a
+svn_fs_node_t abstraction in the FS API.
+
+The branch should be maintained with catch-up merges from trunk.
+
+The branch is NOT going to be merged to trunk; I'm going to re-implement
+everything in trunk in case we find the svn_fs_node_t API useful.
+
+STATUS
+======
+- Define svn_fs_node_t abstraction
+- Implement compatibility shim implementation for svn_node_t
+- Switch libsvn_repos code to the new API
+- Natively implement svn_fs_node_t in FSFS
+
+PROBLEM
+=======
+Currently, all FS API functions accept an svn_fs_root_t and a PATH as their
+arguments. In order to find the actual node and to retrieve the requested
+information from these arguments, the FS implementation has to perform a
+DAG walk.
+
+PROPOSED SOLUTION
+=================
+The idea is to introduce a svn_fs_node_t abstraction and use it in FS API
+to access certain information about the nodes. Relevant FS functions will
+be revved and will start returning svn_fs_node_t instances instead of node
+paths. This should help to avoid DAG walks.
