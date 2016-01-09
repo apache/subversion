@@ -1633,9 +1633,6 @@ svn_fs_paths_changed(apr_hash_t **changed_paths_p,
  */
 typedef struct svn_fs_node_t svn_fs_node_t;
 
-/** Open the transaction named @a name in the filesystem @a fs.  Set @a *txn
- * to the transaction.
-
 /** Open the node present at @a path under @a root. Set @a *node_p to the node
  * Sets @a *node_p to NULL if @a path does not exist under @a root
  * and @a ignore_enoent is non-zero. Returns error otherwise.
