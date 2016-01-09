@@ -691,8 +691,8 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
          contents which have not changed with respect to" and "has the same
          actual contents as" when sending text-deltas.  If we know the
          delta is an empty one, we avoiding sending it in either case. */
-      SVN_ERR(svn_repos__compare_files(&changed, b->t_root, t_path,
-                                       s_root, s_path, pool));
+      SVN_ERR(svn_fs_contents_different(&changed, b->t_root, t_path,
+                                        s_root, s_path, pool));
 
       if (!changed)
         return SVN_NO_ERROR;
