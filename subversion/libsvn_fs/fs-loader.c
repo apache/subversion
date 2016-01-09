@@ -1054,6 +1054,12 @@ svn_fs_check_path(svn_node_kind_t *kind_p, svn_fs_root_t *root,
   return svn_error_trace(root->vtable->check_path(kind_p, root, path, pool));
 }
 
+svn_fs_t *
+svn_fs_node_fs(svn_fs_node_t *node)
+{
+  return node->fs;
+}
+
 svn_error_t *
 svn_fs_open_node(svn_fs_node_t **node_p,
                  svn_fs_root_t *root,

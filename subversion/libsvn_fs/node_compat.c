@@ -164,6 +164,7 @@ svn_fs__create_node_shim(svn_fs_root_t *root,
   fnd->path = apr_pstrdup(result_pool, path);
   fnd->node_kind = kind;
 
+  node->fs = svn_fs_root_fs(root);
   node->vtable = &compat_node_vtable;
   node->fsap_data = fnd;
 

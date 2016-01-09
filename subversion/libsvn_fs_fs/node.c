@@ -112,6 +112,7 @@ svn_fs_fs__node_create(dag_node_t *dag_node,
   fs_node_data_t *fnd = apr_palloc(result_pool, sizeof(*fnd));
   svn_fs_node_t *node = apr_palloc(result_pool, sizeof(*node));
   fnd->dag_node = dag_node;
+  node->fs = svn_fs_fs__dag_get_fs(dag_node);
   node->vtable = &fs_node_vtable;
   node->fsap_data = fnd;
 

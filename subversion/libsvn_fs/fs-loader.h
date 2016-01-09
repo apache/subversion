@@ -591,6 +591,9 @@ struct svn_fs_lock_target_t
 
 struct svn_fs_node_t
 {
+  /* The filesystem to which this node belongs */
+  svn_fs_t *fs;
+
   /* FSAP-specific vtable and private data */
   const node_vtable_t *vtable;
   void *fsap_data;
