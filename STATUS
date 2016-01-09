@@ -127,12 +127,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1668625
-   Fix 'svn diff --summarize --ignore-properties'.
-   Justification:
-     --ignore-properties option should not be ignored in summarize diff mode.
-   Notes:
-     Doesn't change APIs. Just 'svn'.
-   Votes:
-     +1: stsp, rhuijben, julianfoad
