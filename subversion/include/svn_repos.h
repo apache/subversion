@@ -1672,8 +1672,8 @@ svn_repos_dated_revision(svn_revnum_t *revision,
                          apr_pool_t *pool);
 
 
-/** Given a @a root/@a path within some filesystem, return three pieces of
- * information allocated in @a pool:
+/** Given a @a node within some filesystem, return three pieces of
+ * information allocated in @a result_pool:
  *
  *    - set @a *committed_rev to the revision in which the object was
  *      last modified.  (In fs parlance, this is the revision in which
@@ -1684,6 +1684,23 @@ svn_repos_dated_revision(svn_revnum_t *revision,
  *
  *    - set @a *last_author to the author of said revision, or @c NULL
  *      if not available.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_repos_get_committed_info2(svn_revnum_t *committed_rev,
+                              const char **committed_date,
+                              const char **last_author,
+                              svn_fs_node_t *node,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+
+/**
+ * Same as svn_repos_get_committed_info2(), but reference node by
+ * @a root and @a path.
  */
 svn_error_t *
 svn_repos_get_committed_info(svn_revnum_t *committed_rev,

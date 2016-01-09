@@ -39,6 +39,19 @@ fs_node_kind(svn_node_kind_t *kind_p,
 }
 
 static svn_error_t *
+fs_node_created_rev(svn_revnum_t *revision_p,
+                    svn_fs_node_t *node,
+                    apr_pool_t *scratch_pool)
+{
+  fs_node_data_t *fnd = node->fsap_data;
+
+  SVN_ERR(svn_fs_fs__dag_get_revision(revision_p, fnd->dag_node,
+                                      scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 fs_node_has_props(svn_boolean_t *has_props,
                   svn_fs_node_t *node,
                   apr_pool_t *scratch_pool)
@@ -46,6 +59,20 @@ fs_node_has_props(svn_boolean_t *has_props,
   fs_node_data_t *fnd = node->fsap_data;
 
   SVN_ERR(svn_fs_fs__dag_has_props(has_props, fnd->dag_node, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fs_node_proplist(apr_hash_t **proplist_p,
+                 svn_fs_node_t *node,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  fs_node_data_t *fnd = node->fsap_data;
+
+  SVN_ERR(svn_fs_fs__dag_get_proplist(proplist_p, fnd->dag_node,
+                                      result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -100,7 +127,9 @@ fs_node_dir_entries(apr_hash_t **entries_p,
 static const node_vtable_t fs_node_vtable = 
 {
   fs_node_kind,
+  fs_node_created_rev,
   fs_node_has_props,
+  fs_node_proplist,
   fs_node_file_length,
   fs_node_dir_entries
 };

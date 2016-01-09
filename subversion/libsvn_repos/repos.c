@@ -2083,10 +2083,10 @@ svn_repos_stat(svn_dirent_t **dirent,
 
   SVN_ERR(svn_fs_node_has_props2(&ent->has_props, node, pool));
 
-  SVN_ERR(svn_repos_get_committed_info(&(ent->created_rev),
-                                       &datestring,
-                                       &(ent->last_author),
-                                       root, path, pool));
+  SVN_ERR(svn_repos_get_committed_info2(&(ent->created_rev),
+                                        &datestring,
+                                        &(ent->last_author),
+                                        node, pool, pool));
   if (datestring)
     SVN_ERR(svn_time_from_cstring(&(ent->time), datestring, pool));
 

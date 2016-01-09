@@ -452,13 +452,21 @@ typedef struct id_vtable_t
 
 typedef struct node_vtable_t
 {
+  /* Generic node operations */
   svn_error_t *(*node_kind)(svn_node_kind_t *kind_p,
                             svn_fs_node_t *node,
                             apr_pool_t *scratch_pool);
+  svn_error_t *(*node_created_rev)(svn_revnum_t *revision_p,
+                                   svn_fs_node_t *node,
+                                   apr_pool_t *scratch_pool);
   /* Property operations */
   svn_error_t *(*node_has_props)(svn_boolean_t *has_props,
                                  svn_fs_node_t *node,
                                  apr_pool_t *scratch_pool);
+  svn_error_t *(*node_proplist)(apr_hash_t **proplist_p,
+                                svn_fs_node_t *node,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
   /* Files */
   svn_error_t *(*file_length)(svn_filesize_t *length_p,
                               svn_fs_node_t *node,

@@ -1192,8 +1192,7 @@ svn_ra_local__stat(svn_ra_session_t *session,
 /* Obtain the properties for a node, including its 'entry props */
 static svn_error_t *
 get_node_props(apr_hash_t **props,
-               svn_fs_root_t *root,
-               const char *path,
+               svn_fs_node_t *node,
                const char *uuid,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
@@ -1202,14 +1201,14 @@ get_node_props(apr_hash_t **props,
   const char *cmt_date, *cmt_author;
 
   /* Create a hash with props attached to the fs node. */
-  SVN_ERR(svn_fs_node_proplist(props, root, path, result_pool));
+  SVN_ERR(svn_fs_node_proplist2(props, node, result_pool, scratch_pool));
 
   /* Now add some non-tweakable metadata to the hash as well... */
 
   /* The so-called 'entryprops' with info about CR & friends. */
-  SVN_ERR(svn_repos_get_committed_info(&cmt_rev, &cmt_date,
-                                       &cmt_author, root, path,
-                                       scratch_pool));
+  SVN_ERR(svn_repos_get_committed_info2(&cmt_rev, &cmt_date,
+                                        &cmt_author, node,
+                                        scratch_pool, scratch_pool));
 
   svn_hash_sets(*props, SVN_PROP_ENTRY_COMMITTED_REV,
                 svn_string_createf(result_pool, "%ld", cmt_rev));
@@ -1241,6 +1240,7 @@ svn_ra_local__get_file(svn_ra_session_t *session,
   svn_revnum_t youngest_rev;
   svn_ra_local__session_baton_t *sess = session->priv;
   const char *abs_path = svn_fspath__join(sess->fs_path->data, path, pool);
+  svn_fs_node_t *node;
   svn_node_kind_t node_kind;
 
   /* Open the revision's root. */
@@ -1254,13 +1254,10 @@ svn_ra_local__get_file(svn_ra_session_t *session,
   else
     SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, pool));
 
-  SVN_ERR(svn_fs_check_path(&node_kind, root, abs_path, pool));
-  if (node_kind == svn_node_none)
-    {
-      return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                               _("'%s' path not found"), abs_path);
-    }
-  else if (node_kind != svn_node_file)
+  SVN_ERR(svn_fs_open_node(&node, root, abs_path, FALSE, pool, pool));
+  SVN_ERR(svn_fs_node_kind(&node_kind, node, pool));
+
+  if (node_kind != svn_node_file)
     {
       return svn_error_createf(SVN_ERR_FS_NOT_FILE, NULL,
                                _("'%s' is not a file"), abs_path);
@@ -1292,7 +1289,7 @@ svn_ra_local__get_file(svn_ra_session_t *session,
 
   /* Handle props if requested. */
   if (props)
-    SVN_ERR(get_node_props(props, root, abs_path, sess->uuid, pool, pool));
+    SVN_ERR(get_node_props(props, node, sess->uuid, pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1316,6 +1313,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
   apr_hash_index_t *hi;
   svn_ra_local__session_baton_t *sess = session->priv;
   const char *abs_path = svn_fspath__join(sess->fs_path->data, path, pool);
+  svn_fs_node_t *node = NULL;
 
   /* Open the revision's root. */
   if (! SVN_IS_VALID_REVNUM(revision))
@@ -1328,12 +1326,13 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
   else
     SVN_ERR(svn_fs_revision_root(&root, sess->fs, revision, pool));
 
+  if (dirents || props)
+    SVN_ERR(svn_fs_open_node(&node, root, abs_path, FALSE, pool, pool));
+
   if (dirents)
     {
-      svn_fs_node_t *node;
       apr_pool_t *iterpool = svn_pool_create(pool);
       /* Get the dir's entries. */
-      SVN_ERR(svn_fs_open_node(&node, root, abs_path, FALSE, pool, iterpool));
       SVN_ERR(svn_fs_dir_entries2(&entries, node, pool, iterpool));
 
       /* Loop over the fs dirents, and build a hash of general
@@ -1384,10 +1383,11 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
               || (dirent_fields & SVN_DIRENT_CREATED_REV))
             {
               /* created_rev & friends */
-              SVN_ERR(svn_repos_get_committed_info(&(entry->created_rev),
-                                                   &datestring,
-                                                   &(entry->last_author),
-                                                   root, fullpath, iterpool));
+              SVN_ERR(svn_repos_get_committed_info2(&(entry->created_rev),
+                                                    &datestring,
+                                                    &(entry->last_author),
+                                                    fs_entry->node,
+                                                    iterpool, iterpool));
               if (datestring)
                 SVN_ERR(svn_time_from_cstring(&(entry->time), datestring,
                                               pool));
@@ -1403,7 +1403,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
 
   /* Handle props if requested. */
   if (props)
-    SVN_ERR(get_node_props(props, root, abs_path, sess->uuid, pool, pool));
+    SVN_ERR(get_node_props(props, node, sess->uuid, pool, pool));
 
   return SVN_NO_ERROR;
 }

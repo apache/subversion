@@ -1819,14 +1819,23 @@ svn_fs_node_relation(svn_fs_node_relation_t *relation,
                      apr_pool_t *scratch_pool);
 
 /** Set @a *revision to the revision in which the node-revision identified
- * by @a path under @a root was created; that is, to the revision in which
- * @a path under @a root was last modified.  @a *revision will
- * be set to #SVN_INVALID_REVNUM for uncommitted nodes (i.e. modified nodes
- * under a transaction root).  Note that the root of an unmodified transaction
- * is not itself considered to be modified; in that case, return the revision
- * upon which the transaction was based.
+ * by @a node was created; that is, to the revision in which @a node
+ * was last modified.  @a *revision will be set to #SVN_INVALID_REVNUM
+ * for uncommitted nodes (i.e. modified nodes under a transaction root).
+ * Note that the root of an unmodified transaction is not itself considered
+ * to be modified; in that case, return the revision upon which the
+ * transaction was based.
  *
- * Use @a pool for any temporary allocations.
+ * Use @a scratch_pool for any temporary allocations.
+ */
+svn_error_t *
+svn_fs_node_created_rev2(svn_revnum_t *revision,
+                         svn_fs_node_t *node,
+                         apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_fs_node_created_rev2(), but reference node by @a root and
+ * @a path.
  */
 svn_error_t *
 svn_fs_node_created_rev(svn_revnum_t *revision,
@@ -1874,10 +1883,23 @@ svn_fs_node_prop(svn_string_t **value_p,
                  apr_pool_t *pool);
 
 
-/** Set @a *table_p to the entire property list of @a path in @a root,
+/** Set @a *table_p to the entire property list of node @a node
  * as an APR hash table allocated in @a pool.  The resulting table maps
  * property names to pointers to #svn_string_t objects containing the
- * property value.
+ * property value.  Allocate the result in @a result_pool.  Perform
+ * temporary allocations in @a scratch_pool.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_fs_node_proplist2(apr_hash_t **table_p,
+                      svn_fs_node_t *node,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_fs_node_proplist2(), but reference node by @a root and
+ * @a path.
  */
 svn_error_t *
 svn_fs_node_proplist(apr_hash_t **table_p,

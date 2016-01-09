@@ -1169,6 +1169,14 @@ svn_fs_node_created_rev(svn_revnum_t *revision, svn_fs_root_t *root,
 }
 
 svn_error_t *
+svn_fs_node_created_rev2(svn_revnum_t *revision, svn_fs_node_t *node,
+                         apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(node->vtable->node_created_rev(revision, node,
+                                                        scratch_pool));
+}
+
+svn_error_t *
 svn_fs_node_origin_rev(svn_revnum_t *revision, svn_fs_root_t *root,
                        const char *path, apr_pool_t *pool)
 {
@@ -1198,6 +1206,15 @@ svn_fs_node_proplist(apr_hash_t **table_p, svn_fs_root_t *root,
 {
   return svn_error_trace(root->vtable->node_proplist(table_p, root, path,
                                                      pool));
+}
+
+svn_error_t *
+svn_fs_node_proplist2(apr_hash_t **table_p, svn_fs_node_t *node,
+                      apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(node->vtable->node_proplist(table_p, node,
+                                                     result_pool,
+                                                     scratch_pool));
 }
 
 svn_error_t *

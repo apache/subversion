@@ -151,16 +151,16 @@ svn_repos_dated_revision(svn_revnum_t *revision,
 
 
 svn_error_t *
-svn_repos_get_committed_info(svn_revnum_t *committed_rev,
-                             const char **committed_date,
-                             const char **last_author,
-                             svn_fs_root_t *root,
-                             const char *path,
-                             apr_pool_t *pool)
+svn_repos_get_committed_info2(svn_revnum_t *committed_rev,
+                              const char **committed_date,
+                              const char **last_author,
+                              svn_fs_node_t *node,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
   apr_hash_t *revprops;
 
-  svn_fs_t *fs = svn_fs_root_fs(root);
+  svn_fs_t *fs = svn_fs_node_fs(node);
 
   /* ### It might be simpler just to declare that revision
      properties have char * (i.e., UTF-8) values, not arbitrary
@@ -168,11 +168,11 @@ svn_repos_get_committed_info(svn_revnum_t *committed_rev,
   svn_string_t *committed_date_s, *last_author_s;
 
   /* Get the CR field out of the node's skel. */
-  SVN_ERR(svn_fs_node_created_rev(committed_rev, root, path, pool));
+  SVN_ERR(svn_fs_node_created_rev2(committed_rev, node, scratch_pool));
 
   /* Get the revision properties of this revision. */
   SVN_ERR(svn_fs_revision_proplist2(&revprops, fs, *committed_rev, TRUE,
-                                    pool, pool));
+                                    result_pool, scratch_pool));
 
   /* Extract date and author from these revprops. */
   committed_date_s = svn_hash_gets(revprops, SVN_PROP_REVISION_DATE);
@@ -180,6 +180,23 @@ svn_repos_get_committed_info(svn_revnum_t *committed_rev,
 
   *committed_date = committed_date_s ? committed_date_s->data : NULL;
   *last_author = last_author_s ? last_author_s->data : NULL;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_get_committed_info(svn_revnum_t *committed_rev,
+                             const char **committed_date,
+                             const char **last_author,
+                             svn_fs_root_t *root,
+                             const char *path,
+                             apr_pool_t *pool)
+{
+  svn_fs_node_t *node;
+
+  SVN_ERR(svn_fs_open_node(&node, root, path, FALSE, pool, pool));
+  SVN_ERR(svn_repos_get_committed_info2(committed_rev, committed_date,
+                                        last_author, node, pool, pool));
 
   return SVN_NO_ERROR;
 }
