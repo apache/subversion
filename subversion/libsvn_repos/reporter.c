@@ -671,7 +671,6 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
             const char *s_path, const char *t_path, const char *lock_token,
             apr_pool_t *pool)
 {
-  svn_boolean_t changed;
   svn_fs_root_t *s_root = NULL;
   svn_txdelta_stream_t *dstream = NULL;
   svn_checksum_t *s_checksum;
@@ -685,6 +684,7 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
 
   if (s_path)
     {
+      svn_boolean_t changed;
       SVN_ERR(get_source_root(b, &s_root, s_rev));
 
       /* We're not interested in the theoretical difference between "has
