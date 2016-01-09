@@ -1633,7 +1633,10 @@ svn_fs_paths_changed(apr_hash_t **changed_paths_p,
  */
 typedef struct svn_fs_node_t svn_fs_node_t;
 
-/** Return the filesystem to which @a node belongs.  */
+/** Return the filesystem to which @a node belongs.
+ *
+ * @since New in 1.10.
+ */
 svn_fs_t *
 svn_fs_node_fs(svn_fs_node_t *node);
 
@@ -1642,6 +1645,8 @@ svn_fs_node_fs(svn_fs_node_t *node);
  * and @a ignore_enoent is non-zero. Returns error otherwise.
  * Allocats @a *node_p in @a result_pool. Use @a scratch_pool for temporary
  * allocation.
+ *
+ * @since New in 1.10.
  */
 svn_error_t *
 svn_fs_open_node(svn_fs_node_t **node_p,
@@ -1665,6 +1670,8 @@ svn_fs_check_path(svn_node_kind_t *kind_p,
 
 /** Set @a *kind_p to the type of node @a node.
  * Use @a scratch_pool for temporary allocation.
+ *
+ * @since New in 1.10.
  */
 svn_error_t *
 svn_fs_node_kind(svn_node_kind_t *kind_p,
@@ -1827,6 +1834,8 @@ svn_fs_node_relation(svn_fs_node_relation_t *relation,
  * transaction was based.
  *
  * Use @a scratch_pool for any temporary allocations.
+ *
+ * @since New in 1.10.
  */
 svn_error_t *
 svn_fs_node_created_rev2(svn_revnum_t *revision,
@@ -2337,6 +2346,8 @@ svn_fs_revision_link(svn_fs_root_t *from_root,
 
 /** Set @a *length_p to the length of the file @a node, in bytes.
  * Do any necessary temporary allocation in @a pool.
+ *
+ * @since New in 1.10.
  */
 svn_error_t *
 svn_fs_file_length2(svn_filesize_t *length_p,
