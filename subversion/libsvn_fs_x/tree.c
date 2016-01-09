@@ -3170,6 +3170,7 @@ x_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
 /* The vtable associated with root objects. */
 static root_vtable_t root_vtable = {
   x_paths_changed,
+  NULL /* open_node */,
   svn_fs_x__check_path,
   x_node_history,
   x_node_id,

@@ -303,6 +303,12 @@ typedef struct root_vtable_t
                                 apr_pool_t *pool);
 
   /* Generic node operations */
+  svn_error_t *(*open_node)(svn_fs_node_t **node_p,
+                            svn_fs_root_t *root,
+                            const char *path,
+                            svn_boolean_t ignore_enoent,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
   svn_error_t *(*check_path)(svn_node_kind_t *kind_p, svn_fs_root_t *root,
                              const char *path, apr_pool_t *pool);
   svn_error_t *(*node_history)(svn_fs_history_t **history_p,

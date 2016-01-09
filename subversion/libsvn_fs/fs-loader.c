@@ -1062,13 +1062,14 @@ svn_fs_open_node(svn_fs_node_t **node_p,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-#if 0
   if (root->vtable->open_node)
     {
-      return svn_error_trace(root->vtable->open_node(...));
+      return svn_error_trace(root->vtable->open_node(node_p, root, path,
+                                                     ignore_enoent,
+                                                     result_pool,
+                                                     scratch_pool));
     }
   else
-#endif
     {
       svn_node_kind_t kind;
       SVN_ERR(svn_fs_check_path(&kind, root, path, scratch_pool));
