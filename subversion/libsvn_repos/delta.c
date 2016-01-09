@@ -603,19 +603,6 @@ send_text_delta(struct context *c,
     }
 }
 
-svn_error_t *
-svn_repos__compare_files(svn_boolean_t *changed_p,
-                         svn_fs_root_t *root1,
-                         const char *path1,
-                         svn_fs_root_t *root2,
-                         const char *path2,
-                         apr_pool_t *pool)
-{
-  return svn_error_trace(svn_fs_contents_different(changed_p, root1, path1,
-                                                   root2, path2, pool));
-}
-
-
 /* Make the appropriate edits on FILE_BATON to change its contents and
    properties from those in SOURCE_PATH to those in TARGET_PATH. */
 static svn_error_t *
