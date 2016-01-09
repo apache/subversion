@@ -1483,14 +1483,10 @@ node_kind(svn_node_kind_t *kind_p,
           const char *path,
           apr_pool_t *pool)
 {
-  const svn_fs_id_t *node_id;
   dag_node_t *node;
 
   /* Get the node id. */
-  SVN_ERR(svn_fs_fs__node_id(&node_id, root, path, pool));
-
-  /* Use the node id to get the real kind. */
-  SVN_ERR(svn_fs_fs__dag_get_node(&node, root->fs, node_id, pool));
+  SVN_ERR(get_dag(&node, root, path, pool));
   *kind_p = svn_fs_fs__dag_node_kind(node);
 
   return SVN_NO_ERROR;
