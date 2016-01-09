@@ -1828,7 +1828,7 @@ get_dir(svn_ra_svn_conn_t *conn,
               entry_kind = fsent->kind;
 
           if (dirent_fields & SVN_DIRENT_SIZE)
-              if (entry_kind != svn_node_dir)
+              if (fsent->kind != svn_node_dir)
                 SVN_CMD_ERR(svn_fs_file_length(&entry_size, root, file_path,
                                                subpool));
 
