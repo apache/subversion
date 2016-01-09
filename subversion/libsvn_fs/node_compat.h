@@ -20,7 +20,7 @@
  *    under the License.
  * ====================================================================
  */
-#include <svn_fs.h>
+#include "svn_fs.h"
 
 /* Creates svn_fs_node_t object of the node identified by ROOT + PATH
  * of type KIND.
