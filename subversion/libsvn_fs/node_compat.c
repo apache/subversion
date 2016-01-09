@@ -104,13 +104,14 @@ compat_fs_node_dir_entries(apr_hash_t **entries_p,
   svn_fs_root_t *root;
   apr_hash_t *entries_v1;
   apr_hash_t *entries_v2;
+  apr_hash_index_t *hi;
 
   SVN_ERR(get_root(&root, fnd, scratch_pool));
 
   SVN_ERR(svn_fs_dir_entries(&entries_v1, root, fnd->path, scratch_pool));
 
   entries_v2 = apr_hash_make(result_pool);
-  for (apr_hash_index_t *hi = apr_hash_first(scratch_pool, entries_v1); hi;
+  for (hi = apr_hash_first(scratch_pool, entries_v1); hi;
        hi = apr_hash_next(hi))
     {
       svn_fs_dirent_t *dirent_v1 = apr_hash_this_val(hi);
