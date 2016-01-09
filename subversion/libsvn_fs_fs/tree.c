@@ -62,6 +62,7 @@
 #include "temp_serializer.h"
 #include "transaction.h"
 #include "util.h"
+#include "node.h"
 
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_subr_private.h"
@@ -3281,7 +3282,33 @@ fs_paths_changed(apr_hash_t **changed_paths_p,
 }
 
 
-
+static svn_error_t *
+fs_open_node(svn_fs_node_t **node_p,
+             svn_fs_root_t *root,
+             const char *path,
+             svn_boolean_t ignore_enoent,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  dag_node_t *node;
+  svn_error_t *err;
+
+  err = get_dag(&node, root, path, result_pool);
+  if (ignore_enoent && err &&
+      ((err->apr_err == SVN_ERR_FS_NOT_FOUND)
+       || (err->apr_err == SVN_ERR_FS_NOT_DIRECTORY)))
+    {
+      svn_error_clear(err);
+      *node_p = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+
+  *node_p = svn_fs_fs__node_create(node, result_pool);
+  return SVN_NO_ERROR;
+}
+
 /* Our coolio opaque history object. */
 typedef struct fs_history_data_t
 {
@@ -4325,7 +4352,7 @@ fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
 /* The vtable associated with root objects. */
 static root_vtable_t root_vtable = {
   fs_paths_changed,
-  NULL /* open_node */,
+  fs_open_node,
   svn_fs_fs__check_path,
   fs_node_history,
   svn_fs_fs__node_id,
