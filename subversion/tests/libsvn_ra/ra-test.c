@@ -603,6 +603,7 @@ get_dir_test(const svn_test_opts_t *opts,
 {
   svn_ra_session_t *session;
   apr_hash_t *dirents;
+  svn_dirent_t *ent;
 
   SVN_ERR(make_and_open_repos(&session, "test-get-dir", opts, pool));
   SVN_ERR(commit_tree(session, pool));
@@ -612,6 +613,14 @@ get_dir_test(const svn_test_opts_t *opts,
                                         "non/existing/relpath", 1,
                                         SVN_DIRENT_KIND, pool),
                         SVN_ERR_FS_NOT_FOUND);
+
+  /* Test fetching SVN_DIRENT_SIZE without SVN_DIRENT_KIND. */
+  SVN_ERR(svn_ra_get_dir2(session, &dirents, NULL, NULL, "", 1,
+                          SVN_DIRENT_SIZE, pool));
+  SVN_TEST_INT_ASSERT(apr_hash_count(dirents), 1);
+  ent = svn_hash_gets(dirents, "A");
+  SVN_TEST_ASSERT(ent);
+  SVN_TEST_INT_ASSERT(ent->size, 0);
 
   return SVN_NO_ERROR;
 }
