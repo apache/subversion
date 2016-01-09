@@ -1474,25 +1474,6 @@ fs_node_created_path(const char **created_path,
   return SVN_NO_ERROR;
 }
 
-
-/* Set *KIND_P to the type of node located at PATH under ROOT.
-   Perform temporary allocations in POOL. */
-static svn_error_t *
-node_kind(svn_node_kind_t *kind_p,
-          svn_fs_root_t *root,
-          const char *path,
-          apr_pool_t *pool)
-{
-  dag_node_t *node;
-
-  /* Get the node id. */
-  SVN_ERR(get_dag(&node, root, path, pool));
-  *kind_p = svn_fs_fs__dag_node_kind(node);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Set *KIND_P to the type of node present at PATH under ROOT.  If
    PATH does not exist under ROOT, set *KIND_P to svn_node_none.  Use
    POOL for temporary allocation. */
@@ -1502,17 +1483,23 @@ svn_fs_fs__check_path(svn_node_kind_t *kind_p,
                       const char *path,
                       apr_pool_t *pool)
 {
-  svn_error_t *err = node_kind(kind_p, root, path, pool);
+  dag_node_t *node;
+  svn_error_t *err;
+
+  err = get_dag(&node, root, path, pool);
   if (err &&
       ((err->apr_err == SVN_ERR_FS_NOT_FOUND)
        || (err->apr_err == SVN_ERR_FS_NOT_DIRECTORY)))
     {
       svn_error_clear(err);
-      err = SVN_NO_ERROR;
       *kind_p = svn_node_none;
+      return SVN_NO_ERROR;
     }
+  else if (err)
+    return svn_error_trace(err);
 
-  return svn_error_trace(err);
+  *kind_p = svn_fs_fs__dag_node_kind(node);
+  return SVN_NO_ERROR;
 }
 
 /* Set *VALUE_P to the value of the property named PROPNAME of PATH in
