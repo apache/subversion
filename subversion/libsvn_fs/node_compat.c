@@ -66,6 +66,26 @@ compat_fs_node_kind(svn_node_kind_t *kind_p,
 }
 
 static svn_error_t *
+compat_fs_node_relation(svn_fs_node_relation_t *relation_p,
+                        svn_fs_node_t *node_a,
+                        svn_fs_node_t *node_b,
+                        apr_pool_t *scratch_pool)
+{
+  compat_node_data_t *fnd_a = node_a->fsap_data;
+  compat_node_data_t *fnd_b = node_b->fsap_data;
+  svn_fs_root_t *root_a;
+  svn_fs_root_t *root_b;
+
+  SVN_ERR(get_root(&root_a, fnd_a, scratch_pool));
+  SVN_ERR(get_root(&root_b, fnd_b, scratch_pool));
+
+  return svn_error_trace(root_a->vtable->node_relation(relation_p,
+                                                       root_a, fnd_a->path,
+                                                       root_b, fnd_b->path,
+                                                       scratch_pool));
+}
+
+static svn_error_t *
 compat_fs_node_created_rev(svn_revnum_t *revision_p,
                            svn_fs_node_t *node,
                            apr_pool_t *scratch_pool)
@@ -109,6 +129,28 @@ compat_fs_node_proplist(apr_hash_t **proplist_p,
 }
 
 static svn_error_t *
+compat_fs_node_props_changed(int *changed_p,
+                             svn_fs_node_t *node1,
+                             svn_fs_node_t *node2,
+                             svn_boolean_t strict,
+                             apr_pool_t *scratch_pool)
+{
+  compat_node_data_t *fnd1 = node1->fsap_data;
+  compat_node_data_t *fnd2 = node2->fsap_data;
+  svn_fs_root_t *root1;
+  svn_fs_root_t *root2;
+
+  SVN_ERR(get_root(&root1, fnd1, scratch_pool));
+  SVN_ERR(get_root(&root2, fnd2, scratch_pool));
+
+  return svn_error_trace(root1->vtable->props_changed(changed_p,
+                                                      root1, fnd1->path,
+                                                      root2, fnd2->path,
+                                                      strict,
+                                                      scratch_pool));
+}
+
+static svn_error_t *
 compat_fs_node_file_length(svn_filesize_t *length_p,
                            svn_fs_node_t *node,
                            apr_pool_t *pool)
@@ -121,6 +163,59 @@ compat_fs_node_file_length(svn_filesize_t *length_p,
   return svn_error_trace(root->vtable->file_length(length_p, root,
                                                    fnd->path,
                                                    pool));
+}
+
+static svn_error_t *
+compat_fs_node_file_checksum(svn_checksum_t **checksum_p,
+                             svn_checksum_kind_t kind,
+                             svn_fs_node_t *node,
+                             apr_pool_t *pool)
+{
+  compat_node_data_t *fnd = node->fsap_data;
+  svn_fs_root_t *root;
+
+  SVN_ERR(get_root(&root, fnd, pool));
+
+  return svn_error_trace(root->vtable->file_checksum(checksum_p, kind,
+                                                     root, fnd->path,
+                                                     pool));
+}
+
+static svn_error_t *
+compat_fs_node_file_contents(svn_stream_t **contents_p,
+                             svn_fs_node_t *node,
+                             apr_pool_t *pool)
+{
+  compat_node_data_t *fnd = node->fsap_data;
+  svn_fs_root_t *root;
+
+  SVN_ERR(get_root(&root, fnd, pool));
+
+  return svn_error_trace(root->vtable->file_contents(contents_p,
+                                                     root, fnd->path,
+                                                     pool));
+}
+
+static svn_error_t *
+compat_fs_node_contents_changed(int *changed_p,
+                                svn_fs_node_t *node1,
+                                svn_fs_node_t *node2,
+                                svn_boolean_t strict,
+                                apr_pool_t *scratch_pool)
+{
+  compat_node_data_t *fnd1 = node1->fsap_data;
+  compat_node_data_t *fnd2 = node2->fsap_data;
+  svn_fs_root_t *root1;
+  svn_fs_root_t *root2;
+
+  SVN_ERR(get_root(&root1, fnd1, scratch_pool));
+  SVN_ERR(get_root(&root2, fnd2, scratch_pool));
+
+  return svn_error_trace(root1->vtable->contents_changed(changed_p,
+                                                         root1, fnd1->path,
+                                                         root2, fnd2->path,
+                                                         strict,
+                                                         scratch_pool));
 }
 
 static svn_error_t *
@@ -164,10 +259,15 @@ compat_fs_node_dir_entries(apr_hash_t **entries_p,
 static const node_vtable_t compat_node_vtable = 
 {
   compat_fs_node_kind,
+  compat_fs_node_relation,
   compat_fs_node_created_rev,
   compat_fs_node_has_props,
   compat_fs_node_proplist,
+  compat_fs_node_props_changed,
   compat_fs_node_file_length,
+  compat_fs_node_file_checksum,
+  compat_fs_node_file_contents,
+  compat_fs_node_contents_changed,
   compat_fs_node_dir_entries
 };
 

@@ -1806,14 +1806,26 @@ svn_fs_node_id(const svn_fs_id_t **id_p,
                const char *path,
                apr_pool_t *pool);
 
-/** Determine how @a path_a under @a root_a and @a path_b under @a root_b
- * are related and return the result in @a relation.  There is no restriction
- * concerning the roots: They may refer to different repositories, be in
- * arbitrary revision order and any of them may pertain to a transaction.
+/** Determine how @a node_a and @a node_b are related and return the result in
+ * @a relation.  There is no restriction concerning the nodes: They may refer
+ * to different repositories, be in arbitrary revision order and any of them
+ * may pertain to a transaction.
  * @a scratch_pool is used for temporary allocations.
  *
- * @note Paths from different svn_fs_t will be reported as unrelated even
+ * @note Nodes from different svn_fs_t will be reported as unrelated even
  * if the underlying physical repository is the same.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_fs_node_relation2(svn_fs_node_relation_t *relation,
+                      svn_fs_node_t *node_a,
+                      svn_fs_node_t *node_b,
+                      apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_fs_node_relation2(), but reference nodes by @a root_a,
+ * @a path_a, @a root_b and @a path_b.
  *
  * @since New in 1.9.
  */
@@ -1960,20 +1972,31 @@ svn_fs_change_node_prop(svn_fs_root_t *root,
 
 /** Determine if the properties of two path/root combinations are different.
  *
- * Set @a *different_p to #TRUE if the properties at @a path1 under @a root1
- * differ from those at @a path2 under @a root2, or set it to #FALSE if they
- * are the same.  Both paths must exist under their respective roots, and
- * both roots must be in the same filesystem.
- * Do any necessary temporary allocation in @a scratch_pool.
+ * Set @a *different_p to #TRUE if the properties at @a node1 differ from
+ * those at @a node2, or set it to #FALSE if they are the same.  Both nodes
+ * must be in the same filesystem.  Do any necessary temporary allocation in
+ * @a scratch_pool.
  *
  * @note For the purposes of preserving accurate history, certain bits of
  * code (such as the repository dump code) need to care about the distinction
  * between situations when the properties are "different" and "have changed
  * across two points in history".  We have a pair of functions that can
- * answer both of these questions, svn_fs_props_different() and
+ * answer both of these questions, svn_fs_props_different2() and
  * svn_fs_props_changed().  See issue 4598 for more details.
  *
  * @see svn_fs_props_changed
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_fs_props_different2(svn_boolean_t *different_p,
+                        svn_fs_node_t *node1,
+                        svn_fs_node_t *node2,
+                        apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_fs_props_different2(), but reference nodes by @a root1,
+ * @a path1, @a root2 and @a path2.
  *
  * @since New in 1.9.
  */
@@ -2365,12 +2388,12 @@ svn_fs_file_length(svn_filesize_t *length_p,
                    apr_pool_t *pool);
 
 
-/** Set @a *checksum to the checksum of type @a kind for the file @a path.
+/** Set @a *checksum to the checksum of type @a kind for the file @a node.
  * @a *checksum will be allocated out of @a pool, which will also be used
  * for temporary allocations.
  *
  * If the filesystem does not have a prerecorded checksum of @a kind for
- * @a path, and @a force is not TRUE, do not calculate a checksum
+ * @a node, and @a force is not TRUE, do not calculate a checksum
  * dynamically, just put NULL into @a checksum.  (By convention, the NULL
  * checksum is considered to match any checksum.)
  *
@@ -2399,6 +2422,17 @@ svn_fs_file_length(svn_filesize_t *length_p,
  * @since New in 1.6.
  */
 svn_error_t *
+svn_fs_file_checksum2(svn_checksum_t **checksum,
+                      svn_checksum_kind_t kind,
+                      svn_fs_node_t *root,
+                      svn_boolean_t force,
+                      apr_pool_t *pool);
+
+/**
+ * Same as svn_fs_file_checksum2(), but reference node by @a root and
+ * @a path.
+ */
+svn_error_t *
 svn_fs_file_checksum(svn_checksum_t **checksum,
                      svn_checksum_kind_t kind,
                      svn_fs_root_t *root,
@@ -2422,19 +2456,27 @@ svn_fs_file_md5_checksum(unsigned char digest[],
 
 
 /** Set @a *contents to a readable generic stream that will yield the
- * contents of the file @a path in @a root.  Allocate the stream in
- * @a pool.  You can only use @a *contents for as long as the underlying
- * filesystem is open.  If @a path is not a file, return
+ * contents of the file node @a node.  Allocate the stream in @a pool.
+ * You can only use @a *contents for as long as the underlying
+ * filesystem is open.  If @a node is not a file, return
  * #SVN_ERR_FS_NOT_FILE.
  *
- * If @a root is the root of a transaction, it is possible that the
- * contents of the file @a path will change between calls to
- * svn_fs_file_contents().  In that case, the result of reading from
- * @a *contents is undefined.
+ * If @a node is in transaction, it is possible that the contents of
+ * the file will change between calls to svn_fs_file_contents().
+ * In that case, the result of reading from @a *contents is undefined.
  *
  * ### @todo kff: I am worried about lifetime issues with this pool vs
  * the trail created farther down the call stack.  Trace this function
  * to investigate...
+ */
+svn_error_t *
+svn_fs_file_contents2(svn_stream_t **contents,
+                      svn_fs_node_t *node,
+                      apr_pool_t *pool);
+
+/**
+ * Same as svn_fs_file_contents2(), but reference node by @a root and
+ * @a path.
  */
 svn_error_t *
 svn_fs_file_contents(svn_stream_t **contents,
@@ -2567,23 +2609,34 @@ svn_fs_apply_text(svn_stream_t **contents_p,
                   apr_pool_t *pool);
 
 
-/** Check if the contents of two root/path combos are different.
+/** Check if the contents of two filesystem nodes are different.
  *
- * Set @a *different_p to #TRUE if the file contents at @a path1 under
- * @a root1 differ from those at @a path2 under @a root2, or set it to
- * #FALSE if they are the same.  Both paths must exist under their
- * respective roots, and both roots must be in the same filesystem.
- * Do any necessary temporary allocation in @a scratch_pool.
+ * Set @a *different_p to #TRUE if the file contents at @a node1 differ
+ * from those at @a node2, or set it to #FALSE if they are the same.
+ * Both nodes must be in the same filesystem.  Do any necessary
+ * temporary allocation in @a scratch_pool.
  *
  * @note For the purposes of preserving accurate history, certain bits of
  * code (such as the repository dump code) need to care about the distinction
  * between situations when two files have "different" content and when the
  * contents of a given file "have changed" across two points in its history.
  * We have a pair of functions that can answer both of these questions,
- * svn_fs_contents_different() and svn_fs_contents_changed().  See issue
+ * svn_fs_contents_different2() and svn_fs_contents_changed().  See issue
  * 4598 for more details.
  *
  * @see svn_fs_contents_changed
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_fs_contents_different2(svn_boolean_t *different_p,
+                           svn_fs_node_t *node1,
+                           svn_fs_node_t *node2,
+                           apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_fs_contents_different(), but reference nodes by @a root1,
+ * @a path1, @a root2 and @a path2.
  *
  * @since New in 1.9.
  */

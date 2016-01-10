@@ -1161,6 +1161,24 @@ svn_fs_node_relation(svn_fs_node_relation_t *relation,
 }
 
 svn_error_t *
+svn_fs_node_relation2(svn_fs_node_relation_t *relation,
+                      svn_fs_node_t *node_a,
+                      svn_fs_node_t *node_b,
+                      apr_pool_t *scratch_pool)
+{
+  /* Different repository types? */
+  if (node_a->fs != node_b->fs)
+    {
+      *relation = svn_fs_node_unrelated;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_trace(node_a->vtable->node_relation(relation,
+                                                       node_a, node_b,
+                                                       scratch_pool));
+}
+
+svn_error_t *
 svn_fs_node_created_rev(svn_revnum_t *revision, svn_fs_root_t *root,
                         const char *path, apr_pool_t *pool)
 {
@@ -1254,6 +1272,18 @@ svn_fs_props_different(svn_boolean_t *changed_p, svn_fs_root_t *root1,
                                                       root1, path1,
                                                       root2, path2,
                                                       TRUE, scratch_pool));
+}
+
+svn_error_t *
+svn_fs_props_different2(svn_boolean_t *different_p,
+                        svn_fs_node_t *node1,
+                        svn_fs_node_t *node2,
+                        apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(node1->vtable->props_changed(different_p,
+                                                      node1, node2,
+                                                      TRUE,
+                                                      scratch_pool));
 }
 
 svn_error_t *
@@ -1439,11 +1469,43 @@ svn_fs_file_checksum(svn_checksum_t **checksum,
 }
 
 svn_error_t *
+svn_fs_file_checksum2(svn_checksum_t **checksum,
+                      svn_checksum_kind_t kind,
+                      svn_fs_node_t *node,
+                      svn_boolean_t force,
+                      apr_pool_t *pool)
+{
+  SVN_ERR(node->vtable->file_checksum(checksum, kind, node, pool));
+
+  if (force && (*checksum == NULL || (*checksum)->kind != kind))
+    {
+      svn_stream_t *contents, *checksum_contents;
+
+      SVN_ERR(svn_fs_file_contents2(&contents, node, pool));
+      checksum_contents = svn_stream_checksummed2(contents, checksum, NULL,
+                                                  kind, TRUE, pool);
+
+      /* This will force a read of any remaining data (which is all of it in
+         this case) and dump the checksum into checksum->digest. */
+      SVN_ERR(svn_stream_close(checksum_contents));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_file_contents(svn_stream_t **contents, svn_fs_root_t *root,
                      const char *path, apr_pool_t *pool)
 {
   return svn_error_trace(root->vtable->file_contents(contents, root, path,
                                                      pool));
+}
+
+svn_error_t *
+svn_fs_file_contents2(svn_stream_t **contents, svn_fs_node_t *node,
+                      apr_pool_t *pool)
+{
+  return svn_error_trace(node->vtable->file_contents(contents, node, pool));
 }
 
 svn_error_t *
@@ -1522,6 +1584,18 @@ svn_fs_contents_different(svn_boolean_t *changed_p, svn_fs_root_t *root1,
   return svn_error_trace(root1->vtable->contents_changed(changed_p,
                                                          root1, path1,
                                                          root2, path2,
+                                                         TRUE,
+                                                         scratch_pool));
+}
+
+svn_error_t *
+svn_fs_contents_different2(svn_boolean_t *different_p,
+                           svn_fs_node_t *node1,
+                           svn_fs_node_t *node2,
+                           apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(node1->vtable->contents_changed(different_p,
+                                                         node1, node2,
                                                          TRUE,
                                                          scratch_pool));
 }

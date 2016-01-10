@@ -456,6 +456,10 @@ typedef struct node_vtable_t
   svn_error_t *(*node_kind)(svn_node_kind_t *kind_p,
                             svn_fs_node_t *node,
                             apr_pool_t *scratch_pool);
+  svn_error_t *(*node_relation)(svn_fs_node_relation_t *relation_p,
+                                svn_fs_node_t *node_a,
+                                svn_fs_node_t *node_b,
+                                apr_pool_t *scratch_pool);
   svn_error_t *(*node_created_rev)(svn_revnum_t *revision_p,
                                    svn_fs_node_t *node,
                                    apr_pool_t *scratch_pool);
@@ -467,10 +471,28 @@ typedef struct node_vtable_t
                                 svn_fs_node_t *node,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
+  svn_error_t *(*props_changed)(int *changed_p,
+                                svn_fs_node_t *node1,
+                                svn_fs_node_t *node2,
+                                svn_boolean_t strict,
+                                apr_pool_t *scratch_pool);
   /* Files */
   svn_error_t *(*file_length)(svn_filesize_t *length_p,
                               svn_fs_node_t *node,
                               apr_pool_t *pool);
+  svn_error_t *(*file_checksum)(svn_checksum_t **checksum_p,
+                                svn_checksum_kind_t kind,
+                                svn_fs_node_t *node,
+                                apr_pool_t *pool);
+  svn_error_t *(*file_contents)(svn_stream_t **contents_p,
+                                svn_fs_node_t *node,
+                                apr_pool_t *pool);
+  svn_error_t *(*contents_changed)(int *changed_p,
+                                   svn_fs_node_t *node1,
+                                   svn_fs_node_t *node2,
+                                   svn_boolean_t strict,
+                                   apr_pool_t *scratch_pool);
+
   /* Directories */
   svn_error_t *(*dir_entries)(apr_hash_t **entries_p,
                               svn_fs_node_t *node,

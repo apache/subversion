@@ -4274,7 +4274,10 @@ check_related(const svn_test_opts_t *opts,
             const svn_fs_id_t *id1, *id2;
             int related = 0;
             svn_fs_node_relation_t relation;
+            svn_fs_node_relation_t relation2;
             svn_fs_root_t *rev_root1, *rev_root2;
+            svn_fs_node_t *node1;
+            svn_fs_node_t *node2;
 
             /* Get the ID for the first path/revision combination. */
             SVN_ERR(svn_fs_revision_root(&rev_root1, fs, pr1.rev, subpool));
@@ -4337,6 +4340,14 @@ check_related(const svn_test_opts_t *opts,
                    pr1.path, (int)pr1.rev, pr2.path, (int)pr2.rev);
               }
 
+            /* Try svn_fs_node_relation2() as well. */
+            SVN_ERR(svn_fs_open_node(&node1, rev_root1, pr1.path,
+                                     FALSE, subpool, subpool));
+            SVN_ERR(svn_fs_open_node(&node2, rev_root2, pr2.path,
+                                     FALSE, subpool, subpool));
+            SVN_ERR(svn_fs_node_relation2(&relation2, node1, node2, subpool));
+            SVN_TEST_INT_ASSERT(relation2, relation);
+
             svn_pool_clear(subpool);
           } /* for ... */
       } /* for ... */
@@ -4349,6 +4360,8 @@ check_related(const svn_test_opts_t *opts,
         svn_fs_root_t *latest_root;
         svn_revnum_t rev;
         svn_fs_node_relation_t relation;
+        svn_fs_node_t *node1;
+        svn_fs_node_t *node2;
 
         /* FS root of the latest change. */
         svn_pool_clear(subpool);
@@ -4371,6 +4384,14 @@ check_related(const svn_test_opts_t *opts,
                   " it was not",
                   path, (int)latest, path, (int)rev);
               }
+
+            /* Try svn_fs_node_relation2() as well. */
+            SVN_ERR(svn_fs_open_node(&node1, latest_root, path,
+                                     FALSE, subpool, subpool));
+            SVN_ERR(svn_fs_open_node(&node2, rev_root, path,
+                                     FALSE, subpool, subpool));
+            SVN_ERR(svn_fs_node_relation2(&relation, node1, node2, subpool));
+            SVN_TEST_INT_ASSERT(relation, svn_fs_node_unchanged);
           } /* for ... */
       } /* for ... */
   }
@@ -4493,6 +4514,9 @@ check_txn_related(const svn_test_opts_t *opts,
             const svn_fs_id_t *id1, *id2;
             int related = 0;
             svn_fs_node_relation_t relation;
+            svn_fs_node_relation_t relation2;
+            svn_fs_node_t *node1;
+            svn_fs_node_t *node2;
 
             svn_pool_clear(subpool);
 
@@ -4554,6 +4578,14 @@ check_txn_related(const svn_test_opts_t *opts,
                    "expected '%s-%d' to not be related to '%s-%d'; it was",
                    pr1.path, pr1.root, pr2.path, pr2.root);
               }
+
+            /* Try svn_fs_node_relation2() as well. */
+            SVN_ERR(svn_fs_open_node(&node1, root[pr1.root], pr1.path,
+                                     FALSE, subpool, subpool));
+            SVN_ERR(svn_fs_open_node(&node2, root[pr2.root], pr2.path,
+                                     FALSE, subpool, subpool));
+            SVN_ERR(svn_fs_node_relation2(&relation2, node1, node2, subpool));
+            SVN_TEST_INT_ASSERT(relation2, relation);
           } /* for ... */
       } /* for ... */
 
@@ -4562,6 +4594,9 @@ check_txn_related(const svn_test_opts_t *opts,
     for (i = 1; i <= 2; ++i)
       {
         svn_fs_node_relation_t relation;
+        svn_fs_node_t *node1;
+        svn_fs_node_t *node2;
+
         svn_pool_clear(subpool);
 
         /* Query their noderev relationship to the latest change. */
@@ -4575,6 +4610,14 @@ check_txn_related(const svn_test_opts_t *opts,
               (SVN_ERR_TEST_FAILED, NULL,
               "expected 'D-%d' to be the same as 'D-0'; it was not", i);
           }
+
+        /* Try svn_fs_node_relation2() as well. */
+        SVN_ERR(svn_fs_open_node(&node1, root[i], "D",
+                                 FALSE, subpool, subpool));
+        SVN_ERR(svn_fs_open_node(&node2, root[0], "D",
+                                 FALSE, subpool, subpool));
+        SVN_ERR(svn_fs_node_relation2(&relation, node1, node2, subpool));
+        SVN_TEST_INT_ASSERT(relation, svn_fs_node_unchanged);
       } /* for ... */
   }
 

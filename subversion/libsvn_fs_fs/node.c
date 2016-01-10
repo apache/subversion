@@ -39,6 +39,24 @@ fs_node_kind(svn_node_kind_t *kind_p,
 }
 
 static svn_error_t *
+fs_node_relation(svn_fs_node_relation_t *relation_p,
+                 svn_fs_node_t *node_a,
+                 svn_fs_node_t *node_b,
+                 apr_pool_t *scratch_pool)
+{
+  fs_node_data_t *fnd_a = node_a->fsap_data;
+  fs_node_data_t *fnd_b = node_b->fsap_data;
+  const svn_fs_id_t *id_a;
+  const svn_fs_id_t *id_b;
+
+  id_a = svn_fs_fs__dag_get_id(fnd_a->dag_node);
+  id_b = svn_fs_fs__dag_get_id(fnd_b->dag_node);
+
+  *relation_p = svn_fs_fs__id_compare(id_a, id_b);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 fs_node_created_rev(svn_revnum_t *revision_p,
                     svn_fs_node_t *node,
                     apr_pool_t *scratch_pool)
@@ -78,6 +96,23 @@ fs_node_proplist(apr_hash_t **proplist_p,
 }
 
 static svn_error_t *
+fs_node_props_changed(int *changed_p,
+                      svn_fs_node_t *node1,
+                      svn_fs_node_t *node2,
+                      svn_boolean_t strict,
+                      apr_pool_t *scratch_pool)
+{
+  fs_node_data_t *fnd1 = node1->fsap_data;
+  fs_node_data_t *fnd2 = node2->fsap_data;
+
+  SVN_ERR(svn_fs_fs__dag_things_different(changed_p, NULL,
+                                          fnd1->dag_node, fnd2->dag_node,
+                                          strict, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 fs_node_file_length(svn_filesize_t *length_p,
                            svn_fs_node_t *node,
                            apr_pool_t *pool)
@@ -85,6 +120,49 @@ fs_node_file_length(svn_filesize_t *length_p,
   fs_node_data_t *fnd = node->fsap_data;
 
   SVN_ERR(svn_fs_fs__dag_file_length(length_p, fnd->dag_node, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fs_node_file_checksum(svn_checksum_t **checksum_p,
+                      svn_checksum_kind_t kind,
+                      svn_fs_node_t *node,
+                      apr_pool_t *pool)
+{
+  fs_node_data_t *fnd = node->fsap_data;
+
+  SVN_ERR(svn_fs_fs__dag_file_checksum(checksum_p, fnd->dag_node, kind,
+                                       pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fs_node_file_contents(svn_stream_t **contents_p,
+                      svn_fs_node_t *node,
+                      apr_pool_t *pool)
+{
+  fs_node_data_t *fnd = node->fsap_data;
+
+  SVN_ERR(svn_fs_fs__dag_get_contents(contents_p, fnd->dag_node, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fs_node_contents_changed(int *changed_p,
+                         svn_fs_node_t *node1,
+                         svn_fs_node_t *node2,
+                         svn_boolean_t strict,
+                         apr_pool_t *scratch_pool)
+{
+  fs_node_data_t *fnd1 = node1->fsap_data;
+  fs_node_data_t *fnd2 = node2->fsap_data;
+
+  SVN_ERR(svn_fs_fs__dag_things_different(NULL, changed_p,
+                                          fnd1->dag_node, fnd2->dag_node,
+                                          strict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -127,10 +205,15 @@ fs_node_dir_entries(apr_hash_t **entries_p,
 static const node_vtable_t fs_node_vtable = 
 {
   fs_node_kind,
+  fs_node_relation,
   fs_node_created_rev,
   fs_node_has_props,
   fs_node_proplist,
+  fs_node_props_changed,
   fs_node_file_length,
+  fs_node_file_checksum,
+  fs_node_file_contents,
+  fs_node_contents_changed,
   fs_node_dir_entries
 };
 
