@@ -156,7 +156,8 @@ typedef svn_error_t *proplist_change_fn_t(report_baton_t *b, void *object,
                                           apr_pool_t *pool);
 
 static svn_error_t *delta_dirs(report_baton_t *b, svn_revnum_t s_rev,
-                               const char *s_path, const char *t_path,
+                               const char *s_path, svn_fs_node_t *s_node,
+                               const char *t_path, svn_fs_node_t *t_node,
                                void *dir_baton, const char *e_path,
                                svn_boolean_t start_empty,
                                svn_depth_t wc_depth,
@@ -510,22 +511,22 @@ get_revision_info(report_baton_t *b,
 
 
 /* Generate the appropriate property editing calls to turn the
-   properties of S_REV/S_PATH into those of B->t_root/T_PATH.  If
-   S_PATH is NULL, this is an add, so assume the target starts with no
-   properties.  Pass OBJECT on to the editor function wrapper
-   CHANGE_FN. */
+   properties of S_NODE into those of T_NODE/T_PATH.  If S_NODE is NULL,
+   this is an add, so assume the target starts with no properties.
+   Pass OBJECT on to the editor function wrapper CHANGE_FN. */
 static svn_error_t *
-delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
-                const char *t_path, const char *lock_token,
+delta_proplists(report_baton_t *b,
+                svn_fs_node_t *s_node,
+                const char *t_path, svn_fs_node_t *t_node,
+                const char *lock_token,
                 proplist_change_fn_t *change_fn,
                 void *object, apr_pool_t *pool)
 {
-  svn_fs_root_t *s_root;
   apr_hash_t *s_props = NULL, *t_props;
   svn_revnum_t crev;
 
   /* Fetch the created-rev and send entry props. */
-  SVN_ERR(svn_fs_node_created_rev(&crev, b->t_root, t_path, pool));
+  SVN_ERR(svn_fs_node_created_rev2(&crev, t_node, pool));
   if (SVN_IS_VALID_REVNUM(crev))
     {
       revision_info_t *revision_info;
@@ -542,12 +543,12 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       SVN_ERR(get_revision_info(b, crev, &revision_info, pool));
 
       /* Transmit the committed-date. */
-      if (revision_info->date || s_path)
+      if (revision_info->date || s_node)
         SVN_ERR(change_fn(b, object, SVN_PROP_ENTRY_COMMITTED_DATE,
                           revision_info->date, pool));
 
       /* Transmit the last-author. */
-      if (revision_info->author || s_path)
+      if (revision_info->author || s_node)
         SVN_ERR(change_fn(b, object, SVN_PROP_ENTRY_LAST_AUTHOR,
                           revision_info->author, pool));
 
@@ -568,23 +569,21 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                           NULL, pool));
     }
 
-  if (s_path)
+  if (s_node)
     {
       svn_boolean_t changed;
-      SVN_ERR(get_source_root(b, &s_root, s_rev));
 
       /* Is this deltification worth our time? */
-      SVN_ERR(svn_fs_props_different(&changed, b->t_root, t_path, s_root,
-                                     s_path, pool));
+      SVN_ERR(svn_fs_props_different2(&changed, t_node, s_node, pool));
       if (! changed)
         return SVN_NO_ERROR;
 
       /* If so, go ahead and get the source path's properties. */
-      SVN_ERR(svn_fs_node_proplist(&s_props, s_root, s_path, pool));
+      SVN_ERR(svn_fs_node_proplist2(&s_props, s_node, pool, pool));
     }
 
   /* Get the target path's properties */
-  SVN_ERR(svn_fs_node_proplist(&t_props, b->t_root, t_path, pool));
+  SVN_ERR(svn_fs_node_proplist2(&t_props, t_node, pool, pool));
 
   if (s_props && apr_hash_count(s_props))
     {
@@ -663,15 +662,15 @@ send_zero_copy_delta(const unsigned char *contents,
 
 
 /* Make the appropriate edits on FILE_BATON to change its contents and
-   properties from those in S_REV/S_PATH to those in B->t_root/T_PATH,
+   properties from those in S_NODE/S_PATH to those in T_NODE/T_PATH,
    possibly using LOCK_TOKEN to determine if the client's lock on the file
    is defunct. */
 static svn_error_t *
 delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
-            const char *s_path, const char *t_path, const char *lock_token,
-            apr_pool_t *pool)
+            const char *s_path, svn_fs_node_t *s_node,
+            const char *t_path, svn_fs_node_t *t_node,
+            const char *lock_token, apr_pool_t *pool)
 {
-  svn_fs_root_t *s_root = NULL;
   svn_txdelta_stream_t *dstream = NULL;
   svn_checksum_t *s_checksum;
   const char *s_hex_digest = NULL;
@@ -679,26 +678,24 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
   void *dbaton;
 
   /* Compare the files' property lists.  */
-  SVN_ERR(delta_proplists(b, s_rev, s_path, t_path, lock_token,
+  SVN_ERR(delta_proplists(b, s_node, t_path, t_node, lock_token,
                           change_file_prop, file_baton, pool));
 
   if (s_path)
     {
       svn_boolean_t changed;
-      SVN_ERR(get_source_root(b, &s_root, s_rev));
 
       /* We're not interested in the theoretical difference between "has
          contents which have not changed with respect to" and "has the same
          actual contents as" when sending text-deltas.  If we know the
          delta is an empty one, we avoiding sending it in either case. */
-      SVN_ERR(svn_fs_contents_different(&changed, b->t_root, t_path,
-                                        s_root, s_path, pool));
+      SVN_ERR(svn_fs_contents_different2(&changed, t_node, s_node, pool));
 
       if (!changed)
         return SVN_NO_ERROR;
 
-      SVN_ERR(svn_fs_file_checksum(&s_checksum, svn_checksum_md5, s_root,
-                                   s_path, TRUE, pool));
+      SVN_ERR(svn_fs_file_checksum2(&s_checksum, svn_checksum_md5, s_node,
+                                    TRUE, pool));
       s_hex_digest = svn_checksum_to_cstring(s_checksum, pool);
     }
 
@@ -710,6 +707,8 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
     {
       if (b->text_deltas)
         {
+          svn_fs_root_t *s_root;
+
           /* if we send deltas against empty streams, we may use our
              zero-copy code. */
           if (b->zero_copy_limit > 0 && s_path == NULL)
@@ -732,6 +731,7 @@ delta_files(report_baton_t *b, void *file_baton, svn_revnum_t s_rev,
                 return SVN_NO_ERROR;
             }
 
+          SVN_ERR(get_source_root(b, &s_root, s_rev));
           SVN_ERR(svn_fs_get_file_delta_stream(&dstream, s_root, s_path,
                                                b->t_root, t_path, pool));
           SVN_ERR(svn_txdelta_send_txstream(dstream, dhandler, dbaton, pool));
@@ -759,14 +759,14 @@ check_auth(report_baton_t *b, svn_boolean_t *allowed, const char *path,
    replace the source or target dirent when a report pathinfo tells us to
    change paths or revisions. */
 static svn_error_t *
-fake_dirent(const svn_fs_dirent_t **entry, svn_fs_root_t *root,
+fake_dirent(const svn_fs_dirent2_t **entry, svn_fs_root_t *root,
             const char *path, apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
-  svn_fs_dirent_t *ent;
+  svn_fs_node_t *node;
+  svn_fs_dirent2_t *ent;
 
-  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
-  if (kind == svn_node_none)
+  SVN_ERR(svn_fs_open_node(&node, root, path, TRUE, pool, pool));
+  if (node == NULL)
     *entry = NULL;
   else
     {
@@ -775,8 +775,8 @@ fake_dirent(const svn_fs_dirent_t **entry, svn_fs_root_t *root,
              formats */
       ent->name = (*path == '/') ? svn_fspath__basename(path, pool)
                                  : svn_relpath_basename(path, pool);
-      SVN_ERR(svn_fs_node_id(&ent->id, root, path, pool));
-      ent->kind = kind;
+      SVN_ERR(svn_fs_node_kind(&ent->kind, node, pool));
+      ent->node = node;
       *entry = ent;
     }
   return SVN_NO_ERROR;
@@ -815,8 +815,9 @@ is_depth_upgrade(svn_depth_t wc_depth,
    However, make an attempt to send 'copyfrom' arguments if they're
    available, by examining the closest copy of the original file
    O_PATH within B->t_root.  If any copyfrom args are discovered,
-   return those in *COPYFROM_PATH and *COPYFROM_REV;  otherwise leave
-   those return args untouched. */
+   return those in *COPYFROM_PATH and *COPYFROM_REV, and return the
+   corresponding node in *COPYFROM_NODE;  otherwise leave those
+   return args untouched. */
 static svn_error_t *
 add_file_smartly(report_baton_t *b,
                  const char *path,
@@ -825,6 +826,7 @@ add_file_smartly(report_baton_t *b,
                  void **new_file_baton,
                  const char **copyfrom_path,
                  svn_revnum_t *copyfrom_rev,
+                 svn_fs_node_t **copyfrom_node,
                  apr_pool_t *pool)
 {
   /* ### TODO:  use a subpool to do this work, clear it at the end? */
@@ -835,6 +837,7 @@ add_file_smartly(report_baton_t *b,
   /* Pre-emptively assume no copyfrom args exist. */
   *copyfrom_path = NULL;
   *copyfrom_rev = SVN_INVALID_REVNUM;
+  *copyfrom_node = NULL;
 
   if (b->send_copyfrom_args)
     {
@@ -845,6 +848,9 @@ add_file_smartly(report_baton_t *b,
       if (*o_path != '/')
         o_path = apr_pstrcat(pool, "/", o_path, SVN_VA_NULL);
 
+      /* ### Need to replace both the svn_fs_closest_copy() and
+         ### svn_fs_copied_from() calls below with new functions
+         ### that accept and return filesystem nodes. */
       SVN_ERR(svn_fs_closest_copy(&closest_copy_root, &closest_copy_path,
                                   b->t_root, o_path, pool));
       if (closest_copy_root != NULL)
@@ -854,15 +860,18 @@ add_file_smartly(report_baton_t *b,
              have 'copyfrom' history. */
           if (strcmp(closest_copy_path, o_path) == 0)
             {
+              svn_fs_root_t *copyfrom_root;
+
               SVN_ERR(svn_fs_copied_from(copyfrom_rev, copyfrom_path,
                                          closest_copy_root, closest_copy_path,
                                          pool));
+              SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs, *copyfrom_rev,
+                                           pool));
+              SVN_ERR(svn_fs_open_node(copyfrom_node, copyfrom_root,
+                                       *copyfrom_path, FALSE, pool, pool));
               if (b->authz_read_func)
                 {
                   svn_boolean_t allowed;
-                  svn_fs_root_t *copyfrom_root;
-                  SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
-                                               *copyfrom_rev, pool));
                   SVN_ERR(b->authz_read_func(&allowed, copyfrom_root,
                                              *copyfrom_path, b->authz_read_baton,
                                              pool));
@@ -870,6 +879,7 @@ add_file_smartly(report_baton_t *b,
                     {
                       *copyfrom_path = NULL;
                       *copyfrom_rev = SVN_INVALID_REVNUM;
+                      *copyfrom_node = NULL;
                     }
                 }
             }
@@ -913,12 +923,11 @@ add_file_smartly(report_baton_t *b,
    should happen for various combinations of WC_DEPTH/REQUESTED_DEPTH. */
 static svn_error_t *
 update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
-             const svn_fs_dirent_t *s_entry, const char *t_path,
-             const svn_fs_dirent_t *t_entry, void *dir_baton,
+             const svn_fs_dirent2_t *s_entry, const char *t_path,
+             const svn_fs_dirent2_t *t_entry, void *dir_baton,
              const char *e_path, path_info_t *info, svn_depth_t wc_depth,
              svn_depth_t requested_depth, apr_pool_t *pool)
 {
-  svn_fs_root_t *s_root;
   svn_boolean_t allowed, related;
   void *new_baton;
   svn_checksum_t *checksum;
@@ -939,6 +948,8 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
     }
   else if (info && s_path)
     {
+      svn_fs_root_t *s_root;
+
       /* Follow the rev and possibly path in this entry. */
       s_path = (info->link_path) ? info->link_path : s_path;
       s_rev = info->rev;
@@ -960,8 +971,12 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   related = FALSE;
   if (s_entry && t_entry && s_entry->kind == t_entry->kind)
     {
-      int distance = svn_fs_compare_ids(s_entry->id, t_entry->id);
-      if (distance == 0 && !any_path_info(b, e_path)
+      svn_fs_node_relation_t relation;
+
+      SVN_ERR(svn_fs_node_relation2(&relation, s_entry->node, t_entry->node,
+                                    pool));
+
+      if (relation == svn_fs_node_unchanged && !any_path_info(b, e_path)
           && (requested_depth <= wc_depth || t_entry->kind == svn_node_file))
         {
           if (!info)
@@ -980,7 +995,7 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
             }
         }
 
-      related = (distance != -1 || b->ignore_ancestry);
+      related = (relation != svn_fs_node_unrelated || b->ignore_ancestry);
     }
 
   /* If there's a source and it's not related to the target, nuke it. */
@@ -1036,7 +1051,8 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                                          SVN_INVALID_REVNUM, pool,
                                          &new_baton));
 
-      SVN_ERR(delta_dirs(b, s_rev, s_path, t_path, new_baton, e_path,
+      SVN_ERR(delta_dirs(b, s_rev, s_path, s_entry ? s_entry->node : NULL,
+                         t_path, t_entry->node, new_baton, e_path,
                          info ? info->start_empty : FALSE,
                          wc_depth, requested_depth, pool));
       return svn_error_trace(b->editor->close_directory(new_baton, pool));
@@ -1047,29 +1063,36 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
         {
           SVN_ERR(b->editor->open_file(e_path, dir_baton, s_rev, pool,
                                        &new_baton));
-          SVN_ERR(delta_files(b, new_baton, s_rev, s_path, t_path,
+          SVN_ERR(delta_files(b, new_baton, s_rev,
+                              s_path, s_entry ? s_entry->node : NULL,
+                              t_path, t_entry->node,
                               info ? info->lock_token : NULL, pool));
         }
       else
         {
           svn_revnum_t copyfrom_rev = SVN_INVALID_REVNUM;
           const char *copyfrom_path = NULL;
+          svn_fs_node_t *copyfrom_node = NULL;
           SVN_ERR(add_file_smartly(b, e_path, dir_baton, t_path, &new_baton,
-                                   &copyfrom_path, &copyfrom_rev, pool));
+                                   &copyfrom_path, &copyfrom_rev,
+                                   &copyfrom_node, pool));
           if (! copyfrom_path)
             /* Send txdelta between empty file (s_path@s_rev doesn't
-               exist) and added file (t_path@t_root). */
-            SVN_ERR(delta_files(b, new_baton, s_rev, s_path, t_path,
+               exist) and added file (t_path + t_entry->node). */
+            SVN_ERR(delta_files(b, new_baton, s_rev,
+                                s_path, s_entry ? s_entry->node : NULL,
+                                t_path, t_entry->node,
                                 info ? info->lock_token : NULL, pool));
           else
             /* Send txdelta between copied file (copyfrom_path@copyfrom_rev)
-               and added file (tpath@t_root). */
+               and added file (t_path + t_entry->node). */
             SVN_ERR(delta_files(b, new_baton, copyfrom_rev, copyfrom_path,
-                                t_path, info ? info->lock_token : NULL, pool));
+                                copyfrom_node, t_path, t_entry->node,
+                                info ? info->lock_token : NULL, pool));
         }
 
-      SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5, b->t_root,
-                                   t_path, TRUE, pool));
+      SVN_ERR(svn_fs_file_checksum2(&checksum, svn_checksum_md5,
+                                    t_entry->node, TRUE, pool));
       hex_digest = svn_checksum_to_cstring(checksum, pool);
       return svn_error_trace(b->editor->close_file(new_baton, hex_digest,
                                                    pool));
@@ -1136,22 +1159,22 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
    various other checks below.
 */
 static svn_error_t *
-delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
-           const char *t_path, void *dir_baton, const char *e_path,
+delta_dirs(report_baton_t *b, svn_revnum_t s_rev,
+           const char *s_path, svn_fs_node_t *s_node,
+           const char *t_path, svn_fs_node_t *t_node,
+           void *dir_baton, const char *e_path,
            svn_boolean_t start_empty, svn_depth_t wc_depth,
            svn_depth_t requested_depth, apr_pool_t *pool)
 {
   apr_hash_t *s_entries = NULL, *t_entries;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
-  apr_array_header_t *t_ordered_entries = NULL;
-  int i;
 
   /* Compare the property lists.  If we're starting empty, pass a NULL
      source path so that we add all the properties.
 
      When we support directory locks, we must pass the lock token here. */
-  SVN_ERR(delta_proplists(b, s_rev, start_empty ? NULL : s_path, t_path,
+  SVN_ERR(delta_proplists(b, start_empty ? NULL : s_node, t_path, t_node,
                           NULL, change_dir_prop, dir_baton, subpool));
   svn_pool_clear(subpool);
 
@@ -1163,12 +1186,9 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       /* Get the list of entries in each of source and target. */
       if (s_path && !start_empty)
         {
-          svn_fs_root_t *s_root;
-
-          SVN_ERR(get_source_root(b, &s_root, s_rev));
-          SVN_ERR(svn_fs_dir_entries(&s_entries, s_root, s_path, subpool));
+          SVN_ERR(svn_fs_dir_entries2(&s_entries, s_node, subpool, subpool));
         }
-      SVN_ERR(svn_fs_dir_entries(&t_entries, b->t_root, t_path, subpool));
+      SVN_ERR(svn_fs_dir_entries2(&t_entries, t_node, subpool, subpool));
 
       /* Iterate over the report information for this directory. */
       iterpool = svn_pool_create(subpool);
@@ -1177,7 +1197,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
         {
           path_info_t *info;
           const char *name, *s_fullpath, *t_fullpath, *e_fullpath;
-          const svn_fs_dirent_t *s_entry, *t_entry;
+          const svn_fs_dirent2_t *s_entry, *t_entry;
 
           svn_pool_clear(iterpool);
           SVN_ERR(fetch_path_info(b, &name, &info, e_path, iterpool));
@@ -1248,7 +1268,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                hi;
                hi = apr_hash_next(hi))
             {
-              const svn_fs_dirent_t *s_entry = apr_hash_this_val(hi);
+              const svn_fs_dirent2_t *s_entry = apr_hash_this_val(hi);
 
               svn_pool_clear(iterpool);
 
@@ -1283,13 +1303,11 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
         }
 
       /* Loop over the dirents in the target. */
-      SVN_ERR(svn_fs_dir_optimal_order(&t_ordered_entries, b->t_root,
-                                       t_entries, subpool, iterpool));
-      for (i = 0; i < t_ordered_entries->nelts; ++i)
+      for (hi = apr_hash_first(subpool, t_entries); hi;
+           hi = apr_hash_next(hi))
         {
-          const svn_fs_dirent_t *t_entry
-             = APR_ARRAY_IDX(t_ordered_entries, i, svn_fs_dirent_t *);
-          const svn_fs_dirent_t *s_entry;
+          const svn_fs_dirent2_t *t_entry = apr_hash_this_val(hi);
+          const svn_fs_dirent2_t *s_entry;
           const char *s_fullpath, *t_fullpath, *e_fullpath;
 
           svn_pool_clear(iterpool);
@@ -1346,7 +1364,7 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
   const char *t_anchor, *s_fullpath;
   svn_boolean_t allowed, info_is_set_path;
   svn_fs_root_t *s_root;
-  const svn_fs_dirent_t *s_entry, *t_entry;
+  const svn_fs_dirent2_t *s_entry, *t_entry;
   void *root_baton;
 
   /* Compute the target path corresponding to the working copy anchor,
@@ -1389,7 +1407,8 @@ drive(report_baton_t *b, svn_revnum_t s_rev, path_info_t *info,
   /* If the anchor is the operand, diff the two directories; otherwise
      update the operand within the anchor directory. */
   if (!*b->s_operand)
-    SVN_ERR(delta_dirs(b, s_rev, s_fullpath, b->t_path, root_baton,
+    SVN_ERR(delta_dirs(b, s_rev, s_fullpath, s_entry->node,
+                       b->t_path, t_entry->node, root_baton,
                        "", info->start_empty, info->depth, b->requested_depth,
                        pool));
   else
