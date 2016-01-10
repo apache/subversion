@@ -506,7 +506,7 @@ get_path_ancestor_length(const char *path1,
   else
     if (last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
       return 1;
-    return last_dirsep;
+  return last_dirsep;
 }
 
 
