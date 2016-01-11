@@ -38,13 +38,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1710167
-   Set journal-mode in exclusive-locking mode to improve NFS performance.
-   Justification:
-     Reduces performance regression compared to 1.8.
-   Votes:
-     +1: philip, stefan2
-
  * r1717876, r1717877
    Fix svn_fs_contents_different on FSFS producing false negatives.
    Justification:
@@ -127,3 +120,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1710167
+   Set journal-mode in exclusive-locking mode to improve NFS performance.
+   Justification:
+     Reduces performance regression compared to 1.8.
+   Votes:
+     +1: philip, stefan2, julianfoad
