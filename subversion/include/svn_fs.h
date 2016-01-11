@@ -2424,7 +2424,7 @@ svn_fs_file_length(svn_filesize_t *length_p,
 svn_error_t *
 svn_fs_file_checksum2(svn_checksum_t **checksum,
                       svn_checksum_kind_t kind,
-                      svn_fs_node_t *root,
+                      svn_fs_node_t *node,
                       svn_boolean_t force,
                       apr_pool_t *pool);
 
