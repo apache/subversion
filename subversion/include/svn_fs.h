@@ -2419,7 +2419,7 @@ svn_fs_file_length(svn_filesize_t *length_p,
  * it has access to the lowest level storage forms: strings behind
  * representations.
  *
- * @since New in 1.6.
+ * @since New in 1.10.
  */
 svn_error_t *
 svn_fs_file_checksum2(svn_checksum_t **checksum,
@@ -2431,6 +2431,8 @@ svn_fs_file_checksum2(svn_checksum_t **checksum,
 /**
  * Same as svn_fs_file_checksum2(), but reference node by @a root and
  * @a path.
+ *
+ * @since New in 1.6.
  */
 svn_error_t *
 svn_fs_file_checksum(svn_checksum_t **checksum,
@@ -2468,6 +2470,8 @@ svn_fs_file_md5_checksum(unsigned char digest[],
  * ### @todo kff: I am worried about lifetime issues with this pool vs
  * the trail created farther down the call stack.  Trace this function
  * to investigate...
+ *
+ * @since New in 1.10.
  */
 svn_error_t *
 svn_fs_file_contents2(svn_stream_t **contents,
