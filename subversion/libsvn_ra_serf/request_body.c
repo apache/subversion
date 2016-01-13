@@ -220,3 +220,13 @@ svn_ra_serf__request_body_get_delegate(svn_ra_serf__request_body_delegate_t *del
   *del = request_body_delegate;
   *baton = body;
 }
+
+svn_error_t *
+svn_ra_serf__request_body_cleanup(svn_ra_serf__request_body_t *body,
+                                  apr_pool_t *scratch_pool)
+{
+  if (body->file)
+    SVN_ERR(svn_io_file_close(body->file, scratch_pool));
+
+  return SVN_NO_ERROR;
+}

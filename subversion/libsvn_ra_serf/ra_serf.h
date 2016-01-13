@@ -1594,6 +1594,14 @@ svn_ra_serf__request_body_get_delegate(svn_ra_serf__request_body_delegate_t *del
                                        void **baton,
                                        svn_ra_serf__request_body_t *body);
 
+/* Release intermediate resources associated with BODY.  These resources
+   (such as open file handles) will be automatically released when the
+   pool used to construct BODY is cleared or destroyed, but this optional
+   function allows doing that explicitly. */
+svn_error_t *
+svn_ra_serf__request_body_cleanup(svn_ra_serf__request_body_t *body,
+                                  apr_pool_t *scratch_pool);
+
 
 #if defined(SVN_DEBUG)
 /* Wrapper macros to collect file and line information */

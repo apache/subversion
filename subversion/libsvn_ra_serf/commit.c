@@ -170,11 +170,11 @@ typedef struct file_context_t {
   const char *copy_path;
   svn_revnum_t copy_revision;
 
-  /* stream */
+  /* Stream for collecting the svndiff. */
   svn_stream_t *stream;
 
-  /* Temporary file containing the svndiff. */
-  apr_file_t *svndiff;
+  /* Buffer holding the svndiff (can spill to disk). */
+  svn_ra_serf__request_body_t *svndiff;
 
   /* Our base checksum as reported by the WC. */
   const char *base_checksum;
@@ -865,35 +865,6 @@ proppatch_resource(svn_ra_serf__session_t *session,
     }
 
   return svn_error_trace(err);
-}
-
-/* Implements svn_ra_serf__request_body_delegate_t */
-static svn_error_t *
-create_put_body(serf_bucket_t **body_bkt,
-                void *baton,
-                serf_bucket_alloc_t *alloc,
-                apr_pool_t *pool /* request pool */,
-                apr_pool_t *scratch_pool)
-{
-  file_context_t *ctx = baton;
-  apr_off_t offset;
-
-  /* We need to flush the file, make it unbuffered (so that it can be
-   * zero-copied via mmap), and reset the position before attempting to
-   * deliver the file.
-   *
-   * N.B. If we have APR 1.3+, we can unbuffer the file to let us use mmap
-   * and zero-copy the PUT body.  However, on older APR versions, we can't
-   * check the buffer status; but serf will fall through and create a file
-   * bucket for us on the buffered svndiff handle.
-   */
-  SVN_ERR(svn_io_file_flush(ctx->svndiff, pool));
-  apr_file_buffer_set(ctx->svndiff, NULL, 0);
-  offset = 0;
-  SVN_ERR(svn_io_file_seek(ctx->svndiff, APR_SET, &offset, pool));
-
-  *body_bkt = serf_bucket_file_create(ctx->svndiff, alloc);
-  return SVN_NO_ERROR;
 }
 
 /* Implements svn_ra_serf__request_body_delegate_t */
@@ -1877,23 +1848,6 @@ open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_stream_lazyopen_func_t for apply_textdelta */
-static svn_error_t *
-delayed_commit_stream_open(svn_stream_t **stream,
-                           void *baton,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
-{
-  file_context_t *file_ctx = baton;
-
-  SVN_ERR(svn_io_open_unique_file3(&file_ctx->svndiff, NULL, NULL,
-                                   svn_io_file_del_on_pool_cleanup,
-                                   file_ctx->pool, scratch_pool));
-
-  *stream = svn_stream_from_aprfile2(file_ctx->svndiff, TRUE, result_pool);
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 apply_textdelta(void *file_baton,
                 const char *base_checksum,
@@ -1905,12 +1859,12 @@ apply_textdelta(void *file_baton,
   int svndiff_version;
   int compression_level;
 
-  /* Store the stream in a temporary file; we'll give it to serf when we
+  /* Construct a holder for the request body; we'll give it to serf when we
    * close this file.
    *
    * TODO: There should be a way we can stream the request body instead of
-   * writing to a temporary file (ugh). A special svn stream serf bucket
-   * that returns EAGAIN until we receive the done call?  But, when
+   * possibly writing to a temporary file (ugh). A special svn stream serf
+   * bucket that returns EAGAIN until we receive the done call?  But, when
    * would we run through the serf context?  Grr.
    *
    * BH: If you wait to a specific event... why not use that event to
@@ -1923,8 +1877,10 @@ apply_textdelta(void *file_baton,
    *     for sure after the request is completely available.
    */
 
-  ctx->stream = svn_stream_lazyopen_create(delayed_commit_stream_open,
-                                           ctx, FALSE, ctx->pool);
+  ctx->svndiff =
+    svn_ra_serf__request_body_create(SVN_RA_SERF__REQUEST_BODY_IN_MEM_SIZE,
+                                     ctx->pool);
+  ctx->stream = svn_ra_serf__request_body_get_stream(ctx->svndiff);
 
   if (ctx->commit_ctx->session->supports_svndiff1 &&
       ctx->commit_ctx->session->using_compression)
@@ -1949,7 +1905,9 @@ apply_textdelta(void *file_baton,
       compression_level = SVN_DELTA_COMPRESSION_LEVEL_NONE;
     }
 
-  svn_txdelta_to_svndiff3(handler, handler_baton, ctx->stream,
+  /* Disown the stream; we'll close it explicitly in close_file(). */
+  svn_txdelta_to_svndiff3(handler, handler_baton,
+                          svn_stream_disown(ctx->stream, pool),
                           svndiff_version, compression_level, pool);
 
   if (base_checksum)
@@ -2016,8 +1974,11 @@ close_file(void *file_baton,
         }
       else
         {
-          handler->body_delegate = create_put_body;
-          handler->body_delegate_baton = ctx;
+          SVN_ERR(svn_stream_close(ctx->stream));
+
+          svn_ra_serf__request_body_get_delegate(&handler->body_delegate,
+                                                 &handler->body_delegate_baton,
+                                                 ctx->svndiff);
           handler->body_type = SVN_SVNDIFF_MIME_TYPE;
         }
 
@@ -2035,8 +1996,9 @@ close_file(void *file_baton,
         return svn_error_trace(svn_ra_serf__unexpected_status(handler));
     }
 
+  /* Don't keep open file handles longer than necessary. */
   if (ctx->svndiff)
-    SVN_ERR(svn_io_file_close(ctx->svndiff, scratch_pool));
+    SVN_ERR(svn_ra_serf__request_body_cleanup(ctx->svndiff, scratch_pool));
 
   /* If we had any prop changes, push them via PROPPATCH. */
   if (apr_hash_count(ctx->prop_changes))
