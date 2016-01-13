@@ -1570,6 +1570,31 @@ svn_ra_serf__uri_parse(apr_uri_t *uri,
                        apr_pool_t *result_pool);
 
 
+/* Default limit for in-memory size of a request body. */
+#define SVN_RA_SERF__REQUEST_BODY_IN_MEM_SIZE 256 * 1024
+
+/* An opaque structure used to prepare a request body. */
+typedef struct svn_ra_serf__request_body_t svn_ra_serf__request_body_t;
+
+/* Constructor for svn_ra_serf__request_body_t.  Creates a new writable
+   buffer for the request body.  Request bodies under IN_MEMORY_SIZE
+   bytes will be held in memory, otherwise, the body content will be
+   spilled to a temporary file. */
+svn_ra_serf__request_body_t *
+svn_ra_serf__request_body_create(apr_size_t in_memory_size,
+                                 apr_pool_t *result_pool);
+
+/* Get the writable stream associated with BODY. */
+svn_stream_t *
+svn_ra_serf__request_body_get_stream(svn_ra_serf__request_body_t *body);
+
+/* Get a svn_ra_serf__request_body_delegate_t and baton for BODY. */
+void
+svn_ra_serf__request_body_get_delegate(svn_ra_serf__request_body_delegate_t *del,
+                                       void **baton,
+                                       svn_ra_serf__request_body_t *body);
+
+
 #if defined(SVN_DEBUG)
 /* Wrapper macros to collect file and line information */
 #define svn_ra_serf__wrap_err \
