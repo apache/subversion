@@ -3035,20 +3035,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.accept_which = svn_cl__accept_postpone;
     }
 
-  /* Install the default conflict handler. */
+  /* We don't use legacy libsvn_wc conflict handlers by default. */
   {
-    svn_cl__interactive_conflict_baton_t *b;
-
     ctx->conflict_func = NULL;
     ctx->conflict_baton = NULL;
-
-    ctx->conflict_func2 = svn_cl__conflict_func_interactive;
-    SVN_ERR(svn_cl__get_conflict_func_interactive_baton(
-                &b,
-                opt_state.accept_which,
-                ctx->config, opt_state.editor_cmd, conflict_stats,
-                ctx->cancel_func, ctx->cancel_baton, pool));
-    ctx->conflict_baton2 = b;
+    ctx->conflict_func2 = NULL;
+    ctx->conflict_baton2 = NULL;
   }
 
   /* And now we finally run the subcommand. */

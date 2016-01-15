@@ -292,84 +292,74 @@ walk_conflicts(svn_client_ctx_t *ctx,
   return SVN_NO_ERROR;
 }
 
-/* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__resolve(apr_getopt_t *os,
-                void *baton,
-                apr_pool_t *scratch_pool)
+svn_cl__walk_conflicts(apr_array_header_t *targets,
+                       svn_cl__conflict_stats_t *conflict_stats,
+                       svn_boolean_t is_resolve_cmd,
+                       svn_cl__opt_state_t *opt_state,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *scratch_pool)
 {
-  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
-  svn_cl__conflict_stats_t *conflict_stats =
-    ((svn_cl__cmd_baton_t *) baton)->conflict_stats;
-  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
-  svn_client_conflict_option_id_t option_id;
-  svn_error_t *err;
-  apr_array_header_t *targets;
-  const char *path_prefix;
-  int i;
-  apr_pool_t *iterpool;
   svn_boolean_t had_error = FALSE;
   svn_boolean_t quit = FALSE;
   svn_boolean_t external_failed = FALSE;
   svn_boolean_t printed_summary = FALSE;
+  svn_client_conflict_option_id_t option_id;
   svn_cmdline_prompt_baton_t *pb = apr_palloc(scratch_pool, sizeof(*pb));
+  const char *path_prefix;
+  svn_error_t *err;
+  int i;
+  apr_pool_t *iterpool;
+
+  SVN_ERR(svn_dirent_get_absolute(&path_prefix, "", scratch_pool));
 
   pb->cancel_func = ctx->cancel_func;
   pb->cancel_baton = ctx->cancel_baton;
 
-  option_id = svn_client_conflict_option_unspecified;
-
-  SVN_ERR(svn_dirent_get_absolute(&path_prefix, "", scratch_pool));
-
   switch (opt_state->accept_which)
     {
     case svn_cl__accept_working:
-      option_id = svn_wc_conflict_choose_merged;
+      option_id = svn_client_conflict_option_merged_text;
       break;
     case svn_cl__accept_base:
-      option_id = svn_wc_conflict_choose_base;
+      option_id = svn_client_conflict_option_base_text;
       break;
     case svn_cl__accept_theirs_conflict:
-      option_id = svn_wc_conflict_choose_theirs_conflict;
+      option_id = svn_client_conflict_option_incoming_text_where_conflicted;
       break;
     case svn_cl__accept_mine_conflict:
-      option_id = svn_wc_conflict_choose_mine_conflict;
+      option_id = svn_client_conflict_option_working_text_where_conflicted;
       break;
     case svn_cl__accept_theirs_full:
-      option_id = svn_wc_conflict_choose_theirs_full;
+      option_id = svn_client_conflict_option_incoming_text;
       break;
     case svn_cl__accept_mine_full:
-      option_id = svn_wc_conflict_choose_mine_full;
+      option_id = svn_client_conflict_option_working_text;
       break;
     case svn_cl__accept_unspecified:
-      if (opt_state->non_interactive)
+      if (is_resolve_cmd && opt_state->non_interactive)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("missing --accept option"));
-      option_id = svn_wc_conflict_choose_unspecified;
+      option_id = svn_client_conflict_option_unspecified;
+      break;
+    case svn_cl__accept_postpone:
+      if (is_resolve_cmd)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("invalid 'accept' ARG"));
+      option_id = svn_client_conflict_option_postpone;
+      break;
+    case svn_cl__accept_edit:
+    case svn_cl__accept_launch:
+      if (is_resolve_cmd)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("invalid 'accept' ARG"));
+      option_id = svn_client_conflict_option_unspecified;
       break;
     default:
       return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                               _("invalid 'accept' ARG"));
     }
 
-  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets,
-                                                      ctx, FALSE,
-                                                      scratch_pool));
-  if (! targets->nelts)
-    svn_opt_push_implicit_dot_target(targets, scratch_pool);
-
-  if (opt_state->depth == svn_depth_unknown)
-    {
-      if (opt_state->accept_which == svn_cl__accept_unspecified)
-        opt_state->depth = svn_depth_infinity;
-      else
-        opt_state->depth = svn_depth_empty;
-    }
-
-  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
-
-  SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
@@ -422,6 +412,42 @@ svn_cl__resolve(apr_getopt_t *os,
     return svn_error_create(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                             _("Failure occurred resolving one or more "
                               "conflicts"));
+  return SVN_NO_ERROR;
+}
+
+/* This implements the `svn_opt_subcommand_t' interface. */
+svn_error_t *
+svn_cl__resolve(apr_getopt_t *os,
+                void *baton,
+                apr_pool_t *scratch_pool)
+{
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_cl__conflict_stats_t *conflict_stats =
+    ((svn_cl__cmd_baton_t *) baton)->conflict_stats;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
+  apr_array_header_t *targets;
+
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
+                                                      ctx, FALSE,
+                                                      scratch_pool));
+  if (! targets->nelts)
+    svn_opt_push_implicit_dot_target(targets, scratch_pool);
+
+  if (opt_state->depth == svn_depth_unknown)
+    {
+      if (opt_state->accept_which == svn_cl__accept_unspecified)
+        opt_state->depth = svn_depth_infinity;
+      else
+        opt_state->depth = svn_depth_empty;
+    }
+
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
+
+  SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
+
+  SVN_ERR(svn_cl__walk_conflicts(targets, conflict_stats, TRUE,
+                                 opt_state, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }

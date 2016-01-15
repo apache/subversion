@@ -145,6 +145,84 @@ run_merge(svn_boolean_t two_sources_specified,
   return merge_err;
 }
 
+/* Baton type for conflict_func_merge_cmd(). */
+struct conflict_func_merge_cmd_baton {
+  svn_cl__accept_t accept_which;
+  const char *path_prefix;
+  svn_cl__conflict_stats_t *conflict_stats;
+};
+
+/* This implements the `svn_wc_conflict_resolver_func2_t ' interface.
+ *
+ * The merge subcommand needs to install this legacy conflict callback
+ * in case the user passed an --accept option to 'svn merge'.
+ * Otherwise, merges involving multiple editor drives might encounter a
+ * conflict during one of the editor drives and abort with an error,
+ * rather than resolving conflicts as per the --accept option and
+ * continuing with the next editor drive.
+ * ### TODO add an svn_client_merge API that makes this callback unnecessary
+ */
+static svn_error_t *
+conflict_func_merge_cmd(svn_wc_conflict_result_t **result,
+                        const svn_wc_conflict_description2_t *desc,
+                        void *baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  struct conflict_func_merge_cmd_baton *b = baton;
+  svn_wc_conflict_choice_t choice;
+
+  switch (b->accept_which)
+    {
+    case svn_cl__accept_postpone:
+    case svn_cl__accept_invalid:
+    case svn_cl__accept_unspecified:
+      /* Postpone or no valid --accept option, postpone the conflict. */
+      choice = svn_wc_conflict_choose_postpone;
+      break;
+    case svn_cl__accept_base:
+      choice = svn_wc_conflict_choose_base;
+      break;
+    case svn_cl__accept_working:
+      choice = svn_wc_conflict_choose_merged;
+      break;
+    case svn_cl__accept_mine_conflict:
+      choice = svn_wc_conflict_choose_mine_conflict;
+      break;
+    case svn_cl__accept_theirs_conflict:
+      choice = svn_wc_conflict_choose_theirs_conflict;
+      break;
+    case svn_cl__accept_mine_full:
+      choice = svn_wc_conflict_choose_mine_full;
+      break;
+    case svn_cl__accept_theirs_full:
+      choice = svn_wc_conflict_choose_theirs_full;
+      break;
+    case svn_cl__accept_edit:
+    case svn_cl__accept_launch:
+      /* The 'edit' and 'launch' options used to be valid in Subversion 1.9 but
+       * we can't support these options for the purposes of this callback. */
+      choice = svn_wc_conflict_choose_postpone;
+      break;
+    }
+
+  *result = svn_wc_create_conflict_result(choice, NULL, result_pool);
+
+  /* If we are resolving a conflict, adjust the summary of conflicts. */
+  if (choice != svn_wc_conflict_choose_postpone)
+    {
+      const char *local_path;
+
+      local_path = svn_cl__local_style_skip_ancestor(b->path_prefix,
+                                                     desc->local_abspath,
+                                                     scratch_pool);
+      svn_cl__conflict_stats_resolved(b->conflict_stats, local_path,
+                                      desc->kind);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__merge(apr_getopt_t *os,
@@ -152,6 +230,8 @@ svn_cl__merge(apr_getopt_t *os,
               apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_cl__conflict_stats_t *conflict_stats =
+    ((svn_cl__cmd_baton_t *) baton)->conflict_stats;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   const char *sourcepath1 = NULL, *sourcepath2 = NULL, *targetpath = "";
@@ -160,6 +240,7 @@ svn_cl__merge(apr_getopt_t *os,
   svn_opt_revision_t first_range_start, first_range_end, peg_revision1,
     peg_revision2;
   apr_array_header_t *options, *ranges_to_merge = opt_state->revision_ranges;
+  apr_array_header_t *conflicted_paths;
   svn_boolean_t has_explicit_target = FALSE;
 
   /* Merge doesn't support specifying a revision or revision range
@@ -427,6 +508,21 @@ svn_cl__merge(apr_getopt_t *os,
                                   "with --reintegrate"));
     }
 
+  /* Install a legacy conflict handler if the --accept option was given.
+   * Else, svn_client_merge5() may abort the merge in an undesirable way.
+   * See the docstring at conflict_func_merge_cmd() for details */
+  if (opt_state->accept_which != svn_cl__accept_unspecified)
+    {
+      struct conflict_func_merge_cmd_baton b;
+
+      b.accept_which = opt_state->accept_which;
+      SVN_ERR(svn_dirent_get_absolute(&b.path_prefix, "", pool));
+      b.conflict_stats = conflict_stats;
+
+      ctx->conflict_func2 = conflict_func_merge_cmd;
+      ctx->conflict_baton2 = &b;
+    }
+
   merge_err = run_merge(two_sources_specified,
                         sourcepath1, peg_revision1,
                         sourcepath2,
@@ -441,6 +537,13 @@ svn_cl__merge(apr_getopt_t *os,
                _("Merge tracking not possible, use --ignore-ancestry or\n"
                  "fix invalid mergeinfo in target with 'svn propset'"));
     }
+
+  /* Run the interactive resolver if conflicts were raised. */
+  SVN_ERR(svn_cl__conflict_stats_get_paths(&conflicted_paths, conflict_stats,
+                                           pool, pool));
+  if (conflicted_paths)
+    SVN_ERR(svn_cl__walk_conflicts(conflicted_paths, conflict_stats, FALSE,
+                                   opt_state, ctx, pool));
 
   if (!opt_state->quiet)
     {
