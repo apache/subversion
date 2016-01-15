@@ -58,7 +58,7 @@ abort_on_pool_failure(int retcode)
 #ifdef WIN32
   /* Provide a way to distinguish the out-of-memory error from abort(). */
   if (retcode == APR_ENOMEM)
-    RaiseException(STATUS_NO_MEMORY, 0, 0, NULL);
+    RaiseException(STATUS_NO_MEMORY, EXCEPTION_NONCONTINUABLE, 0, NULL);
 #endif
 
   abort();
