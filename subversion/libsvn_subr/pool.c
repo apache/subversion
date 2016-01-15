@@ -54,6 +54,13 @@ abort_on_pool_failure(int retcode)
   /* Don't translate this string! It requires memory allocation to do so!
      And we don't have any of it... */
   printf("libsvn: Out of memory - terminating application.\n");
+
+#ifdef WIN32
+  /* Provide a way to distinguish the out-of-memory error from abort(). */
+  if (retcode == APR_ENOMEM)
+    RaiseException(STATUS_NO_MEMORY, 0, 0, NULL);
+#endif
+
   abort();
   return 0; /* not reached */
 }
