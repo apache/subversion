@@ -63,35 +63,6 @@ struct svn_cl__interactive_conflict_baton_t {
   svn_boolean_t printed_summary;
 };
 
-svn_error_t *
-svn_cl__get_conflict_func_interactive_baton(
-  svn_cl__interactive_conflict_baton_t **b,
-  svn_cl__accept_t accept_which,
-  apr_hash_t *config,
-  const char *editor_cmd,
-  svn_cl__conflict_stats_t *conflict_stats,
-  svn_cancel_func_t cancel_func,
-  void *cancel_baton,
-  apr_pool_t *result_pool)
-{
-  svn_cmdline_prompt_baton_t *pb = apr_palloc(result_pool, sizeof(*pb));
-  pb->cancel_func = cancel_func;
-  pb->cancel_baton = cancel_baton;
-
-  *b = apr_palloc(result_pool, sizeof(**b));
-  (*b)->accept_which = accept_which;
-  (*b)->config = config;
-  (*b)->editor_cmd = editor_cmd;
-  (*b)->external_failed = FALSE;
-  (*b)->pb = pb;
-  SVN_ERR(svn_dirent_get_absolute(&(*b)->path_prefix, "", result_pool));
-  (*b)->quit = FALSE;
-  (*b)->conflict_stats = conflict_stats;
-  (*b)->printed_summary = FALSE;
-
-  return SVN_NO_ERROR;
-}
-
 svn_cl__accept_t
 svn_cl__accept_from_word(const char *word)
 {
@@ -1272,7 +1243,6 @@ handle_tree_conflict(svn_client_conflict_option_id_t *option_id,
   return SVN_NO_ERROR;
 }
 
-/* The body of svn_cl__conflict_func_interactive(). */
 static svn_error_t *
 conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
                           svn_boolean_t *save_merged,
@@ -1496,48 +1466,6 @@ conflict_option_id_to_wc_conflict_choice(
     }
 
   return svn_wc_conflict_choose_undefined;
-}
-
-svn_error_t *
-svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
-                                  const svn_wc_conflict_description2_t *desc,
-                                  void *baton,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool)
-{
-  svn_cl__interactive_conflict_baton_t *b = baton;
-  svn_client_conflict_t *conflict;
-  svn_client_conflict_option_id_t option_id;
-  svn_boolean_t save_merged = FALSE;
-  const svn_string_t *merged_propval = NULL;
-
-  SVN_ERR(svn_client_conflict_from_wc_description2_t(&conflict, desc,
-                                                     scratch_pool,
-                                                     scratch_pool));
-  *result = svn_wc_create_conflict_result(svn_client_conflict_option_postpone,
-                                          NULL, result_pool);
-  SVN_ERR(conflict_func_interactive(&option_id, &save_merged, &merged_propval,
-                                    &b->accept_which, &b->quit,
-                                    &b->external_failed, &b->printed_summary,
-                                    conflict, b->editor_cmd, b->config,
-                                    b->path_prefix, b->pb, b->conflict_stats,
-                                    result_pool, scratch_pool));
-  (*result)->choice = conflict_option_id_to_wc_conflict_choice(option_id);
-  (*result)->save_merged = save_merged;
-  (*result)->merged_value = merged_propval;
-
-  /* If we are resolving a conflict, adjust the summary of conflicts. */
-  if (option_id != svn_client_conflict_option_postpone)
-    {
-      const char *local_path
-        = svn_cl__local_style_skip_ancestor(
-            b->path_prefix, svn_client_conflict_get_local_abspath(conflict),
-            scratch_pool);
-
-      svn_cl__conflict_stats_resolved(b->conflict_stats, local_path,
-                                      svn_client_conflict_get_kind(conflict));
-    }
-  return SVN_NO_ERROR;
 }
 
 svn_error_t *
