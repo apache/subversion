@@ -35,6 +35,9 @@ Candidate changes:
    Justification:
      Applying accidental reverse diffs might work for git, but isn't
      going to work for our 1.10 'svn patch' implementation.
+     .
+     Without this patch we produce a diff transforming the result file
+     to the original file.
    Votes:
      +1: rhuijben
 
@@ -105,6 +108,7 @@ Candidate changes:
      Fixes bindings build failure when -Wdate-time is present in $CPPFLAGS
    Votes:
      +1: jamessan
+     +1: rhuijben (Would prefer some redesign for trunk though)
 
  * r1721488, r1721648
    Enable building bindings with SWIG >= 3.0.6
@@ -140,7 +144,7 @@ Candidate changes:
               that had not been reported a faulty. 
      r1722861 has been included to make r1722879 merge cleanly.
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
  * r1724448
    Fix handling of newly secured subdirectories in a working copy
