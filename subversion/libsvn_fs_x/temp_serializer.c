@@ -274,7 +274,7 @@ serialize_dir(svn_fs_x__dir_data_t *dir,
    * estimate for the size of the buffer that we will need. */
   context = svn_temp_serializer__init(&dir_data,
                                       sizeof(dir_data),
-                                      50 + count * 200 + entries_len,
+                                      50 + count * 100 + entries_len,
                                       scratch_pool);
 
   /* serialize entries references */
