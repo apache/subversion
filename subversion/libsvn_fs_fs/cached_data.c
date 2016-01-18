@@ -2715,8 +2715,12 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
   SVN_ERR(get_dir_contents(dir, fs, noderev, result_pool, scratch_pool));
   *entries_p = dir->entries;
 
-  /* Update the cache, if we are to use one. */
-  if (cache)
+  /* Update the cache, if we are to use one.
+   *
+   * Don't even attempt to serialize very large directories; it would cause
+   * an unnecessary memory allocation peak.  150 bytes/entry is about right.
+   */
+  if (cache && svn_cache__is_cachable(cache, 150 * dir->entries->nelts))
     SVN_ERR(svn_cache__set(cache, key, dir, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2777,8 +2781,12 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
       SVN_ERR(get_dir_contents(&dir, fs, noderev, scratch_pool,
                                scratch_pool));
 
-      /* Update the cache, if we are to use one. */
-      if (cache)
+      /* Update the cache, if we are to use one.
+       *
+       * Don't even attempt to serialize very large directories; it would
+       * cause an unnecessary memory allocation peak.  150 bytes / entry is
+       * about right. */
+      if (cache && svn_cache__is_cachable(cache, 150 * dir.entries->nelts))
         SVN_ERR(svn_cache__set(cache, key, &dir, scratch_pool));
 
       /* find desired entry and return a copy in POOL, if found */
