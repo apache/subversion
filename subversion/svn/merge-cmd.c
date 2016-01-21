@@ -513,14 +513,14 @@ svn_cl__merge(apr_getopt_t *os,
    * See the docstring at conflict_func_merge_cmd() for details */
   if (opt_state->accept_which != svn_cl__accept_unspecified)
     {
-      struct conflict_func_merge_cmd_baton b;
+      struct conflict_func_merge_cmd_baton *b = apr_pcalloc(pool, sizeof(*b));
 
-      b.accept_which = opt_state->accept_which;
-      SVN_ERR(svn_dirent_get_absolute(&b.path_prefix, "", pool));
-      b.conflict_stats = conflict_stats;
+      b->accept_which = opt_state->accept_which;
+      SVN_ERR(svn_dirent_get_absolute(&b->path_prefix, "", pool));
+      b->conflict_stats = conflict_stats;
 
       ctx->conflict_func2 = conflict_func_merge_cmd;
-      ctx->conflict_baton2 = &b;
+      ctx->conflict_baton2 = b;
     }
 
   merge_err = run_merge(two_sources_specified,
