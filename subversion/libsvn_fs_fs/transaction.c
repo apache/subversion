@@ -2586,7 +2586,6 @@ rep_write_contents_close(void *baton)
   /* Fill in the rest of the representation field. */
   rep->expanded_size = b->expanded_size;
   rep->txn_id = *txn_id;
-  SVN_ERR(set_uniquifier(b->fs, rep, b->scratch_pool));
   rep->revision = SVN_INVALID_REVNUM;
 
   /* Finalize the checksum. */
@@ -2596,6 +2595,10 @@ rep_write_contents_close(void *baton)
   /* If not already done, open the prototype rev file and lock this txn. */
   if (ffd->concurrent_txns)
     SVN_ERR(rep_write_open_file(b));
+
+  /* This modifies shared txn data.  Therefore, we need the lock on this
+   * txn and can't do it earlier. */
+  SVN_ERR(set_uniquifier(b->fs, rep, b->scratch_pool));
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
