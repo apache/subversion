@@ -2744,6 +2744,7 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
+  extract_dir_entry_baton_t baton;
   svn_boolean_t found = FALSE;
 
   /* find the cache we may use */
@@ -2753,8 +2754,6 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                          scratch_pool);
   if (cache)
     {
-      extract_dir_entry_baton_t baton;
-
       svn_filesize_t filesize;
       SVN_ERR(get_txn_dir_info(&filesize, fs, noderev, scratch_pool));
 
@@ -2771,7 +2770,7 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
     }
 
   /* fetch data from disk if we did not find it in the cache */
-  if (! found)
+  if (! found || baton.out_of_date)
     {
       svn_fs_dirent_t *entry;
       svn_fs_dirent_t *entry_copy = NULL;
