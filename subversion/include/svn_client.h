@@ -4386,8 +4386,8 @@ typedef enum svn_client_conflict_option_id_t {
   svn_client_conflict_option_undefined = -1, /* for private use only */
   svn_client_conflict_option_postpone = 0,
   svn_client_conflict_option_base_text,
-  svn_client_conflict_option_incoming_text,
-  svn_client_conflict_option_working_text,
+  svn_client_conflict_option_incoming_text, /* "theirs-full" */
+  svn_client_conflict_option_working_text,  /* "mine-full" */
   svn_client_conflict_option_incoming_text_where_conflicted,
   svn_client_conflict_option_working_text_where_conflicted,
   svn_client_conflict_option_merged_text,
