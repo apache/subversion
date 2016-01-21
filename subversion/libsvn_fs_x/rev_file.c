@@ -490,8 +490,8 @@ svn_fs_x__rev_file_offset(apr_off_t *offset,
                           svn_fs_x__revision_file_t *file)
 {
   SVN_ERR(auto_open(file));
-  return svn_error_trace(svn_fs_x__get_file_offset(offset, file->file,
-                                                   file->pool));
+  return svn_error_trace(svn_io_file_get_offset(offset, file->file,
+                                                file->pool));
 }
 
 svn_error_t *

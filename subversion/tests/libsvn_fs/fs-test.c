@@ -6701,6 +6701,9 @@ test_fsfs_config_opts(const svn_test_opts_t *opts,
   svn_fs_t *fs;
   const svn_fs_info_placeholder_t *fs_info;
   const svn_fs_fsfs_info_t *fsfs_info;
+  const char *dir_name = "test-repo-fsfs-config-opts";
+  const char *repo_name_default = "test-repo-fsfs-config-opts/default";
+  const char *repo_name_custom = "test-repo-fsfs-config-opts/custom";
 
   /* Bail (with SKIP) on known-untestable scenarios */
   if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) != 0)
@@ -6708,20 +6711,19 @@ test_fsfs_config_opts(const svn_test_opts_t *opts,
                             "this will test FSFS repositories only");
 
   /* Remove the test directory from previous runs. */
-  SVN_ERR(svn_io_remove_dir2("test-repo-fsfs-config-opts", TRUE, NULL, NULL,
-                             pool));
+  SVN_ERR(svn_io_remove_dir2(dir_name, TRUE, NULL, NULL, pool));
 
   /* Create the test directory and add it to the test cleanup list. */
-  SVN_ERR(svn_io_dir_make("test-fsfs-config-opts", APR_OS_DEFAULT, pool));
-  svn_test_add_dir_cleanup("test-fsfs-config-opts");
+  SVN_ERR(svn_io_dir_make(dir_name, APR_OS_DEFAULT, pool));
+  svn_test_add_dir_cleanup(dir_name);
 
   /* Create an FSFS filesystem with default config.*/
   fs_config = apr_hash_make(pool);
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, SVN_FS_TYPE_FSFS);
-  SVN_ERR(svn_fs_create(&fs, "test-fsfs-config-opts/default", fs_config, pool));
+  SVN_ERR(svn_fs_create(&fs, repo_name_default, fs_config, pool));
 
   /* Re-open FS to test the data on disk. */
-  SVN_ERR(svn_fs_open2(&fs, "test-fsfs-config-opts/default", NULL, pool, pool));
+  SVN_ERR(svn_fs_open2(&fs, repo_name_default, NULL, pool, pool));
 
   SVN_ERR(svn_fs_info(&fs_info, fs, pool, pool));
   SVN_TEST_STRING_ASSERT(fs_info->fs_type, SVN_FS_TYPE_FSFS);
@@ -6738,10 +6740,10 @@ test_fsfs_config_opts(const svn_test_opts_t *opts,
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, SVN_FS_TYPE_FSFS);
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_LOG_ADDRESSING, "false");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_SHARD_SIZE, "123");
-  SVN_ERR(svn_fs_create(&fs, "test-fsfs-config-opts/custom", fs_config, pool));
+  SVN_ERR(svn_fs_create(&fs, repo_name_custom, fs_config, pool));
 
   /* Re-open FS to test the data on disk. */
-  SVN_ERR(svn_fs_open2(&fs, "test-fsfs-config-opts/custom", NULL, pool, pool));
+  SVN_ERR(svn_fs_open2(&fs, repo_name_custom, NULL, pool, pool));
 
   SVN_ERR(svn_fs_info(&fs_info, fs, pool, pool));
   SVN_TEST_STRING_ASSERT(fs_info->fs_type, SVN_FS_TYPE_FSFS);

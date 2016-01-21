@@ -1185,6 +1185,48 @@ svn_client__remote_propget(apr_hash_t *props,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
+/* */
+typedef struct merge_source_t
+{
+  /* "left" side URL and revision (inclusive iff youngest) */
+  const svn_client__pathrev_t *loc1;
+
+  /* "right" side URL and revision (inclusive iff youngest) */
+  const svn_client__pathrev_t *loc2;
+
+  /* True iff LOC1 is an ancestor of LOC2 or vice-versa (history-wise). */
+  svn_boolean_t ancestral;
+} merge_source_t;
+
+/* Description of the merge target root node (a WC working node) */
+typedef struct merge_target_t
+{
+  /* Absolute path to the WC node */
+  const char *abspath;
+
+  /* The repository location of the base node of the target WC.  If the node
+   * is locally added, then URL & REV are NULL & SVN_INVALID_REVNUM.
+   * REPOS_ROOT_URL and REPOS_UUID are always valid. */
+  svn_client__pathrev_t loc;
+
+} merge_target_t;
+
+/*
+ * Similar API to svn_client_merge_peg5().
+ */
+svn_error_t *
+svn_client__merge_elements(svn_boolean_t *use_sleep,
+                           apr_array_header_t *merge_sources,
+                           merge_target_t *target,
+                           svn_ra_session_t *ra_session,
+                           svn_boolean_t diff_ignore_ancestry,
+                           svn_boolean_t force_delete,
+                           svn_boolean_t dry_run,
+                           const apr_array_header_t *merge_options,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

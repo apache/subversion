@@ -717,7 +717,7 @@ append_locks(dav_lockdb *lockdb,
 
       /* Commit a 0-byte file: */
 
-      if ((serr = svn_fs_youngest_rev(&rev, repos->fs, resource->pool)))
+      if ((serr = dav_svn__get_youngest_rev(&rev, repos, resource->pool)))
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Could not determine youngest revision",
                                     resource->pool);

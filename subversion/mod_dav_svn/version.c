@@ -221,8 +221,8 @@ get_option(const dav_resource *resource,
       const char *uuid;
 
       /* Got youngest revision? */
-      if ((serr = svn_fs_youngest_rev(&youngest, resource->info->repos->fs,
-                                      resource->pool)))
+      if ((serr = dav_svn__get_youngest_rev(&youngest, resource->info->repos,
+                                            resource->pool)))
         {
           return dav_svn__convert_err
             (serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -616,8 +616,8 @@ dav_svn__checkout(dav_resource *resource,
       svn_revnum_t youngest;
 
       /* make sure the baseline being checked out is the latest */
-      serr = svn_fs_youngest_rev(&youngest, resource->info->repos->fs,
-                                 resource->pool);
+      serr = dav_svn__get_youngest_rev(&youngest, resource->info->repos,
+                                       resource->pool);
       if (serr != NULL)
         {
           /* ### correct HTTP error? */

@@ -3303,6 +3303,7 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
   result->choice = choice;
   result->merged_file = apr_pstrdup(pool, merged_file);
   result->save_merged = FALSE;
+  result->merged_value = NULL;
 
   /* If we add more fields to svn_wc_conflict_result_t, add them here. */
 

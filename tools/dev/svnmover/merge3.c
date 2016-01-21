@@ -899,8 +899,9 @@ merge_subbranch(svn_branch__txn_t *edit_txn,
                                          scratch_pool);
       svn_branch__state_t *edit_subbranch;
 
-      SVN_ERR(svn_branch__txn_branch(edit_txn, &edit_subbranch, from,
-                                     new_branch_id, scratch_pool, scratch_pool));
+      SVN_ERR(svn_branch__txn_open_branch(edit_txn, &edit_subbranch,
+                                          new_branch_id, from->eid, from,
+                                          scratch_pool, scratch_pool));
 
       /* subbranch possibly changed in source => merge */
       SVN_ERR(branch_merge_subtree_r(edit_txn, edit_subbranch,
@@ -933,8 +934,9 @@ merge_subbranch(svn_branch__txn_t *edit_txn,
                                          svn_branch__root_eid(src_subbranch),
                                          scratch_pool);
 
-      SVN_ERR(svn_branch__txn_branch(edit_txn, NULL /*new_branch_p*/, from,
-                                     new_branch_id, scratch_pool, scratch_pool));
+      SVN_ERR(svn_branch__txn_open_branch(edit_txn, NULL /*new_branch_p*/,
+                                          new_branch_id, from->eid, from,
+                                          scratch_pool, scratch_pool));
     }
   else if (subbr_tgt)  /* added on target branch */
     {
@@ -948,8 +950,9 @@ merge_subbranch(svn_branch__txn_t *edit_txn,
                                          svn_branch__root_eid(tgt_subbranch),
                                          scratch_pool);
 
-      SVN_ERR(svn_branch__txn_branch(edit_txn, NULL /*new_branch_p*/, from,
-                                     new_branch_id, scratch_pool, scratch_pool));
+      SVN_ERR(svn_branch__txn_open_branch(edit_txn, NULL /*new_branch_p*/,
+                                          new_branch_id, from->eid, from,
+                                          scratch_pool, scratch_pool));
     }
   else if (subbr_yca)  /* double delete */
     {

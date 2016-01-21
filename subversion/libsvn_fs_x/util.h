@@ -422,13 +422,6 @@ svn_fs_x__try_stringbuf_from_file(svn_stringbuf_t **content,
                                   svn_boolean_t last_attempt,
                                   apr_pool_t *result_pool);
 
-/* Fetch the current offset of FILE into *OFFSET_P.
- * Perform temporary allocations in SCRATCH_POOL. */
-svn_error_t *
-svn_fs_x__get_file_offset(apr_off_t *offset_p,
-                          apr_file_t *file,
-                          apr_pool_t *scratch_pool);
-
 /* Read the file FNAME and store the contents in *BUF.
    Allocations are performed in RESULT_POOL. */
 svn_error_t *

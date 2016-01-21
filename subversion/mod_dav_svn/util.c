@@ -870,3 +870,19 @@ dav_svn__parse_request_skel(svn_skel_t **skel,
   *skel = svn_skel__parse(skel_str->data, skel_str->len, pool);
   return OK;
 }
+
+svn_error_t *
+dav_svn__get_youngest_rev(svn_revnum_t *youngest_p,
+                          dav_svn_repos *repos,
+                          apr_pool_t *scratch_pool)
+{
+  if (repos->youngest_rev == SVN_INVALID_REVNUM)
+    {
+      svn_revnum_t revnum;
+      SVN_ERR(svn_fs_youngest_rev(&revnum, repos->fs, scratch_pool));
+      repos->youngest_rev = revnum;
+    }
+
+   *youngest_p = repos->youngest_rev;
+   return SVN_NO_ERROR;
+}

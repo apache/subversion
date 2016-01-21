@@ -215,32 +215,6 @@
 
 /*** Repos-Diff Editor Callbacks ***/
 
-/* */
-typedef struct merge_source_t
-{
-  /* "left" side URL and revision (inclusive iff youngest) */
-  const svn_client__pathrev_t *loc1;
-
-  /* "right" side URL and revision (inclusive iff youngest) */
-  const svn_client__pathrev_t *loc2;
-
-  /* True iff LOC1 is an ancestor of LOC2 or vice-versa (history-wise). */
-  svn_boolean_t ancestral;
-} merge_source_t;
-
-/* Description of the merge target root node (a WC working node) */
-typedef struct merge_target_t
-{
-  /* Absolute path to the WC node */
-  const char *abspath;
-
-  /* The repository location of the base node of the target WC.  If the node
-   * is locally added, then URL & REV are NULL & SVN_INVALID_REVNUM.
-   * REPOS_ROOT_URL and REPOS_UUID are always valid. */
-  svn_client__pathrev_t loc;
-
-} merge_target_t;
-
 typedef struct merge_cmd_baton_t {
   svn_boolean_t force_delete;         /* Delete a file/dir even if modified */
   svn_boolean_t dry_run;
@@ -11853,6 +11827,21 @@ merge_peg_locked(conflict_report_t **conflict_report,
 
   /* Do the real merge!  (We say with confidence that our merge
      sources are both ancestral and related.) */
+  if (getenv("SVN_ELEMENT_MERGE")
+      && same_repos
+      && (depth == svn_depth_infinity || depth == svn_depth_unknown)
+      && ignore_mergeinfo
+      && !record_only)
+    {
+      err = svn_client__merge_elements(&use_sleep,
+                                       merge_sources, target, ra_session,
+                                       diff_ignore_ancestry, force_delete,
+                                       dry_run, merge_options,
+                                       ctx, result_pool, scratch_pool);
+      /* ### Currently this merge just errors out on any conflicts */
+      *conflict_report = NULL;
+    }
+  else
   err = do_merge(NULL, NULL, conflict_report, &use_sleep,
                  merge_sources, target, ra_session,
                  TRUE /*sources_related*/, same_repos, ignore_mergeinfo,

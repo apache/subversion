@@ -107,7 +107,7 @@ class StatusEditor implements ISVNEditor
     {
         //DEBUG:System.err.println("  [J] StatusEditor.addAbsent");
         checkState();
-        throw new RuntimeException("Not implemented: StatusEditor.addAbsent");
+        // ignore this callback, as svn status -u does
     }
 
     public void alterDirectory(String relativePath,

@@ -295,14 +295,18 @@ svn_branch__instantiate_elements_r(svn_branch__state_t *to_branch,
         svn_branch__subtree_t *this_subtree = apr_hash_this_val(hi);
         const char *new_branch_id;
         svn_branch__state_t *new_branch;
+        /*### svn_branch__history_t *history;*/
 
         /* branch this subbranch into NEW_BRANCH (recursing) */
         new_branch_id = svn_branch__id_nest(to_branch->bid, this_outer_eid,
                                             scratch_pool);
-        new_branch = svn_branch__txn_add_new_branch(to_branch->txn,
-                                                    new_branch_id,
-                                                    this_subtree->tree->root_eid,
-                                                    scratch_pool);
+        SVN_ERR(svn_branch__txn_open_branch(to_branch->txn, &new_branch,
+                                            new_branch_id,
+                                            this_subtree->tree->root_eid,
+                                            NULL /*tree_ref*/,
+                                            scratch_pool, scratch_pool));
+        /*### SVN_ERR(svn_branch__state_set_history(new_branch, history,
+                                              scratch_pool));*/
 
         SVN_ERR(svn_branch__instantiate_elements_r(new_branch, *this_subtree,
                                                    scratch_pool));
@@ -462,35 +466,6 @@ nested_branch_txn_get_branches(const svn_branch__txn_t *txn,
 
 /* An #svn_branch__txn_t method. */
 static svn_error_t *
-nested_branch_txn_add_branch(svn_branch__txn_t *txn,
-                             svn_branch__state_t *branch,
-                             apr_pool_t *scratch_pool)
-{
-  /* Just forwarding: nothing more is needed. */
-  SVN_ERR(svn_branch__txn_add_branch(txn->priv->wrapped_txn,
-                                     branch,
-                                     scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_branch__txn_t method. */
-static svn_branch__state_t *
-nested_branch_txn_add_new_branch(svn_branch__txn_t *txn,
-                                 const char *bid,
-                                 int root_eid,
-                                 apr_pool_t *scratch_pool)
-{
-  /* Just forwarding: nothing more is needed. */
-  svn_branch__state_t *new_branch
-    = svn_branch__txn_add_new_branch(txn->priv->wrapped_txn,
-                                     bid, root_eid,
-                                     scratch_pool);
-
-  return new_branch;
-}
-
-/* An #svn_branch__txn_t method. */
-static svn_error_t *
 nested_branch_txn_delete_branch(svn_branch__txn_t *txn,
                                 const char *bid,
                                 apr_pool_t *scratch_pool)
@@ -537,47 +512,33 @@ nested_branch_txn_open_branch(svn_branch__txn_t *txn,
                               svn_branch__state_t **new_branch_p,
                               const char *new_branch_id,
                               int root_eid,
+                              svn_branch__rev_bid_eid_t *tree_ref,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
-  /* Just forwarding: nothing more is needed. */
+  svn_branch__state_t *new_branch;
+
   SVN_ERR(svn_branch__txn_open_branch(txn->priv->wrapped_txn,
-                                      new_branch_p,
-                                      new_branch_id, root_eid,
+                                      &new_branch,
+                                      new_branch_id, root_eid, tree_ref,
                                       result_pool,
                                       scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-/* Implements nested branching.
- * An #svn_branch__txn_t method. */
-static svn_error_t *
-nested_branch_txn_branch(svn_branch__txn_t *txn,
-                         svn_branch__state_t **new_branch_p,
-                         svn_branch__rev_bid_eid_t *from,
-                         const char *new_branch_id,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
-{
-  svn_branch__state_t *new_branch;
-  svn_branch__state_t *from_branch;
-  svn_branch__subtree_t *from_subtree;
-
-  SVN_ERR(svn_branch__txn_branch(txn->priv->wrapped_txn,
-                                 &new_branch, from,
-                                 new_branch_id,
-                                 result_pool,
-                                 scratch_pool));
 
   /* Recursively branch any nested branches */
-  /* (The way we're doing it here also redundantly re-instantiates all the
-     elements in NEW_BRANCH.) */
-  SVN_ERR(branch_in_rev_or_txn(&from_branch, from, txn->priv->wrapped_txn,
-                               scratch_pool));
-  SVN_ERR(svn_branch__get_subtree(from_branch, &from_subtree, from->eid,
-                                  scratch_pool));
-  SVN_ERR(svn_branch__instantiate_elements_r(new_branch, *from_subtree,
-                                             scratch_pool));
+  if (tree_ref)
+    {
+      svn_branch__state_t *from_branch;
+      svn_branch__subtree_t *from_subtree;
+
+      /* (The way we're doing it here also redundantly re-instantiates all the
+         elements in NEW_BRANCH.) */
+      SVN_ERR(branch_in_rev_or_txn(&from_branch, tree_ref,
+                                   txn->priv->wrapped_txn, scratch_pool));
+      SVN_ERR(svn_branch__get_subtree(from_branch, &from_subtree,
+                                      tree_ref->eid, scratch_pool));
+      SVN_ERR(svn_branch__instantiate_elements_r(new_branch, *from_subtree,
+                                                 scratch_pool));
+    }
 
   if (new_branch_p)
     *new_branch_p = new_branch;
@@ -676,13 +637,10 @@ svn_branch__nested_txn_create(svn_branch__txn_t *wrapped_txn,
   static const svn_branch__txn_vtable_t vtable = {
     {0},
     nested_branch_txn_get_branches,
-    nested_branch_txn_add_branch,
-    nested_branch_txn_add_new_branch,
     nested_branch_txn_delete_branch,
     nested_branch_txn_get_num_new_eids,
     nested_branch_txn_new_eid,
     nested_branch_txn_open_branch,
-    nested_branch_txn_branch,
     nested_branch_txn_finalize_eids,
     nested_branch_txn_serialize,
     nested_branch_txn_sequence_point,

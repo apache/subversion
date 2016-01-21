@@ -182,6 +182,12 @@ typedef struct svn_fs_x__ede_baton_t
   /** Current length of the in-txn in-disk representation of the directory.
    * SVN_INVALID_FILESIZE if unknown. */
   svn_filesize_t txn_filesize;
+
+  /** Will be set by the callback.  If FALSE, the cached data is out of date.
+   * We need this indicator because the svn_cache__t interface will always
+   * report the lookup as a success (FOUND==TRUE) if the generic lookup was
+   * successful -- regardless of what the entry extraction callback does. */
+  svn_boolean_t out_of_date;
 } svn_fs_x__ede_baton_t;
 
 /**

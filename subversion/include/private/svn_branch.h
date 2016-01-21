@@ -166,6 +166,11 @@ svn_branch__txn_create(const svn_branch__txn_vtable_t *vtable,
 
 /* Return all the branches in TXN.
  *
+ * These branches are available for reading. (Some of them may also be
+ * mutable.)
+ *
+ * ### Rename to 'list_branches' & return only their ids?
+ *
  * Return an empty array if there are none.
  */
 apr_array_header_t *
@@ -199,10 +204,20 @@ svn_branch__txn_new_eid(svn_branch__txn_t *txn,
                         int *new_eid_p,
                         apr_pool_t *scratch_pool);
 
-/** Create a new branch or access an existing branch.
+/** Open for writing, either a new branch or an existing branch.
  *
- * When creating a branch, declare its root element id to be ROOT_EID. Do
+ * When creating a new branch, declare its root element id to be ROOT_EID. Do
  * not instantiate the root element, nor any other elements.
+ *
+ * TREE_REF specifies the initial tree content, by reference to a committed
+ * tree. It overwrites any existing tree, even if the branch was already
+ * mutable in the txn.
+ *
+ * If TREE_REF is null, then the initial tree is empty for a new branch
+ * (not already present in the txn), or the branch's current tree if the
+ * branch was already present (readable or mutable) in the txn.
+ *
+ * ### TODO: Take a 'history' parameter; 'none' is a valid option.
  *
  * We use a common 'open subbranch' method for both 'find' and 'add'
  * cases, according to the principle that 'editing' a txn should dictate
@@ -211,26 +226,17 @@ svn_branch__txn_new_eid(svn_branch__txn_t *txn,
  * This method returns a mutable 'branch state' object which is a part of
  * the txn.
  *
- * When adding a new branch, ROOT_EID is used.
- *
  * ### When opening ('finding') an existing branch, ROOT_EID should match
  *     it. (Should we check, and throw an error if not?)
  */
 svn_error_t *
 svn_branch__txn_open_branch(svn_branch__txn_t *txn,
                             svn_branch__state_t **new_branch_p,
-                            const char *new_branch_id,
+                            const char *branch_id,
                             int root_eid,
+                            svn_branch__rev_bid_eid_t *tree_ref,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
-
-svn_error_t *
-svn_branch__txn_branch(svn_branch__txn_t *txn,
-                       svn_branch__state_t **new_branch_p,
-                       svn_branch__rev_bid_eid_t *from,
-                       const char *new_branch_id,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool);
 
 /** Register a sequence point.
  *
@@ -323,6 +329,8 @@ struct svn_branch__state_t
   const char *bid;
 
   /* The revision to which this branch state belongs */
+  /* ### Later we should remove this and let a single state be sharable
+     by multiple txns. */
   svn_branch__txn_t *txn;
 
 };
@@ -384,26 +392,6 @@ svn_branch__id_unnest(const char **outer_bid,
                       int *outer_eid,
                       const char *bid,
                       apr_pool_t *result_pool);
-
-/* Register the existence of BRANCH in TXN.
- */
-svn_error_t *
-svn_branch__txn_add_branch(svn_branch__txn_t *txn,
-                           svn_branch__state_t *branch,
-                           apr_pool_t *scratch_pool);
-
-/* Create a new branch with branch id BID, with no elements
- * (not even a root element).
- *
- * Create and return a new branch object. Register its existence in TXN.
- *
- * Set the root element to ROOT_EID.
- */
-svn_branch__state_t *
-svn_branch__txn_add_new_branch(svn_branch__txn_t *txn,
-                               const char *bid,
-                               int root_eid,
-                               apr_pool_t *scratch_pool);
 
 /* Remove the branch with id BID from the list of branches in TXN.
  */

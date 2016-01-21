@@ -1518,6 +1518,7 @@ fi
 # Need to strip '-no-cpp-precomp' from CPPFLAGS for SWIG as well.
 SWIG_CPPFLAGS="$CPPFLAGS"
 SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-no-cpp-precomp ])
+SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-Wdate-time ])
 AC_SUBST([SWIG_CPPFLAGS])
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'

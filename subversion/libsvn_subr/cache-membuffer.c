@@ -147,6 +147,10 @@
 #endif
 
 /* For more efficient copy operations, let's align all data items properly.
+ * Since we can't portably align pointers, this is rather the item size
+ * granularity which ensures *relative* alignment within the cache - still
+ * giving us decent copy speeds on most machines.
+ *
  * Must be a power of 2.
  */
 #define ITEM_ALIGNMENT 16
@@ -813,10 +817,6 @@ struct svn_membuffer_t
 /* Align integer VALUE to the next ITEM_ALIGNMENT boundary.
  */
 #define ALIGN_VALUE(value) (((value) + ITEM_ALIGNMENT-1) & -ITEM_ALIGNMENT)
-
-/* Align POINTER value to the next ITEM_ALIGNMENT boundary.
- */
-#define ALIGN_POINTER(pointer) ((void*)ALIGN_VALUE((apr_size_t)(char*)(pointer)))
 
 /* If locking is supported for CACHE, acquire a read lock for it.
  */
@@ -1827,28 +1827,6 @@ ensure_data_insertable_l1(svn_membuffer_t *cache, apr_size_t size)
    * right answer. */
 }
 
-/* Mimic apr_pcalloc in APR_POOL_DEBUG mode, i.e. handle failed allocations
- * (e.g. OOM) properly: Allocate at least SIZE bytes from POOL and zero
- * the content of the allocated memory if ZERO has been set. Return NULL
- * upon failed allocations.
- *
- * Also, satisfy our buffer alignment needs for performance reasons.
- */
-static void* secure_aligned_alloc(apr_pool_t *pool,
-                                  apr_size_t size,
-                                  svn_boolean_t zero)
-{
-  void* memory = apr_palloc(pool, size + ITEM_ALIGNMENT);
-  if (memory != NULL)
-    {
-      memory = ALIGN_POINTER(memory);
-      if (zero)
-        memset(memory, 0, size);
-    }
-
-  return memory;
-}
-
 svn_error_t *
 svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
                                   apr_size_t total_size,
@@ -2017,10 +1995,11 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
       c[seg].l2.last = NO_INDEX;
       c[seg].l2.next = NO_INDEX;
       c[seg].l2.start_offset = c[seg].l1.size;
-      c[seg].l2.size = data_size - c[seg].l1.size;
+      c[seg].l2.size = ALIGN_VALUE(data_size) - c[seg].l1.size;
       c[seg].l2.current_data = c[seg].l2.start_offset;
 
-      c[seg].data = secure_aligned_alloc(pool, (apr_size_t)data_size, FALSE);
+      /* This cast is safe because DATA_SIZE <= MAX_SEGMENT_SIZE. */
+      c[seg].data = apr_palloc(pool, (apr_size_t)ALIGN_VALUE(data_size));
       c[seg].data_used = 0;
       c[seg].max_entry_size = max_entry_size;
 
@@ -2219,18 +2198,13 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
   /* first, look for a previous entry for the given key */
   entry_t *entry = find_entry(cache, group_index, to_find, FALSE);
 
-  /* Quick size check to make sure arithmetics will work further down
-   * the road. */
-  if (   cache->max_entry_size >= item_size
-      && cache->max_entry_size - item_size >= to_find->entry_key.key_len)
+  /* Quick check make sure arithmetics will work further down the road. */
+  size = item_size + to_find->entry_key.key_len;
+  if (size < item_size)
     {
-      size = item_size + to_find->entry_key.key_len;
-    }
-  else
-    {
-      /* The combination of serialized ITEM and KEY does not fit, so the
-       * the insertion attempt will fail and simply remove any old entry
-       * if that exists. */
+      /* Arithmetic overflow, so combination of serialized ITEM and KEY
+       * cannot not fit into the cache.  Setting BUFFER to NULL will cause
+       * the removal of any entry if that exists without writing new data. */
       buffer = NULL;
     }
 
@@ -2414,7 +2388,7 @@ membuffer_cache_get_internal(svn_membuffer_t *cache,
     }
 
   size = ALIGN_VALUE(entry->size) - entry->key.key_len;
-  *buffer = ALIGN_POINTER(apr_palloc(result_pool, size + ITEM_ALIGNMENT-1));
+  *buffer = apr_palloc(result_pool, size);
   memcpy(*buffer, cache->data + entry->offset + entry->key.key_len, size);
 
 #ifdef SVN_DEBUG_CACHE_MEMBUFFER

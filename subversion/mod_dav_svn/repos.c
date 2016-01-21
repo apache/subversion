@@ -810,7 +810,7 @@ prep_regular(dav_resource_combined *comb)
      ### other cases besides a BC? */
   if (comb->priv.root.rev == SVN_INVALID_REVNUM)
     {
-      serr = svn_fs_youngest_rev(&comb->priv.root.rev, repos->fs, pool);
+      serr = dav_svn__get_youngest_rev(&comb->priv.root.rev, repos, pool);
       if (serr != NULL)
         {
           return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
@@ -879,9 +879,9 @@ prep_version(dav_resource_combined *comb)
   /* if we don't have a revision, then assume the youngest */
   if (!SVN_IS_VALID_REVNUM(comb->priv.root.rev))
     {
-      serr = svn_fs_youngest_rev(&comb->priv.root.rev,
-                                 comb->priv.repos->fs,
-                                 pool);
+      serr = dav_svn__get_youngest_rev(&comb->priv.root.rev,
+                                       comb->priv.repos,
+                                       pool);
       if (serr != NULL)
         {
           /* ### might not be a baseline */
@@ -1583,6 +1583,7 @@ get_parentpath_resource(request_rec *r,
   repos->special_uri = dav_svn__get_special_uri(r);
   repos->username = r->user;
   repos->client_capabilities = apr_hash_make(repos->pool);
+  repos->youngest_rev = SVN_INVALID_REVNUM;
 
   /* Make sure this type of resource always has a trailing slash; if
      not, redirect to a URI that does. */
@@ -2020,7 +2021,7 @@ parse_querystring(request_rec *r, const char *query,
   else
     {
       /* No peg-rev?  Default to HEAD, just like the cmdline client. */
-      serr = svn_fs_youngest_rev(&peg_rev, comb->priv.repos->fs, pool);
+      serr = dav_svn__get_youngest_rev(&peg_rev, comb->priv.repos, pool);
       if (serr != NULL)
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Couldn't fetch youngest rev.", pool);
@@ -2259,6 +2260,7 @@ get_resource(request_rec *r,
   /* create the repository structure and stash it away */
   repos = apr_pcalloc(r->pool, sizeof(*repos));
   repos->pool = r->pool;
+  repos->youngest_rev = SVN_INVALID_REVNUM;
 
   comb->priv.repos = repos;
 
@@ -2367,6 +2369,8 @@ get_resource(request_rec *r,
                     dav_svn__get_fulltext_cache_flag(r) ? "1" :"0");
       svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
                     dav_svn__get_revprop_cache_flag(r) ? "2" :"0");
+      svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NODEPROPS,
+                    dav_svn__get_nodeprop_cache_flag(r) ? "1" :"0");
       svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ,
                     dav_svn__get_block_read_flag(r) ? "1" :"0");
 
@@ -3034,50 +3038,6 @@ seek_stream(dav_stream *stream, apr_off_t abs_position)
        && resource->baselined))
 
 
-/* Return the last modification time of RESOURCE, or -1 if the DAV
-   resource type is not handled, or if an error occurs.  Temporary
-   allocations are made from RESOURCE->POOL. */
-static apr_time_t
-get_last_modified(const dav_resource *resource)
-{
-  apr_time_t last_modified;
-  svn_error_t *serr;
-  svn_revnum_t created_rev;
-  svn_string_t *date_time;
-
-  if (RESOURCE_LACKS_ETAG_POTENTIAL(resource))
-    return -1;
-
-  if ((serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
-                                      resource->info->repos_path,
-                                      resource->pool)))
-    {
-      svn_error_clear(serr);
-      return -1;
-    }
-
-  if ((serr = svn_fs_revision_prop2(&date_time, resource->info->repos->fs,
-                                    created_rev, "svn:date", TRUE,
-                                    resource->pool, resource->pool)))
-    {
-      svn_error_clear(serr);
-      return -1;
-    }
-
-  if (date_time == NULL || date_time->data == NULL)
-    return -1;
-
-  if ((serr = svn_time_from_cstring(&last_modified, date_time->data,
-                                    resource->pool)))
-    {
-      svn_error_clear(serr);
-      return -1;
-    }
-
-  return last_modified;
-}
-
-
 const char *
 dav_svn__getetag(const dav_resource *resource, apr_pool_t *pool)
 {
@@ -3147,7 +3107,6 @@ set_headers(request_rec *r, const dav_resource *resource)
   svn_error_t *serr;
   svn_filesize_t length;
   const char *mimetype = NULL;
-  apr_time_t last_modified;
 
   /* As version resources don't change, encourage caching. */
   if (is_cacheable(r, resource))
@@ -3158,15 +3117,6 @@ set_headers(request_rec *r, const dav_resource *resource)
 
   if (!resource->exists)
     return NULL;
-
-  last_modified = get_last_modified(resource);
-  if (last_modified != -1)
-    {
-      /* Note the modification time for the requested resource, and
-         include the Last-Modified header in the response. */
-      ap_update_mtime(r, last_modified);
-      ap_set_last_modified(r);
-    }
 
   /* generate our etag and place it into the output */
   apr_table_setn(r->headers_out, "ETag",
@@ -4633,7 +4583,7 @@ dav_svn__working_to_regular_resource(dav_resource *resource)
   /* Change the URL into either a baseline-collection or a public one. */
   if (priv->root.rev == SVN_INVALID_REVNUM)
     {
-      serr = svn_fs_youngest_rev(&priv->root.rev, repos->fs, resource->pool);
+      serr = dav_svn__get_youngest_rev(&priv->root.rev, repos, resource->pool);
       if (serr != NULL)
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Could not determine youngest rev.",

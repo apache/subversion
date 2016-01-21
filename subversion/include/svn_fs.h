@@ -134,6 +134,12 @@ typedef struct svn_fs_t svn_fs_t;
  */
 #define SVN_FS_CONFIG_FSFS_CACHE_NS             "fsfs-cache-namespace"
 
+/** Enable / disable caching of node properties for a FSFS repository.
+ *
+ * @since New in 1.10.
+ */
+#define SVN_FS_CONFIG_FSFS_CACHE_NODEPROPS      "fsfs-cache-nodeprops"
+
 /** Enable / disable the FSFS format 7 "block read" feature.
  *
  * @since New in 1.9.

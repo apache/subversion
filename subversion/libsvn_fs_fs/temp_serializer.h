@@ -221,6 +221,16 @@ svn_fs_fs__serialize_dir_entries(void **data,
                                  apr_pool_t *pool);
 
 /**
+ * Same as svn_fs_fs__serialize_dir_entries but allocates extra room for
+ * in-place modification.
+ */
+svn_error_t *
+svn_fs_fs__serialize_txndir_entries(void **data,
+                                    apr_size_t *data_len,
+                                    void *in,
+                                    apr_pool_t *pool);
+
+/**
  * Implements #svn_cache__deserialize_func_t for a #svn_fs_fs__dir_data_t
  */
 svn_error_t *
@@ -264,6 +274,12 @@ typedef struct extract_dir_entry_baton_t
   /** Current length of the in-txn in-disk representation of the directory.
    * SVN_INVALID_FILESIZE if unknown. */
   svn_filesize_t txn_filesize;
+
+  /** Will be set by the callback.  If FALSE, the cached data is out of date.
+   * We need this indicator because the svn_cache__t interface will always
+   * report the lookup as a success (FOUND==TRUE) if the generic lookup was
+   * successful -- regardless of what the entry extraction callback does. */
+  svn_boolean_t out_of_date;
 } extract_dir_entry_baton_t;
 
 

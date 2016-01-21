@@ -210,15 +210,16 @@ invoke_commit_cb(svn_commit_callback2_t commit_cb,
   /* const */ svn_string_t *date;
   /* const */ svn_string_t *author;
   svn_commit_info_t *commit_info;
+  apr_hash_t *revprops;
 
   if (commit_cb == NULL)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_fs_revision_prop2(&date, fs, revision, SVN_PROP_REVISION_DATE,
-                                TRUE, scratch_pool, scratch_pool));
-  SVN_ERR(svn_fs_revision_prop2(&author, fs, revision,
-                                SVN_PROP_REVISION_AUTHOR,
-                                TRUE, scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_revision_proplist2(&revprops, fs, revision,
+                                    TRUE, scratch_pool, scratch_pool));
+
+  date = svn_hash_gets(revprops, SVN_PROP_REVISION_DATE);
+  author = svn_hash_gets(revprops, SVN_PROP_REVISION_AUTHOR);
 
   commit_info = svn_create_commit_info(scratch_pool);
 

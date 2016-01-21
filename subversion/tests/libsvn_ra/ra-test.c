@@ -603,6 +603,7 @@ get_dir_test(const svn_test_opts_t *opts,
 {
   svn_ra_session_t *session;
   apr_hash_t *dirents;
+  svn_dirent_t *ent;
 
   SVN_ERR(make_and_open_repos(&session, "test-get-dir", opts, pool));
   SVN_ERR(commit_tree(session, pool));
@@ -612,6 +613,19 @@ get_dir_test(const svn_test_opts_t *opts,
                                         "non/existing/relpath", 1,
                                         SVN_DIRENT_KIND, pool),
                         SVN_ERR_FS_NOT_FOUND);
+
+  /* Test fetching SVN_DIRENT_SIZE without SVN_DIRENT_KIND. */
+  SVN_ERR(svn_ra_get_dir2(session, &dirents, NULL, NULL, "", 1,
+                          SVN_DIRENT_SIZE, pool));
+  SVN_TEST_INT_ASSERT(apr_hash_count(dirents), 1);
+  ent = svn_hash_gets(dirents, "A");
+  SVN_TEST_ASSERT(ent);
+
+#if 0
+  /* ra_serf has returns SVN_INVALID_SIZE instead of documented zero for
+   * for directories. */
+  SVN_TEST_INT_ASSERT(ent->size, 0);
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -1632,12 +1646,9 @@ commit_empty_last_change(const svn_test_opts_t *opts,
       SVN_TEST_ASSERT(dirent != NULL);
       SVN_TEST_STRING_ASSERT(dirent->last_author, "jrandom");
       
-      /* BDB only updates last_changed on the repos_root when there is an
-         actual change. Our other filesystems handle this differently */
-      if (!opts->fs_type || !strcasecmp(opts->fs_type, "BDB"))
-        SVN_TEST_INT_ASSERT(dirent->created_rev, 1);
-      else
-        SVN_TEST_INT_ASSERT(dirent->created_rev, 2+i);
+      /* BDB used to only updates last_changed on the repos_root when there
+         was an actual change. Now all filesystems behave in the same way */
+      SVN_TEST_INT_ASSERT(dirent->created_rev, 2+i);
     }
 
   svn_pool_clear(tmp_pool);

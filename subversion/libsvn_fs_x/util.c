@@ -644,22 +644,6 @@ svn_fs_x__try_stringbuf_from_file(svn_stringbuf_t **content,
 
 /* Fetch the current offset of FILE into *OFFSET_P. */
 svn_error_t *
-svn_fs_x__get_file_offset(apr_off_t *offset_p,
-                          apr_file_t *file,
-                          apr_pool_t *scratch_pool)
-{
-  apr_off_t offset;
-
-  /* Note that, for buffered files, one (possibly surprising) side-effect
-     of this call is to flush any unwritten data to disk. */
-  offset = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, &offset, scratch_pool));
-  *offset_p = offset;
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_fs_x__read_content(svn_stringbuf_t **content,
                        const char *fname,
                        apr_pool_t *result_pool)

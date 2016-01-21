@@ -1568,8 +1568,14 @@ get_default_file_perms(apr_fileperms_t *perms,
 
         Using svn_io_open_uniquely_named() here because other tempfile
         creation functions tweak the permission bits of files they create.
+
+        Note that APR pool structures are allocated as the first item
+        in their first memory page (with e.g. 4kB granularity), i.e. the
+        lower bits tend to be identical between pool instances.  That is
+        particularly true for the MMAPed allocator.
       */
       randomish = ((apr_uint32_t)(apr_uintptr_t)scratch_pool
+                   + (apr_uint32_t)((apr_uintptr_t)scratch_pool / 4096)
                    + (apr_uint32_t)apr_time_now());
       fname_base = apr_psprintf(scratch_pool, "svn-%08x", randomish);
 

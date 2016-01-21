@@ -362,6 +362,14 @@ svn_cl__conflict_stats_resolved(svn_cl__conflict_stats_t *conflict_stats,
                                 const char *path_local,
                                 svn_wc_conflict_kind_t conflict_kind);
 
+/* Set *CONFLICTED_PATHS to the conflicted paths contained in CONFLICT_STATS.
+ * If no conflicted path exists, set *CONFLICTED_PATHS to NULL. */
+svn_error_t *
+svn_cl__conflict_stats_get_paths(apr_array_header_t **conflicted_paths,
+                                 svn_cl__conflict_stats_t *conflict_stats,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
+
 /* Print the conflict stats accumulated in CONFLICT_STATS.
  *
  * Return any error encountered during printing.
@@ -371,38 +379,10 @@ svn_error_t *
 svn_cl__print_conflict_stats(svn_cl__conflict_stats_t *conflict_stats,
                              apr_pool_t *scratch_pool);
 
-/* Create and return an baton for use with svn_cl__conflict_func_interactive
- * in *B, allocated from RESULT_POOL, and initialised with the values
- * ACCEPT_WHICH, CONFIG, EDITOR_CMD, CANCEL_FUNC and CANCEL_BATON. */
-svn_error_t *
-svn_cl__get_conflict_func_interactive_baton(
-  svn_cl__interactive_conflict_baton_t **b,
-  svn_cl__accept_t accept_which,
-  apr_hash_t *config,
-  const char *editor_cmd,
-  svn_cl__conflict_stats_t *conflict_stats,
-  svn_cancel_func_t cancel_func,
-  void *cancel_baton,
-  apr_pool_t *result_pool);
-
-/* A callback capable of doing interactive conflict resolution.
-
-   The BATON must come from svn_cl__get_conflict_func_interactive_baton().
-   Resolves based on the --accept option if one was given to that function,
-   otherwise prompts the user to choose one of the three fulltexts, edit
-   the merged file on the spot, or just skip the conflict (to be resolved
-   later), among other options.
-
-   Implements svn_wc_conflict_resolver_func2_t.
+/* 
+ * Interactively resolve the conflict a @a CONFLICT.
+ * TODO: more docs
  */
-svn_error_t *
-svn_cl__conflict_func_interactive(svn_wc_conflict_result_t **result,
-                                  const svn_wc_conflict_description2_t *desc,
-                                  void *baton,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
-
-
 svn_error_t *
 svn_cl__resolve_conflict(svn_boolean_t *resolved,
                          svn_cl__accept_t *accept_which,
@@ -418,6 +398,18 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
                          svn_client_conflict_option_id_t option_id,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool);
+
+/* 
+ * Interactively resolve conflicts for all TARGETS.
+ * TODO: more docs
+ */
+svn_error_t *
+svn_cl__walk_conflicts(apr_array_header_t *targets,
+                       svn_cl__conflict_stats_t *conflict_stats,
+                       svn_boolean_t is_resolve_cmd,
+                       svn_cl__opt_state_t *opt_state,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *scratch_pool);
 
 
 /*** Command-line output functions -- printing to the user. ***/
