@@ -2453,8 +2453,11 @@ read_dir_entries(apr_array_header_t **entries_p,
       char *str;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_hash__read_entry(&entry, stream, terminator,
-                                   incremental, iterpool));
+      SVN_ERR_W(svn_hash__read_entry(&entry, stream, terminator,
+                                     incremental, iterpool),
+                apr_psprintf(iterpool,
+                             _("Directory representation corrupt in '%s'"),
+                             svn_fs_fs__id_unparse(id, scratch_pool)->data));
 
       /* End of directory? */
       if (entry.key == NULL)
