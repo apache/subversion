@@ -234,7 +234,7 @@ get_shared_txn_body(svn_fs_t *fs,
       txn = apr_palloc(subpool, sizeof(*txn));
       txn->pool = subpool;
       txn->is_concurrent = ffd->concurrent_txns;
-      SVN_ERR(svn_mutex__init(&txn->lock, TRUE, txn->pool));
+      SVN_ERR(svn_mutex__init(&txn->lock, txn->is_concurrent, txn->pool));
     }
 
   txn->txn_id = *b->txn_id;
