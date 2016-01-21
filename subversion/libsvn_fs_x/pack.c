@@ -391,7 +391,7 @@ static svn_error_t *
 copy_file_data(pack_context_t *context,
                apr_file_t *dest,
                apr_file_t *source,
-               apr_off_t size,
+               svn_filesize_t size,
                apr_pool_t *scratch_pool)
 {
   /* most non-representation items will be small.  Minimize the buffer
@@ -478,8 +478,8 @@ copy_item_to_temp(pack_context_t *context,
   svn_fs_x__p2l_entry_t *new_entry
     = svn_fs_x__p2l_entry_dup(entry, context->info_pool);
 
-  SVN_ERR(svn_fs_x__get_file_offset(&new_entry->offset, temp_file,
-                                    scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&new_entry->offset, temp_file,
+                                 scratch_pool));
   APR_ARRAY_PUSH(entries, svn_fs_x__p2l_entry_t *) = new_entry;
 
   SVN_ERR(svn_fs_x__rev_file_get(&file, rev_file));
@@ -572,8 +572,8 @@ copy_rep_to_temp(pack_context_t *context,
   /* create a copy of ENTRY, make it point to the copy destination and
    * store it in CONTEXT */
   entry = svn_fs_x__p2l_entry_dup(entry, context->info_pool);
-  SVN_ERR(svn_fs_x__get_file_offset(&entry->offset, context->reps_file,
-                                    scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&entry->offset, context->reps_file,
+                                 scratch_pool));
   add_item_rep_mapping(context, entry);
 
   /* read & parse the representation header */
@@ -698,8 +698,8 @@ copy_node_to_temp(pack_context_t *context,
   /* create a copy of ENTRY, make it point to the copy destination and
    * store it in CONTEXT */
   entry = svn_fs_x__p2l_entry_dup(entry, context->info_pool);
-  SVN_ERR(svn_fs_x__get_file_offset(&entry->offset, context->reps_file,
-                                    scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&entry->offset, context->reps_file,
+                                 scratch_pool));
   add_item_rep_mapping(context, entry);
 
   /* copy the noderev to our temp file */
@@ -1839,20 +1839,15 @@ append_revision(pack_context_t *context,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_fs_x__revision_file_t *rev_file;
   apr_file_t *file;
-  apr_finfo_t finfo;
-
-  /* Get the size of the file. */
-  const char *path = svn_dirent_join(context->shard_dir,
-                                     apr_psprintf(iterpool, "%ld",
-                                                  context->start_rev),
-                                     scratch_pool);
-  SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE, scratch_pool));
+  svn_filesize_t revfile_size;
 
   /* Copy all the bits from the rev file to the end of the pack file. */
   SVN_ERR(svn_fs_x__rev_file_init(&rev_file, context->fs, context->start_rev,
                                   scratch_pool));
   SVN_ERR(svn_fs_x__rev_file_get(&file, rev_file));
-  SVN_ERR(copy_file_data(context, context->pack_file, file, finfo.size,
+
+  SVN_ERR(svn_io_file_size_get(&revfile_size, file, scratch_pool));
+  SVN_ERR(copy_file_data(context, context->pack_file, file, revfile_size,
                          iterpool));
 
   /* mark the start of a new revision */
@@ -1861,7 +1856,7 @@ append_revision(pack_context_t *context,
 
   /* read the phys-to-log index file until we covered the whole rev file.
    * That index contains enough info to build both target indexes from it. */
-  while (offset < finfo.size)
+  while (offset < revfile_size)
     {
       /* read one cluster */
       int i;
@@ -1883,7 +1878,7 @@ append_revision(pack_context_t *context,
 
           /* process entry while inside the rev file */
           offset = entry->offset;
-          if (offset < finfo.size)
+          if (offset < revfile_size)
             {
               /* there should be true containers */
               SVN_ERR_ASSERT(entry->item_count == 1);
@@ -1902,7 +1897,7 @@ append_revision(pack_context_t *context,
     }
 
   svn_pool_destroy(iterpool);
-  context->pack_offset += finfo.size;
+  context->pack_offset += revfile_size;
 
   return SVN_NO_ERROR;
 }

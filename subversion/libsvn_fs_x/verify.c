@@ -448,8 +448,8 @@ expect_buffer_nul(svn_fs_x__revision_file_t *file,
         const char *file_name;
         apr_off_t offset;
 
-        SVN_ERR(svn_fs_x__rev_file_name(&file_name, file, scratch_pool));
-        SVN_ERR(svn_fs_x__rev_file_offset(&offset, file));
+        SVN_ERR(svn_io_file_name_get(&file_name, file, scratch_pool));
+        SVN_ERR(svn_io_file_get_offset(&offset, file, scratch_pool));
         offset -= size - i;
 
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
