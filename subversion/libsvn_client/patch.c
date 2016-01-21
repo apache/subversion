@@ -3305,6 +3305,7 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
  */
 static svn_error_t *
 write_out_rejected_hunks(patch_target_t *target,
+                         const char *root_abspath,
                          svn_boolean_t dry_run,
                          apr_pool_t *scratch_pool)
 {
@@ -3312,17 +3313,33 @@ write_out_rejected_hunks(patch_target_t *target,
     {
       /* Write out rejected hunks, if any. */
       apr_file_t *reject_file;
+      svn_error_t *err;
 
-      SVN_ERR(svn_io_open_uniquely_named(&reject_file, NULL,
-                                         svn_dirent_dirname(
-                                              target->local_abspath,
-                                              scratch_pool),
-                                         svn_dirent_basename(
-                                              target->local_abspath,
-                                              NULL),
-                                         ".svnpatch.rej",
-                                         svn_io_file_del_none,
-                                         scratch_pool, scratch_pool));
+      err = svn_io_open_uniquely_named(&reject_file, NULL,
+                                       svn_dirent_dirname(target->local_abspath,
+                                                          scratch_pool),
+                                       svn_dirent_basename(
+                                         target->local_abspath,
+                                         NULL),
+                                       ".svnpatch.rej",
+                                       svn_io_file_del_none,
+                                       scratch_pool, scratch_pool);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          /* The hunk applies to a file in a directory which does not exist.
+           * Put the reject file into the working copy root instead. */
+          svn_error_clear(err);
+          SVN_ERR(svn_io_open_uniquely_named(&reject_file, NULL,
+                                             root_abspath,
+                                             svn_dirent_basename(
+                                               target->local_abspath,
+                                               NULL),
+                                             ".svnpatch.rej",
+                                             svn_io_file_del_none,
+                                             scratch_pool, scratch_pool));
+        }
+      else
+        SVN_ERR(err);
 
       SVN_ERR(svn_stream_reset(target->reject_stream));
 
@@ -3678,7 +3695,8 @@ apply_patches(/* The path to the patch file. */
                     SVN_ERR(install_patched_prop_targets(target, ctx,
                                                          dry_run, iterpool));
 
-                  SVN_ERR(write_out_rejected_hunks(target, dry_run, iterpool));
+                  SVN_ERR(write_out_rejected_hunks(target, root_abspath,
+                                                   dry_run, iterpool));
 
                   APR_ARRAY_PUSH(targets_info,
                                  patch_target_info_t *) = target_info;
