@@ -1341,7 +1341,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
       SVN_ERR(svn_fs_x__rev_file_get(&apr_file, file));
       SVN_ERR(svn_txdelta_skip_svndiff_window(apr_file, rs->ver, iterpool));
       rs->chunk_index++;
-      SVN_ERR(svn_fs_x__get_file_offset(&start_offset, apr_file, iterpool));
+      SVN_ERR(svn_io_file_get_offset(&start_offset, apr_file, iterpool));
 
       rs->current = start_offset - rs->start;
       if (rs->current >= rs->size)
