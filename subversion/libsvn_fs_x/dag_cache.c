@@ -433,11 +433,15 @@ svn_fs_x__update_dag_cache(dag_node_t *node)
 
   cache_entry_t *bucket;
   svn_string_t normalized;
+  svn_fs_x__change_set_t change_set = svn_fs_x__dag_get_id(node)->change_set;
 
-  auto_clear_dag_cache(cache);
-  bucket = cache_lookup(cache, svn_fs_x__dag_get_id(node)->change_set,
-                        normalize_path(&normalized, path));
-  bucket->node = svn_fs_x__dag_dup(node, cache->pool);
+  if (!svn_fs_x__is_txn(change_set) || !ffd->concurrent_txns)
+    {
+      auto_clear_dag_cache(cache);
+      bucket = cache_lookup(cache, change_set,
+                            normalize_path(&normalized, path));
+      bucket->node = svn_fs_x__dag_dup(node, cache->pool);
+    }
 }
 
 void
@@ -449,6 +453,11 @@ svn_fs_x__invalidate_dag_cache(svn_fs_root_t *root,
   svn_fs_x__change_set_t change_set = svn_fs_x__root_change_set(root);
 
   apr_size_t i;
+
+  /* The cache is not used for items in concurrent txns. */
+  if (ffd->concurrent_txns)
+    return;
+
   for (i = 0; i < BUCKET_COUNT; ++i)
     {
       cache_entry_t *bucket = &cache->buckets[i];
