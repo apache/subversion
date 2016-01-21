@@ -496,21 +496,28 @@ static const svn_client_conflict_option_t text_conflict_options[] =
 
   {
     svn_client_conflict_option_working_text,
-    N_("accept working copy version of entire file"),
+    N_("reject all incoming changes for this file"),
     NULL,
     resolve_text_conflict
   },
 
   {
     svn_client_conflict_option_incoming_text_where_conflicted,
-    N_("accept incoming version of all text conflicts in file"),
+    N_("accept incoming changes only where they conflict"),
     NULL,
     resolve_text_conflict
   },
 
   {
     svn_client_conflict_option_working_text_where_conflicted,
-    N_("accept working copy version of all text conflicts in file"),
+    N_("reject incoming changes which conflict and accept the rest"),
+    NULL,
+    resolve_text_conflict
+  },
+
+  {
+    svn_client_conflict_option_merged_text,
+    N_("accept the file as it appears in the working copy"),
     NULL,
     resolve_text_conflict
   },
