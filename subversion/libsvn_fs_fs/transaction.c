@@ -470,15 +470,16 @@ svn_fs_fs__with_txn_auto_lock(svn_fs_t *fs,
    */
   if (ffd->concurrent_txns)
     {
+      svn_error_t *err1, *err2;
       void *lockcookie;
 
       SVN_ERR(lock_proto_rev(&lockcookie, fs, txn_id, scratch_pool));
 
-      /* Now open the prototype revision file and seek to the end. */
-      SVN_ERR(svn_error_compose_create(body(baton, scratch_pool),
-                                       unlock_proto_rev(fs, txn_id,
-                                                        lockcookie,
-                                                        scratch_pool)));
+      /* Be sure to always unlock the transaction, regardless of BODY's
+         return value. */
+      err1 = body(baton, scratch_pool);
+      err2 = unlock_proto_rev(fs, txn_id, lockcookie, scratch_pool);
+      SVN_ERR(svn_error_compose_create(err1, err2));
     }
   else
     {
