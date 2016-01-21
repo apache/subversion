@@ -126,23 +126,50 @@ svn_fs_fs__txn_get_id(svn_fs_txn_t *txn)
 
 /* Functions for working with shared transaction data. */
 
-/* Set *TXN_P to the transaction object for transaction TXN_ID from the
-   transaction list of filesystem FS (which must already be locked via the
-   txn_list_lock mutex).  If the transaction does not exist in the list,
-   then create a new transaction object and return it (if CREATE_NEW is
-   true) or return NULL (otherwise). */
+/* Obtain a lock on the transaction list of filesystem FS, call BODY
+   with FS, BATON, and POOL, and then unlock the transaction list.
+   Return what BODY returned. */
 static svn_error_t *
-get_shared_txn(fs_fs_shared_txn_data_t **txn_p,
-               svn_fs_t *fs,
-               const svn_fs_fs__id_part_t *txn_id,
-               svn_boolean_t create_new)
+with_txnlist_lock(svn_fs_t *fs,
+                  svn_error_t *(*body)(svn_fs_t *fs,
+                                       const void *baton,
+                                       apr_pool_t *pool),
+                  const void *baton,
+                  apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
+  fs_fs_shared_data_t *ffsd = ffd->shared;
+
+  SVN_MUTEX__WITH_LOCK(ffsd->txn_list_lock,
+                       body(fs, baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Baton type to be used with get_shared_txn_body. It simply provides all
+   parameters passed to get_shared_txn that with_txnlist_lock does not
+   pass through. */
+typedef struct get_shared_txn_baton_t
+{
+  fs_fs_shared_txn_data_t **txn_p;
+  const svn_fs_fs__id_part_t *txn_id;
+  svn_boolean_t create_new;
+} get_shared_txn_baton_t;
+
+/* Implements with_txnlist_lock::body and provides the functionality
+   of get_shared_txn.  To be executed with the txn list mutex held. */
+static svn_error_t *
+get_shared_txn_body(svn_fs_t *fs,
+                    const void *baton,
+                    apr_pool_t *pool)
+{
+  const get_shared_txn_baton_t *b = baton;
   fs_fs_data_t *ffd = fs->fsap_data;
   fs_fs_shared_data_t *ffsd = ffd->shared;
   fs_fs_shared_txn_data_t *txn;
 
   for (txn = ffsd->txns; txn; txn = txn->next)
-    if (svn_fs_fs__id_part_eq(&txn->txn_id, txn_id))
+    if (svn_fs_fs__id_part_eq(&txn->txn_id, b->txn_id))
       break;
 
   if (txn)
@@ -164,22 +191,22 @@ get_shared_txn(fs_fs_shared_txn_data_t **txn_p,
          return svn_error_createf(SVN_ERR_FS_TXN_CONCURRENCY_MISMATCH, NULL,
                                   _("Cannot reopen transaction '%s' "
                                     "without concurrent write support"),
-                                  svn_fs_fs__id_txn_unparse(txn_id,
+                                  svn_fs_fs__id_txn_unparse(b->txn_id,
                                                             fs->pool));
        else if (!txn->is_concurrent && ffd->concurrent_txns)
          return svn_error_createf(SVN_ERR_FS_TXN_CONCURRENCY_MISMATCH, NULL,
                                   _("Cannot reopen transaction '%s' "
                                     "with concurrent write support"),
-                                  svn_fs_fs__id_txn_unparse(txn_id,
+                                  svn_fs_fs__id_txn_unparse(b->txn_id,
                                                             fs->pool));
 
-      *txn_p = txn;
+      *b->txn_p = txn;
       return SVN_NO_ERROR;
     }
  
-  if (!create_new)
+  if (!b->create_new)
     {
-      *txn_p = NULL;
+      *b->txn_p = NULL;
       return SVN_NO_ERROR;
     }
 
@@ -207,10 +234,10 @@ get_shared_txn(fs_fs_shared_txn_data_t **txn_p,
       txn = apr_palloc(subpool, sizeof(*txn));
       txn->pool = subpool;
       txn->is_concurrent = ffd->concurrent_txns;
-      SVN_ERR(svn_mutex__init(&txn->lock, txn->is_concurrent, txn->pool));
+      SVN_ERR(svn_mutex__init(&txn->lock, TRUE, txn->pool));
     }
 
-  txn->txn_id = *txn_id;
+  txn->txn_id = *b->txn_id;
   txn->being_written = FALSE;
 
   /* Link this transaction into the head of the list.  We will typically
@@ -221,9 +248,28 @@ get_shared_txn(fs_fs_shared_txn_data_t **txn_p,
   ffsd->txns = txn;
 
   /* Done. */
-  *txn_p = txn;
+  *b->txn_p = txn;
 
   return SVN_NO_ERROR;
+}
+
+/* Set *TXN_P to the transaction object for transaction TXN_ID from the
+   transaction list of filesystem FS.  If the transaction does not exist
+   in the list, then create a new transaction object and return it (if
+   CREATE_NEW is true) or return NULL (otherwise). */
+static svn_error_t *
+get_shared_txn(fs_fs_shared_txn_data_t **txn_p,
+               svn_fs_t *fs,
+               const svn_fs_fs__id_part_t *txn_id,
+               svn_boolean_t create_new,
+               apr_pool_t *pool)
+{
+  get_shared_txn_baton_t baton;
+  baton.txn_p = txn_p;
+  baton.txn_id = txn_id;
+  baton.create_new = create_new;
+
+  return with_txnlist_lock(fs, get_shared_txn_body, &baton, pool);
 }
 
 /* Free the transaction object for transaction TXN_ID, and remove it
@@ -259,75 +305,6 @@ free_shared_txn(svn_fs_t *fs, const svn_fs_fs__id_part_t *txn_id)
 }
 
 
-/* Obtain a lock on the transaction list of filesystem FS, call BODY
-   with FS, BATON, and POOL, and then unlock the transaction list.
-   Return what BODY returned. */
-static svn_error_t *
-with_txnlist_lock(svn_fs_t *fs,
-                  svn_error_t *(*body)(svn_fs_t *fs,
-                                       const void *baton,
-                                       apr_pool_t *pool),
-                  const void *baton,
-                  apr_pool_t *pool)
-{
-  fs_fs_data_t *ffd = fs->fsap_data;
-  fs_fs_shared_data_t *ffsd = ffd->shared;
-
-  SVN_MUTEX__WITH_LOCK(ffsd->txn_list_lock,
-                       body(fs, baton, pool));
-
-  return SVN_NO_ERROR;
-}
-
-
-/* A structure used by unlock_proto_rev() and unlock_proto_rev_body(),
-   which see. */
-struct unlock_proto_rev_baton
-{
-  svn_fs_fs__id_part_t txn_id;
-  void *lockcookie;
-};
-
-/* Callback used in the implementation of unlock_proto_rev(). */
-static svn_error_t *
-unlock_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
-{
-  const struct unlock_proto_rev_baton *b = baton;
-  apr_file_t *lockfile = b->lockcookie;
-  apr_status_t apr_err;
-  fs_fs_shared_txn_data_t *txn;
-
-  SVN_ERR(get_shared_txn(&txn, fs, &b->txn_id, FALSE));
-
-  if (!txn)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Can't unlock unknown transaction '%s'"),
-                             svn_fs_fs__id_txn_unparse(&b->txn_id, pool));
-  if (!txn->being_written)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                             _("Can't unlock nonlocked transaction '%s'"),
-                             svn_fs_fs__id_txn_unparse(&b->txn_id, pool));
-
-  apr_err = apr_file_unlock(lockfile);
-  if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err,
-       _("Can't unlock prototype revision lockfile for transaction '%s'"),
-       svn_fs_fs__id_txn_unparse(&b->txn_id, pool));
-  apr_err = apr_file_close(lockfile);
-  if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err,
-       _("Can't close prototype revision lockfile for transaction '%s'"),
-       svn_fs_fs__id_txn_unparse(&b->txn_id, pool));
-
-  txn->being_written = FALSE;
-
-  SVN_ERR(svn_mutex__unlock(txn->lock, NULL));
- 
-  return SVN_NO_ERROR;
-}
-
 /* Unlock the prototype revision file for transaction TXN_ID in filesystem
    FS using cookie LOCKCOOKIE.  The original prototype revision file must
    have been closed _before_ calling this function.
@@ -339,20 +316,40 @@ unlock_proto_rev(svn_fs_t *fs,
                  void *lockcookie,
                  apr_pool_t *pool)
 {
-  struct unlock_proto_rev_baton b;
+  apr_file_t *lockfile = lockcookie;
+  apr_status_t apr_err;
+  fs_fs_shared_txn_data_t *txn;
 
-  b.txn_id = *txn_id;
-  b.lockcookie = lockcookie;
-  return with_txnlist_lock(fs, unlock_proto_rev_body, &b, pool);
+  SVN_ERR(get_shared_txn(&txn, fs, txn_id, FALSE, pool));
+
+  if (!txn)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Can't unlock unknown transaction '%s'"),
+                             svn_fs_fs__id_txn_unparse(txn_id, pool));
+  if (!txn->being_written)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Can't unlock nonlocked transaction '%s'"),
+                             svn_fs_fs__id_txn_unparse(txn_id, pool));
+
+  apr_err = apr_file_unlock(lockfile);
+  if (apr_err)
+    return svn_error_wrap_apr
+      (apr_err,
+       _("Can't unlock prototype revision lockfile for transaction '%s'"),
+       svn_fs_fs__id_txn_unparse(txn_id, pool));
+  apr_err = apr_file_close(lockfile);
+  if (apr_err)
+    return svn_error_wrap_apr
+      (apr_err,
+       _("Can't close prototype revision lockfile for transaction '%s'"),
+       svn_fs_fs__id_txn_unparse(txn_id, pool));
+
+  txn->being_written = FALSE;
+
+  SVN_ERR(svn_mutex__unlock(txn->lock, NULL));
+ 
+  return SVN_NO_ERROR;
 }
-
-/* A structure used by get_writable_proto_rev() and
-   get_writable_proto_rev_body(), which see. */
-struct get_writable_proto_rev_baton
-{
-  void **lockcookie;
-  svn_fs_fs__id_part_t txn_id;
-};
 
 /* Acquire the proto-rev lock for TXN in FS and set *LOCKCOOKIE to cookie. 
  * Use POOL for all allocations. */
@@ -428,19 +425,25 @@ lock_proto_rev_body(void **lockcookie,
   return SVN_NO_ERROR;
 }
 
-/* Callback used in the implementation of get_writable_proto_rev(). */
+/* Lock the proto-rev file for transaction TXN_ID in FS.  This is
+ * basically taking out the per-transaction mutex.  Must be paired
+ * with unlock_proto_rev().  Sets *LOCKCOOKIE to some opaque cookie
+ * that will be consumed by the unlock function.
+ * Uses POOL for allocations. */
 static svn_error_t *
-get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
+lock_proto_rev(void **lockcookie,
+               svn_fs_t *fs,
+               const svn_fs_fs__id_part_t *txn_id,
+               apr_pool_t *pool)
 {
-  const struct get_writable_proto_rev_baton *b = baton;
   fs_fs_shared_txn_data_t *txn;
   svn_error_t *err;
 
-  SVN_ERR(get_shared_txn(&txn, fs, &b->txn_id, TRUE));
+  SVN_ERR(get_shared_txn(&txn, fs, txn_id, TRUE, pool));
 
   /* Lock mutex (if even enabled) and file. */
   SVN_ERR(svn_mutex__lock(txn->lock));
-  err = lock_proto_rev_body(b->lockcookie, fs, txn, pool);
+  err = lock_proto_rev_body(lockcookie, fs, txn, pool);
   if (err)
     return svn_mutex__unlock(txn->lock, err);
 
@@ -469,12 +472,7 @@ svn_fs_fs__with_txn_auto_lock(svn_fs_t *fs,
     {
       void *lockcookie;
 
-      struct get_writable_proto_rev_baton b;
-      b.lockcookie = &lockcookie;
-      b.txn_id = *txn_id;
-
-      SVN_ERR(with_txnlist_lock(fs, get_writable_proto_rev_body, &b,
-                                scratch_pool));
+      SVN_ERR(lock_proto_rev(&lockcookie, fs, txn_id, scratch_pool));
 
       /* Now open the prototype revision file and seek to the end. */
       SVN_ERR(svn_error_compose_create(body(baton, scratch_pool),
@@ -552,14 +550,10 @@ get_writable_proto_rev(apr_file_t **file,
                        const svn_fs_fs__id_part_t *txn_id,
                        apr_pool_t *pool)
 {
-  struct get_writable_proto_rev_baton b;
   svn_error_t *err;
   apr_off_t end_offset = 0;
 
-  b.lockcookie = lockcookie;
-  b.txn_id = *txn_id;
-
-  SVN_ERR(with_txnlist_lock(fs, get_writable_proto_rev_body, &b, pool));
+  SVN_ERR(lock_proto_rev(lockcookie, fs, txn_id, pool));
 
   /* Now open the prototype revision file and seek to the end. */
   err = svn_io_file_open(file,
