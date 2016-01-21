@@ -955,7 +955,7 @@ svn_fs_fs__extract_dir_entry(void **out,
   /* de-serialize that entry or return NULL, if no match has been found.
    * Be sure to check that the directory contents is still up-to-date. */
   entry_baton->out_of_date
-    = dir_data->txn_filesize == entry_baton->txn_filesize;
+    = dir_data->txn_filesize != entry_baton->txn_filesize;
 
   *out = NULL;
   if (found && !entry_baton->out_of_date)
