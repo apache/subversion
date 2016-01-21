@@ -69,9 +69,9 @@ normalize_key_part(const char *original,
   return normalized->data;
 }
 
-/* *CACHE_TXDELTAS, *CACHE_FULLTEXTS and *CACHE_REVPROPS flags will be set
-   according to FS->CONFIG.  *CACHE_NAMESPACE receives the cache prefix
-   to use.
+/* *CACHE_TXDELTAS, *CACHE_FULLTEXTS, *CACHE_REVPROPS and *CACHE_NODEPROPS
+   flags will be set according to FS->CONFIG.  *CACHE_NAMESPACE receives
+   the cache prefix to use.
 
    Allocate CACHE_NAMESPACE in RESULT_POOL. */
 static svn_error_t *
@@ -79,6 +79,7 @@ read_config(const char **cache_namespace,
             svn_boolean_t *cache_txdeltas,
             svn_boolean_t *cache_fulltexts,
             svn_boolean_t *cache_revprops,
+            svn_boolean_t *cache_nodeprops,
             svn_fs_t *fs,
             apr_pool_t *result_pool)
 {
@@ -136,6 +137,15 @@ read_config(const char **cache_namespace,
                           FALSE);
   else
     *cache_revprops = TRUE;
+
+  /* by default, cache nodeprops: this will match pre-1.10
+   * behavior where node properties caching was controlled
+   * by SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS configuration option.
+   */
+  *cache_nodeprops
+    = svn_hash__get_bool(fs->config,
+                         SVN_FS_CONFIG_FSFS_CACHE_NODEPROPS,
+                         TRUE);
 
   return SVN_NO_ERROR;
 }
@@ -380,6 +390,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
   svn_boolean_t cache_txdeltas;
   svn_boolean_t cache_fulltexts;
   svn_boolean_t cache_revprops;
+  svn_boolean_t cache_nodeprops;
   const char *cache_namespace;
   svn_boolean_t has_namespace;
 
@@ -388,6 +399,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                       &cache_txdeltas,
                       &cache_fulltexts,
                       &cache_revprops,
+                      &cache_nodeprops,
                       fs,
                       scratch_pool));
 
@@ -430,7 +442,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        svn_fs_x__deserialize_dir_entries,
                        sizeof(svn_fs_x__id_t),
                        apr_pstrcat(scratch_pool, prefix, "DIR", SVN_VA_NULL),
-                       SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                       SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
                        has_namespace,
                        fs,
                        no_handler, FALSE,
@@ -512,7 +524,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
                        SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
                        has_namespace,
                        fs,
-                       no_handler, !cache_fulltexts,
+                       no_handler, !cache_nodeprops,
                        fs->pool, scratch_pool));
 
   /* if enabled, cache revprops */
