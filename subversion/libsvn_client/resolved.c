@@ -548,6 +548,13 @@ static const svn_client_conflict_option_t binary_conflict_options[] =
     resolve_text_conflict
   },
 
+  {
+    svn_client_conflict_option_merged_text,
+    N_("accept the file as it appears in the working copy"),
+    NULL,
+    resolve_text_conflict
+  },
+
 };
 
 /* Resolver options for a property conflict */
@@ -570,6 +577,13 @@ static const svn_client_conflict_option_t prop_conflict_options[] =
   {
     svn_client_conflict_option_working_text,
     N_("accept working copy version of entire property value"),
+    NULL,
+    resolve_prop_conflict
+  },
+
+  {
+    svn_client_conflict_option_merged_text,
+    N_("accept merged version of property value"),
     NULL,
     resolve_prop_conflict
   },
