@@ -259,6 +259,9 @@ serialize_dir(svn_fs_x__dir_data_t *dir,
                            * sizeof(svn_fs_x__dirent_t*);
   apr_size_t lengths_len = (count + over_provision) * sizeof(apr_uint32_t);
 
+  /* Estimate the size of a directory entry + its name. */
+  enum { ENTRY_SIZE = sizeof(svn_fs_x__dirent_t) + 32 };
+
   /* copy the hash entries to an auxiliary struct of known layout */
   dir_data.count = count;
   dir_data.txn_filesize = dir->txn_filesize;
@@ -274,7 +277,8 @@ serialize_dir(svn_fs_x__dir_data_t *dir,
    * estimate for the size of the buffer that we will need. */
   context = svn_temp_serializer__init(&dir_data,
                                       sizeof(dir_data),
-                                      50 + count * 100 + entries_len,
+                                      50 + count * ENTRY_SIZE
+                                         + entries_len + lengths_len,
                                       scratch_pool);
 
   /* serialize entries references */
