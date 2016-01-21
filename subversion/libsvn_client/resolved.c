@@ -482,7 +482,7 @@ static const svn_client_conflict_option_t text_conflict_options[] =
 {
   {
     svn_client_conflict_option_postpone,
-    N_("mark the conflict to be resolved later"),
+    N_("skip this conflict and leave it unresolved"),
     NULL,
     resolve_text_conflict
   },
@@ -522,7 +522,7 @@ static const svn_client_conflict_option_t binary_conflict_options[] =
 {
   {
     svn_client_conflict_option_postpone,
-    N_("mark the conflict to be resolved later"),
+    N_("skip this conflict and leave it unresolved"),
     NULL,
     resolve_text_conflict,
   },
@@ -548,7 +548,7 @@ static const svn_client_conflict_option_t prop_conflict_options[] =
 {
   {
     svn_client_conflict_option_postpone,
-    N_("mark the conflict to be resolved later"),
+    N_("skip this conflict and leave it unresolved"),
     NULL,
     resolve_prop_conflict
   },
@@ -574,7 +574,7 @@ static const svn_client_conflict_option_t tree_conflict_options[] =
 {
   {
     svn_client_conflict_option_postpone,
-    N_("mark the conflict to be resolved later"),
+    N_("skip this conflict and leave it unresolved"),
     NULL,
     resolve_tree_conflict
   },
