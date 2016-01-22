@@ -499,6 +499,96 @@ increment_mergeinfo_up_tree(svn_fs_x__dag_path_t *pp,
   return SVN_NO_ERROR;
 }
 
+/* Baton type to be used with change_node_prop_body.
+   It contains the parameters pass to fs_change_node_prop as-is. */
+typedef struct change_node_prop_body_baton_t
+{
+  svn_fs_root_t *root;
+  const char *path;
+  const char *name;
+  const svn_string_t *value;
+} change_node_prop_body_baton_t;
+
+/* Core of fs_change_node_prop taking all its parameters from the
+   change_node_prop_body_baton_t in BATON. */
+static svn_error_t *
+change_node_prop_body(void *baton,
+                      apr_pool_t *scratch_pool)
+{
+  change_node_prop_body_baton_t *b = baton;
+
+  svn_fs_x__dag_path_t *dag_path;
+  apr_hash_t *proplist;
+  svn_fs_x__txn_id_t txn_id;
+  svn_boolean_t mergeinfo_mod = FALSE;
+  apr_pool_t *subpool = svn_pool_create(scratch_pool);
+
+  if (! b->root->is_txn_root)
+    return SVN_FS__NOT_TXN(b->root);
+  txn_id = svn_fs_x__root_txn_id(b->root);
+
+  SVN_ERR(svn_fs_x__get_dag_path(&dag_path, b->root, b->path, 0, TRUE,
+                                 subpool, subpool));
+
+  /* Check (non-recursively) to see if path is locked; if so, check
+     that we can use it. */
+  if (b->root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR(svn_fs_x__allow_locked_operation(b->path, b->root->fs, FALSE,
+                                             FALSE, subpool));
+
+  SVN_ERR(svn_fs_x__make_path_mutable(b->root, dag_path, b->path, subpool,
+                                      subpool));
+  SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, dag_path->node, subpool,
+                                     subpool));
+
+  /* If there's no proplist, but we're just deleting a property, exit now. */
+  if ((! proplist) && (! b->value))
+    return SVN_NO_ERROR;
+
+  /* Now, if there's no proplist, we know we need to make one. */
+  if (! proplist)
+    proplist = apr_hash_make(subpool);
+
+  if (strcmp(b->name, SVN_PROP_MERGEINFO) == 0)
+    {
+      apr_int64_t increment = 0;
+      svn_boolean_t had_mergeinfo
+        = svn_fs_x__dag_has_mergeinfo(dag_path->node);
+
+      if (b->value && !had_mergeinfo)
+        increment = 1;
+      else if (!b->value && had_mergeinfo)
+        increment = -1;
+
+      if (increment != 0)
+        {
+          SVN_ERR(increment_mergeinfo_up_tree(dag_path, increment, subpool));
+          SVN_ERR(svn_fs_x__dag_set_has_mergeinfo(dag_path->node,
+                                                  (b->value != NULL),
+                                                  subpool));
+        }
+
+      mergeinfo_mod = TRUE;
+    }
+
+  /* Set the property. */
+  svn_hash_sets(proplist, b->name, b->value);
+
+  /* Overwrite the node's proplist. */
+  SVN_ERR(svn_fs_x__dag_set_proplist(dag_path->node, proplist,
+                                     subpool));
+
+  /* Make a record of this modification in the changes table. */
+  SVN_ERR(add_change(b->root->fs, txn_id, b->path,
+                     svn_fs_x__dag_get_id(dag_path->node),
+                     svn_fs_path_change_modify, FALSE, TRUE, mergeinfo_mod,
+                     svn_fs_x__dag_node_kind(dag_path->node),
+                     SVN_INVALID_REVNUM, NULL, subpool));
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
 /* Change, add, or delete a node's property value.  The affected node
    is PATH under ROOT, the property value to modify is NAME, and VALUE
    points to either a string value to set the new contents to, or NULL
@@ -511,77 +601,19 @@ x_change_node_prop(svn_fs_root_t *root,
                    const svn_string_t *value,
                    apr_pool_t *scratch_pool)
 {
-  svn_fs_x__dag_path_t *dag_path;
-  apr_hash_t *proplist;
-  svn_fs_x__txn_id_t txn_id;
-  svn_boolean_t mergeinfo_mod = FALSE;
-  apr_pool_t *subpool = svn_pool_create(scratch_pool);
+  change_node_prop_body_baton_t baton;
+  baton.root = root;
+  baton.path = path;
+  baton.name = name;
+  baton.value = value;
 
-  if (! root->is_txn_root)
-    return SVN_FS__NOT_TXN(root);
-  txn_id = svn_fs_x__root_txn_id(root);
+  SVN_ERR(svn_fs_x__with_txn_auto_lock(root->fs,
+                                       svn_fs_x__root_txn_id(root),
+                                       change_node_prop_body, &baton,
+                                       scratch_pool));
 
-  SVN_ERR(svn_fs_x__get_dag_path(&dag_path, root, path, 0, TRUE, subpool,
-                                 subpool));
-
-  /* Check (non-recursively) to see if path is locked; if so, check
-     that we can use it. */
-  if (root->txn_flags & SVN_FS_TXN_CHECK_LOCKS)
-    SVN_ERR(svn_fs_x__allow_locked_operation(path, root->fs, FALSE, FALSE,
-                                             subpool));
-
-  SVN_ERR(svn_fs_x__make_path_mutable(root, dag_path, path, subpool,
-                                      subpool));
-  SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, dag_path->node, subpool,
-                                     subpool));
-
-  /* If there's no proplist, but we're just deleting a property, exit now. */
-  if ((! proplist) && (! value))
-    return SVN_NO_ERROR;
-
-  /* Now, if there's no proplist, we know we need to make one. */
-  if (! proplist)
-    proplist = apr_hash_make(subpool);
-
-  if (strcmp(name, SVN_PROP_MERGEINFO) == 0)
-    {
-      apr_int64_t increment = 0;
-      svn_boolean_t had_mergeinfo
-        = svn_fs_x__dag_has_mergeinfo(dag_path->node);
-
-      if (value && !had_mergeinfo)
-        increment = 1;
-      else if (!value && had_mergeinfo)
-        increment = -1;
-
-      if (increment != 0)
-        {
-          SVN_ERR(increment_mergeinfo_up_tree(dag_path, increment, subpool));
-          SVN_ERR(svn_fs_x__dag_set_has_mergeinfo(dag_path->node,
-                                                  (value != NULL), subpool));
-        }
-
-      mergeinfo_mod = TRUE;
-    }
-
-  /* Set the property. */
-  svn_hash_sets(proplist, name, value);
-
-  /* Overwrite the node's proplist. */
-  SVN_ERR(svn_fs_x__dag_set_proplist(dag_path->node, proplist,
-                                     subpool));
-
-  /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path,
-                     svn_fs_x__dag_get_id(dag_path->node),
-                     svn_fs_path_change_modify, FALSE, TRUE, mergeinfo_mod,
-                     svn_fs_x__dag_node_kind(dag_path->node),
-                     SVN_INVALID_REVNUM, NULL, subpool));
-
-  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
-
 
 /* Determine if the properties of two path/root combinations are
    different.  Set *CHANGED_P to TRUE if the properties at PATH1 under
@@ -2011,6 +2043,7 @@ x_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
                   apr_pool_t *pool)
 {
   apr_pool_t *scratch_pool = svn_pool_create(pool);
+  svn_fs_x__txn_id_t txn_id = svn_fs_x__root_txn_id(root);
   txdelta_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
 
   tb->root = root;
@@ -2019,7 +2052,9 @@ x_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
   tb->base_checksum = svn_checksum_dup(base_checksum, pool);
   tb->result_checksum = svn_checksum_dup(result_checksum, pool);
 
-  SVN_ERR(apply_textdelta(tb, scratch_pool));
+  SVN_ERR(svn_fs_x__with_txn_auto_lock(root->fs, txn_id,
+                                       apply_textdelta, tb,
+                                       scratch_pool));
 
   *contents_p = window_consumer;
   *contents_baton_p = tb;
@@ -2150,6 +2185,7 @@ x_apply_text(svn_stream_t **contents_p,
              apr_pool_t *pool)
 {
   apr_pool_t *scratch_pool = svn_pool_create(pool);
+  svn_fs_x__txn_id_t txn_id = svn_fs_x__root_txn_id(root);
   text_baton_t *tb = apr_pcalloc(pool, sizeof(*tb));
 
   tb->root = root;
@@ -2157,7 +2193,9 @@ x_apply_text(svn_stream_t **contents_p,
   tb->pool = pool;
   tb->result_checksum = svn_checksum_dup(result_checksum, pool);
 
-  SVN_ERR(apply_text(tb, scratch_pool));
+  SVN_ERR(svn_fs_x__with_txn_auto_lock(root->fs, txn_id,
+                                       apply_text, tb,
+                                       pool));
 
   *contents_p = tb->stream;
 

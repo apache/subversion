@@ -30,6 +30,19 @@
 svn_fs_x__txn_id_t
 svn_fs_x__txn_get_id(svn_fs_txn_t *txn);
 
+/* Acquire the necessary locks for transaction TXN_ID in FS, execute BODY
+   with BATON and release the locks.  Use SCRATCH_POOL for allocations.
+
+   Note that this will only take out any locks when we are in concurrent
+   transaction mode where additional access serialization is needed. */
+svn_error_t *
+svn_fs_x__with_txn_auto_lock(svn_fs_t *fs,
+                             svn_fs_x__txn_id_t txn_id,
+                             svn_error_t *(*body)(void *baton,
+                                                  apr_pool_t *pool),
+                             void *baton,
+                             apr_pool_t *scratch_pool);
+
 /* Obtain a write lock on the filesystem FS in a subpool of SCRATCH_POOL,
    call BODY with BATON and that subpool, destroy the subpool (releasing the
    write lock) and return what BODY returned. */

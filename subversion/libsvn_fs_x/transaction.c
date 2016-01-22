@@ -117,21 +117,16 @@ get_shared_txn(svn_fs_x__shared_txn_data_t **txn_p,
        * setting where some external scheme prevents actual races between
        * them.  However, we consider such a setup illegal (and theoretical).
        */
-      if (txn->is_concurrent != ffd->concurrent_txns)
-        {
-          if (txn->is_concurrent)
-            return svn_error_createf(SVN_ERR_FS_TXN_CONCURRENCY_MISMATCH,
-                                     NULL,
-                                     _("Cannot reopen transaction '%s' "
-                                       "without concurrent write support"),
-                                     svn_fs_x__txn_name(txn_id, fs->pool));
-          else
-            return svn_error_createf(SVN_ERR_FS_TXN_CONCURRENCY_MISMATCH,
-                                     NULL,
-                                     _("Cannot reopen transaction '%s' "
-                                       "with concurrent write support"),
-                                     svn_fs_x__txn_name(txn_id, fs->pool));
-        }
+       if (txn->is_concurrent && !ffd->concurrent_txns)
+         return svn_error_createf(SVN_ERR_FS_TXN_CONCURRENCY_MISMATCH, NULL,
+                                  _("Cannot reopen transaction '%s' "
+                                    "without concurrent write support"),
+                                  svn_fs_x__txn_name(txn_id, fs->pool));
+       else if (!txn->is_concurrent && ffd->concurrent_txns)
+         return svn_error_createf(SVN_ERR_FS_TXN_CONCURRENCY_MISMATCH, NULL,
+                                  _("Cannot reopen transaction '%s' "
+                                    "with concurrent write support"),
+                                  svn_fs_x__txn_name(txn_id, fs->pool));
 
       *txn_p = txn;
       return SVN_NO_ERROR;
@@ -727,6 +722,49 @@ get_writable_proto_rev_body(svn_fs_t *fs, const void *baton, apr_pool_t *pool)
   err = lock_proto_rev_body(b->lockcookie, fs, txn, pool);
   if (err)
     return svn_mutex__unlock(txn->lock, err);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_x__with_txn_auto_lock(svn_fs_t *fs,
+                             svn_fs_x__txn_id_t txn_id,
+                             svn_error_t *(*body)(void *baton,
+                                                  apr_pool_t *pool),
+                             void *baton,
+                             apr_pool_t *scratch_pool)
+{
+  svn_fs_x__data_t *ffd = fs->fsap_data;
+
+  /* In non-concurrent mode, we only serialize via get_writable_proto_rev
+   * and there shall be no additional locking overhead.  Moreover, that
+   * file lock is being held for a long time and would require us to add
+   * special handling for recursion etc.
+   *
+   * Therefore, we only lock in concurrent mode where locks are blocking
+   * and short-lived.
+   */
+  if (ffd->concurrent_txns)
+    {
+      void *lockcookie;
+
+      get_writable_proto_rev_baton_t b;
+      b.lockcookie = &lockcookie;
+      b.txn_id = txn_id;
+
+      SVN_ERR(with_txnlist_lock(fs, get_writable_proto_rev_body, &b,
+                                scratch_pool));
+
+      /* Now open the prototype revision file and seek to the end. */
+      SVN_ERR(svn_error_compose_create(body(baton, scratch_pool),
+                                       unlock_proto_rev(fs, txn_id,
+                                                        lockcookie,
+                                                        scratch_pool)));
+    }
+  else
+    {
+      SVN_ERR(body(baton, scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -2097,6 +2135,8 @@ typedef struct rep_write_baton_t
   /* Lock 'cookie' used to unlock the output file once we've finished
      writing to it. */
   void *lockcookie;
+  /* Underlying data buffer. */
+  svn_spillbuf_t *buffer;
 
   /* Calculate full-text checksums. */
   svn_checksum_ctx_t *md5_checksum_ctx;
@@ -2325,6 +2365,32 @@ rep_write_cleanup(void *data)
   return APR_SUCCESS;
 }
 
+/* Create a spill buffer and initialize elements of B such that we will
+ * write to that buffer. */
+static svn_error_t *
+rep_write_open_buffer(rep_write_baton_t *b)
+{
+  const char *txn_dir;
+  svn_fs_x__txn_id_t txn_id
+    = svn_fs_x__get_txn_id(b->noderev->noderev_id.change_set);
+
+  txn_dir = svn_fs_x__path_txn_dir(b->fs, txn_id, b->local_pool);
+
+  /* Be careful not to create buffers that are too large, there could be
+   * a lot of them.
+   *
+   * Per delta stream, we already allocate 2 txdelta windows worth of memory,
+   * so adding at most 4 more of them should be acceptable. */
+  b->buffer = svn_spillbuf__create_extended(SVN_STREAM_CHUNK_SIZE,
+                                            4 * SVN_STREAM_CHUNK_SIZE,
+                                            TRUE, /* delete-on-close */
+                                            FALSE, /* spill-all-contents */
+                                            txn_dir, b->local_pool);
+  b->rep_stream = svn_stream__from_spillbuf(b->buffer, b->local_pool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Open the proto-rev file and initialize elements of B such that we can
  * append to that file. */
 static svn_error_t *
@@ -2384,6 +2450,9 @@ rep_write_get_baton(rep_write_baton_t **wb_p,
   b->noderev = noderev;
 
   /* Set up the raw target stream. */
+  if (ffd->concurrent_txns)
+    SVN_ERR(rep_write_open_buffer(b));
+  else
     SVN_ERR(rep_write_open_file(b));
 
   /* Get the base for this delta. */
@@ -2407,6 +2476,9 @@ rep_write_get_baton(rep_write_baton_t **wb_p,
                                      b->local_pool));
 
   /* Now determine the offset of the actual svndiff data. */
+  if (ffd->concurrent_txns)
+    b->delta_start = svn_spillbuf__get_size(b->buffer);
+  else
     SVN_ERR(svn_io_file_get_offset(&b->delta_start, b->file,
                                    b->local_pool));
 
@@ -2604,10 +2676,12 @@ static svn_error_t *
 rep_write_contents_close(void *baton)
 {
   rep_write_baton_t *b = baton;
+  svn_fs_x__data_t *ffd = b->fs->fsap_data;
   svn_fs_x__representation_t *rep;
   svn_fs_x__representation_t *old_rep;
   apr_off_t offset;
   apr_int64_t txn_id;
+  svn_stream_t *source = b->rep_stream;
 
   rep = apr_pcalloc(b->result_pool, sizeof(*rep));
 
@@ -2616,7 +2690,11 @@ rep_write_contents_close(void *baton)
   SVN_ERR(svn_stream_close(b->delta_stream));
 
   /* Determine the length of the svndiff data. */
-  SVN_ERR(svn_io_file_get_offset(&offset, b->file, b->local_pool));
+  if (ffd->concurrent_txns)
+    offset = svn_spillbuf__get_size(b->buffer);
+  else
+    SVN_ERR(svn_io_file_get_offset(&offset, b->file, b->local_pool));
+
   rep->size = offset - b->delta_start;
 
   /* Fill in the rest of the representation field. */
@@ -2627,6 +2705,10 @@ rep_write_contents_close(void *baton)
   /* Finalize the checksum. */
   SVN_ERR(digests_final(rep, b->md5_checksum_ctx, b->sha1_checksum_ctx,
                         b->result_pool));
+
+  /* If not already done, open the prototype rev file and lock this txn. */
+  if (ffd->concurrent_txns)
+    SVN_ERR(rep_write_open_file(b));
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
@@ -2639,7 +2721,8 @@ rep_write_contents_close(void *baton)
   if (old_rep)
     {
       /* We need to erase from the protorev the data we just wrote. */
-      SVN_ERR(svn_io_file_trunc(b->file, b->rep_offset, b->local_pool));
+      if (!ffd->concurrent_txns)
+        SVN_ERR(svn_io_file_trunc(b->file, b->rep_offset, b->local_pool));
 
       /* Use the old rep for this content. */
       rep = old_rep;
@@ -2649,6 +2732,11 @@ rep_write_contents_close(void *baton)
     {
       svn_fs_x__p2l_entry_t entry;
       svn_fs_x__id_t noderev_id;
+
+      /* We want to add this new representation to the protorev file. */
+      if (ffd->concurrent_txns)
+        SVN_ERR(svn_stream_copy3(source, b->rep_stream, NULL, NULL,
+                                 b->local_pool));
 
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_stream_puts(b->rep_stream, "ENDREP\n"));
@@ -2675,7 +2763,18 @@ rep_write_contents_close(void *baton)
       SVN_ERR(store_p2l_index_entry(b->fs, txn_id, &entry, b->local_pool));
     }
 
-  /* Write out the new node-rev information. */
+  /* Write out the new node-rev information.
+   *
+   * If concurrent writes are allowed, the noderev may have changed on disk.
+   * Re-read it to prevent lost updates. */
+  if (ffd->concurrent_txns)
+    {
+      SVN_ERR(svn_fs_x__get_node_revision(&b->noderev, b->fs,
+                                          &b->noderev->noderev_id,
+                                          b->result_pool, b->local_pool));
+      b->noderev->data_rep = rep;
+    }
+
   SVN_ERR(svn_fs_x__put_node_revision(b->fs, b->noderev, b->local_pool));
 
   /* The protorev file is now complete. */
