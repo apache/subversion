@@ -25,7 +25,7 @@
 
 #include "ra_serf.h"
 
-typedef struct svn_ra_serf__request_body_t
+struct svn_ra_serf__request_body_t
 {
   svn_stream_t *stream;
   apr_size_t in_memory_size;
@@ -36,7 +36,7 @@ typedef struct svn_ra_serf__request_body_t
   apr_file_t *file;
   apr_pool_t *result_pool;
   apr_pool_t *scratch_pool;
-} svn_ra_serf__request_body_t;
+};
 
 /* Fold all previously collected data in a single buffer allocated in
    RESULT_POOL and clear all intermediate state. */
