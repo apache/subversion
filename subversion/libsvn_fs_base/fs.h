@@ -115,6 +115,10 @@ typedef struct base_fs_data_t
   /* The format number of this FS. */
   int format;
 
+  /* TRUE, if more than one thread or process may write to a transaction
+     at the same time. */
+  svn_boolean_t concurrent_txns;
+
 } base_fs_data_t;
 
 

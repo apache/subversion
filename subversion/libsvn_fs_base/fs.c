@@ -65,6 +65,7 @@
 
 #include "../libsvn_fs/fs-loader.h"
 #include "private/svn_fs_util.h"
+#include "private/svn_subr_private.h"
 
 
 /* Checking for return values, and reporting errors.  */
@@ -313,6 +314,15 @@ base_bdb_set_errcall(svn_fs_t *fs,
 
   return SVN_NO_ERROR;
 }
+
+static svn_boolean_t
+base_supports_concurrent_writes(svn_fs_t *fs,
+                                apr_pool_t *scratch_pool)
+{
+  base_fs_data_t *ffd = fs->fsap_data;
+  return ffd->concurrent_txns;
+}
+
 
 
 /* Write the DB_CONFIG file. */
@@ -574,7 +584,7 @@ static fs_vtable_t fs_vtable = {
   base_bdb_verify_root,
   base_bdb_freeze,
   base_bdb_set_errcall,
-  NULL,
+  base_supports_concurrent_writes,
 };
 
 /* Where the format number is stored. */
@@ -601,6 +611,10 @@ open_databases(svn_fs_t *fs,
 
   if (create)
     SVN_ERR(bdb_write_config(fs));
+
+  bfd->concurrent_txns = svn_hash__get_bool(fs->config,
+                                            SVN_FS_CONFIG_CONCURRENT_WRITES,
+                                            FALSE);
 
   /* Create the Berkeley DB environment.  */
   {
