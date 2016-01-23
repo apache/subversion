@@ -7401,6 +7401,13 @@ test_parallel_put(const svn_test_opts_t *opts,
   /* All contents as expected? */
   SVN_ERR(verify_contents(fs, 1, COUNT, PROC_COUNT, pool));
 
+  /* Verify the whole repository (including meta-data etc.) */
+  svn_hash_sets(config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                svn_uuid_generate(pool));
+  SVN_ERR(svn_fs_verify(repo_name, config, 0, new_rev,
+                        NULL, NULL, NULL, NULL, /* No callbacks. */
+                        pool));
+
   /* Done. */
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
