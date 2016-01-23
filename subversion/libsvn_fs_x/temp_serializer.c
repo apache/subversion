@@ -1161,7 +1161,7 @@ svn_fs_x__serialize_changes(void **data,
 
   svn_temp_serializer__push(context,
                             (const void * const *)&changes.changes,
-                            changes.count * sizeof(**changes.changes));
+                            changes.count * sizeof(*changes.changes));
 
   for (i = 0; i < changes.count; ++i)
     serialize_change(context, &changes.changes[i]);
