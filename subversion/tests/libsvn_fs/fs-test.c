@@ -7238,12 +7238,13 @@ parallel_put_contents(svn_fs_root_t *txn_root,
   for (i = 0; i < proc_count; ++i)
     {
       svn_fs_txn_t *txn;
+      apr_pool_t *root_pool = svn_pool_create(NULL);
 
-      SVN_ERR(svn_fs_open(&params[i].fs, repo_name, config, pool));
-      SVN_ERR(svn_fs_open_txn(&txn, params[i].fs, txn_name, pool));
-      SVN_ERR(svn_fs_txn_root(&params[i].root, txn, pool));
+      SVN_ERR(svn_fs_open(&params[i].fs, repo_name, config, root_pool));
+      SVN_ERR(svn_fs_open_txn(&txn, params[i].fs, txn_name, root_pool));
+      SVN_ERR(svn_fs_txn_root(&params[i].root, txn, root_pool));
 
-      params[i].pool = pool;
+      params[i].pool = root_pool;
       params[i].count = count;
       params[i].file_name = 'A' + i;
       params[i].err = NULL;
@@ -7282,7 +7283,11 @@ parallel_put_contents(svn_fs_root_t *txn_root,
   /* Wait for all threads to end.  If we were to SVN_ERR out here, we might
    * see pool destruction racing with thread completion etc. */
   for (i = 0; i < proc_count; ++i)
-    params[i].retval1 = apr_thread_join(&params[i].retval2, params[i].thread);
+    {
+      params[i].retval1 = apr_thread_join(&params[i].retval2,
+                                          params[i].thread);
+      svn_pool_destroy(params[i].pool);
+    }
 
   svn_pool_destroy(iterpool);
 
