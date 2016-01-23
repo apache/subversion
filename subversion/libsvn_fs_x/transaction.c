@@ -2727,9 +2727,13 @@ rep_write_contents_close(void *baton)
       svn_fs_x__p2l_entry_t entry;
       svn_fs_x__id_t noderev_id;
 
-      /* We want to add this new representation to the protorev file. */
+      /* We want to add this new representation to the protorev file.
+         Make sure our REP_STREAM does not get closed. */
       if (ffd->concurrent_txns)
-        SVN_ERR(svn_stream_copy3(source, b->rep_stream, NULL, NULL,
+        SVN_ERR(svn_stream_copy3(source,
+                                 svn_stream_disown(b->rep_stream,
+                                                   b->local_pool),
+                                 NULL, NULL,
                                  b->local_pool));
 
       /* Write out our cosmetic end marker. */
