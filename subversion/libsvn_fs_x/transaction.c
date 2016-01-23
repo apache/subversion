@@ -2734,6 +2734,7 @@ rep_write_contents_close(void *baton)
 
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_stream_puts(b->rep_stream, "ENDREP\n"));
+      SVN_ERR(svn_stream_close(b->rep_stream));
       SVN_ERR(allocate_item_index(&rep->id.number, b->fs, txn_id,
                                   b->local_pool));
 
