@@ -839,6 +839,10 @@ svn_fs_x__extract_dir_entry(void **out,
   const apr_uint32_t *lengths =
     svn_temp_deserializer__ptr(data, (const void *const *)&dir_data->lengths);
 
+  /* Before we return, make sure we tell the caller this data is even still
+     relevant. */
+  b->out_of_date = dir_data->txn_filesize != b->txn_filesize;
+
   /* Special case: Early out for empty directories.
      That simplifies tests further down the road. */
   *out = NULL;
@@ -867,8 +871,6 @@ svn_fs_x__extract_dir_entry(void **out,
 
   /* de-serialize that entry or return NULL, if no match has been found.
    * Be sure to check that the directory contents is still up-to-date. */
-  b->out_of_date = dir_data->txn_filesize != b->txn_filesize;
-
   if (found && !b->out_of_date)
     {
       const svn_fs_x__dirent_t *source =
@@ -1161,7 +1163,7 @@ svn_fs_x__serialize_changes(void **data,
 
   svn_temp_serializer__push(context,
                             (const void * const *)&changes.changes,
-                            changes.count * sizeof(**changes.changes));
+                            changes.count * sizeof(*changes.changes));
 
   for (i = 0; i < changes.count; ++i)
     serialize_change(context, &changes.changes[i]);
