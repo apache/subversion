@@ -604,13 +604,17 @@ dag_step(dag_node_t **child_p,
   if (auto_clear_dag_cache(ffd->dag_node_cache))
     bucket = cache_lookup(ffd->dag_node_cache, change_set, path);
 
-  /* Construct the DAG node object for NODE_ID. Let it live in the cache. */
-  SVN_ERR(svn_fs_x__dag_get_node(&bucket->node, fs, &node_id,
+  /* Construct the DAG node object for NODE_ID. Let it live in the cache.
+     This is even true for in-txn nodes that we don't want to be found
+     in the cache.  We ensure consistent lifetime that way. */
+  SVN_ERR(svn_fs_x__dag_get_node(child_p, fs, &node_id,
                                  ffd->dag_node_cache->pool,
                                  scratch_pool));
 
-  /* Return a reference to the cached object. */
-  *child_p = bucket->node;
+  /* Update the cache entry, if the item is cachable. */
+  if (svn_fs_x__is_revision(change_set) || !ffd->concurrent_txns)
+    bucket->node = *child_p;
+
   return SVN_NO_ERROR;
 }
 
@@ -639,11 +643,20 @@ get_root_node(dag_node_t **node_p,
   /* If it is not already cached, construct the DAG node object for NODE_ID.
      Let it live in the cache.  Sadly, we often can't reuse txn DAG nodes. */
   if (bucket->node == NULL)
-    SVN_ERR(svn_fs_x__dag_root(&bucket->node, fs, change_set,
-                               ffd->dag_node_cache->pool, scratch_pool));
+    {
+      SVN_ERR(svn_fs_x__dag_root(node_p, fs, change_set,
+                                 ffd->dag_node_cache->pool, scratch_pool));
 
-  /* Return a reference to the cached object. */
-  *node_p = bucket->node;
+      /* Update the cache entry, if the item is cachable. */
+      if (svn_fs_x__is_revision(change_set) || !ffd->concurrent_txns)
+        bucket->node = *node_p;
+    }
+  else
+    {
+      /* Return a reference to the cached object. */
+      *node_p = bucket->node;
+    }
+
   return SVN_NO_ERROR;
 }
 
