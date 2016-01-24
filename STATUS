@@ -148,21 +148,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1722860, r1722861, r1722879, r1722887
-   Memory access portability issues.
-   Justification:
-     Not complying to the C standard is bad.  At the very least we
-     improve the signal/noise ratio when using memory sanitizers.
-     Part of this patch set (r1722879) fixes a crash on SPARC that
-     apparently gets masked by some lucky caller pattern.
-     Finally, these changes make the code actually simpler.
-   Notes:
-     r1722860 fixes the issue originally reported on dev@.
-     r1722879 fixes a follow-up issue found by the SPARC buildbot.
-     r1722887 removes similar logic from the membuffer cache although
-              that had not been reported a faulty. 
-     r1722861 has been included to make r1722879 merge cleanly.
-   Votes:
-     +1: stefan2, rhuijben, jamessan
-
