@@ -587,8 +587,8 @@ svn_repos_capabilities(apr_hash_t **capabilities,
 #define SVN_REPOS_CAPABILITY_MERGEINFO "mergeinfo"
 
 /**
- * The capability of doing the right thing with merge-tracking
- * information, both storing it and responding to queries about it.
+ * The capability of processing concurrent text and property changes
+ * to the same transaction from different threads and processes.
  *
  * @since New in 1.10.
  */
