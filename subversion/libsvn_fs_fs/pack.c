@@ -903,7 +903,7 @@ sort_reps_range(pack_context_t *context,
 
       /* Class 2:
        * Anything from short node chains.  The default of 16 is generous
-       * but we'd rather include to many than to few nodes here to keep
+       * but we'd rather include too many than too few nodes here to keep
        * seeks between different regions of this pack file at a minimum. */
       svn_boolean_t likely_head
         =   path_order[i]->predecessor_count
