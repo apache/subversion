@@ -582,8 +582,8 @@ typedef struct node_revision_t
   svn_revnum_t copyroot_rev;
   const char *copyroot_path;
 
-  /* number of predecessors this node revision has (recursively), or
-     -1 if not known (for backward compatibility). */
+  /* Number of predecessors this node revision has (recursively).
+     A difference from the BDB backend is that it cannot be -1. */
   int predecessor_count;
 
   /* representation key for this node's properties.  may be NULL if
