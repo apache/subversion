@@ -4470,6 +4470,40 @@ svn_client_conflict_get_conflicted(svn_boolean_t *text_conflicted,
                                    apr_pool_t *scratch_pool);
 
 /**
+ * Return a textual human-readable description of the property conflict
+ * described by @a conflict, allocated in @a result_pool. The description
+ * is encoded in UTF-8 and may contain multiple lines separated by
+ * @c APR_EOL_STR. The last line is not terminated by a newline.
+ *
+ * Additionally, the description may be localized to the language used
+ * by the current locale.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_prop_get_description(const char **description,
+                                         svn_client_conflict_t *conflict,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
+
+/**
+ * Return a textual human-readable description of the tree conflict
+ * described by @a conflict, allocated in @a result_pool. The description
+ * is encoded in UTF-8 and may contain multiple lines separated by
+ * @c APR_EOL_STR. The last line is not terminated by a newline.
+ *
+ * Additionally, the description may be localized to the language used
+ * by the current locale.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_tree_get_description(const char **description,
+                                         svn_client_conflict_t *conflict,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
+
+/**
  * Set @a *options to an array of pointers to svn_client_conflict_option_t
  * objects applicable to text conflicts described by @a conflict.
  *
