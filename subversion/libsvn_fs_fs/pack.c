@@ -896,10 +896,10 @@ sort_reps_range(pack_context_t *context,
       /* Class 1:
        * Pretty round _and_ a significant stop in the node's delta chain.
        * This may pick up more than one representation from the same chain
-       * but that's rare not a problem.  Prefer simple checks here.
+       * but that's rare and not a problem.  Prefer simple checks here.
        *
        * The divider of 4 is arbitrary but seems to work well in practice.
-       * Larger values increase the number of item in the "hot zone".
+       * Larger values increase the number of items in the "hot zone".
        * Smaller values make delta chains at HEAD more likely to contain
        * "cold zone" representations. */
       svn_boolean_t likely_target
