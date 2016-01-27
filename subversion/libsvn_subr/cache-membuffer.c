@@ -358,7 +358,7 @@ prefix_pool_get_internal(apr_uint32_t *prefix_idx,
 
   bytes_needed = prefix_len + 1 + OVERHEAD;
   assert(prefix_pool->bytes_max >= prefix_pool->bytes_used);
-  if (prefix_pool->bytes_max - prefix_pool->bytes_used > bytes_needed)
+  if (prefix_pool->bytes_max - prefix_pool->bytes_used < bytes_needed)
     {
       *prefix_idx = NO_INDEX;
       return SVN_NO_ERROR;
