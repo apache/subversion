@@ -1080,7 +1080,7 @@ handle_prop_conflict(svn_client_conflict_option_id_t *option_id,
                      apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
-  const char *message;
+  const char *description;
   const svn_string_t *merged_propval = NULL;
   svn_boolean_t resolved_allowed = FALSE;
   const svn_string_t *base_propval;
@@ -1100,11 +1100,9 @@ handle_prop_conflict(svn_client_conflict_option_id_t *option_id,
                                 path_prefix,
                                 svn_client_conflict_get_local_abspath(conflict),
                                 scratch_pool)));
-
-  SVN_ERR(svn_cl__get_human_readable_prop_conflict_description(&message,
-                                                               conflict,
-                                                               scratch_pool));
-  SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n", message));
+  SVN_ERR(svn_client_conflict_prop_get_description(&description, conflict,
+                                                   scratch_pool, scratch_pool));
+  SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n", description));
 
   SVN_ERR(svn_client_conflict_prop_get_resolution_options(&default_options,
                                                           conflict,
@@ -1195,7 +1193,7 @@ handle_tree_conflict(svn_client_conflict_option_id_t *option_id,
                      svn_cmdline_prompt_baton_t *pb,
                      apr_pool_t *scratch_pool)
 {
-  const char *readable_desc;
+  const char *description;
   const char *src_left_version;
   const char *src_right_version;
   const char *repos_root_url;
@@ -1205,14 +1203,14 @@ handle_tree_conflict(svn_client_conflict_option_id_t *option_id,
   apr_array_header_t *default_options;
   apr_pool_t *iterpool;
   
-  SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
-           &readable_desc, conflict, scratch_pool));
+  SVN_ERR(svn_client_conflict_tree_get_description(
+           &description, conflict, scratch_pool, scratch_pool));
   SVN_ERR(svn_cmdline_fprintf(
                stderr, scratch_pool,
                _("Tree conflict on '%s'\n   > %s\n"),
                svn_cl__local_style_skip_ancestor(path_prefix,
                  svn_client_conflict_get_local_abspath(conflict), scratch_pool),
-               readable_desc));
+               description));
 
   SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL, conflict,
                                              scratch_pool, scratch_pool));
