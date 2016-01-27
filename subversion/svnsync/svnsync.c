@@ -1549,7 +1549,7 @@ do_synchronize(svn_ra_session_t *to_session,
   /* Now check to see if there are any revisions to copy. */
   SVN_ERR(svn_ra_get_latest_revnum(from_session, &from_latest, pool));
 
-  if (from_latest < last_merged)
+  if (from_latest <= last_merged)
     return SVN_NO_ERROR;
 
   /* Ok, so there are new revisions, iterate over them copying them

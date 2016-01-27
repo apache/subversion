@@ -572,7 +572,6 @@ PROPS-END
   # Compare the dump produced by the mirror repository with expected
   verify_mirror(dest_sbox, dump_out)
 
-@XFail()
 def up_to_date_sync(sbox):
   """sync that does nothing"""
 
