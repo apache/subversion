@@ -572,6 +572,21 @@ PROPS-END
   # Compare the dump produced by the mirror repository with expected
   verify_mirror(dest_sbox, dump_out)
 
+@XFail()
+def up_to_date_sync(sbox):
+  """sync that does nothing"""
+
+  # An up-to-date mirror.
+  sbox.build(create_wc=False)
+  dest_sbox = sbox.clone_dependent()
+  dest_sbox.build(create_wc=False, empty=True)
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
+  run_init(dest_sbox.repo_url, sbox.repo_url)
+  run_sync(dest_sbox.repo_url)
+
+  # Another sync should be a no-op
+  run_sync(dest_sbox.repo_url)
+
 
 ########################################################################
 # Run the tests
@@ -609,6 +624,7 @@ test_list = [ None,
               delete_revprops,
               fd_leak_sync_from_serf_to_local, # calls setrlimit
               mergeinfo_contains_r0,
+              up_to_date_sync,
              ]
 
 if __name__ == '__main__':
