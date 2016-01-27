@@ -585,7 +585,8 @@ def up_to_date_sync(sbox):
   run_sync(dest_sbox.repo_url)
 
   # Another sync should be a no-op
-  run_sync(dest_sbox.repo_url)
+  svntest.actions.run_and_verify_svnsync([], [],
+                                         "synchronize", dest_sbox.repo_url)
 
 
 ########################################################################
