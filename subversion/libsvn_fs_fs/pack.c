@@ -803,11 +803,11 @@ compare_ref_to_item(const reference_t * const * lhs_p,
 
 /* Look for the least significant bit set in VALUE and return the smallest
  * number with the same property, i.e. the largest power of 2 that is a
- * factor in VALUE. */
+ * factor in VALUE.  Edge case: roundness(0) := 0 . */
 static int
 roundness(int value)
 {
-  return value ? value - (value & (value - 1)) : INT_MAX;
+  return value - (value & (value - 1));
 }
 
 /* For all paths in first COUNT entries in PATH_ORDER, mark their latest
