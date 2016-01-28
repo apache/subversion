@@ -1405,8 +1405,17 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
   const char *my_abspath = NULL;
   const char *their_abspath = NULL;
   const char *merged_abspath = svn_client_conflict_get_local_abspath(conflict);
+  svn_boolean_t text_conflicted;
+  svn_boolean_t tree_conflicted;
 
-  if (svn_client_conflict_get_kind(conflict) == svn_wc_conflict_kind_text)
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             NULL, /* ### TODO */
+                                             &tree_conflicted,
+                                             conflict,
+                                             scratch_pool,
+                                             scratch_pool));
+
+  if (text_conflicted)
     SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
                                                   &base_abspath,
                                                   &their_abspath,
@@ -1535,11 +1544,11 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
      Conflicting edits on a file's text, or
      Conflicting edits on a property.
   */
-  if (((svn_client_conflict_get_kind(conflict) == svn_wc_conflict_kind_text)
+  if (text_conflicted
        && (svn_client_conflict_get_incoming_change(conflict) ==
            svn_wc_conflict_action_edit)
        && (svn_client_conflict_get_local_change(conflict) ==
-           svn_wc_conflict_reason_edited)))
+           svn_wc_conflict_reason_edited))
     SVN_ERR(handle_text_conflict(option_id, save_merged, accept_which,
                                  quit, conflict, path_prefix, pb,
                                  editor_cmd, config, scratch_pool));
@@ -1549,7 +1558,7 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
                                  quit, path_prefix, pb,
                                  editor_cmd, config, conflict,
                                  result_pool, scratch_pool));
-  else if (svn_client_conflict_get_kind(conflict) == svn_wc_conflict_kind_tree)
+  else if (tree_conflicted)
     SVN_ERR(handle_tree_conflict(option_id, accept_which, quit,
                                  conflict, path_prefix, pb,
                                  scratch_pool));
@@ -1624,6 +1633,17 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool)
 {
+  svn_boolean_t text_conflicted;
+  apr_array_header_t **props_conflicted;
+  svn_boolean_t tree_conflicted;
+
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict,
+                                             scratch_pool,
+                                             scratch_pool));
+
   if (option_id == svn_client_conflict_option_unspecified)
     SVN_ERR(conflict_func_interactive(&option_id, NULL, NULL,
                                       accept_which, quit,
@@ -1641,7 +1661,6 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
         = svn_cl__local_style_skip_ancestor(
             path_prefix, svn_client_conflict_get_local_abspath(conflict),
             scratch_pool);
-      svn_wc_conflict_kind_t conflict_kind;
       const char *local_abspath;
       const char *lock_abspath;
       svn_error_t *err;
@@ -1654,13 +1673,11 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
                                                      local_abspath,
                                                      scratch_pool,
                                                      scratch_pool));
-      conflict_kind = svn_client_conflict_get_kind(conflict);
-
       err = svn_wc_resolved_conflict5(
               ctx->wc_ctx, local_abspath, svn_depth_empty, /* ??? */
-              conflict_kind == svn_wc_conflict_kind_text,
-              conflict_kind == svn_wc_conflict_kind_property ? "" : NULL,
-              conflict_kind == svn_wc_conflict_kind_tree,
+              text_conflicted,
+              props_conflicted != NULL ? "" : NULL,
+              tree_conflicted,
               conflict_option_id_to_wc_conflict_choice(option_id),
               ctx->cancel_func, ctx->cancel_baton,
               ctx->notify_func2, ctx->notify_baton2,
