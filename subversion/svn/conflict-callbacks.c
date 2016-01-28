@@ -1634,7 +1634,7 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
                          apr_pool_t *scratch_pool)
 {
   svn_boolean_t text_conflicted;
-  apr_array_header_t **props_conflicted;
+  apr_array_header_t *props_conflicted;
   svn_boolean_t tree_conflicted;
 
   SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
