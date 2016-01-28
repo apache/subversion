@@ -461,7 +461,7 @@ static const resolver_option_t binary_conflict_options[] =
                                   SVN_CL__ACCEPT_WORKING },
   { "tf", N_("their version"),    NULL,
                                   svn_client_conflict_option_incoming_text,
-                                  SVN_CL__ACCEPT_THEIRS_FULL},
+                                  SVN_CL__ACCEPT_THEIRS_FULL },
   { "p",  N_("postpone"),         NULL,
                                   svn_client_conflict_option_postpone,
                                   SVN_CL__ACCEPT_POSTPONE},
@@ -517,9 +517,10 @@ static const resolver_option_t tree_conflict_options[] =
 static const resolver_option_t tree_conflict_options_update_moved_away[] =
 {
   { "mc", N_("apply update to move destination (recommended)"),
-                                  N_("apply incoming update to move destination"
-                                     "  [mine-conflict]"),
-                                  svn_client_conflict_option_working_text_where_conflicted },
+                                  N_("apply incoming update to move "
+                                     "destination"),
+                                  svn_client_conflict_option_working_text_where_conflicted,
+                                  SVN_CL__ACCEPT_MINE_CONFLICT },
   { "p",  N_("postpone"),         NULL,
                                   svn_client_conflict_option_postpone,
                                   SVN_CL__ACCEPT_POSTPONE },
@@ -534,8 +535,9 @@ static const resolver_option_t tree_conflict_options_update_edit_deleted_dir[] =
 {
   { "mc", N_("prepare for updating moved-away children, if any (recommended)"),
                                   N_("allow updating moved-away children "
-                                     "with 'svn resolve' [mine-conflict]"),
-                                  svn_client_conflict_option_working_text_where_conflicted },
+                                     "with 'svn resolve'"),
+                                  svn_client_conflict_option_working_text_where_conflicted,
+                                  SVN_CL__ACCEPT_MINE_CONFLICT },
   { "p",  N_("postpone"),         NULL,
                                   svn_client_conflict_option_postpone,
                                   SVN_CL__ACCEPT_POSTPONE },
