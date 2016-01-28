@@ -906,27 +906,6 @@ static const svn_client_conflict_option_t prop_conflict_options[] =
 
 };
 
-/* Resolver options for a tree conflict */
-static const svn_client_conflict_option_t tree_conflict_options[] =
-{
-  {
-    svn_client_conflict_option_postpone,
-    N_("skip this conflict and leave it unresolved"),
-    NULL,
-    resolve_tree_conflict
-  },
-
-  {
-    /* ### Use 'working text' for now since libsvn_wc does not know another
-     * ### choice to resolve to working yet. */
-    svn_client_conflict_option_working_text,
-    N_("accept current working copy state"),
-    NULL,
-    resolve_tree_conflict
-  },
-
-};
-
 static svn_error_t *
 assert_text_conflict(svn_client_conflict_t *conflict, apr_pool_t *scratch_pool)
 {
@@ -1032,17 +1011,56 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool)
 {
-  int i;
+  svn_client_conflict_option_t *option;
 
   SVN_ERR(assert_tree_conflict(conflict, scratch_pool));
 
-  *options = apr_array_make(result_pool, ARRAY_LEN(tree_conflict_options),
+  *options = apr_array_make(result_pool, 2,
                             sizeof(svn_client_conflict_option_t *));
-  for (i = 0; i < ARRAY_LEN(tree_conflict_options); i++)
+
+  /* Add postpone option. */
+  option = apr_pcalloc(result_pool, sizeof(*option));
+  option->id = svn_client_conflict_option_postpone;
+  option->description = N_("skip this conflict and leave it unresolved");
+  option->conflict = conflict;
+  option->do_resolve_func = resolve_tree_conflict;
+  APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
+
+  /* Add an option which marks the conflict resolved. */
+  option = apr_pcalloc(result_pool, sizeof(*option));
+  option->id = svn_client_conflict_option_working_text;
+  option->description = N_("accept current working copy state");
+  /* Override ID and DESCRIPTION in case we can offer automated resolution: */
+  if (svn_client_conflict_get_operation(conflict) == svn_wc_operation_update ||
+      svn_client_conflict_get_operation(conflict) == svn_wc_operation_switch)
     {
-      APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
-        &tree_conflict_options[i];
+      svn_wc_conflict_reason_t reason;
+
+      reason = svn_client_conflict_get_local_change(conflict);
+      if (reason == svn_wc_conflict_reason_moved_away)
+        {
+          option->id = svn_client_conflict_option_working_text_where_conflicted;
+          option->description =
+            N_("apply incoming changes to move destination");
+        }
+      else if (reason == svn_wc_conflict_reason_deleted ||
+               reason == svn_wc_conflict_reason_replaced)
+        {
+          if (svn_client_conflict_get_incoming_change(conflict) ==
+              svn_wc_conflict_action_edit &&
+              svn_client_conflict_tree_get_victim_node_kind(conflict) ==
+              svn_node_dir)
+            {
+              option->id =
+                svn_client_conflict_option_working_text_where_conflicted;
+              option->description =
+                N_("prepare for updating moved-away children, if any");
+            }
+        }
     }
+  option->conflict = conflict;
+  option->do_resolve_func = resolve_tree_conflict;
+  APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
 
   return SVN_NO_ERROR;
 }
