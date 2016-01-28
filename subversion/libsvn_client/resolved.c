@@ -1021,7 +1021,7 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   /* Add postpone option. */
   option = apr_pcalloc(result_pool, sizeof(*option));
   option->id = svn_client_conflict_option_postpone;
-  option->description = N_("skip this conflict and leave it unresolved");
+  option->description = _("skip this conflict and leave it unresolved");
   option->conflict = conflict;
   option->do_resolve_func = resolve_tree_conflict;
   APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
@@ -1029,7 +1029,7 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   /* Add an option which marks the conflict resolved. */
   option = apr_pcalloc(result_pool, sizeof(*option));
   option->id = svn_client_conflict_option_working_text;
-  option->description = N_("accept current working copy state");
+  option->description = _("accept current working copy state");
   /* Override ID and DESCRIPTION in case we can offer automated resolution: */
   if (svn_client_conflict_get_operation(conflict) == svn_wc_operation_update ||
       svn_client_conflict_get_operation(conflict) == svn_wc_operation_switch)
@@ -1041,7 +1041,7 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
         {
           option->id = svn_client_conflict_option_working_text_where_conflicted;
           option->description =
-            N_("apply incoming changes to move destination");
+            _("apply incoming changes to move destination");
         }
       else if (reason == svn_wc_conflict_reason_deleted ||
                reason == svn_wc_conflict_reason_replaced)
@@ -1054,7 +1054,7 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
               option->id =
                 svn_client_conflict_option_working_text_where_conflicted;
               option->description =
-                N_("prepare for updating moved-away children, if any");
+                _("prepare for updating moved-away children, if any");
             }
         }
     }
