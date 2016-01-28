@@ -1289,7 +1289,8 @@ svn_client_conflict_get_conflicted(svn_boolean_t *text_conflicted,
         SVN_ERR(svn_hash_keys(props_conflicted, conflict->prop_conflicts,
                               result_pool));
       else
-        *props_conflicted = NULL;
+        *props_conflicted = apr_array_make(result_pool, 0,
+                                           sizeof(const char*));
     }
 
   if (tree_conflicted)
