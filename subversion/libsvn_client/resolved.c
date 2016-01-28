@@ -819,14 +819,14 @@ static const svn_client_conflict_option_t text_conflict_options[] =
 
   {
     svn_client_conflict_option_incoming_text_where_conflicted,
-    N_("accept incoming changes only where they conflict"),
+    N_("accept changes only where they conflict"),
     NULL,
     resolve_text_conflict
   },
 
   {
     svn_client_conflict_option_working_text_where_conflicted,
-    N_("reject incoming changes which conflict and accept the rest"),
+    N_("reject changes which conflict and accept the rest"),
     NULL,
     resolve_text_conflict
   },
