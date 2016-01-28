@@ -1028,7 +1028,7 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
 
   /* Add an option which marks the conflict resolved. */
   option = apr_pcalloc(result_pool, sizeof(*option));
-  option->id = svn_client_conflict_option_working_text;
+  option->id = svn_client_conflict_option_merged_text;
   option->description = _("accept current working copy state");
   /* Override ID and DESCRIPTION in case we can offer automated resolution: */
   if (svn_client_conflict_get_operation(conflict) == svn_wc_operation_update ||
