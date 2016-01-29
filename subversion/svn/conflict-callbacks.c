@@ -48,18 +48,6 @@
 
 
 
-struct svn_cl__interactive_conflict_baton_t {
-  svn_cl__accept_t accept_which;
-  apr_hash_t *config;
-  const char *editor_cmd;
-  svn_boolean_t external_failed;
-  svn_cmdline_prompt_baton_t *pb;
-  const char *path_prefix;
-  svn_boolean_t quit;
-  svn_cl__conflict_stats_t *conflict_stats;
-  svn_boolean_t printed_summary;
-};
-
 svn_cl__accept_t
 svn_cl__accept_from_word(const char *word)
 {
