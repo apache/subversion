@@ -46,6 +46,11 @@
 #include <apr_signal.h>
 #include <apr_uuid.h>
 
+#ifndef WIN32
+#include <signal.h>
+#include <unistd.h>
+#endif
+
 static svn_opt_subcommand_t initialize_cmd,
                             synchronize_cmd,
                             copy_revprops_cmd,
@@ -2470,5 +2475,15 @@ main(int argc, const char *argv[])
     }
 
   svn_pool_destroy(pool);
+
+#ifndef WIN32
+  /* If cancelled by SIGINT then attempt to exit via SIGINT.  This
+     allows the shell to use WIFSIGNALED and WTERMSIG to detect the
+     SIGINT.  See http://www.cons.org/cracauer/sigint.html  */
+  if (cancelled && apr_signal(SIGINT, SIG_DFL) == APR_SUCCESS)
+    /* No APR support for getpid() so cannot use apr_proc_kill(). */
+    kill(getpid(), SIGINT);
+#endif
+
   return exit_code;
 }
