@@ -95,6 +95,8 @@ def print_error(code):
   except KeyError:
     if code == -41:
       print("Sit by a lake.")
+    elif code >= 120100 and code < 121000:
+      print('%08d  <error code from libserf; see serf.h>')
     else:
       print('%08d  *** UNKNOWN ERROR CODE ***' % (code))
 
