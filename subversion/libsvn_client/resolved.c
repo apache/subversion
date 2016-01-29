@@ -1457,30 +1457,34 @@ svn_client_conflict_prop_get_propvals(const svn_string_t **base_propval,
                                       const svn_string_t **incoming_old_propval,
                                       const svn_string_t **incoming_new_propval,
                                       const svn_client_conflict_t *conflict,
-  apr_pool_t *result_pool)
+                                      const char *propname,
+                                      apr_pool_t *result_pool)
 {
+  const svn_wc_conflict_description2_t *desc;
+
   SVN_ERR_ASSERT(svn_client_conflict_get_kind(conflict) ==
                  svn_wc_conflict_kind_property);
 
+  desc = svn_hash_gets(conflict->prop_conflicts, propname);
+  if (desc == NULL)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Property '%s' is not in conflict."), propname);
+
   if (base_propval)
     *base_propval =
-      svn_string_dup(get_conflict_desc2_t(conflict)->prop_value_base,
-                     result_pool);
+      svn_string_dup(desc->prop_value_base, result_pool);
 
   if (working_propval)
     *working_propval =
-      svn_string_dup(get_conflict_desc2_t(conflict)->prop_value_working,
-                     result_pool);
+      svn_string_dup(desc->prop_value_working, result_pool);
 
   if (incoming_old_propval)
     *incoming_old_propval =
-      svn_string_dup(get_conflict_desc2_t(conflict)->prop_value_incoming_old,
-                     result_pool);
+      svn_string_dup(desc->prop_value_incoming_old, result_pool);
 
   if (incoming_new_propval)
     *incoming_new_propval =
-      svn_string_dup(get_conflict_desc2_t(conflict)->prop_value_incoming_new,
-                     result_pool);
+      svn_string_dup(desc->prop_value_incoming_new, result_pool);
 
   return SVN_NO_ERROR;
 }

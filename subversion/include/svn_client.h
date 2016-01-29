@@ -4750,8 +4750,8 @@ svn_client_conflict_prop_get_reject_abspath(
   const svn_client_conflict_t *conflict);
 
 /**
- * Return the set of property values involved in the property conflict
- * described by @a conflict. If a property value is unavailable the
+ * Return the set of property values involved in the conflict of property
+ * PROPNAME described by @a conflict. If a property value is unavailable the
  * corresponding output argument is set to @c NULL.
  *  
  * A 3-way diff of these property values can be generated with
@@ -4766,6 +4766,7 @@ svn_client_conflict_prop_get_propvals(const svn_string_t **base_propval,
                                       const svn_string_t **incoming_old_propval,
                                       const svn_string_t **incoming_new_propval,
                                       const svn_client_conflict_t *conflict,
+                                      const char *propname,
                                       apr_pool_t *result_pool);
 
 /**
