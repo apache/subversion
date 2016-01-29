@@ -171,7 +171,7 @@ struct svn_client_conflict_t
 
   /* For backwards compat. */
   const svn_wc_conflict_description2_t *legacy_text_conflict;
-  const svn_wc_conflict_description2_t *legacy_prop_conflict;
+  const char *legacy_prop_conflict_propname;
   const svn_wc_conflict_description2_t *legacy_tree_conflict;
 };
 
@@ -261,7 +261,10 @@ add_legacy_desc_to_conflict(const svn_wc_conflict_description2_t *desc,
         break;
 
       case svn_wc_conflict_kind_property:
-        conflict->legacy_prop_conflict = desc;
+        if (conflict->prop_conflicts == NULL)
+          conflict->prop_conflicts = apr_hash_make(result_pool);
+        svn_hash_sets(conflict->prop_conflicts, desc->property_name, desc);
+        conflict->legacy_prop_conflict_propname = desc->property_name;
         break;
 
       case svn_wc_conflict_kind_tree:
@@ -314,12 +317,6 @@ conflict_get_internal(svn_client_conflict_t **conflict,
   for (i = 0; i < descs->nelts; i++)
     {
       desc = APR_ARRAY_IDX(descs, i, const svn_wc_conflict_description2_t *);
-      if (desc->kind == svn_wc_conflict_kind_property)
-        {
-          if ((*conflict)->prop_conflicts == NULL)
-            (*conflict)->prop_conflicts = apr_hash_make(result_pool);
-          svn_hash_sets((*conflict)->prop_conflicts, desc->property_name, desc);
-        }
       add_legacy_desc_to_conflict(desc, *conflict, result_pool);
     }
 
@@ -762,6 +759,8 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
                         option);
           svn_hash_sets(conflict->prop_conflicts, this_propname, NULL);
         }
+
+      conflict->legacy_prop_conflict_propname = NULL;
     }
   else
     {
@@ -770,6 +769,10 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
                                 propname),
                    option);
       svn_hash_sets(conflict->prop_conflicts, propname, NULL);
+
+      conflict->legacy_prop_conflict_propname =
+          apr_hash_this_key(apr_hash_first(scratch_pool,
+                                           conflict->prop_conflicts));
     }
 
   return SVN_NO_ERROR;
@@ -1253,8 +1256,9 @@ get_conflict_desc2_t(const svn_client_conflict_t *conflict)
   if (conflict->legacy_tree_conflict)
     return conflict->legacy_tree_conflict;
 
-  if (conflict->legacy_prop_conflict)
-    return conflict->legacy_prop_conflict;
+  if (conflict->prop_conflicts && conflict->legacy_prop_conflict_propname)
+    return svn_hash_gets(conflict->prop_conflicts,
+                         conflict->legacy_prop_conflict_propname);
 
   return NULL;
 }
@@ -1278,14 +1282,7 @@ svn_client_conflict_get_conflicted(svn_boolean_t *text_conflicted,
 
   if (props_conflicted)
     {
-      if (conflict->legacy_prop_conflict)
-        {
-          *props_conflicted = apr_array_make(result_pool, 1,
-                                             sizeof(const char*));
-          APR_ARRAY_PUSH((*props_conflicted), const char *) =
-            conflict->legacy_prop_conflict->property_name;
-        }
-      else if (conflict->prop_conflicts)
+      if (conflict->prop_conflicts)
         SVN_ERR(svn_hash_keys(props_conflicted, conflict->prop_conflicts,
                               result_pool));
       else
