@@ -121,6 +121,10 @@ conflict_status_walker(void *baton,
 
   svn_pool_destroy(iterpool);
 
+  /* If the has user decided to quit resolution, cancel the status walk. */
+  if (*cswb->quit)
+    return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+
   return SVN_NO_ERROR;
 }
 
@@ -270,16 +274,30 @@ walk_conflicts(svn_client_ctx_t *ctx,
   if (iterpool)
     svn_pool_destroy(iterpool);
 
-  if (err && err->apr_err != SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE)
-    err = svn_error_createf(
-                SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, err,
-                _("Unable to resolve conflicts on '%s'"),
-                svn_dirent_local_style(local_abspath, scratch_pool));
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_CANCELLED)
+        {
+          /* If QUIT is set, the user has selected the 'q' option at
+           * the conflict prompt and the status walk was aborted.
+           * This is not an error condition. */
+          if (quit)
+            {
+              svn_error_clear(err);
+              err = SVN_NO_ERROR;
+            }
+        }
+      else if (err->apr_err != SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE)
+        err = svn_error_createf(
+                    SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, err,
+                    _("Unable to resolve conflicts on '%s'"),
+                    svn_dirent_local_style(local_abspath, scratch_pool));
+
+      SVN_ERR(err);
+    }
 
   ctx->notify_func2 = cswb.notify_func;
   ctx->notify_baton2 = cswb.notify_baton;
-
-  SVN_ERR(err);
 
   /* ### call notify.c code */
   if (ctx->notify_func2)
