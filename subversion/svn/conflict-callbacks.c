@@ -749,7 +749,7 @@ handle_text_conflict(svn_boolean_t *resolved,
   resolver_option_t *text_conflict_options;
   svn_client_conflict_option_id_t option_id; 
 
-  option_id = svn_client_conflict_option_undefined;
+  option_id = svn_client_conflict_option_unspecified;
 
   SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
                                                 &base_abspath, &their_abspath,
@@ -1049,7 +1049,7 @@ handle_text_conflict(svn_boolean_t *resolved,
     }
   svn_pool_destroy(iterpool);
 
-  if (option_id != svn_client_conflict_option_undefined &&
+  if (option_id != svn_client_conflict_option_unspecified &&
       option_id != svn_client_conflict_option_postpone)
     {
       SVN_ERR(mark_conflict_resolved(conflict, option_id,
@@ -1148,6 +1148,8 @@ handle_one_prop_conflict(svn_client_conflict_option_id_t *option_id,
   const svn_string_t *my_propval;
   const svn_string_t *their_propval;
   resolver_option_t *prop_conflict_options;
+
+  *option_id = svn_client_conflict_option_unspecified;
 
   SVN_ERR(svn_client_conflict_prop_get_propvals(NULL, &my_propval,
                                                 &base_propval, &their_propval,
@@ -1279,7 +1281,7 @@ handle_prop_conflicts(svn_boolean_t *resolved,
                                        editor_cmd, config, conflict, propname,
                                        iterpool, iterpool));
 
-      if (option_id != svn_client_conflict_option_undefined &&
+      if (option_id != svn_client_conflict_option_unspecified &&
           option_id != svn_client_conflict_option_postpone)
         {
           SVN_ERR(mark_conflict_resolved(conflict, option_id,
@@ -1382,6 +1384,8 @@ handle_tree_conflict(svn_boolean_t *resolved,
   resolver_option_t *tree_conflict_options;
   svn_client_conflict_option_id_t option_id;
 
+  option_id = svn_client_conflict_option_unspecified;
+
   SVN_ERR(svn_client_conflict_tree_get_description(
            &description, conflict, scratch_pool, scratch_pool));
   SVN_ERR(svn_cmdline_fprintf(
@@ -1445,7 +1449,7 @@ handle_tree_conflict(svn_boolean_t *resolved,
         }
     }
   svn_pool_destroy(iterpool);
-  if (option_id != svn_client_conflict_option_undefined &&
+  if (option_id != svn_client_conflict_option_unspecified &&
       option_id != svn_client_conflict_option_postpone)
     {
       SVN_ERR(mark_conflict_resolved(conflict, option_id,
