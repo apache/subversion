@@ -1617,6 +1617,61 @@ conflict_option_id_to_wc_conflict_choice(
   return svn_wc_conflict_choose_undefined;
 }
 
+/* Mark CONFLICT as resolved to resolution option with ID OPTION_ID.
+ * If TEXT_CONFLICTED is true, resolve text conflicts described by CONFLICT.
+ * IF PROPNAME is not NULL, mark the conflict in the specified property as
+ * resolved. If PROPNAME is "", mark all property conflicts described by
+ * CONFLICT as resolved.
+ * If TREE_CONFLICTED is true, resolve tree conflicts described by CONFLICT.
+ * Adjust CONFLICT_STATS as necessary (PATH_PREFIX is needed for this step). */
+static svn_error_t *
+mark_conflict_resolved(svn_client_conflict_t *conflict,
+                       svn_client_conflict_option_id_t option_id,
+                       svn_boolean_t text_conflicted,
+                       const char *propname,
+                       svn_boolean_t tree_conflicted,
+                       const char *path_prefix,
+                       svn_cl__conflict_stats_t *conflict_stats,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *scratch_pool)
+{
+  const char *local_relpath
+    = svn_cl__local_style_skip_ancestor(
+        path_prefix, svn_client_conflict_get_local_abspath(conflict),
+        scratch_pool);
+  const char *local_abspath;
+  const char *lock_abspath;
+  svn_error_t *err;
+
+  local_abspath = svn_client_conflict_get_local_abspath(conflict);
+
+  /* ### for now, resolve conflict using legacy API */
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath,
+                                                 ctx->wc_ctx,
+                                                 local_abspath,
+                                                 scratch_pool,
+                                                 scratch_pool));
+  err = svn_wc_resolved_conflict5(
+          ctx->wc_ctx, local_abspath, svn_depth_empty, /* ??? */
+          text_conflicted, propname, tree_conflicted,
+          conflict_option_id_to_wc_conflict_choice(option_id),
+          ctx->cancel_func, ctx->cancel_baton,
+          ctx->notify_func2, ctx->notify_baton2,
+          scratch_pool);
+
+  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
+                                                                 lock_abspath,
+                                                                 scratch_pool));
+  svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
+
+  SVN_ERR(err);
+
+  svn_cl__conflict_stats_resolved(conflict_stats, local_relpath,
+                                  svn_client_conflict_get_kind(conflict));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_cl__resolve_conflict(svn_boolean_t *resolved,
                          svn_cl__accept_t *accept_which,
@@ -1654,44 +1709,14 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
 
   SVN_ERR_ASSERT(option_id != svn_client_conflict_option_unspecified);
 
-  /* If we are resolving a conflict, adjust the summary of conflicts. */
   if (option_id != svn_client_conflict_option_postpone)
     {
-      const char *local_relpath
-        = svn_cl__local_style_skip_ancestor(
-            path_prefix, svn_client_conflict_get_local_abspath(conflict),
-            scratch_pool);
-      const char *local_abspath;
-      const char *lock_abspath;
-      svn_error_t *err;
-
-      local_abspath = svn_client_conflict_get_local_abspath(conflict);
-
-      /* ### for now, resolve conflict using legacy API */
-      SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath,
-                                                     ctx->wc_ctx,
-                                                     local_abspath,
-                                                     scratch_pool,
-                                                     scratch_pool));
-      err = svn_wc_resolved_conflict5(
-              ctx->wc_ctx, local_abspath, svn_depth_empty, /* ??? */
-              text_conflicted,
-              props_conflicted != NULL ? "" : NULL,
-              tree_conflicted,
-              conflict_option_id_to_wc_conflict_choice(option_id),
-              ctx->cancel_func, ctx->cancel_baton,
-              ctx->notify_func2, ctx->notify_baton2,
-              scratch_pool);
-
-      err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
-                                                                     lock_abspath,
-                                                                     scratch_pool));
-      svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
-
-      SVN_ERR(err);
-    
-      svn_cl__conflict_stats_resolved(conflict_stats, local_relpath,
-                                      svn_client_conflict_get_kind(conflict));
+      SVN_ERR(mark_conflict_resolved(conflict, option_id,
+                                     text_conflicted,
+                                     props_conflicted != NULL ? "" : NULL,
+                                     tree_conflicted,
+                                     path_prefix, conflict_stats,
+                                     ctx, scratch_pool));
       *resolved = TRUE;
     }
   else
