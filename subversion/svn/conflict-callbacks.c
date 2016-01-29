@@ -1063,7 +1063,8 @@ handle_text_conflict(svn_boolean_t *resolved,
     }
   svn_pool_destroy(iterpool);
 
-  if (option_id != svn_client_conflict_option_undefined)
+  if (option_id != svn_client_conflict_option_undefined &&
+      option_id != svn_client_conflict_option_postpone)
     {
       SVN_ERR(mark_conflict_resolved(conflict, option_id,
                                      TRUE, NULL, FALSE,
@@ -1295,7 +1296,8 @@ handle_prop_conflicts(svn_boolean_t *resolved,
                                        editor_cmd, config, conflict, propname,
                                        iterpool, iterpool));
 
-      if (option_id != svn_client_conflict_option_undefined)
+      if (option_id != svn_client_conflict_option_undefined &&
+          option_id != svn_client_conflict_option_postpone)
         {
           SVN_ERR(mark_conflict_resolved(conflict, option_id,
                                          FALSE, propname, FALSE,
@@ -1462,7 +1464,8 @@ handle_tree_conflict(svn_boolean_t *resolved,
         }
     }
   svn_pool_destroy(iterpool);
-  if (option_id != svn_client_conflict_option_undefined)
+  if (option_id != svn_client_conflict_option_undefined &&
+      option_id != svn_client_conflict_option_postpone)
     {
       SVN_ERR(mark_conflict_resolved(conflict, option_id,
                                      FALSE, NULL, TRUE,
@@ -1623,7 +1626,8 @@ resolve_conflict_interactively(svn_boolean_t *resolved,
       break;
     }
 
-  if (option_id != svn_client_conflict_option_undefined)
+  if (option_id != svn_client_conflict_option_undefined &&
+      option_id != svn_client_conflict_option_postpone)
     {
       /* Resolve the conflict as per --accept option. */
       SVN_ERR(mark_conflict_resolved(conflict, option_id,
@@ -1633,6 +1637,12 @@ resolve_conflict_interactively(svn_boolean_t *resolved,
                                      path_prefix, conflict_stats,
                                      ctx, scratch_pool));
       *resolved = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  if (option_id == svn_client_conflict_option_postpone)
+    {
+      *resolved = FALSE;
       return SVN_NO_ERROR;
     }
 
