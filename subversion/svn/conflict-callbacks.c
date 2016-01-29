@@ -720,7 +720,6 @@ mark_conflict_resolved(svn_client_conflict_t *conflict,
  * SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
 handle_text_conflict(svn_boolean_t *resolved,
-                     svn_cl__accept_t *accept_which,
                      svn_boolean_t *quit,
                      svn_client_conflict_t *conflict,
                      const char *path_prefix,
@@ -837,7 +836,6 @@ handle_text_conflict(svn_boolean_t *resolved,
       if (strcmp(opt->code, "q") == 0)
         {
           option_id = opt->choice;
-          *accept_which = svn_cl__accept_postpone;
           *quit = TRUE;
           break;
         }
@@ -1132,7 +1130,6 @@ build_prop_conflict_options(resolver_option_t **options,
 static svn_error_t *
 handle_one_prop_conflict(svn_client_conflict_option_id_t *option_id,
                          const svn_string_t **merged_value,
-                         svn_cl__accept_t *accept_which,
                          svn_boolean_t *quit,
                          const char *path_prefix,
                          svn_cmdline_prompt_baton_t *pb,
@@ -1199,7 +1196,6 @@ handle_one_prop_conflict(svn_client_conflict_option_id_t *option_id,
       if (strcmp(opt->code, "q") == 0)
         {
           *option_id = opt->choice;
-          *accept_which = svn_cl__accept_postpone;
           *quit = TRUE;
           break;
         }
@@ -1249,7 +1245,6 @@ handle_one_prop_conflict(svn_client_conflict_option_id_t *option_id,
 static svn_error_t *
 handle_prop_conflicts(svn_boolean_t *resolved,
                       const svn_string_t **merged_value,
-                      svn_cl__accept_t *accept_which,
                       svn_boolean_t *quit,
                       const char *path_prefix,
                       svn_cmdline_prompt_baton_t *pb,
@@ -1280,7 +1275,7 @@ handle_prop_conflicts(svn_boolean_t *resolved,
       svn_pool_clear(iterpool);
 
       SVN_ERR(handle_one_prop_conflict(&option_id, &merged_propval,
-                                       accept_which, quit, path_prefix, pb,
+                                       quit, path_prefix, pb,
                                        editor_cmd, config, conflict, propname,
                                        iterpool, iterpool));
 
@@ -1368,7 +1363,6 @@ build_tree_conflict_options(resolver_option_t **options,
  * SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
 handle_tree_conflict(svn_boolean_t *resolved,
-                     svn_cl__accept_t *accept_which,
                      svn_boolean_t *quit,
                      svn_client_conflict_t *conflict,
                      const char *path_prefix,
@@ -1441,7 +1435,6 @@ handle_tree_conflict(svn_boolean_t *resolved,
       if (strcmp(opt->code, "q") == 0)
         {
           option_id = opt->choice;
-          *accept_which = svn_cl__accept_postpone;
           *quit = TRUE;
           break;
         }
@@ -1650,18 +1643,16 @@ resolve_conflict_interactively(svn_boolean_t *resolved,
            svn_wc_conflict_action_edit)
        && (svn_client_conflict_get_local_change(conflict) ==
            svn_wc_conflict_reason_edited))
-    SVN_ERR(handle_text_conflict(resolved, accept_which, quit, conflict,
+    SVN_ERR(handle_text_conflict(resolved, quit, conflict,
                                  path_prefix, pb, editor_cmd, config,
                                  conflict_stats, ctx, scratch_pool));
   if (props_conflicted->nelts > 0)
-    SVN_ERR(handle_prop_conflicts(resolved, &merged_propval, accept_which,
-                                  quit, path_prefix, pb,
-                                  editor_cmd, config, conflict,
-                                  conflict_stats, ctx,
+    SVN_ERR(handle_prop_conflicts(resolved, &merged_propval, quit,
+                                  path_prefix, pb, editor_cmd, config,
+                                  conflict, conflict_stats, ctx,
                                   result_pool, scratch_pool));
   if (tree_conflicted)
-    SVN_ERR(handle_tree_conflict(resolved, accept_which, quit,
-                                 conflict, path_prefix, pb,
+    SVN_ERR(handle_tree_conflict(resolved, quit, conflict, path_prefix, pb,
                                  conflict_stats, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
