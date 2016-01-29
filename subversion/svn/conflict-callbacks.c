@@ -715,13 +715,23 @@ build_text_conflict_options(resolver_option_t **options,
   return SVN_NO_ERROR;
 }
 
-/* Ask the user what to do about the text conflict described by CONFLICT.
- * Return the answer in RESULT. B is the conflict baton for this
- * conflict resolution session.
+/* forward declaration */
+static svn_error_t *
+mark_conflict_resolved(svn_client_conflict_t *conflict,
+                       svn_client_conflict_option_id_t option_id,
+                       svn_boolean_t text_conflicted,
+                       const char *propname,
+                       svn_boolean_t tree_conflicted,
+                       const char *path_prefix,
+                       svn_cl__conflict_stats_t *conflict_stats,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *scratch_pool);
+
+/* Ask the user what to do about the text conflict described by CONFLICT
+ * and either resolve the conflict accordingly or postpone resolution.
  * SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
-handle_text_conflict(svn_client_conflict_option_id_t *option_id,
-                     svn_boolean_t *save_merged,
+handle_text_conflict(svn_boolean_t *resolved,
                      svn_cl__accept_t *accept_which,
                      svn_boolean_t *quit,
                      svn_client_conflict_t *conflict,
@@ -729,13 +739,13 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
                      svn_cmdline_prompt_baton_t *pb,
                      const char *editor_cmd,
                      apr_hash_t *config,
+                     svn_cl__conflict_stats_t *conflict_stats,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_boolean_t diff_allowed = FALSE;
-  /* Have they done something that might have affected the merged
-     file (so that we need to save a .edited copy by setting the
-     *save_merge flag)? */
+  /* Have they done something that might have affected the merged file? */
   svn_boolean_t performed_edit = FALSE;
   /* Have they done *something* (edit, look at diff, etc) to
      give them a rational basis for choosing (r)esolved? */
@@ -750,6 +760,9 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
   const char *their_abspath;
   const char *merged_abspath = svn_client_conflict_get_local_abspath(conflict);
   resolver_option_t *text_conflict_options;
+  svn_client_conflict_option_id_t option_id; 
+
+  option_id = svn_client_conflict_option_undefined;
 
   SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
                                                 &base_abspath, &their_abspath,
@@ -835,7 +848,7 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
 
       if (strcmp(opt->code, "q") == 0)
         {
-          *option_id = opt->choice;
+          option_id = opt->choice;
           *accept_which = svn_cl__accept_postpone;
           *quit = TRUE;
           break;
@@ -1044,13 +1057,22 @@ handle_text_conflict(svn_client_conflict_option_id_t *option_id,
               continue;
             }
 
-          *option_id = opt->choice;
-          if (performed_edit && save_merged)
-            *save_merged = TRUE;
+          option_id = opt->choice;
           break;
         }
     }
   svn_pool_destroy(iterpool);
+
+  if (option_id != svn_client_conflict_option_undefined)
+    {
+      SVN_ERR(mark_conflict_resolved(conflict, option_id,
+                                     TRUE, NULL, FALSE,
+                                     path_prefix, conflict_stats,
+                                     ctx, scratch_pool));
+      *resolved = TRUE;
+    }
+  else
+      *resolved = FALSE;
 
   return SVN_NO_ERROR;
 }
@@ -1115,22 +1137,22 @@ build_prop_conflict_options(resolver_option_t **options,
   return SVN_NO_ERROR;
 }
 
-/* Ask the user what to do about the property conflict described by CONFLICT.
- * Return the answer in RESULT. B is the conflict baton for this
- * conflict resolution session.
+/* Ask the user what to do about the conflicted property PROPNAME described
+ * by CONFLICT and return the answer in *OPTION_ID.
  * SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
-handle_prop_conflict(svn_client_conflict_option_id_t *option_id,
-                     const svn_string_t **merged_value,
-                     svn_cl__accept_t *accept_which,
-                     svn_boolean_t *quit,
-                     const char *path_prefix,
-                     svn_cmdline_prompt_baton_t *pb,
-                     const char *editor_cmd,
-                     apr_hash_t *config,
-                     svn_client_conflict_t *conflict,
-                     apr_pool_t *result_pool,
-                     apr_pool_t *scratch_pool)
+handle_one_prop_conflict(svn_client_conflict_option_id_t *option_id,
+                         const svn_string_t **merged_value,
+                         svn_cl__accept_t *accept_which,
+                         svn_boolean_t *quit,
+                         const char *path_prefix,
+                         svn_cmdline_prompt_baton_t *pb,
+                         const char *editor_cmd,
+                         apr_hash_t *config,
+                         svn_client_conflict_t *conflict,
+                         const char *propname,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool;
   const char *description;
@@ -1143,12 +1165,13 @@ handle_prop_conflict(svn_client_conflict_option_id_t *option_id,
 
   SVN_ERR(svn_client_conflict_prop_get_propvals(NULL, &my_propval,
                                                 &base_propval, &their_propval,
-                                                conflict, scratch_pool));
+                                                conflict, propname,
+                                                scratch_pool));
 
   SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
                               _("Conflict for property '%s' discovered"
                                 " on '%s'.\n"),
-                              svn_client_conflict_prop_get_propname(conflict),
+                              propname,
                               svn_cl__local_style_skip_ancestor(
                                 path_prefix,
                                 svn_client_conflict_get_local_abspath(conflict),
@@ -1231,6 +1254,64 @@ handle_prop_conflict(svn_client_conflict_option_id_t *option_id,
   return SVN_NO_ERROR;
 }
 
+/* Ask the user what to do about the property conflicts described by CONFLICT
+ * and either resolve them accordingly or postpone resolution.
+ * SCRATCH_POOL is used for temporary allocations. */
+static svn_error_t *
+handle_prop_conflicts(svn_boolean_t *resolved,
+                      const svn_string_t **merged_value,
+                      svn_cl__accept_t *accept_which,
+                      svn_boolean_t *quit,
+                      const char *path_prefix,
+                      svn_cmdline_prompt_baton_t *pb,
+                      const char *editor_cmd,
+                      apr_hash_t *config,
+                      svn_client_conflict_t *conflict,
+                      svn_cl__conflict_stats_t *conflict_stats,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *props_conflicted;
+  apr_pool_t *iterpool;
+  int i;
+  int nresolved = 0;
+
+  SVN_ERR(svn_client_conflict_get_conflicted(NULL, &props_conflicted, NULL,
+                                             conflict, scratch_pool,
+                                             scratch_pool));
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < props_conflicted->nelts; i++)
+    {
+      const char *propname = APR_ARRAY_IDX(props_conflicted, i, const char *);
+      svn_client_conflict_option_id_t option_id;
+      const svn_string_t *merged_propval = NULL;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(handle_one_prop_conflict(&option_id, &merged_propval,
+                                       accept_which, quit, path_prefix, pb,
+                                       editor_cmd, config, conflict, propname,
+                                       iterpool, iterpool));
+
+      if (option_id != svn_client_conflict_option_undefined)
+        {
+          SVN_ERR(mark_conflict_resolved(conflict, option_id,
+                                         FALSE, propname, FALSE,
+                                         path_prefix, conflict_stats,
+                                         ctx, iterpool));
+          nresolved++;
+        }
+    }
+  svn_pool_destroy(iterpool);
+
+  /* Indicate success if no property conflicts remain. */
+  *resolved = (nresolved == props_conflicted->nelts);
+
+  return SVN_NO_ERROR;
+}
+
 /* Set *OPTIONS to an array of resolution options for CONFLICT. */
 static svn_error_t *
 build_tree_conflict_options(resolver_option_t **options,
@@ -1292,17 +1373,18 @@ build_tree_conflict_options(resolver_option_t **options,
   return SVN_NO_ERROR;
 }
 
-/* Ask the user what to do about the tree conflict described by CONFLICT.
- * Return the answer in RESULT. B is the conflict baton for this
- * conflict resolution session.
+/* Ask the user what to do about the tree conflict described by CONFLICT
+ * and either resolve the conflict accordingly or postpone resolution.
  * SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
-handle_tree_conflict(svn_client_conflict_option_id_t *option_id,
+handle_tree_conflict(svn_boolean_t *resolved,
                      svn_cl__accept_t *accept_which,
                      svn_boolean_t *quit,
                      svn_client_conflict_t *conflict,
                      const char *path_prefix,
                      svn_cmdline_prompt_baton_t *pb,
+                     svn_cl__conflict_stats_t *conflict_stats,
+                     svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool)
 {
   const char *description;
@@ -1314,7 +1396,8 @@ handle_tree_conflict(svn_client_conflict_option_id_t *option_id,
   svn_node_kind_t node_kind;
   apr_pool_t *iterpool;
   resolver_option_t *tree_conflict_options;
-  
+  svn_client_conflict_option_id_t option_id;
+
   SVN_ERR(svn_client_conflict_tree_get_description(
            &description, conflict, scratch_pool, scratch_pool));
   SVN_ERR(svn_cmdline_fprintf(
@@ -1367,38 +1450,47 @@ handle_tree_conflict(svn_client_conflict_option_id_t *option_id,
 
       if (strcmp(opt->code, "q") == 0)
         {
-          *option_id = opt->choice;
+          option_id = opt->choice;
           *accept_which = svn_cl__accept_postpone;
           *quit = TRUE;
           break;
         }
       else if (opt->choice != svn_client_conflict_option_undefined)
         {
-          *option_id = opt->choice;
+          option_id = opt->choice;
           break;
         }
     }
   svn_pool_destroy(iterpool);
+  if (option_id != svn_client_conflict_option_undefined)
+    {
+      SVN_ERR(mark_conflict_resolved(conflict, option_id,
+                                     FALSE, NULL, TRUE,
+                                     path_prefix, conflict_stats,
+                                     ctx, scratch_pool));
+      *resolved = TRUE;
+    }
+  else
+      *resolved = FALSE;
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
-                          svn_boolean_t *save_merged,
-                          const svn_string_t **merged_propval,
-                          svn_cl__accept_t *accept_which, 
-                          svn_boolean_t *quit,
-                          svn_boolean_t *external_failed,
-                          svn_boolean_t *printed_summary,
-                          svn_client_conflict_t *conflict,
-                          const char *editor_cmd,
-                          apr_hash_t *config,
-                          const char *path_prefix,
-                          svn_cmdline_prompt_baton_t *pb,
-                          svn_cl__conflict_stats_t *conflict_stats,
-                          apr_pool_t *result_pool,
-                          apr_pool_t *scratch_pool)
+resolve_conflict_interactively(svn_boolean_t *resolved,
+                               svn_cl__accept_t *accept_which, 
+                               svn_boolean_t *quit,
+                               svn_boolean_t *external_failed,
+                               svn_boolean_t *printed_summary,
+                               svn_client_conflict_t *conflict,
+                               const char *editor_cmd,
+                               apr_hash_t *config,
+                               const char *path_prefix,
+                               svn_cmdline_prompt_baton_t *pb,
+                               svn_cl__conflict_stats_t *conflict_stats,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   const char *base_abspath = NULL;
@@ -1406,10 +1498,13 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
   const char *their_abspath = NULL;
   const char *merged_abspath = svn_client_conflict_get_local_abspath(conflict);
   svn_boolean_t text_conflicted;
+  apr_array_header_t *props_conflicted;
   svn_boolean_t tree_conflicted;
+  const svn_string_t *merged_propval;
+  svn_client_conflict_option_id_t option_id;
 
   SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
-                                             NULL, /* ### TODO */
+                                             &props_conflicted,
                                              &tree_conflicted,
                                              conflict,
                                              scratch_pool,
@@ -1422,9 +1517,8 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
                                                   conflict, scratch_pool,
                                                   scratch_pool));
 
-  /* Start out assuming we're going to postpone the conflict. */
-  *option_id = svn_client_conflict_option_postpone;
-
+  option_id = svn_client_conflict_option_undefined;
+  /* Handle the --accept option. */ 
   switch (*accept_which)
     {
     case svn_cl__accept_invalid:
@@ -1432,33 +1526,33 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
       /* No (or no valid) --accept option, fall through to prompting. */
       break;
     case svn_cl__accept_postpone:
-      *option_id = svn_client_conflict_option_postpone;
-      return SVN_NO_ERROR;
+      option_id = svn_client_conflict_option_postpone;
+      break;
     case svn_cl__accept_base:
-      *option_id = svn_client_conflict_option_base_text;
-      return SVN_NO_ERROR;
+      option_id = svn_client_conflict_option_base_text;
+      break;
     case svn_cl__accept_working:
-      *option_id = svn_client_conflict_option_merged_text;
-      return SVN_NO_ERROR;
+      option_id = svn_client_conflict_option_merged_text;
+      break;
     case svn_cl__accept_mine_conflict:
-      *option_id = svn_client_conflict_option_working_text_where_conflicted;
-      return SVN_NO_ERROR;
+      option_id = svn_client_conflict_option_working_text_where_conflicted;
+      break;
     case svn_cl__accept_theirs_conflict:
-      *option_id = svn_client_conflict_option_incoming_text_where_conflicted;
-      return SVN_NO_ERROR;
+      option_id = svn_client_conflict_option_incoming_text_where_conflicted;
+      break;
     case svn_cl__accept_mine_full:
-      *option_id = svn_client_conflict_option_working_text;
-      return SVN_NO_ERROR;
+      option_id = svn_client_conflict_option_working_text;
+      break;
     case svn_cl__accept_theirs_full:
-      *option_id = svn_client_conflict_option_incoming_text;
-      return SVN_NO_ERROR;
+      option_id = svn_client_conflict_option_incoming_text;
+      break;
     case svn_cl__accept_edit:
       if (merged_abspath)
         {
           if (*external_failed)
             {
-              *option_id = svn_client_conflict_option_postpone;
-              return SVN_NO_ERROR;
+              option_id = svn_client_conflict_option_postpone;
+              break;
             }
 
           err = svn_cmdline__edit_file_externally(merged_abspath,
@@ -1478,8 +1572,8 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
             }
           else if (err)
             return svn_error_trace(err);
-          *option_id = svn_client_conflict_option_merged_text;
-          return SVN_NO_ERROR;
+          option_id = svn_client_conflict_option_merged_text;
+          break;
         }
       /* else, fall through to prompting. */
       break;
@@ -1491,8 +1585,8 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
 
           if (*external_failed)
             {
-              *option_id = svn_client_conflict_option_postpone;
-              return SVN_NO_ERROR;
+              option_id = svn_client_conflict_option_postpone;
+              break;
             }
 
           local_abspath = svn_client_conflict_get_local_abspath(conflict);
@@ -1520,13 +1614,26 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
             return svn_error_trace(err);
 
           if (remains_in_conflict)
-            *option_id = svn_client_conflict_option_postpone;
+            option_id = svn_client_conflict_option_postpone;
           else
-            *option_id = svn_client_conflict_option_merged_text;
-          return SVN_NO_ERROR;
+            option_id = svn_client_conflict_option_merged_text;
+          break;
         }
       /* else, fall through to prompting. */
       break;
+    }
+
+  if (option_id != svn_client_conflict_option_undefined)
+    {
+      /* Resolve the conflict as per --accept option. */
+      SVN_ERR(mark_conflict_resolved(conflict, option_id,
+                                     text_conflicted,
+                                     props_conflicted->nelts >  0 ? "" : NULL,
+                                     tree_conflicted,
+                                     path_prefix, conflict_stats,
+                                     ctx, scratch_pool));
+      *resolved = TRUE;
+      return SVN_NO_ERROR;
     }
 
   /* Print a summary of conflicts before starting interactive resolution */
@@ -1539,34 +1646,25 @@ conflict_func_interactive(svn_client_conflict_option_id_t *option_id,
   /* We're in interactive mode and either the user gave no --accept
      option or the option did not apply; let's prompt. */
 
-  /* Handle the most common cases, which is either:
-
-     Conflicting edits on a file's text, or
-     Conflicting edits on a property.
-  */
+  *resolved = FALSE;
   if (text_conflicted
        && (svn_client_conflict_get_incoming_change(conflict) ==
            svn_wc_conflict_action_edit)
        && (svn_client_conflict_get_local_change(conflict) ==
            svn_wc_conflict_reason_edited))
-    SVN_ERR(handle_text_conflict(option_id, save_merged, accept_which,
-                                 quit, conflict, path_prefix, pb,
-                                 editor_cmd, config, scratch_pool));
-  else if (svn_client_conflict_get_kind(conflict) ==
-           svn_wc_conflict_kind_property)
-    SVN_ERR(handle_prop_conflict(option_id, merged_propval, accept_which,
-                                 quit, path_prefix, pb,
-                                 editor_cmd, config, conflict,
-                                 result_pool, scratch_pool));
-  else if (tree_conflicted)
-    SVN_ERR(handle_tree_conflict(option_id, accept_which, quit,
+    SVN_ERR(handle_text_conflict(resolved, accept_which, quit, conflict,
+                                 path_prefix, pb, editor_cmd, config,
+                                 conflict_stats, ctx, scratch_pool));
+  if (props_conflicted->nelts > 0)
+    SVN_ERR(handle_prop_conflicts(resolved, &merged_propval, accept_which,
+                                  quit, path_prefix, pb,
+                                  editor_cmd, config, conflict,
+                                  conflict_stats, ctx,
+                                  result_pool, scratch_pool));
+  if (tree_conflicted)
+    SVN_ERR(handle_tree_conflict(resolved, accept_which, quit,
                                  conflict, path_prefix, pb,
-                                 scratch_pool));
-
-  else /* other types of conflicts -- do nothing about them. */
-    {
-      *option_id = svn_client_conflict_option_postpone;
-    }
+                                 conflict_stats, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1699,21 +1797,25 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
                                              scratch_pool,
                                              scratch_pool));
 
+  /* Resolve the conflict interactively if no resolution option was passed. */
   if (option_id == svn_client_conflict_option_unspecified)
-    SVN_ERR(conflict_func_interactive(&option_id, NULL, NULL,
-                                      accept_which, quit,
-                                      external_failed, printed_summary,
-                                      conflict, editor_cmd, config,
-                                      path_prefix, pb, conflict_stats,
-                                      scratch_pool, scratch_pool));
+    {
+      SVN_ERR(resolve_conflict_interactively(resolved, accept_which, quit,
+                                             external_failed, printed_summary,
+                                             conflict, editor_cmd, config,
+                                             path_prefix, pb, conflict_stats,
+                                             ctx, scratch_pool, scratch_pool));
+      return SVN_NO_ERROR;
+    }
 
+  /* Non-interactive resolution. */
   SVN_ERR_ASSERT(option_id != svn_client_conflict_option_unspecified);
 
   if (option_id != svn_client_conflict_option_postpone)
     {
       SVN_ERR(mark_conflict_resolved(conflict, option_id,
                                      text_conflicted,
-                                     props_conflicted != NULL ? "" : NULL,
+                                     props_conflicted->nelts > 0 ? "" : NULL,
                                      tree_conflicted,
                                      path_prefix, conflict_stats,
                                      ctx, scratch_pool));
