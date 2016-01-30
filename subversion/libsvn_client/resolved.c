@@ -301,8 +301,8 @@ conflict_get_internal(svn_client_conflict_t **conflict,
     {
       /* Add a single legacy conflict descriptor. */
       (*conflict)->local_abspath = desc->local_abspath;
-      (*conflict)->resolution_text = svn_client_conflict_option_undefined;
-      (*conflict)->resolution_tree = svn_client_conflict_option_undefined;
+      (*conflict)->resolution_text = svn_client_conflict_option_unspecified;
+      (*conflict)->resolution_tree = svn_client_conflict_option_unspecified;
       (*conflict)->resolved_props = apr_hash_make(result_pool);
       add_legacy_desc_to_conflict(desc, *conflict, result_pool);
 
@@ -310,8 +310,8 @@ conflict_get_internal(svn_client_conflict_t **conflict,
     }
 
   (*conflict)->local_abspath = apr_pstrdup(result_pool, local_abspath);
-  (*conflict)->resolution_text = svn_client_conflict_option_undefined;
-  (*conflict)->resolution_tree = svn_client_conflict_option_undefined;
+  (*conflict)->resolution_text = svn_client_conflict_option_unspecified;
+  (*conflict)->resolution_tree = svn_client_conflict_option_unspecified;
   (*conflict)->resolved_props = apr_hash_make(result_pool);
   (*conflict)->ctx = ctx;
 
