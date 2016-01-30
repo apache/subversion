@@ -526,9 +526,6 @@ typedef struct svn_fs_x__change_t
   /* Path of the change. */
   svn_string_t path;
 
-  /* node revision id of changed path */
-  svn_fs_x__id_t noderev_id;
-
   /* See svn_fs_path_change2_t for a description for the remaining elements.
    */
   svn_fs_path_change_kind_t change_kind;
