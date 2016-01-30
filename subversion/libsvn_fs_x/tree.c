@@ -2244,19 +2244,77 @@ x_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 
 /* Finding Changes */
 
-/* Copy CHANGE into a FS API object allocated in RESULT_POOL and return
-   it in *RESULT_P.  Pass CONTEXT to the ID API object being created. */
+/* Construct a new FS API ID object for CHANGE in ROOT using CONTEXT.
+   Allocate the result in RESULT_POOL and use SCRATCH_POOL for temporaries.
+ */
+static svn_error_t *
+construct_fs_id(const svn_fs_id_t **id,
+                svn_fs_root_t *root,
+                svn_fs_x__id_context_t *context,
+                svn_fs_x__change_t *change,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  dag_node_t *node;
+  if (change->change_kind == svn_fs_path_change_delete)
+    {
+      /* CHANGE->PATH got deleted.  Its ID is the one it had previously,
+       * i.e. the ID of the same relative child within the parent's
+       * predecessor. */
+      const char *parent_path;
+      const char *basename;
+      const svn_fs_x__id_t *parent_predecessor_id;
+      dag_node_t *parent_predecessor;
+
+      SVN_ERR_ASSERT(!svn_fspath__is_root(change->path.data,
+                                          change->path.len));
+      parent_path = svn_fspath__dirname(change->path.data, scratch_pool);
+      basename = svn_fspath__basename(change->path.data, scratch_pool);
+
+      /* Get the predecessor of CHANGE->PATH's parent. */
+      SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, parent_path,
+                                          scratch_pool));
+      parent_predecessor_id = svn_fs_x__dag_get_predecessor_id(node);
+      SVN_ERR(svn_fs_x__dag_get_node(&parent_predecessor, root->fs,
+                                     parent_predecessor_id,
+                                     scratch_pool, scratch_pool));
+
+      /* Get the node's predecessor. */
+      SVN_ERR(svn_fs_x__dag_open(&node, parent_predecessor, basename,
+                                 scratch_pool, scratch_pool));
+      SVN_ERR_ASSERT(node);
+    }
+  else
+    {
+      SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, change->path.data,
+                                          scratch_pool));
+    }
+ 
+  *id = svn_fs_x__id_create(context, svn_fs_x__dag_get_id(node),
+                            result_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Copy CHANGE within ROOT into a FS API object allocated in RESULT_POOL
+   and return it in *RESULT_P.  Pass CONTEXT to the ID API object being
+   created and use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 construct_fs_path_change(svn_fs_path_change2_t **result_p,
+                         svn_fs_root_t *root,
                          svn_fs_x__id_context_t *context,
                          svn_fs_x__change_t *change,
-                         apr_pool_t *result_pool)
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
-  const svn_fs_id_t *id
-    = svn_fs_x__id_create(context, &change->noderev_id, result_pool);
-  svn_fs_path_change2_t *result
-    = svn_fs__path_change_create_internal(id, change->change_kind,
-                                          result_pool);
+  const svn_fs_id_t *id;
+  svn_fs_path_change2_t *result;
+ 
+  SVN_ERR(construct_fs_id(&id, root, context, change, result_pool,
+                          scratch_pool));
+
+  result = svn_fs__path_change_create_internal(id, change->change_kind,
+                                               result_pool);
 
   result->text_mod = change->text_mod;
   result->prop_mod = change->prop_mod;
@@ -2286,6 +2344,7 @@ x_paths_changed(apr_hash_t **changed_paths_p,
   svn_fs_path_change2_t *path_change;
   svn_fs_x__id_context_t *context
     = svn_fs_x__id_create_context(root->fs, pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   if (root->is_txn_root)
     {
@@ -2298,8 +2357,10 @@ x_paths_changed(apr_hash_t **changed_paths_p,
            hi = apr_hash_next(hi))
         {
           svn_fs_x__change_t *change = apr_hash_this_val(hi);
-          SVN_ERR(construct_fs_path_change(&path_change, context, change,
-                                           pool));
+
+          svn_pool_clear(iterpool);
+          SVN_ERR(construct_fs_path_change(&path_change, root, context,
+                                           change, pool, iterpool));
           apr_hash_set(changed_paths,
                        apr_hash_this_key(hi), apr_hash_this_key_len(hi),
                        path_change);
@@ -2317,13 +2378,16 @@ x_paths_changed(apr_hash_t **changed_paths_p,
         {
           svn_fs_x__change_t *change = APR_ARRAY_IDX(changes, i,
                                                      svn_fs_x__change_t *);
-          SVN_ERR(construct_fs_path_change(&path_change, context, change,
-                                           pool));
+
+          svn_pool_clear(iterpool);
+          SVN_ERR(construct_fs_path_change(&path_change, root, context,
+                                           change, pool, iterpool));
           apr_hash_set(changed_paths, change->path.data, change->path.len,
                        path_change);
         }
     }
 
+   svn_pool_destroy(iterpool);
   *changed_paths_p = changed_paths;
 
   return SVN_NO_ERROR;
