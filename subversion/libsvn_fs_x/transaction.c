@@ -974,16 +974,6 @@ fold_change(apr_hash_t *changed_paths,
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
 
-      /* Sanity check: we should be talking about the same node
-         revision ID as our last change except where the last change
-         was a deletion. */
-      if (!svn_fs_x__id_eq(&old_change->noderev_id, &change->noderev_id)
-          && (old_change->change_kind != svn_fs_path_change_delete))
-        return svn_error_create
-          (SVN_ERR_FS_CORRUPT, NULL,
-           _("Invalid change ordering: new node revision ID "
-             "without delete"));
-
       /* Sanity check: an add, replacement, or reset must be the first
          thing to follow a deletion. */
       if ((old_change->change_kind == svn_fs_path_change_delete)
@@ -1965,7 +1955,6 @@ svn_fs_x__add_change(svn_fs_t *fs,
 
   change.path.data = path;
   change.path.len = strlen(path);
-  change.noderev_id = *id;
   change.change_kind = change_kind;
   change.text_mod = text_mod;
   change.prop_mod = prop_mod;
@@ -3042,7 +3031,6 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
   svn_fs_x__change_set_t change_set = svn_fs_x__change_set_by_rev(rev);
   svn_stream_t *file_stream;
   apr_pool_t *subpool;
-  svn_fs_x__change_t *change;
 
   /* Check to see if this is a transaction node. */
   if (txn_id == SVN_FS_X__INVALID_TXN_ID)
@@ -3220,34 +3208,8 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
 
   SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, scratch_pool));
 
-  /* Update the ID within the changed paths list. */
-  change = svn_hash_gets(changed_paths, noderev->created_path);
-  if (change)
-    change->noderev_id = noderev->noderev_id;
-
   /* Return our ID that references the revision file. */
   *new_id_p = new_id;
-
-  return SVN_NO_ERROR;
-}
-
-/* Reset all in-transaction noderev-IDs in CHANGED_PATHS.  They should
-   belong to deleted nodes only.  At any rate, these IDs become invalid
-   as soon as transaction got committed.
-   Perform temporary allocations in SCRATCH_POOL. */
-static svn_error_t *
-sanitize_changed_path_info(apr_hash_t *changed_paths,
-                           apr_pool_t *scratch_pool)
-{
-  apr_hash_index_t *hi;
-  for (hi = apr_hash_first(scratch_pool, changed_paths);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      svn_fs_x__change_t *change = apr_hash_this_val(hi);
-      if (svn_fs_x__is_txn(change->noderev_id.change_set))
-        svn_fs_x__id_reset(&change->noderev_id);
-    }
 
   return SVN_NO_ERROR;
 }
@@ -3793,7 +3755,6 @@ commit_body(void *baton,
   svn_pool_clear(subpool);
 
   /* Write the changed-path information. */
-  SVN_ERR(sanitize_changed_path_info(changed_paths, subpool));
   SVN_ERR(write_final_changed_path_info(&changed_path_offset, proto_file,
                                         cb->fs, txn_id, changed_paths,
                                         new_rev, subpool));
