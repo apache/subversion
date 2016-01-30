@@ -208,8 +208,8 @@ struct svn_client_conflict_option_t
  * Return svn_wc_conflict_choose_undefined if no corresponding
  * legacy conflict choice exists.
  */
-static svn_wc_conflict_choice_t
-conflict_option_id_to_wc_conflict_choice(
+svn_wc_conflict_choice_t
+svn_client_conflict_option_id_to_wc_conflict_choice(
   svn_client_conflict_option_id_t option_id)
 {
 
@@ -241,6 +241,12 @@ conflict_option_id_to_wc_conflict_choice(
 
       case svn_client_conflict_option_unspecified:
         return svn_wc_conflict_choose_unspecified;
+
+      /* ### These options are mapped to conflict_choice_t for now
+       * ### because libsvn_wc does not offer an interface for them. */
+      case svn_client_conflict_option_update_move_destination:
+      case svn_client_conflict_option_update_any_moved_away_children:
+        return svn_wc_conflict_choose_mine_conflict;
 
       default:
         break;
@@ -686,7 +692,8 @@ resolve_conflict(svn_client_conflict_option_id_t option_id,
   const char *lock_abspath;
   svn_error_t *err;
 
-  conflict_choice = conflict_option_id_to_wc_conflict_choice(option_id);
+  conflict_choice =
+    svn_client_conflict_option_id_to_wc_conflict_choice(option_id);
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
                                                  local_abspath,
                                                  scratch_pool, scratch_pool));
@@ -1042,7 +1049,8 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
       reason = svn_client_conflict_get_local_change(conflict);
       if (reason == svn_wc_conflict_reason_moved_away)
         {
-          option->id = svn_client_conflict_option_working_text_where_conflicted;
+          option->id =
+            svn_client_conflict_option_update_move_destination;
           option->description =
             _("apply incoming changes to move destination");
         }
@@ -1055,7 +1063,7 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
               svn_node_dir)
             {
               option->id =
-                svn_client_conflict_option_working_text_where_conflicted;
+                svn_client_conflict_option_update_any_moved_away_children;
               option->description =
                 _("prepare for updating moved-away children, if any");
             }
