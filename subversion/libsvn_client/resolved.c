@@ -1038,8 +1038,13 @@ svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
                             sizeof(svn_client_conflict_option_t *));
   for (i = 0; i < ARRAY_LEN(prop_conflict_options); i++)
     {
-      APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
-        &prop_conflict_options[i];
+      svn_client_conflict_option_t *option;
+
+      /* Property conflicts make use of type-specific data. We must make a
+       * mutable copy to make the memory for option->type_data writable. */
+      option = apr_pcalloc(result_pool, sizeof(*option));
+      *option = prop_conflict_options[i];
+      APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
     }
 
   return SVN_NO_ERROR;
