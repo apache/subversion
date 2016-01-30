@@ -4740,7 +4740,7 @@ svn_client_conflict_tree_resolve_by_id(
 /**
  * Return the ID of the option this tree @a conflict has been resolved to.
  * If the conflict has not been resolved yet, then return
- * @c svn_client_conflict_option_undefined.
+ * @c svn_client_conflict_option_unspecified.
  *
  * @since New in 1.10.
  */
@@ -4881,7 +4881,7 @@ svn_client_conflict_text_resolve_by_id(
 /**
  * Return the ID of the option this text @a conflict has been resolved to.
  * If the conflict has not been resolved yet, then return
- * @c svn_client_conflict_option_undefined.
+ * @c svn_client_conflict_option_unspecified.
  *
  * @since New in 1.10.
  */
