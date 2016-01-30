@@ -224,18 +224,16 @@ parent_path_relpath(svn_fs_x__dag_path_t *child,
 
 /* Add a change to the changes table in FS, keyed on transaction id
    TXN_ID, and indicated that a change of kind CHANGE_KIND occurred on
-   PATH (whose node revision id is--or was, in the case of a
-   deletion--NODEREV_ID), and optionally that TEXT_MODs, PROP_MODs or
-   MERGEINFO_MODs occurred.  If the change resulted from a copy,
-   COPYFROM_REV and COPYFROM_PATH specify under which revision and path
-   the node was copied from.  If this was not part of a copy, COPYFROM_REV
-   should be SVN_INVALID_REVNUM.  Use SCRATCH_POOL for temporary allocations.
+   PATH, and optionally that TEXT_MODs, PROP_MODs or MERGEINFO_MODs
+   occurred.  If the change resulted from a copy, COPYFROM_REV and
+   COPYFROM_PATH specify under which revision and path the node was
+   copied from.  If this was not part of a copy, COPYFROM_REV should
+   be SVN_INVALID_REVNUM.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 add_change(svn_fs_t *fs,
            svn_fs_x__txn_id_t txn_id,
            const char *path,
-           const svn_fs_x__id_t *noderev_id,
            svn_fs_path_change_kind_t change_kind,
            svn_boolean_t text_mod,
            svn_boolean_t prop_mod,
@@ -248,8 +246,7 @@ add_change(svn_fs_t *fs,
   return svn_fs_x__add_change(fs, txn_id,
                               svn_fs__canonicalize_abspath(path,
                                                            scratch_pool),
-                              noderev_id, change_kind,
-                              text_mod, prop_mod, mergeinfo_mod,
+                              change_kind, text_mod, prop_mod, mergeinfo_mod,
                               node_kind, copyfrom_rev, copyfrom_path,
                               scratch_pool);
 }
@@ -573,7 +570,6 @@ x_change_node_prop(svn_fs_root_t *root,
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
-                     svn_fs_x__dag_get_id(dag_path->node),
                      svn_fs_path_change_modify, FALSE, TRUE, mergeinfo_mod,
                      svn_fs_x__dag_node_kind(dag_path->node),
                      SVN_INVALID_REVNUM, NULL, subpool));
@@ -1446,7 +1442,7 @@ x_make_dir(svn_fs_root_t *root,
   svn_fs_x__update_dag_cache(sub_dir);
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(sub_dir),
+  SVN_ERR(add_change(root->fs, txn_id, path,
                      svn_fs_path_change_add, FALSE, FALSE, FALSE,
                      svn_node_dir, SVN_INVALID_REVNUM, NULL, subpool));
 
@@ -1506,7 +1502,6 @@ x_delete_node(svn_fs_root_t *root,
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
-                     svn_fs_x__dag_get_id(dag_path->node),
                      svn_fs_path_change_delete, FALSE, FALSE, FALSE, kind,
                      SVN_INVALID_REVNUM, NULL, subpool));
 
@@ -1643,8 +1638,7 @@ copy_helper(svn_fs_root_t *from_root,
       /* Make a record of this modification in the changes table. */
       SVN_ERR(svn_fs_x__get_dag_node(&new_node, to_root, to_path,
                                      scratch_pool, scratch_pool));
-      SVN_ERR(add_change(to_root->fs, txn_id, to_path,
-                         svn_fs_x__dag_get_id(new_node), kind, FALSE,
+      SVN_ERR(add_change(to_root->fs, txn_id, to_path, kind, FALSE,
                          FALSE, FALSE, svn_fs_x__dag_node_kind(from_node),
                          from_root->rev, from_canonpath, scratch_pool));
     }
@@ -1784,7 +1778,7 @@ x_make_file(svn_fs_root_t *root,
   svn_fs_x__update_dag_cache(child);
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(child),
+  SVN_ERR(add_change(root->fs, txn_id, path,
                      svn_fs_path_change_add, TRUE, FALSE, FALSE,
                      svn_node_file, SVN_INVALID_REVNUM, NULL, subpool));
 
@@ -1992,7 +1986,6 @@ apply_textdelta(void *baton,
 
   /* Make a record of this modification in the changes table. */
   return add_change(tb->root->fs, txn_id, tb->path,
-                    svn_fs_x__dag_get_id(tb->node),
                     svn_fs_path_change_modify, TRUE, FALSE, FALSE,
                     svn_node_file, SVN_INVALID_REVNUM, NULL, scratch_pool);
 }
@@ -2133,7 +2126,6 @@ apply_text(void *baton,
 
   /* Make a record of this modification in the changes table. */
   return add_change(tb->root->fs, txn_id, tb->path,
-                    svn_fs_x__dag_get_id(tb->node),
                     svn_fs_path_change_modify, TRUE, FALSE, FALSE,
                     svn_node_file, SVN_INVALID_REVNUM, NULL, scratch_pool);
 }
