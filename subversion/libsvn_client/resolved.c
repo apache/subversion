@@ -1206,7 +1206,7 @@ svn_client_conflict_prop_get_resolution(const svn_client_conflict_t *conflict,
 
   option = svn_hash_gets(conflict->resolved_props, propname);
   if (option == NULL)
-    return svn_client_conflict_option_undefined;
+    return svn_client_conflict_option_unspecified;
 
   return svn_client_conflict_option_get_id(option);
 }
