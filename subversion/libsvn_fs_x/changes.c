@@ -52,16 +52,13 @@
 
 /* (flags & CHANGE_KIND_MASK) >> CHANGE_KIND_SHIFT extracts the change type */
 #define CHANGE_KIND_SHIFT   0x00005
-#define CHANGE_KIND_MASK    0x000E0
+#define CHANGE_KIND_MASK    0x00060
 
 /* node types according to svn_fs_path_change_kind_t */
 #define CHANGE_KIND_MODIFY  0x00000
 #define CHANGE_KIND_ADD     0x00020
 #define CHANGE_KIND_DELETE  0x00040
 #define CHANGE_KIND_REPLACE 0x00060
-#define CHANGE_KIND_RESET   0x00080
-#define CHANGE_KIND_MOVE    0x000A0
-#define CHANGE_KIND_MOVEREPLACE 0x000C0
 
 /* Our internal representation of a change */
 typedef struct binary_change_t
