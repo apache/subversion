@@ -143,6 +143,18 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1725180
+   Reduce peak memory usage when listing large directories in FSFS.
+   Justification:
+     Allocating large blocks through APR has unpleasant side-effects
+     for the allocation pattern used in mod_dav's request processing.
+     Also, there is simply no point in serializing data that wouldn't
+     make it into the cache after all.
+   Branch:
+     ^/subversion/branches/1.9.x-r1725180
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
