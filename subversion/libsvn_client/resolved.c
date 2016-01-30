@@ -906,7 +906,7 @@ static const svn_client_conflict_option_t prop_conflict_options[] =
     svn_client_conflict_option_base_text,
     N_("discard local and incoming changes for this property"),
     NULL,
-    resolve_text_conflict
+    resolve_prop_conflict
   },
 
   {
