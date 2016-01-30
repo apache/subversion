@@ -903,6 +903,13 @@ static const svn_client_conflict_option_t prop_conflict_options[] =
   },
 
   {
+    svn_client_conflict_option_base_text,
+    N_("discard local and incoming changes for this property"),
+    NULL,
+    resolve_text_conflict
+  },
+
+  {
     svn_client_conflict_option_incoming_text,
     N_("accept incoming version of entire property value"),
     NULL,
@@ -912,6 +919,20 @@ static const svn_client_conflict_option_t prop_conflict_options[] =
   {
     svn_client_conflict_option_working_text,
     N_("accept working copy version of entire property value"),
+    NULL,
+    resolve_prop_conflict
+  },
+
+  {
+    svn_client_conflict_option_incoming_text_where_conflicted,
+    N_("accept changes only where they conflict"),
+    NULL,
+    resolve_prop_conflict
+  },
+
+  {
+    svn_client_conflict_option_working_text_where_conflicted,
+    N_("reject changes which conflict and accept the rest"),
     NULL,
     resolve_prop_conflict
   },
