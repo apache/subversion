@@ -829,14 +829,6 @@ read_change(svn_fs_x__change_t **change_p,
   change = apr_pcalloc(result_pool, sizeof(*change));
   last_str = line->data;
 
-  /* Get the node-id of the change. */
-  str = svn_cstring_tokenize(" ", &last_str);
-  if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Invalid changes line in rev-file"));
-
-  SVN_ERR(svn_fs_x__id_parse(&change->noderev_id, str));
-
   /* Get the change type. */
   str = svn_cstring_tokenize(" ", &last_str);
   if (str == NULL)
@@ -1044,7 +1036,6 @@ write_change_entry(svn_stream_t *stream,
                    svn_fs_x__change_t *change,
                    apr_pool_t *scratch_pool)
 {
-  const char *idstr;
   const char *change_string = NULL;
   const char *kind_string = "";
   svn_stringbuf_t *buf;
@@ -1070,8 +1061,6 @@ write_change_entry(svn_stream_t *stream,
                                change->change_kind);
     }
 
-  idstr = svn_fs_x__id_unparse(&change->noderev_id, scratch_pool)->data;
-
   SVN_ERR_ASSERT(change->node_kind == svn_node_dir
                  || change->node_kind == svn_node_file);
   kind_string = apr_psprintf(scratch_pool, "-%s",
@@ -1079,8 +1068,8 @@ write_change_entry(svn_stream_t *stream,
                              ? SVN_FS_X__KIND_DIR
                              : SVN_FS_X__KIND_FILE);
 
-  buf = svn_stringbuf_createf(scratch_pool, "%s %s%s %s %s %s %s\n",
-                              idstr, change_string, kind_string,
+  buf = svn_stringbuf_createf(scratch_pool, "%s%s %s %s %s %s\n",
+                              change_string, kind_string,
                               change->text_mod ? FLAG_TRUE : FLAG_FALSE,
                               change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
                               change->mergeinfo_mod == svn_tristate_true
