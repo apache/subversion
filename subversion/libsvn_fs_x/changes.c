@@ -37,6 +37,9 @@
 /* the change contains a property modification */
 #define CHANGE_PROP_MOD     0x00002
 
+/* the change contains a mergeinfo modification */
+#define CHANGE_MERGEINFO_MOD 0x00004
+
 /* (flags & CHANGE_NODE_MASK) >> CHANGE_NODE_SHIFT extracts the node type */
 #define CHANGE_NODE_SHIFT   0x00003
 #define CHANGE_NODE_MASK    0x00018
@@ -139,6 +142,8 @@ append_change(svn_fs_x__changes_t *changes,
   /* define the kind of change and what specific information is present */
   binary_change.flags = (change->text_mod ? CHANGE_TEXT_MOD : 0)
                       | (change->prop_mod ? CHANGE_PROP_MOD : 0)
+                      | (change->mergeinfo_mod == svn_tristate_true
+                                          ? CHANGE_MERGEINFO_MOD : 0)
                       | ((int)change->change_kind << CHANGE_KIND_SHIFT)
                       | ((int)change->node_kind << CHANGE_NODE_SHIFT);
 
@@ -251,6 +256,9 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
         ((binary_change->flags & CHANGE_KIND_MASK) >> CHANGE_KIND_SHIFT);
       change->text_mod = (binary_change->flags & CHANGE_TEXT_MOD) != 0;
       change->prop_mod = (binary_change->flags & CHANGE_PROP_MOD) != 0;
+      change->mergeinfo_mod = (binary_change->flags & CHANGE_MERGEINFO_MOD)
+                            ? svn_tristate_true
+                            : svn_tristate_false;
       change->node_kind = (svn_node_kind_t)
         ((binary_change->flags & CHANGE_NODE_MASK) >> CHANGE_NODE_SHIFT);
 
