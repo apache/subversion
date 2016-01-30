@@ -1049,7 +1049,11 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   option = apr_pcalloc(result_pool, sizeof(*option));
   option->id = svn_client_conflict_option_merged_text;
   option->description = _("accept current working copy state");
-  /* Override ID and DESCRIPTION in case we can offer automated resolution: */
+  option->conflict = conflict;
+  option->do_resolve_func = resolve_tree_conflict;
+  APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
+
+  /* Add options which offer automated resolution: */
   if (svn_client_conflict_get_operation(conflict) == svn_wc_operation_update ||
       svn_client_conflict_get_operation(conflict) == svn_wc_operation_switch)
     {
@@ -1058,10 +1062,15 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
       reason = svn_client_conflict_get_local_change(conflict);
       if (reason == svn_wc_conflict_reason_moved_away)
         {
+          option = apr_pcalloc(result_pool, sizeof(*option));
           option->id =
             svn_client_conflict_option_update_move_destination;
           option->description =
             _("apply incoming changes to move destination");
+          option->conflict = conflict;
+          option->do_resolve_func = resolve_tree_conflict;
+          APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
+            option;
         }
       else if (reason == svn_wc_conflict_reason_deleted ||
                reason == svn_wc_conflict_reason_replaced)
@@ -1071,16 +1080,18 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
               svn_client_conflict_tree_get_victim_node_kind(conflict) ==
               svn_node_dir)
             {
+              option = apr_pcalloc(result_pool, sizeof(*option));
               option->id =
                 svn_client_conflict_option_update_any_moved_away_children;
               option->description =
                 _("prepare for updating moved-away children, if any");
+              option->conflict = conflict;
+              option->do_resolve_func = resolve_tree_conflict;
+              APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
+                option;
             }
         }
     }
-  option->conflict = conflict;
-  option->do_resolve_func = resolve_tree_conflict;
-  APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
 
   return SVN_NO_ERROR;
 }
