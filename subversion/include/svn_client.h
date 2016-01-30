@@ -4819,7 +4819,7 @@ svn_client_conflict_prop_resolve_by_id(
  * Return the ID of the option this property @a conflict in property
  * @a propname has been resolved to.
  * If the conflict has not been resolved yet, then return
- * @c svn_client_conflict_option_undefined.
+ * @c svn_client_conflict_option_unspecified.
  *
  * @since New in 1.10.
  */
