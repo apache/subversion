@@ -733,35 +733,31 @@ mark_conflict_resolved(svn_client_conflict_t *conflict,
     = svn_cl__local_style_skip_ancestor(
         path_prefix, svn_client_conflict_get_local_abspath(conflict),
         scratch_pool);
-  const char *local_abspath;
-  const char *lock_abspath;
-  svn_error_t *err;
 
-  local_abspath = svn_client_conflict_get_local_abspath(conflict);
+  if (text_conflicted)
+    {
+      SVN_ERR(svn_client_conflict_text_resolve_by_id(conflict, option_id,
+                                                     scratch_pool));
+      svn_cl__conflict_stats_resolved(conflict_stats, local_relpath,
+                                      svn_wc_conflict_kind_text);
+    }
 
-  /* ### for now, resolve conflict using legacy API */
-  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath,
-                                                 ctx->wc_ctx,
-                                                 local_abspath,
-                                                 scratch_pool,
-                                                 scratch_pool));
-  err = svn_wc_resolved_conflict5(
-          ctx->wc_ctx, local_abspath, svn_depth_empty, /* ??? */
-          text_conflicted, propname, tree_conflicted,
-          svn_client_conflict_option_id_to_wc_conflict_choice(option_id),
-          ctx->cancel_func, ctx->cancel_baton,
-          ctx->notify_func2, ctx->notify_baton2,
-          scratch_pool);
+  if (propname)
+    {
+      SVN_ERR(svn_client_conflict_prop_resolve_by_id(conflict, propname,
+                                                     option_id,
+                                                     scratch_pool));
+      svn_cl__conflict_stats_resolved(conflict_stats, local_relpath,
+                                      svn_wc_conflict_kind_property);
+    }
 
-  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
-                                                                 lock_abspath,
-                                                                 scratch_pool));
-  svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
-
-  SVN_ERR(err);
-
-  svn_cl__conflict_stats_resolved(conflict_stats, local_relpath,
-                                  svn_client_conflict_get_kind(conflict));
+  if (tree_conflicted)
+    {
+      SVN_ERR(svn_client_conflict_tree_resolve_by_id(conflict, option_id,
+                                                     scratch_pool));
+      svn_cl__conflict_stats_resolved(conflict_stats, local_relpath,
+                                      svn_wc_conflict_kind_tree);
+    }
 
   return SVN_NO_ERROR;
 }
