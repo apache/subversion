@@ -712,6 +712,8 @@ resolve_conflict(svn_client_conflict_option_id_t option_id,
                                                                  scratch_pool));
   svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
 
+  SVN_ERR(err);
+
   return SVN_NO_ERROR;
 }
 
