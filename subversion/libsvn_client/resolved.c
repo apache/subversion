@@ -816,6 +816,13 @@ static const svn_client_conflict_option_t text_conflict_options[] =
   },
 
   {
+    svn_client_conflict_option_base_text,
+    N_("discard local and incoming changes for this file"),
+    NULL,
+    resolve_text_conflict
+  },
+
+  {
     svn_client_conflict_option_incoming_text,
     N_("accept incoming version of entire file"),
     NULL,
