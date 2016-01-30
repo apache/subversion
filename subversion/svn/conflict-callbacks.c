@@ -407,6 +407,14 @@ static const resolver_option_t builtin_resolver_options[] =
   { "p",  N_("postpone"),         NULL,
                                   svn_client_conflict_option_postpone,
                                   SVN_CL__ACCEPT_POSTPONE },
+
+  /* These options use the same code since they only occur in
+   * distinct conflict scenarios. */
+  { "u", N_("update move destination"),    NULL,
+    svn_client_conflict_option_update_move_destination },
+  { "u", N_("update any moved-away children"), NULL,
+    svn_client_conflict_option_update_any_moved_away_children },
+
   { NULL }
 };
 
@@ -1676,52 +1684,6 @@ resolve_conflict_interactively(svn_boolean_t *resolved,
   return SVN_NO_ERROR;
 }
 
-/*
- * Return a legacy conflict choice corresponding to OPTION_ID.
- * Return svn_wc_conflict_choose_undefined if no corresponding
- * legacy conflict choice exists.
- */
-static svn_wc_conflict_choice_t
-conflict_option_id_to_wc_conflict_choice(
-  svn_client_conflict_option_id_t option_id)
-{
-
-  switch (option_id)
-    {
-      case svn_client_conflict_option_undefined:
-        return svn_wc_conflict_choose_undefined;
-
-      case svn_client_conflict_option_postpone:
-        return svn_wc_conflict_choose_postpone;
-
-      case svn_client_conflict_option_base_text:
-        return svn_wc_conflict_choose_base;
-
-      case svn_client_conflict_option_incoming_text:
-        return svn_wc_conflict_choose_theirs_full;
-
-      case svn_client_conflict_option_working_text:
-        return svn_wc_conflict_choose_mine_full;
-
-      case svn_client_conflict_option_incoming_text_where_conflicted:
-        return svn_wc_conflict_choose_theirs_conflict;
-
-      case svn_client_conflict_option_working_text_where_conflicted:
-        return svn_wc_conflict_choose_mine_conflict;
-
-      case svn_client_conflict_option_merged_text:
-        return svn_wc_conflict_choose_merged;
-
-      case svn_client_conflict_option_unspecified:
-        return svn_wc_conflict_choose_unspecified;
-
-      default:
-        break;
-    }
-
-  return svn_wc_conflict_choose_undefined;
-}
-
 /* Mark CONFLICT as resolved to resolution option with ID OPTION_ID.
  * If TEXT_CONFLICTED is true, resolve text conflicts described by CONFLICT.
  * IF PROPNAME is not NULL, mark the conflict in the specified property as
@@ -1759,7 +1721,7 @@ mark_conflict_resolved(svn_client_conflict_t *conflict,
   err = svn_wc_resolved_conflict5(
           ctx->wc_ctx, local_abspath, svn_depth_empty, /* ??? */
           text_conflicted, propname, tree_conflicted,
-          conflict_option_id_to_wc_conflict_choice(option_id),
+          svn_client_conflict_option_id_to_wc_conflict_choice(option_id),
           ctx->cancel_func, ctx->cancel_baton,
           ctx->notify_func2, ctx->notify_baton2,
           scratch_pool);

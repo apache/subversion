@@ -4382,7 +4382,8 @@ typedef struct svn_client_conflict_option_t svn_client_conflict_option_t;
  */
 typedef enum svn_client_conflict_option_id_t {
 
-  /* These values intentionally mirror svn_wc_conflict_choice_t. */
+  /* Options for text and property conflicts.
+   * These values intentionally mirror svn_wc_conflict_choice_t. */
   svn_client_conflict_option_undefined = -1, /* for private use only */
   svn_client_conflict_option_postpone = 0,
   svn_client_conflict_option_base_text,
@@ -4391,10 +4392,29 @@ typedef enum svn_client_conflict_option_id_t {
   svn_client_conflict_option_incoming_text_where_conflicted,
   svn_client_conflict_option_working_text_where_conflicted,
   svn_client_conflict_option_merged_text,
-  svn_client_conflict_option_unspecified
+  svn_client_conflict_option_unspecified,
   /* Values derived from svn_wc_conflict_choice_t end here. */
 
+  /* Tree conflict resolution options start here. */
+
+  /* Options for local move vs incoming edit on update. */
+  svn_client_conflict_option_update_move_destination,
+
+  /* Options for local delete/replace vs incoming edit on update. */
+  svn_client_conflict_option_update_any_moved_away_children,
+
 } svn_client_conflict_option_id_t;
+
+/**
+ * Map an option ID to a legacy conflict choice.
+ * This is a temporary API. It is currently still needed to mark
+ * conflicts as resolved using libsvn_wc interfaces.
+ *
+ * @since New in 1.10.
+ */
+svn_wc_conflict_choice_t
+svn_client_conflict_option_id_to_wc_conflict_choice(
+  svn_client_conflict_option_id_t option_id);
 
 /**
  * Set a merged property value on @a option to @a merged_propval.
