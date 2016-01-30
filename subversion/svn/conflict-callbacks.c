@@ -40,7 +40,6 @@
 #include "cl-conflicts.h"
 
 #include "private/svn_cmdline_private.h"
-#include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
 
