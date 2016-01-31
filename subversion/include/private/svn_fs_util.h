@@ -244,6 +244,22 @@ svn_fs__prop_lists_equal(apr_hash_t *a,
                          apr_hash_t *b,
                          apr_pool_t *pool);
 
+/* Determine the previous location of PATH under ROOT and return it as
+ * *NODE_PATH under *NODE_ROOT.  This may be called for arbitrary nodes
+ * but is intended for nodes that got deleted in ROOT, i.e. when standard
+ * navigation fails.  It also works if ROOT is transaction root.
+ *
+ * Allocate *NODE_PATH and *NODE_ROOT in RESULT_POOL while using
+ * SCRATCH_POOL for temporaries.
+ */
+svn_error_t *
+svn_fs__get_deleted_node(svn_fs_root_t **node_root,
+                         const char **node_path,
+                         svn_fs_root_t *root,
+                         const char *path,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
