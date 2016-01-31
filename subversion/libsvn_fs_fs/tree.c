@@ -4325,6 +4325,7 @@ fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
 /* The vtable associated with root objects. */
 static root_vtable_t root_vtable = {
   fs_paths_changed,
+  NULL,
   svn_fs_fs__check_path,
   fs_node_history,
   svn_fs_fs__node_id,

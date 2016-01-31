@@ -301,6 +301,10 @@ typedef struct root_vtable_t
   svn_error_t *(*paths_changed)(apr_hash_t **changed_paths_p,
                                 svn_fs_root_t *root,
                                 apr_pool_t *pool);
+  svn_error_t *(*report_changes)(svn_fs_root_t *root,
+                                 svn_fs_path_change_receiver_t receiver,
+                                 void *baton,
+                                 apr_pool_t *scratch_pool);
 
   /* Generic node operations */
   svn_error_t *(*check_path)(svn_node_kind_t *kind_p, svn_fs_root_t *root,
