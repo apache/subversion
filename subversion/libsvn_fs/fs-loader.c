@@ -59,6 +59,14 @@
 
 #define FS_TYPE_FILENAME "fs-type"
 
+/* If a FS backend does not implement the PATHS_CHANGED vtable function,
+   it will get emulated.  However, if this macro is defined to non-null
+   then the API will always be emulated when feasible, i.e. the calls
+   get "re-directed" to the old API implementation. */
+#ifndef SVN_FS_ENUMLATE_PATHS_CHANGED
+#define SVN_FS_ENUMLATE_PATHS_CHANGED TRUE
+#endif
+
 /* If a FS backend does not implement the REPORT_CHANGES vtable function,
    it will get emulated.  However, if this macro is defined to non-null
    then the API will always be emulated when feasible, i.e. the calls
@@ -1046,12 +1054,77 @@ svn_fs_revision_root_revision(svn_fs_root_t *root)
   return root->is_txn_root ? SVN_INVALID_REVNUM : root->rev;
 }
 
+/* Baton type to be used with add_changed_path.
+   It contains extra parameters in and out of svn_fs_paths_changed2. */
+typedef struct add_changed_path_baton_t
+{
+  svn_fs_root_t *root;
+  apr_hash_t *changes;
+} add_changed_path_baton_t;
+
+/* Implements svn_fs_path_change_receiver_t.
+   Take the CHANGE, convert it into a svn_fs_path_change2_t and add
+   it to the CHANGES hash in the add_changed_path_baton_t BATON. */
+static svn_error_t *
+add_changed_path(void *baton,
+                 svn_fs_path_change3_t *change,
+                 apr_pool_t *scratch_pool)
+{
+  add_changed_path_baton_t *b = baton;
+  apr_pool_t *result_pool = apr_hash_pool_get(b->changes);
+
+  svn_fs_path_change2_t *copy;
+  const svn_fs_id_t *id_copy;
+
+  svn_fs_root_t *root = b->root;
+  const char *path = change->path.data;
+  if (change->change_kind == svn_fs_path_change_delete)
+    SVN_ERR(svn_fs__get_deleted_node(&root, &path, root, path,
+                                     scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_fs_node_id(&id_copy, root, path, result_pool));
+
+  copy = svn_fs_path_change2_create(id_copy, change->change_kind,
+                                    result_pool);
+  copy->copyfrom_known = change->copyfrom_known;
+  if (copy->copyfrom_known && SVN_IS_VALID_REVNUM(change->copyfrom_rev))
+    {
+      copy->copyfrom_rev = change->copyfrom_rev;
+      copy->copyfrom_path = apr_pstrdup(result_pool, change->copyfrom_path);
+    }
+  copy->mergeinfo_mod = change->mergeinfo_mod;
+  copy->node_kind = change->node_kind;
+  copy->prop_mod = change->prop_mod;
+  copy->text_mod = change->text_mod;
+
+  svn_hash_sets(b->changes, apr_pstrmemdup(result_pool, change->path.data,
+                                           change->path.len), copy);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_paths_changed2(apr_hash_t **changed_paths_p,
                       svn_fs_root_t *root,
                       apr_pool_t *pool)
 {
-  return root->vtable->paths_changed(changed_paths_p, root, pool);
+  svn_boolean_t emulate =    !root->vtable->paths_changed
+                          || SVN_FS_ENUMLATE_PATHS_CHANGED;
+
+  if (emulate)
+    {
+      add_changed_path_baton_t baton;
+      baton.root = root;
+      baton.changes = svn_hash__make(pool);
+      SVN_ERR(svn_fs_paths_changed3(root, add_changed_path, &baton, pool));
+      *changed_paths_p = baton.changes;
+    }
+  else
+    {
+      SVN_ERR(root->vtable->paths_changed(changed_paths_p, root, pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
