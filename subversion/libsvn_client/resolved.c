@@ -1008,16 +1008,30 @@ svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
     {
       for (i = 0; i < ARRAY_LEN(binary_conflict_options); i++)
         {
+          svn_client_conflict_option_t *option;
+
+          /* We must make a copy to make the memory for option->type_data
+           * writable and to localize the description. */
+          option = apr_pcalloc(result_pool, sizeof(*option));
+          *option = binary_conflict_options[i];
+          option->description = _(option->description);
           APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
-            &binary_conflict_options[i];
+            option;
         }
     }
   else
     {
       for (i = 0; i < ARRAY_LEN(text_conflict_options); i++)
         {
+          svn_client_conflict_option_t *option;
+
+          /* We must make a copy to make the memory for option->type_data
+           * writable and to localize the description. */
+          option = apr_pcalloc(result_pool, sizeof(*option));
+          *option = text_conflict_options[i];
+          option->description = _(option->description);
           APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
-            &text_conflict_options[i];
+            option;
         }
     }
 
@@ -1040,10 +1054,11 @@ svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
     {
       svn_client_conflict_option_t *option;
 
-      /* Property conflicts make use of type-specific data. We must make a
-       * mutable copy to make the memory for option->type_data writable. */
+      /* We must make a copy to make the memory for option->type_data
+       * writable and to localize the description. */
       option = apr_pcalloc(result_pool, sizeof(*option));
       *option = prop_conflict_options[i];
+      option->description = _(option->description);
       APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
     }
 
