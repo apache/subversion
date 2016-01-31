@@ -2804,16 +2804,16 @@ changed_path_flags(svn_node_kind_t node_kind,
 svn_error_t *
 svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool,
-                                        const svn_string_t *path,
+                                        const char *path,
                                         char action,
-                                        const svn_string_t *copyfrom_path,
+                                        const char *copyfrom_path,
                                         svn_revnum_t copyfrom_rev,
                                         svn_node_kind_t node_kind,
                                         svn_boolean_t text_modified,
                                         svn_boolean_t props_modified)
 {
-  apr_size_t path_len = path->len;
-  apr_size_t copyfrom_len = copyfrom_path->len;
+  apr_size_t path_len = strlen(path);
+  apr_size_t copyfrom_len = copyfrom_path ? strlen(copyfrom_path) : 0;
   const svn_string_t *flags_str = changed_path_flags(node_kind,
                                                      text_modified,
                                                      props_modified);
@@ -2845,7 +2845,7 @@ svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
       p[1] = ' ';
 
       /* Write path. */
-      p = write_ncstring_quick(p + 2, path->data, path_len);
+      p = write_ncstring_quick(p + 2, path, path_len);
 
       /* Action */
       p[0] = action;
@@ -2853,10 +2853,10 @@ svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
       p[2] = '(';
 
       /* Copy-from info (if given) */
-      if (copyfrom_len)
+      if (copyfrom_path)
         {
           p[3] = ' ';
-          p = write_ncstring_quick(p + 4, copyfrom_path->data, copyfrom_len);
+          p = write_ncstring_quick(p + 4, copyfrom_path, copyfrom_len);
           p += svn__ui64toa(p, copyfrom_rev);
         }
       else
@@ -2873,13 +2873,11 @@ svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
       /* Standard code path (fallback). */
       SVN_ERR(write_tuple_start_list(conn, pool));
 
-      SVN_ERR(svn_ra_svn__write_ncstring(conn, pool, path->data, path_len));
+      SVN_ERR(svn_ra_svn__write_ncstring(conn, pool, path, path_len));
       SVN_ERR(writebuf_writechar(conn, pool, action));
       SVN_ERR(writebuf_writechar(conn, pool, ' '));
       SVN_ERR(write_tuple_start_list(conn, pool));
-      if (copyfrom_len)
-        SVN_ERR(svn_ra_svn__write_ncstring(conn, pool, copyfrom_path->data,
-                                           copyfrom_len));
+      SVN_ERR(write_tuple_cstring_opt(conn, pool, copyfrom_path));
       SVN_ERR(write_tuple_revision_opt(conn, pool, copyfrom_rev));
       SVN_ERR(write_tuple_end_list(conn, pool));
       SVN_ERR(write_tuple_start_list(conn, pool));
