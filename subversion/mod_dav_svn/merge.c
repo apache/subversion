@@ -178,7 +178,14 @@ do_resources(const dav_svn_repos *repos,
               SVN_ERR(send_response(repos, root, path,
                                     kind == svn_node_dir,
                                     output, bb, subpool));
-              apr_hash_set(sent, path, path_len, (void *)1);
+
+              /* The paths in CHANGES are unique, i.e. they can only
+               * clash with those that we end in the SEND_PARENT case.
+               *
+               * Because file paths cannot be the parent of other paths,
+               * we only need to track non-file paths. */
+              if (change->node_kind != svn_node_file)
+                apr_hash_set(sent, path, path_len, (void *)1);
             }
         }
       if (send_parent)
