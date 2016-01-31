@@ -1047,6 +1047,15 @@ svn_fs_paths_changed2(apr_hash_t **changed_paths_p,
 }
 
 svn_error_t *
+svn_fs_paths_changed3(svn_fs_root_t *root,
+                      svn_fs_path_change_receiver_t receiver,
+                      void *baton,
+                      apr_pool_t *scratch_pool)
+{
+  return root->vtable->report_changes(root, receiver, baton, scratch_pool);
+}
+
+svn_error_t *
 svn_fs_check_path(svn_node_kind_t *kind_p, svn_fs_root_t *root,
                   const char *path, apr_pool_t *pool)
 {
@@ -1903,6 +1912,13 @@ svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
                            apr_pool_t *pool)
 {
   return svn_fs__path_change_create_internal(node_rev_id, change_kind, pool);
+}
+
+svn_fs_path_change3_t *
+svn_fs_path_change3_create(svn_fs_path_change_kind_t change_kind,
+                           apr_pool_t *result_pool)
+{
+  return svn_fs__path_change_create_internal2(change_kind, result_pool);
 }
 
 /* Return the library version number. */

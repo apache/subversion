@@ -5506,6 +5506,7 @@ base_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
 
 static root_vtable_t root_vtable = {
   base_paths_changed,
+  NULL,
   base_check_path,
   base_node_history,
   base_node_id,

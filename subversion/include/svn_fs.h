@@ -1493,6 +1493,70 @@ typedef enum svn_fs_path_change_kind_t
  * by the commit API; this does not mean the new value is different from
  * the old value.
  *
+ * @since New in 1.10. */
+typedef struct svn_fs_path_change3_t
+{
+  /** path of the node that got changed. */
+  svn_string_t path;
+
+  /** kind of change */
+  svn_fs_path_change_kind_t change_kind;
+
+  /** what node kind is the path?
+      (Note: it is legal for this to be #svn_node_unknown.) */
+  svn_node_kind_t node_kind;
+
+  /** was the text touched?
+   * For node_kind=dir: always false. For node_kind=file:
+   *   modify:      true iff text touched.
+   *   add (copy):  true iff text touched.
+   *   add (plain): always true.
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
+   */
+  svn_boolean_t text_mod;
+
+  /** were the properties touched?
+   *   modify:      true iff props touched.
+   *   add (copy):  true iff props touched.
+   *   add (plain): true iff props touched.
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
+   */
+  svn_boolean_t prop_mod;
+
+  /** was the mergeinfo property touched?
+   *   modify:      } true iff svn:mergeinfo property add/del/mod
+   *   add (copy):  }          and fs format supports this flag.
+   *   add (plain): }
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
+   * (Note: Pre-1.9 repositories will report #svn_tristate_unknown.)
+   */
+  svn_tristate_t mergeinfo_mod;
+
+  /** Copyfrom revision and path; this is only valid if copyfrom_known
+   * is true. */
+  svn_boolean_t copyfrom_known;
+  svn_revnum_t copyfrom_rev;
+  const char *copyfrom_path;
+
+  /* NOTE! Please update svn_fs_path_change3_create() when adding new
+     fields here. */
+} svn_fs_path_change3_t;
+
+
+/** Change descriptor.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, to preserve binary compatibility, users
+ * should not directly allocate structures of this type.
+ *
+ * @note The @c text_mod, @c prop_mod and @c mergeinfo_mod flags mean the
+ * text, properties and mergeinfo property (respectively) were "touched"
+ * by the commit API; this does not mean the new value is different from
+ * the old value.
+ *
  * @since New in 1.6. */
 typedef struct svn_fs_path_change2_t
 {
@@ -1581,6 +1645,57 @@ svn_fs_path_change2_t *
 svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
                            svn_fs_path_change_kind_t change_kind,
                            apr_pool_t *pool);
+
+/**
+ * Allocate an #svn_fs_path_change3_t structure in @a result_pool,
+ * initialize and return it.
+ *
+ * Set the @c change_kind field to @a change_kind.  Set all other fields
+ * to their @c _unknown, @c NULL or invalid value, respectively.
+ *
+ * @since New in 1.10.
+ */
+svn_fs_path_change3_t *
+svn_fs_path_change3_create(svn_fs_path_change_kind_t change_kind,
+                           apr_pool_t *result_pool);
+
+/**
+ * Processing callback type used with svn_fs_paths_changed3.
+ *
+ * The @a baton is the baton pointer provided to svn_fs_paths_changed3
+ * and @a change is the path change to process.  You may modify its
+ * content and it will become invalid as soon as callback returns.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @note The @c node_kind field in @a change may be #svn_node_unknown and
+ *       the @c copyfrom_known fields may be FALSE.
+ */
+typedef svn_error_t *(*svn_fs_path_change_receiver_t)(
+  void *baton,
+  svn_fs_path_change3_t *change,
+  apr_pool_t *scratch_pool);
+
+/** Determine what has changed under a @a root.
+ *
+ * For each changed path, invoke @a receiver with @a baton and the
+ * respective change.
+ *
+ * Callers can assume that this function takes time proportional to
+ * the amount of data output, and does not need to do tree crawls;
+ * however, it is possible that some of the @c node_kind fields in the
+ * #svn_fs_path_change3_t * values will be #svn_node_unknown or
+ * that and some of the @c copyfrom_known fields will be FALSE.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_fs_paths_changed3(svn_fs_root_t *root,
+                      svn_fs_path_change_receiver_t receiver,
+                      void *baton,
+                      apr_pool_t *scratch_pool);
 
 /** Determine what has changed under a @a root.
  *
