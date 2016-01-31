@@ -59,6 +59,14 @@
 
 #define FS_TYPE_FILENAME "fs-type"
 
+/* If a FS backend does not implement the REPORT_CHANGES vtable function,
+   it will get emulated.  However, if this macro is defined to non-null
+   then the API will always be emulated when feasible, i.e. the calls
+   get "re-directed" to the old API implementation. */
+#ifndef SVN_FS_ENUMLATE_REPORT_CHANGES
+#define SVN_FS_ENUMLATE_REPORT_CHANGES TRUE
+#endif
+
 /* A pool common to all FS objects.  See the documentation on the
    open/create functions in fs-loader.h and for svn_fs_initialize(). */
 static apr_pool_t *common_pool = NULL;
@@ -1052,7 +1060,50 @@ svn_fs_paths_changed3(svn_fs_root_t *root,
                       void *baton,
                       apr_pool_t *scratch_pool)
 {
-  return root->vtable->report_changes(root, receiver, baton, scratch_pool);
+  svn_boolean_t emulate =    !root->vtable->report_changes
+                          || (   SVN_FS_ENUMLATE_REPORT_CHANGES
+                              && root->vtable->paths_changed);
+
+  if (emulate)
+    {
+      apr_hash_t *changes;
+      apr_hash_index_t *hi;
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+      SVN_ERR(root->vtable->paths_changed(&changes, root, scratch_pool));
+
+      for (hi = apr_hash_first(scratch_pool, changes);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *path = apr_hash_this_key(hi);
+          svn_fs_path_change2_t *change = apr_hash_this_val(hi);
+          svn_fs_path_change3_t path_change = { 0 };
+
+          svn_pool_clear(iterpool);
+
+          path_change.path.data = path;
+          path_change.path.len = apr_hash_this_key_len(hi);
+          path_change.change_kind = change->change_kind;
+          path_change.node_kind = change->node_kind;
+          path_change.text_mod = change->text_mod;
+          path_change.prop_mod = change->prop_mod;
+          path_change.mergeinfo_mod = change->mergeinfo_mod;
+          path_change.copyfrom_known = change->copyfrom_known;
+          path_change.copyfrom_rev = change->copyfrom_rev;
+          path_change.copyfrom_path = change->copyfrom_path;
+
+          SVN_ERR(receiver(baton, &path_change, iterpool));
+        }
+
+      svn_pool_destroy(iterpool);
+    }
+  else
+    {
+      SVN_ERR(root->vtable->report_changes(root, receiver, baton,
+                                           scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
