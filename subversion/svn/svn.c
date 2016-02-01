@@ -1803,6 +1803,7 @@ check_lib_versions(void)
 
 /* A flag to see if we've been cancelled by the client or not. */
 static volatile sig_atomic_t cancelled = FALSE;
+static int signum_cancelled;
 
 /* A signal handler to support cancellation. */
 static void
@@ -1810,6 +1811,7 @@ signal_handler(int signum)
 {
   apr_signal(signum, SIG_IGN);
   cancelled = TRUE;
+  signum_cancelled = signum;
 }
 
 /* Our cancellation callback. */
@@ -3149,12 +3151,15 @@ main(int argc, const char *argv[])
   svn_pool_destroy(pool);
 
 #ifndef WIN32
-  /* If cancelled by SIGINT then attempt to exit via SIGINT.  This
+  /* Resend any signal as this may cause the program to exit and
      allows the shell to use WIFSIGNALED and WTERMSIG to detect the
-     SIGINT.  See http://www.cons.org/cracauer/sigint.html  */
-  if (cancelled && apr_signal(SIGINT, SIG_DFL) == APR_SUCCESS)
-    /* No APR support for getpid() so cannot use apr_proc_kill(). */
-    kill(getpid(), SIGINT);
+     signal.  See http://www.cons.org/cracauer/sigint.html */
+  if (cancelled)
+    {
+      apr_signal(signum_cancelled, SIG_DFL);
+      /* No APR support for getpid() so cannot use apr_proc_kill(). */
+      kill(getpid(), signum_cancelled);
+    }
 #endif
 
   return exit_code;
