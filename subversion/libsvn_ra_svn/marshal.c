@@ -2769,19 +2769,19 @@ changed_path_flags(svn_node_kind_t node_kind,
                    svn_boolean_t text_modified,
                    svn_boolean_t props_modified)
 {
-  const static svn_string_t file_flags[4]
+  static const svn_string_t file_flags[4]
     = { STATIC_SVN_STRING(" ) ( 4:file false false ) ) "),
         STATIC_SVN_STRING(" ) ( 4:file false true ) ) "),
         STATIC_SVN_STRING(" ) ( 4:file true false ) ) "),
         STATIC_SVN_STRING(" ) ( 4:file true true ) ) ") };
 
-  const static svn_string_t dir_flags[4]
+  static const svn_string_t dir_flags[4]
     = { STATIC_SVN_STRING(" ) ( 3:dir false false ) ) "),
         STATIC_SVN_STRING(" ) ( 3:dir false true ) ) "),
         STATIC_SVN_STRING(" ) ( 3:dir true false ) ) "),
         STATIC_SVN_STRING(" ) ( 3:dir true true ) ) ") };
 
-  const static svn_string_t no_flags = STATIC_SVN_STRING("");
+  static const svn_string_t no_flags = STATIC_SVN_STRING("");
 
   /* Select the array based on the NODE_KIND. */
   const svn_string_t *flags;
