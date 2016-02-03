@@ -393,6 +393,16 @@ log_results(const char *progname,
   return test_failed;
 }
 
+/* This function exists so that automatic variables in the calling
+   function are peserved.  At the time of writing 'err' and 'test_num'
+   in 'do_test_num()' were in danger of being clobbered by a direct
+   setjmp() call. */
+static int call_setjmp(jmp_buf env)
+{
+  return setjmp(env);
+}
+
+
 /* Execute a test number TEST_NUM.  Pretty-print test name and dots
    according to our test-suite spec, and return the result code.
    If HEADER_MSG and *HEADER_MSG are not NULL, print *HEADER_MSG prior
@@ -414,9 +424,11 @@ do_test_num(const char *progname,
   svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
   enum svn_test_mode_t test_mode;
 
-  /* Check our array bounds! */
+  /* This allows './some-test -- -1' to run the last test. */
   if (test_num < 0)
     test_num += array_size + 1;
+
+  /* Check our array bounds! */
   if ((test_num > array_size) || (test_num <= 0))
     {
       if (header_msg && *header_msg)
@@ -458,7 +470,7 @@ do_test_num(const char *progname,
      so we don't end up in an infinite loop.
 
      If we've got non-zero from setjmp(), we know we've crashed. */
-  if (setjmp(jump_buffer) == 0)
+  if (call_setjmp(jump_buffer) == 0)
     {
       /* Do test */
       if (msg_only || skip || !run_this_test)
