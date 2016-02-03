@@ -155,6 +155,13 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1728308
+   Pass on correct parameter in deprecated function.
+   Justification:
+     Correct behaviour for deprecated API.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
