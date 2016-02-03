@@ -311,7 +311,7 @@ svn_x509_certinfo_get_valid_from(const svn_x509_certinfo_t *certinfo)
   return certinfo->valid_from;
 }
 
-const apr_time_t
+apr_time_t
 svn_x509_certinfo_get_valid_to(const svn_x509_certinfo_t *certinfo)
 {
   return certinfo->valid_to;
