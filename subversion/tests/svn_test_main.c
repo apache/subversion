@@ -407,26 +407,29 @@ do_test_num(const char *progname,
             apr_pool_t *pool)
 {
   svn_boolean_t skip, xfail, wimp;
-  svn_error_t *err = NULL;
+  svn_error_t *err;
   const char *msg = NULL;  /* the message this individual test prints out */
   const struct svn_test_descriptor_t *desc;
   const int array_size = get_array_size(test_funcs);
   svn_boolean_t run_this_test; /* This test's mode matches DESC->MODE. */
   enum svn_test_mode_t test_mode;
+  volatile int adjusted_num = test_num; /* volatile for setjmp */
+
+  /* This allows './some-test -- -1' to run the last test. */
+  if (adjusted_num < 0)
+    adjusted_num += array_size + 1;
 
   /* Check our array bounds! */
-  if (test_num < 0)
-    test_num += array_size + 1;
-  if ((test_num > array_size) || (test_num <= 0))
+  if ((adjusted_num > array_size) || (adjusted_num <= 0))
     {
       if (header_msg && *header_msg)
         printf("%s", *header_msg);
-      printf("FAIL: %s: THERE IS NO TEST NUMBER %2d\n", progname, test_num);
+      printf("FAIL: %s: THERE IS NO TEST NUMBER %2d\n", progname, adjusted_num);
       skip_cleanup = TRUE;
       return TRUE;  /* BAIL, this test number doesn't exist. */
     }
 
-  desc = &test_funcs[test_num];
+  desc = &test_funcs[adjusted_num];
   /* Check the test predicate. */
   if (desc->predicate.func
       && desc->predicate.func(opts, desc->predicate.value, pool))
@@ -462,7 +465,7 @@ do_test_num(const char *progname,
     {
       /* Do test */
       if (msg_only || skip || !run_this_test)
-        ; /* pass */
+        err = NULL; /* pass */
       else if (desc->func2)
         err = (*desc->func2)(pool);
       else
@@ -480,7 +483,7 @@ do_test_num(const char *progname,
     }
 
   /* Failure means unexpected results -- FAIL or XPASS. */
-  skip_cleanup = log_results(progname, test_num, msg_only, run_this_test,
+  skip_cleanup = log_results(progname, adjusted_num, msg_only, run_this_test,
                              skip, xfail, wimp, err, msg, desc);
 
   return skip_cleanup;
