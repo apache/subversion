@@ -165,7 +165,7 @@ Candidate changes:
  * r1728387
    Fix issue 4611, gpg-agent and passwords with a percent character.
    Justification:
-     Some passwords don;t work.
+     Some passwords don't work.
    Votes:
      +1: philip
 
