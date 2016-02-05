@@ -64,16 +64,16 @@
    it will get emulated.  However, if this macro is defined to non-null
    then the API will always be emulated when feasible, i.e. the calls
    get "re-directed" to the old API implementation. */
-#ifndef SVN_FS_ENUMLATE_PATHS_CHANGED
-#define SVN_FS_ENUMLATE_PATHS_CHANGED TRUE
+#ifndef SVN_FS_EMULATE_PATHS_CHANGED
+#define SVN_FS_EMULATE_PATHS_CHANGED TRUE
 #endif
 
 /* If a FS backend does not implement the REPORT_CHANGES vtable function,
    it will get emulated.  However, if this macro is defined to non-null
    then the API will always be emulated when feasible, i.e. the calls
    get "re-directed" to the old API implementation. */
-#ifndef SVN_FS_ENUMLATE_REPORT_CHANGES
-#define SVN_FS_ENUMLATE_REPORT_CHANGES TRUE
+#ifndef SVN_FS_EMULATE_REPORT_CHANGES
+#define SVN_FS_EMULATE_REPORT_CHANGES TRUE
 #endif
 
 /* A pool common to all FS objects.  See the documentation on the
@@ -1110,7 +1110,7 @@ svn_fs_paths_changed2(apr_hash_t **changed_paths_p,
                       apr_pool_t *pool)
 {
   svn_boolean_t emulate =    !root->vtable->paths_changed
-                          || SVN_FS_ENUMLATE_PATHS_CHANGED;
+                          || SVN_FS_EMULATE_PATHS_CHANGED;
 
   if (emulate)
     {
@@ -1135,7 +1135,7 @@ svn_fs_paths_changed3(svn_fs_root_t *root,
                       apr_pool_t *scratch_pool)
 {
   svn_boolean_t emulate =    !root->vtable->report_changes
-                          || (   SVN_FS_ENUMLATE_REPORT_CHANGES
+                          || (   SVN_FS_EMULATE_REPORT_CHANGES
                               && root->vtable->paths_changed);
 
   if (emulate)
