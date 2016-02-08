@@ -62,7 +62,7 @@ parse_commandline();
 
 # Point at the root of a repository so we get can look at
 # every revision.
-my $auth = (new SVN::Client())->auth;
+my $auth = SVN::Client->new->auth;
 my $ra = SVN::Ra->new(url => $repos_url, auth => $auth);
 
 # Handle identifier for the aboslutely youngest revision.
@@ -110,7 +110,7 @@ usage: svn-graph.pl [-r START_REV:END_REV] [-p PATH] REPOS_URL
   getopts('r:p:h', \%cmd_opts) or die $usage;
 
   die $usage if scalar(@ARGV) < 1;
-  $repos_url = $ARGV[0];
+  $repos_url = SVN::Core::uri_canonicalize($ARGV[0]);
 
   $cmd_opts{'r'} =~ m/(\d+)(:(.+))?/;
   if ($3)
@@ -215,7 +215,7 @@ sub write_graph_descriptor
   print "\n";
 
   # Retrieve the requested history.
-  $ra->get_log(['/'], $startrev, $youngest, 0, 1, 0, \&process_revision);
+  $ra->get_log([''], $startrev, $youngest, 0, 1, 0, \&process_revision);
 
   # Now ensure that everything is linked.
   foreach my $codeline_change (keys %codeline_changes_forward)
