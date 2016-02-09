@@ -251,6 +251,22 @@ svn_cmdline__parse_trust_options(
                         const char *opt_arg,
                         apr_pool_t *scratch_pool);
 
+/* Setup signal handlers for signals such as SIGINT and return a
+   cancellation handler function.  This also sets some other signals
+   to be ignored. */
+svn_cancel_func_t
+svn_cmdline__setup_cancellation_handler(void);
+
+/* Set the handlers for signals such as SIGINT back to default. */
+void
+svn_cmdline__disable_cancellation_handler(void);
+
+/* Return a signal that triggered cancellation if any, or zero
+   otherwise.  If a signal is returned the signal handling for that
+   signal will be reset to default. */
+int
+svn_cmdline__get_cancellation_signal(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
