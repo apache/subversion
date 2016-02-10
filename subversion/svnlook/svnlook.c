@@ -2846,18 +2846,7 @@ main(int argc, const char *argv[])
 
   svn_pool_destroy(pool);
 
-#ifndef WIN32
-  /* Resend any signal as this may cause the program to exit and
-     allows the shell to use WIFSIGNALED and WTERMSIG to detect the
-     signal.  See http://www.cons.org/cracauer/sigint.html */
-  {
-    int signum = svn_cmdline__get_cancellation_signal();
-
-    if (signum)
-      /* No APR support for getpid() so cannot use apr_proc_kill(). */
-      kill(getpid(), signum);
-  }
-#endif
+  svn_cmdline__cancellation_exit();
 
   return exit_code;
 }

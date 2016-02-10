@@ -261,11 +261,12 @@ svn_cmdline__setup_cancellation_handler(void);
 void
 svn_cmdline__disable_cancellation_handler(void);
 
-/* Return a signal that triggered cancellation if any, or zero
-   otherwise.  If a signal is returned the signal handling for that
-   signal will be reset to default. */
-int
-svn_cmdline__get_cancellation_signal(void);
+/* Exit this process with a status that indicates the cancellation
+   signal, or return without exiting if there is no signal.  This
+   allows the shell to use WIFSIGNALED and WTERMSIG to detect the
+   signal.  See http://www.cons.org/cracauer/sigint.html */
+void
+svn_cmdline__cancellation_exit(void);
 
 #ifdef __cplusplus
 }
