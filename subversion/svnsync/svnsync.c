@@ -45,10 +45,6 @@
 
 #include <apr_uuid.h>
 
-#ifndef WIN32
-#include <unistd.h>
-#endif
-
 static svn_opt_subcommand_t initialize_cmd,
                             synchronize_cmd,
                             copy_revprops_cmd,

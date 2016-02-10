@@ -30,10 +30,6 @@
 #include <string.h>
 #include <assert.h>
 
-#ifndef WIN32
-#include <unistd.h>
-#endif
-
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_general.h>

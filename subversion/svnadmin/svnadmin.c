@@ -24,10 +24,6 @@
 
 #include <apr_file_io.h>
 
-#ifndef WIN32
-#include <unistd.h>
-#endif
-
 #include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_cmdline.h"
