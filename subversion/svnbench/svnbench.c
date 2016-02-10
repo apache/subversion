@@ -31,11 +31,8 @@
 #include <assert.h>
 
 #ifndef WIN32
-#include <signal.h>
 #include <unistd.h>
 #endif
-
-#include <apr_signal.h>
 
 #include "svn_cmdline.h"
 #include "svn_dirent_uri.h"
@@ -895,18 +892,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* Set up our cancellation support. */
   svn_cl__check_cancel = svn_cmdline__setup_cancellation_handler();
   ctx->cancel_func = svn_cl__check_cancel;
-
-#ifdef SIGPIPE
-  /* Disable SIGPIPE generation for the platforms that have it. */
-  apr_signal(SIGPIPE, SIG_IGN);
-#endif
-
-#ifdef SIGXFSZ
-  /* Disable SIGXFSZ generation for the platforms that have it, otherwise
-   * working with large files when compiled against an APR that doesn't have
-   * large file support will crash the program, which is uncool. */
-  apr_signal(SIGXFSZ, SIG_IGN);
-#endif
 
   /* Set up Authentication stuff. */
   SVN_ERR(svn_cmdline_create_auth_baton2(
