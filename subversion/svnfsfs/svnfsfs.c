@@ -21,10 +21,7 @@
  * ====================================================================
  */
 
-#include <apr_signal.h>
-
 #ifndef WIN32
-#include <signal.h>
 #include <unistd.h>
 #endif
 
