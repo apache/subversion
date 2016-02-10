@@ -29,10 +29,6 @@
 #include <apr_time.h>
 #include <apr_file_io.h>
 
-#ifndef WIN32
-#include <unistd.h>
-#endif
-
 #define APR_WANT_STDIO
 #define APR_WANT_STRFUNC
 #include <apr_want.h>

@@ -30,10 +30,6 @@
 #include <string.h>
 #include <assert.h>
 
-#ifndef WIN32
-#include <unistd.h>
-#endif
-
 #include "svn_cmdline.h"
 #include "svn_dirent_uri.h"
 #include "svn_pools.h"
