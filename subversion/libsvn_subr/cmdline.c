@@ -1687,15 +1687,19 @@ svn_cmdline__disable_cancellation_handler(void)
     apr_signal(signal_map[i], SIG_DFL);
 }
 
-int
-svn_cmdline__get_cancellation_signal(void)
+void
+svn_cmdline__cancellation_exit(void)
 {
   int signum = 0;
 
   if (cancelled && signum_cancelled)
     signum = signal_map[signum_cancelled - 1];
   if (signum)
-    apr_signal(signum, SIG_DFL);
-
-  return signum;
+    {
+#ifndef WIN32
+      apr_signal(signum, SIG_DFL);
+      /* No APR support for getpid() so cannot use apr_proc_kill(). */
+      kill(getpid(), signum);
+#endif
+    }
 }
