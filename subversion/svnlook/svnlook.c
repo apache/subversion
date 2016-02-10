@@ -28,10 +28,8 @@
 #include <apr_pools.h>
 #include <apr_time.h>
 #include <apr_file_io.h>
-#include <apr_signal.h>
 
 #ifndef WIN32
-#include <signal.h>
 #include <unistd.h>
 #endif
 

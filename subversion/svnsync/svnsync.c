@@ -43,11 +43,9 @@
 
 #include "svn_private_config.h"
 
-#include <apr_signal.h>
 #include <apr_uuid.h>
 
 #ifndef WIN32
-#include <signal.h>
 #include <unistd.h>
 #endif
 

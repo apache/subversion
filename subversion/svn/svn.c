@@ -31,14 +31,12 @@
 #include <assert.h>
 
 #ifndef WIN32
-#include <signal.h>
 #include <unistd.h>
 #endif
 
 #include <apr_strings.h>
 #include <apr_tables.h>
 #include <apr_general.h>
-#include <apr_signal.h>
 
 #include "svn_cmdline.h"
 #include "svn_pools.h"

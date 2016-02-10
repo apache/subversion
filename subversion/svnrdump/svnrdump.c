@@ -22,11 +22,9 @@
  * ====================================================================
  */
 
-#include <apr_signal.h>
 #include <apr_uri.h>
 
 #ifndef WIN32
-#include <signal.h>
 #include <unistd.h>
 #endif
 
