@@ -169,13 +169,14 @@ Candidate changes:
    Votes:
      +1: philip, jamessan
 
- * r1729060
+ * r1729060, r1729519
    svn-graph.pl: Canonicalize user-provided URI and hard-coded relpath
    Justification:
      Fixes a non-canonical assertion for a hard-coded path and canonicalizes
      user input to avoid a similar assertion
    Votes:
-     +1: jamessan, danielsh
+     +1: jamessan
+     +1: danielsh (without r1729519)
 
 Veto-blocked changes:
 =====================
