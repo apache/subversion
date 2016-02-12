@@ -41,7 +41,7 @@ use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
 use IO::Select ();
 use IPC::Open3 qw/open3/;
-use POSIX qw/ctermid strftime isprint isspace/;
+use POSIX qw/ctermid strftime/;
 use Text::Wrap qw/wrap/;
 use Tie::File ();
 
@@ -311,11 +311,11 @@ sub prompt {
       ReadMode 'normal';
       die if $@ or not defined $answer;
       # Swallow terminal escape codes (e.g., arrow keys).
-      unless (isprint $answer or isspace $answer) {
+      unless ($answer =~ m/^(?:[[:print:]]+|\s+)$/) {
         $answer = (ReadKey -1) while defined $answer;
         # TODO: provide an indication that the keystroke was sensed and ignored.
       }
-    } until defined $answer and (isprint $answer or isspace $answer);
+    } until defined $answer and ($answer =~ m/^(?:[[:print:]]+|\s+)$/);
     print $answer;
     return $answer;
   };
