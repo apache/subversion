@@ -113,7 +113,7 @@ my $STATUS = './STATUS';
 my $STATEFILE = './.backports1';
 my $BRANCHES = '^/subversion/branches';
 my $TRUNK = '^/subversion/trunk';
-$ENV{LC_ALL} = "C";  # since we parse 'svn info' output and use isprint()
+$ENV{LC_ALL} = "C";  # since we parse 'svn info' output
 
 # Globals.
 my %ERRORS = ();
