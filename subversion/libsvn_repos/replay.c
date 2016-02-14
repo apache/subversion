@@ -198,7 +198,7 @@ add_subdir(svn_fs_root_t *source_root,
 
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
-      svn_fs_path_change2_t *change;
+      svn_fs_path_change3_t *change;
       svn_boolean_t readable = TRUE;
       svn_fs_dirent_t *dent = apr_hash_this_val(hi);
       const char *copyfrom_path = NULL;
@@ -412,7 +412,7 @@ fill_copyfrom(svn_fs_root_t **copyfrom_root,
               svn_revnum_t *copyfrom_rev,
               svn_boolean_t *src_readable,
               svn_fs_root_t *root,
-              svn_fs_path_change2_t *change,
+              svn_fs_path_change3_t *change,
               svn_repos_authz_func_t authz_read_func,
               void *authz_read_baton,
               const char *path,
@@ -463,7 +463,7 @@ path_driver_cb_func(void **dir_baton,
   const svn_delta_editor_t *editor = cb->editor;
   void *edit_baton = cb->edit_baton;
   svn_fs_root_t *root = cb->root;
-  svn_fs_path_change2_t *change;
+  svn_fs_path_change3_t *change;
   svn_boolean_t do_add = FALSE, do_delete = FALSE;
   void *file_baton = NULL;
   svn_revnum_t copyfrom_rev;
@@ -846,7 +846,7 @@ fetch_props_func(apr_hash_t **props,
 /* Retrieve the path changes under ROOT, filter them with AUTHZ_READ_FUNC
    and AUTHZ_READ_BATON and return those that intersect with BASE_RELPATH.
 
-   The svn_fs_path_change2_t* will be returned in *CHANGED_PATHS, keyed by
+   The svn_fs_path_change3_t* will be returned in *CHANGED_PATHS, keyed by
    their path.  The paths themselves are additionally returned in *PATHS.
 
    Allocate the returned data in RESULT_POOL and use SCRATCH_POOL for
@@ -862,24 +862,22 @@ get_relevant_changes(apr_hash_t **changed_paths,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  apr_hash_t *fs_changes;
-  apr_hash_index_t *hi;
+  svn_fs_path_change_iterator_t *iterator;
+  svn_fs_path_change3_t *change;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   /* Fetch the paths changed under ROOT. */
-  SVN_ERR(svn_fs_paths_changed2(&fs_changes, root, result_pool));
+  SVN_ERR(svn_fs_paths_changed3(&iterator, root, scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_path_change_get(&change, iterator));
 
   /* Make an array from the keys of our CHANGED_PATHS hash, and copy
      the values into a new hash whose keys have no leading slashes. */
   *paths = apr_array_make(result_pool, 16, sizeof(const char *));
   *changed_paths = apr_hash_make(result_pool);
-  for (hi = apr_hash_first(scratch_pool, fs_changes);
-       hi;
-       hi = apr_hash_next(hi))
+  while (change)
     {
-      const char *path = apr_hash_this_key(hi);
-      apr_ssize_t keylen = apr_hash_this_key_len(hi);
-      svn_fs_path_change2_t *change = apr_hash_this_val(hi);
+      const char *path = change->path.data;
+      apr_ssize_t keylen = change->path.len;
       svn_boolean_t allowed = TRUE;
 
       svn_pool_clear(iterpool);
@@ -902,10 +900,17 @@ get_relevant_changes(apr_hash_t **changed_paths,
           if (   svn_relpath_skip_ancestor(base_relpath, path)
               || svn_relpath_skip_ancestor(path, base_relpath))
             {
+              change = svn_fs_path_change3_dup(change, result_pool);
+              path = change->path.data;
+              if (path[0] == '/')
+                path++;
+
               APR_ARRAY_PUSH(*paths, const char *) = path;
               apr_hash_set(*changed_paths, path, keylen, change);
             }
         }
+
+      SVN_ERR(svn_fs_path_change_get(&change, iterator));
     }
 
   svn_pool_destroy(iterpool);
@@ -1090,7 +1095,7 @@ add_subdir_ev2(svn_fs_root_t *source_root,
 
   for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
     {
-      svn_fs_path_change2_t *change;
+      svn_fs_path_change3_t *change;
       svn_boolean_t readable = TRUE;
       svn_fs_dirent_t *dent = apr_hash_this_val(hi);
       const char *copyfrom_path = NULL;
@@ -1218,7 +1223,7 @@ replay_node(svn_fs_root_t *root,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
-  svn_fs_path_change2_t *change;
+  svn_fs_path_change3_t *change;
   svn_boolean_t do_add = FALSE;
   svn_boolean_t do_delete = FALSE;
   svn_revnum_t copyfrom_rev;

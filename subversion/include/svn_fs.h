@@ -1660,6 +1660,15 @@ svn_fs_path_change3_create(svn_fs_path_change_kind_t change_kind,
                            apr_pool_t *result_pool);
 
 /**
+ * Return a deep copy of @a *change, allocated in @a result_pool.
+ *
+ * @since New in 1.10.
+ */
+svn_fs_path_change3_t *
+svn_fs_path_change3_dup(svn_fs_path_change3_t *change,
+                        apr_pool_t *result_pool);
+
+/**
  * Opaque iterator object type for a changed paths list.
  *
  * @since New in 1.10.
