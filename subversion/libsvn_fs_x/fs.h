@@ -521,26 +521,7 @@ typedef struct svn_fs_x__dirent_t
 
 
 /*** Change ***/
-typedef struct svn_fs_x__change_t
-{
-  /* Path of the change. */
-  svn_string_t path;
-
-  /* See svn_fs_path_change2_t for a description for the remaining elements.
-   */
-  svn_fs_path_change_kind_t change_kind;
-
-  svn_boolean_t text_mod;
-  svn_boolean_t prop_mod;
-  svn_node_kind_t node_kind;
-
-  svn_boolean_t copyfrom_known;
-  svn_revnum_t copyfrom_rev;
-  const char *copyfrom_path;
-
-  svn_tristate_t mergeinfo_mod;
-} svn_fs_x__change_t;
-
+typedef svn_fs_path_change3_t svn_fs_x__change_t;
 
 /*** Directory (only used at the cache interface) ***/
 typedef struct svn_fs_x__dir_data_t
