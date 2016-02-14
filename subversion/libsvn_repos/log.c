@@ -61,7 +61,7 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
   apr_hash_index_t *hi;
   svn_boolean_t found_readable = FALSE;
   svn_boolean_t found_unreadable = FALSE;
-  apr_pool_t *subpool;
+  apr_pool_t *iterpool;
 
   /* By default, we'll grant full read access to REVISION. */
   *access_level = svn_repos_revision_access_full;
@@ -80,17 +80,17 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
 
   /* Otherwise, we have to check the readability of each changed
      path, or at least enough to answer the question asked. */
-  subpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
     {
       const char *key = apr_hash_this_key(hi);
       svn_fs_path_change2_t *change = apr_hash_this_val(hi);
       svn_boolean_t readable;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
       SVN_ERR(authz_read_func(&readable, rev_root, key,
-                              authz_read_baton, subpool));
+                              authz_read_baton, iterpool));
       if (! readable)
         found_unreadable = TRUE;
       else
@@ -110,15 +110,15 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
             svn_revnum_t copyfrom_rev;
 
             SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
-                                       rev_root, key, subpool));
+                                       rev_root, key, iterpool));
             if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
               {
                 svn_fs_root_t *copyfrom_root;
                 SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
-                                             copyfrom_rev, subpool));
+                                             copyfrom_rev, iterpool));
                 SVN_ERR(authz_read_func(&readable,
                                         copyfrom_root, copyfrom_path,
-                                        authz_read_baton, subpool));
+                                        authz_read_baton, iterpool));
                 if (! readable)
                   found_unreadable = TRUE;
 
@@ -138,7 +138,7 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
     }
 
  decision:
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   /* Either every changed path was unreadable... */
   if (! found_readable)
