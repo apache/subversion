@@ -843,6 +843,75 @@ fetch_props_func(apr_hash_t **props,
 
 
 
+/* Retrieve the path changes under ROOT, filter them with AUTHZ_READ_FUNC
+   and AUTHZ_READ_BATON and return those that intersect with BASE_RELPATH.
+
+   The svn_fs_path_change2_t* will be returned in *CHANGED_PATHS, keyed by
+   their path.  The paths themselves are additionally returned in *PATHS.
+
+   Allocate the returned data in RESULT_POOL and use SCRATCH_POOL for
+   temporary allocations.
+ */
+static svn_error_t *
+get_relevant_changes(apr_hash_t **changed_paths,
+                     apr_array_header_t **paths,
+                     svn_fs_root_t *root,
+                     const char *base_relpath,
+                     svn_repos_authz_func_t authz_read_func,
+                     void *authz_read_baton,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  apr_hash_t *fs_changes;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  /* Fetch the paths changed under ROOT. */
+  SVN_ERR(svn_fs_paths_changed2(&fs_changes, root, result_pool));
+
+  /* Make an array from the keys of our CHANGED_PATHS hash, and copy
+     the values into a new hash whose keys have no leading slashes. */
+  *paths = apr_array_make(result_pool, 16, sizeof(const char *));
+  *changed_paths = apr_hash_make(result_pool);
+  for (hi = apr_hash_first(scratch_pool, fs_changes);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *path = apr_hash_this_key(hi);
+      apr_ssize_t keylen = apr_hash_this_key_len(hi);
+      svn_fs_path_change2_t *change = apr_hash_this_val(hi);
+      svn_boolean_t allowed = TRUE;
+
+      svn_pool_clear(iterpool);
+      if (authz_read_func)
+        SVN_ERR(authz_read_func(&allowed, root, path, authz_read_baton,
+                                iterpool));
+
+      if (allowed)
+        {
+          if (path[0] == '/')
+            {
+              path++;
+              keylen--;
+            }
+
+          /* If the base_path doesn't match the top directory of this path
+             we don't want anything to do with it... 
+             ...unless this was a change to one of the parent directories of
+             base_path. */
+          if (   svn_relpath_skip_ancestor(base_relpath, path)
+              || svn_relpath_skip_ancestor(path, base_relpath))
+            {
+              APR_ARRAY_PUSH(*paths, const char *) = path;
+              apr_hash_set(*changed_paths, path, keylen, change);
+            }
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_repos_replay2(svn_fs_root_t *root,
                   const char *base_path,
@@ -855,9 +924,7 @@ svn_repos_replay2(svn_fs_root_t *root,
                   apr_pool_t *pool)
 {
 #ifndef USE_EV2_IMPL
-  apr_hash_t *fs_changes;
   apr_hash_t *changed_paths;
-  apr_hash_index_t *hi;
   apr_array_header_t *paths;
   struct path_driver_cb_baton cb_baton;
 
@@ -869,54 +936,15 @@ svn_repos_replay2(svn_fs_root_t *root,
       return SVN_NO_ERROR;
     }
 
-  /* Fetch the paths changed under ROOT. */
-  SVN_ERR(svn_fs_paths_changed2(&fs_changes, root, pool));
-
   if (! base_path)
     base_path = "";
   else if (base_path[0] == '/')
     ++base_path;
 
-  /* Make an array from the keys of our CHANGED_PATHS hash, and copy
-     the values into a new hash whose keys have no leading slashes. */
-  paths = apr_array_make(pool, apr_hash_count(fs_changes),
-                         sizeof(const char *));
-  changed_paths = apr_hash_make(pool);
-  for (hi = apr_hash_first(pool, fs_changes); hi; hi = apr_hash_next(hi))
-    {
-      const char *path = apr_hash_this_key(hi);
-      apr_ssize_t keylen = apr_hash_this_key_len(hi);
-      svn_fs_path_change2_t *change = apr_hash_this_val(hi);
-      svn_boolean_t allowed = TRUE;
-
-      if (authz_read_func)
-        SVN_ERR(authz_read_func(&allowed, root, path, authz_read_baton,
-                                pool));
-
-      if (allowed)
-        {
-          if (path[0] == '/')
-            {
-              path++;
-              keylen--;
-            }
-
-          /* If the base_path doesn't match the top directory of this path
-             we don't want anything to do with it... */
-          if (svn_relpath_skip_ancestor(base_path, path) != NULL)
-            {
-              APR_ARRAY_PUSH(paths, const char *) = path;
-              apr_hash_set(changed_paths, path, keylen, change);
-            }
-          /* ...unless this was a change to one of the parent directories of
-             base_path. */
-          else if (svn_relpath_skip_ancestor(path, base_path) != NULL)
-            {
-              APR_ARRAY_PUSH(paths, const char *) = path;
-              apr_hash_set(changed_paths, path, keylen, change);
-            }
-        }
-    }
+  /* Fetch the paths changed under ROOT. */
+  SVN_ERR(get_relevant_changes(&changed_paths, &paths, root, base_path,
+                               authz_read_func, authz_read_baton,
+                               pool, pool));
 
   /* If we were not given a low water mark, assume that everything is there,
      all the way back to revision 0. */
@@ -1485,9 +1513,7 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
                       void *authz_read_baton,
                       apr_pool_t *scratch_pool)
 {
-  apr_hash_t *fs_changes;
   apr_hash_t *changed_paths;
-  apr_hash_index_t *hi;
   apr_array_header_t *paths;
   apr_array_header_t *copies;
   apr_pool_t *iterpool;
@@ -1505,49 +1531,10 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
     }
 
   /* Fetch the paths changed under ROOT. */
-  SVN_ERR(svn_fs_paths_changed2(&fs_changes, root, scratch_pool));
-
-  /* Make an array from the keys of our CHANGED_PATHS hash, and copy
-     the values into a new hash whose keys have no leading slashes. */
-  paths = apr_array_make(scratch_pool, apr_hash_count(fs_changes),
-                         sizeof(const char *));
-  changed_paths = apr_hash_make(scratch_pool);
-  for (hi = apr_hash_first(scratch_pool, fs_changes); hi;
-        hi = apr_hash_next(hi))
-    {
-      const char *path = apr_hash_this_key(hi);
-      apr_ssize_t keylen = apr_hash_this_key_len(hi);
-      svn_fs_path_change2_t *change = apr_hash_this_val(hi);
-      svn_boolean_t allowed = TRUE;
-
-      if (authz_read_func)
-        SVN_ERR(authz_read_func(&allowed, root, path, authz_read_baton,
-                                scratch_pool));
-
-      if (allowed)
-        {
-          if (path[0] == '/')
-            {
-              path++;
-              keylen--;
-            }
-
-          /* If the base_path doesn't match the top directory of this path
-             we don't want anything to do with it... */
-          if (svn_relpath_skip_ancestor(base_repos_relpath, path) != NULL)
-            {
-              APR_ARRAY_PUSH(paths, const char *) = path;
-              apr_hash_set(changed_paths, path, keylen, change);
-            }
-          /* ...unless this was a change to one of the parent directories of
-             base_path. */
-          else if (svn_relpath_skip_ancestor(path, base_repos_relpath) != NULL)
-            {
-              APR_ARRAY_PUSH(paths, const char *) = path;
-              apr_hash_set(changed_paths, path, keylen, change);
-            }
-        }
-    }
+  SVN_ERR(get_relevant_changes(&changed_paths, &paths, root,
+                               base_repos_relpath,
+                               authz_read_func, authz_read_baton,
+                               scratch_pool, scratch_pool));
 
   /* If we were not given a low water mark, assume that everything is there,
      all the way back to revision 0. */
