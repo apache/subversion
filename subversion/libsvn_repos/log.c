@@ -2306,21 +2306,21 @@ get_paths_history_as_mergeinfo(svn_mergeinfo_t *paths_history_mergeinfo,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_repos_get_logs4(svn_repos_t *repos,
-                    const apr_array_header_t *paths,
-                    svn_revnum_t start,
-                    svn_revnum_t end,
-                    int limit,
-                    svn_boolean_t discover_changed_paths,
-                    svn_boolean_t strict_node_history,
-                    svn_boolean_t include_merged_revisions,
-                    const apr_array_header_t *revprops,
-                    svn_repos_authz_func_t authz_read_func,
-                    void *authz_read_baton,
-                    svn_log_entry_receiver_t receiver,
-                    void *receiver_baton,
-                    apr_pool_t *pool)
+static svn_error_t *
+svn_repos__get_logs5(svn_repos_t *repos,
+                     const apr_array_header_t *paths,
+                     svn_revnum_t start,
+                     svn_revnum_t end,
+                     int limit,
+                     svn_boolean_t discover_changed_paths,
+                     svn_boolean_t strict_node_history,
+                     svn_boolean_t include_merged_revisions,
+                     const apr_array_header_t *revprops,
+                     svn_repos_authz_func_t authz_read_func,
+                     void *authz_read_baton,
+                     svn_log_entry_receiver_t receiver,
+                     void *receiver_baton,
+                     apr_pool_t *scratch_pool)
 {
   svn_revnum_t head = SVN_INVALID_REVNUM;
   svn_fs_t *fs = repos->fs;
@@ -2331,21 +2331,23 @@ svn_repos_get_logs4(svn_repos_t *repos,
     {
       int i;
       apr_array_header_t *new_revprops
-        = apr_array_make(pool, revprops->nelts, sizeof(svn_string_t *));
+        = apr_array_make(scratch_pool, revprops->nelts,
+                         sizeof(svn_string_t *));
 
       for (i = 0; i < revprops->nelts; ++i)
         APR_ARRAY_PUSH(new_revprops, svn_string_t *)
-          = svn_string_create(APR_ARRAY_IDX(revprops, i, const char *), pool);
+          = svn_string_create(APR_ARRAY_IDX(revprops, i, const char *),
+                              scratch_pool);
 
       revprops = new_revprops;
     }
 
   /* Make sure we catch up on the latest revprop changes.  This is the only
    * time we will refresh the revprop data in this query. */
-  SVN_ERR(svn_fs_refresh_revision_props(fs, pool));
+  SVN_ERR(svn_fs_refresh_revision_props(fs, scratch_pool));
 
   /* Setup log range. */
-  SVN_ERR(svn_fs_youngest_rev(&head, fs, pool));
+  SVN_ERR(svn_fs_youngest_rev(&head, fs, scratch_pool));
 
   if (! SVN_IS_VALID_REVNUM(start))
     start = head;
@@ -2374,7 +2376,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
     }
 
   if (! paths)
-    paths = apr_array_make(pool, 0, sizeof(const char *));
+    paths = apr_array_make(scratch_pool, 0, sizeof(const char *));
 
   /* If we're not including merged revisions, and we were given no
      paths or a single empty (or "/") path, then we can bypass a bunch
@@ -2389,7 +2391,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
     {
       apr_uint64_t send_count = 0;
       int i;
-      apr_pool_t *iterpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
       /* If we are provided an authz callback function, use it to
          verify that the user has read access to the root path in the
@@ -2405,9 +2407,10 @@ svn_repos_get_logs4(svn_repos_t *repos,
           svn_fs_root_t *rev_root;
 
           SVN_ERR(svn_fs_revision_root(&rev_root, fs,
-                                       descending_order ? end : start, pool));
+                                       descending_order ? end : start,
+                                       scratch_pool));
           SVN_ERR(authz_read_func(&readable, rev_root, "",
-                                  authz_read_baton, pool));
+                                  authz_read_baton, scratch_pool));
           if (! readable)
             return svn_error_create(SVN_ERR_AUTHZ_UNREADABLE, NULL, NULL);
         }
@@ -2442,19 +2445,47 @@ svn_repos_get_logs4(svn_repos_t *repos,
      http://subversion.tigris.org/issues/show_bug.cgi?id=3650#desc5 */
   if (include_merged_revisions)
     {
-      apr_pool_t *subpool = svn_pool_create(pool);
+      apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
       SVN_ERR(get_paths_history_as_mergeinfo(&paths_history_mergeinfo,
                                              repos, paths, start, end,
                                              authz_read_func,
                                              authz_read_baton,
-                                             pool, subpool));
+                                             scratch_pool, subpool));
       svn_pool_destroy(subpool);
     }
 
-  return do_logs(repos->fs, paths, paths_history_mergeinfo, NULL, NULL, start, end,
-                 limit, discover_changed_paths, strict_node_history,
+  return do_logs(repos->fs, paths, paths_history_mergeinfo, NULL, NULL, start,
+                 end, limit, discover_changed_paths, strict_node_history,
                  include_merged_revisions, FALSE, FALSE, FALSE,
                  revprops, descending_order, receiver, receiver_baton,
-                 authz_read_func, authz_read_baton, pool);
+                 authz_read_func, authz_read_baton, scratch_pool);
+}
+
+svn_error_t *
+svn_repos_get_logs4(svn_repos_t *repos,
+                    const apr_array_header_t *paths,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    int limit,
+                    svn_boolean_t discover_changed_paths,
+                    svn_boolean_t strict_node_history,
+                    svn_boolean_t include_merged_revisions,
+                    const apr_array_header_t *revprops,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_log_entry_receiver_t receiver,
+                    void *receiver_baton,
+                    apr_pool_t *pool)
+{
+  SVN_ERR(svn_repos__get_logs5(repos, paths, start, end, limit,
+                               discover_changed_paths,
+                               strict_node_history,
+                               include_merged_revisions,
+                               revprops,
+                               authz_read_func, authz_read_baton,
+                               receiver, receiver_baton,
+                               pool));
+
+  return SVN_NO_ERROR;
 }
