@@ -2385,6 +2385,101 @@ x_paths_changed(apr_hash_t **changed_paths_p,
   return SVN_NO_ERROR;
 }
 
+/* Implement changes_iterator_vtable_t.get for in-txn change lists.
+   There is no specific FSAP data type, a simple APR hash iterator
+   to the underlying collection is sufficient. */
+static svn_error_t *
+x_txn_changes_iterator_get(svn_fs_path_change3_t **change,
+                           svn_fs_path_change_iterator_t *iterator)
+{
+  apr_hash_index_t *hi = iterator->fsap_data;
+
+  if (hi)
+    {
+      *change = apr_hash_this_val(hi);
+      iterator->fsap_data = apr_hash_next(hi);
+    }
+  else
+    {
+      *change = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static changes_iterator_vtable_t txn_changes_iterator_vtable =
+{
+  x_txn_changes_iterator_get
+};
+
+/* FSAP data structure for in-revision changes list iterators. */
+typedef struct fs_revision_changes_iterator_data_t
+{
+  /* Changes to send. */
+  apr_array_header_t *changes;
+
+  /* Current indexes within CHANGES. */
+  int idx;
+} fs_revision_changes_iterator_data_t;
+
+static svn_error_t *
+x_revision_changes_iterator_get(svn_fs_path_change3_t **change,
+                                svn_fs_path_change_iterator_t *iterator)
+{
+  fs_revision_changes_iterator_data_t *data = iterator->fsap_data;
+
+  if (data->idx < data->changes->nelts)
+    {
+      *change = APR_ARRAY_IDX(data->changes, data->idx,
+                              svn_fs_x__change_t *);
+      ++data->idx;
+    }
+  else
+    {
+      *change = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static changes_iterator_vtable_t rev_changes_iterator_vtable =
+{
+  x_revision_changes_iterator_get
+};
+
+static svn_error_t *
+x_report_changes(svn_fs_path_change_iterator_t **iterator,
+                 svn_fs_root_t *root,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  svn_fs_path_change_iterator_t *result = apr_pcalloc(result_pool,
+                                                      sizeof(*result));
+  if (root->is_txn_root)
+    {
+      apr_hash_t *changed_paths;
+      SVN_ERR(svn_fs_x__txn_changes_fetch(&changed_paths, root->fs,
+                                          svn_fs_x__root_txn_id(root),
+                                          result_pool));
+
+      result->fsap_data = apr_hash_first(result_pool, changed_paths);
+      result->vtable = &txn_changes_iterator_vtable;
+    }
+  else
+    {
+      fs_revision_changes_iterator_data_t *data = apr_pcalloc(result_pool,
+                                                              sizeof(*data));
+      SVN_ERR(svn_fs_x__get_changes(&data->changes, root->fs, root->rev,
+                                    result_pool));
+
+      result->fsap_data = data;
+      result->vtable = &rev_changes_iterator_vtable;
+    }
+
+  *iterator = result;
+
+  return SVN_NO_ERROR;
+}
 
 
 /* Our coolio opaque history object. */
@@ -3214,8 +3309,8 @@ x_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
 
 /* The vtable associated with root objects. */
 static root_vtable_t root_vtable = {
-  x_paths_changed,
   NULL,
+  x_report_changes,
   svn_fs_x__check_path,
   x_node_history,
   x_node_id,
