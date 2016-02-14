@@ -49,6 +49,7 @@
 /* To become public API. */
 typedef svn_error_t *(*svn_repos__path_change_receiver_t)(
   void *baton,
+  const char *path,
   svn_log_changed_path2_t *change,
   apr_pool_t *scratch_pool);
 
@@ -375,8 +376,9 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
       apr_hash_set(*changed, path, path_len, item);
 
       if (callbacks->path_change_receiver)
-        SVN_ERR(callbacks->path_change_receiver(item,
+        SVN_ERR(callbacks->path_change_receiver(
                                      callbacks->path_change_receiver_baton,
+                                     path, item,
                                      iterpool));
     }
 
@@ -1199,6 +1201,71 @@ fill_log_entry(svn_log_entry_t *log_entry,
   return SVN_NO_ERROR;
 }
 
+/* Baton type to be used with the interesting_merge callback. */
+typedef struct interesting_merge_baton_t
+{
+  /* What we are looking for. */
+  svn_revnum_t rev;
+  svn_mergeinfo_t log_target_history_as_mergeinfo;
+
+  /* Set to TRUE if we found it. */
+  svn_boolean_t found_rev_of_interest;
+
+  /* We need to invoke this user-provided callback if not NULL. */
+  svn_repos__path_change_receiver_t inner;
+  void *inner_baton;
+} interesting_merge_baton_t;
+
+/* Implements svn_repos__path_change_receiver_t. 
+ * *BATON is a interesting_merge_baton_t.
+ *
+ * If BATON->REV a merged revision that is not already part of
+ * BATON->LOG_TARGET_HISTORY_AS_MERGEINFO, set BATON->FOUND_REV_OF_INTEREST.
+ */
+static svn_error_t *
+interesting_merge(void *baton,
+                  const char *path,
+                  svn_log_changed_path2_t *change,
+                  apr_pool_t *scratch_pool)
+{
+  interesting_merge_baton_t *b = baton;
+  apr_hash_index_t *hi;
+
+  if (b->inner)
+    SVN_ERR(b->inner(b->inner_baton, path, change, scratch_pool));
+
+  if (b->found_rev_of_interest)
+    return SVN_NO_ERROR;
+
+  /* Look at each path on the log target's mergeinfo. */
+  for (hi = apr_hash_first(scratch_pool, b->log_target_history_as_mergeinfo);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *mergeinfo_path = apr_hash_this_key(hi);
+      svn_rangelist_t *rangelist = apr_hash_this_val(hi);
+
+      /* Check whether CHANGED_PATH at revision REV is a child of
+          a (path, revision) tuple in LOG_TARGET_HISTORY_AS_MERGEINFO. */
+      if (svn_fspath__skip_ancestor(mergeinfo_path, path))
+        {
+          int i;
+
+          for (i = 0; i < rangelist->nelts; i++)
+            {
+              svn_merge_range_t *range
+                = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+              if (b->rev > range->start && b->rev <= range->end)
+               return SVN_NO_ERROR;
+            }
+        }
+    }
+
+  b->found_rev_of_interest = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
 /* Send a log message for REV to the CALLBACKS.
 
    FS is used with REV to fetch the interesting history information,
@@ -1238,8 +1305,33 @@ send_log(svn_revnum_t rev,
          apr_pool_t *pool)
 {
   svn_log_entry_t *log_entry;
-  /* Assume we want to send the log for REV. */
-  svn_boolean_t found_rev_of_interest = TRUE;
+  log_callbacks_t my_callbacks = *callbacks;
+
+  interesting_merge_baton_t baton;
+
+  /* Is REV a merged revision that is already part of
+     LOG_TARGET_HISTORY_AS_MERGEINFO?  If so then there is no
+     need to send it, since it already was (or will be) sent.
+
+     Use our callback to snoop through the changes. */
+  if (handling_merged_revision
+      && log_target_history_as_mergeinfo
+      && apr_hash_count(log_target_history_as_mergeinfo))
+    {
+      baton.found_rev_of_interest = FALSE;
+      baton.rev = rev;
+      baton.log_target_history_as_mergeinfo = log_target_history_as_mergeinfo;
+      baton.inner = callbacks->path_change_receiver;
+      baton.inner_baton = callbacks->path_change_receiver_baton;
+
+      my_callbacks.path_change_receiver = interesting_merge;
+      my_callbacks.path_change_receiver_baton = &baton;
+      callbacks = &my_callbacks;
+    }
+  else
+    {
+      baton.found_rev_of_interest = TRUE;
+    }
 
   log_entry = svn_log_entry_create(pool);
   SVN_ERR(fill_log_entry(log_entry, rev, fs,
@@ -1249,74 +1341,6 @@ send_log(svn_revnum_t rev,
   log_entry->has_children = has_children;
   log_entry->subtractive_merge = subtractive_merge;
 
-  /* Is REV a merged revision that is already part of
-     LOG_TARGET_HISTORY_AS_MERGEINFO?  If so then there is no
-     need to send it, since it already was (or will be) sent. */
-  if (handling_merged_revision
-      && log_entry->changed_paths2
-      && log_target_history_as_mergeinfo
-      && apr_hash_count(log_target_history_as_mergeinfo))
-    {
-      apr_hash_index_t *hi;
-      apr_pool_t *iterpool = svn_pool_create(pool);
-
-      /* REV was merged in, but it might already be part of the log target's
-         natural history, so change our starting assumption. */
-      found_rev_of_interest = FALSE;
-
-      /* Look at each changed path in REV. */
-      for (hi = apr_hash_first(pool, log_entry->changed_paths2);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          svn_boolean_t path_is_in_history = FALSE;
-          const char *changed_path = apr_hash_this_key(hi);
-          apr_hash_index_t *hi2;
-
-          /* Look at each path on the log target's mergeinfo. */
-          for (hi2 = apr_hash_first(iterpool,
-                                    log_target_history_as_mergeinfo);
-               hi2;
-               hi2 = apr_hash_next(hi2))
-            {
-              const char *mergeinfo_path = apr_hash_this_key(hi2);
-              svn_rangelist_t *rangelist = apr_hash_this_val(hi2);
-
-              /* Check whether CHANGED_PATH at revision REV is a child of
-                 a (path, revision) tuple in LOG_TARGET_HISTORY_AS_MERGEINFO. */
-              if (svn_fspath__skip_ancestor(mergeinfo_path, changed_path))
-                {
-                  int i;
-
-                  for (i = 0; i < rangelist->nelts; i++)
-                    {
-                      svn_merge_range_t *range =
-                        APR_ARRAY_IDX(rangelist, i,
-                                      svn_merge_range_t *);
-                      if (rev > range->start && rev <= range->end)
-                        {
-                          path_is_in_history = TRUE;
-                          break;
-                        }
-                    }
-                }
-              if (path_is_in_history)
-                break;
-            }
-          svn_pool_clear(iterpool);
-
-          if (!path_is_in_history)
-            {
-              /* If even one path in LOG_ENTRY->CHANGED_PATHS2 is not part of
-                 LOG_TARGET_HISTORY_AS_MERGEINFO, then we want to send the
-                 log for REV. */
-              found_rev_of_interest = TRUE;
-              break;
-            }
-        }
-      svn_pool_destroy(iterpool);
-    }
-
   /* If we only got changed paths the sake of detecting redundant merged
      revisions, then be sure we don't send that info to the receiver. */
   if (!callbacks->path_change_receiver && handling_merged_revision)
@@ -1324,7 +1348,7 @@ send_log(svn_revnum_t rev,
 
   /* Send the entry to the receiver, unless it is a redundant merged
      revision. */
-  if (found_rev_of_interest)
+  if (baton.found_rev_of_interest)
     {
       apr_pool_t *scratch_pool;
 
@@ -2444,6 +2468,7 @@ svn_repos__get_logs5(svn_repos_t *repos,
 
 static svn_error_t *
 log4_path_change_receiver(void *baton,
+                          const char *path,
                           svn_log_changed_path2_t *change,
                           apr_pool_t *scratch_pool)
 {
