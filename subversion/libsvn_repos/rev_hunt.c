@@ -1012,26 +1012,39 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
   apr_hash_t *curr_mergeinfo, *prev_mergeinfo, *deleted, *changed;
   svn_error_t *err;
   svn_fs_root_t *root, *prev_root;
-  apr_hash_t *changed_paths;
-  const char *path = old_path_rev->path;
+  const char *start_path = old_path_rev->path;
+  const char *path = NULL;
+
+  svn_fs_path_change_iterator_t *iterator;
+  svn_fs_path_change3_t *change;
 
   /* Getting/parsing/diffing svn:mergeinfo is expensive, so only do it
      if there is a property change. */
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, old_path_rev->revnum,
                                scratch_pool));
-  SVN_ERR(svn_fs_paths_changed2(&changed_paths, root, scratch_pool));
-  while (1)
+  SVN_ERR(svn_fs_paths_changed3(&iterator, root, scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_path_change_get(&change, iterator));
+
+  /* Find the changed PATH closest to START_PATH which may have a mergeinfo
+   * change. */
+  while (change)
     {
-      svn_fs_path_change2_t *changed_path = svn_hash_gets(changed_paths, path);
-      if (changed_path && changed_path->prop_mod
-          && changed_path->mergeinfo_mod != svn_tristate_false)
-        break;
-      if (svn_fspath__is_root(path, strlen(path)))
+      if (   change->prop_mod
+          && change->mergeinfo_mod != svn_tristate_false
+          && svn_fspath__skip_ancestor(change->path.data, start_path))
         {
-          *merged_mergeinfo = NULL;
-          return SVN_NO_ERROR;
+          if (!path || svn_fspath__skip_ancestor(path, change->path.data))
+            path = apr_pstrmemdup(scratch_pool, change->path.data,
+                                  change->path.len);
         }
-      path = svn_fspath__dirname(path, scratch_pool);
+
+      SVN_ERR(svn_fs_path_change_get(&change, iterator));
+    }
+
+  if (path == NULL)
+    {
+      *merged_mergeinfo = NULL;
+      return SVN_NO_ERROR;
     }
 
   /* First, find the mergeinfo difference for old_path_rev->revnum, and
