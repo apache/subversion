@@ -1204,8 +1204,9 @@ fill_log_entry(svn_log_entry_t *log_entry,
    FS is used with REV to fetch the interesting history information,
    such as changed paths, revprops, etc.
 
-   The detect_changed function is used if either AUTHZ_READ_FUNC is
-   not NULL, or if DISCOVER_CHANGED_PATHS is TRUE.  See it for details.
+   The detect_changed function is used if either CALLBACKS->AUTHZ_READ_FUNC
+   is not NULL, or if CALLBACKS->PATH_CHANGE_RECEIVER is not NULL.
+   See it for details.
 
    If DESCENDING_ORDER is true, send child messages in descending order.
 
@@ -1229,7 +1230,6 @@ send_log(svn_revnum_t rev,
          svn_fs_t *fs,
          svn_mergeinfo_t log_target_history_as_mergeinfo,
          svn_bit_array__t *nested_merges,
-         svn_boolean_t discover_changed_paths,
          svn_boolean_t subtractive_merge,
          svn_boolean_t handling_merged_revision,
          const apr_array_header_t *revprops,
@@ -1243,7 +1243,8 @@ send_log(svn_revnum_t rev,
 
   log_entry = svn_log_entry_create(pool);
   SVN_ERR(fill_log_entry(log_entry, rev, fs,
-                         discover_changed_paths || handling_merged_revision,
+                         callbacks->path_change_receiver
+                           || handling_merged_revision,
                          revprops, callbacks, pool));
   log_entry->has_children = has_children;
   log_entry->subtractive_merge = subtractive_merge;
@@ -1318,7 +1319,7 @@ send_log(svn_revnum_t rev,
 
   /* If we only got changed paths the sake of detecting redundant merged
      revisions, then be sure we don't send that info to the receiver. */
-  if (!discover_changed_paths && handling_merged_revision)
+  if (!callbacks->path_change_receiver && handling_merged_revision)
     log_entry->changed_paths = log_entry->changed_paths2 = NULL;
 
   /* Send the entry to the receiver, unless it is a redundant merged
@@ -1697,7 +1698,6 @@ do_logs(svn_fs_t *fs,
         svn_revnum_t hist_start,
         svn_revnum_t hist_end,
         int limit,
-        svn_boolean_t discover_changed_paths,
         svn_boolean_t strict_node_history,
         svn_boolean_t include_merged_revisions,
         svn_boolean_t handling_merged_revisions,
@@ -1747,7 +1747,6 @@ handle_merged_revisions(svn_revnum_t rev,
                         svn_mergeinfo_t processed,
                         svn_mergeinfo_t added_mergeinfo,
                         svn_mergeinfo_t deleted_mergeinfo,
-                        svn_boolean_t discover_changed_paths,
                         svn_boolean_t strict_node_history,
                         const apr_array_header_t *revprops,
                         log_callbacks_t *callbacks,
@@ -1785,7 +1784,7 @@ handle_merged_revisions(svn_revnum_t rev,
       SVN_ERR(do_logs(fs, pl_range->paths, log_target_history_as_mergeinfo,
                       processed, nested_merges,
                       pl_range->range.start, pl_range->range.end, 0,
-                      discover_changed_paths, strict_node_history,
+                      strict_node_history,
                       TRUE, pl_range->reverse_merge, TRUE, TRUE,
                       revprops, TRUE, callbacks, iterpool));
     }
@@ -1951,7 +1950,6 @@ do_logs(svn_fs_t *fs,
         svn_revnum_t hist_start,
         svn_revnum_t hist_end,
         int limit,
-        svn_boolean_t discover_changed_paths,
         svn_boolean_t strict_node_history,
         svn_boolean_t include_merged_revisions,
         svn_boolean_t subtractive_merge,
@@ -2067,7 +2065,6 @@ do_logs(svn_fs_t *fs,
             {
               SVN_ERR(send_log(current, fs,
                                log_target_history_as_mergeinfo, nested_merges,
-                               discover_changed_paths,
                                subtractive_merge, handling_merged_revisions,
                                revprops, has_children, callbacks, iterpool));
 
@@ -2088,7 +2085,6 @@ do_logs(svn_fs_t *fs,
                     log_target_history_as_mergeinfo, nested_merges,
                     processed,
                     added_mergeinfo, deleted_mergeinfo,
-                    discover_changed_paths,
                     strict_node_history,
                     revprops,
                     callbacks,
@@ -2168,7 +2164,6 @@ do_logs(svn_fs_t *fs,
 
           SVN_ERR(send_log(current, fs,
                            log_target_history_as_mergeinfo, nested_merges,
-                           discover_changed_paths,
                            subtractive_merge, handling_merged_revisions,
                            revprops, has_children, callbacks, iterpool));
           if (has_children)
@@ -2185,7 +2180,6 @@ do_logs(svn_fs_t *fs,
                                               processed,
                                               added_mergeinfo,
                                               deleted_mergeinfo,
-                                              discover_changed_paths,
                                               strict_node_history,
                                               revprops, callbacks,
                                               iterpool));
@@ -2291,7 +2285,6 @@ svn_repos__get_logs5(svn_repos_t *repos,
                      svn_revnum_t start,
                      svn_revnum_t end,
                      int limit,
-                     svn_boolean_t discover_changed_paths,
                      svn_boolean_t strict_node_history,
                      svn_boolean_t include_merged_revisions,
                      const apr_array_header_t *revprops,
@@ -2418,7 +2411,6 @@ svn_repos__get_logs5(svn_repos_t *repos,
           else
             rev = start + i;
           SVN_ERR(send_log(rev, fs, NULL, NULL,
-                           discover_changed_paths,
                            FALSE, FALSE, revprops, FALSE,
                            &callbacks, iterpool));
         }
@@ -2444,8 +2436,8 @@ svn_repos__get_logs5(svn_repos_t *repos,
       svn_pool_destroy(subpool);
     }
 
-  return do_logs(repos->fs, paths, paths_history_mergeinfo, NULL, NULL, start,
-                 end, limit, discover_changed_paths, strict_node_history,
+  return do_logs(repos->fs, paths, paths_history_mergeinfo, NULL, NULL,
+                 start, end, limit, strict_node_history,
                  include_merged_revisions, FALSE, FALSE, FALSE,
                  revprops, descending_order, &callbacks, scratch_pool);
 }
@@ -2475,12 +2467,14 @@ svn_repos_get_logs4(svn_repos_t *repos,
                     apr_pool_t *pool)
 {
   SVN_ERR(svn_repos__get_logs5(repos, paths, start, end, limit,
-                               discover_changed_paths,
                                strict_node_history,
                                include_merged_revisions,
                                revprops,
                                authz_read_func, authz_read_baton,
-                               log4_path_change_receiver, NULL,
+                               discover_changed_paths
+                                 ? log4_path_change_receiver
+                                 : NULL,
+                               NULL,
                                receiver, receiver_baton,
                                pool));
 
