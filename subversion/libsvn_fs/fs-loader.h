@@ -301,9 +301,9 @@ typedef struct root_vtable_t
   svn_error_t *(*paths_changed)(apr_hash_t **changed_paths_p,
                                 svn_fs_root_t *root,
                                 apr_pool_t *pool);
-  svn_error_t *(*report_changes)(svn_fs_root_t *root,
-                                 svn_fs_path_change_receiver_t receiver,
-                                 void *baton,
+  svn_error_t *(*report_changes)(svn_fs_path_change_iterator_t **iterator,
+                                 svn_fs_root_t *root,
+                                 apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 
   /* Generic node operations */
@@ -430,6 +430,13 @@ typedef struct root_vtable_t
 } root_vtable_t;
 
 
+typedef struct changes_iterator_vtable_t
+{
+  svn_error_t *(*get)(svn_fs_path_change3_t **change,
+                      svn_fs_path_change_iterator_t *iterator);
+} changes_iterator_vtable_t;
+
+
 typedef struct history_vtable_t
 {
   svn_error_t *(*prev)(svn_fs_history_t **prev_history_p,
@@ -532,6 +539,12 @@ struct svn_fs_root_t
   void *fsap_data;
 };
 
+struct svn_fs_path_change_iterator_t
+{
+  /* FSAP-specific vtable and private data */
+  const changes_iterator_vtable_t *vtable;
+  void *fsap_data;
+};
 
 struct svn_fs_history_t
 {

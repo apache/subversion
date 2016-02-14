@@ -1055,53 +1055,11 @@ svn_fs_revision_root_revision(svn_fs_root_t *root)
   return root->is_txn_root ? SVN_INVALID_REVNUM : root->rev;
 }
 
-/* Baton type to be used with add_changed_path.
-   It contains extra parameters in and out of svn_fs_paths_changed2. */
-typedef struct add_changed_path_baton_t
+svn_error_t *
+svn_fs_path_change_get(svn_fs_path_change3_t **change,
+                       svn_fs_path_change_iterator_t *iterator)
 {
-  svn_fs_root_t *root;
-  apr_hash_t *changes;
-} add_changed_path_baton_t;
-
-/* Implements svn_fs_path_change_receiver_t.
-   Take the CHANGE, convert it into a svn_fs_path_change2_t and add
-   it to the CHANGES hash in the add_changed_path_baton_t BATON. */
-static svn_error_t *
-add_changed_path(void *baton,
-                 svn_fs_path_change3_t *change,
-                 apr_pool_t *scratch_pool)
-{
-  add_changed_path_baton_t *b = baton;
-  apr_pool_t *result_pool = apr_hash_pool_get(b->changes);
-
-  svn_fs_path_change2_t *copy;
-  const svn_fs_id_t *id_copy;
-
-  svn_fs_root_t *root = b->root;
-  const char *path = change->path.data;
-  if (change->change_kind == svn_fs_path_change_delete)
-    SVN_ERR(svn_fs__get_deleted_node(&root, &path, root, path,
-                                     scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_fs_node_id(&id_copy, root, path, result_pool));
-
-  copy = svn_fs_path_change2_create(id_copy, change->change_kind,
-                                    result_pool);
-  copy->copyfrom_known = change->copyfrom_known;
-  if (copy->copyfrom_known && SVN_IS_VALID_REVNUM(change->copyfrom_rev))
-    {
-      copy->copyfrom_rev = change->copyfrom_rev;
-      copy->copyfrom_path = apr_pstrdup(result_pool, change->copyfrom_path);
-    }
-  copy->mergeinfo_mod = change->mergeinfo_mod;
-  copy->node_kind = change->node_kind;
-  copy->prop_mod = change->prop_mod;
-  copy->text_mod = change->text_mod;
-
-  svn_hash_sets(b->changes, apr_pstrmemdup(result_pool, change->path.data,
-                                           change->path.len), copy);
-
-  return SVN_NO_ERROR;
+  return iterator->vtable->get(change, iterator);
 }
 
 svn_error_t *
@@ -1114,11 +1072,54 @@ svn_fs_paths_changed2(apr_hash_t **changed_paths_p,
 
   if (emulate)
     {
-      add_changed_path_baton_t baton;
-      baton.root = root;
-      baton.changes = svn_hash__make(pool);
-      SVN_ERR(svn_fs_paths_changed3(root, add_changed_path, &baton, pool));
-      *changed_paths_p = baton.changes;
+      apr_pool_t *scratch_pool = svn_pool_create(pool);
+      apr_hash_t *changes = svn_hash__make(pool);
+
+      svn_fs_path_change_iterator_t *iterator;
+      svn_fs_path_change3_t *change;
+
+      SVN_ERR(svn_fs_paths_changed3(&iterator, root, scratch_pool,
+                                    scratch_pool));
+
+      SVN_ERR(svn_fs_path_change_get(&change, iterator));
+      while (change)
+        {
+          svn_fs_path_change2_t *copy;
+          const svn_fs_id_t *id_copy;
+          const char *change_path = change->path.data;
+          svn_fs_root_t *change_root = root;
+
+          /* Copy CHANGE to old API struct. */
+          if (change->change_kind == svn_fs_path_change_delete)
+            SVN_ERR(svn_fs__get_deleted_node(&change_root, &change_path,
+                                             change_root, change_path,
+                                             scratch_pool, scratch_pool));
+
+          SVN_ERR(svn_fs_node_id(&id_copy, change_root, change_path, pool));
+
+          copy = svn_fs_path_change2_create(id_copy, change->change_kind,
+                                            pool);
+          copy->copyfrom_known = change->copyfrom_known;
+          if (   copy->copyfrom_known
+              && SVN_IS_VALID_REVNUM(change->copyfrom_rev))
+            {
+              copy->copyfrom_rev = change->copyfrom_rev;
+              copy->copyfrom_path = apr_pstrdup(pool, change->copyfrom_path);
+            }
+          copy->mergeinfo_mod = change->mergeinfo_mod;
+          copy->node_kind = change->node_kind;
+          copy->prop_mod = change->prop_mod;
+          copy->text_mod = change->text_mod;
+
+          svn_hash_sets(changes, apr_pstrmemdup(pool, change->path.data,
+                                                change->path.len), copy);
+
+          /* Next change. */
+          SVN_ERR(svn_fs_path_change_get(&change, iterator));
+        }
+      svn_pool_destroy(scratch_pool);
+
+      *changed_paths_p = changes;
     }
   else
     {
@@ -1128,10 +1129,61 @@ svn_fs_paths_changed2(apr_hash_t **changed_paths_p,
   return SVN_NO_ERROR;
 }
 
+/* Implement svn_fs_path_change_iterator_t on top of svn_fs_paths_changed2. */
+
+/* The iterator builds upon a hash iterator, which in turn operates on the
+   full prefetched changes list. */
+typedef struct fsap_iterator_data_t
+{
+  apr_hash_index_t *hi;
+
+  /* For efficicency such that we don't need to dynamically allocate
+     yet another copy of that data. */
+  svn_fs_path_change3_t change;
+} fsap_iterator_data_t;
+
+static svn_error_t *
+changes_iterator_get(svn_fs_path_change3_t **change,
+                     svn_fs_path_change_iterator_t *iterator)
+{
+  fsap_iterator_data_t *data = iterator->fsap_data;
+
+  if (data->hi)
+    {
+      const char *path = apr_hash_this_key(data->hi);
+      svn_fs_path_change2_t *entry = apr_hash_this_val(data->hi);
+
+      data->change.path.data = path;
+      data->change.path.len = apr_hash_this_key_len(data->hi);
+      data->change.change_kind = entry->change_kind;
+      data->change.node_kind = entry->node_kind;
+      data->change.text_mod = entry->text_mod;
+      data->change.prop_mod = entry->prop_mod;
+      data->change.mergeinfo_mod = entry->mergeinfo_mod;
+      data->change.copyfrom_known = entry->copyfrom_known;
+      data->change.copyfrom_rev = entry->copyfrom_rev;
+      data->change.copyfrom_path = entry->copyfrom_path;
+
+      *change = &data->change;
+      data->hi = apr_hash_next(data->hi);
+    }
+  else
+    {
+      *change = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static changes_iterator_vtable_t iterator_vtable =
+{
+  changes_iterator_get
+};
+
 svn_error_t *
-svn_fs_paths_changed3(svn_fs_root_t *root,
-                      svn_fs_path_change_receiver_t receiver,
-                      void *baton,
+svn_fs_paths_changed3(svn_fs_path_change_iterator_t **iterator,
+                      svn_fs_root_t *root,
+                      apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
   svn_boolean_t emulate =    !root->vtable->report_changes
@@ -1140,40 +1192,24 @@ svn_fs_paths_changed3(svn_fs_root_t *root,
 
   if (emulate)
     {
+      svn_fs_path_change_iterator_t *result;
+      fsap_iterator_data_t *data;
+
       apr_hash_t *changes;
-      apr_hash_index_t *hi;
-      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-      SVN_ERR(root->vtable->paths_changed(&changes, root, scratch_pool));
+      SVN_ERR(root->vtable->paths_changed(&changes, root, result_pool));
 
-      for (hi = apr_hash_first(scratch_pool, changes);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          const char *path = apr_hash_this_key(hi);
-          svn_fs_path_change2_t *change = apr_hash_this_val(hi);
-          svn_fs_path_change3_t path_change = { 0 };
+      data = apr_pcalloc(result_pool, sizeof(*data));
+      data->hi = apr_hash_first(result_pool, changes);
 
-          svn_pool_clear(iterpool);
+      result = apr_pcalloc(result_pool, sizeof(*result));
+      result->fsap_data = data;
+      result->vtable = &iterator_vtable;
 
-          path_change.path.data = path;
-          path_change.path.len = apr_hash_this_key_len(hi);
-          path_change.change_kind = change->change_kind;
-          path_change.node_kind = change->node_kind;
-          path_change.text_mod = change->text_mod;
-          path_change.prop_mod = change->prop_mod;
-          path_change.mergeinfo_mod = change->mergeinfo_mod;
-          path_change.copyfrom_known = change->copyfrom_known;
-          path_change.copyfrom_rev = change->copyfrom_rev;
-          path_change.copyfrom_path = change->copyfrom_path;
-
-          SVN_ERR(receiver(baton, &path_change, iterpool));
-        }
-
-      svn_pool_destroy(iterpool);
+      *iterator = result;
     }
   else
     {
-      SVN_ERR(root->vtable->report_changes(root, receiver, baton,
+      SVN_ERR(root->vtable->report_changes(iterator, root, result_pool,
                                            scratch_pool));
     }
 

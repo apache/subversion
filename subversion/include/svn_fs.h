@@ -1660,26 +1660,39 @@ svn_fs_path_change3_create(svn_fs_path_change_kind_t change_kind,
                            apr_pool_t *result_pool);
 
 /**
- * Processing callback type used with svn_fs_paths_changed3.
+ * Opaque iterator object type for a changed paths list.
  *
- * The @a baton is the baton pointer provided to svn_fs_paths_changed3
- * and @a change is the path change to process.  You may modify its
- * content and it will become invalid as soon as callback returns.
+ * @since New in 1.10.
+ */
+typedef struct svn_fs_path_change_iterator_t svn_fs_path_change_iterator_t;
+
+/**
+ * Set @a *change to the path change that @a iterator currently points to
+ * and advance the @a iterator.  If the change list has been exhausted,
+ * @a change will be set to @c NULL.
  *
- * Use @a scratch_pool for temporary allocations.
+ * You may modify @a **change but its content becomes invalid as soon as
+ * either @a iterator becomes invalid or you call this function again.
  *
  * @note The @c node_kind field in @a change may be #svn_node_unknown and
  *       the @c copyfrom_known fields may be FALSE.
+ *
+ * @since New in 1.10.
  */
-typedef svn_error_t *(*svn_fs_path_change_receiver_t)(
-  void *baton,
-  svn_fs_path_change3_t *change,
-  apr_pool_t *scratch_pool);
+svn_error_t *
+svn_fs_path_change_get(svn_fs_path_change3_t **change,
+                       svn_fs_path_change_iterator_t *iterator);
+
 
 /** Determine what has changed under a @a root.
  *
- * For each changed path, invoke @a receiver with @a baton and the
- * respective change.
+ * Set @a *iterator to an iterator object, allocated in @a result_pool,
+ * which will give access to the full list of changed paths under @a root.
+ * Each call to @a svn_fs_path_change_get will return a new unique path
+ * change.  The iteration order is undefined and may change even for the
+ * same @a root.
+ *
+ * If @a root becomes invalid, @a *iterator becomes invalid, too.
  *
  * Callers can assume that this function takes time proportional to
  * the amount of data output, and does not need to do tree crawls;
@@ -1689,12 +1702,16 @@ typedef svn_error_t *(*svn_fs_path_change_receiver_t)(
  *
  * Use @a scratch_pool for temporary allocations.
  *
+ * @note The @a *iterator may be a large object and bind limited system
+ *       resources such as file handles.  Be sure to clear the owning
+ *       pool once you don't need that iterator anymore.
+ *
  * @since New in 1.10.
  */
 svn_error_t *
-svn_fs_paths_changed3(svn_fs_root_t *root,
-                      svn_fs_path_change_receiver_t receiver,
-                      void *baton,
+svn_fs_paths_changed3(svn_fs_path_change_iterator_t **iterator,
+                      svn_fs_root_t *root,
+                      apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
 /** Determine what has changed under a @a root.
