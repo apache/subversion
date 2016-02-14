@@ -2140,6 +2140,21 @@ svn_fs_path_change3_create(svn_fs_path_change_kind_t change_kind,
   return svn_fs__path_change_create_internal2(change_kind, result_pool);
 }
 
+svn_fs_path_change3_t *
+svn_fs_path_change3_dup(svn_fs_path_change3_t *change,
+                        apr_pool_t *result_pool)
+{
+  svn_fs_path_change3_t *copy = apr_pmemdup(result_pool, change,
+                                            sizeof(*copy));
+
+  copy->path.data = apr_pstrmemdup(result_pool, copy->path.data,
+                                   copy->path.len);
+  if (copy->copyfrom_path)
+    copy->copyfrom_path = apr_pstrdup(result_pool, change->copyfrom_path);
+
+  return copy;
+}
+
 /* Return the library version number. */
 const svn_version_t *
 svn_fs_version(void)
