@@ -120,18 +120,24 @@ do_resources(const dav_svn_repos *repos,
              apr_pool_t *pool)
 {
   apr_hash_t *changes;
-  apr_hash_t *sent = apr_hash_make(pool);
   apr_hash_index_t *hi;
+
+  /* Change lists can have >100000 entries, so we must make sure to release
+     any collection as soon as possible.  Allocate them in SUBPOOL. */
   apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_t *sent = apr_hash_make(subpool);
+
+  /* Standard iteration pool. */
+  apr_pool_t *iterpool = svn_pool_create(subpool);
 
   /* Fetch the paths changed in this revision.  This will contain
      everything except otherwise-unchanged parent directories of added
      and deleted things.  Also, note that deleted things don't merit
      responses of their own -- they are considered modifications to
      their parent.  */
-  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+  SVN_ERR(svn_fs_paths_changed2(&changes, root, subpool));
 
-  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(subpool, changes); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
@@ -141,7 +147,7 @@ do_resources(const dav_svn_repos *repos,
       svn_boolean_t send_self;
       svn_boolean_t send_parent;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
       apr_hash_this(hi, &key, &path_len, &val);
       path = key;
       change = val;
@@ -174,10 +180,10 @@ do_resources(const dav_svn_repos *repos,
           if (! apr_hash_get(sent, path, path_len))
             {
               svn_node_kind_t kind;
-              SVN_ERR(svn_fs_check_path(&kind, root, path, subpool));
+              SVN_ERR(svn_fs_check_path(&kind, root, path, iterpool));
               SVN_ERR(send_response(repos, root, path,
                                     kind == svn_node_dir,
-                                    output, bb, subpool));
+                                    output, bb, iterpool));
 
               /* The paths in CHANGES are unique, i.e. they can only
                * clash with those that we end in the SEND_PARENT case.
@@ -190,16 +196,12 @@ do_resources(const dav_svn_repos *repos,
         }
       if (send_parent)
         {
-          /* If it hasn't already been sent, send the parent directory
-             (and then remember that you sent it).  Allocate parent in
-             pool, not subpool, because it stays in the sent hash
-             afterwards. */
-          const char *parent = svn_fspath__dirname(path, pool);
+          const char *parent = svn_fspath__dirname(path, iterpool);
           if (! svn_hash_gets(sent, parent))
             {
               SVN_ERR(send_response(repos, root, parent,
-                                    TRUE, output, bb, subpool));
-              svn_hash_sets(sent, parent, (void *)1);
+                                    TRUE, output, bb, iterpool));
+              svn_hash_sets(sent, apr_pstrdup(subpool, parent), (void *)1);
             }
         }
     }
