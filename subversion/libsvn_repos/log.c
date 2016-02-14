@@ -46,10 +46,18 @@
 #include "private/svn_string_private.h"
 
 
+/* To become public API. */
+typedef svn_error_t *(*svn_repos__path_change_receiver_t)(
+  void *baton,
+  svn_log_changed_path2_t *change,
+  apr_pool_t *scratch_pool);
+
 /* This is a mere convenience struct such that we don't need to pass that
    many parameters around individually. */
 typedef struct log_callbacks_t
 {
+  svn_repos__path_change_receiver_t path_change_receiver;
+  void *path_change_receiver_baton;
   svn_log_entry_receiver_t revision_receiver;
   void *revision_receiver_baton;
   svn_repos_authz_func_t authz_read_func;
@@ -365,6 +373,11 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
         }
 
       apr_hash_set(*changed, path, path_len, item);
+
+      if (callbacks->path_change_receiver)
+        SVN_ERR(callbacks->path_change_receiver(item,
+                                     callbacks->path_change_receiver_baton,
+                                     iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -2284,8 +2297,10 @@ svn_repos__get_logs5(svn_repos_t *repos,
                      const apr_array_header_t *revprops,
                      svn_repos_authz_func_t authz_read_func,
                      void *authz_read_baton,
-                     svn_log_entry_receiver_t receiver,
-                     void *receiver_baton,
+                     svn_repos__path_change_receiver_t path_change_receiver,
+                     void *path_change_receiver_baton,
+                     svn_log_entry_receiver_t revision_receiver,
+                     void *revision_receiver_baton,
                      apr_pool_t *scratch_pool)
 {
   svn_revnum_t head = SVN_INVALID_REVNUM;
@@ -2294,8 +2309,10 @@ svn_repos__get_logs5(svn_repos_t *repos,
   svn_mergeinfo_t paths_history_mergeinfo = NULL;
   log_callbacks_t callbacks;
 
-  callbacks.revision_receiver = receiver;
-  callbacks.revision_receiver_baton = receiver_baton;
+  callbacks.path_change_receiver = path_change_receiver;
+  callbacks.path_change_receiver_baton = path_change_receiver_baton;
+  callbacks.revision_receiver = revision_receiver;
+  callbacks.revision_receiver_baton = revision_receiver_baton;
   callbacks.authz_read_func = authz_read_func;
   callbacks.authz_read_baton = authz_read_baton;
 
@@ -2433,6 +2450,14 @@ svn_repos__get_logs5(svn_repos_t *repos,
                  revprops, descending_order, &callbacks, scratch_pool);
 }
 
+static svn_error_t *
+log4_path_change_receiver(void *baton,
+                          svn_log_changed_path2_t *change,
+                          apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_repos_get_logs4(svn_repos_t *repos,
                     const apr_array_header_t *paths,
@@ -2455,6 +2480,7 @@ svn_repos_get_logs4(svn_repos_t *repos,
                                include_merged_revisions,
                                revprops,
                                authz_read_func, authz_read_baton,
+                               log4_path_change_receiver, NULL,
                                receiver, receiver_baton,
                                pool));
 
