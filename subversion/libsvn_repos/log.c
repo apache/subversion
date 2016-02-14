@@ -94,6 +94,13 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
   SVN_ERR(svn_fs_paths_changed3(&iterator, rev_root, pool, pool));
   SVN_ERR(svn_fs_path_change_get(&change, iterator));
 
+  /* No changed paths?  We're done.
+
+     Note that the check at "decision:" assumes that at least one
+     path has been processed.  So, this actually affects functionality. */
+  if (!change)
+    return SVN_NO_ERROR;
+
   /* Otherwise, we have to check the readability of each changed
      path, or at least enough to answer the question asked. */
   iterpool = svn_pool_create(pool);
