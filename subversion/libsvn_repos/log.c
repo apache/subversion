@@ -46,6 +46,16 @@
 #include "private/svn_string_private.h"
 
 
+/* This is a mere convenience struct such that we don't need to pass that
+   many parameters around individually. */
+typedef struct log_callbacks_t
+{
+  svn_log_entry_receiver_t revision_receiver;
+  void *revision_receiver_baton;
+  svn_repos_authz_func_t authz_read_func;
+  void *authz_read_baton;
+} log_callbacks_t;
+
 
 svn_error_t *
 svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
@@ -1235,10 +1245,7 @@ send_log(svn_revnum_t rev,
          svn_boolean_t handling_merged_revision,
          const apr_array_header_t *revprops,
          svn_boolean_t has_children,
-         svn_log_entry_receiver_t receiver,
-         void *receiver_baton,
-         svn_repos_authz_func_t authz_read_func,
-         void *authz_read_baton,
+         const log_callbacks_t *callbacks,
          apr_pool_t *pool)
 {
   svn_log_entry_t *log_entry;
@@ -1248,7 +1255,8 @@ send_log(svn_revnum_t rev,
   log_entry = svn_log_entry_create(pool);
   SVN_ERR(fill_log_entry(log_entry, rev, fs, prefetched_changes,
                          discover_changed_paths || handling_merged_revision,
-                         revprops, authz_read_func, authz_read_baton, pool));
+                         revprops, callbacks->authz_read_func,
+                         callbacks->authz_read_baton, pool));
   log_entry->has_children = has_children;
   log_entry->subtractive_merge = subtractive_merge;
 
@@ -1351,7 +1359,8 @@ send_log(svn_revnum_t rev,
       /* Pass a scratch pool to ensure no temporary state stored
          by the receiver callback persists. */
       scratch_pool = svn_pool_create(pool);
-      SVN_ERR(receiver(receiver_baton, log_entry, scratch_pool));
+      SVN_ERR(callbacks->revision_receiver(callbacks->revision_receiver_baton,
+                                           log_entry, scratch_pool));
       svn_pool_destroy(scratch_pool);
     }
 
@@ -1708,10 +1717,7 @@ do_logs(svn_fs_t *fs,
         svn_boolean_t ignore_missing_locations,
         const apr_array_header_t *revprops,
         svn_boolean_t descending_order,
-        svn_log_entry_receiver_t receiver,
-        void *receiver_baton,
-        svn_repos_authz_func_t authz_read_func,
-        void *authz_read_baton,
+        log_callbacks_t *callbacks,
         apr_pool_t *pool);
 
 /* Comparator function for handle_merged_revisions().  Sorts path_list_range
@@ -1756,10 +1762,7 @@ handle_merged_revisions(svn_revnum_t rev,
                         svn_boolean_t discover_changed_paths,
                         svn_boolean_t strict_node_history,
                         const apr_array_header_t *revprops,
-                        svn_log_entry_receiver_t receiver,
-                        void *receiver_baton,
-                        svn_repos_authz_func_t authz_read_func,
-                        void *authz_read_baton,
+                        log_callbacks_t *callbacks,
                         apr_pool_t *pool)
 {
   apr_array_header_t *combined_list = NULL;
@@ -1796,15 +1799,15 @@ handle_merged_revisions(svn_revnum_t rev,
                       pl_range->range.start, pl_range->range.end, 0,
                       discover_changed_paths, strict_node_history,
                       TRUE, pl_range->reverse_merge, TRUE, TRUE,
-                      revprops, TRUE, receiver, receiver_baton,
-                      authz_read_func, authz_read_baton, iterpool));
+                      revprops, TRUE, callbacks, iterpool));
     }
   svn_pool_destroy(iterpool);
 
   /* Send the empty revision.  */
   empty_log_entry = svn_log_entry_create(pool);
   empty_log_entry->revision = SVN_INVALID_REVNUM;
-  return (*receiver)(receiver_baton, empty_log_entry, pool);
+  return (callbacks->revision_receiver)(callbacks->revision_receiver_baton,
+                                        empty_log_entry, pool);
 }
 
 /* This is used by do_logs to differentiate between forward and
@@ -1921,10 +1924,10 @@ store_search(svn_mergeinfo_t processed,
   return SVN_NO_ERROR;
 }
 
-/* Find logs for PATHS from HIST_START to HIST_END in FS, and invoke
-   RECEIVER with RECEIVER_BATON on them.  If DESCENDING_ORDER is TRUE, send
-   the logs back as we find them, else buffer the logs and send them back
-   in youngest->oldest order.
+/* Find logs for PATHS from HIST_START to HIST_END in FS, and invoke the
+   CALLBACKS on them.  If DESCENDING_ORDER is TRUE, send the logs back as
+   we find them, else buffer the logs and send them back in youngest->oldest
+   order.
 
    If IGNORE_MISSING_LOCATIONS is set, don't treat requests for bogus
    repository locations as fatal -- just ignore them.
@@ -1968,10 +1971,7 @@ do_logs(svn_fs_t *fs,
         svn_boolean_t ignore_missing_locations,
         const apr_array_header_t *revprops,
         svn_boolean_t descending_order,
-        svn_log_entry_receiver_t receiver,
-        void *receiver_baton,
-        svn_repos_authz_func_t authz_read_func,
-        void *authz_read_baton,
+        log_callbacks_t *callbacks,
         apr_pool_t *pool)
 {
   apr_pool_t *iterpool, *iterpool2;
@@ -2004,7 +2004,8 @@ do_logs(svn_fs_t *fs,
      revisions contain real changes to at least one of our paths.  */
   SVN_ERR(get_path_histories(&histories, fs, paths, hist_start, hist_end,
                              strict_node_history, ignore_missing_locations,
-                             authz_read_func, authz_read_baton, pool));
+                             callbacks->authz_read_func,
+                             callbacks->authz_read_baton, pool));
 
   /* Loop through all the revisions in the range and add any
      where a path was changed to the array, or if they wanted
@@ -2028,9 +2029,10 @@ do_logs(svn_fs_t *fs,
 
           /* Check history for this path in current rev. */
           SVN_ERR(check_history(&changed, info, fs, current,
-                                strict_node_history, authz_read_func,
-                                authz_read_baton, hist_start, pool,
-                                iterpool2));
+                                strict_node_history,
+                                callbacks->authz_read_func,
+                                callbacks->authz_read_baton,
+                                hist_start, pool, iterpool2));
           if (! info->done)
             any_histories_left = TRUE;
         }
@@ -2081,9 +2083,7 @@ do_logs(svn_fs_t *fs,
                                log_target_history_as_mergeinfo, nested_merges,
                                discover_changed_paths,
                                subtractive_merge, handling_merged_revisions,
-                               revprops, has_children,
-                               receiver, receiver_baton,
-                               authz_read_func, authz_read_baton, iterpool));
+                               revprops, has_children, callbacks, iterpool));
 
               if (has_children) /* Implies include_merged_revisions == TRUE */
                 {
@@ -2105,9 +2105,7 @@ do_logs(svn_fs_t *fs,
                     discover_changed_paths,
                     strict_node_history,
                     revprops,
-                    receiver, receiver_baton,
-                    authz_read_func,
-                    authz_read_baton,
+                    callbacks,
                     iterpool));
                 }
               if (limit && ++send_count >= limit)
@@ -2184,11 +2182,9 @@ do_logs(svn_fs_t *fs,
 
           SVN_ERR(send_log(current, fs, NULL,
                            log_target_history_as_mergeinfo, nested_merges,
-                           discover_changed_paths, subtractive_merge,
-                           handling_merged_revisions,
-                           revprops, has_children,
-                           receiver, receiver_baton, authz_read_func,
-                           authz_read_baton, iterpool));
+                           discover_changed_paths,
+                           subtractive_merge, handling_merged_revisions,
+                           revprops, has_children, callbacks, iterpool));
           if (has_children)
             {
               if (!nested_merges)
@@ -2205,10 +2201,7 @@ do_logs(svn_fs_t *fs,
                                               deleted_mergeinfo,
                                               discover_changed_paths,
                                               strict_node_history,
-                                              revprops,
-                                              receiver, receiver_baton,
-                                              authz_read_func,
-                                              authz_read_baton,
+                                              revprops, callbacks,
                                               iterpool));
             }
           if (limit && i + 1 >= limit)
@@ -2326,6 +2319,12 @@ svn_repos__get_logs5(svn_repos_t *repos,
   svn_fs_t *fs = repos->fs;
   svn_boolean_t descending_order;
   svn_mergeinfo_t paths_history_mergeinfo = NULL;
+  log_callbacks_t callbacks;
+
+  callbacks.revision_receiver = receiver;
+  callbacks.revision_receiver_baton = receiver_baton;
+  callbacks.authz_read_func = authz_read_func;
+  callbacks.authz_read_baton = authz_read_baton;
 
   if (revprops)
     {
@@ -2429,9 +2428,9 @@ svn_repos__get_logs5(svn_repos_t *repos,
           else
             rev = start + i;
           SVN_ERR(send_log(rev, fs, NULL, NULL, NULL,
-                           discover_changed_paths, FALSE,
-                           FALSE, revprops, FALSE, receiver, receiver_baton,
-                           authz_read_func, authz_read_baton, iterpool));
+                           discover_changed_paths,
+                           FALSE, FALSE, revprops, FALSE,
+                           &callbacks, iterpool));
         }
       svn_pool_destroy(iterpool);
 
@@ -2458,8 +2457,7 @@ svn_repos__get_logs5(svn_repos_t *repos,
   return do_logs(repos->fs, paths, paths_history_mergeinfo, NULL, NULL, start,
                  end, limit, discover_changed_paths, strict_node_history,
                  include_merged_revisions, FALSE, FALSE, FALSE,
-                 revprops, descending_order, receiver, receiver_baton,
-                 authz_read_func, authz_read_baton, scratch_pool);
+                 revprops, descending_order, &callbacks, scratch_pool);
 }
 
 svn_error_t *
