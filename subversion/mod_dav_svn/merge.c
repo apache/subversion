@@ -119,8 +119,8 @@ do_resources(const dav_svn_repos *repos,
              apr_bucket_brigade *bb,
              apr_pool_t *pool)
 {
-  apr_hash_t *changes;
-  apr_hash_index_t *hi;
+  svn_fs_path_change_iterator_t *iterator;
+  svn_fs_path_change3_t *change;
 
   /* Change lists can have >100000 entries, so we must make sure to release
      any collection as soon as possible.  Allocate them in SUBPOOL. */
@@ -135,22 +135,16 @@ do_resources(const dav_svn_repos *repos,
      and deleted things.  Also, note that deleted things don't merit
      responses of their own -- they are considered modifications to
      their parent.  */
-  SVN_ERR(svn_fs_paths_changed2(&changes, root, subpool));
+  SVN_ERR(svn_fs_paths_changed3(&iterator, root, subpool, subpool));
+  SVN_ERR(svn_fs_path_change_get(&change, iterator));
 
-  for (hi = apr_hash_first(subpool, changes); hi; hi = apr_hash_next(hi))
+  while (change)
     {
-      const void *key;
-      void *val;
-      const char *path;
-      apr_ssize_t path_len;
-      svn_fs_path_change2_t *change;
       svn_boolean_t send_self;
       svn_boolean_t send_parent;
+      const char *path = change->path.data;
 
       svn_pool_clear(iterpool);
-      apr_hash_this(hi, &key, &path_len, &val);
-      path = key;
-      change = val;
 
       /* Figure out who needs to get sent. */
       switch (change->change_kind)
@@ -177,11 +171,11 @@ do_resources(const dav_svn_repos *repos,
         {
           /* If we haven't already sent this path, send it (and then
              remember that we sent it). */
-          if (! apr_hash_get(sent, path, path_len))
+          if (! apr_hash_get(sent, path, change->path.len))
             {
               svn_node_kind_t kind;
               SVN_ERR(svn_fs_check_path(&kind, root, path, iterpool));
-              SVN_ERR(send_response(repos, root, path,
+              SVN_ERR(send_response(repos, root, change->path.data,
                                     kind == svn_node_dir,
                                     output, bb, iterpool));
 
@@ -191,7 +185,10 @@ do_resources(const dav_svn_repos *repos,
                * Because file paths cannot be the parent of other paths,
                * we only need to track non-file paths. */
               if (change->node_kind != svn_node_file)
-                apr_hash_set(sent, path, path_len, (void *)1);
+                {
+                  path = apr_pstrmemdup(subpool, path, change->path.len);
+                  apr_hash_set(sent, path, change->path.len, (void *)1);
+                }
             }
         }
       if (send_parent)
@@ -204,6 +201,8 @@ do_resources(const dav_svn_repos *repos,
               svn_hash_sets(sent, apr_pstrdup(subpool, parent), (void *)1);
             }
         }
+
+      SVN_ERR(svn_fs_path_change_get(&change, iterator));
     }
 
   svn_pool_destroy(subpool);
