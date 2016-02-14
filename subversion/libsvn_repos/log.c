@@ -1079,7 +1079,6 @@ static svn_error_t *
 fill_log_entry(svn_log_entry_t *log_entry,
                svn_revnum_t rev,
                svn_fs_t *fs,
-               svn_boolean_t discover_changed_paths,
                const apr_array_header_t *revprops,
                const log_callbacks_t *callbacks,
                apr_pool_t *pool)
@@ -1091,7 +1090,7 @@ fill_log_entry(svn_log_entry_t *log_entry,
   /* Discover changed paths if the user requested them
      or if we need to check that they are readable. */
   if ((rev > 0)
-      && (callbacks->authz_read_func || discover_changed_paths))
+      && (callbacks->authz_read_func || callbacks->path_change_receiver))
     {
       svn_fs_root_t *newroot;
       svn_repos_revision_access_level_t access_level;
@@ -1116,7 +1115,7 @@ fill_log_entry(svn_log_entry_t *log_entry,
 
       /* It may be the case that an authz func was passed in, but
          the user still doesn't want to see any changed-paths. */
-      if (! discover_changed_paths)
+      if (! callbacks->path_change_receiver)
         changed_paths = NULL;
     }
 
@@ -1334,10 +1333,7 @@ send_log(svn_revnum_t rev,
     }
 
   log_entry = svn_log_entry_create(pool);
-  SVN_ERR(fill_log_entry(log_entry, rev, fs,
-                         callbacks->path_change_receiver
-                           || handling_merged_revision,
-                         revprops, callbacks, pool));
+  SVN_ERR(fill_log_entry(log_entry, rev, fs, revprops, callbacks, pool));
   log_entry->has_children = has_children;
   log_entry->subtractive_merge = subtractive_merge;
 
