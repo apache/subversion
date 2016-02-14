@@ -57,8 +57,8 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
 {
   svn_fs_t *fs = svn_repos_fs(repos);
   svn_fs_root_t *rev_root;
-  apr_hash_t *changes;
-  apr_hash_index_t *hi;
+  svn_fs_path_change_iterator_t *iterator;
+  svn_fs_path_change3_t *change;
   svn_boolean_t found_readable = FALSE;
   svn_boolean_t found_unreadable = FALSE;
   apr_pool_t *iterpool;
@@ -72,24 +72,19 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
 
   /* Fetch the changes associated with REVISION. */
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, revision, pool));
-  SVN_ERR(svn_fs_paths_changed2(&changes, rev_root, pool));
-
-  /* No changed paths?  We're done. */
-  if (apr_hash_count(changes) == 0)
-    return SVN_NO_ERROR;
+  SVN_ERR(svn_fs_paths_changed3(&iterator, rev_root, pool, pool));
+  SVN_ERR(svn_fs_path_change_get(&change, iterator));
 
   /* Otherwise, we have to check the readability of each changed
      path, or at least enough to answer the question asked. */
   iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+  while (change)
     {
-      const char *key = apr_hash_this_key(hi);
-      svn_fs_path_change2_t *change = apr_hash_this_val(hi);
       svn_boolean_t readable;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(authz_read_func(&readable, rev_root, key,
+      SVN_ERR(authz_read_func(&readable, rev_root, change->path.data,
                               authz_read_baton, iterpool));
       if (! readable)
         found_unreadable = TRUE;
@@ -110,7 +105,8 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
             svn_revnum_t copyfrom_rev;
 
             SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
-                                       rev_root, key, iterpool));
+                                       rev_root, change->path.data,
+                                       iterpool));
             if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
               {
                 svn_fs_root_t *copyfrom_root;
@@ -135,6 +131,8 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
         default:
           break;
         }
+
+      SVN_ERR(svn_fs_path_change_get(&change, iterator));
     }
 
  decision:
