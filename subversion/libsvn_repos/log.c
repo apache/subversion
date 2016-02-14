@@ -169,9 +169,9 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
  * The CHANGED hash set and its keys and values are allocated in POOL;
  * keys are const char * paths and values are svn_log_changed_path_t.
  *
- * If optional AUTHZ_READ_FUNC is non-NULL, then use it (with
- * AUTHZ_READ_BATON and FS) to check whether each changed-path (and
- * copyfrom_path) is readable:
+ * If optional CALLBACKS->AUTHZ_READ_FUNC is non-NULL, then use it (with
+ * CALLBACKS->AUTHZ_READ_BATON and FS) to check whether each changed-path
+ * (and copyfrom_path) is readable:
  *
  *     - If absolutely every changed-path (and copyfrom_path) is
  *     readable, then return the full CHANGED hash, and set
@@ -192,8 +192,7 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
                apr_hash_t **changed,
                svn_fs_root_t *root,
                svn_fs_t *fs,
-               svn_repos_authz_func_t authz_read_func,
-               void *authz_read_baton,
+               const log_callbacks_t *callbacks,
                apr_pool_t *pool)
 {
   apr_hash_t *changes;
@@ -209,7 +208,7 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
 
   /* If we are going to filter the results, we won't use the exact
     * same keys but put them into a new hash. */
-  if (authz_read_func)
+  if (callbacks->authz_read_func)
     *changed = svn_hash__make(pool);
   else
     *changed = changes;
@@ -237,12 +236,12 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
       svn_pool_clear(iterpool);
 
       /* Skip path if unreadable. */
-      if (authz_read_func)
+      if (callbacks->authz_read_func)
         {
           svn_boolean_t readable;
-          SVN_ERR(authz_read_func(&readable,
-                                  root, path,
-                                  authz_read_baton, iterpool));
+          SVN_ERR(callbacks->authz_read_func(&readable, root, path,
+                                             callbacks->authz_read_baton,
+                                             iterpool));
           if (! readable)
             {
               found_unreadable = TRUE;
@@ -342,15 +341,17 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
             {
               svn_boolean_t readable = TRUE;
 
-              if (authz_read_func)
+              if (callbacks->authz_read_func)
                 {
                   svn_fs_root_t *copyfrom_root;
 
                   SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
                                                copyfrom_rev, iterpool));
-                  SVN_ERR(authz_read_func(&readable,
-                                          copyfrom_root, copyfrom_path,
-                                          authz_read_baton, iterpool));
+                  SVN_ERR(callbacks->authz_read_func(&readable,
+                                                     copyfrom_root,
+                                                     copyfrom_path,
+                                                     callbacks->authz_read_baton,
+                                                     iterpool));
                   if (! readable)
                     found_unreadable = TRUE;
                 }
@@ -1065,8 +1066,7 @@ fill_log_entry(svn_log_entry_t *log_entry,
                svn_fs_t *fs,
                svn_boolean_t discover_changed_paths,
                const apr_array_header_t *revprops,
-               svn_repos_authz_func_t authz_read_func,
-               void *authz_read_baton,
+               const log_callbacks_t *callbacks,
                apr_pool_t *pool)
 {
   apr_hash_t *r_props, *changed_paths = NULL;
@@ -1076,14 +1076,14 @@ fill_log_entry(svn_log_entry_t *log_entry,
   /* Discover changed paths if the user requested them
      or if we need to check that they are readable. */
   if ((rev > 0)
-      && (authz_read_func || discover_changed_paths))
+      && (callbacks->authz_read_func || discover_changed_paths))
     {
       svn_fs_root_t *newroot;
       svn_repos_revision_access_level_t access_level;
 
       SVN_ERR(svn_fs_revision_root(&newroot, fs, rev, pool));
       SVN_ERR(detect_changed(&access_level, &changed_paths, newroot, fs,
-                             authz_read_func, authz_read_baton, pool));
+                             callbacks, pool));
 
       if (access_level == svn_repos_revision_access_none)
         {
@@ -1231,8 +1231,7 @@ send_log(svn_revnum_t rev,
   log_entry = svn_log_entry_create(pool);
   SVN_ERR(fill_log_entry(log_entry, rev, fs,
                          discover_changed_paths || handling_merged_revision,
-                         revprops, callbacks->authz_read_func,
-                         callbacks->authz_read_baton, pool));
+                         revprops, callbacks, pool));
   log_entry->has_children = has_children;
   log_entry->subtractive_merge = subtractive_merge;
 
