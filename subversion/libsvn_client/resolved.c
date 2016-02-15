@@ -792,28 +792,52 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
   const char *lock_abspath;
-  svn_wc_conflict_choice_t conflict_choice;
+  svn_wc_conflict_reason_t local_change;
   svn_client_ctx_t *ctx = conflict->ctx;
+  svn_wc_operation_t operation;
   svn_error_t *err;
 
   option_id = svn_client_conflict_option_get_id(option);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
-  conflict_choice =
-    svn_client_conflict_option_id_to_wc_conflict_choice(option_id);
+  operation = svn_client_conflict_get_operation(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
 
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
                                                  local_abspath,
                                                  scratch_pool, scratch_pool));
-  err = svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
-                                  svn_depth_empty,
-                                  FALSE, FALSE, TRUE,
-                                  conflict_choice,
-                                  NULL, NULL, /* legacy conflict_func/baton */
-                                  ctx->cancel_func,
-                                  ctx->cancel_baton,
-                                  ctx->notify_func2,
-                                  ctx->notify_baton2,
-                                  scratch_pool);
+
+  if (option_id == svn_client_conflict_option_merged_text &&
+      (operation == svn_wc_operation_update ||
+       operation == svn_wc_operation_switch) &&
+      (local_change == svn_wc_conflict_reason_deleted ||
+       local_change == svn_wc_conflict_reason_replaced))
+    {
+      err = svn_wc__conflict_tree_update_break_moved_away(ctx->wc_ctx,
+                                                          local_abspath,
+                                                          ctx->cancel_func,
+                                                          ctx->cancel_baton,
+                                                          ctx->notify_func2,
+                                                          ctx->notify_baton2,
+                                                          scratch_pool);
+    }
+  else
+    {
+      svn_wc_conflict_choice_t conflict_choice;
+
+      conflict_choice =
+        svn_client_conflict_option_id_to_wc_conflict_choice(option_id);
+      err = svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
+                                      svn_depth_empty,
+                                      FALSE, FALSE, TRUE,
+                                      conflict_choice,
+                                      NULL, NULL,
+                                      ctx->cancel_func,
+                                      ctx->cancel_baton,
+                                      ctx->notify_func2,
+                                      ctx->notify_baton2,
+                                      scratch_pool);
+    }
+
   err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
                                                                  lock_abspath,
                                                                  scratch_pool));
