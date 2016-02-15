@@ -631,11 +631,11 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
                      apr_pool_t *scratch_pool)
 {
   svn_fs_root_t *root;
-  apr_pool_t *iterpool;
-  apr_hash_index_t *hi;
+  apr_pool_t *iterpool, *iterator_pool;
+  svn_fs_path_change_iterator_t *iterator;
+  svn_fs_path_change3_t *change;
   svn_boolean_t any_mergeinfo = FALSE;
   svn_boolean_t any_copy = FALSE;
-  apr_hash_t *changes;
 
   /* Initialize return variables. */
   *deleted_mergeinfo_catalog = svn_hash__make(result_pool);
@@ -645,54 +645,68 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
   if (rev == 0)
     return SVN_NO_ERROR;
 
+  /* FS iterators are potentially heavy objects.
+   * Hold them in a separate pool to clean them up asap. */
+  iterator_pool = svn_pool_create(scratch_pool);
+
   /* We're going to use the changed-paths information for REV to
      narrow down our search. */
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, scratch_pool));
-  SVN_ERR(svn_fs_paths_changed2(&changes, root, scratch_pool));
+  SVN_ERR(svn_fs_paths_changed3(&iterator, root, iterator_pool,
+                                scratch_pool));
+  SVN_ERR(svn_fs_path_change_get(&change, iterator));
 
   /* Look for copies and (potential) mergeinfo changes.
-     We will use both flags to take shortcuts further down the road. */
-  for (hi = apr_hash_first(scratch_pool, changes);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      svn_fs_path_change2_t *change = apr_hash_this_val(hi);
+     We will use both flags to take shortcuts further down the road.
 
+     The critical information here is whether there are any copies
+     because that greatly influences the costs for log processing.
+     So, it is faster to iterate over the changes twice - in the worst
+     case b/c most times there is no m/i at all and we exit out early
+     without any overhead. 
+   */
+  while (change && (!any_mergeinfo || !any_copy))
+    {
       /* If there was a prop change and we are not positive that _no_
          mergeinfo change happened, we must assume that it might have. */
       if (change->mergeinfo_mod != svn_tristate_false && change->prop_mod)
         any_mergeinfo = TRUE;
 
-      switch (change->change_kind)
-        {
-        case svn_fs_path_change_add:
-        case svn_fs_path_change_replace:
-          any_copy = TRUE;
-          break;
+      if (   (change->change_kind == svn_fs_path_change_add)
+          || (change->change_kind == svn_fs_path_change_replace))
+        any_copy = TRUE;
 
-        default:
-          break;
-        }
+      SVN_ERR(svn_fs_path_change_get(&change, iterator));
     }
 
   /* No potential mergeinfo changes?  We're done. */
   if (! any_mergeinfo)
-    return SVN_NO_ERROR;
+    {
+      svn_pool_destroy(iterator_pool);
+      return SVN_NO_ERROR;
+    }
+
+  /* There is or may be some m/i change. Look closely now. */
+  svn_pool_clear(iterator_pool);
+  SVN_ERR(svn_fs_paths_changed3(&iterator, root, iterator_pool,
+                                scratch_pool));
 
   /* Loop over changes, looking for anything that might carry an
      svn:mergeinfo change and is one of our paths of interest, or a
      child or [grand]parent directory thereof. */
   iterpool = svn_pool_create(scratch_pool);
-  for (hi = apr_hash_first(scratch_pool, changes);
-       hi;
-       hi = apr_hash_next(hi))
+  while (TRUE)
     {
       const char *changed_path;
-      svn_fs_path_change2_t *change = apr_hash_this_val(hi);
       const char *base_path = NULL;
       svn_revnum_t base_rev = SVN_INVALID_REVNUM;
       svn_fs_root_t *base_root = NULL;
       svn_string_t *prev_mergeinfo_value = NULL, *mergeinfo_value;
+
+      /* Next change. */
+      SVN_ERR(svn_fs_path_change_get(&change, iterator));
+      if (!change)
+        break;
 
       /* Cheap pre-checks that don't require memory allocation etc. */
 
@@ -705,7 +719,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
         continue;
 
       /* Begin actual processing */
-      changed_path = apr_hash_this_key(hi);
+      changed_path = change->path.data;
       svn_pool_clear(iterpool);
 
       switch (change->change_kind)
@@ -863,6 +877,8 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
     }
 
   svn_pool_destroy(iterpool);
+  svn_pool_destroy(iterator_pool);
+
   return SVN_NO_ERROR;
 }
 
