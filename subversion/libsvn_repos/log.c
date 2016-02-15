@@ -53,13 +53,64 @@ typedef svn_error_t *(*svn_repos__path_change_receiver_t)(
   svn_log_changed_path2_t *change,
   apr_pool_t *scratch_pool);
 
+/* To become public API. */
+typedef struct svn_repos__log_entry_t
+{
+  /** The revision of the commit. */
+  svn_revnum_t revision;
+
+  /** The hash of requested revision properties, which may be NULL if it
+   * would contain no revprops.  Maps (const char *) property name to
+   * (svn_string_t *) property value. */
+  apr_hash_t *revprops;
+
+  /**
+   * Whether or not this message has children.
+   *
+   * When a log operation requests additional merge information, extra log
+   * entries may be returned as a result of this entry.  The new entries, are
+   * considered children of the original entry, and will follow it.  When
+   * the HAS_CHILDREN flag is set, the receiver should increment its stack
+   * depth, and wait until an entry is provided with SVN_INVALID_REVNUM which
+   * indicates the end of the children.
+   *
+   * For log operations which do not request additional merge information, the
+   * HAS_CHILDREN flag is always FALSE.
+   *
+   * For more information see:
+   * https://svn.apache.org/repos/asf/subversion/trunk/notes/merge-tracking/design.html#commutative-reporting
+   */
+  svn_boolean_t has_children;
+
+  /**
+   * Whether @a revision should be interpreted as non-inheritable in the
+   * same sense of #svn_merge_range_t.
+   *
+   * Currently always FALSE.
+   */
+  svn_boolean_t non_inheritable;
+
+  /**
+   * Whether @a revision is a merged revision resulting from a reverse merge.
+   */
+  svn_boolean_t subtractive_merge;
+
+  /* NOTE: Add new fields at the end to preserve binary compatibility. */
+} svn_repos__log_entry_t;
+
+/* To become public API. */
+typedef svn_error_t *(*svn_repos__log_entry_receiver_t)(
+  void *baton,
+  svn_repos__log_entry_t *log_entry,
+  apr_pool_t *scratch_pool);
+
 /* This is a mere convenience struct such that we don't need to pass that
    many parameters around individually. */
 typedef struct log_callbacks_t
 {
   svn_repos__path_change_receiver_t path_change_receiver;
   void *path_change_receiver_baton;
-  svn_log_entry_receiver_t revision_receiver;
+  svn_repos__log_entry_receiver_t revision_receiver;
   void *revision_receiver_baton;
   svn_repos_authz_func_t authz_read_func;
   void *authz_read_baton;
@@ -1070,7 +1121,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
 
 /* Fill LOG_ENTRY with history information in FS at REV. */
 static svn_error_t *
-fill_log_entry(svn_log_entry_t *log_entry,
+fill_log_entry(svn_repos__log_entry_t *log_entry,
                svn_revnum_t rev,
                svn_fs_t *fs,
                const apr_array_header_t *revprops,
@@ -1288,7 +1339,7 @@ send_log(svn_revnum_t rev,
          const log_callbacks_t *callbacks,
          apr_pool_t *pool)
 {
-  svn_log_entry_t *log_entry;
+  svn_repos__log_entry_t log_entry = { 0 };
   log_callbacks_t my_callbacks = *callbacks;
 
   interesting_merge_baton_t baton;
@@ -1317,15 +1368,9 @@ send_log(svn_revnum_t rev,
       baton.found_rev_of_interest = TRUE;
     }
 
-  log_entry = svn_log_entry_create(pool);
-  SVN_ERR(fill_log_entry(log_entry, rev, fs, revprops, callbacks, pool));
-  log_entry->has_children = has_children;
-  log_entry->subtractive_merge = subtractive_merge;
-
-  /* If we only got changed paths the sake of detecting redundant merged
-     revisions, then be sure we don't send that info to the receiver. */
-  if (!callbacks->path_change_receiver && handling_merged_revision)
-    log_entry->changed_paths = log_entry->changed_paths2 = NULL;
+  SVN_ERR(fill_log_entry(&log_entry, rev, fs, revprops, callbacks, pool));
+  log_entry.has_children = has_children;
+  log_entry.subtractive_merge = subtractive_merge;
 
   /* Send the entry to the receiver, unless it is a redundant merged
      revision. */
@@ -1354,7 +1399,7 @@ send_log(svn_revnum_t rev,
          by the receiver callback persists. */
       scratch_pool = svn_pool_create(pool);
       SVN_ERR(callbacks->revision_receiver(callbacks->revision_receiver_baton,
-                                           log_entry, scratch_pool));
+                                           &log_entry, scratch_pool));
       svn_pool_destroy(scratch_pool);
     }
 
@@ -1758,7 +1803,7 @@ handle_merged_revisions(svn_revnum_t rev,
                         apr_pool_t *pool)
 {
   apr_array_header_t *combined_list = NULL;
-  svn_log_entry_t *empty_log_entry;
+  svn_repos__log_entry_t empty_log_entry = { 0 };
   apr_pool_t *iterpool;
   int i;
 
@@ -1796,10 +1841,9 @@ handle_merged_revisions(svn_revnum_t rev,
   svn_pool_destroy(iterpool);
 
   /* Send the empty revision.  */
-  empty_log_entry = svn_log_entry_create(pool);
-  empty_log_entry->revision = SVN_INVALID_REVNUM;
+  empty_log_entry.revision = SVN_INVALID_REVNUM;
   return (callbacks->revision_receiver)(callbacks->revision_receiver_baton,
-                                        empty_log_entry, pool);
+                                        &empty_log_entry, pool);
 }
 
 /* This is used by do_logs to differentiate between forward and
@@ -2297,7 +2341,7 @@ svn_repos__get_logs5(svn_repos_t *repos,
                      void *authz_read_baton,
                      svn_repos__path_change_receiver_t path_change_receiver,
                      void *path_change_receiver_baton,
-                     svn_log_entry_receiver_t revision_receiver,
+                     svn_repos__log_entry_receiver_t revision_receiver,
                      void *revision_receiver_baton,
                      apr_pool_t *scratch_pool)
 {
@@ -2500,17 +2544,23 @@ log4_path_change_receiver(void *baton,
  * to the user-provided log4-compatible callback. */
 static svn_error_t *
 log4_entry_receiver(void *baton,
-                    svn_log_entry_t *log_entry,
-                    apr_pool_t *pool)
+                    svn_repos__log_entry_t *log_entry,
+                    apr_pool_t *scratch_pool)
 {
   log_entry_receiver_baton_t *b = baton;
+  svn_log_entry_t *entry = svn_log_entry_create(scratch_pool);
 
-  /* Complete the LOG_ENTRY. */
-  log_entry->changed_paths = b->changes;
-  log_entry->changed_paths2 = b->changes;
+  /* Complete the ENTRY. */
+  entry->changed_paths = b->changes;
+  entry->revision = log_entry->revision;
+  entry->revprops = log_entry->revprops;
+  entry->has_children = log_entry->has_children;
+  entry->changed_paths2 = b->changes;
+  entry->non_inheritable = log_entry->non_inheritable;
+  entry->subtractive_merge = log_entry->subtractive_merge;
 
   /* Invoke the log4-compatible callback. */
-  SVN_ERR(b->inner(b->inner_baton, log_entry, pool));
+  SVN_ERR(b->inner(b->inner_baton, entry, scratch_pool));
 
   /* Release per-revision data. */
   svn_pool_clear(b->changes_pool);
