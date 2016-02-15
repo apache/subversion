@@ -4959,7 +4959,11 @@ svn_client_resolved(const char *path,
  * @a path in order to be able to resolve tree-conflicts on @a path.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.9 API.
+ * Use svn_client_conflict_text_resolve() , svn_client_conflict_prop_resolve(),
+ * and svn_client_conflict_tree_resolve() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_resolve(const char *path,
                    svn_depth_t depth,
