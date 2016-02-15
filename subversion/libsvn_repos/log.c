@@ -47,10 +47,12 @@
 
 
 /* To become public API. */
+typedef svn_fs_path_change3_t svn_repos__path_change_t;
+
+/* To become public API. */
 typedef svn_error_t *(*svn_repos__path_change_receiver_t)(
   void *baton,
-  const char *path,
-  svn_log_changed_path2_t *change,
+  svn_repos__path_change_t *change,
   apr_pool_t *scratch_pool);
 
 /* To become public API. */
@@ -258,8 +260,8 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
                const log_callbacks_t *callbacks,
                apr_pool_t *scratch_pool)
 {
-  apr_hash_t *changes;
-  apr_hash_index_t *hi;
+  svn_fs_path_change_iterator_t *iterator;
+  svn_fs_path_change3_t *change;
   apr_pool_t *iterpool;
   svn_boolean_t found_readable = FALSE;
   svn_boolean_t found_unreadable = FALSE;
@@ -267,9 +269,10 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
   /* If we create the CHANGES hash ourselves, we can reuse it as the
    * result hash as it contains the exact same keys - but with _all_
    * values being replaced by structs of a different type. */
-  SVN_ERR(svn_fs_paths_changed2(&changes, root, scratch_pool));
+  SVN_ERR(svn_fs_paths_changed3(&iterator, root, scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_path_change_get(&change, iterator));
 
-  if (apr_hash_count(changes) == 0)
+  if (!change)
     {
       /* No paths changed in this revision?  Uh, sure, I guess the
          revision is readable, then.  */
@@ -278,16 +281,12 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
     }
 
   iterpool = svn_pool_create(scratch_pool);
-  for (hi = apr_hash_first(scratch_pool, changes); hi; hi = apr_hash_next(hi))
+  while (change)
     {
       /* NOTE:  Much of this loop is going to look quite similar to
          svn_repos_check_revision_access(), but we have to do more things
          here, so we'll live with the duplication. */
-      const char *path = apr_hash_this_key(hi);
-      svn_fs_path_change2_t *change = apr_hash_this_val(hi);
-      char action;
-      svn_log_changed_path2_t *item;
-
+      const char *path = change->path.data;
       svn_pool_clear(iterpool);
 
       /* Skip path if unreadable. */
@@ -300,6 +299,7 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
           if (! readable)
             {
               found_unreadable = TRUE;
+              SVN_ERR(svn_fs_path_change_get(&change, iterator));
               continue;
             }
         }
@@ -307,41 +307,9 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
       /* At least one changed-path was readable. */
       found_readable = TRUE;
 
-      switch (change->change_kind)
-        {
-        case svn_fs_path_change_reset:
-          continue;
-
-        case svn_fs_path_change_add:
-          action = 'A';
-          break;
-
-        case svn_fs_path_change_replace:
-          action = 'R';
-          break;
-
-        case svn_fs_path_change_delete:
-          action = 'D';
-          break;
-
-        case svn_fs_path_change_modify:
-        default:
-          action = 'M';
-          break;
-        }
-
-      item = svn_log_changed_path2_create(iterpool);
-      item->action = action;
-      item->node_kind = change->node_kind;
-      item->copyfrom_rev = SVN_INVALID_REVNUM;
-      item->text_modified = change->text_mod ? svn_tristate_true
-                                             : svn_tristate_false;
-      item->props_modified = change->prop_mod ? svn_tristate_true
-                                              : svn_tristate_false;
-
       /* Pre-1.6 revision files don't store the change path kind, so fetch
          it manually. */
-      if (item->node_kind == svn_node_unknown)
+      if (change->node_kind == svn_node_unknown)
         {
           svn_fs_root_t *check_root = root;
           const char *check_path = path;
@@ -373,12 +341,12 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
               check_path = svn_fspath__join(parent_path, name, iterpool);
             }
 
-          SVN_ERR(svn_fs_check_path(&item->node_kind, check_root, check_path,
+          SVN_ERR(svn_fs_check_path(&change->node_kind, check_root, check_path,
                                     iterpool));
         }
 
-
-      if ((action == 'A') || (action == 'R'))
+      if (   (change->change_kind == svn_fs_path_change_add)
+          || (change->change_kind == svn_fs_path_change_replace))
         {
           const char *copyfrom_path = change->copyfrom_path;
           svn_revnum_t copyfrom_rev = change->copyfrom_rev;
@@ -387,11 +355,8 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
              we will follow the DAG from ROOT to PATH and that requires
              actually reading the directories along the way. */
           if (!change->copyfrom_known)
-            {
-              SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
-                                        root, path, iterpool));
-              copyfrom_path = apr_pstrdup(scratch_pool, copyfrom_path);
-            }
+            SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+                                       root, path, iterpool));
 
           if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
             {
@@ -414,8 +379,8 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
 
               if (readable)
                 {
-                  item->copyfrom_path = copyfrom_path;
-                  item->copyfrom_rev = copyfrom_rev;
+                  change->copyfrom_path = copyfrom_path;
+                  change->copyfrom_rev = copyfrom_rev;
                 }
             }
         }
@@ -423,8 +388,11 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
       if (callbacks->path_change_receiver)
         SVN_ERR(callbacks->path_change_receiver(
                                      callbacks->path_change_receiver_baton,
-                                     path, item,
+                                     change,
                                      iterpool));
+
+      /* Next changed path. */
+      SVN_ERR(svn_fs_path_change_get(&change, iterator));
     }
 
   svn_pool_destroy(iterpool);
@@ -1259,15 +1227,14 @@ typedef struct interesting_merge_baton_t
  */
 static svn_error_t *
 interesting_merge(void *baton,
-                  const char *path,
-                  svn_log_changed_path2_t *change,
+                  svn_fs_path_change3_t *change,
                   apr_pool_t *scratch_pool)
 {
   interesting_merge_baton_t *b = baton;
   apr_hash_index_t *hi;
 
   if (b->inner)
-    SVN_ERR(b->inner(b->inner_baton, path, change, scratch_pool));
+    SVN_ERR(b->inner(b->inner_baton, change, scratch_pool));
 
   if (b->found_rev_of_interest)
     return SVN_NO_ERROR;
@@ -1282,7 +1249,7 @@ interesting_merge(void *baton,
 
       /* Check whether CHANGED_PATH at revision REV is a child of
           a (path, revision) tuple in LOG_TARGET_HISTORY_AS_MERGEINFO. */
-      if (svn_fspath__skip_ancestor(mergeinfo_path, path))
+      if (svn_fspath__skip_ancestor(mergeinfo_path, change->path.data))
         {
           int i;
 
@@ -2510,23 +2477,45 @@ typedef struct log_entry_receiver_baton_t
   void *inner_baton;
 } log_entry_receiver_baton_t;
 
+/* Return the action character (see svn_log_changed_path2_t) for KIND.
+ * Returns 0 for invalid KINDs. */
+static char
+path_change_kind_to_char(svn_fs_path_change_kind_t kind)
+{
+  const char symbol[] = "MADR";
+
+  if (kind < svn_fs_path_change_modify || kind > svn_fs_path_change_replace)
+    return 0;
+
+  return symbol[kind];
+}
+
 /* Implement svn_repos__path_change_receiver_t.
- * Copy (path, change) to the CHANGES list in *BATON. */
+ * Convert CHANGE and add it to the CHANGES list in *BATON. */
 static svn_error_t *
 log4_path_change_receiver(void *baton,
-                          const char *path,
-                          svn_log_changed_path2_t *change,
+                          svn_repos__path_change_t *change,
                           apr_pool_t *scratch_pool)
 {
   log_entry_receiver_baton_t *b = baton;
   svn_log_changed_path2_t *change_copy;
+  const char *path = apr_pstrmemdup(b->changes_pool, change->path.data,
+                                    change->path.len);
 
   /* Create a deep copy of the temporary CHANGE struct. */
   change_copy = svn_log_changed_path2_create(b->changes_pool);
-  *change_copy = *change;
+  change_copy->action = path_change_kind_to_char(change->change_kind);
+
   if (change->copyfrom_path)
     change_copy->copyfrom_path = apr_pstrdup(b->changes_pool,
                                              change->copyfrom_path);
+
+  change_copy->copyfrom_rev = change->copyfrom_rev;
+  change_copy->node_kind = change->node_kind;
+  change_copy->text_modified = change->text_mod ? svn_tristate_true
+                                                : svn_tristate_false;
+  change_copy->props_modified = change->prop_mod ? svn_tristate_true
+                                                 : svn_tristate_false;
 
   /* Auto-create the CHANGES container (happens for each first change
    * in any revison. */
@@ -2534,7 +2523,7 @@ log4_path_change_receiver(void *baton,
     b->changes = svn_hash__make(b->changes_pool);
 
   /* Add change to per-revision collection. */
-  svn_hash_sets(b->changes, apr_pstrdup(b->changes_pool, path), change_copy);
+  apr_hash_set(b->changes, path, change->path.len, change_copy);
 
   return SVN_NO_ERROR;
 }
