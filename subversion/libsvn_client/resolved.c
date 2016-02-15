@@ -674,49 +674,6 @@ svn_client_conflict_option_set_merged_propval(
   option->type_data.prop.merged_propval = merged_propval;
 }
 
-/* 
- * Resolve the conflict at LOCAL_ABSPATH. Currently only supports
- * an OPTION_ID which can be mapped to svn_wc_conflict_choice_t and
- * maps a single option_id to text, prop, and/or tree conflicts.
- */
-static svn_error_t *
-resolve_conflict(svn_client_conflict_option_id_t option_id,
-                 const char *local_abspath,
-                 svn_boolean_t resolve_text,
-                 const char * resolve_prop,
-                 svn_boolean_t resolve_tree,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *scratch_pool)
-{
-  svn_wc_conflict_choice_t conflict_choice;
-  const char *lock_abspath;
-  svn_error_t *err;
-
-  conflict_choice =
-    svn_client_conflict_option_id_to_wc_conflict_choice(option_id);
-  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
-                                                 local_abspath,
-                                                 scratch_pool, scratch_pool));
-  err = svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
-                                  svn_depth_empty,
-                                  resolve_text, resolve_prop, resolve_tree,
-                                  conflict_choice,
-                                  NULL, NULL, /* legacy conflict_func/baton */
-                                  ctx->cancel_func,
-                                  ctx->cancel_baton,
-                                  ctx->notify_func2,
-                                  ctx->notify_baton2,
-                                  scratch_pool);
-  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
-                                                                 lock_abspath,
-                                                                 scratch_pool));
-  svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
-
-  SVN_ERR(err);
-
-  return SVN_NO_ERROR;
-}
-
 /* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
 resolve_text_conflict(svn_client_conflict_option_t *option,
@@ -725,11 +682,33 @@ resolve_text_conflict(svn_client_conflict_option_t *option,
 {
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
+  const char *lock_abspath;
+  svn_wc_conflict_choice_t conflict_choice;
+  svn_client_ctx_t *ctx = conflict->ctx;
+  svn_error_t *err;
 
   option_id = svn_client_conflict_option_get_id(option);
+  conflict_choice =
+    svn_client_conflict_option_id_to_wc_conflict_choice(option_id);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
-  SVN_ERR(resolve_conflict(option_id, local_abspath, TRUE, NULL, FALSE,
-                           conflict->ctx, scratch_pool));
+
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
+                                                 local_abspath,
+                                                 scratch_pool, scratch_pool));
+  err = svn_wc__conflict_text_mark_resolved(conflict->ctx->wc_ctx,
+                                            local_abspath,
+                                            conflict_choice,
+                                            conflict->ctx->cancel_func,
+                                            conflict->ctx->cancel_baton,
+                                            conflict->ctx->notify_func2,
+                                            conflict->ctx->notify_baton2,
+                                            scratch_pool);
+  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
+                                                                 lock_abspath,
+                                                                 scratch_pool));
+  svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
+  SVN_ERR(err);
+
   conflict->resolution_text = option_id;
 
   return SVN_NO_ERROR;
@@ -742,14 +721,31 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
                       apr_pool_t *scratch_pool)
 {
   svn_client_conflict_option_id_t option_id;
+  svn_wc_conflict_choice_t conflict_choice;
   const char *local_abspath;
+  const char *lock_abspath;
   const char *propname = option->type_data.prop.propname;
+  svn_client_ctx_t *ctx = conflict->ctx;
+  svn_error_t *err;
 
   option_id = svn_client_conflict_option_get_id(option);
+  conflict_choice =
+    svn_client_conflict_option_id_to_wc_conflict_choice(option_id);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
-  SVN_ERR(resolve_conflict(option_id, local_abspath,
-                           FALSE, propname, FALSE,
-                           conflict->ctx, scratch_pool));
+
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
+                                                 local_abspath,
+                                                 scratch_pool, scratch_pool));
+  err = svn_wc__conflict_prop_mark_resolved(ctx->wc_ctx, local_abspath,
+                                            propname, conflict_choice,
+                                            conflict->ctx->notify_func2,
+                                            conflict->ctx->notify_baton2,
+                                            scratch_pool);
+  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
+                                                                 lock_abspath,
+                                                                 scratch_pool));
+  svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
+  SVN_ERR(err);
 
   if (propname[0] == '\0')
     {
@@ -787,19 +783,43 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
 /* Implements conflict_option_resolve_func_t. */
+static svn_error_t *
 resolve_tree_conflict(svn_client_conflict_option_t *option,
                       svn_client_conflict_t *conflict,
                       apr_pool_t *scratch_pool)
 {
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
+  const char *lock_abspath;
+  svn_wc_conflict_choice_t conflict_choice;
+  svn_client_ctx_t *ctx = conflict->ctx;
+  svn_error_t *err;
 
   option_id = svn_client_conflict_option_get_id(option);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
-  SVN_ERR(resolve_conflict(option_id, local_abspath, FALSE, NULL, TRUE,
-                           conflict->ctx, scratch_pool));
+  conflict_choice =
+    svn_client_conflict_option_id_to_wc_conflict_choice(option_id);
+
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
+                                                 local_abspath,
+                                                 scratch_pool, scratch_pool));
+  err = svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
+                                  svn_depth_empty,
+                                  FALSE, FALSE, TRUE,
+                                  conflict_choice,
+                                  NULL, NULL, /* legacy conflict_func/baton */
+                                  ctx->cancel_func,
+                                  ctx->cancel_baton,
+                                  ctx->notify_func2,
+                                  ctx->notify_baton2,
+                                  scratch_pool);
+  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
+                                                                 lock_abspath,
+                                                                 scratch_pool));
+  svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
+  SVN_ERR(err);
+
   conflict->resolution_tree = option_id;
 
   return SVN_NO_ERROR;

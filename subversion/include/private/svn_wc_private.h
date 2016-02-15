@@ -1748,6 +1748,39 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
                           void *notify_baton,
                           apr_pool_t *scratch_pool);
 
+/** 
+ * Resolve the text conflict at LOCAL_ABSPATH as per CHOICE, and then
+ * mark the conflict resolved.
+ * The working copy must already be locked for resolving, e.g. by calling
+ * svn_wc__acquire_write_lock_for_resolve() first.
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_wc__conflict_text_mark_resolved(svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    svn_wc_conflict_choice_t choice,
+                                    svn_cancel_func_t cancel_func,
+                                    void *cancel_baton,
+                                    svn_wc_notify_func2_t notify_func,
+                                    void *notify_baton,
+                                    apr_pool_t *scratch_pool);
+
+/** 
+ * Resolve the conflicted property PROPNAME at LOCAL_ABSPATH as per CHOICE,
+ * and then mark the conflict resolved.
+ * The working copy must already be locked for resolving, e.g. by calling
+ * svn_wc__acquire_write_lock_for_resolve() first.
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_wc__conflict_prop_mark_resolved(svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    const char *propname,
+                                    svn_wc_conflict_choice_t choice,
+                                    svn_wc_notify_func2_t notify_func,
+                                    void *notify_baton,
+                                    apr_pool_t *scratch_pool);
+
 /**
  * Move @a src_abspath to @a dst_abspath, by scheduling @a dst_abspath
  * for addition to the repository, remembering the history. Mark @a src_abspath
