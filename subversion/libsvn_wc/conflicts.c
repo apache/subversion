@@ -3309,3 +3309,80 @@ svn_wc_create_conflict_result(svn_wc_conflict_choice_t choice,
 
   return result;
 }
+
+svn_error_t *
+svn_wc__conflict_text_mark_resolved(svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    svn_wc_conflict_choice_t choice,
+                                    svn_cancel_func_t cancel_func,
+                                    void *cancel_baton,
+                                    svn_wc_notify_func2_t notify_func,
+                                    void *notify_baton,
+                                    apr_pool_t *scratch_pool)
+{
+  svn_skel_t *work_items;
+  svn_skel_t *conflict;
+  svn_boolean_t did_resolve;
+
+  SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, NULL,
+                                   wc_ctx->db, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+  if (!conflict)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(build_text_conflict_resolve_items(&work_items, &did_resolve,
+                                            wc_ctx->db, local_abspath,
+                                            conflict, choice,
+                                            NULL, FALSE, NULL,
+                                            cancel_func, cancel_baton,
+                                            scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__db_op_mark_resolved(wc_ctx->db, local_abspath,
+                                      TRUE, FALSE, FALSE,
+                                      work_items, scratch_pool));
+
+  SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath,
+                         cancel_func, cancel_baton,
+                         scratch_pool));
+
+  if (did_resolve && notify_func)
+    notify_func(notify_baton,
+                svn_wc_create_notify(local_abspath, svn_wc_notify_resolved,
+                                     scratch_pool),
+                scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__conflict_prop_mark_resolved(svn_wc_context_t *wc_ctx,
+                                    const char *local_abspath,
+                                    const char *propname,
+                                    svn_wc_conflict_choice_t choice,
+                                    svn_wc_notify_func2_t notify_func,
+                                    void *notify_baton,
+                                    apr_pool_t *scratch_pool)
+{
+  svn_boolean_t did_resolve;
+  svn_skel_t *conflicts;
+
+  SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, NULL,
+                                   wc_ctx->db, local_abspath,
+                                   scratch_pool, scratch_pool));
+
+  if (!conflicts)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(resolve_prop_conflict_on_node(&did_resolve, wc_ctx->db,
+                                        local_abspath, conflicts,
+                                        propname, choice, NULL, NULL,
+                                        NULL, NULL, scratch_pool));
+
+  if (did_resolve && notify_func)
+    notify_func(notify_baton,
+                svn_wc_create_notify(local_abspath, svn_wc_notify_resolved,
+                                     scratch_pool),
+                scratch_pool);
+  return SVN_NO_ERROR;
+}
