@@ -177,13 +177,10 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
 }
 
 
-/* Store as keys in CHANGED the paths of all node in ROOT that show a
- * significant change.  "Significant" means that the text or
- * properties of the node were changed, or that the node was added or
- * deleted.
- *
- * The CHANGED hash set and its keys and values are allocated in POOL;
- * keys are const char * paths and values are svn_log_changed_path_t.
+/* Find all significant changes under ROOT and, if not NULL, report them
+ * to the CALLBACKS->PATH_CHANGE_RECEIVER.  "Significant" means that the
+ * text or properties of the node were changed, or that the node was added
+ * or deleted.
  *
  * If optional CALLBACKS->AUTHZ_READ_FUNC is non-NULL, then use it (with
  * CALLBACKS->AUTHZ_READ_BATON and FS) to check whether each changed-path
@@ -205,11 +202,10 @@ svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
  */
 static svn_error_t *
 detect_changed(svn_repos_revision_access_level_t *access_level,
-               apr_hash_t **changed,
                svn_fs_root_t *root,
                svn_fs_t *fs,
                const log_callbacks_t *callbacks,
-               apr_pool_t *pool)
+               apr_pool_t *scratch_pool)
 {
   apr_hash_t *changes;
   apr_hash_index_t *hi;
@@ -220,14 +216,7 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
   /* If we create the CHANGES hash ourselves, we can reuse it as the
    * result hash as it contains the exact same keys - but with _all_
    * values being replaced by structs of a different type. */
-  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
-
-  /* If we are going to filter the results, we won't use the exact
-    * same keys but put them into a new hash. */
-  if (callbacks->authz_read_func)
-    *changed = svn_hash__make(pool);
-  else
-    *changed = changes;
+  SVN_ERR(svn_fs_paths_changed2(&changes, root, scratch_pool));
 
   if (apr_hash_count(changes) == 0)
     {
@@ -237,14 +226,13 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
       return SVN_NO_ERROR;
     }
 
-  iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+  iterpool = svn_pool_create(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, changes); hi; hi = apr_hash_next(hi))
     {
       /* NOTE:  Much of this loop is going to look quite similar to
          svn_repos_check_revision_access(), but we have to do more things
          here, so we'll live with the duplication. */
       const char *path = apr_hash_this_key(hi);
-      apr_ssize_t path_len = apr_hash_this_key_len(hi);
       svn_fs_path_change2_t *change = apr_hash_this_val(hi);
       char action;
       svn_log_changed_path2_t *item;
@@ -291,7 +279,7 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
           break;
         }
 
-      item = svn_log_changed_path2_create(pool);
+      item = svn_log_changed_path2_create(iterpool);
       item->action = action;
       item->node_kind = change->node_kind;
       item->copyfrom_rev = SVN_INVALID_REVNUM;
@@ -327,9 +315,10 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
               SVN_ERR(svn_fs_history_prev2(&history, history, TRUE, iterpool,
                                            iterpool));
 
-              SVN_ERR(svn_fs_history_location(&parent_path, &prev_rev, history,
-                                              iterpool));
-              SVN_ERR(svn_fs_revision_root(&check_root, fs, prev_rev, iterpool));
+              SVN_ERR(svn_fs_history_location(&parent_path, &prev_rev,
+                                              history, iterpool));
+              SVN_ERR(svn_fs_revision_root(&check_root, fs, prev_rev,
+                                           iterpool));
               check_path = svn_fspath__join(parent_path, name, iterpool);
             }
 
@@ -350,7 +339,7 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
             {
               SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
                                         root, path, iterpool));
-              copyfrom_path = apr_pstrdup(pool, copyfrom_path);
+              copyfrom_path = apr_pstrdup(scratch_pool, copyfrom_path);
             }
 
           if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
@@ -379,8 +368,6 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
                 }
             }
         }
-
-      apr_hash_set(*changed, path, path_len, item);
 
       if (callbacks->path_change_receiver)
         SVN_ERR(callbacks->path_change_receiver(
@@ -1090,7 +1077,7 @@ fill_log_entry(svn_log_entry_t *log_entry,
                const log_callbacks_t *callbacks,
                apr_pool_t *pool)
 {
-  apr_hash_t *r_props, *changed_paths = NULL;
+  apr_hash_t *r_props;
   svn_boolean_t get_revprops = TRUE, censor_revprops = FALSE;
   svn_boolean_t want_revprops = !revprops || revprops->nelts;
 
@@ -1103,13 +1090,11 @@ fill_log_entry(svn_log_entry_t *log_entry,
       svn_repos_revision_access_level_t access_level;
 
       SVN_ERR(svn_fs_revision_root(&newroot, fs, rev, pool));
-      SVN_ERR(detect_changed(&access_level, &changed_paths, newroot, fs,
-                             callbacks, pool));
+      SVN_ERR(detect_changed(&access_level, newroot, fs, callbacks, pool));
 
       if (access_level == svn_repos_revision_access_none)
         {
           /* All changed-paths are unreadable, so clear all fields. */
-          changed_paths = NULL;
           get_revprops = FALSE;
         }
       else if (access_level == svn_repos_revision_access_partial)
@@ -1119,11 +1104,6 @@ fill_log_entry(svn_log_entry_t *log_entry,
              missing from the hash.) */
           censor_revprops = TRUE;
         }
-
-      /* It may be the case that an authz func was passed in, but
-         the user still doesn't want to see any changed-paths. */
-      if (! callbacks->path_change_receiver)
-        changed_paths = NULL;
     }
 
   if (get_revprops && want_revprops)
@@ -1200,8 +1180,6 @@ fill_log_entry(svn_log_entry_t *log_entry,
         }
     }
 
-  log_entry->changed_paths = changed_paths;
-  log_entry->changed_paths2 = changed_paths;
   log_entry->revision = rev;
 
   return SVN_NO_ERROR;
@@ -2469,12 +2447,75 @@ svn_repos__get_logs5(svn_repos_t *repos,
                  revprops, descending_order, &callbacks, scratch_pool);
 }
 
+/* Baton type to be used with both log4 compatibility callbacks.
+ * For each revision, we collect the CHANGES and then pass them
+ * on to INNER. */
+typedef struct log_entry_receiver_baton_t
+{
+  /* Pool to use to allocate CHANGES and its entries.
+   * Gets cleared after each revision. */
+  apr_pool_t *changes_pool;
+
+  /* Path changes reported so far for the current revision.
+   * Will be NULL before the first item gets added and will be reset
+   * to NULL after the INNER callback has returned. */
+  apr_hash_t *changes;
+
+  /* User-provided callback to send the log entry to. */
+  svn_log_entry_receiver_t inner;
+  void *inner_baton;
+} log_entry_receiver_baton_t;
+
+/* Implement svn_repos__path_change_receiver_t.
+ * Copy (path, change) to the CHANGES list in *BATON. */
 static svn_error_t *
 log4_path_change_receiver(void *baton,
                           const char *path,
                           svn_log_changed_path2_t *change,
                           apr_pool_t *scratch_pool)
 {
+  log_entry_receiver_baton_t *b = baton;
+  svn_log_changed_path2_t *change_copy;
+
+  /* Create a deep copy of the temporary CHANGE struct. */
+  change_copy = svn_log_changed_path2_create(b->changes_pool);
+  *change_copy = *change;
+  if (change->copyfrom_path)
+    change_copy->copyfrom_path = apr_pstrdup(b->changes_pool,
+                                             change->copyfrom_path);
+
+  /* Auto-create the CHANGES container (happens for each first change
+   * in any revison. */
+  if (b->changes == NULL)
+    b->changes = svn_hash__make(b->changes_pool);
+
+  /* Add change to per-revision collection. */
+  svn_hash_sets(b->changes, apr_pstrdup(b->changes_pool, path), change_copy);
+
+  return SVN_NO_ERROR;
+}
+
+/* Implement svn_log_entry_receiver_t.
+ * Combine the data gathered in BATON for this revision and send it
+ * to the user-provided log4-compatible callback. */
+static svn_error_t *
+log4_entry_receiver(void *baton,
+                    svn_log_entry_t *log_entry,
+                    apr_pool_t *pool)
+{
+  log_entry_receiver_baton_t *b = baton;
+
+  /* Complete the LOG_ENTRY. */
+  log_entry->changed_paths = b->changes;
+  log_entry->changed_paths2 = b->changes;
+
+  /* Invoke the log4-compatible callback. */
+  SVN_ERR(b->inner(b->inner_baton, log_entry, pool));
+
+  /* Release per-revision data. */
+  svn_pool_clear(b->changes_pool);
+  b->changes = NULL;
+
   return SVN_NO_ERROR;
 }
 
@@ -2494,6 +2535,14 @@ svn_repos_get_logs4(svn_repos_t *repos,
                     void *receiver_baton,
                     apr_pool_t *pool)
 {
+  apr_pool_t *changes_pool = svn_pool_create(pool);
+
+  log_entry_receiver_baton_t baton;
+  baton.changes_pool = changes_pool;
+  baton.changes = NULL;
+  baton.inner = receiver;
+  baton.inner_baton = receiver_baton;
+
   SVN_ERR(svn_repos__get_logs5(repos, paths, start, end, limit,
                                strict_node_history,
                                include_merged_revisions,
@@ -2502,9 +2551,10 @@ svn_repos_get_logs4(svn_repos_t *repos,
                                discover_changed_paths
                                  ? log4_path_change_receiver
                                  : NULL,
-                               NULL,
-                               receiver, receiver_baton,
+                               &baton,
+                               log4_entry_receiver, &baton,
                                pool));
 
+  svn_pool_destroy(changes_pool);
   return SVN_NO_ERROR;
 }
