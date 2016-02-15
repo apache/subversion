@@ -5054,7 +5054,11 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * Temporary allocations will be performed in @a scratch_pool.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.9 API.
+ * Use svn_client_conflict_text_resolve(), svn_client_conflict_prop_resolve(),
+ * and svn_client_conflict_tree_resolve() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
                           const char *local_abspath,
