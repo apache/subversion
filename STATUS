@@ -175,8 +175,7 @@ Candidate changes:
      Fixes a non-canonical assertion for a hard-coded path and canonicalizes
      user input to avoid a similar assertion
    Votes:
-     +1: jamessan
-     +1: danielsh (without r1729519)
+     +1: jamessan, danielsh
 
 Veto-blocked changes:
 =====================
