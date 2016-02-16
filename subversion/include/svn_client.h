@@ -4401,7 +4401,7 @@ typedef enum svn_client_conflict_option_id_t {
   svn_client_conflict_option_update_move_destination,
 
   /* Options for local delete/replace vs incoming edit on update. */
-  svn_client_conflict_option_update_any_moved_away_children,
+  svn_client_conflict_option_update_any_moved_away_children
 
 } svn_client_conflict_option_id_t;
 
