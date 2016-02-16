@@ -4717,6 +4717,13 @@ svn_client_conflict_tree_get_victim_node_kind(
 /**
  * Resolve a tree @a conflict using resolution option @a option.
  *
+ * May raise an error in case the tree conflict cannot be resolved yet, for
+ * instance @c SVN_ERR_WC_OBSTRUCTED_UPDATE or @c SVN_ERR_WC_FOUND_CONFLICT.
+ * This may happen when other tree conflicts, or unversioned obstructions,
+ * block the resolution of this tree conflict. In such a case the other
+ * conflicts should be resolved first and resolution of this conflict should
+ * be attempted again later.
+ *
  * @since New in 1.10.
  */
 svn_error_t *

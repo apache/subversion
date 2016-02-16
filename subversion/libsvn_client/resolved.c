@@ -175,7 +175,11 @@ struct svn_client_conflict_t
   const svn_wc_conflict_description2_t *legacy_tree_conflict;
 };
 
-/* Resolves conflict to OPTION and sets CONFLICT->RESOLUTION accordingly. */
+/* Resolves conflict to OPTION and sets CONFLICT->RESOLUTION accordingly.
+ *
+ * May raise an error in case the conflict could not be resolved. A common
+ * case would be a tree conflict the resolution of which depends on other
+ * tree conflicts to be resolved first. */
 typedef svn_error_t *(*conflict_option_resolve_func_t)(
   svn_client_conflict_option_t *option,
   svn_client_conflict_t *conflict,
@@ -793,6 +797,7 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
   const char *local_abspath;
   const char *lock_abspath;
   svn_wc_conflict_reason_t local_change;
+  svn_wc_conflict_action_t incoming_change;
   svn_client_ctx_t *ctx = conflict->ctx;
   svn_wc_operation_t operation;
   svn_error_t *err;
@@ -806,19 +811,30 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
                                                  local_abspath,
                                                  scratch_pool, scratch_pool));
 
-  if (option_id == svn_client_conflict_option_merged_text &&
+  if ((option_id == svn_client_conflict_option_merged_text ||
+       (option_id == svn_client_conflict_option_update_any_moved_away_children
+        && incoming_change == svn_wc_conflict_action_edit)) &&
       (operation == svn_wc_operation_update ||
        operation == svn_wc_operation_switch) &&
       (local_change == svn_wc_conflict_reason_deleted ||
        local_change == svn_wc_conflict_reason_replaced))
     {
-      err = svn_wc__conflict_tree_update_break_moved_away(ctx->wc_ctx,
-                                                          local_abspath,
-                                                          ctx->cancel_func,
-                                                          ctx->cancel_baton,
-                                                          ctx->notify_func2,
-                                                          ctx->notify_baton2,
-                                                          scratch_pool);
+      if (option_id == svn_client_conflict_option_merged_text)
+        err = svn_wc__conflict_tree_update_break_moved_away(ctx->wc_ctx,
+                                                            local_abspath,
+                                                            ctx->cancel_func,
+                                                            ctx->cancel_baton,
+                                                            ctx->notify_func2,
+                                                            ctx->notify_baton2,
+                                                            scratch_pool);
+      else
+        err = svn_wc__conflict_tree_update_raise_moved_away(ctx->wc_ctx,
+                                                            local_abspath,
+                                                            ctx->cancel_func,
+                                                            ctx->cancel_baton,
+                                                            ctx->notify_func2,
+                                                            ctx->notify_baton2,
+                                                            scratch_pool);
     }
   else
     {
