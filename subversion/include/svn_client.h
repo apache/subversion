@@ -4725,9 +4725,12 @@ svn_client_conflict_tree_resolve(svn_client_conflict_t *conflict,
                                  apr_pool_t *scratch_pool);
 
 /**
+ * Like svn_client_conflict_tree_resolve(), except that it identifies
+ * the desired resolution option by ID @a option_id.
+ *
  * If the provided @a option_id is the ID of an option which resolves
- * @a conflict, resolve the tree conflict using that option.
- * Else, return an error.
+ * @a conflict, try to resolve the tree conflict using that option.
+ * Else, return @c SVN_ERR_CLIENT_CONFLICT_OPTION_NOT_APPLICABLE.
  *
  * @since New in 1.10.
  */
@@ -4804,7 +4807,8 @@ svn_client_conflict_prop_resolve(svn_client_conflict_t *conflict,
 /**
  * If the provided @a option_id is the ID of an option which resolves
  * @a conflict, resolve the property conflict in property @a propname
- * using that option. Else, return an error.
+ * using that option.
+ * Else, return @c SVN_ERR_CLIENT_CONFLICT_OPTION_NOT_APPLICABLE.
  *
  * @since New in 1.10.
  */
@@ -4868,7 +4872,7 @@ svn_client_conflict_text_resolve(svn_client_conflict_t *conflict,
 /**
  * If the provided @a option_id is the ID of an option which resolves
  * @a conflict, resolve the text conflict using that option.
- * Else, return an error.
+ * Else, return @c SVN_ERR_CLIENT_CONFLICT_OPTION_NOT_APPLICABLE.
  *
  * @since New in 1.10.
  */
