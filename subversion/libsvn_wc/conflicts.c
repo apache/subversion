@@ -2723,7 +2723,7 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
               if (!new_conflicts || !tree_conflicted)
                 {
                   /* TC is marked resolved by calling
-                     svn_wc__db_resolve_delete_raise_moved_away */
+                     svn_wc__db_op_raise_moved_away */
                   *did_resolve = TRUE;
                   return SVN_NO_ERROR;
                 }
