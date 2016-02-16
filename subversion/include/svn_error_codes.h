@@ -1246,6 +1246,11 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 23,
              "The operation is forbidden by the server")
 
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_CONFLICT_OPTION_NOT_APPLICABLE,
+             SVN_ERR_CLIENT_CATEGORY_START + 24,
+             "The conflict resolution option is not applicable")
+
   /* misc errors */
 
   SVN_ERRDEF(SVN_ERR_BASE,
