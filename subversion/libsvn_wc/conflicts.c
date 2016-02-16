@@ -2693,8 +2693,9 @@ resolve_tree_conflict_on_node(svn_boolean_t *did_resolve,
             {
               svn_skel_t *new_conflicts;
 
-              /* Raise moved-away conflicts on any children moved out of
-               * this directory, and leave this directory as-is.
+              /* Raise local moved-away vs. incoming edit conflicts on
+               * any children moved out of this directory, and leave
+               * this directory as-is.
                *
                * The newly conflicted moved-away children will be updated
                * if they are resolved with 'mine_conflict' as well. */
