@@ -88,6 +88,35 @@ tree_conflict_collector(void *baton,
     }
 }
 
+/* 
+ * Record a tree conflict resolution failure due to error condition ERR
+ * in the RESOLVE_LATER hash table. If the hash table is not available
+ * (meaning the caller does not wish to retry resolution later), or if
+ * the error condition does not indicate circumstances where another
+ * existing tree conflict is blocking the resolution attempt, then
+ * return the error ERR itself.
+ */
+static svn_error_t *
+handle_tree_conflict_resolution_failure(const char *local_abspath,
+                                        svn_error_t *err,
+                                        apr_hash_t *resolve_later)
+{
+  const char *dup_abspath;
+
+  if (!resolve_later
+      || (err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE
+          && err->apr_err != SVN_ERR_WC_FOUND_CONFLICT))
+    return svn_error_trace(err); /* Give up. Do not retry resolution later. */
+
+  svn_error_clear(err);
+  dup_abspath = apr_pstrdup(apr_hash_pool_get(resolve_later),
+                            local_abspath);
+
+  svn_hash_sets(resolve_later, dup_abspath, dup_abspath);
+
+  return SVN_NO_ERROR; /* Caller may retry after resolving other conflicts. */
+}
+
 /* Implements svn_wc_status4_t to walk all conflicts to resolve.
  */
 static svn_error_t *
@@ -100,6 +129,7 @@ conflict_status_walker(void *baton,
   apr_pool_t *iterpool;
   svn_boolean_t resolved = FALSE;
   svn_client_conflict_t *conflict;
+  svn_error_t *err;
 
   if (!status->conflicted)
     return SVN_NO_ERROR;
@@ -108,14 +138,24 @@ conflict_status_walker(void *baton,
 
   SVN_ERR(svn_client_conflict_get(&conflict, local_abspath, cswb->ctx,
                                   iterpool, iterpool));
-  SVN_ERR(svn_cl__resolve_conflict(&resolved, cswb->accept_which,
-                                   cswb->quit, cswb->external_failed,
-                                   cswb->printed_summary,
-                                   conflict, cswb->editor_cmd,
-                                   cswb->config, cswb->path_prefix,
-                                   cswb->pb, cswb->conflict_stats,
-                                   cswb->option_id, cswb->ctx,
-                                   scratch_pool));
+  err = svn_cl__resolve_conflict(&resolved, cswb->accept_which,
+                                 cswb->quit, cswb->external_failed,
+                                 cswb->printed_summary,
+                                 conflict, cswb->editor_cmd,
+                                 cswb->config, cswb->path_prefix,
+                                 cswb->pb, cswb->conflict_stats,
+                                 cswb->option_id, cswb->ctx,
+                                 scratch_pool);
+  if (err)
+    {
+      if (svn_client_conflict_get_kind(conflict) == svn_wc_conflict_kind_tree)
+        SVN_ERR(handle_tree_conflict_resolution_failure(local_abspath, err,
+                                                        cswb->resolve_later));
+
+      else
+        return svn_error_trace(err);
+    }
+
   if (resolved)
     cswb->resolved_one = TRUE;
 
