@@ -155,19 +155,25 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1728308
    Pass on correct parameter in deprecated function.
    Justification:
      Correct behaviour for deprecated API.
    Votes:
-     +1: philip, jamessan
+     +1: philip, jamessan, rhuijben
 
  * r1728387
    Fix issue 4611, gpg-agent and passwords with a percent character.
    Justification:
      Some passwords don't work.
    Votes:
-     +1: philip, jamessan
+     +1: philip, jamessan, rhuijben
 
  * r1729060, r1729519
    svn-graph.pl: Canonicalize user-provided URI and hard-coded relpath
@@ -175,10 +181,4 @@ Candidate changes:
      Fixes a non-canonical assertion for a hard-coded path and canonicalizes
      user input to avoid a similar assertion
    Votes:
-     +1: jamessan, danielsh
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: jamessan, danielsh, rhuijben
