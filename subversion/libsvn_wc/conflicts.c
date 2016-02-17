@@ -3524,6 +3524,12 @@ svn_wc__conflict_tree_update_raise_moved_away(svn_wc_context_t *wc_ctx,
                              svn_token__to_word(reason_map, reason),
                              svn_dirent_local_style(local_abspath,
                                                      scratch_pool));
+  if (action != svn_wc_conflict_action_edit)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Unexpected conflict action '%s' on '%s'"),
+                             svn_token__to_word(action_map, action),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   /* Raise local moved-away vs. incoming edit conflicts on any children
    * moved out of this directory, and leave this directory as-is.
