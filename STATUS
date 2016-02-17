@@ -161,13 +161,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1728387
-   Fix issue 4611, gpg-agent and passwords with a percent character.
-   Justification:
-     Some passwords don't work.
-   Votes:
-     +1: philip, jamessan, rhuijben
-
  * r1729060, r1729519
    svn-graph.pl: Canonicalize user-provided URI and hard-coded relpath
    Justification:
