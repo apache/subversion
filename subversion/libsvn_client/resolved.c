@@ -806,6 +806,7 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
   operation = svn_client_conflict_get_operation(conflict);
   local_change = svn_client_conflict_get_local_change(conflict);
+  incoming_change = svn_client_conflict_get_incoming_change(conflict);
 
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
                                                  local_abspath,
