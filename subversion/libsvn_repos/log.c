@@ -656,7 +656,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
      narrow down our search. */
   SVN_ERR(svn_fs_revision_root(&root, fs, rev, scratch_pool));
   SVN_ERR(svn_fs_paths_changed3(&iterator, root, iterator_pool,
-                                scratch_pool));
+                                iterator_pool));
   SVN_ERR(svn_fs_path_change_get(&change, iterator));
 
   /* Look for copies and (potential) mergeinfo changes.
@@ -692,7 +692,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
   /* There is or may be some m/i change. Look closely now. */
   svn_pool_clear(iterator_pool);
   SVN_ERR(svn_fs_paths_changed3(&iterator, root, iterator_pool,
-                                scratch_pool));
+                                iterator_pool));
 
   /* Loop over changes, looking for anything that might carry an
      svn:mergeinfo change and is one of our paths of interest, or a
