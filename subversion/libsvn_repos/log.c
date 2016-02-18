@@ -266,9 +266,7 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
   svn_boolean_t found_readable = FALSE;
   svn_boolean_t found_unreadable = FALSE;
 
-  /* If we create the CHANGES hash ourselves, we can reuse it as the
-   * result hash as it contains the exact same keys - but with _all_
-   * values being replaced by structs of a different type. */
+  /* Retrieve the first change in the list. */
   SVN_ERR(svn_fs_paths_changed3(&iterator, root, scratch_pool, scratch_pool));
   SVN_ERR(svn_fs_path_change_get(&change, iterator));
 
