@@ -355,8 +355,11 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
              we will follow the DAG from ROOT to PATH and that requires
              actually reading the directories along the way. */
           if (!change->copyfrom_known)
-            SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
-                                       root, path, iterpool));
+            {
+              SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+                                        root, path, iterpool));
+              change->copyfrom_known = TRUE;
+            }
 
           if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
             {
