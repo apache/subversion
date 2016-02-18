@@ -46,73 +46,13 @@
 #include "private/svn_string_private.h"
 
 
-/* To become public API. */
-typedef svn_fs_path_change3_t svn_repos__path_change_t;
-
-/* To become public API. */
-typedef svn_error_t *(*svn_repos__path_change_receiver_t)(
-  void *baton,
-  svn_repos__path_change_t *change,
-  apr_pool_t *scratch_pool);
-
-/* To become public API. */
-typedef struct svn_repos__log_entry_t
-{
-  /** The revision of the commit. */
-  svn_revnum_t revision;
-
-  /** The hash of requested revision properties, which may be NULL if it
-   * would contain no revprops.  Maps (const char *) property name to
-   * (svn_string_t *) property value. */
-  apr_hash_t *revprops;
-
-  /**
-   * Whether or not this message has children.
-   *
-   * When a log operation requests additional merge information, extra log
-   * entries may be returned as a result of this entry.  The new entries, are
-   * considered children of the original entry, and will follow it.  When
-   * the HAS_CHILDREN flag is set, the receiver should increment its stack
-   * depth, and wait until an entry is provided with SVN_INVALID_REVNUM which
-   * indicates the end of the children.
-   *
-   * For log operations which do not request additional merge information, the
-   * HAS_CHILDREN flag is always FALSE.
-   *
-   * For more information see:
-   * https://svn.apache.org/repos/asf/subversion/trunk/notes/merge-tracking/design.html#commutative-reporting
-   */
-  svn_boolean_t has_children;
-
-  /**
-   * Whether @a revision should be interpreted as non-inheritable in the
-   * same sense of #svn_merge_range_t.
-   *
-   * Currently always FALSE.
-   */
-  svn_boolean_t non_inheritable;
-
-  /**
-   * Whether @a revision is a merged revision resulting from a reverse merge.
-   */
-  svn_boolean_t subtractive_merge;
-
-  /* NOTE: Add new fields at the end to preserve binary compatibility. */
-} svn_repos__log_entry_t;
-
-/* To become public API. */
-typedef svn_error_t *(*svn_repos__log_entry_receiver_t)(
-  void *baton,
-  svn_repos__log_entry_t *log_entry,
-  apr_pool_t *scratch_pool);
-
 /* This is a mere convenience struct such that we don't need to pass that
    many parameters around individually. */
 typedef struct log_callbacks_t
 {
-  svn_repos__path_change_receiver_t path_change_receiver;
+  svn_repos_path_change_receiver_t path_change_receiver;
   void *path_change_receiver_baton;
-  svn_repos__log_entry_receiver_t revision_receiver;
+  svn_repos_log_entry_receiver_t revision_receiver;
   void *revision_receiver_baton;
   svn_repos_authz_func_t authz_read_func;
   void *authz_read_baton;
@@ -1106,7 +1046,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
 
 /* Fill LOG_ENTRY with history information in FS at REV. */
 static svn_error_t *
-fill_log_entry(svn_repos__log_entry_t *log_entry,
+fill_log_entry(svn_repos_log_entry_t *log_entry,
                svn_revnum_t rev,
                svn_fs_t *fs,
                const apr_array_header_t *revprops,
@@ -1232,7 +1172,7 @@ typedef struct interesting_merge_baton_t
   svn_boolean_t found_rev_of_interest;
 
   /* We need to invoke this user-provided callback if not NULL. */
-  svn_repos__path_change_receiver_t inner;
+  svn_repos_path_change_receiver_t inner;
   void *inner_baton;
 } interesting_merge_baton_t;
 
@@ -1323,7 +1263,7 @@ send_log(svn_revnum_t rev,
          const log_callbacks_t *callbacks,
          apr_pool_t *pool)
 {
-  svn_repos__log_entry_t log_entry = { 0 };
+  svn_repos_log_entry_t log_entry = { 0 };
   log_callbacks_t my_callbacks = *callbacks;
 
   interesting_merge_baton_t baton;
@@ -1787,7 +1727,7 @@ handle_merged_revisions(svn_revnum_t rev,
                         apr_pool_t *pool)
 {
   apr_array_header_t *combined_list = NULL;
-  svn_repos__log_entry_t empty_log_entry = { 0 };
+  svn_repos_log_entry_t empty_log_entry = { 0 };
   apr_pool_t *iterpool;
   int i;
 
@@ -2312,22 +2252,22 @@ get_paths_history_as_mergeinfo(svn_mergeinfo_t *paths_history_mergeinfo,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-svn_repos__get_logs5(svn_repos_t *repos,
-                     const apr_array_header_t *paths,
-                     svn_revnum_t start,
-                     svn_revnum_t end,
-                     int limit,
-                     svn_boolean_t strict_node_history,
-                     svn_boolean_t include_merged_revisions,
-                     const apr_array_header_t *revprops,
-                     svn_repos_authz_func_t authz_read_func,
-                     void *authz_read_baton,
-                     svn_repos__path_change_receiver_t path_change_receiver,
-                     void *path_change_receiver_baton,
-                     svn_repos__log_entry_receiver_t revision_receiver,
-                     void *revision_receiver_baton,
-                     apr_pool_t *scratch_pool)
+svn_error_t *
+svn_repos_get_logs5(svn_repos_t *repos,
+                    const apr_array_header_t *paths,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    int limit,
+                    svn_boolean_t strict_node_history,
+                    svn_boolean_t include_merged_revisions,
+                    const apr_array_header_t *revprops,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_repos_path_change_receiver_t path_change_receiver,
+                    void *path_change_receiver_baton,
+                    svn_repos_log_entry_receiver_t revision_receiver,
+                    void *revision_receiver_baton,
+                    apr_pool_t *scratch_pool)
 {
   svn_revnum_t head = SVN_INVALID_REVNUM;
   svn_fs_t *fs = repos->fs;
@@ -2511,7 +2451,7 @@ path_change_kind_to_char(svn_fs_path_change_kind_t kind)
  * Convert CHANGE and add it to the CHANGES list in *BATON. */
 static svn_error_t *
 log4_path_change_receiver(void *baton,
-                          svn_repos__path_change_t *change,
+                          svn_repos_path_change_t *change,
                           apr_pool_t *scratch_pool)
 {
   log_entry_receiver_baton_t *b = baton;
@@ -2550,7 +2490,7 @@ log4_path_change_receiver(void *baton,
  * to the user-provided log4-compatible callback. */
 static svn_error_t *
 log4_entry_receiver(void *baton,
-                    svn_repos__log_entry_t *log_entry,
+                    svn_repos_log_entry_t *log_entry,
                     apr_pool_t *scratch_pool)
 {
   log_entry_receiver_baton_t *b = baton;
@@ -2599,17 +2539,17 @@ svn_repos_get_logs4(svn_repos_t *repos,
   baton.inner = receiver;
   baton.inner_baton = receiver_baton;
 
-  SVN_ERR(svn_repos__get_logs5(repos, paths, start, end, limit,
-                               strict_node_history,
-                               include_merged_revisions,
-                               revprops,
-                               authz_read_func, authz_read_baton,
-                               discover_changed_paths
-                                 ? log4_path_change_receiver
-                                 : NULL,
-                               &baton,
-                               log4_entry_receiver, &baton,
-                               pool));
+  SVN_ERR(svn_repos_get_logs5(repos, paths, start, end, limit,
+                              strict_node_history,
+                              include_merged_revisions,
+                              revprops,
+                              authz_read_func, authz_read_baton,
+                              discover_changed_paths
+                                ? log4_path_change_receiver
+                                : NULL,
+                              &baton,
+                              log4_entry_receiver, &baton,
+                              pool));
 
   svn_pool_destroy(changes_pool);
   return SVN_NO_ERROR;
