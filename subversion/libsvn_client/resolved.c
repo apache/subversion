@@ -816,7 +816,7 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
        operation == svn_wc_operation_switch) &&
       (local_change == svn_wc_conflict_reason_deleted ||
        local_change == svn_wc_conflict_reason_replaced) &&
-      option_id == svn_client_conflict_option_merged_text)
+      option_id == svn_client_conflict_option_accept_current_wc_state)
     {
       err = svn_wc__conflict_tree_update_break_moved_away(ctx->wc_ctx,
                                                           local_abspath,
@@ -861,7 +861,7 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
             local_change == svn_wc_conflict_reason_moved_away &&
            incoming_change == svn_wc_conflict_action_edit &&
            option_id ==
-             svn_client_conflict_option_merged_text)
+             svn_client_conflict_option_accept_current_wc_state)
     {
       /* We must break the move if the user accepts the current
        * working copy state instead of updating the move.
@@ -874,7 +874,7 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
                                                           ctx->notify_baton2,
                                                           scratch_pool);
     }
-  else if (option_id != svn_client_conflict_option_merged_text)
+  else if (option_id != svn_client_conflict_option_accept_current_wc_state)
     {
       err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                               _("Tree conflict on '%s' can only be resolved "
@@ -1190,7 +1190,7 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
 
   /* Add an option which marks the conflict resolved. */
   option = apr_pcalloc(result_pool, sizeof(*option));
-  option->id = svn_client_conflict_option_merged_text;
+  option->id = svn_client_conflict_option_accept_current_wc_state;
   option->description = _("accept current working copy state");
   option->conflict = conflict;
   option->do_resolve_func = resolve_tree_conflict;
@@ -1434,6 +1434,11 @@ svn_client_conflict_tree_resolve_by_id(
                 }
             }
         }
+    }
+  else if (option_id == svn_client_conflict_option_merged_text)
+    {
+      /* Another backwards compatibility hack for 'choose merged'. */
+      option_id = svn_client_conflict_option_accept_current_wc_state;
     }
   
   SVN_ERR(svn_client_conflict_tree_get_resolution_options(

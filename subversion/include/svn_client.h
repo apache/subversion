@@ -4397,6 +4397,9 @@ typedef enum svn_client_conflict_option_id_t {
 
   /* Tree conflict resolution options start here. */
 
+  /* Accept current working copy state. */
+  svn_client_conflict_option_accept_current_wc_state,
+
   /* Options for local move vs incoming edit on update. */
   svn_client_conflict_option_update_move_destination,
 
