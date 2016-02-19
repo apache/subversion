@@ -897,7 +897,7 @@ extract_mergeinfo_paths(void *baton, const void *key, apr_ssize_t klen,
   if (xb->normalize)
     {
       const char *normkey;
-      SVN_ERR(svn_utf__normalize(&normkey, key, klen, &xb->buffer));
+      SVN_ERR(svn_utf__normalize(&normkey, key, klen, FALSE, &xb->buffer));
       svn_hash_sets(xb->result,
                     apr_pstrdup(xb->buffer.pool, normkey),
                     normalized_unique);
@@ -951,7 +951,7 @@ verify_mergeinfo_normalization(void *baton, const void *key, apr_ssize_t klen,
   const char *normpath;
   const char *found;
 
-  SVN_ERR(svn_utf__normalize(&normpath, path, klen, &vb->buffer));
+  SVN_ERR(svn_utf__normalize(&normpath, path, klen, FALSE, &vb->buffer));
   found = svn_hash_gets(vb->normalized_paths, normpath);
   if (!found)
       svn_hash_sets(vb->normalized_paths,
@@ -2233,7 +2233,7 @@ check_name_collision(void *baton, const void *key, apr_ssize_t klen,
   const char *name;
   const char *found;
 
-  SVN_ERR(svn_utf__normalize(&name, key, klen, &cb->buffer));
+  SVN_ERR(svn_utf__normalize(&name, key, klen, FALSE, &cb->buffer));
 
   found = svn_hash_gets(cb->normalized, name);
   if (!found)
@@ -2252,7 +2252,7 @@ check_name_collision(void *baton, const void *key, apr_ssize_t klen,
 
       SVN_ERR(svn_utf__normalize(
                   &normpath, svn_relpath_join(db->path, name, iterpool),
-                  SVN_UTF__UNKNOWN_LENGTH, &cb->buffer));
+                  SVN_UTF__UNKNOWN_LENGTH, FALSE, &cb->buffer));
       notify_warning(iterpool, eb->notify_func, eb->notify_baton,
                      svn_repos_notify_warning_name_collision,
                      _("Duplicate representation of path '%s'"), normpath);

@@ -139,6 +139,9 @@ svn_utf__normcmp(int *result,
  * null-terminated; otherwise, consider the string only up to the
  * given length.
  *
+ * If CASEFOLD is non-zero, perform Unicode case folding, e.g., for
+ * case-insensitive string comparison.
+ *
  * Return the normalized string in *RESULT, which shares storage with
  * BUF and is valid only until the next time BUF is modified.
  *
@@ -148,6 +151,7 @@ svn_utf__normcmp(int *result,
 svn_error_t*
 svn_utf__normalize(const char **result,
                    const char *str, apr_size_t len,
+                   svn_boolean_t casefold,
                    svn_membuf_t *buf);
 
 /* Check if STRING is a valid, NFC-normalized UTF-8 string.  Note that
