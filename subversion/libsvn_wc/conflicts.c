@@ -3622,7 +3622,12 @@ svn_wc__conflict_tree_update_moved_away_node(svn_wc_context_t *wc_ctx,
                                                        notify_baton,
                                                        scratch_pool));
 
-  /* The conflict was marked resolved by svn_wc__db_op_raise_moved_away(). */
+  SVN_ERR(svn_wc__db_op_mark_resolved(wc_ctx->db, local_abspath,
+                                      FALSE, FALSE, TRUE,
+                                      NULL, scratch_pool));
+  SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath, cancel_func, cancel_baton,
+                         scratch_pool));
+
   if (notify_func)
     notify_func(notify_baton,
                 svn_wc_create_notify(local_abspath, svn_wc_notify_resolved,

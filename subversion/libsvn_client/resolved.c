@@ -846,8 +846,7 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
             operation == svn_wc_operation_switch) &&
            local_change == svn_wc_conflict_reason_moved_away &&
            incoming_change == svn_wc_conflict_action_edit &&
-           option_id ==
-             svn_client_conflict_option_working_text_where_conflicted)
+           option_id == svn_client_conflict_option_update_move_destination)
     {
       err = svn_wc__conflict_tree_update_moved_away_node(ctx->wc_ctx,
                                                          local_abspath,
