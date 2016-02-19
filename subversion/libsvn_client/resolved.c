@@ -862,6 +862,24 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
                                                          ctx->notify_baton2,
                                                          scratch_pool);
     }
+  else if ((operation == svn_wc_operation_update ||
+            operation == svn_wc_operation_switch) &&
+            local_change == svn_client_conflict_option_merged_text &&
+           incoming_change == svn_wc_conflict_action_edit &&
+           option_id ==
+             svn_client_conflict_option_working_text_where_conflicted)
+    {
+      /* We must break the move if the user accepts the current
+       * working copy state instead of updating the move.
+       * Else the move would be left in an invalid state. */
+      err = svn_wc__conflict_tree_update_break_moved_away(ctx->wc_ctx,
+                                                          local_abspath,
+                                                          ctx->cancel_func,
+                                                          ctx->cancel_baton,
+                                                          ctx->notify_func2,
+                                                          ctx->notify_baton2,
+                                                          scratch_pool);
+    }
   else
     {
       svn_wc_conflict_choice_t conflict_choice;
