@@ -818,18 +818,13 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
        local_change == svn_wc_conflict_reason_replaced) &&
       option_id == svn_client_conflict_option_merged_text)
     {
-      if (incoming_change != svn_wc_conflict_action_delete)
-        err = svn_wc__conflict_tree_update_break_moved_away(ctx->wc_ctx,
-                                                            local_abspath,
-                                                            ctx->cancel_func,
-                                                            ctx->cancel_baton,
-                                                            ctx->notify_func2,
-                                                            ctx->notify_baton2,
-                                                            scratch_pool);
-      else
-        {
-          /* # The move is/moves are already broken */
-        }
+      err = svn_wc__conflict_tree_update_break_moved_away(ctx->wc_ctx,
+                                                          local_abspath,
+                                                          ctx->cancel_func,
+                                                          ctx->cancel_baton,
+                                                          ctx->notify_func2,
+                                                          ctx->notify_baton2,
+                                                          scratch_pool);
     }
   else if ((operation == svn_wc_operation_update ||
             operation == svn_wc_operation_switch) &&
