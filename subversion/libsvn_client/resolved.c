@@ -812,30 +812,50 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
                                                  local_abspath,
                                                  scratch_pool, scratch_pool));
 
-  if ((option_id == svn_client_conflict_option_merged_text ||
-       (option_id == svn_client_conflict_option_update_any_moved_away_children
-        && incoming_change == svn_wc_conflict_action_edit)) &&
-      (operation == svn_wc_operation_update ||
+  if ((operation == svn_wc_operation_update ||
        operation == svn_wc_operation_switch) &&
       (local_change == svn_wc_conflict_reason_deleted ||
-       local_change == svn_wc_conflict_reason_replaced))
+       local_change == svn_wc_conflict_reason_replaced) &&
+      option_id == svn_client_conflict_option_merged_text)
     {
-      if (option_id == svn_client_conflict_option_merged_text)
-        err = svn_wc__conflict_tree_update_break_moved_away(ctx->wc_ctx,
-                                                            local_abspath,
-                                                            ctx->cancel_func,
-                                                            ctx->cancel_baton,
-                                                            ctx->notify_func2,
-                                                            ctx->notify_baton2,
-                                                            scratch_pool);
-      else
-        err = svn_wc__conflict_tree_update_raise_moved_away(ctx->wc_ctx,
-                                                            local_abspath,
-                                                            ctx->cancel_func,
-                                                            ctx->cancel_baton,
-                                                            ctx->notify_func2,
-                                                            ctx->notify_baton2,
-                                                            scratch_pool);
+      err = svn_wc__conflict_tree_update_break_moved_away(ctx->wc_ctx,
+                                                          local_abspath,
+                                                          ctx->cancel_func,
+                                                          ctx->cancel_baton,
+                                                          ctx->notify_func2,
+                                                          ctx->notify_baton2,
+                                                          scratch_pool);
+    }
+  else if ((operation == svn_wc_operation_update ||
+            operation == svn_wc_operation_switch) &&
+           (local_change == svn_wc_conflict_reason_deleted ||
+            local_change == svn_wc_conflict_reason_replaced) &&
+           incoming_change == svn_wc_conflict_action_edit &&
+           option_id ==
+             svn_client_conflict_option_update_any_moved_away_children)
+    {
+      err = svn_wc__conflict_tree_update_raise_moved_away(ctx->wc_ctx,
+                                                          local_abspath,
+                                                          ctx->cancel_func,
+                                                          ctx->cancel_baton,
+                                                          ctx->notify_func2,
+                                                          ctx->notify_baton2,
+                                                          scratch_pool);
+    }
+  else if ((operation == svn_wc_operation_update ||
+            operation == svn_wc_operation_switch) &&
+           local_change == svn_wc_conflict_reason_moved_away &&
+           incoming_change == svn_wc_conflict_action_edit &&
+           option_id ==
+             svn_client_conflict_option_working_text_where_conflicted)
+    {
+      err = svn_wc__conflict_tree_update_moved_away_node(ctx->wc_ctx,
+                                                         local_abspath,
+                                                         ctx->cancel_func,
+                                                         ctx->cancel_baton,
+                                                         ctx->notify_func2,
+                                                         ctx->notify_baton2,
+                                                         scratch_pool);
     }
   else
     {
