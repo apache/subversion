@@ -56,6 +56,7 @@
 #include "private/svn_opt_private.h"
 #include "private/svn_cmdline_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_utf_private.h"
 
 #include "svn_private_config.h"
 
@@ -1868,6 +1869,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t reading_file_from_stdin = FALSE;
   apr_hash_t *changelists;
   apr_hash_t *cfg_hash;
+  svn_membuf_t buf;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -1887,6 +1889,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   /* Init our changelists hash. */
   changelists = apr_hash_make(pool);
+
+  /* Init the temporary buffer. */
+  svn_membuf__create(&buf, 0, pool);
 
   /* Begin processing arguments. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
@@ -2392,11 +2397,19 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_search:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        add_search_pattern_group(&opt_state, utf8_opt_arg, pool);
+        SVN_ERR(svn_utf__normalize(&utf8_opt_arg, utf8_opt_arg,
+                                   strlen(utf8_opt_arg), TRUE, &buf));
+        add_search_pattern_group(&opt_state,
+                                 apr_pstrdup(pool, utf8_opt_arg),
+                                 pool);
         break;
       case opt_search_and:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        add_search_pattern_to_latest_group(&opt_state, utf8_opt_arg, pool);
+        SVN_ERR(svn_utf__normalize(&utf8_opt_arg, utf8_opt_arg,
+                                   strlen(utf8_opt_arg), TRUE, &buf));
+        add_search_pattern_to_latest_group(&opt_state,
+                                           apr_pstrdup(pool, utf8_opt_arg),
+                                           pool);
       case opt_remove_unversioned:
         opt_state.remove_unversioned = TRUE;
         break;

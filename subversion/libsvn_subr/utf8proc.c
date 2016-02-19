@@ -126,15 +126,20 @@ decompose_normalized(apr_size_t *result_length,
  * STRING. Upon return, BUFFER->data points at a NUL-terminated string
  * of UTF-8 characters.
  *
+ * If CASEFOLD is non-zero, perform Unicode case folding, e.g., for
+ * case-insensitive string comparison.
+ *
  * A returned error may indicate that STRING contains invalid UTF-8 or
  * invalid Unicode codepoints. Any error message comes from utf8proc.
  */
 static svn_error_t *
 normalize_cstring(apr_size_t *result_length,
                   const char *string, apr_size_t length,
+                  svn_boolean_t casefold,
                   svn_membuf_t *buffer)
 {
-  ssize_t result = unicode_decomposition(0, string, length, buffer);
+  ssize_t result = unicode_decomposition(casefold ? UTF8PROC_CASEFOLD : 0,
+                                         string, length, buffer);
   if (result >= 0)
     {
       svn_membuf__resize(buffer, result * sizeof(apr_int32_t) + 1);
@@ -199,10 +204,11 @@ svn_utf__normcmp(int *result,
 svn_error_t*
 svn_utf__normalize(const char **result,
                    const char *str, apr_size_t len,
+                   svn_boolean_t casefold,
                    svn_membuf_t *buf)
 {
   apr_size_t result_length;
-  SVN_ERR(normalize_cstring(&result_length, str, len, buf));
+  SVN_ERR(normalize_cstring(&result_length, str, len, casefold, buf));
   *result = (const char*)(buf->data);
   return SVN_NO_ERROR;
 }
@@ -359,7 +365,7 @@ svn_utf__is_normalized(const char *string, apr_pool_t *scratch_pool)
   apr_size_t result_length;
   const apr_size_t length = strlen(string);
   svn_membuf__create(&buffer, length * sizeof(apr_int32_t), scratch_pool);
-  err = normalize_cstring(&result_length, string, length, &buffer);
+  err = normalize_cstring(&result_length, string, length, FALSE, &buffer);
   if (err)
     {
       svn_error_clear(err);
