@@ -864,10 +864,10 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
     }
   else if ((operation == svn_wc_operation_update ||
             operation == svn_wc_operation_switch) &&
-            local_change == svn_client_conflict_option_merged_text &&
+            local_change == svn_wc_conflict_reason_moved_away &&
            incoming_change == svn_wc_conflict_action_edit &&
            option_id ==
-             svn_client_conflict_option_working_text_where_conflicted)
+             svn_client_conflict_option_merged_text)
     {
       /* We must break the move if the user accepts the current
        * working copy state instead of updating the move.
