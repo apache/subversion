@@ -3433,7 +3433,8 @@ svn_wc__conflict_tree_update_break_moved_away(svn_wc_context_t *wc_ctx,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
   if (reason != svn_wc_conflict_reason_deleted &&
-      reason != svn_wc_conflict_reason_replaced)
+      reason != svn_wc_conflict_reason_replaced &&
+      reason != svn_wc_conflict_reason_moved_away)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                              _("Unexpected conflict reason '%s' on '%s'"),
                              svn_token__to_word(reason_map, reason),

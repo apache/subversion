@@ -1782,8 +1782,8 @@ svn_wc__conflict_prop_mark_resolved(svn_wc_context_t *wc_ctx,
                                     apr_pool_t *scratch_pool);
 
 /* Resolve a tree conflict where the victim at LOCAL_ABSPATH is a directory
- * which was locally deleted or replaced, and which received an arbitrary
- * incoming change during an update or switch operation.
+ * which was locally deleted, replaced or moved away, and which received an
+ * arbitrary incoming change during an update or switch operation.
  *
  * The conflict is resolved by accepting the current working copy state and
  * breaking the 'moved-here' link for any files or directories which were
@@ -1796,7 +1796,8 @@ svn_wc__conflict_prop_mark_resolved(svn_wc_context_t *wc_ctx,
  * 
  * operation: svn_wc_operation_update or svn_wc_operation_switch
  * local change: svn_wc_conflict_reason_deleted or
- *               svn_wc_conflict_reason_replaced
+ *               svn_wc_conflict_reason_replaced or
+ *               svn_wc_conflict_reason_moved_away
  * incoming change: any
  *
  * The working copy must already be locked for resolving, e.g. by calling
