@@ -3487,7 +3487,6 @@ svn_wc__conflict_tree_update_raise_moved_away(svn_wc_context_t *wc_ctx,
   svn_wc_conflict_action_t action;
   svn_wc_operation_t operation;
   svn_boolean_t tree_conflicted;
-  const char *src_op_root_abspath;
   const apr_array_header_t *conflicts;
   svn_skel_t *conflict_skel;
 
@@ -3504,8 +3503,7 @@ svn_wc__conflict_tree_update_raise_moved_away(svn_wc_context_t *wc_ctx,
   if (!tree_conflicted)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action,
-                                              &src_op_root_abspath,
+  SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action, NULL,
                                               wc_ctx->db, local_abspath,
                                               conflict_skel,
                                               scratch_pool, scratch_pool));
