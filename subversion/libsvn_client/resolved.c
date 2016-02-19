@@ -874,6 +874,14 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
                                                           ctx->notify_baton2,
                                                           scratch_pool);
     }
+  else if (option_id != svn_client_conflict_option_merged_text)
+    {
+      err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                              _("Tree conflict on '%s' can only be resolved "
+                                "to the current working copy state"),
+                              svn_dirent_local_style(local_abspath,
+                                                     scratch_pool));
+    }
   else
     {
       svn_wc_conflict_choice_t conflict_choice;
