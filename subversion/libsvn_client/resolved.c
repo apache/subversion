@@ -884,20 +884,16 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
     }
   else
     {
-      svn_wc_conflict_choice_t conflict_choice;
+      /* Resolve to current working copy state. */
+      err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
 
-      conflict_choice =
-        svn_client_conflict_option_id_to_wc_conflict_choice(option_id);
-      err = svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
-                                      svn_depth_empty,
-                                      FALSE, FALSE, TRUE,
-                                      conflict_choice,
-                                      NULL, NULL,
-                                      ctx->cancel_func,
-                                      ctx->cancel_baton,
-                                      ctx->notify_func2,
-                                      ctx->notify_baton2,
-                                      scratch_pool);
+      /* svn_wc__del_tree_conflict doesn't handle notification for us */
+      if (ctx->notify_func2)
+        ctx->notify_func2(ctx->notify_baton2,
+                          svn_wc_create_notify(local_abspath,
+                                               svn_wc_notify_resolved,
+                                               scratch_pool),
+                          scratch_pool);
     }
 
   err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
