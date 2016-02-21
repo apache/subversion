@@ -7679,6 +7679,88 @@ def patch_missed_trail(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+def patch_merge(sbox):
+  "patching a specific merge"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_add_text('A\n'
+                       'B\n'
+                       'C\n'
+                       'J\n'
+                       'K\n'
+                       'L', 'new.txt')
+  sbox.simple_commit()
+
+  remote_patch = sbox.get_tempname('remote.patch')
+  svntest.main.file_write(remote_patch,
+      '--- new.txt\t(revision 6)\n'
+      '+++ new.txt\t(revision 7)\n'
+      '@@ -1,6 +1,9 @@\n'
+      ' A\n'
+      ' B\n'
+      '-C\n'
+      '+ C\n'
+      '+D\n'
+      '+E\n'
+      '+F\n'
+      ' J\n'
+      ' K\n'
+      ' L\n'
+      '\ No newline at end of file', mode='wb')
+
+  expected_skip = wc.State('', { })
+  expected_output = wc.State(wc_dir, {
+      'new.txt' : Item(status='U '),
+    })
+  svntest.actions.run_and_verify_patch(wc_dir, remote_patch,
+                                       expected_output, None,
+                                       None, expected_skip)
+  sbox.simple_commit()
+  sbox.simple_update(revision=2)
+
+  local_patch = sbox.get_tempname('local.patch')
+  svntest.main.file_write(local_patch,
+      '--- new.txt\t(revision 3)\n'
+      '+++ new.txt\t(revision 4)\n'
+      '@@ -1,6 +1,9 @@\n'
+      ' A\n'
+      ' B\n'
+      ' C\n'
+      '+D\n'
+      '+E\n'
+      '+F\n'
+      ' J\n'
+      ' K\n'
+      ' L\n'
+      '\ No newline at end of file', mode='wb')
+
+  svntest.actions.run_and_verify_patch(wc_dir, local_patch,
+                                       expected_output, None,
+                                       None, expected_skip)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'new.txt' : Item(contents='A\n'
+                              'B\n'
+                              ' C\n'
+                              'D\n'
+                              'E\n'
+                              'F\n'
+                              'D\n'
+                              'E\n'
+                              'F\n'
+                              'J\n'
+                              'K\n'
+                              'L')})
+  expected_output = wc.State(wc_dir, {
+    'new.txt'           : Item(status='G '),
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+                                        None, [])
+
 ########################################################################
 #Run the tests
 
@@ -7761,6 +7843,7 @@ test_list = [ None,
               patch_move_and_change,
               missing_trailing_context,
               patch_missed_trail,
+              patch_merge,
             ]
 
 if __name__ == '__main__':
