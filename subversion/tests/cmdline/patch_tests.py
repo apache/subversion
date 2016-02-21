@@ -7684,6 +7684,7 @@ def patch_merge(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
 
   sbox.simple_add_text('A\n'
                        'B\n'
@@ -7754,12 +7755,25 @@ def patch_merge(sbox):
                               'J\n'
                               'K\n'
                               'L')})
-  expected_output = wc.State(wc_dir, {
-    'new.txt'           : Item(status='G '),
-  })
-
+  expected_output.tweak('new.txt', status='G ')
   svntest.actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
                                         None, [])
+
+  # Revert to base position
+  sbox.simple_revert('new.txt')
+  sbox.simple_update(revision=2)
+
+  # And now do the same thing as a merge instead of an update
+  expected_output.tweak('new.txt', status='U ')
+  svntest.actions.run_and_verify_patch(wc_dir, local_patch,
+                                       expected_output, None,
+                                       None, expected_skip)
+
+  expected_output.tweak('new.txt', status='G ')
+  svntest.actions.run_and_verify_merge(wc_dir, 2, 3, repo_url, repo_url,
+                                       expected_output, None, None,
+                                       expected_disk, None,
+                                       expected_skip)
 
 ########################################################################
 #Run the tests
