@@ -73,6 +73,8 @@ SSL_VERBOSE
 SVN_DEPRECATED
 SVN_FS__TRAIL_DEBUG
 SVN_FS_FS__LOG_ACCESS
+SVN_FS_EMULATE_PATHS_CHANGED
+SVN_FS_EMULATE_REPORT_CHANGES
 
 2.4 Test-only
 
@@ -435,6 +437,26 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Range:     definedness
   Default:   not defined
   Suggested: defined, not defined
+
+5.15 SVN_FS_EMULATE_PATHS_CHANGED
+  
+  Scope:     libsvn_fs/fs-loader.c
+  Purpose:   Force svn_fs_paths_changed2 to be emulated through
+             svn_fs_paths_changed3 even if the FS provides an implementation
+             of the former.
+  Range:     TRUE, FALSE
+  Default:   TRUE (local default if macro has not been defined)
+  Suggested: FALSE
+
+5.16 SVN_FS_EMULATE_REPORT_CHANGES
+  
+  Scope:     libsvn_fs/fs-loader.c
+  Purpose:   Force svn_fs_paths_changed3 to be emulated through
+             svn_fs_paths_changed2 even if the FS provides an implementation
+             of the former.
+  Range:     TRUE, FALSE
+  Default:   TRUE (local default if macro has not been defined)
+  Suggested: FALSE
 
 
 6 Defines that affect unit tests
