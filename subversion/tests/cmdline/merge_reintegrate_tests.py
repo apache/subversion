@@ -2458,63 +2458,88 @@ def no_source_subtree_mergeinfo(sbox):
                           'AAA\n' +
                           'BBB\n' +
                           'CCC\n')
-  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
-  svntest.main.run_svn(None, 'update', wc_dir)
+  sbox.simple_commit()
+  sbox.simple_update()
 
   # Create branch-1
   svntest.main.run_svn(None, 'copy',
                        sbox.ospath('A/B'),
                        sbox.ospath('A/B1'))
-  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  sbox.simple_commit()
 
   # Create branch-1
   svntest.main.run_svn(None, 'copy',
                        sbox.ospath('A/B'),
                        sbox.ospath('A/B2'))
-  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  sbox.simple_commit()
 
   # Change on trunk
   svntest.main.file_write(sbox.ospath('A/B/E/alpha'),
                           'AAAxx\n' +
                           'BBB\n' +
                           'CCC\n')
-  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  sbox.simple_commit()
 
   # Change on branch-1
   svntest.main.file_write(sbox.ospath('A/B1/E/alpha'),
                           'AAA\n' +
                           'BBBxx\n' +
                           'CCC\n')
-  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  sbox.simple_commit()
 
   # Change on branch-2
   svntest.main.file_write(sbox.ospath('A/B2/E/alpha'),
                           'AAA\n' +
                           'BBB\n' +
                           'CCCxx\n')
-  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
-  svntest.main.run_svn(None, 'update', wc_dir)
+  sbox.simple_commit()
+  sbox.simple_update()
 
   # Merge trunk to branch-1
-  svntest.main.run_svn(None, 'merge', '^/A/B', sbox.ospath('A/B1'))
-  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  # svntest.main.run_svn(None, 'merge', '^/A/B', sbox.ospath('A/B1'))
+  A_B1 = sbox.ospath('A/B1')
+  expected_output = wc.State(A_B1, {
+    'E/alpha'           : Item(status='U '),
+  })
+  expected_skip = wc.State(A_B1, { })
+  svntest.actions.run_and_verify_merge(A_B1, None, None, '^/A/B', None,
+                                       expected_output, None, None, None, None,
+                                       expected_skip, [])
+  sbox.simple_commit()
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # Reintegrate branch-1 subtree to trunk subtree
   run_reintegrate('^/A/B1/E', sbox.ospath('A/B/E'))
-  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  sbox.simple_commit()
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # Merge trunk to branch-2
-  svntest.main.run_svn(None, 'merge', '^/A/B', sbox.ospath('A/B2'))
-  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  #svntest.main.run_svn(None, 'merge', '^/A/B', sbox.ospath('A/B2'))
+  A_B2 = sbox.ospath('A/B2')
+  expected_output = wc.State(A_B2, {
+    'E'                 : Item(status=' U'),
+    'E/alpha'           : Item(status='U '),
+  })
+  expected_skip = wc.State(A_B1, { })
+  svntest.actions.run_and_verify_merge(A_B2, None, None, '^/A/B', None,
+                                       expected_output, None, None, None, None,
+                                       expected_skip, [])
+  sbox.simple_commit()
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # Reverse merge branch-1 subtree to branch-2 subtree, this removes
   # the subtree mergeinfo from branch 2
-  svntest.main.run_svn(None, 'merge', '-r8:2',
-                       '^/A/B1/E', sbox.ospath('A/B2/E'))
-  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
+  #svntest.main.run_svn(None, 'merge', '-r8:2',
+  #                     '^/A/B1/E', sbox.ospath('A/B2/E'))
+  A_B2_E = sbox.ospath('A/B2/E')
+  expected_output = wc.State(A_B2_E, {
+    'alpha'             : Item(status='U '),
+  })
+  expected_skip = wc.State(A_B2_E, { })
+  svntest.actions.run_and_verify_merge(A_B2_E, 8, 2, '^/A/B1/E', None,
+                                       expected_output, None, None, None, None,
+                                       expected_skip, [])
+  sbox.simple_commit()
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # Verify that merge results in no subtree mergeinfo
@@ -2525,8 +2550,8 @@ def no_source_subtree_mergeinfo(sbox):
 
   # Merge trunk to branch-2
   svntest.main.run_svn(None, 'merge', '^/A/B', sbox.ospath('A/B2'))
-  svntest.main.run_svn(None, 'commit', '-m', 'log message', wc_dir)
-  svntest.main.run_svn(None, 'update', wc_dir)
+  sbox.simple_commit()
+  sbox.simple_update()
 
   # Verify that there is still no subtree mergeinfo
   svntest.actions.run_and_verify_svn([], expected_stderr,
