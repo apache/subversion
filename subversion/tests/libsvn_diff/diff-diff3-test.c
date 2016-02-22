@@ -3006,7 +3006,60 @@ three_way_double_add(apr_pool_t *pool)
                           "K\n"
                           "L",
                           NULL,
-                          svn_diff_conflict_display_modified_latest,
+                          svn_diff_conflict_display_modified_original_latest,
+                          pool));
+
+  SVN_ERR(three_way_merge("doubleadd1", "doubleadd2", "doubleadd3",
+                          "A\n"
+                          "B\n"
+                          "C\n"
+                          "J\n"
+                          "K\n"
+                          "L",
+
+                          "A\n"
+                          "B\n"
+                          "C\n"
+                          "D\n" /* New line 1a */
+                          "E\n" /* New line 2a */
+                          "F\n" /* New line 3a*/
+                          "K\n"
+                          "L",
+
+                          "A\n"
+                          "B\n"
+                          "O\n" /* Change C to O */
+                          "P\n" /* New line 1b */
+                          "Q\n" /* New line 2b */
+                          "R\n" /* New line 3b */
+                          "J\n"
+                          "K\n"
+                          "L",
+
+                          /* With s/C/O/ we expect something like this,
+                          but the current (1.9/trunk) result is a
+                          succeeded merge to a combined result.
+
+                          ### I'm guessing this result needs tweaks before it
+                          will be a PASS. */
+                          "A\n"
+                          "B\n"
+                          "<<<<<<< doubleadd2\n"
+                          "C\n"
+                          "D\n" /* New line 1a */
+                          "E\n" /* New line 2a */
+                          "F\n" /* New line 3a*/
+                          "=======\n"
+                          "O\n"
+                          "P\n" /* New line 1b */
+                          "Q\n" /* New line 2b */
+                          "R\n" /* New line 3b */
+                          "J\n"
+                          ">>>>>>> doubleadd3\n"
+                          "K\n"
+                          "L",
+                          NULL,
+                          svn_diff_conflict_display_modified_original_latest,
                           pool));
 
   return SVN_NO_ERROR;
