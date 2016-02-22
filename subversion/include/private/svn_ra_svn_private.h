@@ -978,7 +978,7 @@ svn_ra_svn__write_cmd_finish_replay(svn_ra_svn_conn_t *conn,
 svn_error_t *
 svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool,
-                                        const char *path,
+                                        const svn_string_t *path,
                                         char action,
                                         const char *copyfrom_path,
                                         svn_revnum_t copyfrom_rev,

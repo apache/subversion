@@ -2222,7 +2222,7 @@ path_change_receiver(void *baton,
   /* Serialize CHANGE. */
   SVN_ERR(svn_ra_svn__write_data_log_changed_path(
               conn, scratch_pool,
-              change->path.data,
+              &change->path,
               action,
               change->copyfrom_path,
               change->copyfrom_rev,
