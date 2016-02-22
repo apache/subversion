@@ -1176,7 +1176,7 @@ typedef struct interesting_merge_baton_t
   void *inner_baton;
 } interesting_merge_baton_t;
 
-/* Implements svn_repos__path_change_receiver_t. 
+/* Implements svn_repos_path_change_receiver_t. 
  * *BATON is a interesting_merge_baton_t.
  *
  * If BATON->REV a merged revision that is not already part of
@@ -2447,7 +2447,7 @@ path_change_kind_to_char(svn_fs_path_change_kind_t kind)
   return symbol[kind];
 }
 
-/* Implement svn_repos__path_change_receiver_t.
+/* Implement svn_repos_path_change_receiver_t.
  * Convert CHANGE and add it to the CHANGES list in *BATON. */
 static svn_error_t *
 log4_path_change_receiver(void *baton,
