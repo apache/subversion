@@ -2262,11 +2262,22 @@ revision_receiver(void *baton,
 
   svn_compat_log_revprops_out_string(&author, &date, &message,
                                      log_entry->revprops);
-  svn_compat_log_revprops_clear(log_entry->revprops);
-  if (log_entry->revprops)
-    revprop_count = apr_hash_count(log_entry->revprops);
+
+  /* Revprops list filtering is somewhat expensive.
+     Avoid doing that for the 90% case where only the standard revprops
+     have been requested and delivered. */
+  if (author && date && message && apr_hash_count(log_entry->revprops) == 3)
+    {
+      revprop_count = 0;
+    }
   else
-    revprop_count = 0;
+    {
+      svn_compat_log_revprops_clear(log_entry->revprops);
+      if (log_entry->revprops)
+        revprop_count = apr_hash_count(log_entry->revprops);
+      else
+        revprop_count = 0;
+    }
 
   /* Open lists once: LOG_ENTRY and LOG_ENTRY->CHANGED_PATHS. */
   if (!b->started)
