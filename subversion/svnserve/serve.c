@@ -87,6 +87,9 @@ typedef struct log_baton_t {
   const char *fs_path;
   svn_ra_svn_conn_t *conn;
   int stack_depth;
+
+  /* Set to TRUE when at least one changed path has been sent. */
+  svn_boolean_t started;
 } log_baton_t;
 
 typedef struct file_revs_baton_t {
@@ -2187,14 +2190,58 @@ get_mergeinfo(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
-/* Send a log entry to the client. */
-static svn_error_t *log_receiver(void *baton,
-                                 svn_log_entry_t *log_entry,
-                                 apr_pool_t *pool)
+/* Send a changed paths list entry to the client.
+   This implements svn_repos_path_change_receiver_t. */
+static svn_error_t *
+path_change_receiver(void *baton,
+                     svn_repos_path_change_t *change,
+                     apr_pool_t *scratch_pool)
+{
+  const char symbol[] = "MADR";
+
+  log_baton_t *b = baton;
+  svn_ra_svn_conn_t *conn = b->conn;
+
+  /* Sanitize and convert change kind to ra-svn level action.
+
+     Pushing that conversion down into libsvn_ra_svn would add yet another
+     API dependency there. */
+  char action = (   change->change_kind < svn_fs_path_change_modify
+                 || change->change_kind > svn_fs_path_change_replace)
+              ? 0
+              : symbol[change->change_kind];
+
+  /* Open lists once: LOG_ENTRY and LOG_ENTRY->CHANGED_PATHS. */
+  if (!b->started)
+    {
+      SVN_ERR(svn_ra_svn__start_list(conn, scratch_pool));
+      SVN_ERR(svn_ra_svn__start_list(conn, scratch_pool));
+      b->started = TRUE;
+    }
+
+  /* Serialize CHANGE. */
+  SVN_ERR(svn_ra_svn__write_data_log_changed_path(
+              conn, scratch_pool,
+              change->path.data,
+              action,
+              change->copyfrom_path,
+              change->copyfrom_rev,
+              change->node_kind,
+              change->text_mod,
+              change->prop_mod));
+
+  return SVN_NO_ERROR;
+}
+
+/* Send a the meta data and the revpros for LOG_ENTRY to the client.
+   This implements svn_log_entry_receiver_t. */
+static svn_error_t *
+revision_receiver(void *baton,
+                  svn_repos_log_entry_t *log_entry,
+                  apr_pool_t *scratch_pool)
 {
   log_baton_t *b = baton;
   svn_ra_svn_conn_t *conn = b->conn;
-  apr_hash_index_t *h;
   svn_boolean_t invalid_revnum = FALSE;
   const svn_string_t *author, *date, *message;
   unsigned revprop_count;
@@ -2221,49 +2268,35 @@ static svn_error_t *log_receiver(void *baton,
   else
     revprop_count = 0;
 
-  /* send LOG_ENTRY */
-  SVN_ERR(svn_ra_svn__start_list(conn, pool));
-
-  /* send LOG_ENTRY->CHANGED_PATHS2 */
-  SVN_ERR(svn_ra_svn__start_list(conn, pool));
-  if (log_entry->changed_paths2)
+  /* Open lists once: LOG_ENTRY and LOG_ENTRY->CHANGED_PATHS. */
+  if (!b->started)
     {
-      for (h = apr_hash_first(pool, log_entry->changed_paths2); h;
-                                                        h = apr_hash_next(h))
-        {
-          const char *path = apr_hash_this_key(h);
-          svn_log_changed_path2_t *change = apr_hash_this_val(h);
-
-          SVN_ERR(svn_ra_svn__write_data_log_changed_path(
-                      conn, pool,
-                      path,
-                      change->action,
-                      change->copyfrom_path,
-                      change->copyfrom_rev,
-                      change->node_kind,
-                      /* text_modified and props_modified are never unknown */
-                      change->text_modified  == svn_tristate_true,
-                      change->props_modified == svn_tristate_true));
-        }
+      SVN_ERR(svn_ra_svn__start_list(conn, scratch_pool));
+      SVN_ERR(svn_ra_svn__start_list(conn, scratch_pool));
     }
-  SVN_ERR(svn_ra_svn__end_list(conn, pool));
+
+  /* Close LOG_ENTRY->CHANGED_PATHS. */
+  SVN_ERR(svn_ra_svn__end_list(conn, scratch_pool));
+  b->started = FALSE;
 
   /* send LOG_ENTRY main members */
-  SVN_ERR(svn_ra_svn__write_data_log_entry(conn, pool,
+  SVN_ERR(svn_ra_svn__write_data_log_entry(conn, scratch_pool,
                                            log_entry->revision,
                                            author, date, message,
                                            log_entry->has_children,
                                            invalid_revnum, revprop_count));
 
   /* send LOG_ENTRY->REVPROPS */
-  SVN_ERR(svn_ra_svn__start_list(conn, pool));
+  SVN_ERR(svn_ra_svn__start_list(conn, scratch_pool));
   if (revprop_count)
-    SVN_ERR(svn_ra_svn__write_proplist(conn, pool, log_entry->revprops));
-  SVN_ERR(svn_ra_svn__end_list(conn, pool));
+    SVN_ERR(svn_ra_svn__write_proplist(conn, scratch_pool,
+                                       log_entry->revprops));
+  SVN_ERR(svn_ra_svn__end_list(conn, scratch_pool));
 
   /* send LOG_ENTRY members that were added in later SVN releases */
-  SVN_ERR(svn_ra_svn__write_boolean(conn, pool, log_entry->subtractive_merge));
-  SVN_ERR(svn_ra_svn__end_list(conn, pool));
+  SVN_ERR(svn_ra_svn__write_boolean(conn, scratch_pool,
+                                    log_entry->subtractive_merge));
+  SVN_ERR(svn_ra_svn__end_list(conn, scratch_pool));
 
   if (log_entry->has_children)
     b->stack_depth++;
@@ -2361,11 +2394,14 @@ log_cmd(svn_ra_svn_conn_t *conn,
   lb.fs_path = b->repository->fs_path->data;
   lb.conn = conn;
   lb.stack_depth = 0;
-  err = svn_repos_get_logs4(b->repository->repos, full_paths, start_rev,
-                            end_rev, (int) limit, send_changed_paths,
+  lb.started = FALSE;
+  err = svn_repos_get_logs5(b->repository->repos, full_paths, start_rev,
+                            end_rev, (int) limit,
                             strict_node, include_merged_revisions,
                             revprops, authz_check_access_cb_func(b), &ab,
-                            log_receiver, &lb, pool);
+                            send_changed_paths ? path_change_receiver : NULL,
+                            send_changed_paths ? &lb : NULL,
+                            revision_receiver, &lb, pool);
 
   write_err = svn_ra_svn__write_word(conn, pool, "done");
   if (write_err)
