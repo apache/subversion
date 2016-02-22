@@ -2456,7 +2456,9 @@ def no_source_subtree_mergeinfo(sbox):
 
   svntest.main.file_write(sbox.ospath('A/B/E/alpha'),
                           'AAA\n' +
+                          'X\n' +
                           'BBB\n' +
+                          'Y\n' +
                           'CCC\n')
   sbox.simple_commit()
   sbox.simple_update()
@@ -2476,21 +2478,27 @@ def no_source_subtree_mergeinfo(sbox):
   # Change on trunk
   svntest.main.file_write(sbox.ospath('A/B/E/alpha'),
                           'AAAxx\n' +
+                          'X\n' +
                           'BBB\n' +
+                          'Y\n' +
                           'CCC\n')
   sbox.simple_commit()
 
   # Change on branch-1
   svntest.main.file_write(sbox.ospath('A/B1/E/alpha'),
                           'AAA\n' +
+                          'X\n' +
                           'BBBxx\n' +
+                          'Y\n' +
                           'CCC\n')
   sbox.simple_commit()
 
   # Change on branch-2
   svntest.main.file_write(sbox.ospath('A/B2/E/alpha'),
                           'AAA\n' +
+                          'X\n' +
                           'BBB\n' +
+                          'Y\n' +
                           'CCCxx\n')
   sbox.simple_commit()
   sbox.simple_update()
@@ -2506,12 +2514,12 @@ def no_source_subtree_mergeinfo(sbox):
                                        expected_output, None, None, None, None,
                                        expected_skip, [])
   sbox.simple_commit()
-  svntest.main.run_svn(None, 'update', wc_dir)
+  sbox.simple_update()
 
   # Reintegrate branch-1 subtree to trunk subtree
   run_reintegrate('^/A/B1/E', sbox.ospath('A/B/E'))
   sbox.simple_commit()
-  svntest.main.run_svn(None, 'update', wc_dir)
+  sbox.simple_update()
 
   # Merge trunk to branch-2
   #svntest.main.run_svn(None, 'merge', '^/A/B', sbox.ospath('A/B2'))
@@ -2575,7 +2583,9 @@ def no_source_subtree_mergeinfo(sbox):
       ''        : Item(props={SVN_PROP_MERGEINFO : '/A/B2:4-12'}),
       'E'       : Item(),
       'E/alpha' : Item("AAA\n" +
+                       "X\n" +
                        "BBB\n" +
+                       "Y\n" +
                        "CCCxx\n"),
       'E/beta'  : Item("This is the file 'beta'.\n"),
       'F'       : Item(),
