@@ -2952,6 +2952,61 @@ two_way_issue_3362_v2(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+three_way_double_add(apr_pool_t *pool)
+{
+  svn_diff_file_options_t *diff_opts = svn_diff_file_options_create(pool);
+
+  SVN_ERR(three_way_merge("doubleadd1", "doubleadd2", "doubleadd3",
+                          "A\n"
+                          "B\n"
+                          "C\n"
+                          "J\n"
+                          "K\n"
+                          "L",
+
+                          "A\n"
+                          "B\n"
+                          "C\n"
+                          "D\n" /* New line 1a */
+                          "E\n" /* New line 2a */
+                          "F\n" /* New line 3a*/
+                          "J\n"
+                          "K\n"
+                          "L",
+
+                          "A\n"
+                          "B\n"
+                          "C\n" /* Still C, Still pass */
+                          "P\n" /* New line 1b */
+                          "Q\n" /* New line 2b */
+                          "R\n" /* New line 3b */
+                          "J\n"
+                          "K\n"
+                          "L",
+
+                          "A\n"
+                          "B\n"
+                          "C\n"
+                          "<<<<<<< doubleadd2\n"
+                          "D\n" /* New line 1a */
+                          "E\n" /* New line 2a */
+                          "F\n" /* New line 3a*/
+                          "=======\n"
+                          "P\n" /* New line 1b */
+                          "Q\n" /* New line 2b */
+                          "R\n" /* New line 3b */
+                          ">>>>>>> doubleadd3\n"
+                          "J\n"
+                          "K\n"
+                          "L",
+                          NULL,
+                          svn_diff_conflict_display_modified_latest,
+                          pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -2994,6 +3049,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "2-way issue #3362 test v1"),
     SVN_TEST_PASS2(two_way_issue_3362_v2,
                    "2-way issue #3362 test v2"),
+    SVN_TEST_PASS2(three_way_double_add,
+                   "3-way merge, double add"),
     SVN_TEST_NULL
   };
 
