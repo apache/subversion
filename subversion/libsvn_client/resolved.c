@@ -1240,6 +1240,13 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
                                                 apr_pool_t *scratch_pool)
 {
   svn_client_conflict_option_t *option;
+  svn_wc_operation_t operation;
+  svn_wc_conflict_reason_t local_change;
+  svn_wc_conflict_action_t incoming_change;
+
+  operation = svn_client_conflict_get_operation(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
+  incoming_change = svn_client_conflict_get_incoming_change(conflict);
 
   SVN_ERR(assert_tree_conflict(conflict, scratch_pool));
 
@@ -1259,7 +1266,19 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   option->id = svn_client_conflict_option_accept_current_wc_state;
   option->description = _("accept current working copy state");
   option->conflict = conflict;
-  option->do_resolve_func = resolve_tree_conflict;
+  if ((operation == svn_wc_operation_update ||
+       operation == svn_wc_operation_switch) &&
+      local_change == svn_wc_conflict_reason_moved_away &&
+      incoming_change == svn_wc_conflict_action_edit)
+    {
+      /* We must break the move if the user accepts the current
+       * working copy state instead of updating the move.
+       * Else the move would be left in an invalid state. */
+      option->do_resolve_func = resolve_update_break_moved_away;
+    }
+  else
+    option->do_resolve_func = resolve_tree_conflict;
+
   APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
 
   /* Add options which offer automated resolution: */
