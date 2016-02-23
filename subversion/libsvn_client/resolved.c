@@ -940,6 +940,39 @@ resolve_update_break_moved_away(svn_client_conflict_option_t *option,
   return SVN_NO_ERROR;
 }
 
+/* Implements conflict_option_resolve_func_t. */
+static svn_error_t *
+resolve_update_moved_away_node(svn_client_conflict_option_t *option,
+                               svn_client_conflict_t *conflict,
+                               apr_pool_t *scratch_pool)
+{
+  const char *local_abspath;
+  const char *lock_abspath;
+  svn_client_ctx_t *ctx = conflict->ctx;
+  svn_error_t *err;
+
+  local_abspath = svn_client_conflict_get_local_abspath(conflict);
+
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
+                                                 local_abspath,
+                                                 scratch_pool, scratch_pool));
+  err = svn_wc__conflict_tree_update_moved_away_node(ctx->wc_ctx,
+                                                     local_abspath,
+                                                     ctx->cancel_func,
+                                                     ctx->cancel_baton,
+                                                     ctx->notify_func2,
+                                                     ctx->notify_baton2,
+                                                     scratch_pool);
+  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
+                                                                 lock_abspath,
+                                                                 scratch_pool));
+  SVN_ERR(err);
+
+  conflict->resolution_tree = svn_client_conflict_option_get_id(option);
+
+  return SVN_NO_ERROR;
+}
+
 /* Resolver options for a text conflict */
 static const svn_client_conflict_option_t text_conflict_options[] =
 {
@@ -1244,7 +1277,7 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
           option->description =
             _("apply incoming changes to move destination");
           option->conflict = conflict;
-          option->do_resolve_func = resolve_tree_conflict;
+          option->do_resolve_func = resolve_update_moved_away_node;
           APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
             option;
         }
