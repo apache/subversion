@@ -34,6 +34,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
+#include "svn_props.h"
 #include "svn_hash.h"
 #include "svn_sorts.h"
 #include "client.h"
@@ -643,6 +644,13 @@ conflict_tree_get_description_generic(const char **description,
   return SVN_NO_ERROR;
 }
 
+/* Details for tree conflicts involving incoming deletions. */
+struct conflict_tree_incoming_delete_details
+{
+  svn_revnum_t deleted_rev;
+  const char *rev_author;
+};
+
 /* Implements tree_conflict_get_description_func_t. */
 static svn_error_t *
 conflict_tree_get_description_incoming_delete(const char **description,
@@ -650,13 +658,13 @@ conflict_tree_get_description_incoming_delete(const char **description,
                                               apr_pool_t *result_pool,
                                               apr_pool_t *scratch_pool)
 {
-  const char *action, *reason, *operation;
-  svn_revnum_t deleted_rev;
+  const char *action, *reason;
   svn_node_kind_t incoming_node_kind;
   svn_node_kind_t victim_node_kind;
   svn_wc_conflict_action_t incoming_change;
   svn_wc_conflict_reason_t local_change;
   svn_wc_operation_t conflict_operation;
+  struct conflict_tree_incoming_delete_details *details;
 
   if (conflict->tree_conflict_details == NULL)
     return svn_error_trace(conflict_tree_get_description_generic(description,
@@ -675,7 +683,7 @@ conflict_tree_get_description_incoming_delete(const char **description,
                                                                  result_pool,
                                                                  scratch_pool));
 
-  deleted_rev = *((svn_revnum_t *)conflict->tree_conflict_details);
+  details = conflict->tree_conflict_details;
 
   /* Delete is acting on 'src_left' version of the node. */
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
@@ -683,23 +691,19 @@ conflict_tree_get_description_incoming_delete(const char **description,
             scratch_pool));
   if (incoming_node_kind == svn_node_dir)
     action = apr_psprintf(result_pool,
-                          _("incoming dir deleted or moved in r%lu"),
-                          deleted_rev);
+                          _("dir was deleted or moved by %s in r%lu"),
+                          details->rev_author, details->deleted_rev);
   else if (incoming_node_kind == svn_node_file ||
            incoming_node_kind == svn_node_symlink)
     action = apr_psprintf(result_pool,
-                          _("incoming file deleted or moved in r%lu"),
-                          deleted_rev);
+                          _("file was deleted or moved by %s in r%lu"),
+                          details->rev_author, details->deleted_rev);
   else
     action = apr_psprintf(result_pool,
-                          _("incoming item deleted or moved in r%lu"),
-                          deleted_rev);
+                          _("item was deleted or moved by %s in r%lu"),
+                          details->rev_author, details->deleted_rev);
 
-  operation = operation_str(conflict_operation);
-  SVN_ERR_ASSERT(operation);
-
-  *description = apr_psprintf(result_pool, _("%s, %s %s"),
-                              reason, action, operation);
+  *description = apr_psprintf(result_pool, _("%s, %s"), reason, action);
   return SVN_NO_ERROR;
 }
 
@@ -710,6 +714,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                           apr_pool_t *scratch_pool)
 {
   svn_revnum_t deleted_rev;
+  svn_string_t *author_revprop;
   const char *repos_relpath;
   const char *repos_root_url;
   svn_revnum_t peg_rev;
@@ -717,6 +722,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
   const char *url;
   const char *corrected_url;
   svn_ra_session_t *ra_session;
+  struct conflict_tree_incoming_delete_details *details;
 
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
             &repos_relpath, &peg_rev, NULL, conflict, scratch_pool,
@@ -736,10 +742,12 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                                scratch_pool, scratch_pool));
   SVN_ERR(svn_ra_get_deleted_rev(ra_session, "", peg_rev, end_rev,
                                  &deleted_rev, scratch_pool));
-
-  conflict->tree_conflict_details = apr_pcalloc(conflict->pool,
-                                                sizeof(deleted_rev));
-  *((svn_revnum_t *)conflict->tree_conflict_details) = deleted_rev;
+  SVN_ERR(svn_ra_rev_prop(ra_session, deleted_rev, SVN_PROP_REVISION_AUTHOR,
+                          &author_revprop, scratch_pool));
+  details = apr_pcalloc(conflict->pool, sizeof(*details));
+  details->deleted_rev = deleted_rev;
+  details->rev_author = apr_pstrdup(conflict->pool, author_revprop->data);
+  conflict->tree_conflict_details = details;
 
   return SVN_NO_ERROR;
 }
