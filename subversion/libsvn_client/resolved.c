@@ -796,105 +796,33 @@ resolve_tree_conflict(svn_client_conflict_option_t *option,
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
   const char *lock_abspath;
-  svn_wc_conflict_reason_t local_change;
-  svn_wc_conflict_action_t incoming_change;
   svn_client_ctx_t *ctx = conflict->ctx;
-  svn_wc_operation_t operation;
   svn_error_t *err;
 
   option_id = svn_client_conflict_option_get_id(option);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
-  operation = svn_client_conflict_get_operation(conflict);
-  local_change = svn_client_conflict_get_local_change(conflict);
-  incoming_change = svn_client_conflict_get_incoming_change(conflict);
+
+  if (option_id != svn_client_conflict_option_accept_current_wc_state)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Tree conflict on '%s' can only be resolved "
+                               "to the current working copy state"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
                                                  local_abspath,
                                                  scratch_pool, scratch_pool));
 
-  if ((operation == svn_wc_operation_update ||
-       operation == svn_wc_operation_switch) &&
-      (local_change == svn_wc_conflict_reason_deleted ||
-       local_change == svn_wc_conflict_reason_replaced) &&
-      option_id == svn_client_conflict_option_accept_current_wc_state)
-    {
-      err = svn_wc__conflict_tree_update_break_moved_away(ctx->wc_ctx,
-                                                          local_abspath,
-                                                          ctx->cancel_func,
-                                                          ctx->cancel_baton,
-                                                          ctx->notify_func2,
-                                                          ctx->notify_baton2,
-                                                          scratch_pool);
-    }
-  else if ((operation == svn_wc_operation_update ||
-            operation == svn_wc_operation_switch) &&
-           (local_change == svn_wc_conflict_reason_deleted ||
-            local_change == svn_wc_conflict_reason_replaced) &&
-           incoming_change == svn_wc_conflict_action_edit &&
-           option_id ==
-             svn_client_conflict_option_update_any_moved_away_children)
-    {
-      err = svn_wc__conflict_tree_update_raise_moved_away(ctx->wc_ctx,
-                                                          local_abspath,
-                                                          ctx->cancel_func,
-                                                          ctx->cancel_baton,
-                                                          ctx->notify_func2,
-                                                          ctx->notify_baton2,
-                                                          scratch_pool);
-    }
-  else if ((operation == svn_wc_operation_update ||
-            operation == svn_wc_operation_switch) &&
-           local_change == svn_wc_conflict_reason_moved_away &&
-           incoming_change == svn_wc_conflict_action_edit &&
-           option_id == svn_client_conflict_option_update_move_destination)
-    {
-      err = svn_wc__conflict_tree_update_moved_away_node(ctx->wc_ctx,
-                                                         local_abspath,
-                                                         ctx->cancel_func,
-                                                         ctx->cancel_baton,
-                                                         ctx->notify_func2,
-                                                         ctx->notify_baton2,
-                                                         scratch_pool);
-    }
-  else if ((operation == svn_wc_operation_update ||
-            operation == svn_wc_operation_switch) &&
-            local_change == svn_wc_conflict_reason_moved_away &&
-           incoming_change == svn_wc_conflict_action_edit &&
-           option_id ==
-             svn_client_conflict_option_accept_current_wc_state)
-    {
-      /* We must break the move if the user accepts the current
-       * working copy state instead of updating the move.
-       * Else the move would be left in an invalid state. */
-      err = svn_wc__conflict_tree_update_break_moved_away(ctx->wc_ctx,
-                                                          local_abspath,
-                                                          ctx->cancel_func,
-                                                          ctx->cancel_baton,
-                                                          ctx->notify_func2,
-                                                          ctx->notify_baton2,
-                                                          scratch_pool);
-    }
-  else if (option_id != svn_client_conflict_option_accept_current_wc_state)
-    {
-      err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                              _("Tree conflict on '%s' can only be resolved "
-                                "to the current working copy state"),
-                              svn_dirent_local_style(local_abspath,
-                                                     scratch_pool));
-    }
-  else
-    {
-      /* Resolve to current working copy state. */
-      err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
+  /* Resolve to current working copy state. */
+  err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
 
-      /* svn_wc__del_tree_conflict doesn't handle notification for us */
-      if (ctx->notify_func2)
-        ctx->notify_func2(ctx->notify_baton2,
-                          svn_wc_create_notify(local_abspath,
-                                               svn_wc_notify_resolved,
-                                               scratch_pool),
-                          scratch_pool);
-    }
+  /* svn_wc__del_tree_conflict doesn't handle notification for us */
+  if (ctx->notify_func2)
+    ctx->notify_func2(ctx->notify_baton2,
+                      svn_wc_create_notify(local_abspath,
+                                           svn_wc_notify_resolved,
+                                           scratch_pool),
+                      scratch_pool);
 
   err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
                                                                  lock_abspath,
