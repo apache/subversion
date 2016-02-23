@@ -1301,12 +1301,15 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   option->conflict = conflict;
   if ((operation == svn_wc_operation_update ||
        operation == svn_wc_operation_switch) &&
-      local_change == svn_wc_conflict_reason_moved_away &&
+      (local_change == svn_wc_conflict_reason_moved_away ||
+       local_change == svn_wc_conflict_reason_deleted ||
+       local_change == svn_wc_conflict_reason_replaced) &&
       incoming_change == svn_wc_conflict_action_edit)
     {
-      /* We must break the move if the user accepts the current
-       * working copy state instead of updating the move.
-       * Else the move would be left in an invalid state. */
+      /* We must break moves if the user accepts the current working copy
+       * state instead of updating a moved-away node or updating children
+       * moved outside of deleted or replaced directory nodes.
+       * Else such moves would be left in an invalid state. */
       option->do_resolve_func = resolve_update_break_moved_away;
     }
   else
