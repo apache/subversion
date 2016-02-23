@@ -142,12 +142,6 @@ conflict_option_id_to_wc_conflict_choice(
       case svn_client_conflict_option_unspecified:
         return svn_wc_conflict_choose_unspecified;
 
-      /* ### These options are mapped to conflict_choice_t for now
-       * ### because libsvn_wc does not offer an interface for them. */
-      case svn_client_conflict_option_update_move_destination:
-      case svn_client_conflict_option_update_any_moved_away_children:
-        return svn_wc_conflict_choose_mine_conflict;
-
       default:
         break;
     }
