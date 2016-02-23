@@ -836,7 +836,6 @@ resolve_accept_current_wc_state(svn_client_conflict_option_t *option,
   err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
                                                                  lock_abspath,
                                                                  scratch_pool));
-  svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
   SVN_ERR(err);
 
   conflict->resolution_tree = option_id;
