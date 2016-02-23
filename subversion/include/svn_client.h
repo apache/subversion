@@ -4507,6 +4507,11 @@ svn_client_conflict_prop_get_description(const char **description,
  * Additionally, the description may be localized to the language used
  * by the current locale.
  *
+ * By default, the description is based only on information available in
+ * the working copy. If svn_client_conflict_tree_get_details() was already
+ * called for @a conflict, the description might also contain useful
+ * information obtained from the repository.
+ *
  * @since New in 1.10.
  */
 svn_error_t *
@@ -4543,6 +4548,10 @@ svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
  * Set @a *options to an array of pointers to svn_client_conflict_option_t
  * objects applicable to the tree conflict described by @a conflict.
  *
+ * By default, the list of options is based only on information available in
+ * the working copy. If svn_client_conflict_tree_get_details() was already
+ * called for @a conflict, a more useful list of options might be returned.
+ *
  * @since New in 1.10.
  */
 svn_error_t *
@@ -4550,6 +4559,23 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
                                                 svn_client_conflict_t *conflict,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool);
+
+/**
+ * Find more information about the tree conflict represented by @a conflict.
+ *
+ * A call to svn_client_conflict_tree_get_description() may yield much better
+ * results after this function has been called.
+ *
+ * A call to svn_client_conflict_tree_get_resolution_options() may provide
+ * more useful resolution options if this function has been called.
+ *
+ * This function may contact the repository.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_tree_get_details(svn_client_conflict_t *conflict,
+                                     apr_pool_t *scratch_pool);
 
 /**
  * Return an ID for @a option. This ID can be used by callers to associate
