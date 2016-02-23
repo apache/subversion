@@ -48,6 +48,19 @@
 
 /*** Dealing with conflicts. ***/
 
+/* Describe a tree conflict. */
+typedef svn_error_t *(*tree_conflict_get_description_func_t)(
+  const char **description,
+  svn_client_conflict_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/* Get more information about a tree conflict.
+ * This function may contact the repository. */
+typedef svn_error_t *(*tree_conflict_get_details_func_t)(
+  svn_client_conflict_t *conflict,
+  apr_pool_t *scratch_pool);
+
 struct svn_client_conflict_t
 {
   const char *local_abspath;
@@ -64,6 +77,20 @@ struct svn_client_conflict_t
    * conflicts resolved. Indicates which options were chosen to resolve
    * the property conflicts. */
   apr_hash_t *resolved_props;
+
+  /* Ask a tree conflict to describe itself. */
+  tree_conflict_get_description_func_t tree_conflict_get_description_func;
+
+  /* Ask a tree conflict to find out more information about itself
+   * by contacting the repository. */
+  tree_conflict_get_details_func_t tree_conflict_get_details_func;
+
+  /* Any additional information found can be stored here and may be used
+   * when describing a tree conflict. */
+  void *tree_conflict_details;
+
+  /* The pool this conflict was allocated from. */
+  apr_pool_t *pool;
 
   /* For backwards compat. */
   const svn_wc_conflict_description2_t *legacy_text_conflict;
@@ -176,6 +203,58 @@ add_legacy_desc_to_conflict(const svn_wc_conflict_description2_t *desc,
     }
 }
 
+/* ### forward declarations */
+static svn_error_t *
+conflict_tree_get_description_generic(const char **description,
+                                      svn_client_conflict_t *conflict,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
+static svn_error_t *
+conflict_tree_get_description_incoming_delete(const char **description,
+                                              svn_client_conflict_t *conflict,
+                                              apr_pool_t *result_pool,
+                                              apr_pool_t *scratch_pool);
+static svn_error_t *
+conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
+                                          apr_pool_t *scratch_pool);
+
+/* Set up type-specific data for a new conflict object. */
+static svn_error_t *
+conflict_type_specific_setup(svn_client_conflict_t *conflict,
+                             apr_pool_t *scratch_pool)
+{
+  svn_boolean_t tree_conflicted;
+  svn_wc_operation_t operation;
+  svn_wc_conflict_reason_t local_change;
+  svn_wc_conflict_action_t incoming_change;
+
+  /* For now, we only deal with tree conflicts here. */
+  SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
+                                             conflict, scratch_pool,
+                                             scratch_pool));
+  if (!tree_conflicted)
+    return SVN_NO_ERROR;
+
+  /* Set a default description function. */
+  conflict->tree_conflict_get_description_func =
+    conflict_tree_get_description_generic;
+
+  operation = svn_client_conflict_get_operation(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
+  incoming_change = svn_client_conflict_get_incoming_change(conflict);
+
+  /* Set type-specific description and details functions if available. */
+  if (incoming_change == svn_wc_conflict_action_delete)
+    {
+      conflict->tree_conflict_get_description_func =
+        conflict_tree_get_description_incoming_delete;
+      conflict->tree_conflict_get_details_func =
+        conflict_tree_get_details_incoming_delete;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Set up a conflict object. If legacy conflict descriptor DESC is not NULL,
  * set up the conflict object for backwards compatibility. */
 static svn_error_t *
@@ -208,6 +287,7 @@ conflict_get_internal(svn_client_conflict_t **conflict,
   (*conflict)->resolution_tree = svn_client_conflict_option_unspecified;
   (*conflict)->resolved_props = apr_hash_make(result_pool);
   (*conflict)->ctx = ctx;
+  (*conflict)->pool = result_pool;
 
   /* Add all legacy conflict descriptors we can find. Eventually, this code
    * path should stop relying on svn_wc_conflict_description2_t entirely. */
@@ -219,6 +299,8 @@ conflict_get_internal(svn_client_conflict_t **conflict,
       desc = APR_ARRAY_IDX(descs, i, const svn_wc_conflict_description2_t *);
       add_legacy_desc_to_conflict(desc, *conflict, result_pool);
     }
+
+  SVN_ERR(conflict_type_specific_setup(*conflict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -491,11 +573,12 @@ svn_client_conflict_prop_get_description(const char **description,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_conflict_tree_get_description(const char **description,
-                                         svn_client_conflict_t *conflict,
-                                         apr_pool_t *result_pool,
-                                         apr_pool_t *scratch_pool)
+/* Implements tree_conflict_get_description_func_t. */
+static svn_error_t *
+conflict_tree_get_description_generic(const char **description,
+                                      svn_client_conflict_t *conflict,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool)
 {
   const char *action, *reason, *operation;
   svn_node_kind_t incoming_kind;
@@ -558,6 +641,117 @@ svn_client_conflict_tree_get_description(const char **description,
                                   operation);
     }
   return SVN_NO_ERROR;
+}
+
+/* Implements tree_conflict_get_description_func_t. */
+static svn_error_t *
+conflict_tree_get_description_incoming_delete(const char **description,
+                                              svn_client_conflict_t *conflict,
+                                              apr_pool_t *result_pool,
+                                              apr_pool_t *scratch_pool)
+{
+  const char *action, *reason, *operation;
+  svn_revnum_t deleted_rev;
+  svn_node_kind_t incoming_node_kind;
+  svn_node_kind_t victim_node_kind;
+  svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_reason_t local_change;
+  svn_wc_operation_t conflict_operation;
+
+  if (conflict->tree_conflict_details == NULL)
+    return svn_error_trace(conflict_tree_get_description_generic(description,
+                                                                 conflict,
+                                                                 result_pool,
+                                                                 scratch_pool));
+
+  incoming_change = svn_client_conflict_get_incoming_change(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
+  conflict_operation = svn_client_conflict_get_operation(conflict);
+  victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
+  reason = local_reason_str(victim_node_kind, local_change, conflict_operation);
+  if (reason == NULL)
+    return svn_error_trace(conflict_tree_get_description_generic(description,
+                                                                 conflict,
+                                                                 result_pool,
+                                                                 scratch_pool));
+
+  deleted_rev = *((svn_revnum_t *)conflict->tree_conflict_details);
+
+  /* Delete is acting on 'src_left' version of the node. */
+  SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+            NULL, NULL, &incoming_node_kind, conflict, scratch_pool,
+            scratch_pool));
+  if (incoming_node_kind == svn_node_dir)
+    action = apr_psprintf(result_pool,
+                          _("incoming dir deleted or moved in r%lu"),
+                          deleted_rev);
+  else if (incoming_node_kind == svn_node_file ||
+           incoming_node_kind == svn_node_symlink)
+    action = apr_psprintf(result_pool,
+                          _("incoming file deleted or moved in r%lu"),
+                          deleted_rev);
+  else
+    action = apr_psprintf(result_pool,
+                          _("incoming item deleted or moved in r%lu"),
+                          deleted_rev);
+
+  operation = operation_str(conflict_operation);
+  SVN_ERR_ASSERT(operation);
+
+  *description = apr_psprintf(result_pool, _("%s, %s %s"),
+                              reason, action, operation);
+  return SVN_NO_ERROR;
+}
+
+/* Implements tree_conflict_get_details_func_t.
+ * Find the revision in which the victim was deleted in the repository. */
+static svn_error_t *
+conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
+                                          apr_pool_t *scratch_pool)
+{
+  svn_revnum_t deleted_rev;
+  const char *repos_relpath;
+  const char *repos_root_url;
+  svn_revnum_t peg_rev;
+  svn_revnum_t end_rev;
+  const char *url;
+  const char *corrected_url;
+  svn_ra_session_t *ra_session;
+
+  SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+            &repos_relpath, &peg_rev, NULL, conflict, scratch_pool,
+            scratch_pool));
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            NULL, &end_rev, NULL, conflict, scratch_pool,
+            scratch_pool));
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL, conflict,
+                                             scratch_pool, scratch_pool));
+  url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                    scratch_pool);
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
+                                               url, NULL, NULL,
+                                               FALSE /* write_dav_props */,
+                                               FALSE /* read_dav_props */,
+                                               conflict->ctx,
+                                               scratch_pool, scratch_pool));
+  SVN_ERR(svn_ra_get_deleted_rev(ra_session, "", peg_rev, end_rev,
+                                 &deleted_rev, scratch_pool));
+
+  conflict->tree_conflict_details = apr_pcalloc(conflict->pool,
+                                                sizeof(deleted_rev));
+  *((svn_revnum_t *)conflict->tree_conflict_details) = deleted_rev;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_tree_get_description(const char **description,
+                                         svn_client_conflict_t *conflict,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(conflict->tree_conflict_get_description_func(
+                           description, conflict, result_pool, scratch_pool));
 }
 
 void
@@ -1181,6 +1375,18 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
             }
         }
     }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_tree_get_details(svn_client_conflict_t *conflict,
+                                     apr_pool_t *scratch_pool)
+{
+  SVN_ERR(assert_tree_conflict(conflict, scratch_pool));
+
+  if (conflict->tree_conflict_get_details_func)
+    SVN_ERR(conflict->tree_conflict_get_details_func(conflict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
