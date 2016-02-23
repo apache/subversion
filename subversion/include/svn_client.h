@@ -4409,17 +4409,6 @@ typedef enum svn_client_conflict_option_id_t {
 } svn_client_conflict_option_id_t;
 
 /**
- * Map an option ID to a legacy conflict choice.
- * This is a temporary API. It is currently still needed to mark
- * conflicts as resolved using libsvn_wc interfaces.
- *
- * @since New in 1.10.
- */
-svn_wc_conflict_choice_t
-svn_client_conflict_option_id_to_wc_conflict_choice(
-  svn_client_conflict_option_id_t option_id);
-
-/**
  * Set a merged property value on @a option to @a merged_propval.
  * 
  * Setting the merged value is required before resolving the property

@@ -108,8 +108,8 @@ struct svn_client_conflict_option_t
  * Return svn_wc_conflict_choose_undefined if no corresponding
  * legacy conflict choice exists.
  */
-svn_wc_conflict_choice_t
-svn_client_conflict_option_id_to_wc_conflict_choice(
+static svn_wc_conflict_choice_t
+conflict_option_id_to_wc_conflict_choice(
   svn_client_conflict_option_id_t option_id)
 {
 
@@ -597,8 +597,7 @@ resolve_text_conflict(svn_client_conflict_option_t *option,
   svn_error_t *err;
 
   option_id = svn_client_conflict_option_get_id(option);
-  conflict_choice =
-    svn_client_conflict_option_id_to_wc_conflict_choice(option_id);
+  conflict_choice = conflict_option_id_to_wc_conflict_choice(option_id);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
 
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
@@ -638,8 +637,7 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
   svn_error_t *err;
 
   option_id = svn_client_conflict_option_get_id(option);
-  conflict_choice =
-    svn_client_conflict_option_id_to_wc_conflict_choice(option_id);
+  conflict_choice = conflict_option_id_to_wc_conflict_choice(option_id);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
 
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
