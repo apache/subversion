@@ -798,9 +798,9 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
 
 /* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
-resolve_tree_conflict(svn_client_conflict_option_t *option,
-                      svn_client_conflict_t *conflict,
-                      apr_pool_t *scratch_pool)
+resolve_accept_current_wc_state(svn_client_conflict_option_t *option,
+                                svn_client_conflict_t *conflict,
+                                apr_pool_t *scratch_pool)
 {
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
@@ -1250,7 +1250,7 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
       option->do_resolve_func = resolve_update_break_moved_away;
     }
   else
-    option->do_resolve_func = resolve_tree_conflict;
+    option->do_resolve_func = resolve_accept_current_wc_state;
 
   APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
 
