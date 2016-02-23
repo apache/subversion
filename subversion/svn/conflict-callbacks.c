@@ -1493,17 +1493,17 @@ handle_tree_conflict(svn_boolean_t *resolved,
       else if (strcmp(opt->code, "g") == 0)
         {
           /* User wants to get more information from the repository. */
-          SVN_ERR(svn_client_conflict_tree_get_details(conflict, scratch_pool));
+          SVN_ERR(svn_client_conflict_tree_get_details(conflict, iterpool));
 
           /* Description might have changed. Show it again. */
           SVN_ERR(svn_client_conflict_tree_get_description(
-                   &description, conflict, scratch_pool, scratch_pool));
-          SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, _("   > %s\n"),
+                   &description, conflict, scratch_pool, iterpool));
+          SVN_ERR(svn_cmdline_fprintf(stderr, iterpool, _("   > %s\n"),
                                       description));
 
           /* Options might have changed. Rebuild the list. */
           SVN_ERR(build_tree_conflict_options(&tree_conflict_options, conflict,
-                                              scratch_pool, scratch_pool));
+                                              scratch_pool, iterpool));
           continue;
         }
       else if (opt->choice != svn_client_conflict_option_undefined)
