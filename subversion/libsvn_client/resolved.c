@@ -680,6 +680,15 @@ svn_client_conflict_option_set_merged_propval(
 
 /* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
+resolve_postpone(svn_client_conflict_option_t *option,
+                      svn_client_conflict_t *conflict,
+                      apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR; /* Nothing to do. */
+}
+
+/* Implements conflict_option_resolve_func_t. */
+static svn_error_t *
 resolve_text_conflict(svn_client_conflict_option_t *option,
                       svn_client_conflict_t *conflict,
                       apr_pool_t *scratch_pool)
@@ -941,7 +950,7 @@ static const svn_client_conflict_option_t text_conflict_options[] =
     svn_client_conflict_option_postpone,
     N_("skip this conflict and leave it unresolved"),
     NULL,
-    resolve_text_conflict
+    resolve_postpone
   },
 
   {
@@ -995,7 +1004,7 @@ static const svn_client_conflict_option_t binary_conflict_options[] =
     svn_client_conflict_option_postpone,
     N_("skip this conflict and leave it unresolved"),
     NULL,
-    resolve_text_conflict,
+    resolve_postpone,
   },
 
   {
@@ -1028,7 +1037,7 @@ static const svn_client_conflict_option_t prop_conflict_options[] =
     svn_client_conflict_option_postpone,
     N_("skip this conflict and leave it unresolved"),
     NULL,
-    resolve_prop_conflict
+    resolve_postpone
   },
 
   {
@@ -1219,7 +1228,7 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   option->id = svn_client_conflict_option_postpone;
   option->description = _("skip this conflict and leave it unresolved");
   option->conflict = conflict;
-  option->do_resolve_func = resolve_tree_conflict;
+  option->do_resolve_func = resolve_postpone;
   APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
 
   /* Add an option which marks the conflict resolved. */
