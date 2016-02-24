@@ -595,86 +595,86 @@ print_info(void *baton,
         {
           svn_boolean_t printed_tc = FALSE;
           svn_stringbuf_t *conflicted_props = NULL;
-          int i;
-          apr_pool_t *iterpool;
+          svn_client_conflict_t *conflict;
+          svn_boolean_t text_conflicted;
+          apr_array_header_t *props_conflicted;
+          svn_boolean_t tree_conflicted;
+          const svn_wc_conflict_description2_t *desc2 =
+                APR_ARRAY_IDX(info->wc_info->conflicts, 0,
+                              const svn_wc_conflict_description2_t *);
 
-          iterpool = svn_pool_create(pool);
-          for (i = 0; i < info->wc_info->conflicts->nelts; i++)
+          SVN_ERR(svn_client_conflict_get(&conflict, desc2->local_abspath,
+                                          receiver_baton->ctx, pool, pool));
+          SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                                     &props_conflicted,
+                                                     &tree_conflicted,
+                                                     conflict, pool, pool));
+          if (text_conflicted)
             {
-              const svn_wc_conflict_description2_t *desc2 =
-                    APR_ARRAY_IDX(info->wc_info->conflicts, i,
-                                  const svn_wc_conflict_description2_t *);
-              const char *desc;
               const char *base_abspath = NULL;
               const char *my_abspath = NULL;
               const char *their_abspath = NULL;
-              svn_client_conflict_t *conflict;
 
-              svn_pool_clear(iterpool);
+              SVN_ERR(svn_client_conflict_text_get_contents(
+                        NULL, &my_abspath, &base_abspath, &their_abspath,
+                        conflict, pool, pool));
 
-              SVN_ERR(svn_client_conflict_get(&conflict, desc2->local_abspath,
-                                              receiver_baton->ctx,
-                                              iterpool, iterpool));
-              switch (svn_client_conflict_get_kind(conflict))
+              if (base_abspath)
+                SVN_ERR(svn_cmdline_printf(pool,
+                          _("Conflict Previous Base File: %s\n"),
+                          svn_cl__local_style_skip_ancestor(
+                                  receiver_baton->path_prefix,
+                                  base_abspath,
+                                  pool)));
+
+              if (my_abspath)
+                SVN_ERR(svn_cmdline_printf(pool,
+                          _("Conflict Previous Working File: %s\n"),
+                          svn_cl__local_style_skip_ancestor(
+                                  receiver_baton->path_prefix,
+                                  my_abspath,
+                                  pool)));
+
+              if (their_abspath)
+                SVN_ERR(svn_cmdline_printf(pool,
+                          _("Conflict Current Base File: %s\n"),
+                          svn_cl__local_style_skip_ancestor(
+                                  receiver_baton->path_prefix,
+                                  their_abspath,
+                                  pool)));
+            }
+
+          if (props_conflicted)
+            {
+              int i;
+
+              for (i = 0; i < props_conflicted->nelts; i++)
                 {
-                  case svn_wc_conflict_kind_text:
+                  const char *name;
 
-                    SVN_ERR(svn_client_conflict_text_get_contents(
-                              NULL, &my_abspath, &base_abspath, &their_abspath,
-                              conflict, pool, pool));
-
-                    if (base_abspath)
-                      SVN_ERR(svn_cmdline_printf(pool,
-                                _("Conflict Previous Base File: %s\n"),
-                                svn_cl__local_style_skip_ancestor(
-                                        receiver_baton->path_prefix,
-                                        base_abspath,
-                                        pool)));
-
-                    if (my_abspath)
-                      SVN_ERR(svn_cmdline_printf(pool,
-                                _("Conflict Previous Working File: %s\n"),
-                                svn_cl__local_style_skip_ancestor(
-                                        receiver_baton->path_prefix,
-                                        my_abspath,
-                                        pool)));
-
-                    if (their_abspath)
-                      SVN_ERR(svn_cmdline_printf(pool,
-                                _("Conflict Current Base File: %s\n"),
-                                svn_cl__local_style_skip_ancestor(
-                                        receiver_baton->path_prefix,
-                                        their_abspath,
-                                        pool)));
-                  break;
-
-                  case svn_wc_conflict_kind_property:
+                  name = APR_ARRAY_IDX(props_conflicted, i, const char *);
+                  if (conflicted_props == NULL)
+                    conflicted_props = svn_stringbuf_create(name, pool);
+                  else
                     {
-                      const char *name;
-
-                      name = svn_client_conflict_prop_get_propname(conflict);
-                      if (conflicted_props == NULL)
-                        conflicted_props = svn_stringbuf_create(name, pool);
-                      else
-                        {
-                          svn_stringbuf_appendbyte(conflicted_props, ' ');
-                          svn_stringbuf_appendcstr(conflicted_props, name);
-                        }
+                      svn_stringbuf_appendbyte(conflicted_props, ' ');
+                      svn_stringbuf_appendcstr(conflicted_props, name);
                     }
-                  break;
-
-                  case svn_wc_conflict_kind_tree:
-                    printed_tc = TRUE;
-                    SVN_ERR(
-                        svn_cl__get_human_readable_tree_conflict_description(
-                                                    &desc, conflict, pool));
-
-                    SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n",
-                                               _("Tree conflict"), desc));
-                  break;
                 }
             }
-          svn_pool_destroy(iterpool);
+
+          if (tree_conflicted)
+            {
+              const char *desc;
+
+              printed_tc = TRUE;
+              SVN_ERR(
+                  svn_cl__get_human_readable_tree_conflict_description(
+                                              &desc, conflict, pool));
+
+              SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n",
+                                         _("Tree conflict"), desc));
+            }
 
           if (conflicted_props)
             SVN_ERR(svn_cmdline_printf(pool, _("Conflicted Properties: %s\n"),
@@ -691,14 +691,7 @@ print_info(void *baton,
             const char *repos_relpath;
             svn_revnum_t peg_rev;
             svn_node_kind_t node_kind;
-            const svn_wc_conflict_description2_t *desc2 =
-                  APR_ARRAY_IDX(info->wc_info->conflicts, 0,
-                                const svn_wc_conflict_description2_t *);
 
-            svn_client_conflict_t *conflict;
-
-            SVN_ERR(svn_client_conflict_get(&conflict, desc2->local_abspath,
-                                            receiver_baton->ctx, pool, pool));
             if (!printed_tc)
               {
                 const char *desc;
