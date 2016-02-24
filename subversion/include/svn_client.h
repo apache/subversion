@@ -4594,15 +4594,6 @@ svn_client_conflict_option_describe(const char **description,
                                     apr_pool_t *scratch_pool);
 
 /**
- * Return the kind of conflict (text conflict, property conflict,
- * or tree conflict) represented by @a conflict.
- *
- * New in 1.10.
- */
-svn_wc_conflict_kind_t
-svn_client_conflict_get_kind(const svn_client_conflict_t *conflict);
-
-/**
  * Return the absolute path to the conflicted working copy node described
  * by @a conflict.
  *
