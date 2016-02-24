@@ -1631,12 +1631,6 @@ get_conflict_desc2_t(const svn_client_conflict_t *conflict)
   return NULL;
 }
 
-svn_wc_conflict_kind_t
-svn_client_conflict_get_kind(const svn_client_conflict_t *conflict)
-{
-  return get_conflict_desc2_t(conflict)->kind;
-}
-
 svn_error_t *
 svn_client_conflict_get_conflicted(svn_boolean_t *text_conflicted,
                                    apr_array_header_t **props_conflicted,
