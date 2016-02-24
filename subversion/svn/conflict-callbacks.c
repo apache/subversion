@@ -86,7 +86,7 @@ svn_cl__accept_from_word(const char *word)
 /* Print on stdout a diff that shows incoming conflicting changes
  * corresponding to the conflict described in CONFLICT. */
 static svn_error_t *
-show_diff(const svn_client_conflict_t *conflict,
+show_diff(svn_client_conflict_t *conflict,
           const char *merged_abspath,
           const char *path_prefix,
           svn_cancel_func_t cancel_func,
@@ -168,7 +168,7 @@ show_diff(const svn_client_conflict_t *conflict,
 /* Print on stdout just the conflict hunks of a diff among the 'base', 'their'
  * and 'my' files of CONFLICT. */
 static svn_error_t *
-show_conflicts(const svn_client_conflict_t *conflict,
+show_conflicts(svn_client_conflict_t *conflict,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *pool)
