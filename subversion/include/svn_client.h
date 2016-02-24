@@ -4763,15 +4763,6 @@ svn_client_conflict_tree_resolve_by_id(
 svn_client_conflict_option_id_t
 svn_client_conflict_tree_get_resolution(const svn_client_conflict_t *conflict);
 
-
-/**
- * Return the name of the conflicted property represented by @a conflict.
- *
- * @since New in 1.10.
- */
-const char *
-svn_client_conflict_prop_get_propname(const svn_client_conflict_t *conflict);
-
 /**
  * Return the path to the legacy property conflicts reject file
  * for the property conflicts represented by @a conflict.
