@@ -4600,7 +4600,7 @@ svn_client_conflict_option_describe(const char **description,
  * @since New in 1.10. 
  */
 const char *
-svn_client_conflict_get_local_abspath(const svn_client_conflict_t *conflict);
+svn_client_conflict_get_local_abspath(svn_client_conflict_t *conflict);
 
 /**
  * Return the operation during which the conflict described by @a
@@ -4609,7 +4609,7 @@ svn_client_conflict_get_local_abspath(const svn_client_conflict_t *conflict);
  * @since New in 1.10. 
  */
 svn_wc_operation_t
-svn_client_conflict_get_operation(const svn_client_conflict_t *conflict);
+svn_client_conflict_get_operation(svn_client_conflict_t *conflict);
 
 /**
  * Return the action an update, switch, or merge operation attempted to
@@ -4618,7 +4618,7 @@ svn_client_conflict_get_operation(const svn_client_conflict_t *conflict);
  * @since New in 1.10. 
  */
 svn_wc_conflict_action_t
-svn_client_conflict_get_incoming_change(const svn_client_conflict_t *conflict);
+svn_client_conflict_get_incoming_change(svn_client_conflict_t *conflict);
 
 /**
  * Return the reason why the attempted action performed by an update, switch,
@@ -4632,7 +4632,7 @@ svn_client_conflict_get_incoming_change(const svn_client_conflict_t *conflict);
  * @since New in 1.10. 
  */
 svn_wc_conflict_reason_t
-svn_client_conflict_get_local_change(const svn_client_conflict_t *conflict);
+svn_client_conflict_get_local_change(svn_client_conflict_t *conflict);
 
 /**
  * Return information about the repository associated with @a conflict. 
@@ -4644,7 +4644,7 @@ svn_client_conflict_get_local_change(const svn_client_conflict_t *conflict);
 svn_error_t *
 svn_client_conflict_get_repos_info(const char **repos_root_url,
                                    const char **repos_uuid,
-                                   const svn_client_conflict_t *conflict,
+                                   svn_client_conflict_t *conflict,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
@@ -4679,7 +4679,7 @@ svn_client_conflict_get_incoming_old_repos_location(
   const char **incoming_old_repos_relpath,
   svn_revnum_t *incoming_old_regrev,
   svn_node_kind_t *incoming_old_node_kind,
-  const svn_client_conflict_t *conflict,
+  svn_client_conflict_t *conflict,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
@@ -4751,7 +4751,7 @@ svn_client_conflict_tree_resolve_by_id(
  * @since New in 1.10.
  */
 svn_client_conflict_option_id_t
-svn_client_conflict_tree_get_resolution(const svn_client_conflict_t *conflict);
+svn_client_conflict_tree_get_resolution(svn_client_conflict_t *conflict);
 
 /**
  * Return the path to the legacy property conflicts reject file
@@ -4821,7 +4821,7 @@ svn_client_conflict_prop_resolve_by_id(
  * @since New in 1.10.
  */
 svn_client_conflict_option_id_t
-svn_client_conflict_prop_get_resolution(const svn_client_conflict_t *conflict,
+svn_client_conflict_prop_get_resolution(svn_client_conflict_t *conflict,
                                         const char *propname);
 
 /**
@@ -4883,7 +4883,7 @@ svn_client_conflict_text_resolve_by_id(
  * @since New in 1.10.
  */
 svn_client_conflict_option_id_t
-svn_client_conflict_text_get_resolution(const svn_client_conflict_t *conflict);
+svn_client_conflict_text_get_resolution(svn_client_conflict_t *conflict);
 
 /** @} */
 

@@ -1465,7 +1465,7 @@ svn_client_conflict_text_resolve_by_id(
 }
 
 svn_client_conflict_option_id_t
-svn_client_conflict_text_get_resolution(const svn_client_conflict_t *conflict)
+svn_client_conflict_text_get_resolution(svn_client_conflict_t *conflict)
 {
   return conflict->resolution_text;
 }
@@ -1513,7 +1513,7 @@ svn_client_conflict_prop_resolve_by_id(
 }
 
 svn_client_conflict_option_id_t
-svn_client_conflict_prop_get_resolution(const svn_client_conflict_t *conflict,
+svn_client_conflict_prop_get_resolution(svn_client_conflict_t *conflict,
                                         const char *propname)
 {
   svn_client_conflict_option_t *option;
@@ -1609,14 +1609,14 @@ svn_client_conflict_tree_resolve_by_id(
 }
 
 svn_client_conflict_option_id_t
-svn_client_conflict_tree_get_resolution(const svn_client_conflict_t *conflict)
+svn_client_conflict_tree_get_resolution(svn_client_conflict_t *conflict)
 {
   return conflict->resolution_tree;
 }
 
 /* Return the legacy conflict descriptor which is wrapped by CONFLICT. */
 static const svn_wc_conflict_description2_t *
-get_conflict_desc2_t(const svn_client_conflict_t *conflict)
+get_conflict_desc2_t(svn_client_conflict_t *conflict)
 {
   if (conflict->legacy_text_conflict)
     return conflict->legacy_text_conflict;
@@ -1659,25 +1659,25 @@ svn_client_conflict_get_conflicted(svn_boolean_t *text_conflicted,
 }
 
 const char *
-svn_client_conflict_get_local_abspath(const svn_client_conflict_t *conflict)
+svn_client_conflict_get_local_abspath(svn_client_conflict_t *conflict)
 {
   return conflict->local_abspath;
 }
 
 svn_wc_operation_t
-svn_client_conflict_get_operation(const svn_client_conflict_t *conflict)
+svn_client_conflict_get_operation(svn_client_conflict_t *conflict)
 {
   return get_conflict_desc2_t(conflict)->operation;
 }
 
 svn_wc_conflict_action_t
-svn_client_conflict_get_incoming_change(const svn_client_conflict_t *conflict)
+svn_client_conflict_get_incoming_change(svn_client_conflict_t *conflict)
 {
   return get_conflict_desc2_t(conflict)->action;
 }
 
 svn_wc_conflict_reason_t
-svn_client_conflict_get_local_change(const svn_client_conflict_t *conflict)
+svn_client_conflict_get_local_change(svn_client_conflict_t *conflict)
 {
   return get_conflict_desc2_t(conflict)->reason;
 }
@@ -1685,7 +1685,7 @@ svn_client_conflict_get_local_change(const svn_client_conflict_t *conflict)
 svn_error_t *
 svn_client_conflict_get_repos_info(const char **repos_root_url,
                                    const char **repos_uuid,
-                                   const svn_client_conflict_t *conflict,
+                                   svn_client_conflict_t *conflict,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool)
 {
@@ -1721,7 +1721,7 @@ svn_client_conflict_get_incoming_old_repos_location(
   const char **incoming_old_repos_relpath,
   svn_revnum_t *incoming_old_pegrev,
   svn_node_kind_t *incoming_old_node_kind,
-  const svn_client_conflict_t *conflict,
+  svn_client_conflict_t *conflict,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool)
 {
