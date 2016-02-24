@@ -637,7 +637,17 @@ conflict_tree_get_description_generic(const char **description,
 /* Details for tree conflicts involving incoming deletions. */
 struct conflict_tree_incoming_delete_details
 {
+  /* If not SVN_INVALID_REVNUM, the node was deleted in DELETED_REV. */
   svn_revnum_t deleted_rev;
+
+  /* If not SVN_INVALID_REVNUM, the node was added in ADDED_REV. The incoming
+   * delete is the result of a reverse application of this addition. */
+  svn_revnum_t added_rev;
+
+  /* The path which was deleted/added relative to the repository root. */
+  const char *repos_relpath;
+
+  /* Author who committed DELETED_REV/ADDED_REV. */
   const char *rev_author;
 };
 
@@ -649,11 +659,11 @@ conflict_tree_get_description_incoming_delete(const char **description,
                                               apr_pool_t *scratch_pool)
 {
   const char *action, *reason;
-  svn_node_kind_t incoming_node_kind;
   svn_node_kind_t victim_node_kind;
   svn_wc_conflict_action_t incoming_change;
   svn_wc_conflict_reason_t local_change;
   svn_wc_operation_t conflict_operation;
+  svn_revnum_t new_rev;
   struct conflict_tree_incoming_delete_details *details;
 
   if (conflict->tree_conflict_details == NULL)
@@ -672,28 +682,79 @@ conflict_tree_get_description_incoming_delete(const char **description,
                                                                  conflict,
                                                                  result_pool,
                                                                  scratch_pool));
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            NULL, &new_rev, NULL, conflict, scratch_pool,
+            scratch_pool));
 
   details = conflict->tree_conflict_details;
 
-  /* Delete is acting on 'src_left' version of the node. */
-  SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
-            NULL, NULL, &incoming_node_kind, conflict, scratch_pool,
-            scratch_pool));
-  if (incoming_node_kind == svn_node_dir)
-    action = apr_psprintf(result_pool,
-                          _("dir was deleted or moved by %s in r%lu"),
-                          details->rev_author, details->deleted_rev);
-  else if (incoming_node_kind == svn_node_file ||
-           incoming_node_kind == svn_node_symlink)
-    action = apr_psprintf(result_pool,
-                          _("file was deleted or moved by %s in r%lu"),
-                          details->rev_author, details->deleted_rev);
-  else
-    action = apr_psprintf(result_pool,
-                          _("item was deleted or moved by %s in r%lu"),
-                          details->rev_author, details->deleted_rev);
+  if (details->deleted_rev != SVN_INVALID_REVNUM)
+    {
+      if (victim_node_kind == svn_node_dir)
+        action = apr_psprintf(result_pool,
+                              _("dir updated to r%lu was deleted or moved "
+                                "by %s in r%lu"), new_rev,
+                              details->rev_author, details->deleted_rev);
+      else if (victim_node_kind == svn_node_file ||
+               victim_node_kind == svn_node_symlink)
+        action = apr_psprintf(result_pool,
+                              _("file updated to r%lu was deleted or moved "
+                                "by %s in r%lu"), new_rev,
+                              details->rev_author, details->deleted_rev);
+      else
+        action = apr_psprintf(result_pool,
+                              _("item updated to r%lu was deleted or moved "
+                                "by %s in r%lu"), new_rev,
+                              details->rev_author, details->deleted_rev);
+    }
+  else /* details->added_rev != SVN_INVALID_REVNUM */
+    {
+      /* This deletion is really the reverse change of an addition. */
+      if (victim_node_kind == svn_node_dir)
+        action = apr_psprintf(result_pool,
+                              _("dir updated to r%lu did not exist before it "
+                                "was added by %s in r%lu"), new_rev,
+                              details->rev_author, details->added_rev);
+      else if (victim_node_kind == svn_node_file ||
+               victim_node_kind == svn_node_symlink)
+        action = apr_psprintf(result_pool,
+                              _("file updated to r%lu did not exist before it "
+                                "was added by %s in r%lu"), new_rev,
+                              details->rev_author, details->added_rev);
+      else
+        action = apr_psprintf(result_pool,
+                              _("item updated to r%lu did not exist before it "
+                                "was added by %s in r%lu"), new_rev,
+                              details->rev_author, details->added_rev);
+    }
 
   *description = apr_psprintf(result_pool, _("%s, %s"), reason, action);
+  return SVN_NO_ERROR;
+}
+
+/* Baton for find_added_rev(). */
+struct find_added_rev_baton
+{
+  struct conflict_tree_incoming_delete_details *details;
+  apr_pool_t *pool;
+};
+
+/* Implements svn_location_segment_receiver_t.
+ * Finds the revision in which a node was added by tracing 'start'
+ * revisions in location segments reported for the node. */
+static svn_error_t *
+find_added_rev(svn_location_segment_t *segment,
+               void *baton,
+               apr_pool_t *scratch_pool)
+{
+  struct find_added_rev_baton *b = baton;
+
+  if (segment->path) /* not interested in gaps */
+    {
+      b->details->added_rev = segment->range_start;
+      b->details->repos_relpath = apr_pstrdup(b->pool, segment->path);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -705,38 +766,90 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
 {
   svn_revnum_t deleted_rev;
   svn_string_t *author_revprop;
-  const char *repos_relpath;
+  const char *old_repos_relpath;
+  const char *new_repos_relpath;
   const char *repos_root_url;
-  svn_revnum_t peg_rev;
-  svn_revnum_t end_rev;
+  svn_revnum_t old_rev;
+  svn_revnum_t new_rev;
   const char *url;
   const char *corrected_url;
   svn_ra_session_t *ra_session;
   struct conflict_tree_incoming_delete_details *details;
+  svn_wc_operation_t operation;
 
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
-            &repos_relpath, &peg_rev, NULL, conflict, scratch_pool,
+            &old_repos_relpath, &old_rev, NULL, conflict, scratch_pool,
             scratch_pool));
   SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
-            NULL, &end_rev, NULL, conflict, scratch_pool,
+            &new_repos_relpath, &new_rev, NULL, conflict, scratch_pool,
             scratch_pool));
   SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL, conflict,
                                              scratch_pool, scratch_pool));
-  url = svn_path_url_add_component2(repos_root_url, repos_relpath,
-                                    scratch_pool);
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
-                                               url, NULL, NULL,
-                                               FALSE /* write_dav_props */,
-                                               FALSE /* read_dav_props */,
-                                               conflict->ctx,
-                                               scratch_pool, scratch_pool));
-  SVN_ERR(svn_ra_get_deleted_rev(ra_session, "", peg_rev, end_rev,
-                                 &deleted_rev, scratch_pool));
-  SVN_ERR(svn_ra_rev_prop(ra_session, deleted_rev, SVN_PROP_REVISION_AUTHOR,
-                          &author_revprop, scratch_pool));
-  details = apr_pcalloc(conflict->pool, sizeof(*details));
-  details->deleted_rev = deleted_rev;
-  details->rev_author = apr_pstrdup(conflict->pool, author_revprop->data);
+  operation = svn_client_conflict_get_operation(conflict);
+
+  if (operation == svn_wc_operation_update)
+    {
+      if (old_rev < new_rev)
+        {
+          /* The update operation went forward in history. */
+          url = svn_path_url_add_component2(repos_root_url, new_repos_relpath,
+                                            scratch_pool);
+          SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
+                                                       &corrected_url,
+                                                       url, NULL, NULL,
+                                                       FALSE,
+                                                       FALSE,
+                                                       conflict->ctx,
+                                                       scratch_pool,
+                                                       scratch_pool));
+          SVN_ERR(svn_ra_get_deleted_rev(ra_session, "", old_rev, new_rev,
+                                         &deleted_rev, scratch_pool));
+          SVN_ERR(svn_ra_rev_prop(ra_session, deleted_rev,
+                                  SVN_PROP_REVISION_AUTHOR,
+                                  &author_revprop, scratch_pool));
+          details = apr_pcalloc(conflict->pool, sizeof(*details));
+          details->deleted_rev = deleted_rev;
+          details->added_rev = SVN_INVALID_REVNUM;
+          details->repos_relpath = apr_pstrdup(conflict->pool,
+                                               new_repos_relpath);
+          details->rev_author = apr_pstrdup(conflict->pool,
+                                            author_revprop->data);
+        }
+      else /* new_rev < old_rev */
+        {
+          struct find_added_rev_baton b;
+
+          /* The update operation went backwards in history. */
+          url = svn_path_url_add_component2(repos_root_url, old_repos_relpath,
+                                            scratch_pool);
+          SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
+                                                       &corrected_url,
+                                                       url, NULL, NULL,
+                                                       FALSE,
+                                                       FALSE,
+                                                       conflict->ctx,
+                                                       scratch_pool,
+                                                       scratch_pool));
+
+          details = apr_pcalloc(conflict->pool, sizeof(*details));
+          b.details = details;
+          b.pool = scratch_pool;
+          /* Figure out when this node was added. */
+          SVN_ERR(svn_ra_get_location_segments(ra_session, "", old_rev,
+                                               old_rev, new_rev,
+                                               find_added_rev, &b,
+                                               scratch_pool));
+          SVN_ERR(svn_ra_rev_prop(ra_session, details->added_rev,
+                                  SVN_PROP_REVISION_AUTHOR,
+                                  &author_revprop, scratch_pool));
+          details->deleted_rev = SVN_INVALID_REVNUM;
+          details->repos_relpath = apr_pstrdup(conflict->pool,
+                                               new_repos_relpath);
+          details->rev_author = apr_pstrdup(conflict->pool,
+                                            author_revprop->data);
+        }
+    }
+
   conflict->tree_conflict_details = details;
 
   return SVN_NO_ERROR;
