@@ -93,7 +93,7 @@ struct svn_client_conflict_t
   /* The pool this conflict was allocated from. */
   apr_pool_t *pool;
 
-  /* For backwards compat. */
+  /* Conflict data provided by libsvn_wc. */
   const svn_wc_conflict_description2_t *legacy_text_conflict;
   const char *legacy_prop_conflict_propname;
   const svn_wc_conflict_description2_t *legacy_tree_conflict;
