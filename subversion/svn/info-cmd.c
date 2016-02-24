@@ -162,6 +162,9 @@ typedef struct print_info_baton_t
 
   /* Did we already print a line of output? */
   svn_boolean_t start_new_line;
+
+  /* The client context. */
+  svn_client_ctx_t *ctx;
 } print_info_baton_t;
 
 
@@ -403,9 +406,9 @@ print_info_xml(void *baton,
 
           svn_pool_clear(iterpool);
 
-          SVN_ERR(svn_client_conflict_from_wc_description2_t(&conflict, desc,
-                                                             iterpool,
-                                                             iterpool));
+          SVN_ERR(svn_client_conflict_get(&conflict, desc->local_abspath,
+                                          receiver_baton->ctx,
+                                          iterpool, iterpool));
           SVN_ERR(svn_cl__append_conflict_info_xml(sb, conflict, iterpool));
         }
       svn_pool_destroy(iterpool);
@@ -609,10 +612,9 @@ print_info(void *baton,
 
               svn_pool_clear(iterpool);
 
-              SVN_ERR(svn_client_conflict_from_wc_description2_t(&conflict,
-                                                                 desc2,
-                                                                 iterpool,
-                                                                 iterpool));
+              SVN_ERR(svn_client_conflict_get(&conflict, desc2->local_abspath,
+                                              receiver_baton->ctx,
+                                              iterpool, iterpool));
               switch (svn_client_conflict_get_kind(conflict))
                 {
                   case svn_wc_conflict_kind_text:
@@ -695,8 +697,8 @@ print_info(void *baton,
 
             svn_client_conflict_t *conflict;
 
-            SVN_ERR(svn_client_conflict_from_wc_description2_t(&conflict, desc2,
-                                                               pool, pool));
+            SVN_ERR(svn_client_conflict_get(&conflict, desc2->local_abspath,
+                                            receiver_baton->ctx, pool, pool));
             if (!printed_tc)
               {
                 const char *desc;
@@ -925,6 +927,8 @@ svn_cl__info(apr_getopt_t *os,
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);
+
+  receiver_baton.ctx = ctx;
 
   if (opt_state->xml)
     {
