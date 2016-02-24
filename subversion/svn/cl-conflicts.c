@@ -58,14 +58,6 @@ static const svn_token_map_t map_conflict_reason_xml[] =
   { NULL,               0 }
 };
 
-static const svn_token_map_t map_conflict_kind_xml[] =
-{
-  { "text",             svn_wc_conflict_kind_text },
-  { "property",         svn_wc_conflict_kind_property },
-  { "tree",             svn_wc_conflict_kind_tree },
-  { NULL,               0 }
-};
-
 /* Return a localised string representation of the local part of a conflict;
    NULL for non-localised odd cases. */
 static const char *
@@ -479,115 +471,128 @@ append_tree_conflict_info_xml(svn_stringbuf_t *str,
 
 svn_error_t *
 svn_cl__append_conflict_info_xml(svn_stringbuf_t *str,
-                                 const svn_client_conflict_t *conflict,
+                                 svn_client_conflict_t *conflict,
                                  apr_pool_t *scratch_pool)
 {
   apr_hash_t *att_hash;
-  const char *kind;
-  svn_wc_conflict_kind_t conflict_kind;
+  svn_boolean_t text_conflicted;
+  apr_array_header_t *props_conflicted;
+  svn_boolean_t tree_conflicted;
   svn_wc_operation_t conflict_operation;
   const char *repos_root_url;
   const char *repos_relpath;
   svn_revnum_t peg_rev;
   svn_node_kind_t node_kind;
 
-  conflict_kind = svn_client_conflict_get_kind(conflict);
   conflict_operation = svn_client_conflict_get_operation(conflict);
 
-  if (conflict_kind == svn_wc_conflict_kind_tree)
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict,
+                                             scratch_pool, scratch_pool));
+  if (tree_conflicted)
     {
       /* Uses other element type */
       return svn_error_trace(
                 append_tree_conflict_info_xml(str, conflict, scratch_pool));
     }
 
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL,
+                                             conflict,
+                                             scratch_pool, scratch_pool));
   att_hash = apr_hash_make(scratch_pool);
 
   svn_hash_sets(att_hash, "operation",
                 svn_cl__operation_str_xml(conflict_operation, scratch_pool));
 
-
-  kind = svn_token__to_word(map_conflict_kind_xml, conflict_kind);
-  svn_hash_sets(att_hash, "type", kind);
-
   svn_hash_sets(att_hash, "operation",
                 svn_cl__operation_str_xml(conflict_operation, scratch_pool));
 
-
-  /* "<conflict>" */
-  svn_xml_make_open_tag_hash(&str, scratch_pool,
-                             svn_xml_normal, "conflict", att_hash);
-
-  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL, conflict,
-                                             scratch_pool, scratch_pool));
-  SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(&repos_relpath,
-                                                              &peg_rev,
-                                                              &node_kind,
-                                                              conflict,
-                                                              scratch_pool,
-                                                              scratch_pool));
-  if (repos_root_url && repos_relpath)
-    SVN_ERR(add_conflict_version_xml(&str, "source-left",
-                                     repos_root_url, repos_relpath, peg_rev,
-                                     node_kind, scratch_pool));
-
-  SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(&repos_relpath,
-                                                              &peg_rev,
-                                                              &node_kind,
-                                                              conflict,
-                                                              scratch_pool,
-                                                              scratch_pool));
-  if (repos_root_url && repos_relpath)
-    SVN_ERR(add_conflict_version_xml(&str, "source-right",
-                                     repos_root_url, repos_relpath, peg_rev,
-                                     node_kind, scratch_pool));
-
-  switch (conflict_kind)
+  if (text_conflicted)
     {
       const char *base_abspath;
       const char *my_abspath;
       const char *their_abspath;
 
-      case svn_wc_conflict_kind_text:
-        SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
-                                                      &base_abspath,
-                                                      &their_abspath,
-                                                      conflict, scratch_pool,
-                                                      scratch_pool));
-        /* "<prev-base-file> xx </prev-base-file>" */
-        svn_cl__xml_tagged_cdata(
-          &str, scratch_pool, "prev-base-file", base_abspath);
+      svn_hash_sets(att_hash, "type", "text");
 
-        /* "<prev-wc-file> xx </prev-wc-file>" */
-        svn_cl__xml_tagged_cdata(
-          &str, scratch_pool, "prev-wc-file", my_abspath);
+      /* "<conflict>" */
+      svn_xml_make_open_tag_hash(&str, scratch_pool,
+                                 svn_xml_normal, "conflict", att_hash);
 
-        /* "<cur-base-file> xx </cur-base-file>" */
-        svn_cl__xml_tagged_cdata(
-          &str, scratch_pool, "cur-base-file", their_abspath);
+      SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+                &repos_relpath, &peg_rev, &node_kind, conflict,
+                scratch_pool, scratch_pool));
+      if (repos_root_url && repos_relpath)
+        SVN_ERR(add_conflict_version_xml(&str, "source-left",
+                                         repos_root_url, repos_relpath, peg_rev,
+                                         node_kind, scratch_pool));
 
-        break;
+      SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+                &repos_relpath, &peg_rev, &node_kind, conflict,
+                scratch_pool, scratch_pool));
+      if (repos_root_url && repos_relpath)
+        SVN_ERR(add_conflict_version_xml(&str, "source-right",
+                                         repos_root_url, repos_relpath, peg_rev,
+                                         node_kind, scratch_pool));
 
-      case svn_wc_conflict_kind_property:
-        {
-          const char *reject_abspath;
+      SVN_ERR(svn_client_conflict_text_get_contents(NULL, &my_abspath,
+                                                    &base_abspath,
+                                                    &their_abspath,
+                                                    conflict, scratch_pool,
+                                                    scratch_pool));
+      /* "<prev-base-file> xx </prev-base-file>" */
+      svn_cl__xml_tagged_cdata(
+        &str, scratch_pool, "prev-base-file", base_abspath);
 
-          /* "<prop-file> xx </prop-file>" */
-          reject_abspath =
-            svn_client_conflict_prop_get_reject_abspath(conflict);
-          svn_cl__xml_tagged_cdata(
-            &str, scratch_pool, "prop-file", reject_abspath);
-        }
-        break;
+      /* "<prev-wc-file> xx </prev-wc-file>" */
+      svn_cl__xml_tagged_cdata(
+        &str, scratch_pool, "prev-wc-file", my_abspath);
 
-      default:
-      case svn_wc_conflict_kind_tree:
-        SVN_ERR_MALFUNCTION(); /* Handled separately */
-        break;
+      /* "<cur-base-file> xx </cur-base-file>" */
+      svn_cl__xml_tagged_cdata(
+        &str, scratch_pool, "cur-base-file", their_abspath);
+
+      /* "</conflict>" */
+      svn_xml_make_close_tag(&str, scratch_pool, "conflict");
     }
 
-  /* "</conflict>" */
-  svn_xml_make_close_tag(&str, scratch_pool, "conflict");
+  if (props_conflicted->nelts > 0)
+    {
+      const char *reject_abspath;
+
+      svn_hash_sets(att_hash, "type", "property");
+
+      /* "<conflict>" */
+      svn_xml_make_open_tag_hash(&str, scratch_pool,
+                                 svn_xml_normal, "conflict", att_hash);
+
+      SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+                &repos_relpath, &peg_rev, &node_kind, conflict,
+                scratch_pool, scratch_pool));
+      if (repos_root_url && repos_relpath)
+        SVN_ERR(add_conflict_version_xml(&str, "source-left",
+                                         repos_root_url, repos_relpath, peg_rev,
+                                         node_kind, scratch_pool));
+
+      SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+                &repos_relpath, &peg_rev, &node_kind, conflict,
+                scratch_pool, scratch_pool));
+      if (repos_root_url && repos_relpath)
+        SVN_ERR(add_conflict_version_xml(&str, "source-right",
+                                         repos_root_url, repos_relpath, peg_rev,
+                                         node_kind, scratch_pool));
+
+      /* "<prop-file> xx </prop-file>" */
+      reject_abspath =
+        svn_client_conflict_prop_get_reject_abspath(conflict);
+      svn_cl__xml_tagged_cdata(
+        &str, scratch_pool, "prop-file", reject_abspath);
+
+      /* "</conflict>" */
+      svn_xml_make_close_tag(&str, scratch_pool, "conflict");
+    }
 
   return SVN_NO_ERROR;
 }
