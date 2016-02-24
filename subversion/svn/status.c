@@ -289,9 +289,8 @@ print_status(const char *target_abspath,
                                             local_abspath, pool, pool));
           SVN_ERR_ASSERT(desc2 != NULL);
 
-          SVN_ERR(svn_client_conflict_from_wc_description2_t(&tree_conflict,
-                                                             desc2,
-                                                             pool, pool));
+          SVN_ERR(svn_client_conflict_get(&tree_conflict, desc2->local_abspath,
+                                          ctx, pool, pool));
           tree_status_code = 'C';
           SVN_ERR(svn_cl__get_human_readable_tree_conflict_description(
                             &desc, tree_conflict, pool));
