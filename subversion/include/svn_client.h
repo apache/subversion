@@ -4705,7 +4705,7 @@ svn_client_conflict_get_incoming_new_repos_location(
   const char **incoming_new_repos_relpath,
   svn_revnum_t *incoming_new_regrev,
   svn_node_kind_t *incoming_new_node_kind,
-  const svn_client_conflict_t *conflict,
+  svn_client_conflict_t *conflict,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
@@ -4717,8 +4717,7 @@ svn_client_conflict_get_incoming_new_repos_location(
  * @since New in 1.10.
  */
 svn_node_kind_t
-svn_client_conflict_tree_get_victim_node_kind(
-  const svn_client_conflict_t *conflict);
+svn_client_conflict_tree_get_victim_node_kind(svn_client_conflict_t *conflict);
 
 /**
  * Resolve a tree @a conflict using resolution option @a option.
@@ -4773,8 +4772,7 @@ svn_client_conflict_tree_get_resolution(const svn_client_conflict_t *conflict);
  * @since New in 1.10.
  */
 const char *
-svn_client_conflict_prop_get_reject_abspath(
-  const svn_client_conflict_t *conflict);
+svn_client_conflict_prop_get_reject_abspath(svn_client_conflict_t *conflict);
 
 /**
  * Return the set of property values involved in the conflict of property
@@ -4792,7 +4790,7 @@ svn_client_conflict_prop_get_propvals(const svn_string_t **base_propval,
                                       const svn_string_t **working_propval,
                                       const svn_string_t **incoming_old_propval,
                                       const svn_string_t **incoming_new_propval,
-                                      const svn_client_conflict_t *conflict,
+                                      svn_client_conflict_t *conflict,
                                       const char *propname,
                                       apr_pool_t *result_pool);
 
@@ -4843,7 +4841,7 @@ svn_client_conflict_prop_get_resolution(const svn_client_conflict_t *conflict,
  * @since: New in 1.10.
  */
 const char *
-svn_client_conflict_text_get_mime_type(const svn_client_conflict_t *conflict);
+svn_client_conflict_text_get_mime_type(svn_client_conflict_t *conflict);
 
 /**
  * Return absolute paths to the versions of the text-conflicted file 
@@ -4859,7 +4857,7 @@ svn_client_conflict_text_get_contents(const char **base_abspath,
                                       const char **working_abspath,
                                       const char **incoming_old_abspath,
                                       const char **incoming_new_abspath,
-                                      const svn_client_conflict_t *conflict,
+                                      svn_client_conflict_t *conflict,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
