@@ -476,8 +476,6 @@ static const resolver_option_t extra_resolver_options_tree[] =
 {
   /* Translators: keep long_desc below 70 characters (wrap with a left
      margin of 9 spaces if needed) */
-  { "g",  N_("get more details"), N_("get more information from repository"),
-                                   svn_client_conflict_option_undefined },
   { "h",  N_("help"),             N_("show this help (also '?')"),
                                    svn_client_conflict_option_undefined },
   { NULL }
@@ -1434,6 +1432,9 @@ handle_tree_conflict(svn_boolean_t *resolved,
 
   option_id = svn_client_conflict_option_unspecified;
 
+  /* Always show the best possible conflict description and options. */
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, scratch_pool));
+
   SVN_ERR(svn_client_conflict_tree_get_description(
            &description, conflict, scratch_pool, scratch_pool));
   SVN_ERR(svn_cmdline_fprintf(
@@ -1489,22 +1490,6 @@ handle_tree_conflict(svn_boolean_t *resolved,
           option_id = opt->choice;
           *quit = TRUE;
           break;
-        }
-      else if (strcmp(opt->code, "g") == 0)
-        {
-          /* User wants to get more information from the repository. */
-          SVN_ERR(svn_client_conflict_tree_get_details(conflict, iterpool));
-
-          /* Description might have changed. Show it again. */
-          SVN_ERR(svn_client_conflict_tree_get_description(
-                   &description, conflict, scratch_pool, iterpool));
-          SVN_ERR(svn_cmdline_fprintf(stderr, iterpool, _("   > %s\n"),
-                                      description));
-
-          /* Options might have changed. Rebuild the list. */
-          SVN_ERR(build_tree_conflict_options(&tree_conflict_options, conflict,
-                                              scratch_pool, iterpool));
-          continue;
         }
       else if (opt->choice != svn_client_conflict_option_undefined)
         {
