@@ -1810,15 +1810,6 @@ svn_client_conflict_tree_get_victim_node_kind(
   return get_conflict_desc2_t(conflict)->node_kind;
 }
 
-const char *
-svn_client_conflict_prop_get_propname(const svn_client_conflict_t *conflict)
-{
-  SVN_ERR_ASSERT_NO_RETURN(svn_client_conflict_get_kind(conflict)
-      == svn_wc_conflict_kind_property);
-
-  return get_conflict_desc2_t(conflict)->property_name;
-}
-
 svn_error_t *
 svn_client_conflict_prop_get_propvals(const svn_string_t **base_propval,
                                       const svn_string_t **working_propval,
