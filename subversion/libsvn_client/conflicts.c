@@ -317,17 +317,6 @@ svn_client_conflict_get(svn_client_conflict_t **conflict,
                                                ctx, result_pool, scratch_pool));
 }
 
-svn_error_t *
-svn_client_conflict_from_wc_description2_t(
-  svn_client_conflict_t **conflict,
-  const svn_wc_conflict_description2_t *desc,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(conflict_get_internal(conflict, NULL, desc, NULL,
-                                               result_pool, scratch_pool));
-}
-
 /* A map for svn_wc_conflict_action_t values to strings */
 static const svn_token_map_t map_conflict_action[] =
 {
