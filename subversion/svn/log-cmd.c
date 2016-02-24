@@ -119,7 +119,7 @@ match(const char *pattern, const char *str, svn_membuf_t *buf)
 {
   svn_error_t *err;
 
-  err = svn_utf__normalize(&str, str, strlen(str), TRUE, buf);
+  err = svn_utf__casefold(&str, str, strlen(str), buf);
   if (err)
     {
       /* Can't match invalid data. */

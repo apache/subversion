@@ -204,11 +204,21 @@ svn_utf__normcmp(int *result,
 svn_error_t*
 svn_utf__normalize(const char **result,
                    const char *str, apr_size_t len,
-                   svn_boolean_t casefold,
                    svn_membuf_t *buf)
 {
   apr_size_t result_length;
-  SVN_ERR(normalize_cstring(&result_length, str, len, casefold, buf));
+  SVN_ERR(normalize_cstring(&result_length, str, len, FALSE, buf));
+  *result = (const char*)(buf->data);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_utf__casefold(const char **result,
+                  const char *str, apr_size_t len,
+                  svn_membuf_t *buf)
+{
+  apr_size_t result_length;
+  SVN_ERR(normalize_cstring(&result_length, str, len, TRUE, buf));
   *result = (const char*)(buf->data);
   return SVN_NO_ERROR;
 }

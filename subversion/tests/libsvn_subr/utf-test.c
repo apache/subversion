@@ -839,6 +839,80 @@ test_utf_normalize(apr_pool_t *pool)
     "\xe1\xbb\x9d"              /* o with grave and hook */
     "\xe1\xb9\x8b";             /* n with circumflex below */
 
+  /* Normalized: NFD */
+  static const char nfd[] =
+    "S\xcc\xa3\xcc\x87"         /* S with dot above and below */
+    "u\xcc\x8a"                 /* u with ring */
+    "b\xcc\xb1"                 /* b with macron below */
+    "v\xcc\x83"                 /* v with tilde */
+    "e\xcc\xa7\xcc\x86"         /* e with breve and cedilla */
+    "r\xcc\x8f"                 /* r with double grave */
+    "s\xcc\x8c"                 /* s with caron */
+    "i\xcc\x88\xcc\x81"         /* i with diaeresis and acute */
+    "o\xcc\x9b\xcc\x80"         /* o with grave and hook */
+    "n\xcc\xad";                /* n with circumflex below */
+
+  /* Mixed, denormalized */
+  static const char mixup[] =
+    "S\xcc\x87\xcc\xa3"         /* S with dot above and below */
+    "\xc5\xaf"                  /* u with ring */
+    "b\xcc\xb1"                 /* b with macron below */
+    "\xe1\xb9\xbd"              /* v with tilde */
+    "e\xcc\xa7\xcc\x86"         /* e with breve and cedilla */
+    "\xc8\x91"                  /* r with double grave */
+    "s\xcc\x8c"                 /* s with caron */
+    "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+    "o\xcc\x80\xcc\x9b"         /* o with grave and hook */
+    "\xe1\xb9\x8b";             /* n with circumflex below */
+
+  /* Invalid UTF-8 */
+  static const char invalid[] =
+    "\xe1\xb9\xa8"              /* S with dot above and below */
+    "\xc5\xaf"                  /* u with ring */
+    "\xe1\xb8\x87"              /* b with macron below */
+    "\xe1\xb9\xbd"              /* v with tilde */
+    "\xe1\xb8\x9d"              /* e with breve and cedilla */
+    "\xc8\x91"                  /* r with double grave */
+    "\xc5\xa1"                  /* s with caron */
+    "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+    "\xe6"                      /* Invalid byte */
+    "\xe1\xb9\x8b";             /* n with circumflex below */
+
+  const char *result;
+  svn_membuf_t buf;
+
+  svn_membuf__create(&buf, 0, pool);
+  SVN_ERR(svn_utf__normalize(&result, nfc, strlen(nfc), &buf));
+  SVN_TEST_STRING_ASSERT(result, nfc);
+  SVN_ERR(svn_utf__normalize(&result, nfd, strlen(nfd), &buf));
+  SVN_TEST_STRING_ASSERT(result, nfc);
+  SVN_ERR(svn_utf__normalize(&result, mixup, strlen(mixup), &buf));
+  SVN_TEST_STRING_ASSERT(result, nfc);
+
+  SVN_TEST_ASSERT_ERROR(svn_utf__normalize(&result, invalid, strlen(invalid),
+                                           &buf),
+                        SVN_ERR_UTF8PROC_ERROR);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_utf_casefold(apr_pool_t *pool)
+{
+  /* Normalized: NFC */
+  static const char nfc[] =
+    "\xe1\xb9\xa8"              /* S with dot above and below */
+    "\xc5\xaf"                  /* u with ring */
+    "\xe1\xb8\x87"              /* b with macron below */
+    "\xe1\xb9\xbd"              /* v with tilde */
+    "\xe1\xb8\x9d"              /* e with breve and cedilla */
+    "\xc8\x91"                  /* r with double grave */
+    "\xc5\xa1"                  /* s with caron */
+    "\xe1\xb8\xaf"              /* i with diaeresis and acute */
+    "\xe1\xbb\x9d"              /* o with grave and hook */
+    "\xe1\xb9\x8b";             /* n with circumflex below */
+
   /* Normalized: NFC, case folded */
   static const char nfc_casefold[] =
     "\xe1\xb9\xa9"              /* s with dot above and below */
@@ -895,20 +969,15 @@ test_utf_normalize(apr_pool_t *pool)
   svn_membuf_t buf;
 
   svn_membuf__create(&buf, 0, pool);
-  SVN_ERR(svn_utf__normalize(&result, nfd, strlen(nfd), FALSE, &buf));
-  SVN_TEST_STRING_ASSERT(result, nfc);
-  SVN_ERR(svn_utf__normalize(&result, nfd, strlen(nfd), TRUE, &buf));
+  SVN_ERR(svn_utf__casefold(&result, nfc, strlen(nfc), &buf));
   SVN_TEST_STRING_ASSERT(result, nfc_casefold);
-  SVN_ERR(svn_utf__normalize(&result, mixup, strlen(mixup), FALSE, &buf));
-  SVN_TEST_STRING_ASSERT(result, nfc);
-  SVN_ERR(svn_utf__normalize(&result, mixup, strlen(mixup), TRUE, &buf));
+  SVN_ERR(svn_utf__casefold(&result, nfd, strlen(nfd), &buf));
+  SVN_TEST_STRING_ASSERT(result, nfc_casefold);
+  SVN_ERR(svn_utf__casefold(&result, mixup, strlen(mixup), &buf));
   SVN_TEST_STRING_ASSERT(result, nfc_casefold);
 
-  SVN_TEST_ASSERT_ERROR(svn_utf__normalize(&result, invalid, strlen(invalid),
-                                           FALSE, &buf),
-                        SVN_ERR_UTF8PROC_ERROR);
-  SVN_TEST_ASSERT_ERROR(svn_utf__normalize(&result, invalid, strlen(invalid),
-                                           TRUE, &buf),
+  SVN_TEST_ASSERT_ERROR(svn_utf__casefold(&result, invalid, strlen(invalid),
+                                          &buf),
                         SVN_ERR_UTF8PROC_ERROR);
 
   return SVN_NO_ERROR;
@@ -942,6 +1011,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_utf__utf{16,32}_to_utf8"),
     SVN_TEST_PASS2(test_utf_normalize,
                    "test svn_utf__normalize"),
+    SVN_TEST_PASS2(test_utf_casefold,
+                   "test svn_utf__casefold"),
     SVN_TEST_NULL
   };
 
