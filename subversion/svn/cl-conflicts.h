@@ -81,7 +81,7 @@ svn_cl__get_human_readable_action_description(
 svn_error_t *
 svn_cl__append_conflict_info_xml(
   svn_stringbuf_t *str,
-  const svn_client_conflict_t *conflict,
+  svn_client_conflict_t *conflict,
   apr_pool_t *pool);
 
 #ifdef __cplusplus
