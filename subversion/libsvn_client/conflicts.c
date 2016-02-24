@@ -245,7 +245,8 @@ conflict_type_specific_setup(svn_client_conflict_t *conflict,
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
 
   /* Set type-specific description and details functions if available. */
-  if (incoming_change == svn_wc_conflict_action_delete)
+  if (incoming_change == svn_wc_conflict_action_delete &&
+      operation == svn_wc_operation_update /* ### TODO: merge/switch */)
     {
       conflict->tree_conflict_get_description_func =
         conflict_tree_get_description_incoming_delete;
