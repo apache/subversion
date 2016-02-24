@@ -1928,7 +1928,7 @@ svn_client_conflict_prop_get_propvals(const svn_string_t **base_propval,
 {
   const svn_wc_conflict_description2_t *desc;
 
-  SVN_ERR_ASSERT(assert_prop_conflict(conflict, conflict->pool));
+  SVN_ERR(assert_prop_conflict(conflict, conflict->pool));
 
   desc = svn_hash_gets(conflict->prop_conflicts, propname);
   if (desc == NULL)
@@ -1982,7 +1982,7 @@ svn_client_conflict_text_get_contents(const char **base_abspath,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool)
 {
-  SVN_ERR_ASSERT(assert_text_conflict(conflict, scratch_pool));
+  SVN_ERR(assert_text_conflict(conflict, scratch_pool));
 
   if (base_abspath)
     {
