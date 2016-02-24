@@ -130,6 +130,7 @@ conflict_status_walker(void *baton,
   svn_boolean_t resolved = FALSE;
   svn_client_conflict_t *conflict;
   svn_error_t *err;
+  svn_boolean_t tree_conflicted;
 
   if (!status->conflicted)
     return SVN_NO_ERROR;
@@ -138,6 +139,8 @@ conflict_status_walker(void *baton,
 
   SVN_ERR(svn_client_conflict_get(&conflict, local_abspath, cswb->ctx,
                                   iterpool, iterpool));
+  SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
+                                             conflict, iterpool, iterpool));
   err = svn_cl__resolve_conflict(&resolved, cswb->accept_which,
                                  cswb->quit, cswb->external_failed,
                                  cswb->printed_summary,
@@ -148,7 +151,7 @@ conflict_status_walker(void *baton,
                                  scratch_pool);
   if (err)
     {
-      if (svn_client_conflict_get_kind(conflict) == svn_wc_conflict_kind_tree)
+      if (tree_conflicted)
         SVN_ERR(handle_tree_conflict_resolution_failure(local_abspath, err,
                                                         cswb->resolve_later));
 
