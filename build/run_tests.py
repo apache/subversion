@@ -30,7 +30,7 @@
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
             [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
             [--server-minor-version=<version>] [--http-proxy=<host>:<port>]
-            [--httpd-version=<version>]
+            [--httpd-version=<version>] [--httpd-whitelist=<version>]
             [--config-file=<file>] [--ssl-cert=<file>]
             [--exclusive-wc-locks] [--memcached-server=<url:port>]
             <abs_srcdir> <abs_builddir>
@@ -259,6 +259,8 @@ class TestHarness:
       cmdline.append('--http-proxy-password=%s' % self.opts.http_proxy_password)
     if self.opts.httpd_version is not None:
       cmdline.append('--httpd-version=%s' % self.opts.httpd_version)
+    if self.opts.httpd_whitelist is not None:
+      cmdline.append('--httpd-whitelist=%s' % self.opts.httpd_whitelist)
     if self.opts.exclusive_wc_locks is not None:
       cmdline.append('--exclusive-wc-locks')
     if self.opts.memcached_server is not None:
@@ -999,6 +1001,8 @@ def create_parser():
                     help='Password for the HTTP Proxy.')
   parser.add_option('--httpd-version', action='store',
                     help='Assume HTTPD is this version.')
+  parser.add_option('--httpd-whitelist', action='store',
+                    help='Assume HTTPD whitelist is this version.')
   parser.add_option('--exclusive-wc-locks', action='store_true',
                     help='Use sqlite exclusive locking for working copies')
   parser.add_option('--memcached-server', action='store',

@@ -136,9 +136,18 @@ if test "$svn_lib_apr_memcache" = "yes"; then
             [Defined if apr_memcache (standalone or in apr-util) is present])
 fi
 
+AC_ARG_ENABLE(apache-whitelist,
+  AS_HELP_STRING([--enable-apache-whitelist=VER],
+                 [Whitelist a particular Apache version number,
+                  typically used to enable the use of a old version
+                  patched by a distribution.]),
+                 [apache_whitelist_ver=$enableval],
+                 [apache_whitelist_ver=no])
+HTTPD_WHITELIST="$apache_whitelist_ver"
+AC_SUBST(HTTPD_WHITELIST)
 
 dnl Find Apache with a recent-enough magic module number
-SVN_FIND_APACHE(20051115)
+SVN_FIND_APACHE(20051115, $apache_whitelist_ver)
 
 dnl Search for SQLite.  If you change SQLITE_URL from a .zip to
 dnl something else also update build/ac-macros/sqlite.m4 to reflect

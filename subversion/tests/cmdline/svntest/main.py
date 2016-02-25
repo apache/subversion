@@ -1571,7 +1571,7 @@ __mod_dav_url_quoting_broken_versions = frozenset([
     '2.4.5',
 ])
 def is_mod_dav_url_quoting_broken():
-    if is_ra_type_dav():
+    if is_ra_type_dav() and options.httpd_version != options.httpd_whitelist:
         return (options.httpd_version in __mod_dav_url_quoting_broken_versions)
     return None
 
@@ -1643,6 +1643,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--http-proxy-password=' + options.http_proxy_password)
     if options.httpd_version:
       args.append('--httpd-version=' + options.httpd_version)
+    if options.httpd_whitelist:
+      args.append('--httpd-whitelist=' + options.httpd_whitelist)
     if options.exclusive_wc_locks:
       args.append('--exclusive-wc-locks')
     if options.memcached_server:
@@ -2059,6 +2061,8 @@ def _create_parser(usage=None):
                     help='Password for the HTTP Proxy.')
   parser.add_option('--httpd-version', action='store',
                     help='Assume HTTPD is this version.')
+  parser.add_option('--httpd-whitelist', action='store',
+                    help='httpd whitelist version.')
   parser.add_option('--tools-bin', action='store', dest='tools_bin',
                     help='Use the svn tools installed in this path')
   parser.add_option('--exclusive-wc-locks', action='store_true',
