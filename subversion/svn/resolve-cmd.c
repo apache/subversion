@@ -462,7 +462,7 @@ svn_cl__walk_conflicts(apr_array_header_t *targets,
 
       if (err)
         {
-          svn_handle_warning2(stderr, err, "svn: ");
+          svn_handle_warning2(stderr, svn_error_root_cause(err), "svn: ");
           svn_error_clear(err);
           had_error = TRUE;
         }
