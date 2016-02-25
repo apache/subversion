@@ -246,7 +246,8 @@ conflict_type_specific_setup(svn_client_conflict_t *conflict,
 
   /* Set type-specific description and details functions if available. */
   if (incoming_change == svn_wc_conflict_action_delete &&
-      operation == svn_wc_operation_update /* ### TODO: merge/switch */)
+      (operation == svn_wc_operation_update ||
+       operation == svn_wc_operation_switch) /* ### TODO: merge */)
     {
       conflict->tree_conflict_get_description_func =
         conflict_tree_get_description_incoming_delete;
@@ -663,6 +664,9 @@ conflict_tree_get_description_incoming_delete(const char **description,
   svn_wc_conflict_action_t incoming_change;
   svn_wc_conflict_reason_t local_change;
   svn_wc_operation_t conflict_operation;
+  const char *old_repos_relpath;
+  svn_revnum_t old_rev;
+  const char *new_repos_relpath;
   svn_revnum_t new_rev;
   struct conflict_tree_incoming_delete_details *details;
 
@@ -682,51 +686,114 @@ conflict_tree_get_description_incoming_delete(const char **description,
                                                                  conflict,
                                                                  result_pool,
                                                                  scratch_pool));
+  SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+            &old_repos_relpath, &old_rev, NULL, conflict, scratch_pool,
+            scratch_pool));
   SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
-            NULL, &new_rev, NULL, conflict, scratch_pool,
+            &new_repos_relpath, &new_rev, NULL, conflict, scratch_pool,
             scratch_pool));
 
   details = conflict->tree_conflict_details;
 
-  if (details->deleted_rev != SVN_INVALID_REVNUM)
+  if (conflict_operation == svn_wc_operation_update)
     {
-      if (victim_node_kind == svn_node_dir)
-        action = apr_psprintf(result_pool,
-                              _("dir updated to r%lu was deleted or moved "
-                                "by %s in r%lu"), new_rev,
-                              details->rev_author, details->deleted_rev);
-      else if (victim_node_kind == svn_node_file ||
-               victim_node_kind == svn_node_symlink)
-        action = apr_psprintf(result_pool,
-                              _("file updated to r%lu was deleted or moved "
-                                "by %s in r%lu"), new_rev,
-                              details->rev_author, details->deleted_rev);
-      else
-        action = apr_psprintf(result_pool,
-                              _("item updated to r%lu was deleted or moved "
-                                "by %s in r%lu"), new_rev,
-                              details->rev_author, details->deleted_rev);
+      if (details->deleted_rev != SVN_INVALID_REVNUM)
+        {
+          if (victim_node_kind == svn_node_dir)
+            action = apr_psprintf(result_pool,
+                                  _("dir updated to r%lu was deleted or moved "
+                                    "by %s in r%lu"), new_rev,
+                                  details->rev_author, details->deleted_rev);
+          else if (victim_node_kind == svn_node_file ||
+                   victim_node_kind == svn_node_symlink)
+            action = apr_psprintf(result_pool,
+                                  _("file updated to r%lu was deleted or moved "
+                                    "by %s in r%lu"), new_rev,
+                                  details->rev_author, details->deleted_rev);
+          else
+            action = apr_psprintf(result_pool,
+                                  _("item updated to r%lu was deleted or moved "
+                                    "by %s in r%lu"), new_rev,
+                                  details->rev_author, details->deleted_rev);
+        }
+      else /* details->added_rev != SVN_INVALID_REVNUM */
+        {
+          /* This deletion is really the reverse change of an addition. */
+          if (victim_node_kind == svn_node_dir)
+            action = apr_psprintf(result_pool,
+                                  _("dir updated to r%lu did not exist before "
+                                    "it was added by %s in r%lu"), new_rev,
+                                  details->rev_author, details->added_rev);
+          else if (victim_node_kind == svn_node_file ||
+                   victim_node_kind == svn_node_symlink)
+            action = apr_psprintf(result_pool,
+                                  _("file updated to r%lu did not exist before "
+                                    "it was added by %s in r%lu"), new_rev,
+                                  details->rev_author, details->added_rev);
+          else
+            action = apr_psprintf(result_pool,
+                                  _("item updated to r%lu did not exist before "
+                                    "it was added by %s in r%lu"), new_rev,
+                                  details->rev_author, details->added_rev);
+        }
     }
-  else /* details->added_rev != SVN_INVALID_REVNUM */
+  else if (conflict_operation == svn_wc_operation_switch)
     {
-      /* This deletion is really the reverse change of an addition. */
-      if (victim_node_kind == svn_node_dir)
-        action = apr_psprintf(result_pool,
-                              _("dir updated to r%lu did not exist before it "
-                                "was added by %s in r%lu"), new_rev,
-                              details->rev_author, details->added_rev);
-      else if (victim_node_kind == svn_node_file ||
-               victim_node_kind == svn_node_symlink)
-        action = apr_psprintf(result_pool,
-                              _("file updated to r%lu did not exist before it "
-                                "was added by %s in r%lu"), new_rev,
-                              details->rev_author, details->added_rev);
-      else
-        action = apr_psprintf(result_pool,
-                              _("item updated to r%lu did not exist before it "
-                                "was added by %s in r%lu"), new_rev,
-                              details->rev_author, details->added_rev);
-    }
+      if (details->deleted_rev != SVN_INVALID_REVNUM)
+        {
+          if (victim_node_kind == svn_node_dir)
+            action = apr_psprintf(result_pool,
+                                  _("dir switched from %s@r%lu to %s@r%lu was "
+                                    "deleted or moved by %s in r%lu"),
+                                  old_repos_relpath, old_rev,
+                                  new_repos_relpath, new_rev,
+                                  details->rev_author, details->deleted_rev);
+          else if (victim_node_kind == svn_node_file ||
+                   victim_node_kind == svn_node_symlink)
+            action = apr_psprintf(result_pool,
+                                  _("file switched from %s@r%lu to %s@r%lu was "
+                                    "deleted or moved by %s in r%lu"),
+                                  old_repos_relpath, old_rev,
+                                  new_repos_relpath, new_rev,
+                                  details->rev_author, details->deleted_rev);
+          else
+            action = apr_psprintf(result_pool,
+                                  _("item switched from %s@r%lu to %s@r%lu was "
+                                    "deleted or moved by %s in r%lu"),
+                                  old_repos_relpath, old_rev,
+                                  new_repos_relpath, new_rev,
+                                  details->rev_author, details->deleted_rev);
+        }
+      else /* details->added_rev != SVN_INVALID_REVNUM */
+        {
+          /* This deletion is really the reverse change of an addition. */
+          if (victim_node_kind == svn_node_dir)
+            action = apr_psprintf(result_pool,
+                                  _("dir switched from %s@r%lu to %s@r%lu did "
+                                    "not exist before it was added by %s in "
+                                    "r%lu"),
+                                  old_repos_relpath, old_rev,
+                                  new_repos_relpath, new_rev,
+                                  details->rev_author, details->added_rev);
+          else if (victim_node_kind == svn_node_file ||
+                   victim_node_kind == svn_node_symlink)
+            action = apr_psprintf(result_pool,
+                                  _("file switched from %s@r%lu to %s@r%lu did "
+                                    "not exist before it was added by %s in "
+                                    "r%lu"),
+                                  old_repos_relpath, old_rev,
+                                  new_repos_relpath, new_rev,
+                                  details->rev_author, details->added_rev);
+          else
+            action = apr_psprintf(result_pool,
+                                  _("item switched from %s@r%lu to %s@r%lu did "
+                                    "not exist before it was added by %s in "
+                                    "r%lu"),
+                                  old_repos_relpath, old_rev,
+                                  new_repos_relpath, new_rev,
+                                  details->rev_author, details->added_rev);
+          }
+      }
 
   *description = apr_psprintf(result_pool, _("%s, %s"), reason, action);
   return SVN_NO_ERROR;
@@ -758,6 +825,97 @@ find_added_rev(svn_location_segment_t *segment,
   return SVN_NO_ERROR;
 }
 
+struct find_deleted_rev_baton
+{
+  const char *deleted_repos_relpath;
+  const char *related_repos_relpath;
+  svn_revnum_t related_repos_peg_rev;
+
+  svn_revnum_t deleted_rev;
+
+  const char *repos_root_url;
+  const char *repos_uuid;
+  svn_client_ctx_t *ctx;
+};
+
+/* Implements svn_log_entry_receiver_t.
+ *
+ * Find the revision in which a node, ancestrally related to the node
+ * specified via find_deleted_rev_baton, was deleted, When the revision
+ * was found, store it in BATON->DELETED_REV and abort the log operation
+ * by raising SVN_ERR_CANCELLED.
+ *
+ * If no such revision can be found, leave BATON->DELETED_REV alone.
+ *
+ * This function answers the same question as svn_ra_get_deleted_rev() but
+ * works in cases where we do not already know a revision in which the deleted
+ * node once used to exist. */
+static svn_error_t *
+find_deleted_rev(void *baton,
+                 svn_log_entry_t *log_entry,
+                 apr_pool_t *scratch_pool)
+{
+  struct find_deleted_rev_baton *b = baton;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
+
+  /* No paths were changed in this revision.  Nothing to do. */
+  if (! log_entry->changed_paths2)
+    return SVN_NO_ERROR;
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, log_entry->changed_paths2);
+       hi != NULL;
+       hi = apr_hash_next(hi))
+    {
+      void *val;
+      const char *path;
+      svn_log_changed_path_t *log_item;
+
+      svn_pool_clear(iterpool);
+
+
+      apr_hash_this(hi, (void *) &path, NULL, &val);
+      log_item = val;
+
+      /* ### Remove leading slash from paths in log entries. */
+      if (path[0] == '/')
+          path = svn_relpath_canonicalize(path, iterpool);
+
+      if (svn_path_compare_paths(b->deleted_repos_relpath, path) == 0
+          && (log_item->action == 'D' || log_item->action == 'R'))
+        {
+          svn_client__pathrev_t *yca_loc;
+          svn_client__pathrev_t *loc1;
+          svn_client__pathrev_t *loc2;
+
+          /* We found a deleted node which occupies the correct path.
+           * To be certain that this is the deleted node we're looking for,
+           * we must establish whether it is ancestrally related to the
+           * "related node" specified in our baton. */
+          loc1 = svn_client__pathrev_create_with_relpath(
+                   b->repos_root_url, b->repos_uuid, b->related_repos_peg_rev,
+                   b->related_repos_relpath, iterpool);
+          loc2 = svn_client__pathrev_create_with_relpath(
+                   b->repos_root_url, b->repos_uuid, log_entry->revision - 1,
+                   b->deleted_repos_relpath, iterpool);
+          SVN_ERR(svn_client__get_youngest_common_ancestor(&yca_loc, loc1, loc2,
+                                                           NULL, b->ctx,
+                                                           iterpool,
+                                                           iterpool));
+          if (yca_loc != NULL)
+            {
+              /* Found the correct node, we are done. */
+              b->deleted_rev = log_entry->revision;
+              return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+            }
+        }
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements tree_conflict_get_details_func_t.
  * Find the revision in which the victim was deleted in the repository. */
 static svn_error_t *
@@ -769,6 +927,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
   const char *old_repos_relpath;
   const char *new_repos_relpath;
   const char *repos_root_url;
+  const char *repos_uuid;
   svn_revnum_t old_rev;
   svn_revnum_t new_rev;
   const char *url;
@@ -783,7 +942,8 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
   SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
             &new_repos_relpath, &new_rev, NULL, conflict, scratch_pool,
             scratch_pool));
-  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL, conflict,
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
+                                             conflict,
                                              scratch_pool, scratch_pool));
   operation = svn_client_conflict_get_operation(conflict);
 
@@ -835,6 +995,118 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           b.details = details;
           b.pool = scratch_pool;
           /* Figure out when this node was added. */
+          SVN_ERR(svn_ra_get_location_segments(ra_session, "", old_rev,
+                                               old_rev, new_rev,
+                                               find_added_rev, &b,
+                                               scratch_pool));
+          SVN_ERR(svn_ra_rev_prop(ra_session, details->added_rev,
+                                  SVN_PROP_REVISION_AUTHOR,
+                                  &author_revprop, scratch_pool));
+          details->deleted_rev = SVN_INVALID_REVNUM;
+          details->repos_relpath = apr_pstrdup(conflict->pool,
+                                               new_repos_relpath);
+          details->rev_author = apr_pstrdup(conflict->pool,
+                                            author_revprop->data);
+        }
+    }
+  else if (operation == svn_wc_operation_switch)
+    {
+      if (old_rev < new_rev)
+        {
+          apr_array_header_t *paths;
+          struct find_deleted_rev_baton b;
+          svn_error_t *err;
+
+          /* The switch operation went forward in history.
+           *
+           * The deletion of the node happened on the branch we switched to.
+           * Scan new_repos_relpath's parent's log to find the revision which
+           * deleted the node. */
+          url = svn_path_url_add_component2(
+                  repos_root_url,
+                  svn_relpath_dirname(new_repos_relpath, scratch_pool),
+                  scratch_pool);
+          SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
+                                                       &corrected_url,
+                                                       url, NULL, NULL,
+                                                       FALSE,
+                                                       FALSE,
+                                                       conflict->ctx,
+                                                       scratch_pool,
+                                                       scratch_pool));
+
+          paths = apr_array_make(scratch_pool, 1, sizeof(const char *));
+          APR_ARRAY_PUSH(paths, const char *) = "";
+
+          b.deleted_repos_relpath = new_repos_relpath;
+          b.related_repos_relpath = old_repos_relpath;
+          b.related_repos_peg_rev = old_rev;
+          b.deleted_rev = SVN_INVALID_REVNUM;
+          b.repos_root_url = repos_root_url;
+          b.repos_uuid = repos_uuid;
+          b.ctx = conflict->ctx;
+
+          err = svn_ra_get_log2(ra_session, paths, new_rev, 0,
+                                 0, /* no limit */
+                                 TRUE, /* need the changed paths list */
+                                 FALSE, /* need to traverse copies */
+                                 FALSE, /* no need for merged revisions */
+                                 /* no need for revprops: */
+                                 apr_array_make(scratch_pool, 0,
+                                                sizeof(const char *)),
+                                 find_deleted_rev, &b,
+                                 scratch_pool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_CANCELLED &&
+                  b.deleted_rev != SVN_INVALID_REVNUM)
+                {
+                  /* Log operation was aborted because we found a YCA. */
+                  svn_error_clear(err);
+                }
+              else
+                return svn_error_trace(err);
+            }
+
+          if (b.deleted_rev == SVN_INVALID_REVNUM)
+            {
+              /* We could not determine the revision in which the node was
+               * deleted. We cannot provide the required details so the best
+               * we can do is fall back to the default description. */
+              return SVN_NO_ERROR;
+            }
+
+          SVN_ERR(svn_ra_rev_prop(ra_session, b.deleted_rev,
+                                  SVN_PROP_REVISION_AUTHOR,
+                                  &author_revprop, scratch_pool));
+          details = apr_pcalloc(conflict->pool, sizeof(*details));
+          details->deleted_rev = b.deleted_rev;
+          details->added_rev = SVN_INVALID_REVNUM;
+          details->repos_relpath = apr_pstrdup(conflict->pool,
+                                               new_repos_relpath);
+          details->rev_author = apr_pstrdup(conflict->pool,
+                                            author_revprop->data);
+        }
+      else /* new_rev < old_rev */
+        {
+          struct find_added_rev_baton b;
+
+          /* The switch operation went backwards in history. */
+          url = svn_path_url_add_component2(repos_root_url, old_repos_relpath,
+                                            scratch_pool);
+          SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
+                                                       &corrected_url,
+                                                       url, NULL, NULL,
+                                                       FALSE,
+                                                       FALSE,
+                                                       conflict->ctx,
+                                                       scratch_pool,
+                                                       scratch_pool));
+
+          details = apr_pcalloc(conflict->pool, sizeof(*details));
+          b.details = details;
+          b.pool = scratch_pool;
+          /* Figure out when the node we switched away from was added. */
           SVN_ERR(svn_ra_get_location_segments(ra_session, "", old_rev,
                                                old_rev, new_rev,
                                                find_added_rev, &b,
