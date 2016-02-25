@@ -1454,7 +1454,8 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
       svn_wc_conflict_reason_t reason;
 
       reason = svn_client_conflict_get_local_change(conflict);
-      if (reason == svn_wc_conflict_reason_moved_away)
+      if (reason == svn_wc_conflict_reason_moved_away &&
+          incoming_change == svn_wc_conflict_action_edit)
         {
           option = apr_pcalloc(result_pool, sizeof(*option));
           option->id =
