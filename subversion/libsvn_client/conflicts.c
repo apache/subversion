@@ -226,7 +226,6 @@ conflict_type_specific_setup(svn_client_conflict_t *conflict,
 {
   svn_boolean_t tree_conflicted;
   svn_wc_operation_t operation;
-  svn_wc_conflict_reason_t local_change;
   svn_wc_conflict_action_t incoming_change;
 
   /* For now, we only deal with tree conflicts here. */
@@ -241,7 +240,6 @@ conflict_type_specific_setup(svn_client_conflict_t *conflict,
     conflict_tree_get_description_generic;
 
   operation = svn_client_conflict_get_operation(conflict);
-  local_change = svn_client_conflict_get_local_change(conflict);
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
 
   /* Set type-specific description and details functions if available. */
@@ -661,7 +659,6 @@ conflict_tree_get_description_incoming_delete(const char **description,
 {
   const char *action, *reason;
   svn_node_kind_t victim_node_kind;
-  svn_wc_conflict_action_t incoming_change;
   svn_wc_conflict_reason_t local_change;
   svn_wc_operation_t conflict_operation;
   const char *old_repos_relpath;
@@ -676,7 +673,6 @@ conflict_tree_get_description_incoming_delete(const char **description,
                                                                  result_pool,
                                                                  scratch_pool));
 
-  incoming_change = svn_client_conflict_get_incoming_change(conflict);
   local_change = svn_client_conflict_get_local_change(conflict);
   conflict_operation = svn_client_conflict_get_operation(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
