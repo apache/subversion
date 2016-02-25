@@ -30,6 +30,8 @@ AC_REQUIRE([AC_CANONICAL_HOST])
 
 HTTPD_WANTED_MMN="$1"
 
+HTTPD_WHITELIST_VER="$2"
+
 AC_MSG_CHECKING(for Apache module support via DSO through APXS)
 AC_ARG_WITH(apxs,
             [AS_HELP_STRING([[--with-apxs[=FILE]]],
@@ -102,6 +104,9 @@ if test -n "$APXS" && test "$APXS" != "no"; then
   HTTPD_PATCH=`$SED -ne '/^#define AP_SERVER_PATCHLEVEL_NUMBER/p' "$APXS_INCLUDE/ap_release.h" | $SED -e 's/^.*NUMBER *//'`
   HTTPD_VERSION="${HTTPD_MAJOR}.${HTTPD_MINOR}.${HTTPD_PATCH}"
   case "$HTTPD_VERSION" in
+    $HTTPD_WHITELIST_VER)
+      AC_MSG_RESULT([acceptable (whitelist)])
+      ;;
     2.2.25 | 2.4.[[5-6]])
       AC_MSG_RESULT([broken])
       AC_MSG_ERROR([Apache httpd version $HTTPD_VERSION includes a broken mod_dav; use a newer version of httpd])
@@ -171,7 +176,9 @@ if test -n "$APXS" && test "$APXS" != "no"; then
       # API but the installation may have been patched.
       AC_ARG_ENABLE(broken-httpd-auth,
         AS_HELP_STRING([--enable-broken-httpd-auth],
-                       [Force build against httpd 2.4 with broken auth]),
+                       [Force build against httpd 2.4 with broken auth. (This
+                        is not recommended as Subversion will be vulnerable to
+                        CVE-2015-3184.)]),
         [broken_httpd_auth=$enableval],[broken_httpd_auth=no])
       AC_MSG_CHECKING([for ap_some_authn_required])
       old_CPPFLAGS="$CPPFLAGS"
