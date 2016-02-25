@@ -280,9 +280,9 @@ def build_simple_file_move_tests(sbox, source, dest):
   test['up_status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   test['up_status'].tweak(source, status='! ', treeconflict='C', wc_rev=None)
   test['up_status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
-  # mine-conflict doen't work.
+  # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
@@ -323,7 +323,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   test['up_status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
@@ -362,7 +362,7 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     wc_rev='-', moved_from=source)})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
@@ -403,7 +403,7 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     wc_rev='-', moved_from=source)})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
@@ -468,7 +468,7 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     wc_rev='-', moved_from=source)})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
@@ -508,7 +508,7 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     wc_rev='-', moved_from=source)})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
@@ -548,7 +548,7 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     wc_rev='-', moved_from=source)})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
@@ -588,7 +588,7 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     wc_rev='-', moved_from=source)})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
@@ -628,7 +628,7 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     wc_rev='-', moved_from=source)})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
@@ -815,7 +815,7 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     treeconflict='C')})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
