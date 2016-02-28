@@ -56,6 +56,11 @@ struct log_receiver_baton
      writes to support mod_dav-based error handling. */
   svn_boolean_t needs_header;
 
+  /* Whether we've written the <S:log-item> header for the current revision.
+     Allows for lazy XML node creation while receiving the data through
+     callbacks. */
+  svn_boolean_t needs_log_item;
+
   /* How deep we are in the log message tree.  We only need to surpress the
      SVN_INVALID_REVNUM message if the stack_depth is 0. */
   int stack_depth;
@@ -88,6 +93,22 @@ maybe_send_header(struct log_receiver_baton *lrb)
                                     "xmlns:D=\"DAV:\">" DEBUG_CR));
       lrb->needs_header = FALSE;
     }
+
+  return SVN_NO_ERROR;
+}
+
+/* If LRB->needs_log_item is true, send the "<S:log-item>" start
+   element and set LRB->needs_log_item to zero.  Else do nothing. */
+static svn_error_t *
+maybe_start_log_item(struct log_receiver_baton *lrb)
+{
+  if (lrb->needs_log_item)
+    {
+      SVN_ERR(dav_svn__brigade_printf(lrb->bb, lrb->output,
+                                      "<S:log-item>" DEBUG_CR));
+      lrb->needs_log_item = FALSE;
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -99,17 +120,22 @@ maybe_send_header(struct log_receiver_baton *lrb)
 static svn_error_t *
 start_path_with_copy_from(const char **element,
                           struct log_receiver_baton *lrb,
-                          svn_log_changed_path2_t *log_item,
+                          svn_repos_path_change_t *log_item,
                           apr_pool_t *pool)
 {
-  switch (log_item->action)
+  switch (log_item->change_kind)
     {
-      case 'A': *element = "S:added-path";
-                break;
-      case 'R': *element = "S:replaced-path";
-                break;
-      default:  /* Caller, you did wrong! */
-                SVN_ERR_MALFUNCTION();
+      case svn_fs_path_change_add: 
+        *element = "S:added-path";
+        break;
+
+      case svn_fs_path_change_replace:
+        *element = "S:replaced-path";
+        break;
+
+      default:
+        /* Caller, you did wrong! */
+        SVN_ERR_MALFUNCTION();
     }
 
   if (log_item->copyfrom_path
@@ -129,15 +155,76 @@ start_path_with_copy_from(const char **element,
 }
 
 
-/* This implements `svn_log_entry_receiver_t'.
+/* This implements `svn_repos_path_change_receiver_t'.
    BATON is a `struct log_receiver_baton *'.  */
 static svn_error_t *
-log_receiver(void *baton,
-             svn_log_entry_t *log_entry,
-             apr_pool_t *pool)
+log_change_receiver(void *baton,
+                    svn_repos_path_change_t *change,
+                    apr_pool_t *scratch_pool)
 {
   struct log_receiver_baton *lrb = baton;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  const char *close_element = NULL;
+
+  /* We must open the XML nodes for the report and log-item before
+     sending the first changed path.
+
+     Note that we can't get here for empty revisions that log() injects
+     to indicate the end of a recursive merged rev sequence.
+   */
+  SVN_ERR(maybe_send_header(lrb));
+  SVN_ERR(maybe_start_log_item(lrb));
+
+  /* ### todo: is there a D: namespace equivalent for
+      `changed-path'?  Should use it if so. */
+  switch (change->change_kind)
+    {
+    case svn_fs_path_change_add:
+    case svn_fs_path_change_replace:
+      SVN_ERR(start_path_with_copy_from(&close_element, lrb,
+                                        change, scratch_pool));
+      break;
+
+    case svn_fs_path_change_delete:
+      SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
+                                    "<S:deleted-path"));
+      close_element = "S:deleted-path";
+      break;
+
+    case svn_fs_path_change_modify:
+      SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
+                                    "<S:modified-path"));
+      close_element = "S:modified-path";
+      break;
+
+    default:
+      break;
+    }
+
+  /* If we need to close the element, then send the attributes
+      that apply to all changed items and then close the element. */
+  if (close_element)
+    SVN_ERR(dav_svn__brigade_printf
+             (lrb->bb, lrb->output,
+              " node-kind=\"%s\""
+              " text-mods=\"%s\""
+              " prop-mods=\"%s\">%s</%s>" DEBUG_CR,
+              svn_node_kind_to_word(change->node_kind),
+              change->text_mod ? "true" : "false",
+              change->prop_mod ? "true" : "false",
+              apr_xml_quote_string(scratch_pool, change->path.data, 0),
+              close_element));
+
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_repos_log_entry_receiver_t'.
+   BATON is a `struct log_receiver_baton *'.  */
+static svn_error_t *
+log_revision_receiver(void *baton,
+                      svn_repos_log_entry_t *log_entry,
+                      apr_pool_t *scratch_pool)
+{
+  struct log_receiver_baton *lrb = baton;
 
   SVN_ERR(maybe_send_header(lrb));
 
@@ -151,68 +238,14 @@ log_receiver(void *baton,
         lrb->stack_depth--;
     }
 
-  SVN_ERR(dav_svn__brigade_printf(lrb->bb, lrb->output,
-                                  "<S:log-item>" DEBUG_CR));
+  /* If we have not received any path changes, the log-item XML node
+     still needs to be opened.  Also, reset the controlling flag to
+     prepare it for the next revision - if there should be one. */
+  SVN_ERR(maybe_start_log_item(lrb));
+  lrb->needs_log_item = TRUE;
 
-  if (log_entry->changed_paths2)
-    {
-      apr_hash_index_t *hi;
-      char *path;
-
-      for (hi = apr_hash_first(pool, log_entry->changed_paths2);
-           hi != NULL;
-           hi = apr_hash_next(hi))
-        {
-          void *val;
-          svn_log_changed_path2_t *log_item;
-          const char *close_element = NULL;
-
-          svn_pool_clear(iterpool);
-          apr_hash_this(hi, (void *) &path, NULL, &val);
-          log_item = val;
-
-          /* ### todo: is there a D: namespace equivalent for
-             `changed-path'?  Should use it if so. */
-          switch (log_item->action)
-            {
-            case 'A':
-            case 'R':
-              SVN_ERR(start_path_with_copy_from(&close_element, lrb,
-                                                log_item, iterpool));
-              break;
-
-            case 'D':
-              SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
-                                            "<S:deleted-path"));
-              close_element = "S:deleted-path";
-              break;
-
-            case 'M':
-              SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
-                                            "<S:modified-path"));
-              close_element = "S:modified-path";
-              break;
-
-            default:
-              break;
-            }
-
-          /* If we need to close the element, then send the attributes
-             that apply to all changed items and then close the element. */
-          if (close_element)
-            SVN_ERR(dav_svn__brigade_printf
-                    (lrb->bb, lrb->output,
-                     " node-kind=\"%s\""
-                     " text-mods=\"%s\""
-                     " prop-mods=\"%s\">%s</%s>" DEBUG_CR,
-                     svn_node_kind_to_word(log_item->node_kind),
-                     svn_tristate__to_word(log_item->text_modified),
-                     svn_tristate__to_word(log_item->props_modified),
-                     apr_xml_quote_string(iterpool, path, 0),
-                     close_element));
-        }
-    }
-
+  /* Path changes have been processed already. 
+     Now send the remaining per-revision info. */
   SVN_ERR(dav_svn__brigade_printf(lrb->bb, lrb->output,
                                   "<D:version-name>%ld"
                                   "</D:version-name>" DEBUG_CR,
@@ -220,8 +253,9 @@ log_receiver(void *baton,
 
   if (log_entry->revprops)
     {
+      apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       apr_hash_index_t *hi;
-      for (hi = apr_hash_first(pool, log_entry->revprops);
+      for (hi = apr_hash_first(scratch_pool, log_entry->revprops);
            hi != NULL;
            hi = apr_hash_next(hi))
         {
@@ -262,7 +296,7 @@ log_receiver(void *baton,
             SVN_ERR(dav_svn__brigade_printf
                     (lrb->bb, lrb->output,
                      "<D:comment%s>%s</D:comment>" DEBUG_CR, encoding_str,
-                     apr_xml_quote_string(pool,
+                     apr_xml_quote_string(scratch_pool,
                                           svn_xml_fuzzy_escape(value->data,
                                                                iterpool), 0)));
           else
@@ -272,6 +306,8 @@ log_receiver(void *baton,
                      apr_xml_quote_string(iterpool, name, 0), encoding_str,
                      apr_xml_quote_string(iterpool, value->data, 0)));
         }
+
+      svn_pool_destroy(iterpool);
     }
 
   if (log_entry->has_children)
@@ -283,7 +319,6 @@ log_receiver(void *baton,
   if (log_entry->subtractive_merge)
     SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
                                   "<S:subtractive-merge/>"));
-  svn_pool_destroy(iterpool);
 
   SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
                                 "</S:log-item>" DEBUG_CR));
@@ -465,6 +500,7 @@ dav_svn__log_report(const dav_resource *resource,
                               output->c->bucket_alloc);
   lrb.output = output;
   lrb.needs_header = TRUE;
+  lrb.needs_log_item = TRUE;
   lrb.stack_depth = 0;
   /* lrb.requested_custom_revprops set above */
 
@@ -477,18 +513,20 @@ dav_svn__log_report(const dav_resource *resource,
      flag in our log_receiver_baton structure). */
 
   /* Send zero or more log items. */
-  serr = svn_repos_get_logs4(repos->repos,
+  serr = svn_repos_get_logs5(repos->repos,
                              paths,
                              start,
                              end,
                              limit,
-                             discover_changed_paths,
                              strict_node_history,
                              include_merged_revisions,
                              revprops,
                              dav_svn__authz_read_func(&arb),
                              &arb,
-                             log_receiver,
+                             discover_changed_paths ? log_change_receiver
+                                                    : NULL,
+                             &lrb,
+                             log_revision_receiver,
                              &lrb,
                              resource->pool);
   if (serr)
