@@ -152,7 +152,69 @@ log_receiver(void *baton,
     }
 
   SVN_ERR(dav_svn__brigade_printf(lrb->bb, lrb->output,
-                                  "<S:log-item>" DEBUG_CR "<D:version-name>%ld"
+                                  "<S:log-item>" DEBUG_CR));
+
+  if (log_entry->changed_paths2)
+    {
+      apr_hash_index_t *hi;
+      char *path;
+
+      for (hi = apr_hash_first(pool, log_entry->changed_paths2);
+           hi != NULL;
+           hi = apr_hash_next(hi))
+        {
+          void *val;
+          svn_log_changed_path2_t *log_item;
+          const char *close_element = NULL;
+
+          svn_pool_clear(iterpool);
+          apr_hash_this(hi, (void *) &path, NULL, &val);
+          log_item = val;
+
+          /* ### todo: is there a D: namespace equivalent for
+             `changed-path'?  Should use it if so. */
+          switch (log_item->action)
+            {
+            case 'A':
+            case 'R':
+              SVN_ERR(start_path_with_copy_from(&close_element, lrb,
+                                                log_item, iterpool));
+              break;
+
+            case 'D':
+              SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
+                                            "<S:deleted-path"));
+              close_element = "S:deleted-path";
+              break;
+
+            case 'M':
+              SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
+                                            "<S:modified-path"));
+              close_element = "S:modified-path";
+              break;
+
+            default:
+              break;
+            }
+
+          /* If we need to close the element, then send the attributes
+             that apply to all changed items and then close the element. */
+          if (close_element)
+            SVN_ERR(dav_svn__brigade_printf
+                    (lrb->bb, lrb->output,
+                     " node-kind=\"%s\""
+                     " text-mods=\"%s\""
+                     " prop-mods=\"%s\">%s</%s>" DEBUG_CR,
+                     svn_node_kind_to_word(log_item->node_kind),
+                     svn_tristate__to_word(log_item->text_modified),
+                     svn_tristate__to_word(log_item->props_modified),
+                     apr_xml_quote_string(iterpool, path, 0),
+                     close_element));
+        }
+    }
+
+  SVN_ERR(dav_svn__brigade_printf(lrb->bb, lrb->output,
+                                  "<D:version-name>%ld"
                                   "</D:version-name>" DEBUG_CR,
                                   log_entry->revision));
 
@@ -221,66 +283,6 @@ log_receiver(void *baton,
   if (log_entry->subtractive_merge)
     SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
                                   "<S:subtractive-merge/>"));
-
-  if (log_entry->changed_paths2)
-    {
-      apr_hash_index_t *hi;
-      char *path;
-
-      for (hi = apr_hash_first(pool, log_entry->changed_paths2);
-           hi != NULL;
-           hi = apr_hash_next(hi))
-        {
-          void *val;
-          svn_log_changed_path2_t *log_item;
-          const char *close_element = NULL;
-
-          svn_pool_clear(iterpool);
-          apr_hash_this(hi, (void *) &path, NULL, &val);
-          log_item = val;
-
-          /* ### todo: is there a D: namespace equivalent for
-             `changed-path'?  Should use it if so. */
-          switch (log_item->action)
-            {
-            case 'A':
-            case 'R':
-              SVN_ERR(start_path_with_copy_from(&close_element, lrb,
-                                                log_item, iterpool));
-              break;
-
-            case 'D':
-              SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
-                                            "<S:deleted-path"));
-              close_element = "S:deleted-path";
-              break;
-
-            case 'M':
-              SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
-                                            "<S:modified-path"));
-              close_element = "S:modified-path";
-              break;
-
-            default:
-              break;
-            }
-
-          /* If we need to close the element, then send the attributes
-             that apply to all changed items and then close the element. */
-          if (close_element)
-            SVN_ERR(dav_svn__brigade_printf
-                    (lrb->bb, lrb->output,
-                     " node-kind=\"%s\""
-                     " text-mods=\"%s\""
-                     " prop-mods=\"%s\">%s</%s>" DEBUG_CR,
-                     svn_node_kind_to_word(log_item->node_kind),
-                     svn_tristate__to_word(log_item->text_modified),
-                     svn_tristate__to_word(log_item->props_modified),
-                     apr_xml_quote_string(iterpool, path, 0),
-                     close_element));
-        }
-    }
-
   svn_pool_destroy(iterpool);
 
   SVN_ERR(dav_svn__brigade_puts(lrb->bb, lrb->output,
