@@ -3323,7 +3323,7 @@ def dump_no_op_change(sbox):
   svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
                                      sbox2.repo_url + '/bar')
 
-@XFail()
+@XFail() # This test will XPASS on FSFS if rep-caching is disabled.
 def dump_no_op_prop_change(sbox):
   "svnadmin dump with no-op property change"
 
