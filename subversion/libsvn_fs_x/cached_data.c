@@ -2801,39 +2801,52 @@ svn_fs_x__get_proplist(apr_hash_t **proplist,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_x__create_changes_context(svn_fs_x__changes_context_t **context,
+                                 svn_fs_t *fs,
+                                 svn_revnum_t rev,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_fs_x__changes_context_t *result = apr_pcalloc(result_pool,
+                                                    sizeof(*result));
+  result->fs = fs;
+  result->revision = rev;
 
+  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, scratch_pool));
+  SVN_ERR(svn_fs_x__rev_file_init(&result->revision_file, fs, rev,
+                                  result_pool));
+
+  *context = result;
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_fs_x__get_changes(apr_array_header_t **changes,
-                      svn_fs_t *fs,
-                      svn_revnum_t rev,
-                      apr_pool_t *result_pool)
+                      svn_fs_x__changes_context_t *context,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
-  svn_fs_x__revision_file_t *revision_file;
   svn_boolean_t found;
-  svn_fs_x__data_t *ffd = fs->fsap_data;
-  apr_pool_t *scratch_pool = svn_pool_create(result_pool);
+  svn_fs_x__data_t *ffd = context->fs->fsap_data;
 
   svn_fs_x__id_t id;
-  id.change_set = svn_fs_x__change_set_by_rev(rev);
+  id.change_set = svn_fs_x__change_set_by_rev(context->revision);
   id.number = SVN_FS_X__ITEM_INDEX_CHANGES;
-
-  /* Provide revision file. */
-
-  SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, scratch_pool));
-  SVN_ERR(svn_fs_x__rev_file_init(&revision_file, fs, rev, scratch_pool));
 
   /* try cache lookup first */
 
-  if (svn_fs_x__is_packed_rev(fs, rev))
+  if (svn_fs_x__is_packed_rev(context->fs, context->revision))
     {
       apr_off_t offset;
       apr_uint32_t sub_item;
       svn_fs_x__pair_cache_key_t key;
 
-      SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, revision_file,
+      SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, context->fs,
+                                    context->revision_file,
                                     &id, scratch_pool));
-      key.revision = svn_fs_x__packed_base_rev(fs, rev);
+      key.revision = svn_fs_x__packed_base_rev(context->fs,
+                                               context->revision);
       key.second = offset;
 
       SVN_ERR(svn_cache__get_partial((void **)changes, &found,
@@ -2844,22 +2857,22 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
   else
     {
       SVN_ERR(svn_cache__get((void **) changes, &found, ffd->changes_cache,
-                             &rev, result_pool));
+                             &context->revision, result_pool));
     }
 
   if (!found)
     {
       /* 'block-read' will also provide us with the desired data */
-      SVN_ERR(block_read((void **)changes, fs, &id, revision_file,
-                         result_pool, scratch_pool));
-
-      SVN_ERR(svn_fs_x__close_revision_file(revision_file));
+      SVN_ERR(block_read((void **)changes, context->fs, &id,
+                         context->revision_file, result_pool, scratch_pool));
     }
 
-  SVN_ERR(dgb__log_access(fs, &id, *changes, SVN_FS_X__ITEM_TYPE_CHANGES,
-                          scratch_pool));
+  context->next += (*changes)->nelts;
+  context->eol = TRUE;
 
-  svn_pool_destroy(scratch_pool);
+  SVN_ERR(dgb__log_access(context->fs, &id, *changes,
+                          SVN_FS_X__ITEM_TYPE_CHANGES, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
