@@ -2852,7 +2852,7 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
                                                context->revision);
       key.second = offset;
 
-      SVN_ERR(svn_cache__get_partial((void **)&all, &found,
+      SVN_ERR(svn_cache__get_partial((void **)changes, &found,
                                      ffd->changes_container_cache, &key,
                                      svn_fs_x__changes_get_list_func,
                                      &baton, result_pool));
