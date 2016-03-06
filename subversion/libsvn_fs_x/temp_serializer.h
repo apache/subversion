@@ -286,4 +286,28 @@ svn_fs_x__deserialize_changes(void **out,
                               apr_size_t data_len,
                               apr_pool_t *result_pool);
 
+/* Baton type to be used with svn_fs_x__read_changes_block. */
+typedef struct svn_fs_x__read_changes_block_baton_t
+{
+  /* Deliver data starting from this index within the changes list. */
+  int start;
+
+  /* To be set by svn_fs_x__read_changes_block:
+     Did we deliver the last change in that list? */
+  svn_boolean_t *eol;
+} svn_fs_x__read_changes_block_baton_t;
+
+/**
+ * Implements #svn_cache__partial_getter_func_t, returning a number of
+ * #svn_fs_x__change_t * in an #apr_array_header_t.  The @a *baton of type
+ * 'svn_fs_x__read_changes_block_baton_t describes what the first index
+ * in that block should be.
+ */
+svn_error_t *
+svn_fs_x__read_changes_block(void **out,
+                             const void *data,
+                             apr_size_t data_len,
+                             void *baton,
+                             apr_pool_t *pool);
+
 #endif
