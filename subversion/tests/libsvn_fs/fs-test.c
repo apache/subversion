@@ -7033,6 +7033,72 @@ freeze_and_commit(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_large_changed_paths_list(const svn_test_opts_t *opts,
+                              apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  int i;
+  svn_revnum_t rev = 0;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  const char *repo_name = "test-repo-changed-paths-list";
+  apr_hash_t *changed_paths;
+  svn_fs_path_change_iterator_t *iterator;
+  svn_fs_path_change3_t *change;
+  enum { CHANGES_COUNT = 1017 };
+
+  SVN_ERR(svn_test__create_fs(&fs, repo_name, opts, pool));
+
+  /* r1: Add many empty files - just to amass a long list of changes. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+
+  for (i = 0; i < CHANGES_COUNT; ++i)
+    {
+      const char *file_name;
+      svn_pool_clear(iterpool);
+
+      file_name = apr_psprintf(iterpool, "/file-%d", i);
+      SVN_ERR(svn_fs_make_file(txn_root, file_name, iterpool));
+    }
+
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, pool));
+
+  /* Now, read the change list.  Test that no path gets reported twice. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+  SVN_ERR(svn_fs_paths_changed3(&iterator, root, pool, pool));
+
+  changed_paths = apr_hash_make(pool);
+  SVN_ERR(svn_fs_path_change_get(&change, iterator));
+  while (change)
+    {
+      const char *path = apr_pstrmemdup(pool, change->path.data,
+                                        change->path.len);
+      SVN_TEST_ASSERT(change->change_kind == svn_fs_path_change_add);
+      SVN_TEST_ASSERT(!apr_hash_get(changed_paths, path, change->path.len));
+
+      apr_hash_set(changed_paths, path, change->path.len, path);
+      SVN_ERR(svn_fs_path_change_get(&change, iterator));
+    }
+
+  /* Verify that we've got exactly all paths that we added. */
+  SVN_TEST_ASSERT(CHANGES_COUNT == apr_hash_count(changed_paths));
+  for (i = 0; i < CHANGES_COUNT; ++i)
+    {
+      const char *file_name;
+      svn_pool_clear(iterpool);
+
+      file_name = apr_psprintf(iterpool, "/file-%d", i);
+      SVN_TEST_ASSERT(svn_hash_gets(changed_paths, file_name));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -7167,6 +7233,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_check_related for transactions"),
     SVN_TEST_OPTS_PASS(freeze_and_commit,
                        "freeze and commit"),
+    SVN_TEST_OPTS_PASS(test_large_changed_paths_list,
+                       "test reading a large changed paths list"),
     SVN_TEST_NULL
   };
 
