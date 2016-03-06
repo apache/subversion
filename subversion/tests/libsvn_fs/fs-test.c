@@ -7113,9 +7113,9 @@ test_large_changed_paths_list(const svn_test_opts_t *opts,
   /* Now, read the change list.
    * Do it twice to cover cached data as well. */
   svn_pool_clear(iterpool);
-  verify_added_files_list(fs, rev, iterpool);
+  SVN_ERR(verify_added_files_list(fs, rev, iterpool));
   svn_pool_clear(iterpool);
-  verify_added_files_list(fs, rev, iterpool);
+  SVN_ERR(verify_added_files_list(fs, rev, iterpool));
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
