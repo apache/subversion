@@ -134,7 +134,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
                         int num_entries,
                         apr_pool_t *pool);
 
-/* Verify that svn_fs_paths_changed2(ROOT) returns a hash with exactly
+/* Verify that svn_fs_paths_changed3(ROOT) returns a hash with exactly
    the same keys as EXPECTED_KEYS.  Values are not currently verified.
  */
 svn_error_t *
