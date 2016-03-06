@@ -2840,10 +2840,12 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
   if (svn_fs_x__is_packed_rev(context->fs, context->revision))
     {
       apr_off_t offset;
-      apr_uint32_t sub_item;
       svn_fs_x__pair_cache_key_t key;
+      svn_fs_x__changes_get_list_baton_t baton;
+      baton.start = (int)context->next;
+      baton.eol = &context->eol;
 
-      SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, context->fs,
+      SVN_ERR(svn_fs_x__item_offset(&offset, &baton.sub_item, context->fs,
                                     context->revision_file,
                                     &id, scratch_pool));
       key.revision = svn_fs_x__packed_base_rev(context->fs,
@@ -2853,7 +2855,7 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
       SVN_ERR(svn_cache__get_partial((void **)&all, &found,
                                      ffd->changes_container_cache, &key,
                                      svn_fs_x__changes_get_list_func,
-                                     &sub_item, result_pool));
+                                     &baton, result_pool));
     }
   else
     {
