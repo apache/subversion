@@ -21,6 +21,7 @@
  */
 
 #include "svn_private_config.h"
+#include "svn_sorts.h"
 
 #include "private/svn_packed_data.h"
 
@@ -445,8 +446,10 @@ svn_fs_x__changes_get_list_func(void **out,
   int last;
   int i;
   apr_array_header_t *list;
+  enum { BLOCK_SIZE = 100 };
 
-  apr_uint32_t idx = *(apr_uint32_t *)baton;
+  svn_fs_x__changes_get_list_baton_t *b = baton;
+  apr_uint32_t idx = b->sub_item;
   const svn_fs_x__changes_t *container = data;
 
   /* resolve all the sub-container pointers we need */
@@ -476,6 +479,12 @@ svn_fs_x__changes_get_list_func(void **out,
   /* range of changes to return */
   first = offsets[idx];
   last = offsets[idx+1];
+
+  /* Restrict range to the block requested by the BATON.
+   * Tell the caller whether we reached the end of the list. */
+  first = MIN(first + b->start, last);
+  last = MIN(first + BLOCK_SIZE, last);
+  *b->eol = last == offsets[idx+1];
 
   /* construct result */
   list = apr_array_make(pool, last - first, sizeof(svn_fs_x__change_t*));
