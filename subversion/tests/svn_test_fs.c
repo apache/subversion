@@ -646,10 +646,27 @@ svn_test__validate_changes(svn_fs_root_t *root,
                            apr_hash_t *expected,
                            apr_pool_t *pool)
 {
+  svn_fs_path_change_iterator_t *iter;
   apr_hash_t *actual;
   apr_hash_index_t *hi;
+  svn_fs_path_change3_t *change;
 
-  SVN_ERR(svn_fs_paths_changed2(&actual, root, pool));
+  SVN_ERR(svn_fs_paths_changed3(&iter, root, pool, pool));
+  SVN_ERR(svn_fs_path_change_get(&change, iter));
+
+  /* We collect all changes b/c this is the easiest way to check for an
+     exact match against EXPECTED. */
+  actual = apr_hash_make(pool);
+  while (change)
+    {
+      const char *path = apr_pstrmemdup(pool, change->path.data,
+                                        change->path.len);
+      /* No duplicates! */
+      SVN_TEST_ASSERT(!apr_hash_get(actual, path, change->path.len));
+      apr_hash_set(actual, path, change->path.len, path);
+
+      SVN_ERR(svn_fs_path_change_get(&change, iter));
+    }
 
 #if 0
   /* Print ACTUAL and EXPECTED. */
