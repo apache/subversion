@@ -2859,8 +2859,14 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
     }
   else
     {
-      SVN_ERR(svn_cache__get((void **)&all, &found, ffd->changes_cache,
-                             &context->revision, result_pool));
+      svn_fs_x__read_changes_block_baton_t baton;
+      baton.start = (int)context->next;
+      baton.eol = &context->eol;
+
+      SVN_ERR(svn_cache__get_partial((void **)changes, &found,
+                                     ffd->changes_cache, &context->revision,
+                                     svn_fs_x__read_changes_block,
+                                     &baton, result_pool));
     }
 
   if (!found)
@@ -2879,12 +2885,6 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
 
       *changes = all;
       context->eol = TRUE;
-    }
-  else
-    {
-      /* TODO: This is not elegant and the info will later be provided by
-       * the retrieval functions. */
-      context->eol = (*changes)->nelts == 0;
     }
 
   context->next += (*changes)->nelts;

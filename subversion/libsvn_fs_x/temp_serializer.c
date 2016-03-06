@@ -1210,3 +1210,57 @@ svn_fs_x__deserialize_changes(void **out,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_x__read_changes_block(void **out,
+                             const void *data,
+                             apr_size_t data_len,
+                             void *baton,
+                             apr_pool_t *pool)
+{
+  int first;
+  int last;
+  int i;
+  enum { BLOCK_SIZE = 100 };
+  apr_array_header_t *array;
+
+  svn_fs_x__read_changes_block_baton_t *b = baton;
+  changes_data_t changes = *(const changes_data_t *)data;
+
+  /* Restrict range to the block requested by the BATON.
+   * Tell the caller whether we reached the end of the list. */
+  first = MIN(b->start, changes.count);
+  last = MIN(first + BLOCK_SIZE, changes.count);
+  *b->eol = last == changes.count;
+
+  /* de-serialize our auxiliary data structure */
+  svn_temp_deserializer__resolve(data, (void**)&changes.changes);
+
+  /* de-serialize each entry and add it to the array */
+  array = apr_array_make(pool, last - first, sizeof(svn_fs_x__change_t *));
+  for (i = first; i < last; ++i)
+    {
+      svn_fs_x__change_t *change;
+
+      /* Get a pointer to the in-cache change struct at offset I. */
+      svn_fs_x__change_t *cached_change = changes.changes[i];
+      svn_temp_deserializer__resolve(changes.changes,
+                                     (void**)&cached_change);
+
+      /* Duplicate that struct into the result POOL. */
+      change = apr_pmemdup(pool, cached_change, sizeof(*change));
+
+      /* fix-up of pointers within the struct */
+      svn_temp_deserializer__resolve(cached_change,
+                                     (void **)&change->path.data);
+      svn_temp_deserializer__resolve(cached_change,
+                                     (void **)&change->copyfrom_path);
+
+      /* Add the change to result. */
+      APR_ARRAY_PUSH(array, svn_fs_x__change_t *) = change;
+    }
+
+  /* done */
+  *out = array;
+
+  return SVN_NO_ERROR;
+}
