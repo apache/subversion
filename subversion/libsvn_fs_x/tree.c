@@ -2289,7 +2289,7 @@ x_revision_changes_iterator_get(svn_fs_path_change3_t **change,
 
   /* If we exhausted our block of changes and did not reach the end of the
      list, yet, fetch the next block.  Note that that block may be empty. */
-  if ((data->idx <= data->changes->nelts) && !data->context->eol)
+  if ((data->idx >= data->changes->nelts) && !data->context->eol)
     {
       apr_pool_t *changes_pool = data->changes->pool;
 
@@ -2297,6 +2297,7 @@ x_revision_changes_iterator_get(svn_fs_path_change3_t **change,
       svn_pool_clear(changes_pool);
       SVN_ERR(svn_fs_x__get_changes(&data->changes, data->context,
                                     changes_pool, data->scratch_pool));
+      data->idx = 0;
 
       /* Immediately release any temporary data. */
       svn_pool_clear(data->scratch_pool);
