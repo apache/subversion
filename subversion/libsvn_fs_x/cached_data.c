@@ -2829,6 +2829,7 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
 {
   svn_boolean_t found;
   svn_fs_x__data_t *ffd = context->fs->fsap_data;
+  apr_array_header_t *all = NULL;
 
   svn_fs_x__id_t id;
   id.change_set = svn_fs_x__change_set_by_rev(context->revision);
@@ -2849,26 +2850,42 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
                                                context->revision);
       key.second = offset;
 
-      SVN_ERR(svn_cache__get_partial((void **)changes, &found,
+      SVN_ERR(svn_cache__get_partial((void **)&all, &found,
                                      ffd->changes_container_cache, &key,
                                      svn_fs_x__changes_get_list_func,
                                      &sub_item, result_pool));
     }
   else
     {
-      SVN_ERR(svn_cache__get((void **) changes, &found, ffd->changes_cache,
+      SVN_ERR(svn_cache__get((void **)&all, &found, ffd->changes_cache,
                              &context->revision, result_pool));
     }
 
   if (!found)
     {
       /* 'block-read' will also provide us with the desired data */
-      SVN_ERR(block_read((void **)changes, context->fs, &id,
+      SVN_ERR(block_read((void **)&all, context->fs, &id,
                          context->revision_file, result_pool, scratch_pool));
     }
 
+  /* If we fetched all data, return the bits that we did not deliver, yet. */
+  if (all)
+    {
+      /* TODO: This code path is transitional. */
+      all->elts += all->elt_size * context->next;
+      all->nelts -= (int)context->next;
+
+      *changes = all;
+      context->eol = TRUE;
+    }
+  else
+    {
+      /* TODO: This is not elegant and the info will later be provided by
+       * the retrieval functions. */
+      context->eol = (*changes)->nelts == 0;
+    }
+
   context->next += (*changes)->nelts;
-  context->eol = TRUE;
 
   SVN_ERR(dgb__log_access(context->fs, &id, *changes,
                           SVN_FS_X__ITEM_TYPE_CHANGES, scratch_pool));
