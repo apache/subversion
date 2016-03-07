@@ -113,7 +113,9 @@ Candidate changes:
  * r1721488, r1721648
    Enable building bindings with SWIG >= 3.0.6
    Justification:
-     Enable building bindings with SWIG 3.x
+     Enable building bindings with SWIG 3.x.  SWIG 2.x is end-of-life (no
+     releases since 2014) and is starting to be removed from Linux
+     distributions.
    Branch:
      ^/subversion/branches/1.9.x-r1721488
    Votes:
