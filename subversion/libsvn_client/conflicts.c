@@ -1051,17 +1051,12 @@ static svn_error_t *
 conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                           apr_pool_t *scratch_pool)
 {
-  svn_revnum_t deleted_rev;
-  svn_string_t *author_revprop;
   const char *old_repos_relpath;
   const char *new_repos_relpath;
   const char *repos_root_url;
   const char *repos_uuid;
   svn_revnum_t old_rev;
   svn_revnum_t new_rev;
-  const char *url;
-  const char *corrected_url;
-  svn_ra_session_t *ra_session;
   struct conflict_tree_incoming_delete_details *details;
   svn_wc_operation_t operation;
 
@@ -1080,6 +1075,12 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
     {
       if (old_rev < new_rev)
         {
+          svn_ra_session_t *ra_session;
+          const char *url;
+          const char *corrected_url;
+          svn_revnum_t deleted_rev;
+          svn_string_t *author_revprop;
+
           /* The update operation went forward in history. */
           url = svn_path_url_add_component2(repos_root_url, new_repos_relpath,
                                             scratch_pool);
@@ -1123,6 +1124,10 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
     {
       if (old_rev < new_rev)
         {
+          svn_ra_session_t *ra_session;
+          const char *url;
+          const char *corrected_url;
+          svn_string_t *author_revprop;
           apr_array_header_t *paths;
           struct find_deleted_rev_baton b;
           svn_error_t *err;
