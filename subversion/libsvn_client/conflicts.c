@@ -856,7 +856,8 @@ conflict_tree_get_description_incoming_delete(const char **description,
 /* Baton for find_added_rev(). */
 struct find_added_rev_baton
 {
-  struct conflict_tree_incoming_delete_details *details;
+  svn_revnum_t added_rev;
+  const char *repos_relpath;
   apr_pool_t *pool;
 };
 
@@ -872,8 +873,8 @@ find_added_rev(svn_location_segment_t *segment,
 
   if (segment->path) /* not interested in gaps */
     {
-      b->details->added_rev = segment->range_start;
-      b->details->repos_relpath = apr_pstrdup(b->pool, segment->path);
+      b->added_rev = segment->range_start;
+      b->repos_relpath = apr_pstrdup(b->pool, segment->path);
     }
 
   return SVN_NO_ERROR;
@@ -1060,19 +1061,20 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                                        scratch_pool));
 
           details = apr_pcalloc(conflict->pool, sizeof(*details));
-          b.details = details;
+          b.added_rev = SVN_INVALID_REVNUM;
+          b.repos_relpath = NULL;
           b.pool = scratch_pool;
           /* Figure out when this node was added. */
           SVN_ERR(svn_ra_get_location_segments(ra_session, "", old_rev,
                                                old_rev, new_rev,
                                                find_added_rev, &b,
                                                scratch_pool));
-          SVN_ERR(svn_ra_rev_prop(ra_session, details->added_rev,
+          SVN_ERR(svn_ra_rev_prop(ra_session, b.added_rev,
                                   SVN_PROP_REVISION_AUTHOR,
                                   &author_revprop, scratch_pool));
           details->deleted_rev = SVN_INVALID_REVNUM;
-          details->repos_relpath = apr_pstrdup(conflict->pool,
-                                               new_repos_relpath);
+          details->added_rev = b.added_rev;
+          details->repos_relpath = apr_pstrdup(conflict->pool, b.repos_relpath);
           details->rev_author = apr_pstrdup(conflict->pool,
                                             author_revprop->data);
           /* Check for replacement. */
@@ -1188,7 +1190,8 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                                        scratch_pool));
 
           details = apr_pcalloc(conflict->pool, sizeof(*details));
-          b.details = details;
+          b.added_rev = SVN_INVALID_REVNUM;
+          b.repos_relpath = NULL;
           b.pool = scratch_pool;
           /* Figure out when the node we switched away from, or merged
            * from another branch, was added. */
@@ -1196,12 +1199,12 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                                old_rev, new_rev,
                                                find_added_rev, &b,
                                                scratch_pool));
-          SVN_ERR(svn_ra_rev_prop(ra_session, details->added_rev,
+          SVN_ERR(svn_ra_rev_prop(ra_session, b.added_rev,
                                   SVN_PROP_REVISION_AUTHOR,
                                   &author_revprop, scratch_pool));
           details->deleted_rev = SVN_INVALID_REVNUM;
-          details->repos_relpath = apr_pstrdup(conflict->pool,
-                                               new_repos_relpath);
+          details->added_rev = b.added_rev;
+          details->repos_relpath = apr_pstrdup(conflict->pool, b.repos_relpath);
           details->rev_author = apr_pstrdup(conflict->pool,
                                             author_revprop->data);
           /* Check for replacement. */
