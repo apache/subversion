@@ -1159,7 +1159,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           b.details = details;
           b.pool = scratch_pool;
           /* Figure out when the node we switched away from, or merged
-          * from another branch, was added. */
+           * from another branch, was added. */
           SVN_ERR(svn_ra_get_location_segments(ra_session, "", old_rev,
                                                old_rev, new_rev,
                                                find_added_rev, &b,
