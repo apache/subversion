@@ -651,6 +651,198 @@ struct conflict_tree_incoming_delete_details
   svn_node_kind_t replacing_node_kind;
 };
 
+static const char *
+describe_incoming_deletion_upon_update(
+  struct conflict_tree_incoming_delete_details *details,
+  svn_node_kind_t victim_node_kind,
+  svn_revnum_t new_rev,
+  apr_pool_t *result_pool)
+{
+  if (victim_node_kind == svn_node_dir)
+    return apr_psprintf(result_pool,
+                        _("dir updated to r%lu was deleted or moved "
+                          "by %s in r%lu"), new_rev,
+                        details->rev_author, details->deleted_rev);
+  else if (victim_node_kind == svn_node_file ||
+           victim_node_kind == svn_node_symlink)
+    return apr_psprintf(result_pool,
+                        _("file updated to r%lu was deleted or moved "
+                          "by %s in r%lu"), new_rev,
+                        details->rev_author, details->deleted_rev);
+  else
+    return apr_psprintf(result_pool,
+                        _("item updated to r%lu was deleted or moved "
+                          "by %s in r%lu"), new_rev,
+                        details->rev_author, details->deleted_rev);
+}
+
+static const char *
+describe_incoming_reverse_addition_upon_update(
+  struct conflict_tree_incoming_delete_details *details,
+  svn_node_kind_t victim_node_kind,
+  svn_revnum_t new_rev,
+  apr_pool_t *result_pool)
+{
+  if (victim_node_kind == svn_node_dir)
+    return apr_psprintf(result_pool,
+                        _("dir updated to r%lu did not exist before "
+                          "it was added by %s in r%lu"), new_rev,
+                        details->rev_author, details->added_rev);
+  else if (victim_node_kind == svn_node_file ||
+           victim_node_kind == svn_node_symlink)
+    return apr_psprintf(result_pool,
+                        _("file updated to r%lu did not exist before "
+                          "it was added by %s in r%lu"), new_rev,
+                        details->rev_author, details->added_rev);
+  else
+    return apr_psprintf(result_pool,
+                        _("item updated to r%lu did not exist before "
+                          "it was added by %s in r%lu"), new_rev,
+                        details->rev_author, details->added_rev);
+}
+
+static const char *
+describe_incoming_deletion_upon_switch(
+  struct conflict_tree_incoming_delete_details *details,
+  svn_node_kind_t victim_node_kind,
+  const char *old_repos_relpath,
+  svn_revnum_t old_rev,
+  const char *new_repos_relpath,
+  svn_revnum_t new_rev,
+  apr_pool_t *result_pool)
+{
+  if (victim_node_kind == svn_node_dir)
+    return apr_psprintf(result_pool,
+                        _("dir switched from %s@r%lu to %s@r%lu was "
+                          "deleted or moved by %s in r%lu"),
+                        old_repos_relpath, old_rev,
+                        new_repos_relpath, new_rev,
+                        details->rev_author, details->deleted_rev);
+  else if (victim_node_kind == svn_node_file ||
+           victim_node_kind == svn_node_symlink)
+    return apr_psprintf(result_pool,
+                        _("file switched from %s@r%lu to %s@r%lu was "
+                          "deleted or moved by %s in r%lu"),
+                        old_repos_relpath, old_rev,
+                        new_repos_relpath, new_rev,
+                        details->rev_author, details->deleted_rev);
+  else
+    return apr_psprintf(result_pool,
+                        _("item switched from %s@r%lu to %s@r%lu was "
+                          "deleted or moved by %s in r%lu"),
+                        old_repos_relpath, old_rev,
+                        new_repos_relpath, new_rev,
+                        details->rev_author, details->deleted_rev);
+}
+
+static const char *
+describe_incoming_reverse_addition_upon_switch(
+  struct conflict_tree_incoming_delete_details *details,
+  svn_node_kind_t victim_node_kind,
+  const char *old_repos_relpath,
+  svn_revnum_t old_rev,
+  const char *new_repos_relpath,
+  svn_revnum_t new_rev,
+  apr_pool_t *result_pool)
+{
+  if (victim_node_kind == svn_node_dir)
+    return apr_psprintf(result_pool,
+                        _("dir switched from %s@r%lu to %s@r%lu did "
+                          "not exist before it was added by %s in "
+                          "r%lu"),
+                        old_repos_relpath, old_rev,
+                        new_repos_relpath, new_rev,
+                        details->rev_author, details->added_rev);
+  else if (victim_node_kind == svn_node_file ||
+           victim_node_kind == svn_node_symlink)
+    return apr_psprintf(result_pool,
+                        _("file switched from %s@r%lu to %s@r%lu did "
+                          "not exist before it was added by %s in "
+                          "r%lu"),
+                        old_repos_relpath, old_rev,
+                        new_repos_relpath, new_rev,
+                        details->rev_author, details->added_rev);
+  else
+    return apr_psprintf(result_pool,
+                        _("item switched from %s@r%lu to %s@r%lu did "
+                          "not exist before it was added by %s in "
+                          "r%lu"),
+                        old_repos_relpath, old_rev,
+                        new_repos_relpath, new_rev,
+                        details->rev_author, details->added_rev);
+}
+
+static const char *
+describe_incoming_deletion_upon_merge(
+  struct conflict_tree_incoming_delete_details *details,
+  svn_node_kind_t victim_node_kind,
+  const char *old_repos_relpath,
+  svn_revnum_t old_rev,
+  const char *new_repos_relpath,
+  svn_revnum_t new_rev,
+  apr_pool_t *result_pool)
+{
+  if (victim_node_kind == svn_node_dir)
+    return apr_psprintf(result_pool,
+                        _("dir merged from %s@r%lu to %s@r%lu was "
+                          "deleted or moved by %s in r%lu"),
+                        old_repos_relpath, old_rev,
+                        new_repos_relpath, new_rev,
+                        details->rev_author, details->deleted_rev);
+  else if (victim_node_kind == svn_node_file ||
+           victim_node_kind == svn_node_symlink)
+    return apr_psprintf(result_pool,
+                        _("file merged from %s@r%lu to %s@r%lu was "
+                          "deleted or moved by %s in r%lu"),
+                        old_repos_relpath, old_rev,
+                        new_repos_relpath, new_rev,
+                        details->rev_author, details->deleted_rev);
+  else
+    return apr_psprintf(result_pool,
+                        _("item merged from %s@r%lu to %s@r%lu was "
+                          "deleted or moved by %s in r%lu"),
+                        old_repos_relpath, old_rev,
+                        new_repos_relpath, new_rev,
+                        details->rev_author, details->deleted_rev);
+}
+
+static const char *
+describe_incoming_reverse_addition_upon_merge(
+  struct conflict_tree_incoming_delete_details *details,
+  svn_node_kind_t victim_node_kind,
+  const char *old_repos_relpath,
+  svn_revnum_t old_rev,
+  const char *new_repos_relpath,
+  svn_revnum_t new_rev,
+  apr_pool_t *result_pool)
+{
+  if (victim_node_kind == svn_node_dir)
+    return apr_psprintf(result_pool,
+                        _("dir merged from %s@r%lu to %s@r%lu did "
+                          "not exist before it was added by %s in "
+                          "r%lu"),
+                        old_repos_relpath, old_rev,
+                        new_repos_relpath, new_rev,
+                        details->rev_author, details->added_rev);
+  else if (victim_node_kind == svn_node_file ||
+           victim_node_kind == svn_node_symlink)
+    return apr_psprintf(result_pool,
+                        _("file merged from %s@r%lu to %s@r%lu did "
+                          "not exist before it was added by %s in "
+                          "r%lu"),
+                        old_repos_relpath, old_rev,
+                        new_repos_relpath, new_rev,
+                        details->rev_author, details->added_rev);
+  else
+    return apr_psprintf(result_pool,
+                        _("item merged from %s@r%lu to %s@r%lu did "
+                          "not exist before it was added by %s in "
+                          "r%lu"),
+                        old_repos_relpath, old_rev,
+                        new_repos_relpath, new_rev,
+                        details->rev_author, details->added_rev);
+}
+
 /* Implements tree_conflict_get_description_func_t. */
 static svn_error_t *
 conflict_tree_get_description_incoming_delete(const char **description,
@@ -696,157 +888,58 @@ conflict_tree_get_description_incoming_delete(const char **description,
     {
       if (details->deleted_rev != SVN_INVALID_REVNUM)
         {
-          if (victim_node_kind == svn_node_dir)
-            action = apr_psprintf(result_pool,
-                                  _("dir updated to r%lu was deleted or moved "
-                                    "by %s in r%lu"), new_rev,
-                                  details->rev_author, details->deleted_rev);
-          else if (victim_node_kind == svn_node_file ||
-                   victim_node_kind == svn_node_symlink)
-            action = apr_psprintf(result_pool,
-                                  _("file updated to r%lu was deleted or moved "
-                                    "by %s in r%lu"), new_rev,
-                                  details->rev_author, details->deleted_rev);
-          else
-            action = apr_psprintf(result_pool,
-                                  _("item updated to r%lu was deleted or moved "
-                                    "by %s in r%lu"), new_rev,
-                                  details->rev_author, details->deleted_rev);
+          action = describe_incoming_deletion_upon_update(details,
+                                                          victim_node_kind,
+                                                          new_rev,
+                                                          result_pool);
         }
       else /* details->added_rev != SVN_INVALID_REVNUM */
         {
           /* This deletion is really the reverse change of an addition. */
-          if (victim_node_kind == svn_node_dir)
-            action = apr_psprintf(result_pool,
-                                  _("dir updated to r%lu did not exist before "
-                                    "it was added by %s in r%lu"), new_rev,
-                                  details->rev_author, details->added_rev);
-          else if (victim_node_kind == svn_node_file ||
-                   victim_node_kind == svn_node_symlink)
-            action = apr_psprintf(result_pool,
-                                  _("file updated to r%lu did not exist before "
-                                    "it was added by %s in r%lu"), new_rev,
-                                  details->rev_author, details->added_rev);
-          else
-            action = apr_psprintf(result_pool,
-                                  _("item updated to r%lu did not exist before "
-                                    "it was added by %s in r%lu"), new_rev,
-                                  details->rev_author, details->added_rev);
+          action = describe_incoming_reverse_addition_upon_update(
+                     details, victim_node_kind, new_rev, result_pool);
         }
     }
   else if (conflict_operation == svn_wc_operation_switch)
     {
       if (details->deleted_rev != SVN_INVALID_REVNUM)
         {
-          if (victim_node_kind == svn_node_dir)
-            action = apr_psprintf(result_pool,
-                                  _("dir switched from %s@r%lu to %s@r%lu was "
-                                    "deleted or moved by %s in r%lu"),
-                                  old_repos_relpath, old_rev,
-                                  new_repos_relpath, new_rev,
-                                  details->rev_author, details->deleted_rev);
-          else if (victim_node_kind == svn_node_file ||
-                   victim_node_kind == svn_node_symlink)
-            action = apr_psprintf(result_pool,
-                                  _("file switched from %s@r%lu to %s@r%lu was "
-                                    "deleted or moved by %s in r%lu"),
-                                  old_repos_relpath, old_rev,
-                                  new_repos_relpath, new_rev,
-                                  details->rev_author, details->deleted_rev);
-          else
-            action = apr_psprintf(result_pool,
-                                  _("item switched from %s@r%lu to %s@r%lu was "
-                                    "deleted or moved by %s in r%lu"),
-                                  old_repos_relpath, old_rev,
-                                  new_repos_relpath, new_rev,
-                                  details->rev_author, details->deleted_rev);
+          action = describe_incoming_deletion_upon_switch(details,
+                                                          victim_node_kind,
+                                                          old_repos_relpath,
+                                                          old_rev,
+                                                          new_repos_relpath,
+                                                          new_rev,
+                                                          result_pool);
         }
       else /* details->added_rev != SVN_INVALID_REVNUM */
         {
           /* This deletion is really the reverse change of an addition. */
-          if (victim_node_kind == svn_node_dir)
-            action = apr_psprintf(result_pool,
-                                  _("dir switched from %s@r%lu to %s@r%lu did "
-                                    "not exist before it was added by %s in "
-                                    "r%lu"),
-                                  old_repos_relpath, old_rev,
-                                  new_repos_relpath, new_rev,
-                                  details->rev_author, details->added_rev);
-          else if (victim_node_kind == svn_node_file ||
-                   victim_node_kind == svn_node_symlink)
-            action = apr_psprintf(result_pool,
-                                  _("file switched from %s@r%lu to %s@r%lu did "
-                                    "not exist before it was added by %s in "
-                                    "r%lu"),
-                                  old_repos_relpath, old_rev,
-                                  new_repos_relpath, new_rev,
-                                  details->rev_author, details->added_rev);
-          else
-            action = apr_psprintf(result_pool,
-                                  _("item switched from %s@r%lu to %s@r%lu did "
-                                    "not exist before it was added by %s in "
-                                    "r%lu"),
-                                  old_repos_relpath, old_rev,
-                                  new_repos_relpath, new_rev,
-                                  details->rev_author, details->added_rev);
-          }
+          action = describe_incoming_reverse_addition_upon_switch(
+                     details, victim_node_kind, old_repos_relpath, old_rev,
+                     new_repos_relpath, new_rev, result_pool);
+            
+        }
       }
   else if (conflict_operation == svn_wc_operation_merge)
     {
       if (details->deleted_rev != SVN_INVALID_REVNUM)
         {
-          if (victim_node_kind == svn_node_dir)
-            action = apr_psprintf(result_pool,
-                                  _("dir merged from %s@r%lu to %s@r%lu was "
-                                    "deleted or moved by %s in r%lu"),
-                                  old_repos_relpath, old_rev,
-                                  new_repos_relpath, new_rev,
-                                  details->rev_author, details->deleted_rev);
-          else if (victim_node_kind == svn_node_file ||
-                   victim_node_kind == svn_node_symlink)
-            action = apr_psprintf(result_pool,
-                                  _("file merged from %s@r%lu to %s@r%lu was "
-                                    "deleted or moved by %s in r%lu"),
-                                  old_repos_relpath, old_rev,
-                                  new_repos_relpath, new_rev,
-                                  details->rev_author, details->deleted_rev);
-          else
-            action = apr_psprintf(result_pool,
-                                  _("item merged from %s@r%lu to %s@r%lu was "
-                                    "deleted or moved by %s in r%lu"),
-                                  old_repos_relpath, old_rev,
-                                  new_repos_relpath, new_rev,
-                                  details->rev_author, details->deleted_rev);
+          action = describe_incoming_deletion_upon_merge(details,
+                                                          victim_node_kind,
+                                                          old_repos_relpath,
+                                                          old_rev,
+                                                          new_repos_relpath,
+                                                          new_rev,
+                                                          result_pool);
         }
       else /* details->added_rev != SVN_INVALID_REVNUM */
         {
           /* This deletion is really the reverse change of an addition. */
-          if (victim_node_kind == svn_node_dir)
-            action = apr_psprintf(result_pool,
-                                  _("dir merged from %s@r%lu to %s@r%lu did "
-                                    "not exist before it was added by %s in "
-                                    "r%lu"),
-                                  old_repos_relpath, old_rev,
-                                  new_repos_relpath, new_rev,
-                                  details->rev_author, details->added_rev);
-          else if (victim_node_kind == svn_node_file ||
-                   victim_node_kind == svn_node_symlink)
-            action = apr_psprintf(result_pool,
-                                  _("file merged from %s@r%lu to %s@r%lu did "
-                                    "not exist before it was added by %s in "
-                                    "r%lu"),
-                                  old_repos_relpath, old_rev,
-                                  new_repos_relpath, new_rev,
-                                  details->rev_author, details->added_rev);
-          else
-            action = apr_psprintf(result_pool,
-                                  _("item merged from %s@r%lu to %s@r%lu did "
-                                    "not exist before it was added by %s in "
-                                    "r%lu"),
-                                  old_repos_relpath, old_rev,
-                                  new_repos_relpath, new_rev,
-                                  details->rev_author, details->added_rev);
-          }
+          action = describe_incoming_reverse_addition_upon_merge(
+                     details, victim_node_kind, old_repos_relpath, old_rev,
+                     new_repos_relpath, new_rev, result_pool);
+        }
       }
 
   *description = apr_psprintf(result_pool, _("%s, %s"), reason, action);
