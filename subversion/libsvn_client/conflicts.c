@@ -243,9 +243,7 @@ conflict_type_specific_setup(svn_client_conflict_t *conflict,
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
 
   /* Set type-specific description and details functions if available. */
-  if (incoming_change == svn_wc_conflict_action_delete &&
-      (operation == svn_wc_operation_update ||
-       operation == svn_wc_operation_switch) /* ### TODO: merge */)
+  if (incoming_change == svn_wc_conflict_action_delete)
     {
       conflict->tree_conflict_get_description_func =
         conflict_tree_get_description_incoming_delete;
@@ -790,6 +788,63 @@ conflict_tree_get_description_incoming_delete(const char **description,
                                   details->rev_author, details->added_rev);
           }
       }
+  else if (conflict_operation == svn_wc_operation_merge)
+    {
+      if (details->deleted_rev != SVN_INVALID_REVNUM)
+        {
+          if (victim_node_kind == svn_node_dir)
+            action = apr_psprintf(result_pool,
+                                  _("dir merged from %s@r%lu to %s@r%lu was "
+                                    "deleted or moved by %s in r%lu"),
+                                  old_repos_relpath, old_rev,
+                                  new_repos_relpath, new_rev,
+                                  details->rev_author, details->deleted_rev);
+          else if (victim_node_kind == svn_node_file ||
+                   victim_node_kind == svn_node_symlink)
+            action = apr_psprintf(result_pool,
+                                  _("file merged from %s@r%lu to %s@r%lu was "
+                                    "deleted or moved by %s in r%lu"),
+                                  old_repos_relpath, old_rev,
+                                  new_repos_relpath, new_rev,
+                                  details->rev_author, details->deleted_rev);
+          else
+            action = apr_psprintf(result_pool,
+                                  _("item merged from %s@r%lu to %s@r%lu was "
+                                    "deleted or moved by %s in r%lu"),
+                                  old_repos_relpath, old_rev,
+                                  new_repos_relpath, new_rev,
+                                  details->rev_author, details->deleted_rev);
+        }
+      else /* details->added_rev != SVN_INVALID_REVNUM */
+        {
+          /* This deletion is really the reverse change of an addition. */
+          if (victim_node_kind == svn_node_dir)
+            action = apr_psprintf(result_pool,
+                                  _("dir merged from %s@r%lu to %s@r%lu did "
+                                    "not exist before it was added by %s in "
+                                    "r%lu"),
+                                  old_repos_relpath, old_rev,
+                                  new_repos_relpath, new_rev,
+                                  details->rev_author, details->added_rev);
+          else if (victim_node_kind == svn_node_file ||
+                   victim_node_kind == svn_node_symlink)
+            action = apr_psprintf(result_pool,
+                                  _("file merged from %s@r%lu to %s@r%lu did "
+                                    "not exist before it was added by %s in "
+                                    "r%lu"),
+                                  old_repos_relpath, old_rev,
+                                  new_repos_relpath, new_rev,
+                                  details->rev_author, details->added_rev);
+          else
+            action = apr_psprintf(result_pool,
+                                  _("item merged from %s@r%lu to %s@r%lu did "
+                                    "not exist before it was added by %s in "
+                                    "r%lu"),
+                                  old_repos_relpath, old_rev,
+                                  new_repos_relpath, new_rev,
+                                  details->rev_author, details->added_rev);
+          }
+      }
 
   *description = apr_psprintf(result_pool, _("%s, %s"), reason, action);
   return SVN_NO_ERROR;
@@ -1005,7 +1060,8 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                             author_revprop->data);
         }
     }
-  else if (operation == svn_wc_operation_switch)
+  else if (operation == svn_wc_operation_switch ||
+           operation == svn_wc_operation_merge)
     {
       if (old_rev < new_rev)
         {
@@ -1013,11 +1069,11 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           struct find_deleted_rev_baton b;
           svn_error_t *err;
 
-          /* The switch operation went forward in history.
+          /* The switch/merge operation went forward in history.
            *
-           * The deletion of the node happened on the branch we switched to.
-           * Scan new_repos_relpath's parent's log to find the revision which
-           * deleted the node. */
+           * The deletion of the node happened on the branch we switched to
+           * or merged from. Scan new_repos_relpath's parent's log to find
+           * the revision which deleted the node. */
           url = svn_path_url_add_component2(
                   repos_root_url,
                   svn_relpath_dirname(new_repos_relpath, scratch_pool),
@@ -1087,7 +1143,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
         {
           struct find_added_rev_baton b;
 
-          /* The switch operation went backwards in history. */
+          /* The switch/merge operation went backwards in history. */
           url = svn_path_url_add_component2(repos_root_url, old_repos_relpath,
                                             scratch_pool);
           SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
@@ -1102,7 +1158,8 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           details = apr_pcalloc(conflict->pool, sizeof(*details));
           b.details = details;
           b.pool = scratch_pool;
-          /* Figure out when the node we switched away from was added. */
+          /* Figure out when the node we switched away from, or merged
+          * from another branch, was added. */
           SVN_ERR(svn_ra_get_location_segments(ra_session, "", old_rev,
                                                old_rev, new_rev,
                                                find_added_rev, &b,
