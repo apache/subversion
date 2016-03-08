@@ -1269,6 +1269,15 @@ record_skip(merge_cmd_baton_t *merge_b,
   return SVN_NO_ERROR;
 }
 
+/* Forward declaration */
+static svn_client__merge_path_t *
+find_nearest_ancestor_with_intersecting_ranges(
+  svn_revnum_t *start,
+  svn_revnum_t *end,
+  const apr_array_header_t *children_with_mergeinfo,
+  svn_boolean_t path_is_own_ancestor,
+  const char *local_abspath);
+
 /* Record a tree conflict in the WC, unless this is a dry run or a record-
  * only merge, or if a tree conflict is already flagged for the VICTIM_PATH.
  * (The latter can happen if a merge-tracking-aware merge is doing multiple
@@ -1340,11 +1349,45 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
             reason = svn_wc_conflict_reason_moved_here;
         }
 
-      SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
-                                     merge_left_node_kind,
-                                     merge_right_node_kind,
-                                     &merge_b->merge_source, merge_b->target,
-                                     result_pool, scratch_pool));
+      if (HONOR_MERGEINFO(merge_b) && merge_b->merge_source.ancestral)
+        {
+          struct merge_source_t *source;
+          svn_client__pathrev_t *loc1;
+          svn_client__pathrev_t *loc2;
+          svn_merge_range_t range =
+            {SVN_INVALID_REVNUM, SVN_INVALID_REVNUM, TRUE};
+
+          /* We are honoring mergeinfo so do not blindly record
+           * a conflict describing the merge of
+           * SOURCE->LOC1->URL@SOURCE->LOC1->REV through
+           * SOURCE->LOC2->URL@SOURCE->LOC2->REV
+           * but figure out the actual revision range merged. */
+          (void)find_nearest_ancestor_with_intersecting_ranges(
+            &(range.start), &(range.end),
+            merge_b->notify_begin.nodes_with_mergeinfo,
+            action != svn_wc_conflict_action_delete,
+            local_abspath);
+          loc1 = svn_client__pathrev_dup(merge_b->merge_source.loc1,
+                                         scratch_pool);
+          loc2 = svn_client__pathrev_dup(merge_b->merge_source.loc2,
+                                         scratch_pool);
+          loc1->rev = range.start;
+          loc2->rev = range.end;
+          source = merge_source_create(loc1, loc2,
+                                       merge_b->merge_source.ancestral,
+                                       scratch_pool);
+          SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
+                                         merge_left_node_kind,
+                                         merge_right_node_kind,
+                                         source, merge_b->target,
+                                         result_pool, scratch_pool));
+        }
+      else
+        SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
+                                       merge_left_node_kind,
+                                       merge_right_node_kind,
+                                       &merge_b->merge_source, merge_b->target,
+                                       result_pool, scratch_pool));
 
       /* Fix up delete of file, add of dir replacement (or other way around) */
       if (existing_conflict != NULL && existing_conflict->src_left_version)
