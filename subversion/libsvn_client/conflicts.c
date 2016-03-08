@@ -631,7 +631,7 @@ conflict_tree_get_description_generic(const char **description,
   return SVN_NO_ERROR;
 }
 
-/* Details for tree conflicts involving incoming deletions. */
+/* Details for tree conflicts involving incoming deletions and replacements. */
 struct conflict_tree_incoming_delete_details
 {
   /* If not SVN_INVALID_REVNUM, the node was deleted in DELETED_REV. */
@@ -646,6 +646,9 @@ struct conflict_tree_incoming_delete_details
 
   /* Author who committed DELETED_REV/ADDED_REV. */
   const char *rev_author;
+
+  /* New node kind for a replaced node. This is svn_node_none for deletions. */
+  svn_node_kind_t replacing_node_kind;
 };
 
 /* Implements tree_conflict_get_description_func_t. */
@@ -883,6 +886,7 @@ struct find_deleted_rev_baton
   svn_revnum_t related_repos_peg_rev;
 
   svn_revnum_t deleted_rev;
+  svn_node_kind_t replacing_node_kind;
 
   const char *repos_root_url;
   const char *repos_uuid;
@@ -896,7 +900,12 @@ struct find_deleted_rev_baton
  * was found, store it in BATON->DELETED_REV and abort the log operation
  * by raising SVN_ERR_CANCELLED.
  *
- * If no such revision can be found, leave BATON->DELETED_REV alone.
+ * If no such revision can be found, leave BATON->DELETED_REV and
+ * BATON->REPLACING_NODE_KIND alone.
+ *
+ * If the node was replaced, set BATON->REPLACING_NODE_KIND to the node
+ * kind of the node which replaced the original node. If the node was not
+ * replaced, set BATON->REPLACING_NODE_KIND to svn_node_none.
  *
  * This function answers the same question as svn_ra_get_deleted_rev() but
  * works in cases where we do not already know a revision in which the deleted
@@ -921,7 +930,7 @@ find_deleted_rev(void *baton,
     {
       void *val;
       const char *path;
-      svn_log_changed_path_t *log_item;
+      svn_log_changed_path2_t *log_item;
 
       svn_pool_clear(iterpool);
 
@@ -958,6 +967,10 @@ find_deleted_rev(void *baton,
             {
               /* Found the correct node, we are done. */
               b->deleted_rev = log_entry->revision;
+              if (log_item->action == 'R')
+                b->replacing_node_kind = log_item->node_kind;
+              else
+                b->replacing_node_kind = svn_node_none;
               return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
             }
         }
@@ -1025,6 +1038,10 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                                new_repos_relpath);
           details->rev_author = apr_pstrdup(conflict->pool,
                                             author_revprop->data);
+          /* Check for replacement. */
+          SVN_ERR(svn_ra_check_path(ra_session, "", deleted_rev,
+                                    &details->replacing_node_kind,
+                                    scratch_pool));
         }
       else /* new_rev < old_rev */
         {
@@ -1058,6 +1075,19 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                                new_repos_relpath);
           details->rev_author = apr_pstrdup(conflict->pool,
                                             author_revprop->data);
+          /* Check for replacement. */
+          details->replacing_node_kind = svn_node_none;
+          if (details->added_rev > 0)
+            {
+              svn_node_kind_t replaced_node_kind;
+
+              SVN_ERR(svn_ra_check_path(ra_session, "", details->added_rev - 1,
+                                        &replaced_node_kind, scratch_pool));
+              if (replaced_node_kind != svn_node_none)
+                SVN_ERR(svn_ra_check_path(ra_session, "", details->added_rev,
+                                          &details->replacing_node_kind,
+                                          scratch_pool));
+            }
         }
     }
   else if (operation == svn_wc_operation_switch ||
@@ -1094,6 +1124,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           b.related_repos_relpath = old_repos_relpath;
           b.related_repos_peg_rev = old_rev;
           b.deleted_rev = SVN_INVALID_REVNUM;
+          b.replacing_node_kind = svn_node_unknown;
           b.repos_root_url = repos_root_url;
           b.repos_uuid = repos_uuid;
           b.ctx = conflict->ctx;
@@ -1138,6 +1169,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                                new_repos_relpath);
           details->rev_author = apr_pstrdup(conflict->pool,
                                             author_revprop->data);
+          details->replacing_node_kind = b.replacing_node_kind;
         }
       else /* new_rev < old_rev */
         {
@@ -1172,6 +1204,19 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                                new_repos_relpath);
           details->rev_author = apr_pstrdup(conflict->pool,
                                             author_revprop->data);
+          /* Check for replacement. */
+          details->replacing_node_kind = svn_node_none;
+          if (details->added_rev > 0)
+            {
+              svn_node_kind_t replaced_node_kind;
+
+              SVN_ERR(svn_ra_check_path(ra_session, "", details->added_rev - 1,
+                                        &replaced_node_kind, scratch_pool));
+              if (replaced_node_kind != svn_node_none)
+                SVN_ERR(svn_ra_check_path(ra_session, "", details->added_rev,
+                                          &details->replacing_node_kind,
+                                          scratch_pool));
+            }
         }
     }
 
