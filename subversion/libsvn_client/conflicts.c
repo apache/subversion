@@ -642,8 +642,9 @@ describe_incoming_reverse_addition_upon_update(
                             details->rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item updated from r%ld to r%ld was replaced "
-                              "with a file by %s in r%ld"), old_rev, new_rev,
+                            _("item updated backwards from r%ld to r%ld was "
+                              "replaced with a file by %s in r%ld"),
+                            old_rev, new_rev,
                             details->rev_author, details->added_rev);
     }
   else if (details->replacing_node_kind == svn_node_dir)
@@ -664,8 +665,8 @@ describe_incoming_reverse_addition_upon_update(
                             details->rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item updated from r%ld to r%ld was replaced "
-                              "with a directory by %s in r%ld"),
+                            _("item updated backwards from r%ld to r%ld was "
+                              "replaced with a directory by %s in r%ld"),
                             old_rev, new_rev,
                             details->rev_author, details->added_rev);
     }
