@@ -88,20 +88,6 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1721174
-   hot-backup.py: Housekeeping.
-   Justification:
-     Do the right thing on repository names that contain '+' or '('.
-   Votes:
-     +1: danielsh, jamessan
-
- * r1721175
-   hot-backup.py: Input validation.
-   Justification:
-     Better failure mode on --archive-type=foobar typos.
-   Votes:
-     +1: danielsh, jamessan
-
  * r1722164
    Filter out -Wdate-time from SWIG_CPPFLAGS
    Justification:
@@ -163,7 +149,7 @@ Candidate changes:
    Justification:
      Configuration knobs should be documented.
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
  * r1734926
    Use kde4-config to determine location of headers and libs instead
@@ -171,10 +157,24 @@ Candidate changes:
    Justification:
      Allows build against KDE4 without conflict with KDE5.
   Votes:
-    +1: stsp
+    +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1721174
+   hot-backup.py: Housekeeping.
+   Justification:
+     Do the right thing on repository names that contain '+' or '('.
+   Votes:
+     +1: danielsh, jamessan, rhuijben
+
+ * r1721175
+   hot-backup.py: Input validation.
+   Justification:
+     Better failure mode on --archive-type=foobar typos.
+   Votes:
+     +1: danielsh, jamessan, rhuijben
