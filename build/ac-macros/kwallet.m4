@@ -68,15 +68,15 @@ AC_DEFUN(SVN_LIB_KWALLET,
                     fi
                   done
                   qt_include_dirs="`$PKG_CONFIG --cflags-only-I QtCore QtDBus QtGui`"
-                  kde_dir="`$KDE4_CONFIG --prefix`"
-                  SVN_KWALLET_INCLUDES="$DBUS_CPPFLAGS $qt_include_dirs -I$kde_dir/include"
+                  kde_incdir="`$KDE4_CONFIG --install include`"
+                  SVN_KWALLET_INCLUDES="$DBUS_CPPFLAGS $qt_include_dirs -I$kde_incdir"
                   qt_libs_other_options="`$PKG_CONFIG --libs-only-other QtCore QtDBus QtGui`"
                   SVN_KWALLET_LIBS="$DBUS_LIBS -lQtCore -lQtDBus -lQtGui -lkdecore -lkdeui $qt_libs_other_options"
                   CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES"
                   LIBS="$LIBS $SVN_KWALLET_LIBS"
                   qt_lib_dirs="`$PKG_CONFIG --libs-only-L QtCore QtDBus QtGui`"
-                  kde_lib_suffix="`$KDE4_CONFIG --libsuffix`"
-                  LDFLAGS="$old_LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS($qt_lib_dirs -L$kde_dir/lib$kde_lib_suffix)`"
+                  kde_libdir="`$KDE4_CONFIG --install lib`"
+                  LDFLAGS="$old_LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS($qt_lib_dirs -L$kde_libdir)`"
                   AC_LANG(C++)
                   AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <kwallet.h>
