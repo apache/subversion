@@ -204,94 +204,6 @@ add_legacy_desc_to_conflict(const svn_wc_conflict_description2_t *desc,
     }
 }
 
-/* ### forward declarations */
-static svn_error_t *
-conflict_tree_get_description_generic(const char **description,
-                                      svn_client_conflict_t *conflict,
-                                      apr_pool_t *result_pool,
-                                      apr_pool_t *scratch_pool);
-static svn_error_t *
-conflict_tree_get_description_incoming_delete(const char **description,
-                                              svn_client_conflict_t *conflict,
-                                              apr_pool_t *result_pool,
-                                              apr_pool_t *scratch_pool);
-static svn_error_t *
-conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
-                                          apr_pool_t *scratch_pool);
-
-/* Set up type-specific data for a new conflict object. */
-static svn_error_t *
-conflict_type_specific_setup(svn_client_conflict_t *conflict,
-                             apr_pool_t *scratch_pool)
-{
-  svn_boolean_t tree_conflicted;
-  svn_wc_operation_t operation;
-  svn_wc_conflict_action_t incoming_change;
-
-  /* For now, we only deal with tree conflicts here. */
-  SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
-                                             conflict, scratch_pool,
-                                             scratch_pool));
-  if (!tree_conflicted)
-    return SVN_NO_ERROR;
-
-  /* Set a default description function. */
-  conflict->tree_conflict_get_description_func =
-    conflict_tree_get_description_generic;
-
-  operation = svn_client_conflict_get_operation(conflict);
-  incoming_change = svn_client_conflict_get_incoming_change(conflict);
-
-  /* Set type-specific description and details functions if available. */
-  if (incoming_change == svn_wc_conflict_action_delete ||
-      incoming_change == svn_wc_conflict_action_replace)
-    {
-      conflict->tree_conflict_get_description_func =
-        conflict_tree_get_description_incoming_delete;
-      conflict->tree_conflict_get_details_func =
-        conflict_tree_get_details_incoming_delete;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_conflict_get(svn_client_conflict_t **conflict,
-                        const char *local_abspath,
-                        svn_client_ctx_t *ctx,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
-{
-  const apr_array_header_t *descs;
-  int i;
-
-  *conflict = apr_pcalloc(result_pool, sizeof(**conflict));
-
-  (*conflict)->local_abspath = apr_pstrdup(result_pool, local_abspath);
-  (*conflict)->resolution_text = svn_client_conflict_option_unspecified;
-  (*conflict)->resolution_tree = svn_client_conflict_option_unspecified;
-  (*conflict)->resolved_props = apr_hash_make(result_pool);
-  (*conflict)->ctx = ctx;
-  (*conflict)->pool = result_pool;
-
-  /* Add all legacy conflict descriptors we can find. Eventually, this code
-   * path should stop relying on svn_wc_conflict_description2_t entirely. */
-  SVN_ERR(svn_wc__read_conflict_descriptions2_t(&descs, ctx->wc_ctx,
-                                                local_abspath,
-                                                result_pool, scratch_pool));
-  for (i = 0; i < descs->nelts; i++)
-    {
-      const svn_wc_conflict_description2_t *desc;
-
-      desc = APR_ARRAY_IDX(descs, i, const svn_wc_conflict_description2_t *);
-      add_legacy_desc_to_conflict(desc, *conflict, result_pool);
-    }
-
-  SVN_ERR(conflict_type_specific_setup(*conflict, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* A map for svn_wc_conflict_action_t values to strings */
 static const svn_token_map_t map_conflict_action[] =
 {
@@ -2771,6 +2683,79 @@ svn_client_conflict_text_get_contents(const char **base_abspath,
 
   if (incoming_new_abspath)
     *incoming_new_abspath = get_conflict_desc2_t(conflict)->their_abspath;
+
+  return SVN_NO_ERROR;
+}
+
+/* Set up type-specific data for a new conflict object. */
+static svn_error_t *
+conflict_type_specific_setup(svn_client_conflict_t *conflict,
+                             apr_pool_t *scratch_pool)
+{
+  svn_boolean_t tree_conflicted;
+  svn_wc_operation_t operation;
+  svn_wc_conflict_action_t incoming_change;
+
+  /* For now, we only deal with tree conflicts here. */
+  SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
+                                             conflict, scratch_pool,
+                                             scratch_pool));
+  if (!tree_conflicted)
+    return SVN_NO_ERROR;
+
+  /* Set a default description function. */
+  conflict->tree_conflict_get_description_func =
+    conflict_tree_get_description_generic;
+
+  operation = svn_client_conflict_get_operation(conflict);
+  incoming_change = svn_client_conflict_get_incoming_change(conflict);
+
+  /* Set type-specific description and details functions if available. */
+  if (incoming_change == svn_wc_conflict_action_delete ||
+      incoming_change == svn_wc_conflict_action_replace)
+    {
+      conflict->tree_conflict_get_description_func =
+        conflict_tree_get_description_incoming_delete;
+      conflict->tree_conflict_get_details_func =
+        conflict_tree_get_details_incoming_delete;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_get(svn_client_conflict_t **conflict,
+                        const char *local_abspath,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  const apr_array_header_t *descs;
+  int i;
+
+  *conflict = apr_pcalloc(result_pool, sizeof(**conflict));
+
+  (*conflict)->local_abspath = apr_pstrdup(result_pool, local_abspath);
+  (*conflict)->resolution_text = svn_client_conflict_option_unspecified;
+  (*conflict)->resolution_tree = svn_client_conflict_option_unspecified;
+  (*conflict)->resolved_props = apr_hash_make(result_pool);
+  (*conflict)->ctx = ctx;
+  (*conflict)->pool = result_pool;
+
+  /* Add all legacy conflict descriptors we can find. Eventually, this code
+   * path should stop relying on svn_wc_conflict_description2_t entirely. */
+  SVN_ERR(svn_wc__read_conflict_descriptions2_t(&descs, ctx->wc_ctx,
+                                                local_abspath,
+                                                result_pool, scratch_pool));
+  for (i = 0; i < descs->nelts; i++)
+    {
+      const svn_wc_conflict_description2_t *desc;
+
+      desc = APR_ARRAY_IDX(descs, i, const svn_wc_conflict_description2_t *);
+      add_legacy_desc_to_conflict(desc, *conflict, result_pool);
+    }
+
+  SVN_ERR(conflict_type_specific_setup(*conflict, scratch_pool));
 
   return SVN_NO_ERROR;
 }
