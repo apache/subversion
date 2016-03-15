@@ -164,10 +164,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1721175
-   hot-backup.py: Input validation.
-   Justification:
-     Better failure mode on --archive-type=foobar typos.
-   Votes:
-     +1: danielsh, jamessan, rhuijben
