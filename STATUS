@@ -165,13 +165,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1721174
-   hot-backup.py: Housekeeping.
-   Justification:
-     Do the right thing on repository names that contain '+' or '('.
-   Votes:
-     +1: danielsh, jamessan, rhuijben
-
  * r1721175
    hot-backup.py: Input validation.
    Justification:

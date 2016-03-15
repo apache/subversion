@@ -198,7 +198,7 @@ def get_youngest_revision():
   """Examine the repository REPO_DIR using the svnlook binary
   specified by SVNLOOK, and return the youngest revision."""
 
-  p = subprocess.Popen([svnlook, 'youngest', repo_dir],
+  p = subprocess.Popen([svnlook, 'youngest', '--', repo_dir],
                        stdin=subprocess.PIPE,
                        stdout=subprocess.PIPE,
                        stderr=subprocess.PIPE)
@@ -245,7 +245,7 @@ backup_subdir = os.path.join(backup_dir, repo + "-" + youngest)
 # rather than start from 1 and increment because the starting
 # increments may have already been removed due to num_backups.
 
-regexp = re.compile("^" + repo + "-" + youngest +
+regexp = re.compile("^" + re.escape(repo) + "-" + re.escape(youngest) +
                     "(-(?P<increment>[0-9]+))?" + ext_re + "$")
 directory_list = os.listdir(backup_dir)
 young_list = [x for x in directory_list if regexp.search(x)]
@@ -262,8 +262,8 @@ if young_list:
 ###         copied last.
 
 print("Backing up repository to '" + backup_subdir + "'...")
-err_code = subprocess.call([svnadmin, "hotcopy", repo_dir, 
-                            backup_subdir, "--clean-logs"])
+err_code = subprocess.call([svnadmin, "hotcopy", "--clean-logs",
+                            '--', repo_dir, backup_subdir])
 if err_code != 0:
   sys.stderr.write("Unable to backup the repository.\n")
   sys.stderr.flush()
@@ -274,7 +274,7 @@ else:
 ### Step 4: Verify the hotcopy
 if verify_copy:
   print("Verifying backup...")
-  err_code = subprocess.call([svnadmin, "verify", "--quiet", backup_subdir])
+  err_code = subprocess.call([svnadmin, "verify", "--quiet", '--', backup_subdir])
   if err_code != 0:
     sys.stderr.write("Backup verification failed.\n")
     sys.stderr.flush()
@@ -340,7 +340,7 @@ if archive_type:
 ###         NUM_BACKUPS.
 
 if num_backups > 0:
-  regexp = re.compile("^" + repo + "-[0-9]+(-[0-9]+)?" + ext_re + "$")
+  regexp = re.compile("^" + re.escape(repo) + "-[0-9]+(-[0-9]+)?" + ext_re + "$")
   directory_list = os.listdir(backup_dir)
   old_list = [x for x in directory_list if regexp.search(x)]
   old_list.sort(comparator)
