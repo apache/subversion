@@ -151,14 +151,6 @@ Candidate changes:
    Votes:
      +1: danielsh, rhuijben
 
- * r1734926
-   Use kde4-config to determine location of headers and libs instead
-   of hardcoding them.
-   Justification:
-     Allows build against KDE4 without conflict with KDE5.
-  Votes:
-    +1: stsp, rhuijben
-
  * r1735179
    build system: Improve svn_error_symbolic_name()'s data gatherer.
    Justification:
@@ -171,3 +163,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1734926
+   Use kde4-config to determine location of headers and libs instead
+   of hardcoding them.
+   Justification:
+     Allows build against KDE4 without conflict with KDE5.
+  Votes:
+    +1: stsp, rhuijben, danielsh
+
