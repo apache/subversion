@@ -163,12 +163,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1734926
-   Use kde4-config to determine location of headers and libs instead
-   of hardcoding them.
-   Justification:
-     Allows build against KDE4 without conflict with KDE5.
-  Votes:
-    +1: stsp, rhuijben, danielsh
-
