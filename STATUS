@@ -159,6 +159,13 @@ Candidate changes:
   Votes:
     +1: stsp, rhuijben
 
+ * r1735179
+   build system: Improve svn_error_symbolic_name()'s data gatherer.
+   Justification:
+     The incumbent warning message is unclear and might have false positives.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
