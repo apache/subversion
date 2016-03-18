@@ -158,6 +158,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1735680
+   Make SIGINT abort a commit, even at the interactive plaintext prompt.
+   (Issue #4624.)
+   Justification:
+     Can result in unintended commits (users expect ^C to abort the commit).
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
