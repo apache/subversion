@@ -86,6 +86,7 @@ static const char *ckind_str[] = {
   "$sha1$",
   "$fnv1$",
   "$fnvm$",
+  /* ### svn_checksum_deserialize() assumes all these have the same strlen() */
 };
 
 /* Returns the digest size of it's argument. */
