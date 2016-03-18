@@ -112,14 +112,14 @@ display_diff(const svn_log_entry_t *log_entry,
 }
 
 /* Return TRUE if STR matches PATTERN. Else, return FALSE. Assumes that
- * PATTERN is a UTF-8 string normalized to form C with case folding
- * applied. Use BUF for temporary allocations. */
+ * PATTERN is a UTF-8 string prepared for case- and accent-insensitive
+ * comparison via svn_utf__xfrm(). */
 static svn_boolean_t
 match(const char *pattern, const char *str, svn_membuf_t *buf)
 {
   svn_error_t *err;
 
-  err = svn_utf__casefold(&str, str, strlen(str), buf);
+  err = svn_utf__xfrm(&str, str, strlen(str), TRUE, TRUE, buf);
   if (err)
     {
       /* Can't match invalid data. */

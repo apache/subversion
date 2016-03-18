@@ -2397,16 +2397,16 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_search:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        SVN_ERR(svn_utf__casefold(&utf8_opt_arg, utf8_opt_arg,
-                                  strlen(utf8_opt_arg), &buf));
+        SVN_ERR(svn_utf__xfrm(&utf8_opt_arg, utf8_opt_arg,
+                              strlen(utf8_opt_arg), TRUE, TRUE, &buf));
         add_search_pattern_group(&opt_state,
                                  apr_pstrdup(pool, utf8_opt_arg),
                                  pool);
         break;
       case opt_search_and:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        SVN_ERR(svn_utf__casefold(&utf8_opt_arg, utf8_opt_arg,
-                                  strlen(utf8_opt_arg), &buf));
+        SVN_ERR(svn_utf__xfrm(&utf8_opt_arg, utf8_opt_arg,
+                              strlen(utf8_opt_arg), TRUE, TRUE, &buf));
         add_search_pattern_to_latest_group(&opt_state,
                                            apr_pstrdup(pool, utf8_opt_arg),
                                            pool);

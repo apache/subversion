@@ -127,7 +127,8 @@ decompose_normalized(apr_size_t *result_length,
  * of UTF-8 characters.
  *
  * If CASEFOLD is non-zero, perform Unicode case folding, e.g., for
- * case-insensitive string comparison.
+ * case-insensitive string comparison. If STRIPMARK is non-zero, strip
+ * all diacritical marks (e.g., accents) from the string.
  *
  * A returned error may indicate that STRING contains invalid UTF-8 or
  * invalid Unicode codepoints. Any error message comes from utf8proc.
@@ -136,10 +137,19 @@ static svn_error_t *
 normalize_cstring(apr_size_t *result_length,
                   const char *string, apr_size_t length,
                   svn_boolean_t casefold,
+                  svn_boolean_t stripmark,
                   svn_membuf_t *buffer)
 {
-  ssize_t result = unicode_decomposition(casefold ? UTF8PROC_CASEFOLD : 0,
-                                         string, length, buffer);
+  int flags = 0;
+  ssize_t result;
+
+  if (casefold)
+    flags |= UTF8PROC_CASEFOLD;
+
+  if (stripmark)
+    flags |= UTF8PROC_STRIPMARK;
+
+  result = unicode_decomposition(flags, string, length, buffer);
   if (result >= 0)
     {
       svn_membuf__resize(buffer, result * sizeof(apr_int32_t) + 1);
@@ -207,18 +217,21 @@ svn_utf__normalize(const char **result,
                    svn_membuf_t *buf)
 {
   apr_size_t result_length;
-  SVN_ERR(normalize_cstring(&result_length, str, len, FALSE, buf));
+  SVN_ERR(normalize_cstring(&result_length, str, len, FALSE, FALSE, buf));
   *result = (const char*)(buf->data);
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_utf__casefold(const char **result,
-                  const char *str, apr_size_t len,
-                  svn_membuf_t *buf)
+svn_utf__xfrm(const char **result,
+              const char *str, apr_size_t len,
+              svn_boolean_t case_insensitive,
+              svn_boolean_t accent_insensitive,
+              svn_membuf_t *buf)
 {
   apr_size_t result_length;
-  SVN_ERR(normalize_cstring(&result_length, str, len, TRUE, buf));
+  SVN_ERR(normalize_cstring(&result_length, str, len,
+                            case_insensitive, accent_insensitive, buf));
   *result = (const char*)(buf->data);
   return SVN_NO_ERROR;
 }
@@ -375,7 +388,8 @@ svn_utf__is_normalized(const char *string, apr_pool_t *scratch_pool)
   apr_size_t result_length;
   const apr_size_t length = strlen(string);
   svn_membuf__create(&buffer, length * sizeof(apr_int32_t), scratch_pool);
-  err = normalize_cstring(&result_length, string, length, FALSE, &buffer);
+  err = normalize_cstring(&result_length, string, length,
+                          FALSE, FALSE, &buffer);
   if (err)
     {
       svn_error_clear(err);
