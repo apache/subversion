@@ -158,11 +158,16 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1735680
+ * r1735826
    Make SIGINT abort a commit, even at the interactive plaintext prompt.
    (Issue #4624.)
    Justification:
      Can result in unintended commits (users expect ^C to abort the commit).
+   Notes:
+     r1735826 is the merge to trunk of r1735680 from the 1.9.x branch.
+     An 'svn merge' of r1735826 to 1.9.x is a no-op with some old versions
+     of svn, including the version svn-role uses.  Consequently, this revision
+     should (if approved) be merged without svn-role's help.
    Votes:
      +1: danielsh
 
