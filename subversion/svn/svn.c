@@ -2410,6 +2410,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         add_search_pattern_to_latest_group(&opt_state,
                                            apr_pstrdup(pool, utf8_opt_arg),
                                            pool);
+        break;
       case opt_remove_unversioned:
         opt_state.remove_unversioned = TRUE;
         break;
