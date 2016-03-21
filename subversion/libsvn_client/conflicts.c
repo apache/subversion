@@ -2030,6 +2030,289 @@ conflict_tree_get_description_incoming_add(const char **description,
   return SVN_NO_ERROR;
 }
 
+/* Details for tree conflicts involving incoming edits.
+ * Note that we store an array of these. Each element corresponds to a
+ * revision within the old/new range in which a modification occured. */
+struct conflict_tree_incoming_edit_details
+{
+  /* The revision in which the edit ocurred. */
+  svn_revnum_t rev;
+
+  /* The author of the revision. */
+  const char *author;
+
+  /** Is the text modified? May be svn_tristate_unknown. */
+  svn_tristate_t text_modified;
+
+  /** Are properties modified? May be svn_tristate_unknown. */
+  svn_tristate_t props_modified;
+
+  /** For directories, are children modified?
+   * May be svn_tristate_unknown. */
+  svn_tristate_t children_modified;
+
+  /* The path which was edited, relative to the repository root. */
+  const char *repos_relpath;
+};
+
+/* Baton for find_modified_rev(). */
+struct find_modified_rev_baton {
+  apr_array_header_t *edits;
+  const char *repos_relpath;
+  svn_node_kind_t node_kind;
+  apr_pool_t *result_pool;
+  apr_pool_t *scratch_pool;
+};
+
+/* Implements svn_log_entry_receiver_t. */
+static svn_error_t *
+find_modified_rev(void *baton,
+                  svn_log_entry_t *log_entry,
+                  apr_pool_t *scratch_pool)
+{
+  struct find_modified_rev_baton *b = baton;
+  struct conflict_tree_incoming_edit_details *details = NULL;
+  svn_string_t *author;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
+
+  /* No paths were changed in this revision.  Nothing to do. */
+  if (! log_entry->changed_paths2)
+    return SVN_NO_ERROR;
+
+  details = apr_pcalloc(b->result_pool, sizeof(*details));
+  details->rev = log_entry->revision;
+  author = svn_hash_gets(log_entry->revprops, SVN_PROP_REVISION_AUTHOR);
+  details->author = apr_pstrdup(b->result_pool, author->data);
+
+  details->text_modified = svn_tristate_unknown;
+  details->props_modified = svn_tristate_unknown;
+  details->children_modified = svn_tristate_unknown;
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, log_entry->changed_paths2);
+       hi != NULL;
+       hi = apr_hash_next(hi))
+    {
+      void *val;
+      const char *path;
+      svn_log_changed_path2_t *log_item;
+
+      svn_pool_clear(iterpool);
+
+      apr_hash_this(hi, (void *) &path, NULL, &val);
+      log_item = val;
+
+      /* ### Remove leading slash from paths in log entries. */
+      if (path[0] == '/')
+          path = svn_relpath_canonicalize(path, iterpool);
+
+      if (svn_path_compare_paths(b->repos_relpath, path) == 0 &&
+          (log_item->action == 'M' || log_item->action == 'A'))
+        {
+          details->text_modified = log_item->text_modified;
+          details->props_modified = log_item->props_modified;
+          details->repos_relpath = apr_pstrdup(b->result_pool, path);
+
+          if (log_item->copyfrom_path)
+            b->repos_relpath = apr_pstrdup(b->scratch_pool,
+                                           log_item->copyfrom_path);
+        }
+      else if (b->node_kind == svn_node_dir &&
+               svn_relpath_skip_ancestor(b->repos_relpath, path) != NULL)
+        details->children_modified = svn_tristate_true;
+    }
+
+  if (details)
+    {
+      if (b->node_kind == svn_node_dir &&
+          details->children_modified == svn_tristate_unknown)
+            details->children_modified = svn_tristate_false;
+
+      APR_ARRAY_PUSH(b->edits, struct conflict_tree_incoming_edit_details *) =
+        details;
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements tree_conflict_get_details_func_t.
+ * Find one or more revisions in which the victim was modified in the
+ * repository. */
+static svn_error_t *
+conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
+                                        apr_pool_t *scratch_pool)
+{
+  const char *old_repos_relpath;
+  const char *new_repos_relpath;
+  const char *repos_root_url;
+  const char *repos_uuid;
+  svn_revnum_t old_rev;
+  svn_revnum_t new_rev;
+  svn_node_kind_t old_node_kind;
+  svn_node_kind_t new_node_kind;
+  svn_wc_operation_t operation;
+  const char *url;
+  const char *corrected_url;
+  svn_ra_session_t *ra_session;
+  apr_array_header_t *paths;
+  apr_array_header_t *revprops;
+  struct find_modified_rev_baton b;
+
+  SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+            &old_repos_relpath, &old_rev, &old_node_kind, conflict,
+            scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            &new_repos_relpath, &new_rev, &new_node_kind, conflict,
+            scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
+                                             conflict,
+                                             scratch_pool, scratch_pool));
+  operation = svn_client_conflict_get_operation(conflict);
+
+  b.result_pool = conflict->pool;
+  b.scratch_pool = scratch_pool;
+  b.edits = apr_array_make(
+               conflict->pool, 0,
+               sizeof(struct conflict_tree_incoming_edit_details *));
+  paths = apr_array_make(scratch_pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(paths, const char *) = "";
+
+  revprops = apr_array_make(scratch_pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
+
+  if (operation == svn_wc_operation_update)
+    {
+      url = svn_path_url_add_component2(repos_root_url,
+                                        old_rev < new_rev ? new_repos_relpath
+                                                          : old_repos_relpath,
+                                        scratch_pool);
+
+      b.repos_relpath = old_rev < new_rev ? new_repos_relpath
+                                          : old_repos_relpath;
+      b.node_kind = old_rev < new_rev ? new_node_kind : old_node_kind;
+    }
+  else if (operation == svn_wc_operation_switch ||
+           operation == svn_wc_operation_merge)
+    {
+      url = svn_path_url_add_component2(repos_root_url, new_repos_relpath,
+                                        scratch_pool);
+
+      b.repos_relpath = new_repos_relpath;
+      b.node_kind = new_node_kind;
+    }
+
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
+                                               &corrected_url,
+                                               url, NULL, NULL,
+                                               FALSE,
+                                               FALSE,
+                                               conflict->ctx,
+                                               scratch_pool,
+                                               scratch_pool));
+  SVN_ERR(svn_ra_get_log2(ra_session, paths,
+                          old_rev < new_rev ? new_rev : old_rev,
+                          old_rev < new_rev ? old_rev : new_rev,
+                          0, /* no limit */
+                          TRUE, /* need the changed paths list */
+                          FALSE, /* need to traverse copies */
+                          FALSE, /* no need for merged revisions */
+                          revprops,
+                          find_modified_rev, &b,
+                          scratch_pool));
+
+  conflict->tree_conflict_details = b.edits;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements tree_conflict_get_description_func_t. */
+static svn_error_t *
+conflict_tree_get_description_incoming_edit(const char **description,
+                                            svn_client_conflict_t *conflict,
+                                            apr_pool_t *result_pool,
+                                            apr_pool_t *scratch_pool)
+{
+  const char *action, *reason;
+  svn_node_kind_t victim_node_kind;
+  svn_wc_conflict_reason_t local_change;
+  svn_wc_operation_t conflict_operation;
+  const char *old_repos_relpath;
+  svn_revnum_t old_rev;
+  const char *new_repos_relpath;
+  svn_revnum_t new_rev;
+  apr_array_header_t *edits;
+  int i;
+
+  if (conflict->tree_conflict_details == NULL)
+    return svn_error_trace(conflict_tree_get_description_generic(description,
+                                                                 conflict,
+                                                                 result_pool,
+                                                                 scratch_pool));
+
+  SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+            &old_repos_relpath, &old_rev, NULL, conflict,
+            scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            &new_repos_relpath, &new_rev, NULL, conflict,
+            scratch_pool, scratch_pool));
+
+  local_change = svn_client_conflict_get_local_change(conflict);
+  conflict_operation = svn_client_conflict_get_operation(conflict);
+  victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
+  reason = local_reason_str(victim_node_kind, local_change, conflict_operation);
+  if (reason == NULL)
+    return svn_error_trace(conflict_tree_get_description_generic(description,
+                                                                 conflict,
+                                                                 result_pool,
+                                                                 scratch_pool));
+
+  edits = conflict->tree_conflict_details;
+
+  if (conflict_operation == svn_wc_operation_update)
+    {
+      if (old_rev < new_rev)
+        action = apr_psprintf(scratch_pool,
+                              _("changes from the following revisions arrived "
+                                "during update from r%ld to r%ld:"),
+                              old_rev, new_rev);
+      else
+        action = apr_psprintf(scratch_pool,
+                              _("changes from the following revisions arrived "
+                                "during backwards update from r%ld to r%ld:"),
+                              old_rev, new_rev);
+    }
+  else if (conflict_operation == svn_wc_operation_switch)
+    action = apr_psprintf(scratch_pool,
+                          _("changes from the following revisions arrived "
+                            "during switch to ^/%s@r%ld:"),
+                          new_repos_relpath, new_rev);
+  else if (conflict_operation == svn_wc_operation_merge)
+    action = apr_psprintf(scratch_pool,
+                          _("changes from the following revisions have not "
+                            "yet been merged from ^/%s:%ld-%ld:"),
+                          old_rev < new_rev ? new_repos_relpath
+                                            : old_repos_relpath,
+                          old_rev < new_rev ? old_rev : new_rev,
+                          old_rev < new_rev ? new_rev : old_rev);
+
+  for (i = 0; i < edits->nelts; i++)
+    {
+      struct conflict_tree_incoming_edit_details *details;
+
+      details = APR_ARRAY_IDX(edits, i,
+                              struct conflict_tree_incoming_edit_details *);
+      action = apr_psprintf(scratch_pool, "%s r%ld by %s%s", action,
+                            details->rev, details->author,
+                            i < edits->nelts - 1 ? "," : "");
+    }
+
+  *description = apr_psprintf(result_pool, _("%s, %s"), reason, action);
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_conflict_tree_get_description(const char **description,
                                          svn_client_conflict_t *conflict,
@@ -3219,6 +3502,13 @@ conflict_type_specific_setup(svn_client_conflict_t *conflict,
         conflict_tree_get_description_incoming_add;
       conflict->tree_conflict_get_details_func =
         conflict_tree_get_details_incoming_add;
+    }
+  else if (incoming_change == svn_wc_conflict_action_edit)
+    {
+      conflict->tree_conflict_get_description_func =
+        conflict_tree_get_description_incoming_edit;
+      conflict->tree_conflict_get_details_func =
+        conflict_tree_get_details_incoming_edit;
     }
 
   return SVN_NO_ERROR;
