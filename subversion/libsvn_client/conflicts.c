@@ -2364,6 +2364,71 @@ describe_incoming_edit_upon_switch(const char *new_repos_relpath,
                         new_repos_relpath, new_rev);
 }
 
+/* Return a string showing the list of revisions in EDITS, ensuring
+ * the string won't grow too large for display. */
+static const char *
+describe_incoming_edit_list_modified_revs(apr_array_header_t *edits,
+                                          apr_pool_t *result_pool)
+{
+  int num_revs_to_skip;
+  static const int min_revs_for_skipping = 2;
+  static const int max_revs_to_display = 8;
+  const char *s = "";
+  int i;
+
+  if (edits->nelts <= max_revs_to_display)
+    num_revs_to_skip = 0;
+  else
+    {
+      /* Check if we should insert a placeholder for some revisions because
+       * the string would grow too long for display otherwise. */
+      num_revs_to_skip = edits->nelts - max_revs_to_display;
+      if (num_revs_to_skip < min_revs_for_skipping)
+        {
+          /* Don't bother with the placeholder. Just list all revisions. */
+          num_revs_to_skip = 0;
+        }
+    }
+
+  for (i = 0; i < edits->nelts; i++)
+    {
+      struct conflict_tree_incoming_edit_details *details;
+
+      details = APR_ARRAY_IDX(edits, i,
+                              struct conflict_tree_incoming_edit_details *);
+      if (num_revs_to_skip > 0)
+        {
+          /* Insert a placeholder for revisions falling into the middle of
+           * the range so we'll get something that looks like:
+           * 1, 2, 3, 4, 5 [ placeholder ] 95, 96, 97, 98, 99 */
+          if (i < max_revs_to_display / 2)
+            s = apr_psprintf(result_pool, _("%s r%ld by %s%s"), s,
+                             details->rev, details->author,
+                             i < edits->nelts - 1 ? "," : "");
+          else if (i >= max_revs_to_display / 2 &&
+                   i < edits->nelts - (max_revs_to_display / 2))
+              continue;
+          else
+            {
+              if (i == edits->nelts - (max_revs_to_display / 2))
+                  s = apr_psprintf(result_pool,
+                                   _("%s [%d revisions omitted for brevity],"),
+                                   s, num_revs_to_skip);
+
+              s = apr_psprintf(result_pool, _("%s r%ld by %s%s"), s,
+                               details->rev, details->author,
+                               i < edits->nelts - 1 ? "," : "");
+            }
+        } 
+      else
+        s = apr_psprintf(result_pool, _("%s r%ld by %s%s"), s,
+                         details->rev, details->author,
+                         i < edits->nelts - 1 ? "," : "");
+    }
+
+  return s;
+}
+
 /* Implements tree_conflict_get_description_func_t. */
 static svn_error_t *
 conflict_tree_get_description_incoming_edit(const char **description,
@@ -2382,7 +2447,6 @@ conflict_tree_get_description_incoming_edit(const char **description,
   svn_revnum_t new_rev;
   svn_node_kind_t new_node_kind;
   apr_array_header_t *edits;
-  int i;
 
   if (conflict->tree_conflict_details == NULL)
     return svn_error_trace(conflict_tree_get_description_generic(description,
@@ -2524,17 +2588,9 @@ conflict_tree_get_description_incoming_edit(const char **description,
         }
     }
 
-  for (i = 0; i < edits->nelts; i++)
-    {
-      struct conflict_tree_incoming_edit_details *details;
-
-      details = APR_ARRAY_IDX(edits, i,
-                              struct conflict_tree_incoming_edit_details *);
-      action = apr_psprintf(scratch_pool, "%s r%ld by %s%s", action,
-                            details->rev, details->author,
-                            i < edits->nelts - 1 ? "," : "");
-    }
-
+  action = apr_psprintf(scratch_pool, "%s%s", action,
+                        describe_incoming_edit_list_modified_revs(
+                          edits, scratch_pool));
   *description = apr_psprintf(result_pool, _("%s, %s"), reason, action);
   return SVN_NO_ERROR;
 }
