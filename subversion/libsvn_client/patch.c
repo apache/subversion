@@ -1041,7 +1041,6 @@ init_patch_target(patch_target_t **patch_target,
   target->operation = patch->operation;
 
   if (patch->operation == svn_diff_op_added /* Allow replacing */
-      || patch->operation == svn_diff_op_added
       || patch->operation == svn_diff_op_moved)
     {
       follow_moves = FALSE;
