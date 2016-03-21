@@ -534,7 +534,7 @@ switch_file_external(const char *local_abspath,
 
       SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
 
-      if (kind == svn_node_file || kind == svn_node_dir)
+      if (disk_kind == svn_node_file || disk_kind == svn_node_dir)
         return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
                                  _("The file external '%s' can not be "
                                    "created because the node exists."),
