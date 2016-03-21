@@ -1901,24 +1901,51 @@ describe_incoming_add_upon_merge(
   apr_pool_t *result_pool)
 {
   if (new_node_kind == svn_node_dir)
-    return apr_psprintf(result_pool,
-                        _("directory appeared during merge of ^/%s:%ld-%ld; "
-                          "it was added by %s in r%ld"),
-                        new_repos_relpath, old_rev, new_rev,
-                        details->added_rev_author, details->added_rev);
+    {
+      if (old_rev + 1 == new_rev)
+        return apr_psprintf(result_pool,
+                            _("directory appeared during merge of "
+                              "^/%s:%ld; it was added by %s in r%ld"),
+                            new_repos_relpath, new_rev,
+                            details->added_rev_author, details->added_rev);
+      else
+        return apr_psprintf(result_pool,
+                            _("directory appeared during merge of "
+                              "^/%s:%ld-%ld; it was added by %s in r%ld"),
+                            new_repos_relpath, old_rev + 1, new_rev,
+                            details->added_rev_author, details->added_rev);
+    }
   else if (new_node_kind == svn_node_file ||
            new_node_kind == svn_node_symlink)
-    return apr_psprintf(result_pool,
-                        _("file appeared during merge of ^/%s:%ld-%ld; "
-                          "it was added by %s in r%ld"),
-                        new_repos_relpath, old_rev, new_rev,
-                        details->added_rev_author, details->added_rev);
+    {
+      if (old_rev + 1 == new_rev)
+        return apr_psprintf(result_pool,
+                            _("file appeared during merge of "
+                              "^/%s:%ld; it was added by %s in r%ld"),
+                            new_repos_relpath, new_rev,
+                            details->added_rev_author, details->added_rev);
+      else
+        return apr_psprintf(result_pool,
+                            _("file appeared during merge of "
+                              "^/%s:%ld-%ld; it was added by %s in r%ld"),
+                            new_repos_relpath, old_rev + 1, new_rev,
+                            details->added_rev_author, details->added_rev);
+    }
   else
-    return apr_psprintf(result_pool,
-                        _("item appeared during merge of ^/%s:%ld-%ld; "
-                          "it was added by %s in r%ld"),
-                        new_repos_relpath, old_rev, new_rev,
-                        details->added_rev_author, details->added_rev);
+    {
+      if (old_rev + 1 == new_rev)
+        return apr_psprintf(result_pool,
+                            _("item appeared during merge of "
+                              "^/%s:%ld; it was added by %s in r%ld"),
+                            new_repos_relpath, new_rev,
+                            details->added_rev_author, details->added_rev);
+      else
+        return apr_psprintf(result_pool,
+                            _("item appeared during merge of "
+                              "^/%s:%ld-%ld; it was added by %s in r%ld"),
+                            new_repos_relpath, old_rev + 1, new_rev,
+                            details->added_rev_author, details->added_rev);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -1932,24 +1959,58 @@ describe_incoming_reverse_deletion_upon_merge(
   apr_pool_t *result_pool)
 {
   if (new_node_kind == svn_node_dir)
-    return apr_psprintf(result_pool,
-                        _("directory appeared during reverse-merge of "
-                          "^/%s:%ld-%ld; it was deleted by %s in r%ld"),
-                        old_repos_relpath, new_rev, old_rev,
-                        details->deleted_rev_author, details->deleted_rev);
+    {
+      if (new_rev + 1 == old_rev)
+        return apr_psprintf(result_pool,
+                            _("directory appeared during reverse-merge of "
+                              "^/%s:%ld; it was deleted by %s in r%ld"),
+                            old_repos_relpath, old_rev,
+                            details->deleted_rev_author,
+                            details->deleted_rev);
+      else
+        return apr_psprintf(result_pool,
+                            _("directory appeared during reverse-merge of "
+                              "^/%s:%ld-%ld; it was deleted by %s in r%ld"),
+                            old_repos_relpath, new_rev, old_rev - 1,
+                            details->deleted_rev_author,
+                            details->deleted_rev);
+    }
   else if (new_node_kind == svn_node_file ||
            new_node_kind == svn_node_symlink)
-    return apr_psprintf(result_pool,
-                        _("file appeared during reverse-merge of "
-                          "^/%s:%ld-%ld; it was deleted by %s in r%ld"),
-                        old_repos_relpath, new_rev, old_rev,
-                        details->deleted_rev_author, details->deleted_rev);
+    {
+      if (new_rev + 1 == old_rev)
+        return apr_psprintf(result_pool,
+                            _("file appeared during reverse-merge of "
+                              "^/%s:%ld; it was deleted by %s in r%ld"),
+                            old_repos_relpath, old_rev,
+                            details->deleted_rev_author,
+                            details->deleted_rev);
+      else
+        return apr_psprintf(result_pool,
+                            _("file appeared during reverse-merge of "
+                              "^/%s:%ld-%ld; it was deleted by %s in r%ld"),
+                            old_repos_relpath, new_rev + 1, old_rev,
+                            details->deleted_rev_author,
+                            details->deleted_rev);
+    }
   else
-    return apr_psprintf(result_pool,
-                        _("item appeared during reverse-merge of "
-                          "^/%s:%ld-%ld; it was deleted by %s in r%ld"),
-                        old_repos_relpath, new_rev, old_rev,
-                        details->deleted_rev_author, details->deleted_rev);
+    {
+      if (new_rev + 1 == old_rev)
+        return apr_psprintf(result_pool,
+                            _("item appeared during reverse-merge of "
+                              "^/%s:%ld; it was deleted by %s in r%ld"),
+                            old_repos_relpath, old_rev,
+                            details->deleted_rev_author,
+                            details->deleted_rev);
+      else
+        return apr_psprintf(result_pool,
+                            _("item appeared during reverse-merge of "
+                              "^/%s:%ld-%ld; it was deleted by %s in r%ld"),
+                            old_repos_relpath, new_rev + 1, old_rev,
+                            details->deleted_rev_author,
+                            details->deleted_rev);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -2290,13 +2351,47 @@ conflict_tree_get_description_incoming_edit(const char **description,
                             "during switch to ^/%s@r%ld:"),
                           new_repos_relpath, new_rev);
   else if (conflict_operation == svn_wc_operation_merge)
-    action = apr_psprintf(scratch_pool,
-                          _("changes from the following revisions have not "
-                            "yet been merged from ^/%s:%ld-%ld:"),
-                          old_rev < new_rev ? new_repos_relpath
-                                            : old_repos_relpath,
-                          old_rev < new_rev ? old_rev : new_rev,
-                          old_rev < new_rev ? new_rev : old_rev);
+    {
+      if (old_rev < new_rev)
+        {
+          if (old_rev + 1 == new_rev)
+            {
+              action = apr_psprintf(scratch_pool,
+                                    _("changes arrived during merge of "
+                                      "^/%s:%ld:"),
+                                    new_repos_relpath, new_rev);
+
+              *description = apr_psprintf(result_pool, _("%s, %s"),
+                                           reason, action);
+              return SVN_NO_ERROR;
+            }
+          else
+            action = apr_psprintf(scratch_pool,
+                                  _("changes from the following revisions "
+                                    "arrived during merge of ^/%s:%ld-%ld:"),
+                                  new_repos_relpath, old_rev + 1, new_rev);
+        }
+      else
+        {
+          if (new_rev + 1 == old_rev)
+            {
+              action = apr_psprintf(scratch_pool,
+                                    _("changes arrived during reverse-merge "
+                                      "of ^/%s:%ld:"),
+                                    new_repos_relpath, old_rev);
+
+              *description = apr_psprintf(result_pool, _("%s, %s"),
+                                           reason, action);
+              return SVN_NO_ERROR;
+            }
+          else
+            action = apr_psprintf(scratch_pool,
+                                  _("changes from the following revisions "
+                                    "arrived during reverse-merge of "
+                                    "^/%s:%ld-%ld:"),
+                                  new_repos_relpath, new_rev + 1, old_rev);
+        }
+    }
 
   for (i = 0; i < edits->nelts; i++)
     {
