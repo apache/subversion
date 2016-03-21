@@ -2289,6 +2289,81 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
   return SVN_NO_ERROR;
 }
 
+static const char *
+describe_incoming_edit_upon_update(svn_revnum_t old_rev,
+                                   svn_revnum_t new_rev,
+                                   svn_node_kind_t old_node_kind,
+                                   svn_node_kind_t new_node_kind,
+                                   apr_pool_t *result_pool)
+{
+  if (old_rev < new_rev)
+    {
+      if (new_node_kind == svn_node_dir)
+        return apr_psprintf(result_pool,
+                            _("changes destined for a directory arrived "
+                              "via the following revisions during update "
+                              "from r%ld to r%ld:"), old_rev, new_rev);
+      else if (new_node_kind == svn_node_file ||
+               new_node_kind == svn_node_symlink)
+        return apr_psprintf(result_pool,
+                            _("changes destined for a file arrived "
+                              "via the following revisions during update "
+                              "from r%ld to r%ld:"), old_rev, new_rev);
+      else
+        return apr_psprintf(result_pool,
+                            _("changes from the following revisions arrived "
+                              "during update from r%ld to r%ld:"),
+                            old_rev, new_rev);
+    }
+  else
+    {
+      if (new_node_kind == svn_node_dir)
+        return apr_psprintf(result_pool,
+                            _("changes destined for a directory arrived "
+                              "via the following revisions during backwards "
+                              "update from r%ld to r%ld:"),
+                            old_rev, new_rev);
+      else if (new_node_kind == svn_node_file ||
+               new_node_kind == svn_node_symlink)
+        return apr_psprintf(result_pool,
+                            _("changes destined for a file arrived "
+                              "via the following revisions during backwards "
+                              "update from r%ld to r%ld:"),
+                            old_rev, new_rev);
+      else
+        return apr_psprintf(result_pool,
+                            _("changes from the following revisions arrived "
+                              "during backwards update from r%ld to r%ld:"),
+                            old_rev, new_rev);
+    }
+}
+
+static const char *
+describe_incoming_edit_upon_switch(const char *new_repos_relpath,
+                                   svn_revnum_t new_rev,
+                                   svn_node_kind_t new_node_kind,
+                                   apr_pool_t *result_pool)
+{
+  if (new_node_kind == svn_node_dir)
+    return apr_psprintf(result_pool,
+                        _("changes destined for a directory arrived via "
+                          "the following revisions during switch to "
+                          "^/%s@r%ld:"),
+                        new_repos_relpath, new_rev);
+  else if (new_node_kind == svn_node_file ||
+           new_node_kind == svn_node_symlink)
+    return apr_psprintf(result_pool,
+                        _("changes destined for a directory arrived via "
+                          "the following revisions during switch to "
+                          "^/%s@r%ld:"),
+                        new_repos_relpath, new_rev);
+  else
+    return apr_psprintf(result_pool,
+                        _("changes from the following revisions arrived "
+                          "during switch to ^/%s@r%ld:"),
+                        new_repos_relpath, new_rev);
+}
+
 /* Implements tree_conflict_get_description_func_t. */
 static svn_error_t *
 conflict_tree_get_description_incoming_edit(const char **description,
@@ -2302,8 +2377,10 @@ conflict_tree_get_description_incoming_edit(const char **description,
   svn_wc_operation_t conflict_operation;
   const char *old_repos_relpath;
   svn_revnum_t old_rev;
+  svn_node_kind_t old_node_kind;
   const char *new_repos_relpath;
   svn_revnum_t new_rev;
+  svn_node_kind_t new_node_kind;
   apr_array_header_t *edits;
   int i;
 
@@ -2314,10 +2391,10 @@ conflict_tree_get_description_incoming_edit(const char **description,
                                                                  scratch_pool));
 
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
-            &old_repos_relpath, &old_rev, NULL, conflict,
+            &old_repos_relpath, &old_rev, &old_node_kind, conflict,
             scratch_pool, scratch_pool));
   SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
-            &new_repos_relpath, &new_rev, NULL, conflict,
+            &new_repos_relpath, &new_rev, &new_node_kind, conflict,
             scratch_pool, scratch_pool));
 
   local_change = svn_client_conflict_get_local_change(conflict);
@@ -2333,63 +2410,117 @@ conflict_tree_get_description_incoming_edit(const char **description,
   edits = conflict->tree_conflict_details;
 
   if (conflict_operation == svn_wc_operation_update)
-    {
-      if (old_rev < new_rev)
-        action = apr_psprintf(scratch_pool,
-                              _("changes from the following revisions arrived "
-                                "during update from r%ld to r%ld:"),
-                              old_rev, new_rev);
-      else
-        action = apr_psprintf(scratch_pool,
-                              _("changes from the following revisions arrived "
-                                "during backwards update from r%ld to r%ld:"),
-                              old_rev, new_rev);
-    }
+    action = describe_incoming_edit_upon_update(old_rev, new_rev,
+                                                old_node_kind, new_node_kind,
+                                                scratch_pool);
   else if (conflict_operation == svn_wc_operation_switch)
-    action = apr_psprintf(scratch_pool,
-                          _("changes from the following revisions arrived "
-                            "during switch to ^/%s@r%ld:"),
-                          new_repos_relpath, new_rev);
+    action = describe_incoming_edit_upon_switch(new_repos_relpath, new_rev,
+                                                new_node_kind, scratch_pool);
   else if (conflict_operation == svn_wc_operation_merge)
     {
+      /* Handle merge inline because it returns early sometimes. */
       if (old_rev < new_rev)
         {
           if (old_rev + 1 == new_rev)
             {
-              action = apr_psprintf(scratch_pool,
-                                    _("changes arrived during merge of "
-                                      "^/%s:%ld:"),
-                                    new_repos_relpath, new_rev);
+              if (new_node_kind == svn_node_dir)
+                action = apr_psprintf(scratch_pool,
+                                      _("changes destined for a directory "
+                                        "arrived during merge of "
+                                        "^/%s:%ld:"),
+                                        new_repos_relpath, new_rev);
+              else if (new_node_kind == svn_node_file ||
+                       new_node_kind == svn_node_symlink)
+                action = apr_psprintf(scratch_pool,
+                                      _("changes destined for a file "
+                                        "arrived during merge of "
+                                        "^/%s:%ld:"),
+                                      new_repos_relpath, new_rev);
+              else
+                action = apr_psprintf(scratch_pool,
+                                      _("changes arrived during merge of "
+                                        "^/%s:%ld:"),
+                                      new_repos_relpath, new_rev);
 
               *description = apr_psprintf(result_pool, _("%s, %s"),
                                            reason, action);
               return SVN_NO_ERROR;
             }
           else
-            action = apr_psprintf(scratch_pool,
-                                  _("changes from the following revisions "
-                                    "arrived during merge of ^/%s:%ld-%ld:"),
-                                  new_repos_relpath, old_rev + 1, new_rev);
+            {
+              if (new_node_kind == svn_node_dir)
+                action = apr_psprintf(scratch_pool,
+                                      _("changes destined for a directory "
+                                        "arrived via the following revisions "
+                                        "during merge of ^/%s:%ld-%ld:"),
+                                      new_repos_relpath, old_rev + 1, new_rev);
+              else if (new_node_kind == svn_node_file ||
+                       new_node_kind == svn_node_symlink)
+                action = apr_psprintf(scratch_pool,
+                                      _("changes destined for a file "
+                                        "arrived via the following revisions "
+                                        "during merge of ^/%s:%ld-%ld:"),
+                                      new_repos_relpath, old_rev + 1, new_rev);
+              else
+                action = apr_psprintf(scratch_pool,
+                                      _("changes from the following revisions "
+                                        "arrived during merge of "
+                                        "^/%s:%ld-%ld:"),
+                                      new_repos_relpath, old_rev + 1, new_rev);
+            }
         }
       else
         {
           if (new_rev + 1 == old_rev)
             {
-              action = apr_psprintf(scratch_pool,
-                                    _("changes arrived during reverse-merge "
-                                      "of ^/%s:%ld:"),
-                                    new_repos_relpath, old_rev);
+              if (new_node_kind == svn_node_dir)
+                action = apr_psprintf(scratch_pool,
+                                      _("changes destined for a directory "
+                                        "arrived during reverse-merge of "
+                                        "^/%s:%ld:"),
+                                      new_repos_relpath, old_rev);
+              else if (new_node_kind == svn_node_file ||
+                       new_node_kind == svn_node_symlink)
+                action = apr_psprintf(scratch_pool,
+                                      _("changes destined for a file "
+                                        "arrived during reverse-merge of "
+                                        "^/%s:%ld:"),
+                                      new_repos_relpath, old_rev);
+              else
+                action = apr_psprintf(scratch_pool,
+                                      _("changes arrived during reverse-merge "
+                                        "of ^/%s:%ld:"),
+                                      new_repos_relpath, old_rev);
 
               *description = apr_psprintf(result_pool, _("%s, %s"),
                                            reason, action);
               return SVN_NO_ERROR;
             }
           else
-            action = apr_psprintf(scratch_pool,
-                                  _("changes from the following revisions "
-                                    "arrived during reverse-merge of "
-                                    "^/%s:%ld-%ld:"),
-                                  new_repos_relpath, new_rev + 1, old_rev);
+            {
+              if (new_node_kind == svn_node_dir)
+                action = apr_psprintf(scratch_pool,
+                                      _("changes destined for a directory "
+                                        "arrived via the following revisions "
+                                        "during reverse-merge of "
+                                        "^/%s:%ld-%ld:"),
+                                      new_repos_relpath, new_rev + 1, old_rev);
+              else if (new_node_kind == svn_node_file ||
+                       new_node_kind == svn_node_symlink)
+                action = apr_psprintf(scratch_pool,
+                                      _("changes destined for a file "
+                                        "arrived via the following revisions "
+                                        "during reverse-merge of "
+                                        "^/%s:%ld-%ld:"),
+                                      new_repos_relpath, new_rev + 1, old_rev);
+                
+              else
+                action = apr_psprintf(scratch_pool,
+                                      _("changes from the following revisions "
+                                        "arrived during reverse-merge of "
+                                        "^/%s:%ld-%ld:"),
+                                      new_repos_relpath, new_rev + 1, old_rev);
+            }
         }
     }
 
