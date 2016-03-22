@@ -257,44 +257,44 @@ describe_local_change(const char **description,
             case svn_wc_conflict_reason_edited:
               if (operation == svn_wc_operation_update ||
                   operation == svn_wc_operation_switch)
-                *description = _("a file containing uncommitted changes was "
-                                 "found in the working copy");
+                *description = _("A file containing uncommitted changes was "
+                                 "found in the working copy.");
               else if (operation == svn_wc_operation_merge)
-                *description = _("a file which differs from the corresponding "
-                                 "file on the merge source branch was found "
-                                 "in the working copy");
+                *description = _("A file which differs from the corresponding "
+                                 "File on the merge source branch was found "
+                                 "in the working copy.");
               break;
             case svn_wc_conflict_reason_obstructed:
-              *description = _("an unversioned file was found in the working "
-                               "copy where a versioned item was expected");
+              *description = _("An unversioned file was found in the working "
+                               "copy where a versioned item was expected.");
               break;
             case svn_wc_conflict_reason_unversioned:
-              *description = _("an unversioned file was found in the working "
-                               "copy");
+              *description = _("An unversioned file was found in the working "
+                               "copy.");
               break;
             case svn_wc_conflict_reason_deleted:
-              *description = _("a deleted file was found in the working copy");
+              *description = _("A deleted file was found in the working copy.");
               break;
             case svn_wc_conflict_reason_missing:
               if (operation == svn_wc_operation_update ||
                   operation == svn_wc_operation_switch)
-                *description = _("no such file was found in the working copy");
+                *description = _("No such file was found in the working copy.");
               else if (operation == svn_wc_operation_merge)
                 {
                   /* ### display deleted revision */
-                  *description = _("no such file was found in the merge target "
-                                   "working copy; the file may have been "
-                                   "deleted or moved away in the "
-                                   "repository's history");
+                  *description = _("No such file was found in the merge target "
+                                   "working copy.\nPerhaps the file has been "
+                                   "deleted or moved away in the repository's "
+                                   "history?");
                 }
               break;
             case svn_wc_conflict_reason_added:
             case svn_wc_conflict_reason_replaced:
               {
                 /* ### show more details about copies or replacements? */
-                *description = _("a file scheduled to be added to the "
+                *description = _("A file scheduled to be added to the "
                                  "repository in the next commit was found in "
-                                 "the working copy");
+                                 "the working copy.");
               }
               break;
             case svn_wc_conflict_reason_moved_away:
@@ -312,13 +312,13 @@ describe_local_change(const char **description,
                     if (moved_to_abspath == NULL)
                       {
                         /* The move no longer exists. */
-                        *description = _("the file had been moved away at the "
-                                         "time this conflict was recorded");
+                        *description = _("The file had been moved away at the "
+                                         "time this conflict was recorded.");
                       }
                     else
                       *description = apr_psprintf(
                                        result_pool,
-                                       _("the file was moved away to '%s'"),
+                                       _("The file was moved away to\n'%s'."),
                                        svn_dirent_local_style(moved_to_abspath,
                                                               scratch_pool));
                   }
@@ -330,15 +330,16 @@ describe_local_change(const char **description,
                          * This case cannot happen until we detect incoming
                          * moves, which we currently don't do. */
                         /* ### find deleted/moved revision? */
-                        *description = _("the file had been moved away at the "
-                                         "time this conflict was recorded");
+                        *description = _("The file had been moved away at the "
+                                         "time this conflict was recorded.");
                       }
                     else
                       {
                         /* This is a local move in the working copy. */
                         *description = apr_psprintf(
                                          result_pool,
-                                         _("the file was moved away to '%s'"),
+                                         _("The file was moved away to\n"
+                                           "'%s'."),
                                          svn_dirent_local_style(
                                            moved_to_abspath, scratch_pool));
                       }
@@ -360,15 +361,15 @@ describe_local_change(const char **description,
                     if (moved_from_abspath == NULL)
                       {
                         /* The move no longer exists. */
-                        *description = _("a file had been moved here at the "
-                                         "time this conflict was recorded");
+                        *description = _("A file had been moved here at the "
+                                         "time this conflict was recorded.");
                       }
                     else
                       *description = apr_psprintf(
                                        result_pool,
-                                       _("a file was moved here from '%s'"),
-                                       svn_dirent_local_style(moved_from_abspath,
-                                                              scratch_pool));
+                                       _("A file was moved here from\n'%s'."),
+                                       svn_dirent_local_style(
+                                         moved_from_abspath, scratch_pool));
                   }
                 else if (operation == svn_wc_operation_merge)
                   {
@@ -378,15 +379,16 @@ describe_local_change(const char **description,
                          * This case cannot happen until we detect incoming
                          * moves, which we currently don't do. */
                         /* ### find deleted/moved revision? */
-                        *description = _("a file had been moved here at the "
-                                         "time this conflict was recorded");
+                        *description = _("A file had been moved here at the "
+                                         "time this conflict was recorded.");
                       }
                     else
                       {
                         /* This is a local move in the working copy. */
                         *description = apr_psprintf(
                                          result_pool,
-                                         _("a file was moved here from '%s'"),
+                                         _("A file was moved here from\n"
+                                           "'%s'."),
                                          svn_dirent_local_style(
                                            moved_from_abspath, scratch_pool));
                       }
@@ -401,47 +403,47 @@ describe_local_change(const char **description,
             case svn_wc_conflict_reason_edited:
               if (operation == svn_wc_operation_update ||
                   operation == svn_wc_operation_switch)
-                *description = _("a directory containing uncommitted changes "
-                                 "was found in the working copy");
+                *description = _("A directory containing uncommitted changes "
+                                 "was found in the working copy.");
               else if (operation == svn_wc_operation_merge)
-                *description = _("a directory which differs from the "
+                *description = _("A directory which differs from the "
                                  "corresponding directory on the merge source "
-                                 "branch was found in the working copy");
+                                 "branch was found in the working copy.");
               break;
             case svn_wc_conflict_reason_obstructed:
-              *description = _("an unversioned directory was found in the "
+              *description = _("An unversioned directory was found in the "
                                "working copy where a versioned item was "
-                               "expected");
+                               "expected.");
               break;
             case svn_wc_conflict_reason_unversioned:
-              *description = _("an unversioned directory was found in the "
-                               "working copy");
+              *description = _("An unversioned directory was found in the "
+                               "working copy.");
               break;
             case svn_wc_conflict_reason_deleted:
-              *description = _("a deleted directory was found in the "
-                               "working copy");
+              *description = _("A deleted directory was found in the "
+                               "working copy.");
               break;
             case svn_wc_conflict_reason_missing:
               if (operation == svn_wc_operation_update ||
                   operation == svn_wc_operation_switch)
-                *description = _("no such directory was found in the working "
-                                 "copy");
+                *description = _("No such directory was found in the working "
+                                 "copy.");
               else if (operation == svn_wc_operation_merge)
                 {
                   /* ### display deleted revision */
-                  *description = _("no such directory was found in the merge "
-                                   "target working copy; the directory may "
-                                   "have been deleted or moved away in the "
-                                   "repository's history");
+                  *description = _("No such directory was found in the merge "
+                                   "target working copy.\nPerhaps the "
+                                   "directory has been deleted or moved away "
+                                   "in the repository's history?");
                 }
               break;
             case svn_wc_conflict_reason_added:
             case svn_wc_conflict_reason_replaced:
               {
                 /* ### show more details about copies or replacements? */
-                *description = _("a directory scheduled to be added to the "
+                *description = _("A directory scheduled to be added to the "
                                  "repository in the next commit was found in "
-                                 "the working copy");
+                                 "the working copy.");
               }
               break;
             case svn_wc_conflict_reason_moved_away:
@@ -459,15 +461,15 @@ describe_local_change(const char **description,
                     if (moved_to_abspath == NULL)
                       {
                         /* The move no longer exists. */
-                        *description = _("the directory had been moved away "
+                        *description = _("The directory had been moved away "
                                          "at the time this conflict was "
-                                         "recorded");
+                                         "recorded.");
                       }
                     else
                       *description = apr_psprintf(
                                        result_pool,
-                                       _("the directory was moved away to "
-                                         "'%s'"),
+                                       _("The directory was moved away to\n"
+                                         "'%s'."),
                                        svn_dirent_local_style(moved_to_abspath,
                                                               scratch_pool));
                   }
@@ -479,17 +481,17 @@ describe_local_change(const char **description,
                          * This case cannot happen until we detect incoming
                          * moves, which we currently don't do. */
                         /* ### find deleted/moved revision? */
-                        *description = _("the directory had been moved away "
+                        *description = _("The directory had been moved away "
                                          "at the time this conflict was "
-                                         "recorded");
+                                         "recorded.");
                       }
                     else
                       {
                         /* This is a local move in the working copy. */
                         *description = apr_psprintf(
                                          result_pool,
-                                         _("the directory was moved away to "
-                                           "'%s'"),
+                                         _("The directory was moved away to\n"
+                                           "'%s'."),
                                          svn_dirent_local_style(
                                            moved_to_abspath, scratch_pool));
                       }
@@ -511,16 +513,17 @@ describe_local_change(const char **description,
                     if (moved_from_abspath == NULL)
                       {
                         /* The move no longer exists. */
-                        *description = _("a directory had been moved here at "
-                                         "the time this conflict was recorded");
+                        *description = _("A directory had been moved here at "
+                                         "the time this conflict was "
+                                         "recorded.");
                       }
                     else
                       *description = apr_psprintf(
                                        result_pool,
-                                       _("a directory was moved here from "
-                                         "'%s'"),
-                                       svn_dirent_local_style(moved_from_abspath,
-                                                              scratch_pool));
+                                       _("A directory was moved here from\n"
+                                         "'%s'."),
+                                       svn_dirent_local_style(
+                                         moved_from_abspath, scratch_pool));
                   }
                 else if (operation == svn_wc_operation_merge)
                   {
@@ -530,15 +533,17 @@ describe_local_change(const char **description,
                          * This case cannot happen until we detect incoming
                          * moves, which we currently don't do. */
                         /* ### find deleted/moved revision? */
-                        *description = _("a directory had been moved here at the "
-                                         "time this conflict was recorded");
+                        *description = _("A directory had been moved here at "
+                                         "the time this conflict was "
+                                         "recorded.");
                       }
                     else
                       {
                         /* This is a local move in the working copy. */
                         *description = apr_psprintf(
                                          result_pool,
-                                         _("a directory was moved here from '%s'"),
+                                         _("A directory was moved here from\n"
+                                           "'%s'."),
                                          svn_dirent_local_style(
                                            moved_from_abspath, scratch_pool));
                       }
@@ -551,47 +556,47 @@ describe_local_change(const char **description,
         switch (local_change)
           {
           case svn_wc_conflict_reason_edited:
-            *description = _("an item containing uncommitted changes was "
-                             "found in the working copy");
+            *description = _("An item containing uncommitted changes was "
+                             "found in the working copy.");
             break;
           case svn_wc_conflict_reason_obstructed:
-            *description = _("an unversioned item was found in the working "
-                             "copy where a versioned item was expected");
+            *description = _("An unversioned item was found in the working "
+                             "copy where a versioned item was expected.");
             break;
           case svn_wc_conflict_reason_deleted:
-            *description = _("a deleted item was found in the working copy");
+            *description = _("A deleted item was found in the working copy.");
             break;
           case svn_wc_conflict_reason_missing:
             if (operation == svn_wc_operation_update ||
                 operation == svn_wc_operation_switch)
-              *description = _("no such file or directory was found in the "
-                               "working copy");
+              *description = _("No such file or directory was found in the "
+                               "working copy.");
             else if (operation == svn_wc_operation_merge)
               {
                 /* ### display deleted revision */
-                *description = _("no such file or directory was found in the "
-                                 "merge target working copy; the item may "
+                *description = _("No such file or directory was found in the "
+                                 "merge target working copy.\nThe item may "
                                  "have been deleted or moved away in the "
-                                 "repository's history");
+                                 "repository's history.");
               }
             break;
           case svn_wc_conflict_reason_unversioned:
-            *description = _("an unversioned item was found in the working "
-                             "copy");
+            *description = _("An unversioned item was found in the working "
+                             "copy.");
             break;
           case svn_wc_conflict_reason_added:
           case svn_wc_conflict_reason_replaced:
-            *description = _("an item scheduled to be added to the repository "
+            *description = _("An item scheduled to be added to the repository "
                              "in the next commit was found in the working "
-                             "copy");
+                             "copy.");
             break;
           case svn_wc_conflict_reason_moved_away:
-            *description = _("the item had been moved away at the "
-                             "time this conflict was recorded");
+            *description = _("The item had been moved away at the "
+                             "time this conflict was recorded.");
             break;
           case svn_wc_conflict_reason_moved_here:
-            *description = _("an item had been moved here at the "
-                             "time this conflict was recorded");
+            *description = _("An item had been moved here at the "
+                             "time this conflict was recorded.");
             break;
           }
         break;
@@ -787,12 +792,12 @@ conflict_tree_get_description_generic(const char **local_change_description,
          It will not be pretty, but is closer to an internal error than
          an ordinary user-facing string. */
       *local_change_description = apr_psprintf(result_pool,
-                                    _("local: %s %s"),
+                                    _("local %s %s"),
                                     svn_node_kind_to_word(conflict_node_kind),
                                     svn_token__to_word(map_conflict_reason,
                                                        conflict_reason));
       *incoming_change_description = apr_psprintf(result_pool,
-                                       _("incoming: %s %s"),
+                                       _("incoming %s %s"),
                                        svn_node_kind_to_word(incoming_kind),
                                        svn_token__to_word(map_conflict_action,
                                                           conflict_action));
@@ -833,64 +838,64 @@ describe_incoming_deletion_upon_update(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory updated from r%ld to r%ld was "
-                              "replaced with a file by %s in r%ld"),
+                            _("Directory updated from r%ld to r%ld was "
+                              "replaced with a file by %s in r%ld."),
                             old_rev, new_rev,
                             details->rev_author, details->deleted_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file updated from r%ld to r%ld was replaced "
+                            _("File updated from r%ld to r%ld was replaced "
                               "with a file from another line of history by "
-                              "%s in r%ld"),
+                              "%s in r%ld."),
                             old_rev, new_rev,
                             details->rev_author, details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item updated from r%ld to r%ld was replaced "
-                              "with a file by %s in r%ld"), old_rev, new_rev,
+                            _("Item updated from r%ld to r%ld was replaced "
+                              "with a file by %s in r%ld."), old_rev, new_rev,
                             details->rev_author, details->deleted_rev);
     }
   else if (details->replacing_node_kind == svn_node_dir)
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory updated from r%ld to r%ld was "
+                            _("Directory updated from r%ld to r%ld was "
                               "replaced with a directory from another line "
-                              "of history by %s in r%ld"),
+                              "of history by %s in r%ld."),
                             old_rev, new_rev,
                             details->rev_author, details->deleted_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("directory updated from r%ld to r%ld was "
-                              "replaced with a file by %s in r%ld"),
+                            _("Directory updated from r%ld to r%ld was "
+                              "replaced with a file by %s in r%ld."),
                             old_rev, new_rev,
                             details->rev_author, details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item updated from r%ld to r%ld was replaced "
-                              "by %s in r%ld"), old_rev, new_rev,
+                            _("Item updated from r%ld to r%ld was replaced "
+                              "by %s in r%ld."), old_rev, new_rev,
                             details->rev_author, details->deleted_rev);
     }
   else
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory updated from r%ld to r%ld was "
-                              "deleted or moved by %s in r%ld"),
+                            _("Directory updated from r%ld to r%ld was "
+                              "deleted or moved by %s in r%ld."),
                             old_rev, new_rev,
                             details->rev_author, details->deleted_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file updated from r%ld to r%ld was deleted or "
-                              "moved by %s in r%ld"), old_rev, new_rev,
+                            _("File updated from r%ld to r%ld was deleted or "
+                              "moved by %s in r%ld."), old_rev, new_rev,
                             details->rev_author, details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item updated from r%ld to r%ld was deleted or "
-                              "moved by %s in r%ld"), old_rev, new_rev,
+                            _("Item updated from r%ld to r%ld was deleted or "
+                              "moved by %s in r%ld."), old_rev, new_rev,
                             details->rev_author, details->deleted_rev);
     }
 }
@@ -908,22 +913,22 @@ describe_incoming_reverse_addition_upon_update(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory updated backwards from r%ld to r%ld "
+                            _("Directory updated backwards from r%ld to r%ld "
                               "was a file before the replacement made by %s "
-                              "in r%ld"), old_rev, new_rev,
+                              "in r%ld."), old_rev, new_rev,
                             details->rev_author, details->added_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file updated backwards from r%ld to r%ld was a "
+                            _("File updated backwards from r%ld to r%ld was a "
                               "file from another line of history before the "
-                              "replacement made by %s in r%ld"),
+                              "replacement made by %s in r%ld."),
                             old_rev, new_rev,
                             details->rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item updated backwards from r%ld to r%ld was "
-                              "replaced with a file by %s in r%ld"),
+                            _("Item updated backwards from r%ld to r%ld was "
+                              "replaced with a file by %s in r%ld."),
                             old_rev, new_rev,
                             details->rev_author, details->added_rev);
     }
@@ -931,22 +936,22 @@ describe_incoming_reverse_addition_upon_update(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory updated backwards from r%ld to r%ld "
+                            _("Directory updated backwards from r%ld to r%ld "
                               "was a directory from another line of history "
                               "before the replacement made by %s in "
-                              "r%ld"), old_rev, new_rev,
+                              "r%ld."), old_rev, new_rev,
                             details->rev_author, details->added_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file updated backwards from r%ld to r%ld was a "
+                            _("File updated backwards from r%ld to r%ld was a "
                               "directory before the replacement made by %s "
-                              "in r%ld"), old_rev, new_rev,
+                              "in r%ld."), old_rev, new_rev,
                             details->rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item updated backwards from r%ld to r%ld was "
-                              "replaced with a directory by %s in r%ld"),
+                            _("Item updated backwards from r%ld to r%ld was "
+                              "replaced with a directory by %s in r%ld."),
                             old_rev, new_rev,
                             details->rev_author, details->added_rev);
     }
@@ -954,21 +959,21 @@ describe_incoming_reverse_addition_upon_update(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory updated backwards from r%ld to r%ld "
+                            _("Directory updated backwards from r%ld to r%ld "
                               "did not exist before it was added by %s in "
-                              "r%ld"), old_rev, new_rev,
+                              "r%ld."), old_rev, new_rev,
                             details->rev_author, details->added_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file updated backwards from r%ld to r%ld did "
-                              "not exist before it was added by %s in r%ld"),
+                            _("File updated backwards from r%ld to r%ld did "
+                              "not exist before it was added by %s in r%ld."),
                             old_rev, new_rev,
                             details->rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item updated backwards from r%ld to r%ld did "
-                              "not exist before it was added by %s in r%ld"),
+                            _("Item updated backwards from r%ld to r%ld did "
+                              "not exist before it was added by %s in r%ld."),
                             old_rev, new_rev,
                             details->rev_author, details->added_rev);
     }
@@ -989,24 +994,27 @@ describe_incoming_deletion_upon_switch(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory switched from ^/%s@%ld to ^/%s@%ld "
-                              "was replaced with a file by %s in r%ld"),
+                            _("Directory switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
+                              "was replaced with a file by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file switched from ^/%s@%ld to ^/%s@%ld was "
+                            _("File switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
                               "replaced with a file from another line of "
-                              "history by %s in r%ld"),
+                              "history by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item switched from ^/%s@%ld to ^/%s@%ld was "
-                              "replaced with a file by %s in r%ld"),
+                            _("Item switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                              "replaced with a file by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
@@ -1015,24 +1023,27 @@ describe_incoming_deletion_upon_switch(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory switched from ^/%s@%ld to ^/%s@%ld "
+                            _("Directory switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
                               "was replaced with a directory from another "
-                              "line of history by %s in r%ld"),
+                              "line of history by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file switched from ^/%s@%ld to ^/%s@%ld "
-                              "was replaced with a directory by %s in r%ld"),
+                            _("File switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
+                              "was replaced with a directory by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item switched from ^/%s@%ld to ^/%s@%ld was "
-                              "replaced with a directory by %s in r%ld"),
+                            _("Item switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                              "replaced with a directory by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
@@ -1041,23 +1052,26 @@ describe_incoming_deletion_upon_switch(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory switched from ^/%s@%ld to ^/%s@%ld "
-                              "was deleted or moved by %s in r%ld"),
+                            _("Directory switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
+                              "was deleted or moved by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file switched from ^/%s@%ld to ^/%s@%ld was "
-                              "deleted or moved by %s in r%ld"),
+                            _("File switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                              "deleted or moved by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item switched from ^/%s@%ld to ^/%s@%ld was "
-                              "deleted or moved by %s in r%ld"),
+                            _("Item switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                              "deleted or moved by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
@@ -1079,25 +1093,28 @@ describe_incoming_reverse_addition_upon_switch(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory switched from ^/%s@%ld to ^/%s@%ld "
+                            _("Directory switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
                               "was a file before the replacement made by %s "
-                              "in r%ld"),
+                              "in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file switched from ^/%s@%ld to ^/%s@%ld was a "
+                            _("File switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas a "
                               "file from another line of history before the "
-                              "replacement made by %s in r%ld"),
+                              "replacement made by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item switched from ^/%s@%ld to ^/%s@%ld was "
-                              "replaced with a file by %s in r%ld"),
+                            _("Item switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                              "replaced with a file by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
@@ -1106,25 +1123,28 @@ describe_incoming_reverse_addition_upon_switch(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory switched from ^/%s@%ld to ^/%s@%ld "
+                            _("Directory switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
                               "was a directory from another line of history "
-                              "before the replacement made by %s in r%ld"),
+                              "before the replacement made by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("directory switched from ^/%s@%ld to ^/%s@%ld "
+                            _("Directory switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
                               "was a file before the replacement made by %s "
-                              "in r%ld"),
+                              "in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item switched from ^/%s@%ld to ^/%s@%ld was "
-                              "replaced with a directory by %s in r%ld"),
+                            _("Item switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                              "replaced with a directory by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
@@ -1133,26 +1153,29 @@ describe_incoming_reverse_addition_upon_switch(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory switched from ^/%s@%ld to ^/%s@%ld "
+                            _("Directory switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
                               "did not exist before it was added by %s in "
-                              "r%ld"),
+                              "r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file switched from ^/%s@%ld to ^/%s@%ld did "
+                            _("File switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\ndid "
                               "not exist before it was added by %s in "
-                              "r%ld"),
+                              "r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item switched from ^/%s@%ld to ^/%s@%ld did "
+                            _("Item switched from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\ndid "
                               "not exist before it was added by %s in "
-                              "r%ld"),
+                              "r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
@@ -1174,24 +1197,27 @@ describe_incoming_deletion_upon_merge(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory merged from ^/%s@%ld to ^/%s@%ld "
-                              "was replaced with a file by %s in r%ld"),
+                            _("Directory merged from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
+                              "was replaced with a file by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file merged from ^/%s@%ld to ^/%s@%ld was "
+                            _("File merged from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
                               "replaced with a file from another line of "
-                              "history by %s in r%ld"),
+                              "history by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item merged from ^/%s@%ld to ^/%s@%ld was "
-                              "replaced with a file by %s in r%ld"),
+                            _("Item merged from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                              "replaced with a file by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
@@ -1200,24 +1226,27 @@ describe_incoming_deletion_upon_merge(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory merged from ^/%s@%ld to ^/%s@%ld "
+                            _("Directory merged from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
                               "was replaced with a directory from another "
-                              "line of history by %s in r%ld"),
+                              "line of history by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file merged from ^/%s@%ld to ^/%s@%ld "
-                              "was replaced with a directory by %s in r%ld"),
+                            _("File merged from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
+                              "was replaced with a directory by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item merged from ^/%s@%ld to ^/%s@%ld was "
-                              "replaced with a directory by %s in r%ld"),
+                            _("Item merged from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                              "replaced with a directory by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
@@ -1226,23 +1255,26 @@ describe_incoming_deletion_upon_merge(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory merged from ^/%s@%ld to ^/%s@%ld was "
-                              "deleted or moved by %s in r%ld"),
+                            _("Directory merged from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                              "deleted or moved by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file merged from ^/%s@%ld to ^/%s@%ld was "
-                              "deleted or moved by %s in r%ld"),
+                            _("File merged from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                              "deleted or moved by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item merged from ^/%s@%ld to ^/%s@%ld was "
-                              "deleted or moved by %s in r%ld"),
+                            _("Item merged from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                              "deleted or moved by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->deleted_rev);
@@ -1264,25 +1296,27 @@ describe_incoming_reverse_addition_upon_merge(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory reverse-merged from ^/%s@%ld to "
+                            _("Directory reverse-merged from\n'^/%s@%ld'\nto "
                               "^/%s@%ld was a file before the replacement "
-                              "made by %s in r%ld"),
+                              "made by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file reverse-merged from ^/%s@%ld to ^/%s@%ld "
+                            _("File reverse-merged from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
                               "was a file from another line of history before "
-                              "the replacement made by %s in r%ld"),
+                              "the replacement made by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item reverse-merged from ^/%s@%ld to ^/%s@%ld "
-                              "was replaced with a file by %s in r%ld"),
+                            _("Item reverse-merged from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
+                              "was replaced with a file by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
@@ -1291,26 +1325,27 @@ describe_incoming_reverse_addition_upon_merge(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory reverse-merged from ^/%s@%ld to "
+                            _("Directory reverse-merged from\n'^/%s@%ld'\nto "
                               "^/%s@%ld was a directory from another line "
                               "of history before the replacement made by %s "
-                              "in r%ld"),
+                              "in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("directory reverse-merged from ^/%s@%ld to "
+                            _("Directory reverse-merged from\n'^/%s@%ld'\nto "
                               "^/%s@%ld was a file before the replacement "
-                              "made by %s in r%ld"),
+                              "made by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item reverse-merged from ^/%s@%ld to ^/%s@%ld "
-                              "was replaced with a directory by %s in r%ld"),
+                            _("Item reverse-merged from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
+                              "was replaced with a directory by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
@@ -1319,26 +1354,28 @@ describe_incoming_reverse_addition_upon_merge(
     {
       if (victim_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("directory reverse-merged from ^/%s@%ld to "
+                            _("Directory reverse-merged from\n'^/%s@%ld'\nto "
                               "^/%s@%ld did not exist before it was added "
-                              "by %s in r%ld"),
+                              "by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("file reverse-merged from ^/%s@%ld to ^/%s@%ld "
+                            _("File reverse-merged from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
                               "did not exist before it was added by %s in "
-                              "r%ld"),
+                              "r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item reverse-merged from ^/%s@%ld to ^/%s@%ld "
+                            _("Item reverse-merged from\n"
+                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
                               "did not exist before it was added by %s in "
-                              "r%ld"),
+                              "r%ld."),
                             old_repos_relpath, old_rev,
                             new_repos_relpath, new_rev,
                             details->rev_author, details->added_rev);
@@ -2035,20 +2072,20 @@ describe_incoming_add_upon_update(
       if (SVN_IS_VALID_REVNUM(details->added_rev) &&
           SVN_IS_VALID_REVNUM(details->deleted_rev))
         return apr_psprintf(result_pool,
-                            _("directory appeared during update to r%ld; "
+                            _("Directory appeared during update to r%ld; "
                               "it was added by %s in r%ld and later deleted "
-                              "by %s in r%ld"), new_rev,
+                              "by %s in r%ld."), new_rev,
                             details->added_rev_author, details->added_rev,
                             details->deleted_rev_author, details->deleted_rev);
       else if (SVN_IS_VALID_REVNUM(details->added_rev))
         return apr_psprintf(result_pool,
-                            _("directory appeared during update to r%ld; "
-                              "it was added by %s in r%ld"), new_rev,
+                            _("Directory appeared during update to r%ld; "
+                              "it was added by %s in r%ld."), new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("directory appeared during update to r%ld; "
-                              "it was deleted by %s in r%ld"), new_rev,
+                            _("Directory appeared during update to r%ld; "
+                              "it was deleted by %s in r%ld."), new_rev,
                             details->deleted_rev_author, details->deleted_rev);
     }
   else if (new_node_kind == svn_node_file ||
@@ -2056,39 +2093,39 @@ describe_incoming_add_upon_update(
       if (SVN_IS_VALID_REVNUM(details->added_rev) &&
           SVN_IS_VALID_REVNUM(details->deleted_rev))
         return apr_psprintf(result_pool,
-                            _("file appeared during update to r%ld; "
+                            _("File appeared during update to r%ld; "
                               "it was added by %s in r%ld and later deleted "
-                              "by %s in r%ld"), new_rev,
+                              "by %s in r%ld."), new_rev,
                             details->added_rev_author, details->added_rev,
                             details->deleted_rev_author, details->deleted_rev);
       else if (SVN_IS_VALID_REVNUM(details->added_rev))
         return apr_psprintf(result_pool,
-                            _("file appeared during update to r%ld; "
-                              "it was added by %s in r%ld"), new_rev,
+                            _("File appeared during update to r%ld; "
+                              "it was added by %s in r%ld."), new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("file appeared during update to r%ld; "
-                              "it was deleted by %s in r%ld"), new_rev,
+                            _("File appeared during update to r%ld; "
+                              "it was deleted by %s in r%ld."), new_rev,
                             details->deleted_rev_author, details->deleted_rev);
   else
       if (SVN_IS_VALID_REVNUM(details->added_rev) &&
           SVN_IS_VALID_REVNUM(details->deleted_rev))
         return apr_psprintf(result_pool,
-                            _("item appeared during update to r%ld; "
+                            _("Item appeared during update to r%ld; "
                               "it was added by %s in r%ld and later deleted "
-                              "by %s in r%ld"), new_rev,
+                              "by %s in r%ld."), new_rev,
                             details->added_rev_author, details->added_rev,
                             details->deleted_rev_author, details->deleted_rev);
       else if (SVN_IS_VALID_REVNUM(details->added_rev))
         return apr_psprintf(result_pool,
-                            _("item appeared during update to r%ld; "
-                              "it was added by %s in r%ld"), new_rev,
+                            _("Item appeared during update to r%ld; "
+                              "it was added by %s in r%ld."), new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item appeared during update to r%ld; "
-                              "it was deleted by %s in r%ld"), new_rev,
+                            _("Item appeared during update to r%ld; "
+                              "it was deleted by %s in r%ld."), new_rev,
                             details->deleted_rev_author, details->deleted_rev);
 
   return SVN_NO_ERROR;
@@ -2107,21 +2144,22 @@ describe_incoming_add_upon_switch(
       if (SVN_IS_VALID_REVNUM(details->added_rev) &&
           SVN_IS_VALID_REVNUM(details->deleted_rev))
         return apr_psprintf(result_pool,
-                            _("directory appeared during switch to ^/%s@%ld; "
-                              "it was added by %s in r%ld and later deleted "
-                              "by %s in r%ld"), new_repos_relpath, new_rev,
+                            _("Directory appeared during switch to\n"
+                              "'^/%s@%ld'.\n"
+                              "It was added by %s in r%ld and later deleted "
+                              "by %s in r%ld."), new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev,
                             details->deleted_rev_author, details->deleted_rev);
       else if (SVN_IS_VALID_REVNUM(details->added_rev))
         return apr_psprintf(result_pool,
-                            _("directory appeared during switch to ^/%s@%ld; "
-                              "it was added by %s in r%ld"),
+                            _("Directory appeared during switch to\n"
+                             "'^/%s@%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("directory appeared during switch to ^/%s@%ld; "
-                              "it was deleted by %s in r%ld"),
+                            _("Directory appeared during switch to\n"
+                              "'^/%s@%ld'.\nIt was deleted by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->deleted_rev_author, details->deleted_rev);
     }
@@ -2131,21 +2169,21 @@ describe_incoming_add_upon_switch(
       if (SVN_IS_VALID_REVNUM(details->added_rev) &&
           SVN_IS_VALID_REVNUM(details->deleted_rev))
         return apr_psprintf(result_pool,
-                            _("file appeared during switch to ^/%s@%ld; "
-                              "it was added by %s in r%ld and later deleted "
-                              "by %s in r%ld"), new_repos_relpath, new_rev,
+                            _("File appeared during switch to\n'^/%s@%ld'.\n"
+                              "It was added by %s in r%ld and later deleted "
+                              "by %s in r%ld."), new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev,
                             details->deleted_rev_author, details->deleted_rev);
       else if (SVN_IS_VALID_REVNUM(details->added_rev))
         return apr_psprintf(result_pool,
-                            _("file appeared during switch to ^/%s@%ld; "
-                              "it was added by %s in r%ld"),
+                            _("File appeared during switch to\n'^/%s@%ld'.\n"
+                              "It was added by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("file appeared during switch to ^/%s@%ld; "
-                              "it was deleted by %s in r%ld"),
+                            _("File appeared during switch to\n'^/%s@%ld'.\n"
+                              "It was deleted by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->deleted_rev_author, details->deleted_rev);
     }
@@ -2154,21 +2192,21 @@ describe_incoming_add_upon_switch(
       if (SVN_IS_VALID_REVNUM(details->added_rev) &&
           SVN_IS_VALID_REVNUM(details->deleted_rev))
         return apr_psprintf(result_pool,
-                            _("item appeared during switch to ^/%s@%ld; "
-                              "it was added by %s in r%ld and later deleted "
-                              "by %s in r%ld"), new_repos_relpath, new_rev,
+                            _("Item appeared during switch to\n'^/%s@%ld'.\n"
+                              "It was added by %s in r%ld and later deleted "
+                              "by %s in r%ld."), new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev,
                             details->deleted_rev_author, details->deleted_rev);
       else if (SVN_IS_VALID_REVNUM(details->added_rev))
         return apr_psprintf(result_pool,
-                            _("item appeared during switch to ^/%s@%ld; "
-                              "it was added by %s in r%ld"),
+                            _("Item appeared during switch to\n'^/%s@%ld'.\n"
+                              "It was added by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item appeared during switch to ^/%s@%ld; "
-                              "it was deleted by %s in r%ld"),
+                            _("Item appeared during switch to\n'^/%s@%ld'.\n"
+                              "It was deleted by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->deleted_rev_author, details->deleted_rev);
     }
@@ -2188,14 +2226,14 @@ describe_incoming_add_upon_merge(
     {
       if (old_rev + 1 == new_rev)
         return apr_psprintf(result_pool,
-                            _("directory appeared during merge of "
-                              "^/%s:%ld; it was added by %s in r%ld"),
+                            _("Directory appeared during merge of\n"
+                              "'^/%s:%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("directory appeared during merge of "
-                              "^/%s:%ld-%ld; it was added by %s in r%ld"),
+                            _("directory appeared during merge of\n"
+                              "'^/%s:%ld-%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, old_rev + 1, new_rev,
                             details->added_rev_author, details->added_rev);
     }
@@ -2204,14 +2242,14 @@ describe_incoming_add_upon_merge(
     {
       if (old_rev + 1 == new_rev)
         return apr_psprintf(result_pool,
-                            _("file appeared during merge of "
-                              "^/%s:%ld; it was added by %s in r%ld"),
+                            _("File appeared during merge of\n"
+                              "'^/%s:%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("file appeared during merge of "
-                              "^/%s:%ld-%ld; it was added by %s in r%ld"),
+                            _("File appeared during merge of\n"
+                              "'^/%s:%ld-%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, old_rev + 1, new_rev,
                             details->added_rev_author, details->added_rev);
     }
@@ -2219,14 +2257,14 @@ describe_incoming_add_upon_merge(
     {
       if (old_rev + 1 == new_rev)
         return apr_psprintf(result_pool,
-                            _("item appeared during merge of "
-                              "^/%s:%ld; it was added by %s in r%ld"),
+                            _("Item appeared during merge of\n"
+                              "'^/%s:%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item appeared during merge of "
-                              "^/%s:%ld-%ld; it was added by %s in r%ld"),
+                            _("Item appeared during merge of\n"
+                              "'^/%s:%ld-%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, old_rev + 1, new_rev,
                             details->added_rev_author, details->added_rev);
     }
@@ -2246,15 +2284,15 @@ describe_incoming_reverse_deletion_upon_merge(
     {
       if (new_rev + 1 == old_rev)
         return apr_psprintf(result_pool,
-                            _("directory appeared during reverse-merge of "
-                              "^/%s:%ld; it was deleted by %s in r%ld"),
+                            _("directory appeared during reverse-merge of\n"
+                              "'^/%s:%ld'.\nIt was deleted by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             details->deleted_rev_author,
                             details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("directory appeared during reverse-merge of "
-                              "^/%s:%ld-%ld; it was deleted by %s in r%ld"),
+                            _("directory appeared during reverse-merge of\n"
+                              "'^/%s:%ld-%ld'.\nIt was deleted by %s in r%ld."),
                             old_repos_relpath, new_rev, old_rev - 1,
                             details->deleted_rev_author,
                             details->deleted_rev);
@@ -2264,15 +2302,15 @@ describe_incoming_reverse_deletion_upon_merge(
     {
       if (new_rev + 1 == old_rev)
         return apr_psprintf(result_pool,
-                            _("file appeared during reverse-merge of "
-                              "^/%s:%ld; it was deleted by %s in r%ld"),
+                            _("File appeared during reverse-merge of\n"
+                              "'^/%s:%ld'.\nIt was deleted by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             details->deleted_rev_author,
                             details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("file appeared during reverse-merge of "
-                              "^/%s:%ld-%ld; it was deleted by %s in r%ld"),
+                            _("File appeared during reverse-merge of\n"
+                              "'^/%s:%ld-%ld'.\nIt was deleted by %s in r%ld."),
                             old_repos_relpath, new_rev + 1, old_rev,
                             details->deleted_rev_author,
                             details->deleted_rev);
@@ -2281,15 +2319,15 @@ describe_incoming_reverse_deletion_upon_merge(
     {
       if (new_rev + 1 == old_rev)
         return apr_psprintf(result_pool,
-                            _("item appeared during reverse-merge of "
-                              "^/%s:%ld; it was deleted by %s in r%ld"),
+                            _("Item appeared during reverse-merge of\n"
+                              "'^/%s:%ld'.\nIt was deleted by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             details->deleted_rev_author,
                             details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("item appeared during reverse-merge of "
-                              "^/%s:%ld-%ld; it was deleted by %s in r%ld"),
+                            _("Item appeared during reverse-merge of\n"
+                              "'^/%s:%ld-%ld'.\nIt was deleted by %s in r%ld."),
                             old_repos_relpath, new_rev + 1, old_rev,
                             details->deleted_rev_author,
                             details->deleted_rev);
@@ -2589,18 +2627,18 @@ describe_incoming_edit_upon_update(svn_revnum_t old_rev,
     {
       if (new_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("changes destined for a directory arrived "
+                            _("Changes destined for a directory arrived "
                               "via the following revisions during update "
-                              "from r%ld to r%ld"), old_rev, new_rev);
+                              "from r%ld to r%ld."), old_rev, new_rev);
       else if (new_node_kind == svn_node_file ||
                new_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("changes destined for a file arrived "
+                            _("Changes destined for a file arrived "
                               "via the following revisions during update "
                               "from r%ld to r%ld"), old_rev, new_rev);
       else
         return apr_psprintf(result_pool,
-                            _("changes from the following revisions arrived "
+                            _("Changes from the following revisions arrived "
                               "during update from r%ld to r%ld"),
                             old_rev, new_rev);
     }
@@ -2608,20 +2646,20 @@ describe_incoming_edit_upon_update(svn_revnum_t old_rev,
     {
       if (new_node_kind == svn_node_dir)
         return apr_psprintf(result_pool,
-                            _("changes destined for a directory arrived "
+                            _("Changes destined for a directory arrived "
                               "via the following revisions during backwards "
                               "update from r%ld to r%ld"),
                             old_rev, new_rev);
       else if (new_node_kind == svn_node_file ||
                new_node_kind == svn_node_symlink)
         return apr_psprintf(result_pool,
-                            _("changes destined for a file arrived "
+                            _("Changes destined for a file arrived "
                               "via the following revisions during backwards "
                               "update from r%ld to r%ld"),
                             old_rev, new_rev);
       else
         return apr_psprintf(result_pool,
-                            _("changes from the following revisions arrived "
+                            _("Changes from the following revisions arrived "
                               "during backwards update from r%ld to r%ld"),
                             old_rev, new_rev);
     }
@@ -2635,21 +2673,21 @@ describe_incoming_edit_upon_switch(const char *new_repos_relpath,
 {
   if (new_node_kind == svn_node_dir)
     return apr_psprintf(result_pool,
-                        _("changes destined for a directory arrived via "
-                          "the following revisions during switch to "
-                          "^/%s@r%ld"),
+                        _("Changes destined for a directory arrived via "
+                          "the following revisions during switch to\n"
+                          "'^/%s@r%ld'"),
                         new_repos_relpath, new_rev);
   else if (new_node_kind == svn_node_file ||
            new_node_kind == svn_node_symlink)
     return apr_psprintf(result_pool,
-                        _("changes destined for a directory arrived via "
-                          "the following revisions during switch to "
-                          "^/%s@r%ld"),
+                        _("Changes destined for a directory arrived via "
+                          "the following revisions during switch to\n"
+                          "'^/%s@r%ld'"),
                         new_repos_relpath, new_rev);
   else
     return apr_psprintf(result_pool,
-                        _("changes from the following revisions arrived "
-                          "during switch to ^/%s@r%ld"),
+                        _("Changes from the following revisions arrived "
+                          "during switch to\n'^/%s@r%ld'"),
                         new_repos_relpath, new_rev);
 }
 
@@ -2662,7 +2700,7 @@ describe_incoming_edit_list_modified_revs(apr_array_header_t *edits,
   int num_revs_to_skip;
   static const int min_revs_for_skipping = 2;
   static const int max_revs_to_display = 8;
-  const char *s = "";
+  const char *s = " ";
   int i;
 
   if (edits->nelts <= max_revs_to_display)
@@ -2701,7 +2739,8 @@ describe_incoming_edit_list_modified_revs(apr_array_header_t *edits,
             {
               if (i == edits->nelts - (max_revs_to_display / 2))
                   s = apr_psprintf(result_pool,
-                                   _("%s [%d revisions omitted for brevity],"),
+                                   _("%s\n[%d revisions omitted for "
+                                     "brevity],\n"),
                                    s, num_revs_to_skip);
 
               s = apr_psprintf(result_pool, _("%s r%ld by %s%s"), s,
@@ -2780,21 +2819,21 @@ conflict_tree_get_description_incoming_edit(
             {
               if (new_node_kind == svn_node_dir)
                 action = apr_psprintf(scratch_pool,
-                                      _("changes destined for a directory "
-                                        "arrived during merge of "
-                                        "^/%s:%ld"),
+                                      _("Changes destined for a directory "
+                                        "arrived during merge of\n"
+                                        "'^/%s:%ld'."),
                                         new_repos_relpath, new_rev);
               else if (new_node_kind == svn_node_file ||
                        new_node_kind == svn_node_symlink)
                 action = apr_psprintf(scratch_pool,
-                                      _("changes destined for a file "
-                                        "arrived during merge of "
-                                        "^/%s:%ld"),
+                                      _("Changes destined for a file "
+                                        "arrived during merge of\n"
+                                        "'^/%s:%ld'."),
                                       new_repos_relpath, new_rev);
               else
                 action = apr_psprintf(scratch_pool,
-                                      _("changes arrived during merge of "
-                                        "^/%s:%ld"),
+                                      _("Changes arrived during merge of\n"
+                                        "'^/%s:%ld'."),
                                       new_repos_relpath, new_rev);
 
               *local_change_description = apr_pstrdup(result_pool, reason);
@@ -2806,22 +2845,22 @@ conflict_tree_get_description_incoming_edit(
             {
               if (new_node_kind == svn_node_dir)
                 action = apr_psprintf(scratch_pool,
-                                      _("changes destined for a directory "
+                                      _("Changes destined for a directory "
                                         "arrived via the following revisions "
-                                        "during merge of ^/%s:%ld-%ld"),
+                                        "during merge of\n'^/%s:%ld-%ld'"),
                                       new_repos_relpath, old_rev + 1, new_rev);
               else if (new_node_kind == svn_node_file ||
                        new_node_kind == svn_node_symlink)
                 action = apr_psprintf(scratch_pool,
-                                      _("changes destined for a file "
+                                      _("Changes destined for a file "
                                         "arrived via the following revisions "
-                                        "during merge of ^/%s:%ld-%ld"),
+                                        "during merge of\n'^/%s:%ld-%ld'"),
                                       new_repos_relpath, old_rev + 1, new_rev);
               else
                 action = apr_psprintf(scratch_pool,
-                                      _("changes from the following revisions "
-                                        "arrived during merge of "
-                                        "^/%s:%ld-%ld"),
+                                      _("Changes from the following revisions "
+                                        "arrived during merge of\n"
+                                        "'^/%s:%ld-%ld'"),
                                       new_repos_relpath, old_rev + 1, new_rev);
             }
         }
@@ -2831,21 +2870,21 @@ conflict_tree_get_description_incoming_edit(
             {
               if (new_node_kind == svn_node_dir)
                 action = apr_psprintf(scratch_pool,
-                                      _("changes destined for a directory "
-                                        "arrived during reverse-merge of "
-                                        "^/%s:%ld"),
+                                      _("Changes destined for a directory "
+                                        "arrived during reverse-merge of\n"
+                                        "'^/%s:%ld'."),
                                       new_repos_relpath, old_rev);
               else if (new_node_kind == svn_node_file ||
                        new_node_kind == svn_node_symlink)
                 action = apr_psprintf(scratch_pool,
-                                      _("changes destined for a file "
-                                        "arrived during reverse-merge of "
-                                        "^/%s:%ld"),
+                                      _("Changes destined for a file "
+                                        "arrived during reverse-merge of\n"
+                                        "'^/%s:%ld'."),
                                       new_repos_relpath, old_rev);
               else
                 action = apr_psprintf(scratch_pool,
-                                      _("changes arrived during reverse-merge "
-                                        "of ^/%s:%ld"),
+                                      _("Changes arrived during reverse-merge "
+                                        "of\n'^/%s:%ld'."),
                                       new_repos_relpath, old_rev);
 
               *local_change_description = apr_pstrdup(result_pool, reason);
@@ -2857,31 +2896,31 @@ conflict_tree_get_description_incoming_edit(
             {
               if (new_node_kind == svn_node_dir)
                 action = apr_psprintf(scratch_pool,
-                                      _("changes destined for a directory "
+                                      _("Changes destined for a directory "
                                         "arrived via the following revisions "
-                                        "during reverse-merge of "
-                                        "^/%s:%ld-%ld"),
+                                        "during reverse-merge of\n"
+                                        "'^/%s:%ld-%ld'"),
                                       new_repos_relpath, new_rev + 1, old_rev);
               else if (new_node_kind == svn_node_file ||
                        new_node_kind == svn_node_symlink)
                 action = apr_psprintf(scratch_pool,
-                                      _("changes destined for a file "
+                                      _("Changes destined for a file "
                                         "arrived via the following revisions "
-                                        "during reverse-merge of "
-                                        "^/%s:%ld-%ld"),
+                                        "during reverse-merge of\n"
+                                        "'^/%s:%ld-%ld'"),
                                       new_repos_relpath, new_rev + 1, old_rev);
                 
               else
                 action = apr_psprintf(scratch_pool,
-                                      _("changes from the following revisions "
-                                        "arrived during reverse-merge of "
-                                        "^/%s:%ld-%ld"),
+                                      _("Changes from the following revisions "
+                                        "arrived during reverse-merge of\n"
+                                        "'^/%s:%ld-%ld'"),
                                       new_repos_relpath, new_rev + 1, old_rev);
             }
         }
     }
 
-  action = apr_psprintf(scratch_pool, "%s:%s", action,
+  action = apr_psprintf(scratch_pool, "%s:\n%s", action,
                         describe_incoming_edit_list_modified_revs(
                           edits, scratch_pool));
   *local_change_description = apr_pstrdup(result_pool, reason);
