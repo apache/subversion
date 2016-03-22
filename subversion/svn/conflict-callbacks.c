@@ -1441,12 +1441,11 @@ handle_tree_conflict(svn_boolean_t *resolved,
            conflict, scratch_pool, scratch_pool));
   SVN_ERR(svn_cmdline_fprintf(
                stderr, scratch_pool,
-               _("Tree conflict on '%s'\n"
-                 "- Local change:\n%s\n"
-                 "- Incoming change:\n%s\n"),
+               _("Tree conflict on '%s':\n"
+                 "\n%s\n%s\n\n"),
                svn_cl__local_style_skip_ancestor(path_prefix,
                  svn_client_conflict_get_local_abspath(conflict), scratch_pool),
-               local_change_description, incoming_change_description));
+               incoming_change_description, local_change_description));
 
   SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL, conflict,
                                              scratch_pool, scratch_pool));
