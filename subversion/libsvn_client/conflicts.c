@@ -51,7 +51,8 @@
 
 /* Describe a tree conflict. */
 typedef svn_error_t *(*tree_conflict_get_description_func_t)(
-  const char **description,
+  const char **local_change_description,
+  const char **incoming_change_description,
   svn_client_conflict_t *conflict,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
@@ -730,7 +731,8 @@ svn_client_conflict_prop_get_description(const char **description,
 
 /* Implements tree_conflict_get_description_func_t. */
 static svn_error_t *
-conflict_tree_get_description_generic(const char **description,
+conflict_tree_get_description_generic(const char **local_change_description,
+                                      const char **incoming_change_description,
                                       svn_client_conflict_t *conflict,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool)
@@ -776,23 +778,24 @@ conflict_tree_get_description_generic(const char **description,
 
   if (action && reason)
     {
-      *description = apr_psprintf(result_pool, _("%s, %s %s"),
-                                  reason, action, operation);
+      *local_change_description = apr_pstrdup(result_pool, reason);
+      *incoming_change_description = apr_pstrdup(result_pool, action);
     }
   else
     {
       /* A catch-all message for very rare or nominally impossible cases.
          It will not be pretty, but is closer to an internal error than
          an ordinary user-facing string. */
-      *description = apr_psprintf(result_pool,
-                                  _("local: %s %s incoming: %s %s %s"),
-                                  svn_node_kind_to_word(conflict_node_kind),
-                                  svn_token__to_word(map_conflict_reason,
-                                                     conflict_reason),
-                                  svn_node_kind_to_word(incoming_kind),
-                                  svn_token__to_word(map_conflict_action,
-                                                     conflict_action),
-                                  operation);
+      *local_change_description = apr_psprintf(result_pool,
+                                    _("local: %s %s"),
+                                    svn_node_kind_to_word(conflict_node_kind),
+                                    svn_token__to_word(map_conflict_reason,
+                                                       conflict_reason));
+      *incoming_change_description = apr_psprintf(result_pool,
+                                       _("incoming: %s %s"),
+                                       svn_node_kind_to_word(incoming_kind),
+                                       svn_token__to_word(map_conflict_action,
+                                                          conflict_action));
     }
   return SVN_NO_ERROR;
 }
@@ -1344,10 +1347,12 @@ describe_incoming_reverse_addition_upon_merge(
 
 /* Implements tree_conflict_get_description_func_t. */
 static svn_error_t *
-conflict_tree_get_description_incoming_delete(const char **description,
-                                              svn_client_conflict_t *conflict,
-                                              apr_pool_t *result_pool,
-                                              apr_pool_t *scratch_pool)
+conflict_tree_get_description_incoming_delete(
+  const char **local_change_description,
+  const char **incoming_change_description,
+  svn_client_conflict_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
 {
   const char *action, *reason;
   svn_node_kind_t victim_node_kind;
@@ -1360,20 +1365,20 @@ conflict_tree_get_description_incoming_delete(const char **description,
   struct conflict_tree_incoming_delete_details *details;
 
   if (conflict->tree_conflict_details == NULL)
-    return svn_error_trace(conflict_tree_get_description_generic(description,
-                                                                 conflict,
-                                                                 result_pool,
-                                                                 scratch_pool));
+    return svn_error_trace(conflict_tree_get_description_generic(
+                             local_change_description,
+                             incoming_change_description,
+                             conflict, result_pool, scratch_pool));
 
   local_change = svn_client_conflict_get_local_change(conflict);
   conflict_operation = svn_client_conflict_get_operation(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
   SVN_ERR(describe_local_change(&reason, conflict, scratch_pool, scratch_pool));
   if (reason == NULL)
-    return svn_error_trace(conflict_tree_get_description_generic(description,
-                                                                 conflict,
-                                                                 result_pool,
-                                                                 scratch_pool));
+    return svn_error_trace(conflict_tree_get_description_generic(
+                             local_change_description,
+                             incoming_change_description,
+                             conflict, result_pool, scratch_pool));
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
             &old_repos_relpath, &old_rev, NULL, conflict, scratch_pool,
             scratch_pool));
@@ -1442,7 +1447,9 @@ conflict_tree_get_description_incoming_delete(const char **description,
         }
       }
 
-  *description = apr_psprintf(result_pool, _("%s, %s"), reason, action);
+  *local_change_description = apr_pstrdup(result_pool, reason);
+  *incoming_change_description = apr_pstrdup(result_pool, action);
+
   return SVN_NO_ERROR;
 }
 
@@ -2293,10 +2300,12 @@ describe_incoming_reverse_deletion_upon_merge(
 
 /* Implements tree_conflict_get_description_func_t. */
 static svn_error_t *
-conflict_tree_get_description_incoming_add(const char **description,
-                                           svn_client_conflict_t *conflict,
-                                           apr_pool_t *result_pool,
-                                           apr_pool_t *scratch_pool)
+conflict_tree_get_description_incoming_add(
+  const char **local_change_description,
+  const char **incoming_change_description,
+  svn_client_conflict_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
 {
   const char *action, *reason;
   svn_node_kind_t victim_node_kind;
@@ -2311,20 +2320,21 @@ conflict_tree_get_description_incoming_add(const char **description,
   struct conflict_tree_incoming_add_details *details;
 
   if (conflict->tree_conflict_details == NULL)
-    return svn_error_trace(conflict_tree_get_description_generic(description,
-                                                                 conflict,
-                                                                 result_pool,
-                                                                 scratch_pool));
+    return svn_error_trace(conflict_tree_get_description_generic(
+                             local_change_description,
+                             incoming_change_description,
+                             conflict, result_pool, scratch_pool));
 
   local_change = svn_client_conflict_get_local_change(conflict);
   conflict_operation = svn_client_conflict_get_operation(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
   SVN_ERR(describe_local_change(&reason, conflict, scratch_pool, scratch_pool));
   if (reason == NULL)
-    return svn_error_trace(conflict_tree_get_description_generic(description,
-                                                                 conflict,
-                                                                 result_pool,
-                                                                 scratch_pool));
+    return svn_error_trace(conflict_tree_get_description_generic(
+                             local_change_description,
+                             incoming_change_description,
+                             conflict, result_pool, scratch_pool));
+
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
             &old_repos_relpath, &old_rev, &old_node_kind, conflict,
             scratch_pool, scratch_pool));
@@ -2364,7 +2374,9 @@ conflict_tree_get_description_incoming_add(const char **description,
                    old_rev, new_rev, result_pool);
     }
 
-  *description = apr_psprintf(result_pool, _("%s, %s"), reason, action);
+  *local_change_description = apr_pstrdup(result_pool, reason);
+  *incoming_change_description = apr_pstrdup(result_pool, action);
+
   return SVN_NO_ERROR;
 }
 
@@ -2708,10 +2720,12 @@ describe_incoming_edit_list_modified_revs(apr_array_header_t *edits,
 
 /* Implements tree_conflict_get_description_func_t. */
 static svn_error_t *
-conflict_tree_get_description_incoming_edit(const char **description,
-                                            svn_client_conflict_t *conflict,
-                                            apr_pool_t *result_pool,
-                                            apr_pool_t *scratch_pool)
+conflict_tree_get_description_incoming_edit(
+  const char **local_change_description,
+  const char **incoming_change_description,
+  svn_client_conflict_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
 {
   const char *action, *reason;
   svn_node_kind_t victim_node_kind;
@@ -2726,10 +2740,10 @@ conflict_tree_get_description_incoming_edit(const char **description,
   apr_array_header_t *edits;
 
   if (conflict->tree_conflict_details == NULL)
-    return svn_error_trace(conflict_tree_get_description_generic(description,
-                                                                 conflict,
-                                                                 result_pool,
-                                                                 scratch_pool));
+    return svn_error_trace(conflict_tree_get_description_generic(
+                             local_change_description,
+                             incoming_change_description,
+                             conflict, result_pool, scratch_pool));
 
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
             &old_repos_relpath, &old_rev, &old_node_kind, conflict,
@@ -2743,10 +2757,10 @@ conflict_tree_get_description_incoming_edit(const char **description,
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
   SVN_ERR(describe_local_change(&reason, conflict, scratch_pool, scratch_pool));
   if (reason == NULL)
-    return svn_error_trace(conflict_tree_get_description_generic(description,
-                                                                 conflict,
-                                                                 result_pool,
-                                                                 scratch_pool));
+    return svn_error_trace(conflict_tree_get_description_generic(
+                             local_change_description,
+                             incoming_change_description,
+                             conflict, result_pool, scratch_pool));
 
   edits = conflict->tree_conflict_details;
 
@@ -2783,8 +2797,9 @@ conflict_tree_get_description_incoming_edit(const char **description,
                                         "^/%s:%ld"),
                                       new_repos_relpath, new_rev);
 
-              *description = apr_psprintf(result_pool, _("%s, %s"),
-                                           reason, action);
+              *local_change_description = apr_pstrdup(result_pool, reason);
+              *incoming_change_description = apr_pstrdup(result_pool, action);
+
               return SVN_NO_ERROR;
             }
           else
@@ -2833,8 +2848,9 @@ conflict_tree_get_description_incoming_edit(const char **description,
                                         "of ^/%s:%ld"),
                                       new_repos_relpath, old_rev);
 
-              *description = apr_psprintf(result_pool, _("%s, %s"),
-                                           reason, action);
+              *local_change_description = apr_pstrdup(result_pool, reason);
+              *incoming_change_description = apr_pstrdup(result_pool, action);
+
               return SVN_NO_ERROR;
             }
           else
@@ -2868,18 +2884,24 @@ conflict_tree_get_description_incoming_edit(const char **description,
   action = apr_psprintf(scratch_pool, "%s:%s", action,
                         describe_incoming_edit_list_modified_revs(
                           edits, scratch_pool));
-  *description = apr_psprintf(result_pool, _("%s, %s"), reason, action);
+  *local_change_description = apr_pstrdup(result_pool, reason);
+  *incoming_change_description = apr_pstrdup(result_pool, action);
+
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_client_conflict_tree_get_description(const char **description,
-                                         svn_client_conflict_t *conflict,
-                                         apr_pool_t *result_pool,
-                                         apr_pool_t *scratch_pool)
+svn_client_conflict_tree_get_description(
+  const char **local_change_description,
+  const char **incoming_change_description,
+  svn_client_conflict_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
 {
   return svn_error_trace(conflict->tree_conflict_get_description_func(
-                           description, conflict, result_pool, scratch_pool));
+                           local_change_description,
+                           incoming_change_description,
+                           conflict, result_pool, scratch_pool));
 }
 
 void

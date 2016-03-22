@@ -4495,18 +4495,40 @@ svn_client_conflict_prop_get_description(const char **description,
  * Additionally, the description may be localized to the language used
  * by the current locale.
  *
+ * While client implementors are free to enhance descriptions by adding
+ * additional information to the text, or break up very long lines for
+ * formatting purposes, there is no syntax defined for descriptions, and
+ * implementors should not rely on any particular parts of descriptions
+ * to remain stable over time, apart from what is stated below.
+ * Descriptions may or may not form complete sentences. They may contain
+ * paths relative to the repository root; such paths always start with "^/",
+ * and end with either a peg revision (e.g. "@100") or a colon followed by
+ * a range of revisions (as in svn:mergeinfo, e.g. ":100-200").
+ * Paths may appear on a line of their own to avoid overlong lines.
+ * Any revision numbers mentioned elsewhere in the description are
+ * prefixed with the letter 'r' (e.g. "r99").
+ *
+ * The description has two parts: One describing the "local change" which
+ * occured in the working copy or perhaps a branch (the merge target).
+ * The other part describes the "incoming change" which conflicts with
+ * the local change. Both parts are provided independently to allow for
+ * some flexibility when displaying the description.
+ *
  * By default, the description is based only on information available in
  * the working copy. If svn_client_conflict_tree_get_details() was already
  * called for @a conflict, the description might also contain useful
- * information obtained from the repository.
+ * information obtained from the repository and provide for a much better
+ * user experience.
  *
  * @since New in 1.10.
  */
 svn_error_t *
-svn_client_conflict_tree_get_description(const char **description,
-                                         svn_client_conflict_t *conflict,
-                                         apr_pool_t *result_pool,
-                                         apr_pool_t *scratch_pool);
+svn_client_conflict_tree_get_description(
+  const char **local_change_description,
+  const char **incoming_change_description,
+  svn_client_conflict_t *conflict,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
 
 /**
  * Set @a *options to an array of pointers to svn_client_conflict_option_t

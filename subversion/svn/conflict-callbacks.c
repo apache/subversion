@@ -1419,7 +1419,8 @@ handle_tree_conflict(svn_boolean_t *resolved,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool)
 {
-  const char *description;
+  const char *local_change_description;
+  const char *incoming_change_description;
   const char *src_left_version;
   const char *src_right_version;
   const char *repos_root_url;
@@ -1436,13 +1437,14 @@ handle_tree_conflict(svn_boolean_t *resolved,
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, scratch_pool));
 
   SVN_ERR(svn_client_conflict_tree_get_description(
-           &description, conflict, scratch_pool, scratch_pool));
+           &local_change_description, &incoming_change_description,
+           conflict, scratch_pool, scratch_pool));
   SVN_ERR(svn_cmdline_fprintf(
                stderr, scratch_pool,
-               _("Tree conflict on '%s'\n   > %s\n"),
+               _("Tree conflict on '%s'\n   > %s, %s\n"),
                svn_cl__local_style_skip_ancestor(path_prefix,
                  svn_client_conflict_get_local_abspath(conflict), scratch_pool),
-               description));
+               local_change_description, incoming_change_description));
 
   SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL, conflict,
                                              scratch_pool, scratch_pool));
