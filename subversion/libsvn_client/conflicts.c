@@ -231,94 +231,372 @@ static const svn_token_map_t map_conflict_reason[] =
 
 /* Return a localised string representation of the local part of a conflict;
    NULL for non-localised odd cases. */
-static const char *
-local_reason_str(svn_node_kind_t kind, svn_wc_conflict_reason_t reason,
-                 svn_wc_operation_t operation)
+static svn_error_t *
+describe_local_change(const char **description,
+                      svn_client_conflict_t *conflict,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
-  switch (kind)
+  svn_wc_conflict_reason_t local_change;
+  svn_wc_operation_t operation;
+  svn_node_kind_t victim_node_kind;
+
+  local_change = svn_client_conflict_get_local_change(conflict);
+  operation = svn_client_conflict_get_operation(conflict);
+  victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
+
+  *description = NULL;
+
+  switch (victim_node_kind)
     {
       case svn_node_file:
       case svn_node_symlink:
-        switch (reason)
+        switch (local_change)
           {
-          case svn_wc_conflict_reason_edited:
-            return _("local file edit");
-          case svn_wc_conflict_reason_obstructed:
-            return _("local file obstruction");
-          case svn_wc_conflict_reason_deleted:
-            return _("local file delete");
-          case svn_wc_conflict_reason_missing:
-            if (operation == svn_wc_operation_merge)
-              return _("local file missing or deleted or moved away");
-            else
-              return _("local file missing");
-          case svn_wc_conflict_reason_unversioned:
-            return _("local file unversioned");
-          case svn_wc_conflict_reason_added:
-            return _("local file add");
-          case svn_wc_conflict_reason_replaced:
-            return _("local file replace");
-          case svn_wc_conflict_reason_moved_away:
-            return _("local file moved away");
-          case svn_wc_conflict_reason_moved_here:
-            return _("local file moved here");
+            case svn_wc_conflict_reason_edited:
+              if (operation == svn_wc_operation_update ||
+                  operation == svn_wc_operation_switch)
+                *description = _("a file containing uncommitted changes was "
+                                 "found in the working copy");
+              else if (operation == svn_wc_operation_merge)
+                *description = _("a file which differs from the corresponding "
+                                 "file on the merge source branch was found "
+                                 "in the working copy");
+              break;
+            case svn_wc_conflict_reason_obstructed:
+              *description = _("an unversioned file was found in the working "
+                               "copy where a versioned item was expected");
+              break;
+            case svn_wc_conflict_reason_unversioned:
+              *description = _("an unversioned file was found in the working "
+                               "copy");
+              break;
+            case svn_wc_conflict_reason_deleted:
+              *description = _("a deleted file was found in the working copy");
+              break;
+            case svn_wc_conflict_reason_missing:
+              if (operation == svn_wc_operation_update ||
+                  operation == svn_wc_operation_switch)
+                *description = _("no such file was found in the working copy");
+              else if (operation == svn_wc_operation_merge)
+                {
+                  /* ### display deleted revision */
+                  *description = _("no such file was found in the merge target "
+                                   "working copy; the file may have been "
+                                   "deleted or moved away in the "
+                                   "repository's history");
+                }
+              break;
+            case svn_wc_conflict_reason_added:
+            case svn_wc_conflict_reason_replaced:
+              {
+                /* ### show more details about copies or replacements? */
+                *description = _("a file scheduled to be added to the "
+                                 "repository in the next commit was found in "
+                                 "the working copy");
+              }
+              break;
+            case svn_wc_conflict_reason_moved_away:
+              {
+                const char *moved_to_abspath;
+
+                SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, NULL, 
+                                                    conflict->ctx->wc_ctx,
+                                                    conflict->local_abspath,
+                                                    scratch_pool,
+                                                    scratch_pool));
+                if (operation == svn_wc_operation_update ||
+                    operation == svn_wc_operation_switch)
+                  {
+                    if (moved_to_abspath == NULL)
+                      {
+                        /* The move no longer exists. */
+                        *description = _("the file had been moved away at the "
+                                         "time this conflict was recorded");
+                      }
+                    else
+                      *description = apr_psprintf(
+                                       result_pool,
+                                       _("the file was moved away to '%s'"),
+                                       svn_dirent_local_style(moved_to_abspath,
+                                                              scratch_pool));
+                  }
+                else if (operation == svn_wc_operation_merge)
+                  {
+                    if (moved_to_abspath == NULL)
+                      {
+                        /* The move probably happened in branch history.
+                         * This case cannot happen until we detect incoming
+                         * moves, which we currently don't do. */
+                        /* ### find deleted/moved revision? */
+                        *description = _("the file had been moved away at the "
+                                         "time this conflict was recorded");
+                      }
+                    else
+                      {
+                        /* This is a local move in the working copy. */
+                        *description = apr_psprintf(
+                                         result_pool,
+                                         _("the file was moved away to '%s'"),
+                                         svn_dirent_local_style(
+                                           moved_to_abspath, scratch_pool));
+                      }
+                  }
+                break;
+              }
+            case svn_wc_conflict_reason_moved_here:
+              {
+                const char *moved_from_abspath;
+
+                SVN_ERR(svn_wc__node_was_moved_here(&moved_from_abspath, NULL, 
+                                                    conflict->ctx->wc_ctx,
+                                                    conflict->local_abspath,
+                                                    scratch_pool,
+                                                    scratch_pool));
+                if (operation == svn_wc_operation_update ||
+                    operation == svn_wc_operation_switch)
+                  {
+                    if (moved_from_abspath == NULL)
+                      {
+                        /* The move no longer exists. */
+                        *description = _("a file had been moved here at the "
+                                         "time this conflict was recorded");
+                      }
+                    else
+                      *description = apr_psprintf(
+                                       result_pool,
+                                       _("a file was moved here from '%s'"),
+                                       svn_dirent_local_style(moved_from_abspath,
+                                                              scratch_pool));
+                  }
+                else if (operation == svn_wc_operation_merge)
+                  {
+                    if (moved_from_abspath == NULL)
+                      {
+                        /* The move probably happened in branch history.
+                         * This case cannot happen until we detect incoming
+                         * moves, which we currently don't do. */
+                        /* ### find deleted/moved revision? */
+                        *description = _("a file had been moved here at the "
+                                         "time this conflict was recorded");
+                      }
+                    else
+                      {
+                        /* This is a local move in the working copy. */
+                        *description = apr_psprintf(
+                                         result_pool,
+                                         _("a file was moved here from '%s'"),
+                                         svn_dirent_local_style(
+                                           moved_from_abspath, scratch_pool));
+                      }
+                  }
+                break;
+              }
           }
         break;
       case svn_node_dir:
-        switch (reason)
+        switch (local_change)
           {
-          case svn_wc_conflict_reason_edited:
-            return _("local dir edit");
-          case svn_wc_conflict_reason_obstructed:
-            return _("local dir obstruction");
-          case svn_wc_conflict_reason_deleted:
-            return _("local dir delete");
-          case svn_wc_conflict_reason_missing:
-            if (operation == svn_wc_operation_merge)
-              return _("local dir missing or deleted or moved away");
-            else
-              return _("local dir missing");
-          case svn_wc_conflict_reason_unversioned:
-            return _("local dir unversioned");
-          case svn_wc_conflict_reason_added:
-            return _("local dir add");
-          case svn_wc_conflict_reason_replaced:
-            return _("local dir replace");
-          case svn_wc_conflict_reason_moved_away:
-            return _("local dir moved away");
-          case svn_wc_conflict_reason_moved_here:
-            return _("local dir moved here");
+            case svn_wc_conflict_reason_edited:
+              if (operation == svn_wc_operation_update ||
+                  operation == svn_wc_operation_switch)
+                *description = _("a directory containing uncommitted changes "
+                                 "was found in the working copy");
+              else if (operation == svn_wc_operation_merge)
+                *description = _("a directory which differs from the "
+                                 "corresponding directory on the merge source "
+                                 "branch was found in the working copy");
+              break;
+            case svn_wc_conflict_reason_obstructed:
+              *description = _("an unversioned directory was found in the "
+                               "working copy where a versioned item was "
+                               "expected");
+              break;
+            case svn_wc_conflict_reason_unversioned:
+              *description = _("an unversioned directory was found in the "
+                               "working copy");
+              break;
+            case svn_wc_conflict_reason_deleted:
+              *description = _("a deleted directory was found in the "
+                               "working copy");
+              break;
+            case svn_wc_conflict_reason_missing:
+              if (operation == svn_wc_operation_update ||
+                  operation == svn_wc_operation_switch)
+                *description = _("no such directory was found in the working "
+                                 "copy");
+              else if (operation == svn_wc_operation_merge)
+                {
+                  /* ### display deleted revision */
+                  *description = _("no such directory was found in the merge "
+                                   "target working copy; the directory may "
+                                   "have been deleted or moved away in the "
+                                   "repository's history");
+                }
+              break;
+            case svn_wc_conflict_reason_added:
+            case svn_wc_conflict_reason_replaced:
+              {
+                /* ### show more details about copies or replacements? */
+                *description = _("a directory scheduled to be added to the "
+                                 "repository in the next commit was found in "
+                                 "the working copy");
+              }
+              break;
+            case svn_wc_conflict_reason_moved_away:
+              {
+                const char *moved_to_abspath;
+
+                SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, NULL, 
+                                                    conflict->ctx->wc_ctx,
+                                                    conflict->local_abspath,
+                                                    scratch_pool,
+                                                    scratch_pool));
+                if (operation == svn_wc_operation_update ||
+                    operation == svn_wc_operation_switch)
+                  {
+                    if (moved_to_abspath == NULL)
+                      {
+                        /* The move no longer exists. */
+                        *description = _("the directory had been moved away "
+                                         "at the time this conflict was "
+                                         "recorded");
+                      }
+                    else
+                      *description = apr_psprintf(
+                                       result_pool,
+                                       _("the directory was moved away to "
+                                         "'%s'"),
+                                       svn_dirent_local_style(moved_to_abspath,
+                                                              scratch_pool));
+                  }
+                else if (operation == svn_wc_operation_merge)
+                  {
+                    if (moved_to_abspath == NULL)
+                      {
+                        /* The move probably happened in branch history.
+                         * This case cannot happen until we detect incoming
+                         * moves, which we currently don't do. */
+                        /* ### find deleted/moved revision? */
+                        *description = _("the directory had been moved away "
+                                         "at the time this conflict was "
+                                         "recorded");
+                      }
+                    else
+                      {
+                        /* This is a local move in the working copy. */
+                        *description = apr_psprintf(
+                                         result_pool,
+                                         _("the directory was moved away to "
+                                           "'%s'"),
+                                         svn_dirent_local_style(
+                                           moved_to_abspath, scratch_pool));
+                      }
+                  }
+                }
+                break;
+            case svn_wc_conflict_reason_moved_here:
+              {
+                const char *moved_from_abspath;
+
+                SVN_ERR(svn_wc__node_was_moved_here(&moved_from_abspath, NULL, 
+                                                    conflict->ctx->wc_ctx,
+                                                    conflict->local_abspath,
+                                                    scratch_pool,
+                                                    scratch_pool));
+                if (operation == svn_wc_operation_update ||
+                    operation == svn_wc_operation_switch)
+                  {
+                    if (moved_from_abspath == NULL)
+                      {
+                        /* The move no longer exists. */
+                        *description = _("a directory had been moved here at "
+                                         "the time this conflict was recorded");
+                      }
+                    else
+                      *description = apr_psprintf(
+                                       result_pool,
+                                       _("a directory was moved here from "
+                                         "'%s'"),
+                                       svn_dirent_local_style(moved_from_abspath,
+                                                              scratch_pool));
+                  }
+                else if (operation == svn_wc_operation_merge)
+                  {
+                    if (moved_from_abspath == NULL)
+                      {
+                        /* The move probably happened in branch history.
+                         * This case cannot happen until we detect incoming
+                         * moves, which we currently don't do. */
+                        /* ### find deleted/moved revision? */
+                        *description = _("a directory had been moved here at the "
+                                         "time this conflict was recorded");
+                      }
+                    else
+                      {
+                        /* This is a local move in the working copy. */
+                        *description = apr_psprintf(
+                                         result_pool,
+                                         _("a directory was moved here from '%s'"),
+                                         svn_dirent_local_style(
+                                           moved_from_abspath, scratch_pool));
+                      }
+                  }
+              }
           }
         break;
       case svn_node_none:
       case svn_node_unknown:
-        switch (reason)
+        switch (local_change)
           {
           case svn_wc_conflict_reason_edited:
-            return _("local edit");
+            *description = _("an item containing uncommitted changes was "
+                             "found in the working copy");
+            break;
           case svn_wc_conflict_reason_obstructed:
-            return _("local obstruction");
+            *description = _("an unversioned item was found in the working "
+                             "copy where a versioned item was expected");
+            break;
           case svn_wc_conflict_reason_deleted:
-            return _("local delete");
+            *description = _("a deleted item was found in the working copy");
+            break;
           case svn_wc_conflict_reason_missing:
-            if (operation == svn_wc_operation_merge)
-              return _("local missing or deleted or moved away");
-            else
-              return _("local missing");
+            if (operation == svn_wc_operation_update ||
+                operation == svn_wc_operation_switch)
+              *description = _("no such file or directory was found in the "
+                               "working copy");
+            else if (operation == svn_wc_operation_merge)
+              {
+                /* ### display deleted revision */
+                *description = _("no such file or directory was found in the "
+                                 "merge target working copy; the item may "
+                                 "have been deleted or moved away in the "
+                                 "repository's history");
+              }
+            break;
           case svn_wc_conflict_reason_unversioned:
-            return _("local unversioned");
+            *description = _("an unversioned item was found in the working "
+                             "copy");
+            break;
           case svn_wc_conflict_reason_added:
-            return _("local add");
           case svn_wc_conflict_reason_replaced:
-            return _("local replace");
+            *description = _("an item scheduled to be added to the repository "
+                             "in the next commit was found in the working "
+                             "copy");
+            break;
           case svn_wc_conflict_reason_moved_away:
-            return _("local moved away");
+            *description = _("the item had been moved away at the "
+                             "time this conflict was recorded");
+            break;
           case svn_wc_conflict_reason_moved_here:
-            return _("local moved here");
+            *description = _("an item had been moved here at the "
+                             "time this conflict was recorded");
+            break;
           }
         break;
     }
-  return NULL;
+
+  return SVN_NO_ERROR;
 }
 
 /* Return a localised string representation of the incoming part of a
@@ -491,8 +769,7 @@ conflict_tree_get_description_generic(const char **description,
                 scratch_pool));
     }
 
-  reason = local_reason_str(conflict_node_kind, conflict_reason,
-                            conflict_operation);
+  SVN_ERR(describe_local_change(&reason, conflict, scratch_pool, scratch_pool));
   action = incoming_action_str(incoming_kind, conflict_action);
   operation = operation_str(conflict_operation);
   SVN_ERR_ASSERT(operation);
@@ -1091,7 +1368,7 @@ conflict_tree_get_description_incoming_delete(const char **description,
   local_change = svn_client_conflict_get_local_change(conflict);
   conflict_operation = svn_client_conflict_get_operation(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
-  reason = local_reason_str(victim_node_kind, local_change, conflict_operation);
+  SVN_ERR(describe_local_change(&reason, conflict, scratch_pool, scratch_pool));
   if (reason == NULL)
     return svn_error_trace(conflict_tree_get_description_generic(description,
                                                                  conflict,
@@ -2042,7 +2319,7 @@ conflict_tree_get_description_incoming_add(const char **description,
   local_change = svn_client_conflict_get_local_change(conflict);
   conflict_operation = svn_client_conflict_get_operation(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
-  reason = local_reason_str(victim_node_kind, local_change, conflict_operation);
+  SVN_ERR(describe_local_change(&reason, conflict, scratch_pool, scratch_pool));
   if (reason == NULL)
     return svn_error_trace(conflict_tree_get_description_generic(description,
                                                                  conflict,
@@ -2464,7 +2741,7 @@ conflict_tree_get_description_incoming_edit(const char **description,
   local_change = svn_client_conflict_get_local_change(conflict);
   conflict_operation = svn_client_conflict_get_operation(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
-  reason = local_reason_str(victim_node_kind, local_change, conflict_operation);
+  SVN_ERR(describe_local_change(&reason, conflict, scratch_pool, scratch_pool));
   if (reason == NULL)
     return svn_error_trace(conflict_tree_get_description_generic(description,
                                                                  conflict,
