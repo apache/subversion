@@ -317,12 +317,24 @@ describe_local_change(const char **description,
                                          "conflict was recorded.");
                       }
                     else
-                      *description = apr_psprintf(
-                                       result_pool,
-                                       _("The file in the working copy was "
-                                         "moved away to\n'%s'."),
-                                       svn_dirent_local_style(moved_to_abspath,
-                                                              scratch_pool));
+                      {
+                        const char *wcroot_abspath;
+
+                        SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
+                                                   conflict->ctx->wc_ctx,
+                                                   conflict->local_abspath,
+                                                   scratch_pool,
+                                                   scratch_pool));
+                        *description = apr_psprintf(
+                                         result_pool,
+                                         _("The file in the working copy was "
+                                           "moved away to\n'%s'."),
+                                         svn_dirent_local_style(
+                                           svn_dirent_skip_ancestor(
+                                             wcroot_abspath,
+                                             moved_to_abspath),
+                                           scratch_pool));
+                      }
                   }
                 else if (operation == svn_wc_operation_merge)
                   {
@@ -339,12 +351,22 @@ describe_local_change(const char **description,
                     else
                       {
                         /* This is a local move in the working copy. */
+                        const char *wcroot_abspath;
+
+                        SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
+                                                   conflict->ctx->wc_ctx,
+                                                   conflict->local_abspath,
+                                                   scratch_pool,
+                                                   scratch_pool));
                         *description = apr_psprintf(
                                          result_pool,
                                          _("The file in the working copy was "
                                            "moved away to\n'%s'."),
                                          svn_dirent_local_style(
-                                           moved_to_abspath, scratch_pool));
+                                           svn_dirent_skip_ancestor(
+                                             wcroot_abspath,
+                                             moved_to_abspath),
+                                           scratch_pool));
                       }
                   }
                 break;
@@ -369,12 +391,24 @@ describe_local_change(const char **description,
                                          "conflict was recorded.");
                       }
                     else
-                      *description = apr_psprintf(
-                                       result_pool,
-                                       _("A file was moved here in the working "
-                                         "copy from\n'%s'."),
-                                       svn_dirent_local_style(
-                                         moved_from_abspath, scratch_pool));
+                      {
+                        const char *wcroot_abspath;
+
+                        SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
+                                                   conflict->ctx->wc_ctx,
+                                                   conflict->local_abspath,
+                                                   scratch_pool,
+                                                   scratch_pool));
+                        *description = apr_psprintf(
+                                         result_pool,
+                                         _("A file was moved here in the "
+                                           "working copy from\n'%s'."),
+                                         svn_dirent_local_style(
+                                           svn_dirent_skip_ancestor(
+                                             wcroot_abspath,
+                                             moved_from_abspath),
+                                           scratch_pool));
+                      }
                   }
                 else if (operation == svn_wc_operation_merge)
                   {
@@ -390,13 +424,23 @@ describe_local_change(const char **description,
                       }
                     else
                       {
+                        const char *wcroot_abspath;
+
+                        SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
+                                                   conflict->ctx->wc_ctx,
+                                                   conflict->local_abspath,
+                                                   scratch_pool,
+                                                   scratch_pool));
                         /* This is a local move in the working copy. */
                         *description = apr_psprintf(
                                          result_pool,
                                          _("A file was moved here in the "
                                            "working copy from\n'%s'."),
                                          svn_dirent_local_style(
-                                           moved_from_abspath, scratch_pool));
+                                           svn_dirent_skip_ancestor(
+                                             wcroot_abspath,
+                                             moved_from_abspath),
+                                           scratch_pool));
                       }
                   }
                 break;
@@ -472,12 +516,24 @@ describe_local_change(const char **description,
                                          "this conflict was recorded.");
                       }
                     else
-                      *description = apr_psprintf(
-                                       result_pool,
-                                       _("The directory in the working copy "
-                                         "was moved away to\n'%s'."),
-                                       svn_dirent_local_style(moved_to_abspath,
-                                                              scratch_pool));
+                      {
+                        const char *wcroot_abspath;
+
+                        SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
+                                                   conflict->ctx->wc_ctx,
+                                                   conflict->local_abspath,
+                                                   scratch_pool,
+                                                   scratch_pool));
+                        *description = apr_psprintf(
+                                         result_pool,
+                                         _("The directory in the working copy "
+                                           "was moved away to\n'%s'."),
+                                         svn_dirent_local_style(
+                                           svn_dirent_skip_ancestor(
+                                             wcroot_abspath,
+                                             moved_to_abspath),
+                                           scratch_pool));
+                      }
                   }
                 else if (operation == svn_wc_operation_merge)
                   {
@@ -494,12 +550,22 @@ describe_local_change(const char **description,
                     else
                       {
                         /* This is a local move in the working copy. */
+                        const char *wcroot_abspath;
+
+                        SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
+                                                   conflict->ctx->wc_ctx,
+                                                   conflict->local_abspath,
+                                                   scratch_pool,
+                                                   scratch_pool));
                         *description = apr_psprintf(
                                          result_pool,
                                          _("The directory was moved away to\n"
                                            "'%s'."),
                                          svn_dirent_local_style(
-                                           moved_to_abspath, scratch_pool));
+                                           svn_dirent_skip_ancestor(
+                                             wcroot_abspath,
+                                             moved_to_abspath),
+                                           scratch_pool));
                       }
                   }
                 }
@@ -524,12 +590,24 @@ describe_local_change(const char **description,
                                          "recorded.");
                       }
                     else
-                      *description = apr_psprintf(
-                                       result_pool,
-                                       _("A directory was moved here from\n"
-                                         "'%s'."),
-                                       svn_dirent_local_style(
-                                         moved_from_abspath, scratch_pool));
+                      {
+                        const char *wcroot_abspath;
+
+                        SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
+                                                   conflict->ctx->wc_ctx,
+                                                   conflict->local_abspath,
+                                                   scratch_pool,
+                                                   scratch_pool));
+                        *description = apr_psprintf(
+                                         result_pool,
+                                         _("A directory was moved here from\n"
+                                           "'%s'."),
+                                         svn_dirent_local_style(
+                                           svn_dirent_skip_ancestor(
+                                             wcroot_abspath,
+                                             moved_from_abspath),
+                                           scratch_pool));
+                      }
                   }
                 else if (operation == svn_wc_operation_merge)
                   {
@@ -546,12 +624,22 @@ describe_local_change(const char **description,
                     else
                       {
                         /* This is a local move in the working copy. */
+                        const char *wcroot_abspath;
+
+                        SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
+                                                   conflict->ctx->wc_ctx,
+                                                   conflict->local_abspath,
+                                                   scratch_pool,
+                                                   scratch_pool));
                         *description = apr_psprintf(
                                          result_pool,
                                          _("A directory was moved here in "
                                            "the working copy from\n'%s'."),
                                          svn_dirent_local_style(
-                                           moved_from_abspath, scratch_pool));
+                                           svn_dirent_skip_ancestor(
+                                             wcroot_abspath,
+                                             moved_from_abspath),
+                                           scratch_pool));
                       }
                   }
               }
