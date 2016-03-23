@@ -2792,7 +2792,7 @@ describe_incoming_edit_list_modified_revs(apr_array_header_t *edits,
                                           apr_pool_t *result_pool)
 {
   int num_revs_to_skip;
-  static const int min_revs_for_skipping = 2;
+  static const int min_revs_for_skipping = 5;
   static const int max_revs_to_display = 8;
   const char *s = "";
   int i;
