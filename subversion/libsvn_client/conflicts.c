@@ -312,13 +312,15 @@ describe_local_change(const char **description,
                     if (moved_to_abspath == NULL)
                       {
                         /* The move no longer exists. */
-                        *description = _("The file had been moved away at the "
-                                         "time this conflict was recorded.");
+                        *description = _("The file in the working copy had "
+                                         "been moved away at the time this "
+                                         "conflict was recorded.");
                       }
                     else
                       *description = apr_psprintf(
                                        result_pool,
-                                       _("The file was moved away to\n'%s'."),
+                                       _("The file in the working copy was "
+                                         "moved away to\n'%s'."),
                                        svn_dirent_local_style(moved_to_abspath,
                                                               scratch_pool));
                   }
@@ -330,16 +332,17 @@ describe_local_change(const char **description,
                          * This case cannot happen until we detect incoming
                          * moves, which we currently don't do. */
                         /* ### find deleted/moved revision? */
-                        *description = _("The file had been moved away at the "
-                                         "time this conflict was recorded.");
+                        *description = _("The file in the working copy had "
+                                         "been moved away at the time this "
+                                         "conflict was recorded.");
                       }
                     else
                       {
                         /* This is a local move in the working copy. */
                         *description = apr_psprintf(
                                          result_pool,
-                                         _("The file was moved away to\n"
-                                           "'%s'."),
+                                         _("The file in the working copy was "
+                                           "moved away to\n'%s'."),
                                          svn_dirent_local_style(
                                            moved_to_abspath, scratch_pool));
                       }
@@ -361,13 +364,15 @@ describe_local_change(const char **description,
                     if (moved_from_abspath == NULL)
                       {
                         /* The move no longer exists. */
-                        *description = _("A file had been moved here at the "
-                                         "time this conflict was recorded.");
+                        *description = _("A file had been moved here in the "
+                                         "working copy at the time this "
+                                         "conflict was recorded.");
                       }
                     else
                       *description = apr_psprintf(
                                        result_pool,
-                                       _("A file was moved here from\n'%s'."),
+                                       _("A file was moved here in the working "
+                                         "copy from\n'%s'."),
                                        svn_dirent_local_style(
                                          moved_from_abspath, scratch_pool));
                   }
@@ -379,16 +384,17 @@ describe_local_change(const char **description,
                          * This case cannot happen until we detect incoming
                          * moves, which we currently don't do. */
                         /* ### find deleted/moved revision? */
-                        *description = _("A file had been moved here at the "
-                                         "time this conflict was recorded.");
+                        *description = _("A file had been moved here in the "
+                                         "working copy at the time this "
+                                         "conflict was recorded.");
                       }
                     else
                       {
                         /* This is a local move in the working copy. */
                         *description = apr_psprintf(
                                          result_pool,
-                                         _("A file was moved here from\n"
-                                           "'%s'."),
+                                         _("A file was moved here in the "
+                                           "working copy from\n'%s'."),
                                          svn_dirent_local_style(
                                            moved_from_abspath, scratch_pool));
                       }
@@ -461,15 +467,15 @@ describe_local_change(const char **description,
                     if (moved_to_abspath == NULL)
                       {
                         /* The move no longer exists. */
-                        *description = _("The directory had been moved away "
-                                         "at the time this conflict was "
-                                         "recorded.");
+                        *description = _("The directory in the working copy "
+                                         "had been moved away at the time "
+                                         "this conflict was recorded.");
                       }
                     else
                       *description = apr_psprintf(
                                        result_pool,
-                                       _("The directory was moved away to\n"
-                                         "'%s'."),
+                                       _("The directory in the working copy "
+                                         "was moved away to\n'%s'."),
                                        svn_dirent_local_style(moved_to_abspath,
                                                               scratch_pool));
                   }
@@ -542,8 +548,8 @@ describe_local_change(const char **description,
                         /* This is a local move in the working copy. */
                         *description = apr_psprintf(
                                          result_pool,
-                                         _("A directory was moved here from\n"
-                                           "'%s'."),
+                                         _("A directory was moved here in "
+                                           "the working copy from\n'%s'."),
                                          svn_dirent_local_style(
                                            moved_from_abspath, scratch_pool));
                       }
@@ -591,12 +597,12 @@ describe_local_change(const char **description,
                              "copy.");
             break;
           case svn_wc_conflict_reason_moved_away:
-            *description = _("The item had been moved away at the "
-                             "time this conflict was recorded.");
+            *description = _("The item in the working copy had been moved "
+                             "away at the time this conflict was recorded.");
             break;
           case svn_wc_conflict_reason_moved_here:
-            *description = _("An item had been moved here at the "
-                             "time this conflict was recorded.");
+            *description = _("An item had been moved here in the working copy "
+                             "at the time this conflict was recorded.");
             break;
           }
         break;
