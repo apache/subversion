@@ -2489,7 +2489,7 @@ describe_incoming_add_upon_merge(
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("directory appeared during merge of\n"
+                            _("Directory appeared during merge of\n"
                               "'^/%s:%ld-%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, old_rev + 1, new_rev,
                             details->added_rev_author, details->added_rev);
