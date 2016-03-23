@@ -362,7 +362,7 @@ describe_local_file_node_change(const char **description,
                            "found in the working copy.");
         else if (operation == svn_wc_operation_merge)
           *description = _("A file which differs from the corresponding "
-                           "File on the merge source branch was found "
+                           "file on the merge source branch was found "
                            "in the working copy.");
         break;
       case svn_wc_conflict_reason_obstructed:
