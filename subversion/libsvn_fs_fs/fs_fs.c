@@ -1032,14 +1032,9 @@ read_global_config(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  /* Providing a config hash is optional. */
-  if (fs->config)
-    ffd->use_block_read = svn_hash__get_bool(fs->config,
-                                             SVN_FS_CONFIG_FSFS_BLOCK_READ,
-                                             FALSE);
-  else
-    ffd->use_block_read = FALSE;
-
+  ffd->use_block_read = svn_hash__get_bool(fs->config,
+                                           SVN_FS_CONFIG_FSFS_BLOCK_READ,
+                                           FALSE);
   ffd->flush_to_disk = !svn_hash__get_bool(fs->config,
                                            SVN_FS_CONFIG_NO_FLUSH_TO_DISK,
                                            FALSE);
