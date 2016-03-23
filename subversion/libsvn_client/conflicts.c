@@ -237,11 +237,13 @@ struct find_deleted_rev_baton
   svn_revnum_t related_repos_peg_rev;
 
   svn_revnum_t deleted_rev;
+  const char *deleted_rev_author;
   svn_node_kind_t replacing_node_kind;
 
   const char *repos_root_url;
   const char *repos_uuid;
   svn_client_ctx_t *ctx;
+  apr_pool_t *result_pool;
 };
 
 /* Implements svn_log_entry_receiver_t.
@@ -316,8 +318,14 @@ find_deleted_rev(void *baton,
                                                            iterpool));
           if (yca_loc != NULL)
             {
+              svn_string_t *author;
               /* Found the correct node, we are done. */
               b->deleted_rev = log_entry->revision;
+
+              author = svn_hash_gets(log_entry->revprops,
+                                     SVN_PROP_REVISION_AUTHOR);
+              b->deleted_rev_author = apr_pstrdup(b->result_pool, author->data);
+                  
               if (log_item->action == 'R')
                 b->replacing_node_kind = log_item->node_kind;
               else
@@ -795,6 +803,7 @@ describe_local_none_node_change(const char **description,
           const char *url;
           const char *corrected_url;
           apr_array_header_t *paths;
+          apr_array_header_t *revprops;
           const char *old_repos_relpath;
           const char *new_repos_relpath;
           const char *repos_root_url;
@@ -803,7 +812,6 @@ describe_local_none_node_change(const char **description,
           svn_revnum_t old_rev;
           svn_revnum_t new_rev;
           struct find_deleted_rev_baton b;
-          svn_string_t *author_revprop;
           svn_error_t *err;
 
           SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url,
@@ -844,6 +852,9 @@ describe_local_none_node_change(const char **description,
           paths = apr_array_make(scratch_pool, 1, sizeof(const char *));
           APR_ARRAY_PUSH(paths, const char *) = "";
 
+          revprops = apr_array_make(scratch_pool, 1, sizeof(const char *));
+          APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
+
           b.deleted_repos_relpath = svn_relpath_join(
                                       parent_repos_relpath,
                                       svn_dirent_basename(
@@ -865,15 +876,14 @@ describe_local_none_node_change(const char **description,
           b.repos_root_url = repos_root_url;
           b.repos_uuid = repos_uuid;
           b.ctx = conflict->ctx;
+          b.result_pool = scratch_pool;
 
           err = svn_ra_get_log2(ra_session, paths, new_rev, 0,
                                 0, /* no limit */
                                 TRUE, /* need the changed paths list */
                                 FALSE, /* need to traverse copies */
                                 FALSE, /* no need for merged revisions */
-                                /* no need for revprops: */
-                                apr_array_make(scratch_pool, 0,
-                                               sizeof(const char *)),
+                                revprops,
                                 find_deleted_rev, &b,
                                 scratch_pool);
           if (err)
@@ -899,16 +909,12 @@ describe_local_none_node_change(const char **description,
               return SVN_NO_ERROR;
             }
 
-          /* ### gather this while scanning the log? */
-          SVN_ERR(svn_ra_rev_prop(ra_session, b.deleted_rev,
-                                  SVN_PROP_REVISION_AUTHOR,
-                                  &author_revprop, scratch_pool));
           *description = apr_psprintf(
                            result_pool,
                            _("No such file or directory was found in the "
                              "merge target working copy.\nThe item was "
                              "deleted or moved away in r%ld by %s."),
-                           b.deleted_rev, author_revprop->data);
+                           b.deleted_rev, b.deleted_rev_author);
         }
       break;
     case svn_wc_conflict_reason_unversioned:
