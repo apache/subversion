@@ -519,7 +519,8 @@ svn_fs_fs__write_current(svn_fs_t *fs,
 
   name = svn_fs_fs__path_current(fs, pool);
   SVN_ERR(svn_io_write_atomic2(name, buf, strlen(buf),
-                               name /* copy_perms_path */, TRUE, pool));
+                               name /* copy_perms_path */,
+                               ffd->flush_to_disk, pool));
 
   return SVN_NO_ERROR;
 }
@@ -619,6 +620,7 @@ svn_error_t *
 svn_fs_fs__move_into_place(const char *old_filename,
                            const char *new_filename,
                            const char *perms_reference,
+                           svn_boolean_t flush_to_disk,
                            apr_pool_t *pool)
 {
   svn_error_t *err;
@@ -628,7 +630,7 @@ svn_fs_fs__move_into_place(const char *old_filename,
   SVN_ERR(svn_io_copy_perms(perms_reference, old_filename, pool));
 
   /* Move the file into place. */
-  err = svn_io_file_rename2(old_filename, new_filename, TRUE, pool);
+  err = svn_io_file_rename2(old_filename, new_filename, flush_to_disk, pool);
   if (err && APR_STATUS_IS_EXDEV(err->apr_err))
     {
       /* Can't rename across devices; fall back to copying. */
@@ -639,25 +641,29 @@ svn_fs_fs__move_into_place(const char *old_filename,
          ### The code below is duplicates svn_io_file_rename2(), because
              currently we don't have the svn_io_copy_file2() function with
              a flush_to_disk argument. */
-      SVN_ERR(svn_io_file_open(&file, new_filename, APR_WRITE,
-                               APR_OS_DEFAULT, pool));
-      SVN_ERR(svn_io_file_flush_to_disk(file, pool));
-      SVN_ERR(svn_io_file_close(file, pool));
+      if (flush_to_disk)
+        {
+          SVN_ERR(svn_io_file_open(&file, new_filename, APR_WRITE,
+                                   APR_OS_DEFAULT, pool));
+          SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+          SVN_ERR(svn_io_file_close(file, pool));
+        }
 
 #ifdef SVN_ON_POSIX
-      {
-        /* On POSIX, the file name is stored in the file's directory entry.
-           Hence, we need to fsync() that directory as well.
-           On other operating systems, we'd only be asking for trouble
-           by trying to open and fsync a directory. */
-        const char *dirname;
+      if (flush_to_disk)
+        {
+          /* On POSIX, the file name is stored in the file's directory entry.
+             Hence, we need to fsync() that directory as well.
+             On other operating systems, we'd only be asking for trouble
+             by trying to open and fsync a directory. */
+          const char *dirname;
 
-        dirname = svn_dirent_dirname(new_filename, pool);
-        SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
-                                 pool));
-        SVN_ERR(svn_io_file_flush_to_disk(file, pool));
-        SVN_ERR(svn_io_file_close(file, pool));
-      }
+          dirname = svn_dirent_dirname(new_filename, pool);
+          SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
+                                   pool));
+          SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+          SVN_ERR(svn_io_file_close(file, pool));
+        }
 #endif
     }
   else if (err)

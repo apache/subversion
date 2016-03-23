@@ -3367,6 +3367,23 @@ def dump_no_op_prop_change(sbox):
   svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
                                      sbox2.repo_url + '/bar')
 
+def load_no_flush_to_disk(sbox):
+  "svnadmin load --no-flush-to-disk"
+
+  sbox.build(empty=True)
+
+  # Can't test the "not flushing to disk part", but loading the
+  # dump should work.
+  dump = clean_dumpfile()
+  expected = [
+    svntest.wc.State('', {
+      'A' : svntest.wc.StateItem(contents="text\n",
+                                 props={'svn:keywords': 'Id'})
+      })
+    ]
+  load_and_verify_dumpstream(sbox, [], [], expected, True, dump,
+                             '--no-flush-to-disk', '--ignore-uuid')
+
 ########################################################################
 # Run the tests
 
@@ -3428,7 +3445,8 @@ test_list = [ None,
               load_revprops,
               dump_revprops,
               dump_no_op_change,
-              dump_no_op_prop_change
+              dump_no_op_prop_change,
+              load_no_flush_to_disk
              ]
 
 if __name__ == '__main__':

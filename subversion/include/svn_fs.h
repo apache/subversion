@@ -213,6 +213,20 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.9.
  */
 #define SVN_FS_CONFIG_COMPATIBLE_VERSION        "compatible-version"
+
+/** Specifies whether the filesystem should be forcing a physical write of
+ * the data to disk.  Enabling the option allows the filesystem to return
+ * from the API calls without forcing the write to disk.  If this option
+ * is disabled, the changes are always written to disk.
+ *
+ * @note Avoiding the forced write to disk usually is more efficient, but
+ * doesn't guarantee data integrity after a system crash or power failure
+ * and should be used with caution.
+ *
+ * @since New in 1.10.
+ */
+#define SVN_FS_CONFIG_NO_FLUSH_TO_DISK          "no-flush-to-disk"
+
 /** @} */
 
 
