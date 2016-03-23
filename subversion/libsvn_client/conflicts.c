@@ -2794,7 +2794,7 @@ describe_incoming_edit_list_modified_revs(apr_array_header_t *edits,
   int num_revs_to_skip;
   static const int min_revs_for_skipping = 2;
   static const int max_revs_to_display = 8;
-  const char *s = " ";
+  const char *s = "";
   int i;
 
   if (edits->nelts <= max_revs_to_display)
@@ -2833,7 +2833,7 @@ describe_incoming_edit_list_modified_revs(apr_array_header_t *edits,
             {
               if (i == edits->nelts - (max_revs_to_display / 2))
                   s = apr_psprintf(result_pool,
-                                   _("%s\n[%d revisions omitted for "
+                                   _("%s\n [%d revisions omitted for "
                                      "brevity],\n"),
                                    s, num_revs_to_skip);
 
