@@ -2695,8 +2695,8 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
                                                scratch_pool,
                                                scratch_pool));
   SVN_ERR(svn_ra_get_log2(ra_session, paths,
-                          old_rev < new_rev ? new_rev : old_rev,
                           old_rev < new_rev ? old_rev : new_rev,
+                          old_rev < new_rev ? new_rev : old_rev,
                           0, /* no limit */
                           TRUE, /* need the changed paths list */
                           FALSE, /* need to traverse copies */
