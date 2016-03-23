@@ -2328,19 +2328,19 @@ describe_incoming_add_upon_update(
       if (SVN_IS_VALID_REVNUM(details->added_rev) &&
           SVN_IS_VALID_REVNUM(details->deleted_rev))
         return apr_psprintf(result_pool,
-                            _("Directory appeared during update to r%ld; "
+                            _("A new directory appeared during update to r%ld; "
                               "it was added by %s in r%ld and later deleted "
                               "by %s in r%ld."), new_rev,
                             details->added_rev_author, details->added_rev,
                             details->deleted_rev_author, details->deleted_rev);
       else if (SVN_IS_VALID_REVNUM(details->added_rev))
         return apr_psprintf(result_pool,
-                            _("Directory appeared during update to r%ld; "
+                            _("A new directory appeared during update to r%ld; "
                               "it was added by %s in r%ld."), new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("Directory appeared during update to r%ld; "
+                            _("A new directory appeared during update to r%ld; "
                               "it was deleted by %s in r%ld."), new_rev,
                             details->deleted_rev_author, details->deleted_rev);
     }
@@ -2349,38 +2349,38 @@ describe_incoming_add_upon_update(
       if (SVN_IS_VALID_REVNUM(details->added_rev) &&
           SVN_IS_VALID_REVNUM(details->deleted_rev))
         return apr_psprintf(result_pool,
-                            _("File appeared during update to r%ld; "
+                            _("A new file appeared during update to r%ld; "
                               "it was added by %s in r%ld and later deleted "
                               "by %s in r%ld."), new_rev,
                             details->added_rev_author, details->added_rev,
                             details->deleted_rev_author, details->deleted_rev);
       else if (SVN_IS_VALID_REVNUM(details->added_rev))
         return apr_psprintf(result_pool,
-                            _("File appeared during update to r%ld; "
+                            _("A new file appeared during update to r%ld; "
                               "it was added by %s in r%ld."), new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("File appeared during update to r%ld; "
+                            _("A new file appeared during update to r%ld; "
                               "it was deleted by %s in r%ld."), new_rev,
                             details->deleted_rev_author, details->deleted_rev);
   else
       if (SVN_IS_VALID_REVNUM(details->added_rev) &&
           SVN_IS_VALID_REVNUM(details->deleted_rev))
         return apr_psprintf(result_pool,
-                            _("Item appeared during update to r%ld; "
+                            _("A new item appeared during update to r%ld; "
                               "it was added by %s in r%ld and later deleted "
                               "by %s in r%ld."), new_rev,
                             details->added_rev_author, details->added_rev,
                             details->deleted_rev_author, details->deleted_rev);
       else if (SVN_IS_VALID_REVNUM(details->added_rev))
         return apr_psprintf(result_pool,
-                            _("Item appeared during update to r%ld; "
+                            _("A new item appeared during update to r%ld; "
                               "it was added by %s in r%ld."), new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("Item appeared during update to r%ld; "
+                            _("A new item appeared during update to r%ld; "
                               "it was deleted by %s in r%ld."), new_rev,
                             details->deleted_rev_author, details->deleted_rev);
 
@@ -2400,7 +2400,7 @@ describe_incoming_add_upon_switch(
       if (SVN_IS_VALID_REVNUM(details->added_rev) &&
           SVN_IS_VALID_REVNUM(details->deleted_rev))
         return apr_psprintf(result_pool,
-                            _("Directory appeared during switch to\n"
+                            _("A new directory appeared during switch to\n"
                               "'^/%s@%ld'.\n"
                               "It was added by %s in r%ld and later deleted "
                               "by %s in r%ld."), new_repos_relpath, new_rev,
@@ -2408,13 +2408,13 @@ describe_incoming_add_upon_switch(
                             details->deleted_rev_author, details->deleted_rev);
       else if (SVN_IS_VALID_REVNUM(details->added_rev))
         return apr_psprintf(result_pool,
-                            _("Directory appeared during switch to\n"
+                            _("A new directory appeared during switch to\n"
                              "'^/%s@%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("Directory appeared during switch to\n"
+                            _("A new directory appeared during switch to\n"
                               "'^/%s@%ld'.\nIt was deleted by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->deleted_rev_author, details->deleted_rev);
@@ -2425,20 +2425,23 @@ describe_incoming_add_upon_switch(
       if (SVN_IS_VALID_REVNUM(details->added_rev) &&
           SVN_IS_VALID_REVNUM(details->deleted_rev))
         return apr_psprintf(result_pool,
-                            _("File appeared during switch to\n'^/%s@%ld'.\n"
+                            _("A new file appeared during switch to\n"
+                              "'^/%s@%ld'.\n"
                               "It was added by %s in r%ld and later deleted "
                               "by %s in r%ld."), new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev,
                             details->deleted_rev_author, details->deleted_rev);
       else if (SVN_IS_VALID_REVNUM(details->added_rev))
         return apr_psprintf(result_pool,
-                            _("File appeared during switch to\n'^/%s@%ld'.\n"
+                            _("A new file appeared during switch to\n"
+                              "'^/%s@%ld'.\n"
                               "It was added by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("File appeared during switch to\n'^/%s@%ld'.\n"
+                            _("A new file appeared during switch to\n"
+                              "'^/%s@%ld'.\n"
                               "It was deleted by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->deleted_rev_author, details->deleted_rev);
@@ -2448,20 +2451,23 @@ describe_incoming_add_upon_switch(
       if (SVN_IS_VALID_REVNUM(details->added_rev) &&
           SVN_IS_VALID_REVNUM(details->deleted_rev))
         return apr_psprintf(result_pool,
-                            _("Item appeared during switch to\n'^/%s@%ld'.\n"
+                            _("A new item appeared during switch to\n"
+                              "'^/%s@%ld'.\n"
                               "It was added by %s in r%ld and later deleted "
                               "by %s in r%ld."), new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev,
                             details->deleted_rev_author, details->deleted_rev);
       else if (SVN_IS_VALID_REVNUM(details->added_rev))
         return apr_psprintf(result_pool,
-                            _("Item appeared during switch to\n'^/%s@%ld'.\n"
+                            _("A new item appeared during switch to\n"
+                              "'^/%s@%ld'.\n"
                               "It was added by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("Item appeared during switch to\n'^/%s@%ld'.\n"
+                            _("A new item appeared during switch to\n"
+                              "'^/%s@%ld'.\n"
                               "It was deleted by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->deleted_rev_author, details->deleted_rev);
@@ -2482,13 +2488,13 @@ describe_incoming_add_upon_merge(
     {
       if (old_rev + 1 == new_rev)
         return apr_psprintf(result_pool,
-                            _("Directory appeared during merge of\n"
+                            _("A new directory appeared during merge of\n"
                               "'^/%s:%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("Directory appeared during merge of\n"
+                            _("A new directory appeared during merge of\n"
                               "'^/%s:%ld-%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, old_rev + 1, new_rev,
                             details->added_rev_author, details->added_rev);
@@ -2498,13 +2504,13 @@ describe_incoming_add_upon_merge(
     {
       if (old_rev + 1 == new_rev)
         return apr_psprintf(result_pool,
-                            _("File appeared during merge of\n"
+                            _("A new file appeared during merge of\n"
                               "'^/%s:%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("File appeared during merge of\n"
+                            _("A new file appeared during merge of\n"
                               "'^/%s:%ld-%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, old_rev + 1, new_rev,
                             details->added_rev_author, details->added_rev);
@@ -2513,13 +2519,13 @@ describe_incoming_add_upon_merge(
     {
       if (old_rev + 1 == new_rev)
         return apr_psprintf(result_pool,
-                            _("Item appeared during merge of\n"
+                            _("A new item appeared during merge of\n"
                               "'^/%s:%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, new_rev,
                             details->added_rev_author, details->added_rev);
       else
         return apr_psprintf(result_pool,
-                            _("Item appeared during merge of\n"
+                            _("A new item appeared during merge of\n"
                               "'^/%s:%ld-%ld'.\nIt was added by %s in r%ld."),
                             new_repos_relpath, old_rev + 1, new_rev,
                             details->added_rev_author, details->added_rev);
@@ -2540,15 +2546,16 @@ describe_incoming_reverse_deletion_upon_merge(
     {
       if (new_rev + 1 == old_rev)
         return apr_psprintf(result_pool,
-                            _("directory appeared during reverse-merge of\n"
-                              "'^/%s:%ld'.\nIt was deleted by %s in r%ld."),
+                            _("A new directory appeared during reverse-merge of"
+                              "\n'^/%s:%ld'.\nIt was deleted by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             details->deleted_rev_author,
                             details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("directory appeared during reverse-merge of\n"
-                              "'^/%s:%ld-%ld'.\nIt was deleted by %s in r%ld."),
+                            _("A new directory appeared during reverse-merge "
+                              "of\n'^/%s:%ld-%ld'.\n"
+                              "It was deleted by %s in r%ld."),
                             old_repos_relpath, new_rev, old_rev - 1,
                             details->deleted_rev_author,
                             details->deleted_rev);
@@ -2558,14 +2565,14 @@ describe_incoming_reverse_deletion_upon_merge(
     {
       if (new_rev + 1 == old_rev)
         return apr_psprintf(result_pool,
-                            _("File appeared during reverse-merge of\n"
+                            _("A new file appeared during reverse-merge of\n"
                               "'^/%s:%ld'.\nIt was deleted by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             details->deleted_rev_author,
                             details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("File appeared during reverse-merge of\n"
+                            _("A new file appeared during reverse-merge of\n"
                               "'^/%s:%ld-%ld'.\nIt was deleted by %s in r%ld."),
                             old_repos_relpath, new_rev + 1, old_rev,
                             details->deleted_rev_author,
@@ -2575,14 +2582,14 @@ describe_incoming_reverse_deletion_upon_merge(
     {
       if (new_rev + 1 == old_rev)
         return apr_psprintf(result_pool,
-                            _("Item appeared during reverse-merge of\n"
+                            _("A new item appeared during reverse-merge of\n"
                               "'^/%s:%ld'.\nIt was deleted by %s in r%ld."),
                             old_repos_relpath, old_rev,
                             details->deleted_rev_author,
                             details->deleted_rev);
       else
         return apr_psprintf(result_pool,
-                            _("Item appeared during reverse-merge of\n"
+                            _("A new item appeared during reverse-merge of\n"
                               "'^/%s:%ld-%ld'.\nIt was deleted by %s in r%ld."),
                             old_repos_relpath, new_rev + 1, old_rev,
                             details->deleted_rev_author,
