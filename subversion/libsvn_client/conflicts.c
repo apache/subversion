@@ -772,6 +772,7 @@ describe_local_dir_node_change(const char **description,
  * and *DELETED_REV_AUTHOR to NULL.
  * If the node was replaced rather than deleted, set *REPLACING_NODE_KIND to
  * the node kind of the replacing node. Else, set it to svn_node_unknown.
+ * Only request the log for revisions up to END_REV from the server.
  */
 static svn_error_t *
 find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
@@ -781,6 +782,7 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
                                      const char *deleted_basename,
                                      const char *parent_repos_relpath,
                                      svn_revnum_t start_rev,
+                                     svn_revnum_t end_rev,
                                      const char *related_repos_relpath,
                                      svn_revnum_t related_peg_rev,
                                      apr_pool_t *result_pool,
@@ -823,7 +825,7 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
   b.ctx = conflict->ctx;
   b.result_pool = scratch_pool;
 
-  err = svn_ra_get_log2(ra_session, paths, start_rev, 0,
+  err = svn_ra_get_log2(ra_session, paths, start_rev, end_rev,
                         0, /* no limit */
                         TRUE, /* need the changed paths list */
                         FALSE, /* need to traverse copies */
@@ -927,7 +929,7 @@ describe_local_none_node_change(const char **description,
           SVN_ERR(find_revision_for_suspected_deletion(
                     &deleted_rev, &deleted_rev_author, &replacing_node_kind,
                     conflict, deleted_basename, parent_repos_relpath,
-                    old_rev < new_rev ? new_rev : old_rev,
+                    old_rev < new_rev ? new_rev : old_rev, 0,
                     old_rev < new_rev ? new_repos_relpath : old_repos_relpath,
                     old_rev < new_rev ? new_rev : old_rev,
                     scratch_pool, scratch_pool));
@@ -2077,7 +2079,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                     conflict,
                     svn_relpath_basename(new_repos_relpath, scratch_pool),
                     svn_relpath_dirname(new_repos_relpath, scratch_pool),
-                    new_rev, old_repos_relpath, old_rev,
+                    new_rev, old_rev, old_repos_relpath, old_rev,
                     scratch_pool, scratch_pool));
           if (deleted_rev == SVN_INVALID_REVNUM)
             {
