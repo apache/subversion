@@ -366,8 +366,8 @@ describe_local_file_node_change(const char **description,
                            "in the working copy.");
         break;
       case svn_wc_conflict_reason_obstructed:
-        *description = _("An unversioned file was found in the working "
-                         "copy where a versioned item was expected.");
+        *description = _("A file which occupies this path was found in the "
+                          "working copy.");
         break;
       case svn_wc_conflict_reason_unversioned:
         *description = _("An unversioned file was found in the working "
@@ -578,9 +578,8 @@ describe_local_dir_node_change(const char **description,
                            "branch was found in the working copy.");
         break;
       case svn_wc_conflict_reason_obstructed:
-        *description = _("An unversioned directory was found in the "
-                         "working copy where a versioned item was "
-                         "expected.");
+        *description = _("A directory which occupies this path was found "
+                         "in the working copy.");
         break;
       case svn_wc_conflict_reason_unversioned:
         *description = _("An unversioned directory was found in the "
@@ -883,8 +882,8 @@ describe_local_none_node_change(const char **description,
                        "found in the working copy.");
       break;
     case svn_wc_conflict_reason_obstructed:
-      *description = _("An unversioned item was found in the working "
-                       "copy where a versioned item was expected.");
+      *description = _("An item which obstructs this path was found in "
+                       "the working copy.");
       break;
     case svn_wc_conflict_reason_deleted:
       *description = _("A deleted item was found in the working copy.");
