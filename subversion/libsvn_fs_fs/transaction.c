@@ -997,6 +997,7 @@ static svn_error_t *
 get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
 {
   struct get_and_increment_txn_key_baton *cb = baton;
+  fs_fs_data_t *ffd = cb->fs->fsap_data;
   const char *txn_current_filename
     = svn_fs_fs__path_txn_current(cb->fs, pool);
   char new_id_str[SVN_INT64_BUFFER_SIZE + 1]; /* add space for a newline */
@@ -1017,7 +1018,7 @@ get_and_increment_txn_key_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_io_write_atomic2(txn_current_filename, new_id_str,
                                line_length + 1,
                                txn_current_filename /* copy_perms path */,
-                               TRUE, pool));
+                               ffd->flush_to_disk, pool));
 
   return SVN_NO_ERROR;
 }
@@ -3440,6 +3441,7 @@ static svn_error_t *
 write_final_revprop(const char *path,
                     const char *perms_reference,
                     svn_fs_txn_t *txn,
+                    svn_boolean_t flush_to_disk,
                     apr_pool_t *pool)
 {
   apr_hash_t *txnprops;
@@ -3479,7 +3481,8 @@ write_final_revprop(const char *path,
   SVN_ERR(svn_hash_write2(txnprops, stream, SVN_HASH_TERMINATOR, pool));
   SVN_ERR(svn_stream_close(stream));
 
-  SVN_ERR(svn_io_file_flush_to_disk(revprop_file, pool));
+  if (flush_to_disk)
+    SVN_ERR(svn_io_file_flush_to_disk(revprop_file, pool));
   SVN_ERR(svn_io_file_close(revprop_file, pool));
 
   SVN_ERR(svn_io_copy_perms(perms_reference, path, pool));
@@ -3676,7 +3679,8 @@ commit_body(void *baton, apr_pool_t *pool)
                                      NULL, pool));
     }
 
-  SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
+  if (ffd->flush_to_disk)
+    SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
   SVN_ERR(svn_io_file_close(proto_file, pool));
 
   /* We don't unlock the prototype revision file immediately to avoid a
@@ -3729,7 +3733,8 @@ commit_body(void *baton, apr_pool_t *pool)
   rev_filename = svn_fs_fs__path_rev(cb->fs, new_rev, pool);
   proto_filename = svn_fs_fs__path_txn_proto_rev(cb->fs, txn_id, pool);
   SVN_ERR(svn_fs_fs__move_into_place(proto_filename, rev_filename,
-                                     old_rev_filename, pool));
+                                     old_rev_filename, ffd->flush_to_disk,
+                                     pool));
 
   /* Now that we've moved the prototype revision file out of the way,
      we can unlock it (since further attempts to write to the file
@@ -3741,7 +3746,7 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR_ASSERT(! svn_fs_fs__is_packed_revprop(cb->fs, new_rev));
   revprop_filename = svn_fs_fs__path_revprops(cb->fs, new_rev, pool);
   SVN_ERR(write_final_revprop(revprop_filename, old_rev_filename,
-                              cb->txn, pool));
+                              cb->txn, ffd->flush_to_disk, pool));
 
   /* Update the 'current' file. */
   SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev, pool));

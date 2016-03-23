@@ -476,6 +476,9 @@ typedef struct fs_fs_data_t
      or dump / load cycles). */
   const char *instance_id;
 
+  /* Ensure that all filesystem changes are written to disk. */
+  svn_boolean_t flush_to_disk;
+
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
                                apr_pool_t *, apr_pool_t *);

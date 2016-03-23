@@ -1040,6 +1040,10 @@ read_global_config(svn_fs_t *fs)
   else
     ffd->use_block_read = FALSE;
 
+  ffd->flush_to_disk = !svn_hash__get_bool(fs->config,
+                                           SVN_FS_CONFIG_NO_FLUSH_TO_DISK,
+                                           FALSE);
+
   /* Ignore the user-specified larger block size if we don't use block-read.
      Defaulting to 4k gives us the same access granularity in format 7 as in
      older formats. */

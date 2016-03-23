@@ -776,7 +776,7 @@ switch_to_new_revprop(svn_fs_t *fs,
                       apr_pool_t *pool)
 {
   SVN_ERR(svn_fs_fs__move_into_place(tmp_path, final_path, perms_reference,
-                                     pool));
+                                     TRUE, pool));
 
   /* Clean up temporary files, if necessary. */
   if (files_to_delete)

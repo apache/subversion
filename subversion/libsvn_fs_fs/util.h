@@ -388,11 +388,12 @@ svn_fs_fs__read_number_from_stream(apr_int64_t *result,
    PERMS_REFERENCE.  Temporary allocations are from POOL.
 
    This function almost duplicates svn_io_file_move(), but it tries to
-   guarantee a flush. */
+   guarantee a flush if FLUSH_TO_DISK is non-zero. */
 svn_error_t *
 svn_fs_fs__move_into_place(const char *old_filename,
                            const char *new_filename,
                            const char *perms_reference,
+                           svn_boolean_t flush_to_disk,
                            apr_pool_t *pool);
 
 /* Return TRUE, iff FS uses logical addressing. */

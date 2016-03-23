@@ -72,35 +72,6 @@ warning_func(void *baton,
 }
 
 
-/* Helper to open a repository and set a warning func (so we don't
- * SEGFAULT when libsvn_fs's default handler gets run).  */
-static svn_error_t *
-open_repos(svn_repos_t **repos,
-           const char *path,
-           apr_pool_t *pool)
-{
-  /* Enable the "block-read" feature (where it applies)? */
-  svn_boolean_t use_block_read
-    = svn_cache_config_get()->cache_size > BLOCK_READ_CACHE_THRESHOLD;
-
-  /* construct FS configuration parameters: enable caches for r/o data */
-  apr_hash_t *fs_config = apr_hash_make(pool);
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, "1");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, "1");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NODEPROPS, "1");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "2");
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
-                           svn_uuid_generate(pool));
-  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ,
-                           use_block_read ? "1" : "0");
-
-  /* now, open the requested repository */
-  SVN_ERR(svn_repos_open3(repos, path, fs_config, pool, pool));
-  svn_fs_set_warning_func(svn_repos_fs(*repos), warning_func, NULL);
-  return SVN_NO_ERROR;
-}
-
-
 /* Version compatibility check */
 static svn_error_t *
 check_lib_versions(void)
@@ -178,7 +149,8 @@ enum svnadmin__cmdline_options_t
     svnadmin__pre_1_6_compatible,
     svnadmin__compatible_version,
     svnadmin__check_normalization,
-    svnadmin__metadata_only
+    svnadmin__metadata_only,
+    svnadmin__no_flush_to_disk
   };
 
 /* Option codes and descriptions.
@@ -296,6 +268,10 @@ static const apr_getopt_option_t options_table[] =
      N_("verify metadata only (ignored for BDB),\n"
         "                             checking against external corruption in\n"
         "                             Subversion 1.9+ format repositories.\n")},
+
+    {"no-flush-to-disk", svnadmin__no_flush_to_disk, 0,
+     N_("disable flushing to disk during the operation\n"
+        "                             (faster, but unsafe on power off)")},
 
     {NULL}
   };
@@ -415,7 +391,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {'q', 'r', svnadmin__ignore_uuid, svnadmin__force_uuid,
     svnadmin__ignore_dates,
     svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
-    svnadmin__parent_dir, svnadmin__bypass_prop_validation, 'M'} },
+    svnadmin__parent_dir, svnadmin__bypass_prop_validation, 'M',
+    svnadmin__no_flush_to_disk} },
 
   {"load-revprops", subcommand_load_revprops, {0}, N_
    ("usage: svnadmin load-revprops REPOS_PATH\n\n"
@@ -561,6 +538,7 @@ struct svnadmin_opt_state
   svn_boolean_t metadata_only;                      /* --metadata-only */
   svn_boolean_t bypass_prop_validation;             /* --bypass-prop-validation */
   svn_boolean_t ignore_dates;                       /* --ignore-dates */
+  svn_boolean_t no_flush_to_disk;                   /* --no-flush-to-disk */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
   apr_uint64_t memory_cache_size;                   /* --memory-cache-size M */
@@ -569,6 +547,38 @@ struct svnadmin_opt_state
 
   const char *config_dir;    /* Overriding Configuration Directory */
 };
+
+
+/* Helper to open a repository and set a warning func (so we don't
+ * SEGFAULT when libsvn_fs's default handler gets run).  */
+static svn_error_t *
+open_repos(svn_repos_t **repos,
+           const char *path,
+           struct svnadmin_opt_state *opt_state,
+           apr_pool_t *pool)
+{
+  /* Enable the "block-read" feature (where it applies)? */
+  svn_boolean_t use_block_read
+    = svn_cache_config_get()->cache_size > BLOCK_READ_CACHE_THRESHOLD;
+
+  /* construct FS configuration parameters: enable caches for r/o data */
+  apr_hash_t *fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NODEPROPS, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "2");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                           svn_uuid_generate(pool));
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ,
+                           use_block_read ? "1" : "0");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_NO_FLUSH_TO_DISK,
+                           opt_state->no_flush_to_disk ? "1" : "0");
+
+  /* now, open the requested repository */
+  SVN_ERR(svn_repos_open3(repos, path, fs_config, pool, pool));
+  svn_fs_set_warning_func(svn_repos_fs(*repos), warning_func, NULL);
+  return SVN_NO_ERROR;
+}
 
 
 /* Set *REVNUM to the revision specified by REVISION (or to
@@ -677,7 +687,7 @@ subcommand_crashtest(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_repos_t *repos;
 
   (void)svn_error_set_malfunction_handler(crashtest_malfunction_handler);
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   SVN_ERR(svn_cmdline_printf(pool,
                              _("Successfully opened repository '%s'.\n"
                                "Will now crash to simulate a crashing "
@@ -794,7 +804,7 @@ subcommand_deltify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
 
@@ -1230,7 +1240,7 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   SVN_ERR(get_dump_range(&lower, &upper, repos, opt_state, pool));
 
   SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
@@ -1261,7 +1271,7 @@ subcommand_dump_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   SVN_ERR(get_dump_range(&lower, &upper, repos, opt_state, pool));
 
   SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
@@ -1464,7 +1474,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
      support a limited set of revision kinds: number and unspecified. */
   SVN_ERR(get_load_range(&lower, &upper, opt_state));
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
 
   /* Read the stream from STDIN.  Users can redirect a file. */
   SVN_ERR(svn_stream_for_stdin2(&stdin_stream, TRUE, pool));
@@ -1508,7 +1518,7 @@ subcommand_load_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
      support a limited set of revision kinds: number and unspecified. */
   SVN_ERR(get_load_range(&lower, &upper, opt_state));
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
 
   /* Read the stream from STDIN.  Users can redirect a file. */
   SVN_ERR(svn_stream_for_stdin2(&stdin_stream, TRUE, pool));
@@ -1550,7 +1560,7 @@ subcommand_lstxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("Revision range is not allowed"));
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_fs_list_transactions(&txns, fs, pool));
 
@@ -1633,7 +1643,7 @@ subcommand_recover(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Since db transactions may have been replayed, it's nice to tell
      people what the latest revision is.  It also proves that the
      recovery actually worked. */
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   SVN_ERR(svn_fs_youngest_rev(&youngest_rev, svn_repos_fs(repos), pool));
   SVN_ERR(svn_cmdline_printf(pool, _("The latest repos revision is %ld.\n"),
                              youngest_rev));
@@ -1711,7 +1721,7 @@ subcommand_rmtxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   fs = svn_repos_fs(repos);
 
   /* All the rest of the arguments are transaction names. */
@@ -1791,7 +1801,7 @@ set_revprop(const char *prop_name, const char *filename,
     }
 
   /* Open the filesystem  */
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
 
   if (opt_state->txn_id)
     {
@@ -1867,7 +1877,7 @@ subcommand_setuuid(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (args->nelts == 1)
     uuid = APR_ARRAY_IDX(args, 0, const char *);
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   fs = svn_repos_fs(repos);
   return svn_fs_set_uuid(fs, uuid, pool);
 }
@@ -1915,7 +1925,7 @@ subcommand_pack(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
 
   /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
   if (! opt_state->quiet)
@@ -1950,7 +1960,7 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                  "are mutually exclusive"));
     }
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
 
@@ -2106,7 +2116,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_cmdline_printf(pool, _("Path: %s\n"),
                              svn_dirent_local_style(svn_repos_path(repos, pool),
@@ -2248,7 +2258,7 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(target_arg_to_dirent(&comment_file_name, comment_file_name, pool));
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   fs = svn_repos_fs(repos);
 
   /* Create an access context describing the user. */
@@ -2304,7 +2314,7 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (targets->nelts)
     fs_path = APR_ARRAY_IDX(targets, 0, const char *);
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
 
   /* Fetch all locks on or below the root directory. */
   SVN_ERR(svn_repos_fs_get_locks2(&locks, repos, fs_path, svn_depth_infinity,
@@ -2362,7 +2372,7 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   const char *username;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   fs = svn_repos_fs(repos);
 
   /* svn_fs_unlock() demands that some username be associated with the
@@ -2453,7 +2463,7 @@ subcommand_unlock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Open the repos/FS, and associate an access context containing
      USERNAME. */
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   fs = svn_repos_fs(repos);
   SVN_ERR(svn_fs_create_access(&access, username, pool));
   SVN_ERR(svn_fs_set_access(fs, access));
@@ -2797,6 +2807,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case svnadmin__wait:
         opt_state.wait = TRUE;
+        break;
+      case svnadmin__no_flush_to_disk:
+        opt_state.no_flush_to_disk = TRUE;
         break;
       default:
         {
