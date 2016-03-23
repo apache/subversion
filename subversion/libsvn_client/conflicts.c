@@ -2035,6 +2035,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           const char *corrected_url;
           svn_string_t *author_revprop;
           apr_array_header_t *paths;
+          apr_array_header_t *revprops;
           struct find_deleted_rev_baton b;
           svn_error_t *err;
 
@@ -2059,6 +2060,9 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           paths = apr_array_make(scratch_pool, 1, sizeof(const char *));
           APR_ARRAY_PUSH(paths, const char *) = "";
 
+          revprops = apr_array_make(scratch_pool, 1, sizeof(const char *));
+          APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
+
           b.deleted_repos_relpath = new_repos_relpath;
           b.related_repos_relpath = old_repos_relpath;
           b.related_repos_peg_rev = old_rev;
@@ -2067,15 +2071,14 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           b.repos_root_url = repos_root_url;
           b.repos_uuid = repos_uuid;
           b.ctx = conflict->ctx;
+          b.result_pool = scratch_pool;
 
           err = svn_ra_get_log2(ra_session, paths, new_rev, 0,
                                  0, /* no limit */
                                  TRUE, /* need the changed paths list */
                                  FALSE, /* need to traverse copies */
                                  FALSE, /* no need for merged revisions */
-                                 /* no need for revprops: */
-                                 apr_array_make(scratch_pool, 0,
-                                                sizeof(const char *)),
+                                 revprops,
                                  find_deleted_rev, &b,
                                  scratch_pool);
           if (err)
