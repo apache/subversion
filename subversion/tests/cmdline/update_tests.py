@@ -6343,28 +6343,37 @@ def windows_update_backslash(sbox):
                     'mkdir', 'A/completely\\unusable\\dir')
 
   # No error and a proper skip + recording in the working copy would also
-  # be a good result. This just verifies current behavior.
-
-  if sbox.repo_url.startswith('http'):
-    # Apache Httpd doesn't allow paths with '\\' in them on Windows, so the
-    # test if a user is allowed to read them returns a failure. This makes
-    # mod_dav_svn report the path as server excluded (aka absent), which
-    # doesn't produce output when updating.
-    expected_output = [
-      "Updating '%s':\n" % wc_dir,
-      "At revision 2.\n"
-    ]
-    expected_err = []
-  else:
-    expected_output = None
-    expected_err = 'svn: E155000: .* is not valid.*'
-
-  svntest.actions.run_and_verify_svn(expected_output, expected_err,
-                                     'up', wc_dir)
-
-  if sbox.repo_url.startswith('http'):
+  # be a good result. This just verifies current behavior:
+  #
+  # - Error via file://, svn:// or http:// with SVNPathAuthz short_circuit
+  #
+  # - No error via http:// with SVNPathAuthz on
+  #   (The reason is that Apache Httpd doesn't allow paths with '\\' in
+  #    them on Windows, and a subrequest-based access check returns 404.
+  #    This makes mod_dav_svn report the path as server excluded (aka
+  #    absent), which doesn't produce output when updating.)
+  #
+  # Since https://issues.apache.org/jira/browse/SVN-3288 is about a crash,
+  # we're fine with either result -- that is, if `svn update' finished
+  # without an error, we expect specific stdout and proper wc state.
+  # If it failed, we expect to get the following error:
+  #
+  #  svn: E155000: 'completely\unusable\dir' is not valid as filename
+  #  in directory [...]
+  #
+  exit_code, output, errput = svntest.main.run_svn(1, 'up', wc_dir)
+  if exit_code == 0:
+    verify.verify_outputs("Unexpected output", output, errput, [
+                           "Updating '%s':\n" % wc_dir,
+                           "At revision 2.\n"
+                          ], [])
     expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
     svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  elif exit_code == 1:
+    verify.verify_outputs("Unexpected output", output, errput,
+                          None, 'svn: E155000: .* is not valid.*')
+  else:
+    raise verify.SVNUnexpectedExitCode(exit_code)
 
 def update_moved_away(sbox):
   "update subtree of moved away"
