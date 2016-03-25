@@ -12,11 +12,11 @@ installed:
                       apr-1-config / apr-config script)
 
 Next, checkout the latest version of ctypesgen from
-http://code.google.com/p/ctypesgen/ to a "ctypesgen" subdirectory under
+https://github.com/davidjamesca/ctypesgen to a "ctypesgen" subdirectory under
 the ctypes python bindings.
 
 For example:
-   $ svn co http://ctypesgen.googlecode.com/svn/trunk ctypesgen
+   $ git clone https://github.com/davidjamesca/ctypesgen
 
 Once you have all of the above software installed, you can build the
 ctypes Python bindings by running the following:
