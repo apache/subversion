@@ -143,14 +143,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1730856
-   Provide a (hopefully) better documentation for the AuthzSVNGroupsFile
-   directive and for the groups-db option in svnserve.conf.
-   Justification:
-     Configuration knobs should be documented.
-   Votes:
-     +1: danielsh, rhuijben
-
  * r1735179
    build system: Improve svn_error_symbolic_name()'s data gatherer.
    Justification:
@@ -185,3 +177,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1730856
+   Provide a (hopefully) better documentation for the AuthzSVNGroupsFile
+   directive and for the groups-db option in svnserve.conf.
+   Justification:
+     Configuration knobs should be documented.
+   Votes:
+     +1: danielsh, rhuijben, kotkov
