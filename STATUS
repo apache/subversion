@@ -163,7 +163,7 @@ Candidate changes:
      .
      'svn-role' uses a sufficiently new svn (1.9.3).
    Votes:
-     +1: danielsh
+     +1: danielsh, ivan
 
  * r1736432
    Fix failure in update_tests.py#76 with SVNPathAuthz short_circuit.
