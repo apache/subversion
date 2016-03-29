@@ -3252,18 +3252,28 @@ def file_external_unversioned_obstruction(sbox):
 
   # Update reports a tree-conflict but status doesn't show any such
   # conflict.  I'm no sure whether this is correct.
-  expected_output = svntest.wc.State(wc_dir, {
-      'A'        : Item(status=' U'),
-      'A/mu-ext' : Item(status='  ', treeconflict='A'),
-      })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
       'A/mu-ext' : Item('unversioned obstruction'),
       })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.add({
-      'A/mu-ext' : Item(status='M ', wc_rev='2', switched='X'),
+  svntest.actions.run_and_verify_svn(
+                  None,
+                  ".*svn: warning: W155014: The file external '.*mu-ext'"
+                  " can not be created because the node exists.*",
+                  'up', wc_dir)
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  os.remove(sbox.ospath('A/mu-ext'))
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/mu-ext' : Item(status='A '),
       })
+  expected_status.add({
+      'A/mu-ext' : Item(status='  ', wc_rev='2', switched='X'),
+      })
+  expected_disk.tweak('A/mu-ext', contents="This is the file 'mu'.\n")
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, expected_disk,
                                         expected_status)
