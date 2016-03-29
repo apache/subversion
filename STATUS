@@ -177,11 +177,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1730856
-   Provide a (hopefully) better documentation for the AuthzSVNGroupsFile
-   directive and for the groups-db option in svnserve.conf.
-   Justification:
-     Configuration knobs should be documented.
-   Votes:
-     +1: danielsh, rhuijben, kotkov
