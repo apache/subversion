@@ -2337,7 +2337,6 @@ def copy_dir_with_locked_file(sbox):
                                      '-m', '')
 
 @Issue(4557)
-@XFail(svntest.main.is_ra_type_dav)
 def delete_dir_with_lots_of_locked_files(sbox):
   "delete a directory containing lots of locked files"
 
@@ -2365,12 +2364,6 @@ def delete_dir_with_lots_of_locked_files(sbox):
   # Locally delete A (regression against earlier versions, which
   #                   always used a special non-standard request)
   sbox.simple_rm("A")
-
-  # But a further replacement never worked
-  sbox.simple_mkdir("A")
-  # And an additional propset didn't work either
-  # (but doesn't require all lock tokens recursively)
-  sbox.simple_propset("k", "v", "A")
 
   # Commit the deletion
   # XFAIL: As of 1.8.10, this commit fails with:
@@ -2434,7 +2427,49 @@ def delete_locks_on_depth_commit(sbox):
   expected_status.tweak('', 'iota', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@Issue(4557)
+@XFail(svntest.main.is_ra_type_dav)
+def replace_dir_with_lots_of_locked_files(sbox):
+  "replace directory containing lots of locked files"
 
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # A lot of paths.
+  nfiles = 75 # NOTE: test XPASSES with 50 files!!!
+  locked_paths = []
+  for i in range(nfiles):
+      locked_paths.append(sbox.ospath("A/locked_files/file-%i" % i))
+
+  # Create files at these paths
+  os.mkdir(sbox.ospath("A/locked_files"))
+  for file_path in locked_paths:
+    svntest.main.file_write(file_path, "This is '%s'.\n" % (file_path,))
+  sbox.simple_add("A/locked_files")
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # lock all the files
+  svntest.actions.run_and_verify_svn(None, [], 'lock',
+                                     '-m', 'All locks',
+                                      *locked_paths)
+  # Locally delete A (regression against earlier versions, which
+  #                   always used a special non-standard request)
+  sbox.simple_rm("A")
+
+  # But a further replacement never worked
+  sbox.simple_mkdir("A")
+  # And an additional propset didn't work either
+  # (but doesn't require all lock tokens recursively)
+  sbox.simple_propset("k", "v", "A")
+
+  # Commit the deletion
+  # XFAIL: As of 1.8.10, this commit fails with:
+  #  svn: E175002: Unexpected HTTP status 400 'Bad Request' on '<path>'
+  # and the following error in the httpd error log:
+  #  request failed: error reading the headers
+  # This problem was introduced on the 1.8.x branch in r1606976.
+  sbox.simple_commit()
 
 ########################################################################
 # Run the tests
@@ -2503,6 +2538,7 @@ test_list = [ None,
               copy_dir_with_locked_file,
               delete_dir_with_lots_of_locked_files,
               delete_locks_on_depth_commit,
+              replace_dir_with_lots_of_locked_files,
             ]
 
 if __name__ == '__main__':
