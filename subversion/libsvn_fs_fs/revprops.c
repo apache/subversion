@@ -79,6 +79,7 @@ svn_fs_fs__upgrade_pack_revprops(svn_fs_t *fs,
                                              shard, ffd->max_files_per_dir,
                                              (int)(0.9 * ffd->revprop_pack_size),
                                              compression_level,
+                                             ffd->flush_to_disk,
                                              cancel_func, cancel_baton,
                                              iterpool));
       if (notify_func)
@@ -738,6 +739,7 @@ write_non_packed_revprop(const char **final_path,
                          apr_hash_t *proplist,
                          apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   apr_file_t *file;
   svn_stream_t *stream;
   *final_path = svn_fs_fs__path_revprops(fs, rev, pool);
@@ -752,7 +754,8 @@ write_non_packed_revprop(const char **final_path,
   SVN_ERR(svn_stream_close(stream));
 
   /* Flush temporary file to disk and close it. */
-  SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+  if (ffd->flush_to_disk)
+    SVN_ERR(svn_io_file_flush_to_disk(file, pool));
   SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
@@ -775,8 +778,10 @@ switch_to_new_revprop(svn_fs_t *fs,
                       apr_array_header_t *files_to_delete,
                       apr_pool_t *pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
+
   SVN_ERR(svn_fs_fs__move_into_place(tmp_path, final_path, perms_reference,
-                                     TRUE, pool));
+                                     ffd->flush_to_disk, pool));
 
   /* Clean up temporary files, if necessary. */
   if (files_to_delete)
@@ -904,7 +909,8 @@ repack_revprops(svn_fs_t *fs,
   /* finally, write the content to the target file, flush and close it */
   SVN_ERR(svn_io_file_write_full(file, compressed->data, compressed->len,
                                  NULL, pool));
-  SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+  if (ffd->flush_to_disk)
+    SVN_ERR(svn_io_file_flush_to_disk(file, pool));
   SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
@@ -1111,7 +1117,8 @@ write_packed_revprop(const char **final_path,
           SVN_ERR(svn_stream_printf(stream, pool, "%s\n", filename));
         }
       SVN_ERR(svn_stream_close(stream));
-      SVN_ERR(svn_io_file_flush_to_disk(file, pool));
+      if (ffd->flush_to_disk)
+        SVN_ERR(svn_io_file_flush_to_disk(file, pool));
       SVN_ERR(svn_io_file_close(file, pool));
     }
 
@@ -1246,6 +1253,7 @@ svn_fs_fs__copy_revprops(const char *pack_file_dir,
                          apr_array_header_t *sizes,
                          apr_size_t total_size,
                          int compression_level,
+                         svn_boolean_t flush_to_disk,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
                          apr_pool_t *scratch_pool)
@@ -1302,7 +1310,8 @@ svn_fs_fs__copy_revprops(const char *pack_file_dir,
   /* write the pack file content to disk */
   SVN_ERR(svn_io_file_write_full(pack_file, compressed->data, compressed->len,
                                  NULL, scratch_pool));
-  SVN_ERR(svn_io_file_flush_to_disk(pack_file, scratch_pool));
+  if (flush_to_disk)
+    SVN_ERR(svn_io_file_flush_to_disk(pack_file, scratch_pool));
   SVN_ERR(svn_io_file_close(pack_file, scratch_pool));
 
   svn_pool_destroy(iterpool);
@@ -1317,6 +1326,7 @@ svn_fs_fs__pack_revprops_shard(const char *pack_file_dir,
                                int max_files_per_dir,
                                apr_int64_t max_pack_size,
                                int compression_level,
+                               svn_boolean_t flush_to_disk,
                                svn_cancel_func_t cancel_func,
                                void *cancel_baton,
                                apr_pool_t *scratch_pool)
@@ -1388,8 +1398,9 @@ svn_fs_fs__pack_revprops_shard(const char *pack_file_dir,
           SVN_ERR(svn_fs_fs__copy_revprops(pack_file_dir, pack_filename,
                                            shard_path, start_rev, rev-1,
                                            sizes, total_size,
-                                           compression_level, cancel_func,
-                                           cancel_baton, iterpool));
+                                           compression_level, flush_to_disk,
+                                           cancel_func, cancel_baton,
+                                           iterpool));
 
           /* next pack file starts empty again */
           apr_array_clear(sizes);
@@ -1415,12 +1426,13 @@ svn_fs_fs__pack_revprops_shard(const char *pack_file_dir,
     SVN_ERR(svn_fs_fs__copy_revprops(pack_file_dir, pack_filename,
                                      shard_path, start_rev, rev-1,
                                      sizes, (apr_size_t)total_size,
-                                     compression_level, cancel_func,
-                                     cancel_baton, iterpool));
+                                     compression_level, flush_to_disk,
+                                     cancel_func, cancel_baton, iterpool));
 
   /* flush the manifest file to disk and update permissions */
   SVN_ERR(svn_stream_close(manifest_stream));
-  SVN_ERR(svn_io_file_flush_to_disk(manifest_file, iterpool));
+  if (flush_to_disk)
+    SVN_ERR(svn_io_file_flush_to_disk(manifest_file, iterpool));
   SVN_ERR(svn_io_file_close(manifest_file, iterpool));
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, iterpool));
 

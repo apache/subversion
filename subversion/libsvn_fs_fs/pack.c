@@ -233,6 +233,9 @@ typedef struct pack_context_t
   /* pool used for temporary data structures that will be cleaned up when
    * the next range of revisions is being processed */
   apr_pool_t *info_pool;
+
+  /* ensure that all filesystem changes are written to disk. */
+  svn_boolean_t flush_to_disk;
 } pack_context_t;
 
 /* Create and initialize a new pack context for packing shard SHARD_REV in
@@ -240,7 +243,7 @@ typedef struct pack_context_t
  * and return the structure in *CONTEXT.
  *
  * Limit the number of items being copied per iteration to MAX_ITEMS.
- * Set CANCEL_FUNC and CANCEL_BATON as well.
+ * Set FLUSH_TO_DISK, CANCEL_FUNC and CANCEL_BATON as well.
  */
 static svn_error_t *
 initialize_pack_context(pack_context_t *context,
@@ -249,6 +252,7 @@ initialize_pack_context(pack_context_t *context,
                         const char *shard_dir,
                         svn_revnum_t shard_rev,
                         int max_items,
+                        svn_boolean_t flush_to_disk,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *pool)
@@ -325,6 +329,8 @@ initialize_pack_context(pack_context_t *context,
   context->info_pool = svn_pool_create(pool);
   context->paths = svn_prefix_tree__create(context->info_pool);
 
+  context->flush_to_disk = flush_to_disk;
+
   return SVN_NO_ERROR;
 }
 
@@ -385,7 +391,8 @@ close_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_remove_file2(proto_p2l_index_path, FALSE, pool));
 
   /* Ensure that packed file is written to disk.*/
-  SVN_ERR(svn_io_file_flush_to_disk(context->pack_file, pool));
+  if (context->flush_to_disk)
+    SVN_ERR(svn_io_file_flush_to_disk(context->pack_file, pool));
   SVN_ERR(svn_io_file_close(context->pack_file, pool));
 
   return SVN_NO_ERROR;
@@ -1510,8 +1517,9 @@ append_revision(pack_context_t *context,
  *
  * Pack the revision shard starting at SHARD_REV in filesystem FS from
  * SHARD_DIR into the PACK_FILE_DIR, using POOL for allocations.  Limit
- * the extra memory consumption to MAX_MEM bytes.  CANCEL_FUNC and
- * CANCEL_BATON are what you think they are.
+ * the extra memory consumption to MAX_MEM bytes.  If FLUSH_TO_DISK is
+ * non-zero, do not return until the data has actually been written on
+ * the disk.  CANCEL_FUNC and CANCEL_BATON are what you think they are.
  */
 static svn_error_t *
 pack_log_addressed(svn_fs_t *fs,
@@ -1519,6 +1527,7 @@ pack_log_addressed(svn_fs_t *fs,
                    const char *shard_dir,
                    svn_revnum_t shard_rev,
                    apr_size_t max_mem,
+                   svn_boolean_t flush_to_disk,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *pool)
@@ -1551,8 +1560,8 @@ pack_log_addressed(svn_fs_t *fs,
 
   /* set up a pack context */
   SVN_ERR(initialize_pack_context(&context, fs, pack_file_dir, shard_dir,
-                                  shard_rev, max_items, cancel_func,
-                                  cancel_baton, pool));
+                                  shard_rev, max_items, flush_to_disk,
+                                  cancel_func, cancel_baton, pool));
 
   /* phase 1: determine the size of the revisions to pack */
   SVN_ERR(svn_fs_fs__l2p_get_max_ids(&max_ids, fs, shard_rev,
@@ -1675,14 +1684,16 @@ svn_fs_fs__get_packed_offset(apr_off_t *rev_offset,
  *
  * Pack the revision shard starting at SHARD_REV containing exactly
  * MAX_FILES_PER_DIR revisions from SHARD_PATH into the PACK_FILE_DIR,
- * using POOL for allocations.  CANCEL_FUNC and CANCEL_BATON are what you
- * think they are.
+ * using POOL for allocations.  If FLUSH_TO_DISK is non-zero, do not
+ * return until the data has actually been written on the disk.
+ * CANCEL_FUNC and CANCEL_BATON are what you think they are.
  */
 static svn_error_t *
 pack_phys_addressed(const char *pack_file_dir,
                     const char *shard_path,
                     svn_revnum_t start_rev,
                     int max_files_per_dir,
+                    svn_boolean_t flush_to_disk,
                     svn_cancel_func_t cancel_func,
                     void *cancel_baton,
                     apr_pool_t *pool)
@@ -1744,14 +1755,16 @@ pack_phys_addressed(const char *pack_file_dir,
   SVN_ERR(svn_stream_close(manifest_stream));
 
   /* Ensure that pack file is written to disk. */
-  SVN_ERR(svn_io_file_flush_to_disk(manifest_file, pool));
+  if (flush_to_disk)
+    SVN_ERR(svn_io_file_flush_to_disk(manifest_file, pool));
   SVN_ERR(svn_io_file_close(manifest_file, pool));
 
   /* disallow write access to the manifest file */
   SVN_ERR(svn_io_set_file_read_only(manifest_file_path, FALSE, iterpool));
 
   /* Ensure that pack file is written to disk. */
-  SVN_ERR(svn_io_file_flush_to_disk(pack_file, pool));
+  if (flush_to_disk)
+    SVN_ERR(svn_io_file_flush_to_disk(pack_file, pool));
   SVN_ERR(svn_io_file_close(pack_file, pool));
 
   svn_pool_destroy(iterpool);
@@ -1762,8 +1775,9 @@ pack_phys_addressed(const char *pack_file_dir,
 /* In filesystem FS, pack the revision SHARD containing exactly
  * MAX_FILES_PER_DIR revisions from SHARD_PATH into the PACK_FILE_DIR,
  * using POOL for allocations.  Try to limit the amount of temporary
- * memory needed to MAX_MEM bytes.  CANCEL_FUNC and CANCEL_BATON are what
- * you think they are.
+ * memory needed to MAX_MEM bytes.  If FLUSH_TO_DISK is non-zero, do
+ * not return until the data has actually been written on the disk.
+ * CANCEL_FUNC and CANCEL_BATON are what you think they are.
  *
  * If for some reason we detect a partial packing already performed, we
  * remove the pack file and start again.
@@ -1777,6 +1791,7 @@ pack_rev_shard(svn_fs_t *fs,
                apr_int64_t shard,
                int max_files_per_dir,
                apr_size_t max_mem,
+               svn_boolean_t flush_to_disk,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                apr_pool_t *pool)
@@ -1796,12 +1811,13 @@ pack_rev_shard(svn_fs_t *fs,
 
   /* Index information files */
   if (svn_fs_fs__use_log_addressing(fs))
-    SVN_ERR(pack_log_addressed(fs, pack_file_dir, shard_path, shard_rev,
-                               max_mem, cancel_func, cancel_baton, pool));
+    SVN_ERR(pack_log_addressed(fs, pack_file_dir, shard_path,
+                               shard_rev, max_mem, flush_to_disk,
+                               cancel_func, cancel_baton, pool));
   else
     SVN_ERR(pack_phys_addressed(pack_file_dir, shard_path, shard_rev,
-                                max_files_per_dir, cancel_func,
-                                cancel_baton, pool));
+                                max_files_per_dir, flush_to_disk,
+                                cancel_func, cancel_baton, pool));
 
   SVN_ERR(svn_io_copy_perms(shard_path, pack_file_dir, pool));
   SVN_ERR(svn_io_set_file_read_only(pack_file_path, FALSE, pool));
@@ -1867,6 +1883,7 @@ synced_pack_shard(void *baton,
                                              ffd->compress_packed_revprops
                                                ? SVN__COMPRESSION_ZLIB_DEFAULT
                                                : SVN__COMPRESSION_NONE,
+                                             ffd->flush_to_disk,
                                              pb->cancel_func,
                                              pb->cancel_baton,
                                              pool));
@@ -1943,8 +1960,8 @@ pack_shard(struct pack_baton *baton,
   /* pack the revision content */
   SVN_ERR(pack_rev_shard(baton->fs, rev_pack_file_dir, baton->rev_shard_path,
                          baton->shard, ffd->max_files_per_dir,
-                         DEFAULT_MAX_MEM, baton->cancel_func,
-                         baton->cancel_baton, pool));
+                         DEFAULT_MAX_MEM, ffd->flush_to_disk,
+                         baton->cancel_func, baton->cancel_baton, pool));
 
   /* For newer repo formats, we only acquired the pack lock so far.
      Before modifying the repo state by switching over to the packed
