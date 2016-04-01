@@ -401,7 +401,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "repository will cause an error.  Progress feedback is sent to stdout.\n"
     "If --revision is specified, limit the loaded revisions to only those\n"
     "in the dump stream whose revision numbers match the specified range.\n"),
-   {'q', 'r', svnadmin__force_uuid, svnadmin__bypass_prop_validation} },
+   {'q', 'r', svnadmin__force_uuid, svnadmin__bypass_prop_validation,
+    svnadmin__no_flush_to_disk} },
 
   {"lock", subcommand_lock, {0}, N_
    ("usage: svnadmin lock REPOS_PATH PATH USERNAME COMMENT-FILE [TOKEN]\n\n"
