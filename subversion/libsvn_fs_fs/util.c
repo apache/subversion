@@ -428,6 +428,7 @@ svn_fs_fs__write_min_unpacked_rev(svn_fs_t *fs,
                                   svn_revnum_t revnum,
                                   apr_pool_t *scratch_pool)
 {
+  fs_fs_data_t *ffd = fs->fsap_data;
   const char *final_path;
   char buf[SVN_INT64_BUFFER_SIZE];
   apr_size_t len = svn__i64toa(buf, revnum);
@@ -436,8 +437,8 @@ svn_fs_fs__write_min_unpacked_rev(svn_fs_t *fs,
   final_path = svn_fs_fs__path_min_unpacked_rev(fs, scratch_pool);
 
   SVN_ERR(svn_io_write_atomic2(final_path, buf, len + 1,
-                               final_path /* copy_perms */, TRUE,
-                               scratch_pool));
+                               final_path /* copy_perms */,
+                               ffd->flush_to_disk, scratch_pool));
 
   return SVN_NO_ERROR;
 }
