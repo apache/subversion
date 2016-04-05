@@ -150,6 +150,12 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1735826
    Make SIGINT abort a commit, even at the interactive plaintext prompt.
    (Issue #4624.)
@@ -163,17 +169,11 @@ Candidate changes:
      .
      'svn-role' uses a sufficiently new svn (1.9.3).
    Votes:
-     +1: danielsh, ivan
+     +1: danielsh, ivan, rhuijben
 
  * r1736432
    Fix failure in update_tests.py#76 with SVNPathAuthz short_circuit.
    Justification:
      Tests should not fail.
    Votes:
-     +1: kotkov, ivan
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: kotkov, ivan, rhuijben
