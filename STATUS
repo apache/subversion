@@ -155,10 +155,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1736432
-   Fix failure in update_tests.py#76 with SVNPathAuthz short_circuit.
-   Justification:
-     Tests should not fail.
-   Votes:
-     +1: kotkov, ivan, rhuijben
