@@ -3384,6 +3384,51 @@ def load_no_flush_to_disk(sbox):
   load_and_verify_dumpstream(sbox, [], [], expected, True, dump,
                              '--no-flush-to-disk', '--ignore-uuid')
 
+def dump_to_file(sbox):
+  "svnadmin dump --file ARG"
+
+  sbox.build(create_wc=False, empty=False)
+  expected_dump = svntest.actions.run_and_verify_dump(sbox.repo_dir)
+
+  file = sbox.get_tempname()
+  svntest.actions.run_and_verify_svnadmin2([],
+                                           ["* Dumped revision 0.\n",
+                                            "* Dumped revision 1.\n"],
+                                           0, 'dump', '--file', file,
+                                           sbox.repo_dir)
+  actual_dump = open(file, 'rb').readlines()
+  svntest.verify.compare_dump_files(None, None, expected_dump, actual_dump)
+
+  # Test that svnadmin dump --file overwrites existing files.
+  file = sbox.get_tempname()
+  svntest.main.file_write(file, '')
+  svntest.actions.run_and_verify_svnadmin2([],
+                                           ["* Dumped revision 0.\n",
+                                            "* Dumped revision 1.\n"],
+                                           0, 'dump', '--file', file,
+                                           sbox.repo_dir)
+  actual_dump = open(file, 'rb').readlines()
+  svntest.verify.compare_dump_files(None, None, expected_dump, actual_dump)
+
+def load_from_file(sbox):
+  "svnadmin load --file ARG"
+
+  sbox.build(empty=True)
+
+  file = sbox.get_tempname()
+  open(file, 'wb').writelines(clean_dumpfile())
+  svntest.actions.run_and_verify_svnadmin2(None, [],
+                                           0, 'load', '--file', file,
+                                           '--ignore-uuid', sbox.repo_dir)
+  expected_tree = \
+    svntest.wc.State('', {
+      'A' : svntest.wc.StateItem(contents="text\n",
+                                 props={'svn:keywords': 'Id'})
+      })
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
+                                     'update', sbox.wc_dir)
+  svntest.actions.verify_disk(sbox.wc_dir, expected_tree, check_props=True)
+
 ########################################################################
 # Run the tests
 
@@ -3446,7 +3491,9 @@ test_list = [ None,
               dump_revprops,
               dump_no_op_change,
               dump_no_op_prop_change,
-              load_no_flush_to_disk
+              load_no_flush_to_disk,
+              dump_to_file,
+              load_from_file
              ]
 
 if __name__ == '__main__':
