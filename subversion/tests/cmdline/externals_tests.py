@@ -3076,6 +3076,7 @@ def list_include_externals(sbox):
     expected_stdout, [], 0, 'ls', '--include-externals', C_url)
 
 @Issue(4293)
+@XFail()
 def move_with_file_externals(sbox):
   "move with file externals"
 

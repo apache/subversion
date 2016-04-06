@@ -12032,7 +12032,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "move depth expansion"),
     SVN_TEST_OPTS_XFAIL(move_retract,
                        "move retract (issue 4336)"),
-    SVN_TEST_OPTS_PASS(move_delete_file_externals,
+    SVN_TEST_OPTS_XFAIL(move_delete_file_externals,
                        "move/delete file externals (issue 4293)"),
     SVN_TEST_OPTS_PASS(update_with_tree_conflict,
                        "update with tree conflict (issue 4347)"),
