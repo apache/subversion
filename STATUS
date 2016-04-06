@@ -156,21 +156,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1735826
-   Make SIGINT abort a commit, even at the interactive plaintext prompt.
-   (Issue #4624.)
-   Justification:
-     Can result in unintended commits (users expect ^C to abort the commit).
-   Notes:
-     r1735826 is the merge to trunk of r1735680 from the 1.9.x branch.
-     Some older versions of 'svn merge' would make the merge of r1735826
-     to 1.9.x a noop merge.  (1.8.9 does; 1.8.15 does not.)  Consequently,
-     this entry must be merged by a sufficiently new svn.
-     .
-     'svn-role' uses a sufficiently new svn (1.9.3).
-   Votes:
-     +1: danielsh, ivan, rhuijben
-
  * r1736432
    Fix failure in update_tests.py#76 with SVNPathAuthz short_circuit.
    Justification:
