@@ -330,7 +330,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "every path present in the repository as of that revision.  (In either\n"
     "case, the second and subsequent revisions, if any, describe only paths\n"
     "changed in those revisions.)\n"),
-  {'r', svnadmin__incremental, svnadmin__deltas, 'q', 'M'} },
+  {'r', svnadmin__incremental, svnadmin__deltas, 'q', 'M', 'F'},
+  {{'F', N_("write to file ARG instead of stdout")}} },
 
   {"dump-revprops", subcommand_dump_revprops, {0}, N_
    ("usage: svnadmin dump-revprops REPOS_PATH [-r LOWER[:UPPER]]\n\n"
@@ -339,7 +340,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "LOWER rev through UPPER rev.  If no revisions are given, dump the\n"
     "properties for all revisions.  If only LOWER is given, dump the\n"
     "properties for that one revision.\n"),
-  {'r', 'q'} },
+  {'r', 'q', 'F'},
+  {{'F', N_("write to file ARG instead of stdout")}} },
 
   {"freeze", subcommand_freeze, {0}, N_
    ("usage: 1. svnadmin freeze REPOS_PATH PROGRAM [ARG...]\n"
@@ -349,7 +351,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "2. Like 1 except all repositories listed in FILE are locked. The file\n"
     "   format is repository paths separated by newlines.  Repositories are\n"
     "   locked in the same order as they are listed in the file.\n"),
-   {'F'} },
+   {'F'},
+   {{'F', N_("read repository paths from file ARG")}} },
 
   {"help", subcommand_help, {"?", "h"}, N_
    ("usage: svnadmin help [SUBCOMMAND...]\n\n"
@@ -392,7 +395,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     svnadmin__ignore_dates,
     svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
     svnadmin__parent_dir, svnadmin__bypass_prop_validation, 'M',
-    svnadmin__no_flush_to_disk} },
+    svnadmin__no_flush_to_disk, 'F'},
+   {{'F', N_("read from file ARG instead of stdin")}} },
 
   {"load-revprops", subcommand_load_revprops, {0}, N_
    ("usage: svnadmin load-revprops REPOS_PATH\n\n"
@@ -402,7 +406,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "If --revision is specified, limit the loaded revisions to only those\n"
     "in the dump stream whose revision numbers match the specified range.\n"),
    {'q', 'r', svnadmin__force_uuid, svnadmin__bypass_prop_validation,
-    svnadmin__no_flush_to_disk} },
+    svnadmin__no_flush_to_disk, 'F'},
+   {{'F', N_("read from file ARG instead of stdin")}} },
 
   {"lock", subcommand_lock, {0}, N_
    ("usage: svnadmin lock REPOS_PATH PATH USERNAME COMMENT-FILE [TOKEN]\n\n"
@@ -544,7 +549,7 @@ struct svnadmin_opt_state
                                                        --force-uuid */
   apr_uint64_t memory_cache_size;                   /* --memory-cache-size M */
   const char *parent_dir;                           /* --parent-dir */
-  svn_stringbuf_t *filedata;                        /* --file */
+  const char *file;                                 /* --file */
 
   const char *config_dir;    /* Overriding Configuration Directory */
 };
@@ -1234,7 +1239,7 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
-  svn_stream_t *stdout_stream;
+  svn_stream_t *out_stream;
   svn_revnum_t lower, upper;
   svn_stream_t *feedback_stream = NULL;
 
@@ -1244,13 +1249,25 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   SVN_ERR(get_dump_range(&lower, &upper, repos, opt_state, pool));
 
-  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
+  /* Open the file or STDOUT, depending on whether -F was specified. */
+  if (opt_state->file)
+    {
+      apr_file_t *file;
+
+      /* Overwrite existing files, same as with > redirection. */
+      SVN_ERR(svn_io_file_open(&file, opt_state->file,
+                               APR_WRITE | APR_CREATE | APR_TRUNCATE
+                               | APR_BUFFERED, APR_OS_DEFAULT, pool));
+      out_stream = svn_stream_from_aprfile2(file, FALSE, pool);
+    }
+  else
+    SVN_ERR(svn_stream_for_stdout(&out_stream, pool));
 
   /* Progress feedback goes to STDERR, unless they asked to suppress it. */
   if (! opt_state->quiet)
     feedback_stream = recode_stream_create(stderr, pool);
 
-  SVN_ERR(svn_repos_dump_fs4(repos, stdout_stream, lower, upper,
+  SVN_ERR(svn_repos_dump_fs4(repos, out_stream, lower, upper,
                              opt_state->incremental, opt_state->use_deltas,
                              TRUE, TRUE,
                              !opt_state->quiet ? repos_notify_handler : NULL,
@@ -1265,7 +1282,7 @@ subcommand_dump_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
-  svn_stream_t *stdout_stream;
+  svn_stream_t *out_stream;
   svn_revnum_t lower, upper;
   svn_stream_t *feedback_stream = NULL;
 
@@ -1275,13 +1292,25 @@ subcommand_dump_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   SVN_ERR(get_dump_range(&lower, &upper, repos, opt_state, pool));
 
-  SVN_ERR(svn_stream_for_stdout(&stdout_stream, pool));
+  /* Open the file or STDOUT, depending on whether -F was specified. */
+  if (opt_state->file)
+    {
+      apr_file_t *file;
+
+      /* Overwrite existing files, same as with > redirection. */
+      SVN_ERR(svn_io_file_open(&file, opt_state->file,
+                               APR_WRITE | APR_CREATE | APR_TRUNCATE
+                               | APR_BUFFERED, APR_OS_DEFAULT, pool));
+      out_stream = svn_stream_from_aprfile2(file, FALSE, pool);
+    }
+  else
+    SVN_ERR(svn_stream_for_stdout(&out_stream, pool));
 
   /* Progress feedback goes to STDERR, unless they asked to suppress it. */
   if (! opt_state->quiet)
     feedback_stream = recode_stream_create(stderr, pool);
 
-  SVN_ERR(svn_repos_dump_fs4(repos, stdout_stream, lower, upper,
+  SVN_ERR(svn_repos_dump_fs4(repos, out_stream, lower, upper,
                              FALSE, FALSE, TRUE, FALSE,
                              !opt_state->quiet ? repos_notify_handler : NULL,
                              feedback_stream, check_cancel, NULL, pool));
@@ -1336,7 +1365,7 @@ subcommand_freeze(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
                             _("No program provided"));
 
-  if (!opt_state->filedata)
+  if (!opt_state->file)
     {
       /* One repository on the command line. */
       paths = apr_array_make(pool, 1, sizeof(const char *));
@@ -1344,9 +1373,11 @@ subcommand_freeze(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     }
   else
     {
+      svn_stringbuf_t *buf;
       const char *utf8;
-      /* All repositories in filedata. */
-      SVN_ERR(svn_utf_cstring_to_utf8(&utf8, opt_state->filedata->data, pool));
+      /* Read repository paths from the -F file. */
+      SVN_ERR(svn_stringbuf_from_file2(&buf, opt_state->file, pool));
+      SVN_ERR(svn_utf_cstring_to_utf8(&utf8, buf->data, pool));
       paths = svn_cstring_split(utf8, "\r\n", FALSE, pool);
     }
 
@@ -1465,7 +1496,7 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_revnum_t lower, upper;
-  svn_stream_t *stdin_stream;
+  svn_stream_t *in_stream;
   svn_stream_t *feedback_stream = NULL;
 
   /* Expect no more arguments. */
@@ -1477,14 +1508,18 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
 
-  /* Read the stream from STDIN.  Users can redirect a file. */
-  SVN_ERR(svn_stream_for_stdin2(&stdin_stream, TRUE, pool));
+  /* Open the file or STDIN, depending on whether -F was specified. */
+  if (opt_state->file)
+    SVN_ERR(svn_stream_open_readonly(&in_stream, opt_state->file,
+                                     pool, pool));
+  else
+    SVN_ERR(svn_stream_for_stdin2(&in_stream, TRUE, pool));
 
   /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
   if (! opt_state->quiet)
     feedback_stream = recode_stream_create(stdout, pool);
 
-  err = svn_repos_load_fs5(repos, stdin_stream, lower, upper,
+  err = svn_repos_load_fs5(repos, in_stream, lower, upper,
                            opt_state->uuid_action, opt_state->parent_dir,
                            opt_state->use_pre_commit_hook,
                            opt_state->use_post_commit_hook,
@@ -1508,7 +1543,7 @@ subcommand_load_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
   svn_revnum_t lower, upper;
-  svn_stream_t *stdin_stream;
+  svn_stream_t *in_stream;
 
   svn_stream_t *feedback_stream = NULL;
 
@@ -1521,14 +1556,18 @@ subcommand_load_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
 
-  /* Read the stream from STDIN.  Users can redirect a file. */
-  SVN_ERR(svn_stream_for_stdin2(&stdin_stream, TRUE, pool));
+  /* Open the file or STDIN, depending on whether -F was specified. */
+  if (opt_state->file)
+    SVN_ERR(svn_stream_open_readonly(&in_stream, opt_state->file,
+                                     pool, pool));
+  else
+    SVN_ERR(svn_stream_for_stdin2(&in_stream, TRUE, pool));
 
   /* Progress feedback goes to STDOUT, unless they asked to suppress it. */
   if (! opt_state->quiet)
     feedback_stream = recode_stream_create(stdout, pool);
 
-  err = svn_repos_load_fs_revprops(repos, stdin_stream, lower, upper,
+  err = svn_repos_load_fs_revprops(repos, in_stream, lower, upper,
                                    !opt_state->bypass_prop_validation,
                                    opt_state->ignore_dates,
                                    opt_state->quiet ? NULL
@@ -2682,9 +2721,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
             = 0x100000 * apr_strtoi64(opt_arg, NULL, 0);
         break;
       case 'F':
-        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        SVN_ERR(svn_stringbuf_from_file2(&(opt_state.filedata),
-                                             utf8_opt_arg, pool));
+        SVN_ERR(svn_utf_cstring_to_utf8(&(opt_state.file), opt_arg, pool));
         dash_F_arg = TRUE;
         break;
       case svnadmin__version:
