@@ -179,7 +179,7 @@ inner_dir_diff(const char *left_abspath,
         {
           svn_error_clear(err);
           right_dirents = apr_hash_make(scratch_pool);
-          right_only = TRUE;
+          left_only = TRUE;
         }
       else
         SVN_ERR(err);
