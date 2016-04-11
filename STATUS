@@ -150,15 +150,15 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1738259
-   Fix out of bounds read when sizeof(svn_revnum_t) < sizeof(svn_revnum_t *).
-   Justification:
-     Undefined behaviour.
-   Votes:
-     +1: danielsh, ivan
-
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1738259
+   Fix out of bounds read when sizeof(svn_revnum_t) < sizeof(svn_revnum_t *).
+   Justification:
+     Undefined behaviour.
+   Votes:
+     +1: danielsh, ivan, rhuijben
