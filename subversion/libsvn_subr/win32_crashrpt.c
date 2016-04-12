@@ -172,7 +172,7 @@ write_module_info_callback(void *data,
       MINIDUMP_MODULE_CALLBACK module = callback_input->Module;
 
       char *buf = convert_wbcs_to_ansi(module.FullPath);
-      fprintf(log_file, FORMAT_PTR, (INT_PTR)module.BaseOfImage);
+      fprintf(log_file, FORMAT_PTR, (UINT_PTR)module.BaseOfImage);
       fprintf(log_file, "  %s", buf);
       free(buf);
 
@@ -304,7 +304,7 @@ write_basic_type(FILE *log_file, DWORD basic_type, DWORD64 length,
         break;
       default:
         fprintf(log_file, "[unhandled type 0x%08x of length " FORMAT_PTR "]",
-                basic_type, (INT_PTR)length);
+                basic_type, (UINT_PTR)length);
         break;
     }
 }
@@ -343,7 +343,7 @@ write_value(FILE *log_file, DWORD64 mod_base, DWORD type, void *value_addr)
 
               if (ptr == 0)
                 fprintf(log_file, "(%s) " FORMAT_PTR,
-                        type_name, (INT_PTR)(DWORD_PTR *)value_addr);
+                        type_name, (UINT_PTR)(DWORD_PTR *)value_addr);
               else if (ptr == 1)
                 fprintf(log_file, "(%s *) " FORMAT_PTR,
                         type_name, *(DWORD_PTR *)value_addr);
