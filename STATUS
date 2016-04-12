@@ -65,7 +65,7 @@ Candidate changes:
      caller uses svn_path_url_add_component2() this wasn't noticed by
      our code.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, steveking
 
  * r1663500
    Fix issue #4557, "ra_serf fails to delete directory containing many files"
@@ -104,7 +104,7 @@ Candidate changes:
      Also, memory usage with mod_dav_svn may go through the roof for
      uncached directories.
    Votes:
-     +1: stefan2
+     +1: stefan2, steveking
 
  * r1724448
    Fix handling of newly secured subdirectories in a working copy
@@ -130,7 +130,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.9.x-r1725180
    Votes:
-     +1: stefan2
+     +1: stefan2, steveking
 
  * r1735179
    build system: Improve svn_error_symbolic_name()'s data gatherer.
