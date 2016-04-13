@@ -144,14 +144,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1704292, r1704573
-   Make svn diff --git produce proper forward binary diffs
-   Justification:
-     Applying accidental reverse diffs might work for git, but isn't
-     going to work for our 1.10 'svn patch' implementation.
-     .
-     Without this patch we produce a diff transforming the result file
-     to the original file.
-   Votes:
-     +1: rhuijben, jamessan, ivan
