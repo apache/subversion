@@ -1672,7 +1672,7 @@ compare_0_length_rep(const svn_test_opts_t *opts,
 
   enum { COUNT = 5 };
   const char *file_names[COUNT] = { no_rep_file,
-                                    empty_delta_file, 
+                                    empty_plain_file, 
                                     plain_file,
                                     empty_delta_file,
                                     delta_file };
