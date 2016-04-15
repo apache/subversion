@@ -1459,6 +1459,18 @@ delete_entry(const char *path,
       /* Try again with non-standard body to overcome Apache Httpd
          header limit */
       delete_ctx->non_recursive_if = TRUE;
+
+      handler = svn_ra_serf__create_handler(dir->commit_ctx->session, pool);
+
+      handler->response_handler = svn_ra_serf__expect_empty_body;
+      handler->response_baton = handler;
+
+      handler->header_delegate = setup_delete_headers;
+      handler->header_delegate_baton = delete_ctx;
+
+      handler->method = "DELETE";
+      handler->path = delete_target;
+
       handler->body_type = "text/xml";
       handler->body_delegate = create_delete_body;
       handler->body_delegate_baton = delete_ctx;
