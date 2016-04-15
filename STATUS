@@ -43,16 +43,6 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1717874, r1717875, r1717878
-   Make inherited property api consistent over all ra layers
-   Justification:
-     Our ra implementations should follow the documentation... and should
-     be as consistent as possible between each other. Only because the
-     caller uses svn_path_url_add_component2() this wasn't noticed by
-     our code.
-   Votes:
-     +1: rhuijben, steveking
-
  * r1663500, r1737122, r1739278, r1739280
    Fix issue #4557, "ra_serf fails to delete directory containing many files"
    Justification:
@@ -114,6 +104,18 @@ Candidate changes:
 
 Veto-blocked changes:
 =====================
+
+ * r1717874, r1717875, r1717878
+   Make inherited property api consistent over all ra layers
+   Justification:
+     Our ra implementations should follow the documentation... and should
+     be as consistent as possible between each other. Only because the
+     caller uses svn_path_url_add_component2() this wasn't noticed by
+     our code.
+   Votes:
+     +1: rhuijben, steveking
+     -1: ivan (compilation error in mtcc-test due missing
+               SVN_TEST_INT_ASSERT macro)
 
 Approved changes:
 =================
