@@ -91,6 +91,7 @@ Candidate changes:
      uncached directories.
    Votes:
      +1: stefan2, steveking
+     -0: stsp (merge conflict; needs a backport branch)
 
  * r1724448
    Fix handling of newly secured subdirectories in a working copy
