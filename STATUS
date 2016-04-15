@@ -43,14 +43,6 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1663500, r1737122, r1739278, r1739280
-   Fix issue #4557, "ra_serf fails to delete directory containing many files"
-   Justification:
-     Regression introduced in 1.8.10.
-   Votes:
-     +1: stsp (without r1737122, r1739278, r1739280)
-     +1: ivan, rhuijben
-
  * r1722164
    Filter out -Wdate-time from SWIG_CPPFLAGS
    Justification:
@@ -145,3 +137,10 @@ Approved changes:
      ^/subversion/branches/1.9.x-r1725180
    Votes:
      +1: stefan2, steveking, stsp
+
+ * r1663500, r1737122, r1739278, r1739280
+   Fix issue #4557, "ra_serf fails to delete directory containing many files"
+   Justification:
+     Regression introduced in 1.8.10.
+   Votes:
+     +1: stsp, ivan, rhuijben
