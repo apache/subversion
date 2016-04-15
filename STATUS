@@ -53,15 +53,13 @@ Candidate changes:
    Votes:
      +1: rhuijben, steveking
 
- * r1663500
+ * r1663500, r1737122, r1739278, r1739280
    Fix issue #4557, "ra_serf fails to delete directory containing many files"
    Justification:
      Regression introduced in 1.8.10.
-   Notes:
-     The associated test is still failing because it was extended to check
-     COPY as well as DELETE. Issue #4557 is just about DELETE requests.  
    Votes:
-     +1: stsp, rhuijben
+     +1: stsp, rhuijben (without r1737122, r1739278, r1739280)
+     +1: ivan
 
  * r1722164
    Filter out -Wdate-time from SWIG_CPPFLAGS
