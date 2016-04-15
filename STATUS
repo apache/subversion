@@ -94,20 +94,22 @@ Candidate changes:
    Votes:
      +1: danielsh, stsp
 
-Veto-blocked changes:
-=====================
-
- * r1717874, r1717875, r1717878
+ * r1717874, r1717875, r1717878, r1716808
    Make inherited property api consistent over all ra layers
    Justification:
      Our ra implementations should follow the documentation... and should
      be as consistent as possible between each other. Only because the
      caller uses svn_path_url_add_component2() this wasn't noticed by
      our code.
+   Notes:
+     r1716808 needed for SVN_TEST_INT_ASSERT macro. I think it makes
+     sense to backport this change to simplify future backports.
    Votes:
-     +1: rhuijben, steveking
-     -1: ivan (compilation error in mtcc-test due missing
-               SVN_TEST_INT_ASSERT macro)
+     +1: rhuijben, steveking (without r1716808)
+     +1: ivan
+
+Veto-blocked changes:
+=====================
 
 Approved changes:
 =================
