@@ -108,23 +108,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1714790
-   Fix ruby test suite to work with test-unit gem.
-   Justification:
-     Ruby test suite would simply not run on Ubuntu 15.10.
-     The patch is limited to rb test suite code only.
-   Votes:
-     +1: stefan2, jamessan
-
- * r1539230
-   Make JAVAHL tests pass on symlinked ramdiscs.
-   Justification:
-     We will support 1.8.x for quite some time still.  So, if a low-risk
-     patch avoids confusion during release signing etc., I think it is
-     worth it.  The patch is limited to JAVAHL test code only.
-   Votes:
-     +1: stefan2, brane
-
  * r1663500
    Fix issue #4557, "ra_serf fails to delete directory containing many files"
    Justification:
@@ -183,3 +166,22 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1539230
+   Make JAVAHL tests pass on symlinked ramdiscs.
+   Justification:
+     We will support 1.8.x for quite some time still.  So, if a low-risk
+     patch avoids confusion during release signing etc., I think it is
+     worth it.  The patch is limited to JAVAHL test code only.
+   Votes:
+     +1: stefan2, brane
+     +0.5: rhuijben (Simple fix to bindings, doesn't require full review but
+                     looks good)
+
+ * r1714790
+   Fix ruby test suite to work with test-unit gem.
+   Justification:
+     Ruby test suite would simply not run on Ubuntu 15.10.
+     The patch is limited to rb test suite code only.
+   Votes:
+     +1: stefan2, jamessan, rhuijben
