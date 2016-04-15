@@ -48,8 +48,8 @@ Candidate changes:
    Justification:
      Regression introduced in 1.8.10.
    Votes:
-     +1: stsp, rhuijben (without r1737122, r1739278, r1739280)
-     +1: ivan
+     +1: stsp (without r1737122, r1739278, r1739280)
+     +1: ivan, rhuijben
 
  * r1722164
    Filter out -Wdate-time from SWIG_CPPFLAGS
