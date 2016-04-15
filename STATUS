@@ -73,13 +73,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, julianfoad
 
- * r1703470, r1703475
-   Updated INSTALL documentation.
-   Justification:
-     Corrects outdated statement.
-   Votes:
-     +1: luke1410
-
  * r1706783
    Really pass patch result to svn_client_patch() filter 
    Justification:
@@ -185,3 +178,11 @@ Approved changes:
      The patch is limited to rb test suite code only.
    Votes:
      +1: stefan2, jamessan, rhuijben
+
+ * r1703470, r1703475
+   Updated INSTALL documentation.
+   Justification:
+     Corrects outdated statement.
+   Votes:
+     +1: luke1410
+     +0: rhuijben (Documentation only change)
