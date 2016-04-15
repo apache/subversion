@@ -1415,7 +1415,6 @@ delete_entry(const char *path,
   delete_context_t *delete_ctx;
   svn_ra_serf__handler_t *handler;
   const char *delete_target;
-  svn_error_t *err;
 
   if (USING_HTTPV2_COMMIT_SUPPORT(dir->commit_ctx))
     {
@@ -1449,13 +1448,12 @@ delete_entry(const char *path,
 
   handler->method = "DELETE";
   handler->path = delete_target;
+  handler->no_fail_on_http_failure_status = TRUE;
 
-  err = svn_ra_serf__context_run_one(handler, pool);
-  if (err && err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED
-      && handler->sline.code == 400)
+  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
+
+  if (handler->sline.code == 400)
     {
-      svn_error_clear(err);
-
       /* Try again with non-standard body to overcome Apache Httpd
          header limit */
       delete_ctx->non_recursive_if = TRUE;
@@ -1477,8 +1475,9 @@ delete_entry(const char *path,
 
       SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
     }
-  else
-    SVN_ERR(err);
+
+  if (handler->server_error)
+    return svn_ra_serf__server_error_create(handler, pool);
 
   /* 204 No Content: item successfully deleted */
   if (handler->sline.code != 204)
