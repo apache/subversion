@@ -158,4 +158,4 @@ Approved changes:
    Votes:
      +1: rhuijben, stefan2, stsp
      +0: danielsh (hard to review all potential causes of expanded_size==0 in
-                   7*3*2 cases (1.1…1.8) × (file/dir/prop rep) × (plain/delta))
+                   7*3*2 cases (1.1-1.8) * (file/dir/prop rep) * (plain/delta))
