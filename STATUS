@@ -127,10 +127,3 @@ Approved changes:
      ^/subversion/branches/1.9.x-fsfs-rep-comparison
    Votes:
      +1: stefan2, rhuijben, stsp
-
- * r1663500, r1737122, r1739278, r1739280
-   Fix issue #4557, "ra_serf fails to delete directory containing many files"
-   Justification:
-     Regression introduced in 1.8.10.
-   Votes:
-     +1: stsp, ivan, rhuijben
