@@ -105,8 +105,8 @@ Candidate changes:
      r1716808 needed for SVN_TEST_INT_ASSERT macro. I think it makes
      sense to backport this change to simplify future backports.
    Votes:
-     +1: rhuijben, steveking (without r1716808)
-     +1: ivan
+     +1: steveking (without r1716808)
+     +1: ivan, rhuijben
 
 Veto-blocked changes:
 =====================
