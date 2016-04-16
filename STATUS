@@ -143,17 +143,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1539230
-   Make JAVAHL tests pass on symlinked ramdiscs.
-   Justification:
-     We will support 1.8.x for quite some time still.  So, if a low-risk
-     patch avoids confusion during release signing etc., I think it is
-     worth it.  The patch is limited to JAVAHL test code only.
-   Votes:
-     +1: stefan2, brane
-     +0.5: rhuijben (Simple fix to bindings, doesn't require full review but
-                     looks good)
-
  * r1714790
    Fix ruby test suite to work with test-unit gem.
    Justification:
