@@ -2434,7 +2434,7 @@ do_put_file(svn_branch__txn_t *txn,
       SVN_ERR(svn_stream_open_readonly(&src, local_file_path,
                                        scratch_pool, scratch_pool));
     else
-      SVN_ERR(svn_stream_for_stdin(&src, scratch_pool));
+      SVN_ERR(svn_stream_for_stdin2(&src, FALSE, scratch_pool));
 
     svn_stringbuf_from_stream(&text, src, 0, scratch_pool);
   }
