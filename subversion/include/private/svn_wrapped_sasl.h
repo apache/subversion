@@ -25,8 +25,10 @@
 #define SVN_WRAPPED_SASL_H
 
 #ifdef WIN32
-/* This prevents sasl.h from redefining iovec,
-   which is always defined by APR on win32. */
+#  define APR_WANT_IOVEC
+#  include <apr_want.h>
+  /* This prevents sasl.h from redefining iovec,
+     which is always defined by APR on win32. */
 #  define STRUCT_IOVEC_DEFINED
 #  include <sasl.h>
 #else
