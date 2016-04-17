@@ -2275,11 +2275,14 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
             patch->operation = svn_diff_op_added;
             break;
 
-          /* ### case svn_diff_op_copied:
-             ### case svn_diff_op_moved:*/
-
           case svn_diff_op_modified:
-            break; /* Stays modify */
+            break; /* Stays modified. */
+
+          case svn_diff_op_copied:
+          case svn_diff_op_moved:
+            break; /* Stays copied or moved, just in the other direction. */
+          case svn_diff_op_unchanged:
+            break; /* Stays unchanged, of course. */
         }
 
       ts_tmp = patch->old_executable_bit;
