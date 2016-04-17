@@ -27,14 +27,6 @@
 #ifndef RA_SVN_SASL_H
 #define RA_SVN_SASL_H
 
-#ifdef WIN32
-/* This prevents sasl.h from redefining iovec, which is always defined by APR
-   on win32. */
-#define STRUCT_IOVEC_DEFINED
-#include <sasl.h>
-#else
-#include <sasl/sasl.h>
-#endif
 
 #include <apr_errno.h>
 #include <apr_pools.h>
@@ -43,6 +35,7 @@
 #include "svn_ra_svn.h"
 
 #include "private/svn_atomic.h"
+#include "private/svn_wrapped_sasl.h"
 
 #ifdef __cplusplus
 extern "C" {
