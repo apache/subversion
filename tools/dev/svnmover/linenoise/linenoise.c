@@ -103,6 +103,14 @@
  *
  */
 
+/* Tell the compiler to be quiet about implicit conversions from
+   [s]size_t to int. */
+#if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2)
+#  if defined(__APPLE_CC__) || defined(__clang__)
+#    pragma GCC diagnostic ignored "-Wshorten-64-to-32"
+#  endif
+#endif
+
 #include <termios.h>
 #include <unistd.h>
 #include <stdlib.h>
