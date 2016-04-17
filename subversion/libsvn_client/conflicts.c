@@ -2108,6 +2108,10 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                     conflict->pool, scratch_pool));
         }
     }
+  else
+    {
+      details = NULL;
+    }
 
   conflict->tree_conflict_details = details;
 
@@ -2309,6 +2313,10 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
           details->added_rev = SVN_INVALID_REVNUM;
           details->added_rev_author = NULL;
         }
+    }
+  else
+    {
+      details = NULL;
     }
 
   conflict->tree_conflict_details = details;
