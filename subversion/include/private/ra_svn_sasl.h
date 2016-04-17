@@ -27,6 +27,8 @@
 #ifndef RA_SVN_SASL_H
 #define RA_SVN_SASL_H
 
+/* Keep this include statement at the top of theis file. */
+#include "private/svn_wrapped_sasl.h"
 
 #include <apr_errno.h>
 #include <apr_pools.h>
@@ -35,7 +37,6 @@
 #include "svn_ra_svn.h"
 
 #include "private/svn_atomic.h"
-#include "private/svn_wrapped_sasl.h"
 
 #ifdef __cplusplus
 extern "C" {
