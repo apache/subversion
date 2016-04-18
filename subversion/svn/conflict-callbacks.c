@@ -1437,7 +1437,7 @@ handle_tree_conflict(svn_boolean_t *resolved,
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, scratch_pool));
 
   SVN_ERR(svn_client_conflict_tree_get_description(
-           &local_change_description, &incoming_change_description,
+           &incoming_change_description, &local_change_description,
            conflict, scratch_pool, scratch_pool));
   SVN_ERR(svn_cmdline_fprintf(
                stderr, scratch_pool,

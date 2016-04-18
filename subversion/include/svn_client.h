@@ -4526,8 +4526,8 @@ svn_client_conflict_prop_get_description(const char **description,
  */
 svn_error_t *
 svn_client_conflict_tree_get_description(
-  const char **local_change_description,
   const char **incoming_change_description,
+  const char **local_change_description,
   svn_client_conflict_t *conflict,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
