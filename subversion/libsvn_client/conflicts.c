@@ -998,7 +998,7 @@ describe_local_none_node_change(const char **description,
 
 /* Implements tree_conflict_get_description_func_t. */
 static svn_error_t *
-tree_conflict_get_local_description_generic(const char **description,
+conflict_tree_get_local_description_generic(const char **description,
                                             svn_client_conflict_t *conflict,
                                             apr_pool_t *result_pool,
                                             apr_pool_t *scratch_pool)
@@ -1041,7 +1041,7 @@ conflict_tree_get_description_local_missing(const char **description,
 
   details = conflict->tree_conflict_local_details;
   if (details == NULL)
-    return svn_error_trace(tree_conflict_get_local_description_generic(
+    return svn_error_trace(conflict_tree_get_local_description_generic(
                              description, conflict, result_pool, scratch_pool));
 
   *description = apr_psprintf(
@@ -1289,7 +1289,7 @@ svn_client_conflict_prop_get_description(const char **description,
 
 /* Implements tree_conflict_get_description_func_t. */
 static svn_error_t *
-tree_conflict_get_incoming_description_generic(
+conflict_tree_get_incoming_description_generic(
   const char **incoming_change_description,
   svn_client_conflict_t *conflict,
   apr_pool_t *result_pool,
@@ -1942,7 +1942,7 @@ conflict_tree_get_description_incoming_delete(
   struct conflict_tree_incoming_delete_details *details;
 
   if (conflict->tree_conflict_incoming_details == NULL)
-    return svn_error_trace(tree_conflict_get_incoming_description_generic(
+    return svn_error_trace(conflict_tree_get_incoming_description_generic(
                              incoming_change_description,
                              conflict, result_pool, scratch_pool));
 
@@ -2754,7 +2754,7 @@ conflict_tree_get_description_incoming_add(
   struct conflict_tree_incoming_add_details *details;
 
   if (conflict->tree_conflict_incoming_details == NULL)
-    return svn_error_trace(tree_conflict_get_incoming_description_generic(
+    return svn_error_trace(conflict_tree_get_incoming_description_generic(
                              incoming_change_description,
                              conflict, result_pool, scratch_pool));
 
@@ -3164,7 +3164,7 @@ conflict_tree_get_description_incoming_edit(
   apr_array_header_t *edits;
 
   if (conflict->tree_conflict_incoming_details == NULL)
-    return svn_error_trace(tree_conflict_get_incoming_description_generic(
+    return svn_error_trace(conflict_tree_get_incoming_description_generic(
                              incoming_change_description,
                              conflict, result_pool, scratch_pool));
 
@@ -4486,9 +4486,9 @@ conflict_type_specific_setup(svn_client_conflict_t *conflict,
 
   /* Set a default description function. */
   conflict->tree_conflict_get_incoming_description_func =
-    tree_conflict_get_incoming_description_generic;
+    conflict_tree_get_incoming_description_generic;
   conflict->tree_conflict_get_local_description_func =
-    tree_conflict_get_local_description_generic;
+    conflict_tree_get_local_description_generic;
 
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
   local_change = svn_client_conflict_get_local_change(conflict);
