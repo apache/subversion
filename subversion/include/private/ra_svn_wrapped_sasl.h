@@ -21,8 +21,10 @@
  * ====================================================================
  */
 
-#ifndef SVN_WRAPPED_SASL_H
-#define SVN_WRAPPED_SASL_H
+#ifndef RA_SVN_WRAPPED_SASL_H
+#define RA_SVN_WRAPPED_SASL_H
+
+#include <stddef.h>
 
 #ifdef WIN32
 #  define APR_WANT_IOVEC
@@ -126,4 +128,4 @@ svn_sasl__decode(sasl_conn_t *, const char *, unsigned,
 #  endif
 #endif /* __APPLE__ */
 
-#endif /* SVN_WRAPPED_SASL_H */
+#endif /* RA_SVN_WRAPPED_SASL_H */

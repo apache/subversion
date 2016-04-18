@@ -28,7 +28,7 @@
 #define RA_SVN_SASL_H
 
 /* Keep this include statement at the top of theis file. */
-#include "private/svn_wrapped_sasl.h"
+#include "private/ra_svn_wrapped_sasl.h"
 
 #include <apr_errno.h>
 #include <apr_pools.h>

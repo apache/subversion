@@ -24,7 +24,7 @@
 #include "svn_private_config.h"
 #ifdef SVN_HAVE_SASL
 
-#include "private/svn_wrapped_sasl.h"
+#include "private/ra_svn_wrapped_sasl.h"
 
 /* See the comment at the top of svn_wrapped_sasl.h */
 #ifdef __APPLE__
