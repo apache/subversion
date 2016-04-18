@@ -415,7 +415,7 @@ static const resolver_option_t builtin_resolver_options[] =
     svn_client_conflict_option_update_any_moved_away_children },
 
   /* Options for incoming file add vs local file add upon merge. */
-  { "m", N_("merge incoming file into local file"), NULL,
+  { "m", NULL, NULL,
     svn_client_conflict_option_merge_incoming_added_file_text_merge },
 
   { NULL }
@@ -554,7 +554,8 @@ prompt_string(const resolver_option_t *options,
       if (! first)
         result = apr_pstrcat(pool, result, ",", SVN_VA_NULL);
       s = apr_psprintf(pool, _(" (%s) %s"),
-                       opt->code, _(opt->short_desc));
+                       opt->code,
+                       opt->short_desc ? _(opt->short_desc) : opt->long_desc);
       slen = svn_utf_cstring_utf8_width(s);
       /* Break the line if adding the next option would make it too long */
       if (this_line_len + slen > MAX_PROMPT_WIDTH)
