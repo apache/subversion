@@ -4956,7 +4956,11 @@ svn_client_resolved(const char *path,
  *   - svn_wc_conflict_choose_unspecified
  *     invoke @a ctx->conflict_func2 with @a ctx->conflict_baton2 to obtain
  *     a resolution decision for each conflict.  This can be used to
- *     implement interactive conflict resolution.
+ *     implement interactive conflict resolution but is NOT RECOMMENDED for
+ *     new code. To perform conflict resolution based on interactive user
+ *     input on a per-conflict basis, use svn_client_conflict_text_resolve(),
+ *     svn_client_conflict_prop_resolve(), and
+ *     svn_client_conflict_tree_resolve() instead of svn_client_resolve().
  *
  * #svn_wc_conflict_choose_theirs_conflict and
  * #svn_wc_conflict_choose_mine_conflict are not legal for binary
@@ -4978,11 +4982,7 @@ svn_client_resolved(const char *path,
  * @a path in order to be able to resolve tree-conflicts on @a path.
  *
  * @since New in 1.5.
- * @deprecated Provided for backward compatibility with the 1.9 API.
- * Use svn_client_conflict_text_resolve() , svn_client_conflict_prop_resolve(),
- * and svn_client_conflict_tree_resolve() instead.
  */
-SVN_DEPRECATED
 svn_error_t *
 svn_client_resolve(const char *path,
                    svn_depth_t depth,
