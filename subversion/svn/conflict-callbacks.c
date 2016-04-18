@@ -414,6 +414,10 @@ static const resolver_option_t builtin_resolver_options[] =
   { "u", N_("update any moved-away children"), NULL,
     svn_client_conflict_option_update_any_moved_away_children },
 
+  /* Options for incoming file add vs local file add upon merge. */
+  { "m", N_("merge incoming file into local file"), NULL,
+    svn_client_conflict_option_merge_incoming_added_file_text_merge },
+
   { NULL }
 };
 
