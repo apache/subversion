@@ -92,17 +92,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1717876, r1717877
-   Fix svn_fs_contents_different on FSFS producing false negatives.
-   Justification:
-     Under rare circumstances, see issue #4554, the API may not recognize
-     two file contents as being different.  This may result in incomplete
-     reports and dump files.
-   Notes:
-     r1717877 provides a test case that verifies everything still works
-     even with the EXPANDED_SIZE check removed.
-   Branch:
-     ^/subversion/branches/1.9.x-fsfs-rep-comparison
-   Votes:
-     +1: stefan2, rhuijben, stsp
