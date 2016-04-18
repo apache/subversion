@@ -89,7 +89,7 @@ struct svn_client_conflict_t
 
   /* Any additional information found can be stored here and may be used
    * when describing a tree conflict. */
-  void *tree_conflict_details;
+  void *tree_conflict_incoming_details;
 
   /* The pool this conflict was allocated from. */
   apr_pool_t *pool;
@@ -1907,7 +1907,7 @@ conflict_tree_get_description_incoming_delete(
   svn_revnum_t new_rev;
   struct conflict_tree_incoming_delete_details *details;
 
-  if (conflict->tree_conflict_details == NULL)
+  if (conflict->tree_conflict_incoming_details == NULL)
     return svn_error_trace(conflict_tree_get_description_generic(
                              incoming_change_description,
                              local_change_description,
@@ -1929,7 +1929,7 @@ conflict_tree_get_description_incoming_delete(
             &new_repos_relpath, &new_rev, NULL, conflict, scratch_pool,
             scratch_pool));
 
-  details = conflict->tree_conflict_details;
+  details = conflict->tree_conflict_incoming_details;
 
   if (conflict_operation == svn_wc_operation_update)
     {
@@ -2215,7 +2215,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
       details = NULL;
     }
 
-  conflict->tree_conflict_details = details;
+  conflict->tree_conflict_incoming_details = details;
 
   return SVN_NO_ERROR;
 }
@@ -2421,7 +2421,7 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
       details = NULL;
     }
 
-  conflict->tree_conflict_details = details;
+  conflict->tree_conflict_incoming_details = details;
 
   return SVN_NO_ERROR;
 }
@@ -2730,7 +2730,7 @@ conflict_tree_get_description_incoming_add(
   svn_node_kind_t new_node_kind;
   struct conflict_tree_incoming_add_details *details;
 
-  if (conflict->tree_conflict_details == NULL)
+  if (conflict->tree_conflict_incoming_details == NULL)
     return svn_error_trace(conflict_tree_get_description_generic(
                              incoming_change_description,
                              local_change_description,
@@ -2753,7 +2753,7 @@ conflict_tree_get_description_incoming_add(
             &new_repos_relpath, &new_rev, &new_node_kind, conflict,
             scratch_pool, scratch_pool));
 
-  details = conflict->tree_conflict_details;
+  details = conflict->tree_conflict_incoming_details;
 
   if (conflict_operation == svn_wc_operation_update)
     {
@@ -2984,7 +2984,7 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
                           find_modified_rev, &b,
                           scratch_pool));
 
-  conflict->tree_conflict_details = b.edits;
+  conflict->tree_conflict_incoming_details = b.edits;
 
   return SVN_NO_ERROR;
 }
@@ -3151,7 +3151,7 @@ conflict_tree_get_description_incoming_edit(
   svn_node_kind_t new_node_kind;
   apr_array_header_t *edits;
 
-  if (conflict->tree_conflict_details == NULL)
+  if (conflict->tree_conflict_incoming_details == NULL)
     return svn_error_trace(conflict_tree_get_description_generic(
                              incoming_change_description,
                              local_change_description,
@@ -3174,7 +3174,7 @@ conflict_tree_get_description_incoming_edit(
                              local_change_description,
                              conflict, result_pool, scratch_pool));
 
-  edits = conflict->tree_conflict_details;
+  edits = conflict->tree_conflict_incoming_details;
 
   if (conflict_operation == svn_wc_operation_update)
     action = describe_incoming_edit_upon_update(old_rev, new_rev,
