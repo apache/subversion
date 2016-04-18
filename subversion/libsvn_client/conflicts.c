@@ -3998,6 +3998,7 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
   svn_node_kind_t incoming_new_kind;
+  const char *wcroot_abspath;
 
   operation = svn_client_conflict_get_operation(conflict);
   local_change = svn_client_conflict_get_local_change(conflict);
@@ -4007,6 +4008,10 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
             &incoming_new_repos_relpath, &incoming_new_pegrev,
             &incoming_new_kind, conflict, scratch_pool,
             scratch_pool));
+
+  SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+                             conflict->local_abspath, scratch_pool,
+                             scratch_pool));
 
   SVN_ERR(assert_tree_conflict(conflict, scratch_pool));
 
@@ -4096,8 +4101,11 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
             svn_client_conflict_option_merge_incoming_added_file_text_merge;
           option->description =
             apr_psprintf(result_pool,
-              _("merge the file '%s' with '^/%s@%ld'"),
-              svn_dirent_basename(conflict->local_abspath, scratch_pool),
+              _("merge file '%s' with '^/%s@%ld'"),
+              svn_dirent_local_style(
+                svn_dirent_skip_ancestor(wcroot_abspath,
+                                         conflict->local_abspath),
+                scratch_pool),
               incoming_new_repos_relpath, incoming_new_pegrev);
           option->conflict = conflict;
           option->do_resolve_func =
