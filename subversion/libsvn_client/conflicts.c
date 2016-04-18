@@ -86,10 +86,12 @@ struct svn_client_conflict_t
   /* Ask a tree conflict to find out more information about itself
    * by contacting the repository. */
   tree_conflict_get_details_func_t tree_conflict_get_incoming_details_func;
+  tree_conflict_get_details_func_t tree_conflict_get_local_details_func;
 
   /* Any additional information found can be stored here and may be used
    * when describing a tree conflict. */
   void *tree_conflict_incoming_details;
+  void *tree_conflict_local_details;
 
   /* The pool this conflict was allocated from. */
   apr_pool_t *pool;
@@ -3951,6 +3953,10 @@ svn_client_conflict_tree_get_details(svn_client_conflict_t *conflict,
   if (conflict->tree_conflict_get_incoming_details_func)
     SVN_ERR(conflict->tree_conflict_get_incoming_details_func(conflict,
                                                               scratch_pool));
+
+  if (conflict->tree_conflict_get_local_details_func)
+    SVN_ERR(conflict->tree_conflict_get_local_details_func(conflict,
+                                                           scratch_pool));
 
   return SVN_NO_ERROR;
 }
