@@ -865,6 +865,76 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
   return SVN_NO_ERROR;
 }
 
+/* Details for tree conflicts involving a locally missing node. */
+struct conflict_tree_local_missing_details
+{
+  /* If not SVN_INVALID_REVNUM, the node was deleted in DELETED_REV. */
+  svn_revnum_t deleted_rev;
+
+  /* Author who committed DELETED_REV. */
+  const char *deleted_rev_author;
+};
+
+/* Implements tree_conflict_get_details_func_t. */
+static svn_error_t *
+conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
+                                        apr_pool_t *scratch_pool)
+{
+  const char *old_repos_relpath;
+  const char *new_repos_relpath;
+  const char *parent_repos_relpath;
+  svn_revnum_t old_rev;
+  svn_revnum_t new_rev;
+  svn_revnum_t deleted_rev;
+  const char *deleted_rev_author;
+  svn_node_kind_t replacing_node_kind;
+  const char *deleted_basename;
+  struct conflict_tree_local_missing_details *details;
+
+  /* We only handle merges here. */
+  if (svn_client_conflict_get_operation(conflict) != svn_wc_operation_merge)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+            &old_repos_relpath, &old_rev, NULL, conflict,
+            scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            &new_repos_relpath, &new_rev, NULL, conflict,
+            scratch_pool, scratch_pool));
+
+  /* A deletion of the node may have happened on the branch we
+   * merged to. Scan the conflict victim's parent's log to find
+   * a revision which deleted the node. */
+  deleted_basename = svn_dirent_basename(conflict->local_abspath,
+                                         scratch_pool);
+  SVN_ERR(svn_wc__node_get_repos_info(NULL, &parent_repos_relpath,
+                                      NULL, NULL,
+                                      conflict->ctx->wc_ctx,
+                                      svn_dirent_dirname(
+                                        conflict->local_abspath,
+                                        scratch_pool),
+                                      scratch_pool,
+                                      scratch_pool));
+  SVN_ERR(find_revision_for_suspected_deletion(
+            &deleted_rev, &deleted_rev_author, &replacing_node_kind,
+            conflict, deleted_basename, parent_repos_relpath,
+            old_rev < new_rev ? new_rev : old_rev, 0,
+            old_rev < new_rev ? new_repos_relpath : old_repos_relpath,
+            old_rev < new_rev ? new_rev : old_rev,
+            scratch_pool, scratch_pool));
+
+  if (deleted_rev == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
+
+  details = apr_pcalloc(conflict->pool, sizeof(*details));
+  details->deleted_rev = deleted_rev;
+  details->deleted_rev_author = apr_pstrdup(conflict->pool, deleted_rev_author);
+                                         
+  conflict->tree_conflict_local_details = details;
+
+  return SVN_NO_ERROR;
+}
+
 /* Return a localised string representation of the local part of a tree
    conflict on a non-existent node. */
 static svn_error_t *
@@ -898,62 +968,10 @@ describe_local_none_node_change(const char **description,
         *description = _("No such file or directory was found in the "
                          "working copy.");
       else if (operation == svn_wc_operation_merge)
-        {
-          const char *old_repos_relpath;
-          const char *new_repos_relpath;
-          const char *parent_repos_relpath;
-          svn_revnum_t old_rev;
-          svn_revnum_t new_rev;
-          svn_revnum_t deleted_rev;
-          const char *deleted_rev_author;
-          svn_node_kind_t replacing_node_kind;
-          const char *deleted_basename;
-
-          SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
-                    &old_repos_relpath, &old_rev, NULL, conflict,
-                    scratch_pool, scratch_pool));
-          SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
-                    &new_repos_relpath, &new_rev, NULL, conflict,
-                    scratch_pool, scratch_pool));
-
-          /* The deletion of the node may have happened on the branch we
-           * merged to. Scan the conflict victim's parent's log to find
-           * a revision which deleted the node. */
-          deleted_basename = svn_dirent_basename(conflict->local_abspath,
-                                                 scratch_pool);
-          SVN_ERR(svn_wc__node_get_repos_info(NULL, &parent_repos_relpath,
-                                              NULL, NULL,
-                                              conflict->ctx->wc_ctx,
-                                              svn_dirent_dirname(
-                                                conflict->local_abspath,
-                                                scratch_pool),
-                                              scratch_pool,
-                                              scratch_pool));
-          SVN_ERR(find_revision_for_suspected_deletion(
-                    &deleted_rev, &deleted_rev_author, &replacing_node_kind,
-                    conflict, deleted_basename, parent_repos_relpath,
-                    old_rev < new_rev ? new_rev : old_rev, 0,
-                    old_rev < new_rev ? new_repos_relpath : old_repos_relpath,
-                    old_rev < new_rev ? new_rev : old_rev,
-                    scratch_pool, scratch_pool));
-
-          if (deleted_rev == SVN_INVALID_REVNUM)
-            {
-              /* We could not determine the revision in which the node was
-               * deleted. */
-              *description = _("No such file or directory was found in the "
-                               "merge target working copy.\nThe item may "
-                               "have been deleted or moved away in the "
-                               "repository's history.");
-            }
-          else
-            *description = apr_psprintf(
-                             result_pool,
-                             _("No such file or directory was found in the "
-                               "merge target working copy.\nThe item was "
-                               "deleted or moved away in r%ld by %s."),
-                             deleted_rev, deleted_rev_author);
-        }
+        *description = _("No such file or directory was found in the "
+                         "merge target working copy.\nThe item may "
+                         "have been deleted or moved away in the "
+                         "repository's history.");
       break;
     case svn_wc_conflict_reason_unversioned:
       *description = _("An unversioned item was found in the working "
@@ -1008,6 +1026,30 @@ tree_conflict_get_local_description_generic(const char **description,
                                                 result_pool, scratch_pool));
         break;
     }
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements tree_conflict_get_description_func_t. */
+static svn_error_t *
+conflict_tree_get_description_local_missing(const char **description,
+                                            svn_client_conflict_t *conflict,
+                                            apr_pool_t *result_pool,
+                                            apr_pool_t *scratch_pool)
+{
+  struct conflict_tree_local_missing_details *details;
+
+  details = conflict->tree_conflict_local_details;
+  if (details == NULL)
+    return svn_error_trace(tree_conflict_get_local_description_generic(
+                             description, conflict, result_pool, scratch_pool));
+
+  *description = apr_psprintf(
+                   result_pool,
+                   _("No such file or directory was found in the "
+                     "merge target working copy.\nThe item was "
+                     "deleted or moved away in r%ld by %s."),
+                   details->deleted_rev, details->deleted_rev_author);
 
   return SVN_NO_ERROR;
 }
@@ -4432,8 +4474,8 @@ conflict_type_specific_setup(svn_client_conflict_t *conflict,
                              apr_pool_t *scratch_pool)
 {
   svn_boolean_t tree_conflicted;
-  svn_wc_operation_t operation;
   svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_reason_t local_change;
 
   /* For now, we only deal with tree conflicts here. */
   SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
@@ -4448,8 +4490,8 @@ conflict_type_specific_setup(svn_client_conflict_t *conflict,
   conflict->tree_conflict_get_local_description_func =
     tree_conflict_get_local_description_generic;
 
-  operation = svn_client_conflict_get_operation(conflict);
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
 
   /* Set type-specific description and details functions. */
   if (incoming_change == svn_wc_conflict_action_delete ||
@@ -4473,6 +4515,14 @@ conflict_type_specific_setup(svn_client_conflict_t *conflict,
         conflict_tree_get_description_incoming_edit;
       conflict->tree_conflict_get_incoming_details_func =
         conflict_tree_get_details_incoming_edit;
+    }
+
+  if (local_change == svn_wc_conflict_reason_missing)
+    {
+      conflict->tree_conflict_get_local_description_func =
+        conflict_tree_get_description_local_missing;
+      conflict->tree_conflict_get_local_details_func =
+        conflict_tree_get_details_local_missing;
     }
 
   return SVN_NO_ERROR;
