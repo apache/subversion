@@ -85,7 +85,7 @@ struct svn_client_conflict_t
 
   /* Ask a tree conflict to find out more information about itself
    * by contacting the repository. */
-  tree_conflict_get_details_func_t tree_conflict_get_details_func;
+  tree_conflict_get_details_func_t tree_conflict_get_incoming_details_func;
 
   /* Any additional information found can be stored here and may be used
    * when describing a tree conflict. */
@@ -3948,8 +3948,9 @@ svn_client_conflict_tree_get_details(svn_client_conflict_t *conflict,
 {
   SVN_ERR(assert_tree_conflict(conflict, scratch_pool));
 
-  if (conflict->tree_conflict_get_details_func)
-    SVN_ERR(conflict->tree_conflict_get_details_func(conflict, scratch_pool));
+  if (conflict->tree_conflict_get_incoming_details_func)
+    SVN_ERR(conflict->tree_conflict_get_incoming_details_func(conflict,
+                                                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -4486,21 +4487,21 @@ conflict_type_specific_setup(svn_client_conflict_t *conflict,
     {
       conflict->tree_conflict_get_description_func =
         conflict_tree_get_description_incoming_delete;
-      conflict->tree_conflict_get_details_func =
+      conflict->tree_conflict_get_incoming_details_func =
         conflict_tree_get_details_incoming_delete;
     }
   else if (incoming_change == svn_wc_conflict_action_add)
     {
       conflict->tree_conflict_get_description_func =
         conflict_tree_get_description_incoming_add;
-      conflict->tree_conflict_get_details_func =
+      conflict->tree_conflict_get_incoming_details_func =
         conflict_tree_get_details_incoming_add;
     }
   else if (incoming_change == svn_wc_conflict_action_edit)
     {
       conflict->tree_conflict_get_description_func =
         conflict_tree_get_description_incoming_edit;
-      conflict->tree_conflict_get_details_func =
+      conflict->tree_conflict_get_incoming_details_func =
         conflict_tree_get_details_incoming_edit;
     }
 
