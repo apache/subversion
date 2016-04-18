@@ -308,11 +308,17 @@ class GeneratorBase:
       key, _, val = line.split()
       aprerr += [(int(val), key)]
     write_struct('svn__apr_errno', aprerr)
+    aprdict = dict(aprerr)
+    del aprerr
 
     ## sanity check
-    intersection = set(errno.errorcode.keys()) & set(dict(aprerr).keys())
+    intersection = set(errno.errorcode.keys()) & set(aprdict.keys())
+    intersection = filter(lambda x: errno.errorcode[x] != aprdict[x],
+                          intersection)
     if self.errno_filter(intersection):
-        print("WARNING: errno intersects APR error codes: %r" % intersection)
+        print("WARNING: errno intersects APR error codes; "
+              "runtime computation of symbolic error names for the following numeric codes might be wrong: "
+              "%r" % (intersection,))
 
     self.write_file_if_changed('subversion/libsvn_subr/errorcode.inc',
                                '\n'.join(lines))

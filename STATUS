@@ -107,13 +107,6 @@ Approved changes:
    Votes:
      +1: stefan2, rhuijben, stsp
 
- * r1735179
-   build system: Improve svn_error_symbolic_name()'s data gatherer.
-   Justification:
-     The incumbent warning message is unclear and might have false positives.
-   Votes:
-     +1: danielsh, stsp, stefan2
-
  * r1717874, r1717875, r1717878, r1716808
    Make inherited property api consistent over all ra layers
    Justification:
