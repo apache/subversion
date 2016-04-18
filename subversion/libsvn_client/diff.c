@@ -726,12 +726,13 @@ diff_props_changed(const char *diff_relpath,
   return SVN_NO_ERROR;
 }
 
-/* Given a file TMPFILE, return a path to a temporary file that lives at least
-   as long as RESULT_POOL, containing the git-like represention of TMPFILE */
+/* Given a file ORIG_TMPFILE, return a path to a temporary file that lives at
+ * least as long as RESULT_POOL, containing the git-like represention of
+ * ORIG_TMPFILE */
 static svn_error_t *
 transform_link_to_git(const char **new_tmpfile,
                       const char **git_sha1,
-                      const char *tmpfile,
+                      const char *orig_tmpfile,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
@@ -741,7 +742,7 @@ transform_link_to_git(const char **new_tmpfile,
 
   *git_sha1 = NULL;
 
-  SVN_ERR(svn_io_file_open(&orig, tmpfile, APR_READ, APR_OS_DEFAULT,
+  SVN_ERR(svn_io_file_open(&orig, orig_tmpfile, APR_READ, APR_OS_DEFAULT,
                            scratch_pool));
   SVN_ERR(svn_io_open_unique_file3(&gitlike, new_tmpfile, NULL,
                                    svn_io_file_del_on_pool_cleanup,
@@ -773,7 +774,7 @@ transform_link_to_git(const char **new_tmpfile,
   else
     {
       /* Not a link... so can't convert */
-      *new_tmpfile = apr_pstrdup(result_pool, tmpfile);
+      *new_tmpfile = apr_pstrdup(result_pool, orig_tmpfile);
     }
 
   SVN_ERR(svn_io_file_close(orig, scratch_pool));
