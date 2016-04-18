@@ -1012,52 +1012,156 @@ describe_local_change(const char **description,
 /* Return a localised string representation of the incoming part of a
    conflict; NULL for non-localised odd cases. */
 static const char *
-incoming_action_str(svn_node_kind_t kind, svn_wc_conflict_action_t action)
+describe_incoming_change(svn_node_kind_t kind, svn_wc_conflict_action_t action,
+                         svn_wc_operation_t operation)
 {
   switch (kind)
     {
       case svn_node_file:
       case svn_node_symlink:
-        switch (action)
+        if (operation == svn_wc_operation_update)
           {
-            case svn_wc_conflict_action_edit:
-              return _("incoming file edit");
-            case svn_wc_conflict_action_add:
-              return _("incoming file add");
-            case svn_wc_conflict_action_delete:
-              return _("incoming file delete or move");
-            case svn_wc_conflict_action_replace:
-              return _("incoming replace with file");
+            switch (action)
+              {
+                case svn_wc_conflict_action_edit:
+                  return _("An update operation tried to edit a file.");
+                case svn_wc_conflict_action_add:
+                  return _("An update operation tried to add a file.");
+                case svn_wc_conflict_action_delete:
+                  return _("An update operation tried to delete or move "
+                           "a file.");
+                case svn_wc_conflict_action_replace:
+                  return _("An update operation tried to replace a file.");
+              }
+          }
+        else if (operation == svn_wc_operation_switch)
+          {
+            switch (action)
+              {
+                case svn_wc_conflict_action_edit:
+                  return _("A switch operation tried to edit a file.");
+                case svn_wc_conflict_action_add:
+                  return _("A switch operation tried to add a file.");
+                case svn_wc_conflict_action_delete:
+                  return _("A switch operation tried to delete or move "
+                           "a file.");
+                case svn_wc_conflict_action_replace:
+                  return _("A switch operation tried to replace a file.");
+              }
+          }
+        else if (operation == svn_wc_operation_merge)
+          {
+            switch (action)
+              {
+                case svn_wc_conflict_action_edit:
+                  return _("A merge operation tried to edit a file.");
+                case svn_wc_conflict_action_add:
+                  return _("A merge operation tried to add a file.");
+                case svn_wc_conflict_action_delete:
+                  return _("A merge operation tried to delete or move "
+                           "a file.");
+                case svn_wc_conflict_action_replace:
+                  return _("A merge operation tried to replace a file.");
+            }
           }
         break;
       case svn_node_dir:
-        switch (action)
+        if (operation == svn_wc_operation_update)
           {
-            case svn_wc_conflict_action_edit:
-              return _("incoming dir edit");
-            case svn_wc_conflict_action_add:
-              return _("incoming dir add");
-            case svn_wc_conflict_action_delete:
-              return _("incoming dir delete or move");
-            case svn_wc_conflict_action_replace:
-              return _("incoming replace with dir");
+            switch (action)
+              {
+                case svn_wc_conflict_action_edit:
+                  return _("An update operation tried to change a directory.");
+                case svn_wc_conflict_action_add:
+                  return _("An update operation tried to add a directory.");
+                case svn_wc_conflict_action_delete:
+                  return _("An update operation tried to delete or move "
+                           "a directory.");
+                case svn_wc_conflict_action_replace:
+                  return _("An update operation tried to replace a directory.");
+              }
+          }
+        else if (operation == svn_wc_operation_switch)
+          {
+            switch (action)
+              {
+                case svn_wc_conflict_action_edit:
+                  return _("A switch operation tried to edit a directory.");
+                case svn_wc_conflict_action_add:
+                  return _("A switch operation tried to add a directory.");
+                case svn_wc_conflict_action_delete:
+                  return _("A switch operation tried to delete or move "
+                           "a directory.");
+                case svn_wc_conflict_action_replace:
+                  return _("A switch operation tried to replace a directory.");
+              }
+          }
+        else if (operation == svn_wc_operation_merge)
+          {
+            switch (action)
+              {
+                case svn_wc_conflict_action_edit:
+                  return _("A merge operation tried to edit a directory.");
+                case svn_wc_conflict_action_add:
+                  return _("A merge operation tried to add a directory.");
+                case svn_wc_conflict_action_delete:
+                  return _("A merge operation tried to delete or move "
+                           "a directory.");
+                case svn_wc_conflict_action_replace:
+                  return _("A merge operation tried to replace a directory.");
+            }
           }
         break;
       case svn_node_none:
       case svn_node_unknown:
-        switch (action)
+        if (operation == svn_wc_operation_update)
           {
-            case svn_wc_conflict_action_edit:
-              return _("incoming edit");
-            case svn_wc_conflict_action_add:
-              return _("incoming add");
-            case svn_wc_conflict_action_delete:
-              return _("incoming delete or move");
-            case svn_wc_conflict_action_replace:
-              return _("incoming replace");
+            switch (action)
+              {
+                case svn_wc_conflict_action_edit:
+                  return _("An update operation tried to edit an item.");
+                case svn_wc_conflict_action_add:
+                  return _("An update operation tried to add an item.");
+                case svn_wc_conflict_action_delete:
+                  return _("An update operation tried to delete or move "
+                           "an item.");
+                case svn_wc_conflict_action_replace:
+                  return _("An update operation tried to replace an item.");
+              }
+          }
+        else if (operation == svn_wc_operation_switch)
+          {
+            switch (action)
+              {
+                case svn_wc_conflict_action_edit:
+                  return _("A switch operation tried to edit an item.");
+                case svn_wc_conflict_action_add:
+                  return _("A switch operation tried to add an item.");
+                case svn_wc_conflict_action_delete:
+                  return _("A switch operation tried to delete or move "
+                           "an item.");
+                case svn_wc_conflict_action_replace:
+                  return _("A switch operation tried to replace an item.");
+              }
+          }
+        else if (operation == svn_wc_operation_merge)
+          {
+            switch (action)
+              {
+                case svn_wc_conflict_action_edit:
+                  return _("A merge operation tried to edit an item.");
+                case svn_wc_conflict_action_add:
+                  return _("A merge operation tried to add an item.");
+                case svn_wc_conflict_action_delete:
+                  return _("A merge operation tried to delete or move "
+                           "an item.");
+                case svn_wc_conflict_action_replace:
+                  return _("A merge operation tried to replace an item.");
+              }
           }
         break;
     }
+
   return NULL;
 }
 
@@ -1146,7 +1250,7 @@ conflict_tree_get_description_generic(const char **local_change_description,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool)
 {
-  const char *action, *reason, *operation;
+  const char *action, *reason;
   svn_node_kind_t incoming_kind;
   svn_wc_conflict_action_t conflict_action;
   svn_wc_conflict_reason_t conflict_reason;
@@ -1181,10 +1285,8 @@ conflict_tree_get_description_generic(const char **local_change_description,
     }
 
   SVN_ERR(describe_local_change(&reason, conflict, scratch_pool, scratch_pool));
-  action = incoming_action_str(incoming_kind, conflict_action);
-  operation = operation_str(conflict_operation);
-  SVN_ERR_ASSERT(operation);
-
+  action = describe_incoming_change(incoming_kind, conflict_action,
+                                    conflict_operation);
   if (action && reason)
     {
       *local_change_description = apr_pstrdup(result_pool, reason);
