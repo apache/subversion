@@ -4480,7 +4480,7 @@ conflict_type_specific_setup(svn_client_conflict_t *conflict,
   operation = svn_client_conflict_get_operation(conflict);
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
 
-  /* Set type-specific description and details functions if available. */
+  /* Set type-specific description and details functions. */
   if (incoming_change == svn_wc_conflict_action_delete ||
       incoming_change == svn_wc_conflict_action_replace)
     {
