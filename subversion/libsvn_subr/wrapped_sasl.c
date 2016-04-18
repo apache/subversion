@@ -21,6 +21,9 @@
  * ====================================================================
  */
 
+#include "svn_private_config.h"
+#ifdef SVN_HAVE_SASL
+
 #include "private/svn_wrapped_sasl.h"
 
 /* See the comment at the top of svn_wrapped_sasl.h */
@@ -190,3 +193,5 @@ svn_sasl__decode(sasl_conn_t *conn,
 {
   return sasl_decode(conn, input, inputlen, output, outputlen);
 }
+
+#endif /* SVN_HAVE_SASL */
