@@ -3905,8 +3905,8 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
 
   /* Add options which offer automated resolution: */
-  if (svn_client_conflict_get_operation(conflict) == svn_wc_operation_update ||
-      svn_client_conflict_get_operation(conflict) == svn_wc_operation_switch)
+  if (operation == svn_wc_operation_update ||
+      operation == svn_wc_operation_switch)
     {
       svn_wc_conflict_reason_t reason;
 
