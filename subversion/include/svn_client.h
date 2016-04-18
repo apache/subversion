@@ -4508,11 +4508,13 @@ svn_client_conflict_prop_get_description(const char **description,
  * Any revision numbers mentioned elsewhere in the description are
  * prefixed with the letter 'r' (e.g. "r99").
  *
- * The description has two parts: One describing the "local change" which
- * occured in the working copy or perhaps a branch (the merge target).
- * The other part describes the "incoming change" which conflicts with
- * the local change. Both parts are provided independently to allow for
- * some flexibility when displaying the description.
+ * The description has two parts: One part describes the "incoming change"
+ * applied by an update, merge, or switch operation. The other part
+ * describes the "local change" which occurred in the working copy or
+ * perhaps in the history of a merge target branch.
+ * Both parts are provided independently to allow for some flexibility
+ * when displaying the description. As a convention, displaying the
+ * "incoming change" first and the "local change" second is recommended.
  *
  * By default, the description is based only on information available in
  * the working copy. If svn_client_conflict_tree_get_details() was already
