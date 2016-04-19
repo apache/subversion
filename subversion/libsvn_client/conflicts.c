@@ -3605,6 +3605,7 @@ resolve_merge_incoming_added_file_text_merge(
   const char *corrected_url;
   const char *repos_root_url;
   const char *repos_uuid;
+  const char *wc_tmpdir;
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
   const char *local_abspath;
@@ -3623,8 +3624,10 @@ resolve_merge_incoming_added_file_text_merge(
   svn_error_t *err;
 
   /* Set up tempory storage for the repository version of file. */
+  SVN_ERR(svn_wc__get_tmpdir(&wc_tmpdir, ctx->wc_ctx, local_abspath,
+                             scratch_pool, scratch_pool));
   SVN_ERR(svn_io_open_unique_file3(&incoming_new_file,
-                                   &incoming_new_tmp_abspath, NULL,
+                                   &incoming_new_tmp_abspath, wc_tmpdir,
                                    svn_io_file_del_on_pool_cleanup,
                                    scratch_pool, scratch_pool));
   incoming_new_stream = svn_stream_from_aprfile2(incoming_new_file, TRUE,
