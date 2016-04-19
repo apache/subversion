@@ -3367,7 +3367,8 @@ svn_wc__conflict_text_mark_resolved(svn_wc_context_t *wc_ctx,
 
   if (did_resolve && notify_func)
     notify_func(notify_baton,
-                svn_wc_create_notify(local_abspath, svn_wc_notify_resolved,
+                svn_wc_create_notify(local_abspath,
+                                     svn_wc_notify_resolved_text,
                                      scratch_pool),
                 scratch_pool);
 
@@ -3399,10 +3400,14 @@ svn_wc__conflict_prop_mark_resolved(svn_wc_context_t *wc_ctx,
                                         NULL, NULL, scratch_pool));
 
   if (did_resolve && notify_func)
-    notify_func(notify_baton,
-                svn_wc_create_notify(local_abspath, svn_wc_notify_resolved,
+    {
+      svn_wc_notify_t *notify;
+      
+      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_resolved_prop,
                                      scratch_pool),
-                scratch_pool);
+      notify->prop_name = propname;
+      notify_func(notify_baton, notify, scratch_pool);
+    }
   return SVN_NO_ERROR;
 }
 
