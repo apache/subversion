@@ -407,6 +407,11 @@ static const resolver_option_t builtin_resolver_options[] =
                                   svn_client_conflict_option_postpone,
                                   SVN_CL__ACCEPT_POSTPONE },
 
+  /* This option resolves a tree conflict to the current working copy state. */
+  { "r", N_("accept current working copy state"), NULL,
+    svn_client_conflict_option_accept_current_wc_state,
+    SVN_CL__ACCEPT_WORKING },
+
   /* These options use the same code since they only occur in
    * distinct conflict scenarios. */
   { "u", N_("update move destination"),    NULL,
