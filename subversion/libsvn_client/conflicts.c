@@ -3623,6 +3623,8 @@ resolve_merge_incoming_added_file_text_merge(
   apr_array_header_t *propdiffs;
   svn_error_t *err;
 
+  local_abspath = svn_client_conflict_get_local_abspath(conflict);
+
   /* Set up tempory storage for the repository version of file. */
   SVN_ERR(svn_wc__get_tmpdir(&wc_tmpdir, ctx->wc_ctx, local_abspath,
                              scratch_pool, scratch_pool));
@@ -3671,8 +3673,6 @@ resolve_merge_incoming_added_file_text_merge(
   SVN_ERR(svn_io_open_unique_file3(&empty_file, &empty_file_abspath, NULL,
                                    svn_io_file_del_on_pool_cleanup,
                                    scratch_pool, scratch_pool));
-
-  local_abspath = svn_client_conflict_get_local_abspath(conflict);
 
   /* Create a property diff against an empty base. */
   SVN_ERR(svn_prop_diffs(&propdiffs, apr_hash_make(scratch_pool),
