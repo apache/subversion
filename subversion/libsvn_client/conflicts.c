@@ -4322,12 +4322,12 @@ configure_option_merge_incoming_added_file_text_merge(
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
       option->description =
-        apr_psprintf(options->pool, _("merge file '%s' with '^/%s@%ld'"),
+        apr_psprintf(options->pool, _("merge '^/%s@%ld' into '%s'"),
+          incoming_new_repos_relpath, incoming_new_pegrev,
           svn_dirent_local_style(
             svn_dirent_skip_ancestor(wcroot_abspath,
                                      conflict->local_abspath),
-            scratch_pool),
-          incoming_new_repos_relpath, incoming_new_pegrev);
+            scratch_pool));
       option->conflict = conflict;
       option->do_resolve_func = resolve_merge_incoming_added_file_text_merge;
       APR_ARRAY_PUSH(options, const svn_client_conflict_option_t *) = option;
