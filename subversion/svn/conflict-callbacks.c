@@ -817,11 +817,12 @@ handle_text_conflict(svn_boolean_t *resolved,
 
   if (is_binary)
     SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-                                _("Conflict discovered in binary file '%s'.\n"),
+                                _("Merge conflict discovered in binary "
+                                  "file '%s'.\n"),
                                 local_relpath));
   else
     SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-                                _("Conflict discovered in file '%s'.\n"),
+                                _("Merge conflict discovered in file '%s'.\n"),
                                 local_relpath));
 
   /* ### TODO This whole feature availability check is grossly outdated.
