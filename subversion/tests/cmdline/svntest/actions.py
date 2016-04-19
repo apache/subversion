@@ -1797,6 +1797,15 @@ def _run_and_verify_resolve(cmd, expected_paths, *args):
          expected_paths] + [
         "Resolved conflicted state of '" + path + "'\n" for path in
         expected_paths]),
+      verify.UnorderedOutput([
+        "Merge conflicts in '" + path + "' marked as resolved.\n" for path in
+        expected_paths]),
+      verify.UnorderedRegexListOutput([
+        "Conflict in property.*at '" + path + "' marked as resolved.\n" \
+        for path in expected_paths]),
+      verify.UnorderedOutput([
+        "Tree conflict at '" + path + "' marked as resolved.\n" for path in
+        expected_paths]),
     ],
     match_all=False)
   run_and_verify_svn(expected_output, [],
