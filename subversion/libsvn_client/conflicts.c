@@ -3479,7 +3479,7 @@ resolve_accept_current_wc_state(svn_client_conflict_option_t *option,
   if (ctx->notify_func2)
     ctx->notify_func2(ctx->notify_baton2,
                       svn_wc_create_notify(local_abspath,
-                                           svn_wc_notify_resolved,
+                                           svn_wc_notify_resolved_tree,
                                            scratch_pool),
                       scratch_pool);
 
@@ -3724,7 +3724,7 @@ resolve_merge_incoming_added_file_text_merge(
       ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
 
       /* And also about the successfully resolved tree conflict. */
-      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_resolved,
+      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_resolved_tree,
                                     scratch_pool);
       ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
@@ -3922,9 +3922,10 @@ unlock_wc:
 
   if (ctx->notify_func2)
     {
-      svn_wc_notify_t *notify = svn_wc_create_notify(local_abspath,
-                                                     svn_wc_notify_resolved,
-                                                     scratch_pool);
+      svn_wc_notify_t *notify = svn_wc_create_notify(
+                                  local_abspath,
+                                  svn_wc_notify_resolved_tree,
+                                  scratch_pool);
 
       ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
