@@ -3610,7 +3610,7 @@ def update_output_with_conflicts(rev, target, paths=None, resolved=False):
   lines += ['Updated to revision %d.\n' % rev]
   if resolved:
     for path in paths:
-      lines += ["Resolved conflicted state of '%s'\n" % path]
+      lines += ["Merge conflicts in '%s' marked as resolved.\n" % path]
     lines += svntest.main.summary_of_conflicts(text_resolved=len(paths))
   else:
     lines += svntest.main.summary_of_conflicts(text_conflicts=len(paths))
