@@ -3984,50 +3984,21 @@ svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
-                                                svn_client_conflict_t *conflict,
-                                                apr_pool_t *result_pool,
-                                                apr_pool_t *scratch_pool)
+/* Configure 'accept current wc state' resolution option for a tree conflict. */
+static svn_error_t *
+configure_option_accept_current_wc_state(svn_client_conflict_t *conflict,
+                                         apr_array_header_t *options)
 {
-  svn_client_conflict_option_t *option;
   svn_wc_operation_t operation;
-  svn_wc_conflict_reason_t local_change;
   svn_wc_conflict_action_t incoming_change;
-  svn_node_kind_t victim_node_kind;
-  const char *incoming_new_repos_relpath;
-  svn_revnum_t incoming_new_pegrev;
-  svn_node_kind_t incoming_new_kind;
-  const char *wcroot_abspath;
+  svn_wc_conflict_reason_t local_change;
+  svn_client_conflict_option_t *option;
 
   operation = svn_client_conflict_get_operation(conflict);
-  local_change = svn_client_conflict_get_local_change(conflict);
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
-  victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
-  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
-            &incoming_new_repos_relpath, &incoming_new_pegrev,
-            &incoming_new_kind, conflict, scratch_pool,
-            scratch_pool));
+  local_change = svn_client_conflict_get_local_change(conflict);
 
-  SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
-                             conflict->local_abspath, scratch_pool,
-                             scratch_pool));
-
-  SVN_ERR(assert_tree_conflict(conflict, scratch_pool));
-
-  *options = apr_array_make(result_pool, 2,
-                            sizeof(svn_client_conflict_option_t *));
-
-  /* Add postpone option. */
-  option = apr_pcalloc(result_pool, sizeof(*option));
-  option->id = svn_client_conflict_option_postpone;
-  option->description = _("skip this conflict and leave it unresolved");
-  option->conflict = conflict;
-  option->do_resolve_func = resolve_postpone;
-  APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
-
-  /* Add an option which marks the conflict resolved. */
-  option = apr_pcalloc(result_pool, sizeof(*option));
+  option = apr_pcalloc(options->pool, sizeof(*option));
   option->id = svn_client_conflict_option_accept_current_wc_state;
   option->description = _("accept current working copy state");
   option->conflict = conflict;
@@ -4047,73 +4018,166 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   else
     option->do_resolve_func = resolve_accept_current_wc_state;
 
+  APR_ARRAY_PUSH(options, const svn_client_conflict_option_t *) = option;
+
+  return SVN_NO_ERROR;
+}
+
+/* Configure 'update move destination' resolution option for a tree conflict. */
+static svn_error_t *
+configure_option_update_move_destination(svn_client_conflict_t *conflict,
+                                         apr_array_header_t *options)
+{
+  svn_wc_operation_t operation;
+  svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_reason_t local_change;
+
+  operation = svn_client_conflict_get_operation(conflict);
+  incoming_change = svn_client_conflict_get_incoming_change(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
+
+  if ((operation == svn_wc_operation_update ||
+       operation == svn_wc_operation_switch) &&
+      incoming_change == svn_wc_conflict_action_edit &&
+      local_change == svn_wc_conflict_reason_moved_away)
+    {
+      svn_client_conflict_option_t *option;
+
+      option = apr_pcalloc(options->pool, sizeof(*option));
+      option->id = svn_client_conflict_option_update_move_destination;
+      option->description = _("apply incoming changes to move destination");
+      option->conflict = conflict;
+      option->do_resolve_func = resolve_update_moved_away_node;
+      APR_ARRAY_PUSH(options, const svn_client_conflict_option_t *) = option;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Configure 'update raise moved away children' resolution option for a tree
+ * conflict. */
+static svn_error_t *
+configure_option_update_raise_moved_away_children(
+  svn_client_conflict_t *conflict,
+  apr_array_header_t *options)
+{
+  svn_wc_operation_t operation;
+  svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_reason_t local_change;
+  svn_node_kind_t victim_node_kind;
+
+  operation = svn_client_conflict_get_operation(conflict);
+  incoming_change = svn_client_conflict_get_incoming_change(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
+  victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
+
+  if ((operation == svn_wc_operation_update ||
+       operation == svn_wc_operation_switch) &&
+      incoming_change == svn_wc_conflict_action_edit &&
+      (local_change == svn_wc_conflict_reason_deleted ||
+       local_change == svn_wc_conflict_reason_replaced) &&
+      victim_node_kind == svn_node_dir)
+    {
+      svn_client_conflict_option_t *option;
+
+      option = apr_pcalloc(options->pool, sizeof(*option));
+      option->id = svn_client_conflict_option_update_any_moved_away_children;
+      option->description = _("prepare for updating moved-away children, "
+                              "if any");
+      option->conflict = conflict;
+      option->do_resolve_func = resolve_update_raise_moved_away;
+      APR_ARRAY_PUSH(options, const svn_client_conflict_option_t *) = option;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Configure 'incoming added file text merge' resolution option for a tree
+ * conflict. */
+static svn_error_t *
+configure_option_merge_incoming_added_file_text_merge(
+  svn_client_conflict_t *conflict,
+  apr_array_header_t *options,
+  apr_pool_t *scratch_pool)
+{
+  svn_wc_operation_t operation;
+  svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_reason_t local_change;
+  svn_node_kind_t victim_node_kind;
+  const char *incoming_new_repos_relpath;
+  svn_revnum_t incoming_new_pegrev;
+  svn_node_kind_t incoming_new_kind;
+
+  operation = svn_client_conflict_get_operation(conflict);
+  incoming_change = svn_client_conflict_get_incoming_change(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
+  victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            &incoming_new_repos_relpath, &incoming_new_pegrev,
+            &incoming_new_kind, conflict, scratch_pool,
+            scratch_pool));
+
+  if (operation == svn_wc_operation_merge &&
+      victim_node_kind == svn_node_file &&
+      incoming_new_kind == svn_node_file &&
+      incoming_change == svn_wc_conflict_action_add &&
+      local_change == svn_wc_conflict_reason_obstructed)
+    {
+      svn_client_conflict_option_t *option;
+      const char *wcroot_abspath;
+
+      option = apr_pcalloc(options->pool, sizeof(*option));
+      option->id =
+        svn_client_conflict_option_merge_incoming_added_file_text_merge;
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+                                 conflict->local_abspath, scratch_pool,
+                                 scratch_pool));
+      option->description =
+        apr_psprintf(options->pool, _("merge file '%s' with '^/%s@%ld'"),
+          svn_dirent_local_style(
+            svn_dirent_skip_ancestor(wcroot_abspath,
+                                     conflict->local_abspath),
+            scratch_pool),
+          incoming_new_repos_relpath, incoming_new_pegrev);
+      option->conflict = conflict;
+      option->do_resolve_func = resolve_merge_incoming_added_file_text_merge;
+      APR_ARRAY_PUSH(options, const svn_client_conflict_option_t *) = option;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
+                                                svn_client_conflict_t *conflict,
+                                                apr_pool_t *result_pool,
+                                                apr_pool_t *scratch_pool)
+{
+  svn_client_conflict_option_t *option;
+
+  SVN_ERR(assert_tree_conflict(conflict, scratch_pool));
+
+  *options = apr_array_make(result_pool, 2,
+                            sizeof(svn_client_conflict_option_t *));
+
+  /* Add postpone option. */
+  option = apr_pcalloc(result_pool, sizeof(*option));
+  option->id = svn_client_conflict_option_postpone;
+  option->description = _("skip this conflict and leave it unresolved");
+  option->conflict = conflict;
+  option->do_resolve_func = resolve_postpone;
   APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
 
-  /* Add options which offer automated resolution: */
-  if (operation == svn_wc_operation_update ||
-      operation == svn_wc_operation_switch)
-    {
-      svn_wc_conflict_reason_t reason;
+  /* Add an option which marks the conflict resolved. */
+  SVN_ERR(configure_option_accept_current_wc_state(conflict, *options));
 
-      reason = svn_client_conflict_get_local_change(conflict);
-      if (reason == svn_wc_conflict_reason_moved_away &&
-          incoming_change == svn_wc_conflict_action_edit)
-        {
-          option = apr_pcalloc(result_pool, sizeof(*option));
-          option->id =
-            svn_client_conflict_option_update_move_destination;
-          option->description =
-            _("apply incoming changes to move destination");
-          option->conflict = conflict;
-          option->do_resolve_func = resolve_update_moved_away_node;
-          APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
-            option;
-        }
-      else if (reason == svn_wc_conflict_reason_deleted ||
-               reason == svn_wc_conflict_reason_replaced)
-        {
-          if (svn_client_conflict_get_incoming_change(conflict) ==
-              svn_wc_conflict_action_edit &&
-              svn_client_conflict_tree_get_victim_node_kind(conflict) ==
-              svn_node_dir)
-            {
-              option = apr_pcalloc(result_pool, sizeof(*option));
-              option->id =
-                svn_client_conflict_option_update_any_moved_away_children;
-              option->description =
-                _("prepare for updating moved-away children, if any");
-              option->conflict = conflict;
-              option->do_resolve_func = resolve_update_raise_moved_away;
-              APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
-                option;
-            }
-        }
-    }
-  else if (operation == svn_wc_operation_merge)
-    {
-      if (victim_node_kind == svn_node_file &&
-          incoming_new_kind == svn_node_file &&
-          incoming_change == svn_wc_conflict_action_add &&
-          local_change == svn_wc_conflict_reason_obstructed)
-        {
-          option = apr_pcalloc(result_pool, sizeof(*option));
-          option->id =
-            svn_client_conflict_option_merge_incoming_added_file_text_merge;
-          option->description =
-            apr_psprintf(result_pool,
-              _("merge file '%s' with '^/%s@%ld'"),
-              svn_dirent_local_style(
-                svn_dirent_skip_ancestor(wcroot_abspath,
-                                         conflict->local_abspath),
-                scratch_pool),
-              incoming_new_repos_relpath, incoming_new_pegrev);
-          option->conflict = conflict;
-          option->do_resolve_func =
-            resolve_merge_incoming_added_file_text_merge;
-          APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
-            option;
-        }
-    }
+  /* Configure options which offer automatic resolution. */
+  SVN_ERR(configure_option_update_move_destination(conflict, *options));
+  SVN_ERR(configure_option_update_raise_moved_away_children(conflict,
+                                                            *options));
+  SVN_ERR(configure_option_merge_incoming_added_file_text_merge(conflict,
+                                                                *options,
+                                                                scratch_pool));
 
   return SVN_NO_ERROR;
 }
