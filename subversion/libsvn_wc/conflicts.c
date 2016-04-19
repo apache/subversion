@@ -2971,12 +2971,13 @@ conflict_status_walker(void *baton,
 {
   struct conflict_status_walker_baton *cswb = baton;
   svn_wc__db_t *db = cswb->db;
-
+  svn_wc_notify_action_t notify_action = svn_wc_notify_resolved;
   const apr_array_header_t *conflicts;
   apr_pool_t *iterpool;
   int i;
   svn_boolean_t resolved = FALSE;
   svn_skel_t *conflict;
+  const svn_wc_conflict_description2_t *cd;
 
   if (!status->conflicted)
     return SVN_NO_ERROR;
@@ -2991,7 +2992,6 @@ conflict_status_walker(void *baton,
 
   for (i = 0; i < conflicts->nelts; i++)
     {
-      const svn_wc_conflict_description2_t *cd;
       svn_boolean_t did_resolve;
       svn_wc_conflict_choice_t my_choice = cswb->conflict_choice;
       svn_wc_conflict_result_t *result = NULL;
@@ -3043,7 +3043,10 @@ conflict_status_walker(void *baton,
                                                   iterpool));
 
             if (did_resolve)
-              resolved = TRUE;
+              {
+                resolved = TRUE;
+                notify_action = svn_wc_notify_resolved_tree;
+              }
             break;
 
           case svn_wc_conflict_kind_text:
@@ -3067,6 +3070,8 @@ conflict_status_walker(void *baton,
             SVN_ERR(svn_wc__wq_run(db, local_abspath,
                                    cswb->cancel_func, cswb->cancel_baton,
                                    iterpool));
+            if (resolved)
+                notify_action = svn_wc_notify_resolved_text;
             break;
 
           case svn_wc_conflict_kind_property:
@@ -3087,7 +3092,10 @@ conflict_status_walker(void *baton,
                                                   iterpool));
 
             if (did_resolve)
-              resolved = TRUE;
+              {
+                resolved = TRUE;
+                notify_action = svn_wc_notify_resolved_prop;
+              }
             break;
 
           default:
@@ -3098,12 +3106,22 @@ conflict_status_walker(void *baton,
 
   /* Notify */
   if (cswb->notify_func && resolved)
-    cswb->notify_func(cswb->notify_baton,
-                      svn_wc_create_notify(local_abspath,
-                                           svn_wc_notify_resolved,
-                                           iterpool),
-                      iterpool);
+    {
+      svn_wc_notify_t *notify;
 
+      /* If our caller asked for all conflicts to be resolved,
+       * send a general 'resolved' notification. */
+      if (cswb->resolve_text && cswb->resolve_tree &&
+          (cswb->resolve_prop == NULL || cswb->resolve_prop[0] == '\0'))
+        notify_action = svn_wc_notify_resolved;
+
+      notify = svn_wc_create_notify(local_abspath, notify_action, iterpool);
+      if (notify_action == svn_wc_notify_resolved_prop)
+        notify->prop_name = cd->property_name;
+
+      cswb->notify_func(cswb->notify_baton, notify, iterpool);
+
+    }
   if (resolved)
     cswb->resolved_one = TRUE;
 
@@ -3452,7 +3470,8 @@ svn_wc__conflict_tree_update_break_moved_away(svn_wc_context_t *wc_ctx,
 
       if (notify_func)
         notify_func(notify_baton,
-                    svn_wc_create_notify(local_abspath, svn_wc_notify_resolved,
+                    svn_wc_create_notify(local_abspath,
+                                         svn_wc_notify_resolved_tree,
                                          scratch_pool),
                     scratch_pool);
       return SVN_NO_ERROR;
@@ -3467,7 +3486,8 @@ svn_wc__conflict_tree_update_break_moved_away(svn_wc_context_t *wc_ctx,
 
   if (notify_func)
     notify_func(notify_baton,
-                svn_wc_create_notify(local_abspath, svn_wc_notify_resolved,
+                svn_wc_create_notify(local_abspath,
+                                     svn_wc_notify_resolved_tree,
                                      scratch_pool),
                 scratch_pool);
 
@@ -3543,7 +3563,8 @@ svn_wc__conflict_tree_update_raise_moved_away(svn_wc_context_t *wc_ctx,
   /* The conflict was marked resolved by svn_wc__db_op_raise_moved_away(). */
   if (notify_func)
     notify_func(notify_baton,
-                svn_wc_create_notify(local_abspath, svn_wc_notify_resolved,
+                svn_wc_create_notify(local_abspath,
+                                     svn_wc_notify_resolved_tree,
                                      scratch_pool),
                 scratch_pool);
 
@@ -3628,7 +3649,8 @@ svn_wc__conflict_tree_update_moved_away_node(svn_wc_context_t *wc_ctx,
 
   if (notify_func)
     notify_func(notify_baton,
-                svn_wc_create_notify(local_abspath, svn_wc_notify_resolved,
+                svn_wc_create_notify(local_abspath,
+                                     svn_wc_notify_resolved_tree,
                                      scratch_pool),
                 scratch_pool);
 

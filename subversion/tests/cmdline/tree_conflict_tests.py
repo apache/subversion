@@ -1339,7 +1339,7 @@ def actual_only_node_behaviour(sbox):
                      "relocate", A_copy_url + "/foo", foo_path)
 
   # resolve
-  expected_stdout = "Resolved conflicted state of.*foo.*"
+  expected_stdout = "Tree conflict at.*foo.*marked as resolved"
   expected_stderr = []
   run_and_verify_svn(expected_stdout, expected_stderr,
                      "resolve", "--accept", "working", foo_path)
