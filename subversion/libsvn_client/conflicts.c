@@ -3729,6 +3729,163 @@ resolve_merge_incoming_added_file_text_merge(
 
 /* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
+resolve_merge_incoming_added_file_replace(
+  svn_client_conflict_option_t *option,
+  svn_client_conflict_t *conflict,
+  apr_pool_t *scratch_pool)
+{
+  svn_ra_session_t *ra_session;
+  const char *url;
+  const char *corrected_url;
+  const char *repos_root_url;
+  const char *repos_uuid;
+  const char *incoming_new_repos_relpath;
+  svn_revnum_t incoming_new_pegrev;
+  apr_file_t *incoming_new_file;
+  svn_stream_t *incoming_new_stream;
+  apr_hash_t *incoming_new_props;
+  const char *local_abspath;
+  const char *lock_abspath;
+  svn_client_ctx_t *ctx = conflict->ctx;
+  const char *wc_tmpdir;
+  apr_file_t *working_file_tmp;
+  svn_stream_t *working_file_tmp_stream;
+  const char *working_file_tmp_abspath;
+  svn_stream_t *working_file_stream;
+  apr_hash_t *working_props;
+  apr_file_t *empty_file;
+  const char *empty_file_abspath;
+  apr_array_header_t *propdiffs;
+  svn_error_t *err;
+
+  local_abspath = svn_client_conflict_get_local_abspath(conflict);
+
+  /* Set up tempory storage for the working version of file. */
+  SVN_ERR(svn_wc__get_tmpdir(&wc_tmpdir, ctx->wc_ctx, local_abspath,
+                             scratch_pool, scratch_pool));
+  SVN_ERR(svn_io_open_unique_file3(&working_file_tmp,
+                                   &working_file_tmp_abspath, wc_tmpdir,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   scratch_pool, scratch_pool));
+  working_file_tmp_stream = svn_stream_from_aprfile2(working_file_tmp,
+                                                     FALSE, scratch_pool);
+
+  /* Copy the working file to temporary storage. */
+  SVN_ERR(svn_stream_open_readonly(&working_file_stream, local_abspath,
+                                   scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(working_file_stream, working_file_tmp_stream,
+                           ctx->cancel_baton, ctx->cancel_baton,
+                           scratch_pool));
+  SVN_ERR(svn_io_file_flush(working_file_tmp, scratch_pool));
+
+  /* Get a copy of the working file's properties. */
+  SVN_ERR(svn_wc_prop_list2(&working_props, ctx->wc_ctx, local_abspath,
+                            scratch_pool, scratch_pool));
+
+  /* Create a property diff against an empty base. */
+  SVN_ERR(svn_prop_diffs(&propdiffs, apr_hash_make(scratch_pool),
+                         working_props, scratch_pool));
+
+  /* Fetch the incoming added file from the repository. */
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            &incoming_new_repos_relpath, &incoming_new_pegrev,
+            NULL, conflict, scratch_pool,
+            scratch_pool));
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
+                                             conflict, scratch_pool,
+                                             scratch_pool));
+  url = svn_path_url_add_component2(repos_root_url, incoming_new_repos_relpath,
+                                    scratch_pool);
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
+                                               url, NULL, NULL, FALSE, FALSE,
+                                               conflict->ctx, scratch_pool,
+                                               scratch_pool));
+  if (corrected_url)
+    url = corrected_url;
+  SVN_ERR(svn_io_open_unique_file3(&incoming_new_file, NULL, wc_tmpdir,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   scratch_pool, scratch_pool));
+  incoming_new_stream = svn_stream_from_aprfile2(incoming_new_file, TRUE,
+                                                 scratch_pool);
+  SVN_ERR(svn_ra_get_file(ra_session, "", incoming_new_pegrev,
+                          incoming_new_stream, NULL, /* fetched_rev */
+                          &incoming_new_props, scratch_pool));
+  /* Flush file to disk. */
+  SVN_ERR(svn_io_file_flush(incoming_new_file, scratch_pool));
+
+  /* Reset the stream in preparation for adding its content to WC. */
+  SVN_ERR(svn_stream_reset(incoming_new_stream));
+
+  /* Create an empty file as fake "merge-base" for the two added files.
+   * The files are not ancestrally related so this is the best we can do. */
+  SVN_ERR(svn_io_open_unique_file3(&empty_file, &empty_file_abspath, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
+                                                 local_abspath,
+                                                 scratch_pool, scratch_pool));
+
+  /* ### The following WC modifications should be atomic. */
+
+  /* Replace the working file with the file from the repository. */
+  err = svn_wc_delete4(ctx->wc_ctx, local_abspath, FALSE, FALSE,
+                       ctx->cancel_func, ctx->cancel_baton,
+                       ctx->notify_func2, ctx->notify_baton2,
+                       scratch_pool);
+  if (err)
+    goto unlock_wc;
+  err = svn_wc_add_repos_file4(ctx->wc_ctx, local_abspath,
+                               incoming_new_stream,
+                               NULL, /* ### could we merge first, then set
+                                        ### the merged content here? */
+                               incoming_new_props,
+                               NULL, /* ### merge props first, set here? */
+                               url, incoming_new_pegrev,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               scratch_pool);
+  if (err)
+    goto unlock_wc;
+
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify(local_abspath,
+                                                     svn_wc_notify_add,
+                                                     scratch_pool);
+      notify->kind = svn_node_file;
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+    }
+
+  /* Resolve to current working copy state. */
+  err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
+  if (err)
+    goto unlock_wc;
+
+unlock_wc:
+  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
+                                                                 lock_abspath,
+                                                                 scratch_pool));
+  svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
+  SVN_ERR(err);
+
+  SVN_ERR(svn_stream_close(incoming_new_stream));
+
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify(local_abspath,
+                                                     svn_wc_notify_resolved,
+                                                     scratch_pool);
+
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+    }
+
+  conflict->resolution_tree = svn_client_conflict_option_get_id(option);
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements conflict_option_resolve_func_t. */
+static svn_error_t *
 resolve_merge_incoming_added_file_replace_and_merge(
   svn_client_conflict_option_t *option,
   svn_client_conflict_t *conflict,
@@ -4339,6 +4496,60 @@ configure_option_merge_incoming_added_file_text_merge(
   return SVN_NO_ERROR;
 }
 
+/* Configure 'incoming added file replace' resolution option for a tree
+ * conflict. */
+static svn_error_t *
+configure_option_merge_incoming_added_file_replace(
+  svn_client_conflict_t *conflict,
+  apr_array_header_t *options,
+  apr_pool_t *scratch_pool)
+{
+  svn_wc_operation_t operation;
+  svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_reason_t local_change;
+  svn_node_kind_t victim_node_kind;
+  const char *incoming_new_repos_relpath;
+  svn_revnum_t incoming_new_pegrev;
+  svn_node_kind_t incoming_new_kind;
+
+  operation = svn_client_conflict_get_operation(conflict);
+  incoming_change = svn_client_conflict_get_incoming_change(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
+  victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            &incoming_new_repos_relpath, &incoming_new_pegrev,
+            &incoming_new_kind, conflict, scratch_pool,
+            scratch_pool));
+
+  if (operation == svn_wc_operation_merge &&
+      victim_node_kind == svn_node_file &&
+      incoming_new_kind == svn_node_file &&
+      incoming_change == svn_wc_conflict_action_add &&
+      local_change == svn_wc_conflict_reason_obstructed)
+    {
+      svn_client_conflict_option_t *option;
+      const char *wcroot_abspath;
+
+      option = apr_pcalloc(options->pool, sizeof(*option));
+      option->id = svn_client_conflict_option_merge_incoming_added_file_replace;
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+                                 conflict->local_abspath, scratch_pool,
+                                 scratch_pool));
+      option->description =
+        apr_psprintf(options->pool, _("delete '%s', copy '^/%s@%ld' here"),
+                     svn_dirent_local_style(
+                       svn_dirent_skip_ancestor(wcroot_abspath,
+                                                conflict->local_abspath),
+                       scratch_pool),
+                     incoming_new_repos_relpath, incoming_new_pegrev);
+      option->conflict = conflict;
+      option->do_resolve_func = resolve_merge_incoming_added_file_replace;
+      APR_ARRAY_PUSH(options, const svn_client_conflict_option_t *) = option;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Configure 'incoming added file replace and merge' resolution option for a
  * tree conflict. */
 static svn_error_t *
@@ -4427,6 +4638,8 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   SVN_ERR(configure_option_merge_incoming_added_file_text_merge(conflict,
                                                                 *options,
                                                                 scratch_pool));
+  SVN_ERR(configure_option_merge_incoming_added_file_replace(
+            conflict, *options, scratch_pool));
   SVN_ERR(configure_option_merge_incoming_added_file_replace_and_merge(
             conflict, *options, scratch_pool));
 
