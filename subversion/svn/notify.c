@@ -450,6 +450,27 @@ notify_body(struct notify_baton *nb,
                                  path_local));
       break;
 
+    case svn_wc_notify_resolved_text:
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 _("Merge conflicts in '%s' marked as "
+                                   "resolved.\n"),
+                                 path_local));
+      break;
+
+    case svn_wc_notify_resolved_prop:
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 _("Conflict in property '%s' at '%s' marked "
+                                   "as resolved.\n"),
+                                 n->prop_name, path_local));
+      break;
+
+    case svn_wc_notify_resolved_tree:
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 _("Tree conflict at '%s' marked as "
+                                   "resolved.\n"),
+                                 path_local));
+      break;
+
     case svn_wc_notify_add:
       /* We *should* only get the MIME_TYPE if PATH is a file.  If we
          do get it, and the mime-type is not textual, note that this

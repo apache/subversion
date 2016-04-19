@@ -998,7 +998,10 @@ typedef enum svn_wc_notify_action_t
   /** A revert operation has failed. */
   svn_wc_notify_failed_revert,
 
-  /** Resolving a conflict. */
+  /** All conflicts on a path were marked as resolved.
+   * @note As of 1.10, separate notifications are sent for individually
+   * resolved text, property, and tree conflicts. This notification is used
+   * only if all conflicts on a path were marked resolved at once. */
   svn_wc_notify_resolved,
 
   /** Skipping a path. */
@@ -1274,7 +1277,21 @@ typedef enum svn_wc_notify_action_t
 
   /** Finalizing commit.
    * @since New in 1.9. */
-  svn_wc_notify_commit_finalizing
+  svn_wc_notify_commit_finalizing,
+
+  /** All text conflicts in a file were marked as resolved.
+   * @since New in 1.10. */
+  svn_wc_notify_resolved_text,
+
+  /** A property conflict on a path was marked as resolved.
+   * The name of the property is specified in #svn_wc_notify_t.prop_name.
+   * @since New in 1.10. */
+  svn_wc_notify_resolved_prop,
+
+  /** A tree conflict on a path was marked as resolved.
+   * @since New in 1.10. */
+  svn_wc_notify_resolved_tree,
+
 } svn_wc_notify_action_t;
 
 
