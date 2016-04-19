@@ -3711,17 +3711,24 @@ resolve_merge_incoming_added_file_text_merge(
     {
       svn_wc_notify_t *notify;
 
-      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_resolved,
+      /* Tell the world about the file merge that just happened. */
+      notify = svn_wc_create_notify(local_abspath,
+                                    svn_wc_notify_update_update,
                                     scratch_pool);
-
-      /* Signal new text/prop merge conflicts */
       if (merge_content_outcome == svn_wc_merge_conflict)
         notify->content_state = svn_wc_notify_state_conflicted;
-      if (merge_props_outcome == svn_wc_notify_state_conflicted)
-        notify->prop_state = svn_wc_notify_state_conflicted;
+      else
+        notify->content_state = svn_wc_notify_state_merged;
+      notify->prop_state = merge_props_outcome;
+      notify->kind = svn_node_file;
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
 
+      /* And also about the successfully resolved tree conflict. */
+      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_resolved,
+                                    scratch_pool);
       ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
+
   conflict->resolution_tree = svn_client_conflict_option_get_id(option);
 
   return SVN_NO_ERROR;
