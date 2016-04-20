@@ -4407,6 +4407,7 @@ typedef enum svn_client_conflict_option_id_t {
   svn_client_conflict_option_update_any_moved_away_children,
 
   /* Options for incoming file add vs local file 'obstruction' on merge. */
+  svn_client_conflict_option_merge_incoming_added_file_ignore,
   svn_client_conflict_option_merge_incoming_added_file_text_merge,
   svn_client_conflict_option_merge_incoming_added_file_replace,
   svn_client_conflict_option_merge_incoming_added_file_replace_and_merge,

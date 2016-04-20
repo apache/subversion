@@ -420,6 +420,8 @@ static const resolver_option_t builtin_resolver_options[] =
     svn_client_conflict_option_update_any_moved_away_children },
 
   /* Options for incoming file add vs local file add upon merge. */
+  { "i", N_("ignore the incoming file"), NULL,
+    svn_client_conflict_option_merge_incoming_added_file_ignore },
   { "m", N_("merge the files"), NULL,
     svn_client_conflict_option_merge_incoming_added_file_text_merge },
   { "R", N_("replace my file with incoming file"), NULL,
