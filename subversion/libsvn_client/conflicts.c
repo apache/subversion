@@ -4527,7 +4527,7 @@ configure_option_merge_incoming_added_file_replace(
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
       option->description =
-        apr_psprintf(options->pool, _("delete '%s', copy '^/%s@%ld' here"),
+        apr_psprintf(options->pool, _("delete '%s' and copy '^/%s@%ld' here"),
                      svn_dirent_local_style(
                        svn_dirent_skip_ancestor(wcroot_abspath,
                                                 conflict->local_abspath),
