@@ -391,16 +391,16 @@ static const resolver_option_t builtin_resolver_options[] =
   { "r",  N_("mark resolved"),    NULL,
                                   svn_client_conflict_option_merged_text,
                                   SVN_CL__ACCEPT_WORKING },
-  { "mc", N_("my side of conflict"), NULL,
+  { "mc", NULL, NULL,
     svn_client_conflict_option_working_text_where_conflicted,
                                   SVN_CL__ACCEPT_MINE_CONFLICT },
-  { "tc", N_("their side of conflict"), NULL,
+  { "tc", NULL, NULL,
     svn_client_conflict_option_incoming_text_where_conflicted,
                                   SVN_CL__ACCEPT_THEIRS_CONFLICT },
-  { "mf", N_("my version"),       NULL,
+  { "mf", NULL, NULL,
                                   svn_client_conflict_option_working_text,
                                   SVN_CL__ACCEPT_MINE_FULL},
-  { "tf", N_("their version"),    NULL,
+  { "tf", NULL, NULL,
                                   svn_client_conflict_option_incoming_text,
                                   SVN_CL__ACCEPT_THEIRS_FULL },
   { "p",  N_("postpone"),         NULL,
@@ -871,9 +871,6 @@ handle_text_conflict(svn_boolean_t *resolved,
 
           if (knows_something)
             *next_option++ = "r";
-
-          *next_option++ = "mc";
-          *next_option++ = "tc";
         }
       else
         {
