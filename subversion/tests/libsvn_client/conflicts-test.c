@@ -452,7 +452,7 @@ test_option_merge_incoming_added_file_replace_and_merge(
 /* ========================================================================== */
 
 
-static int max_threads = 3;
+static int max_threads = 1;
 
 static struct svn_test_descriptor_t test_funcs[] =
   {
