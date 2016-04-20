@@ -628,12 +628,14 @@ help_string(const char **result,
  * NULL if the answer was not one of them.
  *
  * If the answer is the (globally recognized) 'help' option, then display
- * the help (on stderr) and return with *OPT == NULL.
+ * CONFLICT_DESCRIPTION (if not NULL) and help (on stderr) and return with
+ * *OPT == NULL.
  */
 static svn_error_t *
 prompt_user(const resolver_option_t **opt,
             const resolver_option_t *conflict_options,
             const char *const *options_to_show,
+            const char *conflict_description,
             void *prompt_baton,
             apr_pool_t *scratch_pool)
 {
@@ -646,6 +648,9 @@ prompt_user(const resolver_option_t **opt,
     {
       const char *helpstr;
 
+      if (conflict_description)
+        SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, _("\n%s\n"),
+                                    conflict_description));
       SVN_ERR(help_string(&helpstr, conflict_options, scratch_pool));
       SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "\n%s\n", helpstr));
       *opt = NULL;
@@ -888,8 +893,8 @@ handle_text_conflict(svn_boolean_t *resolved,
       *next_option++ = "s";
       *next_option++ = NULL;
 
-      SVN_ERR(prompt_user(&opt, text_conflict_options, suggested_options, pb,
-                          iterpool));
+      SVN_ERR(prompt_user(&opt, text_conflict_options, suggested_options,
+                          NULL, pb, iterpool));
       if (! opt)
         continue;
 
@@ -1250,8 +1255,8 @@ handle_one_prop_conflict(svn_client_conflict_option_id_t *option_id,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(prompt_user(&opt, prop_conflict_options, suggested_options, pb,
-                          iterpool));
+      SVN_ERR(prompt_user(&opt, prop_conflict_options, suggested_options,
+                          NULL, pb, iterpool));
       if (! opt)
         continue;
 
@@ -1438,6 +1443,7 @@ handle_tree_conflict(svn_boolean_t *resolved,
   apr_pool_t *iterpool;
   resolver_option_t *tree_conflict_options;
   svn_client_conflict_option_id_t option_id;
+  const char *conflict_description;
 
   option_id = svn_client_conflict_option_unspecified;
 
@@ -1447,14 +1453,16 @@ handle_tree_conflict(svn_boolean_t *resolved,
   SVN_ERR(svn_client_conflict_tree_get_description(
            &incoming_change_description, &local_change_description,
            conflict, scratch_pool, scratch_pool));
-  SVN_ERR(svn_cmdline_fprintf(
-               stderr, scratch_pool,
-               _("Tree conflict on '%s':\n"
-                 "%s\n%s\n"),
-               svn_cl__local_style_skip_ancestor(path_prefix,
-                 svn_client_conflict_get_local_abspath(conflict), scratch_pool),
-               incoming_change_description, local_change_description));
-
+  conflict_description = apr_psprintf(scratch_pool, "%s\n%s",
+                                      incoming_change_description,
+                                      local_change_description);
+  SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                              _("Tree conflict on '%s':\n%s\n"),
+                              svn_cl__local_style_skip_ancestor(
+                                path_prefix,
+                                svn_client_conflict_get_local_abspath(conflict),
+                                scratch_pool),
+                              conflict_description));
   SVN_ERR(build_tree_conflict_options(&tree_conflict_options, conflict,
                                       scratch_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
@@ -1464,7 +1472,8 @@ handle_tree_conflict(svn_boolean_t *resolved,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(prompt_user(&opt, tree_conflict_options, NULL, pb, iterpool));
+      SVN_ERR(prompt_user(&opt, tree_conflict_options, NULL,
+                          conflict_description, pb, iterpool));
       if (! opt)
         continue;
 
