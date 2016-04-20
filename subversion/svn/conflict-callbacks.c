@@ -1435,12 +1435,6 @@ handle_tree_conflict(svn_boolean_t *resolved,
 {
   const char *local_change_description;
   const char *incoming_change_description;
-  const char *src_left_version;
-  const char *src_right_version;
-  const char *repos_root_url;
-  const char *repos_relpath;
-  svn_revnum_t peg_rev;
-  svn_node_kind_t node_kind;
   apr_pool_t *iterpool;
   resolver_option_t *tree_conflict_options;
   svn_client_conflict_option_id_t option_id;
@@ -1456,38 +1450,10 @@ handle_tree_conflict(svn_boolean_t *resolved,
   SVN_ERR(svn_cmdline_fprintf(
                stderr, scratch_pool,
                _("Tree conflict on '%s':\n"
-                 "\n%s\n%s\n\n"),
+                 "%s\n%s\n"),
                svn_cl__local_style_skip_ancestor(path_prefix,
                  svn_client_conflict_get_local_abspath(conflict), scratch_pool),
                incoming_change_description, local_change_description));
-
-  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL, conflict,
-                                             scratch_pool, scratch_pool));
-  SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(&repos_relpath,
-                                                              &peg_rev,
-                                                              &node_kind,
-                                                              conflict,
-                                                              scratch_pool,
-                                                              scratch_pool));
-  src_left_version =
-              svn_cl__node_description(repos_root_url, repos_relpath, peg_rev,
-                                       node_kind, repos_root_url, scratch_pool);
-  if (src_left_version)
-    SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s: %s\n",
-                                _("Source  left"), src_left_version));
-
-  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(&repos_relpath,
-                                                              &peg_rev,
-                                                              &node_kind,
-                                                              conflict,
-                                                              scratch_pool,
-                                                              scratch_pool));
-  src_right_version =
-              svn_cl__node_description(repos_root_url, repos_relpath, peg_rev,
-                                       node_kind, repos_root_url, scratch_pool);
-  if (src_right_version)
-    SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s: %s\n",
-                                _("Source right"), src_right_version));
 
   SVN_ERR(build_tree_conflict_options(&tree_conflict_options, conflict,
                                       scratch_pool, scratch_pool));
