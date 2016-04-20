@@ -3676,7 +3676,7 @@ resolve_merge_incoming_added_file_text_merge(
 
   /* Create a property diff which shows all props as added. */
   SVN_ERR(svn_prop_diffs(&propdiffs, incoming_new_props,
-                         apr_hash_make(scratch_pool), scratch_pool);
+                         apr_hash_make(scratch_pool), scratch_pool));
 
   /* ### The following WC modifications should be atomic. */
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
