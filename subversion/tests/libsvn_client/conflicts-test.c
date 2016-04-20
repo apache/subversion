@@ -27,6 +27,7 @@
 
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
@@ -61,6 +62,10 @@ static const char *trunk_path = "A";
 static const char *branch_path = "A_branch";
 static const char *new_file_name = "newfile.txt";
 
+/* File property content. */
+static const char *propval_trunk = "This is a property on the trunk.";
+static const char *propval_branch = "This is a property on the branch.";
+
 /* A helper function which prepares a working copy for the tests below. */
 static svn_error_t *
 create_wc_with_add_vs_add_upon_merge_conflict(svn_test__sandbox_t *b)
@@ -81,11 +86,12 @@ create_wc_with_add_vs_add_upon_merge_conflict(svn_test__sandbox_t *b)
   SVN_ERR(sbox_wc_commit(b, ""));
 
   /* Add new files on trunk and the branch which occupy the same path
-   * but have differnet content. */
+   * but have different content and properties. */
   new_file_path = svn_relpath_join(trunk_path, new_file_name, b->pool);
   SVN_ERR(sbox_file_write(b, new_file_path,
                           "This is a new file on the trunk\n"));
   SVN_ERR(sbox_wc_add(b, new_file_path));
+  SVN_ERR(sbox_wc_propset(b, "prop", propval_trunk, new_file_path));
   SVN_ERR(sbox_wc_commit(b, ""));
   new_file_path = svn_relpath_join(branch_path, new_file_name, b->pool);
   SVN_ERR(sbox_file_write(b, new_file_path,
@@ -94,6 +100,7 @@ create_wc_with_add_vs_add_upon_merge_conflict(svn_test__sandbox_t *b)
                            * run with sleep for timestamps disabled. */
                           "This is a new file on the branch\n"));
   SVN_ERR(sbox_wc_add(b, new_file_path));
+  SVN_ERR(sbox_wc_propset(b, "prop", propval_branch, new_file_path));
   SVN_ERR(sbox_wc_commit(b, ""));
 
   /* Run a merge from the trunk to the branch. */
@@ -124,7 +131,7 @@ create_wc_with_add_vs_add_upon_merge_conflict(svn_test__sandbox_t *b)
   SVN_TEST_ASSERT(status->conflicted);
   SVN_TEST_ASSERT(status->node_status == svn_wc_status_normal);
   SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
-  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_normal);
   SVN_TEST_ASSERT(!status->copied);
   SVN_TEST_ASSERT(!status->switched);
   SVN_TEST_ASSERT(!status->file_external);
@@ -159,6 +166,7 @@ test_option_merge_incoming_added_file_text_merge(const svn_test_opts_t *opts,
   struct status_baton sb;
   struct svn_client_status_t *status;
   svn_opt_revision_t opt_rev;
+  const svn_string_t *propval;
 
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
@@ -190,7 +198,8 @@ test_option_merge_incoming_added_file_text_merge(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(status->conflicted);
   SVN_TEST_ASSERT(status->node_status == svn_wc_status_conflicted);
   SVN_TEST_ASSERT(status->text_status == svn_wc_status_conflicted);
-  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  /* ### Shouldn't there be a property conflict? The trunk wins. */
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_modified);
   SVN_TEST_ASSERT(!status->copied);
   SVN_TEST_ASSERT(!status->switched);
   SVN_TEST_ASSERT(!status->file_external);
@@ -209,6 +218,12 @@ test_option_merge_incoming_added_file_text_merge(const svn_test_opts_t *opts,
                   props_conflicted->nelts == 0 &&
                   !tree_conflicted);
 
+  /* Verify the merged property value. */
+  SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx,
+                           sbox_wc_path(b, new_file_path),
+                           "prop", b->pool, b->pool));
+  SVN_TEST_STRING_ASSERT(propval->data, propval_trunk);
+
   return SVN_NO_ERROR;
 }
 
@@ -225,6 +240,7 @@ test_option_merge_incoming_added_file_replace(const svn_test_opts_t *opts,
   struct status_baton sb;
   struct svn_client_status_t *status;
   svn_opt_revision_t opt_rev;
+  const svn_string_t *propval;
 
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
@@ -256,7 +272,7 @@ test_option_merge_incoming_added_file_replace(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(!status->conflicted);
   SVN_TEST_ASSERT(status->node_status == svn_wc_status_replaced);
   SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
-  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_normal);
   SVN_TEST_ASSERT(status->copied);
   SVN_TEST_ASSERT(!status->switched);
   SVN_TEST_ASSERT(!status->file_external);
@@ -275,6 +291,12 @@ test_option_merge_incoming_added_file_replace(const svn_test_opts_t *opts,
                   props_conflicted->nelts == 0 &&
                   !tree_conflicted);
 
+  /* Verify the merged property value. */
+  SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx,
+                           sbox_wc_path(b, new_file_path),
+                           "prop", b->pool, b->pool));
+  SVN_TEST_STRING_ASSERT(propval->data, propval_trunk);
+
   return SVN_NO_ERROR;
 }
 
@@ -292,6 +314,7 @@ test_option_merge_incoming_added_file_replace_and_merge(
   struct status_baton sb;
   struct svn_client_status_t *status;
   svn_opt_revision_t opt_rev;
+  const svn_string_t *propval;
 
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
@@ -324,7 +347,8 @@ test_option_merge_incoming_added_file_replace_and_merge(
   SVN_TEST_ASSERT(status->conflicted);
   SVN_TEST_ASSERT(status->node_status == svn_wc_status_conflicted);
   SVN_TEST_ASSERT(status->text_status == svn_wc_status_conflicted);
-  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  /* ### Shouldn't there be a property conflict? The trunk wins. */
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_normal);
   SVN_TEST_ASSERT(status->copied);
   SVN_TEST_ASSERT(!status->switched);
   SVN_TEST_ASSERT(!status->file_external);
@@ -342,6 +366,12 @@ test_option_merge_incoming_added_file_replace_and_merge(
   SVN_TEST_ASSERT(text_conflicted &&
                   props_conflicted->nelts == 0 &&
                   !tree_conflicted);
+
+  /* Verify the merged property value. */
+  SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx,
+                           sbox_wc_path(b, new_file_path),
+                           "prop", b->pool, b->pool));
+  SVN_TEST_STRING_ASSERT(propval->data, propval_trunk);
 
   return SVN_NO_ERROR;
 }
