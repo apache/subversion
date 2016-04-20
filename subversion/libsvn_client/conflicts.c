@@ -3864,6 +3864,7 @@ merge_incoming_added_file_replace(svn_client_conflict_option_t *option,
       apr_file_t *empty_file;
       const char *empty_file_abspath;
       apr_array_header_t *propdiffs;
+      apr_hash_index_t *hi;
 
       /* Create an empty file as fake "merge-base" for the two added files.
        * The files are not ancestrally related so this is the best we can do. */
@@ -3873,9 +3874,20 @@ merge_incoming_added_file_replace(svn_client_conflict_option_t *option,
       if (err)
         goto unlock_wc;
 
-      /* Create a property diff which shows all props as added. */
-      err = svn_prop_diffs(&propdiffs, working_props,
-                           apr_hash_make(scratch_pool), scratch_pool);
+      /* Delete entry and wc props from the returned set of properties.. */
+      for (hi = apr_hash_first(scratch_pool, incoming_new_props);
+           hi != NULL;
+           hi = apr_hash_next(hi))
+        {
+          const char *propname = apr_hash_this_key(hi);
+
+          if (!svn_wc_is_normal_prop(propname))
+            svn_hash_sets(incoming_new_props, propname, NULL);
+        }
+
+      /* Create a property diff for the files. */
+      err = svn_prop_diffs(&propdiffs, incoming_new_props,
+                           working_props, scratch_pool);
       if (err)
         goto unlock_wc;
 
