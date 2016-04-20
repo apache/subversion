@@ -564,8 +564,7 @@ prompt_string(const resolver_option_t *options,
 
       if (! first)
         result = apr_pstrcat(pool, result, ",", SVN_VA_NULL);
-      s = apr_psprintf(pool, _(" (%s) %s"),
-                       opt->code,
+      s = apr_psprintf(pool, " (%s) %s", opt->code,
                        opt->short_desc ? _(opt->short_desc) : opt->long_desc);
       slen = svn_utf_cstring_utf8_width(s);
       /* Break the line if adding the next option would make it too long */
@@ -649,7 +648,7 @@ prompt_user(const resolver_option_t **opt,
       const char *helpstr;
 
       if (conflict_description)
-        SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, _("\n%s\n"),
+        SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "\n%s\n",
                                     conflict_description));
       SVN_ERR(help_string(&helpstr, conflict_options, scratch_pool));
       SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "\n%s\n", helpstr));
