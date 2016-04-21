@@ -68,7 +68,7 @@ static const char *propval_branch = "This is a property on the branch.";
 
 /* A helper function which prepares a working copy for the tests below. */
 static svn_error_t *
-create_wc_with_add_vs_add_upon_merge_conflict(svn_test__sandbox_t *b)
+create_wc_with_file_add_vs_file_add_merge_conflict(svn_test__sandbox_t *b)
 {
   static const char *new_file_path;
   svn_client_ctx_t *ctx;
@@ -173,7 +173,7 @@ test_option_merge_incoming_added_file_ignore(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__sandbox_create(b, "incoming_added_file_ignore",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_add_vs_add_upon_merge_conflict(b));
+  SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -246,7 +246,7 @@ test_option_merge_incoming_added_file_text_merge(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__sandbox_create(b, "incoming_added_file_text_merge",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_add_vs_add_upon_merge_conflict(b));
+  SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -320,7 +320,7 @@ test_option_merge_incoming_added_file_replace(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__sandbox_create(b, "incoming_added_file_replace",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_add_vs_add_upon_merge_conflict(b));
+  SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -394,7 +394,7 @@ test_option_merge_incoming_added_file_replace_and_merge(
   SVN_ERR(svn_test__sandbox_create(b, "incoming_added_file_replace_and_merge",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_add_vs_add_upon_merge_conflict(b));
+  SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
