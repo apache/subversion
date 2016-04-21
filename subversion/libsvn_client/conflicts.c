@@ -3438,9 +3438,12 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
                    option);
       svn_hash_sets(conflict->prop_conflicts, propname, NULL);
 
-      conflict->legacy_prop_conflict_propname =
-          apr_hash_this_key(apr_hash_first(scratch_pool,
-                                           conflict->prop_conflicts));
+      if (apr_hash_count(conflict->prop_conflicts) > 0)
+        conflict->legacy_prop_conflict_propname =
+            apr_hash_this_key(apr_hash_first(scratch_pool,
+                                             conflict->prop_conflicts));
+      else
+        conflict->legacy_prop_conflict_propname = NULL;
     }
 
   return SVN_NO_ERROR;
