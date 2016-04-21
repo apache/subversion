@@ -639,6 +639,8 @@ req_check_access(request_rec *r,
 
   if (r->method_number == M_MOVE || r->method_number == M_COPY)
     {
+      apr_status_t status;
+
       dest_uri = apr_table_get(r->headers_in, "Destination");
 
       /* Decline MOVE or COPY when there is no Destination uri, this will
@@ -647,7 +649,19 @@ req_check_access(request_rec *r,
       if (!dest_uri)
         return DECLINED;
 
-      apr_uri_parse(r->pool, dest_uri, &parsed_dest_uri);
+      status = apr_uri_parse(r->pool, dest_uri, &parsed_dest_uri);
+      if (status)
+        {
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, status, r,
+                        "Invalid URI in Destination header");
+          return HTTP_BAD_REQUEST;
+        }
+      if (!parsed_dest_uri.path)
+        {
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                        "Invalid URI in Destination header");
+          return HTTP_BAD_REQUEST;
+        }
 
       ap_unescape_url(parsed_dest_uri.path);
       dest_uri = parsed_dest_uri.path;
