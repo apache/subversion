@@ -458,6 +458,7 @@ notify_body(struct notify_baton *nb,
       break;
 
     case svn_wc_notify_resolved_prop:
+      SVN_ERR_ASSERT(n->prop_name && strlen(n->prop_name) > 0);
       SVN_ERR(svn_cmdline_printf(pool,
                                  _("Conflict in property '%s' at '%s' marked "
                                    "as resolved.\n"),

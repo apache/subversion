@@ -3115,9 +3115,20 @@ conflict_status_walker(void *baton,
           (cswb->resolve_prop == NULL || cswb->resolve_prop[0] == '\0'))
         notify_action = svn_wc_notify_resolved;
 
+      /* If we resolved a property conflict, but no specific property was
+       * requested by the caller, send a general 'resolved' notification. */
+      if (notify_action == svn_wc_notify_resolved_prop &&
+          (cswb->resolve_prop == NULL || cswb->resolve_prop[0] == '\0'))
+        notify_action = svn_wc_notify_resolved;
+
       notify = svn_wc_create_notify(local_abspath, notify_action, iterpool);
+
+      /* Add the property name for property-specific notifications. */
       if (notify_action == svn_wc_notify_resolved_prop)
-        notify->prop_name = cd->property_name;
+        {
+          notify->prop_name = cd->property_name;
+          SVN_ERR_ASSERT(strlen(notify->prop_name) > 0);
+        }
 
       cswb->notify_func(cswb->notify_baton, notify, iterpool);
 
@@ -3402,10 +3413,22 @@ svn_wc__conflict_prop_mark_resolved(svn_wc_context_t *wc_ctx,
   if (did_resolve && notify_func)
     {
       svn_wc_notify_t *notify;
-      
-      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_resolved_prop,
-                                     scratch_pool),
-      notify->prop_name = propname;
+
+      /* Send a general notification if no specific property was requested. */
+      if (propname == NULL || propname[0] == '\0')
+        {
+          notify = svn_wc_create_notify(local_abspath,
+                                        svn_wc_notify_resolved,
+                                        scratch_pool);
+        }
+      else
+        {
+          notify = svn_wc_create_notify(local_abspath,
+                                        svn_wc_notify_resolved_prop,
+                                        scratch_pool);
+          notify->prop_name = propname;
+        }
+
       notify_func(notify_baton, notify, scratch_pool);
     }
   return SVN_NO_ERROR;
