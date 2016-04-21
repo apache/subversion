@@ -14,6 +14,7 @@ Status of 1.8.16:
 
 Candidate changes:
 ==================
+
  * r1536854
    Make 'svnadmin verify' detect inconsistencies that will prevent loading
    dump files.
@@ -158,4 +159,4 @@ Approved changes:
    Votes:
      +1: rhuijben, stefan2, stsp
      +0: danielsh (hard to review all potential causes of expanded_size==0 in
-                   7*3*2 cases (1.1-1.8) * (file/dir/prop rep) * (plain/delta))
+                   8*3*2 cases (1.1-1.8) * (file/dir/prop rep) * (plain/delta))
