@@ -1745,7 +1745,7 @@ list_branches(svn_branch__txn_t *txn,
 
       SVN_ERR(list_branch(branch, with_elements, scratch_pool));
       if (with_elements) /* separate branches by a blank line */
-        svnmover_notify("");
+        svnmover_notify("%s", "");
     }
 
   for (i = 0; i < branches->nelts; i++)
@@ -1769,7 +1769,7 @@ list_branches(svn_branch__txn_t *txn,
         }
       SVN_ERR(list_branch(branch, with_elements, scratch_pool));
       if (with_elements) /* separate branches by a blank line */
-        svnmover_notify("");
+        svnmover_notify("%s", "");
     }
 
   return SVN_NO_ERROR;
@@ -1796,7 +1796,7 @@ list_all_branches(svn_branch__txn_t *txn,
 
       SVN_ERR(list_branch(branch, with_elements, scratch_pool));
       if (with_elements) /* separate branches by a blank line */
-        svnmover_notify("");
+        svnmover_notify("%s", "");
     }
 
   return SVN_NO_ERROR;
