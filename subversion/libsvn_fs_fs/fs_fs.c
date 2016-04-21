@@ -41,6 +41,7 @@
 #include "svn_fs.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
+#include "svn_checksum.h"
 #include "svn_hash.h"
 #include "svn_props.h"
 #include "svn_sorts.h"
@@ -5859,10 +5860,40 @@ svn_fs_fs__file_length(svn_filesize_t *length,
                        node_revision_t *noderev,
                        apr_pool_t *pool)
 {
-  if (noderev->data_rep)
-    *length = noderev->data_rep->expanded_size;
+  representation_t *data_rep = noderev->data_rep;
+  if (!data_rep)
+    {
+      /* Treat "no representation" as "empty file". */
+      *length = 0;
+    }
+  else if (data_rep->expanded_size)
+    {
+      /* Standard case: a non-empty file. */
+      *length = data_rep->expanded_size;
+    }
   else
-    *length = 0;
+    {
+      /* Work around a FSFS format quirk (see issue #4554).
+         A plain representation may specify its EXPANDED LENGTH as "0"
+         in which case, the SIZE value is what we want.
+
+         Because EXPANDED_LENGTH will also be 0 for empty files, while
+         SIZE is non-null, we need to check wether the content is
+         actually empty.  We simply compare with the MD5 checksum of
+         empty content (sha-1 is not always available).
+       */
+      if (svn_checksum_is_empty_checksum(data_rep->md5_checksum))
+        {
+          /* Contents is empty. */
+          *length = 0;
+        }
+      else
+        {
+          /* Contents is not empty, i.e. EXPANDED_LENGTH cannot be the
+             actual file length. */
+          *length = data_rep->size;
+        }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -7589,10 +7620,21 @@ get_shared_rep(representation_t **old_rep,
         }
     }
 
-  /* Add information that is missing in the cached data. */
-  if (*old_rep)
+  if (!*old_rep)
+    return SVN_NO_ERROR;
+
+  /* We don't want 0-length PLAIN representations to replace non-0-length
+     ones (see issue #4554).  Also, this doubles as a simple guard against
+     general rep-cache induced corruption. */
+  if (   ((*old_rep)->expanded_size != rep->expanded_size)
+      || ((*old_rep)->size != rep->size))
     {
-      /* Use the old rep for this content. */
+      *old_rep = NULL;
+    }
+  else
+    {
+      /* Add information that is missing in the cached data.
+         Use the old rep for this content. */
       (*old_rep)->md5_checksum = rep->md5_checksum;
       (*old_rep)->uniquifier = rep->uniquifier;
     }
