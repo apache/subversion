@@ -1,3 +1,44 @@
+Version 1.9.4
+(28 Apr 2016, from /branches/1.9.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.9.4
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * diff: support '--summarize --ignore-properties' (part of issue #4567)
+    * checkout: fix performance regression on NFS (r1710167)
+    * gpg-agent: properly handle passwords with percent characters (issue #4611)
+    * svn-graph.pl: fix assertion about a non-canonical path (r1729060 et al)
+    * hot-backup.py: better input validation (r1721174, r1721175)
+    * commit: abort on Ctrl-C in plaintext password prompt (issue #4624)
+    * diff: produce proper forward binary diffs with --git (r1704292, r1704573)
+    * ra_serf: fix deleting directories with many files (issue #4557)
+
+  - Server-side bugfixes:
+    * improve documentation for AuthzSVNGroupsFile and groups-db (r1730856)
+    * fsfs: reduce peak memory usage when listing large directories (r1725180)
+    * fsfs: fix a rare source of incomplete dump files and reports (r1717876)
+
+  - Client-side and server-side bugfixes:
+    * update INSTALL documentation file (r1703470 et al)
+    * fix potential memory access bugs (r1722860 et al)
+    * fix potential out of bounds read in svn_repos_get_logs5() (r1738259)
+
+  - Bindings bugfixes:
+    * ignore absent nodes in javahl version of svn status -u (r1720643)
+
+ Developer-visible changes:
+  - General:
+    * fix ruby test suite to work with test-unit gem (r1714790)
+    * allow building against KDE4 without conflict with KDE5 (r1734926)
+    * fix update_tests.py#76 with SVNPathAuthz short_circuit (r1736432)
+    * build system tweaks:
+    * tweak how symbolic error names in maintainer mode (r1735179)
+    * fix inconsistent behavior of inherited property API (r1717874 et al)
+
+  - API changes:
+    * properly interpret parameters in svn_wc_get_diff_editor6() (r1728308)
+
+
 Version 1.9.3
 (15 Dec 2015, from /branches/1.9.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.9.3
@@ -839,6 +880,25 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: requires Java 1.6 (r1677003)
     * javahl: on OS X use /usr/libexec/java_home to find the JDK (r1675774)
     * javahl: allow compiling with a C++11 compiler (r1684412)
+
+
+Version 1.8.16
+(28 Apr 2016, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.16
+
+ User-visible changes:
+  - Server-side bugfixes:
+    * mod_authz_svn: fix authz with mod_auth_kerb/mod_auth_ntlm (issue #4602)
+    * dump: don't write broken dump files in some ambiguously encoded fsfs
+      repositories (issue #4554)
+
+  - Client-side and server-side bugfixes:
+    * update INSTALL documentation file (r1703470, r1703475)
+
+ Developer-visible changes:
+  - General:
+    * fix javahl test suite to work on a symlinked RAM disk (r1539230)
+    * fix ruby test suite to work with test-unit gem (r1714790)
 
 
 Version 1.8.15
