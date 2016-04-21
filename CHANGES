@@ -1,3 +1,22 @@
+Version 1.8.16
+(28 Apr 2016, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.16
+
+ User-visible changes:
+  - Server-side bugfixes:
+    * mod_authz_svn: fix authz with mod_auth_kerb/mod_auth_ntlm (issue #4602)
+    * dump: don't write broken dump files in some ambiguously encoded fsfs
+      repositories (issue #4554)
+
+  - Client-side and server-side bugfixes:
+    * update INSTALL documentation file (r1703470, r1703475)
+
+ Developer-visible changes:
+  - General:
+    * fix javahl test suite to work on a symlinked RAM disk (r1539230)
+    * fix ruby test suite to work with test-unit gem (r1714790)
+
+
 Version 1.8.15
 (15 Dec 2015, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.15
@@ -10,6 +29,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.15
     * fix a segfault with old style text delta (r1618472 et al)
 
   - Server-side bugfixes:
+    * mod_dav_svn: fix heap overflow with skel-encoded requests (CVE-2015-5343)
     * fsfs: reduce memory allocation with Apache (r1591005 et al)
     * mod_dav_svn: emit first log items as soon as possible (r1666965 et al)
     * mod_dav_svn: use LimitXMLRequestBody for skel-encoded requests (r1687812)
