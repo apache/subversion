@@ -4013,6 +4013,112 @@ resolve_merge_incoming_added_file_replace_and_merge(
                                                            scratch_pool));
 }
 
+/* Implements conflict_option_resolve_func_t. */
+static svn_error_t *
+resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
+                                       svn_client_conflict_t *conflict,
+                                       apr_pool_t *scratch_pool)
+{
+  const char *repos_root_url;
+  const char *repos_uuid;
+  const char *incoming_new_repos_relpath;
+  svn_revnum_t incoming_new_pegrev;
+  const char *local_abspath;
+  const char *lock_abspath;
+  svn_client_ctx_t *ctx = conflict->ctx;
+  struct conflict_tree_incoming_add_details *details;
+  svn_client__conflict_report_t *conflict_report;
+  const char *source1;
+  svn_opt_revision_t revision1;
+  const char *source2;
+  svn_opt_revision_t revision2;
+  svn_error_t *err;
+
+  local_abspath = svn_client_conflict_get_local_abspath(conflict);
+
+  details = conflict->tree_conflict_incoming_details;
+  if (details == NULL)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Conflict resolution option '%d' requires "
+                               "details for tree conflict at '%s' to be "
+                               "fetched from the repository."),
+                            option->id,
+                            svn_dirent_local_style(local_abspath,
+                                                   scratch_pool));
+
+  /* Set up merge sources to merge the entire incoming added directory tree. */
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
+                                             conflict, scratch_pool,
+                                             scratch_pool));
+  source1 = svn_path_url_add_component2(repos_root_url,
+                                        details->repos_relpath,
+                                        scratch_pool);
+  revision1.kind = svn_opt_revision_number;
+  revision1.value.number = details->added_rev;
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            &incoming_new_repos_relpath, &incoming_new_pegrev,
+            NULL, conflict, scratch_pool, scratch_pool));
+  source2 = svn_path_url_add_component2(repos_root_url,
+                                        incoming_new_repos_relpath,
+                                        scratch_pool);
+  revision2.kind = svn_opt_revision_number;
+  revision2.value.number = incoming_new_pegrev;
+
+  /* ### The following WC modifications should be atomic. */
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
+                                                 local_abspath,
+                                                 scratch_pool, scratch_pool));
+
+  /* Resolve to current working copy state. The merge requires this. */
+  err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
+  if (err)
+    return svn_error_compose_create(err,
+                                    svn_wc__release_write_lock(ctx->wc_ctx,
+                                                               lock_abspath,
+                                                               scratch_pool));
+
+  /* ### Should we do anything about mergeinfo? We need to run a no-ancestry
+   * ### merge to get a useful result because mergeinfo-aware merges may split
+   * ### this merge into several ranges and then abort early as soon as a
+   * ### conflict occurs (which will happen invariably when merging unrelated
+   * ### trees). The original merge which raised the tree conflict in the
+   * ### first place created mergeinfo which also describes this merge,
+   * ### unless 1) the working copy's mergeinfo was changed since, or
+   * ### 2) the newly added directory's history has location segments with
+   * ### paths outside the original merge source's natural history's path
+   * ### (see the test_option_merge_incoming_added_dir_merge3() test). */
+  err = svn_client__merge_locked(&conflict_report,
+                                 source1, &revision1,
+                                 source2, &revision2,
+                                 local_abspath, svn_depth_infinity,
+                                 TRUE, TRUE, /* do a no-ancestry merge */
+                                 FALSE, FALSE, FALSE,
+                                 TRUE, /* Allow mixed-rev just in case, since
+                                        * conflict victims can't be updated to
+                                        * straighten out mixed-rev trees. */
+                                 NULL, ctx, scratch_pool, scratch_pool);
+
+  err = svn_error_compose_create(err,
+                                 svn_client__make_merge_conflict_error(
+                                   conflict_report, scratch_pool));
+  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
+                                                                 lock_abspath,
+                                                                 scratch_pool));
+  svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
+  SVN_ERR(err);
+
+  if (ctx->notify_func2)
+    ctx->notify_func2(ctx->notify_baton2,
+                      svn_wc_create_notify(local_abspath,
+                                           svn_wc_notify_resolved_tree,
+                                           scratch_pool),
+                      scratch_pool);
+
+  conflict->resolution_tree = svn_client_conflict_option_get_id(option);
+
+  return SVN_NO_ERROR;
+}
+
 /* Resolver options for a text conflict */
 static const svn_client_conflict_option_t text_conflict_options[] =
 {
@@ -4591,6 +4697,59 @@ configure_option_merge_incoming_added_file_replace_and_merge(
   return SVN_NO_ERROR;
 }
 
+/* Configure 'incoming added dir merge' resolution option for a tree
+ * conflict. */
+static svn_error_t *
+configure_option_merge_incoming_added_dir_merge(svn_client_conflict_t *conflict,
+                                                apr_array_header_t *options,
+                                                apr_pool_t *scratch_pool)
+{
+  svn_wc_operation_t operation;
+  svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_reason_t local_change;
+  svn_node_kind_t victim_node_kind;
+  const char *incoming_new_repos_relpath;
+  svn_revnum_t incoming_new_pegrev;
+  svn_node_kind_t incoming_new_kind;
+
+  operation = svn_client_conflict_get_operation(conflict);
+  incoming_change = svn_client_conflict_get_incoming_change(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
+  victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            &incoming_new_repos_relpath, &incoming_new_pegrev,
+            &incoming_new_kind, conflict, scratch_pool,
+            scratch_pool));
+
+  if (operation == svn_wc_operation_merge &&
+      victim_node_kind == svn_node_dir &&
+      incoming_new_kind == svn_node_dir &&
+      incoming_change == svn_wc_conflict_action_add &&
+      local_change == svn_wc_conflict_reason_obstructed)
+    {
+      svn_client_conflict_option_t *option;
+      const char *wcroot_abspath;
+
+      option = apr_pcalloc(options->pool, sizeof(*option));
+      option->id = svn_client_conflict_option_merge_incoming_added_dir_merge;
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+                                 conflict->local_abspath, scratch_pool,
+                                 scratch_pool));
+      option->description =
+        apr_psprintf(options->pool, _("merge '^/%s@%ld' into '%s'"),
+          incoming_new_repos_relpath, incoming_new_pegrev,
+          svn_dirent_local_style(
+            svn_dirent_skip_ancestor(wcroot_abspath,
+                                     conflict->local_abspath),
+            scratch_pool));
+      option->conflict = conflict;
+      option->do_resolve_func = resolve_merge_incoming_added_dir_merge;
+      APR_ARRAY_PUSH(options, const svn_client_conflict_option_t *) = option;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
                                                 svn_client_conflict_t *conflict,
@@ -4628,6 +4787,8 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
             conflict, *options, scratch_pool));
   SVN_ERR(configure_option_merge_incoming_added_file_replace_and_merge(
             conflict, *options, scratch_pool));
+  SVN_ERR(configure_option_merge_incoming_added_dir_merge(conflict, *options,
+                                                          scratch_pool));
 
   return SVN_NO_ERROR;
 }

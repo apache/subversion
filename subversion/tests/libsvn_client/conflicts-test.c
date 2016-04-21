@@ -457,7 +457,9 @@ static const char *new_dir_name = "newdir";
 
 /* A helper function which prepares a working copy for the tests below. */
 static svn_error_t *
-create_wc_with_dir_add_vs_dir_add_merge_conflict(svn_test__sandbox_t *b)
+create_wc_with_dir_add_vs_dir_add_merge_conflict(svn_test__sandbox_t *b,
+                                                 svn_boolean_t file_change,
+                                                 svn_boolean_t with_move)
 {
   static const char *new_dir_path;
   static const char *new_file_path;
@@ -468,6 +470,7 @@ create_wc_with_dir_add_vs_dir_add_merge_conflict(svn_test__sandbox_t *b)
   struct status_baton sb;
   svn_client_conflict_t *conflict;
   svn_boolean_t tree_conflicted;
+  const char *move_src_path;
 
   SVN_ERR(sbox_add_and_commit_greek_tree(b));
 
@@ -477,16 +480,40 @@ create_wc_with_dir_add_vs_dir_add_merge_conflict(svn_test__sandbox_t *b)
 
   /* Add new directories on trunk and the branch which occupy the same path
    * but have different content and properties. */
-  new_dir_path = svn_relpath_join(trunk_path, new_dir_name, b->pool);
+  if (with_move)
+    {
+      /* History starts at ^/newdir.orig, outside of ^/A (the "trunk").
+       * Then a move to ^/A/newdir causes a collision. */
+      move_src_path = apr_pstrcat(b->pool, new_dir_name, ".orig", SVN_VA_NULL);
+      new_dir_path = move_src_path;
+    }
+  else
+    {
+      new_dir_path = svn_relpath_join(trunk_path, new_dir_name, b->pool);
+      move_src_path = NULL;
+    }
+
   SVN_ERR(sbox_wc_mkdir(b, new_dir_path));
-  new_file_path = svn_relpath_join(trunk_path,
-                                   svn_relpath_join(new_dir_name,
-                                                    new_file_name, b->pool),
-                                   b->pool);
+  new_file_path = svn_relpath_join(new_dir_path, new_file_name, b->pool);
   SVN_ERR(sbox_file_write(b, new_file_path,
                           "This is a new file on the trunk\n"));
   SVN_ERR(sbox_wc_add(b, new_file_path));
+  SVN_ERR(sbox_wc_propset(b, "prop", propval_trunk, new_file_path));
   SVN_ERR(sbox_wc_commit(b, ""));
+  if (file_change)
+    {
+      SVN_ERR(sbox_file_write(b, new_file_path,
+                              "This is a change to the new file\n"));
+      SVN_ERR(sbox_wc_commit(b, ""));
+    }
+  if (with_move)
+    {
+      /* Now move the new directory to the colliding path. */
+      new_dir_path = svn_relpath_join(trunk_path, new_dir_name, b->pool);
+      SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+      sbox_wc_move(b, move_src_path, new_dir_path);
+      SVN_ERR(sbox_wc_commit(b, ""));
+    }
   new_dir_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
   SVN_ERR(sbox_wc_mkdir(b, new_dir_path));
   new_file_path = svn_relpath_join(branch_path,
@@ -499,6 +526,7 @@ create_wc_with_dir_add_vs_dir_add_merge_conflict(svn_test__sandbox_t *b)
                            * run with sleep for timestamps disabled. */
                           "This is a new file on the branch\n"));
   SVN_ERR(sbox_wc_add(b, new_file_path));
+  SVN_ERR(sbox_wc_propset(b, "prop", propval_branch, new_file_path));
   SVN_ERR(sbox_wc_commit(b, ""));
 
   /* Run a merge from the trunk to the branch. */
@@ -568,7 +596,7 @@ test_option_merge_incoming_added_dir_ignore(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__sandbox_create(b, "incoming_added_dir_ignore",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_dir_add_vs_dir_add_merge_conflict(b));
+  SVN_ERR(create_wc_with_dir_add_vs_dir_add_merge_conflict(b, FALSE, FALSE));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -615,6 +643,304 @@ test_option_merge_incoming_added_dir_ignore(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* This test currently fails to meet expectations. Our merge code doesn't
+ * support a merge of files which were added in the same revision as their
+ * parent directory and were not modified since. */
+static svn_error_t *
+test_option_merge_incoming_added_dir_merge(const svn_test_opts_t *opts,
+                                           apr_pool_t *pool)
+{
+  svn_client_ctx_t *ctx;
+  svn_client_conflict_t *conflict;
+  const char *new_dir_path;
+  const char *new_file_path;
+  svn_boolean_t text_conflicted;
+  apr_array_header_t *props_conflicted;
+  svn_boolean_t tree_conflicted;
+  struct status_baton sb;
+  struct svn_client_status_t *status;
+  svn_opt_revision_t opt_rev;
+  const svn_string_t *propval;
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+
+  SVN_ERR(svn_test__sandbox_create(b, "incoming_added_dir_merge",
+                                   opts, pool));
+
+  SVN_ERR(create_wc_with_dir_add_vs_dir_add_merge_conflict(b, FALSE, FALSE));
+
+  /* Resolve the tree conflict. */
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  new_dir_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
+                                  ctx, b->pool, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict,
+            svn_client_conflict_option_merge_incoming_added_dir_merge,
+            b->pool));
+
+  /* Ensure that the directory has the expected status. */
+  opt_rev.kind = svn_opt_revision_working;
+  sb.result_pool = b->pool;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, new_dir_path),
+                             &opt_rev, svn_depth_unknown, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_dir);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(!status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
+                                  ctx, b->pool, b->pool));
+
+  /* The directory should not be in conflict. */
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, b->pool, b->pool));
+  SVN_TEST_ASSERT(!text_conflicted &&
+                  props_conflicted->nelts == 0 &&
+                  !tree_conflicted);
+
+  /* XFAIL: Currently, no text conflict is raised since the file is not merged.
+   * We should have a text conflict in the file. */
+  new_file_path = svn_relpath_join(branch_path,
+                                   svn_relpath_join(new_dir_name,
+                                                    new_file_name, b->pool),
+                                   b->pool);
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
+                                  ctx, b->pool, b->pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, b->pool, b->pool));
+  SVN_TEST_ASSERT(text_conflicted &&
+                  props_conflicted->nelts == 0 &&
+                  !tree_conflicted);
+
+  /* Verify the file's merged property value. */
+  SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx,
+                           sbox_wc_path(b, new_file_path),
+                           "prop", b->pool, b->pool));
+  SVN_TEST_STRING_ASSERT(propval->data, propval_trunk);
+
+  return SVN_NO_ERROR;
+}
+
+/* Same test as above, but with an additional file change on the trunk
+ * which makes resolution work as expected. */
+static svn_error_t *
+test_option_merge_incoming_added_dir_merge2(const svn_test_opts_t *opts,
+                                            apr_pool_t *pool)
+{
+  svn_client_ctx_t *ctx;
+  svn_client_conflict_t *conflict;
+  const char *new_dir_path;
+  const char *new_file_path;
+  svn_boolean_t text_conflicted;
+  apr_array_header_t *props_conflicted;
+  svn_boolean_t tree_conflicted;
+  struct status_baton sb;
+  struct svn_client_status_t *status;
+  svn_opt_revision_t opt_rev;
+  const svn_string_t *propval;
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+
+  SVN_ERR(svn_test__sandbox_create(b, "incoming_added_dir_merge2",
+                                   opts, pool));
+
+  SVN_ERR(create_wc_with_dir_add_vs_dir_add_merge_conflict(b, TRUE, FALSE));
+
+  /* Resolve the tree conflict. */
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  new_dir_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
+                                  ctx, b->pool, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict,
+            svn_client_conflict_option_merge_incoming_added_dir_merge,
+            b->pool));
+
+  /* Ensure that the directory has the expected status. */
+  opt_rev.kind = svn_opt_revision_working;
+  sb.result_pool = b->pool;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, new_dir_path),
+                             &opt_rev, svn_depth_unknown, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_dir);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(!status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
+                                  ctx, b->pool, b->pool));
+
+  /* The directory should not be in conflict. */
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, b->pool, b->pool));
+  SVN_TEST_ASSERT(!text_conflicted &&
+                  props_conflicted->nelts == 0 &&
+                  !tree_conflicted);
+
+  /* We should have a text conflict in the file. */
+  new_file_path = svn_relpath_join(branch_path,
+                                   svn_relpath_join(new_dir_name,
+                                                    new_file_name, b->pool),
+                                   b->pool);
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
+                                  ctx, b->pool, b->pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, b->pool, b->pool));
+  SVN_TEST_ASSERT(text_conflicted &&
+                  props_conflicted->nelts == 0 &&
+                  !tree_conflicted);
+
+  /* Verify the file's merged property value. */
+  /* ### Shouldn't there be a property conflict? The branch wins. */
+  SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx,
+                           sbox_wc_path(b, new_file_path),
+                           "prop", b->pool, b->pool));
+  SVN_TEST_STRING_ASSERT(propval->data, propval_branch);
+
+  return SVN_NO_ERROR;
+}
+
+/* Same test as above, but with an additional move operation on the trunk. */
+static svn_error_t *
+test_option_merge_incoming_added_dir_merge3(const svn_test_opts_t *opts,
+                                            apr_pool_t *pool)
+{
+  svn_client_ctx_t *ctx;
+  svn_client_conflict_t *conflict;
+  const char *new_dir_path;
+  const char *new_file_path;
+  svn_boolean_t text_conflicted;
+  apr_array_header_t *props_conflicted;
+  svn_boolean_t tree_conflicted;
+  struct status_baton sb;
+  struct svn_client_status_t *status;
+  svn_opt_revision_t opt_rev;
+  const svn_string_t *propval;
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+
+  SVN_ERR(svn_test__sandbox_create(b, "incoming_added_dir_merge3",
+                                   opts, pool));
+
+  SVN_ERR(create_wc_with_dir_add_vs_dir_add_merge_conflict(b, TRUE, TRUE));
+
+  /* Resolve the tree conflict. */
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  new_dir_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
+                                  ctx, b->pool, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict,
+            svn_client_conflict_option_merge_incoming_added_dir_merge,
+            b->pool));
+
+  /* Ensure that the directory has the expected status. */
+  opt_rev.kind = svn_opt_revision_working;
+  sb.result_pool = b->pool;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, new_dir_path),
+                             &opt_rev, svn_depth_unknown, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_dir);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(!status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
+                                  ctx, b->pool, b->pool));
+
+  /* The directory should not be in conflict. */
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, b->pool, b->pool));
+  SVN_TEST_ASSERT(!text_conflicted &&
+                  props_conflicted->nelts == 0 &&
+                  !tree_conflicted);
+
+  /* We should have a text conflict in the file. */
+  new_file_path = svn_relpath_join(branch_path,
+                                   svn_relpath_join(new_dir_name,
+                                                    new_file_name, b->pool),
+                                   b->pool);
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
+                                  ctx, b->pool, b->pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, b->pool, b->pool));
+  SVN_TEST_ASSERT(text_conflicted &&
+                  props_conflicted->nelts == 0 &&
+                  !tree_conflicted);
+
+  /* Verify the file's merged property value. */
+  /* ### Shouldn't there be a property conflict? The branch wins. */
+  SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx,
+                           sbox_wc_path(b, new_file_path),
+                           "prop", b->pool, b->pool));
+  SVN_TEST_STRING_ASSERT(propval->data, propval_branch);
+
+  /* XFAIL: Currently, no subtree mergeinfo is created.
+   *
+   * Verify the directory's subtree mergeinfo. It should mention both
+   * location segments of ^/A/newdir's history, shouldn't it? Like this:
+   *
+   *   /A/newdir:2-6
+   *   /newdir.orig:4
+   *
+   * ### /newdir.orig was created in r3 and moved to /A/newdir in r5.
+   * ### Should the second line say "/newdir.orig:3-4" instead? */
+  SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx,
+                           sbox_wc_path(b, new_dir_path),
+                           "svn:mergeinfo", b->pool, b->pool));
+  SVN_TEST_ASSERT(propval != NULL);
+  SVN_TEST_STRING_ASSERT(propval->data,
+                         apr_psprintf(b->pool, "/%s:2-6\n/%s:4",
+                                      svn_relpath_join(trunk_path,
+                                                       new_dir_name,
+                                                       b->pool),
+                                      apr_pstrcat(b->pool,
+                                                  new_dir_name, ".orig",
+                                                  SVN_VA_NULL)));
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -633,6 +959,12 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test incoming add file replace and merge"),
     SVN_TEST_OPTS_PASS(test_option_merge_incoming_added_dir_ignore,
                        "test incoming add dir ignore"),
+    SVN_TEST_OPTS_XFAIL(test_option_merge_incoming_added_dir_merge,
+                       "test incoming add dir merge"),
+    SVN_TEST_OPTS_PASS(test_option_merge_incoming_added_dir_merge2,
+                       "test incoming add dir merge with file change"),
+    SVN_TEST_OPTS_XFAIL(test_option_merge_incoming_added_dir_merge3,
+                       "test incoming add dir merge with move history"),
     SVN_TEST_NULL
   };
 
