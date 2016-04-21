@@ -19,11 +19,15 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.3
     * ra_local: disable zero-copy code path (r1718167)
 
   - Server-side bugfixes:
+    * mod_dav_svn: fix heap overflow with skel-encoded requests (CVE-2015-5343)
     * mod_authz_svn: fix authz with mod_auth_kerb/mod_auth_ntlm (issue #4602)
     * mod_dav_svn: fix display of process ID in cache statistics (r1709553)
     * mod_dav_svn: use LimitXMLRequestBody for skel-encoded requests (r1687812)
     * svnadmin dump: preserve no-op changes (r1709388 et al, issue #4598)
     * fsfs: avoid unneeded I/O when opening transactions (r1715793)
+
+  - Client-side and server-side bugfixes:
+    * fix heap overflow in svn:// protocol parser (CVE-2015-5259)
 
   - Bindings bugfixes:
     * javahl: fix ABI incompatibilty with 1.8 (r1710104)
@@ -849,6 +853,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.15
     * fix a segfault with old style text delta (r1618472 et al)
 
   - Server-side bugfixes:
+    * mod_dav_svn: fix heap overflow with skel-encoded requests (CVE-2015-5343)
     * fsfs: reduce memory allocation with Apache (r1591005 et al)
     * mod_dav_svn: emit first log items as soon as possible (r1666965 et al)
     * mod_dav_svn: use LimitXMLRequestBody for skel-encoded requests (r1687812)
