@@ -603,7 +603,7 @@ test_option_merge_incoming_added_dir_ignore(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
                                   ctx, b->pool, b->pool));
 
-  /* The file should not be in conflict. */
+  /* The directory should not be in conflict. */
   SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
                                              &props_conflicted,
                                              &tree_conflicted,
