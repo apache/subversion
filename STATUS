@@ -138,6 +138,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1740316
+   Update copyright years in NOTICE and subversion/libsvn_subr/version.c.
+   Justification:
+     We're not in 2015 any more.
+   Votes:
+     +1: kotkov
+
 Veto-blocked changes:
 =====================
 
