@@ -143,20 +143,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1654932, r1654933, r1654934, r1654937
-   Fix issue #4554, "0 file length reported in FSFS".
-   Justification:
-     This causes 'svnadmin dump' to create corrupted output that fails to
-     load and we provide no way to detect that problem other than loading
-     the respective dump.  We also want to prevent further instances of
-     that issue to be added to the repository.
-   Notes:
-     r1561419 has been removed from this change set and proposed for a
-     separate backport because it is not a necessary part of the #4554 fix.
-   Branch:
-     ^/subversion/branches/1.8.x-issue4554-v2
-   Votes:
-     +1: rhuijben, stefan2, stsp
-     +0: danielsh (hard to review all potential causes of expanded_size==0 in
-                   8*3*2 cases (1.1-1.8) * (file/dir/prop rep) * (plain/delta))
