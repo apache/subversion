@@ -3595,9 +3595,9 @@ resolve_update_moved_away_node(svn_client_conflict_option_t *option,
 
 /* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
-resolve_merge_incoming_added_file_ignore(svn_client_conflict_option_t *option,
-                                         svn_client_conflict_t *conflict,
-                                         apr_pool_t *scratch_pool)
+resolve_merge_incoming_add_ignore(svn_client_conflict_option_t *option,
+                                  svn_client_conflict_t *conflict,
+                                  apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
   const char *lock_abspath;
@@ -3611,7 +3611,7 @@ resolve_merge_incoming_added_file_ignore(svn_client_conflict_option_t *option,
                                                  scratch_pool, scratch_pool));
 
   /* All other options for this conflict actively fetch the incoming
-   * new file. We can ignore the incoming new file by doing nothing. */
+   * new node. We can ignore the incoming new node by doing nothing. */
 
   /* Resolve to current working copy state. */
   err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
@@ -4381,34 +4381,27 @@ configure_option_update_raise_moved_away_children(
   return SVN_NO_ERROR;
 }
 
-/* Configure 'incoming added file ignore' resolution option for a tree
- * conflict. */
+/* Configure 'incoming add ignore' resolution option for a tree conflict. */
 static svn_error_t *
-configure_option_merge_incoming_added_file_ignore(
-  svn_client_conflict_t *conflict,
-  apr_array_header_t *options,
-  apr_pool_t *scratch_pool)
+configure_option_merge_incoming_add_ignore(svn_client_conflict_t *conflict,
+                                           apr_array_header_t *options,
+                                           apr_pool_t *scratch_pool)
 {
   svn_wc_operation_t operation;
   svn_wc_conflict_action_t incoming_change;
   svn_wc_conflict_reason_t local_change;
-  svn_node_kind_t victim_node_kind;
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
-  svn_node_kind_t incoming_new_kind;
 
   operation = svn_client_conflict_get_operation(conflict);
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
   local_change = svn_client_conflict_get_local_change(conflict);
-  victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
   SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
             &incoming_new_repos_relpath, &incoming_new_pegrev,
-            &incoming_new_kind, conflict, scratch_pool,
+            NULL, conflict, scratch_pool,
             scratch_pool));
 
   if (operation == svn_wc_operation_merge &&
-      victim_node_kind == svn_node_file &&
-      incoming_new_kind == svn_node_file &&
       incoming_change == svn_wc_conflict_action_add &&
       local_change == svn_wc_conflict_reason_obstructed)
     {
@@ -4417,7 +4410,7 @@ configure_option_merge_incoming_added_file_ignore(
 
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->id =
-        svn_client_conflict_option_merge_incoming_added_file_ignore;
+        svn_client_conflict_option_merge_incoming_add_ignore;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
@@ -4425,7 +4418,7 @@ configure_option_merge_incoming_added_file_ignore(
         apr_psprintf(options->pool, _("ignore and do not add '^/%s@%ld' here"),
           incoming_new_repos_relpath, incoming_new_pegrev);
       option->conflict = conflict;
-      option->do_resolve_func = resolve_merge_incoming_added_file_ignore;
+      option->do_resolve_func = resolve_merge_incoming_add_ignore;
       APR_ARRAY_PUSH(options, const svn_client_conflict_option_t *) = option;
     }
 
@@ -4626,8 +4619,8 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   SVN_ERR(configure_option_update_move_destination(conflict, *options));
   SVN_ERR(configure_option_update_raise_moved_away_children(conflict,
                                                             *options));
-  SVN_ERR(configure_option_merge_incoming_added_file_ignore(conflict, *options,
-                                                            scratch_pool));
+  SVN_ERR(configure_option_merge_incoming_add_ignore(conflict, *options,
+                                                     scratch_pool));
   SVN_ERR(configure_option_merge_incoming_added_file_text_merge(conflict,
                                                                 *options,
                                                                 scratch_pool));
