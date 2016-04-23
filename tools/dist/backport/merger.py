@@ -23,12 +23,14 @@ backport.merger - library for running STATUS merges
 
 import backport.status
 
+import contextlib
 import functools
 import logging
 import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 import unittest
 
@@ -141,6 +143,14 @@ def _includes_only_svn_mergeinfo_changes(status_output):
   return False
 
 
+@contextlib.contextmanager
+def log_message_file(logmsg):
+  "Context manager that returns a file containing the text LOGMSG."
+  with tempfile.NamedTemporaryFile(mode='w+', encoding="UTF-8") as logmsg_file:
+    logmsg_file.write(logmsg)
+    logmsg_file.flush()
+    yield logmsg_file.name
+  
 def merge(entry, expected_stderr=None, *, commit=False):
   """Merges ENTRY into the working copy at cwd.
 
@@ -209,7 +219,9 @@ def merge(entry, expected_stderr=None, *, commit=False):
       s = s[:-1]
     open('./STATUS', 'w').write(s)
 
-    run_svn_quiet(['commit', '-m', logmsg])
+    # Don't assume we can pass UTF-8 in argv.
+    with log_message_file(logmsg) as logmsg_filename:
+      run_svn_quiet(['commit', '-F', logmsg_filename])
 
   # TODO(interactive mode): add the 'svn status' display
 
