@@ -685,6 +685,8 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
+  # Using putenv() here is fine because this file is never run as a module.
+  os.putenv('SVN_BACKPORT_DONT_SLEEP', '1')
   svntest.main.run_tests(test_list)
   # NOTREACHED
 
