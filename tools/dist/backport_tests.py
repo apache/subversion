@@ -646,6 +646,22 @@ def backport_STATUS_mods(sbox):
                                 expected_stdout, expected_stderr)
 
 #----------------------------------------------------------------------
+@BackportTest('76cee987-25c9-4d6c-ad40-000000000012')
+def backport_unicode_entry(sbox):
+  "an entry containing literal UTF-8"
+
+  # r6: nominate r4
+  approved_entries = [
+    make_entry([4], notes="Hello 🗺"),
+  ]
+  sbox.simple_append(STATUS, serialize_STATUS(approved_entries))
+  sbox.simple_commit(message='Nominate r4')
+
+  # Run it.
+  run_backport(sbox)
+
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -663,8 +679,9 @@ test_list = [ None,
               backport_branch_with_original_revision,
               backport_otherproject_change,
               backport_STATUS_mods,
+              backport_unicode_entry,
               # When adding a new test, include the test number in the last
-              # 6 bytes of the UUID.
+              # 6 bytes of the UUID, in decimal.
              ]
 
 if __name__ == '__main__':

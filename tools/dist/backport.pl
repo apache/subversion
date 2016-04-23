@@ -51,6 +51,7 @@ use Tie::File ();
 #
 # TODO: document which are interpreted by sh and which should point to binary.
 my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
+$SVN .= " --config-option=config:miscellany:log-encoding=UTF-8";
 my $SHELL = $ENV{SHELL} // '/bin/sh';
 my $VIM = 'vim';
 my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';

@@ -40,7 +40,7 @@ if sys.argv[1:]:
   sys.exit(0)
 
 backport.merger.no_local_mods('./STATUS')
-sf = backport.status.StatusFile(open('./STATUS'))
+sf = backport.status.StatusFile(open('./STATUS', encoding="UTF-8"))
 
 # Duplicate sf.paragraphs, since merge() will be removing elements from it.
 entries_paras = list(sf.entries_paras())
