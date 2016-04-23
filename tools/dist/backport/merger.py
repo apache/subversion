@@ -50,7 +50,8 @@ def invoke_svn(argv):
   # TODO(interactive mode): disable --non-interactive
   child_env = os.environ.copy()
   child_env.update({'LC_ALL': 'C'})
-  child = subprocess.Popen([SVN, '--non-interactive'] + argv,
+  argv = [SVN, '--non-interactive', '--config-option=config:miscellany:log-encoding=UTF-8'] + argv
+  child = subprocess.Popen(argv,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE,
                            env=child_env)
