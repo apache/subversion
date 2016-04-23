@@ -230,9 +230,9 @@ def merge(entry, expected_stderr=None, *, commit=False):
     revnum = last_changed_revision('./STATUS')
     
     if commit:
-      # TODO: disable this for test runs
       # Sleep to avoid out-of-order commit notifications
-      time.sleep(15)
+      if not os.getenv("SVN_BACKPORT_DONT_SLEEP"): # enabled by the test suite
+          time.sleep(15)
       second_logmsg = "Remove the {!r} branch, {} in r{}."\
                           .format(entry.branch, reintegrated_word, revnum)
       run_svn(['rm', '-m', second_logmsg, '--', branch_url])
