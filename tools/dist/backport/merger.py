@@ -43,11 +43,11 @@ class UnableToMergeException(Exception):
   pass
 
 
-def invoke_svn(argv, extra_env={}):
+def invoke_svn(argv):
   "Run svn with ARGV as argv[1:].  Return (exit_code, stdout, stderr)."
   # TODO(interactive mode): disable --non-interactive
   child_env = os.environ.copy()
-  child_env.update(extra_env)
+  child_env.update({'LC_ALL': 'C'})
   child = subprocess.Popen([SVN, '--non-interactive'] + argv,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE,
@@ -55,13 +55,13 @@ def invoke_svn(argv, extra_env={}):
   stdout, stderr = child.communicate()
   return child.returncode, stdout.decode('UTF-8'), stderr.decode('UTF-8')
 
-def run_svn(argv, expected_stderr=None, extra_env={'LC_ALL': 'C'}):
+def run_svn(argv, expected_stderr=None):
   """Run svn with ARGV as argv[1:].  If EXPECTED_STDERR is None, raise if the
   exit code is non-zero or stderr is non-empty.  Else, treat EXPECTED_STDERR as
   a regexp, and ignore an errorful exit or stderr messages if the latter match
   the regexp.  Return exit_code, stdout, stderr."""
 
-  exit_code, stdout, stderr = invoke_svn(argv, extra_env)
+  exit_code, stdout, stderr = invoke_svn(argv)
   if exit_code == 0 and not stderr:
     return exit_code, stdout, stderr
   elif expected_stderr and re.compile(expected_stderr).search(stderr):
