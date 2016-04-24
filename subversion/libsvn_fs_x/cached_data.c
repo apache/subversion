@@ -2896,9 +2896,8 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
 }
 
 /* Fetch the representation data (header, txdelta / plain windows)
- * addressed by ENTRY->ITEM in FS and cache it if caches are enabled.
- * Read the data from the already open FILE and the wrapping
- * STREAM object.  If MAX_OFFSET is not -1, don't read windows that start
+ * addressed by ENTRY->ITEM in FS and cache it under KEY.  Read the data
+ * from REV_FILE.  If MAX_OFFSET is not -1, don't read windows that start
  * at or beyond that offset.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
@@ -2972,11 +2971,10 @@ read_item(svn_stream_t **stream,
                  apr_psprintf(pool, "%" APR_OFF_T_FMT, entry->offset));
 }
 
-/* Read all txdelta / plain windows following REP_HEADER in FS as described
- * by ENTRY.  Read the data from the already open FILE and the wrapping
- * STREAM object.  If MAX_OFFSET is not -1, don't read windows that start
- * at or beyond that offset.  Use SCRATCH_POOL for temporary allocations.
- * If caching is not enabled, this is a no-op.
+/* If not already cached or if MUST_READ is set, read the changed paths
+ * list addressed by ENTRY in FS and retúrn it in *CHANGES.  Cache the
+ * result if caching is enabled.  Read the data from REV_FILE.  Allocate
+ * *CHANGES in RESUSLT_POOL and allocate temporaries in SCRATCH_POOL.
  */
 static svn_error_t *
 block_read_changes(apr_array_header_t **changes,
@@ -3026,6 +3024,13 @@ block_read_changes(apr_array_header_t **changes,
   return SVN_NO_ERROR;
 }
 
+/* If not already cached or if MUST_READ is set, read the changed paths
+ * list container addressed by ENTRY in FS.  Return the changes list
+ * identified by SUB_ITEM in *CHANGES.  Read the data from REV_FILE and
+ * cache the result.
+ *
+ * Allocate *CHANGES in RESUSLT_POOL and everything else in SCRATCH_POOL.
+ */
 static svn_error_t *
 block_read_changes_container(apr_array_header_t **changes,
                              svn_fs_t *fs,
@@ -3073,6 +3078,12 @@ block_read_changes_container(apr_array_header_t **changes,
   return SVN_NO_ERROR;
 }
 
+/* If not already cached or if MUST_READ is set, read the node revision
+ * addressed by ENTRY in FS and return it in *NODEREV_P.  Cache the
+ * result under KEY if caching is enabled.  Read the data from REV_FILE.
+ * Allocate *NODEREV_P in RESUSLT_POOL and allocate temporaries in
+ * SCRATCH_POOL.
+ */
 static svn_error_t *
 block_read_noderev(svn_fs_x__noderev_t **noderev_p,
                    svn_fs_t *fs,
@@ -3111,6 +3122,12 @@ block_read_noderev(svn_fs_x__noderev_t **noderev_p,
   return SVN_NO_ERROR;
 }
 
+/* If not already cached or if MUST_READ is set, read the node revision
+ * container addressed by ENTRY in FS.  Return the item identified by
+ * SUB_ITEM in *NODEREV_P.  Read the data from REV_FILE and cache it.
+ * Allocate *NODEREV_P in RESUSLT_POOL and allocate temporaries in
+ * SCRATCH_POOL.
+ */
 static svn_error_t *
 block_read_noderevs_container(svn_fs_x__noderev_t **noderev_p,
                               svn_fs_t *fs,
@@ -3157,6 +3174,12 @@ block_read_noderevs_container(svn_fs_x__noderev_t **noderev_p,
   return SVN_NO_ERROR;
 }
 
+/* If not already cached or if MUST_READ is set, read the representation
+ * container addressed by ENTRY in FS.  Return an extractor object for the
+ * item identified by SUB_ITEM in *EXTRACTOR.  Read the data from REV_FILE
+ * and cache it.  Allocate *EXTRACTOR in RESUSLT_POOL and all temporaries
+ * in SCRATCH_POOL.
+ */
 static svn_error_t *
 block_read_reps_container(svn_fs_x__rep_extractor_t **extractor,
                           svn_fs_t *fs,
@@ -3204,6 +3227,16 @@ block_read_reps_container(svn_fs_x__rep_extractor_t **extractor,
   return SVN_NO_ERROR;
 }
 
+/* Read the whole (e.g. 64kB) block containing the item identified by ID in
+ * FS and put all data into cache.  If necessary and depending on heuristics,
+ * neighboring blocks may also get read.  The data is being read from
+ * already open REVISION_FILE, which must be the correct rev / pack file
+ * w.r.t. ID->CHANGE_SET.
+ *
+ * For noderevs and changed path lists, the item fetched can be allocated
+ * RESULT_POOL and returned in *RESULT.  Otherwise, RESULT must be NULL.
+ * SCRATCH_POOL will be used for all temporary allocations.
+ */
 static svn_error_t *
 block_read(void **result,
            svn_fs_t *fs,
