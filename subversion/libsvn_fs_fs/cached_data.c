@@ -3248,9 +3248,8 @@ read_rep_header(svn_fs_fs__rep_header_t **rep_header,
 
 /* Fetch the representation data (header, txdelta / plain windows)
  * addressed by ENTRY->ITEM in FS and cache it if caches are enabled.
- * Read the data from the already open FILE and the wrapping
- * STREAM object.  If MAX_OFFSET is not -1, don't read windows that start
- * at or beyond that offset.
+ * Read the data from REV_FILE.  If MAX_OFFSET is not -1, don't read
+ * windows that start at or beyond that offset.
  * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
@@ -3327,8 +3326,8 @@ read_item(svn_stream_t **stream,
 
 /* If not already cached or if MUST_READ is set, read the changed paths
  * list addressed by ENTRY in FS and retúrn it in *CHANGES.  Cache the
- * result if caching is enabled.  Read the data from the already open
- * FILE and wrapping FILE_STREAM.  Use POOL for allocations.
+ * result if caching is enabled.  Read the data from REV_FILE.  Allocate
+ * *CHANGES in RESUSLT_POOL and allocate temporaries in SCRATCH_POOL.
  */
 static svn_error_t *
 block_read_changes(apr_array_header_t **changes,
@@ -3369,10 +3368,10 @@ block_read_changes(apr_array_header_t **changes,
   return SVN_NO_ERROR;
 }
 
-/* If not already cached or if MUST_READ is set, read the nod revision
+/* If not already cached or if MUST_READ is set, read the node revision
  * addressed by ENTRY in FS and retúrn it in *NODEREV_P.  Cache the
- * result if caching is enabled.  Read the data from the already open
- * FILE and wrapping FILE_STREAM. Use SCRATCH_POOL for temporary allocations.
+ * result if caching is enabled.  Read the data from REV_FILE.  Allocate
+ * *NODEREV_P in RESUSLT_POOL and allocate temporaries in SCRATCH_POOL.
  */
 static svn_error_t *
 block_read_noderev(node_revision_t **noderev_p,
