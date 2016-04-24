@@ -55,6 +55,7 @@ block_read(void **result,
            svn_fs_t *fs,
            const svn_fs_x__id_t *id,
            svn_fs_x__revision_file_t *revision_file,
+           void *baton,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool);
 
@@ -352,6 +353,7 @@ get_node_revision_body(svn_fs_x__noderev_t **noderev_p,
       SVN_ERR(block_read((void **)noderev_p, fs,
                          id,
                          revision_file,
+                         NULL,
                          result_pool,
                          scratch_pool));
       SVN_ERR(svn_fs_x__close_revision_file(revision_file));
@@ -698,7 +700,7 @@ create_rep_state_body(rep_state_t **rep_state,
       /* populate the cache if appropriate */
       if (SVN_IS_VALID_REVNUM(revision))
         {
-          SVN_ERR(block_read(NULL, fs, &rs->rep_id, rs->sfile->rfile,
+          SVN_ERR(block_read(NULL, fs, &rs->rep_id, rs->sfile->rfile, NULL,
                              result_pool, scratch_pool));
           SVN_ERR(svn_cache__set(ffd->rep_header_cache, &key, rh,
                                  scratch_pool));
@@ -1310,7 +1312,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
       && svn_fs_x__is_revision(rs->rep_id.change_set)
       && rs->window_cache)
     {
-      SVN_ERR(block_read(NULL, rs->sfile->fs, &rs->rep_id, file,
+      SVN_ERR(block_read(NULL, rs->sfile->fs, &rs->rep_id, file, NULL,
                          result_pool, scratch_pool));
 
       /* reading the whole block probably also provided us with the
@@ -1405,7 +1407,8 @@ read_container_window(svn_stringbuf_t **nwin,
     {
       SVN_ERR(auto_open_shared_file(rs->sfile));
       SVN_ERR(block_read((void **)&extractor, fs, &rs->rep_id,
-                         rs->sfile->rfile, result_pool, scratch_pool));
+                         rs->sfile->rfile, NULL,
+                         result_pool, scratch_pool));
     }
 
   SVN_ERR(svn_fs_x__extractor_drive(nwin, extractor, rs->current, size,
@@ -2829,7 +2832,6 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
 {
   svn_boolean_t found;
   svn_fs_x__data_t *ffd = context->fs->fsap_data;
-  apr_array_header_t *all = NULL;
 
   svn_fs_x__id_t id;
   id.change_set = svn_fs_x__change_set_by_rev(context->revision);
@@ -2872,19 +2874,9 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
   if (!found)
     {
       /* 'block-read' will also provide us with the desired data */
-      SVN_ERR(block_read((void **)&all, context->fs, &id,
-                         context->revision_file, result_pool, scratch_pool));
-    }
-
-  /* If we fetched all data, return the bits that we did not deliver, yet. */
-  if (all)
-    {
-      /* TODO: This code path is transitional. */
-      all->elts += all->elt_size * context->next;
-      all->nelts -= (int)context->next;
-
-      *changes = all;
-      context->eol = TRUE;
+      SVN_ERR(block_read((void **)changes, context->fs, &id,
+                         context->revision_file, context,
+                         result_pool, scratch_pool));
     }
 
   context->next += (*changes)->nelts;
@@ -2974,14 +2966,16 @@ read_item(svn_stream_t **stream,
 
 /* If not already cached or if MUST_READ is set, read the changed paths
  * list addressed by ENTRY in FS and retúrn it in *CHANGES.  Cache the
- * result if caching is enabled.  Read the data from REV_FILE.  Allocate
- * *CHANGES in RESUSLT_POOL and allocate temporaries in SCRATCH_POOL.
+ * result if caching is enabled.  Read the data from REV_FILE.  Trim the
+ * data in *CHANGES to the range given by CONTEXT.  Allocate *CHANGES in
+ * RESUSLT_POOL and allocate temporaries in SCRATCH_POOL.
  */
 static svn_error_t *
 block_read_changes(apr_array_header_t **changes,
                    svn_fs_t *fs,
                    svn_fs_x__revision_file_t *rev_file,
                    svn_fs_x__p2l_entry_t* entry,
+                   svn_fs_x__changes_context_t *context,
                    svn_boolean_t must_read,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
@@ -3022,13 +3016,33 @@ block_read_changes(apr_array_header_t **changes,
     SVN_ERR(svn_cache__set(ffd->changes_cache, &revision, *changes,
                            scratch_pool));
 
+  /* Trim the result:
+   * Remove the entries that already been reported. */
+
+  /* TODO: This is transitional code.
+   *       The final implementation will read and cache only sections of
+   *       the changes list. */
+  if (must_read)
+    {
+      int i;
+      for (i = 0; i + context->next < (*changes)->nelts; ++i)
+        {
+          APR_ARRAY_IDX(*changes, i, svn_fs_x__change_t *)
+            = APR_ARRAY_IDX(*changes, i + context->next,
+                            svn_fs_x__change_t *);
+        }
+      (*changes)->nelts = i;
+
+      context->eol = TRUE;
+    }
+
   return SVN_NO_ERROR;
 }
 
 /* If not already cached or if MUST_READ is set, read the changed paths
  * list container addressed by ENTRY in FS.  Return the changes list
- * identified by SUB_ITEM in *CHANGES.  Read the data from REV_FILE and
- * cache the result.
+ * identified by SUB_ITEM in *CHANGES, using CONTEXT to select a sub-range
+ * within that list.  Read the data from REV_FILE and cache the result.
  *
  * Allocate *CHANGES in RESUSLT_POOL and everything else in SCRATCH_POOL.
  */
@@ -3038,6 +3052,7 @@ block_read_changes_container(apr_array_header_t **changes,
                              svn_fs_x__revision_file_t *rev_file,
                              svn_fs_x__p2l_entry_t* entry,
                              apr_uint32_t sub_item,
+                             svn_fs_x__changes_context_t *context,
                              svn_boolean_t must_read,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
@@ -3072,7 +3087,7 @@ block_read_changes_container(apr_array_header_t **changes,
 
   if (must_read)
     SVN_ERR(svn_fs_x__changes_get_list(changes, container, sub_item,
-                                       result_pool));
+                                       context, result_pool));
   SVN_ERR(svn_cache__set(ffd->changes_container_cache, &key, container,
                          scratch_pool));
 
@@ -3236,13 +3251,16 @@ block_read_reps_container(svn_fs_x__rep_extractor_t **extractor,
  *
  * For noderevs and changed path lists, the item fetched can be allocated
  * RESULT_POOL and returned in *RESULT.  Otherwise, RESULT must be NULL.
- * SCRATCH_POOL will be used for all temporary allocations.
+ * The BATON is passed along to the extractor sub-functions and will be
+ * used only when constructing the *RESULT.  SCRATCH_POOL will be used for
+ * all temporary allocations.
  */
 static svn_error_t *
 block_read(void **result,
            svn_fs_t *fs,
            const svn_fs_x__id_t *id,
            svn_fs_x__revision_file_t *revision_file,
+           void *baton,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
 {
@@ -3333,7 +3351,7 @@ block_read(void **result,
                   case SVN_FS_X__ITEM_TYPE_CHANGES:
                     SVN_ERR(block_read_changes((apr_array_header_t **)&item,
                                                fs, revision_file,
-                                               entry, is_result,
+                                               entry, baton, is_result,
                                                pool, iterpool));
                     break;
 
@@ -3342,7 +3360,8 @@ block_read(void **result,
                                             ((apr_array_header_t **)&item,
                                              fs, revision_file,
                                              entry, wanted_sub_item,
-                                             is_result, pool, iterpool));
+                                             baton, is_result,
+                                             pool, iterpool));
                     break;
 
                   case SVN_FS_X__ITEM_TYPE_NODEREVS_CONT:
