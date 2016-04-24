@@ -212,11 +212,18 @@ svn_error_t *
 svn_fs_x__changes_get_list(apr_array_header_t **list,
                            const svn_fs_x__changes_t *changes,
                            apr_size_t idx,
+                           svn_fs_x__changes_context_t *context,
                            apr_pool_t *result_pool)
 {
+  int list_first;
+  int list_last;
   int first;
   int last;
   int i;
+
+  /* Return up to this many entries.  Anything > 0 will do.
+   * At 100..300 bytes per entry, this limits the allocation to ~30kB. */
+  enum { BLOCK_SIZE = 100 };
 
   /* CHANGES must be in 'finalized' mode */
   SVN_ERR_ASSERT(changes->builder == NULL);
@@ -232,8 +239,16 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
                              idx, changes->offsets->nelts - 1);
 
   /* range of changes to return */
-  first = APR_ARRAY_IDX(changes->offsets, (int)idx, int);
-  last = APR_ARRAY_IDX(changes->offsets, (int)idx + 1, int);
+  list_first = APR_ARRAY_IDX(changes->offsets, (int)idx, int);
+  list_last = APR_ARRAY_IDX(changes->offsets, (int)idx + 1, int);
+
+  /* Restrict it to the sub-range requested by the caller.
+   * Clip the range to never exceed the list's content. */
+  first = MIN(context->next + list_first, list_last);
+  last = MIN(first + BLOCK_SIZE, list_last);
+
+  /* Indicate to the caller whether the end of the list has been reached. */
+  context->eol = last == list_last;
 
   /* construct result */
   *list = apr_array_make(result_pool, last - first,
