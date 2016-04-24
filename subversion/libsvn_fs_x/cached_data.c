@@ -2927,27 +2927,28 @@ block_read_contents(svn_fs_t *fs,
 
 /* For the given REV_FILE in FS, in *STREAM return a stream covering the
  * item specified by ENTRY.  Also, verify the item's content by low-level
- * checksum.  Allocate the result in POOL.
+ * checksum.  Allocate the result in RESULT_POOL.
  */
 static svn_error_t *
 read_item(svn_stream_t **stream,
           svn_fs_t *fs,
           svn_fs_x__revision_file_t *rev_file,
           svn_fs_x__p2l_entry_t* entry,
-          apr_pool_t *pool)
+          apr_pool_t *result_pool)
 {
   apr_uint32_t digest;
   svn_checksum_t *expected, *actual;
   apr_uint32_t plain_digest;
+  svn_stringbuf_t *text;
 
   /* Read item into string buffer. */
-  svn_stringbuf_t *text = svn_stringbuf_create_ensure(entry->size, pool);
+  text = svn_stringbuf_create_ensure(entry->size, result_pool);
   text->len = entry->size;
   text->data[text->len] = 0;
   SVN_ERR(svn_fs_x__rev_file_read(rev_file, text->data, text->len));
 
   /* Return (construct, calculate) stream and checksum. */
-  *stream = svn_stream_from_stringbuf(text, pool);
+  *stream = svn_stream_from_stringbuf(text, result_pool);
   digest = svn__fnv1a_32x4(text->data, text->len);
 
   /* Checksums will match most of the time. */
@@ -2958,17 +2959,17 @@ read_item(svn_stream_t **stream,
    * nice error messages. */
   plain_digest = htonl(entry->fnv1_checksum);
   expected = svn_checksum__from_digest_fnv1a_32x4(
-                (const unsigned char *)&plain_digest, pool);
+                (const unsigned char *)&plain_digest, result_pool);
   plain_digest = htonl(digest);
   actual = svn_checksum__from_digest_fnv1a_32x4(
-                (const unsigned char *)&plain_digest, pool);
+                (const unsigned char *)&plain_digest, result_pool);
 
   /* Construct the full error message with all the info we have. */
-  return svn_checksum_mismatch_err(expected, actual, pool,
+  return svn_checksum_mismatch_err(expected, actual, result_pool,
                  _("Low-level checksum mismatch while reading\n"
                    "%s bytes of meta data at offset %s "),
-                 apr_psprintf(pool, "%" APR_OFF_T_FMT, entry->size),
-                 apr_psprintf(pool, "%" APR_OFF_T_FMT, entry->offset));
+                 apr_psprintf(result_pool, "%" APR_OFF_T_FMT, entry->size),
+                 apr_psprintf(result_pool, "%" APR_OFF_T_FMT, entry->offset));
 }
 
 /* If not already cached or if MUST_READ is set, read the changed paths
