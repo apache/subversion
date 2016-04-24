@@ -3257,7 +3257,6 @@ block_read_contents(svn_fs_t *fs,
                     svn_fs_fs__revision_file_t *rev_file,
                     svn_fs_fs__p2l_entry_t* entry,
                     apr_off_t max_offset,
-                    apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
   pair_cache_key_t header_key = { 0 };
@@ -3267,9 +3266,9 @@ block_read_contents(svn_fs_t *fs,
   header_key.second = entry->item.number;
 
   SVN_ERR(read_rep_header(&rep_header, fs, rev_file->stream, &header_key,
-                          result_pool, scratch_pool));
+                          scratch_pool, scratch_pool));
   SVN_ERR(block_read_windows(rep_header, fs, rev_file, entry, max_offset,
-                             result_pool, scratch_pool));
+                             scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3521,7 +3520,7 @@ block_read(void **result,
                                                 is_wanted
                                                   ? -1
                                                   : block_start + ffd->block_size,
-                                                pool, iterpool));
+                                                iterpool));
                     break;
 
                   case SVN_FS_FS__ITEM_TYPE_NODEREV:
