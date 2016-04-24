@@ -99,6 +99,12 @@ struct svn_prefix_tree__t
 static svn_boolean_t
 is_leaf(node_t *node)
 {
+  /* If this NOT a leaf node and this node has ...
+   *    ... 8 chars, data[7] will not be NUL because we only support
+   *        NUL-*terminated* strings.
+   *    ... less than 8 chars, this will be set to 0xff
+   *        (any other non-NUL would do as well but this is not valid UTF8
+   *         making it easy to recognize during debugging etc.) */
   return node->key.data[7] == 0;
 }
 
@@ -159,7 +165,7 @@ svn_prefix_tree__create(apr_pool_t *pool)
   tree->pool = pool;
 
   tree->root = apr_pcalloc(pool, sizeof(*tree->root));
-  tree->root->key.data[7] = '\xff';
+  tree->root->key.data[7] = '\xff'; /* This is not a leaf. See is_leaf(). */
 
   return tree;
 }
@@ -235,7 +241,7 @@ svn_prefix_string__create(svn_prefix_tree__t *tree,
       new_node = apr_pcalloc(tree->pool, sizeof(*new_node));
       new_node->key = sub_node->key;
       new_node->length = node->length + match;
-      new_node->key.data[7] = '\xff'; /* This is not a leaf node. */
+      new_node->key.data[7] = '\xff';  /* This is not a leaf. See is_leaf(). */
       new_node->sub_node_count = 1;
       new_node->sub_nodes = apr_palloc(tree->pool, sizeof(node_t *));
       new_node->sub_nodes[0] = sub_node;
