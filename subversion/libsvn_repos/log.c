@@ -352,7 +352,7 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
                void *authz_read_baton,
                apr_pool_t *pool)
 {
-  apr_hash_t *changes = prefetched_changes;
+  apr_hash_t *changes;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
   svn_boolean_t found_readable = FALSE;
@@ -361,7 +361,7 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
   /* If we create the CHANGES hash ourselves, we can reuse it as the
    * result hash as it contains the exact same keys - but with _all_
    * values being replaced by structs of a different type. */
-  if (changes == NULL)
+  if (prefetched_changes == NULL)
     {
       SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
 
@@ -374,6 +374,7 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
     }
   else
     {
+      changes = prefetched_changes;
       *changed = svn_hash__make(pool);
     }
 
