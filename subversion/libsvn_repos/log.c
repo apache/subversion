@@ -350,7 +350,7 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
                apr_hash_t *prefetched_changes,
                svn_repos_authz_func_t authz_read_func,
                void *authz_read_baton,
-               apr_pool_t *pool)
+               apr_pool_t *result_pool)
 {
   apr_hash_t *changes;
   apr_hash_index_t *hi;
@@ -363,19 +363,19 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
    * values being replaced by structs of a different type. */
   if (prefetched_changes == NULL)
     {
-      SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+      SVN_ERR(svn_fs_paths_changed2(&changes, root, result_pool));
 
       /* If we are going to filter the results, we won't use the exact
        * same keys but put them into a new hash. */
       if (authz_read_func)
-        *changed = svn_hash__make(pool);
+        *changed = svn_hash__make(result_pool);
       else
         *changed = changes;
     }
   else
     {
       changes = prefetched_changes;
-      *changed = svn_hash__make(pool);
+      *changed = svn_hash__make(result_pool);
     }
 
   if (apr_hash_count(changes) == 0)
@@ -386,14 +386,14 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
       return SVN_NO_ERROR;
     }
 
-  iterpool = svn_pool_create(pool);
+  iterpool = svn_pool_create(result_pool);
 
   /* Authz can be much faster when paths are being checked in tree order. */
   if (authz_read_func && apr_hash_count(changes) > 1)
     {
       apr_array_header_t *sorted;
       int i;
-      apr_pool_t *scratch_pool = svn_pool_create(pool);
+      apr_pool_t *scratch_pool = svn_pool_create(result_pool);
 
       sorted = svn_sort__hash(changes, svn_sort_compare_items_lexically,
                               scratch_pool);
@@ -409,7 +409,7 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
           SVN_ERR(check_changed_path(&changed_item, &found_readable,
                                      &found_unreadable, root, fs, path,
                                      change, authz_read_func,
-                                     authz_read_baton, pool, iterpool));
+                                     authz_read_baton, result_pool, iterpool));
 
           if (changed_item)
             svn_hash_sets(*changed, path, changed_item);
@@ -419,7 +419,7 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
     }
   else
     {
-      for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(result_pool, changes); hi; hi = apr_hash_next(hi))
         {
           const char *path = apr_hash_this_key(hi);
           apr_ssize_t path_len = apr_hash_this_key_len(hi);
@@ -429,7 +429,7 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
           svn_pool_clear(iterpool);
           SVN_ERR(check_changed_path(&changed_item, &found_readable,
                                      &found_unreadable, root, fs, path,
-                                     change, NULL, NULL, pool, iterpool));
+                                     change, NULL, NULL, result_pool, iterpool));
 
           apr_hash_set(*changed, path, path_len, changed_item);
         }
