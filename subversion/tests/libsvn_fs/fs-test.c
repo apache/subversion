@@ -43,6 +43,7 @@
 #include "private/svn_fs_util.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_fspath.h"
+#include "private/svn_sqlite.h"
 
 #include "../svn_test_fs.h"
 
@@ -7123,6 +7124,75 @@ test_large_changed_paths_list(const svn_test_opts_t *opts,
 
 #undef CHANGES_COUNT
 
+static svn_error_t *
+commit_with_locked_rep_cache(const svn_test_opts_t *opts,
+                             apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t new_rev;
+  svn_sqlite__db_t *sdb;
+  svn_error_t *err;
+  const char *fs_path;
+  const char *statements[] = { "SELECT MAX(revision) FROM rep_cache", NULL };
+
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "this will test FSFS repositories only");
+
+  if (opts->server_minor_version && (opts->server_minor_version < 6))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "pre-1.6 SVN doesn't support FSFS rep-sharing");
+
+  fs_path = "test-repo-commit-with-locked-rep-cache";
+  SVN_ERR(svn_test__create_fs(&fs, fs_path, opts, pool));
+
+  /* r1: Add a file. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "/foo", pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "/foo", "a", pool));
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+  SVN_TEST_INT_ASSERT(new_rev, 1);
+
+  /* Begin a new transaction based on r1. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 1, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "/foo", "b", pool));
+
+  /* Obtain a shared lock on the rep-cache.db by starting a new read
+   * transaction. */
+  SVN_ERR(svn_sqlite__open(&sdb,
+                           svn_dirent_join(fs_path, "rep-cache.db", pool),
+                           svn_sqlite__mode_readonly, statements, 0, NULL,
+                           0, pool, pool));
+  SVN_ERR(svn_sqlite__begin_transaction(sdb));
+  SVN_ERR(svn_sqlite__exec_statements(sdb, 0));
+
+  /* Attempt to commit fs transaction.  This should result in a commit
+   * post-processing error due to us still holding the shared lock on the
+   * rep-cache.db. */
+  err = svn_fs_commit_txn(NULL, &new_rev, txn, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_SQLITE_BUSY);
+  SVN_TEST_INT_ASSERT(new_rev, 2);
+
+  /* Release the shared lock. */
+  SVN_ERR(svn_sqlite__finish_transaction(sdb, SVN_NO_ERROR));
+  SVN_ERR(svn_sqlite__close(sdb));
+
+  /* Try an operation that reads from rep-cache.db.
+   *
+   * XFAIL: Around r1740802, this call was producing an error due to the
+   * svn_fs_t keeping an unusable db connection (and associated file
+   * locks) within it.
+   */
+  SVN_ERR(svn_fs_verify(fs_path, NULL, 0, SVN_INVALID_REVNUM, NULL, NULL,
+                        NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -7259,6 +7329,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "freeze and commit"),
     SVN_TEST_OPTS_PASS(test_large_changed_paths_list,
                        "test reading a large changed paths list"),
+    SVN_TEST_OPTS_XFAIL(commit_with_locked_rep_cache,
+                        "test commit with locked rep-cache"),
     SVN_TEST_NULL
   };
 
