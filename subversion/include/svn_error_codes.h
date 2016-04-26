@@ -1457,6 +1457,11 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 43,
              "Parser error: invalid input")
 
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_SQLITE_ROLLBACK_FAILED,
+             SVN_ERR_MISC_CATEGORY_START + 44,
+             "SQLite transaction rollback failed")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
