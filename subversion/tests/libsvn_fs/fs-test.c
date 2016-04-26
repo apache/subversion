@@ -7329,8 +7329,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "freeze and commit"),
     SVN_TEST_OPTS_PASS(test_large_changed_paths_list,
                        "test reading a large changed paths list"),
-    SVN_TEST_OPTS_XFAIL(commit_with_locked_rep_cache,
-                        "test commit with locked rep-cache"),
+    SVN_TEST_OPTS_PASS(commit_with_locked_rep_cache,
+                       "test commit with locked rep-cache"),
     SVN_TEST_NULL
   };
 

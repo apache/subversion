@@ -1300,6 +1300,12 @@ rollback_transaction(svn_sqlite__db_t *db,
         }
     }
 
+  if (err)
+    {
+      /* Rollback failed, use a specific error code. */
+      err = svn_error_create(SVN_ERR_SQLITE_ROLLBACK_FAILED, err, NULL);
+    }
+
   return svn_error_compose_create(error_to_wrap, err);
 }
 
@@ -1347,9 +1353,35 @@ svn_sqlite__finish_transaction(svn_sqlite__db_t *db,
     {
       return svn_error_trace(rollback_transaction(db, err));
     }
+  else
+    {
+      err = get_internal_statement(&stmt, db,
+                                   STMT_INTERNAL_COMMIT_TRANSACTION);
+      if (!err)
+        err = svn_error_trace(svn_sqlite__step_done(stmt));
 
-  SVN_ERR(get_internal_statement(&stmt, db, STMT_INTERNAL_COMMIT_TRANSACTION));
-  return svn_error_trace(svn_sqlite__step_done(stmt));
+      /* Need to rollback if the commit fails as well, because otherwise the
+         db connection will be left in an unusable state.
+
+         One important case to keep in mind is trying to COMMIT with concurrent
+         readers. In case the commit fails, because someone else is holding a
+         shared lock, sqlite keeps the transaction, and *also* keeps the file
+         locks on the database. While the first part only prevents from using
+         this connection, the second part prevents everyone else from accessing
+         the database while the connection is open.
+
+         See https://www.sqlite.org/lang_transaction.html
+
+         COMMIT might also result in an SQLITE_BUSY return code if an another
+         thread or process has a shared lock on the database that prevented
+         the database from being updated. When COMMIT fails in this way, the
+         transaction remains active and the COMMIT can be retried later after
+         the reader has had a chance to clear. */
+      if (err)
+        return svn_error_trace(rollback_transaction(db, err));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

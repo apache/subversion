@@ -126,6 +126,21 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
 }
 
 svn_error_t *
+svn_fs_fs__close_rep_cache(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (ffd->rep_cache_db)
+    {
+      SVN_ERR(svn_sqlite__close(ffd->rep_cache_db));
+      ffd->rep_cache_db = NULL;
+      ffd->rep_cache_db_opened = 0;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_fs__exists_rep_cache(svn_boolean_t *exists,
                             svn_fs_t *fs, apr_pool_t *pool)
 {

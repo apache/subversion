@@ -178,8 +178,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_sqlite_reset,
                    "sqlite reset"),
-    SVN_TEST_XFAIL2(test_sqlite_txn_commit_busy,
-                    "sqlite busy on transaction commit"),
+    SVN_TEST_PASS2(test_sqlite_txn_commit_busy,
+                   "sqlite busy on transaction commit"),
     SVN_TEST_NULL
   };
 
