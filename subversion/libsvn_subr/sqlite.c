@@ -1406,7 +1406,7 @@ svn_sqlite__finish_savepoint(svn_sqlite__db_t *db,
               /* Ok, we have a major problem. Some statement is still open,
                  which makes it impossible to release this savepoint.
 
-                 ### See huge comment in svn_sqlite__finish_transaction for
+                 ### See huge comment in rollback_transaction() for
                      further details */
 
               err2 = svn_error_trace(reset_all_statements(db, err2));
@@ -1429,6 +1429,8 @@ svn_sqlite__finish_savepoint(svn_sqlite__db_t *db,
   SVN_ERR(get_internal_statement(&stmt, db,
                                  STMT_INTERNAL_RELEASE_SAVEPOINT_SVN));
 
+  /* ### Releasing a savepoint can fail and leave the db connection
+         unusable; see svn_sqlite__finish_transaction(). */
   return svn_error_trace(svn_sqlite__step_done(stmt));
 }
 
