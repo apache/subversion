@@ -261,7 +261,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
    If you extend this function, check the callsite to see if you have
    to make it not-ignore additional error codes.  */
 svn_error_t *
-svn_fs_fs__get_rep_reference(representation_t **rep,
+svn_fs_fs__get_rep_reference(representation_t **rep_p,
                              svn_fs_t *fs,
                              svn_checksum_t *checksum,
                              apr_pool_t *pool)
@@ -269,6 +269,7 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  representation_t *rep;
 
   SVN_ERR_ASSERT(ffd->rep_sharing_allowed);
   if (! ffd->rep_cache_db)
@@ -287,29 +288,28 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
-      *rep = apr_pcalloc(pool, sizeof(**rep));
-      svn_fs_fs__id_txn_reset(&(*rep)->txn_id);
-      memcpy((*rep)->sha1_digest, checksum->digest,
-             sizeof((*rep)->sha1_digest));
-      (*rep)->has_sha1 = TRUE;
-      (*rep)->revision = svn_sqlite__column_revnum(stmt, 0);
-      (*rep)->item_index = svn_sqlite__column_int64(stmt, 1);
-      (*rep)->size = svn_sqlite__column_int64(stmt, 2);
-      (*rep)->expanded_size = svn_sqlite__column_int64(stmt, 3);
+      rep = apr_pcalloc(pool, sizeof(*rep));
+      svn_fs_fs__id_txn_reset(&(rep->txn_id));
+      memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
+      rep->has_sha1 = TRUE;
+      rep->revision = svn_sqlite__column_revnum(stmt, 0);
+      rep->item_index = svn_sqlite__column_int64(stmt, 1);
+      rep->size = svn_sqlite__column_int64(stmt, 2);
+      rep->expanded_size = svn_sqlite__column_int64(stmt, 3);
     }
   else
-    *rep = NULL;
+    rep = NULL;
 
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  if (*rep)
+  if (rep)
     {
       svn_error_t *err;
 
-      SVN_ERR(svn_fs_fs__fixup_expanded_size(fs, *rep, pool));
+      SVN_ERR(svn_fs_fs__fixup_expanded_size(fs, rep, pool));
 
       /* Check that REP refers to a revision that exists in FS. */
-      err = svn_fs_fs__ensure_revision_exists((*rep)->revision, fs, pool);
+      err = svn_fs_fs__ensure_revision_exists(rep->revision, fs, pool);
       if (err)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                                  "Checksum '%s' in rep-cache is beyond HEAD",
@@ -317,6 +317,7 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
                                                                  pool));
     }
 
+  *rep_p = rep;
   return SVN_NO_ERROR;
 }
 
