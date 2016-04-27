@@ -3840,7 +3840,7 @@ svn_fs_fs__commit(svn_revnum_t *new_rev_p,
       err = write_reps_to_cache(fs, cb.reps_to_cache, pool);
       err = svn_sqlite__finish_transaction(ffd->rep_cache_db, err);
 
-      if (err && svn_error_find_cause(err, SVN_ERR_SQLITE_ROLLBACK_FAILED))
+      if (svn_error_find_cause(err, SVN_ERR_SQLITE_ROLLBACK_FAILED))
         {
           /* Failed rollback means that our db connection is unusable, and
              the only thing we can do is close it.  The connection will be
