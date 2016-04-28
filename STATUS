@@ -87,6 +87,14 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1741401
+   Add the OSX 10.11 commercial name for 'svn --version --verbose'.
+   Justification:
+     Minor cosmetic change, but it should have been done before the 1.9.0
+     release since OSX 10.11 was released first.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
