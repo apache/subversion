@@ -696,7 +696,7 @@ svn_stringbuf_remove(svn_stringbuf_t *str,
 {
   if (pos > str->len)
     pos = str->len;
-  if (pos + count > str->len)
+  if (count > str->len - pos)
     count = str->len - pos;
 
   memmove(str->data + pos, str->data + pos + count, str->len - pos - count + 1);
@@ -724,7 +724,7 @@ svn_stringbuf_replace(svn_stringbuf_t *str,
 
   if (pos > str->len)
     pos = str->len;
-  if (pos + old_count > str->len)
+  if (old_count > str->len - pos)
     old_count = str->len - pos;
 
   if (old_count < new_count)
@@ -1510,7 +1510,7 @@ svn_cstring__match_length(const char *a,
    * because A and B will probably have different alignment. So, skipping
    * the first few chars until alignment is reached is not an option.
    */
-  for (; pos + sizeof(apr_size_t) <= max_len; pos += sizeof(apr_size_t))
+  for (; max_len - pos >= sizeof(apr_size_t); pos += sizeof(apr_size_t))
     if (*(const apr_size_t*)(a + pos) != *(const apr_size_t*)(b + pos))
       break;
 

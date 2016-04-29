@@ -620,7 +620,7 @@ dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
   wb->output = output;
   svn_stream_set_write(stream, brigade_write_fn);
 
-  return svn_base64_encode(stream, pool);
+  return svn_base64_encode2(stream, FALSE, pool);
 }
 
 void
@@ -779,7 +779,12 @@ request_body_to_string(svn_string_t **request_str,
 
   if (content_length)
     {
-      buf = svn_stringbuf_create_ensure(content_length, pool);
+      /* Do not allocate more than 1 MB until we receive request body. */
+      apr_size_t alloc_len = 1 * 1024 *1024;
+      if (content_length < alloc_len)
+        alloc_len = (apr_size_t) content_length;
+
+      buf = svn_stringbuf_create_ensure(alloc_len, pool);
     }
   else
     {
@@ -864,4 +869,20 @@ dav_svn__parse_request_skel(svn_skel_t **skel,
 
   *skel = svn_skel__parse(skel_str->data, skel_str->len, pool);
   return OK;
+}
+
+svn_error_t *
+dav_svn__get_youngest_rev(svn_revnum_t *youngest_p,
+                          dav_svn_repos *repos,
+                          apr_pool_t *scratch_pool)
+{
+  if (repos->youngest_rev == SVN_INVALID_REVNUM)
+    {
+      svn_revnum_t revnum;
+      SVN_ERR(svn_fs_youngest_rev(&revnum, repos->fs, scratch_pool));
+      repos->youngest_rev = revnum;
+    }
+
+   *youngest_p = repos->youngest_rev;
+   return SVN_NO_ERROR;
 }

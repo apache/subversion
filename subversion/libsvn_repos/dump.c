@@ -326,7 +326,7 @@ store_delta(apr_file_t **tempfile, svn_filesize_t *len,
             svn_fs_root_t *newroot, const char *newpath, apr_pool_t *pool)
 {
   svn_stream_t *temp_stream;
-  apr_off_t offset = 0;
+  apr_off_t offset;
   svn_txdelta_stream_t *delta_stream;
   svn_txdelta_window_handler_t wh;
   void *whb;
@@ -346,7 +346,7 @@ store_delta(apr_file_t **tempfile, svn_filesize_t *len,
   SVN_ERR(svn_txdelta_send_txstream(delta_stream, wh, whb, pool));
 
   /* Get the length of the temporary file and rewind it. */
-  SVN_ERR(svn_io_file_seek(*tempfile, APR_CUR, &offset, pool));
+  SVN_ERR(svn_io_file_get_offset(&offset, *tempfile, pool));
   *len = offset;
   offset = 0;
   return svn_io_file_seek(*tempfile, APR_SET, &offset, pool);
@@ -1164,13 +1164,13 @@ dump_node(struct edit_baton *eb,
                                    svn_fs_root_fs(eb->fs_root),
                                    compare_rev, pool));
 
-      SVN_ERR(svn_fs_props_different(&must_dump_props,
-                                     compare_root, compare_path,
-                                     eb->fs_root, path, pool));
+      SVN_ERR(svn_fs_props_changed(&must_dump_props,
+                                   compare_root, compare_path,
+                                   eb->fs_root, path, pool));
       if (kind == svn_node_file)
-        SVN_ERR(svn_fs_contents_different(&must_dump_text,
-                                          compare_root, compare_path,
-                                          eb->fs_root, path, pool));
+        SVN_ERR(svn_fs_contents_changed(&must_dump_text,
+                                        compare_root, compare_path,
+                                        eb->fs_root, path, pool));
       break;
 
     case svn_node_action_delete:
@@ -1293,16 +1293,16 @@ dump_node(struct edit_baton *eb,
 
           /* Need to decide if the copied node had any extra textual or
              property mods as well.  */
-          SVN_ERR(svn_fs_props_different(&must_dump_props,
-                                         compare_root, compare_path,
-                                         eb->fs_root, path, pool));
+          SVN_ERR(svn_fs_props_changed(&must_dump_props,
+                                       compare_root, compare_path,
+                                       eb->fs_root, path, pool));
           if (kind == svn_node_file)
             {
               svn_checksum_t *checksum;
               const char *hex_digest;
-              SVN_ERR(svn_fs_contents_different(&must_dump_text,
-                                                compare_root, compare_path,
-                                                eb->fs_root, path, pool));
+              SVN_ERR(svn_fs_contents_changed(&must_dump_text,
+                                              compare_root, compare_path,
+                                              eb->fs_root, path, pool));
 
               SVN_ERR(svn_fs_file_checksum(&checksum, svn_checksum_md5,
                                            compare_root, compare_path,
@@ -1934,7 +1934,7 @@ write_revision_record(svn_stream_t *stream,
 
   if (include_revprops)
     {
-      SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, pool));
+      SVN_ERR(svn_fs_revision_proplist2(&props, fs, rev, FALSE, pool, pool));
 
       /* Run revision date properties through the time conversion to
         canonicalize them. */
@@ -1990,6 +1990,10 @@ svn_repos_dump_fs4(svn_repos_t *repos,
   svn_boolean_t found_old_reference = FALSE;
   svn_boolean_t found_old_mergeinfo = FALSE;
   svn_repos_notify_t *notify;
+
+  /* Make sure we catch up on the latest revprop changes.  This is the only
+   * time we will refresh the revprop data in this query. */
+  SVN_ERR(svn_fs_refresh_revision_props(fs, pool));
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
@@ -2325,7 +2329,8 @@ verify_one_revision(svn_fs_t *fs,
      do this for completeness. */
   SVN_ERR(cancel_editor->close_edit(cancel_edit_baton, scratch_pool));
 
-  SVN_ERR(svn_fs_revision_proplist(&props, fs, rev, scratch_pool));
+  SVN_ERR(svn_fs_revision_proplist2(&props, fs, rev, FALSE, scratch_pool,
+                                    scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2404,6 +2409,10 @@ svn_repos_verify_fs3(svn_repos_t *repos,
   svn_fs_progress_notify_func_t verify_notify = NULL;
   struct verify_fs_notify_func_baton_t *verify_notify_baton = NULL;
   svn_error_t *err;
+
+  /* Make sure we catch up on the latest revprop changes.  This is the only
+   * time we will refresh the revprop data in this query. */
+  SVN_ERR(svn_fs_refresh_revision_props(fs, pool));
 
   /* Determine the current youngest revision of the filesystem. */
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));

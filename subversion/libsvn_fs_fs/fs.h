@@ -351,6 +351,15 @@ typedef struct fs_fs_data_t
      rep key (revision/offset) to svn_stringbuf_t. */
   svn_cache__t *fulltext_cache;
 
+  /* The current prefix to be used for revprop cache entries.
+     If this is 0, a new unique prefix must be chosen. */
+  apr_uint64_t revprop_prefix;
+
+  /* Revision property cache.  Maps from (rev,prefix) to apr_hash_t.
+     Unparsed svn_string_t representations of the serialized hash
+     will be written to the cache but the getter returns apr_hash_t. */
+  svn_cache__t *revprop_cache;
+
   /* Node properties cache.  Maps from rep key to apr_hash_t. */
   svn_cache__t *properties_cache;
 
@@ -467,6 +476,9 @@ typedef struct fs_fs_data_t
      or dump / load cycles). */
   const char *instance_id;
 
+  /* Ensure that all filesystem changes are written to disk. */
+  svn_boolean_t flush_to_disk;
+
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
                                apr_pool_t *, apr_pool_t *);
@@ -476,10 +488,6 @@ typedef struct fs_fs_data_t
 /*** Filesystem Transaction ***/
 typedef struct transaction_t
 {
-  /* property list (const char * name, svn_string_t * value).
-     may be NULL if there are no properties.  */
-  apr_hash_t *proplist;
-
   /* node revision id of the root node.  */
   const svn_fs_id_t *root_id;
 
@@ -541,13 +549,7 @@ typedef struct representation_t
   /* For rep-sharing, we need a way of uniquifying node-revs which share the
      same representation (see svn_fs_fs__noderev_same_rep_key() ).  So, we
      store the original txn of the node rev (not the rep!), along with some
-     intra-node uniqification content.
-
-     This is no longer used by the 1.9 code but we have to keep
-     reading and writing it for old formats to remain compatible with
-     1.8, and earlier, that require it.  We also read/write it in
-     format 7 even though it is not currently required by any code
-     that handles that format. */
+     intra-node uniqification content. */
   struct
     {
       /* unique context, i.e. txn ID, in which the noderev (!) got created */
@@ -583,8 +585,8 @@ typedef struct node_revision_t
   svn_revnum_t copyroot_rev;
   const char *copyroot_path;
 
-  /* number of predecessors this node revision has (recursively), or
-     -1 if not known (for backward compatibility). */
+  /* Number of predecessors this node revision has (recursively).
+     A difference from the BDB backend is that it cannot be -1. */
   int predecessor_count;
 
   /* representation key for this node's properties.  may be NULL if

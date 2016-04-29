@@ -1870,6 +1870,198 @@ svn_repos_node_location_segments(svn_repos_t *repos,
 
 /* Retrieving log messages. */
 
+/** Path change descriptor.
+ *
+ * @note Identical to #svn_fs_path_change3_t but with all information
+ *       known, i.e. @a node_kind is never #svn_node_unknown and
+ *       @a copyfrom_known is always @c TRUE.
+ *
+ * @see svn_fs_path_change3_t
+ *
+ * @since New in 1.10.
+ */
+typedef svn_fs_path_change3_t svn_repos_path_change_t;
+
+/** The callback invoked by log message loopers, such as
+ * svn_repos_get_logs5().
+ *
+ * This function is invoked once on each changed path, in a potentially
+ * random order that may even change between invocations for the same
+ * revisions.
+ *
+ * @a baton is what you think it is, and @a change contains relevant
+ * information for the changed path.  Please note that @a change may be
+ * modified within this callback but it will become invalid as soon as
+ * the callback returns.
+ *
+ * Use @a scratch_pool for temporary allocation.  The caller may clear it
+ * between or after invocations.
+ *
+ * @since New in 1.10.
+ */
+typedef svn_error_t *(*svn_repos_path_change_receiver_t)(
+  void *baton,
+  svn_repos_path_change_t *change,
+  apr_pool_t *scratch_pool);
+
+
+/**
+ * A structure to represent all the information about a particular log entry.
+ *
+ * @since New in 1.10.
+ */
+typedef struct svn_repos_log_entry_t
+{
+  /** The revision of the commit. */
+  svn_revnum_t revision;
+
+  /** The hash of requested revision properties, which may be NULL if it
+   * would contain no revprops.  Maps (const char *) property name to
+   * (svn_string_t *) property value. */
+  apr_hash_t *revprops;
+
+  /**
+   * Whether or not this message has children.
+   *
+   * When a log operation requests additional merge information, extra log
+   * entries may be returned as a result of this entry.  The new entries, are
+   * considered children of the original entry, and will follow it.  When
+   * the HAS_CHILDREN flag is set, the receiver should increment its stack
+   * depth, and wait until an entry is provided with SVN_INVALID_REVNUM which
+   * indicates the end of the children.
+   *
+   * For log operations which do not request additional merge information, the
+   * HAS_CHILDREN flag is always FALSE.
+   *
+   * For more information see:
+   * https://svn.apache.org/repos/asf/subversion/trunk/notes/merge-tracking/design.html#commutative-reporting
+   */
+  svn_boolean_t has_children;
+
+  /**
+   * Whether @a revision should be interpreted as non-inheritable in the
+   * same sense of #svn_merge_range_t.
+   *
+   * Currently always FALSE.
+   */
+  svn_boolean_t non_inheritable;
+
+  /**
+   * Whether @a revision is a merged revision resulting from a reverse merge.
+   */
+  svn_boolean_t subtractive_merge;
+
+  /* NOTE: Add new fields at the end to preserve binary compatibility. */
+} svn_repos_log_entry_t;
+
+
+/** The callback invoked by log message loopers, such as
+ * svn_repos_get_logs5().
+ *
+ * This function is invoked once on each log message, in the order
+ * determined by the caller (see above-mentioned functions).
+ *
+ * @a baton is what you think it is, and @a log_entry contains relevant
+ * information for the log message.
+ *
+ * If @a log_entry->has_children is @c TRUE, the message will be followed
+ * immediately by any number of merged revisions (child messages), which are
+ * terminated by an invocation with SVN_INVALID_REVNUM.  This usage may
+ * be recursive.
+ *
+ * Use @a scratch_pool for temporary allocation.  The caller may clear it
+ * between or after invocations.
+ *
+ * @since New in 1.10.
+ */
+typedef svn_error_t *(*svn_repos_log_entry_receiver_t)(
+  void *baton,
+  svn_repos_log_entry_t *log_entry,
+  apr_pool_t *scratch_pool);
+
+
+/**
+ * Invoke @a revision_receiver with @a revision_receiver_baton on each
+ * revision from @a start to @a end in @a repos's filesystem.  @a start may
+ * be greater or less than @a end; this just controls whether the log is
+ * processed in descending or ascending revision number order.
+ *
+ * If not @c NULL, @a path_change_receiver will be invoked with
+ * @a path_change_receiver_baton for each changed path in the respective
+ * revision.  These changes will be reported before the @a revision_receiver
+ * is invoked for that revision.  So, for each revision in the log, there
+ * is a number of calls to @a path_change_receiver followed by a single
+ * invocation of @a revision_receiver, implicitly marking the end of the
+ * changes list for that revision.  If a revision does not contain any
+ * changes (or if none are visible due to @a authz_read_func),
+ * @a path_change_receiver will not be called for that revision.
+ *
+ * If @a start or @a end is #SVN_INVALID_REVNUM, it defaults to youngest.
+ *
+ * If @a paths is non-NULL and has one or more elements, then only show
+ * revisions in which at least one of @a paths was changed (i.e., if
+ * file, text or props changed; if dir, props or entries changed or any node
+ * changed below it).  Each path is a <tt>const char *</tt> representing
+ * an absolute path in the repository.  If @a paths is NULL or empty,
+ * show all revisions regardless of what paths were changed in those
+ * revisions.
+ *
+ * If @a limit is greater than zero then only invoke @a revision_receiver
+ * on the first @a limit logs.
+ *
+ * If @a strict_node_history is set, copy history (if any exists) will
+ * not be traversed while harvesting revision logs for each path.
+ *
+ * If @a include_merged_revisions is set, log information for revisions
+ * which have been merged to @a paths will also be returned, unless these
+ * revisions are already part of @a start to @a end in @a repos's
+ * filesystem, as limited by @a paths. In the latter case those revisions
+ * are skipped and @a receiver is not invoked.
+ *
+ * If @a revprops is NULL, retrieve all revision properties; else, retrieve
+ * only the revision properties named by the (const char *) array elements
+ * (i.e. retrieve none if the array is empty).
+ *
+ * If any invocation of @a revision_receiver or @a path_change_receiver
+ * returnn an error, return that error immediately and without wrapping it.
+ *
+ * If @a start or @a end is a non-existent revision, return the error
+ * #SVN_ERR_FS_NO_SUCH_REVISION, without ever invoking @a revision_receiver.
+ *
+ * If optional @a authz_read_func is non-NULL, then use this function
+ * (along with optional @a authz_read_baton) to check the readability
+ * of each changed-path in each revision about to be "pushed" at
+ * @a path_change_receiver.  If a revision has some changed-paths readable
+ * and others unreadable, unreadable paths are omitted from the
+ * @a path_change_receiver invocations and only svn:author and svn:date
+ * will be available in the revprops field in the @a revision_receiver
+ * callback.  If a revision has no changed-paths readable at all, then all
+ * paths are omitted and no revprops are available.  If
+ * @a path_change_receiver is @c NULL, the same filtering is performed
+ * just without reporting any path changes.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @see svn_repos_path_change_receiver_t, svn_repos_log_entry_receiver_t
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_repos_get_logs5(svn_repos_t *repos,
+                    const apr_array_header_t *paths,
+                    svn_revnum_t start,
+                    svn_revnum_t end,
+                    int limit,
+                    svn_boolean_t strict_node_history,
+                    svn_boolean_t include_merged_revisions,
+                    const apr_array_header_t *revprops,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_repos_path_change_receiver_t path_change_receiver,
+                    void *path_change_receiver_baton,
+                    svn_repos_log_entry_receiver_t revision_receiver,
+                    void *revision_receiver_baton,
+                    apr_pool_t *scratch_pool);
 
 /**
  * Invoke @a receiver with @a receiver_baton on each log message from

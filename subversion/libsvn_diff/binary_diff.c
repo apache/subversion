@@ -103,7 +103,9 @@ base85_value(int *value, char c)
     return svn_error_create(SVN_ERR_DIFF_UNEXPECTED_DATA, NULL,
                             _("Invalid base85 value"));
 
-  *value = (p - b85str);
+  /* It's safe to cast the ptrdiff_t value of the pointer difference
+     to int because the value will always be in the range [0..84]. */
+  *value = (int)(p - b85str);
   return SVN_NO_ERROR;
 }
 

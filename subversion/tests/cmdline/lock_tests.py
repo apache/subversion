@@ -1360,11 +1360,8 @@ def unlocked_lock_of_other_user(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # now try to unlock with user jconstant, should fail but exit 0.
-  if sbox.repo_url.startswith("http"):
-    expected_err = "svn: warning: W160039: .*[Uu]nlock of .*403 Forbidden.*"
-  else:
-    expected_err = "svn: warning: W160039: User '%s' is trying to use a lock owned by "\
-                   "'%s'.*" % (svntest.main.wc_author2, svntest.main.wc_author)
+  expected_err = "svn: warning: W160039: User '%s' is trying to use a lock owned by "\
+                 "'%s'.*" % (svntest.main.wc_author2, svntest.main.wc_author)
   svntest.actions.run_and_verify_svn([], expected_err,
                                      'unlock',
                                      '--username', svntest.main.wc_author2,
@@ -2077,25 +2074,6 @@ def dav_lock_timeout(sbox):
   expected_status.tweak('iota', writelocked='K')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-def http_connection(repo_url):
-
-  import httplib
-  from urlparse import urlparse
-
-  loc = urlparse(repo_url)
-  if loc.scheme == 'http':
-    h = httplib.HTTPConnection(loc.hostname, loc.port)
-  else:
-    try:
-      import ssl # new in python 2.6
-      c = ssl.create_default_context()
-      c.check_hostname = False
-      c.verify_mode = ssl.CERT_NONE
-      h = httplib.HTTPSConnection(loc.hostname, loc.port, context=c)
-    except:
-      h = httplib.HTTPSConnection(loc.hostname, loc.port)
-  return h
-
 @SkipUnless(svntest.main.is_ra_type_dav)
 def create_dav_lock_timeout(sbox):
   "create generic DAV lock with timeout"
@@ -2106,7 +2084,7 @@ def create_dav_lock_timeout(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  h = http_connection(sbox.repo_url)
+  h = svntest.main.create_http_connection(sbox.repo_url)
 
   lock_body = '<?xml version="1.0" encoding="utf-8" ?>' \
               '<D:lockinfo xmlns:D="DAV:">' \
@@ -2121,9 +2099,6 @@ def create_dav_lock_timeout(sbox):
     'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
     'Timeout': 'Second-86400'
   }
-
-  # Enabling the following line makes this test easier to debug
-  h.set_debuglevel(9)
 
   h.request('LOCK', sbox.repo_url + '/iota', lock_body, lock_headers)
 
@@ -2251,7 +2226,7 @@ def dav_lock_refresh(sbox):
                                      sbox.repo_url + '/iota')
 
   # Try to refresh lock using 'If' header
-  h = http_connection(sbox.repo_url)
+  h = svntest.main.create_http_connection(sbox.repo_url)
 
   lock_token = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Token']
 
@@ -2260,9 +2235,6 @@ def dav_lock_refresh(sbox):
     'If': '(<' + lock_token + '>)',
     'Timeout': 'Second-7200'
   }
-
-  # Enabling the following line makes this test easier to debug
-  h.set_debuglevel(9)
 
   h.request('LOCK', sbox.repo_url + '/iota', '', lock_headers)
 
@@ -2365,7 +2337,6 @@ def copy_dir_with_locked_file(sbox):
                                      '-m', '')
 
 @Issue(4557)
-@XFail(svntest.main.is_ra_type_dav)
 def delete_dir_with_lots_of_locked_files(sbox):
   "delete a directory containing lots of locked files"
 
@@ -2393,12 +2364,6 @@ def delete_dir_with_lots_of_locked_files(sbox):
   # Locally delete A (regression against earlier versions, which
   #                   always used a special non-standard request)
   sbox.simple_rm("A")
-
-  # But a further replacement never worked
-  sbox.simple_mkdir("A")
-  # And an additional propset didn't work either
-  # (but doesn't require all lock tokens recursively)
-  sbox.simple_propset("k", "v", "A")
 
   # Commit the deletion
   # XFAIL: As of 1.8.10, this commit fails with:
@@ -2462,7 +2427,49 @@ def delete_locks_on_depth_commit(sbox):
   expected_status.tweak('', 'iota', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+@Issue(4557)
+@XFail(svntest.main.is_ra_type_dav)
+def replace_dir_with_lots_of_locked_files(sbox):
+  "replace directory containing lots of locked files"
 
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # A lot of paths.
+  nfiles = 75 # NOTE: test XPASSES with 50 files!!!
+  locked_paths = []
+  for i in range(nfiles):
+      locked_paths.append(sbox.ospath("A/locked_files/file-%i" % i))
+
+  # Create files at these paths
+  os.mkdir(sbox.ospath("A/locked_files"))
+  for file_path in locked_paths:
+    svntest.main.file_write(file_path, "This is '%s'.\n" % (file_path,))
+  sbox.simple_add("A/locked_files")
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # lock all the files
+  svntest.actions.run_and_verify_svn(None, [], 'lock',
+                                     '-m', 'All locks',
+                                      *locked_paths)
+  # Locally delete A (regression against earlier versions, which
+  #                   always used a special non-standard request)
+  sbox.simple_rm("A")
+
+  # But a further replacement never worked
+  sbox.simple_mkdir("A")
+  # And an additional propset didn't work either
+  # (but doesn't require all lock tokens recursively)
+  sbox.simple_propset("k", "v", "A")
+
+  # Commit the deletion
+  # XFAIL: As of 1.8.10, this commit fails with:
+  #  svn: E175002: Unexpected HTTP status 400 'Bad Request' on '<path>'
+  # and the following error in the httpd error log:
+  #  request failed: error reading the headers
+  # This problem was introduced on the 1.8.x branch in r1606976.
+  sbox.simple_commit()
 
 ########################################################################
 # Run the tests
@@ -2531,6 +2538,7 @@ test_list = [ None,
               copy_dir_with_locked_file,
               delete_dir_with_lots_of_locked_files,
               delete_locks_on_depth_commit,
+              replace_dir_with_lots_of_locked_files,
             ]
 
 if __name__ == '__main__':

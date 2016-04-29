@@ -124,13 +124,6 @@ svn_fs_x__path_txn_current(svn_fs_t *fs,
 }
 
 const char *
-svn_fs_x__path_txn_next(svn_fs_t *fs,
-                           apr_pool_t *result_pool)
-{
-  return svn_dirent_join(fs->path, PATH_TXN_NEXT, result_pool);
-}
-
-const char *
 svn_fs_x__path_txn_current_lock(svn_fs_t *fs,
                                 apr_pool_t *result_pool)
 {
@@ -598,7 +591,13 @@ svn_fs_x__write_current(svn_fs_t *fs,
                                  scratch_pool));
   SVN_ERR(svn_io_file_close(file, scratch_pool));
 
-  return svn_fs_x__move_into_place(tmp_name, name, name, scratch_pool);
+  /* Copying permissions is a no-op on WIN32. */
+  SVN_ERR(svn_io_copy_perms(name, tmp_name, scratch_pool));
+
+  /* Move the file into place. */
+  SVN_ERR(svn_io_file_rename2(tmp_name, name, TRUE, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -644,22 +643,6 @@ svn_fs_x__try_stringbuf_from_file(svn_stringbuf_t **content,
 }
 
 /* Fetch the current offset of FILE into *OFFSET_P. */
-svn_error_t *
-svn_fs_x__get_file_offset(apr_off_t *offset_p,
-                          apr_file_t *file,
-                          apr_pool_t *scratch_pool)
-{
-  apr_off_t offset;
-
-  /* Note that, for buffered files, one (possibly surprising) side-effect
-     of this call is to flush any unwritten data to disk. */
-  offset = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, &offset, scratch_pool));
-  *offset_p = offset;
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_fs_x__read_content(svn_stringbuf_t **content,
                        const char *fname,
@@ -716,66 +699,33 @@ svn_fs_x__read_number_from_stream(apr_int64_t *result,
   return SVN_NO_ERROR;
 }
 
-
-/* Move a file into place from OLD_FILENAME in the transactions
-   directory to its final location NEW_FILENAME in the repository.  On
-   Unix, match the permissions of the new file to the permissions of
-   PERMS_REFERENCE.  Temporary allocations are from SCRATCH_POOL.
-
-   This function almost duplicates svn_io_file_move(), but it tries to
-   guarantee a flush. */
 svn_error_t *
 svn_fs_x__move_into_place(const char *old_filename,
                           const char *new_filename,
                           const char *perms_reference,
+                          svn_fs_x__batch_fsync_t *batch,
                           apr_pool_t *scratch_pool)
 {
-  svn_error_t *err;
-
+  /* Copying permissions is a no-op on WIN32. */
   SVN_ERR(svn_io_copy_perms(perms_reference, old_filename, scratch_pool));
 
+  /* We use specific 'fsyncing move' Win32 API calls on Windows while the
+   * directory update fsync is POSIX-only.  Moreover, there tend to be only
+   * a few moved files (1 or 2) per batch.
+   *
+   * Therefore, we use the platform-optimized "immediate" fsyncs on all
+   * non-POSIX platforms and the "scheduled" fsyncs on POSIX only.
+   */
+#if defined(SVN_ON_POSIX)
   /* Move the file into place. */
-  err = svn_io_file_rename2(old_filename, new_filename, FALSE, scratch_pool);
-  if (err && APR_STATUS_IS_EXDEV(err->apr_err))
-    {
-      apr_file_t *file;
+  SVN_ERR(svn_io_file_rename2(old_filename, new_filename, FALSE,
+                              scratch_pool));
 
-      /* Can't rename across devices; fall back to copying. */
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-      SVN_ERR(svn_io_copy_file(old_filename, new_filename, TRUE,
-                               scratch_pool));
-
-      /* Flush the target of the copy to disk. */
-      SVN_ERR(svn_io_file_open(&file, new_filename, APR_READ,
-                               APR_OS_DEFAULT, scratch_pool));
-      /* ### BH: Does this really guarantee a flush of the data written
-         ### via a completely different handle on all operating systems?
-         ###
-         ### Maybe we should perform the copy ourselves instead of making
-         ### apr do that and flush the real handle? */
-      SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
-      SVN_ERR(svn_io_file_close(file, scratch_pool));
-    }
-  if (err)
-    return svn_error_trace(err);
-
-#ifdef __linux__
-  {
-    /* Linux has the unusual feature that fsync() on a file is not
-       enough to ensure that a file's directory entries have been
-       flushed to disk; you have to fsync the directory as well.
-       On other operating systems, we'd only be asking for trouble
-       by trying to open and fsync a directory. */
-    const char *dirname;
-    apr_file_t *file;
-
-    dirname = svn_dirent_dirname(new_filename, scratch_pool);
-    SVN_ERR(svn_io_file_open(&file, dirname, APR_READ, APR_OS_DEFAULT,
-                             scratch_pool));
-    SVN_ERR(svn_io_file_flush_to_disk(file, scratch_pool));
-    SVN_ERR(svn_io_file_close(file, scratch_pool));
-  }
+  /* Schedule for synchronization. */
+  SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, new_filename, scratch_pool));
+#else
+  SVN_ERR(svn_io_file_rename2(old_filename, new_filename, TRUE,
+                              scratch_pool));
 #endif
 
   return SVN_NO_ERROR;

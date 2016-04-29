@@ -1564,7 +1564,10 @@ void SVNClient::vacuum(const char *path,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_vacuum(path,
+    Path checkedPath(path, subPool);
+    SVN_JNI_ERR(checkedPath.error_occurred(),);
+
+    SVN_JNI_ERR(svn_client_vacuum(checkedPath.c_str(),
                                   remove_unversioned_items,
                                   remove_ignored_items,
                                   fix_recorded_timestamps,

@@ -32,6 +32,7 @@ import filecmp
 import shutil
 import traceback
 import logging
+import re
 try:
   # Python >=3.0
   import configparser
@@ -83,6 +84,9 @@ def _usage_exit():
   print("  --disable-http-v2      : Do not advertise support for HTTPv2 on server")
   print("  --disable-bulk-updates : Disable bulk updates on HTTP server")
   print("  --ssl-cert             : Path to SSL server certificate to trust.")
+  print("  --https                : Run Apache httpd with an https setup.")
+  print("  --http2                : Enable http2 in Apache Httpd (>= 2.4.17).")
+  print("  --global-scheduler     : Enable global scheduler.")
   print("  --exclusive-wc-locks   : Enable exclusive working copy locks")
   print("  --memcached-dir=DIR    : Run memcached from dir")
   print("  --memcached-server=    : Enable usage of the specified memcached server")
@@ -129,11 +133,12 @@ gen_obj = gen_win_dependencies.GenDependenciesBase('build.conf', version_header,
 opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                        ['release', 'debug', 'verbose', 'quiet', 'cleanup',
                         'test=', 'url=', 'svnserve-args=', 'fs-type=', 'asp.net-hack',
-                        'httpd-dir=', 'httpd-port=', 'httpd-daemon',
+                        'httpd-dir=', 'httpd-port=', 'httpd-daemon', 'https',
                         'httpd-server', 'http-short-circuit', 'httpd-no-log',
                         'disable-http-v2', 'disable-bulk-updates', 'help',
                         'fsfs-packing', 'fsfs-sharding=', 'javahl', 'swig=',
-                        'list', 'enable-sasl', 'bin=', 'parallel',
+                        'list', 'enable-sasl', 'bin=', 'parallel', 'http2',
+                        'global-scheduler',
                         'config-file=', 'server-minor-version=', 'log-level=',
                         'log-to-stdout', 'mode-filter=', 'milestone-filter=',
                         'ssl-cert=', 'exclusive-wc-locks', 'memcached-server=',
@@ -144,6 +149,7 @@ if len(args) > 1:
 
 # Interpret the options and set parameters
 base_url, fs_type, verbose, cleanup = None, None, None, None
+global_scheduler = None
 repo_loc = 'local repository.'
 objdir = 'Debug'
 log = 'tests.log'
@@ -154,6 +160,8 @@ run_httpd = None
 httpd_port = None
 httpd_service = None
 httpd_no_log = None
+use_ssl = False
+use_http2 = False
 http_short_circuit = False
 advertise_httpv2 = True
 http_bulk_updates = True
@@ -214,6 +222,10 @@ for opt, val in opts:
     httpd_service = 1
   elif opt == '--httpd-no-log':
     httpd_no_log = 1
+  elif opt == '--https':
+    use_ssl = 1
+  elif opt == '--http2':
+    use_http2 = 1
   elif opt == '--http-short-circuit':
     http_short_circuit = True
   elif opt == '--disable-http-v2':
@@ -226,6 +238,8 @@ for opt, val in opts:
     fsfs_packing = 1
   elif opt == '--javahl':
     test_javahl = 1
+  elif opt == '--global-scheduler':
+    global_scheduler = 1
   elif opt == '--swig':
     if val not in ['perl', 'python', 'ruby']:
       sys.stderr.write('Running \'%s\' swig tests not supported (yet).\n'
@@ -292,7 +306,12 @@ if run_httpd:
   if not httpd_port:
     httpd_port = random.randrange(1024, 30000)
   if not base_url:
-    base_url = 'http://localhost:' + str(httpd_port)
+    if use_ssl:
+      scheme = 'https'
+    else:
+      scheme = 'http'
+
+    base_url = '%s://localhost:%d' % (scheme, httpd_port)
 
 if base_url:
   repo_loc = 'remote repository ' + base_url + '.'
@@ -433,7 +452,9 @@ class Svnserve:
       args = [self.name] + self.args
     print('Starting %s %s' % (self.kind, self.name))
 
-    self.proc = subprocess.Popen([self.path] + args[1:])
+    env = os.environ.copy()
+    env['SVN_DBG_STACKTRACES_TO_STDERR'] = 'y'
+    self.proc = subprocess.Popen([self.path] + args[1:], env=env)
 
   def stop(self):
     if self.proc is not None:
@@ -449,8 +470,9 @@ class Svnserve:
 
 class Httpd:
   "Run httpd for DAV tests"
-  def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
-               service, no_log, httpv2, short_circuit, bulk_updates):
+  def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, abs_srcdir,
+               httpd_port, service, use_ssl, use_http2, no_log, httpv2,
+               short_circuit, bulk_updates):
     self.name = 'apache.exe'
     self.httpd_port = httpd_port
     self.httpd_dir = abs_httpd_dir
@@ -488,12 +510,19 @@ class Httpd:
     self.dontdothat_file = os.path.join(abs_builddir,
                                          CMDLINE_TEST_SCRIPT_NATIVE_PATH,
                                          'svn-test-work', 'dontdothat')
+    self.certfile = os.path.join(abs_builddir,
+                                 CMDLINE_TEST_SCRIPT_NATIVE_PATH,
+                                 'svn-test-work', 'cert.pem')
+    self.certkeyfile = os.path.join(abs_builddir,
+                                     CMDLINE_TEST_SCRIPT_NATIVE_PATH,
+                                     'svn-test-work', 'cert-key.pem')
     self.httpd_config = os.path.join(self.root, 'httpd.conf')
     self.httpd_users = os.path.join(self.root, 'users')
     self.httpd_mime_types = os.path.join(self.root, 'mime.types')
     self.httpd_groups = os.path.join(self.root, 'groups')
     self.abs_builddir = abs_builddir
     self.abs_objdir = abs_objdir
+    self.abs_srcdir = abs_srcdir
     self.service_name = 'svn-test-httpd-' + str(httpd_port)
 
     if self.service:
@@ -509,6 +538,9 @@ class Httpd:
     self._create_mime_types_file()
     self._create_dontdothat_file()
 
+    if use_ssl:
+      self._create_cert_files()
+
     # Obtain version.
     version_vals = gen_obj._libraries['httpd'].version.split('.')
     self.httpd_ver = float('%s.%s' % (version_vals[0], version_vals[1]))
@@ -517,9 +549,10 @@ class Httpd:
     fp = open(self.httpd_config, 'w')
 
     # Limit the number of threads (default = 64)
-    fp.write('<IfModule mpm_winnt.c>\n')
-    fp.write('ThreadsPerChild 16\n')
-    fp.write('</IfModule>\n')
+    if not use_http2:
+      fp.write('<IfModule mpm_winnt.c>\n')
+      fp.write('ThreadsPerChild 16\n')
+      fp.write('</IfModule>\n')
 
     # Global Environment
     fp.write('ServerRoot   ' + self._quote(self.root) + '\n')
@@ -537,6 +570,10 @@ class Httpd:
       fp.write('LogLevel     Crit\n')
 
     # Write LoadModule for minimal system module
+    if use_ssl:
+      fp.write(self._sys_module('ssl_module', 'mod_ssl.so'))
+    if use_http2:
+      fp.write(self._sys_module('http2_module', 'mod_http2.so'))
     fp.write(self._sys_module('dav_module', 'mod_dav.so'))
     if self.httpd_ver >= 2.3:
       fp.write(self._sys_module('access_compat_module', 'mod_access_compat.so'))
@@ -560,6 +597,18 @@ class Httpd:
 
     # And for mod_dontdothat
     fp.write(self._svn_module('dontdothat_module', 'mod_dontdothat.so'))
+
+    if use_ssl:
+      fp.write('SSLEngine on\n')
+      fp.write('SSLProtocol All -SSLv2 -SSLv3\n')
+      fp.write('SSLCertificateFile %s\n' % self._quote(self.certfile))
+      fp.write('SSLCertificateKeyFile %s\n' % self._quote(self.certkeyfile))
+
+    if use_ssl and use_http2:
+      fp.write('Protocols h2 http/1.1\n')
+    elif use_http2:
+      fp.write('Protocols h2c http/1.1\n')
+      fp.write('H2Direct on\n')
 
     # Don't handle .htaccess, symlinks, etc.
     fp.write('<Directory />\n')
@@ -632,6 +681,34 @@ class Httpd:
     fp.write('[recursive-actions]\n')
     fp.write('/ = deny\n')
     fp.close()
+
+  def _create_cert_files(self):
+    "Create certificate files"
+    # The unix build uses certificates encoded in davautocheck.sh
+    # Let's just read them from there
+
+    sh_path = os.path.join(self.abs_srcdir, 'subversion', 'tests', 'cmdline',
+                           'davautocheck.sh')
+    sh = open(sh_path).readlines()
+
+    def cert_extract(lines, what):
+      r = []
+      pattern = r'cat\s*\>\s*' + re.escape(what) + r'\s*\<\<([A-Z_a-z0-9]+)'
+      exit_marker = None
+      for i in lines:
+        if exit_marker:
+          if i.startswith(exit_marker):
+            return r
+          r.append(i)
+        else:
+          m = re.match(pattern, i)
+          if m:
+            exit_marker = m.groups(1)
+
+    cert_file = cert_extract(sh, '"$SSL_CERTIFICATE_FILE"')
+    cert_key = cert_extract(sh, '"$SSL_CERTIFICATE_KEY_FILE"')
+    open(self.certfile, 'w').write(''.join(cert_file))
+    open(self.certkeyfile, 'w').write(''.join(cert_key))
 
   def _sys_module(self, name, path):
     full_path = os.path.join(self.httpd_dir, 'modules', path)
@@ -940,10 +1017,13 @@ if not list_tests:
     daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
   if run_httpd:
-    daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port,
-                   httpd_service, httpd_no_log,
-                   advertise_httpv2, http_short_circuit,
+    daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, abs_srcdir,
+                   httpd_port, httpd_service, use_ssl, use_http2,
+                   httpd_no_log, advertise_httpv2, http_short_circuit,
                    http_bulk_updates)
+
+    if use_ssl and not ssl_cert:
+      ssl_cert = daemon.certfile
 
   # Start service daemon, if any
   if daemon:
@@ -998,6 +1078,7 @@ if not test_javahl and not test_swig:
   opts, args = run_tests.create_parser().parse_args([])
   opts.url = base_url
   opts.fs_type = fs_type
+  opts.global_scheduler = global_scheduler
   opts.http_library = 'serf'
   opts.server_minor_version = server_minor_version
   opts.cleanup = cleanup

@@ -2192,6 +2192,112 @@ def merge_obstruction_recording(sbox):
 
   # A resolver action could be smarter though...
 
+def added_revision_recording_in_tree_conflict(sbox):
+  "tree conflict stores added revision for victim"
+
+  sbox.build(empty=True)
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_mkdir('trunk')
+  sbox.simple_commit() #r1
+
+  # Create a branch
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'copy', sbox.repo_url + '/trunk',
+                                     sbox.repo_url + '/branch',
+                                     '-mcopy') # r2
+
+  sbox.simple_add_text('The file on trunk\n', 'trunk/foo')
+  sbox.simple_commit() #r3
+
+  sbox.simple_update()
+
+  # Merge ^/trunk into ^/branch
+  expected_output = svntest.wc.State(sbox.ospath('branch'), {
+    'foo'          : Item(status='A '),
+  })
+  expected_mergeinfo_output = wc.State(sbox.ospath('branch'), {
+    ''                  : Item(status=' U')
+  })
+  expected_elision_output = wc.State(wc_dir, {
+  })
+  expected_disk = wc.State('', {
+    'foo'              : Item(contents="The file on trunk\n"),
+    '.'                 : Item(props={u'svn:mergeinfo': u'/trunk:2-3'}),
+  })
+  expected_status = wc.State(sbox.ospath('branch'), {
+    ''                  : Item(status=' M', wc_rev='3'),
+    'foo'              : Item(status='A ', copied='+', wc_rev='-'),
+  })
+  expected_skip = wc.State('', {
+  })
+  svntest.actions.run_and_verify_merge(sbox.ospath('branch'), None, None,
+                                       sbox.repo_url + '/trunk',
+                                       None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       check_props=True)
+
+  sbox.simple_commit() #r4
+
+  # Edit the file on the branch
+  sbox.simple_append('branch/foo', 'The file on the branch\n')
+  sbox.simple_commit() #r5
+
+  # Replace file with a directory on trunk
+  sbox.simple_rm('trunk/foo')
+  sbox.simple_mkdir('trunk/foo')
+  sbox.simple_commit() #r6
+
+  sbox.simple_update()
+
+  # Merge ^/trunk into ^/branch
+  expected_output = svntest.wc.State(sbox.ospath('branch'), {
+    'foo'               : Item(status='  ', treeconflict='C')
+  })
+  expected_mergeinfo_output = wc.State(sbox.ospath('branch'), {
+    ''                  : Item(status=' U'),
+  })
+  expected_elision_output = wc.State(wc_dir, {
+  })
+  expected_disk = wc.State('', {
+    'foo'     : Item(contents="The file on trunk\nThe file on the branch\n"),
+      '.'     : Item(props={u'svn:mergeinfo': u'/trunk:2-6'}),
+  })
+  expected_status = wc.State(sbox.ospath('branch'), {
+    ''                  : Item(status=' M', wc_rev='6'),
+    'foo'               : Item(status='  ', treeconflict='C', wc_rev='6'),
+  })
+  expected_skip = wc.State('', {
+  })
+  svntest.actions.run_and_verify_merge(sbox.ospath('branch'), None, None,
+                                       sbox.repo_url + '/trunk',
+                                       None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       check_props=True)
+
+  # Ensure that revisions in tree conflict info match what we expect.
+  # We used to record source left as ^/trunk/foo@1 instead of ^/trunk/foo@3.
+  # Note that foo was first added in r3.
+  expected_info = [
+    {
+      "Path" : re.escape(sbox.ospath('branch/foo')),
+      "Tree conflict": re.escape(
+        'local file edit, incoming replace with dir upon merge' +
+        ' Source  left: (file) ^/trunk/foo@3' +
+        ' Source right: (dir) ^/trunk/foo@6'),
+    },
+  ]
+  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('branch/foo'))
 
 ########################################################################
 # Run the tests
@@ -2225,6 +2331,7 @@ test_list = [ None,
               merge_replace_on_del_fails,
               merge_conflict_details,
               merge_obstruction_recording,
+              added_revision_recording_in_tree_conflict,
              ]
 
 if __name__ == '__main__':

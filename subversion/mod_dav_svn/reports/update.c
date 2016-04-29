@@ -970,7 +970,7 @@ dav_svn__update_report(const dav_resource *resource,
   dav_error *derr = NULL;
   const char *src_path = NULL;
   const char *dst_path = NULL;
-  const dav_svn_repos *repos = resource->info->repos;
+  dav_svn_repos *repos = resource->info->repos;
   const char *target = "";
   svn_boolean_t text_deltas = TRUE;
   svn_depth_t requested_depth = svn_depth_unknown;
@@ -1028,7 +1028,7 @@ dav_svn__update_report(const dav_resource *resource,
 
   /* Ask the repository about its youngest revision (which we'll need
      for some input validation later). */
-  if ((serr = svn_fs_youngest_rev(&youngest, repos->fs, resource->pool)))
+  if ((serr = dav_svn__get_youngest_rev(&youngest, repos, resource->pool)))
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                 "Could not determine the youngest "
                                 "revision for the update process.",

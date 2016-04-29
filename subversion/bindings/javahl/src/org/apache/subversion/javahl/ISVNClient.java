@@ -97,7 +97,7 @@ public interface ISVNClient
      * @since 1.9
      */
     void status(String path, Depth depth,
-                boolean onServer, boolean ignoreLocal,
+                boolean onServer, boolean onDisk,
                 boolean getAll, boolean noIgnore,
                 boolean ignoreExternals, boolean depthAsSticky,
                 Collection<String> changelists, StatusCallback callback)

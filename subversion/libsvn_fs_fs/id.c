@@ -82,9 +82,11 @@ locale_independent_strtol(long *result_p,
 
       next = result * 10 + c;
 
-      /* Overflow check.  In case of an overflow, NEXT is 0..9.
-       * In the non-overflow case, RESULT is either >= 10 or RESULT and NEXT
-       * are both 0. */
+      /* Overflow check.  In case of an overflow, NEXT is 0..9 and RESULT
+       * is much larger than 10.  We will then return FALSE.
+       *
+       * In the non-overflow case, NEXT is >= 10 * RESULT but never smaller.
+       * We will continue the loop in that case. */
       if (next < result)
         return FALSE;
 

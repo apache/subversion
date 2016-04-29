@@ -360,8 +360,13 @@ make_reporter(svn_ra_session_t *session,
                                   edit_baton,
                                   NULL,
                                   NULL,
-                                  1024 * 1024,  /* process-local transfers
-                                                   should be fast */
+                                  0, /* Disable zero-copy codepath, because
+                                        RA API users are unaware about the
+                                        zero-copy code path limitation (do
+                                        not access FSFS data structures
+                                        and, hence, caches).  See notes
+                                        to svn_repos_begin_report3() for
+                                        additional details. */
                                   result_pool));
 
   /* Wrap the report baton given us by the repos layer with our own
@@ -1357,7 +1362,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
           if (dirent_fields & SVN_DIRENT_SIZE)
             {
               /* size  */
-              if (entry->kind == svn_node_dir)
+              if (fs_entry->kind == svn_node_dir)
                 entry->size = 0;
               else
                 SVN_ERR(svn_fs_file_length(&(entry->size), root,
@@ -1833,9 +1838,11 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__has_capability,
   svn_ra_local__replay_range,
   svn_ra_local__get_deleted_rev,
-  svn_ra_local__register_editor_shim_callbacks,
   svn_ra_local__get_inherited_props,
-  svn_ra_local__get_commit_ev2
+  NULL /* set_svn_ra_open */,
+  svn_ra_local__register_editor_shim_callbacks,
+  svn_ra_local__get_commit_ev2,
+  NULL /* replay_range_ev2 */
 };
 
 
@@ -1868,7 +1875,7 @@ svn_ra_local__init(const svn_version_t *loader_version,
 
   SVN_ERR(svn_ver_check_list2(ra_local_version(), checklist, svn_ver_equal));
 
-#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
+#ifndef SVN_LIBSVN_RA_LINKS_RA_LOCAL
   /* This means the library was loaded as a DSO, so use the DSO pool. */
   SVN_ERR(svn_fs_initialize(svn_dso__pool()));
 #endif

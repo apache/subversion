@@ -1242,17 +1242,20 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
 {
   apr_getopt_t *os;
   struct opt_parsing_error_baton_t opt_parsing_error_baton;
-  /* Make room for each option (starting at index 1) plus trailing NULL. */
-  const char **argv = apr_palloc(pool, sizeof(char*) * (args->nelts + 2));
+  apr_array_header_t *argv;
 
   opt_parsing_error_baton.err = NULL;
   opt_parsing_error_baton.pool = pool;
 
-  argv[0] = "";
-  memcpy(argv + 1, args->elts, sizeof(char*) * args->nelts);
-  argv[args->nelts + 1] = NULL;
+  /* Make room for each option (starting at index 1) plus trailing NULL. */
+  argv = apr_array_make(pool, args->nelts + 2, sizeof(char*));
+  APR_ARRAY_PUSH(argv, const char *) = "";
+  apr_array_cat(argv, args);
+  APR_ARRAY_PUSH(argv, const char *) = NULL;
 
-  apr_getopt_init(&os, pool, args->nelts + 1, argv);
+  apr_getopt_init(&os, pool, 
+                  argv->nelts - 1 /* Exclude trailing NULL */,
+                  (const char *const *) argv->elts);
 
   /* Capture any error message from apr_getopt_long().  This will typically
    * say which option is wrong, which we would not otherwise know. */

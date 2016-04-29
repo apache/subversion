@@ -179,6 +179,7 @@ svnauthz_binary = os.path.abspath('../../../tools/server-side/svnauthz' + _exe)
 svnauthz_validate_binary = os.path.abspath(
     '../../../tools/server-side/svnauthz-validate' + _exe
 )
+svnmover_binary = os.path.abspath('../../../tools/dev/svnmover/svnmover' + _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -680,8 +681,7 @@ V %d
 %s
 END
 """ % (len(cert_rep), cert_rep, len(netloc_url), netloc_url)
-
-  file_write(md5_file, md5_file_contents)
+  file_write(md5_file, md5_file_contents, mode='wb')
 
 def copy_trust(dst_cfgdir, src_cfgdir):
   """Copy svn.ssl.server files from one config dir to another.
@@ -773,6 +773,12 @@ def run_svnversion(*varargs):
   """Run svnversion with VARARGS, returns exit code as int; stdout, stderr
   as list of lines (including line terminators)."""
   return run_command(svnversion_binary, 1, False, *varargs)
+
+def run_svnmover(*varargs):
+  """Run svnmover with VARARGS, returns exit code as int; stdout, stderr as
+  list of lines (including line terminators)."""
+  return run_command(svnmover_binary, 1, False,
+                     *(_with_auth(_with_config_dir(varargs))))
 
 def run_svnmucc(*varargs):
   """Run svnmucc with VARARGS, returns exit code as int; stdout, stderr as
@@ -1194,6 +1200,30 @@ def create_python_hook_script(hook_path, hook_script_code,
     file_write(hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
     os.chmod(hook_path, 0755)
 
+def create_http_connection(url, debuglevel=9):
+  """Create an http(s) connection to the host specified by URL.
+     Set the debugging level (the amount of debugging output printed when
+     working with this connection) to DEBUGLEVEL.  By default, all debugging
+     output is printed. """
+
+  import httplib
+  from urlparse import urlparse
+
+  loc = urlparse(url)
+  if loc.scheme == 'http':
+    h = httplib.HTTPConnection(loc.hostname, loc.port)
+  else:
+    try:
+      import ssl # new in python 2.6
+      c = ssl.create_default_context()
+      c.check_hostname = False
+      c.verify_mode = ssl.CERT_NONE
+      h = httplib.HTTPSConnection(loc.hostname, loc.port, context=c)
+    except:
+      h = httplib.HTTPSConnection(loc.hostname, loc.port)
+  h.set_debuglevel(debuglevel)
+  return h
+
 def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
   "Create a restrictive authz file ( no anynomous access )."
 
@@ -1541,7 +1571,7 @@ __mod_dav_url_quoting_broken_versions = frozenset([
     '2.4.5',
 ])
 def is_mod_dav_url_quoting_broken():
-    if is_ra_type_dav():
+    if is_ra_type_dav() and options.httpd_version != options.httpd_whitelist:
         return (options.httpd_version in __mod_dav_url_quoting_broken_versions)
     return None
 
@@ -1613,6 +1643,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--http-proxy-password=' + options.http_proxy_password)
     if options.httpd_version:
       args.append('--httpd-version=' + options.httpd_version)
+    if options.httpd_whitelist:
+      args.append('--httpd-whitelist=' + options.httpd_whitelist)
     if options.exclusive_wc_locks:
       args.append('--exclusive-wc-locks')
     if options.memcached_server:
@@ -2029,6 +2061,8 @@ def _create_parser(usage=None):
                     help='Password for the HTTP Proxy.')
   parser.add_option('--httpd-version', action='store',
                     help='Assume HTTPD is this version.')
+  parser.add_option('--httpd-whitelist', action='store',
+                    help='httpd whitelist version.')
   parser.add_option('--tools-bin', action='store', dest='tools_bin',
                     help='Use the svn tools installed in this path')
   parser.add_option('--exclusive-wc-locks', action='store_true',
@@ -2189,6 +2223,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   global svnsync_binary
   global svndumpfilter_binary
   global svnversion_binary
+  global svnmover_binary
   global svnmucc_binary
   global svnauthz_binary
   global svnauthz_validate_binary
@@ -2287,6 +2322,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     svnauthz_binary = os.path.join(options.tools_bin, 'svnauthz' + _exe)
     svnauthz_validate_binary = os.path.join(options.tools_bin,
                                             'svnauthz-validate' + _exe)
+    svnmover_binary = os.path.join(options.tools_bin, 'svnmover' + _exe)
 
   ######################################################################
 

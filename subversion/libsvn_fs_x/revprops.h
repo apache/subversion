@@ -25,6 +25,8 @@
 
 #include "svn_fs.h"
 
+#include "batch_fsync.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -39,8 +41,26 @@ svn_error_t *
 svn_fs_x__reset_revprop_generation_file(svn_fs_t *fs,
                                         apr_pool_t *scratch_pool);
 
+/* Invalidate the cached revprop generation value in FS->FSAP_DATA.
+ * This enforces a re-read upon the next revprop read. */
+void
+svn_fs_x__invalidate_revprop_generation(svn_fs_t *fs);
+
+/* Utility function serializing PROPLIST into FILE and adding the checksum.
+ * Use SCRATCH_POOL for temporary allocations.
+ *
+ * Call this only when creating initial revprop file contents.
+ * For modifications use svn_fs_x__set_revision_proplist.
+ */
+svn_error_t *
+svn_fs_x__write_non_packed_revprops(apr_file_t *file,
+                                    apr_hash_t *proplist,
+                                    apr_pool_t *scratch_pool);
+
 /* Read the revprops for revision REV in FS and return them in *PROPLIST_P.
  * If BYPASS_CACHE is set, don't consult the disks but always read from disk.
+ * If REFRESH is set, update the revprop generation info; otherwise access
+ * potentially outdated cache data directly.
  *
  * Allocate the *PROPLIST_P in RESULT_POOL and use SCRATCH_POOL for temporary
  * allocations.
@@ -50,6 +70,7 @@ svn_fs_x__get_revision_proplist(apr_hash_t **proplist_p,
                                 svn_fs_t *fs,
                                 svn_revnum_t rev,
                                 svn_boolean_t bypass_cache,
+                                svn_boolean_t refresh,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
@@ -77,7 +98,7 @@ svn_fs_x__packed_revprop_available(svn_boolean_t *missing,
 
 /* For the revprop SHARD at SHARD_PATH with exactly MAX_FILES_PER_DIR
  * revprop files in it, create a packed shared at PACK_FILE_DIR in
- * filesystem FS.
+ * filesystem FS.  Schedule necessary fsync calls in BATCH.
  *
  * COMPRESSION_LEVEL defines how well the resulting pack file shall be
  * compressed or whether is shall be compressed at all.  Individual pack
@@ -93,8 +114,9 @@ svn_fs_x__pack_revprops_shard(svn_fs_t *fs,
                               const char *shard_path,
                               apr_int64_t shard,
                               int max_files_per_dir,
-                              apr_off_t max_pack_size,
+                              apr_int64_t max_pack_size,
                               int compression_level,
+                              svn_fs_x__batch_fsync_t *batch,
                               svn_cancel_func_t cancel_func,
                               void *cancel_baton,
                               apr_pool_t *scratch_pool);

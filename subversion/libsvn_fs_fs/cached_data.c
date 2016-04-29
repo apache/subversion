@@ -425,14 +425,13 @@ get_node_revision_body(node_revision_t **noderev_p,
                              scratch_pool),
                              APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
                              scratch_pool);
-      if (err)
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         {
-          if (APR_STATUS_IS_ENOENT(err->apr_err))
-            {
-              svn_error_clear(err);
-              return svn_error_trace(err_dangling_id(fs, id));
-            }
-
+          svn_error_clear(err);
+          return svn_error_trace(err_dangling_id(fs, id));
+        }
+      else if (err)
+        {
           return svn_error_trace(err);
         }
 
@@ -747,15 +746,15 @@ typedef struct rep_state_t
   int chunk_index;  /* number of the window to read */
 } rep_state_t;
 
-/* Simple wrapper around svn_fs_fs__get_file_offset to simplify callers. */
+/* Simple wrapper around svn_io_file_get_offset to simplify callers. */
 static svn_error_t *
 get_file_offset(apr_off_t *offset,
                 rep_state_t *rs,
                 apr_pool_t *pool)
 {
-  return svn_error_trace(svn_fs_fs__get_file_offset(offset,
-                                                    rs->sfile->rfile->file,
-                                                    pool));
+  return svn_error_trace(svn_io_file_get_offset(offset,
+                                                rs->sfile->rfile->file,
+                                                pool));
 }
 
 /* Simple wrapper around svn_io_file_aligned_seek to simplify callers. */
@@ -1802,10 +1801,10 @@ get_contents_from_windows(struct rep_read_baton *rb,
              This is where we need the pseudo rep_state created
              by build_rep_list(). */
           apr_size_t offset = (apr_size_t)rs->current;
-          if (copy_len + offset > rb->base_window->len)
-            copy_len = offset < rb->base_window->len
-                     ? rb->base_window->len - offset
-                     : 0ul;
+          if (offset >= rb->base_window->len)
+            copy_len = 0ul;
+          else if (copy_len > rb->base_window->len - offset)
+            copy_len = rb->base_window->len - offset;
 
           memcpy (cur, rb->base_window->data + offset, copy_len);
         }
@@ -2043,7 +2042,7 @@ skip_contents(struct rep_read_baton *baton,
   else if (len > 0)
     {
       /* Simply drain LEN bytes from the window stream. */
-      apr_pool_t *subpool = subpool = svn_pool_create(baton->pool);
+      apr_pool_t *subpool = svn_pool_create(baton->pool);
       char *buffer = apr_palloc(subpool, SVN__STREAM_CHUNK_SIZE);
 
       while (len > 0 && !err)
@@ -2422,12 +2421,12 @@ compare_dirent_name(const void *a, const void *b)
   return strcmp(lhs->name, rhs);
 }
 
-/* Into ENTRIES, read all directories entries from the key-value text in
+/* Into *ENTRIES_P, read all directories entries from the key-value text in
  * STREAM.  If INCREMENTAL is TRUE, read until the end of the STREAM and
  * update the data.  ID is provided for nicer error messages.
  */
 static svn_error_t *
-read_dir_entries(apr_array_header_t *entries,
+read_dir_entries(apr_array_header_t **entries_p,
                  svn_stream_t *stream,
                  svn_boolean_t incremental,
                  const svn_fs_id_t *id,
@@ -2435,8 +2434,14 @@ read_dir_entries(apr_array_header_t *entries,
                  apr_pool_t *scratch_pool)
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_hash_t *hash = incremental ? svn_hash__make(scratch_pool) : NULL;
+  apr_hash_t *hash = NULL;
   const char *terminator = SVN_HASH_TERMINATOR;
+  apr_array_header_t *entries = NULL;
+
+  if (incremental)
+    hash = svn_hash__make(scratch_pool);
+  else
+    entries = apr_array_make(result_pool, 16, sizeof(svn_fs_dirent_t *));
 
   /* Read until the terminator (non-incremental) or the end of STREAM
      (incremental mode).  In the latter mode, we use a temporary HASH
@@ -2448,8 +2453,11 @@ read_dir_entries(apr_array_header_t *entries,
       char *str;
 
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_hash__read_entry(&entry, stream, terminator,
-                                   incremental, iterpool));
+      SVN_ERR_W(svn_hash__read_entry(&entry, stream, terminator,
+                                     incremental, iterpool),
+                apr_psprintf(iterpool,
+                             _("Directory representation corrupt in '%s'"),
+                             svn_fs_fs__id_unparse(id, scratch_pool)->data));
 
       /* End of directory? */
       if (entry.key == NULL)
@@ -2517,6 +2525,9 @@ read_dir_entries(apr_array_header_t *entries,
   if (incremental)
     {
       apr_hash_index_t *hi;
+
+      entries = apr_array_make(result_pool, apr_hash_count(hash),
+                               sizeof(svn_fs_dirent_t *));
       for (hi = apr_hash_first(iterpool, hash); hi; hi = apr_hash_next(hi))
         APR_ARRAY_PUSH(entries, svn_fs_dirent_t *) = apr_hash_this_val(hi);
     }
@@ -2526,6 +2537,7 @@ read_dir_entries(apr_array_header_t *entries,
 
   svn_pool_destroy(iterpool);
 
+  *entries_p = entries;
   return SVN_NO_ERROR;
 }
 
@@ -2572,7 +2584,6 @@ get_dir_contents(svn_fs_fs__dir_data_t *dir,
   svn_stream_t *contents;
 
   /* Initialize the result. */
-  dir->entries = apr_array_make(result_pool, 16, sizeof(svn_fs_dirent_t *));
   dir->txn_filesize = SVN_INVALID_FILESIZE;
 
   /* Read dir contents - unless there is none in which case we are done. */
@@ -2595,7 +2606,7 @@ get_dir_contents(svn_fs_fs__dir_data_t *dir,
       SVN_ERR(svn_io_file_size_get(&dir->txn_filesize, file, scratch_pool));
 
       contents = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
-      SVN_ERR(read_dir_entries(dir->entries, contents, TRUE, noderev->id,
+      SVN_ERR(read_dir_entries(&dir->entries, contents, TRUE, noderev->id,
                                result_pool, scratch_pool));
       SVN_ERR(svn_stream_close(contents));
     }
@@ -2615,8 +2626,12 @@ get_dir_contents(svn_fs_fs__dir_data_t *dir,
 
       /* de-serialize hash */
       contents = svn_stream_from_stringbuf(text, scratch_pool);
-      SVN_ERR(read_dir_entries(dir->entries, contents, FALSE, noderev->id,
+      SVN_ERR(read_dir_entries(&dir->entries, contents, FALSE, noderev->id,
                                result_pool, scratch_pool));
+    }
+  else
+    {
+       dir->entries = apr_array_make(result_pool, 0, sizeof(svn_fs_dirent_t *));
     }
 
   return SVN_NO_ERROR;
@@ -2636,27 +2651,27 @@ locate_dir_cache(svn_fs_t *fs,
                  apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  if (svn_fs_fs__id_is_txn(noderev->id))
+  if (!noderev->data_rep)
+    {
+      /* no data rep -> empty directory.
+         A NULL key causes a cache miss. */
+      *key = NULL;
+      return ffd->dir_cache;
+    }
+
+  if (svn_fs_fs__id_txn_used(&noderev->data_rep->txn_id))
     {
       /* data in txns requires the expensive fs_id-based addressing mode */
       *key = svn_fs_fs__id_unparse(noderev->id, pool)->data;
+
       return ffd->txn_dir_cache;
     }
   else
     {
       /* committed data can use simple rev,item pairs */
-      if (noderev->data_rep)
-        {
-          pair_key->revision = noderev->data_rep->revision;
-          pair_key->second = noderev->data_rep->item_index;
-          *key = pair_key;
-        }
-      else
-        {
-          /* no data rep -> empty directory.
-             A NULL key causes a cache miss. */
-          *key = NULL;
-        }
+      pair_key->revision = noderev->data_rep->revision;
+      pair_key->second = noderev->data_rep->item_index;
+      *key = pair_key;
 
       return ffd->dir_cache;
     }
@@ -2703,8 +2718,12 @@ svn_fs_fs__rep_contents_dir(apr_array_header_t **entries_p,
   SVN_ERR(get_dir_contents(dir, fs, noderev, result_pool, scratch_pool));
   *entries_p = dir->entries;
 
-  /* Update the cache, if we are to use one. */
-  if (cache)
+  /* Update the cache, if we are to use one.
+   *
+   * Don't even attempt to serialize very large directories; it would cause
+   * an unnecessary memory allocation peak.  150 bytes/entry is about right.
+   */
+  if (cache && svn_cache__is_cachable(cache, 150 * dir->entries->nelts))
     SVN_ERR(svn_cache__set(cache, key, dir, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -2728,6 +2747,7 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
+  extract_dir_entry_baton_t baton;
   svn_boolean_t found = FALSE;
 
   /* find the cache we may use */
@@ -2737,8 +2757,6 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
                                          scratch_pool);
   if (cache)
     {
-      extract_dir_entry_baton_t baton;
-
       svn_filesize_t filesize;
       SVN_ERR(get_txn_dir_info(&filesize, fs, noderev, scratch_pool));
 
@@ -2755,7 +2773,7 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
     }
 
   /* fetch data from disk if we did not find it in the cache */
-  if (! found)
+  if (! found || baton.out_of_date)
     {
       svn_fs_dirent_t *entry;
       svn_fs_dirent_t *entry_copy = NULL;
@@ -2765,8 +2783,12 @@ svn_fs_fs__rep_contents_dir_entry(svn_fs_dirent_t **dirent,
       SVN_ERR(get_dir_contents(&dir, fs, noderev, scratch_pool,
                                scratch_pool));
 
-      /* Update the cache, if we are to use one. */
-      if (cache)
+      /* Update the cache, if we are to use one.
+       *
+       * Don't even attempt to serialize very large directories; it would
+       * cause an unnecessary memory allocation peak.  150 bytes / entry is
+       * about right. */
+      if (cache && svn_cache__is_cachable(cache, 150 * dir.entries->nelts))
         SVN_ERR(svn_cache__set(cache, key, &dir, scratch_pool));
 
       /* find desired entry and return a copy in POOL, if found */
@@ -3226,9 +3248,8 @@ read_rep_header(svn_fs_fs__rep_header_t **rep_header,
 
 /* Fetch the representation data (header, txdelta / plain windows)
  * addressed by ENTRY->ITEM in FS and cache it if caches are enabled.
- * Read the data from the already open FILE and the wrapping
- * STREAM object.  If MAX_OFFSET is not -1, don't read windows that start
- * at or beyond that offset.
+ * Read the data from REV_FILE.  If MAX_OFFSET is not -1, don't read
+ * windows that start at or beyond that offset.
  * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
@@ -3236,7 +3257,6 @@ block_read_contents(svn_fs_t *fs,
                     svn_fs_fs__revision_file_t *rev_file,
                     svn_fs_fs__p2l_entry_t* entry,
                     apr_off_t max_offset,
-                    apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
   pair_cache_key_t header_key = { 0 };
@@ -3246,9 +3266,9 @@ block_read_contents(svn_fs_t *fs,
   header_key.second = entry->item.number;
 
   SVN_ERR(read_rep_header(&rep_header, fs, rev_file->stream, &header_key,
-                          result_pool, scratch_pool));
+                          scratch_pool, scratch_pool));
   SVN_ERR(block_read_windows(rep_header, fs, rev_file, entry, max_offset,
-                             result_pool, scratch_pool));
+                             scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3305,8 +3325,8 @@ read_item(svn_stream_t **stream,
 
 /* If not already cached or if MUST_READ is set, read the changed paths
  * list addressed by ENTRY in FS and retúrn it in *CHANGES.  Cache the
- * result if caching is enabled.  Read the data from the already open
- * FILE and wrapping FILE_STREAM.  Use POOL for allocations.
+ * result if caching is enabled.  Read the data from REV_FILE.  Allocate
+ * *CHANGES in RESUSLT_POOL and allocate temporaries in SCRATCH_POOL.
  */
 static svn_error_t *
 block_read_changes(apr_array_header_t **changes,
@@ -3347,10 +3367,10 @@ block_read_changes(apr_array_header_t **changes,
   return SVN_NO_ERROR;
 }
 
-/* If not already cached or if MUST_READ is set, read the nod revision
+/* If not already cached or if MUST_READ is set, read the node revision
  * addressed by ENTRY in FS and retúrn it in *NODEREV_P.  Cache the
- * result if caching is enabled.  Read the data from the already open
- * FILE and wrapping FILE_STREAM. Use SCRATCH_POOL for temporary allocations.
+ * result if caching is enabled.  Read the data from REV_FILE.  Allocate
+ * *NODEREV_P in RESUSLT_POOL and allocate temporaries in SCRATCH_POOL.
  */
 static svn_error_t *
 block_read_noderev(node_revision_t **noderev_p,
@@ -3500,7 +3520,7 @@ block_read(void **result,
                                                 is_wanted
                                                   ? -1
                                                   : block_start + ffd->block_size,
-                                                pool, iterpool));
+                                                iterpool));
                     break;
 
                   case SVN_FS_FS__ITEM_TYPE_NODEREV:
@@ -3528,7 +3548,7 @@ block_read(void **result,
               /* if we crossed a block boundary, read the remainder of
                * the last block as well */
               offset = entry->offset + entry->size;
-              if (offset > block_start + ffd->block_size)
+              if (offset - block_start > ffd->block_size)
                 ++run_count;
             }
         }

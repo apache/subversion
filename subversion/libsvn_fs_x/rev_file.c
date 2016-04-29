@@ -331,7 +331,7 @@ auto_read_footer(svn_fs_x__revision_file_t *file)
                                      &file->p2l_info.start,
                                      &file->p2l_info.checksum,
                                      footer, file->file_info.start_revision,
-                                     file->pool));
+                                     filesize - footer_length - 1, file->pool));
       file->l2p_info.end = file->p2l_info.start;
       file->p2l_info.end = filesize - footer_length - 1;
     }
@@ -490,8 +490,8 @@ svn_fs_x__rev_file_offset(apr_off_t *offset,
                           svn_fs_x__revision_file_t *file)
 {
   SVN_ERR(auto_open(file));
-  return svn_error_trace(svn_fs_x__get_file_offset(offset, file->file,
-                                                   file->pool));
+  return svn_error_trace(svn_io_file_get_offset(offset, file->file,
+                                                file->pool));
 }
 
 svn_error_t *

@@ -359,7 +359,7 @@ def authz_write_access(sbox):
 def authz_checkout_test(sbox):
   "test authz for checkout"
 
-  sbox.build(create_wc = False, read_only = True)
+  sbox.build(create_wc = False)
   local_dir = sbox.wc_dir
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
@@ -398,7 +398,7 @@ def authz_checkout_test(sbox):
 def authz_checkout_and_update_test(sbox):
   "test authz for checkout and update"
 
-  sbox.build(create_wc = False, read_only = True)
+  sbox.build(create_wc = False)
   local_dir = sbox.wc_dir
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
@@ -460,7 +460,7 @@ def authz_checkout_and_update_test(sbox):
 def authz_partial_export_test(sbox):
   "test authz for export with unreadable subfolder"
 
-  sbox.build(create_wc = False, read_only = True)
+  sbox.build(create_wc = False)
   local_dir = sbox.wc_dir
 
   # cleanup remains of a previous test run.
@@ -656,7 +656,7 @@ def authz_aliases(sbox):
 def authz_validate(sbox):
   "test the authz validation rules"
 
-  sbox.build(create_wc = False, read_only = True)
+  sbox.build(create_wc = False)
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
@@ -782,7 +782,7 @@ def authz_locking(sbox):
                                       sbox.ospath('A/mu'))
 
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*svn: warning: W160039: Unlock.*[Ff]orbidden.*"
+    expected_err = ".*svn: warning: W160039: .*([Aa]uth.*perf|[Ff]orbidden).*"
   else:
     expected_err = ".*svn: warning: W170001: Authorization failed.*"
 
@@ -874,7 +874,7 @@ def authz_svnserve_anon_access_read(sbox):
 def authz_switch_to_directory(sbox):
   "switched to directory, no read access on parents"
 
-  sbox.build(read_only = True)
+  sbox.build()
 
   write_authz_file(sbox, {"/": "*=rw", "/A/B": "*=", "/A/B/E": "jrandom = rw"})
 
@@ -1610,6 +1610,57 @@ def authz_log_censor_revprops(sbox):
     args=['--with-revprop', 'svn:author', '--with-revprop', 's',
           '-r1', sbox.repo_url])
 
+@Skip(svntest.main.is_ra_type_file)
+def remove_access_after_commit(sbox):
+  "remove a subdir with authz file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.write_restrictive_svnserve_conf(sbox.repo_dir)
+  svntest.main.write_authz_file(sbox, { "/"      : "*=rw"})
+
+  # Modification in subtree
+  sbox.simple_append('A/B/E/alpha', 'appended\n')
+  sbox.simple_append('A/D/G/rho', 'appended\n')
+  sbox.simple_commit()
+
+  svntest.main.write_authz_file(sbox, { "/"      : "*=rw",
+                                        "/A/B"   : "*=",
+                                        "/A/D"   : "*="})
+
+  # Local modification
+  sbox.simple_append('A/D/G/pi', 'appended\n')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B'  : Item(status='D '),
+    'A/D'  : Item(status='  ', treeconflict='C'),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/G/rho',
+                      contents="This is the file 'rho'.\nappended\n")
+  expected_disk.tweak('A/D/G/pi',
+                      contents="This is the file 'pi'.\nappended\n")
+  expected_disk.remove('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                       'A/B/F', 'A/B/lambda')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+
+  expected_status.tweak('A/D', status='R ',treeconflict='C', )
+  expected_status.tweak('A/D', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
+                        'A/D/H', 'A/D/H/omega', 'A/D/H/chi', 'A/D/H/psi',
+                        'A/D/gamma', copied='+', wc_rev='-')
+  expected_status.tweak('A/D/G/pi', status='M ')
+  expected_status.remove('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F',
+                         'A/B/lambda')
+
+  # And expect a mixed rev copy
+  expected_status.tweak('A/D/G/rho', status='A ', entry_status='  ')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        [], True)
+
 
 ########################################################################
 # Run the tests
@@ -1646,6 +1697,7 @@ test_list = [ None,
               log_diff_dontdothat,
               authz_file_external_to_authz,
               authz_log_censor_revprops,
+              remove_access_after_commit,
              ]
 serial_only = True
 

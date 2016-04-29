@@ -163,7 +163,8 @@ get_prog_name() {
 }
 
 # Don't assume sbin is in the PATH.
-# ### Presumably this is used to locate /usr/sbin/apxs or /usr/sbin/apache2
+# This is used to locate apxs when the script is invoked manually; when
+# invoked by 'make davautocheck' the APXS environment variable is set.
 PATH="$PATH:/usr/sbin:/usr/local/sbin"
 
 # Find the source and build directories. The build dir can be found if it is

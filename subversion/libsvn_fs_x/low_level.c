@@ -102,6 +102,19 @@ parse_revnum(svn_revnum_t *rev,
   return SVN_NO_ERROR;
 }
 
+/* If ERR is not NULL, wrap it MESSAGE.  The latter must have an %ld
+ * format parameter that will be filled with REV. */
+static svn_error_t *
+wrap_footer_error(svn_error_t *err,
+                  const char *message,
+                  svn_revnum_t rev)
+{
+  if (err)
+    return svn_error_quick_wrapf(err, message, rev);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_x__parse_footer(apr_off_t *l2p_offset,
                        svn_checksum_t **l2p_checksum,
@@ -109,6 +122,7 @@ svn_fs_x__parse_footer(apr_off_t *l2p_offset,
                        svn_checksum_t **p2l_checksum,
                        svn_stringbuf_t *footer,
                        svn_revnum_t rev,
+                       apr_off_t footer_offset,
                        apr_pool_t *result_pool)
 {
   apr_int64_t val;
@@ -117,17 +131,20 @@ svn_fs_x__parse_footer(apr_off_t *l2p_offset,
   /* Get the L2P offset. */
   const char *str = svn_cstring_tokenize(" ", &last_str);
   if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Invalid revision footer"));
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             "Invalid r%ld footer", rev);
 
-  SVN_ERR(svn_cstring_atoi64(&val, str));
+  SVN_ERR(wrap_footer_error(svn_cstring_strtoi64(&val, str, 0,
+                                                 footer_offset - 1, 10),
+                            "Invalid L2P offset in r%ld footer",
+                            rev));
   *l2p_offset = (apr_off_t)val;
 
   /* Get the L2P checksum. */
   str = svn_cstring_tokenize(" ", &last_str);
   if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Invalid revision footer"));
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             "Invalid r%ld footer", rev);
 
   SVN_ERR(svn_checksum_parse_hex(l2p_checksum, svn_checksum_md5, str,
                                  result_pool));
@@ -135,17 +152,33 @@ svn_fs_x__parse_footer(apr_off_t *l2p_offset,
   /* Get the P2L offset. */
   str = svn_cstring_tokenize(" ", &last_str);
   if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Invalid revision footer"));
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             "Invalid r%ld footer", rev);
 
-  SVN_ERR(svn_cstring_atoi64(&val, str));
+  SVN_ERR(wrap_footer_error(svn_cstring_strtoi64(&val, str, 0,
+                                                 footer_offset - 1, 10),
+                            "Invalid P2L offset in r%ld footer",
+                            rev));
   *p2l_offset = (apr_off_t)val;
+
+  /* The P2L indes follows the L2P index */
+  if (*p2l_offset <= *l2p_offset)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             "P2L offset %s must be larger than L2P offset %s"
+                             " in r%ld footer",
+                             apr_psprintf(result_pool,
+                                          "%" APR_UINT64_T_HEX_FMT,
+                                          (apr_uint64_t)*p2l_offset),
+                             apr_psprintf(result_pool,
+                                          "%" APR_UINT64_T_HEX_FMT,
+                                          (apr_uint64_t)*l2p_offset),
+                             rev);
 
   /* Get the P2L checksum. */
   str = svn_cstring_tokenize(" ", &last_str);
   if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Invalid revision footer"));
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             "Invalid r%ld footer", rev);
 
   SVN_ERR(svn_checksum_parse_hex(p2l_checksum, svn_checksum_md5, str,
                                  result_pool));
@@ -796,14 +829,6 @@ read_change(svn_fs_x__change_t **change_p,
   change = apr_pcalloc(result_pool, sizeof(*change));
   last_str = line->data;
 
-  /* Get the node-id of the change. */
-  str = svn_cstring_tokenize(" ", &last_str);
-  if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Invalid changes line in rev-file"));
-
-  SVN_ERR(svn_fs_x__id_parse(&change->noderev_id, str));
-
   /* Get the change type. */
   str = svn_cstring_tokenize(" ", &last_str);
   if (str == NULL)
@@ -1011,7 +1036,6 @@ write_change_entry(svn_stream_t *stream,
                    svn_fs_x__change_t *change,
                    apr_pool_t *scratch_pool)
 {
-  const char *idstr;
   const char *change_string = NULL;
   const char *kind_string = "";
   svn_stringbuf_t *buf;
@@ -1037,8 +1061,6 @@ write_change_entry(svn_stream_t *stream,
                                change->change_kind);
     }
 
-  idstr = svn_fs_x__id_unparse(&change->noderev_id, scratch_pool)->data;
-
   SVN_ERR_ASSERT(change->node_kind == svn_node_dir
                  || change->node_kind == svn_node_file);
   kind_string = apr_psprintf(scratch_pool, "-%s",
@@ -1046,8 +1068,8 @@ write_change_entry(svn_stream_t *stream,
                              ? SVN_FS_X__KIND_DIR
                              : SVN_FS_X__KIND_FILE);
 
-  buf = svn_stringbuf_createf(scratch_pool, "%s %s%s %s %s %s %s\n",
-                              idstr, change_string, kind_string,
+  buf = svn_stringbuf_createf(scratch_pool, "%s%s %s %s %s %s\n",
+                              change_string, kind_string,
                               change->text_mod ? FLAG_TRUE : FLAG_FALSE,
                               change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
                               change->mergeinfo_mod == svn_tristate_true
@@ -1113,3 +1135,107 @@ svn_fs_x__write_changes(svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_x__parse_properties(apr_hash_t **properties,
+                           const svn_string_t *content,
+                           apr_pool_t *result_pool)
+{
+  const apr_byte_t *p = (const apr_byte_t *)content->data;
+  const apr_byte_t *end = p + content->len;
+  apr_uint64_t count;
+
+  *properties = apr_hash_make(result_pool);
+
+  /* Extract the number of properties we are expected to read. */
+  p = svn__decode_uint(&count, p, end);
+
+  /* Read all the properties we find.
+     Because prop-name and prop-value are nicely NUL-terminated
+     sub-strings of CONTENT, we can simply reference them there.
+     I.e. there is no need to copy them around.
+   */
+  while (p < end)
+    {
+      apr_uint64_t value_len;
+      svn_string_t *value;
+
+      const char *key = (const char *)p;
+
+      /* Note that this may never overflow / segfault because
+         CONTENT itself is NUL-terminated. */
+      apr_size_t key_len = strlen(key);
+      p += key_len + 1;
+      if (key[key_len])
+        return svn_error_createf(SVN_ERR_FS_CORRUPT_PROPLIST, NULL,
+                                 "Property name not NUL terminated");
+
+      if (p >= end)
+        return svn_error_createf(SVN_ERR_FS_CORRUPT_PROPLIST, NULL,
+                                 "Property value missing");
+      p = svn__decode_uint(&value_len, p, end);
+      if (value_len >= (end - p))
+        return svn_error_createf(SVN_ERR_FS_CORRUPT_PROPLIST, NULL,
+                                 "Property value too long");
+
+      value = apr_pcalloc(result_pool, sizeof(*value));
+      value->data = (const char *)p;
+      value->len = (apr_size_t)value_len;
+      if (p[value->len])
+        return svn_error_createf(SVN_ERR_FS_CORRUPT_PROPLIST, NULL,
+                                 "Property value not NUL terminated");
+
+      p += value->len + 1;
+
+      apr_hash_set(*properties, key, key_len, value);
+    }
+
+  /* Check that we read the expected number of properties. */
+  if ((apr_uint64_t)apr_hash_count(*properties) != count)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT_PROPLIST, NULL,
+                             "Property count mismatch");
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_x__write_properties(svn_stream_t *stream,
+                           apr_hash_t *proplist,
+                           apr_pool_t *scratch_pool)
+{
+  apr_byte_t buffer[SVN__MAX_ENCODED_UINT_LEN];
+  apr_size_t len;
+  apr_hash_index_t *hi;
+
+  /* Write the number of properties in this list. */
+  len = svn__encode_uint(buffer, apr_hash_count(proplist)) - buffer;
+  SVN_ERR(svn_stream_write(stream, (const char *)buffer, &len));
+
+  /* Serialize each property as follows:
+     <Prop-name> <NUL>
+     <Value-len> <Prop-value> <NUL>
+   */
+  for (hi = apr_hash_first(scratch_pool, proplist);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *key;
+      apr_size_t key_len;
+      svn_string_t *value;
+      apr_hash_this(hi, (const void **)&key, (apr_ssize_t *)&key_len,
+                    (void **)&value);
+
+      /* Include the terminating NUL. */
+      ++key_len;
+      SVN_ERR(svn_stream_write(stream, key, &key_len));
+
+      len = svn__encode_uint(buffer, value->len) - buffer;
+      SVN_ERR(svn_stream_write(stream, (const char *)buffer, &len));
+      SVN_ERR(svn_stream_write(stream, value->data, &value->len));
+
+      /* Terminate with NUL. */
+      len = 1;
+      SVN_ERR(svn_stream_write(stream, "", &len));
+    }
+
+  return SVN_NO_ERROR;
+}

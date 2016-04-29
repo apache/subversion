@@ -50,6 +50,7 @@
 #include "svn_private_config.h"
 
 #include "private/svn_fspath.h"
+#include "private/svn_string_private.h"
 #include "private/svn_subr_private.h"
 
 #include "../libsvn_ra/ra_loader.h"
@@ -204,7 +205,7 @@ static svn_error_t *parse_prop_diffs(const svn_ra_svn__list_t *list,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Prop diffs element not a list"));
       prop = apr_array_push(*diffs);
-      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, pool, "c(?s)",
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "c(?s)",
                                       &prop->name, &prop->value));
     }
   return SVN_NO_ERROR;
@@ -218,7 +219,7 @@ static svn_error_t *parse_lock(const svn_ra_svn__list_t *list,
 {
   const char *cdate, *edate;
   *lock = svn_lock_create(pool);
-  SVN_ERR(svn_ra_svn__parse_tuple(list, pool, "ccc(?c)c(?c)", &(*lock)->path,
+  SVN_ERR(svn_ra_svn__parse_tuple(list, "ccc(?c)c(?c)", &(*lock)->path,
                                   &(*lock)->token, &(*lock)->owner,
                                   &(*lock)->comment, &cdate, &edate));
   (*lock)->path = svn_fspath__canonicalize((*lock)->path, pool);
@@ -470,9 +471,9 @@ static void handle_child_process_error(apr_pool_t *pool, apr_status_t status,
   in_stream = svn_stream_from_aprfile2(in_file, FALSE, pool);
   out_stream = svn_stream_from_aprfile2(out_file, FALSE, pool);
 
-  conn = svn_ra_svn_create_conn4(NULL, in_stream, out_stream,
+  conn = svn_ra_svn_create_conn5(NULL, in_stream, out_stream,
                                  SVN_DELTA_COMPRESSION_LEVEL_DEFAULT, 0,
-                                 0, pool);
+                                 0, 0, 0, pool);
   err = svn_error_wrap_apr(status, _("Error in child process: %s"), desc);
   svn_error_clear(svn_ra_svn__write_cmd_failure(conn, pool, err));
   svn_error_clear(err);
@@ -541,13 +542,13 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   apr_file_inherit_unset(proc->out);
 
   /* Guard against dotfile output to stdout on the server. */
-  *conn = svn_ra_svn_create_conn4(NULL,
+  *conn = svn_ra_svn_create_conn5(NULL,
                                   svn_stream_from_aprfile2(proc->out, FALSE,
                                                            pool),
                                   svn_stream_from_aprfile2(proc->in, FALSE,
                                                            pool),
                                   SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
-                                  0, 0, pool);
+                                  0, 0, 0, 0, pool);
   err = svn_ra_svn__skip_leading_garbage(*conn, pool);
   if (err)
     return svn_error_quick_wrap(
@@ -673,9 +674,9 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
           apr_pool_cleanup_register(pool, td, close_tunnel_cleanup,
                                     apr_pool_cleanup_null);
 
-          conn = svn_ra_svn_create_conn4(NULL, td->response, td->request,
+          conn = svn_ra_svn_create_conn5(NULL, td->response, td->request,
                                          SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
-                                         0, 0, pool);
+                                         0, 0, 0, 0, pool);
           SVN_ERR(svn_ra_svn__skip_leading_garbage(conn, pool));
         }
     }
@@ -687,9 +688,9 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
       SVN_ERR(make_connection(uri->hostname,
                               uri->port ? uri->port : SVN_RA_SVN_PORT,
                               &sock, pool));
-      conn = svn_ra_svn_create_conn4(sock, NULL, NULL,
+      conn = svn_ra_svn_create_conn5(sock, NULL, NULL,
                                      SVN_DELTA_COMPRESSION_LEVEL_DEFAULT,
-                                     0, 0, pool);
+                                     0, 0, 0, 0, pool);
     }
 
   /* Build the useragent string, querying the client for any
@@ -1192,7 +1193,6 @@ parse_iproplist(apr_array_header_t **inherited_props,
 
 {
   int i;
-  const char *repos_root_url;
   apr_pool_t *iterpool;
 
   if (iproplist == NULL)
@@ -1204,8 +1204,6 @@ parse_iproplist(apr_array_header_t **inherited_props,
       *inherited_props = NULL;
       return SVN_NO_ERROR;
     }
-
-  SVN_ERR(ra_svn_get_repos_root(session, &repos_root_url, scratch_pool));
 
   *inherited_props = apr_array_make(
     result_pool, iproplist->nelts, sizeof(svn_prop_inherited_item_t *));
@@ -1228,12 +1226,10 @@ parse_iproplist(apr_array_header_t **inherited_props,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, iterpool, "cl",
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "cl",
                                       &parent_rel_path, &iprop_list));
       SVN_ERR(svn_ra_svn__parse_proplist(iprop_list, iterpool, &iprops));
-      new_iprop->path_or_url = svn_path_url_add_component2(repos_root_url,
-                                                           parent_rel_path,
-                                                           result_pool);
+      new_iprop->path_or_url = apr_pstrdup(result_pool, parent_rel_path);
       new_iprop->prop_hash = svn_hash__make(result_pool);
       for (hi = apr_hash_first(iterpool, iprops);
            hi;
@@ -1389,7 +1385,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Dirlist element not a list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, pool, "cwnbr(?c)(?c)",
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "cwnbr(?c)(?c)",
                                       &name, &kind, &size, &has_props,
                                       &crev, &cdate, &cauthor));
 
@@ -1481,7 +1477,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
           if (elt->kind != SVN_RA_SVN_LIST)
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                     _("Mergeinfo element is not a list"));
-          SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, pool, "cc",
+          SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "cc",
                                           &path, &to_parse));
           SVN_ERR(svn_mergeinfo_parse(&for_path, to_parse, pool));
           /* Correct for naughty servers that send "relative" paths
@@ -1604,6 +1600,16 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+/* Return TRUE if ITEM matches the word "done". */
+static svn_boolean_t
+is_done_response(const svn_ra_svn__item_t *item)
+{
+  static const svn_string_t str_done = SVN__STATIC_STRING("done");
+
+  return (   item->kind == SVN_RA_SVN_WORD
+          && svn_string_compare(&item->u.word, &str_done));
+}
+
 
 static svn_error_t *
 perform_ra_svn_log(svn_error_t **outer_error,
@@ -1695,12 +1701,12 @@ perform_ra_svn_log(svn_error_t **outer_error,
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_ra_svn__read_item(conn, iterpool, &item));
-      if (item->kind == SVN_RA_SVN_WORD && strcmp(item->u.word, "done") == 0)
+      if (is_done_response(item))
         break;
       if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Log entry not a list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list, iterpool,
+      SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list,
                                       "lr(?s)(?s)(?s)?BBnl?B",
                                       &cplist, &rev, &author, &date,
                                       &message, &has_children_param,
@@ -1915,7 +1921,7 @@ static svn_error_t *ra_svn_stat(svn_ra_session_t *session,
       svn_revnum_t crev;
       apr_uint64_t size;
 
-      SVN_ERR(svn_ra_svn__parse_tuple(list, pool, "wnbr(?c)(?c)",
+      SVN_ERR(svn_ra_svn__parse_tuple(list, "wnbr(?c)(?c)",
                                       &kind, &size, &has_props,
                                       &crev, &cdate, &cauthor));
 
@@ -1945,6 +1951,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   svn_revnum_t revision;
   svn_boolean_t is_done;
+  apr_pool_t *iterpool;
   int i;
 
   /* Transmit the parameters. */
@@ -1965,27 +1972,33 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
   /* Read the hash items. */
   is_done = FALSE;
   *locations = apr_hash_make(pool);
+  iterpool = svn_pool_create(pool);
   while (!is_done)
     {
       svn_ra_svn__item_t *item;
       const char *ret_path;
 
-      SVN_ERR(svn_ra_svn__read_item(conn, pool, &item));
-      if (item->kind == SVN_RA_SVN_WORD && strcmp(item->u.word, "done") == 0)
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_ra_svn__read_item(conn, iterpool, &item));
+      if (is_done_response(item))
         is_done = 1;
       else if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Location entry not a list"));
       else
         {
-          SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list, pool, "rc",
+          SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list, "rc",
                                           &revision, &ret_path));
+
+          /* This also makes RET_PATH live in POOL rather than ITERPOOL. */
           ret_path = svn_fspath__canonicalize(ret_path, pool);
           apr_hash_set(*locations, apr_pmemdup(pool, &revision,
                                                sizeof(revision)),
                        sizeof(revision), ret_path);
         }
     }
+
+  svn_pool_destroy(iterpool);
 
   /* Read the response. This is so the server would have a chance to
    * report an error. */
@@ -2028,7 +2041,7 @@ perform_get_location_segments(svn_error_t **outer_error,
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_ra_svn__read_item(conn, iterpool, &item));
-      if (item->kind == SVN_RA_SVN_WORD && strcmp(item->u.word, "done") == 0)
+      if (is_done_response(item))
         is_done = 1;
       else if (item->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -2037,7 +2050,7 @@ perform_get_location_segments(svn_error_t **outer_error,
         {
           svn_location_segment_t *segment = apr_pcalloc(iterpool,
                                                         sizeof(*segment));
-          SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list, iterpool, "rr(?c)",
+          SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list, "rr(?c)",
                                           &range_start, &range_end, &ret_path));
           if (! (SVN_IS_VALID_REVNUM(range_start)
                  && SVN_IS_VALID_REVNUM(range_end)))
@@ -2131,7 +2144,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
       svn_pool_clear(rev_pool);
       svn_pool_clear(chunk_pool);
       SVN_ERR(svn_ra_svn__read_item(sess_baton->conn, rev_pool, &item));
-      if (item->kind == SVN_RA_SVN_WORD && strcmp(item->u.word, "done") == 0)
+      if (is_done_response(item))
         break;
       /* Either we've got a correct revision or we will error out below. */
       had_revision = TRUE;
@@ -2139,7 +2152,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Revision entry not a list"));
 
-      SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list, rev_pool,
+      SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list,
                                       "crll?B", &p, &rev, &rev_proplist,
                                       &proplist, &merged_rev_param));
       p = svn_fspath__canonicalize(p, rev_pool);
@@ -2400,18 +2413,17 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
          the middle of the request list.  If this happens, it will
          transmit "done" to end the lock-info early, and then the
          overall command response will talk about the fatal error. */
-      if (elt->kind == SVN_RA_SVN_WORD && strcmp(elt->u.word, "done") == 0)
+      if (is_done_response(elt))
         break;
 
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Lock response not a list"));
 
-      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, iterpool, "wl", &status,
-                                      &list));
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "wl", &status, &list));
 
       if (strcmp(status, "failure") == 0)
-        err = svn_ra_svn__handle_failure_status(list, iterpool);
+        err = svn_ra_svn__handle_failure_status(list);
       else if (strcmp(status, "success") == 0)
         {
           SVN_ERR(parse_lock(list, iterpool, &lock));
@@ -2441,7 +2453,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
       svn_ra_svn__item_t *elt;
 
       SVN_ERR(svn_ra_svn__read_item(conn, pool, &elt));
-      if (elt->kind != SVN_RA_SVN_WORD || strcmp(elt->u.word, "done") != 0)
+      if (!is_done_response(elt))
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Didn't receive end marker for lock "
                                   "responses"));
@@ -2525,7 +2537,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
          the middle of the request list.  If this happens, it will
          transmit "done" to end the lock-info early, and then the
          overall command response will talk about the fatal error. */
-      if (elt->kind == SVN_RA_SVN_WORD && (strcmp(elt->u.word, "done") == 0))
+      if (is_done_response(elt))
         break;
 
       apr_hash_this(hi, &key, NULL, NULL);
@@ -2535,14 +2547,13 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Unlock response not a list"));
 
-      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, iterpool, "wl", &status,
-                                      &list));
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "wl", &status, &list));
 
       if (strcmp(status, "failure") == 0)
-        err = svn_ra_svn__handle_failure_status(list, iterpool);
+        err = svn_ra_svn__handle_failure_status(list);
       else if (strcmp(status, "success") == 0)
         {
-          SVN_ERR(svn_ra_svn__parse_tuple(list, iterpool, "c", &path));
+          SVN_ERR(svn_ra_svn__parse_tuple(list, "c", &path));
           err = SVN_NO_ERROR;
         }
       else
@@ -2568,7 +2579,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
       svn_ra_svn__item_t *elt;
 
       SVN_ERR(svn_ra_svn__read_item(conn, pool, &elt));
-      if (elt->kind != SVN_RA_SVN_WORD || strcmp(elt->u.word, "done") != 0)
+      if (! is_done_response(elt))
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Didn't receive end marker for unlock "
                                   "responses"));
@@ -2754,7 +2765,7 @@ ra_svn_replay_range(svn_ra_session_t *session,
       if (strcmp(word, "revprops") != 0)
         {
           if (strcmp(word, "failure") == 0)
-            SVN_ERR(svn_ra_svn__handle_failure_status(list, iterpool));
+            SVN_ERR(svn_ra_svn__handle_failure_status(list));
 
           return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                    _("Expected 'revprops', found '%s'"),
@@ -2935,8 +2946,11 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_has_capability,
   ra_svn_replay_range,
   ra_svn_get_deleted_rev,
+  ra_svn_get_inherited_props,
+  NULL /* ra_set_svn_ra_open */,
   ra_svn_register_editor_shim_callbacks,
-  ra_svn_get_inherited_props
+  NULL /* commit_ev2 */,
+  NULL /* replay_range_ev2 */
 };
 
 svn_error_t *

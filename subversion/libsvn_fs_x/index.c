@@ -231,7 +231,7 @@ stream_error_create(svn_fs_x__packed_number_stream_t *stream,
   apr_off_t offset;
   SVN_ERR(svn_io_file_name_get(&file_name, stream->file,
                                stream->pool));
-  SVN_ERR(svn_fs_x__get_file_offset(&offset, stream->file, stream->pool));
+  SVN_ERR(svn_io_file_get_offset(&offset, stream->file, stream->pool));
 
   return svn_error_createf(err, NULL, message, file_name,
                            apr_psprintf(stream->pool,
@@ -963,8 +963,8 @@ svn_fs_x__l2p_index_append(svn_checksum_t **checksum,
               /* 1 page with up to L2P_PAGE_SIZE entries.
                * fsfs.conf settings validation guarantees this to fit into
                * our address space. */
-              apr_size_t last_buffer_size
-                = (apr_size_t)svn_spillbuf__get_size(buffer);
+              apr_uint64_t last_buffer_size
+                = (apr_uint64_t)svn_spillbuf__get_size(buffer);
 
               svn_pool_clear(iterpool);
 
@@ -1932,7 +1932,7 @@ svn_fs_x__l2p_get_max_ids(apr_array_header_t **max_ids,
       apr_uint64_t item_count;
       apr_size_t first_page_index, last_page_index;
 
-      if (revision >= header->first_revision + header->revision_count)
+      if (revision - header->first_revision >= header->revision_count)
         {
           /* need to read the next index. Clear up memory used for the
            * previous one.  Note that intermittent pack runs do not change
@@ -2182,8 +2182,8 @@ svn_fs_x__p2l_index_append(svn_checksum_t **checksum,
 
   apr_uint64_t last_entry_end = 0;
   apr_uint64_t last_page_end = 0;
-  apr_size_t last_buffer_size = 0;  /* byte offset in the spill buffer at
-                                       the begin of the current revision */
+  apr_uint64_t last_buffer_size = 0;  /* byte offset in the spill buffer at
+                                         the begin of the current revision */
   apr_uint64_t file_size = 0;
 
   /* temporary data structures that collect the data which will be moved
@@ -2649,6 +2649,13 @@ read_entry(svn_fs_x__packed_number_stream_t *stream,
                             _("Changed path list must have item number 1"));
         }
     }
+
+  /* Corrupted SIZE values might cause arithmetic overflow.
+   * The same can happen if you copy a repository from a system with 63 bit
+   * file lengths to one with 31 bit file lengths. */
+  if ((apr_uint64_t)entry.offset + (apr_uint64_t)entry.size > off_t_max)
+    return svn_error_create(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
+                            _("P2L index entry size overflow."));
 
   APR_ARRAY_PUSH(result, svn_fs_x__p2l_entry_t) = entry;
   *item_offset += entry.size;

@@ -86,6 +86,7 @@ fuzzing_1_byte_1_rev(const char *repo_name,
   fs_config = apr_hash_make(pool);
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_DELTAS, "1");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS, "1");
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NODEPROPS, "1");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS, "2");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ, "0");
 

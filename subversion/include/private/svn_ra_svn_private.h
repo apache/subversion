@@ -60,7 +60,7 @@ struct svn_ra_svn__item_t
   union {
     apr_uint64_t number;
     svn_string_t string;
-    const char *word;
+    svn_string_t word;
     svn_ra_svn__list_t list;
   } u;
 };
@@ -320,7 +320,6 @@ svn_ra_svn__skip_leading_garbage(svn_ra_svn_conn_t *conn,
  */
 svn_error_t *
 svn_ra_svn__parse_tuple(const svn_ra_svn__list_t *list,
-                        apr_pool_t *pool,
                         const char *fmt, ...);
 
 /** Read a tuple from the network and parse it as a tuple, using the
@@ -979,7 +978,7 @@ svn_ra_svn__write_cmd_finish_replay(svn_ra_svn_conn_t *conn,
 svn_error_t *
 svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool,
-                                        const char *path,
+                                        const svn_string_t *path,
                                         char action,
                                         const char *copyfrom_path,
                                         svn_revnum_t copyfrom_rev,

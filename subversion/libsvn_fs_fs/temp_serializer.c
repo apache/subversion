@@ -663,6 +663,44 @@ svn_fs_fs__deserialize_properties(void **out,
 }
 
 svn_error_t *
+svn_fs_fs__serialize_revprops(void **data,
+                              apr_size_t *data_len,
+                              void *in,
+                              apr_pool_t *pool)
+{
+  svn_string_t *buffer = in;
+
+  *data = (void *)buffer->data;
+  *data_len = buffer->len;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__deserialize_revprops(void **out,
+                                void *data,
+                                apr_size_t data_len,
+                                apr_pool_t *pool)
+{
+  apr_hash_t *properties;
+  svn_stream_t *stream;
+
+  svn_string_t buffer;
+  buffer.data = data;
+  buffer.len = data_len;
+
+  stream = svn_stream_from_string(&buffer, pool);
+  properties = svn_hash__make(pool);
+
+  SVN_ERR(svn_hash_read2(properties, stream, SVN_HASH_TERMINATOR, pool));
+
+  /* done */
+  *out = properties;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_fs__serialize_id(void **data,
                         apr_size_t *data_len,
                         void *in,
@@ -750,16 +788,18 @@ svn_fs_fs__deserialize_node_revision(void **item,
 }
 
 /* Utility function that returns the directory serialized inside CONTEXT
- * to DATA and DATA_LEN. */
+ * to DATA and DATA_LEN.  If OVERPROVISION is set, allocate some extra
+ * room for future in-place changes by svn_fs_fs__replace_dir_entry. */
 static svn_error_t *
 return_serialized_dir_context(svn_temp_serializer__context_t *context,
                               void **data,
-                              apr_size_t *data_len)
+                              apr_size_t *data_len,
+                              svn_boolean_t overprovision)
 {
   svn_stringbuf_t *serialized = svn_temp_serializer__get(context);
 
   *data = serialized->data;
-  *data_len = serialized->blocksize;
+  *data_len = overprovision ? serialized->blocksize : serialized->len;
   ((dir_data_t *)serialized->data)->len = serialized->len;
 
   return SVN_NO_ERROR;
@@ -777,7 +817,24 @@ svn_fs_fs__serialize_dir_entries(void **data,
    * and return the serialized data */
   return return_serialized_dir_context(serialize_dir(dir, pool),
                                        data,
-                                       data_len);
+                                       data_len,
+                                       FALSE);
+}
+
+svn_error_t *
+svn_fs_fs__serialize_txndir_entries(void **data,
+                                    apr_size_t *data_len,
+                                    void *in,
+                                    apr_pool_t *pool)
+{
+  svn_fs_fs__dir_data_t *dir = in;
+
+  /* serialize the dir content into a new serialization context
+   * and return the serialized data */
+  return return_serialized_dir_context(serialize_dir(dir, pool),
+                                       data,
+                                       data_len,
+                                       TRUE);
 }
 
 svn_error_t *
@@ -878,7 +935,7 @@ svn_fs_fs__extract_dir_entry(void **out,
                              apr_pool_t *pool)
 {
   const dir_data_t *dir_data = data;
-  const extract_dir_entry_baton_t *entry_baton = baton;
+  extract_dir_entry_baton_t *entry_baton = baton;
   svn_boolean_t found;
 
   /* resolve the reference to the entries array */
@@ -897,8 +954,11 @@ svn_fs_fs__extract_dir_entry(void **out,
 
   /* de-serialize that entry or return NULL, if no match has been found.
    * Be sure to check that the directory contents is still up-to-date. */
+  entry_baton->out_of_date
+    = dir_data->txn_filesize != entry_baton->txn_filesize;
+
   *out = NULL;
-  if (found && dir_data->txn_filesize == entry_baton->txn_filesize)
+  if (found && !entry_baton->out_of_date)
     {
       const svn_fs_dirent_t *source =
           svn_temp_deserializer__ptr(entries, (const void *const *)&entries[pos]);
@@ -1059,9 +1119,7 @@ svn_fs_fs__replace_dir_entry(void **data,
   serialize_dir_entry(context, &entries[pos], &length);
 
   /* return the updated serialized data */
-  SVN_ERR (return_serialized_dir_context(context,
-                                         data,
-                                         data_len));
+  SVN_ERR(return_serialized_dir_context(context, data, data_len, TRUE));
 
   /* since the previous call may have re-allocated the buffer, the lengths
    * pointer may no longer point to the entry in that buffer. Therefore,
@@ -1072,6 +1130,18 @@ svn_fs_fs__replace_dir_entry(void **data,
     svn_temp_deserializer__ptr(dir_data,
                                (const void *const *)&dir_data->lengths);
   lengths[pos] = length;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__reset_txn_filesize(void **data,
+                              apr_size_t *data_len,
+                              void *baton,
+                              apr_pool_t *pool)
+{
+  dir_data_t *dir_data = (dir_data_t *)*data;
+  dir_data->txn_filesize = SVN_INVALID_FILESIZE;
 
   return SVN_NO_ERROR;
 }

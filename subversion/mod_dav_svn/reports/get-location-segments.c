@@ -183,8 +183,8 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
     {
       svn_revnum_t youngest;
 
-      serr = svn_fs_youngest_rev(&youngest, resource->info->repos->fs,
-                                 resource->pool);
+      serr = dav_svn__get_youngest_rev(&youngest, resource->info->repos,
+                                       resource->pool);
       if (serr != NULL)
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Could not determine youngest revision",

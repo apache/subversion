@@ -21,11 +21,15 @@
 import unittest, setup_path
 import mergeinfo, core, client, delta, checksum, pool, ra, wc, repository, \
        auth, trac.versioncontrol.tests
+from svn.core import svn_cache_config_get, svn_cache_config_set
 
 # Run all tests
 
 def suite():
   """Run all tests"""
+  settings = svn_cache_config_get()
+  settings.cache_size = long(1024*1024*32) ### Need explicit long
+  svn_cache_config_set(settings)
   s = unittest.TestSuite()
   s.addTest(core.suite())
   s.addTest(checksum.suite())

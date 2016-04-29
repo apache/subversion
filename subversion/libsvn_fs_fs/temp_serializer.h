@@ -156,6 +156,26 @@ svn_fs_fs__deserialize_properties(void **out,
                                   apr_pool_t *pool);
 
 /**
+ * Implements #svn_cache__serialize_func_t for a properties hash
+ * (@a in is an #apr_hash_t of svn_string_t elements, keyed by const char*).
+ */
+svn_error_t *
+svn_fs_fs__serialize_revprops(void **data,
+                              apr_size_t *data_len,
+                              void *in,
+                              apr_pool_t *pool);
+
+/**
+ * Implements #svn_cache__deserialize_func_t for a properties hash
+ * (@a *out is an #apr_hash_t of svn_string_t elements, keyed by const char*).
+ */
+svn_error_t *
+svn_fs_fs__deserialize_revprops(void **out,
+                                void *data,
+                                apr_size_t data_len,
+                                apr_pool_t *pool);
+
+/**
  * Implements #svn_cache__serialize_func_t for #svn_fs_id_t
  */
 svn_error_t *
@@ -201,6 +221,16 @@ svn_fs_fs__serialize_dir_entries(void **data,
                                  apr_pool_t *pool);
 
 /**
+ * Same as svn_fs_fs__serialize_dir_entries but allocates extra room for
+ * in-place modification.
+ */
+svn_error_t *
+svn_fs_fs__serialize_txndir_entries(void **data,
+                                    apr_size_t *data_len,
+                                    void *in,
+                                    apr_pool_t *pool);
+
+/**
  * Implements #svn_cache__deserialize_func_t for a #svn_fs_fs__dir_data_t
  */
 svn_error_t *
@@ -244,6 +274,12 @@ typedef struct extract_dir_entry_baton_t
   /** Current length of the in-txn in-disk representation of the directory.
    * SVN_INVALID_FILESIZE if unknown. */
   svn_filesize_t txn_filesize;
+
+  /** Will be set by the callback.  If FALSE, the cached data is out of date.
+   * We need this indicator because the svn_cache__t interface will always
+   * report the lookup as a success (FOUND==TRUE) if the generic lookup was
+   * successful -- regardless of what the entry extraction callback does. */
+  svn_boolean_t out_of_date;
 } extract_dir_entry_baton_t;
 
 
@@ -293,6 +329,17 @@ svn_fs_fs__replace_dir_entry(void **data,
                              apr_size_t *data_len,
                              void *baton,
                              apr_pool_t *pool);
+
+/**
+ * Implements #svn_cache__partial_setter_func_t for a #svn_fs_fs__dir_data_t
+ * at @a *data, resetting its txn_filesize field to SVN_INVALID_FILESIZE.
+ * &a baton should be NULL.
+ */
+svn_error_t *
+svn_fs_fs__reset_txn_filesize(void **data,
+                              apr_size_t *data_len,
+                              void *baton,
+                              apr_pool_t *pool);
 
 /**
  * Implements #svn_cache__serialize_func_t for a #svn_fs_fs__rep_header_t.

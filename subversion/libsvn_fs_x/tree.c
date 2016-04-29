@@ -224,18 +224,16 @@ parent_path_relpath(svn_fs_x__dag_path_t *child,
 
 /* Add a change to the changes table in FS, keyed on transaction id
    TXN_ID, and indicated that a change of kind CHANGE_KIND occurred on
-   PATH (whose node revision id is--or was, in the case of a
-   deletion--NODEREV_ID), and optionally that TEXT_MODs, PROP_MODs or
-   MERGEINFO_MODs occurred.  If the change resulted from a copy,
-   COPYFROM_REV and COPYFROM_PATH specify under which revision and path
-   the node was copied from.  If this was not part of a copy, COPYFROM_REV
-   should be SVN_INVALID_REVNUM.  Use SCRATCH_POOL for temporary allocations.
+   PATH, and optionally that TEXT_MODs, PROP_MODs or MERGEINFO_MODs
+   occurred.  If the change resulted from a copy, COPYFROM_REV and
+   COPYFROM_PATH specify under which revision and path the node was
+   copied from.  If this was not part of a copy, COPYFROM_REV should
+   be SVN_INVALID_REVNUM.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 add_change(svn_fs_t *fs,
            svn_fs_x__txn_id_t txn_id,
            const char *path,
-           const svn_fs_x__id_t *noderev_id,
            svn_fs_path_change_kind_t change_kind,
            svn_boolean_t text_mod,
            svn_boolean_t prop_mod,
@@ -248,8 +246,7 @@ add_change(svn_fs_t *fs,
   return svn_fs_x__add_change(fs, txn_id,
                               svn_fs__canonicalize_abspath(path,
                                                            scratch_pool),
-                              noderev_id, change_kind,
-                              text_mod, prop_mod, mergeinfo_mod,
+                              change_kind, text_mod, prop_mod, mergeinfo_mod,
                               node_kind, copyfrom_rev, copyfrom_path,
                               scratch_pool);
 }
@@ -388,26 +385,6 @@ x_node_created_path(const char **created_path,
 }
 
 
-/* Set *KIND_P to the type of node located at PATH under ROOT.
-   Perform temporary allocations in SCRATCH_POOL. */
-static svn_error_t *
-node_kind(svn_node_kind_t *kind_p,
-          svn_fs_root_t *root,
-          const char *path,
-          apr_pool_t *scratch_pool)
-{
-  dag_node_t *node;
-
-  /* Get the node id. */
-  SVN_ERR(svn_fs_x__get_temp_dag_node(&node, root, path, scratch_pool));
-
-  /* Use the node id to get the real kind. */
-  *kind_p = svn_fs_x__dag_node_kind(node);
-
-  return SVN_NO_ERROR;
-}
-
-
 /* Set *KIND_P to the type of node present at PATH under ROOT.  If
    PATH does not exist under ROOT, set *KIND_P to svn_node_none.  Use
    SCRATCH_POOL for temporary allocation. */
@@ -417,7 +394,16 @@ svn_fs_x__check_path(svn_node_kind_t *kind_p,
                      const char *path,
                      apr_pool_t *scratch_pool)
 {
-  svn_error_t *err = node_kind(kind_p, root, path, scratch_pool);
+  dag_node_t *node;
+
+  /* Get the node id. */
+  svn_error_t *err = svn_fs_x__get_temp_dag_node(&node, root, path,
+                                                 scratch_pool);
+
+  /* Use the node id to get the real kind. */
+  if (!err)
+    *kind_p = svn_fs_x__dag_node_kind(node);
+
   if (err &&
       ((err->apr_err == SVN_ERR_FS_NOT_FOUND)
        || (err->apr_err == SVN_ERR_FS_NOT_DIRECTORY)))
@@ -584,7 +570,6 @@ x_change_node_prop(svn_fs_root_t *root,
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
-                     svn_fs_x__dag_get_id(dag_path->node),
                      svn_fs_path_change_modify, FALSE, TRUE, mergeinfo_mod,
                      svn_fs_x__dag_node_kind(dag_path->node),
                      SVN_INVALID_REVNUM, NULL, subpool));
@@ -1457,7 +1442,7 @@ x_make_dir(svn_fs_root_t *root,
   svn_fs_x__update_dag_cache(sub_dir);
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(sub_dir),
+  SVN_ERR(add_change(root->fs, txn_id, path,
                      svn_fs_path_change_add, FALSE, FALSE, FALSE,
                      svn_node_dir, SVN_INVALID_REVNUM, NULL, subpool));
 
@@ -1517,7 +1502,6 @@ x_delete_node(svn_fs_root_t *root,
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,
-                     svn_fs_x__dag_get_id(dag_path->node),
                      svn_fs_path_change_delete, FALSE, FALSE, FALSE, kind,
                      SVN_INVALID_REVNUM, NULL, subpool));
 
@@ -1654,8 +1638,7 @@ copy_helper(svn_fs_root_t *from_root,
       /* Make a record of this modification in the changes table. */
       SVN_ERR(svn_fs_x__get_dag_node(&new_node, to_root, to_path,
                                      scratch_pool, scratch_pool));
-      SVN_ERR(add_change(to_root->fs, txn_id, to_path,
-                         svn_fs_x__dag_get_id(new_node), kind, FALSE,
+      SVN_ERR(add_change(to_root->fs, txn_id, to_path, kind, FALSE,
                          FALSE, FALSE, svn_fs_x__dag_node_kind(from_node),
                          from_root->rev, from_canonpath, scratch_pool));
     }
@@ -1795,7 +1778,7 @@ x_make_file(svn_fs_root_t *root,
   svn_fs_x__update_dag_cache(child);
 
   /* Make a record of this modification in the changes table. */
-  SVN_ERR(add_change(root->fs, txn_id, path, svn_fs_x__dag_get_id(child),
+  SVN_ERR(add_change(root->fs, txn_id, path,
                      svn_fs_path_change_add, TRUE, FALSE, FALSE,
                      svn_node_file, SVN_INVALID_REVNUM, NULL, subpool));
 
@@ -2003,7 +1986,6 @@ apply_textdelta(void *baton,
 
   /* Make a record of this modification in the changes table. */
   return add_change(tb->root->fs, txn_id, tb->path,
-                    svn_fs_x__dag_get_id(tb->node),
                     svn_fs_path_change_modify, TRUE, FALSE, FALSE,
                     svn_node_file, SVN_INVALID_REVNUM, NULL, scratch_pool);
 }
@@ -2144,7 +2126,6 @@ apply_text(void *baton,
 
   /* Make a record of this modification in the changes table. */
   return add_change(tb->root->fs, txn_id, tb->path,
-                    svn_fs_x__dag_get_id(tb->node),
                     svn_fs_path_change_modify, TRUE, FALSE, FALSE,
                     svn_node_file, SVN_INVALID_REVNUM, NULL, scratch_pool);
 }
@@ -2200,23 +2181,18 @@ x_contents_changed(svn_boolean_t *changed_p,
       (SVN_ERR_FS_GENERAL, NULL,
        _("Cannot compare file contents between two different filesystems"));
 
-  /* Check that both paths are files. */
-  {
-    svn_node_kind_t kind;
-
-    SVN_ERR(svn_fs_x__check_path(&kind, root1, path1, subpool));
-    if (kind != svn_node_file)
-      return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path1);
-
-    SVN_ERR(svn_fs_x__check_path(&kind, root2, path2, subpool));
-    if (kind != svn_node_file)
-      return svn_error_createf
-        (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path2);
-  }
-
   SVN_ERR(svn_fs_x__get_dag_node(&node1, root1, path1, subpool, subpool));
+  /* Make sure that path is file. */
+  if (svn_fs_x__dag_node_kind(node1) != svn_node_file)
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path1);
+
   SVN_ERR(svn_fs_x__get_temp_dag_node(&node2, root2, path2, subpool));
+  /* Make sure that path is file. */
+  if (svn_fs_x__dag_node_kind(node2) != svn_node_file)
+    return svn_error_createf
+      (SVN_ERR_FS_GENERAL, NULL, _("'%s' is not a file"), path2);
+
   SVN_ERR(svn_fs_x__dag_things_different(NULL, changed_p, node1, node2,
                                          strict, subpool));
 
@@ -2260,91 +2236,141 @@ x_get_file_delta_stream(svn_txdelta_stream_t **stream_p,
 
 /* Finding Changes */
 
-/* Copy CHANGE into a FS API object allocated in RESULT_POOL and return
-   it in *RESULT_P.  Pass CONTEXT to the ID API object being created. */
+/* Implement changes_iterator_vtable_t.get for in-txn change lists.
+   There is no specific FSAP data type, a simple APR hash iterator
+   to the underlying collection is sufficient. */
 static svn_error_t *
-construct_fs_path_change(svn_fs_path_change2_t **result_p,
-                         svn_fs_x__id_context_t *context,
-                         svn_fs_x__change_t *change,
-                         apr_pool_t *result_pool)
+x_txn_changes_iterator_get(svn_fs_path_change3_t **change,
+                           svn_fs_path_change_iterator_t *iterator)
 {
-  const svn_fs_id_t *id
-    = svn_fs_x__id_create(context, &change->noderev_id, result_pool);
-  svn_fs_path_change2_t *result
-    = svn_fs__path_change_create_internal(id, change->change_kind,
-                                          result_pool);
+  apr_hash_index_t *hi = iterator->fsap_data;
 
-  result->text_mod = change->text_mod;
-  result->prop_mod = change->prop_mod;
-  result->node_kind = change->node_kind;
-
-  result->copyfrom_known = change->copyfrom_known;
-  result->copyfrom_rev = change->copyfrom_rev;
-  result->copyfrom_path = change->copyfrom_path;
-
-  result->mergeinfo_mod = change->mergeinfo_mod;
-
-  *result_p = result;
-
-  return SVN_NO_ERROR;
-}
-
-/* Set *CHANGED_PATHS_P to a newly allocated hash containing
-   descriptions of the paths changed under ROOT.  The hash is keyed
-   with const char * paths and has svn_fs_path_change2_t * values.  Use
-   POOL for all allocations. */
-static svn_error_t *
-x_paths_changed(apr_hash_t **changed_paths_p,
-                svn_fs_root_t *root,
-                apr_pool_t *pool)
-{
-  apr_hash_t *changed_paths;
-  svn_fs_path_change2_t *path_change;
-  svn_fs_x__id_context_t *context
-    = svn_fs_x__id_create_context(root->fs, pool);
-
-  if (root->is_txn_root)
+  if (hi)
     {
-      apr_hash_index_t *hi;
-      SVN_ERR(svn_fs_x__txn_changes_fetch(&changed_paths, root->fs,
-                                          svn_fs_x__root_txn_id(root),
-                                          pool));
-      for (hi = apr_hash_first(pool, changed_paths);
-           hi;
-           hi = apr_hash_next(hi))
-        {
-          svn_fs_x__change_t *change = apr_hash_this_val(hi);
-          SVN_ERR(construct_fs_path_change(&path_change, context, change,
-                                           pool));
-          apr_hash_set(changed_paths,
-                       apr_hash_this_key(hi), apr_hash_this_key_len(hi),
-                       path_change);
-        }
+      *change = apr_hash_this_val(hi);
+      iterator->fsap_data = apr_hash_next(hi);
     }
   else
     {
-      apr_array_header_t *changes;
-      int i;
-
-      SVN_ERR(svn_fs_x__get_changes(&changes, root->fs, root->rev, pool));
-
-      changed_paths = svn_hash__make(pool);
-      for (i = 0; i < changes->nelts; ++i)
-        {
-          svn_fs_x__change_t *change = APR_ARRAY_IDX(changes, i,
-                                                     svn_fs_x__change_t *);
-          SVN_ERR(construct_fs_path_change(&path_change, context, change,
-                                           pool));
-          apr_hash_set(changed_paths, change->path.data, change->path.len,
-                       path_change);
-        }
+      *change = NULL;
     }
-
-  *changed_paths_p = changed_paths;
 
   return SVN_NO_ERROR;
 }
 
+static changes_iterator_vtable_t txn_changes_iterator_vtable =
+{
+  x_txn_changes_iterator_get
+};
+
+/* FSAP data structure for in-revision changes list iterators. */
+typedef struct fs_revision_changes_iterator_data_t
+{
+  /* Context that tells the lower layers from where to fetch the next
+     block of changes. */
+  svn_fs_x__changes_context_t *context;
+
+  /* Changes to send. */
+  apr_array_header_t *changes;
+
+  /* Current indexes within CHANGES. */
+  int idx;
+
+  /* A cleanable scratch pool in case we need one.
+     No further sub-pool creation necessary. */
+  apr_pool_t *scratch_pool;
+} fs_revision_changes_iterator_data_t;
+
+static svn_error_t *
+x_revision_changes_iterator_get(svn_fs_path_change3_t **change,
+                                svn_fs_path_change_iterator_t *iterator)
+{
+  fs_revision_changes_iterator_data_t *data = iterator->fsap_data;
+
+  /* If we exhausted our block of changes and did not reach the end of the
+     list, yet, fetch the next block.  Note that that block may be empty. */
+  if ((data->idx >= data->changes->nelts) && !data->context->eol)
+    {
+      apr_pool_t *changes_pool = data->changes->pool;
+
+      /* Drop old changes block, read new block. */
+      svn_pool_clear(changes_pool);
+      SVN_ERR(svn_fs_x__get_changes(&data->changes, data->context,
+                                    changes_pool, data->scratch_pool));
+      data->idx = 0;
+
+      /* Immediately release any temporary data. */
+      svn_pool_clear(data->scratch_pool);
+    }
+
+  if (data->idx < data->changes->nelts)
+    {
+      *change = APR_ARRAY_IDX(data->changes, data->idx,
+                              svn_fs_x__change_t *);
+      ++data->idx;
+    }
+  else
+    {
+      *change = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static changes_iterator_vtable_t rev_changes_iterator_vtable =
+{
+  x_revision_changes_iterator_get
+};
+
+static svn_error_t *
+x_report_changes(svn_fs_path_change_iterator_t **iterator,
+                 svn_fs_root_t *root,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  svn_fs_path_change_iterator_t *result = apr_pcalloc(result_pool,
+                                                      sizeof(*result));
+  if (root->is_txn_root)
+    {
+      apr_hash_t *changed_paths;
+      SVN_ERR(svn_fs_x__txn_changes_fetch(&changed_paths, root->fs,
+                                          svn_fs_x__root_txn_id(root),
+                                          result_pool));
+
+      result->fsap_data = apr_hash_first(result_pool, changed_paths);
+      result->vtable = &txn_changes_iterator_vtable;
+    }
+  else
+    {
+      /* The block of changes that we retrieve need to live in a separately
+         cleanable pool. */
+      apr_pool_t *changes_pool = svn_pool_create(result_pool);
+
+      /* Our iteration context info. */
+      fs_revision_changes_iterator_data_t *data = apr_pcalloc(result_pool,
+                                                              sizeof(*data));
+
+      /* This pool must remain valid as long as ITERATOR lives but will
+         be used only for temporary allocations and will be cleaned up
+         frequently.  So, this must be a sub-pool of RESULT_POOL. */
+      data->scratch_pool = svn_pool_create(result_pool);
+
+      /* Fetch the first block of data. */
+      SVN_ERR(svn_fs_x__create_changes_context(&data->context,
+                                               root->fs, root->rev,
+                                               result_pool, scratch_pool));
+      SVN_ERR(svn_fs_x__get_changes(&data->changes, data->context,
+                                    changes_pool, scratch_pool));
+
+      /* Return the fully initialized object. */
+      result->fsap_data = data;
+      result->vtable = &rev_changes_iterator_vtable;
+    }
+
+  *iterator = result;
+
+  return SVN_NO_ERROR;
+}
 
 
 /* Our coolio opaque history object. */
@@ -3174,7 +3200,8 @@ x_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
 
 /* The vtable associated with root objects. */
 static root_vtable_t root_vtable = {
-  x_paths_changed,
+  NULL,
+  x_report_changes,
   svn_fs_x__check_path,
   x_node_history,
   x_node_id,

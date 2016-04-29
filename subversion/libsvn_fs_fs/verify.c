@@ -30,6 +30,7 @@
 
 #include "cached_data.h"
 #include "rep-cache.h"
+#include "revprops.h"
 #include "util.h"
 #include "index.h"
 
@@ -479,7 +480,7 @@ expect_buffer_nul(apr_file_t *file,
         apr_off_t offset;
 
         SVN_ERR(svn_io_file_name_get(&file_name, file, pool));
-        SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, pool));
+        SVN_ERR(svn_io_file_get_offset(&offset, file, pool));
         offset -= size - i;
 
         return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
@@ -721,6 +722,10 @@ verify_revprops(svn_fs_t *fs,
   svn_revnum_t revision;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
+  /* Invalidate the revprop cache once.
+   * Use the cache inside the loop to speed up packed revprop access. */
+  svn_fs_fs__reset_revprop_cache(fs);
+
   for (revision = start; revision < end; ++revision)
     {
       svn_string_t *date;
@@ -731,7 +736,8 @@ verify_revprops(svn_fs_t *fs,
       /* Access the svn:date revprop.
        * This implies parsing all revprops for that revision. */
       SVN_ERR(svn_fs_fs__revision_prop(&date, fs, revision,
-                                       SVN_PROP_REVISION_DATE, iterpool));
+                                       SVN_PROP_REVISION_DATE, FALSE,
+                                       iterpool, iterpool));
 
       /* The time stamp is the only revprop that, if given, needs to
        * have a valid content. */

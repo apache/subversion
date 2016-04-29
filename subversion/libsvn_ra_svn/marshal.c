@@ -72,6 +72,10 @@
  */
 #define ITEM_NESTING_LIMIT 64
 
+/* The protocol words for booleans. */
+static const svn_string_t str_true = SVN__STATIC_STRING("true");
+static const svn_string_t str_false = SVN__STATIC_STRING("false");
+
 /* Return the APR socket timeout to be used for the connection depending
  * on whether there is a blockage handler or zero copy has been activated. */
 static apr_interval_time_t
@@ -97,7 +101,7 @@ svn_ra_svn__to_public_item(svn_ra_svn_item_t *target,
         target->u.number = source->u.number;
         break;
       case SVN_RA_SVN_WORD:
-        target->u.word = source->u.word;
+        target->u.word = source->u.word.data;
         break;
       case SVN_RA_SVN_LIST:
         target->u.list = svn_ra_svn__to_public_array(&source->u.list,
@@ -140,7 +144,8 @@ svn_ra_svn__to_private_item(svn_ra_svn__item_t *target,
         target->u.number = source->u.number;
         break;
       case SVN_RA_SVN_WORD:
-        target->u.word = source->u.word;
+        target->u.word.data = source->u.word;
+        target->u.word.len = strlen(source->u.word);
         break;
       case SVN_RA_SVN_LIST:
         target->u.list = *svn_ra_svn__to_private_array(source->u.list,
@@ -174,12 +179,14 @@ svn_ra_svn__to_private_array(const apr_array_header_t *source,
 
 /* --- CONNECTION INITIALIZATION --- */
 
-svn_ra_svn_conn_t *svn_ra_svn_create_conn4(apr_socket_t *sock,
+svn_ra_svn_conn_t *svn_ra_svn_create_conn5(apr_socket_t *sock,
                                            svn_stream_t *in_stream,
                                            svn_stream_t *out_stream,
                                            int compression_level,
                                            apr_size_t zero_copy_limit,
                                            apr_size_t error_check_interval,
+                                           apr_uint64_t max_in,
+                                           apr_uint64_t max_out,
                                            apr_pool_t *result_pool)
 {
   svn_ra_svn_conn_t *conn;
@@ -199,6 +206,10 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn4(apr_socket_t *sock,
   conn->written_since_error_check = 0;
   conn->error_check_interval = error_check_interval;
   conn->may_check_for_error = error_check_interval == 0;
+  conn->max_in = max_in;
+  conn->current_in = 0;
+  conn->max_out = max_out;
+  conn->current_out = 0;
   conn->block_handler = NULL;
   conn->block_baton = NULL;
   conn->capabilities = apr_hash_make(result_pool);
@@ -248,8 +259,8 @@ svn_ra_svn__set_capabilities(svn_ra_svn_conn_t *conn,
       if (item->kind != SVN_RA_SVN_WORD)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Capability entry is not a word"));
-      word = apr_pstrdup(conn->pool, item->u.word);
-      svn_hash_sets(conn->capabilities, word, word);
+      word = apr_pstrmemdup(conn->pool, item->u.word.data, item->u.word.len);
+      apr_hash_set(conn->capabilities, word, item->u.word.len, word);
     }
   return SVN_NO_ERROR;
 }
@@ -307,7 +318,32 @@ svn_error_t *svn_ra_svn__data_available(svn_ra_svn_conn_t *conn,
   return svn_ra_svn__stream_data_available(conn->stream, data_available);
 }
 
+void
+svn_ra_svn__reset_command_io_counters(svn_ra_svn_conn_t *conn)
+{
+  conn->current_in = 0;
+  conn->current_out = 0;
+}
+
+
 /* --- WRITE BUFFER MANAGEMENT --- */
+
+/* Return an error object if CONN exceeded its send or receive limits. */
+static svn_error_t *
+check_io_limits(svn_ra_svn_conn_t *conn)
+{
+  if (conn->max_in && (conn->current_in > conn->max_in))
+    return svn_error_create(SVN_ERR_RA_SVN_REQUEST_SIZE, NULL,
+                            "The client request size exceeds the "
+                            "configured limit");
+
+  if (conn->max_out && (conn->current_out > conn->max_out))
+    return svn_error_create(SVN_ERR_RA_SVN_RESPONSE_SIZE, NULL,
+                            "The server response size exceeds the "
+                            "configured limit");
+
+  return SVN_NO_ERROR;
+}
 
 /* Write data to socket or output file as appropriate. */
 static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -317,6 +353,12 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_size_t count;
   apr_pool_t *subpool = NULL;
   svn_ra_svn__session_baton_t *session = conn->session;
+
+  /* Limit the size of the response, if a limit has been configured.
+   * This is to limit the server load in case users e.g. accidentally ran
+   * an export on the root folder. */
+  conn->current_out += len;
+  SVN_ERR(check_io_limits(conn));
 
   while (data < end)
     {
@@ -436,12 +478,19 @@ static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
 {
   svn_ra_svn__session_baton_t *session = conn->session;
 
+  /* First, give the user a chance to cancel the request before we do. */
   if (session && session->callbacks && session->callbacks->cancel_func)
     SVN_ERR((session->callbacks->cancel_func)(session->callbacks_baton));
 
+  /* Limit our memory usage, if a limit has been configured.  Note that
+   * we first read the whole request into memory before process it. */
+  SVN_ERR(check_io_limits(conn));
+
+  /* Actually fill the buffer. */
   SVN_ERR(svn_ra_svn__stream_read(conn->stream, data, len));
   if (*len == 0)
     return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL, NULL);
+  conn->current_in += *len;
 
   if (session)
     {
@@ -487,9 +536,13 @@ static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   apr_size_t len;
 
   SVN_ERR_ASSERT(conn->read_ptr == conn->read_end);
+
+  /* Make sure we tell the other side everything we have to say before
+   * reading / waiting for an answer. */
   if (conn->write_pos)
     SVN_ERR(writebuf_flush(conn, pool));
 
+  /* Fill (some of the) buffer. */
   len = sizeof(conn->read_buf);
   SVN_ERR(readbuf_input(conn, conn->read_buf, &len, pool));
   conn->read_ptr = conn->read_buf;
@@ -655,11 +708,15 @@ svn_ra_svn__write_ncstring(svn_ra_svn_conn_t *conn,
                            const char *s,
                            apr_size_t len)
 {
-  apr_size_t needed = SVN_INT64_BUFFER_SIZE + len + 1;
+  /* Apart from LEN bytes of string contents, we need room for a number,
+     a colon and a space. */
+  apr_size_t max_fill = sizeof(conn->write_buf) - SVN_INT64_BUFFER_SIZE - 2;
 
   /* In most cases, there is enough left room in the WRITE_BUF
-     the we can serialize directly into it. */
-  if (conn->write_pos + needed < sizeof(conn->write_buf))
+     the we can serialize directly into it.  On platforms with
+     segmented memory, LEN might actually be close to APR_SIZE_MAX.
+     Blindly doing arithmetic on it might cause an overflow. */
+  if ((len <= max_fill) && (conn->write_pos <= max_fill - len))
     {
       /* Quick path. */
       conn->write_pos = write_ncstring_quick(conn->write_buf
@@ -907,20 +964,23 @@ write_tuple_string_opt_list(svn_ra_svn_conn_t *conn,
                             apr_pool_t *pool,
                             const svn_string_t *str)
 {
-  apr_size_t needed;
+  apr_size_t max_fill;
 
   /* Special case. */
   if (!str)
     return writebuf_write(conn, pool, "( ) ", 4);
 
-  /* If there is at least this much the room left in the WRITE_BUF,
-     we can serialize directly into it. */
-  needed = 2                       /* open list */
-         + SVN_INT64_BUFFER_SIZE   /* string length + separator */
-         + str->len                /* string contents */
-         + 2;                      /* close list */
+  /* If this how far we can fill the WRITE_BUF with string data and still
+     guarantee that the length info will fit in as well. */
+  max_fill = sizeof(conn->write_buf)
+           - 2                       /* open list */
+           - SVN_INT64_BUFFER_SIZE   /* string length + separator */
+           - 2;                      /* close list */
 
-  if (conn->write_pos + needed <= sizeof(conn->write_buf))
+   /* On platforms with segmented memory, STR->LEN might actually be
+      close to APR_SIZE_MAX.  Blindly doing arithmetic on it might
+      cause an overflow. */
+  if ((str->len <= max_fill) && (conn->write_pos <= max_fill - str->len))
     {
       /* Quick path. */
       /* Open list. */
@@ -1134,15 +1194,17 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   apr_size_t len = (apr_size_t)len64;
   apr_size_t readbuf_len;
   char *dest;
+  apr_size_t buflen;
 
   /* We can't store strings longer than the maximum size of apr_size_t,
-   * so check for wrapping */
+   * so check before using the truncated value. */
   if (len64 > APR_SIZE_MAX)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("String length larger than maximum"));
 
+  buflen = conn->read_end - conn->read_ptr;
   /* Shorter strings can be copied directly from the read buffer. */
-  if (conn->read_ptr + len <= conn->read_end)
+  if (len <= buflen)
     {
       item->kind = SVN_RA_SVN_STRING;
       item->u.string.data = apr_pstrmemdup(pool, conn->read_ptr, len);
@@ -1151,6 +1213,16 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else
     {
+      svn_stringbuf_t *stringbuf;
+
+      /* Don't even attempt to read anything that exceeds the I/O limit.
+       * So, we can terminate the transfer at an early point, saving
+       * everybody's time and resources. */
+      if (conn->max_in && (conn->max_in < len64))
+        return svn_error_create(SVN_ERR_RA_SVN_REQUEST_SIZE, NULL,
+                                "The client request size exceeds the "
+                                "configured limit");
+
       /* Read the string in chunks.  The chunk size is large enough to avoid
        * re-allocation in typical cases, and small enough to ensure we do
        * not pre-allocate an unreasonable amount of memory if (perhaps due
@@ -1159,7 +1231,7 @@ static svn_error_t *read_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
        * start small and wait for all that data to actually show up.  This
        * does not fully prevent DOS attacks but makes them harder (you have
        * to actually send gigabytes of data). */
-      svn_stringbuf_t *stringbuf = svn_stringbuf_create_empty(pool);
+      stringbuf = svn_stringbuf_create_empty(pool);
 
       /* Read string data directly into the string structure.
        * Do it iteratively.  */
@@ -1289,8 +1361,10 @@ static svn_error_t *read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
       c = *p;
       *p = '\0';
 
+      /* Store the word in ITEM. */
       item->kind = SVN_RA_SVN_WORD;
-      item->u.word = buffer;
+      item->u.word.data = buffer;
+      item->u.word.len = p - buffer;
     }
   else if (c == '(')
     {
@@ -1507,7 +1581,6 @@ svn_ra_svn__skip_leading_garbage(svn_ra_svn_conn_t *conn,
  * tuple specification and advance AP by the corresponding arguments. */
 static svn_error_t *
 vparse_tuple(const svn_ra_svn__list_t *items,
-             apr_pool_t *pool,
              const char **fmt,
              va_list *ap)
 {
@@ -1523,19 +1596,19 @@ vparse_tuple(const svn_ra_svn__list_t *items,
       if (**fmt == '(' && elt->kind == SVN_RA_SVN_LIST)
         {
           (*fmt)++;
-          SVN_ERR(vparse_tuple(&elt->u.list, pool, fmt, ap));
+          SVN_ERR(vparse_tuple(&elt->u.list, fmt, ap));
         }
       else if (**fmt == 'c' && elt->kind == SVN_RA_SVN_STRING)
         *va_arg(*ap, const char **) = elt->u.string.data;
       else if (**fmt == 's' && elt->kind == SVN_RA_SVN_STRING)
         *va_arg(*ap, svn_string_t **) = &elt->u.string;
       else if (**fmt == 'w' && elt->kind == SVN_RA_SVN_WORD)
-        *va_arg(*ap, const char **) = elt->u.word;
+        *va_arg(*ap, const char **) = elt->u.word.data;
       else if (**fmt == 'b' && elt->kind == SVN_RA_SVN_WORD)
         {
-          if (strcmp(elt->u.word, "true") == 0)
+          if (svn_string_compare(&elt->u.word, &str_true))
             *va_arg(*ap, svn_boolean_t *) = TRUE;
-          else if (strcmp(elt->u.word, "false") == 0)
+          else if (svn_string_compare(&elt->u.word, &str_false))
             *va_arg(*ap, svn_boolean_t *) = FALSE;
           else
             break;
@@ -1546,18 +1619,18 @@ vparse_tuple(const svn_ra_svn__list_t *items,
         *va_arg(*ap, svn_revnum_t *) = (svn_revnum_t) elt->u.number;
       else if (**fmt == 'B' && elt->kind == SVN_RA_SVN_WORD)
         {
-          if (strcmp(elt->u.word, "true") == 0)
+          if (svn_string_compare(&elt->u.word, &str_true))
             *va_arg(*ap, apr_uint64_t *) = TRUE;
-          else if (strcmp(elt->u.word, "false") == 0)
+          else if (svn_string_compare(&elt->u.word, &str_false))
             *va_arg(*ap, apr_uint64_t *) = FALSE;
           else
             break;
         }
       else if (**fmt == '3' && elt->kind == SVN_RA_SVN_WORD)
         {
-          if (strcmp(elt->u.word, "true") == 0)
+          if (svn_string_compare(&elt->u.word, &str_true))
             *va_arg(*ap, svn_tristate_t *) = svn_tristate_true;
-          else if (strcmp(elt->u.word, "false") == 0)
+          else if (svn_string_compare(&elt->u.word, &str_false))
             *va_arg(*ap, svn_tristate_t *) = svn_tristate_false;
           else
             break;
@@ -1618,14 +1691,13 @@ vparse_tuple(const svn_ra_svn__list_t *items,
 
 svn_error_t *
 svn_ra_svn__parse_tuple(const svn_ra_svn__list_t *list,
-                        apr_pool_t *pool,
                         const char *fmt, ...)
 {
   svn_error_t *err;
   va_list ap;
 
   va_start(ap, fmt);
-  err = vparse_tuple(list, pool, &fmt, &ap);
+  err = vparse_tuple(list, &fmt, &ap);
   va_end(ap);
   return err;
 }
@@ -1644,7 +1716,7 @@ svn_ra_svn__read_tuple(svn_ra_svn_conn_t *conn,
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                             _("Malformed network data"));
   va_start(ap, fmt);
-  err = vparse_tuple(&item->u.list, pool, &fmt, &ap);
+  err = vparse_tuple(&item->u.list, &fmt, &ap);
   va_end(ap);
   return err;
 }
@@ -1679,8 +1751,7 @@ svn_ra_svn__parse_proplist(const svn_ra_svn__list_t *list,
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Proplist element not a list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, pool, "ss",
-                                      &name, &value));
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "ss", &name, &value));
       apr_hash_set(*props, name->data, name->len, value);
     }
 
@@ -1706,15 +1777,13 @@ svn_error_t *svn_ra_svn__locate_real_error_child(svn_error_t *err)
 }
 
 svn_error_t *
-svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
-                                  apr_pool_t *pool)
+svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params)
 {
   const char *message, *file;
   svn_error_t *err = NULL;
   svn_ra_svn__item_t *elt;
   int i;
   apr_uint64_t apr_err, line;
-  apr_pool_t *subpool = svn_pool_create(pool);
 
   if (params->nelts == 0)
     return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1723,12 +1792,11 @@ svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
   /* Rebuild the error list from the end, to avoid reversing the order. */
   for (i = params->nelts - 1; i >= 0; i--)
     {
-      svn_pool_clear(subpool);
       elt = &SVN_RA_SVN__LIST_ITEM(params, i);
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Malformed error list"));
-      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, subpool, "nccn",
+      SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "nccn",
                                       &apr_err, &message, &file, &line));
       /* The message field should have been optional, but we can't
          easily change that, so "" means a nonexistent message. */
@@ -1746,8 +1814,6 @@ svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
           err->line = (long)line;
         }
     }
-
-  svn_pool_destroy(subpool);
 
   /* If we get here, then we failed to find a real error in the error
      chain that the server proported to be sending us.  That's bad. */
@@ -1772,13 +1838,13 @@ svn_ra_svn__read_cmd_response(svn_ra_svn_conn_t *conn,
   if (strcmp(status, "success") == 0)
     {
       va_start(ap, fmt);
-      err = vparse_tuple(params, pool, &fmt, &ap);
+      err = vparse_tuple(params, &fmt, &ap);
       va_end(ap);
       return err;
     }
   else if (strcmp(status, "failure") == 0)
     {
-      return svn_error_trace(svn_ra_svn__handle_failure_status(params, pool));
+      return svn_error_trace(svn_ra_svn__handle_failure_status(params));
     }
 
   return svn_error_createf(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
@@ -1792,7 +1858,12 @@ svn_ra_svn__has_command(svn_boolean_t *has_command,
                         svn_ra_svn_conn_t *conn,
                         apr_pool_t *pool)
 {
-  svn_error_t *err = svn_ra_svn__has_item(has_command, conn, pool);
+  svn_error_t *err;
+
+  /* Don't make whitespace between commands trigger I/O limitiations. */
+  svn_ra_svn__reset_command_io_counters(conn);
+
+  err = svn_ra_svn__has_item(has_command, conn, pool);
   if (err && err->apr_err == SVN_ERR_RA_SVN_CONNECTION_CLOSED)
     {
       *terminated = TRUE;
@@ -1818,6 +1889,10 @@ svn_ra_svn__handle_command(svn_boolean_t *terminate,
   const svn_ra_svn__cmd_entry_t *command;
 
   *terminate = FALSE;
+
+  /* Limit I/O for every command separately. */
+  svn_ra_svn__reset_command_io_counters(conn);
+
   err = svn_ra_svn__read_tuple(conn, pool, "wl", &cmdname, &params);
   if (err)
     {
@@ -1848,6 +1923,13 @@ svn_ra_svn__handle_command(svn_boolean_t *terminate,
           err = (*command->deprecated_handler)(conn, pool, deprecated_params,
                                                baton);
         }
+
+      /* The command implementation may have swallowed or wrapped the I/O
+       * error not knowing that we may no longer be able to send data.
+       *
+       * So, check again for the limit violations and exit the command
+       * processing quickly if we may have truncated data. */
+      err = svn_error_compose_create(check_io_limits(conn), err);
 
       *terminate = command->terminate;
     }
@@ -2687,19 +2769,19 @@ changed_path_flags(svn_node_kind_t node_kind,
                    svn_boolean_t text_modified,
                    svn_boolean_t props_modified)
 {
-  const static svn_string_t file_flags[4]
+  static const svn_string_t file_flags[4]
     = { STATIC_SVN_STRING(" ) ( 4:file false false ) ) "),
         STATIC_SVN_STRING(" ) ( 4:file false true ) ) "),
         STATIC_SVN_STRING(" ) ( 4:file true false ) ) "),
         STATIC_SVN_STRING(" ) ( 4:file true true ) ) ") };
 
-  const static svn_string_t dir_flags[4]
+  static const svn_string_t dir_flags[4]
     = { STATIC_SVN_STRING(" ) ( 3:dir false false ) ) "),
         STATIC_SVN_STRING(" ) ( 3:dir false true ) ) "),
         STATIC_SVN_STRING(" ) ( 3:dir true false ) ) "),
         STATIC_SVN_STRING(" ) ( 3:dir true true ) ) ") };
 
-  const static svn_string_t no_flags = STATIC_SVN_STRING("");
+  static const svn_string_t no_flags = STATIC_SVN_STRING("");
 
   /* Select the array based on the NODE_KIND. */
   const svn_string_t *flags;
@@ -2722,7 +2804,7 @@ changed_path_flags(svn_node_kind_t node_kind,
 svn_error_t *
 svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool,
-                                        const char *path,
+                                        const svn_string_t *path,
                                         char action,
                                         const char *copyfrom_path,
                                         svn_revnum_t copyfrom_rev,
@@ -2730,25 +2812,31 @@ svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
                                         svn_boolean_t text_modified,
                                         svn_boolean_t props_modified)
 {
-  apr_size_t path_len = strlen(path);
+  apr_size_t path_len = path->len;
   apr_size_t copyfrom_len = copyfrom_path ? strlen(copyfrom_path) : 0;
   const svn_string_t *flags_str = changed_path_flags(node_kind,
                                                      text_modified,
                                                      props_modified);
+  apr_size_t flags_len = flags_str->len;
 
-  /* How much buffer space do we need (worst case)? */
-  apr_size_t needed = 2                 /* list start */
-                    + path_len + SVN_INT64_BUFFER_SIZE
-                                        /* path */
-                    + 2                 /* action */
-                    + 2 + copyfrom_len + 2 * SVN_INT64_BUFFER_SIZE
-                                        /* list start + copy-from info */
-                    + flags_str->len;   /* flags and closing lists */
+  /* How much buffer space can we use for non-string data (worst case)? */
+  apr_size_t max_fill = sizeof(conn->write_buf)
+                      - 2                          /* list start */
+                      - 2 - SVN_INT64_BUFFER_SIZE  /* path */
+                      - 2                          /* action */
+                      - 2                          /* list start */
+                      - 2 - SVN_INT64_BUFFER_SIZE  /* copy-from path */
+                      - 1 - SVN_INT64_BUFFER_SIZE; /* copy-from rev */
 
   /* If the remaining buffer is big enough and we've got all parts,
-     directly copy into the buffer. */
-  if (   (conn->write_pos + needed <= sizeof(conn->write_buf))
-      && (flags_str->len > 0))
+     directly copy into the buffer.   On platforms with segmented memory,
+     PATH_LEN + COPYFROM_LEN might actually be close to APR_SIZE_MAX.
+     Blindly doing arithmetic on them might cause an overflow.
+     The sum in here cannot overflow because WRITE_BUF is small, i.e.
+     MAX_FILL and WRITE_POS are much smaller than APR_SIZE_MAX. */
+  if (   (path_len <= max_fill) && (copyfrom_len <= max_fill)
+      && (conn->write_pos + path_len + copyfrom_len + flags_len <= max_fill)
+      && (flags_len > 0))
     {
       /* Quick path. */
       /* Open list. */
@@ -2757,7 +2845,7 @@ svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
       p[1] = ' ';
 
       /* Write path. */
-      p = write_ncstring_quick(p + 2, path, path_len);
+      p = write_ncstring_quick(p + 2, path->data, path_len);
 
       /* Action */
       p[0] = action;
@@ -2785,7 +2873,7 @@ svn_ra_svn__write_data_log_changed_path(svn_ra_svn_conn_t *conn,
       /* Standard code path (fallback). */
       SVN_ERR(write_tuple_start_list(conn, pool));
 
-      SVN_ERR(svn_ra_svn__write_ncstring(conn, pool, path, path_len));
+      SVN_ERR(svn_ra_svn__write_ncstring(conn, pool, path->data, path_len));
       SVN_ERR(writebuf_writechar(conn, pool, action));
       SVN_ERR(writebuf_writechar(conn, pool, ' '));
       SVN_ERR(write_tuple_start_list(conn, pool));
@@ -2869,7 +2957,7 @@ svn_ra_svn__read_word(const svn_ra_svn__list_t *items,
 {
   svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_WORD);
-  *result = elt->u.word;
+  *result = elt->u.word.data;
 
   return SVN_NO_ERROR;
 }
@@ -2897,9 +2985,9 @@ svn_ra_svn__read_boolean(const svn_ra_svn__list_t *items,
 {
   svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(items, idx);
   CHECK_PROTOCOL_COND(elt->kind == SVN_RA_SVN_WORD);
-  if (elt->u.word[0] == 't' && strcmp(elt->u.word, "true") == 0)
+  if (svn_string_compare(&elt->u.word, &str_true))
     *result = TRUE;
-  else if (strcmp(elt->u.word, "false") == 0)
+  else if (svn_string_compare(&elt->u.word, &str_false))
     *result = FALSE;
   else
     CHECK_PROTOCOL_COND(FALSE);

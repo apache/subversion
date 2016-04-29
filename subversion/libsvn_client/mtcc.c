@@ -712,6 +712,7 @@ mtcc_prop_getter(const svn_string_t **mime_type,
                 {
                   *mime_type = svn_string_dup(mod->value, pool);
                   mime_type = NULL;
+                  break;
                 }
             }
         }

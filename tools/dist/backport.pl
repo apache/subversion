@@ -9,11 +9,11 @@ use v5.10.0; # needed for $^V
 # experimental and "subject to change" in v5.18 (see perl5180delta).  Every
 # use of it now triggers a warning.
 #
-# As of Perl v5.20.1, the semantics of given/when provided by Perl are
+# As of Perl v5.22.1, the semantics of given/when provided by Perl are
 # compatible with those expected by the script, so disable the warning for
 # those Perls.  But don't try to disable the the warning category on Perls
 # that don't know that category, since that breaks compilation.
-no if (v5.17.0 le $^V and $^V le v5.20.1),
+no if (v5.17.0 le $^V and $^V le v5.22.1),
    warnings => 'experimental::smartmatch';
 
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -41,7 +41,7 @@ use File::Copy qw/copy move/;
 use File::Temp qw/tempfile/;
 use IO::Select ();
 use IPC::Open3 qw/open3/;
-use POSIX qw/ctermid strftime isprint isspace/;
+use POSIX qw/ctermid strftime/;
 use Text::Wrap qw/wrap/;
 use Tie::File ();
 
@@ -51,6 +51,7 @@ use Tie::File ();
 #
 # TODO: document which are interpreted by sh and which should point to binary.
 my $SVN = $ENV{SVN} || 'svn'; # passed unquoted to sh
+$SVN .= " --config-option=config:miscellany:log-encoding=UTF-8";
 my $SHELL = $ENV{SHELL} // '/bin/sh';
 my $VIM = 'vim';
 my $EDITOR = $ENV{SVN_EDITOR} // $ENV{VISUAL} // $ENV{EDITOR} // 'ed';
@@ -113,7 +114,7 @@ my $STATUS = './STATUS';
 my $STATEFILE = './.backports1';
 my $BRANCHES = '^/subversion/branches';
 my $TRUNK = '^/subversion/trunk';
-$ENV{LC_ALL} = "C";  # since we parse 'svn info' output and use isprint()
+$ENV{LC_ALL} = "C";  # since we parse 'svn info' output
 
 # Globals.
 my %ERRORS = ();
@@ -311,11 +312,11 @@ sub prompt {
       ReadMode 'normal';
       die if $@ or not defined $answer;
       # Swallow terminal escape codes (e.g., arrow keys).
-      unless (isprint $answer or isspace $answer) {
+      unless ($answer =~ m/^(?:[[:print:]]+|\s+)$/) {
         $answer = (ReadKey -1) while defined $answer;
         # TODO: provide an indication that the keystroke was sensed and ignored.
       }
-    } until defined $answer and (isprint $answer or isspace $answer);
+    } until defined $answer and ($answer =~ m/^(?:[[:print:]]+|\s+)$/);
     print $answer;
     return $answer;
   };
