@@ -65,8 +65,8 @@ get_time(apr_time_t *tm,
 {
   svn_string_t *date_str;
 
-  SVN_ERR(svn_fs_revision_prop(&date_str, fs, rev, SVN_PROP_REVISION_DATE,
-                               pool));
+  SVN_ERR(svn_fs_revision_prop2(&date_str, fs, rev, SVN_PROP_REVISION_DATE,
+                                FALSE, pool, pool));
   if (! date_str)
     return svn_error_createf
       (SVN_ERR_FS_GENERAL, NULL,
@@ -88,6 +88,7 @@ svn_repos_dated_revision(svn_revnum_t *revision,
 
   /* Initialize top and bottom values of binary search. */
   SVN_ERR(svn_fs_youngest_rev(&rev_latest, fs, pool));
+  SVN_ERR(svn_fs_refresh_revision_props(fs, pool));
   rev_bot = 0;
   rev_top = rev_latest;
 
@@ -170,7 +171,8 @@ svn_repos_get_committed_info(svn_revnum_t *committed_rev,
   SVN_ERR(svn_fs_node_created_rev(committed_rev, root, path, pool));
 
   /* Get the revision properties of this revision. */
-  SVN_ERR(svn_fs_revision_proplist(&revprops, fs, *committed_rev, pool));
+  SVN_ERR(svn_fs_revision_proplist2(&revprops, fs, *committed_rev, TRUE,
+                                    pool, pool));
 
   /* Extract date and author from these revprops. */
   committed_date_s = svn_hash_gets(revprops, SVN_PROP_REVISION_DATE);
@@ -1010,26 +1012,39 @@ get_merged_mergeinfo(apr_hash_t **merged_mergeinfo,
   apr_hash_t *curr_mergeinfo, *prev_mergeinfo, *deleted, *changed;
   svn_error_t *err;
   svn_fs_root_t *root, *prev_root;
-  apr_hash_t *changed_paths;
-  const char *path = old_path_rev->path;
+  const char *start_path = old_path_rev->path;
+  const char *path = NULL;
+
+  svn_fs_path_change_iterator_t *iterator;
+  svn_fs_path_change3_t *change;
 
   /* Getting/parsing/diffing svn:mergeinfo is expensive, so only do it
      if there is a property change. */
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, old_path_rev->revnum,
                                scratch_pool));
-  SVN_ERR(svn_fs_paths_changed2(&changed_paths, root, scratch_pool));
-  while (1)
+  SVN_ERR(svn_fs_paths_changed3(&iterator, root, scratch_pool, scratch_pool));
+  SVN_ERR(svn_fs_path_change_get(&change, iterator));
+
+  /* Find the changed PATH closest to START_PATH which may have a mergeinfo
+   * change. */
+  while (change)
     {
-      svn_fs_path_change2_t *changed_path = svn_hash_gets(changed_paths, path);
-      if (changed_path && changed_path->prop_mod
-          && changed_path->mergeinfo_mod != svn_tristate_false)
-        break;
-      if (svn_fspath__is_root(path, strlen(path)))
+      if (   change->prop_mod
+          && change->mergeinfo_mod != svn_tristate_false
+          && svn_fspath__skip_ancestor(change->path.data, start_path))
         {
-          *merged_mergeinfo = NULL;
-          return SVN_NO_ERROR;
+          if (!path || svn_fspath__skip_ancestor(path, change->path.data))
+            path = apr_pstrmemdup(scratch_pool, change->path.data,
+                                  change->path.len);
         }
-      path = svn_fspath__dirname(path, scratch_pool);
+
+      SVN_ERR(svn_fs_path_change_get(&change, iterator));
+    }
+
+  if (path == NULL)
+    {
+      *merged_mergeinfo = NULL;
+      return SVN_NO_ERROR;
     }
 
   /* First, find the mergeinfo difference for old_path_rev->revnum, and
@@ -1354,22 +1369,48 @@ send_path_revision(struct path_revision *path_rev,
   void *delta_baton = NULL;
   apr_pool_t *tmp_pool;  /* For swapping */
   svn_boolean_t contents_changed;
+  svn_boolean_t props_changed;
 
   svn_pool_clear(sb->iterpool);
 
   /* Get the revision properties. */
-  SVN_ERR(svn_fs_revision_proplist(&rev_props, repos->fs,
-                                   path_rev->revnum, sb->iterpool));
+  SVN_ERR(svn_fs_revision_proplist2(&rev_props, repos->fs,
+                                    path_rev->revnum, FALSE,
+                                    sb->iterpool, sb->iterpool));
 
   /* Open the revision root. */
   SVN_ERR(svn_fs_revision_root(&root, repos->fs, path_rev->revnum,
                                sb->iterpool));
 
-  /* Get the file's properties for this revision and compute the diffs. */
-  SVN_ERR(svn_fs_node_proplist(&props, root, path_rev->path,
+  /* Check if the props *may* have changed. */
+  if (sb->last_root)
+    {
+      /* We don't use svn_fs_props_different() because it's more
+       * expensive. */
+      SVN_ERR(svn_fs_props_changed(&props_changed,
+                                   sb->last_root, sb->last_path,
+                                   root, path_rev->path, sb->iterpool));
+    }
+  else
+    {
+      props_changed = TRUE;
+    }
+
+  /* Calculate actual difference between last and current properties. */
+  if (props_changed)
+    {
+      /* Get the file's properties for this revision and compute the diffs. */
+      SVN_ERR(svn_fs_node_proplist(&props, root, path_rev->path,
                                    sb->iterpool));
-  SVN_ERR(svn_prop_diffs(&prop_diffs, props, sb->last_props,
-                         sb->iterpool));
+      SVN_ERR(svn_prop_diffs(&prop_diffs, props, sb->last_props,
+                             sb->iterpool));
+    }
+  else
+    {
+      /* Properties didn't change: copy  LAST_PROPS to current POOL. */
+      props = svn_prop_hash_dup(sb->last_props, sb->iterpool);
+      prop_diffs = apr_array_make(sb->iterpool, 0, sizeof(svn_prop_t));
+    }
 
   /* Check if the contents *may* have changed. */
   if (! sb->last_root)
@@ -1593,6 +1634,10 @@ svn_repos_get_file_revs2(svn_repos_t *repos,
       if (!SVN_IS_VALID_REVNUM(end))
         end = youngest_rev;
     }
+
+  /* Make sure we catch up on the latest revprop changes.  This is the only
+   * time we will refresh the revprop data in this query. */
+  SVN_ERR(svn_fs_refresh_revision_props(repos->fs, scratch_pool));
 
   if (end < start)
     {

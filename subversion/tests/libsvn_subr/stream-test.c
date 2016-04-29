@@ -550,9 +550,27 @@ test_stream_base64(apr_pool_t *pool)
     NULL
   };
 
+  /* Test svn_base64_encode2() with BREAK_LINES=FALSE. */
   stream = svn_stream_from_stringbuf(actual, pool);
   stream = svn_base64_decode(stream, pool);
-  stream = svn_base64_encode(stream, pool);
+  stream = svn_base64_encode2(stream, TRUE, pool);
+
+  for (i = 0; strings[i]; i++)
+    {
+      apr_size_t len = strlen(strings[i]);
+
+      svn_stringbuf_appendbytes(expected, strings[i], len);
+      SVN_ERR(svn_stream_write(stream, strings[i], &len));
+    }
+
+  SVN_ERR(svn_stream_close(stream));
+
+  SVN_TEST_STRING_ASSERT(actual->data, expected->data);
+
+  /* Test svn_base64_encode2() with BREAK_LINES=FALSE. */
+  stream = svn_stream_from_stringbuf(actual, pool);
+  stream = svn_base64_decode(stream, pool);
+  stream = svn_base64_encode2(stream, FALSE, pool);
 
   for (i = 0; strings[i]; i++)
     {
@@ -701,6 +719,7 @@ test_stream_base64_2(apr_pool_t *pool)
   };
   int i;
 
+  /* Test svn_base64_encode2() with BREAK_LINES=TRUE. */
   for (i = 0; data[i].encoded1; i++)
     {
       apr_size_t len1 = strlen(data[i].encoded1);
@@ -709,7 +728,32 @@ test_stream_base64_2(apr_pool_t *pool)
       svn_stringbuf_t *expected = svn_stringbuf_create_empty(pool);
       svn_stream_t *stream = svn_stream_from_stringbuf(actual, pool);
 
-      stream = svn_base64_encode(stream, pool);
+      stream = svn_base64_encode2(stream, TRUE, pool);
+      stream = svn_base64_decode(stream, pool);
+
+      SVN_ERR(svn_stream_write(stream, data[i].encoded1, &len1));
+      svn_stringbuf_appendbytes(expected, data[i].encoded1, len1);
+
+      if (data[i].encoded2)
+        {
+          apr_size_t len2 = strlen(data[i].encoded2);
+          SVN_ERR(svn_stream_write(stream, data[i].encoded2, &len2));
+          svn_stringbuf_appendbytes(expected, data[i].encoded2, len2);
+        }
+
+      SVN_ERR(svn_stream_close(stream));
+    }
+
+  /* Test svn_base64_encode2() with BREAK_LINES=FALSE. */
+  for (i = 0; data[i].encoded1; i++)
+    {
+      apr_size_t len1 = strlen(data[i].encoded1);
+
+      svn_stringbuf_t *actual = svn_stringbuf_create_empty(pool);
+      svn_stringbuf_t *expected = svn_stringbuf_create_empty(pool);
+      svn_stream_t *stream = svn_stream_from_stringbuf(actual, pool);
+
+      stream = svn_base64_encode2(stream, FALSE, pool);
       stream = svn_base64_decode(stream, pool);
 
       SVN_ERR(svn_stream_write(stream, data[i].encoded1, &len1));

@@ -1127,7 +1127,7 @@ translate_chunk(svn_stream_t *dst,
                 {
                   /* Check 4 bytes at once to allow for efficient pipelining
                     and to reduce loop condition overhead. */
-                  while ((p + len + 4) <= end)
+                  while ((end - p) >= (len + 4))
                     {
                       if (interesting[(unsigned char)p[len]]
                           || interesting[(unsigned char)p[len+1]]
@@ -1157,7 +1157,7 @@ translate_chunk(svn_stream_t *dst,
             }
           while (b->nl_translation_skippable ==
                    svn_tristate_true &&       /* can potentially skip EOLs */
-                 p + len + 2 < end &&         /* not too close to EOF */
+                 (end - p) > (len + 2) &&     /* not too close to EOF */
                  eol_unchanged(b, p + len));  /* EOL format already ok */
 
           while ((p + len) < end && !interesting[(unsigned char)p[len]])

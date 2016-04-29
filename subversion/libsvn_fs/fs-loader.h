@@ -79,11 +79,11 @@ typedef struct fs_library_vtable_t
      parameter for allocating fs-global objects such as an env cache. */
   svn_error_t *(*create)(svn_fs_t *fs, const char *path,
                          svn_mutex__t *common_pool_lock,
-                         apr_pool_t *pool,
+                         apr_pool_t *scratch_pool,
                          apr_pool_t *common_pool);
   svn_error_t *(*open_fs)(svn_fs_t *fs, const char *path,
                           svn_mutex__t *common_pool_lock,
-                          apr_pool_t *pool,
+                          apr_pool_t *scratch_pool,
                           apr_pool_t *common_pool);
   /* open_for_recovery() is like open(), but used to fill in an fs pointer
      that will be passed to recover().  We assume that the open() method
@@ -196,11 +196,17 @@ typedef struct fs_vtable_t
 {
   svn_error_t *(*youngest_rev)(svn_revnum_t *youngest_p, svn_fs_t *fs,
                                apr_pool_t *pool);
+  svn_error_t *(*refresh_revprops)(svn_fs_t *fs, apr_pool_t *scratch_pool);
   svn_error_t *(*revision_prop)(svn_string_t **value_p, svn_fs_t *fs,
                                 svn_revnum_t rev, const char *propname,
-                                apr_pool_t *pool);
+                                svn_boolean_t refresh,
+                                apr_pool_t *result_pool, 
+                                apr_pool_t *scratch_pool);
   svn_error_t *(*revision_proplist)(apr_hash_t **table_p, svn_fs_t *fs,
-                                    svn_revnum_t rev, apr_pool_t *pool);
+                                    svn_revnum_t rev,
+                                    svn_boolean_t refresh,
+                                    apr_pool_t *result_pool, 
+                                    apr_pool_t *scratch_pool);
   svn_error_t *(*change_rev_prop)(svn_fs_t *fs, svn_revnum_t rev,
                                   const char *name,
                                   const svn_string_t *const *old_value_p,
@@ -295,6 +301,10 @@ typedef struct root_vtable_t
   svn_error_t *(*paths_changed)(apr_hash_t **changed_paths_p,
                                 svn_fs_root_t *root,
                                 apr_pool_t *pool);
+  svn_error_t *(*report_changes)(svn_fs_path_change_iterator_t **iterator,
+                                 svn_fs_root_t *root,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool);
 
   /* Generic node operations */
   svn_error_t *(*check_path)(svn_node_kind_t *kind_p, svn_fs_root_t *root,
@@ -420,6 +430,13 @@ typedef struct root_vtable_t
 } root_vtable_t;
 
 
+typedef struct changes_iterator_vtable_t
+{
+  svn_error_t *(*get)(svn_fs_path_change3_t **change,
+                      svn_fs_path_change_iterator_t *iterator);
+} changes_iterator_vtable_t;
+
+
 typedef struct history_vtable_t
 {
   svn_error_t *(*prev)(svn_fs_history_t **prev_history_p,
@@ -468,7 +485,7 @@ struct svn_fs_t
   svn_fs_access_t *access_ctx;
 
   /* FSAP-specific vtable and private data */
-  fs_vtable_t *vtable;
+  const fs_vtable_t *vtable;
   void *fsap_data;
 
   /* UUID, stored by open(), create(), and set_uuid(). */
@@ -490,7 +507,7 @@ struct svn_fs_txn_t
   const char *id;
 
   /* FSAP-specific vtable and private data */
-  txn_vtable_t *vtable;
+  const txn_vtable_t *vtable;
   void *fsap_data;
 };
 
@@ -518,15 +535,21 @@ struct svn_fs_root_t
   svn_revnum_t rev;
 
   /* FSAP-specific vtable and private data */
-  root_vtable_t *vtable;
+  const root_vtable_t *vtable;
   void *fsap_data;
 };
 
+struct svn_fs_path_change_iterator_t
+{
+  /* FSAP-specific vtable and private data */
+  const changes_iterator_vtable_t *vtable;
+  void *fsap_data;
+};
 
 struct svn_fs_history_t
 {
   /* FSAP-specific vtable and private data */
-  history_vtable_t *vtable;
+  const history_vtable_t *vtable;
   void *fsap_data;
 };
 
@@ -534,7 +557,7 @@ struct svn_fs_history_t
 struct svn_fs_id_t
 {
   /* FSAP-specific vtable and private data */
-  id_vtable_t *vtable;
+  const id_vtable_t *vtable;
   void *fsap_data;
 };
 

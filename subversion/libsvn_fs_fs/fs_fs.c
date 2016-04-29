@@ -492,6 +492,7 @@ read_format(int *pformat,
       svn_error_clear(err);
       *pformat = 1;
       *max_files_per_dir = 0;
+      *use_log_addressing = FALSE;
 
       return SVN_NO_ERROR;
     }
@@ -623,7 +624,8 @@ svn_fs_fs__write_format(svn_fs_t *fs,
   else
     {
       SVN_ERR(svn_io_write_atomic2(path, sb->data, sb->len,
-                                   NULL /* copy_perms_path */, TRUE, pool));
+                                   NULL /* copy_perms_path */,
+                                   ffd->flush_to_disk, pool));
     }
 
   /* And set the perms to make it read only */
@@ -754,8 +756,8 @@ read_config(fs_fs_data_t *ffd,
                                    CONFIG_SECTION_PACKED_REVPROPS,
                                    CONFIG_OPTION_REVPROP_PACK_SIZE,
                                    ffd->compress_packed_revprops
-                                       ? 0x10
-                                       : 0x4));
+                                       ? 0x40
+                                       : 0x10));
 
       ffd->revprop_pack_size *= 1024;
     }
@@ -962,9 +964,9 @@ write_config(svn_fs_t *fs,
 "### latency and CPU usage reading and changing individual revprops."        NL
 "### Values smaller than 4 kByte will not improve latency any further and "  NL
 "### quickly render revprop packing ineffective."                            NL
-"### revprop-pack-size is 4 kBytes by default for non-compressed revprop"    NL
-"### pack files and 16 kBytes when compression has been enabled."            NL
-"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 4"                                  NL
+"### revprop-pack-size is 16 kBytes by default for non-compressed revprop"   NL
+"### pack files and 64 kBytes when compression has been enabled."            NL
+"# " CONFIG_OPTION_REVPROP_PACK_SIZE " = 16"                                 NL
 "###"                                                                        NL
 "### To save disk space, packed revprop files may be compressed.  Standard"  NL
 "### revprops tend to allow for very effective compression.  Reading and"    NL
@@ -1031,13 +1033,12 @@ read_global_config(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  /* Providing a config hash is optional. */
-  if (fs->config)
-    ffd->use_block_read = svn_hash__get_bool(fs->config,
-                                             SVN_FS_CONFIG_FSFS_BLOCK_READ,
-                                             FALSE);
-  else
-    ffd->use_block_read = FALSE;
+  ffd->use_block_read = svn_hash__get_bool(fs->config,
+                                           SVN_FS_CONFIG_FSFS_BLOCK_READ,
+                                           FALSE);
+  ffd->flush_to_disk = !svn_hash__get_bool(fs->config,
+                                           SVN_FS_CONFIG_NO_FLUSH_TO_DISK,
+                                           FALSE);
 
   /* Ignore the user-specified larger block size if we don't use block-read.
      Defaulting to 4k gives us the same access granularity in format 7 as in
@@ -1387,12 +1388,30 @@ svn_fs_fs__file_length(svn_filesize_t *length,
   return SVN_NO_ERROR;
 }
 
+svn_boolean_t
+svn_fs_fs__noderev_same_rep_key(representation_t *a,
+                                representation_t *b)
+{
+  if (a == b)
+    return TRUE;
+
+  if (a == NULL || b == NULL)
+    return FALSE;
+
+  if (a->item_index != b->item_index)
+    return FALSE;
+
+  if (a->revision != b->revision)
+    return FALSE;
+
+  return memcmp(&a->uniquifier, &b->uniquifier, sizeof(a->uniquifier)) == 0;
+}
+
 svn_error_t *
 svn_fs_fs__file_text_rep_equal(svn_boolean_t *equal,
                                svn_fs_t *fs,
                                node_revision_t *a,
                                node_revision_t *b,
-                               svn_boolean_t strict,
                                apr_pool_t *scratch_pool)
 {
   svn_stream_t *contents_a, *contents_b;
@@ -1437,19 +1456,6 @@ svn_fs_fs__file_text_rep_equal(svn_boolean_t *equal,
       return SVN_NO_ERROR;
     }
 
-  /* Old repositories may not have the SHA1 checksum handy.
-     This check becomes expensive.  Skip it unless explicitly required.
-
-     We already have seen that the ID is different, so produce a likely
-     false negative as allowed by the API description - even though the
-     MD5 matched, there is an extremely slim chance that the SHA1 wouldn't.
-   */
-  if (!strict)
-    {
-      *equal = FALSE;
-      return SVN_NO_ERROR;
-    }
-
   SVN_ERR(svn_fs_fs__get_contents(&contents_a, fs, rep_a, TRUE,
                                   scratch_pool));
   SVN_ERR(svn_fs_fs__get_contents(&contents_b, fs, rep_b, TRUE,
@@ -1465,7 +1471,6 @@ svn_fs_fs__prop_rep_equal(svn_boolean_t *equal,
                           svn_fs_t *fs,
                           node_revision_t *a,
                           node_revision_t *b,
-                          svn_boolean_t strict,
                           apr_pool_t *scratch_pool)
 {
   representation_t *rep_a = a->prop_rep;
@@ -1509,14 +1514,6 @@ svn_fs_fs__prop_rep_equal(svn_boolean_t *equal,
   if (svn_fs_fs__id_eq(a->id, b->id))
     {
       *equal = TRUE;
-      return SVN_NO_ERROR;
-    }
-
-  /* Skip the expensive bits unless we are in strict mode.
-     Simply assume that there is a difference. */
-  if (!strict)
-    {
-      *equal = FALSE;
       return SVN_NO_ERROR;
     }
 
@@ -1872,7 +1869,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
      file does not exist during repository creation. */
   SVN_ERR(svn_io_write_atomic2(uuid_path, contents->data, contents->len,
                                svn_fs_fs__path_current(fs, pool) /* perms */,
-                               TRUE, pool));
+                               ffd->flush_to_disk, pool));
 
   fs->uuid = apr_pstrdup(fs->pool, uuid);
 
@@ -2058,14 +2055,17 @@ svn_fs_fs__revision_prop(svn_string_t **value_p,
                          svn_fs_t *fs,
                          svn_revnum_t rev,
                          const char *propname,
-                         apr_pool_t *pool)
+                         svn_boolean_t refresh,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
 {
   apr_hash_t *table;
 
   SVN_ERR(svn_fs__check_fs(fs, TRUE));
-  SVN_ERR(svn_fs_fs__get_revision_proplist(&table, fs, rev, pool));
+  SVN_ERR(svn_fs_fs__get_revision_proplist(&table, fs, rev, refresh,
+                                           scratch_pool, scratch_pool));
 
-  *value_p = svn_hash_gets(table, propname);
+  *value_p = svn_string_dup(svn_hash_gets(table, propname), result_pool);
 
   return SVN_NO_ERROR;
 }
@@ -2090,7 +2090,10 @@ change_rev_prop_body(void *baton, apr_pool_t *pool)
   apr_hash_t *table;
   const svn_string_t *present_value;
 
-  SVN_ERR(svn_fs_fs__get_revision_proplist(&table, cb->fs, cb->rev, pool));
+  /* We always need to read the current revprops from disk.
+   * Hence, always "refresh" here. */
+  SVN_ERR(svn_fs_fs__get_revision_proplist(&table, cb->fs, cb->rev, TRUE,
+                                           pool, pool));
   present_value = svn_hash_gets(table, cb->name);
 
   if (cb->old_value_p)

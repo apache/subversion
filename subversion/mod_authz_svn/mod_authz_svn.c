@@ -639,6 +639,8 @@ req_check_access(request_rec *r,
 
   if (r->method_number == M_MOVE || r->method_number == M_COPY)
     {
+      apr_status_t status;
+
       dest_uri = apr_table_get(r->headers_in, "Destination");
 
       /* Decline MOVE or COPY when there is no Destination uri, this will
@@ -647,7 +649,19 @@ req_check_access(request_rec *r,
       if (!dest_uri)
         return DECLINED;
 
-      apr_uri_parse(r->pool, dest_uri, &parsed_dest_uri);
+      status = apr_uri_parse(r->pool, dest_uri, &parsed_dest_uri);
+      if (status)
+        {
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, status, r,
+                        "Invalid URI in Destination header");
+          return HTTP_BAD_REQUEST;
+        }
+      if (!parsed_dest_uri.path)
+        {
+          ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
+                        "Invalid URI in Destination header");
+          return HTTP_BAD_REQUEST;
+        }
 
       ap_unescape_url(parsed_dest_uri.path);
       dest_uri = parsed_dest_uri.path;
@@ -954,19 +968,21 @@ access_checker(request_rec *r)
 #if USE_FORCE_AUTHN
       if (authn_configured) {
           /* We have to check to see if authn is required because if so we must
-           * return UNAUTHORIZED (401) rather than FORBIDDEN (403) since returning
+           * return DECLINED rather than FORBIDDEN (403) since returning
            * the 403 leaks information about what paths may exist to
-           * unauthenticated users.  We must set a note here in order
-           * to use ap_some_authn_rquired() without triggering an infinite
-           * loop since the call will trigger this function to be called again. */
+           * unauthenticated users.  Returning DECLINED means apache's request
+           * handling will continue until the authn module itself generates
+           * UNAUTHORIZED (401).
+
+           * We must set a note here in order to use
+           * ap_some_authn_rquired() without triggering an infinite
+           * loop since the call will trigger this function to be
+           * called again. */
           apr_table_setn(r->notes, IN_SOME_AUTHN_NOTE, (const char*)1);
           authn_required = ap_some_authn_required(r);
           apr_table_unset(r->notes, IN_SOME_AUTHN_NOTE);
           if (authn_required)
-            {
-              ap_note_auth_failure(r);
-              return HTTP_UNAUTHORIZED;
-            }
+            return DECLINED;
       }
 #else
       if (!authn_required)

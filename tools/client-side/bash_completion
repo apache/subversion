@@ -1136,7 +1136,7 @@ _svnadmin ()
 		;;
 	dump)
 		cmdOpts="-r --revision --incremental -q --quiet --deltas \
-		         -M --memory-cache-size"
+		         -M --memory-cache-size -F --file"
 		;;
 	freeze)
 		cmdOpts="-F --file"
@@ -1150,7 +1150,8 @@ _svnadmin ()
 	load)
 		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet \
 		         --use-pre-commit-hook --use-post-commit-hook \
-		         --bypass-prop-validation -M --memory-cache-size"
+		         --bypass-prop-validation -M --memory-cache-size \
+		         --no-flush-to-disk -F --file"
 		;;
 	lstxns)
         	cmdOpts="-r --revision"

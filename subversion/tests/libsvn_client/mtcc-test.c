@@ -724,6 +724,65 @@ test_file_revs_both_ways(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_iprops_path_format(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  svn_client__mtcc_t *mtcc;
+  svn_client_ctx_t *ctx;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  const char *repos_url;
+  svn_ra_session_t *ra;
+
+  SVN_ERR(svn_test__create_repos2(NULL, &repos_url, NULL, "mtcc-iprops-paths",
+                                  opts, pool, subpool));
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_test__init_auth_baton(&ctx->auth_baton, pool));
+
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 0, ctx, subpool, subpool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("A", mtcc, subpool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("A/B", mtcc, subpool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("A/B/C", mtcc, subpool));
+  SVN_ERR(svn_client__mtcc_add_mkdir("A/B/C/D", mtcc, subpool));
+  SVN_ERR(svn_client__mtcc_add_propset("", "on-root",
+                                       svn_string_create("ROOT", subpool),
+                                       FALSE, mtcc, subpool));
+  SVN_ERR(svn_client__mtcc_add_propset("A/B", "on-B",
+                                       svn_string_create("BBBB", subpool),
+                                       FALSE, mtcc, subpool));
+  SVN_ERR(svn_client__mtcc_add_propset("A/B/C", "Z",
+                                       svn_string_create("Z", subpool),
+                                       FALSE, mtcc, subpool));
+  SVN_ERR(verify_mtcc_commit(mtcc, 1, subpool));
+  svn_pool_clear(subpool);
+
+  {
+    apr_array_header_t *iprops;
+    svn_prop_inherited_item_t *ip;
+
+    SVN_ERR(svn_client_open_ra_session2(&ra, repos_url, NULL, ctx,
+                                        pool, subpool));
+
+    SVN_ERR(svn_ra_get_inherited_props(ra, &iprops, "A/B/C/D", 1,
+                                       subpool, subpool));
+
+    SVN_TEST_ASSERT(iprops != NULL);
+    SVN_TEST_INT_ASSERT(iprops->nelts, 3);
+
+    ip = APR_ARRAY_IDX(iprops, 0, svn_prop_inherited_item_t *);
+    SVN_TEST_STRING_ASSERT(ip->path_or_url, "");
+
+    ip = APR_ARRAY_IDX(iprops, 1, svn_prop_inherited_item_t *);
+    SVN_TEST_STRING_ASSERT(ip->path_or_url, "A/B");
+
+    ip = APR_ARRAY_IDX(iprops, 2, svn_prop_inherited_item_t *);
+    SVN_TEST_STRING_ASSERT(ip->path_or_url, "A/B/C");
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -750,6 +809,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test mtcc replace tree"),
     SVN_TEST_OPTS_PASS(test_file_revs_both_ways,
                        "test ra_get_file_revs2 both ways"),
+    SVN_TEST_OPTS_PASS(test_iprops_path_format,
+                       "test iprops url format"),
     SVN_TEST_NULL
   };
 

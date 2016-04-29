@@ -129,7 +129,7 @@ svn_fs_x__deserialize_node_revision(void **item,
                                     apr_pool_t *result_pool);
 
 /**
- * Implements #svn_cache__serialize_func_t for a directory contents array
+ * Implements #svn_cache__serialize_func_t for a #svn_fs_x__dir_data_t
  */
 svn_error_t *
 svn_fs_x__serialize_dir_entries(void **data,
@@ -138,7 +138,7 @@ svn_fs_x__serialize_dir_entries(void **data,
                                 apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__deserialize_func_t for a directory contents array
+ * Implements #svn_cache__deserialize_func_t for a #svn_fs_x__dir_data_t
  */
 svn_error_t *
 svn_fs_x__deserialize_dir_entries(void **out,
@@ -158,6 +158,18 @@ svn_fs_x__get_sharded_offset(void **out,
                              apr_pool_t *pool);
 
 /**
+ * Implements #svn_cache__partial_getter_func_t.
+ * Set (svn_filesize_t) @a *out to the filesize info stored with the
+ * serialized directory in @a data of @a data_len.  @a baton is unused.
+ */
+svn_error_t *
+svn_fs_x__extract_dir_filesize(void **out,
+                               const void *data,
+                               apr_size_t data_len,
+                               void *baton,
+                               apr_pool_t *pool);
+
+/**
  * Baton type to be used with svn_fs_x__extract_dir_entry. */
 typedef struct svn_fs_x__ede_baton_t
 {
@@ -166,12 +178,24 @@ typedef struct svn_fs_x__ede_baton_t
 
   /* Lookup hint [in / out] */
   apr_size_t hint;
+
+  /** Current length of the in-txn in-disk representation of the directory.
+   * SVN_INVALID_FILESIZE if unknown. */
+  svn_filesize_t txn_filesize;
+
+  /** Will be set by the callback.  If FALSE, the cached data is out of date.
+   * We need this indicator because the svn_cache__t interface will always
+   * report the lookup as a success (FOUND==TRUE) if the generic lookup was
+   * successful -- regardless of what the entry extraction callback does. */
+  svn_boolean_t out_of_date;
 } svn_fs_x__ede_baton_t;
 
 /**
  * Implements #svn_cache__partial_getter_func_t for a single
  * #svn_fs_x__dirent_t within a serialized directory contents hash,
- * identified by its name (given in @a svn_fs_x__ede_baton_t @a *baton).
+ * identified by its name (in (svn_fs_x__ede_baton_t *) @a *baton).
+ * If the filesize specified in the baton does not match the cached
+ * value for this directory, @a *out will be NULL as well.
  */
 svn_error_t *
 svn_fs_x__extract_dir_entry(void **out,
@@ -184,7 +208,10 @@ svn_fs_x__extract_dir_entry(void **out,
  * Describes the change to be done to a directory: Set the entry
  * identify by @a name to the value @a new_entry. If the latter is
  * @c NULL, the entry shall be removed if it exists. Otherwise it
- * will be replaced or automatically added, respectively.
+ * will be replaced or automatically added, respectively.  The
+ * @a filesize allows readers to identify stale cache data (e.g.
+ * due to concurrent access to txns); writers use it to update the
+ * cached file size info.
  */
 typedef struct replace_baton_t
 {
@@ -193,6 +220,10 @@ typedef struct replace_baton_t
 
   /** directory entry to insert instead */
   svn_fs_x__dirent_t *new_entry;
+
+  /** Current length of the in-txn in-disk representation of the directory.
+   * SVN_INVALID_FILESIZE if unknown. */
+  svn_filesize_t txn_filesize;
 } replace_baton_t;
 
 /**
@@ -205,6 +236,17 @@ svn_fs_x__replace_dir_entry(void **data,
                             apr_size_t *data_len,
                             void *baton,
                             apr_pool_t *pool);
+
+/**
+ * Implements #svn_cache__partial_setter_func_t for a #svn_fs_x__dir_data_t
+ * at @a *data, resetting its txn_filesize field to SVN_INVALID_FILESIZE.
+ * &a baton should be NULL.
+ */
+svn_error_t *
+svn_fs_x__reset_txn_filesize(void **data,
+                             apr_size_t *data_len,
+                             void *baton,
+                             apr_pool_t *pool);
 
 /**
  * Implements #svn_cache__serialize_func_t for a #svn_fs_x__rep_header_t.
@@ -243,5 +285,29 @@ svn_fs_x__deserialize_changes(void **out,
                               void *data,
                               apr_size_t data_len,
                               apr_pool_t *result_pool);
+
+/* Baton type to be used with svn_fs_x__read_changes_block. */
+typedef struct svn_fs_x__read_changes_block_baton_t
+{
+  /* Deliver data starting from this index within the changes list. */
+  int start;
+
+  /* To be set by svn_fs_x__read_changes_block:
+     Did we deliver the last change in that list? */
+  svn_boolean_t *eol;
+} svn_fs_x__read_changes_block_baton_t;
+
+/**
+ * Implements #svn_cache__partial_getter_func_t, returning a number of
+ * #svn_fs_x__change_t * in an #apr_array_header_t.  The @a *baton of type
+ * 'svn_fs_x__read_changes_block_baton_t describes what the first index
+ * in that block should be.
+ */
+svn_error_t *
+svn_fs_x__read_changes_block(void **out,
+                             const void *data,
+                             apr_size_t data_len,
+                             void *baton,
+                             apr_pool_t *pool);
 
 #endif

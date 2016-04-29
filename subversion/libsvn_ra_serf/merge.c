@@ -427,6 +427,7 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
   handler->path = merge_ctx->merge_url;
   handler->body_delegate = create_merge_body;
   handler->body_delegate_baton = merge_ctx;
+  handler->body_type = "text/xml";
 
   handler->header_delegate = setup_merge_headers;
   handler->header_delegate_baton = merge_ctx;

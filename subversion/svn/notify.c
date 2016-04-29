@@ -39,6 +39,7 @@
 #include "svn_hash.h"
 #include "cl.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_dep_compat.h"
 
 #include "svn_private_config.h"
@@ -142,6 +143,76 @@ resolved_str(apr_pool_t *pool, int n_resolved)
                                "and %d already resolved",
                                n_resolved),
                       n_resolved);
+}
+
+svn_error_t *
+svn_cl__conflict_stats_get_paths(apr_array_header_t **conflicted_paths,
+                                 svn_cl__conflict_stats_t *conflict_stats,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
+{
+
+  int n_text = apr_hash_count(conflict_stats->text_conflicts);
+  int n_prop = apr_hash_count(conflict_stats->prop_conflicts);
+  int n_tree = apr_hash_count(conflict_stats->tree_conflicts);
+  apr_hash_t *all_conflicts;
+
+  *conflicted_paths = NULL;
+  if (n_text == 0 && n_prop == 0 && n_tree == 0)
+      return SVN_NO_ERROR;
+
+  /* Use a hash table to ensure paths with multiple conflicts are
+   * returned just once. */
+  all_conflicts = apr_hash_make(result_pool);
+  if (n_text > 0)
+    {
+      apr_array_header_t *k_text;
+      int i;
+
+      SVN_ERR(svn_hash_keys(&k_text, conflict_stats->text_conflicts,
+                            scratch_pool));
+      for (i = 0; i < k_text->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(k_text, i, const char *);
+
+          svn_hash_sets(all_conflicts, path, "");
+        }
+    }
+
+  if (n_prop > 0)
+    {
+      apr_array_header_t *k_prop;
+      int i;
+
+      SVN_ERR(svn_hash_keys(&k_prop, conflict_stats->prop_conflicts,
+                            scratch_pool));
+      for (i = 0; i < k_prop->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(k_prop, i, const char *);
+
+          svn_hash_sets(all_conflicts, path, "");
+        }
+    }
+
+  if (n_tree > 0)
+    {
+      apr_array_header_t *k_tree;
+      int i;
+
+      SVN_ERR(svn_hash_keys(&k_tree, conflict_stats->tree_conflicts,
+                            scratch_pool));
+      for (i = 0; i < k_tree->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(k_tree, i, const char *);
+
+          svn_hash_sets(all_conflicts, path, "");
+        }
+    }
+
+  svn_hash_keys(conflicted_paths, all_conflicts, result_pool);
+  svn_sort__array(*conflicted_paths, svn_sort_compare_paths);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -251,6 +322,13 @@ notify_body(struct notify_baton *nb,
           SVN_ERR(svn_cmdline_printf(
                     pool,
                     _("Skipped target: '%s' -- copy-source is missing\n"),
+                    path_local));
+        }
+      else if (n->content_state == svn_wc_notify_state_obstructed)
+        {
+          SVN_ERR(svn_cmdline_printf(
+                    pool,
+                    _("Skipped '%s' -- obstructed by unversioned node\n"),
                     path_local));
         }
       else
@@ -369,6 +447,28 @@ notify_body(struct notify_baton *nb,
     case svn_wc_notify_resolved:
       SVN_ERR(svn_cmdline_printf(pool,
                                  _("Resolved conflicted state of '%s'\n"),
+                                 path_local));
+      break;
+
+    case svn_wc_notify_resolved_text:
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 _("Merge conflicts in '%s' marked as "
+                                   "resolved.\n"),
+                                 path_local));
+      break;
+
+    case svn_wc_notify_resolved_prop:
+      SVN_ERR_ASSERT(n->prop_name && strlen(n->prop_name) > 0);
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 _("Conflict in property '%s' at '%s' marked "
+                                   "as resolved.\n"),
+                                 n->prop_name, path_local));
+      break;
+
+    case svn_wc_notify_resolved_tree:
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 _("Tree conflict at '%s' marked as "
+                                   "resolved.\n"),
                                  path_local));
       break;
 

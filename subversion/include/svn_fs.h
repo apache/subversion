@@ -134,6 +134,12 @@ typedef struct svn_fs_t svn_fs_t;
  */
 #define SVN_FS_CONFIG_FSFS_CACHE_NS             "fsfs-cache-namespace"
 
+/** Enable / disable caching of node properties for a FSFS repository.
+ *
+ * @since New in 1.10.
+ */
+#define SVN_FS_CONFIG_FSFS_CACHE_NODEPROPS      "fsfs-cache-nodeprops"
+
 /** Enable / disable the FSFS format 7 "block read" feature.
  *
  * @since New in 1.9.
@@ -207,6 +213,20 @@ typedef struct svn_fs_t svn_fs_t;
  * @since New in 1.9.
  */
 #define SVN_FS_CONFIG_COMPATIBLE_VERSION        "compatible-version"
+
+/** Specifies whether the filesystem should be forcing a physical write of
+ * the data to disk.  Enabling the option allows the filesystem to return
+ * from the API calls without forcing the write to disk.  If this option
+ * is disabled, the changes are always written to disk.
+ *
+ * @note Avoiding the forced write to disk usually is more efficient, but
+ * doesn't guarantee data integrity after a system crash or power failure
+ * and should be used with caution.
+ *
+ * @since New in 1.10.
+ */
+#define SVN_FS_CONFIG_NO_FLUSH_TO_DISK          "no-flush-to-disk"
+
 /** @} */
 
 
@@ -269,11 +289,13 @@ svn_fs_set_warning_func(svn_fs_t *fs,
  * @c NULL, the options it contains modify the behavior of the
  * filesystem.  The interpretation of @a fs_config is specific to the
  * filesystem back-end.  The new filesystem may be closed by
- * destroying @a pool.
+ * destroying @a result_pool.
+ *
+ * Use @a scratch_pool for temporary allocations.
  *
  * @note The lifetime of @a fs_config must not be shorter than @a
- * pool's. It's a good idea to allocate @a fs_config from @a pool or
- * one of its ancestors.
+ * result_pool's. It's a good idea to allocate @a fs_config from
+ * @a result_pool or one of its ancestors.
  *
  * If @a fs_config contains a value for #SVN_FS_CONFIG_FS_TYPE, that
  * value determines the filesystem type for the new filesystem.
@@ -289,8 +311,22 @@ svn_fs_set_warning_func(svn_fs_t *fs,
  * though the caller should not rely upon any particular default if they
  * wish to ensure that a filesystem of a specific type is created.
  *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_fs_create2(svn_fs_t **fs_p,
+               const char *path,
+               apr_hash_t *fs_config,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_fs_create2(), but without @a scratch_pool.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API.
  * @since New in 1.1.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_create(svn_fs_t **fs_p,
               const char *path,
@@ -1060,15 +1096,12 @@ svn_fs_unparse_id(const svn_fs_id_t *id,
  * set.
  *
  * The Subversion filesystem will make a best effort to not reuse
- * transaction names.  The Berkeley DB backend generates transaction
- * names using a sequence, or a counter, which is stored in the BDB
+ * transaction names.  The BDB and FSFS backends generate transaction
+ * names using a sequence, or a counter, which is stored in the
  * database.  Each new transaction increments the counter.  The
  * current value of the counter is not serialized into a filesystem
  * dump file, so dumping and restoring the repository will reset the
- * sequence and reuse transaction names.  The FSFS backend generates a
- * transaction name using the hostname, process ID and current time in
- * microseconds since 00:00:00 January 1, 1970 UTC.  So it is
- * extremely unlikely that a transaction name will be reused.
+ * sequence and so may reuse transaction names.
  *
  * @defgroup svn_fs_txns Filesystem transactions
  * @{
@@ -1474,6 +1507,70 @@ typedef enum svn_fs_path_change_kind_t
  * by the commit API; this does not mean the new value is different from
  * the old value.
  *
+ * @since New in 1.10. */
+typedef struct svn_fs_path_change3_t
+{
+  /** path of the node that got changed. */
+  svn_string_t path;
+
+  /** kind of change */
+  svn_fs_path_change_kind_t change_kind;
+
+  /** what node kind is the path?
+      (Note: it is legal for this to be #svn_node_unknown.) */
+  svn_node_kind_t node_kind;
+
+  /** was the text touched?
+   * For node_kind=dir: always false. For node_kind=file:
+   *   modify:      true iff text touched.
+   *   add (copy):  true iff text touched.
+   *   add (plain): always true.
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
+   */
+  svn_boolean_t text_mod;
+
+  /** were the properties touched?
+   *   modify:      true iff props touched.
+   *   add (copy):  true iff props touched.
+   *   add (plain): true iff props touched.
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
+   */
+  svn_boolean_t prop_mod;
+
+  /** was the mergeinfo property touched?
+   *   modify:      } true iff svn:mergeinfo property add/del/mod
+   *   add (copy):  }          and fs format supports this flag.
+   *   add (plain): }
+   *   delete:      always false.
+   *   replace:     as for the add/copy part of the replacement.
+   * (Note: Pre-1.9 repositories will report #svn_tristate_unknown.)
+   */
+  svn_tristate_t mergeinfo_mod;
+
+  /** Copyfrom revision and path; this is only valid if copyfrom_known
+   * is true. */
+  svn_boolean_t copyfrom_known;
+  svn_revnum_t copyfrom_rev;
+  const char *copyfrom_path;
+
+  /* NOTE! Please update svn_fs_path_change3_create() when adding new
+     fields here. */
+} svn_fs_path_change3_t;
+
+
+/** Change descriptor.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, to preserve binary compatibility, users
+ * should not directly allocate structures of this type.
+ *
+ * @note The @c text_mod, @c prop_mod and @c mergeinfo_mod flags mean the
+ * text, properties and mergeinfo property (respectively) were "touched"
+ * by the commit API; this does not mean the new value is different from
+ * the old value.
+ *
  * @since New in 1.6. */
 typedef struct svn_fs_path_change2_t
 {
@@ -1562,6 +1659,83 @@ svn_fs_path_change2_t *
 svn_fs_path_change2_create(const svn_fs_id_t *node_rev_id,
                            svn_fs_path_change_kind_t change_kind,
                            apr_pool_t *pool);
+
+/**
+ * Allocate an #svn_fs_path_change3_t structure in @a result_pool,
+ * initialize and return it.
+ *
+ * Set the @c change_kind field to @a change_kind.  Set all other fields
+ * to their @c _unknown, @c NULL or invalid value, respectively.
+ *
+ * @since New in 1.10.
+ */
+svn_fs_path_change3_t *
+svn_fs_path_change3_create(svn_fs_path_change_kind_t change_kind,
+                           apr_pool_t *result_pool);
+
+/**
+ * Return a deep copy of @a *change, allocated in @a result_pool.
+ *
+ * @since New in 1.10.
+ */
+svn_fs_path_change3_t *
+svn_fs_path_change3_dup(svn_fs_path_change3_t *change,
+                        apr_pool_t *result_pool);
+
+/**
+ * Opaque iterator object type for a changed paths list.
+ *
+ * @since New in 1.10.
+ */
+typedef struct svn_fs_path_change_iterator_t svn_fs_path_change_iterator_t;
+
+/**
+ * Set @a *change to the path change that @a iterator currently points to
+ * and advance the @a iterator.  If the change list has been exhausted,
+ * @a change will be set to @c NULL.
+ *
+ * You may modify @a **change but its content becomes invalid as soon as
+ * either @a iterator becomes invalid or you call this function again.
+ *
+ * @note The @c node_kind field in @a change may be #svn_node_unknown and
+ *       the @c copyfrom_known fields may be FALSE.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_fs_path_change_get(svn_fs_path_change3_t **change,
+                       svn_fs_path_change_iterator_t *iterator);
+
+
+/** Determine what has changed under a @a root.
+ *
+ * Set @a *iterator to an iterator object, allocated in @a result_pool,
+ * which will give access to the full list of changed paths under @a root.
+ * Each call to @a svn_fs_path_change_get will return a new unique path
+ * change.  The iteration order is undefined and may change even for the
+ * same @a root.
+ *
+ * If @a root becomes invalid, @a *iterator becomes invalid, too.
+ *
+ * Callers can assume that this function takes time proportional to
+ * the amount of data output, and does not need to do tree crawls;
+ * however, it is possible that some of the @c node_kind fields in the
+ * #svn_fs_path_change3_t * values will be #svn_node_unknown or
+ * that and some of the @c copyfrom_known fields will be FALSE.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @note The @a *iterator may be a large object and bind limited system
+ *       resources such as file handles.  Be sure to clear the owning
+ *       pool once you don't need that iterator anymore.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_fs_paths_changed3(svn_fs_path_change_iterator_t **iterator,
+                      svn_fs_root_t *root,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
 /** Determine what has changed under a @a root.
  *
@@ -1759,12 +1933,15 @@ svn_fs_node_relation(svn_fs_node_relation_t *relation,
                      const char *path_b,
                      apr_pool_t *scratch_pool);
 
-/** Set @a *revision to the revision in which @a path under @a root was
- * created.  Use @a pool for any temporary allocations.  @a *revision will
+/** Set @a *revision to the revision in which the node-revision identified
+ * by @a path under @a root was created; that is, to the revision in which
+ * @a path under @a root was last modified.  @a *revision will
  * be set to #SVN_INVALID_REVNUM for uncommitted nodes (i.e. modified nodes
  * under a transaction root).  Note that the root of an unmodified transaction
  * is not itself considered to be modified; in that case, return the revision
  * upon which the transaction was based.
+ *
+ * Use @a pool for any temporary allocations.
  */
 svn_error_t *
 svn_fs_node_created_rev(svn_revnum_t *revision,
@@ -1861,6 +2038,15 @@ svn_fs_change_node_prop(svn_fs_root_t *root,
  * both roots must be in the same filesystem.
  * Do any necessary temporary allocation in @a scratch_pool.
  *
+ * @note For the purposes of preserving accurate history, certain bits of
+ * code (such as the repository dump code) need to care about the distinction
+ * between situations when the properties are "different" and "have changed
+ * across two points in history".  We have a pair of functions that can
+ * answer both of these questions, svn_fs_props_different() and
+ * svn_fs_props_changed().  See issue 4598 for more details.
+ *
+ * @see svn_fs_props_changed
+ *
  * @since New in 1.9.
  */
 svn_error_t *
@@ -1872,9 +2058,7 @@ svn_fs_props_different(svn_boolean_t *different_p,
                        apr_pool_t *scratch_pool);
 
 
-/** Determine if the properties of two path/root combinations are different.
- * In contrast to #svn_fs_props_different, we only perform a quick test and
- * allow for false positives.
+/** Determine if the properties of two path/root combinations have changed.
  *
  * Set @a *changed_p to #TRUE if the properties at @a path1 under @a root1
  * differ from those at @a path2 under @a root2, or set it to #FALSE if they
@@ -1882,15 +2066,19 @@ svn_fs_props_different(svn_boolean_t *different_p,
  * both roots must be in the same filesystem.
  * Do any necessary temporary allocation in @a pool.
  *
- * @note The behavior is implementation dependent in that the false
- * positives reported may differ from release to release and backend to
- * backend.  There is also no guarantee that there will be false positives
- * at all.
+ * @note For the purposes of preserving accurate history, certain bits of
+ * code (such as the repository dump code) need to care about the distinction
+ * between situations when the properties are "different" and "have changed
+ * across two points in history".  We have a pair of functions that can
+ * answer both of these questions, svn_fs_props_different() and
+ * svn_fs_props_changed().  See issue 4598 for more details.
  *
- * @note Prior to Subversion 1.9, this function would return false negatives
- * for FSFS: If @a root1 and @a root2 were both transaction roots
- * and the proplists of both paths had been changed in their respective
- * transactions, @a changed_p would be set to #FALSE.
+ * @note This function can currently return false negatives for FSFS:
+ * If @a root1 and @a root2 were both transaction roots and the proplists
+ * of both paths had been changed in their respective transactions,
+ * @a changed_p would be set to #FALSE.
+ *
+ * @see svn_fs_props_different
  */
 svn_error_t *
 svn_fs_props_changed(svn_boolean_t *changed_p,
@@ -2410,13 +2598,23 @@ svn_fs_apply_text(svn_stream_t **contents_p,
                   apr_pool_t *pool);
 
 
-/** Check if the contents of two root/path combos have changed.
+/** Check if the contents of two root/path combos are different.
  *
  * Set @a *different_p to #TRUE if the file contents at @a path1 under
  * @a root1 differ from those at @a path2 under @a root2, or set it to
  * #FALSE if they are the same.  Both paths must exist under their
  * respective roots, and both roots must be in the same filesystem.
  * Do any necessary temporary allocation in @a scratch_pool.
+ *
+ * @note For the purposes of preserving accurate history, certain bits of
+ * code (such as the repository dump code) need to care about the distinction
+ * between situations when two files have "different" content and when the
+ * contents of a given file "have changed" across two points in its history.
+ * We have a pair of functions that can answer both of these questions,
+ * svn_fs_contents_different() and svn_fs_contents_changed().  See issue
+ * 4598 for more details.
+ *
+ * @see svn_fs_contents_changed
  *
  * @since New in 1.9.
  */
@@ -2428,9 +2626,7 @@ svn_fs_contents_different(svn_boolean_t *different_p,
                           const char *path2,
                           apr_pool_t *scratch_pool);
 
-/** Check if the contents of two root/path combos have changed.  In
- * contrast to #svn_fs_contents_different, we only perform a quick test
- * and allow for false positives.
+/** Check if the contents of two root/path combos have changed.
  *
  * Set @a *changed_p to #TRUE if the file contents at @a path1 under
  * @a root1 differ from those at @a path2 under @a root2, or set it to
@@ -2438,10 +2634,18 @@ svn_fs_contents_different(svn_boolean_t *different_p,
  * respective roots, and both roots must be in the same filesystem.
  * Do any necessary temporary allocation in @a pool.
  *
- * @note The behavior is implementation dependent in that the false
- * positives reported may differ from release to release and backend to
- * backend.  There is also no guarantee that there will be false positives
- * at all.
+ * @note svn_fs_contents_changed() was not designed to be used to detect
+ * when two files have different content, but really to detect when the
+ * contents of a given file have changed across two points in its history.
+ * For the purposes of preserving accurate history, certain bits of code
+ * (such as the repository dump code) need to care about this distinction.
+ * For example, it's not an error from the FS API point of view to call
+ * svn_fs_apply_textdelta() and explicitly set a file's contents to exactly
+ * what they were before the edit was made.  We have a pair of functions
+ * that can answer both of these questions, svn_fs_contents_changed() and
+ * svn_fs_contents_different().  See issue 4598 for more details.
+ *
+ * @see svn_fs_contents_different
  */
 svn_error_t *
 svn_fs_contents_changed(svn_boolean_t *changed_p,
@@ -2515,11 +2719,70 @@ svn_fs_deltify_revision(svn_fs_t *fs,
                         svn_revnum_t revision,
                         apr_pool_t *pool);
 
+/** Make sure that all completed revision property changes to the filesystem
+ * underlying @a fs are actually visible through @a fs.  Use @a scratch_pool
+ * for temporary allocations.
+ *
+ * This is an explicit synchronization barrier for revprop changes made
+ * through different #svn_fs_t for the same underlying filesystem. Any
+ * revprop change through @a fs acts as an implicit barrier, i.e. that
+ * object will see all completed revprop changes up to an including its own.
+ * Only #svn_fs_revision_prop2 and #svn_fs_revision_proplist2 have an option
+ * to not synchronize with on-disk data and potentially return outdated data
+ * as old as the last barrier.
+ *
+ * The intended use of this is implementing efficient queries in upper layers
+ * where the result only needs to include all changes up the the start of
+ * that query but does not need to pick up on changes while the query is
+ * running:
+ *
+ * @code
+     SVN_ERR(svn_fs_deltify_revision(fs, pool);
+     for (i = 0; i < n; i++)
+       SVN_ERR(svn_fs_revision_prop2(&authors[i], fs, revs[i], "svn:author",
+                                     FALSE, pool, pool)); @endcode
+ *
+ * @see svn_fs_revision_prop2, svn_fs_revision_proplist2
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_fs_refresh_revision_props(svn_fs_t *fs,
+                              apr_pool_t *scratch_pool);
 
 /** Set @a *value_p to the value of the property named @a propname on
  * revision @a rev in the filesystem @a fs.  If @a rev has no property by
- * that name, set @a *value_p to zero.  Allocate the result in @a pool.
+ * that name, set @a *value_p to zero.
+ *
+ * If @a refresh is set, this call acts as a read barrier and is guaranteed
+ * to return the latest value.  Otherwise, it may return data as old as the
+ * last synchronization point but can be much faster to access - in
+ * particular for packed repositories.
+ *
+ * Allocate the result in @a result_pool and use @a scratch_pool for
+ * temporary allocations.
+ *
+ * @see svn_fs_refresh_revision_props
+ *
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_fs_revision_prop2(svn_string_t **value_p,
+                      svn_fs_t *fs,
+                      svn_revnum_t rev,
+                      const char *propname,
+                      svn_boolean_t refresh,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+/** Like #svn_fs_revision_prop2 but using @a pool for @a scratch_pool as
+ * well as @a result_pool and setting @a refresh to #TRUE.
+ *
+ * @see svn_fs_refresh_revision_props
+ *
+ * @deprecated For backward compatibility with 1.9.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_revision_prop(svn_string_t **value_p,
                      svn_fs_t *fs,
@@ -2531,14 +2794,40 @@ svn_fs_revision_prop(svn_string_t **value_p,
 /** Set @a *table_p to the entire property list of revision @a rev in
  * filesystem @a fs, as an APR hash table allocated in @a pool.  The table
  * maps <tt>char *</tt> property names to #svn_string_t * values; the names
- * and values are allocated in @a pool.
+ * and values are allocated in @a result_pool.  Use @a scratch_pool for
+ * temporary allocations.
+ *
+ * If @a refresh is set, this call acts as a read barrier and is guaranteed
+ * to return the latest value.  Otherwise, it may return data as old as the
+ * last synchronization point but can be much faster to access - in
+ * particular for packed repositories.
+ *
+ * @see svn_fs_refresh_revision_props
+ *
+ * @since New in 1.10.
+ *
  */
+svn_error_t *
+svn_fs_revision_proplist2(apr_hash_t **table_p,
+                          svn_fs_t *fs,
+                          svn_revnum_t rev,
+                          svn_boolean_t refresh,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/** Like svn_fs_revision_proplist2 but using @a pool for @a scratch_pool as
+ * well as @a result_pool and setting @a refresh to #TRUE.
+ *
+ * @see svn_fs_refresh_revision_props
+ *
+ * @deprecated For backward compatibility with 1.9.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_revision_proplist(apr_hash_t **table_p,
                          svn_fs_t *fs,
                          svn_revnum_t rev,
                          apr_pool_t *pool);
-
 
 /** Change a revision's property's value, or add/delete a property.
  *

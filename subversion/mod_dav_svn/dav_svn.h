@@ -149,6 +149,9 @@ typedef struct dav_svn_repos {
   /* The path to the activities db */
   const char *activities_db;
 
+  /* Cached yongest revision of the repository. SVN_INVALID_REVNUM if
+     youngest revision is not fetched yet. */
+  svn_revnum_t youngest_rev;
 } dav_svn_repos;
 
 
@@ -296,6 +299,10 @@ struct dav_resource_private {
   /* was keyword substitution requested using our public CGI interface
      (ie: /path/to/item?kw=1)? */
   svn_boolean_t keyword_subst;
+
+  /* whether this resource parameters are fixed and won't change
+     between requests. */
+  svn_boolean_t idempotent;
 };
 
 
@@ -328,6 +335,10 @@ svn_boolean_t dav_svn__get_fulltext_cache_flag(request_rec *r);
 
 /* for the repository referred to by this request, is revprop caching active? */
 svn_boolean_t dav_svn__get_revprop_cache_flag(request_rec *r);
+
+/* for the repository referred to by this request, is node prop caching active? */
+svn_boolean_t
+dav_svn__get_nodeprop_cache_flag(request_rec *r);
 
 /* has block read mode been enabled for the repository referred to by this
  * request? */
@@ -458,7 +469,7 @@ const char *dav_svn__get_vtxn_root_stub(request_rec *r);
    NOTE:  This function will overwrite the svn:author property, if
    any, found in REVPROPS.  */
 dav_error *
-dav_svn__create_txn(const dav_svn_repos *repos,
+dav_svn__create_txn(dav_svn_repos *repos,
                     const char **ptxn_name,
                     apr_hash_t *revprops,
                     apr_pool_t *pool);
@@ -1050,6 +1061,19 @@ int dav_svn__error_response_tag(request_rec *r, dav_error *err);
  */
 int dav_svn__parse_request_skel(svn_skel_t **skel, request_rec *r,
                                 apr_pool_t *pool);
+
+/* Set *YOUNGEST_P to the number of the youngest revision in REPOS.
+ *
+ * Youngest revision will be cached in REPOS->YOUNGEST_REV to avoid
+ * fetching the youngest revision multiple times during proccessing
+ * the request.
+ *
+ * Uses SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+dav_svn__get_youngest_rev(svn_revnum_t *youngest_p,
+                          dav_svn_repos *repos,
+                          apr_pool_t *scratch_pool);
 
 /*** mirror.c ***/
 

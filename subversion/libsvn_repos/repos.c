@@ -848,11 +848,16 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### no path-based access control is done."                                  NL
 "### Uncomment the line below to use the default authorization file."        NL
 "# authz-db = " SVN_REPOS__CONF_AUTHZ                                        NL
-"### The groups-db option controls the location of the groups file."         NL
-"### Unless you specify a path starting with a /, the file's location is"    NL
-"### relative to the directory containing this file.  The specified path"    NL
-"### may be a repository relative URL (^/) or an absolute file:// URL to a"  NL
-"### text file in a Subversion repository."                                  NL
+"### The groups-db option controls the location of the file with the"        NL
+"### group definitions and allows maintaining groups separately from the"    NL
+"### authorization rules.  The groups-db file is of the same format as the"  NL
+"### authz-db file and should contain a single [groups] section with the"    NL
+"### group definitions.  If the option is enabled, the authz-db file cannot" NL
+"### contain a [groups] section.  Unless you specify a path starting with"   NL
+"### a /, the file's location is relative to the directory containing this"  NL
+"### file.  The specified path may be a repository relative URL (^/) or an"  NL
+"### absolute file:// URL to a text file in a Subversion repository."        NL
+"### This option is not being used by default."                              NL
 "# groups-db = " SVN_REPOS__CONF_GROUPS                                      NL
 "### This option specifies the authentication realm of the repository."      NL
 "### If two repositories have the same authentication realm, they should"    NL
@@ -1175,8 +1180,8 @@ svn_repos_create(svn_repos_t **repos_p,
   SVN_ERR(lock_repos(repos, FALSE, FALSE, scratch_pool));
 
   /* Create an environment for the filesystem. */
-  if ((err = svn_fs_create(&repos->fs, repos->db_path, fs_config,
-                           result_pool)))
+  if ((err = svn_fs_create2(&repos->fs, repos->db_path, fs_config,
+                            result_pool, scratch_pool)))
     {
       /* If there was an error making the filesytem, e.g. unknown/supported
        * filesystem type.  Clean up after ourselves.  Yes this is safe because

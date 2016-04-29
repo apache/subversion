@@ -371,6 +371,7 @@ INSTALL_EXTRA_SWIG_RB=\
 
 APXS = @APXS@
 HTTPD_VERSION = @HTTPD_VERSION@
+HTTPD_WHITELIST = @HTTPD_WHITELIST@
 
 PYTHON = @PYTHON@
 PERL = @PERL@
@@ -540,6 +541,9 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(HTTPD_VERSION)" != ""; then                             \
 	     flags="--httpd-version $(HTTPD_VERSION) $$flags";               \
 	  fi;                                                                \
+	  if test "$(HTTPD_WHITELIST)" != ""; then                           \
+	     flags="--httpd-whitelist $(HTTPD_WHITELIST) $$flags";           \
+	  fi;                                                                \
 	  if test "$(SERVER_MINOR_VERSION)" != ""; then                      \
 	    flags="--server-minor-version $(SERVER_MINOR_VERSION) $$flags";  \
 	  fi;                                                                \
@@ -554,6 +558,9 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  fi;                                                                \
 	  if test "$(PARALLEL)" != ""; then                                  \
 	    flags="--parallel $(PARALLEL) $$flags";                          \
+	  fi;                                                                \
+	  if test "$(GLOBAL_SCHEDULER)" != ""; then                          \
+	    flags="--global-scheduler $$flags";                              \
 	  fi;                                                                \
 	  if test "$(LOG_TO_STDOUT)" != ""; then                             \
 	    flags="--log-to-stdout $$flags";                                 \
@@ -656,6 +663,7 @@ check-clean: gcov-clean
 	rm -rf subversion/tests/libsvn_fs/test-repo-*          \
 	       subversion/tests/libsvn_fs_base/test-repo-*     \
 	       subversion/tests/libsvn_fs_fs/test-repo-*       \
+	       subversion/tests/libsvn_fs_x/test-repo-*        \
 	       subversion/tests/libsvn_ra_local/test-repo-*    \
 	       subversion/tests/libsvn_repos/test-repo-*       \
 	       subversion/tests/libsvn_subr/z                  \
@@ -921,13 +929,15 @@ swig-rb: autogen-swig-rb
 check-swig-rb: swig-rb svnserve
 	$(TEST_SHLIB_VAR_SWIG_RB) \
 	cd $(SWIG_RB_DIR); \
-          if [ "$(RUBY_MAJOR)" -eq 1 -a "$(RUBY_MINOR)" -lt 9 ] ; then \
-            $(RUBY) -I $(SWIG_RB_SRC_DIR) \
-              $(SWIG_RB_SRC_DIR)/test/run-test.rb \
-	      --verbose=$(SWIG_RB_TEST_VERBOSE); \
-          else \
-	    $(RUBY) -I $(SWIG_RB_SRC_DIR) \
-	      $(SWIG_RB_SRC_DIR)/test/run-test.rb; \
+	  check_rb() { \
+	    $(RUBY) -I $(SWIG_RB_SRC_DIR) $(SWIG_RB_SRC_DIR)/test/run-test.rb "$$@"; \
+	  }; \
+	  if check_rb --help 2>&1 | grep -q -- --collector; then \
+	    check_rb --collector=dir --verbose=$(SWIG_RB_TEST_VERBOSE); \
+	  elif [ "$(RUBY_MAJOR)" -eq 1 -a "$(RUBY_MINOR)" -lt 9 ] ; then \
+	    check_rb --verbose=$(SWIG_RB_TEST_VERBOSE); \
+	  else \
+	    check_rb; \
           fi
 
 EXTRACLEAN_SWIG_RB=rm -f $(SWIG_RB_SRC_DIR)/svn_*.c $(SWIG_RB_SRC_DIR)/core.c

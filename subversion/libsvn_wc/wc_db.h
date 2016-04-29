@@ -3438,7 +3438,7 @@ svn_wc__db_op_raise_moved_away(svn_wc__db_t *db,
                                apr_pool_t *scratch_pool);
 
 /* Breaks all moves of nodes that exist at or below LOCAL_ABSPATH as
-   shadowed (read: deleted) by the opration rooted at
+   shadowed (read: deleted) by the operation rooted at
    delete_op_root_abspath.
  */
 svn_error_t *

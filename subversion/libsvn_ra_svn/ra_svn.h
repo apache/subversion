@@ -96,6 +96,12 @@ struct svn_ra_svn_conn_st {
   apr_size_t error_check_interval;
   svn_boolean_t may_check_for_error;
 
+  /* I/O limits and tracking */
+  apr_uint64_t max_in;
+  apr_uint64_t current_in;
+  apr_uint64_t max_out;
+  apr_uint64_t current_out;
+
   /* repository info */
   const char *uuid;
   const char *repos_root;
@@ -151,6 +157,12 @@ void svn_ra_svn__set_block_handler(svn_ra_svn_conn_t *conn,
 svn_error_t *svn_ra_svn__data_available(svn_ra_svn_conn_t *conn,
                                        svn_boolean_t *data_available);
 
+/* Signal a new request / response pair on CONN.  That resets the I/O
+ * counters we use to limit the size of individual requests / response pairs.
+ */
+void
+svn_ra_svn__reset_command_io_counters(svn_ra_svn_conn_t *conn);
+
 /* CRAM-MD5 client implementation. */
 svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const char *user, const char *password,
@@ -163,11 +175,9 @@ svn_error_t *svn_ra_svn__locate_real_error_child(svn_error_t *err);
 
 /* Return an error chain based on @a params (which contains a
  * command response indicating failure).  The error chain will be
- * in the same order as the errors indicated in @a params.  Use
- * @a pool for temporary allocations. */
+ * in the same order as the errors indicated in @a params. */
 svn_error_t *
-svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params,
-                                  apr_pool_t *pool);
+svn_ra_svn__handle_failure_status(const svn_ra_svn__list_t *params);
 
 /* Returns a stream that reads/writes from/to SOCK. */
 svn_ra_svn__stream_t *svn_ra_svn__stream_from_sock(apr_socket_t *sock,

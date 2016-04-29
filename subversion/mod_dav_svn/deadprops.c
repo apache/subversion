@@ -110,7 +110,12 @@ get_value(dav_db *db, const dav_prop_name *name, svn_string_t **pvalue)
       return NULL;
     }
 
-  /* ### if db->props exists, then try in there first */
+  /* If db->props exists, then use it to obtain property value. */
+  if (db->props)
+    {
+      *pvalue = svn_hash_gets(db->props, propname);
+      return NULL;
+    }
 
   /* We've got three different types of properties (node, txn, and
      revision), and we've got two different protocol versions to deal
@@ -705,19 +710,14 @@ db_first_name(dav_db *db, dav_prop_name *pname)
         }
       else
         {
-          svn_node_kind_t kind;
           serr = svn_fs_node_proplist(&db->props,
                                       db->resource->info->root.root,
                                       get_repos_path(db->resource->info),
                                       db->p);
-          if (! serr)
-            serr = svn_fs_check_path(&kind, db->resource->info->root.root,
-                                     get_repos_path(db->resource->info),
-                                     db->p);
 
           if (! serr)
             {
-              if (kind == svn_node_dir)
+              if (db->resource->collection)
                 action = svn_log__get_dir(db->resource->info->repos_path,
                                           db->resource->info->root.rev,
                                           FALSE, TRUE, 0, db->resource->pool);

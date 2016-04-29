@@ -141,6 +141,13 @@ svn_diff_hunk__create_deletes_single_line(svn_diff_hunk_t **hunk,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool);
 
+/** Fetches the penalty fuzz of the diff hunk. The patch file parser applies
+ * an additional penalty on some cases of bad patch files. These cases may
+ * include errors as headers that aren't consistent with bodies, etc.
+ */
+svn_linenum_t
+svn_diff_hunk__get_fuzz_penalty(const svn_diff_hunk_t *hunk);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

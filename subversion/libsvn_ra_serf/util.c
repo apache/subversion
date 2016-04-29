@@ -480,6 +480,38 @@ load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
   return SVN_NO_ERROR;
 }
 
+#if SERF_VERSION_AT_LEAST(1, 4, 0) && defined(SVN__SERF_TEST_HTTP2)
+/* Implements serf_ssl_protocol_result_cb_t */
+static apr_status_t
+conn_negotiate_protocol(void *data,
+                        const char *protocol)
+{
+  svn_ra_serf__connection_t *conn = data;
+
+  if (!strcmp(protocol, "h2"))
+    {
+      serf_connection_set_framing_type(
+            conn->conn,
+            SERF_CONNECTION_FRAMING_TYPE_HTTP2);
+
+      /* Disable generating content-length headers. */
+      conn->session->http10 = FALSE;
+      conn->session->http20 = TRUE;
+      conn->session->using_chunked_requests = TRUE;
+      conn->session->detect_chunking = FALSE;
+    }
+  else
+    {
+      /* protocol should be "" or "http/1.1" */
+      serf_connection_set_framing_type(
+            conn->conn,
+            SERF_CONNECTION_FRAMING_TYPE_HTTP1);
+    }
+
+  return APR_SUCCESS;
+}
+#endif
+
 static svn_error_t *
 conn_setup(apr_socket_t *sock,
            serf_bucket_t **read_bkt,
@@ -525,6 +557,16 @@ conn_setup(apr_socket_t *sock,
               SVN_ERR(load_authorities(conn, conn->session->ssl_authorities,
                                        conn->session->pool));
             }
+#if SERF_VERSION_AT_LEAST(1, 4, 0) && defined(SVN__SERF_TEST_HTTP2)
+          if (APR_SUCCESS ==
+                serf_ssl_negotiate_protocol(conn->ssl_context, "h2,http/1.1",
+                                            conn_negotiate_protocol, conn))
+            {
+                serf_connection_set_framing_type(
+                            conn->conn,
+                            SERF_CONNECTION_FRAMING_TYPE_NONE);
+            }
+#endif
         }
 
       if (write_bkt)
@@ -959,7 +1001,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
    will cancel all outstanding requests and prepare the connection
    for re-use.
 */
-static void
+void
 svn_ra_serf__unschedule_handler(svn_ra_serf__handler_t *handler)
 {
   serf_connection_reset(handler->conn->conn);
@@ -1295,6 +1337,10 @@ handle_response(serf_request_t *request,
       /* HTTP/1.1? (or later)  */
       if (sl.version != SERF_HTTP_10)
         handler->session->http10 = FALSE;
+
+      if (sl.version >= SERF_HTTP_VERSION(2, 0)) {
+        handler->session->http20 = TRUE;
+      }
     }
 
   /* Keep reading from the network until we've read all the headers.  */

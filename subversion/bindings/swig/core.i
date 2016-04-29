@@ -838,6 +838,7 @@ core_set_current_pool (apr_pool_t *pool)
 %include svn_mergeinfo_h.swg
 %include svn_io_h.swg
 %include svn_checksum_h.swg
+%include svn_cache_config_h.swg
 
 
 

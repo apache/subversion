@@ -1,0 +1,78 @@
+A guide to sending security advisory e-mails
+============================================
+
+--------------------------------------------------------
+Step 1: Prepare the advisory texts, patches and metadata
+--------------------------------------------------------
+
+[details are covered elsewhere]
+
+----------------------------------
+Step 2: Prepare the website update
+----------------------------------
+
+  $ cd ${PMC_AREA_WC}/security
+  $ ${TRUNK_WC}/tools/dist/advisory.py generate \
+        --destination=${SITE_WC}/publish/security \
+        CVE-2015-5259 CVE-2015-5343 ...
+
+This will generate a plain-text version of the advisories, including
+patches etc., suitable for publishing on our web site. Once these
+are generated, make sure you add the links to the new files to:
+
+    ${SITE_WC}/publish/security/index.html
+
+
+-----------------------------------------------
+Step 3: Check the advisories and their metadata
+-----------------------------------------------
+
+  $ cd ${PMC_AREA_WC}/security
+  $ ${TRUNK_WC}/tools/dist/advisory.py test \
+        --username=someone \
+        --revision=22091347 \
+        --release-versions=1.8.15,1.9.3 \
+        --release-date=2015-12-15 \
+        CVE-2015-5259 CVE-2015-5343 ...
+
+Assuming all the required bits are in place, this will generate the
+complete text of a GPG-signed e-mail message, signed by and sent from
+someone@apache.org, for all the listed CVE numbers.
+
+Note the arguments:
+
+    --revision    is the revision on
+                  https://dist.apache.org/repos/dist/dev/subversion
+                  in which the tarballs are/will be available
+                  (see: notice-template.txt in ${PMC_AREA_WC}/security).
+
+    --release-versions   is a comma-separated list of version numbers
+                         in which fixes for the CVE numbers will be
+                         available.
+
+    --release-date       is the expected date of the release(s).
+
+
+----------------------
+Step 4: Send the mails
+----------------------
+
+  $ cd ${PMC_AREA_WC}/security
+  $ ${TRUNK_WC}/tools/dist/advisory.py send \
+        (the rest of the arguments are as in step 3).
+
+The mails will be sent one at a time to each recipient separately.
+
+
+--------------------------------------------------
+Step 5: Wait for the release. Release.
+        Commit the site update prepared in step 1.
+--------------------------------------------------
+
+
+
+TODO: security/mailer.py does not calculate the micalg= PGP/MIME
+      parameter based on the properties of the actual PGP key
+      used. It's currently hard-coded as "pgp-sha512" which *should*
+      be correct for anyone signing these mails with their ASF release
+      signing key.

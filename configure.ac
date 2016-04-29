@@ -136,9 +136,18 @@ if test "$svn_lib_apr_memcache" = "yes"; then
             [Defined if apr_memcache (standalone or in apr-util) is present])
 fi
 
+AC_ARG_ENABLE(apache-whitelist,
+  AS_HELP_STRING([--enable-apache-whitelist=VER],
+                 [Whitelist a particular Apache version number,
+                  typically used to enable the use of a old version
+                  patched by a distribution.]),
+                 [apache_whitelist_ver=$enableval],
+                 [apache_whitelist_ver=no])
+HTTPD_WHITELIST="$apache_whitelist_ver"
+AC_SUBST(HTTPD_WHITELIST)
 
 dnl Find Apache with a recent-enough magic module number
-SVN_FIND_APACHE(20051115)
+SVN_FIND_APACHE(20051115, $apache_whitelist_ver)
 
 dnl Search for SQLite.  If you change SQLITE_URL from a .zip to
 dnl something else also update build/ac-macros/sqlite.m4 to reflect
@@ -1049,12 +1058,13 @@ AS_HELP_STRING([--enable-maintainer-mode],
         SVN_CFLAGS_ADD_IFELSE([-Wno-system-headers])
         SVN_CFLAGS_ADD_IFELSE([-Wno-format-nonliteral])
         SVN_CFLAGS_ADD_IFELSE([-Wmissing-variable-declarations])
+        SVN_CFLAGS_ADD_IFELSE([-Wno-unused-const-variable])
 
         CMAINTAINERFLAGS="$CFLAGS"
         CFLAGS="$CFLAGS_KEEP"
 
         dnl Add flags that all versions of GCC (should) support
-        CMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wformat=2 -Wunused -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Winline -Wno-long-long -Wbad-function-cast $CMAINTAINERFLAGS"
+        CMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wformat=2 -Wunused -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Winline -Wno-long-long -Wbad-function-cast $CMAINTAINERFLAGS"
       fi
       if test "$GXX" = "yes"; then
         AC_MSG_NOTICE([maintainer-mode: adding G++ warning flags])
@@ -1371,20 +1381,20 @@ AS_HELP_STRING([--enable-runtime-module-search],
 ])
 
 if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
-  AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL, 1,
-      [Defined if libsvn_client should link against libsvn_ra_local])
+  AC_DEFINE(SVN_LIBSVN_RA_LINKS_RA_LOCAL, 1,
+      [Defined if libsvn_ra should link against libsvn_ra_local])
   svn_ra_lib_deps="\$(RA_LOCAL_DEPS)"
   svn_ra_lib_install_deps="install-ramod-lib"
   svn_ra_lib_link="\$(RA_LOCAL_LINK)"
 
-  AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_SVN, 1,
-      [Defined if libsvn_client should link against libsvn_ra_svn])
+  AC_DEFINE(SVN_LIBSVN_RA_LINKS_RA_SVN, 1,
+      [Defined if libsvn_ra should link against libsvn_ra_svn])
   svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_SVN_DEPS)"
   svn_ra_lib_link="$svn_ra_lib_link \$(RA_SVN_LINK)"
 
   if test "$svn_lib_serf" = "yes"; then
-    AC_DEFINE(SVN_LIBSVN_CLIENT_LINKS_RA_SERF, 1,
-          [Defined if libsvn_client should link against libsvn_ra_serf])
+    AC_DEFINE(SVN_LIBSVN_RA_LINKS_RA_SERF, 1,
+          [Defined if libsvn_ra should link against libsvn_ra_serf])
     svn_ra_lib_deps="$svn_ra_lib_deps \$(RA_SERF_DEPS)"
     svn_ra_lib_install_deps="$svn_ra_lib_install_deps install-serf-lib"
     svn_ra_lib_link="$svn_ra_lib_link \$(RA_SERF_LINK)"
@@ -1517,6 +1527,7 @@ fi
 # Need to strip '-no-cpp-precomp' from CPPFLAGS for SWIG as well.
 SWIG_CPPFLAGS="$CPPFLAGS"
 SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-no-cpp-precomp ])
+SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-Wdate-time ])
 AC_SUBST([SWIG_CPPFLAGS])
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'

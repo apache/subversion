@@ -200,7 +200,7 @@ class FSO(object):
     '''
     def __init__(self):
         self.wc_path = None
-        self.state = [ "-", "-" ] # '-': absent, 'F': file, 'D': dir
+        self.state = [ "-", "-" ] # '-': absent, 'F': file, 'D': dir, 'L': symlink
 
     def status(self):
         return "[%s%s]" % (self.state[S_WC], self.state[S_IM])
@@ -216,8 +216,8 @@ class FSOCollection(dict):
     Collection of FSOs
     '''
     def print(self):
-        print(" / Status in working copy (-:absent, F:file, D:dir)")
-        print(" |/ Status in imported sources (-:absent, F:file, D:dir)")
+        print(" / Status in working copy (-:absent, F:file, D:dir, L:link)")
+        print(" |/ Status in imported sources (-:absent, F:file, D:dir, L:link)")
         for k in sorted(self.keys(), key=filename_sort_key):
             e = self[k]
             print("%s %s%s" % (e.status(), shlex.quote(k),
@@ -310,7 +310,8 @@ class Config(dict):
     def print(self):
         for k in sorted(self):
             o = self[k]
-            print("# %s" % o.helpmsg)
+            for s in o.helpmsg.split('\n'):
+                print("# %s" % s)
             print("%-20s: %s" % (k, str(o)))
             print()
 
@@ -330,6 +331,11 @@ class SvnVndImport(cmd.Cmd):
         self.importdir = importdir
         self.svninfo = svninfo
         self.config = Config()
+        self.config.add_option('symlink-handling',
+                ConfigOpt("as-is", "How symbolic links are handled;\n" +
+                    "  'dereference' treats as normal files/dirs (and " +
+                    "ignores dangling links);\n" +
+                    "  'as-is' imports as symlinks"))
         self.config.add_option('save-diff-copied',
                 ConfigOpt(None, "Save 'svn diff' output on the " +
                     "moved/copied files and directories to this " +
@@ -359,12 +365,13 @@ class SvnVndImport(cmd.Cmd):
     def scan(self):
         self.items = FSOCollection()
         self.info(1, "Scanning working copy directory...")
-        self.get_lists(self.wcdir, S_WC)
+        self.get_lists(self.wcdir, S_WC, False)
         self.info(1, "Scanning imported directory...")
-        self.get_lists(self.importdir, S_IM)
+        self.get_lists(self.importdir, S_IM,
+                self.config.get('symlink-handling') == "dereference")
 
-    def get_lists(self, top, where):
-        for d, dn, fn in os.walk(top, followlinks=True):
+    def get_lists(self, top, where, deref):
+        for d, dn, fn in os.walk(top, followlinks=deref):
             dr = os.path.relpath(d, top)
             # If under .svn directory at the top (SVN 1.7+) or has .svn
             # in the path (older SVN), ignore
@@ -374,9 +381,36 @@ class SvnVndImport(cmd.Cmd):
                 continue
             if dr != '.':
                 self.items.add(dr, where, "D")
-            for f in fn:
+            dnn = [] # List where we'll descend
+            for f in fn + dn:
                 fr = os.path.normpath(os.path.join(dr, f))
-                self.items.add(fr, where, "F")
+                frp = os.path.join(d, f)
+                if os.path.islink(frp):
+                    if deref:
+                        # Dereferencing:
+                        # - check for dangling/absolute/out-of-tree symlinks and abort
+                        rl = os.readlink(frp)
+                        if not os.path.exists(frp):
+                            self.info(1, "WARN: Ignoring dangling symlink %s -> %s" % (fr, rl))
+                            continue
+                        if os.path.isabs(rl):
+                            self.info(1, "WARN: Ignoring absolute symlink %s -> %s" % (fr, rl))
+                            continue
+                        tgt = os.path.normpath(os.path.join(dr, rl))
+                        if tgt == ".." or tgt.startswith(".." + os.sep):
+                            self.info(1, "WARN: Ignoring out-of-wc symlink %s -> %s" % (fr, rl))
+                            continue
+                    else:
+                        # Importing symlinks as-is, no need to check.
+                        self.items.add(fr, where, "L")
+                        continue
+                # If we get here, treat symlinks to files as regular files, and add directories
+                # to the list of traversed subdirs
+                if os.path.isfile(frp):
+                    self.items.add(fr, where, "F")
+                if os.path.isdir(frp):
+                    dnn.append(f)
+            dn[:] = dnn
 
     def onecmd(self, str):
         'Override for checking number of arguments'
@@ -403,6 +437,10 @@ class SvnVndImport(cmd.Cmd):
         pos = 0
         atatime = 100
         output = ""
+        # svn treats '@' specially (peg revision); if there's such character in a
+        # file name - append an empty peg revision
+        args_fixed = list(map(lambda x: x + "@" if x.find("@") != -1 else x, args_fixed))
+        args_split = list(map(lambda x: x + "@" if x.find("@") != -1 else x, args_split))
         while pos < len(args_split) or (pos == 0 and len(args_split) == 0):
             svnargs = ['svn'] + args_fixed + args_split[pos : pos + atatime]
             pos += atatime
@@ -557,6 +595,10 @@ class SvnVndImport(cmd.Cmd):
             return
         if xsrc.state[S_WC] != xdst.state[S_IM]:
             # Different kinds - definitely not the same object
+            return 0
+        if xsrc.state[S_WC] == "L" or xdst.state[S_IM] == "L":
+            # Symlinks are not considered the same object (same target in
+            # different dirs refers to different objects).
             return 0
         if xsrc.state[S_WC] == "D":
             return self.similarity_dir(src, dst, threshold, lst_removal)
@@ -734,8 +776,10 @@ class SvnVndImport(cmd.Cmd):
                  edit and load.
         '''
         self.parse_args(arg, 0, "detect")
+        # Configurable for file/dirs; symlinks are never similar.
         self.detect({ "D": self.config.get('dir-similarity'),
-            "F": self.config.get('file-similarity')})
+            "F": self.config.get('file-similarity'),
+            "L": 1001 })
 
     def do_apply(self, arg):
         '''
@@ -782,10 +826,44 @@ class SvnVndImport(cmd.Cmd):
                             os.path.join(self.wcdir, i))
                     files_added.append(i)
                     flg = "(added file)"
+                elif nk_im == "L":
+                    tim = os.readlink(os.path.join(self.importdir, i))
+                    os.symlink(tim, os.path.join(self.wcdir, i))
+                    files_added.append(i)
+                    flg = "(added symlink)"
                 else:
                     # Not in imported sources, not in WC (moved
                     # away/removed) - nothing to do
                     pass
+            elif nk_wc == "L":
+                # Symbolic link in a working copy
+                if nk_im == "L":
+                    # Symbolic link in both. If the same target, do nothing. Otherwise,
+                    # replace.
+                    twc = os.readlink(os.path.join(self.wcdir, i))
+                    tim = os.readlink(os.path.join(self.importdir, i))
+                    if tim != twc:
+                        self.run_svn(["rm", "--force", i])
+                        os.symlink(tim, os.path.join(self.wcdir, i))
+                        files_added.append(i)
+                        flg = "(replaced symlink)"
+                elif nk_im == "D":
+                    # Was a symlink, now a directory. Replace.
+                    self.run_svn(["rm", "--force", i])
+                    os.mkdir(os.path.join(self.wcdir, i))
+                    dirs_added.append(i)
+                    flg = "(replaced symlink with dir)"
+                elif nk_im == "F":
+                    # Symlink replaced with file.
+                    self.run_svn(["rm", "--force", i])
+                    shutil.copyfile(os.path.join(self.importdir, i),
+                            os.path.join(self.wcdir, i))
+                    files_added.append(i)
+                    flg = "(replaced symlink with file)"
+                else:
+                    # Was a symlink, removed
+                    files_removed.append(i)
+                    flg = "(removed symlink)"
             elif nk_wc == "F":
                 # File in a working copy
                 if nk_im == "D":
@@ -799,6 +877,13 @@ class SvnVndImport(cmd.Cmd):
                     shutil.copyfile(os.path.join(self.importdir, i),
                             os.path.join(self.wcdir, i))
                     flg = "(copied)"
+                elif nk_im == "L":
+                    # Was a file, now a symlink. Replace.
+                    self.run_svn(["rm", "--force", i])
+                    tim = os.readlink(os.path.join(self.importdir, i))
+                    os.symlink(tim, os.path.join(self.wcdir, i))
+                    files_added.append(i)
+                    flg = "(replaced file with symlink)"
                 else:
                     # Was a file, removed
                     files_removed.append(i)
@@ -817,6 +902,13 @@ class SvnVndImport(cmd.Cmd):
                             os.path.join(self.wcdir, i))
                     files_added.append(i)
                     flg = "(replaced dir with file)"
+                elif nk_im == "L":
+                    # Was a directory, now a symlink. Replace.
+                    self.run_svn(["rm", "--force", i])
+                    tim = os.readlink(os.path.join(self.importdir, i))
+                    os.symlink(tim, os.path.join(self.wcdir, i))
+                    files_added.append(i)
+                    flg = "(replaced dir with symlink)"
                 else:
                     # Directory removed
                     dirs_removed.append(i)

@@ -252,8 +252,10 @@ switch_dir_external(const char *local_abspath,
                 svn_error_clear(err);
                 err = NULL;
               }
+            else if (err)
+              return svn_error_trace(err);
 
-            return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, err,
+            return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
                                      _("The external '%s' defined in %s at '%s' "
                                        "cannot be checked out because '%s' is "
                                        "already a versioned path."),
@@ -532,7 +534,7 @@ switch_file_external(const char *local_abspath,
 
       SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
 
-      if (kind == svn_node_file || kind == svn_node_dir)
+      if (disk_kind == svn_node_file || disk_kind == svn_node_dir)
         return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
                                  _("The file external '%s' can not be "
                                    "created because the node exists."),

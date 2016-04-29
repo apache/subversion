@@ -22,8 +22,11 @@
 
 #include <assert.h>
 #include <apr_time.h>
-#include "private/svn_atomic.h"
 
+#include "svn_pools.h"
+
+#include "private/svn_atomic.h"
+#include "private/svn_mutex.h"
 
 /* Magic values for atomic initialization */
 #define SVN_ATOMIC_UNINITIALIZED 0
@@ -173,4 +176,43 @@ svn_atomic__init_once_no_error(volatile svn_atomic_t *global_status,
     return "Couldn't perform atomic initialization";
   else
     return init_baton.errstr;
+}
+
+/* The process-global counter that we use to produce process-wide unique
+ * values.  Since APR has no 64 bit atomics, all access to this will be
+ * serialized through COUNTER_MUTEX. */
+static apr_uint64_t uniqiue_counter = 0;
+
+/* The corresponding mutex and initialization state. */
+static volatile svn_atomic_t counter_status = SVN_ATOMIC_UNINITIALIZED;
+static svn_mutex__t *counter_mutex = NULL;
+
+/* svn_atomic__err_init_func_t implementation that initializes COUNTER_MUTEX.
+ * Note that neither argument will be used and should be NULL. */
+static svn_error_t *
+init_unique_counter(void *null_baton,
+                    apr_pool_t *null_pool)
+{
+  /* COUNTER_MUTEX is global, so it needs to live in a global pool.
+   * APR also makes those thread-safe by default. */
+  SVN_ERR(svn_mutex__init(&counter_mutex, TRUE, svn_pool_create(NULL)));
+  return SVN_NO_ERROR;
+}
+
+/* Read and increment UNIQIUE_COUNTER. Return the new value in *VALUE.
+ * Call this function only while having acquired the COUNTER_MUTEX. */
+static svn_error_t *
+read_unique_counter(apr_uint64_t *value)
+{
+  *value = ++uniqiue_counter;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_atomic__unique_counter(apr_uint64_t *value)
+{
+  SVN_ERR(svn_atomic__init_once(&counter_status, init_unique_counter, NULL,
+                                NULL));
+  SVN_MUTEX__WITH_LOCK(counter_mutex, read_unique_counter(value));
+  return SVN_NO_ERROR;
 }

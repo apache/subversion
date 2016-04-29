@@ -46,7 +46,7 @@ svn_boolean_t svn_ra_svn__find_mech(const svn_ra_svn__list_t *mechlist,
   for (i = 0; i < mechlist->nelts; i++)
     {
       elt = &SVN_RA_SVN__LIST_ITEM(mechlist, i);
-      if (elt->kind == SVN_RA_SVN_WORD && strcmp(elt->u.word, mech) == 0)
+      if (elt->kind == SVN_RA_SVN_WORD && strcmp(elt->u.word.data, mech) == 0)
         return TRUE;
     }
   return FALSE;

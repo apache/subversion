@@ -603,6 +603,7 @@ get_dir_test(const svn_test_opts_t *opts,
 {
   svn_ra_session_t *session;
   apr_hash_t *dirents;
+  svn_dirent_t *ent;
 
   SVN_ERR(make_and_open_repos(&session, "test-get-dir", opts, pool));
   SVN_ERR(commit_tree(session, pool));
@@ -612,6 +613,19 @@ get_dir_test(const svn_test_opts_t *opts,
                                         "non/existing/relpath", 1,
                                         SVN_DIRENT_KIND, pool),
                         SVN_ERR_FS_NOT_FOUND);
+
+  /* Test fetching SVN_DIRENT_SIZE without SVN_DIRENT_KIND. */
+  SVN_ERR(svn_ra_get_dir2(session, &dirents, NULL, NULL, "", 1,
+                          SVN_DIRENT_SIZE, pool));
+  SVN_TEST_INT_ASSERT(apr_hash_count(dirents), 1);
+  ent = svn_hash_gets(dirents, "A");
+  SVN_TEST_ASSERT(ent);
+
+#if 0
+  /* ra_serf has returns SVN_INVALID_SIZE instead of documented zero for
+   * for directories. */
+  SVN_TEST_INT_ASSERT(ent->size, 0);
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -1572,7 +1586,103 @@ tunnel_run_checkout(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-
+/* Implements svn_log_entry_receiver_t for commit_empty_last_change */
+static svn_error_t *
+AA_receiver(void *baton,
+            svn_log_entry_t *log_entry,
+            apr_pool_t *pool)
+{
+  svn_log_changed_path2_t *p;
+  apr_hash_index_t *hi;
+
+  SVN_TEST_ASSERT(log_entry->changed_paths2 != NULL);
+  SVN_TEST_ASSERT(apr_hash_count(log_entry->changed_paths2) == 1);
+
+  hi = apr_hash_first(pool, log_entry->changed_paths2);
+
+  SVN_TEST_STRING_ASSERT(apr_hash_this_key(hi), "/AA");
+  p = apr_hash_this_val(hi);
+  SVN_TEST_STRING_ASSERT(p->copyfrom_path, "/A");
+  SVN_TEST_INT_ASSERT(p->copyfrom_rev, 3);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+commit_empty_last_change(const svn_test_opts_t *opts,
+                         apr_pool_t *pool)
+{
+  svn_ra_session_t *session;
+  apr_hash_t *revprop_table = apr_hash_make(pool);
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  const char *repos_root_url;
+  void *root_baton, *aa_baton;
+  apr_pool_t *tmp_pool = svn_pool_create(pool);
+  svn_dirent_t *dirent;
+  int i;
+
+  SVN_ERR(make_and_open_repos(&session,
+                              "commit_empty_last_change", opts,
+                              pool));
+
+  SVN_ERR(commit_changes(session, tmp_pool));
+
+  SVN_ERR(svn_ra_get_repos_root2(session, &repos_root_url, pool));
+  for (i = 0; i < 2; i++)
+    {
+      svn_pool_clear(tmp_pool);
+
+      SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                        revprop_table,
+                                        NULL, NULL, NULL, TRUE, tmp_pool));
+      
+      SVN_ERR(editor->open_root(edit_baton, 1, tmp_pool, &root_baton));
+      SVN_ERR(editor->close_directory(root_baton, tmp_pool));
+      SVN_ERR(editor->close_edit(edit_baton, tmp_pool));
+      
+      SVN_ERR(svn_ra_stat(session, "", 2+i, &dirent, tmp_pool));
+      
+      SVN_TEST_ASSERT(dirent != NULL);
+      SVN_TEST_STRING_ASSERT(dirent->last_author, "jrandom");
+      
+      /* BDB used to only updates last_changed on the repos_root when there
+         was an actual change. Now all filesystems behave in the same way */
+      SVN_TEST_INT_ASSERT(dirent->created_rev, 2+i);
+    }
+
+  svn_pool_clear(tmp_pool);
+
+  SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                    revprop_table,
+                                    NULL, NULL, NULL, TRUE, tmp_pool));
+
+  SVN_ERR(editor->open_root(edit_baton, 1, tmp_pool, &root_baton));
+  SVN_ERR(editor->add_directory("AA", root_baton,
+                                svn_path_url_add_component2(repos_root_url,
+                                                            "A", tmp_pool),
+                                3, tmp_pool,
+                                &aa_baton));
+  SVN_ERR(editor->close_directory(aa_baton, tmp_pool));
+  SVN_ERR(editor->close_directory(root_baton, tmp_pool));
+  SVN_ERR(editor->close_edit(edit_baton, tmp_pool));
+
+  svn_pool_clear(tmp_pool);
+
+  {
+    apr_array_header_t *paths = apr_array_make(tmp_pool, 1, sizeof(const char*));
+    APR_ARRAY_PUSH(paths, const char *) = "AA";
+
+    SVN_ERR(svn_ra_get_log2(session, paths, 4, 4, 1, TRUE, FALSE, FALSE, NULL,
+                            AA_receiver, NULL, tmp_pool));
+  }
+
+  svn_pool_destroy(tmp_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* The test table.  */
 
 static int max_threads = 4;
@@ -1604,6 +1714,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "check list has_props performance"),
     SVN_TEST_OPTS_PASS(tunnel_run_checkout,
                        "verify checkout over a tunnel"),
+    SVN_TEST_OPTS_PASS(commit_empty_last_change,
+                       "check how last change applies to empty commit"),
     SVN_TEST_NULL
   };
 

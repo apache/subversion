@@ -89,6 +89,10 @@ struct svn_diff_hunk_t {
   /* Did we see a 'file does not end with eol' marker in this hunk? */
   svn_boolean_t original_no_final_eol;
   svn_boolean_t modified_no_final_eol;
+
+  /* Fuzz penalty, triggered by bad patch targets */
+  svn_linenum_t original_fuzz;
+  svn_linenum_t modified_fuzz;
 };
 
 struct svn_diff_binary_patch_t {
@@ -122,7 +126,7 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_diff_hunk_t *hunk = apr_palloc(result_pool, sizeof(*hunk));
+  svn_diff_hunk_t *hunk = apr_pcalloc(result_pool, sizeof(*hunk));
   static const char *hunk_header[] = { "@@ -1 +0,0 @@\n", "@@ -0,0 +1 @@\n" };
   const apr_size_t header_len = strlen(hunk_header[add]);
   const apr_size_t len = strlen(line);
@@ -285,6 +289,12 @@ svn_diff_hunk_get_trailing_context(const svn_diff_hunk_t *hunk)
   return hunk->trailing_context;
 }
 
+svn_linenum_t
+svn_diff_hunk__get_fuzz_penalty(const svn_diff_hunk_t *hunk)
+{
+  return hunk->patch->reverse ? hunk->original_fuzz : hunk->modified_fuzz;
+}
+
 /* Baton for the base85 stream implementation */
 struct base85_baton_t
 {
@@ -345,9 +355,8 @@ read_handler_base85(void *baton, char *buffer, apr_size_t *len)
         b85b->next_pos = b85b->end_pos;
       else
         {
-          b85b->next_pos = 0;
-          SVN_ERR(svn_io_file_seek(b85b->file, APR_CUR, &b85b->next_pos,
-                                   iterpool));
+          SVN_ERR(svn_io_file_get_offset(&b85b->next_pos, b85b->file,
+                                         iterpool));
         }
 
       if (line->len && line->data[0] >= 'A' && line->data[0] <= 'Z')
@@ -669,8 +678,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
       return SVN_NO_ERROR;
     }
 
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, &pos,  scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&pos, file, scratch_pool));
   SVN_ERR(svn_io_file_seek(file, APR_SET, &range->current, scratch_pool));
 
   /* It's not ITERPOOL because we use data allocated in LAST_POOL out
@@ -683,8 +691,7 @@ hunk_readline_original_or_modified(apr_file_t *file,
       max_len = range->end - range->current;
       SVN_ERR(svn_io_file_readline(file, &str, eol, eof, max_len,
                                    last_pool, last_pool));
-      range->current = 0;
-      SVN_ERR(svn_io_file_seek(file, APR_CUR, &range->current, last_pool));
+      SVN_ERR(svn_io_file_get_offset(&range->current, file, last_pool));
       filtered = (str->data[0] == verboten || str->data[0] == '\\');
     }
   while (filtered && ! *eof);
@@ -803,17 +810,15 @@ svn_diff_hunk_readline_diff_text(svn_diff_hunk_t *hunk,
       return SVN_NO_ERROR;
     }
 
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_CUR, &pos, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&pos, hunk->apr_file, scratch_pool));
   SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_SET,
                            &hunk->diff_text_range.current, scratch_pool));
   max_len = hunk->diff_text_range.end - hunk->diff_text_range.current;
   SVN_ERR(svn_io_file_readline(hunk->apr_file, &line, eol, eof, max_len,
                                result_pool,
                    scratch_pool));
-  hunk->diff_text_range.current = 0;
-  SVN_ERR(svn_io_file_seek(hunk->apr_file, APR_CUR,
-                           &hunk->diff_text_range.current, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&hunk->diff_text_range.current,
+                                 hunk->apr_file, scratch_pool));
 
   if (*eof && !*eol && *line->data)
     {
@@ -1088,9 +1093,8 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
   modified_end = 0;
   *hunk = apr_pcalloc(result_pool, sizeof(**hunk));
 
-  /* Get current seek position -- APR has no ftell() :( */
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, scratch_pool));
+  /* Get current seek position. */
+  SVN_ERR(svn_io_file_get_offset(&pos, apr_file, scratch_pool));
 
   /* Start out assuming noise. */
   last_line_type = noise_line;
@@ -1107,8 +1111,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                                    iterpool, iterpool));
 
       /* Update line offset for next iteration. */
-      pos = 0;
-      SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, iterpool));
+      SVN_ERR(svn_io_file_get_offset(&pos, apr_file, iterpool));
 
       /* Lines starting with a backslash indicate a missing EOL:
        * "\ No newline at end of file" or "end of property". */
@@ -1149,12 +1152,12 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                 }
 
               SVN_ERR(svn_io_file_seek(apr_file, APR_SET, &pos, iterpool));
+              /* Set for the type and context by using != the other type */
+              if (last_line_type != modified_line)
+                original_no_final_eol = TRUE;
+              if (last_line_type != original_line)
+                modified_no_final_eol = TRUE;
             }
-          /* Set for the type and context by using != the other type */
-          if (last_line_type != modified_line)
-            original_no_final_eol = TRUE;
-          if (last_line_type != original_line)
-            modified_no_final_eol = TRUE;
 
           continue;
         }
@@ -1167,7 +1170,13 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
           SVN_ERR(parse_mergeinfo(&found_mergeinfo, line, *hunk, patch,
                                   result_pool, iterpool));
           if (found_mergeinfo)
-            continue; /* Proceed to the next line in the patch. */
+            continue; /* Proceed to the next line in the svn:mergeinfo hunk. */
+          else
+            {
+              /* Perhaps we can also use original_lines/modified_lines here */
+
+              in_hunk = FALSE; /* On to next property */
+            }
         }
 
       if (in_hunk)
@@ -1184,24 +1193,38 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
 
           c = line->data[0];
-          if (original_lines > 0 && modified_lines > 0 &&
-              ((c == ' ')
+          if (c == ' '
+              || ((original_lines > 0 && modified_lines > 0)
+                  && ( 
                /* Tolerate chopped leading spaces on empty lines. */
-               || (! eof && line->len == 0)
+                      (! eof && line->len == 0)
                /* Maybe tolerate chopped leading spaces on non-empty lines. */
-               || (ignore_whitespace && c != del && c != add)))
+                      || (ignore_whitespace && c != del && c != add))))
             {
               /* It's a "context" line in the hunk. */
               hunk_seen = TRUE;
-              original_lines--;
-              modified_lines--;
+              if (original_lines > 0)
+                original_lines--;
+              else
+                {
+                  (*hunk)->original_length++;
+                  (*hunk)->original_fuzz++;
+                }
+              if (modified_lines > 0)
+                modified_lines--;
+              else
+                {
+                  (*hunk)->modified_length++;
+                  (*hunk)->modified_fuzz++;
+                }
               if (changed_line_seen)
                 trailing_context++;
               else
                 leading_context++;
               last_line_type = context_line;
             }
-          else if (original_lines > 0 && c == del)
+          else if (c == del
+                   && (original_lines > 0 || line->data[1] != del))
             {
               /* It's a "deleted" line in the hunk. */
               hunk_seen = TRUE;
@@ -1212,10 +1235,17 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
               if (trailing_context > 0)
                 trailing_context = 0;
 
-              original_lines--;
+              if (original_lines > 0)
+                original_lines--;
+              else
+                {
+                  (*hunk)->original_length++;
+                  (*hunk)->original_fuzz++;
+                }
               last_line_type = original_line;
             }
-          else if (modified_lines > 0 && c == add)
+          else if (c == add
+                   && (modified_lines > 0 || line->data[1] != add))
             {
               /* It's an "added" line in the hunk. */
               hunk_seen = TRUE;
@@ -1226,7 +1256,13 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
               if (trailing_context > 0)
                 trailing_context = 0;
 
-              modified_lines--;
+              if (modified_lines > 0)
+                modified_lines--;
+              else
+                {
+                  (*hunk)->modified_length++;
+                  (*hunk)->modified_fuzz++;
+                }
               last_line_type = modified_line;
             }
           else
@@ -1242,7 +1278,6 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                    * after the hunk text. */
                   end = last_line;
                 }
-
               if (original_end == 0)
                 original_end = end;
               if (modified_end == 0)
@@ -1319,6 +1354,21 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
 
   if (hunk_seen && start < end)
     {
+      /* Did we get the number of context lines announced in the header?
+
+         If not... let's limit the number from the header to what we
+         actually have, and apply a fuzz penalty */
+      if (original_lines)
+        {
+          (*hunk)->original_length -= original_lines;
+          (*hunk)->original_fuzz += original_lines;
+        }
+      if (modified_lines)
+        {
+          (*hunk)->modified_length -= modified_lines;
+          (*hunk)->modified_fuzz += modified_lines;
+        }
+
       (*hunk)->patch = patch;
       (*hunk)->apr_file = apr_file;
       (*hunk)->leading_context = leading_context;
@@ -1699,6 +1749,39 @@ git_new_mode(enum parse_state *new_state, char *line, svn_patch_t *patch,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+git_index(enum parse_state *new_state, char *line, svn_patch_t *patch,
+          apr_pool_t *result_pool, apr_pool_t *scratch_pool)
+{
+  /* We either have something like "index 33e5b38..0000000" (which we just
+     ignore as we are not interested in git specific shas) or something like
+     "index 33e5b38..0000000 120000" which tells us the mode, that isn't
+     changed by applying this patch.
+
+     If the mode would have changed then we would see 'old mode' and 'new mode'
+     lines.
+  */
+  line = strchr(line + STRLEN_LITERAL("index "), ' ');
+
+  if (line && patch->new_executable_bit == svn_tristate_unknown
+           && patch->new_symlink_bit == svn_tristate_unknown
+           && patch->operation != svn_diff_op_added
+           && patch->operation != svn_diff_op_deleted)
+    {
+      SVN_ERR(parse_git_mode_bits(&patch->new_executable_bit,
+                                  &patch->new_symlink_bit,
+                                  line + 1));
+
+      /* There is no change.. so set the old values to the new values */
+      patch->old_executable_bit = patch->new_executable_bit;
+      patch->old_symlink_bit = patch->new_symlink_bit;
+    }
+
+  /* This function doesn't change the state! */
+  /* *new_state = *new_state */
+  return SVN_NO_ERROR;
+}
+
 /* Parse the 'rename from ' line of a git extended unidiff. */
 static svn_error_t *
 git_move_from(enum parse_state *new_state, char *line, svn_patch_t *patch,
@@ -1927,8 +2010,7 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
 
   patch->prop_patches = apr_hash_make(result_pool);
 
-  pos = 0;
-  SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&pos, apr_file, scratch_pool));
 
   while (!eof)
     {
@@ -1937,8 +2019,7 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
                                iterpool, iterpool));
 
       /* Update line offset for next iteration. */
-      pos = 0;
-      SVN_ERR(svn_io_file_seek(apr_file, APR_CUR, &pos, iterpool));
+      SVN_ERR(svn_io_file_get_offset(&pos, apr_file, iterpool));
 
       if (in_blob)
         {
@@ -2062,6 +2143,10 @@ static struct transition transitions[] =
 
   {"deleted file ",     state_git_diff_seen,    git_deleted_file},
 
+  {"index ",            state_git_diff_seen,    git_index},
+  {"index ",            state_git_tree_seen,    git_index},
+  {"index ",            state_git_mode_seen,    git_index},
+
   {"GIT binary patch",  state_git_diff_seen,    binary_patch_start},
   {"GIT binary patch",  state_git_tree_seen,    binary_patch_start},
   {"GIT binary patch",  state_git_mode_seen,    binary_patch_start},
@@ -2115,9 +2200,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
       if (! eof)
         {
           /* Update line offset for next iteration. */
-          pos = 0;
-          SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_CUR, &pos,
-                                   iterpool));
+          SVN_ERR(svn_io_file_get_offset(&pos, patch_file->apr_file,
+                                         iterpool));
         }
 
       /* Run the state machine. */
@@ -2144,17 +2228,13 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
                && line_after_tree_header_read
                && !valid_header_line)
         {
-          /* git patches can contain an index line after the file mode line */
-          if (!starts_with(line->data, "index "))
-          {
-            /* We have a valid diff header for a patch with only tree changes.
-             * Rewind to the start of the line just read, so subsequent calls
-             * to this function don't end up skipping the line -- it may
-             * contain a patch. */
-            SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &last_line,
-                    scratch_pool));
-            break;
-          }
+          /* We have a valid diff header for a patch with only tree changes.
+           * Rewind to the start of the line just read, so subsequent calls
+           * to this function don't end up skipping the line -- it may
+           * contain a patch. */
+          SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_SET, &last_line,
+                                   scratch_pool));
+          break;
         }
       else if (state == state_git_tree_seen
                || state == state_git_mode_seen)
@@ -2162,8 +2242,7 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
           line_after_tree_header_read = TRUE;
         }
       else if (! valid_header_line && state != state_start
-               && state != state_git_diff_seen
-               && !starts_with(line->data, "index "))
+               && state != state_git_diff_seen)
         {
           /* We've encountered an invalid diff header.
            *
@@ -2196,11 +2275,14 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
             patch->operation = svn_diff_op_added;
             break;
 
-          /* ### case svn_diff_op_copied:
-             ### case svn_diff_op_moved:*/
-
           case svn_diff_op_modified:
-            break; /* Stays modify */
+            break; /* Stays modified. */
+
+          case svn_diff_op_copied:
+          case svn_diff_op_moved:
+            break; /* Stays copied or moved, just in the other direction. */
+          case svn_diff_op_unchanged:
+            break; /* Stays unchanged, of course. */
         }
 
       ts_tmp = patch->old_executable_bit;
@@ -2232,9 +2314,8 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
 
   svn_pool_destroy(iterpool);
 
-  patch_file->next_patch_offset = 0;
-  SVN_ERR(svn_io_file_seek(patch_file->apr_file, APR_CUR,
-                           &patch_file->next_patch_offset, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&patch_file->next_patch_offset,
+                                 patch_file->apr_file, scratch_pool));
 
   if (patch && patch->hunks)
     {

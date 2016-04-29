@@ -1,4 +1,6 @@
 /*
+ * util.c: Utility functions for 'svnmover'
+ *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -19,36 +21,39 @@
  * ====================================================================
  */
 
-
-#ifndef SVN_DEBUG_EDITOR_H
-#define SVN_DEBUG_EDITOR_H
+#include "svnmover.h"
 
-#include "svn_delta.h"
+#ifdef HAVE_LINENOISE
+#include "linenoise/linenoise.c"
+#else
+#include "svn_cmdline.h"
+#endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
 
-/* Return a debug editor that wraps @a wrapped_editor.
- *
- * The debug editor simply prints an indication of what callbacks are being
- * called to @c stdout, and is only intended for use in debugging subversion
- * editors.
- *
- * @a prefix, if non-null, is printed between "DBG: " and each indication.
- *
- * Note: Our test suite generally ignores stdout lines starting with "DBG:".
- */
 svn_error_t *
-svn_delta__get_debug_editor(const svn_delta_editor_t **editor,
-                            void **edit_baton,
-                            const svn_delta_editor_t *wrapped_editor,
-                            void *wrapped_baton,
-                            const char *prefix,
-                            apr_pool_t *pool);
+svnmover_prompt_user(const char **result,
+                     const char *prompt_str,
+                     apr_pool_t *pool)
+{
+#ifdef HAVE_LINENOISE
+  char *input;
 
-#ifdef __cplusplus
+  input = linenoise(prompt_str);
+  if (! input)
+    {
+      return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+    }
+  /* add the line to the recallable history (if non-empty) */
+  if (input && *input)
+    {
+      linenoiseHistoryAdd(input);
+    }
+  *result = apr_pstrdup(pool, input);
+  free(input);
+#else
+  SVN_ERR(svn_cmdline_prompt_user2(result, prompt_str, NULL, pool));
+#endif
+  return SVN_NO_ERROR;
 }
-#endif /* __cplusplus */
 
-#endif /* SVN_DEBUG_EDITOR_H */
+

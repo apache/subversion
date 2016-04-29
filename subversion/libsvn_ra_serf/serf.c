@@ -530,6 +530,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   /* We have to assume that the server only supports HTTP/1.0. Once it's clear
      HTTP/1.1 is supported, we can upgrade. */
   serf_sess->http10 = TRUE;
+  serf_sess->http20 = FALSE;
 
   /* If we switch to HTTP/1.1, then we will use chunked requests. We may disable
      this, if we find an intervening proxy does not support chunked requests.  */
@@ -636,6 +637,7 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
   /* using_ssl */
   /* using_compression */
   /* http10 */
+  /* http20 */
   /* using_chunked_requests */
   /* detect_chunking */
 
@@ -1048,8 +1050,11 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__has_capability,
   svn_ra_serf__replay_range,
   svn_ra_serf__get_deleted_rev,
+  svn_ra_serf__get_inherited_props,
+  NULL /* set_svn_ra_open */,
   svn_ra_serf__register_editor_shim_callbacks,
-  svn_ra_serf__get_inherited_props
+  NULL /* commit_ev2 */,
+  NULL /* replay_range_ev2 */
 };
 
 svn_error_t *

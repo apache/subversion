@@ -231,7 +231,7 @@ stream_error_create(svn_fs_fs__packed_number_stream_t *stream,
   apr_off_t offset;
   SVN_ERR(svn_io_file_name_get(&file_name, stream->file,
                                stream->pool));
-  SVN_ERR(svn_fs_fs__get_file_offset(&offset, stream->file, stream->pool));
+  SVN_ERR(svn_io_file_get_offset(&offset, stream->file, stream->pool));
 
   return svn_error_createf(err, NULL, message, file_name,
                            apr_psprintf(stream->pool,
@@ -1736,7 +1736,7 @@ svn_fs_fs__l2p_get_max_ids(apr_array_header_t **max_ids,
       apr_uint64_t item_count;
       apr_size_t first_page_index, last_page_index;
 
-      if (revision >= header->first_revision + header->revision_count)
+      if (revision - header->first_revision >= header->revision_count)
         {
           /* need to read the next index. Clear up memory used for the
            * previous one.  Note that intermittent pack runs do not change
@@ -2421,6 +2421,13 @@ read_entry(svn_fs_fs__packed_number_stream_t *stream,
         || entry.fnv1_checksum != 0)
       return svn_error_create(SVN_ERR_FS_INDEX_CORRUPTION, NULL,
                  _("Empty regions must have item number 0 and checksum 0"));
+
+  /* Corrupted SIZE values might cause arithmetic overflow.
+   * The same can happen if you copy a repository from a system with 63 bit
+   * file lengths to one with 31 bit file lengths. */
+  if ((apr_uint64_t)entry.offset + (apr_uint64_t)entry.size > off_t_max)
+    return svn_error_create(SVN_ERR_FS_INDEX_OVERFLOW , NULL,
+                            _("P2L index entry size overflow."));
 
   APR_ARRAY_PUSH(result, svn_fs_fs__p2l_entry_t) = entry;
   *item_offset += entry.size;

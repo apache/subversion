@@ -1089,7 +1089,7 @@ svn_ra_get_file(svn_ra_session_t *session,
  * @a path is interpreted relative to the URL in @a session.
  *
  * If @a revision is @c SVN_INVALID_REVNUM (meaning 'head') and
- * @a *fetched_rev is not @c NULL, then this function will set
+ * @a fetched_rev is not @c NULL, then this function will set
  * @a *fetched_rev to the actual revision that was retrieved.  (Some
  * callers want to know, and some don't.)
  *

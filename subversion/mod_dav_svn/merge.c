@@ -119,32 +119,32 @@ do_resources(const dav_svn_repos *repos,
              apr_bucket_brigade *bb,
              apr_pool_t *pool)
 {
-  apr_hash_t *changes;
-  apr_hash_t *sent = apr_hash_make(pool);
-  apr_hash_index_t *hi;
+  svn_fs_path_change_iterator_t *iterator;
+  svn_fs_path_change3_t *change;
+
+  /* Change lists can have >100000 entries, so we must make sure to release
+     any collection as soon as possible.  Allocate them in SUBPOOL. */
   apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_t *sent = apr_hash_make(subpool);
+
+  /* Standard iteration pool. */
+  apr_pool_t *iterpool = svn_pool_create(subpool);
 
   /* Fetch the paths changed in this revision.  This will contain
      everything except otherwise-unchanged parent directories of added
      and deleted things.  Also, note that deleted things don't merit
      responses of their own -- they are considered modifications to
      their parent.  */
-  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+  SVN_ERR(svn_fs_paths_changed3(&iterator, root, subpool, subpool));
+  SVN_ERR(svn_fs_path_change_get(&change, iterator));
 
-  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+  while (change)
     {
-      const void *key;
-      void *val;
-      const char *path;
-      apr_ssize_t path_len;
-      svn_fs_path_change2_t *change;
       svn_boolean_t send_self;
       svn_boolean_t send_parent;
+      const char *path = change->path.data;
 
-      svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, &path_len, &val);
-      path = key;
-      change = val;
+      svn_pool_clear(iterpool);
 
       /* Figure out who needs to get sent. */
       switch (change->change_kind)
@@ -171,30 +171,38 @@ do_resources(const dav_svn_repos *repos,
         {
           /* If we haven't already sent this path, send it (and then
              remember that we sent it). */
-          if (! apr_hash_get(sent, path, path_len))
+          if (! apr_hash_get(sent, path, change->path.len))
             {
               svn_node_kind_t kind;
-              SVN_ERR(svn_fs_check_path(&kind, root, path, subpool));
-              SVN_ERR(send_response(repos, root, path,
+              SVN_ERR(svn_fs_check_path(&kind, root, path, iterpool));
+              SVN_ERR(send_response(repos, root, change->path.data,
                                     kind == svn_node_dir,
-                                    output, bb, subpool));
-              apr_hash_set(sent, path, path_len, (void *)1);
+                                    output, bb, iterpool));
+
+              /* The paths in CHANGES are unique, i.e. they can only
+               * clash with those that we end in the SEND_PARENT case.
+               *
+               * Because file paths cannot be the parent of other paths,
+               * we only need to track non-file paths. */
+              if (change->node_kind != svn_node_file)
+                {
+                  path = apr_pstrmemdup(subpool, path, change->path.len);
+                  apr_hash_set(sent, path, change->path.len, (void *)1);
+                }
             }
         }
       if (send_parent)
         {
-          /* If it hasn't already been sent, send the parent directory
-             (and then remember that you sent it).  Allocate parent in
-             pool, not subpool, because it stays in the sent hash
-             afterwards. */
-          const char *parent = svn_fspath__dirname(path, pool);
+          const char *parent = svn_fspath__dirname(path, iterpool);
           if (! svn_hash_gets(sent, parent))
             {
               SVN_ERR(send_response(repos, root, parent,
-                                    TRUE, output, bb, subpool));
-              svn_hash_sets(sent, parent, (void *)1);
+                                    TRUE, output, bb, iterpool));
+              svn_hash_sets(sent, apr_pstrdup(subpool, parent), (void *)1);
             }
         }
+
+      SVN_ERR(svn_fs_path_change_get(&change, iterator));
     }
 
   svn_pool_destroy(subpool);
@@ -226,6 +234,7 @@ dav_svn__merge_response(ap_filter_t *output,
   const char *post_commit_err_elem = NULL,
              *post_commit_header_info = NULL;
   apr_status_t status;
+  apr_hash_t *revprops;
 
   serr = svn_fs_revision_root(&root, repos->fs, new_rev, pool);
   if (serr != NULL)
@@ -268,23 +277,17 @@ dav_svn__merge_response(ap_filter_t *output,
 
 
   /* get the creationdate and creator-displayname of the new revision, too. */
-  serr = svn_fs_revision_prop(&creationdate, repos->fs, new_rev,
-                              SVN_PROP_REVISION_DATE, pool);
+  serr = svn_fs_revision_proplist2(&revprops, repos->fs, new_rev,
+                                   TRUE, pool, pool);
   if (serr != NULL)
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  "Could not get date of newest revision",
-                                  repos->pool);
-    }
-  serr = svn_fs_revision_prop(&creator_displayname, repos->fs, new_rev,
-                              SVN_PROP_REVISION_AUTHOR, pool);
-  if (serr != NULL)
-    {
-      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  "Could not get author of newest revision",
-                                  repos->pool);
+                                  "Could not get date and author of newest "
+                                  "revision", repos->pool);
     }
 
+  creationdate = svn_hash_gets(revprops, SVN_PROP_REVISION_DATE);
+  creator_displayname = svn_hash_gets(revprops, SVN_PROP_REVISION_AUTHOR);
 
   status = ap_fputstrs(output, bb,
                      DAV_XML_HEADER DEBUG_CR

@@ -69,7 +69,7 @@ if sys.argv[1:]:
   sys.exit(0)
 
 backport.merger.no_local_mods('./STATUS')
-sf = backport.status.StatusFile(open('./STATUS'))
+sf = backport.status.StatusFile(open('./STATUS', encoding="UTF-8"))
 
 ERRORS = collections.defaultdict(list)
 
