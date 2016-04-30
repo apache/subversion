@@ -291,7 +291,7 @@ def main():
   try:
     opts, args = getopt.getopt(sys.argv[1:], "hv",
                                ["help", "verbose", "targets="])
-  except getopt.GetoptError, e:
+  except getopt.GetoptError as e:
     usage_and_exit(str(e))
 
   for option, value in opts:
@@ -323,7 +323,7 @@ def main():
       usage_and_exit("Valid subcommands are 'include' and 'exclude'")
   except SystemExit:
     raise
-  except (LogStreamError, EOFError), e:
+  except (LogStreamError, EOFError) as e:
     log("ERROR: " + str(e), 0)
     sys.exit(EXIT_FAILURE)
   except:

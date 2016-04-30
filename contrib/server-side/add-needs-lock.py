@@ -46,7 +46,7 @@ try:
   import svn.core
   import svn.fs
   import svn.repos
-except ImportError, e:
+except ImportError as e:
   print >> sys.stderr, "ERROR: Unable to import Subversion's Python bindings: '%s'" % e
   sys.exit(1)
 

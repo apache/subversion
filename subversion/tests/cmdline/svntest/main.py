@@ -258,7 +258,7 @@ def wrap_ex(func, output):
   def w(*args, **kwds):
     try:
       return func(*args, **kwds)
-    except Failure, ex:
+    except Failure as ex:
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
         if ex_args:
@@ -1786,9 +1786,9 @@ class TestRunner:
         print('Test driver returned a status code.')
         sys.exit(255)
       result = svntest.testcase.RESULT_OK
-    except Skip, ex:
+    except Skip as ex:
       result = svntest.testcase.RESULT_SKIP
-    except Failure, ex:
+    except Failure as ex:
       result = svntest.testcase.RESULT_FAIL
       msg = ''
       # We captured Failure and its subclasses. We don't want to print
@@ -1806,7 +1806,7 @@ class TestRunner:
     except KeyboardInterrupt:
       logger.error('Interrupted')
       sys.exit(0)
-    except SystemExit, ex:
+    except SystemExit as ex:
       logger.error('EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code)
       self._print_name(ex.code and 'FAIL: ' or 'PASS: ')
       raise

@@ -63,7 +63,7 @@ def replace_sbox_with_tarfile(sbox, tar_filename,
                               dir=None):
   try:
     svntest.main.safe_rmtree(sbox.wc_dir)
-  except OSError, e:
+  except OSError as e:
     pass
 
   if not dir:
@@ -81,7 +81,7 @@ def replace_sbox_with_tarfile(sbox, tar_filename,
 def replace_sbox_repo_with_tarfile(sbox, tar_filename, dir=None):
   try:
     svntest.main.safe_rmtree(sbox.repo_dir)
-  except OSError, e:
+  except OSError as e:
     pass
 
   if not dir:

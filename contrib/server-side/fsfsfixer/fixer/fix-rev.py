@@ -226,7 +226,7 @@ def fix_one_error(repo_dir, rev):
       return True
     else:
       verbose_print("Unrecognized error message; trying 'svnlook' instead.")
-  except FixError, e:
+  except FixError as e:
     print 'warning:', e
     verbose_print("Trying 'svnlook' instead.")
 
@@ -295,6 +295,6 @@ if __name__ == '__main__':
 
   try:
     fix_rev(repo_dir, rev)
-  except FixError, e:
+  except FixError as e:
     print 'error:', e
     sys.exit(1)

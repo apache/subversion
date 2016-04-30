@@ -201,7 +201,7 @@ class State:
       for path in args:
         try:
           path_ref = self.desc[to_relpath(path)]
-        except KeyError, e:
+        except KeyError as e:
           e.args = ["Path '%s' not present in WC state descriptor" % path]
           raise
         path_ref.tweak(**kw)

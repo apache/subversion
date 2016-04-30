@@ -96,7 +96,7 @@ class WCFormatConverter:
       print("Parsing file '%s'" % entries.path)
     try:
       entries.parse(self.verbosity)
-    except UnrecognizedWCFormatException, e:
+    except UnrecognizedWCFormatException as e:
       if self.error_on_unrecognized:
         raise
       sys.stderr.write("%s, skipping\n" % e)
@@ -116,7 +116,7 @@ class WCFormatConverter:
       print("Checking whether WC format can be converted")
     try:
       entries.assert_valid_format(format_nbr, self.verbosity)
-    except LossyConversionException, e:
+    except LossyConversionException as e:
       # In --force mode, ignore complaints about lossy conversion.
       if self.force:
         print("WARNING: WC format conversion will be lossy. Dropping "\
@@ -405,7 +405,7 @@ def main():
 
   try:
     converter.change_wc_format(new_format_nbr)
-  except LocalException, e:
+  except LocalException as e:
     if debug:
       raise
     sys.stderr.write("%s\n" % e)

@@ -117,7 +117,7 @@ def main():
             usage_and_exit("Invalid mode (%s) provided." % (mode))
     except SystemExit:
         raise
-    except Exception, e:
+    except Exception as e:
         error_and_exit(str(e))
 
 if __name__ == "__main__":
