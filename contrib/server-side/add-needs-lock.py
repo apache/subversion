@@ -47,7 +47,7 @@ try:
   import svn.fs
   import svn.repos
 except ImportError as e:
-  print >> sys.stderr, "ERROR: Unable to import Subversion's Python bindings: '%s'" % e
+  sys.stderr.write("ERROR: Unable to import Subversion's Python bindings: '%s'\n" % e)
   sys.exit(1)
 
 # Walk a tree returning file paths

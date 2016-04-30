@@ -206,7 +206,7 @@ def console_width():
 
 def error(s):
     """Subroutine to output an error and bail."""
-    print >> sys.stderr, "%s: %s" % (NAME, s)
+    sys.stderr.write("%s: %s\n" % (NAME, s))
     sys.exit(1)
 
 def report(s):
@@ -1981,7 +1981,7 @@ class CommandOpts:
         return cmd, args, state
 
     def error(self, s, cmd=None):
-        print >>sys.stderr, "%s: %s" % (self.progname, s)
+        sys.stderr.write("%s: %s\n" % (self.progname, s))
         if cmd is not None:
             self.print_command_help(cmd)
         else:

@@ -67,8 +67,8 @@ def usage_and_exit(error_msg=None):
 
   stream = error_msg and sys.stderr or sys.stdout
   if error_msg:
-    print >> stream, "ERROR: %s\n" % error_msg
-  print >> stream, """Usage: %s REPOS_PATH [PATH_PREFIX...] [OPTIONS]
+    stream.write("ERROR: %s\n\n" % error_msg)
+  stream.write("""Usage: %s REPOS_PATH [PATH_PREFIX...] [OPTIONS]
        %s --help
 
 Migrate merge history from svnmerge.py's format to Subversion 1.5's
@@ -88,7 +88,7 @@ Options:
 Example:
 
    %s /path/to/repos trunk branches tags
-""" % (progname, progname, progname)
+""" % (progname, progname, progname))
   sys.exit(error_msg and 1 or 0)
 
 class Migrator:
