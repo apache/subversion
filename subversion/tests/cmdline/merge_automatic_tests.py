@@ -213,7 +213,7 @@ def get_3ways_from_output(output):
 
   merges = []
   for line in output:
-    print "## " + line,
+    sys.stdout.write("## " + line + " ")
     # Extract "A1" from a line like "DBG: merge.c:11336: base  svn://.../A@1"
     match = re.search(r'merge\.c:.* base .* /(\w+)@([0-9-]+)', line)
     if match:

@@ -295,7 +295,7 @@ def main(ctx, url, export_pathname):
     if ctx.delete_needed:
         print("There are files and directories in the local filesystem")
         print("that do not exist in the Subversion repository that were")
-        print "not deleted.  ",
+        sys.stdout.write("not deleted.   ")
         if ctx.delete_needed:
             print("Please pass the --delete command line option")
             print("to have this script delete those files and directories.")

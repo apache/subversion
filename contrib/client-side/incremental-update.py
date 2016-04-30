@@ -156,11 +156,11 @@ def main():
         usage_and_exit(None)
     path = sys.argv[-1]
     args = ' '.join(sys.argv[1:-1] + ['--non-interactive'])
-    print "Fetch HEAD revision...",
+    sys.stdout.write("Fetch HEAD revision... ")
     head_revision = get_head_revision(path, args)
     print("done.")
     print("Updating to revision %d" % (head_revision))
-    print "Harvesting the list of subdirectories...",
+    sys.stdout.write("Harvesting the list of subdirectories... ")
     dirs = harvest_dirs(path)
     print("done.")
     dirs.sort(compare_paths)
