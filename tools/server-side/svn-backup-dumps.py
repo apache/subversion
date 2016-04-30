@@ -255,8 +255,8 @@ class SvnBackupOutputCommand(SvnBackupOutput):
         try:
             proc = Popen(cmd, stdin=PIPE, stdout=self.__ofd, shell=False)
         except:
-            print (256, "", "Popen failed (%s ...):\n  %s" % (cmd[0],
-                    str(sys.exc_info()[1])))
+            print((256, "", "Popen failed (%s ...):\n  %s" % (cmd[0],
+                  str(sys.exc_info()[1]))))
             sys.exit(256)
         self.__proc  = proc
         self.__stdin = proc.stdin

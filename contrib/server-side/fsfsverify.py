@@ -1136,7 +1136,7 @@ if __name__ == '__main__':
   (options, args) = parser.parse_args()
 
   if len(args) != 1:
-    print >>sys.stderr, "Please specify exactly one rev file."
+    sys.stderr.write("Please specify exactly one rev file.\n")
     parser.print_help()
     sys.exit(1)
 
