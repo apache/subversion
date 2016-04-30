@@ -72,7 +72,7 @@ def del_temp_tree(tmpdir):
     try:
         shutil.rmtree(tmpdir)
     except OSError:
-        print logger.warn("Couldn't delete tmpdir %s. Don't forget to remove it manually." % (tmpdir))
+        print(logger.warn("Couldn't delete tmpdir %s. Don't forget to remove it manually." % (tmpdir)))
 
 
 def checkout(url, revision=None):
