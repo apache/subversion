@@ -115,7 +115,7 @@ def run_cs_command(state, config, repository, prefix, args):
 
   # Display the operation
   repo_title = repository.replace('nonpacked', 'nopack')
-  print state, "\t", repo_title, "\t", prefix, "\t", config, "\t",
+  sys.stdout.write(state, "\t", repo_title, "\t", prefix, "\t", config, "\t ")
   sys.stdout.flush()
 
   # Execute the command and show the execution times
@@ -215,7 +215,7 @@ def run_admin_command(state, config, repository, args):
   else:
     extra = []
 
-  print state, "\t", repository, "\t", config, "\t",
+  sys.stdout.write(state, "\t", repository, "\t", config, "\t ")
   sys.stdout.flush()
   subprocess.call(["TimeWin.exe", exe] + args + extra)
 

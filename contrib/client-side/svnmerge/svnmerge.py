@@ -1999,7 +1999,7 @@ class CommandOpts:
         indent = max(map(len, cmds))
         for c in cmds:
             h = self.ctable[c].short_help()
-            print "  %-*s   " % (indent, c),
+            sys.stdout.write("  %-*s    " % (indent, c))
             self._print_wrapped(h, indent+6)
     def print_command_help(self, cmd):
         cmd = self.ctable[str(cmd)]
@@ -2010,7 +2010,7 @@ class CommandOpts:
             flags = [o.repr_flags() for o in opts]
             indent = max(map(len, flags))
             for f,o in zip(flags, opts):
-                print "  %-*s :" % (indent, f),
+                sys.stdout.write("  %-*s : " % (indent, f))
                 self._print_wrapped(o.help, indent+5)
         print('\nCommand options:')
         print_opts(cmd.opts)

@@ -49,10 +49,10 @@ if __name__ == '__main__':
     formats.append('png')
 
   for config_filename in args:
-    print "%s: reading '%s'," % (prog_name, config_filename),
+    sys.stdout.write("%s: reading '%s', " % (prog_name, config_filename))
     graph = MergeDot(config_filename, rankdir='LR', dpi='72')
     for format in formats:
       filename = '%s.%s' % (graph.basename, format)
-      print "writing '%s'" % filename,
+      sys.stdout.write("writing '%s' " % filename)
       graph.save(format=format, filename=filename)
     print
