@@ -121,7 +121,7 @@ def addneedslock(repos_path, uname='', commitmsg='', included='.*', excluded='^$
 
   interesting_files = []
 
-  print 'Searching ' + str(len(files)) + ' file(s)...'
+  print('Searching ' + str(len(files)) + ' file(s)...')
 
   for path in files:
     locked_val = svn.fs.get_lock(fsob, path)
@@ -135,7 +135,7 @@ def addneedslock(repos_path, uname='', commitmsg='', included='.*', excluded='^$
   if interesting_files:
     if dryrun:
       for path in interesting_files:
-        print "Need to add svn:needs-lock to '" + path + "'"
+        print("Need to add svn:needs-lock to '" + path + "'")
     else:
       # open a transaction against HEAD
       headrev = svn.fs.youngest_rev(fsob)
@@ -143,21 +143,21 @@ def addneedslock(repos_path, uname='', commitmsg='', included='.*', excluded='^$
       root = svn.fs.txn_root(txn)
 
       for path in interesting_files:
-        print "Adding svn:needs-lock to '" + path + "'..."
+        print("Adding svn:needs-lock to '" + path + "'...")
         svn.fs.change_node_prop(root, path, svn.core.SVN_PROP_NEEDS_LOCK, '*')
 
       conflict, newrev = svn.fs.commit_txn(txn)
       if conflict:
         raise Exception("Conflict encountered (%s)" % conflict)
 
-      print 'Created revision: ', newrev
+      print('Created revision: ', newrev)
   else:
-    print 'Nothing changed.  Current Revision: ', headrev
+    print('Nothing changed.  Current Revision: ', headrev)
 
 
 ################################################################################
 def usage():
-  print "USAGE: add-needs-lock.py [-u username] [-m commitmsg] [-i includeregexp] [-e excluderegexp] [-r REV] [-d] REPOS-PATH"
+  print("USAGE: add-needs-lock.py [-u username] [-m commitmsg] [-i includeregexp] [-e excluderegexp] [-r REV] [-d] REPOS-PATH")
   sys.exit(1)
 
 
@@ -184,12 +184,12 @@ def main():
     if name == '-r':
       rev = int(value)
     if name == '-d':
-      print 'Performing dry run...'
+      print('Performing dry run...')
       dryrun = 1
   if rev is None:
-    print 'Searching all files...'
+    print('Searching all files...')
   else:
-    print 'Searching revision: ' + str(rev) + '...'
+    print('Searching revision: ' + str(rev) + '...')
   if len(args) == 1:
     addneedslock(args[0], uname, commitmsg, included, excluded, rev, dryrun)
   else:

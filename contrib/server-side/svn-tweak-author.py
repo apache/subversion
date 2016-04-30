@@ -74,9 +74,9 @@ def tweak_rev_author(fs_obj, revision, author):
         fs.svn_fs_change_rev_prop(fs_obj, revision,
                                   core.SVN_PROP_REVISION_AUTHOR, author)
     except:
-        print ""
+        print()
         raise
-    print "done."
+    print("done.")
 
 def get_fs_obj(repos_path):
     """Return a repository filesystem object for the repository

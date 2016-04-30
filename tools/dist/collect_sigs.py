@@ -42,7 +42,7 @@ def make_config():
   'Output a blank config file'
 
   if os.path.exists('config.py'):
-    print "'config.py' already exists!'"
+    print("'config.py' already exists!'")
     sys.exit(1)
 
   conf = open('config.py', 'w')
@@ -51,7 +51,7 @@ def make_config():
   conf.write("filesdir = ''\n")
   conf.close()
 
-  print "'config.py' generated"
+  print("'config.py' generated")
 
 def make_db():
   'Initialize a blank database'
@@ -114,9 +114,9 @@ try:
   sys.path.append(os.path.dirname(sys.argv[0]))
   import config
 except:
-  print 'Content-type: text/plain'
+  print('Content-type: text/plain')
   print
-  print 'Cannot find config file'
+  print('Cannot find config file')
   sys.exit(1)
 
 r = re.compile('^\[GNUPG\:\] GOODSIG (\w*) (.*)')
@@ -310,8 +310,8 @@ def cat_signatures(basename):
     return (open(ascfile, 'r').read())
 
 def print_content_type(mimetype):
-  print "Content-Type: " + mimetype
-  print
+  print("Content-Type: " + mimetype)
+  print()
 
 def main():
   form = cgi.FieldStorage()

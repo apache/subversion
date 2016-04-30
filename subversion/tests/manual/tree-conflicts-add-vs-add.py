@@ -39,9 +39,9 @@ from itertools import product
 def run_cmd(cmd, verbose=True, shell=False):
   if verbose:
     if shell:
-      print '\n---', cmd
+      print('\n---', cmd)
     else:
-      print '\n---', ' '.join(cmd)
+      print('\n---', ' '.join(cmd))
   p = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=shell)
   stdout,stderr = p.communicate()[0:2]
   if verbose and stdout:
@@ -406,7 +406,7 @@ try:
     results.append( (name, analyze( name, test_func( name, *row[1:] ) )) )
 except:
   if name:
-    print 'Error during', name
+    print('Error during', name)
   raise
 finally:
   lines = []

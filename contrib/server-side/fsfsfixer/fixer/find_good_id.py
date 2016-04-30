@@ -101,7 +101,7 @@ if __name__ == '__main__':
     repo_dir = sys.argv[1]
     rev = sys.argv[2]
     size = sys.argv[3]
-    print "Good offset:", find_good_rep_header(repo_dir, rev, size)
+    print("Good offset:", find_good_rep_header(repo_dir, rev, size))
     sys.exit(0)
 
   if len(sys.argv) != 3:

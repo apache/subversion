@@ -110,7 +110,7 @@ class Daemon(daemonize.Daemon):
     pass
 
   def run(self):
-    print 'irkerbridge started, pid=%d' % (os.getpid())
+    print('irkerbridge started, pid=%d' % (os.getpid()))
 
     mc = svnpubsub.client.MultiClient(self.bdec.urls,
                                       self.bdec.commit,
@@ -197,7 +197,7 @@ class BigDoEverythingClass(object):
     json_msg = json.dumps(msg)
     sock.sendto(json_msg, (irker_list[0],int(irker_list[1])))
     if self.options.verbose:
-      print "SENT: %s to %s" % (json_msg, irker)
+      print("SENT: %s to %s" % (json_msg, irker))
 
   def join_all(self):
     # Like self.commit(), but ignores self.config.get(section, "template").
@@ -212,7 +212,7 @@ class BigDoEverythingClass(object):
 
   def commit(self, url, commit):
     if self.options.verbose:
-      print "RECV: from %s" % url
+      print("RECV: from %s" % url)
       print json.dumps(vars(commit), indent=2)
 
     try:
@@ -233,14 +233,14 @@ class BigDoEverythingClass(object):
             self._send(irker, msg)
 
     except:
-      print "Unexpected error:"
+      print("Unexpected error:")
       traceback.print_exc()
       sys.stdout.flush()
       raise
 
   def event(self, url, event_name, event_arg):
     if self.options.verbose or event_name != "ping":
-      print 'EVENT: %s from %s' % (event_name, url)
+      print('EVENT: %s from %s' % (event_name, url))
       sys.stdout.flush()
 
 
@@ -258,7 +258,7 @@ class ReloadableConfig(ConfigParser.SafeConfigParser):
     self.reload()
 
   def reload(self):
-    print "RELOAD: config file: %s" % self.fname
+    print("RELOAD: config file: %s" % self.fname)
     sys.stdout.flush()
 
     # Delete everything. Just re-reading would overlay, and would not

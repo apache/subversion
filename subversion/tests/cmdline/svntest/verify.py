@@ -765,8 +765,8 @@ def compare_dump_files(message, label, expected, actual,
               action_record['blanks'] = 0
 
   if parsed_expected != parsed_actual:
-    print 'DIFF of raw dumpfiles (including expected differences)'
-    print ''.join(ndiff(expected, actual))
+    print('DIFF of raw dumpfiles (including expected differences)')
+    print(''.join(ndiff(expected, actual)))
     raise svntest.Failure('DIFF of parsed dumpfiles (ignoring expected differences)\n'
                           + '\n'.join(ndiff(
           pprint.pformat(parsed_expected).splitlines(),
