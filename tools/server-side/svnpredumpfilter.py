@@ -243,21 +243,21 @@ def svn_log_stream_get_dependencies(stream, included_paths):
   return dt
 
 def analyze_logs(included_paths):
-  print "Initial include paths:"
+  print("Initial include paths:")
   for path in included_paths:
-    print " + /%s" % (path)
+    print(" + /%s" % (path))
 
   dt = svn_log_stream_get_dependencies(sys.stdin, included_paths)
 
   if dt.dependent_paths:
     found_new_deps = True
-    print "Dependent include paths found:"
+    print("Dependent include paths found:")
     for path in dt.dependent_paths:
-      print " + /%s" % (path)
-    print "You need to also include them (or one of their parents)."
+      print(" + /%s" % (path))
+    print("You need to also include them (or one of their parents).")
   else:
     found_new_deps = False
-    print "No new dependencies found!"
+    print("No new dependencies found!")
     parents = {}
     for path in dt.include_paths:
       while 1:
@@ -268,11 +268,11 @@ def analyze_logs(included_paths):
         path = parent
     parents = parents.keys()
     if parents:
-      print "You might still need to manually create parent directories " \
-            "for the included paths before loading a filtered dump:"
+      print("You might still need to manually create parent directories " \
+            "for the included paths before loading a filtered dump:")
       parents.sort(compare_paths)
       for parent in parents:
-        print "   /%s" % (parent)
+        print("   /%s" % (parent))
 
   return found_new_deps and EXIT_MOREDEPS or EXIT_SUCCESS
 

@@ -56,7 +56,7 @@ def write_output(codes):
 
   for name, value in codes:
     # skip SVN_ERR_ on the name
-    print '%s = %d' % (name[8:], value)
+    print('%s = %d' % (name[8:], value))
 
 
 def main(codes_fname):

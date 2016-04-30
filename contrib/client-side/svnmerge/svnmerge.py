@@ -212,7 +212,7 @@ def error(s):
 def report(s):
     """Subroutine to output progress message, unless in quiet mode."""
     if opts["verbose"]:
-        print "%s: %s" % (NAME, s)
+        print("%s: %s" % (NAME, s))
 
 def prefix_lines(prefix, lines):
     """Given a string representing one or more lines of text, insert the
@@ -1312,10 +1312,10 @@ def display_revisions(revs, display_style, revisions_msg, source_url):
         for start, end in revs.normalized():
             print
             if start == end:
-                print "%s: changes in revision %d follow" % (NAME, start)
+                print("%s: changes in revision %d follow" % (NAME, start))
             else:
-                print "%s: changes in revisions %d-%d follow" % (NAME,
-                                                                 start, end)
+                print("%s: changes in revisions %d-%d follow" % (NAME,
+                                                                 start, end))
             print
 
             # Note: the starting revision number to 'svn diff' is
@@ -1878,7 +1878,7 @@ class CommandOpts:
         text = self._paragraphs(text, self.cwidth - indent)
         print text.pop(0)
         for t in text:
-            print " " * indent + t
+            print(" " * indent + t)
 
     def _find_common(self, fl):
         for o in self.copts:
@@ -1988,12 +1988,12 @@ class CommandOpts:
             self.print_small_help()
         sys.exit(1)
     def print_small_help(self):
-        print "Type '%s help' for usage" % self.progname
+        print("Type '%s help' for usage" % self.progname)
     def print_usage_line(self):
-        print "usage: %s <subcommand> [options...] [args...]\n" % self.progname
+        print("usage: %s <subcommand> [options...] [args...]\n" % self.progname)
     def print_command_list(self):
-        print "Available commands (use '%s help COMMAND' for more details):\n" \
-              % self.progname
+        print("Available commands (use '%s help COMMAND' for more details):\n" \
+              % self.progname)
         cmds = self.ctable.keys()
         cmds.sort()
         indent = max(map(len, cmds))
@@ -2003,7 +2003,7 @@ class CommandOpts:
             self._print_wrapped(h, indent+6)
     def print_command_help(self, cmd):
         cmd = self.ctable[str(cmd)]
-        print 'usage: %s %s\n' % (self.progname, cmd.usage)
+        print('usage: %s %s\n' % (self.progname, cmd.usage))
         self._print_wrapped(cmd.help)
         def print_opts(opts, self=self):
             if not opts: return
@@ -2012,9 +2012,9 @@ class CommandOpts:
             for f,o in zip(flags, opts):
                 print "  %-*s :" % (indent, f),
                 self._print_wrapped(o.help, indent+5)
-        print '\nCommand options:'
+        print('\nCommand options:')
         print_opts(cmd.opts)
-        print '\nGlobal options:'
+        print('\nGlobal options:')
         print_opts(self.gopts)
 
     def print_version(self):
@@ -2374,5 +2374,5 @@ if __name__ == "__main__":
         error(err_msg)
     except KeyboardInterrupt:
         # Avoid traceback on CTRL+C
-        print "aborted by user"
+        print("aborted by user")
         sys.exit(1)

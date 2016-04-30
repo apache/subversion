@@ -765,7 +765,7 @@ class NodeRev(object):
 
               if nodeId.rev != self.id.rev:
                   if not os.path.exists(str(nodeId.rev)):
-                      print "Can't check %s" % repr(nodeId)
+                      print("Can't check %s" % repr(nodeId))
                       continue
                   tmp = open(str(nodeId.rev),'rb')
                   tmp.seek(nodeId.offset)
@@ -785,8 +785,8 @@ class NodeRev(object):
           f.seek(offset)
         else:
           # The directory entries are stored in another file.
-          print "Warning: dir entries are stored in rev %d for noderev %s" % (
-            self.text.rev, repr(self.id))
+          print("Warning: dir entries are stored in rev %d for noderev %s" % (
+            self.text.rev, repr(self.id)))
 
   def __repr__(self):
     str = 'NodeRev Id: %s\n type: %s\n' % (repr(self.id), repr(self.type))
@@ -858,18 +858,18 @@ def getRootAndChangedPaths(revFile):
 
 
 def dumpChangedPaths(changedPaths):
-  print "Changed Path Information:"
+  print("Changed Path Information:")
   for (path,
        (id, action, textMod, propMod,
         copyfromRev, copyfromPath)) in changedPaths:
-    print " %s:" % path
-    print "  id: %s" % id
-    print "  action: %s" % action
-    print "  text mod: %s" % textMod
-    print "  prop mod: %s" % propMod
+    print(" %s:" % path)
+    print("  id: %s" % id)
+    print("  action: %s" % action)
+    print("  text mod: %s" % textMod)
+    print("  prop mod: %s" % propMod)
     if copyfromRev != -1:
-      print "  copyfrom path: %s" % copyfromPath
-      print "  copyfrom rev: %s" % copyfromRev
+      print("  copyfrom path: %s" % copyfromPath)
+      print("  copyfrom rev: %s" % copyfromRev)
     print
 
 
@@ -944,7 +944,7 @@ def verify(noderev, revFile, dumpInstructions, dumpWindows):
 def truncate(noderev, revFile):
   txnId = noderev.id
 
-  print "Truncating node %s (%s)" % (txnId, noderev.cpath)
+  print("Truncating node %s (%s)" % (txnId, noderev.cpath))
 
   # Grab the text rep
   textRep = noderev.text
@@ -980,7 +980,7 @@ def truncate(noderev, revFile):
   newTextRep = ' '.join(fields) + '\x0a'
   assert(len(newTextRep) == overallLength)
   revFile.write(newTextRep)
-  print "Done."
+  print("Done.")
   sys.exit(0)
 
 
@@ -1003,7 +1003,7 @@ def fixHeader(e, revFile):
         headerLen = len(line)
     offset = offset + len(line)
 
-  print "Original text rep located at", originalOffset
+  print("Original text rep located at", originalOffset)
 
   # Okay, now we have the original offset of the text rep that was
   # in the process of being written out.  The header portion of the
@@ -1014,14 +1014,14 @@ def fixHeader(e, revFile):
 
   revFile.seek(originalOffset)
   block = revFile.read(copyLen)
-  print "Copy %d bytes from offset %d" % (copyLen, originalOffset)
+  print("Copy %d bytes from offset %d" % (copyLen, originalOffset))
 
-  print "Write %d bytes at offset %d" % (copyLen, e.offset)
+  print("Write %d bytes at offset %d" % (copyLen, e.offset))
   revFile.seek(e.offset)
   revFile.write(block)
   revFile.flush()
 
-  print "Fixed? :-)  Re-run fsfsverify without the -f option"
+  print("Fixed? :-)  Re-run fsfsverify without the -f option")
 
 
 def fixStream(e, revFile):
@@ -1050,8 +1050,8 @@ def fixStream(e, revFile):
   srcOffset = errorOffset
   destOffset = repeatedBlockOffset
 
-  print "Copy %d bytes from offset %d" % (srcLength, srcOffset)
-  print "Write %d bytes at offset %d" % (srcLength, destOffset)
+  print("Copy %d bytes from offset %d" % (srcLength, srcOffset))
+  print("Write %d bytes at offset %d" % (srcLength, destOffset))
 
   while srcOffset < finalOffset:
     blen = 64*1024
@@ -1068,7 +1068,7 @@ def fixStream(e, revFile):
   revFile.flush()
   revFile.close()
 
-  print "Fixed? :-)  Re-run fsfsverify without the -f option"
+  print("Fixed? :-)  Re-run fsfsverify without the -f option")
 
 
 def checkOptions(options):

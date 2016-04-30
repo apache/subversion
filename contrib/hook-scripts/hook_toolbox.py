@@ -99,7 +99,7 @@ def read_config(repos, filename, expected_tokens_per_line=-1):
   '''
   path = os.path.join(repos, 'conf', filename)
   if not os.path.exists(path):
-    print 'Not present:', path
+    print('Not present:', path)
     return []
 
   config_lines = open(path).readlines()
@@ -114,16 +114,16 @@ def read_config(repos, filename, expected_tokens_per_line=-1):
                      if len(tokens) == expected_tokens_per_line ]
 
   if len(matching_lines) < len(tokenized_lines):
-    print '*** %d syntax errors in %s' % (
+    print('*** %d syntax errors in %s' % (
              len(tokenized_lines) - len(matching_lines),
-             path)
+             path))
 
   return matching_lines
 
 
 def update_working_copy(wc_path):
   if not os.path.exists(wc_path):
-    print '--> *** Cannot find working copy', wc_path
+    print('--> *** Cannot find working copy', wc_path)
     return None
   return run(os.path.join(BIN_PATH, 'svn'), 'update', wc_path)
 
@@ -131,7 +131,7 @@ def update_working_copy(wc_path):
 def run(*cmd):
   '''Call the given command & args and return what it printed to stdout.
      e.g. result = run('/usr/bin/svn', 'info', wc_dir_path) '''
-  print '-->', ' '.join(cmd)
+  print('-->', ' '.join(cmd))
   stdout = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
   print stdout.strip()
   return stdout

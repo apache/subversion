@@ -120,8 +120,8 @@ class RepositoryZombieLockRemover:
     """iterate over every locked file in repo_path/repo_subpath,
        calling unlock_nonexistent_files for each"""
 
-    print "Removing all zombie locks from repository at %s\n" \
-          "This may take several minutes..." % self.repos_path
+    print("Removing all zombie locks from repository at %s\n" \
+          "This may take several minutes..." % self.repos_path)
 
     # Try to use svn_fs_get_locks2() if it's present, as it's believed
     # to be problem-free.
@@ -151,7 +151,7 @@ class RepositoryZombieLockRemover:
       else:
         svn.fs.svn_fs_get_locks(self.fs_ptr, self.repos_subpath,
                                 self.unlock_nonexistent_files, self.pool)
-    print "Done."
+    print("Done.")
 
 
 class RevisionZombieLockRemover:

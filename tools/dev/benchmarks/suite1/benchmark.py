@@ -181,7 +181,7 @@ def run_cmd(cmd, stdin=None, shell=False, verbose=False):
       printable_cmd = cmd
     else:
       printable_cmd = ' '.join(cmd)
-    print 'CMD:', printable_cmd
+    print('CMD:', printable_cmd)
 
   if stdin:
     stdin_arg = subprocess.PIPE
@@ -197,9 +197,9 @@ def run_cmd(cmd, stdin=None, shell=False, verbose=False):
 
   if verbose:
     if (stdout):
-      print "STDOUT: [[[\n%s]]]" % ''.join(stdout)
+      print("STDOUT: [[[\n%s]]]" % ''.join(stdout))
   if (stderr):
-    print "STDERR: [[[\n%s]]]" % ''.join(stderr)
+    print("STDERR: [[[\n%s]]]" % ''.join(stderr))
 
   return stdout, stderr
 
@@ -350,7 +350,7 @@ class TimingsDb:
       # exists
       return
 
-    print 'Creating database tables.'
+    print('Creating database tables.')
     c.executescript('''
         CREATE TABLE batch (
           batch_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -468,7 +468,7 @@ class Run:
   def submit_timings(self):
     conn = self.batch.db.conn
     c = conn.cursor()
-    print 'submitting...'
+    print('submitting...')
 
     c.executemany("""
       INSERT INTO timings
@@ -629,7 +629,7 @@ def perform_run(batch, run_kind,
     cmd = [ svn_bin ]
     cmd.extend( list(args) )
     if verbose:
-      print 'svn cmd:', ' '.join(cmd)
+      print('svn cmd:', ' '.join(cmd))
 
     stdin = None
     if stdin:
@@ -652,9 +652,9 @@ def perform_run(batch, run_kind,
 
     if verbose:
       if (stdout):
-        print "STDOUT: [[[\n%s]]]" % ''.join(stdout)
+        print("STDOUT: [[[\n%s]]]" % ''.join(stdout))
       if (stderr):
-        print "STDERR: [[[\n%s]]]" % ''.join(stderr)
+        print("STDERR: [[[\n%s]]]" % ''.join(stderr))
 
     return stdout,stderr
 
@@ -792,9 +792,9 @@ def perform_run(batch, run_kind,
     else:
       file_url = 'file:///%s' % repos
 
-    print '\nRunning svn benchmark in', base
-    print 'dir levels: %s; new files and dirs per leaf: %s' %(
-          run_kind.levels, run_kind.spread)
+    print('\nRunning svn benchmark in', base)
+    print('dir levels: %s; new files and dirs per leaf: %s' %(
+          run_kind.levels, run_kind.spread))
 
     started = datetime.datetime.now()
 
@@ -876,7 +876,7 @@ def perform_run(batch, run_kind,
 
     finally:
       stopped = datetime.datetime.now()
-      print '\nDone with svn benchmark in', (stopped - started)
+      print('\nDone with svn benchmark in', (stopped - started))
 
       run.remember_timing(TOTAL_RUN,
                         timedelta_to_seconds(stopped - started))
@@ -896,8 +896,8 @@ def cmdline_run(db, options, run_kind_str, N=1):
 
   N = int(N)
 
-  print 'Hi, going to run a Subversion benchmark series of %d runs...' % N
-  print 'Label is %s' % run_kind.label()
+  print('Hi, going to run a Subversion benchmark series of %d runs...' % N)
+  print('Label is %s' % run_kind.label())
 
   # can we run the svn binaries?
   svn_bin = j(options.svn_bin_dir, 'svn')
@@ -908,12 +908,12 @@ def cmdline_run(db, options, run_kind_str, N=1):
     if not so:
       bail("Can't run %s" % b)
 
-    print ', '.join([s.strip() for s in so.split('\n')[:2]])
+    print(', '.join([s.strip() for s in so.split('\n')[:2]]))
 
   batch = Batch(db)
 
   for i in range(N):
-    print 'Run %d of %d' % (i + 1, N)
+    print('Run %d of %d' % (i + 1, N))
     perform_run(batch, run_kind,
                 svn_bin, svnadmin_bin, options.verbose)
 
@@ -934,31 +934,31 @@ def cmdline_list(db, options, *args):
     add_if_not_none('levels', run_kind.levels)
     add_if_not_none('spread', run_kind.spread)
     if constraints:
-      print 'For\n', '\n'.join(constraints)
-    print 'I found:'
+      print('For\n', '\n'.join(constraints))
+    print('I found:')
 
     d = TimingQuery(db, run_kind)
 
     cmd_names = d.get_sorted_command_names()
     if cmd_names:
-      print '\n%d command names:\n ' % len(cmd_names), '\n  '.join(cmd_names)
+      print('\n%d command names:\n ' % len(cmd_names), '\n  '.join(cmd_names))
 
     branches = d.get_sorted_branches()
     if branches and (len(branches) > 1 or branches[0] != run_kind.branch):
-      print '\n%d branches:\n ' % len(branches), '\n  '.join(branches)
+      print('\n%d branches:\n ' % len(branches), '\n  '.join(branches))
 
     revisions = d.get_sorted_revisions()
     if revisions and (len(revisions) > 1 or revisions[0] != run_kind.revision):
-      print '\n%d revisions:\n ' % len(revisions), '\n  '.join(revisions)
+      print('\n%d revisions:\n ' % len(revisions), '\n  '.join(revisions))
 
     levels_spread = d.get_sorted_levels_spread()
     if levels_spread and (
          len(levels_spread) > 1
          or levels_spread[0] != (run_kind.levels, run_kind.spread)):
-      print '\n%d kinds of levels x spread:\n ' % len(levels_spread), '\n  '.join(
-              [ ('%dx%d' % (l, s)) for l,s in levels_spread ])
+      print('\n%d kinds of levels x spread:\n ' % len(levels_spread), '\n  '.join(
+              [ ('%dx%d' % (l, s)) for l,s in levels_spread ]))
 
-    print "\n%d runs in %d batches.\n" % (d.count_runs_batches())
+    print("\n%d runs in %d batches.\n" % (d.count_runs_batches()))
 
 
 def cmdline_show(db, options, *run_kind_strings):
@@ -983,7 +983,7 @@ def cmdline_show(db, options, *run_kind_strings):
                  tavg,
                  command_name))
 
-    print '\n'.join(s)
+    print('\n'.join(s))
 
 
 def cmdline_compare(db, options, *args):
@@ -1004,7 +1004,7 @@ def cmdline_compare(db, options, *args):
     rightq = TimingQuery(db, right_kind)
     right = rightq.get_timings()
     if not right:
-      print "No timings for %s" % right_kind.label()
+      print("No timings for %s" % right_kind.label())
       continue
 
     label = 'Compare %s to %s' % (right_kind.label(), left_kind.label())
@@ -1051,7 +1051,7 @@ def cmdline_compare(db, options, *args):
       ])
 
 
-    print '\n'.join(s)
+    print('\n'.join(s))
 
 
 # ------------------------------------------------------- charts
@@ -1073,7 +1073,7 @@ def cmdline_chart_compare(db, options, *args):
     query = TimingQuery(db, run_kind)
     timings = query.get_timings()
     if not timings:
-      print "No timings for %s" % run_kind.label()
+      print("No timings for %s" % run_kind.label())
       continue
     labels.append(run_kind.label())
     timing_sets.append(timings)
@@ -1215,7 +1215,7 @@ def cmdline_chart_compare(db, options, *args):
                 va='center', weight='bold')
 
   plt.savefig(chart_path)
-  print 'wrote chart file:', chart_path
+  print('wrote chart file:', chart_path)
 
 
 # ------------------------------------------------------------ main

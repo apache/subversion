@@ -2178,8 +2178,8 @@ def get_issue_details(issue_numbers):
     # Parse the xml for ISSUE_NO from the issue tracker into a Document.
     issue_xml_f = urllib.urlopen(xml_url)
   except:
-    print "WARNING: Unable to contact issue tracker; " \
-          "milestones defaulting to 'unknown'."
+    print("WARNING: Unable to contact issue tracker; " \
+          "milestones defaulting to 'unknown'.")
     return issue_dict
 
   try:
@@ -2198,7 +2198,7 @@ def get_issue_details(issue_numbers):
       assignment = assignment_element[0].childNodes[0].nodeValue
       issue_dict[issue_id] = [milestone, assignment]
   except:
-    print "ERROR: Unable to parse target milestones from issue tracker"
+    print("ERROR: Unable to parse target milestones from issue tracker")
     raise
 
   return issue_dict

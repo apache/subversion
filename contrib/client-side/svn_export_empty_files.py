@@ -71,7 +71,7 @@ def check_url_for_export(ctx, url, revision, client_ctx):
     # is something wrong with the given URL.
     try:
         if ctx.verbose:
-            print "Trying to list '%s'" % url
+            print("Trying to list '%s'" % url)
         svn.client.ls(url, revision, 0, client_ctx)
 
         # Given a URL, the ls command does not tell you if
@@ -82,7 +82,7 @@ def check_url_for_export(ctx, url, revision, client_ctx):
         try:
             last_slash_index = url.rindex('/')
         except ValueError:
-            print "Cannot find a / in the URL '%s'" % url
+            print("Cannot find a / in the URL '%s'" % url)
             return False
 
         parent_url = url[:last_slash_index]
@@ -90,31 +90,31 @@ def check_url_for_export(ctx, url, revision, client_ctx):
 
         try:
             if ctx.verbose:
-                print "Trying to list '%s'" % parent_url
+                print("Trying to list '%s'" % parent_url)
             remote_ls = svn.client.ls(parent_url,
                                       revision,
                                       0,
                                       client_ctx)
         except svn.core.SubversionException:
             if ctx.verbose:
-                print "Listing of '%s' failed, assuming URL is top of repos" \
-                      % parent_url
+                print("Listing of '%s' failed, assuming URL is top of repos" \
+                      % parent_url)
             return True
 
         try:
             path_info = remote_ls[path_name]
         except ValueError:
-            print "Able to ls '%s' but '%s' not in ls of '%s'" \
-                  % (url, path_name, parent_url)
+            print("Able to ls '%s' but '%s' not in ls of '%s'" \
+                  % (url, path_name, parent_url))
             return False
 
         if svn.core.svn_node_dir != path_info.kind:
             if ctx.verbose:
-                print "The URL '%s' is not a directory" % url
+                print("The URL '%s' is not a directory" % url)
             return False
         else:
             if ctx.verbose:
-                print "The URL '%s' is a directory" % url
+                print("The URL '%s' is a directory" % url)
             return True
     finally:
         pass
@@ -154,16 +154,16 @@ def synchronize_dir(ctx, url, dir_name, revision, client_ctx):
         msg = ("'%s' which is a local non-directory but remotely a " +
                "directory") % dir_name
         if ctx.delete_local_paths:
-            print "Removing", msg
+            print("Removing", msg)
             os.unlink(dir_name)
             local_path_kind = LOCAL_PATH_NONE
         else:
-            print "Need to remove", msg
+            print("Need to remove", msg)
             ctx.delete_needed = True
             return False
 
     if LOCAL_PATH_NONE == local_path_kind:
-        print "Creating directory '%s'" % dir_name
+        print("Creating directory '%s'" % dir_name)
         os.mkdir(dir_name)
 
     remote_ls = svn.client.ls(url,
@@ -172,7 +172,7 @@ def synchronize_dir(ctx, url, dir_name, revision, client_ctx):
                               client_ctx)
 
     if ctx.verbose:
-        print "Syncing '%s' to '%s'" % (url, dir_name)
+        print("Syncing '%s' to '%s'" % (url, dir_name))
 
     remote_pathnames = remote_ls.keys()
     remote_pathnames.sort()
@@ -191,7 +191,7 @@ def synchronize_dir(ctx, url, dir_name, revision, client_ctx):
 
         if remote_pathname in ctx.ignore_names or \
                full_remote_pathname in ctx.ignore_paths:
-            print "Skipping '%s'" % full_remote_pathname
+            print("Skipping '%s'" % full_remote_pathname)
             continue
 
         # Get the remote path kind.
@@ -221,16 +221,16 @@ def synchronize_dir(ctx, url, dir_name, revision, client_ctx):
                 msg = ("'%s' which is a local directory but remotely a " +
                        "non-directory") % full_remote_pathname
                 if ctx.delete_local_paths:
-                    print "Removing", msg
+                    print("Removing", msg)
                     recursive_delete(full_remote_pathname)
                     local_path_kind = LOCAL_PATH_NONE
                 else:
-                    print "Need to remove", msg
+                    print("Need to remove", msg)
                     ctx.delete_needed = True
                     continue
 
             if LOCAL_PATH_NONE == local_path_kind:
-                print "Creating file '%s'" % full_remote_pathname
+                print("Creating file '%s'" % full_remote_pathname)
                 f = file(full_remote_pathname, 'w')
                 f.close()
 
@@ -240,17 +240,17 @@ def synchronize_dir(ctx, url, dir_name, revision, client_ctx):
         full_local_pathname = os.path.join(dir_name, local_pathname)
         if os.path.isdir(full_local_pathname):
             if ctx.delete_local_paths:
-                print "Removing directory '%s'" % full_local_pathname
+                print("Removing directory '%s'" % full_local_pathname)
                 recursive_delete(full_local_pathname)
             else:
-                print "Need to remove directory '%s'" % full_local_pathname
+                print("Need to remove directory '%s'" % full_local_pathname)
                 ctx.delete_needed = True
         else:
             if ctx.delete_local_paths:
-                print "Removing file '%s'" % full_local_pathname
+                print("Removing file '%s'" % full_local_pathname)
                 os.unlink(full_local_pathname)
             else:
-                print "Need to remove file '%s'" % full_local_pathname
+                print("Need to remove file '%s'" % full_local_pathname)
                 ctx.delete_needed = True
 
     return status
@@ -293,14 +293,14 @@ def main(ctx, url, export_pathname):
                              client_ctx)
 
     if ctx.delete_needed:
-        print "There are files and directories in the local filesystem"
-        print "that do not exist in the Subversion repository that were"
+        print("There are files and directories in the local filesystem")
+        print("that do not exist in the Subversion repository that were")
         print "not deleted.  ",
         if ctx.delete_needed:
-            print "Please pass the --delete command line option"
-            print "to have this script delete those files and directories."
+            print("Please pass the --delete command line option")
+            print("to have this script delete those files and directories.")
         else:
-            print ""
+            print("")
 
     if status:
         return 0

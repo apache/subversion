@@ -158,15 +158,15 @@ def main():
     args = ' '.join(sys.argv[1:-1] + ['--non-interactive'])
     print "Fetch HEAD revision...",
     head_revision = get_head_revision(path, args)
-    print "done."
-    print "Updating to revision %d" % (head_revision)
+    print("done.")
+    print("Updating to revision %d" % (head_revision))
     print "Harvesting the list of subdirectories...",
     dirs = harvest_dirs(path)
-    print "done."
+    print("done.")
     dirs.sort(compare_paths)
     dirs.reverse()
-    print "Update the tree, one subdirectory at a time.  This could take " \
-          "a while."
+    print("Update the tree, one subdirectory at a time.  This could take " \
+          "a while.")
     num_dirs = len(dirs)
     width = len(str(num_dirs))
     format_string = '[%%%dd/%%%dd] Updating %%s' % (width, width)
