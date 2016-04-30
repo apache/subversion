@@ -166,7 +166,7 @@ def get_new_location_segments(parsed_original_mergeinfo, repo_root,
                                      revision_range.end, revision_range.start + 1, location_segment_callback)
           except svn.core.SubversionException:
             sys.stderr.write(" Could not find location segments for %s \n" % path)
-      except Exception, e:
+      except Exception as e:
         sys.stderr.write("")
 
 
@@ -204,7 +204,7 @@ def fix_sanitized_mergeinfo(parsed_original_mergeinfo, repo_root, wcpath,
     with open(hash_file, "r") as f:
       old_hash = pickle.load(f)
     f.close
-  except IOError, e:
+  except IOError as e:
     get_new_location_segments(parsed_original_mergeinfo, repo_root, wcpath, ctx)
     hasher(hash_file, newmergeinfo_file)
     try:
@@ -217,7 +217,7 @@ def fix_sanitized_mergeinfo(parsed_original_mergeinfo, repo_root, wcpath,
     with open(newmergeinfo_file, "r") as f:
       new_hash = md5_of_file(f)
     f.close
-  except IOError, e:
+  except IOError as e:
     if not mergeinfo:
       get_new_location_segments(parsed_original_mergeinfo, repo_root, wcpath, ctx)
     hasher(hash_file, newmergeinfo_file)
@@ -263,7 +263,7 @@ def get_original_mergeinfo(wcpath, revision, depth, ctx, temp_pool):
 def main():
   try:
     opts, args = my_getopt(sys.argv[1:], "h?f", ["help", "fix"])
-  except Exception, e:
+  except Exception as e:
     sys.stderr.write(""" Improperly used """)
     sys.exit(1)
 

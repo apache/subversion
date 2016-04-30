@@ -344,7 +344,7 @@ class Window(object):
           self.instrByteStream = ZlibByteStream(self.origInstrStream,
                                                 self.compressedInstrLength)
           self.isInstrCompressed = True
-      except Exception, e:
+      except Exception as e:
         new_e = InvalidCompressedStream(
           "Invalid compressed instr stream at offset %d (%s)" % (offset,
                                                                  str(e)),
@@ -359,7 +359,7 @@ class Window(object):
           self.dataByteStream = ZlibByteStream(self.origDataStream,
                                                self.compressedDataLength)
           self.isDataCompressed = True
-      except Exception, e:
+      except Exception as e:
         new_e = InvalidCompressedStream(
           "Invalid compressed data stream at offset %d (%s, %s)\n" % (
               offset, str(e), repr(self)),
@@ -388,7 +388,7 @@ class Window(object):
     while computedInstrLength < expectedInstrLength:
       try:
         instr = SvndiffInstruction(self.instrByteStream)
-      except PotentiallyFixableException, e:
+      except PotentiallyFixableException as e:
         e.window = self
         e.windowOffset = self.windowOffset
         raise
@@ -492,7 +492,7 @@ class Svndiff(object):
         log(LOG_WINDOWS, 3, repr(w))
         w.verify()
         remaining -= w.windowLength
-    except PotentiallyFixableException, e:
+    except PotentiallyFixableException as e:
       e.svndiffStart = self.startingOffset
       raise
 
@@ -580,7 +580,7 @@ class Rep(object):
       try:
         svndiff = Svndiff(f, self.length)
         svndiff.verify()
-      except Exception, e:
+      except Exception as e:
         e.rep = self
         e.noderev = self.noderev
         raise
@@ -1209,13 +1209,13 @@ if __name__ == '__main__':
       except:
         sys.stdout.flush()
         raise
-  except InvalidRepHeader, e:
+  except InvalidRepHeader as e:
     if not options.fixRlle:
       handleError(e, options.showTraceback)
 
     fixHeader(e, revFile)
 
-  except PotentiallyFixableException, e:
+  except PotentiallyFixableException as e:
     if not options.fixRlle:
       handleError(e, options.showTraceback)
 

@@ -51,7 +51,7 @@ class Daemon(object):
   def daemonize_exit(self):
     try:
       result = self.daemonize()
-    except (ChildFailed, DaemonFailed), e:
+    except (ChildFailed, DaemonFailed) as e:
       # duplicate the exit code
       sys.exit(e.code)
     except (ChildTerminatedAbnormally, ChildForkFailed,
@@ -122,7 +122,7 @@ class Daemon(object):
     # perform the second fork
     try:
       pid = os.fork()
-    except OSError, e:
+    except OSError as e:
       ### this won't make it to the parent process
       raise DaemonForkFailed(e.errno, e.strerror)
 

@@ -36,7 +36,7 @@ import re
 
 try:
   from svn import core
-except ImportError, e:
+except ImportError as e:
   sys.stderr.write("ERROR: Unable to import Subversion's Python bindings: '%s'\n" \
                    "Hint: Set your PYTHONPATH environment variable, or adjust your " \
                    "PYTHONSTARTUP\nfile to point to your Subversion install " \

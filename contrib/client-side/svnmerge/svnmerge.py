@@ -263,7 +263,7 @@ try:
             stdoutAndErr = p.communicate()
             stdout = stdoutAndErr[0]
             stderr = stdoutAndErr[1]
-        except OSError, inst:
+        except OSError as inst:
             # Using 1 as failure code; should get actual number somehow? For
             # examples see svnmerge_test.py's TestCase_launch.test_failure and
             # TestCase_launch.test_failurecode.
@@ -1960,7 +1960,7 @@ class CommandOpts:
                 opts.extend(cmd.opts)
                 args.remove(cmd.name)
             state, args = self._fancy_getopt(args, opts)
-        except getopt.GetoptError, e:
+        except getopt.GetoptError as e:
             self.error(e, cmd)
 
         # Handle builtins
@@ -2367,7 +2367,7 @@ def main(args):
 if __name__ == "__main__":
     try:
         main(sys.argv[1:])
-    except LaunchError, (ret, cmd, out):
+    except LaunchError as (ret, cmd, out):
         err_msg = "command execution failed (exit code: %d)\n" % ret
         err_msg += cmd + "\n"
         err_msg += "".join(out)

@@ -39,7 +39,7 @@ try:
   import svn.core
   import svn.fs
   import svn.repos
-except ImportError, e:
+except ImportError as e:
   print >> sys.stderr, \
         "ERROR: Unable to import Subversion's Python bindings: '%s'\n" \
         "Hint: Set your PYTHONPATH environment variable, or adjust your " \
@@ -230,7 +230,7 @@ class Migrator:
             filtered_mergeinfo = \
                 svn.core.svn_mergeinfo_merge(filtered_mergeinfo,
                                              source_history)
-          except svn.core.SubversionException, e:
+          except svn.core.SubversionException as e:
             if not (e.apr_err == svn.core.SVN_ERR_FS_NOT_FOUND
                     or e.apr_err == svn.core.SVN_ERR_FS_NO_SUCH_REVISION):
               raise

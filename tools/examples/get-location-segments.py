@@ -111,7 +111,7 @@ def prompt_func_gnome_keyring_prompt(keyring, pool):
 def main():
   try:
     url, peg_revision, start_revision, end_revision = parse_args(sys.argv[1:])
-  except Exception, e:
+  except Exception as e:
     sys.stderr.write("""Usage: %s URL[@PEG-REV] [START-REV[:END-REV]]
 
 Trace the history of URL@PEG-REV, printing the location(s) of its

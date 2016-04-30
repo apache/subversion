@@ -275,7 +275,7 @@ def migrate_wc_subdirs(wc_root_path):
         copy_db_rows_to_wcroot(wc_subdir_path)
         move_and_shard_pristine_files(wc_subdir_path, '.')
         migrated_subdirs += [wc_subdir_path]
-      except (WrongFormatException, NotASubversionWC), e:
+      except (WrongFormatException, NotASubversionWC) as e:
         print "skipped:", e
         # don't walk into it
         dirs.remove(dir)
@@ -292,7 +292,7 @@ def migrate_wc_subdirs(wc_root_path):
         os.rmdir(pristine_path(wc_subdir_path))
       shutil.rmtree(tmp_path(wc_subdir_path))
       os.rmdir(dotsvn_path(wc_subdir_path))
-    except Exception, e:
+    except Exception as e:
       print e
       failed_delete_subdirs += [wc_subdir_path]
 
@@ -346,7 +346,7 @@ if __name__ == '__main__':
 
   try:
     check_wc_format_number(wc_root_path)
-  except (WrongFormatException, NotASubversionWC), e:
+  except (WrongFormatException, NotASubversionWC) as e:
     print "error:", e
     sys.exit(1)
 

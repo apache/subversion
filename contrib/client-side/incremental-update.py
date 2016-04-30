@@ -183,6 +183,6 @@ if __name__ == "__main__":
         main()
     except SystemExit:
         raise
-    except Exception, e:
+    except Exception as e:
         print_error(str(e))
         sys.exit(1)
