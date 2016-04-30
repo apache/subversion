@@ -1412,9 +1412,9 @@ def action_init(target_dir, target_props):
     # Write out commit message if desired
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
-        print >>f, 'Initialized merge tracking via "%s" with revisions "%s" from ' \
-            % (NAME, revs)
-        print >>f, '%s' % source_url
+        f.write('Initialized merge tracking via "%s" with revisions "%s" from \n' \
+            % (NAME, revs))
+        f.write('%s\n' % source_url)
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
 
@@ -1555,15 +1555,15 @@ def action_merge(branch_dir, branch_props):
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
         if record_only:
-            print >>f, 'Recorded merge of revisions %s via %s from ' % \
-                  (revs, NAME)
+            f.write('Recorded merge of revisions %s via %s from \n' % \
+                    (revs, NAME))
         else:
-            print >>f, 'Merged revisions %s via %s from ' % \
-                  (revs, NAME)
-        print >>f, '%s' % opts["source-url"]
+            f.write('Merged revisions %s via %s from \n' % \
+                    (revs, NAME))
+        f.write('%s\n' % opts["source-url"])
         if opts["commit-verbose"]:
-            print >>f
-            print >>f, construct_merged_log_message(opts["source-url"], revs),
+            f.write("\n")
+            f.write(construct_merged_log_message(opts["source-url"], revs))
 
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
@@ -1592,11 +1592,11 @@ def action_block(branch_dir, branch_props):
     # Write out commit message if desired
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
-        print >>f, 'Blocked revisions %s via %s' % (revs_to_block, NAME)
+        f.write('Blocked revisions %s via %s\n' % (revs_to_block, NAME))
         if opts["commit-verbose"]:
-            print >>f
-            print >>f, construct_merged_log_message(opts["source-url"],
-                                                    revs_to_block),
+            f.write("\n")
+            f.write(construct_merged_log_message(opts["source-url"],
+                                                 revs_to_block))
 
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
@@ -1623,11 +1623,11 @@ def action_unblock(branch_dir, branch_props):
     # Write out commit message if desired
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
-        print >>f, 'Unblocked revisions %s via %s' % (revs_to_unblock, NAME)
+        f.write('Unblocked revisions %s via %s\n' % (revs_to_unblock, NAME))
         if opts["commit-verbose"]:
-            print >>f
-            print >>f, construct_merged_log_message(opts["source-url"],
-                                                    revs_to_unblock),
+            f.write("\n")
+            f.write(construct_merged_log_message(opts["source-url"],
+                                                 revs_to_unblock))
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
 
@@ -1694,12 +1694,12 @@ def action_rollback(branch_dir, branch_props):
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
         if record_only:
-            print >>f, 'Recorded rollback of revisions %s via %s from ' % \
-                  (revs , NAME)
+            f.write('Recorded rollback of revisions %s via %s from \n' % \
+                    (revs , NAME))
         else:
-            print >>f, 'Rolled back revisions %s via %s from ' % \
-                  (revs , NAME)
-        print >>f, '%s' % opts["source-url"]
+            f.write('Rolled back revisions %s via %s from \n' % \
+                    (revs , NAME))
+        f.write('%s\n' % opts["source-url"])
 
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
@@ -1732,8 +1732,8 @@ def action_uninit(branch_dir, branch_props):
     # Write out commit message if desired
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
-        print >>f, 'Removed merge tracking for "%s" for ' % NAME
-        print >>f, '%s' % opts["source-url"]
+        f.write('Removed merge tracking for "%s" for \n' % NAME)
+        f.write('%s\n' % opts["source-url"])
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
 
