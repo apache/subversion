@@ -363,7 +363,7 @@ if __name__ == '__main__':
     except getopt.GetoptError:
         usage(False)
     if len(args) < 1 or len(args) > 2:
-        print >>sys.stderr, "Incorrect number of arguments"
+        sys.stderr.write("Incorrect number of arguments\n")
         usage(False)
 
     for o, a in opts:
@@ -397,7 +397,7 @@ if __name__ == '__main__':
         try:
             last_slash_index = url.rindex('/')
         except ValueError:
-            print >>sys.stderr, "Cannot find a / in the URL '%s'" % url
+            sys.stderr.write("Cannot find a / in the URL '%s'\n" % url)
             usage(False)
         export_pathname = url[last_slash_index+1:]
 

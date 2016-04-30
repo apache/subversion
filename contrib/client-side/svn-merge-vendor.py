@@ -336,7 +336,7 @@ def get_xml_text_content(xml_doc, xpath):
 
 def usage(error = None):
     """Print usage message and exit"""
-    print >>sys.stderr, """%s: Merges the difference between two revisions of the original repository of the vendor, to the vendor branch
+    sys.stderr.write("""%s: Merges the difference between two revisions of the original repository of the vendor, to the vendor branch
 usage: %s [options] REPO_URL CURRENT_PATH ORIGINAL_REPO_URL -r N:M
 
   - REPO_URL : repository URL for the vendor branch (i.e: http://svn.example.com/repos/vendor/libcomplex)
@@ -369,10 +369,10 @@ Valid options:
   -v [--verbose]           : verbose mode
   -c [--merged-vendor] arg : working copy path of the original already merged vendor trunk (skips the steps 1. and 2.)
   -w [--current-wc] arg    : working copy path of the current checked out trunk of the vendor branch (skips the step 3.)
-    """ % ((prog_name,) * 2)
+    """ % ((prog_name,) * 2))
 
     if error:
-        print >>sys.stder, "", "Current error : "+error
+        sys.stder.write("\nCurrent error : " + error + "\n")
 
     sys.exit(1)
 

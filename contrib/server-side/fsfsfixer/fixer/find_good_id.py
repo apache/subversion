@@ -117,7 +117,7 @@ if __name__ == '__main__':
   # reconstruct the file so as to preserve all offsets.
   # ### TODO: This check should be in the caller rather than here.
   if len(good_id) != len(bad_id):
-    print >>sys.stderr, "warning: the good ID has a different length: " + \
-                        "bad id '" + bad_id + "', good id '" + good_id + "'"
+    sys.stderr.write("warning: the good ID has a different length: " + \
+                     "bad id '" + bad_id + "', good id '" + good_id + "'\n")
 
   print good_id

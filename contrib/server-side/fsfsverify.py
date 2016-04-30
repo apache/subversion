@@ -561,7 +561,7 @@ class Rep(object):
       raise e
 
     if self.rev != currentRev:
-      print >>sys.stderr, "Skipping text rep since it isn't present in the current rev"
+      sys.stderr.write("Skipping text rep since it isn't present in the current rev\n")
       return
 
     f.seek(self.offset)
@@ -1078,16 +1078,16 @@ def checkOptions(options):
       count = count + 1
 
   if count > 1:
-    print >>sys.stderr, "Please use only one of -c, -f, and -t."
+    sys.stderr.write("Please use only one of -c, -f, and -t.\n")
     sys.exit(1)
 
   if options.dumpChanged and (options.dumpWindows or options.dumpInstructions):
-    print >>sys.stderr, \
-      "-c is incompatible with -w and -i.  Dropping -w and/or -i."
+    sys.stderr.write(\
+      "-c is incompatible with -w and -i.  Dropping -w and/or -i.\n")
 
   if options.noVerify and (options.dumpWindows or options.dumpInstructions):
-    print >>sys.stderr, \
-      "--no-verify is incompatible with -w and -i.  Dropping -w and/or -i."
+    sys.stderr.write(\
+      "--no-verify is incompatible with -w and -i.  Dropping -w and/or -i.\n")
 
 
 def handleError(error, withTraceback=False):
@@ -1096,8 +1096,8 @@ def handleError(error, withTraceback=False):
     import traceback
     traceback.print_exc()
 
-  print >>sys.stderr,"Error %s: %s" % (error.__class__.__name__, str(e))
-  print >>sys.stderr,"Try running with -f to fix the revision"
+  sys.stderr.write("Error %s: %s\n" % (error.__class__.__name__, str(e)))
+  sys.stderr.write("Try running with -f to fix the revision\n")
   sys.exit(1)
 
 
