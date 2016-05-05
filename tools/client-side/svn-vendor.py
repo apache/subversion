@@ -336,6 +336,13 @@ class SvnVndImport(cmd.Cmd):
                     "  'dereference' treats as normal files/dirs (and " +
                     "ignores dangling links);\n" +
                     "  'as-is' imports as symlinks"))
+        self.config.add_option('exec-permission',
+                ConfigOpt("preserve", "How 'executable' permission bits " +
+                    "are handled;\n" +
+                    "  'preserve' sets svn:executable property as in " +
+                    "imported sources;\n" +
+                    "  'clear' removes svn:executable on all new files " +
+                    "(but keeps it intact on existing files)."))
         self.config.add_option('save-diff-copied',
                 ConfigOpt(None, "Save 'svn diff' output on the " +
                     "moved/copied files and directories to this " +
@@ -807,7 +814,28 @@ class SvnVndImport(cmd.Cmd):
         dirs_removed = []
         files_added = []
         files_removed = []
+        files_set_exec = []
+        files_clear_exec = []
+
         self.info(2, "  Creating dirs and copying files...")
+        def copyfile_helper(i, nk_wc):
+            '''Helper: copy a file and optionally, transfer permissions.'''
+            f = os.path.join(self.importdir, i)
+            t = os.path.join(self.wcdir, i)
+            shutil.copyfile(f, t)
+            # If exec-permission is 'clear', we don't need to do anything:
+            # shutil.copyfile will create the file as non-executable.
+            if self.config.get('exec-permission') == 'preserve':
+                # If the file is new, just copying the mode is enough:
+                # svn will set the svn:executable upon adding it.
+                if nk_wc == "F":
+                    # Existing file, check what the setting shall be
+                    if os.access(f, os.X_OK) and not os.access(t, os.X_OK):
+                        files_set_exec.append(i)
+                    elif not os.access(f, os.X_OK) and os.access(t, os.X_OK):
+                        files_clear_exec.append(i)
+                shutil.copymode(f, t)
+
         for i in sorted(self.items.keys()):
             e = self.items[i]
             nk_wc = e.state[S_WC]
@@ -822,8 +850,7 @@ class SvnVndImport(cmd.Cmd):
                     flg = "(added dir)"
                 elif nk_im == "F":
                     # New file added
-                    shutil.copyfile(os.path.join(self.importdir, i),
-                            os.path.join(self.wcdir, i))
+                    copyfile_helper(i, nk_wc);
                     files_added.append(i)
                     flg = "(added file)"
                 elif nk_im == "L":
@@ -856,8 +883,7 @@ class SvnVndImport(cmd.Cmd):
                 elif nk_im == "F":
                     # Symlink replaced with file.
                     self.run_svn(["rm", "--force", i])
-                    shutil.copyfile(os.path.join(self.importdir, i),
-                            os.path.join(self.wcdir, i))
+                    copyfile_helper(i, nk_wc);
                     files_added.append(i)
                     flg = "(replaced symlink with file)"
                 else:
@@ -874,8 +900,7 @@ class SvnVndImport(cmd.Cmd):
                     flg = "(replaced file with dir)"
                 elif nk_im == "F":
                     # Was a file, is a file - just copy contents
-                    shutil.copyfile(os.path.join(self.importdir, i),
-                            os.path.join(self.wcdir, i))
+                    copyfile_helper(i, nk_wc);
                     flg = "(copied)"
                 elif nk_im == "L":
                     # Was a file, now a symlink. Replace.
@@ -896,15 +921,17 @@ class SvnVndImport(cmd.Cmd):
                 elif nk_im == "F":
                     # Directory replaced with file. Need to remove dir
                     # immediately, as bulk removals/additions assume new files
-                    # and dirs already in place.
+                    # and dirs already in place. Also, removing a directory
+                    # removes all its descendants - mark them as removed.
                     self.run_svn(["rm", "--force", i])
-                    shutil.copyfile(os.path.join(self.importdir, i),
-                            os.path.join(self.wcdir, i))
+                    self.items.wc_remove(i)
+                    copyfile_helper(i, nk_wc);
                     files_added.append(i)
                     flg = "(replaced dir with file)"
                 elif nk_im == "L":
                     # Was a directory, now a symlink. Replace.
                     self.run_svn(["rm", "--force", i])
+                    self.items.wc_remove(i)
                     tim = os.readlink(os.path.join(self.importdir, i))
                     os.symlink(tim, os.path.join(self.wcdir, i))
                     files_added.append(i)
@@ -924,7 +951,7 @@ class SvnVndImport(cmd.Cmd):
             dirs_added, files_added))
         dirs_added = list(filter(lambda x: os.path.dirname(x) not in
             dirs_added, dirs_added))
-        self.info(2, "  Running SVN add/rm commands");
+        self.info(2, "  Running SVN add/rm/propset/propdel commands");
         if len(dirs_added):
             self.run_svn(["add"], dirs_added)
         if len(files_added):
@@ -933,6 +960,10 @@ class SvnVndImport(cmd.Cmd):
             self.run_svn(["rm"], dirs_removed)
         if len(files_removed):
             self.run_svn(["rm"], files_removed)
+        if len(files_set_exec):
+            self.run_svn(["propset", "svn:executable", "*"], files_set_exec)
+        if len(files_clear_exec):
+            self.run_svn(["propdel", "svn:executable"], files_clear_exec)
         # Save the diff for the copied/moved items
         diff_save = self.config.get('save-diff-copied')
         if diff_save is not None:
