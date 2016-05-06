@@ -93,7 +93,7 @@ Candidate changes:
      Minor cosmetic change, but it should have been done before the 1.9.0
      release since OSX 10.11 was released first.
    Votes:
-     +1: brane
+     +1: brane, kotkov
 
  * r1720015
    Fix undefined behavior when opening an FSFS repository without db/format.
