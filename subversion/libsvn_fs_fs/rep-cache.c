@@ -51,13 +51,6 @@ path_rep_cache_db(const char *fs_path,
   return svn_dirent_join(fs_path, REP_CACHE_DB_NAME, result_pool);
 }
 
-#define SVN_ERR_CLOSE(x, db) do                                       \
-{                                                                     \
-  svn_error_t *svn__err = (x);                                        \
-  if (svn__err)                                                       \
-    return svn_error_compose_create(svn__err, svn_sqlite__close(db)); \
-} while (0)
-
 
 /** Library-private API's. **/
 
@@ -107,12 +100,15 @@ open_rep_cache(void *baton,
                            0, NULL, 0,
                            fs->pool, pool));
 
-  SVN_ERR_CLOSE(svn_sqlite__read_schema_version(&version, sdb, pool), sdb);
+  SVN_SQLITE__ERR_CLOSE(svn_sqlite__read_schema_version(&version, sdb, pool),
+                        sdb);
   if (version < REP_CACHE_SCHEMA_FORMAT)
     {
       /* Must be 0 -- an uninitialized (no schema) database. Create
          the schema. Results in schema version of 1.  */
-      SVN_ERR_CLOSE(svn_sqlite__exec_statements(sdb, STMT_CREATE_SCHEMA), sdb);
+      SVN_SQLITE__ERR_CLOSE(svn_sqlite__exec_statements(sdb,
+                                                        STMT_CREATE_SCHEMA),
+                            sdb);
     }
 
   /* This is used as a flag that the database is available so don't
