@@ -100,7 +100,7 @@ Candidate changes:
    Justification:
      Unbreaks working with 1.1-era repositories that didn't have this file.
    Votes:
-     +1: kotkov
+     +1: kotkov, danielsh
 
  * r1663253, r1704821, r1738659, r1738828
    Fix a few instances of undefined behavior in Win32 crash reporter.
