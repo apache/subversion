@@ -95,6 +95,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1720015
+   Fix undefined behavior when opening an FSFS repository without db/format.
+   Justification:
+     Unbreaks working with 1.1-era repositories that didn't have this file.
+   Votes:
+     +1: kotkov
+
 Veto-blocked changes:
 =====================
 
