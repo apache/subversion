@@ -36,6 +36,7 @@ import sys
 import tarfile
 import tempfile
 import logging
+import stat
 
 logger = logging.getLogger()
 
@@ -390,7 +391,7 @@ def xml_entries_relocate(path, from_url, to_url):
   adm_name = svntest.main.get_admin_name()
   entries = os.path.join(path, adm_name, 'entries')
   txt = open(entries).read().replace('url="' + from_url, 'url="' + to_url)
-  os.chmod(entries, 0777)
+  os.chmod(entries, svntest.main.S_ALL_RWX)
   open(entries, 'w').write(txt)
 
   for dirent in os.listdir(path):
@@ -408,7 +409,7 @@ def simple_entries_replace(path, from_url, to_url):
   adm_name = svntest.main.get_admin_name()
   entries = os.path.join(path, adm_name, 'entries')
   txt = open(entries).read().replace(from_url, to_url)
-  os.chmod(entries, 0777)
+  os.chmod(entries, svntest.main.S_ALL_RWX)
   open(entries, 'wb').write(txt)
 
   for dirent in os.listdir(path):
@@ -1462,14 +1463,15 @@ def auto_analyze(sbox):
   # svntest.main.chmod_tree will not reset it.)
   for path, subdirs, files in os.walk(sbox.wc_dir):
     for d in subdirs:
-      os.chmod(os.path.join(path, d), 0555)
+      os.chmod(os.path.join(path, d), svntest.main.S_ALL_RX)
     for f in files:
-      os.chmod(os.path.join(path, f), 0444)
+      os.chmod(os.path.join(path, f), svntest.main.S_ALL_READ)
 
   state = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   svntest.actions.run_and_verify_status(sbox.wc_dir, state)
 
-  svntest.main.chmod_tree(sbox.wc_dir, 0666, 0022)
+  svntest.main.chmod_tree(sbox.wc_dir, svntest.main.S_ALL_RW,
+                          stat.S_IWGRP | stat.S_IWOTH)
 
   state = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   svntest.actions.run_and_verify_status(sbox.wc_dir, state)

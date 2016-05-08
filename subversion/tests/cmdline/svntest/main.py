@@ -147,6 +147,19 @@ stack_trace_regexp = r'(?:.*subversion[\\//].*\.c:[0-9]*,$|.*apr_err=.*)'
 os.environ['LC_ALL'] = 'C'
 
 ######################################################################
+# Permission constants used with e.g. chmod() and open().
+# Define them here at a central location, so people aren't tempted to
+# use octal literals which are not portable between Python 2 and 3.
+
+S_ALL_READ  = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
+S_ALL_WRITE = stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH
+S_ALL_EXEC  = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+
+S_ALL_RW  = S_ALL_READ | S_ALL_WRITE
+S_ALL_RX  = S_ALL_READ | S_ALL_EXEC
+S_ALL_RWX = S_ALL_READ | S_ALL_WRITE | S_ALL_EXEC
+
+######################################################################
 # The locations of the svn binaries.
 # Use --bin to override these defaults.
 def P(relpath,
@@ -902,7 +915,7 @@ def safe_rmtree(dirname, retry=0):
   """Remove the tree at DIRNAME, making it writable first.
      If DIRNAME is a symlink, only remove the symlink, not its target."""
   def rmtree(dirname):
-    chmod_tree(dirname, 0666, 0666)
+    chmod_tree(dirname, S_ALL_RW, S_ALL_RW)
     shutil.rmtree(dirname)
 
   if os.path.islink(dirname):
@@ -1005,7 +1018,7 @@ def _post_create_repos(path, minor_version = None):
         new_contents = new_contents[:-1]
 
       # replace it
-      os.chmod(format_file_path, 0666)
+      os.chmod(format_file_path, S_ALL_RW)
       file_write(format_file_path, new_contents, 'wb')
 
     # post-commit
@@ -1022,7 +1035,7 @@ def _post_create_repos(path, minor_version = None):
           % repr([svnadmin_binary, 'pack', abs_path]))
 
   # make the repos world-writeable, for mod_dav_svn's sake.
-  chmod_tree(path, 0666, 0666)
+  chmod_tree(path, S_ALL_RW, S_ALL_RW)
 
 def _unpack_precooked_repos(path, template):
   testdir = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
@@ -1199,7 +1212,7 @@ def create_python_hook_script(hook_path, hook_script_code,
   else:
     # For all other platforms
     file_write(hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
-    os.chmod(hook_path, 0755)
+    os.chmod(hook_path, S_ALL_RW | stat.S_IXUSR)
 
 def create_http_connection(url, debuglevel=9):
   """Create an http(s) connection to the host specified by URL.

@@ -24,6 +24,7 @@ import os
 import signal
 import sys
 import time
+import stat
 import multiprocessing  # requires Python 2.6
 
 
@@ -179,7 +180,8 @@ class Daemon(object):
           os.remove(self.pidfile)
         except OSError:
           pass
-        fd = os.open(self.pidfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0444)
+        fd = os.open(self.pidfile, os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                     stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
         os.write(fd, '%d\n' % pid)
         os.close(fd)
 

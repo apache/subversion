@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import os, logging
+import os, logging, stat
 
 logger = logging.getLogger()
 
@@ -634,7 +634,8 @@ def svn_prop_inheritable_autoprops_add_versioned_target(sbox):
   # addition will notice the executable bits and set svn:executable
   # again, which is not what we are here to test.
   if os.name == 'posix':
-    os.chmod(os.path.join(sbox.wc_dir, 'D', 'rip.bat'), 0664)
+    os.chmod(os.path.join(sbox.wc_dir, 'D', 'rip.bat'),
+                          svntest.main.S_ALL_READ | stat.S_IWUSR | stat.S_IWGRP)
 
   os.chdir(sbox.wc_dir)
   svntest.main.run_svn(None, 'add', '.', '--force', '--no-auto-props',

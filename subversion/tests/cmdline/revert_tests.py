@@ -1132,7 +1132,7 @@ def revert_permissions_only(sbox):
     check_executability(path, False)
 
 
-  os.chmod(sbox.ospath('A/B/E/alpha'), 0444)  # read-only
+  os.chmod(sbox.ospath('A/B/E/alpha'), svntest.main.S_ALL_READ)  # read-only
   is_readonly(sbox.ospath('A/B/E/alpha'))
   expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/alpha')]
   svntest.actions.run_and_verify_svn(expected_output, [],
@@ -1140,7 +1140,7 @@ def revert_permissions_only(sbox):
   is_writable(sbox.ospath('A/B/E/alpha'))
 
   if svntest.main.is_posix_os():
-    os.chmod(sbox.ospath('A/B/E/beta'), 0777)   # executable
+    os.chmod(sbox.ospath('A/B/E/beta'), svntest.main.S_ALL_RWX)   # executable
     is_executable(sbox.ospath('A/B/E/beta'))
     expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/beta')]
     svntest.actions.run_and_verify_svn(expected_output, [],
@@ -1165,7 +1165,7 @@ def revert_permissions_only(sbox):
                                         expected_output,
                                         expected_status)
 
-  os.chmod(sbox.ospath('A/B/E/alpha'), 0666)  # not read-only
+  os.chmod(sbox.ospath('A/B/E/alpha'), svntest.main.S_ALL_RW)  # not read-only
   is_writable(sbox.ospath('A/B/E/alpha'))
   expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/alpha')]
   svntest.actions.run_and_verify_svn(expected_output, [],
@@ -1173,7 +1173,7 @@ def revert_permissions_only(sbox):
   is_readonly(sbox.ospath('A/B/E/alpha'))
 
   if svntest.main.is_posix_os():
-    os.chmod(sbox.ospath('A/B/E/beta'), 0666)   # not executable
+    os.chmod(sbox.ospath('A/B/E/beta'), svntest.main.S_ALL_RW)   # not executable
     is_non_executable(sbox.ospath('A/B/E/beta'))
     expected_output = ["Reverted '%s'\n" % sbox.ospath('A/B/E/beta')]
     svntest.actions.run_and_verify_svn(expected_output, [],

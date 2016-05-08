@@ -246,7 +246,7 @@ def patch_format(repo_dir, shard_size):
       processed_lines.append(line)
 
   new_contents = "\n".join(processed_lines)
-  os.chmod(format_path, 0666)
+  os.chmod(format_path, svntest.main.S_ALL_RW)
   open(format_path, 'wb').write(new_contents)
 
 def is_sharded(repo_dir):
@@ -3172,7 +3172,7 @@ def load_no_svndate_r0(sbox):
 def hotcopy_read_only(sbox):
   "'svnadmin hotcopy' a read-only source repository"
   sbox.build()
-  svntest.main.chmod_tree(sbox.repo_dir, 0, 0222)
+  svntest.main.chmod_tree(sbox.repo_dir, 0, svntest.main.S_ALL_WRITE)
 
   backup_dir, backup_url = sbox.add_repo_path('backup')
   exit_code, output, errput = svntest.main.run_svnadmin("hotcopy",
@@ -3180,7 +3180,8 @@ def hotcopy_read_only(sbox):
                                                         backup_dir)
 
   # r/o repos are hard to clean up. Make it writable again.
-  svntest.main.chmod_tree(sbox.repo_dir, 0222, 0222)
+  svntest.main.chmod_tree(sbox.repo_dir, svntest.main.S_ALL_WRITE,
+                          svntest.main.S_ALL_WRITE)
   if errput:
     logger.warn("Error: hotcopy failed")
     raise SVNUnexpectedStderr(errput)

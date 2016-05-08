@@ -24,6 +24,7 @@
 import sys
 import os
 import getopt
+import stat
 try:
   my_getopt = getopt.gnu_getopt
 except AttributeError:
@@ -265,11 +266,11 @@ class Entries:
     assert len(str(format_nbr)) <= self.format_nbr_bytes
     format_string = '%0' + str(self.format_nbr_bytes) + 'd'
 
-    os.chmod(self.path, 0600)
+    os.chmod(self.path, stat.S_IRUSR | stat.S_IWUSR)
     output = open(self.path, "r+", 0)
     output.write(format_string % format_nbr)
     output.close()
-    os.chmod(self.path, 0400)
+    os.chmod(self.path, stat.S_IRUSR)
 
 class Entry:
   "Describes an entry in a WC."
@@ -334,14 +335,14 @@ class Format:
     if os.path.exists(self.path):
       if verbosity >= 1:
         print("%s will be updated." % self.path)
-      os.chmod(self.path,0600)
+      os.chmod(self.path, stat.S_IRUSR | stat.S_IWUSR)
     else:
       if verbosity >= 1:
         print("%s does not exist, creating it." % self.path)
     format = open(self.path, "w")
     format.write(format_string % format_nbr)
     format.close()
-    os.chmod(self.path, 0400)
+    os.chmod(self.path, stat.S_IRUSR)
 
 class LocalException(Exception):
   """Root of local exception class hierarchy."""

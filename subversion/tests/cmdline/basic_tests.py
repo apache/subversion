@@ -394,8 +394,9 @@ def basic_commit_corruption(sbox):
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
   mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
-  os.chmod(tb_dir_path, 0777)  ### What's a more portable way to do this?
-  os.chmod(mu_tb_path, 0666)   ### Would rather not use hardcoded numbers.
+  ### What's a more portable way to do this?
+  os.chmod(tb_dir_path, svntest.main.S_ALL_RWX)
+  os.chmod(mu_tb_path, svntest.main.S_ALL_RW)
   shutil.copyfile(mu_tb_path, mu_saved_tb_path)
   svntest.main.file_append(mu_tb_path, 'Aaagggkkk, corruption!')
   os.chmod(tb_dir_path, tb_dir_saved_mode)
@@ -407,8 +408,8 @@ def basic_commit_corruption(sbox):
                                         "svn: E200014: Checksum")
 
   # Restore the uncorrupted text base.
-  os.chmod(tb_dir_path, 0777)
-  os.chmod(mu_tb_path, 0666)
+  os.chmod(tb_dir_path, svntest.main.S_ALL_RWX)
+  os.chmod(mu_tb_path, svntest.main.S_ALL_RW)
   os.remove(mu_tb_path)
   os.rename(mu_saved_tb_path, mu_tb_path)
   os.chmod(tb_dir_path, tb_dir_saved_mode)
@@ -480,8 +481,8 @@ def basic_update_corruption(sbox):
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
   mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
-  os.chmod(tb_dir_path, 0777)
-  os.chmod(mu_tb_path, 0666)
+  os.chmod(tb_dir_path, svntest.main.S_ALL_RWX)
+  os.chmod(mu_tb_path, svntest.main.S_ALL_RW)
   shutil.copyfile(mu_tb_path, mu_saved_tb_path)
   svntest.main.file_append(mu_tb_path, 'Aiyeeeee, corruption!\nHelp!\n')
   os.chmod(tb_dir_path, tb_dir_saved_mode)
@@ -499,8 +500,8 @@ def basic_update_corruption(sbox):
                                         "svn: E155017: Checksum")
 
   # Restore the uncorrupted text base.
-  os.chmod(tb_dir_path, 0777)
-  os.chmod(mu_tb_path, 0666)
+  os.chmod(tb_dir_path, svntest.main.S_ALL_RWX)
+  os.chmod(mu_tb_path, svntest.main.S_ALL_RW)
   os.remove(mu_tb_path)
   os.rename(mu_saved_tb_path, mu_tb_path)
   os.chmod(tb_dir_path, tb_dir_saved_mode)
@@ -1556,7 +1557,7 @@ def basic_add_ignores(sbox):
   foo_c_path = os.path.join(dir_path, 'foo.c')
   foo_o_path = os.path.join(dir_path, 'foo.o')
 
-  os.mkdir(dir_path, 0755)
+  os.mkdir(dir_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
   open(foo_c_path, 'w')
   open(foo_o_path, 'w')
 
@@ -1607,7 +1608,7 @@ def basic_add_no_ignores(sbox):
   foo_lo_path = os.path.join(dir_path, 'foo.lo')
   foo_rej_path = os.path.join(dir_path, 'foo.rej')
 
-  os.mkdir(dir_path, 0755)
+  os.mkdir(dir_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
   open(foo_c_path, 'w')
   open(foo_o_path, 'w')
   open(foo_lo_path, 'w')
@@ -1636,9 +1637,9 @@ def basic_add_parents(sbox):
   omicron_path = os.path.join(Y_path, 'omicron')
 
   # Create some unversioned directories
-  os.mkdir(X_path, 0755)
-  os.mkdir(Y_path, 0755)
-  os.mkdir(Z_path, 0755)
+  os.mkdir(X_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
+  os.mkdir(Y_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
+  os.mkdir(Z_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
 
   # Create new files
   z = open(zeta_path, 'w')
