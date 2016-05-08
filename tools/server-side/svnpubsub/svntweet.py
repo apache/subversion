@@ -42,7 +42,13 @@ from twisted.internet import defer, reactor, task, threads
 from twisted.python import failure, log
 from twisted.web.client import HTTPClientFactory, HTTPPageDownloader
 
-from urlparse import urlparse
+try:
+  # Python >=3.0
+  from urllib.parse import urlparse
+except ImportError:
+  # Python <3.0
+  from urlparse import urlparse
+
 import time
 import posixpath
 

@@ -86,7 +86,6 @@ import sys
 import posixpath
 import socket
 import json
-import urlparse
 import optparse
 import ConfigParser
 import traceback
@@ -94,6 +93,14 @@ import signal
 import re
 import fnmatch
 from string import Template
+
+try:
+  # Python >=3.0
+  from urllib.parse import urlparse
+except ImportError:
+  # Python <3.0
+  from urlparse import urlparse
+
 
 # Packages that come with svnpubsub
 import svnpubsub.client
