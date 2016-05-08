@@ -37,7 +37,7 @@ else:
 import svntest
 from svntest import main, verify, tree, wc, sandbox
 from svntest import Failure
-from actions import *
+from svntest.actions import *
 
 logger = logging.getLogger()
 
