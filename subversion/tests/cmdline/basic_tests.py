@@ -3087,12 +3087,12 @@ def plaintext_password_storage_disabled(sbox):
   os.mkdir(config_dir_path)
 
   # disable all encryped password stores
-  config_file = file(os.path.join(config_dir_path, "config"), "w")
+  config_file = open(os.path.join(config_dir_path, "config"), "w")
   config_file.write("[auth]\npassword-stores =\n")
   config_file.close()
 
   # disable plaintext password storage
-  servers_file = file(os.path.join(config_dir_path, "servers"), "w")
+  servers_file = open(os.path.join(config_dir_path, "servers"), "w")
   servers_file.write("[global]\nstore-plaintext-passwords=no\n")
   servers_file.close()
   
@@ -3108,7 +3108,7 @@ def plaintext_password_storage_disabled(sbox):
   for root, dirs, files, in os.walk(os.path.join(config_dir_path, "auth")):
     for file_name in files:
       path = os.path.join(root, file_name)
-      f = file(path, "r")
+      f = open(path, "r")
       for line in f.readlines():
         if svntest.main.wc_passwd in line:
           f.close()
