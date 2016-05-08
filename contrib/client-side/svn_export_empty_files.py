@@ -334,9 +334,10 @@ what you are looking for.  This script was written to create a smaller
 non-working working copy that can be crawled with find or find's
 locate utility to make it easier to find files."""
 
-    print >>sys.stderr, message1 % sys.argv[0]
+    sys.stderr.write(message1 % sys.argv[0])
+    sys.stderr.write("\n")
     if verbose_usage:
-        print >>sys.stderr, message2
+        sys.stderr.write(message2 + "\n")
     sys.exit(1)
 
 if __name__ == '__main__':

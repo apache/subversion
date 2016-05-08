@@ -133,6 +133,6 @@ def run(*cmd):
      e.g. result = run('/usr/bin/svn', 'info', wc_dir_path) '''
   print('-->', ' '.join(cmd))
   stdout = subprocess.Popen(cmd, stdout=subprocess.PIPE).communicate()[0]
-  print stdout.strip()
+  print(stdout.strip())
   return stdout
 

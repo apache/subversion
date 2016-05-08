@@ -84,7 +84,7 @@ assert (svn.core.SVN_VER_MAJOR, svn.core.SVN_VER_MINOR) >= (1, 2), \
        + str(svn.core.SVN_VER_MAJOR) + "." + str(svn.core.SVN_VER_MINOR)
 
 def usage_and_exit():
-  print >> sys.stderr, __doc__
+  sys.stderr.write(__doc__ + "\n")
   sys.exit(1)
 
 class RepositoryZombieLockRemover:
@@ -112,7 +112,7 @@ class RepositoryZombieLockRemover:
     """check if the file still exists in HEAD, removing the lock if not"""
     if svn.fs.svn_fs_check_path(self.rev_root, lock.path, callback_pool) \
            == svn.core.svn_node_none:
-      print lock.path
+      print(lock.path)
       svn.repos.svn_repos_fs_unlock(self.repos_ptr, lock.path, lock.token,
                                     True, callback_pool)
 

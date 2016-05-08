@@ -254,7 +254,7 @@ def co(name, local_action, local_kind, incoming_action, incoming_kind):
   svn('up', ctx.WC)
 
   head = ctx.head()
-  print head
+  print(head)
 
   ctx.create_wc2()
   target = ctx.wc2(name)
@@ -289,7 +289,7 @@ def up(name, local_action, local_kind, incoming_action, incoming_kind):
   svn('up', ctx.WC)
 
   head = ctx.head()
-  print head
+  print(head)
 
   target = ctx.wc(name)
   incoming_action(ctx, target, incoming_kind, 'incoming')
@@ -401,7 +401,7 @@ try:
     if skip(row):
       continue
     name = nameof(row)
-    print name
+    print(name)
     test_func = row[0]
     results.append( (name, analyze( name, test_func( name, *row[1:] ) )) )
 except:
@@ -419,5 +419,5 @@ finally:
     else:
       lines.append('----- ' + name + ': nothing.')
   dump = '\n'.join(lines)
-  print dump
+  print(dump)
   rewrite_file('tree-conflicts-add-vs-add.py.results', dump)

@@ -93,7 +93,7 @@ def log(type, indent, format, *args):
     indentStr = ' ' * indent
     str = format % args
     str = '\n'.join([indentStr + x for x in str.split('\n')])
-    print str
+    print(str)
 
 
 class ByteStream(object):
@@ -926,7 +926,7 @@ class RegexpStrategy(WalkStrategy):
 
 
 def verify(noderev, revFile, dumpInstructions, dumpWindows):
-  print noderev
+  print(noderev)
 
   if noderev.text:
     noderev.text.verify(revFile,
@@ -1192,7 +1192,7 @@ if __name__ == '__main__':
             truncate(noderev, revFile)
 
         else:
-          print noderev
+          print(noderev)
 
           if not options.noVerify:
             if noderev.text:

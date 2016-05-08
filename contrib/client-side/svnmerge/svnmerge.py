@@ -319,7 +319,7 @@ def launchsvn(s, show=False, pretend=False, **kwargs):
     cmd = ' '.join(filter(None, [opts["svn"], "--non-interactive",
                                  username, password, configdir, s]))
     if show or opts["verbose"] >= 2:
-        print cmd
+        print(cmd)
     if pretend:
         return None
     return launch(cmd, **kwargs)
@@ -330,7 +330,7 @@ def svn_command(s):
                     pretend=opts["dry-run"],
                     split_lines=False)
     if not opts["dry-run"]:
-        print out
+        print(out)
 
 def check_dir_clean(dir):
     """Check the current status of dir for local mods."""
@@ -1298,7 +1298,7 @@ def display_revisions(revs, display_style, revisions_msg, source_url):
     if display_style == "revisions":
         if revs:
             report(revisions_msg)
-            print revs
+            print(revs)
     elif display_style == "logs":
         for start,end in revs.normalized():
             svn_command('log --incremental -v -r %d:%d %s' % \
@@ -1876,7 +1876,7 @@ class CommandOpts:
 
     def _print_wrapped(self, text, indent=0):
         text = self._paragraphs(text, self.cwidth - indent)
-        print text.pop(0)
+        print(text.pop(0))
         for t in text:
             print(" " * indent + t)
 
@@ -2018,7 +2018,7 @@ class CommandOpts:
         print_opts(self.gopts)
 
     def print_version(self):
-        print self.version
+        print(self.version)
 
 ###############################################################################
 # Options and Commands description

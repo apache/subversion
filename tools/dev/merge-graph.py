@@ -35,8 +35,8 @@ if __name__ == '__main__':
 
   prog_name = sys.argv[0]
   if not args:
-    usage = '%s: usage: "%s %s"' % (prog_name, prog_name, args_message)
-    print >> sys.stderr, usage
+    usage = '%s: usage: "%s %s"\n' % (prog_name, prog_name, args_message)
+    sys.stderr.write(usage)
     sys.exit(1)
 
   formats = []

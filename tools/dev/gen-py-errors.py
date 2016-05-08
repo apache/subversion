@@ -52,7 +52,7 @@ RE_DEF_VALUE = re.compile(r'SVN_ERR_([A-Z_]+)_CATEG[^0-9]*([0-9]+)')
 
 
 def write_output(codes):
-  print HEADER
+  print(HEADER)
 
   for name, value in codes:
     # skip SVN_ERR_ on the name

@@ -790,7 +790,7 @@ def simpletest(database):
 
         def listdir(noderev, prefix):
             for n in ix.listdir(tx, noderev):
-                print prefix, str(n)
+                print(prefix, str(n))
                 if n._isdir:
                     listdir(n, prefix + "  ")
 
@@ -798,7 +798,7 @@ def simpletest(database):
         tx = ix.get_txn()
         print("transaction:", tx)
         root = ix.lookup(tx)
-        print str(root.noderev)
+        print(str(root.noderev))
         listdir(root.noderev, " ")
 
         print("Lookup iota")

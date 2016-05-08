@@ -105,7 +105,7 @@ if __name__ == '__main__':
     sys.exit(0)
 
   if len(sys.argv) != 3:
-    print >>sys.stderr, usage
+    sys.stderr.write(usage + "\n")
     sys.exit(1)
 
   repo_dir = sys.argv[1]
@@ -120,4 +120,4 @@ if __name__ == '__main__':
     sys.stderr.write("warning: the good ID has a different length: " + \
                      "bad id '" + bad_id + "', good id '" + good_id + "'\n")
 
-  print good_id
+  print(good_id)
