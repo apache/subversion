@@ -48,7 +48,7 @@ separated list of test numbers; the default is to run all the tests in it.
 import os, sys, shutil
 import re
 import logging
-import optparse, subprocess, imp, threading, traceback, exceptions
+import optparse, subprocess, imp, threading, traceback
 from datetime import datetime
 
 try:
@@ -57,6 +57,10 @@ try:
 except ImportError:
   # Python <3.0
   import Queue as queue
+
+if sys.version_info < (3, 0):
+  # Python >= 3.0 already has this build in
+  import exceptions
 
 # Ensure the compiled C tests use a known locale (Python tests set the locale
 # explicitly).
