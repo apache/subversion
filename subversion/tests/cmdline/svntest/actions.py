@@ -1937,6 +1937,10 @@ def get_wc_base_rev(wc_dir):
   "Return the BASE revision of the working copy at WC_DIR."
   return run_and_parse_info(wc_dir)[0]['Revision']
 
+def load_dumpfile(filename):
+  "Return the contents of the FILENAME assuming that it is a dump file"
+  return open(filename, "rb").readlines()
+
 def hook_failure_message(hook_name):
   """Return the error message that the client prints for failure of the
   specified hook HOOK_NAME. The wording changed with Subversion 1.5."""

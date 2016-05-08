@@ -1033,7 +1033,7 @@ def load_with_parent_dir(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
                                    'mergeinfo_included.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.actions.load_dumpfile(dumpfile_location)
 
   # Create 'sample' dir in sbox.repo_url, and load the dump stream there.
   svntest.actions.run_and_verify_svn(['Committing transaction...\n',
@@ -1125,7 +1125,7 @@ def reflect_dropped_renumbered_revs(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'with_merges.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.actions.load_dumpfile(dumpfile_location)
 
   # Create 'toplevel' dir in sbox.repo_url
   svntest.actions.run_and_verify_svn(['Committing transaction...\n',
@@ -1363,9 +1363,10 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   #   Properties on 'branches/B2':
   #     svn:mergeinfo
   #       /trunk:9
-  dumpfile_full = open(os.path.join(os.path.dirname(sys.argv[0]),
-                                    'svnadmin_tests_data',
-                                    'mergeinfo_included_full.dump')).read()
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnadmin_tests_data',
+                                   'mergeinfo_included_full.dump')
+  dumpfile_full = svntest.actions.load_dumpfile(dumpfile_location)
   load_dumpstream(sbox, dumpfile_full, '--ignore-uuid')
 
   # Check that the mergeinfo is as expected.
@@ -1408,9 +1409,12 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   sbox.build(empty=True)
 
   # Load the three incremental dump files in sequence.
-  load_dumpstream(sbox, open(dump_file_r1_10).read(), '--ignore-uuid')
-  load_dumpstream(sbox, open(dump_file_r11_13).read(), '--ignore-uuid')
-  load_dumpstream(sbox, open(dump_file_r14_15).read(), '--ignore-uuid')
+  load_dumpstream(sbox, svntest.actions.load_dumpfile(dump_file_r1_10),
+                  '--ignore-uuid')
+  load_dumpstream(sbox, svntest.actions.load_dumpfile(dump_file_r11_13),
+                  '--ignore-uuid')
+  load_dumpstream(sbox, svntest.actions.load_dumpfile(dump_file_r14_15),
+                  '--ignore-uuid')
 
   # Check the mergeinfo, we use the same expected output as before,
   # as it (duh!) should be exactly the same as when we loaded the
@@ -1436,9 +1440,10 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   #     Project-Z     (Added r5)
   #     docs/         (Added r6)
   #       README      (Added r6)
-  dumpfile_skeleton = open(os.path.join(os.path.dirname(sys.argv[0]),
-                                        'svnadmin_tests_data',
-                                        'skeleton_repos.dump')).read()
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                                   'svnadmin_tests_data',
+                                                   'skeleton_repos.dump')
+  dumpfile_skeleton = svntest.actions.load_dumpfile(dumpfile_location)
   load_dumpstream(sbox, dumpfile_skeleton, '--ignore-uuid')
 
   # Load 'svnadmin_tests_data/mergeinfo_included_full.dump' in one shot:
@@ -1482,11 +1487,11 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   load_dumpstream(sbox, dumpfile_skeleton, '--ignore-uuid')
 
   # Load the three incremental dump files in sequence.
-  load_dumpstream(sbox, open(dump_file_r1_10).read(),
+  load_dumpstream(sbox, svntest.actions.load_dumpfile(dump_file_r1_10),
                   '--parent-dir', 'Projects/Project-X', '--ignore-uuid')
-  load_dumpstream(sbox, open(dump_file_r11_13).read(),
+  load_dumpstream(sbox, svntest.actions.load_dumpfile(dump_file_r11_13),
                   '--parent-dir', 'Projects/Project-X', '--ignore-uuid')
-  load_dumpstream(sbox, open(dump_file_r14_15).read(),
+  load_dumpstream(sbox, svntest.actions.load_dumpfile(dump_file_r14_15),
                   '--parent-dir', 'Projects/Project-X', '--ignore-uuid')
 
   # Check the resulting mergeinfo.  We expect the exact same results
@@ -1778,7 +1783,7 @@ def load_ranges(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
                                    'skeleton_repos.dump')
-  dumplines = open(dumpfile_location).readlines()
+  dumplines = svntest.actions.load_dumpfile(dumpfile_location)
   dumpdata = "".join(dumplines)
 
   # Load our dumpfile, 2 revisions at a time, verifying that we have
@@ -2473,7 +2478,7 @@ def verify_denormalized_names(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
                                    'normalization_check.dump')
-  load_dumpstream(sbox, open(dumpfile_location).read())
+  load_dumpstream(sbox, svntest.actions.load_dumpfile(dumpfile_location))
 
   exit_code, output, errput = svntest.main.run_svnadmin(
     "verify", "--check-normalization", sbox.repo_dir)
@@ -2551,9 +2556,10 @@ def load_ignore_dates(sbox):
 
   sbox.build(create_wc=False, empty=True)
 
-  dumpfile_skeleton = open(os.path.join(os.path.dirname(sys.argv[0]),
-                                        'svnadmin_tests_data',
-                                        'skeleton_repos.dump')).read()
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                                   'svnadmin_tests_data',
+                                                   'skeleton_repos.dump')
+  dumpfile_skeleton = svntest.actions.load_dumpfile(dumpfile_location)
 
   load_dumpstream(sbox, dumpfile_skeleton, '--ignore-dates')
   svntest.actions.run_and_verify_svnlook(['6\n'],

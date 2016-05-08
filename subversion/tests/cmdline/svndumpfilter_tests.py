@@ -90,7 +90,7 @@ def reflect_dropped_renumbered_revs(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'with_merges.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.actions.load_dumpfile(dumpfile_location)
 
   filtered_out, filtered_err = filter_and_return_output(
       dumpfile, 0, "include",
@@ -140,7 +140,7 @@ def svndumpfilter_loses_mergeinfo(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'with_merges.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.actions.load_dumpfile(dumpfile_location)
 
   filtered_out, filtered_err = filter_and_return_output(dumpfile, 0, "include",
                                                         "trunk", "branch1",
@@ -224,7 +224,7 @@ def dumpfilter_with_targets(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'greek_tree.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.actions.load_dumpfile(dumpfile_location)
 
   (fd, targets_file) = tempfile.mkstemp(dir=svntest.main.temp_dir)
   try:
@@ -247,7 +247,7 @@ def dumpfilter_with_patterns(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'greek_tree.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.actions.load_dumpfile(dumpfile_location)
   _simple_dumpfilter_test(sbox, dumpfile,
                           'exclude', '--pattern', '/A/D/[GH]*', '/A/[B]/E*')
 
@@ -335,7 +335,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   partial_dump = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'mergeinfo_included_partial.dump')
-  partial_dump_contents = open(partial_dump).read()
+  partial_dump_contents = svntest.actions.load_dumpfile(partial_dump)
   filtered_dumpfile2, filtered_out = filter_and_return_output(
       partial_dump_contents,
       8192, # Set a sufficiently large bufsize to avoid a deadlock
@@ -366,14 +366,15 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   #     docs/         (Added r6)
   #       README      (Added r6).
   sbox.build(empty=True)
-  skeleton_dumpfile = open(os.path.join(os.path.dirname(sys.argv[0]),
-                                        'svnadmin_tests_data',
-                                        'skeleton_repos.dump')).read()
+  skeleton_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                                  'svnadmin_tests_data',
+                                                  'skeleton_repos.dump')
+  skeleton_dumpfile = svntest.actions.load_dumpfile(skeleton_location)
   load_dumpstream(sbox, skeleton_dumpfile, '--ignore-uuid')
   partial_dump2 = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'mergeinfo_included_partial.dump')
-  partial_dump_contents2 = open(partial_dump2).read()
+  partial_dump_contents2 = svntest.actions.load_dumpfile(partial_dump2)
   # Now use the partial dump file we used above, but this time exclude
   # the B2 branch.  Load the filtered dump into the /Projects/Project-X
   # subtree of the skeleton repos.
@@ -550,7 +551,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   full_dump = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
                                    'mergeinfo_included_full.dump')
-  full_dump_contents = open(full_dump).read()
+  full_dump_contents = svntest.actions.load_dumpfile(full_dump)
   filtered_dumpfile, filtered_out = filter_and_return_output(
       full_dump_contents,
       16384, # Set a sufficiently large bufsize to avoid a deadlock
@@ -595,7 +596,7 @@ def match_empty_prefix(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'greek_tree.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.actions.load_dumpfile(dumpfile_location)
 
   def test(sbox, dumpfile, *dumpargs):
     """Run svndumpfilter with DUMPFILE as the input lines, load
@@ -648,7 +649,7 @@ def accepts_deltas(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'simple_v3.dump')
-  dump_in = open(dumpfile_location).read()
+  dump_in = svntest.actions.load_dumpfile(dumpfile_location)
 
   dump_out, err = filter_and_return_output(dump_in, 0, "include",
                                                         "trunk", "--quiet")
@@ -683,7 +684,7 @@ def dumpfilter_targets_expect_leading_slash_prefixes(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'greek_tree.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.actions.load_dumpfile(dumpfile_location)
 
   (fd, targets_file) = tempfile.mkstemp(dir=svntest.main.temp_dir)
   try:
@@ -706,7 +707,7 @@ def drop_all_empty_revisions(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'empty_revisions.dump')
-  dump_contents = open(dumpfile_location).read()
+  dump_contents = svntest.actions.load_dumpfile(dumpfile_location)
 
   filtered_dumpfile, filtered_err = filter_and_return_output(
       dump_contents,
