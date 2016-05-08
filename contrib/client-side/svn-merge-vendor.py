@@ -282,7 +282,7 @@ def fine_tune(wc_dir):
 def alert(messages):
     """Wait the user to <ENTER> or abort the program"""
     for message in messages:
-        print >> sys.stderr, message
+        sys.stderr.write(message + "\n")
     try:
         return sys.stdin.readline()
     except KeyboardInterrupt:

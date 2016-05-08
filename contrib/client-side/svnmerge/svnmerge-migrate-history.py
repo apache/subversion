@@ -40,11 +40,11 @@ try:
   import svn.fs
   import svn.repos
 except ImportError as e:
-  print >> sys.stderr, \
+  sys.stderr.write(\
         "ERROR: Unable to import Subversion's Python bindings: '%s'\n" \
         "Hint: Set your PYTHONPATH environment variable, or adjust your " \
         "PYTHONSTARTUP\nfile to point to your Subversion install " \
-        "location's svn-python directory." % e
+        "location's svn-python directory.\n" % e)
   sys.exit(1)
 
 # Convenience shortcut.
@@ -105,7 +105,7 @@ class Migrator:
   def log(self, message, only_when_verbose=True):
     if only_when_verbose and not self.verbose:
       return
-    print message
+    print(message)
 
   def run(self):
     self.repos = svn.repos.open(self.repos_path)

@@ -38,7 +38,7 @@ MAX_FSFS_FORMAT = 5
 # Print a message, only if 'verbose' mode is enabled.
 def verbose_print(str):
   if VERBOSE:
-    print str
+    print(str)
 
 # Echo the arguments to a log file, and also (if verbose) to standard output.
 def log(str):
@@ -287,7 +287,7 @@ def fix_rev(repo_dir, rev):
 if __name__ == '__main__':
 
   if len(sys.argv) != 3:
-    print >>sys.stderr, usage
+    sys.stderr.write(usage + "\n")
     sys.exit(1)
 
   repo_dir = sys.argv[1]

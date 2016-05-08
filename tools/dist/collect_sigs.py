@@ -332,7 +332,7 @@ def main():
     elif basename[:-4] in files():
       # early exit; bypass 'content' entirely
       print_content_type('text/plain')
-      print cat_signatures(basename)
+      print(cat_signatures(basename))
       return
 
   # These are "global" values, not specific to our action.
@@ -344,7 +344,7 @@ def main():
   print_content_type('text/html')
 
   template = string.Template(shell_content)
-  print template.safe_substitute(mapping)
+  print(template.safe_substitute(mapping))
 
 
 if __name__ == '__main__':

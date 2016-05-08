@@ -189,8 +189,8 @@ def run_test_cs_configurations(command, args):
       repeatedly with all servers on all repositories. """
 
   print
-  print command
-  print
+  print(command)
+  print()
 
   for config in configurations:
     set_config(config)
@@ -241,9 +241,9 @@ def run_test_admin_configurations(command, args):
   """ Run svnadmin COMMAND with basic arguments ARGS in all configurations
       repeatedly on all repositories. """
 
-  print
-  print command
-  print
+  print()
+  print(command)
+  print()
 
   for config in configurations:
     # These two must be the innermost loops and must be in that order.

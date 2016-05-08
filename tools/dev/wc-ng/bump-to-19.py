@@ -293,7 +293,7 @@ def migrate_wc_subdirs(wc_root_path):
       shutil.rmtree(tmp_path(wc_subdir_path))
       os.rmdir(dotsvn_path(wc_subdir_path))
     except Exception as e:
-      print e
+      print(e)
       failed_delete_subdirs += [wc_subdir_path]
 
   # Notify any problems in deleting
@@ -339,7 +339,7 @@ def bump_wc_format_number(wc_path):
 if __name__ == '__main__':
 
   if len(sys.argv) != 2:
-    print __doc__
+    print(__doc__)
     sys.exit(1)
 
   wc_root_path = sys.argv[1]

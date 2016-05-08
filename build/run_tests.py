@@ -476,7 +476,7 @@ class TestHarness:
     for t in threads:
       t.join()
 
-    print
+    print()
 
     # Aggregate and log the results
     failed = 0
@@ -748,7 +748,7 @@ class TestHarness:
   def _run_c_test(self, progabs, progdir, progbase, test_nums, dot_count):
     'Run a c test, escaping parameters as required.'
     if self.opts.list_tests and self.opts.milestone_filter:
-      print 'WARNING: --milestone-filter option does not currently work with C tests'
+      print('WARNING: --milestone-filter option does not currently work with C tests')
 
     if not os.access(progbase, os.X_OK):
       print("\nNot an executable file: " + progbase)
@@ -929,7 +929,7 @@ class TestHarness:
     # we printed a "Running all tests in ..." line, add the test result.
     if self.log:
       if self.opts.list_tests:
-        print ''
+        print()
       else:
         if failed:
           print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)

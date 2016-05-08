@@ -2383,7 +2383,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
          or options.mode_filter.upper() == test_mode \
          or (options.mode_filter.upper() == 'PASS' and test_mode == ''):
         if not printed_header:
-          print header
+          print(header)
           printed_header = True
         TestRunner(test_list[testnum], testnum).list(milestones_dict)
     # We are simply listing the tests so always exit with success.

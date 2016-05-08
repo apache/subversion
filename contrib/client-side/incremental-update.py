@@ -173,7 +173,7 @@ def main():
     current = 0
     for dir in dirs:
         current = current + 1
-        print format_string % (current, num_dirs, dir)
+        print(format_string % (current, num_dirs, dir))
         os.system('%s update --quiet --revision %d %s %s'
                   % (SVN_BINARY, head_revision, args, dir))
 

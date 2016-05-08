@@ -220,7 +220,7 @@ class BigDoEverythingClass(object):
   def commit(self, url, commit):
     if self.options.verbose:
       print("RECV: from %s" % url)
-      print json.dumps(vars(commit), indent=2)
+      print(json.dumps(vars(commit), indent=2))
 
     try:
       config_sections = self.locate_matching_configs(commit)

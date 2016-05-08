@@ -164,7 +164,7 @@ j = os.path.join
 
 def bail(msg=None):
   if msg:
-    print msg
+    print(msg)
   exit(1)
 
 def time_str():
@@ -1270,8 +1270,8 @@ if __name__ == '__main__':
   def usage(msg=None):
     parser.print_help()
     if msg:
-      print
-      print msg
+      print()
+      print(msg)
     bail()
 
   # there should be at least one arg left: the sub-command
