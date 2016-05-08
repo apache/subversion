@@ -2216,10 +2216,10 @@ def many_locks_hooks(sbox):
 def dav_lock_refresh(sbox):
   "refresh timeout of DAV lock"
 
-  if sys.version_info < (3, 0):
+  try:
     # Python <3.0
     import httplib
-  else:
+  except ImportError:
     # Python >=3.0
     import http.client
 
