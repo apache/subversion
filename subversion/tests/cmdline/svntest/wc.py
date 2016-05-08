@@ -26,16 +26,17 @@
 import os
 import sys
 import re
-import urllib
 import logging
 import pprint
 
 if sys.version_info[0] >= 3:
   # Python >=3.0
   from io import StringIO
+  from urllib.parse import quote as urllib_quote
 else:
   # Python <3.0
   from cStringIO import StringIO
+  from urllib import quote as urllib_quote
 
 import svntest
 
@@ -1073,7 +1074,7 @@ def repos_join(base, path):
 def svn_uri_quote(url):
   # svn defines a different set of "safe" characters than Python does, so
   # we need to avoid escaping them. see subr/path.c:uri_char_validity[]
-  return urllib.quote(url, "!$&'()*+,-./:=@_~")
+  return urllib_quote(url, "!$&'()*+,-./:=@_~")
 
 
 # ------------

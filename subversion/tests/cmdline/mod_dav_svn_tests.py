@@ -25,7 +25,14 @@
 ######################################################################
 
 # General modules
-import os, logging, httplib, base64
+import os, logging, base64
+
+try:
+  # Python <3.0
+  import httplib
+except ImportError:
+  # Python >=3.0
+  import http.client
 
 logger = logging.getLogger()
 
