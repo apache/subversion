@@ -37,18 +37,19 @@ import urllib
 import logging
 import hashlib
 import zipfile
-from urlparse import urlparse
 
 try:
   # Python >=3.0
   import queue
   from urllib.parse import quote as urllib_parse_quote
   from urllib.parse import unquote as urllib_parse_unquote
+  from urllib.parse import urlparse
 except ImportError:
   # Python <3.0
   import Queue as queue
   from urllib import quote as urllib_parse_quote
   from urllib import unquote as urllib_parse_unquote
+  from urlparse import urlparse
 
 import svntest
 from svntest import Failure
@@ -1206,8 +1207,12 @@ def create_http_connection(url, debuglevel=9):
      working with this connection) to DEBUGLEVEL.  By default, all debugging
      output is printed. """
 
-  import httplib
-  from urlparse import urlparse
+  if sys.version_info < (3, 0):
+    # Python <3.0
+    import httplib
+  else:
+    # Python >=3.0
+    import http.client
 
   loc = urlparse(url)
   if loc.scheme == 'http':
