@@ -101,11 +101,11 @@ def write_authz_file_groups(sbox):
 
 def verify_get(test_area_url, path, user, pw,
                expected_status, expected_body, headers):
-  if sys.version_info < (3, 0):
+  try:
     # Python <3.0
     import httplib
     from urlparse import urlparse
-  else:
+  except ImportError:
     # Python >=3.0
     import http.client
     from urllib.parse import urlparse
