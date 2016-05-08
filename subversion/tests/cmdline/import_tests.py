@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import re, os.path, sys
+import re, os.path, sys, stat
 
 # Our testing module
 import svntest
@@ -70,11 +70,11 @@ def import_executable(sbox):
     svntest.main.file_append(path, "some text")
 
   # set executable bits
-  os.chmod(all_path, 0777)
-  os.chmod(none_path, 0666)
-  os.chmod(user_path, 0766)
-  os.chmod(group_path, 0676)
-  os.chmod(other_path, 0667)
+  os.chmod(all_path, svntest.main.S_ALL_RWX)
+  os.chmod(none_path, svntest.main.S_ALL_RW)
+  os.chmod(user_path, svntest.main.S_ALL_RW | stat.S_IXUSR)
+  os.chmod(group_path, svntest.main.S_ALL_RW | stat.S_IXGRP)
+  os.chmod(other_path, svntest.main.S_ALL_RW | stat.S_IXOTH)
 
   # import new files into repository
   url = sbox.repo_url
@@ -149,7 +149,7 @@ def import_ignores(sbox):
   foo_c_path = os.path.join(dir_path, 'foo.c')
   foo_o_path = os.path.join(dir_path, 'foo.o')
 
-  os.mkdir(dir_path, 0755)
+  os.mkdir(dir_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
   open(foo_c_path, 'w')
   open(foo_o_path, 'w')
 
@@ -213,7 +213,7 @@ def import_no_ignores(sbox):
   foo_lo_path = os.path.join(dir_path, 'foo.lo')
   foo_rej_path = os.path.join(dir_path, 'foo.rej')
 
-  os.mkdir(dir_path, 0755)
+  os.mkdir(dir_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
   open(foo_c_path, 'w')
   open(foo_o_path, 'w')
   open(foo_lo_path, 'w')
@@ -326,7 +326,7 @@ enable-auto-props = yes
   imp_dir_path = 'dir'
   imp_file_path = os.path.join(imp_dir_path, file_name)
 
-  os.mkdir(imp_dir_path, 0755)
+  os.mkdir(imp_dir_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
   svntest.main.file_write(imp_file_path, "This is file test.dsp.\n")
 
   svntest.actions.run_and_verify_svn(None, [], 'import',
@@ -378,7 +378,7 @@ enable-auto-props = yes
   imp_dir_path = 'dir2'
   imp_file_path = os.path.join(imp_dir_path, file_name)
 
-  os.mkdir(imp_dir_path, 0755)
+  os.mkdir(imp_dir_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
   svntest.main.file_append_binary(imp_file_path,
                                   "This is file test.txt.\n" + \
                                   "The second line.\r\n" + \

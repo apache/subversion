@@ -166,7 +166,7 @@ def guarantee_greek_repository(path, minor_version):
     sys.exit(1)
 
   # make the repos world-writeable, for mod_dav_svn's sake.
-  main.chmod_tree(path, 0666, 0666)
+  main.chmod_tree(path, main.S_ALL_RW, main.S_ALL_RW)
 
   # give the repository a unique UUID
   run_and_verify_svnadmin([], [], 'setuuid', path)

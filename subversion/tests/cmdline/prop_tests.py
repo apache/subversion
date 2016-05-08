@@ -750,7 +750,7 @@ def copy_inherits_special_props(sbox):
   # copied file.
   if os.name == 'posix':
     sbox.simple_propset('svn:executable', 'on', 'new_file1.bin')
-    os.chmod(new_path1, 0644)
+    os.chmod(new_path1, svntest.main.S_ALL_READ | stat.S_IWUSR)
 
   # Commit the file
   sbox.simple_commit()

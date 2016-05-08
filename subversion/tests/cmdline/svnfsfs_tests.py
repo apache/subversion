@@ -93,7 +93,7 @@ def patch_format(repo_dir, shard_size):
       processed_lines.append(line)
 
   new_contents = "\n".join(processed_lines)
-  os.chmod(format_path, 0666)
+  os.chmod(format_path, svntest.main.S_ALL_RW)
   open(format_path, 'wb').write(new_contents)
 
 ######################################################################
