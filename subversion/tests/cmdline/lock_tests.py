@@ -1422,7 +1422,7 @@ def lock_twice_in_one_wc(sbox):
                                      'lock', '-m', '', mu2_path)
 
   # Change the file anyway
-  os.chmod(mu2_path, 0700)
+  os.chmod(mu2_path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
   svntest.main.file_append(mu2_path, "Updated text")
 
   # Commit will just succeed as the DB owns the lock. It's a user decision
