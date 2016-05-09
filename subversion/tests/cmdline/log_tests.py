@@ -937,7 +937,7 @@ def log_through_copyfrom_history(sbox):
 def escape_control_chars(sbox):
   "mod_dav_svn must escape invalid XML control chars"
 
-  dump_str = """SVN-fs-dump-format-version: 2
+  dump_str = b"""SVN-fs-dump-format-version: 2
 
 UUID: ffcae364-69ee-0310-a980-ca5f10462af2
 

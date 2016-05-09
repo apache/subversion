@@ -53,8 +53,8 @@ Item = svntest.wc.StateItem
 # the logic for differentiating between these two cases.
 
 mismatched_headers_re = re.compile(
-    "Prop-delta: .*|Text-content-sha1: .*|Text-copy-source-md5: .*|"
-    "Text-copy-source-sha1: .*|Text-delta-base-sha1: .*"
+    b"Prop-delta: .*|Text-content-sha1: .*|Text-copy-source-md5: .*|" +
+    b"Text-copy-source-sha1: .*|Text-delta-base-sha1: .*"
 )
 
 ######################################################################
@@ -124,9 +124,9 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
     # Compare the output from stdout
     if ignore_base_checksums:
       expected_dumpfile = [l for l in expected_dumpfile
-                                    if not l.startswith('Text-delta-base-md5')]
+                                    if not l.startswith(b'Text-delta-base-md5')]
       svnrdump_dumpfile = [l for l in svnrdump_dumpfile
-                                    if not l.startswith('Text-delta-base-md5')]
+                                    if not l.startswith(b'Text-delta-base-md5')]
     expected_dumpfile = [l for l in expected_dumpfile
                                   if not mismatched_headers_re.match(l)]
     svnrdump_dumpfile = [l for l in svnrdump_dumpfile
@@ -165,7 +165,7 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
 
   # Set the UUID of the sbox repository to the UUID specified in the
   # dumpfile ### RA layer doesn't have a set_uuid functionality
-  uuid = original_dumpfile[2].split(' ')[1][:-1]
+  uuid = original_dumpfile[2].split(b' ')[1][:-1]
   svntest.actions.run_and_verify_svnadmin2(None, None, 0,
                                            'setuuid', sbox.repo_dir,
                                            uuid)
@@ -203,7 +203,7 @@ def basic_dump(sbox):
                                               [], 0, '-q', 'dump',
                                               sbox.repo_url)
 
-  if not out[0].startswith('SVN-fs-dump-format-version:'):
+  if not out[0].startswith(b'SVN-fs-dump-format-version:'):
     raise svntest.Failure('No valid output')
 
 def revision_0_dump(sbox):

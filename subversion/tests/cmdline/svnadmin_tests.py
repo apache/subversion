@@ -448,25 +448,25 @@ def set_changed_path_list(sbox, revision, changes):
 
 def clean_dumpfile():
   return \
-  [ "SVN-fs-dump-format-version: 2\n\n",
-    "UUID: 668cc64a-31ed-0310-8ccb-b75d75bb44e3\n\n",
-    "Revision-number: 0\n",
-    "Prop-content-length: 56\n",
-    "Content-length: 56\n\n",
-    "K 8\nsvn:date\nV 27\n2005-01-08T21:48:13.838745Z\nPROPS-END\n\n\n",
-    "Revision-number: 1\n",
-    "Prop-content-length: 98\n",
-    "Content-length: 98\n\n",
-    "K 7\nsvn:log\nV 0\n\nK 10\nsvn:author\nV 4\nerik\n",
-    "K 8\nsvn:date\nV 27\n2005-01-08T21:51:16.313791Z\nPROPS-END\n\n\n",
-    "Node-path: A\n",
-    "Node-kind: file\n",
-    "Node-action: add\n",
-    "Prop-content-length: 35\n",
-    "Text-content-length: 5\n",
-    "Text-content-md5: e1cbb0c3879af8347246f12c559a86b5\n",
-    "Content-length: 40\n\n",
-    "K 12\nsvn:keywords\nV 2\nId\nPROPS-END\ntext\n\n\n"]
+  [ b"SVN-fs-dump-format-version: 2\n\n",
+    b"UUID: 668cc64a-31ed-0310-8ccb-b75d75bb44e3\n\n",
+    b"Revision-number: 0\n",
+    b"Prop-content-length: 56\n",
+    b"Content-length: 56\n\n",
+    b"K 8\nsvn:date\nV 27\n2005-01-08T21:48:13.838745Z\nPROPS-END\n\n\n",
+    b"Revision-number: 1\n",
+    b"Prop-content-length: 98\n",
+    b"Content-length: 98\n\n",
+    b"K 7\nsvn:log\nV 0\n\nK 10\nsvn:author\nV 4\nerik\n",
+    b"K 8\nsvn:date\nV 27\n2005-01-08T21:51:16.313791Z\nPROPS-END\n\n\n",
+    b"Node-path: A\n",
+    b"Node-kind: file\n",
+    b"Node-action: add\n",
+    b"Prop-content-length: 35\n",
+    b"Text-content-length: 5\n",
+    b"Text-content-md5: e1cbb0c3879af8347246f12c559a86b5\n",
+    b"Content-length: 40\n\n",
+    b"K 12\nsvn:keywords\nV 2\nId\nPROPS-END\ntext\n\n\n"]
 
 dumpfile_revisions = \
   [ svntest.wc.State('', { 'A' : svntest.wc.StateItem(contents="text\n") }) ]
@@ -480,7 +480,7 @@ def extra_headers(sbox):
   dumpfile = clean_dumpfile()
 
   dumpfile[3:3] = \
-       [ "X-Comment-Header: Ignored header normally not in dump stream\n" ]
+       [ b"X-Comment-Header: Ignored header normally not in dump stream\n" ]
 
   load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, False, dumpfile,
                              '--ignore-uuid')
@@ -496,10 +496,10 @@ def extra_blockcontent(sbox):
 
   # Replace "Content-length" line with two lines
   dumpfile[8:9] = \
-       [ "Extra-content-length: 10\n",
-         "Content-length: 108\n\n" ]
+       [ b"Extra-content-length: 10\n",
+         b"Content-length: 108\n\n" ]
   # Insert the extra content after "PROPS-END\n"
-  dumpfile[11] = dumpfile[11][:-2] + "extra text\n\n\n"
+  dumpfile[11] = dumpfile[11][:-2] + b"extra text\n\n\n"
 
   load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, False, dumpfile,
                              '--ignore-uuid')
@@ -512,7 +512,7 @@ def inconsistent_headers(sbox):
 
   dumpfile = clean_dumpfile()
 
-  dumpfile[-2] = "Content-length: 30\n\n"
+  dumpfile[-2] = b"Content-length: 30\n\n"
 
   load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
                              dumpfile_revisions, False, dumpfile)
@@ -530,9 +530,9 @@ def empty_date(sbox):
 
   # Replace portions of the revision data to drop the svn:date revprop.
   dumpfile[7:11] = \
-       [ "Prop-content-length: 52\n",
-         "Content-length: 52\n\n",
-         "K 7\nsvn:log\nV 0\n\nK 10\nsvn:author\nV 4\nerik\nPROPS-END\n\n\n"
+       [ b"Prop-content-length: 52\n",
+         b"Content-length: 52\n\n",
+         b"K 7\nsvn:log\nV 0\n\nK 10\nsvn:author\nV 4\nerik\nPROPS-END\n\n\n"
          ]
 
   load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, False, dumpfile,
@@ -1565,7 +1565,7 @@ def hotcopy_symlink(sbox):
 def load_bad_props(sbox):
   "svnadmin load with invalid svn: props"
 
-  dump_str = """SVN-fs-dump-format-version: 2
+  dump_str = b"""SVN-fs-dump-format-version: 2
 
 UUID: dc40867b-38f6-0310-9f5f-f81aa277e06f
 
@@ -3159,12 +3159,12 @@ def load_no_svndate_r0(sbox):
                                          'proplist', '--revprop', '-r0',
                                          sbox.repo_dir)
 
-  dump_old = ["SVN-fs-dump-format-version: 2\n", "\n",
-              "UUID: bf52886d-358d-4493-a414-944a6e5ad4f5\n", "\n",
-              "Revision-number: 0\n",
-              "Prop-content-length: 10\n",
-              "Content-length: 10\n", "\n",
-              "PROPS-END\n", "\n"]
+  dump_old = [b"SVN-fs-dump-format-version: 2\n", b"\n",
+              b"UUID: bf52886d-358d-4493-a414-944a6e5ad4f5\n", b"\n",
+              b"Revision-number: 0\n",
+              b"Prop-content-length: 10\n",
+              b"Content-length: 10\n", b"\n",
+              b"PROPS-END\n", b"\n"]
   svntest.actions.run_and_verify_load(sbox.repo_dir, dump_old)
   
   # svn:date should have been removed
@@ -3255,7 +3255,7 @@ def dump_revprops(sbox):
 
   # We expect the dump to contain no path changes
   for line in dump_contents:
-    if line.find("Node-path: ") > -1:
+    if line.find(b"Node-path: ") > -1:
       logger.warn("Error: path change found in revprops-only dump.")
       raise svntest.Failure
 
