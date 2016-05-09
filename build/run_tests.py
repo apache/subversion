@@ -518,7 +518,7 @@ class TestHarness:
   def run(self, testlist):
     '''Run all test programs given in TESTLIST. Print a summary of results, if
        there is a log file. Return zero iff all test programs passed.'''
-    self._open_log('w')
+    self._open_log('wb')
     failed = 0
 
     # Filter tests into Python and native groups and prepare arguments

@@ -715,7 +715,7 @@ def _dump_tree(n,indent="",stream=sys.stdout):
   the SVNTreeNode N. Prefix each line with the string INDENT."""
 
   # Code partially stolen from Dave Beazley
-  tmp_children = sorted(n.children or [])
+  tmp_children = sorted(n.children or [], key=SVNTreeNode.get_printable_path)
 
   if n.name == root_node_name:
     stream.write("%s%s\n" % (indent, "ROOT"))
