@@ -410,9 +410,9 @@ class TestHarness:
         job.execute(self.harness)
 
         if job.result:
-          os.write(sys.stdout.fileno(), '!' * job.test_count())
+          os.write(sys.stdout.fileno(), b'!' * job.test_count())
         else:
-          os.write(sys.stdout.fileno(), '.' * job.test_count())
+          os.write(sys.stdout.fileno(), b'.' * job.test_count())
 
 
   def _run_global_sheduler(self, testlist, has_py_tests):
@@ -776,7 +776,7 @@ class TestHarness:
       if dots > dot_count:
         dots = dot_count
       dots_to_write = dots - self.dots_written
-      os.write(sys.stdout.fileno(), '.' * dots_to_write)
+      os.write(sys.stdout.fileno(), b'.' * dots_to_write)
       self.dots_written = dots
 
     tests_completed = 0
@@ -792,7 +792,7 @@ class TestHarness:
 
     # If we didn't run any tests, still print out the dots
     if not tests_completed:
-      os.write(sys.stdout.fileno(), '.' * dot_count)
+      os.write(sys.stdout.fileno(), b'.' * dot_count)
 
     prog.wait()
     return prog.returncode
@@ -832,7 +832,7 @@ class TestHarness:
       if self.dots_written < dot_count:
         dots_to_write = dots - self.dots_written
         self.dots_written = dots
-        os.write(old_stdout, '.' * dots_to_write)
+        os.write(old_stdout, b'.' * dots_to_write)
       self.progress_lock.release()
 
     serial_only = hasattr(prog_mod, 'serial_only') and prog_mod.serial_only
@@ -851,7 +851,7 @@ class TestHarness:
                                           test_selection=test_nums)
     except svntest.Failure:
       if self.log:
-        os.write(old_stdout, '.' * dot_count)
+        os.write(old_stdout, b'.' * dot_count)
       failed = True
 
     # restore some values
