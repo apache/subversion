@@ -484,7 +484,7 @@ class DumpParser:
     return m.group(1)
 
   def parse_blank(self, required=True):
-    if self.lines[self.current] != '\n':  # Works on Windows
+    if self.lines[self.current] != b'\n':  # Works on Windows
       if required:
         raise SVNDumpParseError("expected blank at line %d\n%s"
                                 % (self.current, self.lines[self.current]))
@@ -494,7 +494,7 @@ class DumpParser:
     return True
 
   def parse_header(self, header):
-    regex = '([^:]*): (.*)$'
+    regex = b'([^:]*): (.*)$'
     m = re.match(regex, self.lines[self.current])
     if not m:
       raise SVNDumpParseError("expected a header at line %d, but found:\n%s"
@@ -504,48 +504,48 @@ class DumpParser:
 
   def parse_headers(self):
     headers = []
-    while self.lines[self.current] != '\n':
+    while self.lines[self.current] != b'\n':
       key, val = self.parse_header(self)
       headers.append((key, val))
     return headers
 
 
   def parse_boolean(self, header, required):
-    return self.parse_line(header + ': (false|true)$', required)
+    return self.parse_line(header + b': (false|true)$', required)
 
   def parse_format(self):
-    return self.parse_line('SVN-fs-dump-format-version: ([0-9]+)$')
+    return self.parse_line(b'SVN-fs-dump-format-version: ([0-9]+)$')
 
   def parse_uuid(self):
-    return self.parse_line('UUID: ([0-9a-z-]+)$')
+    return self.parse_line(b'UUID: ([0-9a-z-]+)$')
 
   def parse_revision(self):
-    return self.parse_line('Revision-number: ([0-9]+)$')
+    return self.parse_line(b'Revision-number: ([0-9]+)$')
 
   def parse_prop_delta(self):
-    return self.parse_line('Prop-delta: (false|true)$', required=False)
+    return self.parse_line(b'Prop-delta: (false|true)$', required=False)
 
   def parse_prop_length(self, required=True):
-    return self.parse_line('Prop-content-length: ([0-9]+)$', required)
+    return self.parse_line(b'Prop-content-length: ([0-9]+)$', required)
 
   def parse_content_length(self, required=True):
-    return self.parse_line('Content-length: ([0-9]+)$', required)
+    return self.parse_line(b'Content-length: ([0-9]+)$', required)
 
   def parse_path(self):
-    path = self.parse_line('Node-path: (.*)$', required=False)
+    path = self.parse_line(b'Node-path: (.*)$', required=False)
     return path
 
   def parse_kind(self):
-    return self.parse_line('Node-kind: (.+)$', required=False)
+    return self.parse_line(b'Node-kind: (.+)$', required=False)
 
   def parse_action(self):
-    return self.parse_line('Node-action: ([0-9a-z-]+)$')
+    return self.parse_line(b'Node-action: ([0-9a-z-]+)$')
 
   def parse_copyfrom_rev(self):
-    return self.parse_line('Node-copyfrom-rev: ([0-9]+)$', required=False)
+    return self.parse_line(b'Node-copyfrom-rev: ([0-9]+)$', required=False)
 
   def parse_copyfrom_path(self):
-    path = self.parse_line('Node-copyfrom-path: (.+)$', required=False)
+    path = self.parse_line(b'Node-copyfrom-path: (.+)$', required=False)
     if not path and self.lines[self.current] == 'Node-copyfrom-path: \n':
       self.current += 1
       path = ''
@@ -743,7 +743,7 @@ def compare_dump_files(message, label, expected, actual,
   for parsed in [parsed_expected, parsed_actual]:
     for rev_name, rev_record in parsed.items():
       #print "Found %s" % (rev_name,)
-      if 'nodes' in rev_record:
+      if b'nodes' in rev_record:
         #print "Found %s.%s" % (rev_name, 'nodes')
         for path_name, path_record in rev_record['nodes'].items():
           #print "Found %s.%s.%s" % (rev_name, 'nodes', path_name)
