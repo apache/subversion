@@ -37,6 +37,7 @@ import urllib
 import logging
 import hashlib
 import zipfile
+import codecs
 
 try:
   # Python >=3.0
@@ -374,11 +375,18 @@ def get_fsfs_format_file_path(repo_dir):
 
   return os.path.join(repo_dir, "db", "format")
 
+def ensure_list(item):
+  "If ITEM is not already a list, convert it to a list."
+  if isinstance(item, list):
+    return item
+  else:
+    return list(item)
+
 def filter_dbg(lines):
   excluded = filter(lambda line: line.startswith('DBG:'), lines)
   included = filter(lambda line: not line.startswith('DBG:'), lines)
   sys.stdout.write(''.join(excluded))
-  return included
+  return ensure_list(included)
 
 # Run any binary, logging the command line and return code
 def run_command(command, error_expected, binary_mode=False, *varargs):
@@ -461,10 +469,17 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
   stdout, stderr = kid.communicate(stdin)
   exit_code = kid.returncode
 
-  # Normalize Windows line endings if in text mode.
-  if windows and not binary_mode:
-    stdout = stdout.replace('\r\n', '\n')
-    stderr = stderr.replace('\r\n', '\n')
+  # We always expect STDERR to be strings, not byte-arrays.
+  if not isinstance(stderr, str):
+    stderr = stderr.decode("utf-8")
+  if not binary_mode:
+    if not isinstance(stdout, str):
+      stdout = stdout.decode("utf-8")
+
+    # Normalize Windows line endings if in text mode.
+    if windows:
+      stdout = stdout.replace('\r\n', '\n')
+      stderr = stderr.replace('\r\n', '\n')
 
   # Convert output strings to lists.
   stdout_lines = stdout.splitlines(True)
@@ -937,21 +952,37 @@ def safe_rmtree(dirname, retry=0):
   else:
     rmtree(dirname)
 
-# For making local mods to files
-def file_append(path, new_text):
-  "Append NEW_TEXT to file at PATH"
-  open(path, 'a').write(new_text)
-
-# Append in binary mode
-def file_append_binary(path, new_text):
-  "Append NEW_TEXT to file at PATH in binary mode"
-  open(path, 'ab').write(new_text)
-
 # For creating new files, and making local mods to existing files.
 def file_write(path, contents, mode='w'):
   """Write the CONTENTS to the file at PATH, opening file using MODE,
   which is (w)rite by default."""
-  open(path, mode).write(contents)
+
+  if sys.version_info < (3, 0):
+    open(path, mode).write(contents)
+  else:
+    # Python 3:  Write data in the format required by MODE, i.e. byte arrays
+    #            to 'b' files, utf-8 otherwise."""
+    if 'b' in mode:
+      if isinstance(contents, str):
+        contents = contents.encode()
+    else:
+      if not isinstance(contents, str):
+        contents = contents.decode("utf-8")
+
+    if isinstance(contents, str):
+      codecs.open(path, mode, "utf-8").write(contents)
+    else:
+      open(path, mode).write(contents)
+
+# For making local mods to files
+def file_append(path, new_text):
+  "Append NEW_TEXT to file at PATH"
+  file_write(path, new_text, 'a')
+
+# Append in binary mode
+def file_append_binary(path, new_text):
+  "Append NEW_TEXT to file at PATH in binary mode"
+  file_write(path, new_text, 'ab')
 
 # For replacing parts of contents in an existing file, with new content.
 def file_substitute(path, contents, new_contents):
