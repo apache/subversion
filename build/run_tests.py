@@ -125,6 +125,12 @@ def _get_term_width():
       cr = (25, 80)
   return int(cr[1])
 
+def ensure_str(s):
+  '''If S is not a string already, convert it to a string'''
+  if isinstance(s, str):
+    return s
+  else:
+    return s.decode()
 
 class TestHarness:
   '''Test harness for Subversion tests.
@@ -485,8 +491,9 @@ class TestHarness:
     for job in jobs:
       if last_test_name != job.progbase:
         if last_test_name != "":
-          log.write('ELAPSED: %s %s\n' % (last_test_name, str(taken)))
-          log.write('\n')
+          text = 'ELAPSED: %s %s\n' % (last_test_name, str(taken))
+          log.write(text.encode())
+          log.write(b'\n')
         last_test_name = job.progbase
         taken = job.taken
       else:
@@ -499,8 +506,9 @@ class TestHarness:
       self._check_for_unknown_failure(log, job.progbase, job.result)
       failed = job.result or failed
 
-    log.write('ELAPSED: %s %s\n' % (last_test_name, str(taken)))
-    log.write('\n')
+    text = 'ELAPSED: %s %s\n' % (last_test_name, str(taken))
+    log.write(text.encode())
+    log.write(b'\n')
 
     return failed
 
@@ -578,7 +586,7 @@ class TestHarness:
 
     # Remove \r characters introduced by opening the log as binary
     if sys.platform == 'win32':
-      log_lines = [x.replace('\r', '') for x in log_lines]
+      log_lines = [x.replace(b'\r', b'') for x in log_lines]
 
     # Print the results, from least interesting to most interesting.
 
@@ -593,14 +601,14 @@ class TestHarness:
                          % (x[:wip], x[wip + len(wimptag):]))
 
     if self.opts.list_tests:
-      passed = [x for x in log_lines if x[8:13] == '     ']
+      passed = [ensure_str(x) for x in log_lines if x[8:13] == b'     ']
     else:
-      passed = [x for x in log_lines if x[:6] == 'PASS: ']
+      passed = [ensure_str(x) for x in log_lines if x[:6] == b'PASS: ']
 
     if self.opts.list_tests:
-      skipped = [x for x in log_lines if x[8:12] == 'SKIP']
+      skipped = [ensure_str(x) for x in log_lines if x[8:12] == b'SKIP']
     else:
-      skipped = [x for x in log_lines if x[:6] == 'SKIP: ']
+      skipped = [ensure_str(x) for x in log_lines if x[:6] == b'SKIP: ']
 
     if skipped and not self.opts.list_tests:
       print('At least one test was SKIPPED, checking ' + self.logfile)
@@ -608,21 +616,21 @@ class TestHarness:
         sys.stdout.write(x)
 
     if self.opts.list_tests:
-      xfailed = [x for x in log_lines if x[8:13] == 'XFAIL']
+      xfailed = [ensure_str(x) for x in log_lines if x[8:13] == b'XFAIL']
     else:
-      xfailed = [x for x in log_lines if x[:6] == 'XFAIL:']
+      xfailed = [ensure_str(x) for x in log_lines if x[:6] == b'XFAIL:']
     if xfailed and not self.opts.list_tests:
       print('At least one test XFAILED, checking ' + self.logfile)
       for x in xfailed:
         printxfail(x)
 
-    xpassed = [x for x in log_lines if x[:6] == 'XPASS:']
+    xpassed = [ensure_str(x) for x in log_lines if x[:6] == b'XPASS:']
     if xpassed:
       print('At least one test XPASSED, checking ' + self.logfile)
       for x in xpassed:
         printxfail(x)
 
-    failed_list = [x for x in log_lines if x[:6] == 'FAIL: ']
+    failed_list = [ensure_str(x) for x in log_lines if x[:6] == b'FAIL: ']
     if failed_list:
       print('At least one test FAILED, checking ' + self.logfile)
       for x in failed_list:
@@ -680,15 +688,15 @@ class TestHarness:
     if xpassed or failed_list:
       faillog = open(self.faillogfile, 'wb')
       last_start_lineno = None
-      last_start_re = re.compile('^(FAIL|SKIP|XFAIL|PASS|START|CLEANUP|END):')
+      last_start_re = re.compile(b'^(FAIL|SKIP|XFAIL|PASS|START|CLEANUP|END):')
       for lineno, line in enumerate(log_lines):
         # Iterate the lines.  If it ends a test we're interested in, dump that
         # test to FAILLOG.  If it starts a test (at all), remember the line
         # number (in case we need it later).
         if line in xpassed or line in failed_list:
-          faillog.write('[[[\n')
+          faillog.write(b'[[[\n')
           faillog.writelines(log_lines[last_start_lineno : lineno+1])
-          faillog.write(']]]\n\n')
+          faillog.write(b']]]\n\n')
         if last_start_re.match(line):
           last_start_lineno = lineno + 1
       faillog.close()
@@ -720,15 +728,15 @@ class TestHarness:
   def _process_test_output_line(self, line):
     if sys.platform == 'win32':
       # Remove CRs inserted because we parse the output as binary.
-      line = line.replace('\r', '')
+      line = line.replace(b'\r', b'')
 
     # If using --log-to-stdout self.log in None.
     if self.log:
       self.log.write(line)
 
-    if line.startswith('PASS') or line.startswith('FAIL') \
-        or line.startswith('XFAIL') or line.startswith('XPASS') \
-        or line.startswith('SKIP'):
+    if line.startswith(b'PASS') or line.startswith(b'FAIL') \
+        or line.startswith(b'XFAIL') or line.startswith(b'XPASS') \
+        or line.startswith(b'SKIP'):
       return 1
 
     return 0
