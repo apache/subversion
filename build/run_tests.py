@@ -693,7 +693,8 @@ class TestHarness:
         # Iterate the lines.  If it ends a test we're interested in, dump that
         # test to FAILLOG.  If it starts a test (at all), remember the line
         # number (in case we need it later).
-        if line in xpassed or line in failed_list:
+        line_str = ensure_str(line)
+        if line_str in xpassed or line_str in failed_list:
           faillog.write(b'[[[\n')
           faillog.writelines(log_lines[last_start_lineno : lineno+1])
           faillog.write(b']]]\n\n')
