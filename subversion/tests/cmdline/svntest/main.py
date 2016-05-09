@@ -382,9 +382,15 @@ def ensure_list(item):
   else:
     return list(item)
 
-def filter_dbg(lines):
-  excluded = filter(lambda line: line.startswith('DBG:'), lines)
-  included = filter(lambda line: not line.startswith('DBG:'), lines)
+def filter_dbg(lines, binary = False):
+  if binary:
+    excluded = filter(lambda line: line.startswith(b'DBG:'), lines)
+    excluded = map(bytes.decode, excluded)
+    included = filter(lambda line: not line.startswith(b'DBG:'), lines)
+  else:
+    excluded = filter(lambda line: line.startswith('DBG:'), lines)
+    included = filter(lambda line: not line.startswith('DBG:'), lines)
+
   sys.stdout.write(''.join(excluded))
   return ensure_list(included)
 
@@ -609,7 +615,7 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
                   '"; exit code ' + str(exit_code))
 
   return exit_code, \
-         filter_dbg(stdout_lines), \
+         filter_dbg(stdout_lines, binary_mode), \
          stderr_lines
 
 def create_config_dir(cfgdir, config_contents=None, server_contents=None,
@@ -1198,12 +1204,12 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
     logger.warn('ERROR:  dump failed; did not see revision %s', head_revision)
     raise SVNRepositoryCopyFailure
 
-  load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
+  load_re = re.compile(b'^------- Committed revision (\\d+) >>>\\r?$')
   expect_revision = 1
-  for load_line in filter_dbg(load_stdout):
+  for load_line in filter_dbg(load_stdout, True):
     match = load_re.match(load_line)
     if match:
-      if match.group(1) != str(expect_revision):
+      if match.group(1).decode() != str(expect_revision):
         logger.warn('ERROR:  load failed: %s', load_line.strip())
         raise SVNRepositoryCopyFailure
       expect_revision += 1
