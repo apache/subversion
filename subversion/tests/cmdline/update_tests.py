@@ -92,7 +92,7 @@ def update_binary_file(sbox):
 
   # Make a change to the binary file in the original working copy
   svntest.main.file_append(theta_path, "revision 3 text")
-  theta_contents_r3 = theta_contents + "revision 3 text"
+  theta_contents_r3 = theta_contents + b"revision 3 text"
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -113,7 +113,7 @@ def update_binary_file(sbox):
 
   # Make a local mod to theta
   svntest.main.file_append(theta_backup_path, "extra theta text")
-  theta_contents_local = theta_contents + "extra theta text"
+  theta_contents_local = theta_contents + b"extra theta text"
 
   # Create expected output tree for an update of wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
@@ -196,9 +196,9 @@ def update_binary_file_2(sbox):
 
   # Make some mods to the binary files.
   svntest.main.file_append(theta_path, "foobar")
-  new_theta_contents = theta_contents + "foobar"
+  new_theta_contents = theta_contents + b"foobar"
   svntest.main.file_append(zeta_path, "foobar")
-  new_zeta_contents = zeta_contents + "foobar"
+  new_zeta_contents = zeta_contents + b"foobar"
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -286,7 +286,7 @@ def update_binary_file_3(sbox):
 
   # Make some mods to the binary files.
   svntest.main.file_append(theta_path, "foobar")
-  new_theta_contents = theta_contents + "foobar"
+  new_theta_contents = theta_contents + b"foobar"
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {

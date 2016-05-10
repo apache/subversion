@@ -108,7 +108,7 @@ def test_misc(sbox):
 
   expect('youngest', [ '2\n' ], run_svnlook('youngest', repo_dir))
 
-  expect('uuid', [ uuid + '\n' ], run_svnlook('uuid', repo_dir))
+  expect('uuid', [ uuid.decode() + '\n' ], run_svnlook('uuid', repo_dir))
 
   # it would be nice to test the author too, but the current test framework
   # does not pull a username when testing over ra_neon or ra_svn,
