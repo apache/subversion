@@ -114,8 +114,8 @@ def check_hotcopy_fsfs_fsx(src, dst):
         # to match. Source and target must have the same number of lines
         # (due to having the same format).
         if src_path == os.path.join(src, 'db', 'uuid'):
-          lines1 = open(src_path, 'rb').read().split("\n")
-          lines2 = open(dst_path, 'rb').read().split("\n")
+          lines1 = open(src_path, 'rb').read().split(b"\n")
+          lines2 = open(dst_path, 'rb').read().split(b"\n")
           if len(lines1) != len(lines2):
             raise svntest.Failure("%s differs in number of lines"
                                   % dst_path)
@@ -153,8 +153,8 @@ def check_hotcopy_fsfs_fsx(src, dst):
                                     "revprop generation")
           continue
 
-        f1 = open(src_path, 'r')
-        f2 = open(dst_path, 'r')
+        f1 = open(src_path, 'rb')
+        f2 = open(dst_path, 'rb')
         while True:
           offset = 0
           BUFSIZE = 1024
@@ -236,7 +236,7 @@ def patch_format(repo_dir, shard_size):
   that it would use sharding with SHARDS revisions per shard."""
 
   format_path = os.path.join(repo_dir, "db", "format")
-  contents = open(format_path, 'rb').read()
+  contents = open(format_path, 'r').read()
   processed_lines = []
 
   for line in contents.split("\n"):
@@ -247,13 +247,13 @@ def patch_format(repo_dir, shard_size):
 
   new_contents = "\n".join(processed_lines)
   os.chmod(format_path, svntest.main.S_ALL_RW)
-  open(format_path, 'wb').write(new_contents)
+  open(format_path, 'w').write(new_contents)
 
 def is_sharded(repo_dir):
   """Return whether the FSFS repository REPO_DIR is sharded."""
 
   format_path = os.path.join(repo_dir, "db", "format")
-  contents = open(format_path, 'rb').read()
+  contents = open(format_path, 'r').read()
 
   for line in contents.split("\n"):
     if line.startswith("layout sharded"):
@@ -269,8 +269,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
   of each rev's items.  VARARGS are optional arguments passed to the
   'load' command."""
 
-  if isinstance(dump, str):
-    dump = [ dump ]
+  dump = svntest.main.ensure_list(dump)
 
   exit_code, output, errput = svntest.main.run_command_stdin(
     svntest.main.svnadmin_binary, expected_stderr, 0, True, dump,
@@ -334,24 +333,25 @@ class FSFS_Index:
     for line in output:
       values = line.split()
       if len(values) >= 4 and values[0] != 'Start':
-        item = long(values[4])
+        item = int(values[4])
         self.by_item[item] = values
 
   def _write(self):
     """ Rewrite indexes using svnfsfs. """
     by_offset = {}
-    for values in self.by_item.itervalues():
-      by_offset[long(values[0], 16)] = values
+    for key in self.by_item:
+      values = self.by_item[key]
+      by_offset[int(values[0], 16)] = values
 
     lines = []
     for (offset, values) in sorted(by_offset.items()):
       values = by_offset[offset]
       line = values[0] + ' ' + values[1] + ' ' + values[2] + ' ' + \
              values[3] + ' ' + values[4] + '\n';
-      lines.append(line)
+      lines.append(line.encode())
 
     exit_code, output, errput = svntest.main.run_command_stdin(
-      svntest.main.svnfsfs_binary, 0, 0, True, lines,
+      svntest.main.svnfsfs_binary, 0, 0, False, lines,
       'load-index', self.repo_dir)
 
     svntest.verify.verify_outputs("Error while rewriting index",
@@ -362,8 +362,8 @@ class FSFS_Index:
     """ Return offset, length and type of ITEM. """
     values = self.by_item[item]
 
-    offset = long(values[0], 16)
-    len = long(values[1], 16)
+    offset = int(values[0], 16)
+    len = int(values[1], 16)
     type = values[2]
 
     return (offset, len, type)
@@ -400,16 +400,19 @@ def set_changed_path_list(sbox, revision, changes):
   if repo_format(sbox) < 7:
     # replace the changed paths list
     header = contents[contents.rfind('\n', length - 64, length - 1):]
-    body_len = long(header.split(' ')[1])
+    body_len = int(header.split(' ')[1])
 
   else:
     # read & parse revision file footer
-    footer_length = ord(contents[length-1]);
+    footer_length = contents[length-1];
+    if isinstance(footer_length, str):
+      footer_length = ord(footer_length)
+
     footer = contents[length - footer_length - 1:length-1]
-    l2p_offset = long(footer.split(' ')[0])
-    l2p_checksum = footer.split(' ')[1]
-    p2l_offset = long(footer.split(' ')[2])
-    p2l_checksum = footer.split(' ')[3]
+    l2p_offset = int(footer.split(b' ')[0])
+    l2p_checksum = footer.split(b' ')[1]
+    p2l_offset = int(footer.split(b' ')[2])
+    p2l_checksum = footer.split(b' ')[3]
 
     idx = FSFS_Index(sbox, revision)
     (offset, item_len, item_type) = idx.get_item(1)
@@ -422,10 +425,10 @@ def set_changed_path_list(sbox, revision, changes):
     file_len = body_len + len(changes) + 1
     p2l_offset += file_len - l2p_offset
 
-    header = str(file_len) + ' ' + l2p_checksum + ' ' \
-           + str(p2l_offset) + ' ' + p2l_checksum
-    header += chr(len(header))
-    header = '\n' + indexes + header
+    header = str(file_len).encode() + b' ' + l2p_checksum + b' ' \
+           + str(p2l_offset).encode() + b' ' + p2l_checksum
+    header += bytes([len(header)])
+    header = b'\n' + indexes + header
 
   contents = contents[:body_len] + changes + header
 
@@ -807,7 +810,7 @@ def verify_incremental_fsfs(sbox):
     raise svntest.Skip('Test doesn\'t handle packed revisions')
 
   fp = open(r2, 'wb')
-  fp.write("""id: 0-2.0.r2/0
+  fp.write(b"""id: 0-2.0.r2/0
 type: dir
 count: 0
 cpath: /A/B/E/bravo
@@ -1650,24 +1653,24 @@ def verify_non_utf8_paths(sbox):
   fp1 = open(path1, 'rb')
   fp_new = open(path_new, 'wb')
   for line in fp1.readlines():
-    if line == "A\n":
+    if line == b"A\n":
       # replace 'A' with a latin1 character -- the new path is not valid UTF-8
-      fp_new.write("\xE6\n")
-    elif line == "text: 1 279 32 32 d63ecce65d8c428b86f4f8b0920921fe\n":
+      fp_new.write(b"\xE6\n")
+    elif line == b"text: 1 279 32 32 d63ecce65d8c428b86f4f8b0920921fe\n":
       # phys, PLAIN directories: fix up the representation checksum
-      fp_new.write("text: 1 279 32 32 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
-    elif line == "text: 1 292 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
+      fp_new.write(b"text: 1 279 32 32 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
+    elif line == b"text: 1 292 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
       # phys, deltified directories: fix up the representation checksum
-      fp_new.write("text: 1 292 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
-    elif line == "text: 1 6 31 31 90f306aa9bfd72f456072076a2bd94f7\n":
+      fp_new.write(b"text: 1 292 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
+    elif line == b"text: 1 6 31 31 90f306aa9bfd72f456072076a2bd94f7\n":
       # log addressing: fix up the representation checksum
-      fp_new.write("text: 1 6 31 31 db2d4a0bad5dff0aea9a288dec02f1fb\n")
-    elif line == "cpath: /A\n":
+      fp_new.write(b"text: 1 6 31 31 db2d4a0bad5dff0aea9a288dec02f1fb\n")
+    elif line == b"cpath: /A\n":
       # also fix up the 'created path' field
-      fp_new.write("cpath: /\xE6\n")
-    elif line == "_0.0.t0-0 add-file true true /A\n":
+      fp_new.write(b"cpath: /\xE6\n")
+    elif line == b"_0.0.t0-0 add-file true true /A\n":
       # and another occurrance
-      fp_new.write("_0.0.t0-0 add-file true true /\xE6\n")
+      fp_new.write(b"_0.0.t0-0 add-file true true /\xE6\n")
     else:
       fp_new.write(line)
   fp1.close()
@@ -1784,17 +1787,16 @@ def load_ranges(sbox):
                                    'svnadmin_tests_data',
                                    'skeleton_repos.dump')
   dumplines = svntest.actions.load_dumpfile(dumpfile_location)
-  dumpdata = "".join(dumplines)
 
   # Load our dumpfile, 2 revisions at a time, verifying that we have
   # the correct youngest revision after each load.
-  load_dumpstream(sbox, dumpdata, '-r0:2')
+  load_dumpstream(sbox, dumplines, '-r0:2')
   svntest.actions.run_and_verify_svnlook(['2\n'],
                                          None, 'youngest', sbox.repo_dir)
-  load_dumpstream(sbox, dumpdata, '-r3:4')
+  load_dumpstream(sbox, dumplines, '-r3:4')
   svntest.actions.run_and_verify_svnlook(['4\n'],
                                          None, 'youngest', sbox.repo_dir)
-  load_dumpstream(sbox, dumpdata, '-r5:6')
+  load_dumpstream(sbox, dumplines, '-r5:6')
   svntest.actions.run_and_verify_svnlook(['6\n'],
                                          None, 'youngest', sbox.repo_dir)
 
@@ -2091,7 +2093,7 @@ def verify_keep_going(sbox):
 
   r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
   fp = open(r2, 'r+b')
-  fp.write("""inserting junk to corrupt the rev""")
+  fp.write(b"inserting junk to corrupt the rev")
   fp.close()
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
                                                         "--keep-going",
@@ -2195,7 +2197,7 @@ def verify_keep_going_quiet(sbox):
 
   r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
   fp = open(r2, 'r+b')
-  fp.write("""inserting junk to corrupt the rev""")
+  fp.write(b"inserting junk to corrupt the rev")
   fp.close()
 
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
@@ -2247,44 +2249,42 @@ def verify_invalid_path_changes(sbox):
 
   # add existing node
   set_changed_path_list(sbox, 2,
-                        "_0.0.t1-1 add-dir false false /A\n\n")
+                        b"_0.0.t1-1 add-dir false false /A\n\n")
 
   # add into non-existent parent
   set_changed_path_list(sbox, 4,
-                        "_0.0.t3-2 add-dir false false /C/X\n\n")
+                        b"_0.0.t3-2 add-dir false false /C/X\n\n")
 
   # del non-existent node
   set_changed_path_list(sbox, 6,
-                        "_0.0.t5-2 delete-dir false false /C\n\n")
+                        b"_0.0.t5-2 delete-dir false false /C\n\n")
 
   # del existent node of the wrong kind
   #
   # THIS WILL NOT BE DETECTED
   # since dump mechanism and file don't care about the types of deleted nodes
   set_changed_path_list(sbox, 8,
-                        "_0.0.t7-2 delete-file false false /B3\n\n")
+                        b"_0.0.t7-2 delete-file false false /B3\n\n")
 
   # copy from non-existent node
   set_changed_path_list(sbox, 10,
-                        "_0.0.t9-2 add-dir false false /B10\n"
-                        "6 /B8\n")
+                        b"_0.0.t9-2 add-dir false false /B10\n6 /B8\n")
 
   # copy from existing node of the wrong kind
   set_changed_path_list(sbox, 12,
-                        "_0.0.t11-2 add-file false false /B12\n"
-                        "9 /B8\n")
+                        b"_0.0.t11-2 add-file false false /B12\n9 /B8\n")
 
   # modify non-existent node
   set_changed_path_list(sbox, 14,
-                        "_0.0.t13-2 modify-file false false /A/D/H/foo\n\n")
+                        b"_0.0.t13-2 modify-file false false /A/D/H/foo\n\n")
 
   # modify existent node of the wrong kind
   set_changed_path_list(sbox, 16,
-                        "_0.0.t15-2 modify-file false false /B12\n\n")
+                        b"_0.0.t15-2 modify-file false false /B12\n\n")
 
   # replace non-existent node
   set_changed_path_list(sbox, 18,
-                        "_0.0.t17-2 replace-file false false /A/D/H/foo\n\n")
+                        b"_0.0.t17-2 replace-file false false /A/D/H/foo\n\n")
 
   # find corruptions
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
@@ -2829,7 +2829,7 @@ def verify_quickly(sbox):
 
   # set new contents
   rev_file.seek(8)
-  rev_file.write('#')
+  rev_file.write(b'#')
   rev_file.close()
 
   exit_code, output, errput = svntest.main.run_svnadmin("verify",
@@ -3130,7 +3130,7 @@ def load_txdelta(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
                                    'load_txdelta.dump.gz')
-  dumpfile = gzip.open(dumpfile_location).read()
+  dumpfile = gzip.open(dumpfile_location, "rb").readlines()
 
   load_dumpstream(sbox, dumpfile)
 

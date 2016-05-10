@@ -785,7 +785,7 @@ def run_svnadmin(*varargs):
   """Run svnadmin with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
 
-  use_binary = ('dump' in varargs)
+  use_binary = ('dump' in varargs) or ('dump-revprops' in varargs)
 
   exit_code, stdout_lines, stderr_lines = \
                        run_command(svnadmin_binary, 1, use_binary, *varargs)
