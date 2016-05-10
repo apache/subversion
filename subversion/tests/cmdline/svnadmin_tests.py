@@ -236,27 +236,27 @@ def patch_format(repo_dir, shard_size):
   that it would use sharding with SHARDS revisions per shard."""
 
   format_path = os.path.join(repo_dir, "db", "format")
-  contents = open(format_path, 'r').read()
+  contents = open(format_path, 'rb').read()
   processed_lines = []
 
-  for line in contents.split("\n"):
+  for line in contents.split(b"\n"):
     if line.startswith("layout "):
-      processed_lines.append("layout sharded %d" % shard_size)
+      processed_lines.append(("layout sharded %d" % shard_size).encode())
     else:
       processed_lines.append(line)
 
-  new_contents = "\n".join(processed_lines)
+  new_contents = b"\n".join(processed_lines)
   os.chmod(format_path, svntest.main.S_ALL_RW)
-  open(format_path, 'w').write(new_contents)
+  open(format_path, 'wb').write(new_contents)
 
 def is_sharded(repo_dir):
   """Return whether the FSFS repository REPO_DIR is sharded."""
 
   format_path = os.path.join(repo_dir, "db", "format")
-  contents = open(format_path, 'r').read()
+  contents = open(format_path, 'rb').read()
 
-  for line in contents.split("\n"):
-    if line.startswith("layout sharded"):
+  for line in contents.split(b"\n"):
+    if line.startswith(b"layout sharded"):
       return True
 
   return False
