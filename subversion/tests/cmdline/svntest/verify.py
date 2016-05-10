@@ -552,32 +552,32 @@ class DumpParser:
     return path
 
   def parse_copy_md5(self):
-    return self.parse_line('Text-copy-source-md5: ([0-9a-z]+)$', required=False)
+    return self.parse_line(b'Text-copy-source-md5: ([0-9a-z]+)$', required=False)
 
   def parse_copy_sha1(self):
-    return self.parse_line('Text-copy-source-sha1: ([0-9a-z]+)$', required=False)
+    return self.parse_line(b'Text-copy-source-sha1: ([0-9a-z]+)$', required=False)
 
   def parse_text_md5(self):
-    return self.parse_line('Text-content-md5: ([0-9a-z]+)$', required=False)
+    return self.parse_line(b'Text-content-md5: ([0-9a-z]+)$', required=False)
 
   def parse_text_sha1(self):
-    return self.parse_line('Text-content-sha1: ([0-9a-z]+)$', required=False)
+    return self.parse_line(b'Text-content-sha1: ([0-9a-z]+)$', required=False)
 
   def parse_text_delta(self):
-    return self.parse_line('Text-delta: (false|true)$', required=False)
+    return self.parse_line(b'Text-delta: (false|true)$', required=False)
 
   def parse_text_delta_base_md5(self):
-    return self.parse_line('Text-delta-base-md5: ([0-9a-f]+)$', required=False)
+    return self.parse_line(b'Text-delta-base-md5: ([0-9a-f]+)$', required=False)
 
   def parse_text_delta_base_sha1(self):
-    return self.parse_line('Text-delta-base-sha1: ([0-9a-f]+)$', required=False)
+    return self.parse_line(b'Text-delta-base-sha1: ([0-9a-f]+)$', required=False)
 
   def parse_text_length(self):
-    return self.parse_line('Text-content-length: ([0-9]+)$', required=False)
+    return self.parse_line(b'Text-content-length: ([0-9]+)$', required=False)
 
   def get_props(self):
     props = []
-    while not re.match('PROPS-END$', self.lines[self.current]):
+    while not re.match(b'PROPS-END$', self.lines[self.current]):
       props.append(self.lines[self.current])
       self.current += 1
     self.current += 1
@@ -593,7 +593,7 @@ class DumpParser:
         curprop[0] += 1
 
         # key / value
-        key = ''
+        key = b''
         while len(key) != klen + 1:
           key += props[curprop[0]]
           curprop[0] += 1
@@ -601,10 +601,10 @@ class DumpParser:
 
         return key
 
-      if props[curprop[0]].startswith('K'):
+      if props[curprop[0]].startswith(b'K'):
         key = read_key_or_value(curprop)
         value = read_key_or_value(curprop)
-      elif props[curprop[0]].startswith('D'):
+      elif props[curprop[0]].startswith(b'D'):
         key = read_key_or_value(curprop)
         value = None
       else:
@@ -614,7 +614,7 @@ class DumpParser:
     return prophash
 
   def get_content(self, length):
-    content = ''
+    content = b''
     while len(content) < length:
       content += self.lines[self.current]
       self.current += 1
@@ -637,22 +637,22 @@ class DumpParser:
     headers = dict(headers_list)
 
     # Content-length must be last, if present
-    if 'Content-length' in headers and headers_list[-1][0] != 'Content-length':
+    if b'Content-length' in headers and headers_list[-1][0] != b'Content-length':
       raise SVNDumpParseError("'Content-length' header is not last, "
                               "in header block ending at line %d"
                               % (self.current,))
 
     # parse the remaining optional headers and store in specific keys in NODE
     for key, header, regex in [
-        ('copyfrom_rev',    'Node-copyfrom-rev',    '([0-9]+)$'),
-        ('copyfrom_path',   'Node-copyfrom-path',   '(.*)$'),
-        ('copy_md5',        'Text-copy-source-md5', '([0-9a-z]+)$'),
-        ('copy_sha1',       'Text-copy-source-sha1','([0-9a-z]+)$'),
-        ('prop_length',     'Prop-content-length',  '([0-9]+)$'),
-        ('text_length',     'Text-content-length',  '([0-9]+)$'),
-        ('text_md5',        'Text-content-md5',     '([0-9a-z]+)$'),
-        ('text_sha1',       'Text-content-sha1',    '([0-9a-z]+)$'),
-        ('content_length',  'Content-length',       '([0-9]+)$'),
+        ('copyfrom_rev',    b'Node-copyfrom-rev',    b'([0-9]+)$'),
+        ('copyfrom_path',   b'Node-copyfrom-path',   b'(.*)$'),
+        ('copy_md5',        b'Text-copy-source-md5', b'([0-9a-z]+)$'),
+        ('copy_sha1',       b'Text-copy-source-sha1',b'([0-9a-z]+)$'),
+        ('prop_length',     b'Prop-content-length',  b'([0-9]+)$'),
+        ('text_length',     b'Text-content-length',  b'([0-9]+)$'),
+        ('text_md5',        b'Text-content-md5',     b'([0-9a-z]+)$'),
+        ('text_sha1',       b'Text-content-sha1',    b'([0-9a-z]+)$'),
+        ('content_length',  b'Content-length',       b'([0-9]+)$'),
         ]:
       if not header in headers:
         node[key] = None
