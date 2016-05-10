@@ -189,7 +189,7 @@ class RegexOutput(ExpectedOutput):
 
   def __init__(self, expected, match_all=True):
     "EXPECTED is a regular expression string."
-    assert isinstance(expected, str)
+    assert isinstance(expected, str) or isinstance(expected, bytes)
     ExpectedOutput.__init__(self, expected, match_all)
     self.expected_re = re.compile(expected)
 
