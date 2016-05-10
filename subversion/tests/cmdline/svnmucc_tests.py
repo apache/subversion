@@ -445,7 +445,7 @@ rm A/B/C/Y
                            """.split()))
 
   # ### TODO: need a smarter run_and_verify_log() that verifies copyfrom
-  expected_output = svntest.verify.UnorderedRegexListOutput(map(re.escape, [
+  excaped = svntest.main.ensure_list(map(re.escape, [
     '   R /A (from /X/Y/Z:2)',
     '   A /A/B (from /A/B:2)',
     '   R /A/B/C (from /X:2)',
@@ -456,9 +456,9 @@ rm A/B/C/Y
     '   A /X/Y (from /X/Y:2)',
     '   R /X/Y/Z (from /M:2)',
     '   D /A/B/C/Y',
-  ]) + [
-    '^-', '^r3', '^-', '^Changed paths:',
-  ])
+  ]))
+  expected_output = svntest.verify.UnorderedRegexListOutput(excaped
+                    + ['^-', '^r3', '^-', '^Changed paths:',])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-qvr3', repo_url)
 

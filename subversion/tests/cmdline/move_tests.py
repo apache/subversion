@@ -1250,7 +1250,7 @@ def nested_replaces(sbox):
   svntest.actions.run_and_verify_status(wc_dir, r2_status)
 
   svntest.main.run_svn(None, 'commit', '-m', 'r2: juggle the tree', wc_dir)
-  expected_output = svntest.verify.UnorderedRegexListOutput(map(re.escape, [
+  escaped = svntest.main.ensure_list(map(re.escape, [
     '   R /A (from /X/Y/Z:1)',
     '   A /A/B (from /A/B:1)',
     '   R /A/B/C (from /X:1)',
@@ -1259,9 +1259,9 @@ def nested_replaces(sbox):
     '   R /X/Y/Z (from /A:1)',
     '   D /X/Y/Z/B',
     '   D /A/B/C/Y',
-  ]) + [
-    '^-', '^r2', '^-', '^Changed paths:',
-  ])
+  ]))
+  expected_output = svntest.verify.UnorderedRegexListOutput(escaped
+                    + [ '^-', '^r2', '^-', '^Changed paths:', ])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-qvr2', repo_url)
 
