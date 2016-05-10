@@ -381,7 +381,7 @@ class State:
 
   def tweak_for_entries_compare(self):
     for path, item in self.desc.copy().items():
-      if item.status:
+      if item.status and path in self.desc:
         # If this is an unversioned tree-conflict, remove it.
         # These are only in their parents' THIS_DIR, they don't have entries.
         if item.status[0] in '!?' and item.treeconflict == 'C' and \
