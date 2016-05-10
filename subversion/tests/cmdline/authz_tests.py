@@ -1108,7 +1108,9 @@ def authz_recursive_ls(sbox):
     'A/D/gamma',
     'iota',
     ]
-  svntest.actions.run_and_verify_svn(map(lambda x: x + '\n', expected_entries),
+  with_newline = svntest.main.ensure_list(map(lambda x: x + '\n',
+                                              expected_entries))
+  svntest.actions.run_and_verify_svn(with_newline,
                                      [], 'ls', '-R',
                                      sbox.repo_url)
 
