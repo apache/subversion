@@ -544,7 +544,8 @@ def get_props(paths):
       # contains a CR character XML-encoded as '&#13;'.  The XML
       # parser converts it back into a CR character.  So again convert
       # all end-of-line variants into a single LF:
-      value = eol_re.sub('\n', value)
+      if isinstance(value, str):
+        value = eol_re.sub('\n', value)
       file_props[name] = value
     files[filename] = file_props
 

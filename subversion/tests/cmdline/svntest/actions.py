@@ -2021,7 +2021,8 @@ def set_prop(name, value, path, expected_re_string=None, force=None):
     propset = ('propset',)
   else:
     propset = ('propset', '--force')
-  if value and (value[0] == '-' or '\x00' in value or sys.platform == 'win32'):
+  if value and (isinstance(value, bytes) or
+                (value[0] == '-' or '\x00' in value or sys.platform == 'win32')):
     from tempfile import mkstemp
     (fd, value_file_path) = mkstemp()
     os.close(fd)
