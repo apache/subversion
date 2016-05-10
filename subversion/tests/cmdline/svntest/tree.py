@@ -499,6 +499,7 @@ def create_from_path(path, contents=None, props={}, atts={}):
 
 
 eol_re = re.compile(r'(\r\n|\r)')
+eol_re_binary = re.compile(br'(\r\n|\r)')
 
 # helper for build_tree_from_wc()
 def get_props(paths):
@@ -546,6 +547,8 @@ def get_props(paths):
       # all end-of-line variants into a single LF:
       if isinstance(value, str):
         value = eol_re.sub('\n', value)
+      else:
+        value = eol_re_binary.sub(b'\n', value)
       file_props[name] = value
     files[filename] = file_props
 
