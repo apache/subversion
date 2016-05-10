@@ -86,13 +86,13 @@ def patch_format(repo_dir, shard_size):
   contents = open(format_path, 'rb').read()
   processed_lines = []
 
-  for line in contents.split("\n"):
-    if line.startswith("layout "):
-      processed_lines.append("layout sharded %d" % shard_size)
+  for line in contents.split(b"\n"):
+    if line.startswith(b"layout "):
+      processed_lines.append(b"layout sharded %d" % shard_size)
     else:
       processed_lines.append(line)
 
-  new_contents = "\n".join(processed_lines)
+  new_contents = b"\n".join(processed_lines)
   os.chmod(format_path, svntest.main.S_ALL_RW)
   open(format_path, 'wb').write(new_contents)
 
@@ -202,7 +202,7 @@ def test_stats(sbox):
 
   # check that the output contains all sections
   for section_name in sections_to_find:
-    if not sections.has_key(section_name):
+    if not section_name in sections.keys():
       logger.warn("Error: section '" + section_name + "' not found")
       raise svntest.Failure
 
@@ -293,6 +293,9 @@ def load_index_sharded(sbox):
       break
 
   assert(items[1].split()[3] == "1")
+
+  # The STDIN data must be binary.
+  items = svntest.main.ensure_list(map(str.encode, items))
 
   # Reload the index
   exit_code, output, errput = svntest.main.run_command_stdin(
