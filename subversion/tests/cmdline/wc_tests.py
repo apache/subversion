@@ -142,7 +142,7 @@ def status_with_corrupt_wc_db(sbox):
 
   sbox.build(read_only = True)
   with open(sbox.ospath(".svn/wc.db"), 'wb') as fd:
-    fd.write('\0' * 17)
+    fd.write(b'\0' * 17)
   svntest.actions.run_and_verify_svn(
     None,
     r"[^ ]+ E155016: The working copy database at '.*' is corrupt",
@@ -189,7 +189,7 @@ def status_with_missing_wc_db_and_maybe_valid_entries(sbox):
 
   sbox.build(read_only = True)
   with open(sbox.ospath(".svn/entries"), 'ab') as fd:
-    fd.write('something\n')
+    fd.write(b'something\n')
     os.remove(sbox.ospath(".svn/wc.db"))
   svntest.actions.run_and_verify_svn(
     None,
