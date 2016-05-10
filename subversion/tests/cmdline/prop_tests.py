@@ -894,41 +894,42 @@ def prop_value_conversions(sbox):
   # part of the prop value and it doesn't get converted in the pipe.
 
   # Check svn:mime-type
-  svntest.actions.check_prop('svn:mime-type', iota_path, ['text/html'])
-  svntest.actions.check_prop('svn:mime-type', mu_path, ['text/html'])
+  svntest.actions.check_prop('svn:mime-type', iota_path, [b'text/html'])
+  svntest.actions.check_prop('svn:mime-type', mu_path, [b'text/html'])
 
   # Check svn:eol-style
-  svntest.actions.check_prop('svn:eol-style', iota_path, ['native'])
-  svntest.actions.check_prop('svn:eol-style', mu_path, ['native'])
+  svntest.actions.check_prop('svn:eol-style', iota_path, [b'native'])
+  svntest.actions.check_prop('svn:eol-style', mu_path, [b'native'])
 
   # Check svn:ignore
+  linesep = os.linesep.encode()
   svntest.actions.check_prop('svn:ignore', A_path,
-                             ['*.o'+os.linesep, 'foo.c'+os.linesep])
+                             [b'*.o'+linesep, b'foo.c'+linesep])
   svntest.actions.check_prop('svn:ignore', B_path,
-                             ['*.o'+os.linesep, 'foo.c'+os.linesep])
+                             [b'*.o'+linesep, b'foo.c'+linesep])
 
   # Check svn:externals
   svntest.actions.check_prop('svn:externals', A_path,
-                             ['foo http://foo.com/repos'+os.linesep])
+                             [b'foo http://foo.com/repos'+linesep])
   svntest.actions.check_prop('svn:externals', B_path,
-                             ['foo http://foo.com/repos'+os.linesep])
+                             [b'foo http://foo.com/repos'+linesep])
 
   # Check svn:keywords
-  svntest.actions.check_prop('svn:keywords', iota_path, ['Rev Date'])
-  svntest.actions.check_prop('svn:keywords', mu_path, ['Rev  Date'])
+  svntest.actions.check_prop('svn:keywords', iota_path, [b'Rev Date'])
+  svntest.actions.check_prop('svn:keywords', mu_path, [b'Rev  Date'])
 
   # Check svn:executable
-  svntest.actions.check_prop('svn:executable', iota_path, ['*'])
-  svntest.actions.check_prop('svn:executable', lambda_path, ['*'])
-  svntest.actions.check_prop('svn:executable', mu_path, ['*'])
+  svntest.actions.check_prop('svn:executable', iota_path, [b'*'])
+  svntest.actions.check_prop('svn:executable', lambda_path, [b'*'])
+  svntest.actions.check_prop('svn:executable', mu_path, [b'*'])
 
   # Check other props
-  svntest.actions.check_prop('svn:some-prop', lambda_path, ['bar'])
-  svntest.actions.check_prop('svn:some-prop', mu_path, [' bar baz'])
-  svntest.actions.check_prop('svn:some-prop', iota_path, ['bar'+os.linesep])
-  svntest.actions.check_prop('some-prop', lambda_path, ['bar'])
-  svntest.actions.check_prop('some-prop', mu_path,[' bar baz'])
-  svntest.actions.check_prop('some-prop', iota_path, ['bar\n'])
+  svntest.actions.check_prop('svn:some-prop', lambda_path, [b'bar'])
+  svntest.actions.check_prop('svn:some-prop', mu_path, [b' bar baz'])
+  svntest.actions.check_prop('svn:some-prop', iota_path, [b'bar'+linesep])
+  svntest.actions.check_prop('some-prop', lambda_path, [b'bar'])
+  svntest.actions.check_prop('some-prop', mu_path,[b' bar baz'])
+  svntest.actions.check_prop('some-prop', iota_path, [b'bar\n'])
 
 
 #----------------------------------------------------------------------
@@ -958,10 +959,10 @@ def binary_props(sbox):
   mu_path_bak = sbox.ospath('A/mu', wc_dir=wc_backup)
 
   # Property value convenience vars.
-  prop_zb   = "This property has a zer\000 byte."
-  prop_ff   = "This property has a form\014feed."
-  prop_xml  = "This property has an <xml> tag."
-  prop_binx = "This property has an <xml> tag and a zer\000 byte."
+  prop_zb   = b"This property has a zer\000 byte."
+  prop_ff   = b"This property has a form\014feed."
+  prop_xml  = b"This property has an <xml> tag."
+  prop_binx = b"This property has an <xml> tag and a zer\000 byte."
 
   # Set some binary properties.
   svntest.actions.set_prop('prop_zb', prop_zb, B_path, )
@@ -1673,11 +1674,11 @@ def added_moved_file(sbox):
   svntest.main.run_svn(None, 'mv', foo_path, foo2_path)
 
   # should still have the property
-  svntest.actions.check_prop('someprop', foo2_path, ['someval'])
+  svntest.actions.check_prop('someprop', foo2_path, [b'someval'])
 
   # the property should get committed, too
   sbox.simple_commit()
-  svntest.actions.check_prop('someprop', foo2_url, ['someval'])
+  svntest.actions.check_prop('someprop', foo2_url, [b'someval'])
 
 
 # Issue 2220, deleting a non-existent property should error
@@ -2087,7 +2088,7 @@ def atomic_over_ra(sbox):
   PASSES_WITHOUT_BPV(None, s1)
 
   # Value of "flower" is 's1'.
-  svntest.actions.check_prop('flower', repo_url, [s1], 0)
+  svntest.actions.check_prop('flower', repo_url, [s1.encode()], 0)
 
 # Test for issue #3721 'redirection of svn propget output corrupted with
 # large property values'
