@@ -416,9 +416,10 @@ def compare_and_display_lines(message, label, expected, actual,
   if not isinstance(expected, ExpectedOutput):
     expected = ExpectedOutput(expected)
 
-  if isinstance(actual, str):
-    actual = [actual]
-  actual = svntest.main.filter_dbg(actual)
+  actual = svntest.main.ensure_list(actual)
+  if len(actual) > 0:
+    is_binary = not isinstance(actual[0], str)
+    actual = svntest.main.filter_dbg(actual, is_binary)
 
   if not expected.matches(actual):
     expected.display_differences(message, label, actual)

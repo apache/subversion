@@ -173,7 +173,7 @@ class State:
     "Remove PATHS recursively from the state (the paths must exist)."
     for subtree_path in paths:
       subtree_path = to_relpath(subtree_path)
-      for path, item in self.desc.items():
+      for path, item in svntest.main.ensure_list(self.desc.items()):
         if path == subtree_path or path[:len(subtree_path) + 1] == subtree_path + '/':
           del self.desc[path]
 
@@ -228,7 +228,7 @@ class State:
     temp = {}
     for src, dst in sorted(moves.items(), key=lambda pair: pair[0])[::-1]:
       temp[src] = {}
-      for path, item in self.desc.items():
+      for path, item in svntest.main.ensure_list(self.desc.items()):
         if path == src or path[:len(src) + 1] == src + '/':
           temp[src][path] = item;
           del self.desc[path]

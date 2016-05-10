@@ -405,6 +405,17 @@ def run_command(command, error_expected, binary_mode=False, *varargs):
   return run_command_stdin(command, error_expected, 0, binary_mode,
                            None, *varargs)
 
+# Frequently used constants:
+# If any of these relative path strings show up in a server response,
+# then we can assume that the on-disk repository path was leaked to the
+# client.  Having these here as constants means we don't need to construct
+# them over and over again.
+_repos_diskpath1 = os.path.join('cmdline', 'svn-test-work', 'repositories')
+_repos_diskpath2 = os.path.join('cmdline', 'svn-test-work', 'local_tmp',
+                                'repos')
+_repos_diskpath1_bytes = _repos_diskpath1.encode()
+_repos_diskpath2_bytes = _repos_diskpath2.encode()
+
 # A regular expression that matches arguments that are trivially safe
 # to pass on a command line without quoting on any supported operating
 # system:
@@ -574,9 +585,10 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
     # ### or the diskpath isn't realpath()'d somewhere on the way from
     # ### the server's configuration and the client's stderr.  We could
     # ### check for both the symlinked path and the realpath.
-    return \
-         os.path.join('cmdline', 'svn-test-work', 'repositories') in line \
-      or os.path.join('cmdline', 'svn-test-work', 'local_tmp', 'repos') in line
+    if isinstance(line, str):
+      return _repos_diskpath1 in line or _repos_diskpath2 in line
+    else:
+      return _repos_diskpath1_bytes in line or _repos_diskpath2_bytes in line
 
   for lines, name in [[stdout_lines, "stdout"], [stderr_lines, "stderr"]]:
     if is_ra_type_file() or 'svnadmin' in command or 'svnlook' in command:
