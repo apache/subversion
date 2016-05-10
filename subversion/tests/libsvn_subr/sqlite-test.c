@@ -26,8 +26,10 @@
 
 static svn_error_t *
 open_db(svn_sqlite__db_t **sdb,
+        const char **db_abspath_p,
         const char *db_name,
         const char *const *statements,
+        apr_int32_t timeout,
         apr_pool_t *pool)
 {
   const char *db_dir, *db_abspath;
@@ -40,8 +42,10 @@ open_db(svn_sqlite__db_t **sdb,
   db_abspath = svn_dirent_join(db_dir, db_name, pool);
 
   SVN_ERR(svn_sqlite__open(sdb, db_abspath, svn_sqlite__mode_rwcreate,
-                           statements, 0, NULL, 0, pool, pool));
+                           statements, 0, NULL, timeout, pool, pool));
 
+  if (db_abspath_p)
+    *db_abspath_p = db_abspath;
   return SVN_NO_ERROR;
 }
 
@@ -83,7 +87,7 @@ test_sqlite_reset(apr_pool_t *pool)
     NULL
   };
 
-  SVN_ERR(open_db(&sdb, "reset", statements, pool));
+  SVN_ERR(open_db(&sdb, NULL, "reset", statements, 0, pool));
   SVN_ERR(svn_sqlite__create_scalar_function(sdb, "error_second",
                                              1, FALSE /* deterministic */,
                                              error_second, NULL));
@@ -113,6 +117,59 @@ test_sqlite_reset(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_sqlite_txn_commit_busy(apr_pool_t *pool)
+{
+  svn_sqlite__db_t *sdb1;
+  svn_sqlite__db_t *sdb2;
+  const char *db_abspath;
+  svn_error_t *err;
+
+  static const char *const statements[] = {
+    "CREATE TABLE test (one TEXT NOT NULL PRIMARY KEY)",
+
+    "INSERT INTO test(one) VALUES ('foo')",
+
+    "SELECT one from test",
+
+    NULL
+  };
+
+  /* Open two db connections.
+
+     Use a small busy_timeout of 250ms, since we're about to receive an
+     SVN_ERR_SQLITE_BUSY error, and retrying for the default 10 seconds
+     would be a waste of time. */
+  SVN_ERR(open_db(&sdb1, &db_abspath, "txn_commit_busy",
+                  statements, 250, pool));
+  SVN_ERR(svn_sqlite__open(&sdb2, db_abspath, svn_sqlite__mode_readwrite,
+                           statements, 0, NULL, 250, pool, pool));
+  SVN_ERR(svn_sqlite__exec_statements(sdb1, 0));
+
+  /* Begin two deferred transactions. */
+  SVN_ERR(svn_sqlite__begin_transaction(sdb1));
+  SVN_ERR(svn_sqlite__exec_statements(sdb1, 1 /* INSERT */));
+  SVN_ERR(svn_sqlite__begin_transaction(sdb2));
+  SVN_ERR(svn_sqlite__exec_statements(sdb2, 2 /* SELECT */));
+
+  /* Try to COMMIT the first write transaction; this should fail due to
+     the concurrent read transaction that holds a shared lock on the db. */
+  err = svn_sqlite__finish_transaction(sdb1, SVN_NO_ERROR);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_SQLITE_BUSY);
+
+  /* We failed to COMMIT the first transaction, but COMMIT-ting the
+     second transaction through a different db connection should succeed.
+     Upgrade it to a write transaction by executing the INSERT statement,
+     and then commit. */
+  SVN_ERR(svn_sqlite__exec_statements(sdb2, 1 /* INSERT */));
+  SVN_ERR(svn_sqlite__finish_transaction(sdb2, SVN_NO_ERROR));
+
+  SVN_ERR(svn_sqlite__close(sdb2));
+  SVN_ERR(svn_sqlite__close(sdb1));
+
+  return SVN_NO_ERROR;
+}
+
 
 static int max_threads = 1;
 
@@ -121,6 +178,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_sqlite_reset,
                    "sqlite reset"),
+    SVN_TEST_XFAIL2(test_sqlite_txn_commit_busy,
+                    "sqlite busy on transaction commit"),
     SVN_TEST_NULL
   };
 
