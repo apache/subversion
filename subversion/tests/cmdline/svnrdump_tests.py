@@ -165,7 +165,7 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
 
   # Set the UUID of the sbox repository to the UUID specified in the
   # dumpfile ### RA layer doesn't have a set_uuid functionality
-  uuid = original_dumpfile[2].split(b' ')[1][:-1]
+  uuid = original_dumpfile[2].split(b' ')[1][:-1].decode()
   svntest.actions.run_and_verify_svnadmin2(None, None, 0,
                                            'setuuid', sbox.repo_dir,
                                            uuid)
