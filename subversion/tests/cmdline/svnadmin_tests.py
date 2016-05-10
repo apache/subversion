@@ -240,7 +240,7 @@ def patch_format(repo_dir, shard_size):
   processed_lines = []
 
   for line in contents.split(b"\n"):
-    if line.startswith("layout "):
+    if line.startswith(b"layout "):
       processed_lines.append(("layout sharded %d" % shard_size).encode())
     else:
       processed_lines.append(line)
