@@ -527,7 +527,7 @@ PROPS-END
 """
     content = content_tmpl % (len(mi), mi)
     headers = headers_tmpl % (node_name, len(content), len(content))
-    record = headers + '\n' + content + '\n\n'
+    record = (headers + '\n' + content + '\n\n').encode()
     return record.splitlines(True)
 
   # The test case mergeinfo (before, after) syncing, separated here with
