@@ -1190,7 +1190,7 @@ def merge_binary_file(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     ''        : Item(props={SVN_PROP_MERGEINFO : '/:3'}),
-    'A/theta' : Item(theta_contents + "some extra junk",
+    'A/theta' : Item(theta_contents + b"some extra junk",
                      props={'svn:mime-type' : 'application/octet-stream'}),
     })
   expected_status = svntest.actions.get_virginal_state(other_wc, 1)
@@ -1822,7 +1822,7 @@ def merge_binary_with_common_ancestry(sbox):
   # Add a binary file to the common ancestry path
   theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
   theta_I_path = os.path.join(I_path, 'theta')
-  svntest.main.file_write(theta_I_path, theta_contents)
+  svntest.main.file_write(theta_I_path, theta_contents, mode='wb')
   svntest.main.run_svn(None, 'add', theta_I_path)
   svntest.main.run_svn(None, 'propset', 'svn:mime-type',
                        'application/octet-stream', theta_I_path)
@@ -15983,7 +15983,7 @@ def dry_run_merge_conflicting_binary(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     ''        : Item(props={SVN_PROP_MERGEINFO : '/:3'}),
-    'A/theta' : Item(theta_contents + "some other junk",
+    'A/theta' : Item(theta_contents + b"some other junk",
                      props={'svn:mime-type' : 'application/octet-stream'}),
     })
 
@@ -15995,7 +15995,7 @@ def dry_run_merge_conflicting_binary(sbox):
   # verify content of theirs(right) file
   expected_disk.add({
   'A/theta.merge-right.r3' :
-    Item(contents= theta_contents + "some extra junk")
+    Item(contents= theta_contents + b"some extra junk")
   })
 
   expected_status = svntest.actions.get_virginal_state(other_wc, 1)
