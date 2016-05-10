@@ -379,6 +379,8 @@ def ensure_list(item):
   "If ITEM is not already a list, convert it to a list."
   if isinstance(item, list):
     return item
+  elif isinstance(item, bytes) or isinstance(item, str):
+    return [ item ]
   else:
     return list(item)
 
