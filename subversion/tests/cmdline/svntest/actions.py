@@ -374,7 +374,7 @@ def run_and_verify_dump(repo_dir, deltas=False):
   if deltas:
     args += ('--deltas',)
   exit_code, output, errput = run_and_verify_svnadmin(
-                                None, [],
+                                verify.AnyOutput, [],
                                 'dump', '--quiet', repo_dir, *args)
   return output
 
