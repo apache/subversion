@@ -679,7 +679,10 @@ class State:
       for name in dirs + files:
         node = os.path.join(dirpath, name)
         if os.path.isfile(node):
-          contents = open(node, 'r').read()
+          try:
+            contents = open(node, 'r', newline='').read()
+          except:
+            contents = open(node, 'rb').read()
         else:
           contents = None
         desc[repos_join(parent, name)] = StateItem(contents=contents)
