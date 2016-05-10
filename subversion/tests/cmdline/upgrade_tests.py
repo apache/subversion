@@ -131,7 +131,7 @@ def check_dav_cache(dir_path, wc_id, expected_dav_caches):
 
   # Check if python's sqlite can read our db
   c.execute('select sqlite_version()')
-  sqlite_ver = map(int, c.fetchone()[0].split('.'))
+  sqlite_ver = svntest.main.ensure_list(map(int, c.fetchone()[0].split('.')))
 
   # SQLite versions have 3 or 4 number groups
   major = sqlite_ver[0]
@@ -158,7 +158,7 @@ def check_dav_cache(dir_path, wc_id, expected_dav_caches):
     if row is None:
       raise svntest.Failure("no dav cache for '%s'" % (local_relpath))
     dav_cache = str(row[0])
-    if dav_cache != expected_dav_cache:
+    if dav_cache != str(expected_dav_cache):
       raise svntest.Failure(
               "wrong dav cache for '%s'\n  Found:    '%s'\n  Expected: '%s'" %
                 (local_relpath, dav_cache, expected_dav_cache))
@@ -379,9 +379,9 @@ def upgrade_wcprops(sbox):
   # to be.  (This could be smarter.)
   expected_dav_caches = {
    '' :
-    '(svn:wc:ra_dav:version-url 41 /svn-test-work/local_tmp/repos/!svn/ver/1)',
+    b'(svn:wc:ra_dav:version-url 41 /svn-test-work/local_tmp/repos/!svn/ver/1)',
    'iota' :
-    '(svn:wc:ra_dav:version-url 46 /svn-test-work/local_tmp/repos/!svn/ver/1/iota)',
+    b'(svn:wc:ra_dav:version-url 46 /svn-test-work/local_tmp/repos/!svn/ver/1/iota)',
   }
   check_dav_cache(sbox.wc_dir, 1, expected_dav_caches)
 
@@ -410,7 +410,7 @@ def simple_entries_replace(path, from_url, to_url):
   entries = os.path.join(path, adm_name, 'entries')
   txt = open(entries).read().replace(from_url, to_url)
   os.chmod(entries, svntest.main.S_ALL_RWX)
-  open(entries, 'wb').write(txt)
+  open(entries, 'wb').write(txt.encode())
 
   for dirent in os.listdir(path):
     item_path = os.path.join(path, dirent)
@@ -1144,21 +1144,21 @@ def upgrade_file_externals(sbox):
   svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
                             '07146bbd-0b64-4aaf-ab70-cd76a0df2d41')
 
-  expected_output = svntest.verify.RegexOutput('r2 committed.*')
+  expected_output = svntest.verify.RegexOutput(b'r2 committed.*')
   svntest.actions.run_and_verify_svnmucc(expected_output, [],
                                          '-m', 'r2',
                                          'propset', 'svn:externals',
                                          '^/A/B/E EX\n^/A/mu muX',
                                          sbox.repo_url + '/A/B/F')
 
-  expected_output = svntest.verify.RegexOutput('r3 committed.*')
+  expected_output = svntest.verify.RegexOutput(b'r3 committed.*')
   svntest.actions.run_and_verify_svnmucc(expected_output, [],
                                          '-m', 'r3',
                                          'propset', 'svn:externals',
                                          '^/A/B/F FX\n^/A/B/lambda lambdaX',
                                          sbox.repo_url + '/A/C')
 
-  expected_output = svntest.verify.RegexOutput('r4 committed.*')
+  expected_output = svntest.verify.RegexOutput(b'r4 committed.*')
   svntest.actions.run_and_verify_svnmucc(expected_output, [],
                                          '-m', 'r4',
                                          'propset', 'pname1', 'pvalue1',
