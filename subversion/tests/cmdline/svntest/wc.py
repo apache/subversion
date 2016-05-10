@@ -680,7 +680,7 @@ class State:
         node = os.path.join(dirpath, name)
         if os.path.isfile(node):
           try:
-            contents = open(node, 'r', newline='').read()
+            contents = open(node, 'r').read()
           except:
             contents = open(node, 'rb').read()
         else:
