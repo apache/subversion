@@ -7243,8 +7243,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_check_related for transactions"),
     SVN_TEST_OPTS_PASS(freeze_and_commit,
                        "freeze and commit"),
-    SVN_TEST_OPTS_XFAIL(commit_with_locked_rep_cache,
-                        "test commit with locked rep-cache"),
+    SVN_TEST_OPTS_PASS(commit_with_locked_rep_cache,
+                       "test commit with locked rep-cache"),
     SVN_TEST_NULL
   };
 
