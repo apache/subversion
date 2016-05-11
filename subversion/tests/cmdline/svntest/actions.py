@@ -564,6 +564,11 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
 def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
                           *args):
   """Export the URL into a new directory WC_DIR_NAME.
+
+  The subcommand output will be verified against OUTPUT_TREE,
+  and the exported copy itself will be verified against DISK_TREE.
+  Return if successful, raise on failure.
+  """
   run_and_verify_export2(URL, export_dir_name, output_tree, disk_tree,
                          False, *args)
 
