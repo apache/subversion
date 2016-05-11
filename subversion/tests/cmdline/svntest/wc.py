@@ -657,7 +657,8 @@ class State:
     return cls('', desc)
 
   @classmethod
-  def from_wc(cls, base, load_props=False, ignore_svn=True):
+  def from_wc(cls, base, load_props=False, ignore_svn=True,
+              keep_eol_style=False):
     """Create a State object from a working copy.
 
     Walks the tree at PATH, building a State based on the actual files
@@ -680,7 +681,10 @@ class State:
         node = os.path.join(dirpath, name)
         if os.path.isfile(node):
           try:
-            contents = open(node, 'r').read()
+            if keep_eol_style:
+              contents = open(node, 'r', newline='').read()
+            else:
+              contents = open(node, 'r').read()
           except:
             contents = open(node, 'rb').read()
         else:

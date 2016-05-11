@@ -564,6 +564,12 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
 def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
                           *args):
   """Export the URL into a new directory WC_DIR_NAME.
+  run_and_verify_export2(URL, export_dir_name, output_tree, disk_tree,
+                         False, *args)
+
+def run_and_verify_export2(URL, export_dir_name, output_tree, disk_tree,
+                           keep_eol_style=False, *args):
+  """Export the URL into a new directory WC_DIR_NAME.
 
   The subcommand output will be verified against OUTPUT_TREE,
   and the exported copy itself will be verified against DISK_TREE.
@@ -592,7 +598,8 @@ def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
   # Create a tree by scanning the working copy.  Don't ignore
   # the .svn directories so that we generate an error if they
   # happen to show up.
-  actual = tree.build_tree_from_wc(export_dir_name, ignore_svn=False)
+  actual = tree.build_tree_from_wc(export_dir_name, ignore_svn=False,
+                                   keep_eol_style=keep_eol_style)
 
   # Verify expected disk against actual disk.
   try:
