@@ -53,7 +53,7 @@ def output_command(fp, cmd, opt):
   status = process.returncode
   fp.write(output)
   fp.write(errors)
-  fp.write("Exit %%d\\n" %% status)
+  fp.write(("Exit %%d\\n" %% status).encode())
   return status
 
 for (svnauthz_cmd, svnauthz_opt) in %s:
