@@ -3461,7 +3461,7 @@ def patch_one_property(sbox, trailing_eol):
                                        1, # dry-run
                                        '--strip', '3')
 
-  svntest.actions.check_prop('k', wc_dir, [value])
+  svntest.actions.check_prop('k', wc_dir, [value.encode()])
 
 def patch_strip_cwd(sbox):
   "patch --strip propchanges cwd"
@@ -5788,7 +5788,7 @@ def patch_binary_file(sbox):
 
   # Make the file binary by putting some non ascii chars inside or propset
   # will return a warning
-  sbox.simple_append('iota', '\0\202\203\204\205\206\207nsomething\nelse\xFF')
+  sbox.simple_append('iota', b'\0\202\203\204\205\206\207nsomething\nelse\xFF')
   sbox.simple_propset('svn:mime-type', 'application/binary', 'iota')
 
   expected_output = [
@@ -5827,8 +5827,8 @@ def patch_binary_file(sbox):
   expected_disk.tweak('iota',
                       props={'svn:mime-type':'application/binary'},
                       contents =
-                      'This is the file \'iota\'.\n'
-                      '\0\202\203\204\205\206\207nsomething\nelse\xFF')
+                      b'This is the file \'iota\'.\n' +
+                      b'\0\202\203\204\205\206\207nsomething\nelse\xFF')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', status='MM')
   expected_skip = wc.State('', { })
