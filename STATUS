@@ -100,7 +100,7 @@ Candidate changes:
    Justification:
      Potentially crashing in a crash reporter is bad.
    Votes:
-     +1: kotkov
+     +1: kotkov, ivan
 
  * r1663286, r1741071, r1741072, r1741073, r1741078, r1741096, r1741200,
    r1741206
