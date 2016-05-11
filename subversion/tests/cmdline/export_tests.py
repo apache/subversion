@@ -254,10 +254,11 @@ def export_eol_translation(sbox):
   expected_output.desc[''] = Item()
   expected_output.tweak(contents=None, status='A ')
 
-  svntest.actions.run_and_verify_export(sbox.repo_url,
-                                        export_target,
-                                        expected_output,
-                                        expected_disk)
+  svntest.actions.run_and_verify_export2(sbox.repo_url,
+                                         export_target,
+                                         expected_output,
+                                         expected_disk,
+                                         keep_eol_style=True)
 
 def export_working_copy_with_keyword_translation(sbox):
   "export working copy with keyword translation"
@@ -348,10 +349,11 @@ def export_working_copy_with_property_mods(sbox):
     'iota'              : Item(status='A '),
   })
 
-  svntest.actions.run_and_verify_export(wc_dir,
-                                        export_target,
-                                        expected_output,
-                                        expected_disk)
+  svntest.actions.run_and_verify_export2(wc_dir,
+                                         export_target,
+                                         expected_output,
+                                         expected_disk,
+                                         keep_eol_style=True)
 
 @XFail()
 @Issue(3798)
@@ -452,11 +454,12 @@ def export_native_eol_option(sbox):
   expected_output.desc[''] = Item()
   expected_output.tweak(contents=None, status='A ')
 
-  svntest.actions.run_and_verify_export(sbox.repo_url,
-                                        export_target,
-                                        expected_output,
-                                        expected_disk,
-                                        '--native-eol','CR')
+  svntest.actions.run_and_verify_export2(sbox.repo_url,
+                                         export_target,
+                                         expected_output,
+                                         expected_disk,
+                                         True,
+                                         '--native-eol','CR')
 
 def export_nonexistent_file(sbox):
   "export nonexistent file"
@@ -846,11 +849,12 @@ def export_externals_with_native_eol(sbox):
   expected_output.wc_dir = export_target
   expected_output.desc[''] = Item()
   expected_output.tweak(contents=None, status='A ')
-  svntest.actions.run_and_verify_export(sbox.repo_url,
-                                        export_target,
-                                        expected_output,
-                                        expected_disk,
-                                        '--native-eol', 'CR')
+  svntest.actions.run_and_verify_export2(sbox.repo_url,
+                                         export_target,
+                                         expected_output,
+                                         expected_disk,
+                                         True,
+                                         '--native-eol', 'CR')
 
 @Issue(3727)
 def export_to_current_dir(sbox):
