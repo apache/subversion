@@ -95,13 +95,6 @@ Candidate changes:
    Votes:
      +1: brane, kotkov
 
- * r1720015
-   Fix undefined behavior when opening an FSFS repository without db/format.
-   Justification:
-     Unbreaks working with 1.1-era repositories that didn't have this file.
-   Votes:
-     +1: kotkov, danielsh
-
  * r1663253, r1704821, r1738659, r1738828
    Fix a few instances of undefined behavior in Win32 crash reporter.
    Justification:
@@ -134,3 +127,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1720015
+   Fix undefined behavior when opening an FSFS repository without db/format.
+   Justification:
+     Unbreaks working with 1.1-era repositories that didn't have this file.
+   Votes:
+     +1: kotkov, danielsh, ivan
