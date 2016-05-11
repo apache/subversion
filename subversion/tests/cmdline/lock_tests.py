@@ -356,9 +356,9 @@ def enforce_lock(sbox):
   svntest.actions.set_prop('svn:needs-lock', '      ', mu_path, expected_err)
 
   # Check svn:needs-lock
-  svntest.actions.check_prop('svn:needs-lock', iota_path, ['*'])
-  svntest.actions.check_prop('svn:needs-lock', lambda_path, ['*'])
-  svntest.actions.check_prop('svn:needs-lock', mu_path, ['*'])
+  svntest.actions.check_prop('svn:needs-lock', iota_path, [b'*'])
+  svntest.actions.check_prop('svn:needs-lock', lambda_path, [b'*'])
+  svntest.actions.check_prop('svn:needs-lock', mu_path, [b'*'])
 
   svntest.main.run_svn(None, 'commit',
                        '-m', '', iota_path, lambda_path, mu_path)
@@ -1689,7 +1689,10 @@ def lock_invalid_token(sbox):
   svntest.main.create_python_hook_script(hook_path,
     '# encoding=utf-8\n'
     'import sys\n'
-    'sys.stdout.write("тест")\n'
+    'if sys.version_info < (3, 0):\n'
+    '  sys.stdout.write("тест")\n'
+    'else:\n'
+    '  sys.stdout.buffer.write(("тест").encode("utf-8"))\n'
     'sys.exit(0)\n')
 
   fname = 'iota'
