@@ -120,7 +120,7 @@ Candidate changes:
      that can't be backported as is without breaking compatibility between
      patch versions.
    Votes:
-     +1: kotkov
+     +1: kotkov, ivan
 
 Veto-blocked changes:
 =====================
