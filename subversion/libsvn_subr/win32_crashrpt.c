@@ -43,7 +43,7 @@ typedef int win32_crashrpt__dummy;
 #include "win32_crashrpt_dll.h"
 
 /*** Global variables ***/
-HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
+static HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
 
 /* Email address where the crash reports should be sent too. */
 #define CRASHREPORT_EMAIL "users@subversion.apache.org"
