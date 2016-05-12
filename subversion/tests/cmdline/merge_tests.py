@@ -3294,17 +3294,17 @@ def merge_ignore_eolstyle(sbox):
   expected_status.tweak(file_name, status='M ', wc_rev=2)
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_merge(sbox.wc_dir, '2', '3',
-                                       sbox.repo_url, None,
-                                       expected_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip,
-                                       [], False, False,
-                                       '--allow-mixed-revisions',
-                                       '-x', '--ignore-eol-style', wc_dir)
+  svntest.actions.run_and_verify_merge2(sbox.wc_dir, '2', '3',
+                                        sbox.repo_url, None,
+                                        expected_output,
+                                        expected_mergeinfo_output,
+                                        expected_elision_output,
+                                        expected_disk,
+                                        expected_status,
+                                        expected_skip,
+                                        [], False, False, True,
+                                        '--allow-mixed-revisions',
+                                        '-x', '--ignore-eol-style', wc_dir)
 
 #----------------------------------------------------------------------
 # eol-style handling during merge with conflicts, scenario 1:
@@ -3434,14 +3434,15 @@ def merge_conflict_markers_matching_eol(sbox):
       })
     expected_backup_skip = wc.State('', { })
 
-    svntest.actions.run_and_verify_merge(wc_backup, cur_rev - 1, cur_rev,
-                                         sbox.repo_url, None,
-                                         expected_backup_output,
-                                         expected_mergeinfo_output,
-                                         expected_elision_output,
-                                         expected_backup_disk,
-                                         expected_backup_status,
-                                         expected_backup_skip)
+    svntest.actions.run_and_verify_merge2(wc_backup, cur_rev - 1, cur_rev,
+                                          sbox.repo_url, None,
+                                          expected_backup_output,
+                                          expected_mergeinfo_output,
+                                          expected_elision_output,
+                                          expected_backup_disk,
+                                          expected_backup_status,
+                                          expected_backup_skip,
+                                          keep_eol_style=True)
 
     # cleanup for next run
     svntest.main.run_svn(None, 'revert', '-R', wc_backup)
@@ -3503,13 +3504,15 @@ def merge_eolstyle_handling(sbox):
 
   expected_backup_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_merge(wc_backup, '1', '2', sbox.repo_url, None,
-                                       expected_backup_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
-                                       expected_backup_disk,
-                                       expected_backup_status,
-                                       expected_backup_skip)
+  svntest.actions.run_and_verify_merge2(wc_backup, '1', '2', sbox.repo_url,
+                                        None,
+                                        expected_backup_output,
+                                        expected_mergeinfo_output,
+                                        expected_elision_output,
+                                        expected_backup_disk,
+                                        expected_backup_status,
+                                        expected_backup_skip,
+                                        keep_eol_style=True)
 
   # Test 2: now change the eol-style property to another value and commit,
   # merge this revision in the still changed mu in the second working copy;
@@ -3532,13 +3535,15 @@ def merge_eolstyle_handling(sbox):
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 1)
   expected_backup_status.tweak('', status=' M')
   expected_backup_status.tweak('A/mu', status='MM')
-  svntest.actions.run_and_verify_merge(wc_backup, '2', '3', sbox.repo_url, None,
-                                       expected_backup_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
-                                       expected_backup_disk,
-                                       expected_backup_status,
-                                       expected_backup_skip)
+  svntest.actions.run_and_verify_merge2(wc_backup, '2', '3', sbox.repo_url,
+                                        None,
+                                        expected_backup_output,
+                                        expected_mergeinfo_output,
+                                        expected_elision_output,
+                                        expected_backup_disk,
+                                        expected_backup_status,
+                                        expected_backup_skip,
+                                        keep_eol_style=True)
 
   # Test 3: now delete the eol-style property and commit, merge this revision
   # in the still changed mu in the second working copy; there should be no
@@ -3559,13 +3564,15 @@ def merge_eolstyle_handling(sbox):
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 1)
   expected_backup_status.tweak('', status=' M')
   expected_backup_status.tweak('A/mu', status='M ')
-  svntest.actions.run_and_verify_merge(wc_backup, '3', '4', sbox.repo_url, None,
-                                       expected_backup_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
-                                       expected_backup_disk,
-                                       expected_backup_status,
-                                       expected_backup_skip)
+  svntest.actions.run_and_verify_merge2(wc_backup, '3', '4', sbox.repo_url,
+                                        None,
+                                        expected_backup_output,
+                                        expected_mergeinfo_output,
+                                        expected_elision_output,
+                                        expected_backup_disk,
+                                        expected_backup_status,
+                                        expected_backup_skip,
+                                        keep_eol_style=True)
 
 #----------------------------------------------------------------------
 def create_deep_trees(wc_dir):
