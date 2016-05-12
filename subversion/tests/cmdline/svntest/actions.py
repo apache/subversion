@@ -1059,6 +1059,29 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
                          check_props = False,
                          dry_run = True,
                          *args, **kw):
+  """Same as run_and_verify_merge2 but with keep_eol_style set to False. """
+
+  run_and_verify_merge2(dir, rev1, rev2, url1, url2,
+                        output_tree,
+                        mergeinfo_output_tree,
+                        elision_output_tree,
+                        disk_tree, status_tree, skip_tree,
+                        expected_stderr,
+                        check_props,
+                        dry_run,
+                        False,
+                        *args, **kw)
+
+def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
+                          output_tree,
+                          mergeinfo_output_tree,
+                          elision_output_tree,
+                          disk_tree, status_tree, skip_tree,
+                          expected_stderr = [],
+                          check_props = False,
+                          dry_run = True,
+                          keep_eol_style = False,
+                          *args, **kw):
   """Run 'svn merge URL1@REV1 URL2@REV2 DIR' if URL2 is not None
   (for a three-way merge between URLs and WC).
 
@@ -1101,12 +1124,12 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
   merge_command = tuple(merge_command)
 
   if dry_run:
-    pre_disk = tree.build_tree_from_wc(dir)
+    pre_disk = tree.build_tree_from_wc(dir, keep_eol_style=keep_eol_style)
     dry_run_command = merge_command + ('--dry-run',)
     dry_run_command = dry_run_command + args
     exit_code, out_dry, err_dry = run_and_verify_svn(None, expected_stderr,
                                                      *dry_run_command)
-    post_disk = tree.build_tree_from_wc(dir)
+    post_disk = tree.build_tree_from_wc(dir, keep_eol_style=keep_eol_style)
     try:
       tree.compare_trees("disk", post_disk, pre_disk)
     except tree.SVNTreeError:
@@ -1207,7 +1230,7 @@ def run_and_verify_merge(dir, rev1, rev2, url1, url2,
   verify_update(actual_diff, actual_mergeinfo, actual_elision, dir,
                 output_tree, mergeinfo_output_tree, elision_output_tree,
                 disk_tree, status_tree,
-                check_props, **kw)
+                check_props, keep_eol_style=keep_eol_style, **kw)
 
 
 def run_and_verify_patch(dir, patch_path,
