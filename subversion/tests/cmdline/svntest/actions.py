@@ -914,6 +914,21 @@ def run_and_verify_update(wc_dir_name,
                           expected_stderr=[],
                           check_props = False,
                           *args, **kw):
+  run_and_verify_update2(wc_dir_name,
+                         output_tree, disk_tree, status_tree,
+                         expected_stderr,
+                         check_props,
+                         False,
+                         *args, **kw)
+  """Same as run_and_verify_update2 but with keep_eol_style set to False."""
+
+
+def run_and_verify_update2(wc_dir_name,
+                           output_tree, disk_tree, status_tree,
+                           expected_stderr=[],
+                           check_props = False,
+                           keep_eol_style = False,
+                           *args, **kw):
 
   """Update WC_DIR_NAME.  *ARGS are any extra optional args to the
   update subcommand.  NOTE: If *ARGS is specified at all, explicit
@@ -944,7 +959,7 @@ def run_and_verify_update(wc_dir_name,
   actual = wc.State.from_checkout(output)
   verify_update(actual, None, None, wc_dir_name,
                 output_tree, None, None, disk_tree, status_tree,
-                check_props, **kw)
+                check_props, keep_eol_style=keep_eol_style, **kw)
 
 
 def run_and_parse_info(*args):

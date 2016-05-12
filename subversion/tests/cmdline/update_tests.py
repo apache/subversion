@@ -1757,10 +1757,11 @@ def conflict_markers_matching_eol(sbox):
     expected_backup_status.tweak(wc_rev = cur_rev)
 
     # Do the update and check the results in three ways.
-    svntest.actions.run_and_verify_update(wc_backup,
-                                          expected_backup_output,
-                                          expected_backup_disk,
-                                          expected_backup_status)
+    svntest.actions.run_and_verify_update2(wc_backup,
+                                           expected_backup_output,
+                                           expected_backup_disk,
+                                           expected_backup_status,
+                                           keep_eol_style=True)
 
     # cleanup for next run
     svntest.main.run_svn(None, 'revert', '-R', wc_backup)
@@ -1814,10 +1815,11 @@ def update_eolstyle_handling(sbox):
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 2)
   expected_backup_status.tweak('A/mu', status='M ')
 
-  svntest.actions.run_and_verify_update(wc_backup,
-                                        expected_backup_output,
-                                        expected_backup_disk,
-                                        expected_backup_status)
+  svntest.actions.run_and_verify_update2(wc_backup,
+                                         expected_backup_output,
+                                         expected_backup_disk,
+                                         expected_backup_status,
+                                         keep_eol_style=True)
 
   # Test 2: now change the eol-style property to another value and commit,
   # update the still changed mu in the second working copy; there should be
@@ -1839,10 +1841,11 @@ def update_eolstyle_handling(sbox):
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 3)
   expected_backup_status.tweak('A/mu', status='M ')
 
-  svntest.actions.run_and_verify_update(wc_backup,
-                                        expected_backup_output,
-                                        expected_backup_disk,
-                                        expected_backup_status)
+  svntest.actions.run_and_verify_update2(wc_backup,
+                                         expected_backup_output,
+                                         expected_backup_disk,
+                                         expected_backup_status,
+                                         keep_eol_style=True)
 
   # Test 3: now delete the eol-style property and commit, update the still
   # changed mu in the second working copy; there should be no conflict!
@@ -1863,10 +1866,11 @@ def update_eolstyle_handling(sbox):
 
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 4)
   expected_backup_status.tweak('A/mu', status='M ')
-  svntest.actions.run_and_verify_update(wc_backup,
-                                        expected_backup_output,
-                                        expected_backup_disk,
-                                        expected_backup_status)
+  svntest.actions.run_and_verify_update2(wc_backup,
+                                         expected_backup_output,
+                                         expected_backup_disk,
+                                         expected_backup_status,
+                                         keep_eol_style=True)
 
 # Bug in which "update" put a bogus revision number on a schedule-add file,
 # causing the wrong version of it to be committed.
