@@ -1581,6 +1581,9 @@ def patch_no_svn_eol_style(sbox):
   else:
     crlf = '\r\n'
 
+  # Strict EOL style matching breaks Windows tests at least with Python 2
+  keep_eol_style = not svntest.main.is_os_windows
+
   eols = [crlf, '\015', '\n', '\012']
   for target_eol in eols:
     for patch_eol in eols:
@@ -1663,7 +1666,7 @@ def patch_no_svn_eol_style(sbox):
                                             expected_disk,
                                             expected_status,
                                             expected_skip,
-                                            [], True, True, True)
+                                            [], True, True, keep_eol_style)
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
       svntest.actions.run_and_verify_svn(expected_output, [],
@@ -1684,6 +1687,9 @@ def patch_with_svn_eol_style(sbox):
     crlf = '\n'
   else:
     crlf = '\r\n'
+
+  # Strict EOL style matching breaks Windows tests at least with Python 2
+  keep_eol_style = not svntest.main.is_os_windows
 
   eols = [crlf, '\015', '\n', '\012']
   eol_styles = ['CRLF', 'CR', 'native', 'LF']
@@ -1780,7 +1786,7 @@ def patch_with_svn_eol_style(sbox):
                                             None, # expected err
                                             1, # check-props
                                             1, # dry-run
-                                            1) # keep-eol-style
+                                            keep_eol_style) # keep-eol-style
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
       svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
@@ -1800,6 +1806,9 @@ def patch_with_svn_eol_style_uncommitted(sbox):
     crlf = '\n'
   else:
     crlf = '\r\n'
+
+  # Strict EOL style matching breaks Windows tests at least with Python 2
+  keep_eol_style = notsvntest. main.is_os_windows
 
   eols = [crlf, '\015', '\n', '\012']
   eol_styles = ['CRLF', 'CR', 'native', 'LF']
@@ -1890,7 +1899,7 @@ def patch_with_svn_eol_style_uncommitted(sbox):
                                             None, # expected err
                                             1, # check-props
                                             1, # dry-run
-                                            1) # keep-eol-style
+                                            keep_eol_style) # keep-eol-style
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
       svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
