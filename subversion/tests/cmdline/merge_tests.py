@@ -3331,7 +3331,7 @@ def merge_conflict_markers_matching_eol(sbox):
     crlf = '\r\n'
 
   # Strict EOL style matching breaks Windows tests at least with Python 2
-  keep_eol_style = not svntest.main.is_os_windows
+  keep_eol_style = not svntest.main.is_os_windows()
 
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
@@ -3476,7 +3476,7 @@ def merge_eolstyle_handling(sbox):
     crlf = '\r\n'
 
   # Strict EOL style matching breaks Windows tests at least with Python 2
-  keep_eol_style = not svntest.main.is_os_windows
+  keep_eol_style = not svntest.main.is_os_windows()
 
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
