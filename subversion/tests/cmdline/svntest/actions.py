@@ -563,12 +563,8 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
 
 def run_and_verify_export(URL, export_dir_name, output_tree, disk_tree,
                           *args):
-  """Export the URL into a new directory WC_DIR_NAME.
+  """Same as run_and_verify_export2 but with KEEP_EOL_STYLE set to False."""
 
-  The subcommand output will be verified against OUTPUT_TREE,
-  and the exported copy itself will be verified against DISK_TREE.
-  Return if successful, raise on failure.
-  """
   run_and_verify_export2(URL, export_dir_name, output_tree, disk_tree,
                          False, *args)
 
@@ -578,6 +574,11 @@ def run_and_verify_export2(URL, export_dir_name, output_tree, disk_tree,
 
   The subcommand output will be verified against OUTPUT_TREE,
   and the exported copy itself will be verified against DISK_TREE.
+
+  If KEEP_EOL_STYLE is set, don't let Python normalize the EOL when
+  reading working copy contents as text files.  It has no effect on
+  binary files.
+
   Return if successful, raise on failure.
   """
   assert isinstance(output_tree, wc.State)
@@ -816,6 +817,10 @@ def verify_update(actual_output,
   against STATUS_TREE (if provided).  (This is a good way to check that
   revision numbers were bumped.)
 
+  If KEEP_EOL_STYLE is set, don't let Python normalize the EOL when
+  reading working copy contents as text files.  It has no effect on
+  binary files.
+
   Return if successful, raise on failure.
 
   For the comparison with DISK_TREE, pass SINGLETON_HANDLER_A and
@@ -877,8 +882,13 @@ def verify_update(actual_output,
 def verify_disk(wc_dir_name, disk_tree, check_props=False,
                 extra_files=None, keep_eol_style=False):
   """Verify WC_DIR_NAME against DISK_TREE.  If CHECK_PROPS is set,
-  the comparison will examin props.  Returns if successful, raises on
-  failure."""
+  the comparison will examin props.
+
+  If KEEP_EOL_STYLE is set, don't let Python normalize the EOL when
+  reading working copy contents as text files.  It has no effect on
+  binary files.
+
+  Returns if successful, raises on failure."""
 
   singleton_handler_a = None
   a_baton = None,
@@ -914,13 +924,13 @@ def run_and_verify_update(wc_dir_name,
                           expected_stderr=[],
                           check_props = False,
                           *args, **kw):
+  """Same as run_and_verify_update2 but with keep_eol_style set to False."""
   run_and_verify_update2(wc_dir_name,
                          output_tree, disk_tree, status_tree,
                          expected_stderr,
                          check_props,
                          False,
                          *args, **kw)
-  """Same as run_and_verify_update2 but with keep_eol_style set to False."""
 
 
 def run_and_verify_update2(wc_dir_name,
@@ -947,6 +957,10 @@ def run_and_verify_update2(wc_dir_name,
   (This is a good way to check that revision numbers were bumped.)
 
   If CHECK_PROPS is set, then disk comparison will examine props.
+
+  If KEEP_EOL_STYLE is set, don't let Python normalize the EOL when
+  reading working copy contents as text files.  It has no effect on
+  binary files.
 
   Return if successful, raise on failure."""
 
@@ -1120,6 +1134,10 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   If DRY_RUN is set then a --dry-run merge will be carried out first and
   the output compared with that of the full merge.
 
+  If KEEP_EOL_STYLE is set, don't let Python normalize the EOL when
+  reading working copy contents as text files.  It has no effect on
+  binary files.
+
   Return if successful, raise on failure.
 
   *ARGS are any extra optional args to the merge subcommand.
@@ -1254,22 +1272,7 @@ def run_and_verify_patch(dir, patch_path,
                          check_props=False,
                          dry_run=True,
                          *args, **kw):
-  """Run 'svn patch patch_path DIR'.
-
-  If ERROR_RE_STRING, 'svn patch' must exit with error, and the error
-  message must match regular expression ERROR_RE_STRING.
-
-  The subcommand output will be verified against OUTPUT_TREE, and the
-  working copy itself will be verified against DISK_TREE.  If optional
-  STATUS_TREE is given, then 'svn status' output will be compared.
-  The 'skipped' merge output will be compared to SKIP_TREE.
-
-  If CHECK_PROPS is set, then disk comparison will examine props.
-
-  If DRY_RUN is set then a --dry-run patch will be carried out first and
-  the output compared with that of the full patch application.
-
-  Returns if successful, raises on failure."""
+  """Same as run_and_verify_patch2 but with KEEP_EOL_STYLE set to False."""
 
   run_and_verify_patch2(dir, patch_path,
                         output_tree, disk_tree, status_tree, skip_tree,
@@ -1300,6 +1303,10 @@ def run_and_verify_patch2(dir, patch_path,
 
   If DRY_RUN is set then a --dry-run patch will be carried out first and
   the output compared with that of the full patch application.
+
+  If KEEP_EOL_STYLE is set, don't let Python normalize the EOL when
+  reading working copy contents as text files.  It has no effect on
+  binary files.
 
   Returns if successful, raises on failure."""
   patch_command = [ "patch" ]

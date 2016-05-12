@@ -870,7 +870,12 @@ def build_tree_from_wc(wc_path, load_props=0, ignore_svn=1, keep_eol_style=False
     """Takes WC_PATH as the path to a working copy.  Walks the tree below
     that path, and creates the tree based on the actual found
     files.  If IGNORE_SVN is true, then exclude SVN admin dirs from the tree.
-    If LOAD_PROPS is true, the props will be added to the tree."""
+    If LOAD_PROPS is true, the props will be added to the tree.
+
+    If KEEP_EOL_STYLE is set, don't let Python normalize the EOL when
+    reading working copy contents as text files.  It has no effect on
+    binary files.
+    """
 
     return svntest.wc.State.from_wc(wc_path, load_props, ignore_svn,
                                     keep_eol_style).old_tree()
