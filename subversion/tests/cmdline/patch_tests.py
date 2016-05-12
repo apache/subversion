@@ -1657,13 +1657,13 @@ def patch_no_svn_eol_style(sbox):
 
       expected_skip = wc.State('', { })
 
-      svntest.actions.run_and_verify_patch(wc_dir,
-                                           patch_file_path,
-                                           expected_output,
-                                           expected_disk,
-                                           expected_status,
-                                           expected_skip,
-                                           [], True, True)
+      svntest.actions.run_and_verify_patch2(wc_dir,
+                                            patch_file_path,
+                                            expected_output,
+                                            expected_disk,
+                                            expected_status,
+                                            expected_skip,
+                                            [], True, True, True)
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
       svntest.actions.run_and_verify_svn(expected_output, [],
@@ -1771,15 +1771,16 @@ def patch_with_svn_eol_style(sbox):
 
       expected_skip = wc.State('', { })
 
-      svntest.actions.run_and_verify_patch(wc_dir,
-                                           patch_file_path,
-                                           expected_output,
-                                           expected_disk,
-                                           expected_status,
-                                           expected_skip,
-                                           None, # expected err
-                                           1, # check-props
-                                           1) # dry-run
+      svntest.actions.run_and_verify_patch2(wc_dir,
+                                            patch_file_path,
+                                            expected_output,
+                                            expected_disk,
+                                            expected_status,
+                                            expected_skip,
+                                            None, # expected err
+                                            1, # check-props
+                                            1, # dry-run
+                                            1) # keep-eol-style
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
       svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
@@ -1880,15 +1881,16 @@ def patch_with_svn_eol_style_uncommitted(sbox):
 
       expected_skip = wc.State('', { })
 
-      svntest.actions.run_and_verify_patch(wc_dir,
-                                           patch_file_path,
-                                           expected_output,
-                                           expected_disk,
-                                           expected_status,
-                                           expected_skip,
-                                           None, # expected err
-                                           1, # check-props
-                                           1) # dry-run
+      svntest.actions.run_and_verify_patch2(wc_dir,
+                                            patch_file_path,
+                                            expected_output,
+                                            expected_disk,
+                                            expected_status,
+                                            expected_skip,
+                                            None, # expected err
+                                            1, # check-props
+                                            1, # dry-run
+                                            1) # keep-eol-style
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
       svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
