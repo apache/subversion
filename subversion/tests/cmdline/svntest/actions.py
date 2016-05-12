@@ -803,6 +803,7 @@ def verify_update(actual_output,
                   disk_tree,
                   status_tree,
                   check_props=False,
+                  keep_eol_style=False,
                   extra_files=None):
   """Verify update of WC_DIR_NAME.
 
@@ -866,7 +867,7 @@ def verify_update(actual_output,
   # Create a tree by scanning the working copy, and verify it
   if disk_tree:
     verify_disk(wc_dir_name, disk_tree, check_props,
-                extra_files=extra_files)
+                extra_files, keep_eol_style)
 
   # Verify via 'status' command too, if possible.
   if status_tree:
@@ -874,7 +875,7 @@ def verify_update(actual_output,
 
 
 def verify_disk(wc_dir_name, disk_tree, check_props=False,
-                extra_files=None):
+                extra_files=None, keep_eol_style=False):
   """Verify WC_DIR_NAME against DISK_TREE.  If CHECK_PROPS is set,
   the comparison will examin props.  Returns if successful, raises on
   failure."""
@@ -893,7 +894,8 @@ def verify_disk(wc_dir_name, disk_tree, check_props=False,
   if isinstance(disk_tree, wc.State):
     disk_tree = disk_tree.old_tree()
 
-  actual_disk = tree.build_tree_from_wc(wc_dir_name, check_props)
+  actual_disk = tree.build_tree_from_wc(wc_dir_name, check_props,
+                                        keep_eol_style=keep_eol_style)
   try:
     tree.compare_trees("disk", actual_disk, disk_tree,
                        singleton_handler_a, a_baton,
@@ -1231,18 +1233,49 @@ def run_and_verify_patch(dir, patch_path,
 
   Returns if successful, raises on failure."""
 
+  run_and_verify_patch2(dir, patch_path,
+                        output_tree, disk_tree, status_tree, skip_tree,
+                        error_re_string,
+                        check_props,
+                        dry_run,
+                        False,
+                        *args, **kw)
+
+def run_and_verify_patch2(dir, patch_path,
+                          output_tree, disk_tree, status_tree, skip_tree,
+                          error_re_string=None,
+                          check_props=False,
+                          dry_run=True,
+                          keep_eol_style=False,
+                          *args, **kw):
+  """Run 'svn patch patch_path DIR'.
+
+  If ERROR_RE_STRING, 'svn patch' must exit with error, and the error
+  message must match regular expression ERROR_RE_STRING.
+
+  The subcommand output will be verified against OUTPUT_TREE, and the
+  working copy itself will be verified against DISK_TREE.  If optional
+  STATUS_TREE is given, then 'svn status' output will be compared.
+  The 'skipped' merge output will be compared to SKIP_TREE.
+
+  If CHECK_PROPS is set, then disk comparison will examine props.
+
+  If DRY_RUN is set then a --dry-run patch will be carried out first and
+  the output compared with that of the full patch application.
+
+  Returns if successful, raises on failure."""
   patch_command = [ "patch" ]
   patch_command.append(patch_path)
   patch_command.append(dir)
   patch_command = tuple(patch_command)
 
   if dry_run:
-    pre_disk = tree.build_tree_from_wc(dir)
+    pre_disk = tree.build_tree_from_wc(dir, keep_eol_style=keep_eol_style)
     dry_run_command = patch_command + ('--dry-run',)
     dry_run_command = dry_run_command + args
     exit_code, out_dry, err_dry = main.run_svn(error_re_string,
                                                *dry_run_command)
-    post_disk = tree.build_tree_from_wc(dir)
+    post_disk = tree.build_tree_from_wc(dir, keep_eol_style=keep_eol_style)
     try:
       tree.compare_trees("disk", post_disk, pre_disk)
     except tree.SVNTreeError:
@@ -1305,7 +1338,8 @@ def run_and_verify_patch(dir, patch_path,
 
   verify_update(mytree, None, None, dir,
                 output_tree, None, None, disk_tree, status_tree,
-                check_props=check_props, **kw)
+                check_props=check_props, keep_eol_style=keep_eol_style,
+                **kw)
 
 
 def run_and_verify_mergeinfo(error_re_string = None,
