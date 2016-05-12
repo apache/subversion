@@ -1655,7 +1655,7 @@ def conflict_markers_matching_eol(sbox):
 #  if os.name == 'nt':
 #    crlf = '\n'
 #  else:
-#    crlf = '\r\n'
+  crlf = '\r\n'
 
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
