@@ -781,7 +781,7 @@ class TestHarness:
     def progress_func(completed):
       if not self.log or self.dots_written >= dot_count:
         return
-      dots = (completed * dot_count) / total
+      dots = (int)((completed * dot_count) / total)
       if dots > dot_count:
         dots = dot_count
       dots_to_write = dots - self.dots_written
@@ -834,7 +834,7 @@ class TestHarness:
          in parallel mode."""
       if not self.log:
         return
-      dots = (completed * dot_count) / total
+      dots = int((completed * dot_count) / total)
       if dots > dot_count:
         dots = dot_count
       self.progress_lock.acquire()
@@ -897,9 +897,9 @@ class TestHarness:
       test_info = ''
 
     if self.opts.list_tests:
-      log.write('LISTING: %s\n' % progbase)
+      log.write(('LISTING: %s\n' % progbase).encode())
     else:
-      log.write('START: %s\n' % progbase)
+      log.write(('START: %s\n' % progbase).encode())
 
     log.flush()
 
@@ -929,10 +929,10 @@ class TestHarness:
     if not self.opts.list_tests:
       # Log the elapsed time.
       elapsed_time = str(datetime.now() - start_time)
-      log.write('END: %s\n' % progbase)
-      log.write('ELAPSED: %s %s\n' % (progbase, elapsed_time))
+      log.write(('END: %s\n' % progbase).encode())
+      log.write(('ELAPSED: %s %s\n' % (progbase, elapsed_time)).encode())
 
-    log.write('\n')
+    log.write(b'\n')
 
     # If we are only listing the tests just add a newline, otherwise if
     # we printed a "Running all tests in ..." line, add the test result.
