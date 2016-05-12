@@ -297,10 +297,10 @@ def show_usage():
   """ Write a simple CL docstring """
 
   print("Copies and duplicates repositories in a way that mimics larger deployments.")
-  print()
+  print("")
   print("Usage:")
   print("copy_repo.py SRC DST COUNT SEPARATOR_SIZE")
-  print()
+  print("")
   print("SRC            Immediate parent folder of all the repositories to copy.")
   print("DST            Folder to copy into; current contents will be lost.")
   print("COUNT          Number of copies to create of each source repository.")

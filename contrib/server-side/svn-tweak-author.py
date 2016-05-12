@@ -74,7 +74,7 @@ def tweak_rev_author(fs_obj, revision, author):
         fs.svn_fs_change_rev_prop(fs_obj, revision,
                                   core.SVN_PROP_REVISION_AUTHOR, author)
     except:
-        print()
+        print("")
         raise
     print("done.")
 

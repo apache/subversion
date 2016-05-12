@@ -188,7 +188,7 @@ def sanitize_mergeinfo(parsed_original_mergeinfo, repo_root, wcpath,
     sys.stdout.write(bogus_mergeinfo_path + ": ")
     for revision_range in bogus_mergeinfo_deleted[bogus_mergeinfo_path]:
       sys.stdout.write(str(revision_range.start + 1) + "-" + str(revision_range.end) + ",")
-    print()
+    print("")
 
 ##
 # This function tries to 'propset the new mergeinfo into the working copy.
@@ -313,7 +313,7 @@ if __name__ == "__main__":
   try:
     main()
   except KeyboardInterrupt:
-    print()
+    print("")
     sys.stderr.write("The script is interrupted and stopped manually.")
-    print()
+    print("")
 

@@ -482,7 +482,7 @@ class TestHarness:
     for t in threads:
       t.join()
 
-    print()
+    print("")
 
     # Aggregate and log the results
     failed = 0
