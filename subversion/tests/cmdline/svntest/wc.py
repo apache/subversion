@@ -665,6 +665,10 @@ class State:
     and directories found. If LOAD_PROPS is True, then the properties
     will be loaded for all nodes (Very Expensive!). If IGNORE_SVN is
     True, then the .svn subdirectories will be excluded from the State.
+
+    If KEEP_EOL_STYLE is set, don't let Python normalize the EOL when
+    reading working copy contents as text files.  It has no effect on
+    binary files.
     """
     if not base:
       # we're going to walk the base, and the OS wants "."
