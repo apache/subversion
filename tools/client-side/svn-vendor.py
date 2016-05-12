@@ -313,7 +313,7 @@ class Config(dict):
             for s in o.helpmsg.split('\n'):
                 print("# %s" % s)
             print("%-20s: %s" % (k, str(o)))
-            print()
+            print("")
 
 
 class SvnVndImport(cmd.Cmd):
@@ -426,7 +426,7 @@ class SvnVndImport(cmd.Cmd):
         except InvalidUsageException as e:
             if e.cmd is not None:
                 print("!!! Invalid usage of `%s' command: %s" % (e.cmd, e))
-                print()
+                print("")
                 self.onecmd("help " + e.cmd)
             else:
                 print("!!! %s" % e)
@@ -1041,7 +1041,7 @@ class SvnVndImport(cmd.Cmd):
         colsz = int((self.termwidth - 14) / 2)
         if len(self.prepare_ops):
             print("Currently recorded preparatory operations:")
-            print()
+            print("")
             print("%5s  %s  %-*s  %-*s" %
                     ("#", "Op", colsz, "Source", colsz, "Destination"))
             for id, o in enumerate(self.prepare_ops):
@@ -1053,10 +1053,10 @@ class SvnVndImport(cmd.Cmd):
                             (id, o[0], colsz, o[1], colsz, o[2]))
                 else:
                     print("%5d  %s  %-*s" % (id, o[0], colsz, o[1]))
-            print()
+            print("")
         else:
             print("No copies/moves/removals recorded")
-            print()
+            print("")
 
     def do_save(self, arg):
         '''
@@ -1162,7 +1162,7 @@ if __name__ == '__main__':
     if p.returncode != 0:
         print("%s: does not appear to be SVN working copy." % args.wcdir)
         print("`svn info' exited with status %d and returned:" % p.returncode)
-        print()
+        print("")
         print(se.decode())
         sys.exit(1)
     imp = SvnVndImport(args.wcdir, args.importdir, so.decode())

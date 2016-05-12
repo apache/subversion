@@ -311,7 +311,7 @@ def cat_signatures(basename):
 
 def print_content_type(mimetype):
   print("Content-Type: " + mimetype)
-  print()
+  print("")
 
 def main():
   form = cgi.FieldStorage()

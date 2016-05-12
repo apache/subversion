@@ -1270,7 +1270,7 @@ if __name__ == '__main__':
   def usage(msg=None):
     parser.print_help()
     if msg:
-      print()
+      print("")
       print(msg)
     bail()
 
