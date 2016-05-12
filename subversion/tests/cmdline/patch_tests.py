@@ -1582,7 +1582,7 @@ def patch_no_svn_eol_style(sbox):
     crlf = '\r\n'
 
   # Strict EOL style matching breaks Windows tests at least with Python 2
-  keep_eol_style = not svntest.main.is_os_windows
+  keep_eol_style = not svntest.main.is_os_windows()
 
   eols = [crlf, '\015', '\n', '\012']
   for target_eol in eols:
@@ -1689,7 +1689,7 @@ def patch_with_svn_eol_style(sbox):
     crlf = '\r\n'
 
   # Strict EOL style matching breaks Windows tests at least with Python 2
-  keep_eol_style = not svntest.main.is_os_windows
+  keep_eol_style = not svntest.main.is_os_windows()
 
   eols = [crlf, '\015', '\n', '\012']
   eol_styles = ['CRLF', 'CR', 'native', 'LF']
@@ -1808,7 +1808,7 @@ def patch_with_svn_eol_style_uncommitted(sbox):
     crlf = '\r\n'
 
   # Strict EOL style matching breaks Windows tests at least with Python 2
-  keep_eol_style = notsvntest. main.is_os_windows
+  keep_eol_style = not svntest.main.is_os_windows()
 
   eols = [crlf, '\015', '\n', '\012']
   eol_styles = ['CRLF', 'CR', 'native', 'LF']
