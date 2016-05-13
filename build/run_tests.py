@@ -809,8 +809,13 @@ class TestHarness:
   def _run_py_test(self, progabs, progdir, progbase, test_nums, dot_count):
     'Run a python test, passing parameters as needed.'
     try:
-      prog_mod = imp.load_module(progbase[:-3], open(progabs, 'r'), progabs,
-                                 ('.py', 'U', imp.PY_SOURCE))
+      if sys.version_info < (3, 0):
+        prog_mod = imp.load_module(progbase[:-3], open(progabs, 'r'), progabs,
+                                   ('.py', 'U', imp.PY_SOURCE))
+      else:
+        prog_mod = imp.load_module(progbase[:-3],
+                                   open(progabs, 'r', encoding="utf-8"),
+                                   progabs, ('.py', 'U', imp.PY_SOURCE))
     except:
       print("\nError loading test (details in following traceback): " + progbase)
       traceback.print_exc()
