@@ -1276,7 +1276,7 @@ def create_http_connection(url, debuglevel=9):
     import httplib
   else:
     # Python >=3.0
-    import http.client
+    import http.client as httplib
 
   loc = urlparse(url)
   if loc.scheme == 'http':
