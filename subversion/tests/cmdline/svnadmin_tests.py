@@ -399,8 +399,8 @@ def set_changed_path_list(sbox, revision, changes):
 
   if repo_format(sbox) < 7:
     # replace the changed paths list
-    header = contents[contents.rfind('\n', length - 64, length - 1):]
-    body_len = int(header.split(' ')[1])
+    header = contents[contents.rfind(b'\n', length - 64, length - 1):]
+    body_len = int(header.split(b' ')[1])
 
   else:
     # read & parse revision file footer
