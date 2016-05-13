@@ -781,7 +781,7 @@ class TestHarness:
     def progress_func(completed):
       if not self.log or self.dots_written >= dot_count:
         return
-      dots = (int)((completed * dot_count) / total)
+      dots = (completed * dot_count) // total
       if dots > dot_count:
         dots = dot_count
       dots_to_write = dots - self.dots_written
@@ -839,7 +839,7 @@ class TestHarness:
          in parallel mode."""
       if not self.log:
         return
-      dots = int((completed * dot_count) / total)
+      dots = (completed * dot_count) // total
       if dots > dot_count:
         dots = dot_count
       self.progress_lock.acquire()
