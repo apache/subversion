@@ -25,14 +25,14 @@
 ######################################################################
 
 # General modules
-import os, logging, base64
+import os, logging, base64, functools
 
 try:
   # Python <3.0
   import httplib
 except ImportError:
   # Python >=3.0
-  import http.client
+  import http.client as httplib
 
 logger = logging.getLogger()
 
@@ -50,6 +50,25 @@ Wimp = svntest.testcase.Wimp_deco
 ######################################################################
 # Helper routines
 
+def compare(lhs, rhs):
+  """Implements cmp() for Python 2 and 3 alike"""
+  if lhs == None:
+    if rhs == None:
+      return 0
+    else:
+      return -1
+  else:
+    if rhs == None:
+      return 1
+    else:
+      return (lhs > rhs) - (lhs < rhs)
+
+def compare_dict(lhs, rhs):
+  """Implements dictionary comparison for Python 2 and 3 alike"""
+  lhs_sorted = sorted(lhs, key=lambda x:sorted(x.keys()))
+  rhs_sorted = sorted(rhs, key=lambda x:sorted(x.keys()))
+  return (lhs_sorted > rhs_sorted) - (lhs_sorted < rhs_sorted)
+
 def compare_xml_elem(a, b):
   """Recursively compare two xml.etree.ElementTree.Element objects.
   Return a 3-tuple made out of (cmp, elem_a, elem_b), where cmp is
@@ -59,20 +78,20 @@ def compare_xml_elem(a, b):
 
   # Compare tags, attributes, inner text, tail attribute and the
   # number of child elements.
-  res = cmp(a.tag, b.tag)
+  res = compare(a.tag, b.tag)
   if res != 0:
     return res, a, b
   # Don't care about the order of the attributes.
-  res = cmp(a.attrib, b.attrib)
+  res = compare_dict(a.attrib, b.attrib)
   if res != 0:
     return res, a, b
-  res = cmp(a.text, b.text)
+  res = compare(a.text, b.text)
   if res != 0:
     return res, a, b
-  res = cmp(a.tail, b.tail)
+  res = compare(a.tail, b.tail)
   if res != 0:
     return res, a, b
-  res = cmp(len(a), len(b))
+  res = compare(len(a), len(b))
   if res != 0:
     return res, a, b
 
@@ -83,9 +102,9 @@ def compare_xml_elem(a, b):
   # iteration.
   def sortcmp(x, y):
     return compare_xml_elem(x, y)[0]
-
-  a_children = sorted(list(a), cmp=sortcmp)
-  b_children = sorted(list(b), cmp=sortcmp)
+ 
+  a_children = sorted(list(a), key=functools.cmp_to_key(sortcmp))
+  b_children = sorted(list(b), key=functools.cmp_to_key(sortcmp))
 
   for a_child, b_child in zip(a_children, b_children):
     res = compare_xml_elem(a_child, b_child)
@@ -124,7 +143,7 @@ def cache_control_header(sbox):
   sbox.build(create_wc=False, read_only=True)
 
   headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
   }
 
   h = svntest.main.create_http_connection(sbox.repo_url)
@@ -227,7 +246,7 @@ def simple_propfind(sbox):
 
   # PROPFIND /repos/!svn/rvr/1, Depth = 0
   headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
     'Depth': '0',
   }
   req_body = (
@@ -261,7 +280,7 @@ def simple_propfind(sbox):
 
   # PROPFIND /repos/!svn/rvr/1, Depth = 1
   headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
     'Depth': '1',
   }
   req_body = (
@@ -315,7 +334,7 @@ def simple_propfind(sbox):
 
   # PROPFIND /repos/!svn/rvr/1/A/B/F, Depth = 1
   headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
     'Depth': '1',
   }
   req_body = (
@@ -349,7 +368,7 @@ def simple_propfind(sbox):
 
   # PROPFIND /repos/!svn/rvr/1/iota, Depth = 0
   headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
     'Depth': '0',
   }
   req_body = (
@@ -393,7 +412,7 @@ def propfind_multiple_props(sbox):
 
   # PROPFIND /repos/!svn/rvr/1/iota, Depth = 0
   headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
     'Depth': '0',
   }
   req_body = (
@@ -445,7 +464,7 @@ def propfind_404(sbox):
 
   # PROPFIND /repos/!svn/rvr/1, Depth = 0
   headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
     'Depth': '0',
   }
   req_body = (
@@ -497,7 +516,7 @@ def propfind_allprop(sbox):
 
   # PROPFIND /repos/!svn/rvr/1, Depth = 0
   headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
     'Depth': '0',
   }
   req_body = (
@@ -569,7 +588,7 @@ def propfind_propname(sbox):
 
   # PROPFIND /repos/!svn/rvr/2/iota, Depth = 0
   headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
     'Depth': '0',
   }
   req_body = (
