@@ -2081,7 +2081,6 @@ def dav_lock_timeout(sbox):
 def create_dav_lock_timeout(sbox):
   "create generic DAV lock with timeout"
 
-  import httplib
   import base64
 
   sbox.build()
@@ -2099,7 +2098,7 @@ def create_dav_lock_timeout(sbox):
               '</D:lockinfo>'
 
   lock_headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Authorization': 'Basic ' + base64.b64encode(b'jrandom:rayjandom').decode(),
     'Timeout': 'Second-86400'
   }
 
@@ -2224,7 +2223,7 @@ def dav_lock_refresh(sbox):
     import httplib
   except ImportError:
     # Python >=3.0
-    import http.client
+    import http.client as httplib
 
   import base64
 
@@ -2240,7 +2239,7 @@ def dav_lock_refresh(sbox):
   lock_token = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Token']
 
   lock_headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jrandom:rayjandom'),
+    'Authorization': 'Basic ' + base64.b64encode(b'jrandom:rayjandom').decode(),
     'If': '(<' + lock_token + '>)',
     'Timeout': 'Second-7200'
   }
