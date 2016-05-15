@@ -2103,6 +2103,18 @@ def create_failing_post_commit_hook(repo_dir):
             '@echo Post-commit hook failed 1>&2\n'
             '@exit 1\n')
 
+def _make_temp_file(contents):
+  """ Create a unique temporary file with the specified CONTENTS
+  and return its path. """
+  from tempfile import mkstemp
+  (fd, path) = mkstemp()
+  os.close(fd)
+  file = open(path, 'wb')
+  file.write(contents)
+  file.flush()
+  file.close()
+  return path
+
 # set_prop can be used for properties with NULL characters which are not
 # handled correctly when passed to subprocess.Popen() and values like "*"
 # which are not handled correctly on Windows.
@@ -2112,21 +2124,29 @@ def set_prop(name, value, path, expected_re_string=None, force=None):
     propset = ('propset',)
   else:
     propset = ('propset', '--force')
-  if value and (isinstance(value, bytes) or
-                (value[0] == '-' or '\x00' in value or sys.platform == 'win32')):
-    from tempfile import mkstemp
-    (fd, value_file_path) = mkstemp()
-    os.close(fd)
-    value_file = open(value_file_path, 'wb')
-    value_file.write(value)
-    value_file.flush()
-    value_file.close()
-    propset += ('-F', value_file_path, name, path)
-    exit_code, out, err = main.run_svn(expected_re_string, *propset)
-    os.remove(value_file_path)
+
+  if isinstance(value, bytes):
+    file = _make_temp_file(value)
+  elif isinstance(value, str):
+    if value and (value[0] == '-' or '\x00' in value or
+                  sys.platform == 'win32'):
+      file = _make_temp_file(value.encode())
+    else:
+      file = None
   else:
+    raise TypeError(value)
+ 
+  if file is None:
     propset += (name, value, path)
+  else:
+    propset += ('-F', file, name, path)
+
+  try:
     exit_code, out, err = main.run_svn(expected_re_string, *propset)
+  finally:
+    if file is not None:
+      os.remove(file)
+
   if expected_re_string:
     if not expected_re_string.startswith(".*"):
       expected_re_string = ".*(" + expected_re_string + ")"
