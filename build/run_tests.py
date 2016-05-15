@@ -45,7 +45,7 @@ and filename of a test program, optionally followed by '#' and a comma-
 separated list of test numbers; the default is to run all the tests in it.
 '''
 
-import os, sys, shutil
+import os, sys, shutil, codecs
 import re
 import logging
 import optparse, subprocess, imp, threading, traceback
@@ -809,13 +809,9 @@ class TestHarness:
   def _run_py_test(self, progabs, progdir, progbase, test_nums, dot_count):
     'Run a python test, passing parameters as needed.'
     try:
-      if sys.version_info < (3, 0):
-        prog_mod = imp.load_module(progbase[:-3], open(progabs, 'r'), progabs,
-                                   ('.py', 'U', imp.PY_SOURCE))
-      else:
-        prog_mod = imp.load_module(progbase[:-3],
-                                   open(progabs, 'r', encoding="utf-8"),
-                                   progabs, ('.py', 'U', imp.PY_SOURCE))
+      prog_mod = imp.load_module(progbase[:-3],
+                                 codecs.open(progabs, 'r', encoding="utf-8"),
+                                 progabs, ('.py', 'U', imp.PY_SOURCE))
     except:
       print("\nError loading test (details in following traceback): " + progbase)
       traceback.print_exc()
