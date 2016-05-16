@@ -2435,7 +2435,7 @@ def delete_locks_on_depth_commit(sbox):
   expected_status.tweak('', 'iota', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@Issue(4557)
+@Issue(4634)
 @XFail(svntest.main.is_ra_type_dav)
 def replace_dir_with_lots_of_locked_files(sbox):
   "replace directory containing lots of locked files"
