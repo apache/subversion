@@ -45,7 +45,7 @@ and filename of a test program, optionally followed by '#' and a comma-
 separated list of test numbers; the default is to run all the tests in it.
 '''
 
-import os, sys, shutil
+import os, sys, shutil, codecs
 import re
 import logging
 import optparse, subprocess, imp, threading, traceback
@@ -581,12 +581,12 @@ class TestHarness:
     # from diff_tests.py's testing of svnpatch. This may prevent
     # readlines() from reading the whole log because it thinks it
     # has encountered the EOF marker.
-    self._open_log('rb')
+    self._open_log('r')
     log_lines = self.log.readlines()
 
     # Remove \r characters introduced by opening the log as binary
     if sys.platform == 'win32':
-      log_lines = [x.replace(b'\r', b'') for x in log_lines]
+      log_lines = [x.replace('\r', '') for x in log_lines]
 
     # Print the results, from least interesting to most interesting.
 
@@ -601,14 +601,14 @@ class TestHarness:
                          % (x[:wip], x[wip + len(wimptag):]))
 
     if self.opts.list_tests:
-      passed = [ensure_str(x) for x in log_lines if x[8:13] == b'     ']
+      passed = [x for x in log_lines if x[8:13] == '     ']
     else:
-      passed = [ensure_str(x) for x in log_lines if x[:6] == b'PASS: ']
+      passed = [x for x in log_lines if x[:6] == 'PASS: ']
 
     if self.opts.list_tests:
-      skipped = [ensure_str(x) for x in log_lines if x[8:12] == b'SKIP']
+      skipped = [x for x in log_lines if x[8:12] == 'SKIP']
     else:
-      skipped = [ensure_str(x) for x in log_lines if x[:6] == b'SKIP: ']
+      skipped = [x for x in log_lines if x[:6] == 'SKIP: ']
 
     if skipped and not self.opts.list_tests:
       print('At least one test was SKIPPED, checking ' + self.logfile)
@@ -616,21 +616,21 @@ class TestHarness:
         sys.stdout.write(x)
 
     if self.opts.list_tests:
-      xfailed = [ensure_str(x) for x in log_lines if x[8:13] == b'XFAIL']
+      xfailed = [x for x in log_lines if x[8:13] == 'XFAIL']
     else:
-      xfailed = [ensure_str(x) for x in log_lines if x[:6] == b'XFAIL:']
+      xfailed = [x for x in log_lines if x[:6] == 'XFAIL:']
     if xfailed and not self.opts.list_tests:
       print('At least one test XFAILED, checking ' + self.logfile)
       for x in xfailed:
         printxfail(x)
 
-    xpassed = [ensure_str(x) for x in log_lines if x[:6] == b'XPASS:']
+    xpassed = [x for x in log_lines if x[:6] == 'XPASS:']
     if xpassed:
       print('At least one test XPASSED, checking ' + self.logfile)
       for x in xpassed:
         printxfail(x)
 
-    failed_list = [ensure_str(x) for x in log_lines if x[:6] == b'FAIL: ']
+    failed_list = [x for x in log_lines if x[:6] == 'FAIL: ']
     if failed_list:
       print('At least one test FAILED, checking ' + self.logfile)
       for x in failed_list:
@@ -686,18 +686,17 @@ class TestHarness:
     # Copy the truly interesting verbose logs to a separate file, for easier
     # viewing.
     if xpassed or failed_list:
-      faillog = open(self.faillogfile, 'wb')
+      faillog = codecs.open(self.faillogfile, 'w', encoding="latin-1")
       last_start_lineno = None
-      last_start_re = re.compile(b'^(FAIL|SKIP|XFAIL|PASS|START|CLEANUP|END):')
+      last_start_re = re.compile('^(FAIL|SKIP|XFAIL|PASS|START|CLEANUP|END):')
       for lineno, line in enumerate(log_lines):
         # Iterate the lines.  If it ends a test we're interested in, dump that
         # test to FAILLOG.  If it starts a test (at all), remember the line
         # number (in case we need it later).
-        line_str = ensure_str(line)
-        if line_str in xpassed or line_str in failed_list:
-          faillog.write(b'[[[\n')
+        if line in xpassed or line in failed_list:
+          faillog.write('[[[\n')
           faillog.writelines(log_lines[last_start_lineno : lineno+1])
-          faillog.write(b']]]\n\n')
+          faillog.write(']]]\n\n')
         if last_start_re.match(line):
           last_start_lineno = lineno + 1
       faillog.close()
@@ -718,7 +717,10 @@ class TestHarness:
     'Open the log file with the required MODE.'
     if self.logfile:
       self._close_log()
-      self.log = open(self.logfile, mode)
+      if 'b' in mode:
+        self.log = open(self.logfile, mode)
+      else:
+        self.log = codecs.open(self.logfile, mode, encoding="latin-1")
 
   def _close_log(self):
     'Close the log file.'
