@@ -137,6 +137,11 @@ extern "C" {
 #define SVN_FS_X__USE_LOCK_MUTEX 0
 #endif
 
+/* Maximum number of changes we deliver per request when listing the
+   changed paths for a given revision.   Anything > 0 will do.
+   At 100..300 bytes per entry, this limits the allocation to ~30kB. */
+#define SVN_FS_X__CHANGES_BLOCK_SIZE 100
+
 /* Private FSX-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
    by transaction id and filesystem UUID).  Objects of this type are

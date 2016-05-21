@@ -2992,8 +2992,6 @@ block_read_changes(apr_array_header_t **changes,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
-  enum { BLOCK_SIZE = 100 };
-
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stream_t *stream;
   svn_fs_x__pair_cache_key_t key;
@@ -3032,7 +3030,7 @@ block_read_changes(apr_array_header_t **changes,
   SVN_ERR(svn_fs_x__rev_file_stream(&stream, rev_file));
 
   /* read changes from revision file */
-  SVN_ERR(svn_fs_x__read_changes(changes, stream, BLOCK_SIZE,
+  SVN_ERR(svn_fs_x__read_changes(changes, stream, SVN_FS_X__CHANGES_BLOCK_SIZE,
                                  result_pool, scratch_pool));
 
   SVN_ERR(svn_fs_x__rev_file_offset(&changes_list.end_offset, rev_file));
@@ -3040,7 +3038,7 @@ block_read_changes(apr_array_header_t **changes,
   changes_list.start_offset = next_offset;
   changes_list.count = (*changes)->nelts;
   changes_list.changes = (svn_fs_x__change_t **)(*changes)->elts;
-  changes_list.eol =    (changes_list.count < BLOCK_SIZE)
+  changes_list.eol =    (changes_list.count < SVN_FS_X__CHANGES_BLOCK_SIZE)
                      || (changes_list.end_offset + 1 >= entry->size);
 
   /* cache for future reference */
