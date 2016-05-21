@@ -319,8 +319,8 @@ typedef struct svn_fs_x__data_t
      the key is a (pack file revision, file offset) pair */
   svn_cache__t *noderevs_container_cache;
 
-  /* Cache for change lists as APR arrays of svn_fs_x__change_t * objects;
-     the key is the revision */
+  /* Cache for change lists n blocks as svn_fs_x__changes_list_t * objects;
+     the key is the (revision, first-element-in-block) pair. */
   svn_cache__t *changes_cache;
 
   /* Cache for change_list_t containers;
@@ -537,6 +537,10 @@ typedef struct svn_fs_x__changes_context_t
 
   /* Index of the next change to fetch. */
   apr_size_t next;
+
+  /* Offset, within the changed paths list on disk, of the next change to
+     fetch. */
+  apr_off_t next_offset;
 
   /* Has the end of the list been reached? */
   svn_boolean_t eol;
