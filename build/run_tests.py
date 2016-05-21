@@ -579,8 +579,11 @@ class TestHarness:
     # from diff_tests.py's testing of svnpatch. This may prevent
     # readlines() from reading the whole log because it thinks it
     # has encountered the EOF marker.
-    self._open_log('r')
-    log_lines = self.log.readlines()
+    if self.logfile:
+      self._open_log('r')
+      log_lines = self.log.readlines()
+    else:
+      log_lines = []
 
     # Remove \r characters introduced by opening the log as binary
     if sys.platform == 'win32':
@@ -698,7 +701,7 @@ class TestHarness:
         if last_start_re.match(line):
           last_start_lineno = lineno + 1
       faillog.close()
-    elif os.path.exists(self.faillogfile):
+    elif self.faillogfile and os.path.exists(self.faillogfile):
       print("WARNING: no failures, but '%s' exists from a previous run."
             % self.faillogfile)
 
