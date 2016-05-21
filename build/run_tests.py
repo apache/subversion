@@ -130,7 +130,7 @@ def ensure_str(s):
   if isinstance(s, str):
     return s
   else:
-    return s.decode()
+    return s.decode("latin-1")
 
 class TestHarness:
   '''Test harness for Subversion tests.
@@ -491,24 +491,22 @@ class TestHarness:
     for job in jobs:
       if last_test_name != job.progbase:
         if last_test_name != "":
-          text = 'ELAPSED: %s %s\n' % (last_test_name, str(taken))
-          log.write(text.encode())
-          log.write(b'\n')
+          log.write('ELAPSED: %s %s\n\n' % (last_test_name, str(taken)))
         last_test_name = job.progbase
         taken = job.taken
       else:
         taken += job.taken
 
-      log.writelines(job.stderr_lines)
+      for line in job.stderr_lines:
+        log.write(ensure_str(line))
+
       for line in job.stdout_lines:
-        self._process_test_output_line(line)
+        self._process_test_output_line(ensure_str(line))
 
       self._check_for_unknown_failure(log, job.progbase, job.result)
       failed = job.result or failed
 
-    text = 'ELAPSED: %s %s\n' % (last_test_name, str(taken))
-    log.write(text.encode())
-    log.write(b'\n')
+    log.write('ELAPSED: %s %s\n\n' % (last_test_name, str(taken)))
 
     return failed
 
@@ -526,7 +524,7 @@ class TestHarness:
   def run(self, testlist):
     '''Run all test programs given in TESTLIST. Print a summary of results, if
        there is a log file. Return zero iff all test programs passed.'''
-    self._open_log('wb')
+    self._open_log('w')
     failed = 0
 
     # Filter tests into Python and native groups and prepare arguments
@@ -731,15 +729,15 @@ class TestHarness:
   def _process_test_output_line(self, line):
     if sys.platform == 'win32':
       # Remove CRs inserted because we parse the output as binary.
-      line = line.replace(b'\r', b'')
+      line = line.replace('\r', '')
 
     # If using --log-to-stdout self.log in None.
     if self.log:
       self.log.write(line)
 
-    if line.startswith(b'PASS') or line.startswith(b'FAIL') \
-        or line.startswith(b'XFAIL') or line.startswith(b'XPASS') \
-        or line.startswith(b'SKIP'):
+    if line.startswith('PASS') or line.startswith('FAIL') \
+        or line.startswith('XFAIL') or line.startswith('XPASS') \
+        or line.startswith('SKIP'):
       return 1
 
     return 0
@@ -795,6 +793,7 @@ class TestHarness:
                             stderr=self.log)
     line = prog.stdout.readline()
     while line:
+      line = ensure_str(line)
       if self._process_test_output_line(line):
         tests_completed += 1
         progress_func(tests_completed)
@@ -904,9 +903,9 @@ class TestHarness:
       test_info = ''
 
     if self.opts.list_tests:
-      log.write(('LISTING: %s\n' % progbase).encode())
+      log.write('LISTING: %s\n' % progbase)
     else:
-      log.write(('START: %s\n' % progbase).encode())
+      log.write('START: %s\n' % progbase)
 
     log.flush()
 
@@ -936,10 +935,10 @@ class TestHarness:
     if not self.opts.list_tests:
       # Log the elapsed time.
       elapsed_time = str(datetime.now() - start_time)
-      log.write(('END: %s\n' % progbase).encode())
-      log.write(('ELAPSED: %s %s\n' % (progbase, elapsed_time)).encode())
+      log.write('END: %s\n' % progbase)
+      log.write('ELAPSED: %s %s\n' % (progbase, elapsed_time))
 
-    log.write(b'\n')
+    log.write('\n')
 
     # If we are only listing the tests just add a newline, otherwise if
     # we printed a "Running all tests in ..." line, add the test result.
