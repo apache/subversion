@@ -575,10 +575,7 @@ class TestHarness:
     else:
       failed = self._run_global_sheduler(testlist, len(py_tests) > 0)
 
-    # Open the log in binary mode because it can contain binary data
-    # from diff_tests.py's testing of svnpatch. This may prevent
-    # readlines() from reading the whole log because it thinks it
-    # has encountered the EOF marker.
+    # Open the log again to for filtering.
     if self.logfile:
       self._open_log('r')
       log_lines = self.log.readlines()
@@ -718,10 +715,7 @@ class TestHarness:
     'Open the log file with the required MODE.'
     if self.logfile:
       self._close_log()
-      if 'b' in mode:
-        self.log = open(self.logfile, mode)
-      else:
-        self.log = codecs.open(self.logfile, mode, encoding="latin-1")
+      self.log = codecs.open(self.logfile, mode, encoding="latin-1")
 
   def _close_log(self):
     'Close the log file.'
