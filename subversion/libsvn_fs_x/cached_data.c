@@ -2861,14 +2861,26 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
     }
   else
     {
-      svn_fs_x__read_changes_block_baton_t baton;
-      baton.start = (int)context->next;
-      baton.eol = &context->eol;
+      svn_fs_x__changes_list_t *changes_list;
+      svn_fs_x__pair_cache_key_t key;
+      key.revision = context->revision;
+      key.second = context->next;
 
-      SVN_ERR(svn_cache__get_partial((void **)changes, &found,
-                                     ffd->changes_cache, &context->revision,
-                                     svn_fs_x__read_changes_block,
-                                     &baton, result_pool));
+      SVN_ERR(svn_cache__get((void **)&changes_list, &found,
+                             ffd->changes_cache, &key, result_pool));
+
+      if (found)
+        {
+          /* Where to look next - if there is more data. */
+          context->eol = changes_list->eol;
+          context->next_offset = changes_list->end_offset;
+
+          /* Return the block as a "proper" APR array. */
+          (*changes) = apr_array_make(result_pool, 0, sizeof(void *));
+          (*changes)->elts = (char *)changes_list->changes;
+          (*changes)->nelts = changes_list->count;
+          (*changes)->nalloc = changes_list->count;
+        }
     }
 
   if (!found)
@@ -2980,61 +2992,68 @@ block_read_changes(apr_array_header_t **changes,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
+  enum { BLOCK_SIZE = 100 };
+
   svn_fs_x__data_t *ffd = fs->fsap_data;
   svn_stream_t *stream;
-  svn_revnum_t revision = svn_fs_x__get_revnum(entry->items[0].change_set);
-  apr_size_t estimated_size;
+  svn_fs_x__pair_cache_key_t key;
+  svn_fs_x__changes_list_t changes_list;
+
+  /* If we don't have to return any data, just read and cache the first
+     block.  This means we won't cache the remaining blocks from longer
+     lists right away but only if they are actually needed. */
+  apr_size_t next = must_read ? context->next : 0;
+  apr_size_t next_offset = must_read ? context->next_offset : 0;
 
   /* we don't support containers, yet */
   SVN_ERR_ASSERT(entry->item_count == 1);
+
+  /* The item to read / write. */
+  key.revision = svn_fs_x__get_revnum(entry->items[0].change_set);
+  key.second = next;
 
   /* already in cache? */
   if (!must_read)
     {
       svn_boolean_t is_cached = FALSE;
-      SVN_ERR(svn_cache__has_key(&is_cached, ffd->changes_cache, &revision,
+      SVN_ERR(svn_cache__has_key(&is_cached, ffd->changes_cache, &key,
                                  scratch_pool));
       if (is_cached)
         return SVN_NO_ERROR;
     }
 
-  SVN_ERR(read_item(&stream, fs, rev_file, entry, scratch_pool));
+  /* Verify the whole list only once.  We don't use the STREAM any further. */
+  if (!must_read || next == 0)
+    SVN_ERR(read_item(&stream, fs, rev_file, entry, scratch_pool));
+
+  /* Seek to the block to read within the changes list. */
+  SVN_ERR(svn_fs_x__rev_file_seek(rev_file, NULL,
+                                  entry->offset + next_offset));
+  SVN_ERR(svn_fs_x__rev_file_stream(&stream, rev_file));
 
   /* read changes from revision file */
-  SVN_ERR(svn_fs_x__read_changes(changes, stream, INT_MAX,
+  SVN_ERR(svn_fs_x__read_changes(changes, stream, BLOCK_SIZE,
                                  result_pool, scratch_pool));
+
+  SVN_ERR(svn_fs_x__rev_file_offset(&changes_list.end_offset, rev_file));
+  changes_list.end_offset -= entry->offset;
+  changes_list.start_offset = next_offset;
+  changes_list.count = (*changes)->nelts;
+  changes_list.changes = (svn_fs_x__change_t **)(*changes)->elts;
+  changes_list.eol =    (changes_list.count < BLOCK_SIZE)
+                     || (changes_list.end_offset + 1 >= entry->size);
 
   /* cache for future reference */
 
-  /* Guesstimate for the size of the in-cache representation. */
-  estimated_size = (apr_size_t)250 * (*changes)->nelts;
-
-  /* Don't even serialize data that probably won't fit into the
-   * cache.  This often implies that either CHANGES is very
-   * large, memory is scarce or both.  Having a huge temporary
-   * copy would not be a good thing in either case. */
-  if (svn_cache__is_cachable(ffd->changes_cache, estimated_size))
-    SVN_ERR(svn_cache__set(ffd->changes_cache, &revision, *changes,
-                           scratch_pool));
+  SVN_ERR(svn_cache__set(ffd->changes_cache, &key, &changes_list,
+                         scratch_pool));
 
   /* Trim the result:
    * Remove the entries that already been reported. */
-
-  /* TODO: This is transitional code.
-   *       The final implementation will read and cache only sections of
-   *       the changes list. */
   if (must_read)
     {
-      int i;
-      for (i = 0; i + context->next < (*changes)->nelts; ++i)
-        {
-          APR_ARRAY_IDX(*changes, i, svn_fs_x__change_t *)
-            = APR_ARRAY_IDX(*changes, i + context->next,
-                            svn_fs_x__change_t *);
-        }
-      (*changes)->nelts = i;
-
-      context->eol = TRUE;
+      context->next_offset = changes_list.end_offset;
+      context->eol = changes_list.eol;
     }
 
   return SVN_NO_ERROR;
