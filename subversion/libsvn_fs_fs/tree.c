@@ -3281,6 +3281,147 @@ fs_paths_changed(apr_hash_t **changed_paths_p,
 }
 
 
+/* Copy the contents of ENTRY at PATH with LEN to OUTPUT. */
+static void
+convert_path_change(svn_fs_path_change3_t *output,
+                    const char *path,
+                    size_t path_len,
+                    svn_fs_path_change2_t *entry)
+{
+  output->path.data = path;
+  output->path.len = path_len;
+  output->change_kind = entry->change_kind;
+  output->node_kind = entry->node_kind;
+  output->text_mod = entry->text_mod;
+  output->prop_mod = entry->prop_mod;
+  output->mergeinfo_mod = entry->mergeinfo_mod;
+  output->copyfrom_known = entry->copyfrom_known;
+  output->copyfrom_rev = entry->copyfrom_rev;
+  output->copyfrom_path = entry->copyfrom_path;
+}
+
+/* FSAP data structure for in-txn changes list iterators. */
+typedef struct fs_txn_changes_iterator_data_t
+{
+  /* Current iterator position. */
+  apr_hash_index_t *hi;
+
+  /* For efficiency such that we don't need to dynamically allocate
+     yet another copy of that data. */
+  svn_fs_path_change3_t change;
+} fs_txn_changes_iterator_data_t;
+
+/* Implement changes_iterator_vtable_t.get for in-txn change lists. */
+static svn_error_t *
+fs_txn_changes_iterator_get(svn_fs_path_change3_t **change,
+                            svn_fs_path_change_iterator_t *iterator)
+{
+  fs_txn_changes_iterator_data_t *data = iterator->fsap_data;
+
+  if (data->hi)
+    {
+      const void *key;
+      ssize_t length;
+      void *value;
+      apr_hash_this(data->hi, &key, &length, &value);
+
+      convert_path_change(&data->change, key, length, value);
+
+      *change = &data->change;
+      data->hi = apr_hash_next(data->hi);
+    }
+  else
+    {
+      *change = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static changes_iterator_vtable_t txn_changes_iterator_vtable =
+{
+  fs_txn_changes_iterator_get
+};
+
+/* FSAP data structure for in-revision changes list iterators. */
+typedef struct fs_revision_changes_iterator_data_t
+{
+  /* Changes to send. */
+  apr_array_header_t *changes;
+
+  /* Current indexes within CHANGES. */
+  int idx;
+
+  /* For efficiency such that we don't need to dynamically allocate
+     yet another copy of that data. */
+  svn_fs_path_change3_t change;
+} fs_revision_changes_iterator_data_t;
+
+/* Implement changes_iterator_vtable_t.get for in-revision change lists. */
+static svn_error_t *
+fs_revision_changes_iterator_get(svn_fs_path_change3_t **change,
+                                 svn_fs_path_change_iterator_t *iterator)
+{
+  fs_revision_changes_iterator_data_t *data = iterator->fsap_data;
+
+  if (data->idx < data->changes->nelts)
+    {
+      change_t *entry = APR_ARRAY_IDX(data->changes, data->idx, change_t *);
+      convert_path_change(&data->change, entry->path.data, entry->path.len,
+                          &entry->info);
+
+      *change = &data->change;
+      ++data->idx;
+    }
+  else
+    {
+      *change = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static changes_iterator_vtable_t rev_changes_iterator_vtable =
+{
+  fs_revision_changes_iterator_get
+};
+
+static svn_error_t *
+fs_report_changes(svn_fs_path_change_iterator_t **iterator,
+                  svn_fs_root_t *root,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  svn_fs_path_change_iterator_t *result = apr_pcalloc(result_pool,
+                                                      sizeof(*result));
+  if (root->is_txn_root)
+    {
+      fs_txn_changes_iterator_data_t *data = apr_pcalloc(result_pool,
+                                                         sizeof(*data));
+      apr_hash_t *changed_paths;
+      SVN_ERR(svn_fs_fs__txn_changes_fetch(&changed_paths, root->fs,
+                                           root_txn_id(root), result_pool));
+
+      data->hi = apr_hash_first(result_pool, changed_paths);
+      result->fsap_data = data;
+      result->vtable = &txn_changes_iterator_vtable;
+    }
+  else
+    {
+      fs_revision_changes_iterator_data_t *data = apr_pcalloc(result_pool,
+                                                              sizeof(*data));
+      SVN_ERR(svn_fs_fs__get_changes(&data->changes, root->fs, root->rev,
+                                     result_pool));
+
+      result->fsap_data = data;
+      result->vtable = &rev_changes_iterator_vtable;
+    }
+
+  *iterator = result;
+
+  return SVN_NO_ERROR;
+}
+
 
 /* Our coolio opaque history object. */
 typedef struct fs_history_data_t
@@ -4325,7 +4466,7 @@ fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
 /* The vtable associated with root objects. */
 static root_vtable_t root_vtable = {
   fs_paths_changed,
-  NULL,
+  fs_report_changes,
   svn_fs_fs__check_path,
   fs_node_history,
   svn_fs_fs__node_id,
