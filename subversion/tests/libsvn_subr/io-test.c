@@ -674,6 +674,68 @@ test_file_readline(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_open_uniquely_named(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  apr_file_t *file;
+  const char *path;
+  svn_error_t *err;
+
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir, "test_open_uniquely_named",
+                                    pool));
+
+  /* Test #1: File 'foo.tmp' doesn't exist. */
+  SVN_ERR(svn_io_open_uniquely_named(&file, &path, tmp_dir, "foo", ".tmp",
+                                     svn_io_file_del_none, pool, pool));
+  SVN_TEST_STRING_ASSERT(path, svn_dirent_join(tmp_dir, "foo.tmp", pool));
+  SVN_ERR(svn_io_file_close(file, pool));
+
+  /* Test #2: File 'foo.tmp' is already exist. */
+  SVN_ERR(svn_io_open_uniquely_named(NULL, &path, tmp_dir, "foo", ".tmp",
+                                     svn_io_file_del_none, pool, pool));
+  SVN_TEST_STRING_ASSERT(path, svn_dirent_join(tmp_dir, "foo.2.tmp", pool));
+
+  /* Test #3: Directory named 'bar.tmp' is already exist. */
+  SVN_ERR(svn_io_dir_make(svn_dirent_join(tmp_dir, "bar.tmp", pool),
+                          APR_OS_DEFAULT, pool));
+  SVN_ERR(svn_io_open_uniquely_named(NULL, &path, tmp_dir, "bar", ".tmp",
+                                     svn_io_file_del_none, pool, pool));
+  SVN_TEST_STRING_ASSERT(path, svn_dirent_join(tmp_dir, "bar.2.tmp", pool));
+
+
+  /* Test #4: Attempt create file in non-existing directory. */
+  err = svn_io_open_uniquely_named(NULL, &path,
+                                   svn_dirent_join(tmp_dir, "non-existing", pool),
+                                   NULL, NULL, svn_io_file_del_none, pool, pool);
+  if (err && APR_STATUS_IS_ENOTDIR(err->apr_err))
+    {
+      svn_error_clear(err);
+    }
+  else if (err)
+    {
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "Expected error APR_STATUS_IS_ENOTDIR() but "
+                               "got %s",
+                               svn_error_symbolic_name(err->apr_err));
+    }
+  else
+    {
+      SVN_TEST_ASSERT_ANY_ERROR(err);
+    }
+
+  /* Test #5: File 'yota.tmp' is already exist and readonly. */
+  SVN_ERR(svn_io_file_create_empty(svn_dirent_join(tmp_dir, "yota.tmp", pool),
+                                   pool));
+  SVN_ERR(svn_io_set_file_read_only(svn_dirent_join(tmp_dir, "yota.tmp", pool),
+                                    FALSE, pool));
+  SVN_ERR(svn_io_open_uniquely_named(NULL, &path, tmp_dir, "yota", ".tmp",
+                                    svn_io_file_del_none, pool, pool));
+  SVN_TEST_STRING_ASSERT(path, svn_dirent_join(tmp_dir, "yota.2.tmp", pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Move the read pointer in FILE to absolute position OFFSET and align
  * the read buffer to multiples of BLOCK_SIZE.  BUFFERED is set only if
  * FILE actually uses a read buffer.  Use POOL for allocations.
@@ -1073,6 +1135,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_io_read_length_line()"),
     SVN_TEST_PASS2(test_file_readline,
                    "test svn_io_file_readline()"),
+    SVN_TEST_PASS2(test_open_uniquely_named,
+                   "test svn_io_open_uniquely_named()"),
     SVN_TEST_NULL
   };
 
