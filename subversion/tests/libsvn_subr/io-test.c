@@ -708,7 +708,7 @@ test_open_uniquely_named(apr_pool_t *pool)
   err = svn_io_open_uniquely_named(NULL, &path,
                                    svn_dirent_join(tmp_dir, "non-existing", pool),
                                    NULL, NULL, svn_io_file_del_none, pool, pool);
-  if (err && APR_STATUS_IS_ENOTDIR(err->apr_err))
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       svn_error_clear(err);
     }
