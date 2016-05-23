@@ -3321,7 +3321,7 @@ fs_txn_changes_iterator_get(svn_fs_path_change3_t **change,
   if (data->hi)
     {
       const void *key;
-      ssize_t length;
+      apr_ssize_t length;
       void *value;
       apr_hash_this(data->hi, &key, &length, &value);
 
