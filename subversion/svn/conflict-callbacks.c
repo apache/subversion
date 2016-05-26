@@ -434,7 +434,10 @@ static const resolver_option_t builtin_resolver_options[] =
   /* Options for incoming dir add vs local dir add upon merge. */
   { "m", N_("merge the directories"), NULL,
     svn_client_conflict_option_merge_incoming_added_dir_merge },
-
+  { "R", N_("replace my directory with incoming directory"), NULL,
+    svn_client_conflict_option_merge_incoming_added_dir_replace },
+  { "M", N_("replace my directory with incoming directory and merge"), NULL,
+    svn_client_conflict_option_merge_incoming_added_dir_replace_and_merge },
   { NULL }
 };
 
