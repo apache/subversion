@@ -2415,10 +2415,10 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
 
           *timestamp_sleep = TRUE;
 
-      /* Schedule dst_path for addition in parent, with copy history.
-         Don't send any notification here.
-         Then remove the temporary checkout's .svn dir in preparation for
-         moving the rest of it into the final destination. */
+          /* Schedule dst_path for addition in parent, with copy history.
+             Don't send any notification here.
+             Then remove the temporary checkout's .svn dir in preparation for
+             moving the rest of it into the final destination. */
           SVN_ERR(svn_wc_copy3(ctx->wc_ctx, tmp_abspath, dst_abspath,
                                TRUE /* metadata_only */,
                                ctx->cancel_func, ctx->cancel_baton,
