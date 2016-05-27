@@ -438,6 +438,11 @@ static const resolver_option_t builtin_resolver_options[] =
     svn_client_conflict_option_merge_incoming_added_dir_replace },
   { "M", N_("replace my directory with incoming directory and merge"), NULL,
     svn_client_conflict_option_merge_incoming_added_dir_replace_and_merge },
+
+  /* Options for incoming delete vs any. */
+  { "i", N_("ignore incoming deletion"), NULL,
+    svn_client_conflict_option_incoming_delete_ignore },
+
   { NULL }
 };
 
