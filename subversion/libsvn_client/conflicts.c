@@ -4343,13 +4343,20 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
           goto unlock_wc;
         }
 
-      /* Merge the replaced directory into the directory which replaced it. */
+      /* Merge the replaced directory into the directory which replaced it.
+       * We do not need to consider a reverse-merge here since the source of
+       * this merge was part of the merge target working copy, not a branch
+       * in the repository. */
       source1 = url;
       revision1.kind = svn_opt_revision_number;
-      revision1.value.number = b.added_rev;
+      if (b.added_rev == base_revision)
+        revision1.value.number = b.added_rev - 1; /* merge -c ADDED_REV */
+      else
+        revision1.value.number = b.added_rev; /* merge -r ADDED_REV:BASE_REV */
       source2 = url;
       revision2.kind = svn_opt_revision_number;
       revision2.value.number = base_revision;
+      
       err = svn_client__merge_locked(&conflict_report,
                                      source1, &revision1,
                                      source2, &revision2,
