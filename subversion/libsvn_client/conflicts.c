@@ -4349,6 +4349,8 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
        * in the repository. */
       source1 = url;
       revision1.kind = svn_opt_revision_number;
+      /* ### Our merge logic doesn't support the merge -c ADDED_REV case.
+       * ### It errors out with 'path not found', unlike diff -c ADDED_REV. */
       if (b.added_rev == base_revision)
         revision1.value.number = b.added_rev - 1; /* merge -c ADDED_REV */
       else
