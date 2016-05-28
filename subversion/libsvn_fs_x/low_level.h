@@ -180,7 +180,7 @@ svn_fs_x__read_changes(apr_array_header_t **changes,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
-/* Callback function used by svn_fs_fs__read_changes_incrementally(),
+/* Callback function used by svn_fs_x__read_changes_incrementally(),
  * asking the receiver to process to process CHANGE using BATON.  CHANGE
  * and SCRATCH_POOL will not be valid beyond the current callback invocation.
  */

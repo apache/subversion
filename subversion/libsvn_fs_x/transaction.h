@@ -64,8 +64,8 @@ svn_fs_x__with_txn_current_lock(svn_fs_t *fs,
    call BODY with BATON and that subpool, destroy the subpool (releasing
    the locks) and return what BODY returned.
 
-   This combines svn_fs_fs__with_write_lock, svn_fs_fs__with_pack_lock,
-   and svn_fs_fs__with_txn_current_lock, ensuring correct lock ordering. */
+   This combines svn_fs_x__with_write_lock, svn_fs_x__with_pack_lock,
+   and svn_fs_x__with_txn_current_lock, ensuring correct lock ordering. */
 svn_error_t *
 svn_fs_x__with_all_locks(svn_fs_t *fs,
                          svn_error_t *(*body)(void *baton,

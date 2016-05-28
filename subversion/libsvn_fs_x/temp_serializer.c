@@ -680,7 +680,7 @@ svn_fs_x__deserialize_node_revision(void **item,
 
 /* Utility function that returns the directory serialized inside CONTEXT
  * to DATA and DATA_LEN.  If OVERPROVISION is set, allocate some extra
- * room for future in-place changes by svn_fs_fs__replace_dir_entry. */
+ * room for future in-place changes by svn_fs_x__replace_dir_entry. */
 static svn_error_t *
 return_serialized_dir_context(svn_temp_serializer__context_t *context,
                               void **data,

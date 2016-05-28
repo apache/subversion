@@ -369,7 +369,7 @@ svn_fs_x__check_file_buffer_numeric(const char *buf,
                                     apr_pool_t *scratch_pool);
 
 /* Set *MIN_UNPACKED_REV to the integer value read from the file returned
- * by #svn_fs_fs__path_min_unpacked_rev() for FS.
+ * by #svn_fs_x__path_min_unpacked_rev() for FS.
  * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
