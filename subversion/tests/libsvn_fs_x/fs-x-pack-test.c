@@ -737,7 +737,7 @@ test_info(const svn_test_opts_t *opts,
           apr_pool_t *pool)
 {
   svn_fs_t *fs;
-  const svn_fs_fsfs_info_t *fsfs_info;
+  const svn_fs_fsx_info_t *fsx_info;
   const svn_fs_info_placeholder_t *info;
 
   SVN_ERR(create_packed_filesystem(REPO_NAME, opts, MAX_REV, SHARD_SIZE,
@@ -753,9 +753,9 @@ test_info(const svn_test_opts_t *opts,
   if (strcmp(opts->fs_type, "fsx") != 0)
     return SVN_NO_ERROR;
 
-  fsfs_info = (const void *)info;
-  SVN_TEST_ASSERT(fsfs_info->shard_size == SHARD_SIZE);
-  SVN_TEST_ASSERT(fsfs_info->min_unpacked_rev
+  fsx_info = (const void *)info;
+  SVN_TEST_ASSERT(fsx_info->shard_size == SHARD_SIZE);
+  SVN_TEST_ASSERT(fsx_info->min_unpacked_rev
                   == (MAX_REV + 1) / SHARD_SIZE * SHARD_SIZE);
 
   return SVN_NO_ERROR;
