@@ -37,7 +37,7 @@
 #include "private/svn_sqlite.h"
 #include "private/svn_mutex.h"
 
-#include "id.h"
+#include "rev_file.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -623,6 +623,29 @@ typedef struct change_t
   svn_fs_path_change2_t info;
 } change_t;
 
+
+/*** Context for reading changed paths lists iteratively. */
+typedef struct svn_fs_fs__changes_context_t
+{
+  /* Repository to fetch from. */
+  svn_fs_t *fs;
+
+  /* Revision that we read from. */
+  svn_revnum_t revision;
+
+  /* Revision file object to use when needed.  NULL until the first access. */
+  svn_fs_fs__revision_file_t *revision_file;
+
+  /* Pool to create REVISION_FILE in. */
+  apr_pool_t *rev_file_pool;
+
+  /* Index of the next change to fetch. */
+  apr_size_t next;
+
+  /* Has the end of the list been reached? */
+  svn_boolean_t eol;
+
+} svn_fs_fs__changes_context_t;
 
 /*** Directory (only used at the cache interface) ***/
 typedef struct svn_fs_fs__dir_data_t
