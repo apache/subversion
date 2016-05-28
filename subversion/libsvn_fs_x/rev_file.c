@@ -192,7 +192,7 @@ get_file_pool(svn_fs_x__revision_file_t *file)
   return file->pool;
 }
 
-/* Core implementation of svn_fs_fs__open_pack_or_rev_file working on an
+/* Core implementation of svn_fs_x__open_pack_or_rev_file working on an
  * existing, initialized FILE structure.  If WRITABLE is TRUE, give write
  * access to the file - temporarily resetting the r/o state if necessary.
  */
