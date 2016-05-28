@@ -2246,6 +2246,19 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
         else
           SVN_ERR(svn_cmdline_printf(pool, _("FSFS Logical Addressing: no\n")));
       }
+    else if (!strcmp(info->fs_type, SVN_FS_TYPE_FSX))
+      {
+        const svn_fs_fsx_info_t *fsx_info = (const void *)info;
+
+        const int shard_size = fsx_info->shard_size;
+        const long shards_packed = fsx_info->min_unpacked_rev / shard_size;
+        long shards_full = (head_rev + 1) / shard_size;
+
+        SVN_ERR(svn_cmdline_printf(pool, _("FSX Shard Size: %d\n"),
+                                   shard_size));
+        SVN_ERR(svn_cmdline_printf(pool, _("FSX Shards Packed: %ld/%ld\n"),
+                                   shards_packed, shards_full));
+      }
   }
 
   {
