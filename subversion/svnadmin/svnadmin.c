@@ -2221,8 +2221,6 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     if (!strcmp(info->fs_type, SVN_FS_TYPE_FSFS))
       {
         const svn_fs_fsfs_info_t *fsfs_info = (const void *)info;
-        svn_revnum_t youngest;
-        SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
 
         if (fsfs_info->shard_size)
           SVN_ERR(svn_cmdline_printf(pool, _("FSFS Sharded: yes\n")));
@@ -2238,7 +2236,7 @@ subcommand_info(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           {
             const int shard_size = fsfs_info->shard_size;
             const long shards_packed = fsfs_info->min_unpacked_rev / shard_size;
-            const long shards_full = (youngest + 1) / shard_size;
+            const long shards_full = (head_rev + 1) / shard_size;
             SVN_ERR(svn_cmdline_printf(pool, _("FSFS Shards Packed: %ld/%ld\n"),
                                        shards_packed, shards_full));
           }
