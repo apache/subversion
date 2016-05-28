@@ -3346,6 +3346,10 @@ static changes_iterator_vtable_t txn_changes_iterator_vtable =
 /* FSAP data structure for in-revision changes list iterators. */
 typedef struct fs_revision_changes_iterator_data_t
 {
+  /* Context that tells the lower layers from where to fetch the next
+     block of changes. */
+  svn_fs_fs__changes_context_t *context;
+
   /* Changes to send. */
   apr_array_header_t *changes;
 
@@ -3355,6 +3359,10 @@ typedef struct fs_revision_changes_iterator_data_t
   /* For efficiency such that we don't need to dynamically allocate
      yet another copy of that data. */
   svn_fs_path_change3_t change;
+
+  /* A cleanable scratch pool in case we need one.
+     No further sub-pool creation necessary. */
+  apr_pool_t *scratch_pool;
 } fs_revision_changes_iterator_data_t;
 
 /* Implement changes_iterator_vtable_t.get for in-revision change lists. */
@@ -3363,6 +3371,22 @@ fs_revision_changes_iterator_get(svn_fs_path_change3_t **change,
                                  svn_fs_path_change_iterator_t *iterator)
 {
   fs_revision_changes_iterator_data_t *data = iterator->fsap_data;
+
+  /* If we exhausted our block of changes and did not reach the end of the
+     list, yet, fetch the next block.  Note that that block may be empty. */
+  if ((data->idx >= data->changes->nelts) && !data->context->eol)
+    {
+      apr_pool_t *changes_pool = data->changes->pool;
+
+      /* Drop old changes block, read new block. */
+      svn_pool_clear(changes_pool);
+      SVN_ERR(svn_fs_fs__get_changes(&data->changes, data->context,
+                                     changes_pool, data->scratch_pool));
+      data->idx = 0;
+
+      /* Immediately release any temporary data. */
+      svn_pool_clear(data->scratch_pool);
+    }
 
   if (data->idx < data->changes->nelts)
     {
@@ -3408,11 +3432,27 @@ fs_report_changes(svn_fs_path_change_iterator_t **iterator,
     }
   else
     {
+      /* The block of changes that we retrieve need to live in a separately
+         cleanable pool. */
+      apr_pool_t *changes_pool = svn_pool_create(result_pool);
+
+      /* Our iteration context info. */
       fs_revision_changes_iterator_data_t *data = apr_pcalloc(result_pool,
                                                               sizeof(*data));
-      SVN_ERR(svn_fs_fs__get_changes(&data->changes, root->fs, root->rev,
-                                     result_pool));
 
+      /* This pool must remain valid as long as ITERATOR lives but will
+         be used only for temporary allocations and will be cleaned up
+         frequently.  So, this must be a sub-pool of RESULT_POOL. */
+      data->scratch_pool = svn_pool_create(result_pool);
+
+      /* Fetch the first block of data. */
+      SVN_ERR(svn_fs_fs__create_changes_context(&data->context,
+                                                root->fs, root->rev,
+                                                result_pool));
+      SVN_ERR(svn_fs_fs__get_changes(&data->changes, data->context,
+                                     changes_pool, scratch_pool));
+
+      /* Return the fully initialized object. */
       result->fsap_data = data;
       result->vtable = &rev_changes_iterator_vtable;
     }

@@ -932,19 +932,35 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
                          svn_revnum_t rev,
                          apr_pool_t *pool)
 {
-  apr_hash_t *changed_paths;
-  apr_array_header_t *changes;
-  int i;
+  apr_hash_t *changed_paths = svn_hash__make(pool);
+  svn_fs_fs__changes_context_t *context;
 
-  SVN_ERR(svn_fs_fs__get_changes(&changes, fs, rev, pool));
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
-  changed_paths = svn_hash__make(pool);
-  for (i = 0; i < changes->nelts; ++i)
+  /* Fetch all data block-by-block. */
+  SVN_ERR(svn_fs_fs__create_changes_context(&context, fs, rev, pool));
+  while (!context->eol)
     {
-      change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
-      apr_hash_set(changed_paths, change->path.data, change->path.len,
-                   &change->info);
+      apr_array_header_t *changes;
+      int i;
+
+      svn_pool_clear(iterpool);
+
+      /* Be sure to allocate the changes in the result POOL, even though
+         we don't need the array itself afterwards.  Copying the entries
+         from a temp pool to the result POOL would be expensive and saves
+         use less then 10% memory. */
+      SVN_ERR(svn_fs_fs__get_changes(&changes, context, pool, iterpool));
+
+      for (i = 0; i < changes->nelts; ++i)
+        {
+          change_t *change = APR_ARRAY_IDX(changes, i, change_t *);
+          apr_hash_set(changed_paths, change->path.data, change->path.len,
+                       &change->info);
+        }
     }
+
+  svn_pool_destroy(iterpool);
 
   *changed_paths_p = changed_paths;
 

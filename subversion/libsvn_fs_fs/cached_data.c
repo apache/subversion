@@ -2884,23 +2884,37 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist_p,
 }
 
 svn_error_t *
+svn_fs_fs__create_changes_context(svn_fs_fs__changes_context_t **context,
+                                  svn_fs_t *fs,
+                                  svn_revnum_t rev,
+                                  apr_pool_t *result_pool)
+{
+  svn_fs_fs__changes_context_t *result = apr_pcalloc(result_pool,
+                                                     sizeof(*result));
+  result->fs = fs;
+  result->revision = rev;
+  result->rev_file_pool = result_pool;
+
+  *context = result;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_fs__get_changes(apr_array_header_t **changes,
-                       svn_fs_t *fs,
-                       svn_revnum_t rev,
-                       apr_pool_t *result_pool)
+                       svn_fs_fs__changes_context_t *context,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
   apr_off_t item_index = SVN_FS_FS__ITEM_INDEX_CHANGES;
-  svn_fs_fs__revision_file_t *revision_file;
   svn_boolean_t found;
-  fs_fs_data_t *ffd = fs->fsap_data;
-  apr_pool_t *scratch_pool = svn_pool_create(result_pool);
+  fs_fs_data_t *ffd = context->fs->fsap_data;
 
   /* try cache lookup first */
 
   if (ffd->changes_cache)
     {
       SVN_ERR(svn_cache__get((void **) changes, &found, ffd->changes_cache,
-                             &rev, result_pool));
+                             &context->revision, result_pool));
     }
   else
     {
@@ -2911,16 +2925,25 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
     {
       /* read changes from revision file */
 
-      SVN_ERR(svn_fs_fs__ensure_revision_exists(rev, fs, scratch_pool));
-      SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&revision_file, fs, rev,
-                                               scratch_pool, scratch_pool));
+      if (!context->revision_file)
+        {
+          SVN_ERR(svn_fs_fs__ensure_revision_exists(context->revision,
+                                                    context->fs,
+                                                    scratch_pool));
+          SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&context->revision_file,
+                                                   context->fs,
+                                                   context->revision,
+                                                   context->rev_file_pool,
+                                                   scratch_pool));
+        }
 
-      if (use_block_read(fs))
+      if (use_block_read(context->fs))
         {
           /* 'block-read' will also provide us with the desired data */
-          SVN_ERR(block_read((void **)changes, fs,
-                             rev, SVN_FS_FS__ITEM_INDEX_CHANGES,
-                             revision_file, result_pool, scratch_pool));
+          SVN_ERR(block_read((void **)changes, context->fs,
+                             context->revision, SVN_FS_FS__ITEM_INDEX_CHANGES,
+                             context->revision_file, result_pool,
+                             scratch_pool));
         }
       else
         {
@@ -2928,17 +2951,19 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
 
           /* Addressing is very different for old formats
            * (needs to read the revision trailer). */
-          if (svn_fs_fs__use_log_addressing(fs))
+          if (svn_fs_fs__use_log_addressing(context->fs))
             {
-              SVN_ERR(svn_fs_fs__item_offset(&changes_offset, fs,
-                                             revision_file, rev, NULL,
+              SVN_ERR(svn_fs_fs__item_offset(&changes_offset, context->fs,
+                                             context->revision_file,
+                                             context->revision, NULL,
                                              SVN_FS_FS__ITEM_INDEX_CHANGES,
                                              scratch_pool));
             }
           else
             {
               SVN_ERR(get_root_changes_offset(NULL, &changes_offset,
-                                              revision_file, fs, rev,
+                                              context->revision_file,
+                                              context->fs, context->revision,
                                               scratch_pool));
 
               /* This variable will be used for debug logging only. */
@@ -2946,9 +2971,10 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
             }
 
           /* Actual reading and parsing are the same, though. */
-          SVN_ERR(aligned_seek(fs, revision_file->file, NULL, changes_offset,
-                               scratch_pool));
-          SVN_ERR(svn_fs_fs__read_changes(changes, revision_file->stream,
+          SVN_ERR(aligned_seek(context->fs, context->revision_file->file,
+                               NULL, changes_offset, scratch_pool));
+          SVN_ERR(svn_fs_fs__read_changes(changes,
+                                          context->revision_file->stream,
                                           result_pool, scratch_pool));
 
           /* cache for future reference */
@@ -2963,18 +2989,26 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
                * large, memory is scarce or both.  Having a huge temporary
                * copy would not be a good thing in either case. */
               if (svn_cache__is_cachable(ffd->changes_cache, estimated_size))
-                SVN_ERR(svn_cache__set(ffd->changes_cache, &rev, *changes,
-                                       scratch_pool));
+                SVN_ERR(svn_cache__set(ffd->changes_cache, &context->revision,
+                                       *changes, scratch_pool));
             }
         }
-
-      SVN_ERR(svn_fs_fs__close_revision_file(revision_file));
     }
 
-  SVN_ERR(dbg_log_access(fs, rev, item_index, *changes,
+  /* TODO: This is transitional code ... */
+  context->next += (*changes)->nelts;
+  context->eol = TRUE;
+
+  /* Close the revision file after we read all data. */
+  if (context->eol && context->revision_file)
+    {
+      SVN_ERR(svn_fs_fs__close_revision_file(context->revision_file));
+      context->revision_file = NULL;
+    }
+
+  SVN_ERR(dbg_log_access(context->fs, context->revision, item_index, *changes,
                          SVN_FS_FS__ITEM_TYPE_CHANGES, scratch_pool));
 
-  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
