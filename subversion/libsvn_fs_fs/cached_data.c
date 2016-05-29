@@ -2939,13 +2939,22 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
 
       if (use_block_read(context->fs))
         {
-          /* 'block-read' will also provide us with the desired data */
-          SVN_ERR(block_read((void **)changes, context->fs,
+          /* 'block-read' will probably populate the cache with the data
+           * that we want.  However, we won't want to force it to process
+           * very large change lists as part of this prefetching mechanism.
+           * Those would be better handled by the iterative code below. */
+          SVN_ERR(block_read(NULL, context->fs,
                              context->revision, SVN_FS_FS__ITEM_INDEX_CHANGES,
-                             context->revision_file, result_pool,
+                             context->revision_file, scratch_pool,
                              scratch_pool));
+
+          /* This may succeed now ... */
+          SVN_ERR(svn_cache__get((void **) changes, &found, ffd->changes_cache,
+                                 &context->revision, result_pool));
         }
-      else
+
+      /* If we still have no data, read it here. */
+      if (!found)
         {
           apr_off_t changes_offset;
 
@@ -3364,21 +3373,19 @@ read_item(svn_stream_t **stream,
  * *CHANGES in RESUSLT_POOL and allocate temporaries in SCRATCH_POOL.
  */
 static svn_error_t *
-block_read_changes(apr_array_header_t **changes,
-                   svn_fs_t *fs,
+block_read_changes(svn_fs_t *fs,
                    svn_fs_fs__revision_file_t *rev_file,
                    svn_fs_fs__p2l_entry_t *entry,
-                   svn_boolean_t must_read,
-                   apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_stream_t *stream;
-  if (!must_read && !ffd->changes_cache)
+  apr_array_header_t *changes;
+  if (!ffd->changes_cache)
     return SVN_NO_ERROR;
 
   /* already in cache? */
-  if (!must_read && ffd->changes_cache)
+  if (ffd->changes_cache)
     {
       svn_boolean_t is_cached;
       SVN_ERR(svn_cache__has_key(&is_cached, ffd->changes_cache,
@@ -3391,13 +3398,12 @@ block_read_changes(apr_array_header_t **changes,
   SVN_ERR(read_item(&stream, fs, rev_file, entry, scratch_pool));
 
   /* read changes from revision file */
-  SVN_ERR(svn_fs_fs__read_changes(changes, stream, INT_MAX,
-                                  result_pool, scratch_pool));
+  SVN_ERR(svn_fs_fs__read_changes(&changes, stream, INT_MAX,
+                                  scratch_pool, scratch_pool));
 
   /* cache for future reference */
-  if (ffd->changes_cache)
-    SVN_ERR(svn_cache__set(ffd->changes_cache, &entry->item.revision,
-                           *changes, scratch_pool));
+  SVN_ERR(svn_cache__set(ffd->changes_cache, &entry->item.revision,
+                         changes, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3567,10 +3573,8 @@ block_read(void **result,
                     break;
 
                   case SVN_FS_FS__ITEM_TYPE_CHANGES:
-                    SVN_ERR(block_read_changes((apr_array_header_t **)&item,
-                                               fs, revision_file,
-                                               entry, is_result,
-                                               pool, iterpool));
+                    SVN_ERR(block_read_changes(fs, revision_file,
+                                               entry, iterpool));
                     break;
 
                   default:
