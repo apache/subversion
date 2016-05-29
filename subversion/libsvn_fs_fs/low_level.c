@@ -482,10 +482,10 @@ read_change(change_t **change_p,
 svn_error_t *
 svn_fs_fs__read_changes(apr_array_header_t **changes,
                         svn_stream_t *stream,
+                        int max_count,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  change_t *change;
   apr_pool_t *iterpool;
 
   /* Pre-allocate enough room for most change lists.
@@ -498,13 +498,16 @@ svn_fs_fs__read_changes(apr_array_header_t **changes,
    */
   *changes = apr_array_make(result_pool, 63, sizeof(change_t *));
 
-  SVN_ERR(read_change(&change, stream, result_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
-  while (change)
+  for (; max_count > 0; --max_count)
     {
-      APR_ARRAY_PUSH(*changes, change_t*) = change;
-      SVN_ERR(read_change(&change, stream, result_pool, iterpool));
+      change_t *change;
       svn_pool_clear(iterpool);
+      SVN_ERR(read_change(&change, stream, result_pool, iterpool));
+      if (!change)
+        break;
+ 
+      APR_ARRAY_PUSH(*changes, change_t*) = change;
     }
   svn_pool_destroy(iterpool);
 

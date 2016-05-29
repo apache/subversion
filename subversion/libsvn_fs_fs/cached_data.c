@@ -2975,6 +2975,7 @@ svn_fs_fs__get_changes(apr_array_header_t **changes,
                                NULL, changes_offset, scratch_pool));
           SVN_ERR(svn_fs_fs__read_changes(changes,
                                           context->revision_file->stream,
+                                          INT_MAX,
                                           result_pool, scratch_pool));
 
           /* cache for future reference */
@@ -3390,8 +3391,8 @@ block_read_changes(apr_array_header_t **changes,
   SVN_ERR(read_item(&stream, fs, rev_file, entry, scratch_pool));
 
   /* read changes from revision file */
-  SVN_ERR(svn_fs_fs__read_changes(changes, stream, result_pool,
-                                  scratch_pool));
+  SVN_ERR(svn_fs_fs__read_changes(changes, stream, INT_MAX,
+                                  result_pool, scratch_pool));
 
   /* cache for future reference */
   if (ffd->changes_cache)
