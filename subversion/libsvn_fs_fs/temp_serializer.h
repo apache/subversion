@@ -359,9 +359,34 @@ svn_fs_fs__deserialize_rep_header(void **out,
                                   apr_size_t data_len,
                                   apr_pool_t *pool);
 
+/*** Block of changes in a changed paths list. */
+typedef struct svn_fs_fs__changes_list_t
+{
+  /* Offset of the first element in CHANGES within the changed paths list
+     on disk. */
+  apr_off_t start_offset;
+
+  /* Offset of the first element behind CHANGES within the changed paths
+     list on disk. */
+  apr_off_t end_offset;
+
+  /* End of list reached? This may have false negatives in case the number
+     of elements in the list is a multiple of our block / range size. */
+  svn_boolean_t eol;
+
+  /* Array of #svn_fs_x__change_t * representing a consecutive sub-range of
+     elements in a changed paths list. */
+
+  /* number of entries in the array */
+  int count;
+
+  /* reference to the changes */
+  change_t **changes;
+
+} svn_fs_fs__changes_list_t;
+
 /**
- * Implements #svn_cache__serialize_func_t for an #apr_array_header_t of
- * #change_t *.
+ * Implements #svn_cache__serialize_func_t for a #svn_fs_fs__changes_list_t.
  */
 svn_error_t *
 svn_fs_fs__serialize_changes(void **data,
@@ -370,8 +395,7 @@ svn_fs_fs__serialize_changes(void **data,
                              apr_pool_t *pool);
 
 /**
- * Implements #svn_cache__deserialize_func_t for an #apr_array_header_t of
- * #change_t *.
+ * Implements #svn_cache__deserialize_func_t for a #svn_fs_fs__changes_list_t.
  */
 svn_error_t *
 svn_fs_fs__deserialize_changes(void **out,
