@@ -510,7 +510,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        1, 8, /* 1k / entry; 8 entries total, rarely used */
                        svn_fs_fs__serialize_changes,
                        svn_fs_fs__deserialize_changes,
-                       sizeof(svn_revnum_t),
+                       sizeof(pair_cache_key_t),
                        apr_pstrcat(pool, prefix, "CHANGES", SVN_VA_NULL),
                        0,
                        has_namespace,
