@@ -1641,7 +1641,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.0
     * fix bug in mergeinfo recording during foreign-repos merge (r1430310)
     * fix spurious merge conflicts for binary files with keywords (issue #4221)
     * fix patching symlinks with 'svn patch' (issue #4273)
-    * make 'svn switch' refresh lock information (issue #3376)
+    * make 'svn switch' refresh lock information (issue #3378)
     * fix 'svn diff' output doesn't apply as patch without fuzz (issue #3362)
     * fix mergeinfo recording for multiple-revision-range merge (issue #4306)
     * fix diffs shown by 'show-diff' conflict prompt option (r1438879)
