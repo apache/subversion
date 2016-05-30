@@ -442,6 +442,8 @@ static const resolver_option_t builtin_resolver_options[] =
   /* Options for incoming delete vs any. */
   { "i", N_("ignore incoming deletion"), NULL,
     svn_client_conflict_option_incoming_delete_ignore },
+  { "a", N_("accept incoming deletion"), NULL,
+    svn_client_conflict_option_incoming_delete_accept },
 
   { NULL }
 };
