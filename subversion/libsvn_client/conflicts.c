@@ -291,7 +291,6 @@ find_deleted_rev(void *baton,
 
       svn_pool_clear(iterpool);
 
-
       apr_hash_this(hi, (void *) &path, NULL, &val);
       log_item = val;
 
@@ -346,6 +345,7 @@ find_deleted_rev(void *baton,
               else
                 b->replacing_node_kind = svn_node_none;
 
+              svn_pool_destroy(iterpool);
               return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
             }
         }
