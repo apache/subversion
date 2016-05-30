@@ -2038,12 +2038,15 @@ struct find_added_rev_baton
 {
   svn_revnum_t added_rev;
   const char *repos_relpath;
+  const char *parent_repos_relpath;
   apr_pool_t *pool;
 };
 
 /* Implements svn_location_segment_receiver_t.
  * Finds the revision in which a node was added by tracing 'start'
- * revisions in location segments reported for the node. */
+ * revisions in location segments reported for the node.
+ * If the PARENT_REPOS_RELPATH in the baton is not NULL, only consider
+ * segments in which the node existed somwhere beneath this path. */
 static svn_error_t *
 find_added_rev(svn_location_segment_t *segment,
                void *baton,
@@ -2053,8 +2056,13 @@ find_added_rev(svn_location_segment_t *segment,
 
   if (segment->path) /* not interested in gaps */
     {
-      b->added_rev = segment->range_start;
-      b->repos_relpath = apr_pstrdup(b->pool, segment->path);
+      if (b->parent_repos_relpath == NULL ||
+          svn_relpath_skip_ancestor(b->parent_repos_relpath,
+                                    segment->path) != NULL)
+        {
+          b->added_rev = segment->range_start;
+          b->repos_relpath = apr_pstrdup(b->pool, segment->path);
+        }
     }
 
   return SVN_NO_ERROR;
@@ -2093,6 +2101,7 @@ get_incoming_delete_details_for_reverse_addition(
   *details = apr_pcalloc(result_pool, sizeof(**details));
   b.added_rev = SVN_INVALID_REVNUM;
   b.repos_relpath = NULL;
+  b.parent_repos_relpath = NULL;
   b.pool = scratch_pool;
   /* Figure out when this node was added. */
   SVN_ERR(svn_ra_get_location_segments(ra_session, "", old_rev,
@@ -2339,6 +2348,7 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
       details = apr_pcalloc(conflict->pool, sizeof(*details));
       b.added_rev = SVN_INVALID_REVNUM;
       b.repos_relpath = NULL;
+      b.parent_repos_relpath = NULL;
       b.pool = scratch_pool;
       /* Figure out when this node was added. */
       SVN_ERR(svn_ra_get_location_segments(ra_session, "", new_rev,
@@ -2402,6 +2412,7 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
           details = apr_pcalloc(conflict->pool, sizeof(*details));
           b.added_rev = SVN_INVALID_REVNUM;
           b.repos_relpath = NULL;
+          b.parent_repos_relpath = NULL;
           b.pool = scratch_pool;
           /* Figure out when this node was added. */
           SVN_ERR(svn_ra_get_location_segments(ra_session, "", new_rev,
@@ -4371,6 +4382,8 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
         goto unlock_wc;
       b.added_rev = SVN_INVALID_REVNUM;
       b.repos_relpath = NULL;
+      b.parent_repos_relpath = svn_relpath_dirname(base_repos_relpath,
+                                                   scratch_pool);
       b.pool = scratch_pool;
       err = svn_ra_get_location_segments(ra_session, "", base_revision,
                                          base_revision, SVN_INVALID_REVNUM,
