@@ -2154,16 +2154,13 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
     {
       if (old_rev < new_rev)
         {
-          svn_ra_session_t *ra_session;
-          const char *url;
-          const char *corrected_url;
           const char *parent_repos_relpath;
-          apr_array_header_t *paths;
-          apr_array_header_t *revprops;
-          struct find_deleted_rev_baton b;
-          svn_error_t *err;
+          svn_revnum_t deleted_rev;
+          const char *deleted_rev_author;
+          svn_node_kind_t replacing_node_kind;
 
           /* The update operation went forward in history. */
+
           SVN_ERR(svn_wc__node_get_repos_info(NULL, &parent_repos_relpath,
                                               NULL, NULL,
                                               conflict->ctx->wc_ctx,
@@ -2172,61 +2169,28 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                                 scratch_pool),
                                               scratch_pool,
                                               scratch_pool));
-          url = svn_path_url_add_component2(repos_root_url,
-                                            parent_repos_relpath,
-                                            scratch_pool);
-          SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
-                                                       &corrected_url,
-                                                       url, NULL, NULL,
-                                                       FALSE,
-                                                       FALSE,
-                                                       conflict->ctx,
-                                                       scratch_pool,
-                                                       scratch_pool));
-          paths = apr_array_make(scratch_pool, 1, sizeof(const char *));
-          APR_ARRAY_PUSH(paths, const char *) = "";
-
-          revprops = apr_array_make(scratch_pool, 1, sizeof(const char *));
-          APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
-
-          b.deleted_repos_relpath = new_repos_relpath;
-          b.related_repos_relpath = NULL;
-          b.related_repos_peg_rev = SVN_INVALID_REVNUM;
-          b.deleted_rev = SVN_INVALID_REVNUM;
-          b.replacing_node_kind = svn_node_unknown;
-          b.repos_root_url = repos_root_url;
-          b.repos_uuid = repos_uuid;
-          b.ctx = conflict->ctx;
-          b.result_pool = scratch_pool;
-
-          err = svn_ra_get_log2(ra_session, paths, old_rev, new_rev,
-                                0, /* no limit */
-                                TRUE, /* need the changed paths list */
-                                FALSE, /* need to traverse copies */
-                                FALSE, /* no need for merged revisions */
-                                revprops,
-                                find_deleted_rev, &b,
-                                scratch_pool);
-          if (err)
+          SVN_ERR(find_revision_for_suspected_deletion(
+                    &deleted_rev, &deleted_rev_author, &replacing_node_kind,
+                    conflict, svn_dirent_basename(conflict->local_abspath,
+                                                  scratch_pool),
+                    parent_repos_relpath, old_rev, new_rev,
+                    NULL, SVN_INVALID_REVNUM, /* related to self */
+                    conflict->pool, scratch_pool));
+          if (deleted_rev == SVN_INVALID_REVNUM)
             {
-              if (err->apr_err == SVN_ERR_CANCELLED &&
-                  b.deleted_rev != SVN_INVALID_REVNUM)
-                {
-                  /* Log operation was aborted because we found deleted rev. */
-                  svn_error_clear(err);
-                }
-              else
-                return svn_error_trace(err);
+              /* We could not determine the revision in which the node was
+               * deleted. We cannot provide the required details so the best
+               * we can do is fall back to the default description. */
+              return SVN_NO_ERROR;
             }
 
           details = apr_pcalloc(conflict->pool, sizeof(*details));
-          details->deleted_rev = b.deleted_rev;
+          details->deleted_rev = deleted_rev;
           details->added_rev = SVN_INVALID_REVNUM;
           details->repos_relpath = apr_pstrdup(conflict->pool,
                                                new_repos_relpath);
-          details->rev_author = apr_pstrdup(conflict->pool,
-                                            b.deleted_rev_author);
-          details->replacing_node_kind = b.replacing_node_kind;
+          details->rev_author = deleted_rev_author;
+          details->replacing_node_kind = replacing_node_kind;
         }
       else /* new_rev < old_rev */
         {
