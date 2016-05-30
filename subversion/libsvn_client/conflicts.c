@@ -4039,6 +4039,8 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
 {
   const char *repos_root_url;
   const char *repos_uuid;
+  const char *incoming_old_repos_relpath;
+  svn_revnum_t incoming_old_pegrev;
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
   const char *local_abspath;
@@ -4059,7 +4061,7 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                              _("Conflict resolution option '%d' requires "
                                "details for tree conflict at '%s' to be "
-                               "fetched from the repository."),
+                               "fetched from the repository"),
                             option->id,
                             svn_dirent_local_style(local_abspath,
                                                    scratch_pool));
@@ -4072,15 +4074,44 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
                                         details->repos_relpath,
                                         scratch_pool);
   revision1.kind = svn_opt_revision_number;
-  revision1.value.number = details->added_rev;
+  SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+            &incoming_old_repos_relpath, &incoming_old_pegrev,
+            NULL, conflict, scratch_pool, scratch_pool));
   SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
             &incoming_new_repos_relpath, &incoming_new_pegrev,
             NULL, conflict, scratch_pool, scratch_pool));
-  source2 = svn_path_url_add_component2(repos_root_url,
-                                        incoming_new_repos_relpath,
-                                        scratch_pool);
-  revision2.kind = svn_opt_revision_number;
-  revision2.value.number = incoming_new_pegrev;
+  if (incoming_old_pegrev < incoming_new_pegrev) /* forward merge */
+    {
+      if (details->added_rev == SVN_INVALID_REVNUM)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("Could not determine when '%s' was "
+                                   "added the repository"),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
+      revision1.value.number = details->added_rev;
+
+      source2 = svn_path_url_add_component2(repos_root_url,
+                                            incoming_new_repos_relpath,
+                                            scratch_pool);
+      revision2.kind = svn_opt_revision_number;
+      revision2.value.number = incoming_new_pegrev;
+    }
+  else /* reverse-merge */
+    {
+      if (details->deleted_rev == SVN_INVALID_REVNUM)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("Could not determine when '%s' was "
+                                   "deleted from the repository"),
+                                 svn_dirent_local_style(local_abspath,
+                                                        scratch_pool));
+      revision1.value.number = details->deleted_rev;
+
+      source2 = svn_path_url_add_component2(repos_root_url,
+                                            incoming_old_repos_relpath,
+                                            scratch_pool);
+      revision2.kind = svn_opt_revision_number;
+      revision2.value.number = incoming_old_pegrev;
+    }
 
   /* ### The following WC modifications should be atomic. */
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
