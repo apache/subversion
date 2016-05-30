@@ -252,8 +252,8 @@ struct find_deleted_rev_baton
 
 /* Implements svn_log_entry_receiver_t.
  *
- * Find the revision in which a node, ancestrally related to the node
- * specified via find_deleted_rev_baton, was deleted, When the revision
+ * Find the revision in which a node, optionally ancestrally related to the
+ * node specified via find_deleted_rev_baton, was deleted, When the revision
  * was found, store it in BATON->DELETED_REV and abort the log operation
  * by raising SVN_ERR_CANCELLED.
  *
@@ -302,30 +302,41 @@ find_deleted_rev(void *baton,
       if (svn_path_compare_paths(b->deleted_repos_relpath, path) == 0
           && (log_item->action == 'D' || log_item->action == 'R'))
         {
-          svn_client__pathrev_t *yca_loc;
-          svn_client__pathrev_t *loc1;
-          svn_client__pathrev_t *loc2;
+          svn_boolean_t deleted_node_found = TRUE;
 
-          /* We found a deleted node which occupies the correct path.
-           * To be certain that this is the deleted node we're looking for,
-           * we must establish whether it is ancestrally related to the
-           * "related node" specified in our baton. */
-          loc1 = svn_client__pathrev_create_with_relpath(
-                   b->repos_root_url, b->repos_uuid, b->related_repos_peg_rev,
-                   b->related_repos_relpath, iterpool);
-          loc2 = svn_client__pathrev_create_with_relpath(
-                   b->repos_root_url, b->repos_uuid, log_entry->revision - 1,
-                   b->deleted_repos_relpath, iterpool);
-          SVN_ERR(svn_client__get_youngest_common_ancestor(&yca_loc, loc1, loc2,
-                                                           NULL, b->ctx,
-                                                           iterpool,
-                                                           iterpool));
-          if (yca_loc != NULL)
+          if (b->related_repos_relpath != NULL &&
+              b->related_repos_peg_rev != SVN_INVALID_REVNUM)
+            {
+              svn_client__pathrev_t *yca_loc = NULL;
+              svn_client__pathrev_t *loc1;
+              svn_client__pathrev_t *loc2;
+
+              /* We found a deleted node which occupies the correct path.
+               * To be certain that this is the deleted node we're looking for,
+               * we must establish whether it is ancestrally related to the
+               * "related node" specified in our baton. */
+              loc1 = svn_client__pathrev_create_with_relpath(
+                       b->repos_root_url, b->repos_uuid,
+                       b->related_repos_peg_rev,
+                       b->related_repos_relpath, iterpool);
+              loc2 = svn_client__pathrev_create_with_relpath(
+                       b->repos_root_url, b->repos_uuid,
+                       log_entry->revision - 1,
+                       b->deleted_repos_relpath, iterpool);
+              SVN_ERR(svn_client__get_youngest_common_ancestor(&yca_loc,
+                                                               loc1, loc2,
+                                                               NULL, b->ctx,
+                                                               iterpool,
+                                                               iterpool));
+              deleted_node_found = (yca_loc != NULL);
+            }
+
+          if (deleted_node_found)
             {
               svn_string_t *author;
+
               /* Found the correct node, we are done. */
               b->deleted_rev = log_entry->revision;
-
               author = svn_hash_gets(log_entry->revprops,
                                      SVN_PROP_REVISION_AUTHOR);
               b->deleted_rev_author = apr_pstrdup(b->result_pool, author->data);
@@ -334,6 +345,7 @@ find_deleted_rev(void *baton,
                 b->replacing_node_kind = log_item->node_kind;
               else
                 b->replacing_node_kind = svn_node_none;
+
               return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
             }
         }
@@ -841,7 +853,7 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
       if (err->apr_err == SVN_ERR_CANCELLED &&
           b.deleted_rev != SVN_INVALID_REVNUM)
         {
-          /* Log operation was aborted because we found a YCA. */
+          /* Log operation was aborted because we found deleted rev. */
           svn_error_clear(err);
         }
       else
@@ -2145,11 +2157,23 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           svn_ra_session_t *ra_session;
           const char *url;
           const char *corrected_url;
-          svn_revnum_t deleted_rev;
-          svn_string_t *author_revprop;
+          const char *parent_repos_relpath;
+          apr_array_header_t *paths;
+          apr_array_header_t *revprops;
+          struct find_deleted_rev_baton b;
+          svn_error_t *err;
 
           /* The update operation went forward in history. */
-          url = svn_path_url_add_component2(repos_root_url, new_repos_relpath,
+          SVN_ERR(svn_wc__node_get_repos_info(NULL, &parent_repos_relpath,
+                                              NULL, NULL,
+                                              conflict->ctx->wc_ctx,
+                                              svn_dirent_dirname(
+                                                conflict->local_abspath,
+                                                scratch_pool),
+                                              scratch_pool,
+                                              scratch_pool));
+          url = svn_path_url_add_component2(repos_root_url,
+                                            parent_repos_relpath,
                                             scratch_pool);
           SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
                                                        &corrected_url,
@@ -2159,22 +2183,50 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                                        conflict->ctx,
                                                        scratch_pool,
                                                        scratch_pool));
-          SVN_ERR(svn_ra_get_deleted_rev(ra_session, "", old_rev, new_rev,
-                                         &deleted_rev, scratch_pool));
-          SVN_ERR(svn_ra_rev_prop(ra_session, deleted_rev,
-                                  SVN_PROP_REVISION_AUTHOR,
-                                  &author_revprop, scratch_pool));
+          paths = apr_array_make(scratch_pool, 1, sizeof(const char *));
+          APR_ARRAY_PUSH(paths, const char *) = "";
+
+          revprops = apr_array_make(scratch_pool, 1, sizeof(const char *));
+          APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
+
+          b.deleted_repos_relpath = new_repos_relpath;
+          b.related_repos_relpath = NULL;
+          b.related_repos_peg_rev = SVN_INVALID_REVNUM;
+          b.deleted_rev = SVN_INVALID_REVNUM;
+          b.replacing_node_kind = svn_node_unknown;
+          b.repos_root_url = repos_root_url;
+          b.repos_uuid = repos_uuid;
+          b.ctx = conflict->ctx;
+          b.result_pool = scratch_pool;
+
+          err = svn_ra_get_log2(ra_session, paths, old_rev, new_rev,
+                                0, /* no limit */
+                                TRUE, /* need the changed paths list */
+                                FALSE, /* need to traverse copies */
+                                FALSE, /* no need for merged revisions */
+                                revprops,
+                                find_deleted_rev, &b,
+                                scratch_pool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_CANCELLED &&
+                  b.deleted_rev != SVN_INVALID_REVNUM)
+                {
+                  /* Log operation was aborted because we found deleted rev. */
+                  svn_error_clear(err);
+                }
+              else
+                return svn_error_trace(err);
+            }
+
           details = apr_pcalloc(conflict->pool, sizeof(*details));
-          details->deleted_rev = deleted_rev;
+          details->deleted_rev = b.deleted_rev;
           details->added_rev = SVN_INVALID_REVNUM;
           details->repos_relpath = apr_pstrdup(conflict->pool,
                                                new_repos_relpath);
           details->rev_author = apr_pstrdup(conflict->pool,
-                                            author_revprop->data);
-          /* Check for replacement. */
-          SVN_ERR(svn_ra_check_path(ra_session, "", deleted_rev,
-                                    &details->replacing_node_kind,
-                                    scratch_pool));
+                                            b.deleted_rev_author);
+          details->replacing_node_kind = b.replacing_node_kind;
         }
       else /* new_rev < old_rev */
         {
