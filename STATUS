@@ -135,6 +135,7 @@ Candidate changes:
     Changelog should not point to a wrong issue number.
   Votes:
     +1: luke1410
+    +1: stsp (IMO this could just be an "ovious fix" commit to the branch)
 
 Veto-blocked changes:
 =====================
