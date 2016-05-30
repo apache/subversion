@@ -2425,33 +2425,32 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
            * This addition is in fact a deletion, applied in reverse,
            * which happened on the branch we merged from.
            * Find the revision which deleted the node. */
-          svn_ra_session_t *ra_session;
-          const char *url;
-          const char *corrected_url;
-          svn_string_t *author_revprop;
           svn_revnum_t deleted_rev;
+          const char *deleted_rev_author;
+          svn_node_kind_t replacing_node_kind;
 
-          url = svn_path_url_add_component2(repos_root_url, new_repos_relpath,
-                                            scratch_pool);
-          SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
-                                                       &corrected_url,
-                                                       url, NULL, NULL,
-                                                       FALSE,
-                                                       FALSE,
-                                                       conflict->ctx,
-                                                       scratch_pool,
-                                                       scratch_pool));
-          SVN_ERR(svn_ra_get_deleted_rev(ra_session, "", new_rev, old_rev,
-                                         &deleted_rev, scratch_pool));
-          SVN_ERR(svn_ra_rev_prop(ra_session, deleted_rev,
-                                  SVN_PROP_REVISION_AUTHOR,
-                                  &author_revprop, scratch_pool));
+          SVN_ERR(find_revision_for_suspected_deletion(
+                    &deleted_rev, &deleted_rev_author, &replacing_node_kind,
+                    conflict, svn_relpath_basename(new_repos_relpath,
+                                                   scratch_pool),
+                    svn_relpath_dirname(new_repos_relpath, scratch_pool),
+                    new_rev, old_rev,
+                    NULL, SVN_INVALID_REVNUM, /* related to self */
+                    conflict->pool, scratch_pool));
+          if (deleted_rev == SVN_INVALID_REVNUM)
+            {
+              /* We could not determine the revision in which the node was
+               * deleted. We cannot provide the required details so the best
+               * we can do is fall back to the default description. */
+              return SVN_NO_ERROR;
+            }
+
           details = apr_pcalloc(conflict->pool, sizeof(*details));
           details->repos_relpath = apr_pstrdup(conflict->pool,
                                                new_repos_relpath);
           details->deleted_rev = deleted_rev;
           details->deleted_rev_author = apr_pstrdup(conflict->pool,
-                                                    author_revprop->data);
+                                                    deleted_rev_author);
 
           details->added_rev = SVN_INVALID_REVNUM;
           details->added_rev_author = NULL;
