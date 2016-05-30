@@ -144,6 +144,7 @@ Candidate changes:
      Resolves Linux build script issue since the old google doc URI is 404 now.
    Votes:
      +1 (non-binding): luke1410
+     +1: stsp
 
 * r1746053
   Correct issue reference in 1.8.0 changelog.
@@ -151,6 +152,7 @@ Candidate changes:
     Changelog should not point to a wrong issue number.
   Votes:
     +1: luke1410
+    +1: stsp (IMO this could just be an "ovious fix" commit to the branch)
 
 Veto-blocked changes:
 =====================
