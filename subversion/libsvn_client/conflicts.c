@@ -4699,7 +4699,7 @@ resolve_incoming_delete_accept(svn_client_conflict_option_t *option,
   if (err)
     goto unlock_wc;
 
-  /* Delete the tree conflict victim. */
+  /* Delete the tree conflict victim. Marks the conflict resolved. */
   err = svn_wc_delete4(ctx->wc_ctx, local_abspath, FALSE, FALSE,
                        ctx->cancel_func, ctx->cancel_baton,
                        ctx->notify_func2, ctx->notify_baton2,
@@ -4707,10 +4707,6 @@ resolve_incoming_delete_accept(svn_client_conflict_option_t *option,
   if (err)
     goto unlock_wc;
 
-  /* Resolve to the current working copy state. */
-  err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
-
-  /* svn_wc__del_tree_conflict doesn't handle notification for us */
   if (ctx->notify_func2)
     ctx->notify_func2(ctx->notify_baton2,
                       svn_wc_create_notify(local_abspath,
