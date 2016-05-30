@@ -4421,6 +4421,7 @@ typedef enum svn_client_conflict_option_id_t {
 
   /* Options for incoming delete vs any */
   svn_client_conflict_option_incoming_delete_ignore,
+  svn_client_conflict_option_incoming_delete_accept,
 
 } svn_client_conflict_option_id_t;
 

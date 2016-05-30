@@ -4419,6 +4419,166 @@ resolve_merge_incoming_added_dir_replace_and_merge(
                                                           scratch_pool));
 }
 
+/* Verify the local working copy state matches what we expect when an
+ * incoming deletion tree conflict exists.
+ * We assume update/merge/switch operations leave the working copy in a
+ * state which prefers the local change and cancels the deletion.
+ * Run a quick sanity check and error out if it looks as if the
+ * working copy was modified since, even though it's not easy to make
+ * such modifications without also clearing the conflict marker. */
+static svn_error_t *
+verify_local_state_for_incoming_delete(svn_client_conflict_t *conflict,
+                                       svn_client_conflict_option_t *option,
+                                       apr_pool_t *scratch_pool)
+{
+  const char *local_abspath;
+  const char *wcroot_abspath;
+  svn_wc_operation_t operation;
+  svn_client_ctx_t *ctx = conflict->ctx;
+
+  local_abspath = svn_client_conflict_get_local_abspath(conflict);
+  SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
+                             local_abspath, scratch_pool,
+                             scratch_pool));
+  operation = svn_client_conflict_get_operation(conflict);
+
+  if (operation == svn_wc_operation_update ||
+      operation == svn_wc_operation_switch)
+    {
+      struct conflict_tree_incoming_delete_details *details;
+      svn_boolean_t is_copy;
+      svn_revnum_t copyfrom_rev;
+      const char *copyfrom_repos_relpath;
+
+      details = conflict->tree_conflict_incoming_details;
+      if (details == NULL)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("Conflict resolution option '%d' requires "
+                                   "details for tree conflict at '%s' to be "
+                                   "fetched from the repository."),
+                                option->id,
+                                svn_dirent_local_style(local_abspath,
+                                                       scratch_pool));
+
+      /* Ensure that the item is a copy of itself from before it was deleted.
+       * Update and switch are supposed to set this up when flagging the
+       * conflict. */
+      SVN_ERR(svn_wc__node_get_origin(&is_copy, &copyfrom_rev,
+                                      &copyfrom_repos_relpath,
+                                      NULL, NULL, NULL, NULL,
+                                      ctx->wc_ctx, local_abspath, FALSE,
+                                      scratch_pool, scratch_pool));
+      if (!is_copy)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("Cannot resolve tree conflict on '%s' by "
+                                   "ignoring the incoming deletion "
+                                   "(expected a copied item, but the item "
+                                   "is not a copy)"),
+                                 svn_dirent_local_style(
+                                   svn_dirent_skip_ancestor(
+                                     wcroot_abspath,
+                                     conflict->local_abspath),
+                                 scratch_pool));
+      else if (details->deleted_rev == SVN_INVALID_REVNUM &&
+               details->added_rev == SVN_INVALID_REVNUM)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("Could not find the revision in which '%s' "
+                                   "was deleted from the repository"),
+                                 svn_dirent_local_style(
+                                   svn_dirent_skip_ancestor(
+                                     wcroot_abspath,
+                                     conflict->local_abspath),
+                                   scratch_pool));
+      else if (details->deleted_rev != SVN_INVALID_REVNUM &&
+               copyfrom_rev >= details->deleted_rev)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("Cannot resolve tree conflict on '%s' by "
+                                   "ignoring the incoming deletion (expected "
+                                   "an item copied from a revision smaller "
+                                   "than r%ld, but the item was copied from "
+                                   "r%ld)"),
+                                 svn_dirent_local_style(
+                                   svn_dirent_skip_ancestor(
+                                     wcroot_abspath, conflict->local_abspath),
+                                   scratch_pool),
+                                 details->deleted_rev, copyfrom_rev);
+
+      else if (details->added_rev != SVN_INVALID_REVNUM &&
+               copyfrom_rev < details->added_rev)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("Cannot resolve tree conflict on '%s' by "
+                                   "ignoring the incoming deletion (expected "
+                                   "an item copied from a revision larger than "
+                                   "r%ld, but the item was copied from r%ld)"),
+                                 svn_dirent_local_style(
+                                   svn_dirent_skip_ancestor(
+                                     wcroot_abspath, conflict->local_abspath),
+                                   scratch_pool),
+                                  details->added_rev, copyfrom_rev);
+
+      else if (operation == svn_wc_operation_update &&
+               strcmp(copyfrom_repos_relpath, details->repos_relpath) != 0)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("Cannot resolve tree conflict on '%s' by "
+                                   "ignoring the incoming deletion (expected "
+                                   "an item copied from '^/%s', but the item "
+                                   "was copied from '^/%s@%ld')"),
+                                 svn_dirent_local_style(
+                                   svn_dirent_skip_ancestor(
+                                     wcroot_abspath, conflict->local_abspath),
+                                   scratch_pool),
+                                 details->repos_relpath,
+                                 copyfrom_repos_relpath, copyfrom_rev);
+      else if (operation == svn_wc_operation_switch)
+        {
+          const char *old_repos_relpath;
+
+          SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+                    &old_repos_relpath, NULL, NULL, conflict,
+                    scratch_pool, scratch_pool));
+
+          if (strcmp(copyfrom_repos_relpath, old_repos_relpath) != 0)
+            return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                     _("Cannot resolve tree conflict on '%s' "
+                                       "by ignoring the incoming deletion "
+                                       "(expected an item copied from '^/%s', "
+                                       "but the item was copied from "
+                                        "'^/%s@%ld')"),
+                                     svn_dirent_local_style(
+                                       svn_dirent_skip_ancestor(
+                                         wcroot_abspath,
+                                         conflict->local_abspath),
+                                       scratch_pool),
+                                     old_repos_relpath,
+                                     copyfrom_repos_relpath, copyfrom_rev);
+        }
+    }
+  else if (operation == svn_wc_operation_merge)
+    {
+      svn_node_kind_t victim_node_kind;
+      svn_node_kind_t on_disk_kind;
+
+      /* For merge, all we can do is ensure that the item still exists. */
+      victim_node_kind =
+        svn_client_conflict_tree_get_victim_node_kind(conflict);
+      SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
+
+      if (victim_node_kind != on_disk_kind)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("Cannot resolve tree conflict on '%s' by "
+                                   "ignoring the incoming deletion (expected "
+                                   "node kind '%s' but found '%s')"),
+                                 svn_dirent_local_style(
+                                   svn_dirent_skip_ancestor(
+                                     wcroot_abspath, conflict->local_abspath),
+                                   scratch_pool),
+                                 svn_node_kind_to_word(victim_node_kind),
+                                 svn_node_kind_to_word(on_disk_kind));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
 resolve_incoming_delete_ignore(svn_client_conflict_option_t *option,
@@ -4429,166 +4589,71 @@ resolve_incoming_delete_ignore(svn_client_conflict_option_t *option,
   const char *local_abspath;
   const char *lock_abspath;
   svn_client_ctx_t *ctx = conflict->ctx;
-  svn_wc_operation_t operation;
-  const char *wcroot_abspath;
   svn_error_t *err;
 
   option_id = svn_client_conflict_option_get_id(option);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
 
-  SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
-                             local_abspath, scratch_pool,
-                             scratch_pool));
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
+                                                 local_abspath,
+                                                 scratch_pool, scratch_pool));
+
+  err = verify_local_state_for_incoming_delete(conflict, option, scratch_pool);
+  if (err)
+    goto unlock_wc;
+
+  /* Resolve to the current working copy state. */
+  err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
+
+  /* svn_wc__del_tree_conflict doesn't handle notification for us */
+  if (ctx->notify_func2)
+    ctx->notify_func2(ctx->notify_baton2,
+                      svn_wc_create_notify(local_abspath,
+                                           svn_wc_notify_resolved_tree,
+                                           scratch_pool),
+                      scratch_pool);
+
+unlock_wc:
+  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
+                                                                 lock_abspath,
+                                                                 scratch_pool));
+  SVN_ERR(err);
+
+  conflict->resolution_tree = option_id;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements conflict_option_resolve_func_t. */
+static svn_error_t *
+resolve_incoming_delete_accept(svn_client_conflict_option_t *option,
+                               svn_client_conflict_t *conflict,
+                               apr_pool_t *scratch_pool)
+{
+  svn_client_conflict_option_id_t option_id;
+  const char *local_abspath;
+  const char *lock_abspath;
+  svn_client_ctx_t *ctx = conflict->ctx;
+  svn_error_t *err;
+
+  option_id = svn_client_conflict_option_get_id(option);
+  local_abspath = svn_client_conflict_get_local_abspath(conflict);
 
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
                                                  local_abspath,
                                                  scratch_pool, scratch_pool));
 
-  /* We assume update/merge/switch operations leave the working copy in a
-   * state which prefers the local change and cancels the deletion.
-   * Run a quick sanity check and error out if it looks as if the
-   * working copy was modified since, even though it's not easy to make
-   * such modifications without also clearing the conflict marker. */
-  operation = svn_client_conflict_get_operation(conflict);
-  if (operation == svn_wc_operation_update || operation == svn_wc_operation_switch)
-    {
-      struct conflict_tree_incoming_delete_details *details;
-      svn_boolean_t is_copy;
-      svn_revnum_t copyfrom_rev;
-      const char *copyfrom_repos_relpath;
+  err = verify_local_state_for_incoming_delete(conflict, option, scratch_pool);
+  if (err)
+    goto unlock_wc;
 
-      details = conflict->tree_conflict_incoming_details;
-      if (details == NULL)
-        {
-          err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                   _("Conflict resolution option '%d' requires "
-                                     "details for tree conflict at '%s' to be "
-                                     "fetched from the repository."),
-                                  option->id,
-                                  svn_dirent_local_style(local_abspath,
-                                                         scratch_pool));
-          goto unlock_wc;
-        }
-
-      /* Ensure that the item is a copy of itself from before it was deleted.
-       * Update and switch are supposed to set this up when flagging the conflict. */
-      err = svn_wc__node_get_origin(&is_copy, &copyfrom_rev,
-                                    &copyfrom_repos_relpath,
-                                    NULL, NULL, NULL, NULL,
-                                    ctx->wc_ctx, local_abspath, FALSE,
-                                    scratch_pool, scratch_pool);
-      if (err)
-        goto unlock_wc;
-
-      if (!is_copy)
-        err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                _("Cannot resolve tree conflict on '%s' by ignoring "
-                                  "the incoming deletion (expected a copied item, "
-                                  "but the item is not a copy)"),
-                                svn_dirent_local_style(
-                                  svn_dirent_skip_ancestor(wcroot_abspath,
-                                                           conflict->local_abspath),
-                                  scratch_pool));
-      else if (details->deleted_rev == SVN_INVALID_REVNUM &&
-               details->added_rev == SVN_INVALID_REVNUM)
-        err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                _("Could not find the revision in which '%s' was "
-                                  "deleted from the repository"),
-                                svn_dirent_local_style(
-                                  svn_dirent_skip_ancestor(wcroot_abspath,
-                                                           conflict->local_abspath),
-                                  scratch_pool));
-      else if (details->deleted_rev != SVN_INVALID_REVNUM &&
-               copyfrom_rev >= details->deleted_rev)
-        err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                _("Cannot resolve tree conflict on '%s' by "
-                                  "ignoring the incoming deletion (expected an "
-                                  "item copied from a revision smaller than "
-                                  "r%ld, but the item was copied from r%ld)"),
-                                svn_dirent_local_style(
-                                  svn_dirent_skip_ancestor(
-                                    wcroot_abspath, conflict->local_abspath),
-                                  scratch_pool),
-                                details->deleted_rev, copyfrom_rev);
-
-      else if (details->added_rev != SVN_INVALID_REVNUM &&
-               copyfrom_rev < details->added_rev)
-        err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                _("Cannot resolve tree conflict on '%s' by "
-                                  "ignoring the incoming deletion (expected an "
-                                  "item copied from a revision larger than r%ld, "
-                                  "but the item was copied from r%ld)"),
-                                svn_dirent_local_style(
-                                  svn_dirent_skip_ancestor(
-                                    wcroot_abspath, conflict->local_abspath),
-                                  scratch_pool),
-                                 details->added_rev, copyfrom_rev);
-
-      else if (operation == svn_wc_operation_update &&
-               strcmp(copyfrom_repos_relpath, details->repos_relpath) != 0)
-        err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                _("Cannot resolve tree conflict on '%s' by "
-                                  "ignoring the incoming deletion (expected an "
-                                  "item copied from '^/%s', but the item was "
-                                  "copied from '^/%s@%ld')"),
-                                svn_dirent_local_style(
-                                  svn_dirent_skip_ancestor(
-                                    wcroot_abspath, conflict->local_abspath),
-                                  scratch_pool),
-                                details->repos_relpath,
-                                copyfrom_repos_relpath, copyfrom_rev);
-      else if (operation == svn_wc_operation_switch)
-        {
-          const char *old_repos_relpath;
-
-          err = svn_client_conflict_get_incoming_old_repos_location(
-                  &old_repos_relpath, NULL, NULL, conflict,
-                  scratch_pool, scratch_pool);
-          if (err)
-            goto unlock_wc;
-
-          if (strcmp(copyfrom_repos_relpath, old_repos_relpath) != 0)
-            err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                    _("Cannot resolve tree conflict on '%s' by "
-                                      "ignoring the incoming deletion (expected an "
-                                      "item copied from '^/%s', but the item was "
-                                      "copied from '^/%s@%ld')"),
-                                    svn_dirent_local_style(
-                                      svn_dirent_skip_ancestor(
-                                        wcroot_abspath, conflict->local_abspath),
-                                      scratch_pool),
-                                    old_repos_relpath,
-                                    copyfrom_repos_relpath, copyfrom_rev);
-        }
-
-      if (err)
-        goto unlock_wc;
-    }
-  else if (operation == svn_wc_operation_merge)
-    {
-      svn_node_kind_t victim_node_kind;
-      svn_node_kind_t on_disk_kind;
-
-      /* For merge, all we can do is ensure that the item still exists. */
-      victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
-      err = svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool);
-      if (err)
-        goto unlock_wc;
-
-      if (victim_node_kind != on_disk_kind)
-          err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                  _("Cannot resolve tree conflict on '%s' by "
-                                    "ignoring the incoming deletion (expected "
-                                    "node kind '%s' but found '%s')"),
-                                  svn_dirent_local_style(
-                                    svn_dirent_skip_ancestor(
-                                      wcroot_abspath, conflict->local_abspath),
-                                    scratch_pool),
-                                  svn_node_kind_to_word(victim_node_kind),
-                                  svn_node_kind_to_word(on_disk_kind));
-      if (err)
-        goto unlock_wc;
-    }
+  /* Delete the tree conflict victim. */
+  err = svn_wc_delete4(ctx->wc_ctx, local_abspath, FALSE, FALSE,
+                       ctx->cancel_func, ctx->cancel_baton,
+                       ctx->notify_func2, ctx->notify_baton2,
+                       scratch_pool);
+  if (err)
+    goto unlock_wc;
 
   /* Resolve to the current working copy state. */
   err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
@@ -5378,18 +5443,59 @@ configure_option_incoming_delete_ignore(svn_client_conflict_t *conflict,
   if (incoming_change == svn_wc_conflict_action_delete)
     {
       svn_client_conflict_option_t *option;
-      const char *wcroot_abspath;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->id = svn_client_conflict_option_incoming_delete_ignore;
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
-                                 conflict->local_abspath, scratch_pool,
-                                 scratch_pool));
       option->description =
         apr_psprintf(options->pool, _("ignore the deletion of '^/%s@%ld'"),
           incoming_new_repos_relpath, incoming_new_pegrev);
       option->conflict = conflict;
       option->do_resolve_func = resolve_incoming_delete_ignore;
+      APR_ARRAY_PUSH(options, const svn_client_conflict_option_t *) = option;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Configure 'incoming delete accept' resolution option for a tree conflict. */
+static svn_error_t *
+configure_option_incoming_delete_accept(svn_client_conflict_t *conflict,
+                                        apr_array_header_t *options,
+                                        apr_pool_t *scratch_pool)
+{
+  svn_wc_operation_t operation;
+  svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_reason_t local_change;
+  const char *incoming_new_repos_relpath;
+  svn_revnum_t incoming_new_pegrev;
+
+  operation = svn_client_conflict_get_operation(conflict);
+  incoming_change = svn_client_conflict_get_incoming_change(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            &incoming_new_repos_relpath, &incoming_new_pegrev,
+            NULL, conflict, scratch_pool,
+            scratch_pool));
+
+  if (incoming_change == svn_wc_conflict_action_delete)
+    {
+      svn_client_conflict_option_t *option;
+      const char *wcroot_abspath;
+      const char *local_abspath;
+
+      option = apr_pcalloc(options->pool, sizeof(*option));
+      option->id = svn_client_conflict_option_incoming_delete_accept;
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+                                 conflict->local_abspath, scratch_pool,
+                                 scratch_pool));
+      local_abspath = svn_client_conflict_get_local_abspath(conflict);
+      option->description =
+        apr_psprintf(options->pool, _("accept the deletion of '%s'"),
+          svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                          local_abspath),
+                                 scratch_pool));
+      option->conflict = conflict;
+      option->do_resolve_func = resolve_incoming_delete_accept;
       APR_ARRAY_PUSH(options, const svn_client_conflict_option_t *) = option;
     }
 
@@ -5440,6 +5546,8 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   SVN_ERR(configure_option_merge_incoming_added_dir_replace_and_merge(
             conflict, *options, scratch_pool));
   SVN_ERR(configure_option_incoming_delete_ignore(conflict, *options,
+                                                  scratch_pool));
+  SVN_ERR(configure_option_incoming_delete_accept(conflict, *options,
                                                   scratch_pool));
 
   return SVN_NO_ERROR;
