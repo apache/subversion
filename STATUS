@@ -146,6 +146,12 @@ Candidate changes:
      +1 (non-binding): luke1410
      +1: stsp
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
 * r1746053
   Correct issue reference in 1.8.0 changelog.
   Justification:
@@ -153,9 +159,3 @@ Candidate changes:
   Votes:
     +1: luke1410
     +1: stsp (IMO this could just be an "ovious fix" commit to the branch)
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
