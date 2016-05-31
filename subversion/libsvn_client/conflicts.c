@@ -423,7 +423,7 @@ find_moves_in_revision(apr_hash_t *moves_table,
             {
               /* This is the first move in this revision. Create the list. */
               moves = apr_array_make(result_pool, 1,
-                                     sizeof(struct repos_move_info_t *));
+                                     sizeof(struct repos_move_info *));
               apr_hash_set(moves_table, &move->rev, sizeof(svn_revnum_t),
                            moves);
             }
