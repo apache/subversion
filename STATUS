@@ -125,7 +125,7 @@ Candidate changes:
  * r1745515
    Update serf download URI to ASF.
    Justification:
-     Resolves Linux build script issue since the old google doc URI is 404 now.
+     Resolves Linux build script issue since the old google code URI is 404 now.
    Votes:
      +1 (non-binding): luke1410
 
