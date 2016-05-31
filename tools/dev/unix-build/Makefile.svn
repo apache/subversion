@@ -1293,6 +1293,7 @@ $(GETTEXT_OBJDIR)/.installed: $(GETTEXT_OBJDIR)/.compiled
 
 svn-install-all: svn-install svn-bindings-install
 
+svn-retrieve:	$(SVN_OBJDIR)/.retrieved
 svn-configure:	$(SVN_OBJDIR)/.configured
 svn-compile:	$(SVN_OBJDIR)/.compiled
 svn-bindings-compile:	$(SVN_OBJDIR)/.bindings-compiled
