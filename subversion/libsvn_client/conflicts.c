@@ -459,8 +459,8 @@ struct find_deleted_rev_baton
  * works in cases where we do not already know a revision in which the deleted
  * node once used to exist.
  * 
- * If the node node was moved, rather than deleted, append a
- * struct repos_move_info * element to BATON-MOVES.
+ * If the node node was moved, rather than deleted, return move information
+ * in BATON->MOVE.
  */
 static svn_error_t *
 find_deleted_rev(void *baton,
@@ -989,9 +989,8 @@ describe_local_dir_node_change(const char **description,
  * If the node was replaced rather than deleted, set *REPLACING_NODE_KIND to
  * the node kind of the replacing node. Else, set it to svn_node_unknown.
  * Only request the log for revisions up to END_REV from the server.
- * Set *MOVES to an array of struct repos_move_info * elements. Each element
- * describes a move of the node which occured between START_REV and END_REV.
- * If the node was not moved, but really deleted, set *MOVES to NULL.
+ * If the deleted node was moved, provide move information in *MOVE.
+ * If the node was not moved,set *MOVE to NULL.
  */
 static svn_error_t *
 find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
@@ -1094,7 +1093,7 @@ struct conflict_tree_local_missing_details
   /* Author who committed DELETED_REV. */
   const char *deleted_rev_author;
 
-  /* An array of struct repos_move_info * elements. */
+  /* Move information. */
   struct repos_move_info *move;
 };
 
