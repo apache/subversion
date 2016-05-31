@@ -36,7 +36,8 @@ APU_VERSION=${APU_VERSION:-"1.5.1"}
 SERF_VERSION=${SERF_VERSION:-"1.3.8"}
 ZLIB_VERSION=${ZLIB_VERSION:-"1.2.8"}
 SQLITE_VERSION=${SQLITE_VERSION:-"3.7.15.1"}
-GMOCK_VERSION=${GMOCK_VERSION:-"1.6.0"}
+GTEST_VERSION=${GMOCK_VERSION:-"1.7.0"}
+GMOCK_VERSION=${GMOCK_VERSION:-"1.7.0"}
 HTTPD_VERSION=${HTTPD_VERSION:-"2.4.10"}
 APR_ICONV_VERSION=${APR_ICONV_VERSION:-"1.2.1"}
 
@@ -46,8 +47,10 @@ SERF=serf-${SERF_VERSION}
 ZLIB=zlib-${ZLIB_VERSION}
 SQLITE_VERSION_LIST=`echo $SQLITE_VERSION | sed -e 's/\./ /g'`
 SQLITE=sqlite-amalgamation-`printf %d%02d%02d%02d $SQLITE_VERSION_LIST`
-GMOCK=gmock-${GMOCK_VERSION}
-GMOCK_URL=https://googlemock.googlecode.com/files/
+GTEST=release-${GTEST_VERSION}
+GTEST_URL=https://github.com/google/googletest/archive
+GMOCK=release-${GMOCK_VERSION}
+GMOCK_URL=https://github.com/google/googlemock/archive
 
 HTTPD=httpd-${HTTPD_VERSION}
 APR_ICONV=apr-iconv-${APR_ICONV_VERSION}
@@ -67,7 +70,7 @@ APACHE_MIRROR=http://archive.apache.org/dist
 # helpers
 usage() {
     echo "Usage: $0"
-    echo "Usage: $0 [ apr | serf | zlib | sqlite | gmock ] ..."
+    echo "Usage: $0 [ apr | serf | zlib | sqlite | googlemock ] ..."
     exit $1
 }
 
@@ -122,17 +125,22 @@ get_sqlite() {
 
 }
 
-get_gmock() {
-    test -d $BASEDIR/gmock-fused && return
+get_googlemock() {
+    test -d $BASEDIR/googlemock && return
 
     cd $TEMPDIR
+    $HTTP_FETCH ${GTEST_URL}/${GTEST}.zip
+    unzip -q ${GTEST}.zip
+    rm -f ${GTEST}.zip
+
     $HTTP_FETCH ${GMOCK_URL}/${GMOCK}.zip
+    unzip -q ${GMOCK}.zip
+    rm -f ${GMOCK}.zip
+
     cd $BASEDIR
-
-    unzip -q $TEMPDIR/$GMOCK.zip
-
-    mv $GMOCK/fused-src gmock-fused
-    rm -fr $GMOCK
+    mkdir googlemock
+    mv $TEMPDIR/googletest-release-${GTEST_VERSION} googlemock/googletest
+    mv $TEMPDIR/googlemock-release-${GMOCK_VERSION} googlemock/googlemock
 }
 
 # main()
