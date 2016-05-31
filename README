@@ -36,10 +36,10 @@ II.   DOCUMENTATION
 
       It is written in DocBook XML, and the sources can be found at:
 
-         http://svn.code.sf.net/p/svnbook/source/trunk/
+         http://svnbook.googlecode.com/svn/trunk/
          
       If you wish to build the documentation from source, read the
-      en/README file within the book source.
+      src/en/README file within the book source.
 
 
 
