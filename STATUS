@@ -138,13 +138,16 @@ Candidate changes:
    Votes:
      +1: philip
 
- * r1745515
-   Update serf download URI to ASF.
+ * r1745515, r1746364
+   Update serf download URIs to ASF.
    Justification:
-     Resolves Linux build script issue since the old google code URI is 404 now.
+     Resolves build script issues since the old google code URI is 404 now.
+   Notes:
+     Merge with --accept=working due to absence of
+     tools/dev/build-svn-deps-win.pl on the 1.8 branch.
    Votes:
      +1 (non-binding): luke1410
-     +1: stsp
+     +1: stsp (without r1746364)
 
 Veto-blocked changes:
 =====================
