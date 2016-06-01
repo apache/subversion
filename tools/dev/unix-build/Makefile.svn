@@ -798,8 +798,6 @@ serf-clean:
 #$(SERF_OBJDIR)/.retrieved: $(DISTDIR)/$(SERF_DIST)
 #	[ -d $(SERF_OBJDIR) ] || mkdir -p $(SERF_OBJDIR)
 #	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SERF_DIST)
-#	cd $(SRCDIR)/serf-$(SERF_VER) && \
-#		svn diff -c1394 http://serf.googlecode.com/svn | patch -p2
 #	touch $@
 
 # retrieve serf if not present yet
