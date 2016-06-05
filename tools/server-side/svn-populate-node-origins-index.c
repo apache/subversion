@@ -71,28 +71,19 @@ index_revision_adds(int *count, svn_fs_t *fs,
                     svn_revnum_t revision, apr_pool_t *pool)
 {
   svn_fs_root_t *root;
-  apr_hash_t *changes;
-  apr_hash_index_t *hi;
   apr_pool_t *subpool;
+
+  svn_fs_path_change_iterator_t *iterator;
+  svn_fs_path_change3_t *change;
 
   *count = 0;
   SVN_ERR(svn_fs_revision_root(&root, fs, revision, pool));
-  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+  SVN_ERR(svn_fs_paths_changed3(&iterator, root, pool, subpool));
+  SVN_ERR(svn_fs_path_change_get(&change, iterator));
 
-  /* No paths changed in this revision?  Nothing to do.  */
-  if (apr_hash_count(changes) == 0)
-    return SVN_NO_ERROR;
-
-  subpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+  while (change)
     {
-      const void *path;
-      void *val;
-      svn_fs_path_change2_t *change;
-
       svn_pool_clear(subpool);
-      apr_hash_this(hi, &path, NULL, &val);
-      change = val;
       if ((change->change_kind == svn_fs_path_change_add)
           || (change->change_kind == svn_fs_path_change_replace))
         {
@@ -100,10 +91,13 @@ index_revision_adds(int *count, svn_fs_t *fs,
                             && SVN_IS_VALID_REVNUM(change->copyfrom_rev)))
             {
               svn_revnum_t origin;
-              SVN_ERR(svn_fs_node_origin_rev(&origin, root, path, subpool));
+              SVN_ERR(svn_fs_node_origin_rev(&origin, root,
+                                             change->path.data, subpool));
               (*count)++;
             }
         }
+
+      SVN_ERR(svn_fs_path_change_get(&change, iterator));
     }
   svn_pool_destroy(subpool);
 
