@@ -356,9 +356,9 @@ def enforce_lock(sbox):
   svntest.actions.set_prop('svn:needs-lock', '      ', mu_path, expected_err)
 
   # Check svn:needs-lock
-  svntest.actions.check_prop('svn:needs-lock', iota_path, ['*'])
-  svntest.actions.check_prop('svn:needs-lock', lambda_path, ['*'])
-  svntest.actions.check_prop('svn:needs-lock', mu_path, ['*'])
+  svntest.actions.check_prop('svn:needs-lock', iota_path, [b'*'])
+  svntest.actions.check_prop('svn:needs-lock', lambda_path, [b'*'])
+  svntest.actions.check_prop('svn:needs-lock', mu_path, [b'*'])
 
   svntest.main.run_svn(None, 'commit',
                        '-m', '', iota_path, lambda_path, mu_path)
@@ -1422,7 +1422,7 @@ def lock_twice_in_one_wc(sbox):
                                      'lock', '-m', '', mu2_path)
 
   # Change the file anyway
-  os.chmod(mu2_path, 0700)
+  os.chmod(mu2_path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
   svntest.main.file_append(mu2_path, "Updated text")
 
   # Commit will just succeed as the DB owns the lock. It's a user decision
@@ -1689,7 +1689,10 @@ def lock_invalid_token(sbox):
   svntest.main.create_python_hook_script(hook_path,
     '# encoding=utf-8\n'
     'import sys\n'
-    'sys.stdout.write("тест")\n'
+    'if sys.version_info < (3, 0):\n'
+    '  sys.stdout.write("тест")\n'
+    'else:\n'
+    '  sys.stdout.buffer.write(("тест").encode("utf-8"))\n'
     'sys.exit(0)\n')
 
   fname = 'iota'
@@ -2078,7 +2081,6 @@ def dav_lock_timeout(sbox):
 def create_dav_lock_timeout(sbox):
   "create generic DAV lock with timeout"
 
-  import httplib
   import base64
 
   sbox.build()
@@ -2096,7 +2098,7 @@ def create_dav_lock_timeout(sbox):
               '</D:lockinfo>'
 
   lock_headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jconstant:rayjandom'),
+    'Authorization': 'Basic ' + base64.b64encode(b'jrandom:rayjandom').decode(),
     'Timeout': 'Second-86400'
   }
 
@@ -2216,7 +2218,13 @@ def many_locks_hooks(sbox):
 def dav_lock_refresh(sbox):
   "refresh timeout of DAV lock"
 
-  import httplib
+  try:
+    # Python <3.0
+    import httplib
+  except ImportError:
+    # Python >=3.0
+    import http.client as httplib
+
   import base64
 
   sbox.build(create_wc = False)
@@ -2231,7 +2239,7 @@ def dav_lock_refresh(sbox):
   lock_token = svntest.actions.run_and_parse_info(sbox.repo_url + '/iota')[0]['Lock Token']
 
   lock_headers = {
-    'Authorization': 'Basic ' + base64.b64encode('jrandom:rayjandom'),
+    'Authorization': 'Basic ' + base64.b64encode(b'jrandom:rayjandom').decode(),
     'If': '(<' + lock_token + '>)',
     'Timeout': 'Second-7200'
   }
@@ -2427,7 +2435,7 @@ def delete_locks_on_depth_commit(sbox):
   expected_status.tweak('', 'iota', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-@Issue(4557)
+@Issue(4634)
 @XFail(svntest.main.is_ra_type_dav)
 def replace_dir_with_lots_of_locked_files(sbox):
   "replace directory containing lots of locked files"

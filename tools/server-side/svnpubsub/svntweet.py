@@ -42,7 +42,13 @@ from twisted.internet import defer, reactor, task, threads
 from twisted.python import failure, log
 from twisted.web.client import HTTPClientFactory, HTTPPageDownloader
 
-from urlparse import urlparse
+try:
+  # Python >=3.0
+  from urllib.parse import urlparse
+except ImportError:
+  # Python <3.0
+  from urlparse import urlparse
+
 import time
 import posixpath
 
@@ -50,7 +56,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "twi
 try:
     import twitter
 except:
-    print "Get a copy of twitty-twister from <http://github.com/dustin/twitty-twister>"
+    print("Get a copy of twitty-twister from <http://github.com/dustin/twitty-twister>")
     sys.exit(-1)
 class Config(object):
     def __init__(self, path):
@@ -231,7 +237,7 @@ def main(config_file):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print "invalid args, read source code"
+        print("invalid args, read source code")
         sys.exit(0)
     log.startLogging(sys.stdout)
     main(sys.argv[1])

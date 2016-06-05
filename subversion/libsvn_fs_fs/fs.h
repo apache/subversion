@@ -37,7 +37,7 @@
 #include "private/svn_sqlite.h"
 #include "private/svn_mutex.h"
 
-#include "id.h"
+#include "rev_file.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -192,6 +192,11 @@ extern "C" {
 #else
 #define SVN_FS_FS__USE_LOCK_MUTEX 0
 #endif
+
+/* Maximum number of changes we deliver per request when listing the
+   changed paths for a given revision.   Anything > 0 will do.
+   At 100..300 bytes per entry, this limits the allocation to ~30kB. */
+#define SVN_FS_FS__CHANGES_BLOCK_SIZE 100
 
 /* Private FSFS-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
@@ -383,8 +388,8 @@ typedef struct fs_fs_data_t
   /* Cache for node_revision_t objects; the key is (revision, item_index) */
   svn_cache__t *node_revision_cache;
 
-  /* Cache for change lists as APR arrays of change_t * objects; the key
-     is the revision */
+  /* Cache for change lists n blocks as svn_fs_fs__changes_list_t * objects;
+     the key is the (revision, first-element-in-block) pair. */
   svn_cache__t *changes_cache;
 
   /* Cache for svn_fs_fs__rep_header_t objects; the key is a
@@ -623,6 +628,33 @@ typedef struct change_t
   svn_fs_path_change2_t info;
 } change_t;
 
+
+/*** Context for reading changed paths lists iteratively. */
+typedef struct svn_fs_fs__changes_context_t
+{
+  /* Repository to fetch from. */
+  svn_fs_t *fs;
+
+  /* Revision that we read from. */
+  svn_revnum_t revision;
+
+  /* Revision file object to use when needed.  NULL until the first access. */
+  svn_fs_fs__revision_file_t *revision_file;
+
+  /* Pool to create REVISION_FILE in. */
+  apr_pool_t *rev_file_pool;
+
+  /* Index of the next change to fetch. */
+  apr_size_t next;
+
+  /* Offset, within the changed paths list on disk, of the next change to
+     fetch. */
+  apr_off_t next_offset;
+
+  /* Has the end of the list been reached? */
+  svn_boolean_t eol;
+
+} svn_fs_fs__changes_context_t;
 
 /*** Directory (only used at the cache interface) ***/
 typedef struct svn_fs_fs__dir_data_t

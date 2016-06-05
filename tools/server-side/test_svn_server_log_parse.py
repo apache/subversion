@@ -607,5 +607,5 @@ if __name__ == '__main__':
     finally:
         try:
             os.unlink(tmp)
-        except Exception, e:
+        except Exception as e:
             sys.stderr.write('os.unlink(tmp): %s\n' % (e,))

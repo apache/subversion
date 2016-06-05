@@ -254,7 +254,7 @@ def migrate_wc_subdirs(wc_root_path):
       dirs.remove(dot_svn)
     except ValueError:
       # a non-WC dir: don't walk into any subdirectories
-      print "skipped: ", NotASubversionWC(dir_path)
+      print("skipped: ", NotASubversionWC(dir_path))
       del dirs[:]
       continue
 
@@ -265,18 +265,18 @@ def migrate_wc_subdirs(wc_root_path):
         wc_subdir_path = wc_subdir_path[2:]
 
       if not select_subdir(wc_subdir_path):
-        print "skipped:", wc_subdir_path
+        print("skipped:", wc_subdir_path)
         dirs.remove(dir)
         continue
 
       try:
         check_wc_format_number(wc_subdir_path)
-        print "migrating '" + wc_subdir_path + "'"
+        print("migrating '" + wc_subdir_path + "'")
         copy_db_rows_to_wcroot(wc_subdir_path)
         move_and_shard_pristine_files(wc_subdir_path, '.')
         migrated_subdirs += [wc_subdir_path]
-      except (WrongFormatException, NotASubversionWC), e:
-        print "skipped:", e
+      except (WrongFormatException, NotASubversionWC) as e:
+        print("skipped:", e)
         # don't walk into it
         dirs.remove(dir)
         continue
@@ -285,22 +285,22 @@ def migrate_wc_subdirs(wc_root_path):
   # Make a note of any problems in deleting.
   failed_delete_subdirs = []
   for wc_subdir_path in migrated_subdirs:
-    print "deleting " + dotsvn_path(wc_subdir_path)
+    print("deleting " + dotsvn_path(wc_subdir_path))
     try:
       os.remove(db_path(wc_subdir_path))
       if os.path.exists(pristine_path(wc_subdir_path)):
         os.rmdir(pristine_path(wc_subdir_path))
       shutil.rmtree(tmp_path(wc_subdir_path))
       os.rmdir(dotsvn_path(wc_subdir_path))
-    except Exception, e:
-      print e
+    except Exception as e:
+      print(e)
       failed_delete_subdirs += [wc_subdir_path]
 
   # Notify any problems in deleting
   if failed_delete_subdirs:
-    print "Failed to delete the following directories. Please delete them manually."
+    print("Failed to delete the following directories. Please delete them manually.")
     for wc_subdir_path in failed_delete_subdirs:
-      print "  " + dotsvn_path(wc_subdir_path)
+      print("  " + dotsvn_path(wc_subdir_path))
 
   os.chdir(old_cwd)
 
@@ -339,18 +339,18 @@ def bump_wc_format_number(wc_path):
 if __name__ == '__main__':
 
   if len(sys.argv) != 2:
-    print __doc__
+    print(__doc__)
     sys.exit(1)
 
   wc_root_path = sys.argv[1]
 
   try:
     check_wc_format_number(wc_root_path)
-  except (WrongFormatException, NotASubversionWC), e:
-    print "error:", e
+  except (WrongFormatException, NotASubversionWC) as e:
+    print("error:", e)
     sys.exit(1)
 
-  print "merging subdir DBs into single DB '" + wc_root_path + "'"
+  print("merging subdir DBs into single DB '" + wc_root_path + "'")
   move_and_shard_pristine_files(wc_root_path, wc_root_path)
   migrate_wc_subdirs(wc_root_path)
   bump_wc_format_number(wc_root_path)

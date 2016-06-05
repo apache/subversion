@@ -562,9 +562,9 @@ def eol_change_is_text_mod(sbox):
   foo_path = os.path.join(wc_dir, 'foo')
   f = open(foo_path, 'wb')
   if svntest.main.windows:
-    f.write("1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n")
+    f.write(b"1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n")
   else:
-    f.write("1\n2\n3\n4\n5\n6\n7\n8\n9\n")
+    f.write(b"1\n2\n3\n4\n5\n6\n7\n8\n9\n")
   f.close()
 
   # commit the file
@@ -591,10 +591,10 @@ def eol_change_is_text_mod(sbox):
   # check 2: do the files have the right contents now?
   contents = open(foo_path, 'rb').read()
   if svntest.main.windows:
-    if contents != "1\n2\n3\n4\n5\n6\n7\n8\n9\n":
+    if contents != b"1\n2\n3\n4\n5\n6\n7\n8\n9\n":
       raise svntest.Failure
   else:
-    if contents != "1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n":
+    if contents != b"1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n":
       raise svntest.Failure
 
   foo_base_path = svntest.wc.text_base_path(foo_path)

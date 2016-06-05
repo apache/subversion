@@ -434,6 +434,16 @@ static const resolver_option_t builtin_resolver_options[] =
   /* Options for incoming dir add vs local dir add upon merge. */
   { "m", N_("merge the directories"), NULL,
     svn_client_conflict_option_merge_incoming_added_dir_merge },
+  { "R", N_("replace my directory with incoming directory"), NULL,
+    svn_client_conflict_option_merge_incoming_added_dir_replace },
+  { "M", N_("replace my directory with incoming directory and merge"), NULL,
+    svn_client_conflict_option_merge_incoming_added_dir_replace_and_merge },
+
+  /* Options for incoming delete vs any. */
+  { "i", N_("ignore incoming deletion"), NULL,
+    svn_client_conflict_option_incoming_delete_ignore },
+  { "a", N_("accept incoming deletion"), NULL,
+    svn_client_conflict_option_incoming_delete_accept },
 
   { NULL }
 };
@@ -792,7 +802,9 @@ mark_conflict_resolved(svn_client_conflict_t *conflict,
  * SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
 handle_text_conflict(svn_boolean_t *resolved,
+                     svn_boolean_t *postponed,
                      svn_boolean_t *quit,
+                     svn_boolean_t *printed_description,
                      svn_client_conflict_t *conflict,
                      const char *path_prefix,
                      svn_cmdline_prompt_baton_t *pb,
@@ -832,15 +844,19 @@ handle_text_conflict(svn_boolean_t *resolved,
                                                     local_abspath,
                                                     scratch_pool);
 
-  if (is_binary)
-    SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-                                _("Merge conflict discovered in binary "
-                                  "file '%s'.\n"),
-                                local_relpath));
-  else
-    SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-                                _("Merge conflict discovered in file '%s'.\n"),
-                                local_relpath));
+  if (!*printed_description)
+    {
+      if (is_binary)
+        SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                                    _("Merge conflict discovered in binary "
+                                      "file '%s'.\n"),
+                                    local_relpath));
+      else
+        SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                                    _("Merge conflict discovered in file '%s'.\n"),
+                                    local_relpath));
+      *printed_description = TRUE;
+    }
 
   /* ### TODO This whole feature availability check is grossly outdated.
      DIFF_ALLOWED needs either to be redefined or to go away.
@@ -1129,7 +1145,10 @@ handle_text_conflict(svn_boolean_t *resolved,
       *resolved = TRUE;
     }
   else
+    {
       *resolved = FALSE;
+      *postponed = (option_id == svn_client_conflict_option_postpone);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1316,8 +1335,9 @@ handle_one_prop_conflict(svn_client_conflict_option_id_t *option_id,
  * SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
 handle_prop_conflicts(svn_boolean_t *resolved,
-                      const svn_string_t **merged_value,
+                      svn_boolean_t *postponed,
                       svn_boolean_t *quit,
+                      const svn_string_t **merged_value,
                       const char *path_prefix,
                       svn_cmdline_prompt_baton_t *pb,
                       const char *editor_cmd,
@@ -1359,7 +1379,13 @@ handle_prop_conflicts(svn_boolean_t *resolved,
                                          path_prefix, conflict_stats,
                                          ctx, iterpool));
           nresolved++;
+          *postponed = FALSE;
         }
+      else
+        *postponed = (option_id == svn_client_conflict_option_postpone);
+
+      if (*quit)
+        break;
     }
   svn_pool_destroy(iterpool);
 
@@ -1435,7 +1461,9 @@ build_tree_conflict_options(resolver_option_t **options,
  * SCRATCH_POOL is used for temporary allocations. */
 static svn_error_t *
 handle_tree_conflict(svn_boolean_t *resolved,
+                     svn_boolean_t *postponed,
                      svn_boolean_t *quit,
+                     svn_boolean_t *printed_description,
                      svn_client_conflict_t *conflict,
                      const char *path_prefix,
                      svn_cmdline_prompt_baton_t *pb,
@@ -1443,12 +1471,12 @@ handle_tree_conflict(svn_boolean_t *resolved,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool)
 {
-  const char *local_change_description;
-  const char *incoming_change_description;
   apr_pool_t *iterpool;
   resolver_option_t *tree_conflict_options;
   svn_client_conflict_option_id_t option_id;
   const char *conflict_description;
+  const char *local_change_description;
+  const char *incoming_change_description;
 
   option_id = svn_client_conflict_option_unspecified;
 
@@ -1461,13 +1489,15 @@ handle_tree_conflict(svn_boolean_t *resolved,
   conflict_description = apr_psprintf(scratch_pool, "%s\n%s",
                                       incoming_change_description,
                                       local_change_description);
-  SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
-                              _("Tree conflict on '%s':\n%s\n"),
-                              svn_cl__local_style_skip_ancestor(
-                                path_prefix,
-                                svn_client_conflict_get_local_abspath(conflict),
-                                scratch_pool),
-                              conflict_description));
+  if (!*printed_description)
+    SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                                _("Tree conflict on '%s':\n%s\n"),
+                                svn_cl__local_style_skip_ancestor(
+                                  path_prefix,
+                                  svn_client_conflict_get_local_abspath(conflict),
+                                  scratch_pool),
+                                conflict_description));
+
   SVN_ERR(build_tree_conflict_options(&tree_conflict_options, conflict,
                                       scratch_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
@@ -1478,7 +1508,9 @@ handle_tree_conflict(svn_boolean_t *resolved,
       svn_pool_clear(iterpool);
 
       SVN_ERR(prompt_user(&opt, tree_conflict_options, NULL,
-                          conflict_description, pb, iterpool));
+                          *printed_description ? NULL : conflict_description,
+                          pb, iterpool));
+      *printed_description = TRUE;
       if (! opt)
         continue;
 
@@ -1505,7 +1537,10 @@ handle_tree_conflict(svn_boolean_t *resolved,
       *resolved = TRUE;
     }
   else
+    {
       *resolved = FALSE;
+      *postponed = (option_id == svn_client_conflict_option_postpone);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1669,9 +1704,11 @@ resolve_conflict_by_accept_option(svn_client_conflict_option_id_t *option_id,
 
 static svn_error_t *
 resolve_conflict_interactively(svn_boolean_t *resolved,
+                               svn_boolean_t *postponed,
                                svn_boolean_t *quit,
                                svn_boolean_t *external_failed,
                                svn_boolean_t *printed_summary,
+                               svn_boolean_t *printed_description,
                                svn_client_conflict_t *conflict,
                                const char *editor_cmd,
                                apr_hash_t *config,
@@ -1707,17 +1744,17 @@ resolve_conflict_interactively(svn_boolean_t *resolved,
            svn_wc_conflict_action_edit)
        && (svn_client_conflict_get_local_change(conflict) ==
            svn_wc_conflict_reason_edited))
-    SVN_ERR(handle_text_conflict(resolved, quit, conflict,
-                                 path_prefix, pb, editor_cmd, config,
+    SVN_ERR(handle_text_conflict(resolved, postponed, quit, printed_description,
+                                 conflict, path_prefix, pb, editor_cmd, config,
                                  conflict_stats, ctx, scratch_pool));
   if (props_conflicted->nelts > 0)
-    SVN_ERR(handle_prop_conflicts(resolved, &merged_propval, quit,
-                                  path_prefix, pb, editor_cmd, config,
-                                  conflict, conflict_stats, ctx,
-                                  result_pool, scratch_pool));
+    SVN_ERR(handle_prop_conflicts(resolved, postponed, quit, &merged_propval,
+                                  path_prefix, pb, editor_cmd, config, conflict,
+                                  conflict_stats, ctx, result_pool, scratch_pool));
   if (tree_conflicted)
-    SVN_ERR(handle_tree_conflict(resolved, quit, conflict, path_prefix, pb,
-                                 conflict_stats, ctx, scratch_pool));
+    SVN_ERR(handle_tree_conflict(resolved, postponed, quit, printed_description,
+                                 conflict, path_prefix, pb, conflict_stats, ctx,
+                                 scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1762,15 +1799,36 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
 
       if (option_id == svn_client_conflict_option_unspecified)
         {
+          svn_boolean_t postponed = FALSE;
+          svn_boolean_t printed_description = FALSE;
+          svn_error_t *err;
+
+          *quit = FALSE;
+
           /* We're in interactive mode and either the user gave no --accept
              option or the option did not apply; let's prompt. */
-          SVN_ERR(resolve_conflict_interactively(resolved, quit,
-                                                 external_failed,
-                                                 printed_summary, conflict,
-                                                 editor_cmd, config,
-                                                 path_prefix, pb,
-                                                 conflict_stats, ctx,
-                                                 scratch_pool, scratch_pool));
+          while (!*resolved && !postponed && !*quit)
+            {
+              err = resolve_conflict_interactively(resolved, &postponed, quit,
+                                                   external_failed,
+                                                   printed_summary,
+                                                   &printed_description,
+                                                   conflict,
+                                                   editor_cmd, config,
+                                                   path_prefix, pb,
+                                                   conflict_stats, ctx,
+                                                   scratch_pool, scratch_pool);
+              if (err && err->apr_err == SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE)
+                {
+                  /* Conflict resolution has failed. Let the user try again.
+                   * It is always possible to break out of this loop with
+                   * the 'quit' or 'postpone' options. */
+                  svn_handle_warning2(stderr, err, "svn: ");
+                  svn_error_clear(err);
+                  err = SVN_NO_ERROR;
+                }
+              SVN_ERR(err);
+            }
         }
 
       return SVN_NO_ERROR;

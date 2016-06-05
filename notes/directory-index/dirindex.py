@@ -754,13 +754,13 @@ __greek_tree = {
     }
 def greektree(ix, tx):
     def populate(track, items):
-        print 'Populating', track
+        print('Populating', track)
         for name, kind in items.iteritems():
             if kind == 'file':
                 node = ix.add(tx, track, name, NodeRev.FILE)
             else:
                 node = ix.add(tx, track, name, NodeRev.DIR)
-            print 'Added', node, 'node:', node.noderev
+            print('Added', node, 'node:', node.noderev)
             if isinstance(kind, dict):
                 populate(node, kind)
 
@@ -773,16 +773,16 @@ def simpletest(database):
     ix.initialize()
 
     try:
-        print "Lookup root"
+        print("Lookup root")
         tx = ix.get_txn()
-        print "transaction:", tx
+        print("transaction:", tx)
         root = ix.lookup(tx)
-        print "root track:", root
-        print "root noderev", root.noderev
+        print("root track:", root)
+        print("root noderev", root.noderev)
 
-        print 'Create greek tree'
+        print('Create greek tree')
         tx = ix.new_txn(0)
-        print "transaction:", tx
+        print("transaction:", tx)
         greektree(ix, tx)
         ix.commit_txn(tx, 1)
         ix.commit()
@@ -790,24 +790,24 @@ def simpletest(database):
 
         def listdir(noderev, prefix):
             for n in ix.listdir(tx, noderev):
-                print prefix, str(n)
+                print(prefix, str(n))
                 if n._isdir:
                     listdir(n, prefix + "  ")
 
-        print "List contents"
+        print("List contents")
         tx = ix.get_txn()
-        print "transaction:", tx
+        print("transaction:", tx)
         root = ix.lookup(tx)
-        print str(root.noderev)
+        print(str(root.noderev))
         listdir(root.noderev, " ")
 
-        print "Lookup iota"
+        print("Lookup iota")
         track = ix.lookup(tx, None, "iota")
-        print str(track), str(track.noderev)
+        print(str(track), str(track.noderev))
 
-        print "Lookup A/D/H/psi"
+        print("Lookup A/D/H/psi")
         track = ix.lookup(tx, None, "A/D/H/psi")
-        print str(track), str(track.noderev)
+        print(str(track), str(track.noderev))
     finally:
         ix.close()
 

@@ -221,10 +221,6 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
   int last;
   int i;
 
-  /* Return up to this many entries.  Anything > 0 will do.
-   * At 100..300 bytes per entry, this limits the allocation to ~30kB. */
-  enum { BLOCK_SIZE = 100 };
-
   /* CHANGES must be in 'finalized' mode */
   SVN_ERR_ASSERT(changes->builder == NULL);
   SVN_ERR_ASSERT(changes->paths);
@@ -245,7 +241,7 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
   /* Restrict it to the sub-range requested by the caller.
    * Clip the range to never exceed the list's content. */
   first = MIN(context->next + list_first, list_last);
-  last = MIN(first + BLOCK_SIZE, list_last);
+  last = MIN(first + SVN_FS_X__CHANGES_BLOCK_SIZE, list_last);
 
   /* Indicate to the caller whether the end of the list has been reached. */
   context->eol = last == list_last;
@@ -461,7 +457,6 @@ svn_fs_x__changes_get_list_func(void **out,
   int last;
   int i;
   apr_array_header_t *list;
-  enum { BLOCK_SIZE = 100 };
 
   svn_fs_x__changes_get_list_baton_t *b = baton;
   apr_uint32_t idx = b->sub_item;
@@ -498,7 +493,7 @@ svn_fs_x__changes_get_list_func(void **out,
   /* Restrict range to the block requested by the BATON.
    * Tell the caller whether we reached the end of the list. */
   first = MIN(first + b->start, last);
-  last = MIN(first + BLOCK_SIZE, last);
+  last = MIN(first + SVN_FS_X__CHANGES_BLOCK_SIZE, last);
   *b->eol = last == offsets[idx+1];
 
   /* construct result */

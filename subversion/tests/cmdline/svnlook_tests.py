@@ -98,17 +98,17 @@ def test_misc(sbox):
                                         expected_status)
 
   # give the repo a new UUID
-  uuid = "01234567-89ab-cdef-89ab-cdef01234567"
+  uuid = b"01234567-89ab-cdef-89ab-cdef01234567"
   svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0, True,
-                           ["SVN-fs-dump-format-version: 2\n",
-                            "\n",
-                            "UUID: ", uuid, "\n",
+                           [b"SVN-fs-dump-format-version: 2\n",
+                            b"\n",
+                            b"UUID: ", uuid, b"\n",
                            ],
                            'load', '--force-uuid', repo_dir)
 
   expect('youngest', [ '2\n' ], run_svnlook('youngest', repo_dir))
 
-  expect('uuid', [ uuid + '\n' ], run_svnlook('uuid', repo_dir))
+  expect('uuid', [ uuid.decode() + '\n' ], run_svnlook('uuid', repo_dir))
 
   # it would be nice to test the author too, but the current test framework
   # does not pull a username when testing over ra_neon or ra_svn,
@@ -301,7 +301,7 @@ def test_print_property_diffs(sbox):
 def info_bad_newlines(sbox):
   "svnlook info must allow inconsistent newlines"
 
-  dump_str = """SVN-fs-dump-format-version: 2
+  dump_str = b"""SVN-fs-dump-format-version: 2
 
 UUID: dc40867b-38f6-0310-9f5f-f81aa277e06e
 

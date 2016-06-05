@@ -256,5 +256,5 @@ print("Output, as (initial, final) mappings by paths:")
 for eid in converter.peid_loc_pairs():
   relpath0 = converter.peid_locs_for_side(0).relpath_from_eid(eid)
   relpath1 = converter.peid_locs_for_side(1).relpath_from_eid(eid)
-  print "%3d %-12s %-12s" % (eid, relpath0, relpath1)
+  print("%3d %-12s %-12s" % (eid, relpath0, relpath1))
 

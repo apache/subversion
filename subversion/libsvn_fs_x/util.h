@@ -369,7 +369,7 @@ svn_fs_x__check_file_buffer_numeric(const char *buf,
                                     apr_pool_t *scratch_pool);
 
 /* Set *MIN_UNPACKED_REV to the integer value read from the file returned
- * by #svn_fs_fs__path_min_unpacked_rev() for FS.
+ * by #svn_fs_x__path_min_unpacked_rev() for FS.
  * Use SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
@@ -449,7 +449,7 @@ svn_fs_x__read_number_from_stream(apr_int64_t *result,
    Temporary allocations are from SCRATCH_POOL.
 
    This function almost duplicates svn_io_file_move(), but it tries to
-   guarantee a flush. */
+   guarantee a flush if BATCH->FLUSH_TO_DISK is non-zero. */
 svn_error_t *
 svn_fs_x__move_into_place(const char *old_filename,
                           const char *new_filename,

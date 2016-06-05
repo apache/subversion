@@ -101,8 +101,15 @@ def write_authz_file_groups(sbox):
 
 def verify_get(test_area_url, path, user, pw,
                expected_status, expected_body, headers):
-  import httplib
-  from urlparse import urlparse
+  try:
+    # Python <3.0
+    import httplib
+    from urlparse import urlparse
+  except ImportError:
+    # Python >=3.0
+    import http.client as httplib
+    from urllib.parse import urlparse
+
   import base64
 
   req_url = test_area_url + path
@@ -119,7 +126,8 @@ def verify_get(test_area_url, path, user, pw,
 
   if user and pw:
       auth_info = user + ':' + pw
-      headers['Authorization'] = 'Basic ' + base64.b64encode(auth_info)
+      user_pw = base64.b64encode(auth_info.encode()).decode()
+      headers['Authorization'] = 'Basic ' + user_pw
   else:
       auth_info = "anonymous"
 
@@ -138,6 +146,8 @@ def verify_get(test_area_url, path, user, pw,
 
   if expected_body:
       actual_body = r.read()
+      if isinstance(expected_body, str) and not isinstance(actual_body, str):
+        actual_body = actual_body.decode()
       if expected_body != actual_body:
         logger.warn("Expected body:")
         logger.warn(expected_body)
