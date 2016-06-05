@@ -873,7 +873,7 @@ test_batch_fsync(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_x__batch_fsync_init());
 
   /* We use and re-use the same batch object throughout this test. */
-  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, pool));
+  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, TRUE, pool));
 
   /* The working directory is new. */
   SVN_ERR(svn_fs_x__batch_fsync_new_path(batch, abspath, pool));

@@ -1390,11 +1390,13 @@ svn_fs_x__set_revision_proplist(svn_fs_t *fs,
   const char *perms_reference;
   apr_array_header_t *files_to_delete = NULL;
   svn_fs_x__batch_fsync_t *batch;
+  svn_fs_x__data_t *ffd = fs->fsap_data;
 
   SVN_ERR(svn_fs_x__ensure_revision_exists(rev, fs, scratch_pool));
 
   /* Perform all fsyncs through this instance. */
-  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, ffd->flush_to_disk,
+                                       scratch_pool));
 
   /* this info will not change while we hold the global FS write lock */
   is_packed = svn_fs_x__is_packed_revprop(fs, rev);

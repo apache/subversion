@@ -449,7 +449,7 @@ svn_fs_x__read_number_from_stream(apr_int64_t *result,
    Temporary allocations are from SCRATCH_POOL.
 
    This function almost duplicates svn_io_file_move(), but it tries to
-   guarantee a flush. */
+   guarantee a flush if BATCH->FLUSH_TO_DISK is non-zero. */
 svn_error_t *
 svn_fs_x__move_into_place(const char *old_filename,
                           const char *new_filename,

@@ -2078,7 +2078,8 @@ pack_shard(const char *dir,
                         scratch_pool));
 
   /* Perform all fsyncs through this instance. */
-  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, ffd->flush_to_disk,
+                                       scratch_pool));
 
   /* Some useful paths. */
   pack_file_dir = svn_dirent_join(dir,
