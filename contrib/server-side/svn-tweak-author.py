@@ -67,16 +67,16 @@ def tweak_rev_author(fs_obj, revision, author):
     """Change the value of the svn:author property for REVISION in
     repository filesystem FS_OBJ in AUTHOR."""
     if author is None:
-        print "Deleting author for revision %d..." % (revision),
+        sys.stdout.write("Deleting author for revision %d... " % (revision))
     else:
-        print "Tweaking author for revision %d..." % (revision),
+        sys.stdout.write("Tweaking author for revision %d... " % (revision))
     try:
         fs.svn_fs_change_rev_prop(fs_obj, revision,
                                   core.SVN_PROP_REVISION_AUTHOR, author)
     except:
-        print ""
+        print("")
         raise
-    print "done."
+    print("done.")
 
 def get_fs_obj(repos_path):
     """Return a repository filesystem object for the repository
@@ -117,7 +117,7 @@ def main():
             usage_and_exit("Invalid mode (%s) provided." % (mode))
     except SystemExit:
         raise
-    except Exception, e:
+    except Exception as e:
         error_and_exit(str(e))
 
 if __name__ == "__main__":

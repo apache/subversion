@@ -36,6 +36,7 @@ import sys
 import tarfile
 import tempfile
 import logging
+import stat
 
 logger = logging.getLogger()
 
@@ -63,7 +64,7 @@ def replace_sbox_with_tarfile(sbox, tar_filename,
                               dir=None):
   try:
     svntest.main.safe_rmtree(sbox.wc_dir)
-  except OSError, e:
+  except OSError as e:
     pass
 
   if not dir:
@@ -81,7 +82,7 @@ def replace_sbox_with_tarfile(sbox, tar_filename,
 def replace_sbox_repo_with_tarfile(sbox, tar_filename, dir=None):
   try:
     svntest.main.safe_rmtree(sbox.repo_dir)
-  except OSError, e:
+  except OSError as e:
     pass
 
   if not dir:
@@ -130,7 +131,7 @@ def check_dav_cache(dir_path, wc_id, expected_dav_caches):
 
   # Check if python's sqlite can read our db
   c.execute('select sqlite_version()')
-  sqlite_ver = map(int, c.fetchone()[0].split('.'))
+  sqlite_ver = svntest.main.ensure_list(map(int, c.fetchone()[0].split('.')))
 
   # SQLite versions have 3 or 4 number groups
   major = sqlite_ver[0]
@@ -157,7 +158,7 @@ def check_dav_cache(dir_path, wc_id, expected_dav_caches):
     if row is None:
       raise svntest.Failure("no dav cache for '%s'" % (local_relpath))
     dav_cache = str(row[0])
-    if dav_cache != expected_dav_cache:
+    if dav_cache != str(expected_dav_cache):
       raise svntest.Failure(
               "wrong dav cache for '%s'\n  Found:    '%s'\n  Expected: '%s'" %
                 (local_relpath, dav_cache, expected_dav_cache))
@@ -378,9 +379,9 @@ def upgrade_wcprops(sbox):
   # to be.  (This could be smarter.)
   expected_dav_caches = {
    '' :
-    '(svn:wc:ra_dav:version-url 41 /svn-test-work/local_tmp/repos/!svn/ver/1)',
+    b'(svn:wc:ra_dav:version-url 41 /svn-test-work/local_tmp/repos/!svn/ver/1)',
    'iota' :
-    '(svn:wc:ra_dav:version-url 46 /svn-test-work/local_tmp/repos/!svn/ver/1/iota)',
+    b'(svn:wc:ra_dav:version-url 46 /svn-test-work/local_tmp/repos/!svn/ver/1/iota)',
   }
   check_dav_cache(sbox.wc_dir, 1, expected_dav_caches)
 
@@ -390,7 +391,7 @@ def xml_entries_relocate(path, from_url, to_url):
   adm_name = svntest.main.get_admin_name()
   entries = os.path.join(path, adm_name, 'entries')
   txt = open(entries).read().replace('url="' + from_url, 'url="' + to_url)
-  os.chmod(entries, 0777)
+  os.chmod(entries, svntest.main.S_ALL_RWX)
   open(entries, 'w').write(txt)
 
   for dirent in os.listdir(path):
@@ -408,8 +409,8 @@ def simple_entries_replace(path, from_url, to_url):
   adm_name = svntest.main.get_admin_name()
   entries = os.path.join(path, adm_name, 'entries')
   txt = open(entries).read().replace(from_url, to_url)
-  os.chmod(entries, 0777)
-  open(entries, 'wb').write(txt)
+  os.chmod(entries, svntest.main.S_ALL_RWX)
+  open(entries, 'wb').write(txt.encode())
 
   for dirent in os.listdir(path):
     item_path = os.path.join(path, dirent)
@@ -1143,21 +1144,21 @@ def upgrade_file_externals(sbox):
   svntest.main.run_svnadmin('setuuid', sbox.repo_dir,
                             '07146bbd-0b64-4aaf-ab70-cd76a0df2d41')
 
-  expected_output = svntest.verify.RegexOutput('r2 committed.*')
+  expected_output = svntest.verify.RegexOutput(b'r2 committed.*')
   svntest.actions.run_and_verify_svnmucc(expected_output, [],
                                          '-m', 'r2',
                                          'propset', 'svn:externals',
                                          '^/A/B/E EX\n^/A/mu muX',
                                          sbox.repo_url + '/A/B/F')
 
-  expected_output = svntest.verify.RegexOutput('r3 committed.*')
+  expected_output = svntest.verify.RegexOutput(b'r3 committed.*')
   svntest.actions.run_and_verify_svnmucc(expected_output, [],
                                          '-m', 'r3',
                                          'propset', 'svn:externals',
                                          '^/A/B/F FX\n^/A/B/lambda lambdaX',
                                          sbox.repo_url + '/A/C')
 
-  expected_output = svntest.verify.RegexOutput('r4 committed.*')
+  expected_output = svntest.verify.RegexOutput(b'r4 committed.*')
   svntest.actions.run_and_verify_svnmucc(expected_output, [],
                                          '-m', 'r4',
                                          'propset', 'pname1', 'pvalue1',
@@ -1462,14 +1463,15 @@ def auto_analyze(sbox):
   # svntest.main.chmod_tree will not reset it.)
   for path, subdirs, files in os.walk(sbox.wc_dir):
     for d in subdirs:
-      os.chmod(os.path.join(path, d), 0555)
+      os.chmod(os.path.join(path, d), svntest.main.S_ALL_RX)
     for f in files:
-      os.chmod(os.path.join(path, f), 0444)
+      os.chmod(os.path.join(path, f), svntest.main.S_ALL_READ)
 
   state = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   svntest.actions.run_and_verify_status(sbox.wc_dir, state)
 
-  svntest.main.chmod_tree(sbox.wc_dir, 0666, 0022)
+  svntest.main.chmod_tree(sbox.wc_dir, svntest.main.S_ALL_RW,
+                          stat.S_IWGRP | stat.S_IWOTH)
 
   state = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
   svntest.actions.run_and_verify_status(sbox.wc_dir, state)

@@ -156,24 +156,24 @@ def main():
         usage_and_exit(None)
     path = sys.argv[-1]
     args = ' '.join(sys.argv[1:-1] + ['--non-interactive'])
-    print "Fetch HEAD revision...",
+    sys.stdout.write("Fetch HEAD revision... ")
     head_revision = get_head_revision(path, args)
-    print "done."
-    print "Updating to revision %d" % (head_revision)
-    print "Harvesting the list of subdirectories...",
+    print("done.")
+    print("Updating to revision %d" % (head_revision))
+    sys.stdout.write("Harvesting the list of subdirectories... ")
     dirs = harvest_dirs(path)
-    print "done."
+    print("done.")
     dirs.sort(compare_paths)
     dirs.reverse()
-    print "Update the tree, one subdirectory at a time.  This could take " \
-          "a while."
+    print("Update the tree, one subdirectory at a time.  This could take " \
+          "a while.")
     num_dirs = len(dirs)
     width = len(str(num_dirs))
     format_string = '[%%%dd/%%%dd] Updating %%s' % (width, width)
     current = 0
     for dir in dirs:
         current = current + 1
-        print format_string % (current, num_dirs, dir)
+        print(format_string % (current, num_dirs, dir))
         os.system('%s update --quiet --revision %d %s %s'
                   % (SVN_BINARY, head_revision, args, dir))
 
@@ -183,6 +183,6 @@ if __name__ == "__main__":
         main()
     except SystemExit:
         raise
-    except Exception, e:
+    except Exception as e:
         print_error(str(e))
         sys.exit(1)

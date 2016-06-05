@@ -26,16 +26,17 @@
 import os
 import sys
 import re
-import urllib
 import logging
 import pprint
 
 if sys.version_info[0] >= 3:
   # Python >=3.0
   from io import StringIO
+  from urllib.parse import quote as urllib_quote
 else:
   # Python <3.0
   from cStringIO import StringIO
+  from urllib import quote as urllib_quote
 
 import svntest
 
@@ -172,7 +173,7 @@ class State:
     "Remove PATHS recursively from the state (the paths must exist)."
     for subtree_path in paths:
       subtree_path = to_relpath(subtree_path)
-      for path, item in self.desc.items():
+      for path, item in svntest.main.ensure_list(self.desc.items()):
         if path == subtree_path or path[:len(subtree_path) + 1] == subtree_path + '/':
           del self.desc[path]
 
@@ -201,7 +202,7 @@ class State:
       for path in args:
         try:
           path_ref = self.desc[to_relpath(path)]
-        except KeyError, e:
+        except KeyError as e:
           e.args = ["Path '%s' not present in WC state descriptor" % path]
           raise
         path_ref.tweak(**kw)
@@ -225,13 +226,13 @@ class State:
 
     """
     temp = {}
-    for src, dst in sorted(moves.items(), key=lambda (src, dst): src)[::-1]:
+    for src, dst in sorted(moves.items(), key=lambda pair: pair[0])[::-1]:
       temp[src] = {}
-      for path, item in self.desc.items():
+      for path, item in svntest.main.ensure_list(self.desc.items()):
         if path == src or path[:len(src) + 1] == src + '/':
           temp[src][path] = item;
           del self.desc[path]
-    for src, dst in sorted(moves.items(), key=lambda (src, dst): dst):
+    for src, dst in sorted(moves.items(), key=lambda pair: pair[1]):
       for path, item in temp[src].items():
         if path == src:
           new_path = dst
@@ -273,7 +274,7 @@ class State:
           os.makedirs(dirpath)
 
         # write out the file contents now
-        open(fullpath, 'wb').write(item.contents)
+        svntest.main.file_write(fullpath, item.contents, 'wb')
 
   def normalize(self):
     """Return a "normalized" version of self.
@@ -380,7 +381,7 @@ class State:
 
   def tweak_for_entries_compare(self):
     for path, item in self.desc.copy().items():
-      if item.status:
+      if item.status and path in self.desc:
         # If this is an unversioned tree-conflict, remove it.
         # These are only in their parents' THIS_DIR, they don't have entries.
         if item.status[0] in '!?' and item.treeconflict == 'C' and \
@@ -656,13 +657,18 @@ class State:
     return cls('', desc)
 
   @classmethod
-  def from_wc(cls, base, load_props=False, ignore_svn=True):
+  def from_wc(cls, base, load_props=False, ignore_svn=True,
+              keep_eol_style=False):
     """Create a State object from a working copy.
 
     Walks the tree at PATH, building a State based on the actual files
     and directories found. If LOAD_PROPS is True, then the properties
     will be loaded for all nodes (Very Expensive!). If IGNORE_SVN is
     True, then the .svn subdirectories will be excluded from the State.
+
+    If KEEP_EOL_STYLE is set, don't let Python normalize the EOL when
+    reading working copy contents as text files.  It has no effect on
+    binary files.
     """
     if not base:
       # we're going to walk the base, and the OS wants "."
@@ -678,7 +684,13 @@ class State:
       for name in dirs + files:
         node = os.path.join(dirpath, name)
         if os.path.isfile(node):
-          contents = open(node, 'r').read()
+          try:
+            if keep_eol_style:
+              contents = open(node, 'r', newline='').read()
+            else:
+              contents = open(node, 'r').read()
+          except:
+            contents = open(node, 'rb').read()
         else:
           contents = None
         desc[repos_join(parent, name)] = StateItem(contents=contents)
@@ -1073,7 +1085,7 @@ def repos_join(base, path):
 def svn_uri_quote(url):
   # svn defines a different set of "safe" characters than Python does, so
   # we need to avoid escaping them. see subr/path.c:uri_char_validity[]
-  return urllib.quote(url, "!$&'()*+,-./:=@_~")
+  return urllib_quote(url, "!$&'()*+,-./:=@_~")
 
 
 # ------------

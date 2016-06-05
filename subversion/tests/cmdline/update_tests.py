@@ -92,7 +92,7 @@ def update_binary_file(sbox):
 
   # Make a change to the binary file in the original working copy
   svntest.main.file_append(theta_path, "revision 3 text")
-  theta_contents_r3 = theta_contents + "revision 3 text"
+  theta_contents_r3 = theta_contents + b"revision 3 text"
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -113,7 +113,7 @@ def update_binary_file(sbox):
 
   # Make a local mod to theta
   svntest.main.file_append(theta_backup_path, "extra theta text")
-  theta_contents_local = theta_contents + "extra theta text"
+  theta_contents_local = theta_contents + b"extra theta text"
 
   # Create expected output tree for an update of wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
@@ -196,9 +196,9 @@ def update_binary_file_2(sbox):
 
   # Make some mods to the binary files.
   svntest.main.file_append(theta_path, "foobar")
-  new_theta_contents = theta_contents + "foobar"
+  new_theta_contents = theta_contents + b"foobar"
   svntest.main.file_append(zeta_path, "foobar")
-  new_zeta_contents = zeta_contents + "foobar"
+  new_zeta_contents = zeta_contents + b"foobar"
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -286,7 +286,7 @@ def update_binary_file_3(sbox):
 
   # Make some mods to the binary files.
   svntest.main.file_append(theta_path, "foobar")
-  new_theta_contents = theta_contents + "foobar"
+  new_theta_contents = theta_contents + b"foobar"
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -1657,6 +1657,9 @@ def conflict_markers_matching_eol(sbox):
   else:
     crlf = '\r\n'
 
+  # Strict EOL style matching breaks Windows tests at least with Python 2
+  keep_eol_style = not svntest.main.is_os_windows()
+
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
   svntest.actions.run_and_verify_svn(None, [], 'checkout',
@@ -1757,10 +1760,11 @@ def conflict_markers_matching_eol(sbox):
     expected_backup_status.tweak(wc_rev = cur_rev)
 
     # Do the update and check the results in three ways.
-    svntest.actions.run_and_verify_update(wc_backup,
-                                          expected_backup_output,
-                                          expected_backup_disk,
-                                          expected_backup_status)
+    svntest.actions.run_and_verify_update2(wc_backup,
+                                           expected_backup_output,
+                                           expected_backup_disk,
+                                           expected_backup_status,
+                                           keep_eol_style=keep_eol_style)
 
     # cleanup for next run
     svntest.main.run_svn(None, 'revert', '-R', wc_backup)
@@ -1788,6 +1792,9 @@ def update_eolstyle_handling(sbox):
   else:
     crlf = '\r\n'
 
+  # Strict EOL style matching breaks Windows tests at least with Python 2
+  keep_eol_style = not svntest.main.is_os_windows()
+
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
   svntest.actions.run_and_verify_svn(None, [], 'checkout',
@@ -1814,10 +1821,11 @@ def update_eolstyle_handling(sbox):
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 2)
   expected_backup_status.tweak('A/mu', status='M ')
 
-  svntest.actions.run_and_verify_update(wc_backup,
-                                        expected_backup_output,
-                                        expected_backup_disk,
-                                        expected_backup_status)
+  svntest.actions.run_and_verify_update2(wc_backup,
+                                         expected_backup_output,
+                                         expected_backup_disk,
+                                         expected_backup_status,
+                                         keep_eol_style=keep_eol_style)
 
   # Test 2: now change the eol-style property to another value and commit,
   # update the still changed mu in the second working copy; there should be
@@ -1839,10 +1847,11 @@ def update_eolstyle_handling(sbox):
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 3)
   expected_backup_status.tweak('A/mu', status='M ')
 
-  svntest.actions.run_and_verify_update(wc_backup,
-                                        expected_backup_output,
-                                        expected_backup_disk,
-                                        expected_backup_status)
+  svntest.actions.run_and_verify_update2(wc_backup,
+                                         expected_backup_output,
+                                         expected_backup_disk,
+                                         expected_backup_status,
+                                         keep_eol_style=keep_eol_style)
 
   # Test 3: now delete the eol-style property and commit, update the still
   # changed mu in the second working copy; there should be no conflict!
@@ -1863,10 +1872,11 @@ def update_eolstyle_handling(sbox):
 
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 4)
   expected_backup_status.tweak('A/mu', status='M ')
-  svntest.actions.run_and_verify_update(wc_backup,
-                                        expected_backup_output,
-                                        expected_backup_disk,
-                                        expected_backup_status)
+  svntest.actions.run_and_verify_update2(wc_backup,
+                                         expected_backup_output,
+                                         expected_backup_disk,
+                                         expected_backup_status,
+                                         keep_eol_style=keep_eol_style)
 
 # Bug in which "update" put a bogus revision number on a schedule-add file,
 # causing the wrong version of it to be committed.

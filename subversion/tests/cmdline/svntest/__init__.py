@@ -53,11 +53,11 @@ class Skip(Exception):
   pass
 
 # import in a specific order: things with the fewest circular imports first.
-import testcase
-import wc
-import verify
-import tree
-import sandbox
-import main
-import actions
-import factory
+from . import testcase
+from . import wc
+from . import verify
+from . import tree
+from . import sandbox
+from . import main
+from . import actions
+from . import factory

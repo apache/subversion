@@ -45,10 +45,10 @@ and filename of a test program, optionally followed by '#' and a comma-
 separated list of test numbers; the default is to run all the tests in it.
 '''
 
-import os, sys, shutil
+import os, sys, shutil, codecs
 import re
 import logging
-import optparse, subprocess, imp, threading, traceback, exceptions
+import optparse, subprocess, imp, threading, traceback
 from datetime import datetime
 
 try:
@@ -57,6 +57,10 @@ try:
 except ImportError:
   # Python <3.0
   import Queue as queue
+
+if sys.version_info < (3, 0):
+  # Python >= 3.0 already has this build in
+  import exceptions
 
 # Ensure the compiled C tests use a known locale (Python tests set the locale
 # explicitly).
@@ -121,6 +125,12 @@ def _get_term_width():
       cr = (25, 80)
   return int(cr[1])
 
+def ensure_str(s):
+  '''If S is not a string already, convert it to a string'''
+  if isinstance(s, str):
+    return s
+  else:
+    return s.decode("latin-1")
 
 class TestHarness:
   '''Test harness for Subversion tests.
@@ -406,9 +416,9 @@ class TestHarness:
         job.execute(self.harness)
 
         if job.result:
-          os.write(sys.stdout.fileno(), '!' * job.test_count())
+          os.write(sys.stdout.fileno(), b'!' * job.test_count())
         else:
-          os.write(sys.stdout.fileno(), '.' * job.test_count())
+          os.write(sys.stdout.fileno(), b'.' * job.test_count())
 
 
   def _run_global_sheduler(self, testlist, has_py_tests):
@@ -472,7 +482,7 @@ class TestHarness:
     for t in threads:
       t.join()
 
-    print
+    print("")
 
     # Aggregate and log the results
     failed = 0
@@ -481,22 +491,22 @@ class TestHarness:
     for job in jobs:
       if last_test_name != job.progbase:
         if last_test_name != "":
-          log.write('ELAPSED: %s %s\n' % (last_test_name, str(taken)))
-          log.write('\n')
+          log.write('ELAPSED: %s %s\n\n' % (last_test_name, str(taken)))
         last_test_name = job.progbase
         taken = job.taken
       else:
         taken += job.taken
 
-      log.writelines(job.stderr_lines)
+      for line in job.stderr_lines:
+        log.write(ensure_str(line))
+
       for line in job.stdout_lines:
-        self._process_test_output_line(line)
+        self._process_test_output_line(ensure_str(line))
 
       self._check_for_unknown_failure(log, job.progbase, job.result)
       failed = job.result or failed
 
-    log.write('ELAPSED: %s %s\n' % (last_test_name, str(taken)))
-    log.write('\n')
+    log.write('ELAPSED: %s %s\n\n' % (last_test_name, str(taken)))
 
     return failed
 
@@ -565,12 +575,12 @@ class TestHarness:
     else:
       failed = self._run_global_sheduler(testlist, len(py_tests) > 0)
 
-    # Open the log in binary mode because it can contain binary data
-    # from diff_tests.py's testing of svnpatch. This may prevent
-    # readlines() from reading the whole log because it thinks it
-    # has encountered the EOF marker.
-    self._open_log('rb')
-    log_lines = self.log.readlines()
+    # Open the log again to for filtering.
+    if self.logfile:
+      self._open_log('r')
+      log_lines = self.log.readlines()
+    else:
+      log_lines = []
 
     # Remove \r characters introduced by opening the log as binary
     if sys.platform == 'win32':
@@ -674,7 +684,7 @@ class TestHarness:
     # Copy the truly interesting verbose logs to a separate file, for easier
     # viewing.
     if xpassed or failed_list:
-      faillog = open(self.faillogfile, 'wb')
+      faillog = codecs.open(self.faillogfile, 'w', encoding="latin-1")
       last_start_lineno = None
       last_start_re = re.compile('^(FAIL|SKIP|XFAIL|PASS|START|CLEANUP|END):')
       for lineno, line in enumerate(log_lines):
@@ -688,7 +698,7 @@ class TestHarness:
         if last_start_re.match(line):
           last_start_lineno = lineno + 1
       faillog.close()
-    elif os.path.exists(self.faillogfile):
+    elif self.faillogfile and os.path.exists(self.faillogfile):
       print("WARNING: no failures, but '%s' exists from a previous run."
             % self.faillogfile)
 
@@ -705,7 +715,7 @@ class TestHarness:
     'Open the log file with the required MODE.'
     if self.logfile:
       self._close_log()
-      self.log = open(self.logfile, mode)
+      self.log = codecs.open(self.logfile, mode, encoding="latin-1")
 
   def _close_log(self):
     'Close the log file.'
@@ -744,7 +754,7 @@ class TestHarness:
   def _run_c_test(self, progabs, progdir, progbase, test_nums, dot_count):
     'Run a c test, escaping parameters as required.'
     if self.opts.list_tests and self.opts.milestone_filter:
-      print 'WARNING: --milestone-filter option does not currently work with C tests'
+      print('WARNING: --milestone-filter option does not currently work with C tests')
 
     if not os.access(progbase, os.X_OK):
       print("\nNot an executable file: " + progbase)
@@ -768,11 +778,11 @@ class TestHarness:
     def progress_func(completed):
       if not self.log or self.dots_written >= dot_count:
         return
-      dots = (completed * dot_count) / total
+      dots = (completed * dot_count) // total
       if dots > dot_count:
         dots = dot_count
       dots_to_write = dots - self.dots_written
-      os.write(sys.stdout.fileno(), '.' * dots_to_write)
+      os.write(sys.stdout.fileno(), b'.' * dots_to_write)
       self.dots_written = dots
 
     tests_completed = 0
@@ -780,6 +790,7 @@ class TestHarness:
                             stderr=self.log)
     line = prog.stdout.readline()
     while line:
+      line = ensure_str(line)
       if self._process_test_output_line(line):
         tests_completed += 1
         progress_func(tests_completed)
@@ -788,7 +799,7 @@ class TestHarness:
 
     # If we didn't run any tests, still print out the dots
     if not tests_completed:
-      os.write(sys.stdout.fileno(), '.' * dot_count)
+      os.write(sys.stdout.fileno(), b'.' * dot_count)
 
     prog.wait()
     return prog.returncode
@@ -796,8 +807,13 @@ class TestHarness:
   def _run_py_test(self, progabs, progdir, progbase, test_nums, dot_count):
     'Run a python test, passing parameters as needed.'
     try:
-      prog_mod = imp.load_module(progbase[:-3], open(progabs, 'r'), progabs,
-                                 ('.py', 'U', imp.PY_SOURCE))
+      if sys.version_info < (3, 0):
+        prog_mod = imp.load_module(progbase[:-3], open(progabs, 'r'), progabs,
+                                   ('.py', 'U', imp.PY_SOURCE))
+      else:
+        prog_mod = imp.load_module(progbase[:-3],
+                                   open(progabs, 'r', encoding="utf-8"),
+                                   progabs, ('.py', 'U', imp.PY_SOURCE))
     except:
       print("\nError loading test (details in following traceback): " + progbase)
       traceback.print_exc()
@@ -821,14 +837,14 @@ class TestHarness:
          in parallel mode."""
       if not self.log:
         return
-      dots = (completed * dot_count) / total
+      dots = (completed * dot_count) // total
       if dots > dot_count:
         dots = dot_count
       self.progress_lock.acquire()
       if self.dots_written < dot_count:
         dots_to_write = dots - self.dots_written
         self.dots_written = dots
-        os.write(old_stdout, '.' * dots_to_write)
+        os.write(old_stdout, b'.' * dots_to_write)
       self.progress_lock.release()
 
     serial_only = hasattr(prog_mod, 'serial_only') and prog_mod.serial_only
@@ -847,7 +863,7 @@ class TestHarness:
                                           test_selection=test_nums)
     except svntest.Failure:
       if self.log:
-        os.write(old_stdout, '.' * dot_count)
+        os.write(old_stdout, b'.' * dot_count)
       failed = True
 
     # restore some values
@@ -925,7 +941,7 @@ class TestHarness:
     # we printed a "Running all tests in ..." line, add the test result.
     if self.log:
       if self.opts.list_tests:
-        print ''
+        print()
       else:
         if failed:
           print(TextColors.FAILURE + 'FAILURE' + TextColors.ENDC)

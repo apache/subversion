@@ -170,15 +170,17 @@ svn_fs_x__write_rep_header(svn_fs_x__rep_header_t *header,
                            svn_stream_t *stream,
                            apr_pool_t *scratch_pool);
 
-/* Read all the changes from STREAM and store them in *CHANGES,
-   allocated in RESULT_POOL. Do temporary allocations in SCRATCH_POOL. */
+/* Read up to MAX_COUNT of the changes from STREAM and store them in
+   *CHANGES, allocated in RESULT_POOL.  Do temporary allocations in
+   SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__read_changes(apr_array_header_t **changes,
                        svn_stream_t *stream,
+                       int max_count,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
 
-/* Callback function used by svn_fs_fs__read_changes_incrementally(),
+/* Callback function used by svn_fs_x__read_changes_incrementally(),
  * asking the receiver to process to process CHANGE using BATON.  CHANGE
  * and SCRATCH_POOL will not be valid beyond the current callback invocation.
  */

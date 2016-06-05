@@ -937,7 +937,7 @@ lock_body(void *baton,
                                                   lb->result_pool));
 
           /* The INFO->PATH is already allocated in LB->RESULT_POOL as a result
-             of svn_fspath__canonicalize() (see svn_fs_fs__lock()). */
+             of svn_fspath__canonicalize() (see svn_fs_x__lock()). */
           info->lock->path = info->path;
           info->lock->owner = apr_pstrdup(lb->result_pool,
                                           lb->fs->access_ctx->username);

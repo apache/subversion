@@ -434,7 +434,8 @@ class Sandbox:
   def simple_append(self, dest, contents, truncate=False):
     """Append CONTENTS to file DEST, optionally truncating it first.
        DEST is a relpath relative to the WC."""
-    open(self.ospath(dest), truncate and 'wb' or 'ab').write(contents)
+    svntest.main.file_write(self.ospath(dest), contents,
+                            truncate and 'wb' or 'ab')
 
   def simple_lock(self, *targets):
     """Lock TARGETS in the WC.

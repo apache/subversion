@@ -1603,8 +1603,8 @@ write_changes_containers(pack_context_t *context,
        * the container */
       SVN_ERR(svn_io_file_seek(temp_file, APR_SET, &entry->offset,
                                iterpool));
-      SVN_ERR(svn_fs_x__read_changes(&changes, temp_stream, scratch_pool,
-                                     iterpool));
+      SVN_ERR(svn_fs_x__read_changes(&changes, temp_stream, INT_MAX,
+                                     scratch_pool, iterpool));
       SVN_ERR(svn_fs_x__changes_append_list(&list_index, container, changes));
       SVN_ERR_ASSERT(list_index == sub_items->nelts);
       block_left -= estimated_size;
@@ -2078,7 +2078,8 @@ pack_shard(const char *dir,
                         scratch_pool));
 
   /* Perform all fsyncs through this instance. */
-  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, ffd->flush_to_disk,
+                                       scratch_pool));
 
   /* Some useful paths. */
   pack_file_dir = svn_dirent_join(dir,
