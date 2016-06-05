@@ -486,7 +486,8 @@ typedef struct svn_fs_x__noderev_t
   /* node kind */
   svn_node_kind_t kind;
 
-  /* number of predecessors this node revision has (recursively). */
+  /* Number of predecessors this node revision has (recursively).
+     A difference from the BDB backend is that it cannot be -1. */
   int predecessor_count;
 
   /* representation key for this node's properties.  may be NULL if
