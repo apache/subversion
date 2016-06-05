@@ -3862,6 +3862,8 @@ svn_fs_x__commit(svn_revnum_t *new_rev_p,
 
   if (ffd->rep_sharing_allowed)
     {
+      svn_error_t *err;
+
       SVN_ERR(svn_fs_x__open_rep_cache(fs, scratch_pool));
 
       /* Write new entries to the rep-sharing database.
@@ -3872,9 +3874,21 @@ svn_fs_x__commit(svn_revnum_t *new_rev_p,
       /* ### A commit that touches thousands of files will starve other
              (reader/writer) commits for the duration of the below call.
              Maybe write in batches? */
-      SVN_SQLITE__WITH_TXN(
-        write_reps_to_cache(fs, cb.reps_to_cache, scratch_pool),
-        ffd->rep_cache_db);
+      SVN_ERR(svn_sqlite__begin_transaction(ffd->rep_cache_db));
+      err = write_reps_to_cache(fs, cb.reps_to_cache, scratch_pool);
+      err = svn_sqlite__finish_transaction(ffd->rep_cache_db, err);
+
+      if (svn_error_find_cause(err, SVN_ERR_SQLITE_ROLLBACK_FAILED))
+        {
+          /* Failed rollback means that our db connection is unusable, and
+             the only thing we can do is close it.  The connection will be
+             reopened during the next operation with rep-cache.db. */
+          return svn_error_trace(
+              svn_error_compose_create(err,
+                                       svn_fs_x__close_rep_cache(fs)));
+        }
+      else if (err)
+        return svn_error_trace(err);
     }
 
   return SVN_NO_ERROR;

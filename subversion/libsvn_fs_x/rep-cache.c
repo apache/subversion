@@ -51,6 +51,13 @@ path_rep_cache_db(const char *fs_path,
   return svn_dirent_join(fs_path, REP_CACHE_DB_NAME, result_pool);
 }
 
+#define SVN_ERR_CLOSE(x, db) do                                       \
+{                                                                     \
+  svn_error_t *svn__err = (x);                                        \
+  if (svn__err)                                                       \
+    return svn_error_compose_create(svn__err, svn_sqlite__close(db)); \
+} while (0)
+
 
 /** Library-private API's. **/
 
@@ -100,12 +107,14 @@ open_rep_cache(void *baton,
                            0, NULL, 0,
                            fs->pool, scratch_pool));
 
-  SVN_ERR(svn_sqlite__read_schema_version(&version, sdb, scratch_pool));
+  SVN_ERR_CLOSE(svn_sqlite__read_schema_version(&version, sdb, scratch_pool),
+                sdb);
   if (version < REP_CACHE_SCHEMA_FORMAT)
     {
       /* Must be 0 -- an uninitialized (no schema) database. Create
          the schema. Results in schema version of 1.  */
-      SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_CREATE_SCHEMA));
+      SVN_ERR_CLOSE(svn_sqlite__exec_statements(sdb, STMT_CREATE_SCHEMA),
+                    sdb);
     }
 
   /* This is used as a flag that the database is available so don't
@@ -123,6 +132,21 @@ svn_fs_x__open_rep_cache(svn_fs_t *fs,
   svn_error_t *err = svn_atomic__init_once(&ffd->rep_cache_db_opened,
                                            open_rep_cache, fs, scratch_pool);
   return svn_error_quick_wrap(err, _("Couldn't open rep-cache database"));
+}
+
+svn_error_t *
+svn_fs_x__close_rep_cache(svn_fs_t *fs)
+{
+  svn_fs_x__data_t *ffd = fs->fsap_data;
+
+  if (ffd->rep_cache_db)
+    {
+      SVN_ERR(svn_sqlite__close(ffd->rep_cache_db));
+      ffd->rep_cache_db = NULL;
+      ffd->rep_cache_db_opened = 0;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
