@@ -52,9 +52,12 @@ typedef struct svn_fs_x__batch_fsync_t svn_fs_x__batch_fsync_t;
 svn_error_t *
 svn_fs_x__batch_fsync_init(void);
 
-/* Set *RESULT_P to a new batch fsync structure, allocated in RESULT_POOL. */
+/* Set *RESULT_P to a new batch fsync structure, allocated in RESULT_POOL.
+ * If FLUSH_TO_DISK is not set, the resulting struct will not actually use
+ * fsync. */
 svn_error_t *
 svn_fs_x__batch_fsync_create(svn_fs_x__batch_fsync_t **result_p,
+                             svn_boolean_t flush_to_disk,
                              apr_pool_t *result_pool);
 
 /* Open the file at FILENAME for read and write access.  Return it in *FILE

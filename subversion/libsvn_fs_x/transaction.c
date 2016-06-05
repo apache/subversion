@@ -3730,7 +3730,8 @@ commit_body(void *baton,
 
   /* Use this to force all data to be flushed to physical storage
      (to the degree our environment will allow). */
-  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, ffd->flush_to_disk,
+                                       scratch_pool));
 
   /* Set up the target directory. */
   SVN_ERR(auto_create_shard(cb->fs, new_rev, batch, subpool));

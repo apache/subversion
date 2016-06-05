@@ -201,7 +201,7 @@ svn_fs_x__write_format(svn_fs_t *fs,
     {
       SVN_ERR(svn_io_write_atomic2(path, sb->data, sb->len,
                                    NULL /* copy_perms_path */,
-                                   TRUE, scratch_pool));
+                                   ffd->flush_to_disk, scratch_pool));
     }
 
   /* And set the perms to make it read only */
@@ -535,6 +535,20 @@ write_config(svn_fs_t *fs,
                             fsx_conf_contents, scratch_pool);
 }
 
+/* Read / Evaluate the global configuration in FS->CONFIG to set up
+ * parameters in FS. */
+static svn_error_t *
+read_global_config(svn_fs_t *fs)
+{
+  svn_fs_x__data_t *ffd = fs->fsap_data;
+
+  ffd->flush_to_disk = !svn_hash__get_bool(fs->config,
+                                           SVN_FS_CONFIG_NO_FLUSH_TO_DISK,
+                                           FALSE);
+
+  return SVN_NO_ERROR;
+}
+
 /* Read FS's UUID file and store the data in the FS struct. */
 static svn_error_t *
 read_uuid(svn_fs_t *fs,
@@ -602,6 +616,9 @@ svn_fs_x__open(svn_fs_t *fs,
 
   /* Read the configuration file. */
   SVN_ERR(read_config(ffd, fs->path, fs->pool, scratch_pool));
+
+  /* Global configuration options. */
+  SVN_ERR(read_global_config(fs));
 
   ffd->youngest_rev_cache = 0;
 
@@ -986,6 +1003,9 @@ svn_fs_x__create_file_tree(svn_fs_t *fs,
   SVN_ERR(write_config(fs, scratch_pool));
   SVN_ERR(read_config(ffd, fs->path, fs->pool, scratch_pool));
 
+  /* Global configuration options. */
+  SVN_ERR(read_global_config(fs));
+
   /* Add revision 0. */
   SVN_ERR(write_revision_zero(fs, scratch_pool));
 
@@ -1096,7 +1116,7 @@ svn_fs_x__set_uuid(svn_fs_t *fs,
       SVN_ERR(svn_io_write_atomic2(uuid_path, contents->data, contents->len,
                                    /* perms */
                                    svn_fs_x__path_current(fs, scratch_pool),
-                                   TRUE, scratch_pool));
+                                   ffd->flush_to_disk, scratch_pool));
     }
 
   fs->uuid = apr_pstrdup(fs->pool, uuid);

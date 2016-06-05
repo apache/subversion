@@ -322,6 +322,7 @@ initialize_fs_struct(svn_fs_t *fs)
 {
   svn_fs_x__data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
   ffd->revprop_generation = -1;
+  ffd->flush_to_disk = TRUE;
 
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
