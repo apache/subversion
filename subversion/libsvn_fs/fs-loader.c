@@ -63,7 +63,7 @@
 /* If a FS backend does not implement the PATHS_CHANGED vtable function,
    it will get emulated.  However, if this macro is defined to non-null
    then the API will always be emulated when feasible, i.e. the calls
-   get "re-directed" to the old API implementation. */
+   get "re-directed" to the new API implementation. */
 #ifndef SVN_FS_EMULATE_PATHS_CHANGED
 #define SVN_FS_EMULATE_PATHS_CHANGED TRUE
 #endif
