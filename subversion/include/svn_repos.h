@@ -2064,64 +2064,22 @@ svn_repos_get_logs5(svn_repos_t *repos,
                     apr_pool_t *scratch_pool);
 
 /**
- * Invoke @a receiver with @a receiver_baton on each log message from
- * @a start to @a end in @a repos's filesystem.  @a start may be greater
- * or less than @a end; this just controls whether the log messages are
- * processed in descending or ascending revision number order.
- *
- * If @a start or @a end is #SVN_INVALID_REVNUM, it defaults to youngest.
- *
- * If @a paths is non-NULL and has one or more elements, then only show
- * revisions in which at least one of @a paths was changed (i.e., if
- * file, text or props changed; if dir, props or entries changed or any node
- * changed below it).  Each path is a <tt>const char *</tt> representing
- * an absolute path in the repository.  If @a paths is NULL or empty,
- * show all revisions regardless of what paths were changed in those
- * revisions.
- *
- * If @a limit is greater than zero then only invoke @a receiver on the first
- * @a limit logs.
+ * Similar to svn_repos_get_logs5 but using a #svn_log_entry_receiver_t
+ * @a receiver to receive revision properties and changed paths through a
+ * single callback and the @a discover_changed_paths flag to control it.
  *
  * If @a discover_changed_paths, then each call to @a receiver passes a
  * hash mapping paths committed in that revision to information about them
  * as the receiver's @a changed_paths argument.
  * Otherwise, each call to @a receiver passes NULL for @a changed_paths.
  *
- * If @a strict_node_history is set, copy history (if any exists) will
- * not be traversed while harvesting revision logs for each path.
- *
- * If @a include_merged_revisions is set, log information for revisions
- * which have been merged to @a paths will also be returned, unless these
- * revisions are already part of @a start to @a end in @a repos's
- * filesystem, as limited by @a paths. In the latter case those revisions
- * are skipped and @a receiver is not invoked.
- *
- * If @a revprops is NULL, retrieve all revision properties; else, retrieve
- * only the revision properties named by the (const char *) array elements
- * (i.e. retrieve none if the array is empty).
- *
- * If any invocation of @a receiver returns error, return that error
- * immediately and without wrapping it.
- *
- * If @a start or @a end is a non-existent revision, return the error
- * #SVN_ERR_FS_NO_SUCH_REVISION, without ever invoking @a receiver.
- *
- * If optional @a authz_read_func is non-NULL, then use this function
- * (along with optional @a authz_read_baton) to check the readability
- * of each changed-path in each revision about to be "pushed" at
- * @a receiver.  If a revision has some changed-paths readable and
- * others unreadable, unreadable paths are omitted from the
- * changed_paths field and only svn:author and svn:date will be
- * available in the revprops field.  If a revision has no
- * changed-paths readable at all, then all paths are omitted and no
- * revprops are available.
- *
- * See also the documentation for #svn_log_entry_receiver_t.
- *
- * Use @a pool for temporary allocations.
+ * @see svn_log_entry_receiver_t
  *
  * @since New in 1.5.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_logs4(svn_repos_t *repos,
                     const apr_array_header_t *paths,

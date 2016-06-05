@@ -1134,19 +1134,19 @@ svn_ra_local__get_log(svn_ra_session_t *session,
   receiver = log_receiver_wrapper;
   receiver_baton = &lb;
 
-  return svn_repos_get_logs4(sess->repos,
-                             abs_paths,
-                             start,
-                             end,
-                             limit,
-                             discover_changed_paths,
-                             strict_node_history,
-                             include_merged_revisions,
-                             revprops,
-                             NULL, NULL,
-                             receiver,
-                             receiver_baton,
-                             pool);
+  return svn_repos__get_logs_compat(sess->repos,
+                                    abs_paths,
+                                    start,
+                                    end,
+                                    limit,
+                                    discover_changed_paths,
+                                    strict_node_history,
+                                    include_merged_revisions,
+                                    revprops,
+                                    NULL, NULL,
+                                    receiver,
+                                    receiver_baton,
+                                    pool);
 }
 
 
