@@ -1560,7 +1560,8 @@ typedef struct svn_fs_path_change3_t
 } svn_fs_path_change3_t;
 
 
-/** Change descriptor.
+/** Similar to #svn_fs_path_change3_t, but with @a node_rev_id and without
+ * path information.
  *
  * @note Fields may be added to the end of this structure in future
  * versions.  Therefore, to preserve binary compatibility, users
@@ -1571,7 +1572,10 @@ typedef struct svn_fs_path_change3_t
  * by the commit API; this does not mean the new value is different from
  * the old value.
  *
- * @since New in 1.6. */
+ * @since New in 1.6.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.9 API.
+ */
 typedef struct svn_fs_path_change2_t
 {
   /** node revision id of changed path */
@@ -1712,16 +1716,10 @@ svn_fs_path_change_get(svn_fs_path_change3_t **change,
  * Set @a *iterator to an iterator object, allocated in @a result_pool,
  * which will give access to the full list of changed paths under @a root.
  * Each call to @a svn_fs_path_change_get will return a new unique path
- * change.  The iteration order is undefined and may change even for the
- * same @a root.
+ * change and has amortized O(1) runtime.  The iteration order is undefined
+ * and may change even for the same @a root.
  *
  * If @a root becomes invalid, @a *iterator becomes invalid, too.
- *
- * Callers can assume that this function takes time proportional to
- * the amount of data output, and does not need to do tree crawls;
- * however, it is possible that some of the @c node_kind fields in the
- * #svn_fs_path_change3_t * values will be #svn_node_unknown or
- * that and some of the @c copyfrom_known fields will be FALSE.
  *
  * Use @a scratch_pool for temporary allocations.
  *
@@ -1737,22 +1735,23 @@ svn_fs_paths_changed3(svn_fs_path_change_iterator_t **iterator,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
-/** Determine what has changed under a @a root.
+/** Same as svn_fs_paths_changed3() but returning all changes in a single,
+ * large data structure and using a single pool for all allocations.
  *
  * Allocate and return a hash @a *changed_paths2_p containing descriptions
  * of the paths changed under @a root.  The hash is keyed with
  * <tt>const char *</tt> paths, and has #svn_fs_path_change2_t * values.
  *
- * Callers can assume that this function takes time proportional to
- * the amount of data output, and does not need to do tree crawls;
- * however, it is possible that some of the @c node_kind fields in the
- * #svn_fs_path_change2_t * values will be #svn_node_unknown or
- * that and some of the @c copyfrom_known fields will be FALSE.
- *
  * Use @a pool for all allocations, including the hash and its values.
  *
+ * @note Retrieving the #node_rev_id element of #svn_fs_path_change2_t may
+ *       be expensive in some FS backends.
+ *
  * @since New in 1.6.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_paths_changed2(apr_hash_t **changed_paths2_p,
                       svn_fs_root_t *root,
