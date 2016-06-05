@@ -7137,9 +7137,9 @@ commit_with_locked_rep_cache(const svn_test_opts_t *opts,
   const char *fs_path;
   const char *statements[] = { "SELECT MAX(revision) FROM rep_cache", NULL };
 
-  if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) != 0)
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
-                            "this will test FSFS repositories only");
+                            "this will not test BDB repositories");
 
   if (opts->server_minor_version && (opts->server_minor_version < 6))
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
