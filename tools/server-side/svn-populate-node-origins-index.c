@@ -71,7 +71,7 @@ index_revision_adds(int *count, svn_fs_t *fs,
                     svn_revnum_t revision, apr_pool_t *pool)
 {
   svn_fs_root_t *root;
-  apr_pool_t *subpool;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   svn_fs_path_change_iterator_t *iterator;
   svn_fs_path_change3_t *change;
