@@ -65,7 +65,7 @@
    then the API will always be emulated when feasible, i.e. the calls
    get "re-directed" to the new API implementation. */
 #ifndef SVN_FS_EMULATE_PATHS_CHANGED
-#define SVN_FS_EMULATE_PATHS_CHANGED TRUE
+#define SVN_FS_EMULATE_PATHS_CHANGED FALSE
 #endif
 
 /* If a FS backend does not implement the REPORT_CHANGES vtable function,
@@ -73,7 +73,7 @@
    then the API will always be emulated when feasible, i.e. the calls
    get "re-directed" to the old API implementation. */
 #ifndef SVN_FS_EMULATE_REPORT_CHANGES
-#define SVN_FS_EMULATE_REPORT_CHANGES TRUE
+#define SVN_FS_EMULATE_REPORT_CHANGES FALSE
 #endif
 
 /* A pool common to all FS objects.  See the documentation on the
