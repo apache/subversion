@@ -1897,7 +1897,7 @@ store_search(svn_mergeinfo_t processed,
 
    If HANDLING_MERGED_REVISIONS is TRUE then this is a recursive call for
    merged revisions, see INCLUDE_MERGED_REVISIONS argument to
-   svn_repos_get_logs4().  If SUBTRACTIVE_MERGE is true, then this is a
+   svn_repos_get_logs5().  If SUBTRACTIVE_MERGE is true, then this is a
    recursive call for reverse merged revisions.
 
    If NESTED_MERGES is not NULL then it is a hash of revisions (svn_revnum_t *
@@ -1912,7 +1912,7 @@ store_search(svn_mergeinfo_t processed,
    revisions that have already been searched.  Allocated like
    NESTED_MERGES above.
 
-   All other parameters are the same as svn_repos_get_logs4().
+   All other parameters are the same as svn_repos_get_logs5().
  */
 static svn_error_t *
 do_logs(svn_fs_t *fs,
@@ -2172,7 +2172,7 @@ struct location_segment_baton
   apr_pool_t *pool;
 };
 
-/* svn_location_segment_receiver_t implementation for svn_repos_get_logs4. */
+/* svn_location_segment_receiver_t implementation for svn_repos_get_logs5. */
 static svn_error_t *
 location_segment_receiver(svn_location_segment_t *segment,
                           void *baton,
@@ -2192,7 +2192,7 @@ location_segment_receiver(svn_location_segment_t *segment,
    filesystem.  START_REV and END_REV must be valid revisions.  RESULT_POOL
    is used to allocate *PATHS_HISTORY_MERGEINFO, SCRATCH_POOL is used for all
    other (temporary) allocations.  Other parameters are the same as
-   svn_repos_get_logs4(). */
+   svn_repos_get_logs5(). */
 static svn_error_t *
 get_paths_history_as_mergeinfo(svn_mergeinfo_t *paths_history_mergeinfo,
                                svn_repos_t *repos,
