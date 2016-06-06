@@ -1123,6 +1123,8 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
   struct find_deleted_rev_baton b;
   svn_error_t *err;
 
+  SVN_ERR_ASSERT(start_rev > end_rev);
+
   SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
                                              conflict, scratch_pool,
                                              scratch_pool));
@@ -3018,7 +3020,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                     &deleted_rev, &deleted_rev_author, &replacing_node_kind,
                     &move, conflict,
                     svn_dirent_basename(conflict->local_abspath, scratch_pool),
-                    parent_repos_relpath, old_rev, new_rev,
+                    parent_repos_relpath, new_rev, old_rev,
                     NULL, SVN_INVALID_REVNUM, /* related to self */
                     conflict->pool, scratch_pool));
           if (deleted_rev == SVN_INVALID_REVNUM)
@@ -3286,10 +3288,10 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
 
           SVN_ERR(find_revision_for_suspected_deletion(
                     &deleted_rev, &deleted_rev_author, &replacing_node_kind,
-                    &move, conflict, svn_relpath_basename(new_repos_relpath,
-                                                   scratch_pool),
-                    svn_relpath_dirname(new_repos_relpath, scratch_pool),
-                    new_rev, old_rev,
+                    &move, conflict,
+                    svn_relpath_basename(old_repos_relpath, scratch_pool),
+                    svn_relpath_dirname(old_repos_relpath, scratch_pool),
+                    old_rev, new_rev,
                     NULL, SVN_INVALID_REVNUM, /* related to self */
                     conflict->pool, scratch_pool));
           if (deleted_rev == SVN_INVALID_REVNUM)
