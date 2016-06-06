@@ -1786,46 +1786,142 @@ describe_incoming_deletion_upon_update(
       details->replacing_node_kind == svn_node_symlink)
     {
       if (victim_node_kind == svn_node_dir)
-        return apr_psprintf(result_pool,
-                            _("Directory updated from r%ld to r%ld was "
-                              "replaced with a file by %s in r%ld."),
-                            old_rev, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("Directory updated from r%ld to r%ld was "
+                           "replaced with a file by %s in r%ld."),
+                         old_rev, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced directory was moved to "
+                               "'^/%s'."), description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
-        return apr_psprintf(result_pool,
-                            _("File updated from r%ld to r%ld was replaced "
-                              "with a file from another line of history by "
-                              "%s in r%ld."),
-                            old_rev, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("File updated from r%ld to r%ld was replaced "
+                           "with a file from another line of history by "
+                           "%s in r%ld."),
+                         old_rev, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced file was moved to '^/%s'."),
+                             description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
       else
-        return apr_psprintf(result_pool,
-                            _("Item updated from r%ld to r%ld was replaced "
-                              "with a file by %s in r%ld."), old_rev, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("Item updated from r%ld to r%ld was replaced "
+                           "with a file by %s in r%ld."), old_rev, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced item was moved to '^/%s'."),
+                             description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
     }
   else if (details->replacing_node_kind == svn_node_dir)
     {
       if (victim_node_kind == svn_node_dir)
-        return apr_psprintf(result_pool,
-                            _("Directory updated from r%ld to r%ld was "
-                              "replaced with a directory from another line "
-                              "of history by %s in r%ld."),
-                            old_rev, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                          _("Directory updated from r%ld to r%ld was "
+                            "replaced with a directory from another line "
+                            "of history by %s in r%ld."),
+                          old_rev, new_rev,
+                          details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced directory was moved to "
+                               "'^/%s'."), description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
-        return apr_psprintf(result_pool,
-                            _("Directory updated from r%ld to r%ld was "
-                              "replaced with a file by %s in r%ld."),
-                            old_rev, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("File updated from r%ld to r%ld was "
+                           "replaced with a directory by %s in r%ld."),
+                         old_rev, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced file was moved to '^/%s'."),
+                             description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
       else
-        return apr_psprintf(result_pool,
-                            _("Item updated from r%ld to r%ld was replaced "
-                              "by %s in r%ld."), old_rev, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("Item updated from r%ld to r%ld was replaced "
+                           "by %s in r%ld."), old_rev, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced item was moved to '^/%s'."),
+                             description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
     }
   else
     {
@@ -1992,60 +2088,156 @@ describe_incoming_deletion_upon_switch(
       details->replacing_node_kind == svn_node_symlink)
     {
       if (victim_node_kind == svn_node_dir)
-        return apr_psprintf(result_pool,
-                            _("Directory switched from\n"
-                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
-                              "was replaced with a file by %s in r%ld."),
-                            old_repos_relpath, old_rev,
-                            new_repos_relpath, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("Directory switched from\n"
+                           "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
+                           "was replaced with a file by %s in r%ld."),
+                         old_repos_relpath, old_rev,
+                         new_repos_relpath, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced directory was moved "
+                               "to '^/%s'."), description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;    
+        }
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
-        return apr_psprintf(result_pool,
-                            _("File switched from\n"
-                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
-                              "replaced with a file from another line of "
-                              "history by %s in r%ld."),
-                            old_repos_relpath, old_rev,
-                            new_repos_relpath, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("File switched from\n"
+                           "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                           "replaced with a file from another line of "
+                           "history by %s in r%ld."),
+                         old_repos_relpath, old_rev,
+                         new_repos_relpath, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced file was moved to '^/%s'."),
+                             description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
       else
-        return apr_psprintf(result_pool,
-                            _("Item switched from\n"
-                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
-                              "replaced with a file by %s in r%ld."),
-                            old_repos_relpath, old_rev,
-                            new_repos_relpath, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("Item switched from\n"
+                           "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                           "replaced with a file by %s in r%ld."),
+                         old_repos_relpath, old_rev,
+                         new_repos_relpath, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced item was moved to '^/%s'."),
+                             description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
     }
   else if (details->replacing_node_kind == svn_node_dir)
     {
       if (victim_node_kind == svn_node_dir)
-        return apr_psprintf(result_pool,
-                            _("Directory switched from\n"
-                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
-                              "was replaced with a directory from another "
-                              "line of history by %s in r%ld."),
-                            old_repos_relpath, old_rev,
-                            new_repos_relpath, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("Directory switched from\n"
+                           "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
+                           "was replaced with a directory from another "
+                           "line of history by %s in r%ld."),
+                         old_repos_relpath, old_rev,
+                         new_repos_relpath, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced directory was moved to "
+                               "'^/%s'."), description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
-        return apr_psprintf(result_pool,
-                            _("File switched from\n"
-                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
-                              "was replaced with a directory by %s in r%ld."),
-                            old_repos_relpath, old_rev,
-                            new_repos_relpath, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("File switched from\n"
+                           "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
+                           "was replaced with a directory by %s in r%ld."),
+                         old_repos_relpath, old_rev,
+                         new_repos_relpath, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced file was moved to '^/%s'."),
+                             description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
       else
-        return apr_psprintf(result_pool,
-                            _("Item switched from\n"
-                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
-                              "replaced with a directory by %s in r%ld."),
-                            old_repos_relpath, old_rev,
-                            new_repos_relpath, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("Item switched from\n"
+                           "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                           "replaced with a directory by %s in r%ld."),
+                         old_repos_relpath, old_rev,
+                         new_repos_relpath, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced item was moved to '^/%s'."),
+                             description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
     }
   else
     {
@@ -2253,23 +2445,55 @@ describe_incoming_deletion_upon_merge(
       details->replacing_node_kind == svn_node_symlink)
     {
       if (victim_node_kind == svn_node_dir)
-        return apr_psprintf(result_pool,
-                            _("Directory merged from\n"
-                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
-                              "was replaced with a file by %s in r%ld."),
-                            old_repos_relpath, old_rev,
-                            new_repos_relpath, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("Directory merged from\n"
+                           "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
+                           "was replaced with a file by %s in r%ld."),
+                         old_repos_relpath, old_rev,
+                         new_repos_relpath, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced directory was moved to "
+                               "'^/%s'."), description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
-        return apr_psprintf(result_pool,
-                            _("File merged from\n"
-                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
-                              "replaced with a file from another line of "
-                              "history by %s in r%ld."),
-                            old_repos_relpath, old_rev,
-                            new_repos_relpath, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("File merged from\n"
+                           "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                           "replaced with a file from another line of "
+                           "history by %s in r%ld."),
+                         old_repos_relpath, old_rev,
+                         new_repos_relpath, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced file was moved to '^/%s'."),
+                             description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
       else
         return apr_psprintf(result_pool,
                             _("Item merged from\n"
@@ -2282,31 +2506,79 @@ describe_incoming_deletion_upon_merge(
   else if (details->replacing_node_kind == svn_node_dir)
     {
       if (victim_node_kind == svn_node_dir)
-        return apr_psprintf(result_pool,
-                            _("Directory merged from\n"
-                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
-                              "was replaced with a directory from another "
-                              "line of history by %s in r%ld."),
-                            old_repos_relpath, old_rev,
-                            new_repos_relpath, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("Directory merged from\n"
+                           "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
+                           "was replaced with a directory from another "
+                           "line of history by %s in r%ld."),
+                         old_repos_relpath, old_rev,
+                         new_repos_relpath, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced directory was moved to "
+                               "'^/%s'."), description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
-        return apr_psprintf(result_pool,
-                            _("File merged from\n"
-                              "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
-                              "was replaced with a directory by %s in r%ld."),
-                            old_repos_relpath, old_rev,
-                            new_repos_relpath, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("File merged from\n"
+                           "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
+                           "was replaced with a directory by %s in r%ld."),
+                         old_repos_relpath, old_rev,
+                         new_repos_relpath, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced file was moved to '^/%s'."),
+                             description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
       else
-        return apr_psprintf(result_pool,
-                            _("Item merged from\n"
-                              "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
-                              "replaced with a directory by %s in r%ld."),
-                            old_repos_relpath, old_rev,
-                            new_repos_relpath, new_rev,
-                            details->rev_author, details->deleted_rev);
+        {
+          const char *description =
+            apr_psprintf(result_pool,
+                         _("Item merged from\n"
+                           "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
+                           "replaced with a directory by %s in r%ld."),
+                         old_repos_relpath, old_rev,
+                         new_repos_relpath, new_rev,
+                         details->rev_author, details->deleted_rev);
+          if (details->move)
+            {
+              description =
+                apr_psprintf(result_pool,
+                             _("%s\nThe replaced item was moved to '^/%s'."),
+                             description,
+                             details->move->moved_to_repos_relpath);
+              return append_moved_to_chain_description(description,
+                                                       details->move->next,
+                                                       result_pool,
+                                                       scratch_pool);
+            }
+          return description;
+        }
     }
   else
     {
