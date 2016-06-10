@@ -16577,3 +16577,48 @@ svn_wc__db_process_commit_queue(svn_wc__db_t *db,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__find_repos_node_in_wc(apr_array_header_t **local_abspath_list,
+                              svn_wc__db_t *db,
+                              const char *wri_abspath,
+                              const char *repos_relpath,
+                              svn_revnum_t rev,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *wri_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &wri_relpath, db,
+                                                 wri_abspath, scratch_pool,
+                                                 scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_FIND_REPOS_PATH_IN_WC));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isr", wcroot->wc_id, repos_relpath, rev));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  *local_abspath_list = apr_array_make(result_pool, have_row ? 1 : 0,
+                                       sizeof(const char*));
+  while (have_row)
+    {
+      const char *local_relpath;
+      const char *local_abspath;
+
+      local_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      local_abspath = svn_dirent_join(wcroot->abspath, local_relpath,
+                                      result_pool);
+      APR_ARRAY_PUSH(*local_abspath_list, const char *) = local_abspath;
+
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+    
+  return svn_error_trace(svn_sqlite__reset(stmt));
+}
+

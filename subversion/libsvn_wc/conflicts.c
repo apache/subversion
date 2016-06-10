@@ -3684,3 +3684,74 @@ svn_wc__conflict_tree_update_moved_away_node(svn_wc_context_t *wc_ctx,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
+                                        svn_wc_context_t *wc_ctx,
+                                        const char *victim_abspath,
+                                        const char *moved_to_repos_relpath,
+                                        svn_revnum_t rev,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *candidates;
+  apr_pool_t *iterpool;
+  int i;
+
+  *moved_to_abspath = NULL;
+  SVN_ERR(svn_wc__find_repos_node_in_wc(&candidates, wc_ctx->db, victim_abspath,
+                                        moved_to_repos_relpath, rev,
+                                        scratch_pool, scratch_pool));
+
+  /* Find a "useful move target" node in our set of candidates.
+   * Since there is no way to be certain, filter out nodes which seem
+   * unlikely candidates, and return the first node which is "good enough".
+   * Nodes which are tree conflict victims don't count, and nodes which
+   * cannot be modified (e.g. replaced or deleted nodes) don't count.
+   * Ignore switched nodes as well, since that is an unlikely case during
+   * update/swtich/merge conflict resolution. And externals shouldn't even
+   * be on our candidate list in the first place. */
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < candidates->nelts; i++)
+    {
+      const char *local_abspath;
+      svn_boolean_t tree_conflicted;
+      svn_wc__db_status_t status;
+      svn_boolean_t is_wcroot;
+      svn_boolean_t is_switched;
+
+      svn_pool_clear(iterpool);
+
+      local_abspath = APR_ARRAY_IDX(candidates, i, const char *);
+
+      SVN_ERR(svn_wc__internal_conflicted_p(NULL, NULL, &tree_conflicted,
+                                            wc_ctx->db, local_abspath,
+                                            iterpool));
+      if (tree_conflicted)
+        continue;
+
+      SVN_ERR(svn_wc__db_read_info(&status,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL,
+                                   wc_ctx->db, local_abspath, iterpool,
+                                   iterpool));
+      if (status != svn_wc__db_status_normal &&
+          status != svn_wc__db_status_added)
+        continue;
+
+      SVN_ERR(svn_wc__db_is_switched(&is_wcroot, &is_switched, NULL,
+                                     wc_ctx->db, local_abspath, iterpool));
+      if (is_wcroot || is_switched)
+        continue;
+
+      /* This might be a move target. Fingers crossed ;-) */
+      *moved_to_abspath = apr_pstrdup(result_pool, local_abspath);
+      break;
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
