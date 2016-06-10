@@ -5614,6 +5614,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   apr_array_header_t *propdiffs;
   struct conflict_tree_incoming_delete_details *details;
 
+  local_abspath = svn_client_conflict_get_local_abspath(conflict);
   details = conflict->tree_conflict_incoming_details;
   if (details == NULL)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
@@ -5625,7 +5626,6 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
                                                    scratch_pool));
 
   option_id = svn_client_conflict_option_get_id(option);
-  local_abspath = svn_client_conflict_get_local_abspath(conflict);
   SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
                                              conflict, scratch_pool,
                                              scratch_pool));
