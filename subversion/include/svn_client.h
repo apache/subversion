@@ -4423,6 +4423,9 @@ typedef enum svn_client_conflict_option_id_t {
   svn_client_conflict_option_incoming_delete_ignore,
   svn_client_conflict_option_incoming_delete_accept,
 
+  /* Options for incoming move vs local edit */
+  svn_client_conflict_option_incoming_move_file_text_merge,
+
 } svn_client_conflict_option_id_t;
 
 /**

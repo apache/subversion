@@ -1890,6 +1890,30 @@ svn_wc__conflict_tree_update_moved_away_node(svn_wc_context_t *wc_ctx,
                                              void *notify_baton,
                                              apr_pool_t *scratch_pool);
 
+/* Find a node in the working copy which corresponds to the new location
+ * MOVED_TO_REPOS_RELPATH@REV of the tree conflict victim at VICTIM_ABSPATH.
+ * If no such node can be found, set *MOVED_TO_ABSPATH to NULL.
+ *
+ * The node should be useful for conflict resolution, e.g. it should be
+ * possible to merge changes into this node to resolve an incoming-move
+ * tree conflict. But the exact criteria for selecting the node are left
+ * to the implementation of this function.
+ * Note that this function may not necessarily return a node which was
+ * actually moved. The only hard guarantee is that the node corresponds to
+ * the repository node MOVED_TO_REPOS_RELPATH@REV specified by the caller.
+ * In many cases, this will be a moved node if the caller's parameters are
+ * correct. But users should be able to override the selection made by
+ * this function.
+ */
+svn_error_t *
+svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
+                                        svn_wc_context_t *wc_ctx,
+                                        const char *victim_abspath,
+                                        const char *moved_to_repos_relpath,
+                                        svn_revnum_t rev,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool);
+
 /**
  * Move @a src_abspath to @a dst_abspath, by scheduling @a dst_abspath
  * for addition to the repository, remembering the history. Mark @a src_abspath

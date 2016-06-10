@@ -445,6 +445,10 @@ static const resolver_option_t builtin_resolver_options[] =
   { "a", N_("accept incoming deletion"), NULL,
     svn_client_conflict_option_incoming_delete_accept },
 
+  /* Options for incoming move vs local edit. */
+  { "m", N_("follow incoming move and merge"), NULL,
+    svn_client_conflict_option_incoming_move_file_text_merge },
+
   { NULL }
 };
 
