@@ -1774,7 +1774,7 @@ struct conflict_tree_incoming_delete_details
    * Follow MOVE->NEXT for subsequent moves in later revisions. */
   struct repos_move_info *move;
 
-  /* The path were we believe the moved-here node corresponding to the
+  /* The path where we believe the moved-here node corresponding to the
    * deleted node exists in the working copy. */
   const char *moved_to_abspath;
 };
