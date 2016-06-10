@@ -3358,6 +3358,7 @@ describe_incoming_add_upon_update(
     }
   else if (new_node_kind == svn_node_file ||
            new_node_kind == svn_node_symlink)
+    {
       if (SVN_IS_VALID_REVNUM(details->added_rev) &&
           SVN_IS_VALID_REVNUM(details->deleted_rev))
         return apr_psprintf(result_pool,
@@ -3376,7 +3377,9 @@ describe_incoming_add_upon_update(
                             _("A new file appeared during update to r%ld; "
                               "it was deleted by %s in r%ld."), new_rev,
                             details->deleted_rev_author, details->deleted_rev);
+    }
   else
+    {
       if (SVN_IS_VALID_REVNUM(details->added_rev) &&
           SVN_IS_VALID_REVNUM(details->deleted_rev))
         return apr_psprintf(result_pool,
@@ -3395,8 +3398,7 @@ describe_incoming_add_upon_update(
                             _("A new item appeared during update to r%ld; "
                               "it was deleted by %s in r%ld."), new_rev,
                             details->deleted_rev_author, details->deleted_rev);
-
-  return SVN_NO_ERROR;
+    }
 }
 
 static const char *
@@ -3484,7 +3486,6 @@ describe_incoming_add_upon_switch(
                             new_repos_relpath, new_rev,
                             details->deleted_rev_author, details->deleted_rev);
     }
-  return SVN_NO_ERROR;
 }
 
 static const char *
@@ -3542,7 +3543,6 @@ describe_incoming_add_upon_merge(
                             new_repos_relpath, old_rev + 1, new_rev,
                             details->added_rev_author, details->added_rev);
     }
-  return SVN_NO_ERROR;
 }
 
 static const char *
@@ -3607,8 +3607,6 @@ describe_incoming_reverse_deletion_upon_merge(
                             details->deleted_rev_author,
                             details->deleted_rev);
     }
-
-  return SVN_NO_ERROR;
 }
 
 /* Implements tree_conflict_get_description_func_t. */
