@@ -101,6 +101,7 @@ static const int slow_statements[] =
   STMT_SELECT_REVERT_LIST_RECURSIVE,
   STMT_SELECT_DELETE_LIST,
   STMT_SELECT_UPDATE_MOVE_LIST,
+  STMT_FIND_REPOS_PATH_IN_WC,
 
   /* Designed as slow to avoid penalty on other queries */
   STMT_SELECT_UNREFERENCED_PRISTINES,
