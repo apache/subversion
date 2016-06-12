@@ -341,12 +341,15 @@ insert_path(construction_context_t *ctx,
   /* End of path? */
   if (segment_count == 0)
     {
-      /* Set access rights.  Since we call this function once per authz
-       * config file section, there cannot be multiple paths having the
-       * same leave node.  Hence, access gets never overwritten.
+      /* Set access rights.  Note that there might be multiple rules for
+       * the same path due to non-repo-specific rules vs. repo-specific
+       * ones.  Whichever gets defined last wins.
        */
-      SVN_ERR_ASSERT_NO_RETURN(!has_local_rule(&node->rights));
-      node->rights.access = *access;
+      limited_rights_t rights;
+      rights.access = *access;
+	  rights.max_rights = access->rights;
+	  rights.min_rights = access->rights;
+      combine_access(&node->rights, &rights);
       return;
     }
 
