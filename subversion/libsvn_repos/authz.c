@@ -324,7 +324,7 @@ create_construction_context(apr_pool_t *result_pool)
 /* Constructor utility:  Below NODE, recursively insert sub-nodes for the
  * path given as *SEGMENTS of length SEGMENT_COUNT. If matching nodes
  * already exist, use those instead of creating new ones.  Set the leave
- * node's access rights spec to ACCESS.  Update the conext info in CTX.
+ * node's access rights spec to ACCESS.  Update the context info in CTX.
  */
 static void
 insert_path(construction_context_t *ctx,
@@ -454,7 +454,7 @@ process_acl(construction_context_t *ctx,
   access.sequence_number = acl->sequence_number;
 
   /* Try to reuse results from previous runs.
-   * Basically, skip the commen prefix. */
+   * Basically, skip the common prefix. */
   node = root;
   for (i = 0; i < ctx->path->nelts; ++i)
     {
