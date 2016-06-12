@@ -730,13 +730,6 @@ rules_open_section(void *baton, svn_stringbuf_t *section)
             _("Empty repository name in authz rule [%s]"),
             section->data);
 
-      if (memchr(rule, '/', repos_len))
-        return svn_error_createf(
-            SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-            _("Invalid repository name '%s' in authz rule [%s]"),
-            apr_pstrmemdup(cb->parser_pool, rule, repos_len),
-            section->data);
-
       acl.acl.rule.repos = intern_string(cb, rule, repos_len);
       rule = endp + 1;
       rule_len -= repos_len + 1;
