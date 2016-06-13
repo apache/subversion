@@ -3755,7 +3755,7 @@ svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
                                                          victim_abspath,
                                                          iterpool);
       ancestor_len = strlen(ancestor_abspath);
-      if (ancestor_len > longest_ancestor_len)
+      if (ancestor_len >= longest_ancestor_len)
         {
           longest_ancestor_len = ancestor_len;
 
