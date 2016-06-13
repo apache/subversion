@@ -3689,6 +3689,7 @@ svn_error_t *
 svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
                                         svn_wc_context_t *wc_ctx,
                                         const char *victim_abspath,
+                                        svn_node_kind_t victim_node_kind,
                                         const char *moved_to_repos_relpath,
                                         svn_revnum_t rev,
                                         apr_pool_t *result_pool,
@@ -3709,6 +3710,7 @@ svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
    * unlikely candidates, and return the first node which is "good enough".
    * Nodes which are tree conflict victims don't count, and nodes which
    * cannot be modified (e.g. replaced or deleted nodes) don't count.
+   * Nodes which are of a different node kind don't count either.
    * Ignore switched nodes as well, since that is an unlikely case during
    * update/swtich/merge conflict resolution. And externals shouldn't even
    * be on our candidate list in the first place.
@@ -3724,6 +3726,7 @@ svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
       svn_wc__db_status_t status;
       svn_boolean_t is_wcroot;
       svn_boolean_t is_switched;
+      svn_node_kind_t node_kind;
 
       svn_pool_clear(iterpool);
 
@@ -3735,15 +3738,18 @@ svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
       if (tree_conflicted)
         continue;
 
-      SVN_ERR(svn_wc__db_read_info(&status,
+      SVN_ERR(svn_wc__db_read_info(&status, &node_kind,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
                                    wc_ctx->db, local_abspath, iterpool,
                                    iterpool));
       if (status != svn_wc__db_status_normal &&
           status != svn_wc__db_status_added)
+        continue;
+
+      if (node_kind != victim_node_kind)
         continue;
 
       SVN_ERR(svn_wc__db_is_switched(&is_wcroot, &is_switched, NULL,

@@ -1892,6 +1892,7 @@ svn_wc__conflict_tree_update_moved_away_node(svn_wc_context_t *wc_ctx,
 
 /* Find a node in the working copy which corresponds to the new location
  * MOVED_TO_REPOS_RELPATH@REV of the tree conflict victim at VICTIM_ABSPATH.
+ * The node must be of the same node kind as VICTIM_NODE_KIND.
  * If no such node can be found, set *MOVED_TO_ABSPATH to NULL.
  *
  * The node should be useful for conflict resolution, e.g. it should be
@@ -1909,6 +1910,7 @@ svn_error_t *
 svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
                                         svn_wc_context_t *wc_ctx,
                                         const char *victim_abspath,
+                                        svn_node_kind_t victim_node_kind,
                                         const char *moved_to_repos_relpath,
                                         svn_revnum_t rev,
                                         apr_pool_t *result_pool,
