@@ -1439,9 +1439,10 @@ test_option_merge_incoming_move_file_text_merge(
   SVN_TEST_ASSERT(!status->copied);
   SVN_TEST_ASSERT(!status->switched);
   SVN_TEST_ASSERT(!status->file_external);
-  /* ### Record as moved-away in the WC? */
   SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
-  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+  new_file_path = svn_relpath_join(branch_path, new_file_name, b->pool);
+  SVN_TEST_STRING_ASSERT(status->moved_to_abspath,
+                         sbox_wc_path(b, new_file_path));
 
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
@@ -1456,7 +1457,6 @@ test_option_merge_incoming_move_file_text_merge(
                   !tree_conflicted);
 
   /* Ensure that the moved file has the expected status. */
-  new_file_path = svn_relpath_join(branch_path, new_file_name, b->pool);
   opt_rev.kind = svn_opt_revision_working;
   sb.result_pool = b->pool;
   SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, new_file_path),
@@ -1468,13 +1468,13 @@ test_option_merge_incoming_move_file_text_merge(
   SVN_TEST_ASSERT(status->versioned);
   SVN_TEST_ASSERT(!status->conflicted);
   SVN_TEST_ASSERT(status->node_status == svn_wc_status_added);
-  SVN_TEST_ASSERT(status->text_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
   SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
   SVN_TEST_ASSERT(status->copied);
   SVN_TEST_ASSERT(!status->switched);
   SVN_TEST_ASSERT(!status->file_external);
-  /* ### Record as moved-here in the WC? */
-  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_STRING_ASSERT(status->moved_from_abspath,
+                         sbox_wc_path(b, deleted_path));
   SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
 
   /* Ensure that the moved file has the expected content. */

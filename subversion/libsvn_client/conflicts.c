@@ -5588,6 +5588,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
 {
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
+  svn_wc_operation_t operation;
   const char *lock_abspath;
   svn_client_ctx_t *ctx = conflict->ctx;
   svn_error_t *err;
@@ -5612,6 +5613,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   struct conflict_tree_incoming_delete_details *details;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
+  operation = svn_client_conflict_get_operation(conflict);
   details = conflict->tree_conflict_incoming_details;
   if (details == NULL)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
@@ -5724,12 +5726,38 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
       ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
 
-  /* The merge is done. Local edits are now at the moved-to location.
-   * Delete the tree conflict victim (clears the tree conflict marker). */
-  err = svn_wc_delete4(ctx->wc_ctx, local_abspath, FALSE, FALSE,
-                       NULL, NULL, /* don't allow user to cancel here */
-                       ctx->notify_func2, ctx->notify_baton2,
-                       scratch_pool);
+  /* The merge is done. Local edits are now at the moved-to location. */
+  if (operation == svn_wc_operation_update ||
+      operation == svn_wc_operation_switch)
+    {
+      /* The move operation is part of our natural history.
+       * Delete the tree conflict victim (clears the tree conflict marker). */
+      err = svn_wc_delete4(ctx->wc_ctx, local_abspath, FALSE, FALSE,
+                           NULL, NULL, /* don't allow user to cancel here */
+                           NULL, NULL, /* no extra notification */
+                           scratch_pool);
+      if (err)
+        goto unlock_wc;
+    }
+  else if (operation == svn_wc_operation_merge)
+    {
+      /* The move operation is not part of natural history. We must replicate
+       * this move in our history. Record a move in the working copy. */
+      err = svn_wc__move2(ctx->wc_ctx, local_abspath, details->moved_to_abspath,
+                          TRUE, /* this is a meta-data only move */
+                          FALSE, /* mixed-revisions don't apply to files */
+                          NULL, NULL, /* don't allow user to cancel here */
+                          NULL, NULL, /* no extra notification */
+                          scratch_pool);
+      if (err)
+        goto unlock_wc;
+    }
+  else
+    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
+                             _("Invalid operation code '%d' recorded for "
+                               "conflict at '%s'"), operation,
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
 
   if (ctx->notify_func2)
     {
