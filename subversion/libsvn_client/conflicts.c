@@ -5662,9 +5662,12 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   SVN_ERR(svn_io_file_flush(ancestor_file, scratch_pool));
 
   /* ### The following WC modifications should be atomic. */
-  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
-                                                 local_abspath,
-                                                 scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(
+            &lock_abspath, ctx->wc_ctx,
+            svn_dirent_get_longest_ancestor(local_abspath,
+                                            details->moved_to_abspath,
+                                            scratch_pool),
+            scratch_pool, scratch_pool));
 
   err = verify_local_state_for_incoming_delete(conflict, option, scratch_pool);
   if (err)
