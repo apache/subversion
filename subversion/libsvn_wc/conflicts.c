@@ -3697,6 +3697,7 @@ svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
   apr_array_header_t *candidates;
   apr_pool_t *iterpool;
   int i;
+  apr_size_t longest_ancestor_len = 0;
 
   *moved_to_abspath = NULL;
   SVN_ERR(svn_wc__find_repos_node_in_wc(&candidates, wc_ctx->db, victim_abspath,
@@ -3710,11 +3711,15 @@ svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
    * cannot be modified (e.g. replaced or deleted nodes) don't count.
    * Ignore switched nodes as well, since that is an unlikely case during
    * update/swtich/merge conflict resolution. And externals shouldn't even
-   * be on our candidate list in the first place. */
+   * be on our candidate list in the first place.
+   * If multiple candidates match these criteria, choose the one which
+   * shares the longest common ancestor with the victim. */
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < candidates->nelts; i++)
     {
       const char *local_abspath;
+      const char *ancestor_abspath;
+      apr_size_t ancestor_len;
       svn_boolean_t tree_conflicted;
       svn_wc__db_status_t status;
       svn_boolean_t is_wcroot;
@@ -3746,9 +3751,17 @@ svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
       if (is_wcroot || is_switched)
         continue;
 
-      /* This might be a move target. Fingers crossed ;-) */
-      *moved_to_abspath = apr_pstrdup(result_pool, local_abspath);
-      break;
+      ancestor_abspath = svn_dirent_get_longest_ancestor(local_abspath,
+                                                         victim_abspath,
+                                                         iterpool);
+      ancestor_len = strlen(ancestor_abspath);
+      if (ancestor_len > longest_ancestor_len)
+        {
+          longest_ancestor_len = ancestor_len;
+
+          /* This might be a move target. Fingers crossed ;-) */
+          *moved_to_abspath = apr_pstrdup(result_pool, local_abspath);
+        }
     }
 
   svn_pool_destroy(iterpool);
