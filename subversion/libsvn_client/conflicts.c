@@ -6645,16 +6645,16 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
     {
       svn_client_conflict_option_t *option;
       const char *wcroot_abspath;
-      const char *local_abspath;
+      const char *victim_abspath;
       struct repos_move_info *move;
       const char *moved_to_abspath;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->id = svn_client_conflict_option_incoming_move_file_text_merge;
+      victim_abspath = svn_client_conflict_get_local_abspath(conflict);
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
-                                 conflict->local_abspath, scratch_pool,
+                                 victim_abspath, scratch_pool,
                                  scratch_pool));
-      local_abspath = svn_client_conflict_get_local_abspath(conflict);
 
       /* Find the last move in the move chain. This should correspond to
        * the node's location in incoming_new_pegrev. */
@@ -6664,7 +6664,8 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
         move = move->next;
 
       SVN_ERR(svn_wc__guess_incoming_move_target_node(
-                &moved_to_abspath, conflict->ctx->wc_ctx, local_abspath,
+                &moved_to_abspath, conflict->ctx->wc_ctx,
+                victim_abspath, victim_node_kind,
                 move->moved_to_repos_relpath, incoming_new_pegrev,
                 scratch_pool, scratch_pool));
       if (moved_to_abspath == NULL)
@@ -6677,7 +6678,7 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
           options->pool,
           _("follow move-away of '%s' and merge with '%s'"),
           svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                          local_abspath),
+                                                          victim_abspath),
                                  scratch_pool),
           svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
                                                           moved_to_abspath),
