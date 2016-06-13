@@ -4617,7 +4617,7 @@ resolve_merge_incoming_added_file_text_merge(
                       NULL, NULL, /* diff3_cmd, merge_options */
                       NULL, propdiffs,
                       NULL, NULL, /* conflict func/baton */
-                      ctx->cancel_func, ctx->cancel_baton,
+                      NULL, NULL, /* don't allow user to cancel here */
                       scratch_pool);
   err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
                                                                  lock_abspath,
@@ -4744,7 +4744,7 @@ merge_incoming_added_file_replace(svn_client_conflict_option_t *option,
 
   /* Replace the working file with the file from the repository. */
   err = svn_wc_delete4(ctx->wc_ctx, local_abspath, FALSE, FALSE,
-                       ctx->cancel_func, ctx->cancel_baton,
+                       NULL, NULL, /* don't allow user to cancel here */
                        ctx->notify_func2, ctx->notify_baton2,
                        scratch_pool);
   if (err)
@@ -4756,7 +4756,7 @@ merge_incoming_added_file_replace(svn_client_conflict_option_t *option,
                                incoming_new_props,
                                NULL, /* ### merge props first, set here? */
                                url, incoming_new_pegrev,
-                               ctx->cancel_func, ctx->cancel_baton,
+                               NULL, NULL, /* don't allow user to cancel here */
                                scratch_pool);
   if (err)
     goto unlock_wc;
@@ -4819,7 +4819,7 @@ merge_incoming_added_file_replace(svn_client_conflict_option_t *option,
                           NULL, NULL, /* diff3_cmd, merge_options */
                           NULL, propdiffs,
                           NULL, NULL, /* conflict func/baton */
-                          ctx->cancel_func, ctx->cancel_baton,
+                          NULL, NULL, /* don't allow user to cancel here */
                           scratch_pool);
       if (err)
         goto unlock_wc;
@@ -5154,7 +5154,7 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
 
   /* Remove the working directory. */
   err = svn_wc_delete4(ctx->wc_ctx, local_abspath, FALSE, FALSE,
-                       ctx->cancel_func, ctx->cancel_baton,
+                       NULL, NULL, /* don't allow user to cancel here */
                        ctx->notify_func2, ctx->notify_baton2,
                        scratch_pool);
   if (err)
@@ -5166,7 +5166,7 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
      moving the rest of it into the final destination. */
   err = svn_wc_copy3(ctx->wc_ctx, tmp_abspath, local_abspath,
                      TRUE /* metadata_only */,
-                     ctx->cancel_func, ctx->cancel_baton,
+                     NULL, NULL, /* don't allow user to cancel here */
                      NULL, NULL, scratch_pool);
   if (err)
     goto unlock_wc;
@@ -5178,8 +5178,7 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
   err = svn_wc_remove_from_revision_control2(ctx->wc_ctx,
                                              tmp_abspath,
                                              FALSE, FALSE,
-                                             ctx->cancel_func,
-                                             ctx->cancel_baton,
+                                             NULL, NULL, /* don't cancel */
                                              scratch_pool);
   if (err)
     goto unlock_wc;
@@ -5557,7 +5556,7 @@ resolve_incoming_delete_accept(svn_client_conflict_option_t *option,
 
   /* Delete the tree conflict victim. Marks the conflict resolved. */
   err = svn_wc_delete4(ctx->wc_ctx, local_abspath, FALSE, FALSE,
-                       ctx->cancel_func, ctx->cancel_baton,
+                       NULL, NULL, /* don't allow user to cancel here */
                        ctx->notify_func2, ctx->notify_baton2,
                        scratch_pool);
   if (err)
