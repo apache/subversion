@@ -5702,7 +5702,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
                       NULL, NULL, /* diff3_cmd, merge_options */
                       NULL, propdiffs,
                       NULL, NULL, /* conflict func/baton */
-                      ctx->cancel_func, ctx->cancel_baton,
+                       NULL, NULL, /* don't allow user to cancel here */
                       scratch_pool);
   svn_io_sleep_for_timestamps(details->moved_to_abspath, scratch_pool);
   if (err)
@@ -5728,7 +5728,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   /* The merge is done. Local edits are now at the moved-to location.
    * Delete the tree conflict victim (clears the tree conflict marker). */
   err = svn_wc_delete4(ctx->wc_ctx, local_abspath, FALSE, FALSE,
-                       ctx->cancel_func, ctx->cancel_baton,
+                       NULL, NULL, /* don't allow user to cancel here */
                        ctx->notify_func2, ctx->notify_baton2,
                        scratch_pool);
 
