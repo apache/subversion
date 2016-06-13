@@ -5701,7 +5701,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
                       NULL, NULL, /* diff3_cmd, merge_options */
                       NULL, propdiffs,
                       NULL, NULL, /* conflict func/baton */
-                       NULL, NULL, /* don't allow user to cancel here */
+                      NULL, NULL, /* don't allow user to cancel here */
                       scratch_pool);
   svn_io_sleep_for_timestamps(details->moved_to_abspath, scratch_pool);
   if (err)
