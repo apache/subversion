@@ -445,6 +445,7 @@ struct find_deleted_rev_baton
   const char *repos_root_url;
   const char *repos_uuid;
   svn_client_ctx_t *ctx;
+  const char *victim_abspath; /* for notifications */
 
   /* Variables below are results for the caller of svn_ra_get_log2(). */
   svn_revnum_t deleted_rev;
@@ -534,6 +535,18 @@ find_deleted_rev(void *baton,
   svn_boolean_t deleted_node_found = FALSE;
   apr_array_header_t *deleted_paths;
   apr_hash_t *copies;
+
+  if (b->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(
+                 b->victim_abspath,
+                 svn_wc_notify_tree_conflict_details_progress,
+                 scratch_pool),
+      notify->revision = log_entry->revision;
+      b->ctx->notify_func2(b->ctx->notify_baton2, notify, scratch_pool);
+    }
 
   /* No paths were changed in this revision.  Nothing to do. */
   if (! log_entry->changed_paths2)
@@ -1121,6 +1134,7 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
   const char *repos_root_url;
   const char *repos_uuid;
   struct find_deleted_rev_baton b;
+  const char *victim_abspath;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(start_rev > end_rev);
@@ -1141,6 +1155,8 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
   revprops = apr_array_make(scratch_pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
 
+ victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+  b.victim_abspath = victim_abspath;
   b.deleted_repos_relpath = svn_relpath_join(parent_repos_relpath,
                                              deleted_basename, scratch_pool);
   b.related_repos_relpath = related_repos_relpath;
@@ -1154,6 +1170,18 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
   b.moved_paths = apr_hash_make(scratch_pool);
   b.result_pool = result_pool;
 
+  if (conflict->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(
+                 victim_abspath,
+                 svn_wc_notify_begin_search_tree_conflict_details,
+                 scratch_pool),
+      conflict->ctx->notify_func2(conflict->ctx->notify_baton2, notify,
+                                  scratch_pool);
+    }
+
   err = svn_ra_get_log2(ra_session, paths, start_rev, end_rev,
                         0, /* no limit */
                         TRUE, /* need the changed paths list */
@@ -1166,12 +1194,25 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
     {
       if (err->apr_err == SVN_ERR_CANCELLED &&
           b.deleted_rev != SVN_INVALID_REVNUM)
+
         {
           /* Log operation was aborted because we found deleted rev. */
           svn_error_clear(err);
         }
       else
         return svn_error_trace(err);
+    }
+
+  if (conflict->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(
+                 victim_abspath,
+                 svn_wc_notify_end_search_tree_conflict_details,
+                 scratch_pool),
+      conflict->ctx->notify_func2(conflict->ctx->notify_baton2, notify,
+                                  scratch_pool);
     }
 
   if (b.deleted_rev == SVN_INVALID_REVNUM)
@@ -2877,6 +2918,8 @@ conflict_tree_get_description_incoming_delete(
 /* Baton for find_added_rev(). */
 struct find_added_rev_baton
 {
+  const char *victim_abspath;
+  svn_client_ctx_t *ctx;
   svn_revnum_t added_rev;
   const char *repos_relpath;
   const char *parent_repos_relpath;
@@ -2894,6 +2937,18 @@ find_added_rev(svn_location_segment_t *segment,
                apr_pool_t *scratch_pool)
 {
   struct find_added_rev_baton *b = baton;
+
+  if (b->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(
+                 b->victim_abspath,
+                 svn_wc_notify_tree_conflict_details_progress,
+                 scratch_pool),
+      notify->revision = segment->range_start;
+      b->ctx->notify_func2(b->ctx->notify_baton2, notify, scratch_pool);
+    }
 
   if (segment->path) /* not interested in gaps */
     {
@@ -2919,6 +2974,7 @@ get_incoming_delete_details_for_reverse_addition(
   svn_revnum_t old_rev,
   svn_revnum_t new_rev,
   svn_client_ctx_t *ctx,
+  const char *victim_abspath,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool)
 {
@@ -2940,15 +2996,41 @@ get_incoming_delete_details_for_reverse_addition(
                                                scratch_pool));
 
   *details = apr_pcalloc(result_pool, sizeof(**details));
+  b.ctx = ctx;
+  b.victim_abspath = victim_abspath;
   b.added_rev = SVN_INVALID_REVNUM;
   b.repos_relpath = NULL;
   b.parent_repos_relpath = NULL;
   b.pool = scratch_pool;
+
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(
+                 victim_abspath,
+                 svn_wc_notify_begin_search_tree_conflict_details,
+                 scratch_pool),
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+    }
+
   /* Figure out when this node was added. */
   SVN_ERR(svn_ra_get_location_segments(ra_session, "", old_rev,
                                        old_rev, new_rev,
                                        find_added_rev, &b,
                                        scratch_pool));
+
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(
+                 victim_abspath,
+                 svn_wc_notify_end_search_tree_conflict_details,
+                 scratch_pool),
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+    }
+
   SVN_ERR(svn_ra_rev_prop(ra_session, b.added_rev,
                           SVN_PROP_REVISION_AUTHOR,
                           &author_revprop, scratch_pool));
@@ -3051,6 +3133,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           SVN_ERR(get_incoming_delete_details_for_reverse_addition(
                     &details, repos_root_url, old_repos_relpath,
                     old_rev, new_rev, conflict->ctx,
+                    svn_client_conflict_get_local_abspath(conflict),
                     conflict->pool, scratch_pool));
         }
     }
@@ -3102,6 +3185,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           SVN_ERR(get_incoming_delete_details_for_reverse_addition(
                     &details, repos_root_url, old_repos_relpath,
                     old_rev, new_rev, conflict->ctx,
+                    svn_client_conflict_get_local_abspath(conflict),
                     conflict->pool, scratch_pool));
         }
     }
@@ -3195,15 +3279,43 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
                                                    scratch_pool));
 
       details = apr_pcalloc(conflict->pool, sizeof(*details));
+      b.ctx = conflict->ctx,
+      b.victim_abspath = svn_client_conflict_get_local_abspath(conflict),
       b.added_rev = SVN_INVALID_REVNUM;
       b.repos_relpath = NULL;
       b.parent_repos_relpath = NULL;
       b.pool = scratch_pool;
+
+      if (conflict->ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify;
+
+          notify = svn_wc_create_notify(
+                     b.victim_abspath,
+                     svn_wc_notify_begin_search_tree_conflict_details,
+                     scratch_pool),
+          conflict->ctx->notify_func2(conflict->ctx->notify_baton2, notify,
+                                      scratch_pool);
+        }
+
       /* Figure out when this node was added. */
       SVN_ERR(svn_ra_get_location_segments(ra_session, "", new_rev,
                                            new_rev, SVN_INVALID_REVNUM,
                                            find_added_rev, &b,
                                            scratch_pool));
+
+      if (conflict->ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify;
+
+          notify = svn_wc_create_notify(
+                     b.victim_abspath,
+                     svn_wc_notify_end_search_tree_conflict_details,
+                     scratch_pool),
+          conflict->ctx->notify_func2(conflict->ctx->notify_baton2, notify,
+                                      scratch_pool);
+        }
+
       SVN_ERR(svn_ra_rev_prop(ra_session, b.added_rev,
                               SVN_PROP_REVISION_AUTHOR,
                               &author_revprop, scratch_pool));
@@ -3259,15 +3371,43 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
                                                        scratch_pool));
 
           details = apr_pcalloc(conflict->pool, sizeof(*details));
+          b.victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+          b.ctx = conflict->ctx;
           b.added_rev = SVN_INVALID_REVNUM;
           b.repos_relpath = NULL;
           b.parent_repos_relpath = NULL;
           b.pool = scratch_pool;
+
+          if (conflict->ctx->notify_func2)
+            {
+              svn_wc_notify_t *notify;
+
+              notify = svn_wc_create_notify(
+                         b.victim_abspath,
+                         svn_wc_notify_begin_search_tree_conflict_details,
+                         scratch_pool),
+              conflict->ctx->notify_func2(conflict->ctx->notify_baton2, notify,
+                                          scratch_pool);
+            }
+
           /* Figure out when this node was added. */
           SVN_ERR(svn_ra_get_location_segments(ra_session, "", new_rev,
                                                new_rev, old_rev,
                                                find_added_rev, &b,
                                                scratch_pool));
+
+          if (conflict->ctx->notify_func2)
+            {
+              svn_wc_notify_t *notify;
+
+              notify = svn_wc_create_notify(
+                         b.victim_abspath,
+                         svn_wc_notify_end_search_tree_conflict_details,
+                         scratch_pool),
+              conflict->ctx->notify_func2(conflict->ctx->notify_baton2, notify,
+                                          scratch_pool);
+            }
+
           SVN_ERR(svn_ra_rev_prop(ra_session, b.added_rev,
                                   SVN_PROP_REVISION_AUTHOR,
                                   &author_revprop, scratch_pool));
@@ -3707,6 +3847,8 @@ struct conflict_tree_incoming_edit_details
 
 /* Baton for find_modified_rev(). */
 struct find_modified_rev_baton {
+  const char *victim_abspath;
+  svn_client_ctx_t *ctx;
   apr_array_header_t *edits;
   const char *repos_relpath;
   svn_node_kind_t node_kind;
@@ -3725,6 +3867,18 @@ find_modified_rev(void *baton,
   svn_string_t *author;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
+
+  if (b->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(
+                 b->victim_abspath,
+                 svn_wc_notify_tree_conflict_details_progress,
+                 scratch_pool),
+      notify->revision = log_entry->revision;
+      b->ctx->notify_func2(b->ctx->notify_baton2, notify, scratch_pool);
+    }
 
   /* No paths were changed in this revision.  Nothing to do. */
   if (! log_entry->changed_paths2)
@@ -3822,6 +3976,8 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
                                              scratch_pool, scratch_pool));
   operation = svn_client_conflict_get_operation(conflict);
 
+  b.ctx = conflict->ctx;
+  b.victim_abspath = svn_client_conflict_get_local_abspath(conflict);
   b.result_pool = conflict->pool;
   b.scratch_pool = scratch_pool;
   b.edits = apr_array_make(
@@ -3862,6 +4018,19 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
                                                conflict->ctx,
                                                scratch_pool,
                                                scratch_pool));
+
+  if (conflict->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(
+                 b.victim_abspath,
+                 svn_wc_notify_begin_search_tree_conflict_details,
+                 scratch_pool),
+      conflict->ctx->notify_func2(conflict->ctx->notify_baton2, notify,
+                                  scratch_pool);
+    }
+
   SVN_ERR(svn_ra_get_log2(ra_session, paths,
                           old_rev < new_rev ? old_rev : new_rev,
                           old_rev < new_rev ? new_rev : old_rev,
@@ -3872,6 +4041,19 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
                           revprops,
                           find_modified_rev, &b,
                           scratch_pool));
+
+  if (conflict->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(
+                 b.victim_abspath,
+                 svn_wc_notify_end_search_tree_conflict_details,
+                 scratch_pool),
+      conflict->ctx->notify_func2(conflict->ctx->notify_baton2, notify,
+                                  scratch_pool);
+    }
+
 
   conflict->tree_conflict_incoming_details = b.edits;
 
@@ -5228,15 +5410,40 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
       err = svn_ra_reparent(ra_session, url, scratch_pool);
       if (err)
         goto unlock_wc;
+      b.victim_abspath = local_abspath;
+      b.ctx = ctx;
       b.added_rev = SVN_INVALID_REVNUM;
       b.repos_relpath = NULL;
       b.parent_repos_relpath = svn_relpath_dirname(base_repos_relpath,
                                                    scratch_pool);
       b.pool = scratch_pool;
+
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify;
+
+          notify = svn_wc_create_notify(
+                     local_abspath,
+                     svn_wc_notify_begin_search_tree_conflict_details,
+                     scratch_pool),
+          ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+        }
+
       err = svn_ra_get_location_segments(ra_session, "", base_revision,
                                          base_revision, SVN_INVALID_REVNUM,
                                          find_added_rev, &b,
                                          scratch_pool);
+      if (ctx->notify_func2)
+        {
+          svn_wc_notify_t *notify;
+
+          notify = svn_wc_create_notify(
+                     local_abspath,
+                     svn_wc_notify_end_search_tree_conflict_details,
+                     scratch_pool),
+          ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+        }
+
       if (err)
         goto unlock_wc;
 
