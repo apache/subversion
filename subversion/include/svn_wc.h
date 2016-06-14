@@ -1292,6 +1292,19 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.10. */
   svn_wc_notify_resolved_tree,
 
+  /** Starting to search the repository for details about a tree conflict.
+   * @since New in 1.10. */
+  svn_wc_notify_begin_search_tree_conflict_details,
+
+  /** Progressing in search of repository for details about a tree conflict.
+   * The revision being searched is specified in #svn_wc_notify_t.revision.
+   * @since New in 1.10. */
+  svn_wc_notify_tree_conflict_details_progress,
+
+  /** Done searching the repository for details about a conflict.
+   * @since New in 1.10. */
+  svn_wc_notify_end_search_tree_conflict_details,
+
 } svn_wc_notify_action_t;
 
 
