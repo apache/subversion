@@ -135,13 +135,6 @@ struct svn_client_conflict_option_t
       /* A merged property value, if supplied by the API user, else NULL. */
       const svn_string_t *merged_propval;
     } prop;
-
-    struct {
-      /* A list of possible working copy nodes for an incoming move target. */
-      apr_array_header_t *possible_moved_to_abspaths;
-      /* The current preferred move target (can be overridden by the user). */
-      int preferred_move_target_idx;
-    } tree;
   } type_data;
 
 };
@@ -1824,6 +1817,12 @@ struct conflict_tree_incoming_delete_details
    * or in ADDED_REV (in which case moves should be interpreted in reverse).
    * Follow MOVE->NEXT for subsequent moves in later revisions. */
   struct repos_move_info *move;
+
+  /* A list of possible working copy nodes for an incoming move target. */
+  apr_array_header_t *possible_moved_to_abspaths;
+
+  /* The current preferred move target (can be overridden by the user). */
+  int preferred_move_target_idx;
 };
 
 static const char *
@@ -5879,10 +5878,9 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   SVN_ERR(svn_stream_close(ancestor_stream));
   SVN_ERR(svn_io_file_flush(ancestor_file, scratch_pool));
 
-  moved_to_abspath = APR_ARRAY_IDX(
-                       option->type_data.tree.possible_moved_to_abspaths,
-                       option->type_data.tree.preferred_move_target_idx,
-                       const char *);
+  moved_to_abspath = APR_ARRAY_IDX(details->possible_moved_to_abspaths,
+                                   details->preferred_move_target_idx,
+                                   const char *);
 
   /* ### The following WC modifications should be atomic. */
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(
@@ -6876,9 +6874,7 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
       svn_client_conflict_option_t *option;
       const char *wcroot_abspath;
       const char *victim_abspath;
-      struct repos_move_info *move;
       const char *moved_to_abspath;
-      apr_array_header_t *possible_moved_to_abspaths;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->pool = options->pool;
@@ -6888,33 +6884,33 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
                                  victim_abspath, scratch_pool,
                                  scratch_pool));
 
-      /* Find the last move in the move chain. This should correspond to
-       * the node's location in incoming_new_pegrev. */
-      /* ### What about reverse-merges and reverse-updates? */
-      move = details->move;
-      while (move->next)
-        move = move->next;
+      if (details->possible_moved_to_abspaths == NULL)
+        {
+          struct repos_move_info *move;
 
-      SVN_ERR(svn_wc__guess_incoming_move_target_nodes(
-                &possible_moved_to_abspaths,
-                conflict->ctx->wc_ctx, victim_abspath, victim_node_kind,
-                move->moved_to_repos_relpath, incoming_new_pegrev,
-                conflict->pool, scratch_pool));
+          /* Find the last move in the move chain. This should correspond to
+           * the node's location in incoming_new_pegrev. */
+          /* ### What about reverse-merges and reverse-updates? */
+          move = details->move;
+          while (move->next)
+            move = move->next;
 
-      /* Save the move target list for later use. */
-      option->type_data.tree.possible_moved_to_abspaths =
-        possible_moved_to_abspaths;
-      option->type_data.tree.preferred_move_target_idx = 0;
+          SVN_ERR(svn_wc__guess_incoming_move_target_nodes(
+                    &details->possible_moved_to_abspaths,
+                    conflict->ctx->wc_ctx, victim_abspath, victim_node_kind,
+                    move->moved_to_repos_relpath, incoming_new_pegrev,
+                    conflict->pool, scratch_pool));
+          details->preferred_move_target_idx = 0;
+        }
 
-      if (possible_moved_to_abspaths->nelts == 0)
+      if (details->possible_moved_to_abspaths->nelts == 0)
         return SVN_NO_ERROR;
 
       /* Pick the first possible move target from the list.
        * In most cases there will only be one candidate anyway. */
-      moved_to_abspath = APR_ARRAY_IDX(
-                           possible_moved_to_abspaths,
-                           option->type_data.tree.preferred_move_target_idx,
-                           const char *);
+      moved_to_abspath = APR_ARRAY_IDX(details->possible_moved_to_abspaths,
+                                       details->preferred_move_target_idx,
+                                       const char *);
       option->description =
         apr_psprintf(
           options->pool, _("move '%s' to '%s' and merge"),
@@ -6942,7 +6938,6 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
   svn_client_conflict_t *conflict = option->conflict;
   struct conflict_tree_incoming_delete_details *details;
   const char *victim_abspath;
-  apr_array_header_t *option_move_target_list;
   int i;
 
   SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
@@ -6959,15 +6954,14 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
                                                    scratch_pool));
 
   /* Return a copy of the option's move target candidate list. */
-  option_move_target_list = option->type_data.tree.possible_moved_to_abspaths;
-  *possible_moved_to_abspaths = apr_array_make(result_pool,
-                                               option_move_target_list->nelts,
-                                               sizeof (const char *));
-  for (i = 0; i < option_move_target_list->nelts; i++)
+  *possible_moved_to_abspaths =
+    apr_array_make(result_pool, details->possible_moved_to_abspaths->nelts,
+                   sizeof (const char *));
+  for (i = 0; i < details->possible_moved_to_abspaths->nelts; i++)
     {
       const char *moved_to_abspath;
 
-      moved_to_abspath = APR_ARRAY_IDX(option_move_target_list, i,
+      moved_to_abspath = APR_ARRAY_IDX(details->possible_moved_to_abspaths, i,
                                        const char *);
       APR_ARRAY_PUSH(*possible_moved_to_abspaths, const char *) =
         apr_pstrdup(result_pool, moved_to_abspath);
@@ -6985,7 +6979,6 @@ svn_client_conflict_option_set_moved_to_abspath(
   svn_client_conflict_t *conflict = option->conflict;
   struct conflict_tree_incoming_delete_details *details;
   const char *victim_abspath;
-  apr_array_header_t *possible_moved_to_abspaths;
   const char *moved_to_abspath;
   const char *wcroot_abspath;
 
@@ -7002,10 +6995,8 @@ svn_client_conflict_option_set_moved_to_abspath(
                             svn_dirent_local_style(victim_abspath,
                                                    scratch_pool));
 
-  possible_moved_to_abspaths =
-    option->type_data.tree.possible_moved_to_abspaths;
   if (preferred_move_target_idx < 0 ||
-      preferred_move_target_idx > possible_moved_to_abspaths->nelts)
+      preferred_move_target_idx > details->possible_moved_to_abspaths->nelts)
     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                              _("Index '%d' is out of bounds of the possible "
                                "move target list for '%s'"),
@@ -7014,12 +7005,12 @@ svn_client_conflict_option_set_moved_to_abspath(
                                                    scratch_pool));
 
   /* Record the user's preference and update the option description. */
-  option->type_data.tree.preferred_move_target_idx = preferred_move_target_idx;
+  details->preferred_move_target_idx = preferred_move_target_idx;
 
   SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
                              victim_abspath, scratch_pool,
                              scratch_pool));
-  moved_to_abspath = APR_ARRAY_IDX(possible_moved_to_abspaths,
+  moved_to_abspath = APR_ARRAY_IDX(details->possible_moved_to_abspaths,
                                    preferred_move_target_idx,
                                    const char *);
   option->description =
