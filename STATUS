@@ -129,6 +129,13 @@ Candidate changes:
    Votes:
      +1 (non-binding): luke1410
 
+ * 1748514
+   Fix a crash in 'svn resolve'.
+   Justification:
+     SVN should not segfault. User complained.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
