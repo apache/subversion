@@ -238,26 +238,37 @@ static const svn_token_map_t map_conflict_reason[] =
 };
 
 /* Describes a server-side move (really a copy+delete within the same
- * revision) which was identified by scanning the revision log. */
+ * revision) which was identified by scanning the revision log.
+ * This structure can represent one or more "chains" of moves, i.e.
+ * multiple move operations which occurred across a range of revisions. */
 struct repos_move_info {
-  /* The repository relpath the node was moved from. */
-  const char *moved_from_repos_relpath;
-
-  /* The repository relpath the node was moved to. */
-  const char *moved_to_repos_relpath;
- 
   /* The revision in which this move was committed. */
   svn_revnum_t rev;
 
   /* The author who commited the revision in which this move was committed. */
   const char *rev_author;
 
+  /* The repository relpath the node was moved from in this revision. */
+  const char *moved_from_repos_relpath;
+
+  /* The repository relpath the node was moved to in this revision. */
+  const char *moved_to_repos_relpath;
+
   /* The copyfrom revision of the moved-to path. */
   svn_revnum_t copyfrom_rev;
 
-  /* Prev and next pointers. NULL if no prior or next move exists. */
+  /* Prev pointer. NULL if no prior move exists in the chain. */
   struct repos_move_info *prev;
-  struct repos_move_info *next;
+
+  /* An array of struct repos_move_info * elements, each representing
+   * a possible way forward in the move chain. NULL if no next move
+   * exists in this chain. If the deleted node was copied only once in
+   * this revision, then this array has only one element and the move
+   * chain does not fork. But if this revision contains multiple copies of
+   * the deleted node, each of these copies appears as an element of this
+   * array, and each element represents a different path the next move
+   * might have taken. */
+  apr_array_header_t *next;
 };
 
 /* Set *RELATED to true if the deleted node at repository relpath
@@ -412,7 +423,12 @@ find_moves_in_revision(apr_hash_t *moves_table,
                   SVN_ERR_ASSERT(move->rev < next_move->rev);
 
                   /* Prepend this move to the linked list. */
-                  move->next = next_move;
+                  if (move->next == NULL)
+                    move->next = apr_array_make(
+                                   result_pool, 1,
+                                   sizeof (struct repos_move_info *));
+                  APR_ARRAY_PUSH(move->next,
+                                 struct repos_move_info *) = next_move;
                   next_move->prev = move;
                 }
             }
@@ -1111,14 +1127,14 @@ describe_local_dir_node_change(const char **description,
  * If the node was replaced rather than deleted, set *REPLACING_NODE_KIND to
  * the node kind of the replacing node. Else, set it to svn_node_unknown.
  * Only request the log for revisions up to END_REV from the server.
- * If the deleted node was moved, provide move information in *MOVE.
- * If the node was not moved,set *MOVE to NULL.
+ * If the deleted node was moved, provide heads of move chains in *MOVES.
+ * If the node was not moved,set *MOVES to NULL.
  */
 static svn_error_t *
 find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
                                      const char **deleted_rev_author,
                                      svn_node_kind_t *replacing_node_kind,
-                                     struct repos_move_info **move,
+                                     struct apr_array_header_t **moves,
                                      svn_client_conflict_t *conflict,
                                      const char *deleted_basename,
                                      const char *parent_repos_relpath,
@@ -1225,41 +1241,46 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
       *deleted_rev = SVN_INVALID_REVNUM;
       *deleted_rev_author = NULL;
       *replacing_node_kind = svn_node_unknown;
-      *move = NULL;
+      *moves = NULL;
       return SVN_NO_ERROR;
     }
   else
     {
-      apr_array_header_t *moves;
+      apr_array_header_t *all_moves_in_deleted_rev;
 
       *deleted_rev = b.deleted_rev;
       *deleted_rev_author = b.deleted_rev_author;
       *replacing_node_kind = b.replacing_node_kind;
 
-      /* Look for a move which affects the deleted node. */
-      moves = apr_hash_get(b.moves_table, &b.deleted_rev,
-                           sizeof(svn_revnum_t));
-      if (moves)
+      /* Look for a moves which affect the deleted node. */
+      all_moves_in_deleted_rev = apr_hash_get(b.moves_table, &b.deleted_rev,
+                                             sizeof(svn_revnum_t));
+      if (all_moves_in_deleted_rev)
         {
           int i;
 
-          for (i = 0; i < moves->nelts; i++)
+          *moves = apr_array_make(result_pool, 1, sizeof(const char *));
+          for (i = 0; i < all_moves_in_deleted_rev->nelts; i++)
             {
               struct repos_move_info *this_move;
               
-              this_move = APR_ARRAY_IDX(moves, i, struct repos_move_info *);
+              this_move = APR_ARRAY_IDX(all_moves_in_deleted_rev, i,
+                                        struct repos_move_info *);
               if (strcmp(b.deleted_repos_relpath,
                          this_move->moved_from_repos_relpath) == 0)
                 {
                   /* Because b->moves_table lives in result_pool
                    * there is no need to deep-copy here. */
-                  *move = this_move;
-                  break;
+                   APR_ARRAY_PUSH(*moves, struct repos_move_info *) = this_move;
                 }
             }
+
+          /* If we didn't find any applicable moves, return NULL. */
+          if ((*moves)->nelts == 0)
+            *moves = NULL;
         }
       else
-        *move = NULL;
+        *moves = NULL;
     }
 
   return SVN_NO_ERROR;
@@ -1274,9 +1295,10 @@ struct conflict_tree_local_missing_details
   /* Author who committed DELETED_REV. */
   const char *deleted_rev_author;
 
-  /* Move information. If not NULL, the first move happened in DELETED_REV.
-   * Follow MOVE->NEXT for subsequent moves in later revisions. */
-  struct repos_move_info *move;
+  /* Move information. If not NULL, this is an array of repos_move_info *
+   * elements. Each element is the head of a move chain which starts in
+   * DELETED_REV. */
+  apr_array_header_t *moves;
 };
 
 /* Implements tree_conflict_get_details_func_t. */
@@ -1294,7 +1316,7 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
   svn_node_kind_t replacing_node_kind;
   const char *deleted_basename;
   struct conflict_tree_local_missing_details *details;
-  struct repos_move_info *move;
+  apr_array_header_t *moves;
 
   /* We only handle merges here. */
   if (svn_client_conflict_get_operation(conflict) != svn_wc_operation_merge)
@@ -1321,7 +1343,7 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
                                       scratch_pool,
                                       scratch_pool));
   SVN_ERR(find_revision_for_suspected_deletion(
-            &deleted_rev, &deleted_rev_author, &replacing_node_kind, &move,
+            &deleted_rev, &deleted_rev_author, &replacing_node_kind, &moves,
             conflict, deleted_basename, parent_repos_relpath,
             old_rev < new_rev ? new_rev : old_rev, 0,
             old_rev < new_rev ? new_repos_relpath : old_repos_relpath,
@@ -1334,7 +1356,7 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
   details = apr_pcalloc(conflict->pool, sizeof(*details));
   details->deleted_rev = deleted_rev;
   details->deleted_rev_author = deleted_rev_author;
-  details->move = move;
+  details->moves = moves;
                                          
   conflict->tree_conflict_local_details = details;
 
@@ -1405,24 +1427,31 @@ describe_local_none_node_change(const char **description,
   return SVN_NO_ERROR;
 }
 
-/* Append a description of all moves in the MOVE chain to DESCRIPTION. */
+/* Append a description of a move chain beginning at NEXT to DESCRIPTION. */
 static const char *
 append_moved_to_chain_description(const char *description,
-                                  struct repos_move_info *move,
+                                  apr_array_header_t *next,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
-  if (move == NULL)
+  if (next == NULL)
     return description;
 
-  while (move)
+  while (next)
     {
+      struct repos_move_info *move;
+
+      /* Describe the first possible move chain only. Adding multiple chains
+       * to the description would just be confusing. The user may select a
+       * different move destination while resolving the conflict. */
+      move = APR_ARRAY_IDX(next, 0, struct repos_move_info *);
+
       description = apr_psprintf(scratch_pool,
                                  _("%s\nAnd then moved away to '^/%s' by "
                                    "%s in r%ld."),
                                  description, move->moved_to_repos_relpath,
                                  move->rev_author, move->rev);
-      move = move->next;
+      next = move->next;
     }
 
   return apr_pstrdup(result_pool, description);
@@ -1476,17 +1505,20 @@ conflict_tree_get_description_local_missing(const char **description,
     return svn_error_trace(conflict_tree_get_local_description_generic(
                              description, conflict, result_pool, scratch_pool));
 
-  if (details->move)
+  if (details->moves)
     {
+      struct repos_move_info *move;
+
+      move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
       *description = apr_psprintf(
                        result_pool,
                        _("No such file or directory was found in the "
                          "merge target working copy.\nThe item was "
                          "moved away to '^/%s' in r%ld by %s."),
-                       details->move->moved_to_repos_relpath,
-                       details->move->rev, details->move->rev_author);
+                       move->moved_to_repos_relpath,
+                       move->rev, move->rev_author);
       *description = append_moved_to_chain_description(*description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
     }
@@ -1813,16 +1845,36 @@ struct conflict_tree_incoming_delete_details
   /* New node kind for a replaced node. This is svn_node_none for deletions. */
   svn_node_kind_t replacing_node_kind;
 
-  /* Move information. If not NULL, the first move happened in DELETED_REV
-   * or in ADDED_REV (in which case moves should be interpreted in reverse).
-   * Follow MOVE->NEXT for subsequent moves in later revisions. */
-  struct repos_move_info *move;
+  /* Move information. If not NULL, this is an array of repos_move_info *
+   * elements. Each element is the head of a move chain which starts in
+   * DELETED_REV or in ADDED_REV (in which case moves should be interpreted
+   * in reverse). */
+  apr_array_header_t *moves;
 
-  /* A list of possible working copy nodes for an incoming move target. */
-  apr_array_header_t *possible_moved_to_abspaths;
+  /* A map of repos_relpaths and working copy nodes for an incoming move.
+   *
+   * Each key is a "const char *" repository relpath corresponding to a
+   * possible repository-side move destination node in the revision which
+   * is the target revision in case of update and switch, or the merge-right
+   * revision in case of a merge.
+   *
+   * Each value is an apr_array_header_t *.
+   * Each array consists of "const char *" absolute paths to working copy
+   * nodes which correspond to the repository node selected by the map key.
+   * Each such working copy node is a potential local move target which can
+   * be chosen to "follow" the incoming move when resolving a tree conflict.
+   *
+   * This may be an empty hash map in case if there is no move target path
+   * in the working copy. */
+  apr_hash_t *wc_move_targets;
 
-  /* The current preferred move target (can be overridden by the user). */
-  int preferred_move_target_idx;
+  /* The preferred move target repository relpath. This is our key into
+   * the WC_MOVE_TARGETS map above (can be overridden by the user). */
+  const char *move_target_repos_relpath;
+
+  /* The current index into the list of working copy nodes corresponding to
+   * MOVE_TARGET_REPOS_REPLATH (can be overridden by the user). */
+  int wc_move_target_idx;
 };
 
 static const char *
@@ -1845,15 +1897,18 @@ describe_incoming_deletion_upon_update(
                            "replaced with a file by %s in r%ld."),
                          old_rev, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved to "
                                "'^/%s'."), description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -1869,15 +1924,18 @@ describe_incoming_deletion_upon_update(
                            "%s in r%ld."),
                          old_rev, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced file was moved to '^/%s'."),
                              description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -1890,15 +1948,18 @@ describe_incoming_deletion_upon_update(
                          _("Item updated from r%ld to r%ld was replaced "
                            "with a file by %s in r%ld."), old_rev, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced item was moved to '^/%s'."),
                              description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -1916,15 +1977,18 @@ describe_incoming_deletion_upon_update(
                             "of history by %s in r%ld."),
                           old_rev, new_rev,
                           details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved to "
                                "'^/%s'."), description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -1939,15 +2003,18 @@ describe_incoming_deletion_upon_update(
                            "replaced with a directory by %s in r%ld."),
                          old_rev, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced file was moved to '^/%s'."),
                              description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -1960,15 +2027,18 @@ describe_incoming_deletion_upon_update(
                          _("Item updated from r%ld to r%ld was replaced "
                            "by %s in r%ld."), old_rev, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced item was moved to '^/%s'."),
                              description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -1979,17 +2049,21 @@ describe_incoming_deletion_upon_update(
     {
       if (victim_node_kind == svn_node_dir)
         {
-          if (details->move)
+          if (details->moves)
             {
-              const char *description =
+              const char *description;
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              description =
                 apr_psprintf(result_pool,
                              _("Directory updated from r%ld to r%ld was "
                                "moved to '^/%s' by %s in r%ld."),
                              old_rev, new_rev,
-                             details->move->moved_to_repos_relpath,
+                             move->moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2003,16 +2077,20 @@ describe_incoming_deletion_upon_update(
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         {
-          if (details->move)
+          if (details->moves)
             {
-              const char *description =
+              struct repos_move_info *move;
+              const char *description;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              description =
                 apr_psprintf(result_pool,
                              _("File updated from r%ld to r%ld was moved "
                                "to '^/%s' by %s in r%ld."), old_rev, new_rev,
-                             details->move->moved_to_repos_relpath,
+                             move->moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2024,16 +2102,20 @@ describe_incoming_deletion_upon_update(
         }
       else
         {
-          if (details->move)
+          if (details->moves)
             {
-              const char *description = 
+              const char *description;
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              description = 
                 apr_psprintf(result_pool,
                              _("Item updated from r%ld to r%ld was moved "
                                "to '^/%s' by %s in r%ld."), old_rev, new_rev,
-                             details->move->moved_to_repos_relpath,
+                             move->moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2149,15 +2231,18 @@ describe_incoming_deletion_upon_switch(
                          old_repos_relpath, old_rev,
                          new_repos_relpath, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved "
                                "to '^/%s'."), description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2175,15 +2260,18 @@ describe_incoming_deletion_upon_switch(
                          old_repos_relpath, old_rev,
                          new_repos_relpath, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced file was moved to '^/%s'."),
                              description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2199,15 +2287,18 @@ describe_incoming_deletion_upon_switch(
                          old_repos_relpath, old_rev,
                          new_repos_relpath, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced item was moved to '^/%s'."),
                              description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2227,15 +2318,18 @@ describe_incoming_deletion_upon_switch(
                          old_repos_relpath, old_rev,
                          new_repos_relpath, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved to "
                                "'^/%s'."), description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2252,15 +2346,18 @@ describe_incoming_deletion_upon_switch(
                          old_repos_relpath, old_rev,
                          new_repos_relpath, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced file was moved to '^/%s'."),
                              description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2276,15 +2373,18 @@ describe_incoming_deletion_upon_switch(
                          old_repos_relpath, old_rev,
                          new_repos_relpath, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced item was moved to '^/%s'."),
                              description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2295,19 +2395,23 @@ describe_incoming_deletion_upon_switch(
     {
       if (victim_node_kind == svn_node_dir)
         {
-          if (details->move)
+          if (details->moves)
             {
-              const char *description =
+              struct repos_move_info *move;
+              const char *description;
+              
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              description =
                 apr_psprintf(result_pool,
                              _("Directory switched from\n"
                                "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
                                "was moved to '^/%s' by %s in r%ld."),
                              old_repos_relpath, old_rev,
                              new_repos_relpath, new_rev,
-                             details->move->moved_to_repos_relpath,
+                             move->moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2323,19 +2427,23 @@ describe_incoming_deletion_upon_switch(
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         {
-          if (details->move)
+          if (details->moves)
             {
-              const char *description =
+              struct repos_move_info *move;
+              const char *description;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              description =
                 apr_psprintf(result_pool,
                              _("File switched from\n"
                                "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
                                "moved to '^/%s' by %s in r%ld."),
                              old_repos_relpath, old_rev,
                              new_repos_relpath, new_rev,
-                             details->move->moved_to_repos_relpath,
+                             move->moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2350,19 +2458,23 @@ describe_incoming_deletion_upon_switch(
         }
       else
         {
-          if (details->move)
+          if (details->moves)
             {
-              const char *description =
+              struct repos_move_info *move;
+              const char *description;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              description =
                 apr_psprintf(result_pool,
                              _("Item switched from\n"
                                "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
                                "moved to '^/%s' by %s in r%ld."),
                              old_repos_relpath, old_rev,
                              new_repos_relpath, new_rev,
-                             details->move->moved_to_repos_relpath,
+                             move->moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2506,15 +2618,18 @@ describe_incoming_deletion_upon_merge(
                          old_repos_relpath, old_rev,
                          new_repos_relpath, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved to "
                                "'^/%s'."), description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2532,15 +2647,18 @@ describe_incoming_deletion_upon_merge(
                          old_repos_relpath, old_rev,
                          new_repos_relpath, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced file was moved to '^/%s'."),
                              description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2568,15 +2686,18 @@ describe_incoming_deletion_upon_merge(
                          old_repos_relpath, old_rev,
                          new_repos_relpath, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved to "
                                "'^/%s'."), description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2593,15 +2714,18 @@ describe_incoming_deletion_upon_merge(
                          old_repos_relpath, old_rev,
                          new_repos_relpath, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced file was moved to '^/%s'."),
                              description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2617,15 +2741,18 @@ describe_incoming_deletion_upon_merge(
                          old_repos_relpath, old_rev,
                          new_repos_relpath, new_rev,
                          details->rev_author, details->deleted_rev);
-          if (details->move)
+          if (details->moves)
             {
+              struct repos_move_info *move;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced item was moved to '^/%s'."),
                              description,
-                             details->move->moved_to_repos_relpath);
+                             move->moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2636,19 +2763,23 @@ describe_incoming_deletion_upon_merge(
     {
       if (victim_node_kind == svn_node_dir)
         {
-          if (details->move)
+          if (details->moves)
             {
-              const char *description =
+              struct repos_move_info *move;
+              const char *description;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              description =
                 apr_psprintf(result_pool,
                              _("Directory merged from\n"
                                "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
                                "moved to '^/%s' by %s in r%ld."),
                              old_repos_relpath, old_rev,
                              new_repos_relpath, new_rev,
-                             details->move->moved_to_repos_relpath,
+                             move->moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2664,19 +2795,23 @@ describe_incoming_deletion_upon_merge(
       else if (victim_node_kind == svn_node_file ||
                victim_node_kind == svn_node_symlink)
         {
-          if (details->move)
+          if (details->moves)
             {
-              const char *description =
+              struct repos_move_info *move;
+              const char *description;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              description =
                 apr_psprintf(result_pool,
                              _("File merged from\n"
                                "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
                                "moved to '^/%s' by %s in r%ld."),
                              old_repos_relpath, old_rev,
                              new_repos_relpath, new_rev,
-                             details->move->moved_to_repos_relpath,
+                             move->moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -2691,19 +2826,23 @@ describe_incoming_deletion_upon_merge(
         }
       else
         {
-          if (details->move)
+          if (details->moves)
             {
-              const char *description =
+              struct repos_move_info *move;
+              const char *description;
+
+              move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              description =
                 apr_psprintf(result_pool,
                              _("Item merged from\n"
                                "'^/%s@%ld'\nto\n'^/%s@%ld'\nwas "
                                "moved to '^/%s' by %s in r%ld."),
                              old_repos_relpath, old_rev,
                              new_repos_relpath, new_rev,
-                             details->move->moved_to_repos_relpath,
+                             move->moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
-                                                       details->move->next,
+                                                       move->next,
                                                        result_pool,
                                                        scratch_pool);
             }
@@ -3095,7 +3234,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           svn_revnum_t deleted_rev;
           const char *deleted_rev_author;
           svn_node_kind_t replacing_node_kind;
-          struct repos_move_info *move;
+          apr_array_header_t *moves;
 
           /* The update operation went forward in history. */
 
@@ -3109,7 +3248,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                               scratch_pool));
           SVN_ERR(find_revision_for_suspected_deletion(
                     &deleted_rev, &deleted_rev_author, &replacing_node_kind,
-                    &move, conflict,
+                    &moves, conflict,
                     svn_dirent_basename(conflict->local_abspath, scratch_pool),
                     parent_repos_relpath, new_rev, old_rev,
                     NULL, SVN_INVALID_REVNUM, /* related to self */
@@ -3129,7 +3268,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                                                new_repos_relpath);
           details->rev_author = deleted_rev_author;
           details->replacing_node_kind = replacing_node_kind;
-          details->move = move;
+          details->moves = moves;
         }
       else /* new_rev < old_rev */
         {
@@ -3150,7 +3289,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           svn_revnum_t deleted_rev;
           const char *deleted_rev_author;
           svn_node_kind_t replacing_node_kind;
-          struct repos_move_info *move;
+          apr_array_header_t *moves;
 
           /* The switch/merge operation went forward in history.
            *
@@ -3159,7 +3298,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
            * the revision which deleted the node. */
           SVN_ERR(find_revision_for_suspected_deletion(
                     &deleted_rev, &deleted_rev_author, &replacing_node_kind,
-                    &move, conflict,
+                    &moves, conflict,
                     svn_relpath_basename(new_repos_relpath, scratch_pool),
                     svn_relpath_dirname(new_repos_relpath, scratch_pool),
                     new_rev, old_rev, old_repos_relpath, old_rev,
@@ -3180,7 +3319,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           details->rev_author = apr_pstrdup(conflict->pool,
                                             deleted_rev_author);
           details->replacing_node_kind = replacing_node_kind;
-          details->move = move;
+          details->moves = moves;
         }
       else /* new_rev < old_rev */
         {
@@ -3222,9 +3361,11 @@ struct conflict_tree_incoming_add_details
   const char *added_rev_author;
   const char *deleted_rev_author;
 
-  /* Move information, in case the item was not added/deleted but moved here
-   * or moved away. Else NULL. */
-  struct repos_move_info *move;
+  /* Move information. If not NULL, this is an array of repos_move_info *
+   * elements. Each element is the head of a move chain which starts in
+   * ADDED_REV or in DELETED_REV (in which case moves should be interpreted
+   * in reverse). */
+  apr_array_header_t *moves;
 };
 
 /* Implements tree_conflict_get_details_func_t.
@@ -3433,11 +3574,11 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
           svn_revnum_t deleted_rev;
           const char *deleted_rev_author;
           svn_node_kind_t replacing_node_kind;
-          struct repos_move_info *move;
+          apr_array_header_t *moves;
 
           SVN_ERR(find_revision_for_suspected_deletion(
                     &deleted_rev, &deleted_rev_author, &replacing_node_kind,
-                    &move, conflict,
+                    &moves, conflict,
                     svn_relpath_basename(old_repos_relpath, scratch_pool),
                     svn_relpath_dirname(old_repos_relpath, scratch_pool),
                     old_rev, new_rev,
@@ -3460,7 +3601,7 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
 
           details->added_rev = SVN_INVALID_REVNUM;
           details->added_rev_author = NULL;
-          details->move = move;
+          details->moves = moves;
         }
     }
   else
@@ -5824,12 +5965,13 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   svn_wc_notify_state_t merge_props_outcome;
   apr_array_header_t *propdiffs;
   struct conflict_tree_incoming_delete_details *details;
+  apr_array_header_t *possible_moved_to_abspaths;
   const char *moved_to_abspath;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
   operation = svn_client_conflict_get_operation(conflict);
   details = conflict->tree_conflict_incoming_details;
-  if (details == NULL || details->move == NULL)
+  if (details == NULL || details->moves == NULL)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                              _("The specified conflict resolution option "
                                "requires details for tree conflict at '%s' "
@@ -5878,8 +6020,10 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   SVN_ERR(svn_stream_close(ancestor_stream));
   SVN_ERR(svn_io_file_flush(ancestor_file, scratch_pool));
 
-  moved_to_abspath = APR_ARRAY_IDX(details->possible_moved_to_abspaths,
-                                   details->preferred_move_target_idx,
+  possible_moved_to_abspaths =
+    svn_hash_gets(details->wc_move_targets, details->move_target_repos_relpath);
+  moved_to_abspath = APR_ARRAY_IDX(possible_moved_to_abspaths,
+                                   details->wc_move_target_idx,
                                    const char *);
 
   /* ### The following WC modifications should be atomic. */
@@ -6832,6 +6976,62 @@ configure_option_incoming_delete_accept(svn_client_conflict_t *conflict,
   return SVN_NO_ERROR;
 }
 
+/* Follow each move chain starting a MOVE all the way to the end to find
+ * the possible working copy locations for VICTIM_ABSPATH at PEG_REVISION.
+ * Add each such location to the WC_MOVE_TARGETS hash table, keyed on the
+ * repos_relpath which is the corresponding move destination in the repository.
+ * This function is recursive. */
+static svn_error_t *
+follow_move_chains(apr_hash_t *wc_move_targets,
+                   struct repos_move_info *move,
+                   svn_client_ctx_t *ctx,
+                   const char *victim_abspath,
+                   svn_node_kind_t victim_node_kind,
+                   svn_revnum_t peg_revision,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  /* If this is the end of a move chain, look for matching paths in
+   * the working copy and add them to our collection if found. */
+  if (move->next == NULL)
+    {
+      apr_array_header_t *moved_to_abspaths;
+
+      /* Gather nodes which represent this moved_to_repos_relpath. */
+      SVN_ERR(svn_wc__guess_incoming_move_target_nodes(
+                &moved_to_abspaths, ctx->wc_ctx,
+                victim_abspath, victim_node_kind,
+                move->moved_to_repos_relpath,
+                peg_revision, result_pool, scratch_pool));
+      if (moved_to_abspaths->nelts > 0)
+        svn_hash_sets(wc_move_targets, move->moved_to_repos_relpath,
+                      moved_to_abspaths);
+    }
+  else
+    {
+      int i;
+      apr_pool_t *iterpool;
+
+      /* Recurse into each of the possible move chains. */
+      iterpool = svn_pool_create(scratch_pool);
+      for (i = 0; i < move->next->nelts; i++)
+        {
+          struct repos_move_info *next_move;
+
+          svn_pool_clear(iterpool);
+
+          next_move = APR_ARRAY_IDX(move->next, i, struct repos_move_info *);
+          SVN_ERR(follow_move_chains(wc_move_targets, next_move,
+                                     ctx, victim_abspath, victim_node_kind,
+                                     peg_revision, result_pool, iterpool));
+                                        
+        }
+      svn_pool_destroy(iterpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Configure 'incoming move file merge' resolution option for
  * a tree conflict. */
 static svn_error_t *
@@ -6851,7 +7051,7 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
   struct conflict_tree_incoming_delete_details *details;
 
   details = conflict->tree_conflict_incoming_details;
-  if (details == NULL || details->move == NULL)
+  if (details == NULL || details->moves == NULL)
     return SVN_NO_ERROR;
 
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
@@ -6875,6 +7075,8 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
       const char *wcroot_abspath;
       const char *victim_abspath;
       const char *moved_to_abspath;
+      apr_array_header_t *move_target_repos_relpaths;
+      apr_array_header_t *move_target_wc_abspaths;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->pool = options->pool;
@@ -6884,32 +7086,50 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
                                  victim_abspath, scratch_pool,
                                  scratch_pool));
 
-      if (details->possible_moved_to_abspaths == NULL)
+      if (details->wc_move_targets == NULL)
         {
-          struct repos_move_info *move;
+          int i;
 
-          /* Find the last move in the move chain. This should correspond to
-           * the node's location in incoming_new_pegrev. */
-          /* ### What about reverse-merges and reverse-updates? */
-          move = details->move;
-          while (move->next)
-            move = move->next;
+          details->wc_move_targets = apr_hash_make(conflict->pool);
+          for (i = 0; i < details->moves->nelts; i++)
+            {
+              struct repos_move_info *move;
 
-          SVN_ERR(svn_wc__guess_incoming_move_target_nodes(
-                    &details->possible_moved_to_abspaths,
-                    conflict->ctx->wc_ctx, victim_abspath, victim_node_kind,
-                    move->moved_to_repos_relpath, incoming_new_pegrev,
-                    conflict->pool, scratch_pool));
-          details->preferred_move_target_idx = 0;
+              move = APR_ARRAY_IDX(details->moves, i, struct repos_move_info *);
+              SVN_ERR(follow_move_chains(details->wc_move_targets, move,
+                                         conflict->ctx, victim_abspath,
+                                         victim_node_kind,
+                                         incoming_new_pegrev,
+                                         conflict->pool, scratch_pool));
+            }
+          if (apr_hash_count(details->wc_move_targets) > 0)
+            {
+              /* Initialize to the first possible move target. Hopefully,
+               * in most cases there will only be one candidate anyway. */
+              move_target_repos_relpaths = 
+                svn_sort__hash(details->wc_move_targets,
+                               svn_sort_compare_items_as_paths,
+                               scratch_pool);
+              details->move_target_repos_relpath =
+                APR_ARRAY_IDX(move_target_repos_relpaths, 0, const char *);
+              details->wc_move_target_idx = 0;
+            }
+          else
+            {
+              details->move_target_repos_relpath = NULL;
+              details->wc_move_target_idx = 0;
+              return SVN_NO_ERROR;
+            }
         }
 
-      if (details->possible_moved_to_abspaths->nelts == 0)
+      if (apr_hash_count(details->wc_move_targets) == 0)
         return SVN_NO_ERROR;
 
-      /* Pick the first possible move target from the list.
-       * In most cases there will only be one candidate anyway. */
-      moved_to_abspath = APR_ARRAY_IDX(details->possible_moved_to_abspaths,
-                                       details->preferred_move_target_idx,
+      move_target_wc_abspaths =
+        svn_hash_gets(details->wc_move_targets,
+                      details->move_target_repos_relpath);
+      moved_to_abspath = APR_ARRAY_IDX(move_target_wc_abspaths,
+                                       details->wc_move_target_idx,
                                        const char *);
       option->description =
         apr_psprintf(
@@ -6938,6 +7158,7 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
   svn_client_conflict_t *conflict = option->conflict;
   struct conflict_tree_incoming_delete_details *details;
   const char *victim_abspath;
+  apr_array_header_t *move_target_wc_abspaths;
   int i;
 
   SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
@@ -6945,23 +7166,26 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
 
   victim_abspath = svn_client_conflict_get_local_abspath(conflict);
   details = conflict->tree_conflict_incoming_details;
-  if (details == NULL || details->move == NULL)
+  if (details == NULL || details->wc_move_targets == NULL)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                             _("Getting a list of possible moved targets "
+                             _("Getting a list of possible move targets "
                                "requires details for tree conflict at '%s' "
                                "to be fetched from the repository first"),
                             svn_dirent_local_style(victim_abspath,
                                                    scratch_pool));
 
+  move_target_wc_abspaths =
+    svn_hash_gets(details->wc_move_targets, details->move_target_repos_relpath);
+
   /* Return a copy of the option's move target candidate list. */
   *possible_moved_to_abspaths =
-    apr_array_make(result_pool, details->possible_moved_to_abspaths->nelts,
+    apr_array_make(result_pool, move_target_wc_abspaths->nelts,
                    sizeof (const char *));
-  for (i = 0; i < details->possible_moved_to_abspaths->nelts; i++)
+  for (i = 0; i < move_target_wc_abspaths->nelts; i++)
     {
       const char *moved_to_abspath;
 
-      moved_to_abspath = APR_ARRAY_IDX(details->possible_moved_to_abspaths, i,
+      moved_to_abspath = APR_ARRAY_IDX(move_target_wc_abspaths, i,
                                        const char *);
       APR_ARRAY_PUSH(*possible_moved_to_abspaths, const char *) =
         apr_pstrdup(result_pool, moved_to_abspath);
@@ -6981,22 +7205,26 @@ svn_client_conflict_option_set_moved_to_abspath(
   const char *victim_abspath;
   const char *moved_to_abspath;
   const char *wcroot_abspath;
+  apr_array_header_t *move_target_wc_abspaths;
 
   SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
                  svn_client_conflict_option_incoming_move_file_text_merge);
 
   victim_abspath = svn_client_conflict_get_local_abspath(conflict);
   details = conflict->tree_conflict_incoming_details;
-  if (details == NULL || details->move == NULL)
+  if (details == NULL || details->wc_move_targets == NULL)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                             _("Setting a possible moved target requires "
-                               "details for tree conflict at '%s' "
-                               "to be fetched from the repository first"),
+                             _("Setting a move target requires details "
+                               "for tree conflict at '%s' to be fetched "
+                               "from the repository first"),
                             svn_dirent_local_style(victim_abspath,
                                                    scratch_pool));
 
+  move_target_wc_abspaths =
+    svn_hash_gets(details->wc_move_targets, details->move_target_repos_relpath);
+
   if (preferred_move_target_idx < 0 ||
-      preferred_move_target_idx > details->possible_moved_to_abspaths->nelts)
+      preferred_move_target_idx > move_target_wc_abspaths->nelts)
     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                              _("Index '%d' is out of bounds of the possible "
                                "move target list for '%s'"),
@@ -7005,12 +7233,12 @@ svn_client_conflict_option_set_moved_to_abspath(
                                                    scratch_pool));
 
   /* Record the user's preference and update the option description. */
-  details->preferred_move_target_idx = preferred_move_target_idx;
+  details->wc_move_target_idx = preferred_move_target_idx;
 
   SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
                              victim_abspath, scratch_pool,
                              scratch_pool));
-  moved_to_abspath = APR_ARRAY_IDX(details->possible_moved_to_abspaths,
+  moved_to_abspath = APR_ARRAY_IDX(move_target_wc_abspaths,
                                    preferred_move_target_idx,
                                    const char *);
   option->description =
