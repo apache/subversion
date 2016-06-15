@@ -6917,8 +6917,7 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
                            const char *);
       option->description =
         apr_psprintf(
-          options->pool,
-          _("follow move-away of '%s' and merge with '%s'"),
+          options->pool, _("move '%s' to '%s' and merge"),
           svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
                                                           victim_abspath),
                                  scratch_pool),
@@ -7025,8 +7024,7 @@ svn_client_conflict_option_set_moved_to_abspath(
                                    const char *);
   option->description =
     apr_psprintf(
-      option->pool,
-      _("follow move-away of '%s' and merge with '%s'"),
+      option->pool, _("move '%s' to '%s' and merge'"),
       svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
                                                       victim_abspath),
                              scratch_pool),
