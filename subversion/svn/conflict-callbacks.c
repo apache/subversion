@@ -574,6 +574,8 @@ prompt_string(const resolver_option_t *options,
           if (! *option_codes)
             break;
           opt = find_option(options, *option_codes++);
+          if (opt == NULL)
+            continue;
         }
       else
         {
