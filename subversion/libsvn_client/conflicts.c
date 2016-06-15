@@ -6058,15 +6058,8 @@ static const svn_client_conflict_option_t binary_conflict_options[] =
   },
 
   {
-    svn_client_conflict_option_working_text,
-    N_("accept working copy version of binary file"),
-    NULL,
-    resolve_text_conflict
-  },
-
-  {
     svn_client_conflict_option_merged_text,
-    N_("accept the file as it appears in the working copy"),
+    N_("accept binary file as it appears in the working copy"),
     NULL,
     resolve_text_conflict
   },
