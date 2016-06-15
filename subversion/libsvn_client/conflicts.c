@@ -4390,7 +4390,8 @@ svn_client_conflict_option_set_merged_propval(
   svn_client_conflict_option_t *option,
   const svn_string_t *merged_propval)
 {
-  option->type_data.prop.merged_propval = merged_propval;
+  option->type_data.prop.merged_propval = svn_string_dup(merged_propval,
+                                                         option->pool);
 }
 
 /* Implements conflict_option_resolve_func_t. */
