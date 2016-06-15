@@ -132,6 +132,13 @@ struct svn_client_conflict_option_t
       /* A merged property value, if supplied by the API user, else NULL. */
       const svn_string_t *merged_propval;
     } prop;
+
+    struct {
+      /* A list of possible working copy nodes for an incoming move target. */
+      apr_array_header_t *possible_moved_to_abspaths;
+      /* The current preferred move target (can be overridden by the user). */
+      int preferred_move_target_idx;
+    } tree;
   } type_data;
 
 };
@@ -1814,10 +1821,6 @@ struct conflict_tree_incoming_delete_details
    * or in ADDED_REV (in which case moves should be interpreted in reverse).
    * Follow MOVE->NEXT for subsequent moves in later revisions. */
   struct repos_move_info *move;
-
-  /* The path where we believe the moved-here node corresponding to the
-   * deleted node exists in the working copy. */
-  const char *moved_to_abspath;
 };
 
 static const char *
@@ -5818,20 +5821,23 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   svn_wc_notify_state_t merge_props_outcome;
   apr_array_header_t *propdiffs;
   struct conflict_tree_incoming_delete_details *details;
+  const char *moved_to_abspath;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
   operation = svn_client_conflict_get_operation(conflict);
   details = conflict->tree_conflict_incoming_details;
-  if (details == NULL)
+  if (details == NULL || details->move == NULL)
     return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                             _("Conflict resolution option '%d' requires "
-                               "details for tree conflict at '%s' to be "
-                               "fetched from the repository."),
-                            option->id,
+                             _("The specified conflict resolution option "
+                               "requires details for tree conflict at '%s' "
+                               "to be fetched from the repository first."),
                             svn_dirent_local_style(local_abspath,
                                                    scratch_pool));
 
   option_id = svn_client_conflict_option_get_id(option);
+  SVN_ERR_ASSERT(option_id ==
+                 svn_client_conflict_option_incoming_move_file_text_merge);
+                  
   SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
                                              conflict, scratch_pool,
                                              scratch_pool));
@@ -5869,11 +5875,16 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   SVN_ERR(svn_stream_close(ancestor_stream));
   SVN_ERR(svn_io_file_flush(ancestor_file, scratch_pool));
 
+  moved_to_abspath = APR_ARRAY_IDX(
+                       option->type_data.tree.possible_moved_to_abspaths,
+                       option->type_data.tree.preferred_move_target_idx,
+                       const char *);
+
   /* ### The following WC modifications should be atomic. */
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(
             &lock_abspath, ctx->wc_ctx,
             svn_dirent_get_longest_ancestor(local_abspath,
-                                            details->moved_to_abspath,
+                                            moved_to_abspath,
                                             scratch_pool),
             scratch_pool, scratch_pool));
 
@@ -5889,7 +5900,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
 
   /* Get a copy of the move target's properties. */
   err = svn_wc_prop_list2(&move_target_props, ctx->wc_ctx,
-                          details->moved_to_abspath,
+                          moved_to_abspath,
                           scratch_pool, scratch_pool);
   if (err)
     goto unlock_wc;
@@ -5903,7 +5914,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   /* Perform the file merge. */
   err = svn_wc_merge5(&merge_content_outcome, &merge_props_outcome,
                       ctx->wc_ctx, ancestor_abspath,
-                      local_abspath, details->moved_to_abspath,
+                      local_abspath, moved_to_abspath,
                       NULL, NULL, NULL, /* labels */
                       NULL, NULL, /* conflict versions */
                       FALSE, /* dry run */
@@ -5912,7 +5923,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
                       NULL, NULL, /* conflict func/baton */
                       NULL, NULL, /* don't allow user to cancel here */
                       scratch_pool);
-  svn_io_sleep_for_timestamps(details->moved_to_abspath, scratch_pool);
+  svn_io_sleep_for_timestamps(moved_to_abspath, scratch_pool);
   if (err)
     goto unlock_wc;
 
@@ -5921,7 +5932,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
       svn_wc_notify_t *notify;
 
       /* Tell the world about the file merge that just happened. */
-      notify = svn_wc_create_notify(details->moved_to_abspath,
+      notify = svn_wc_create_notify(moved_to_abspath,
                                     svn_wc_notify_update_update,
                                     scratch_pool);
       if (merge_content_outcome == svn_wc_merge_conflict)
@@ -5950,7 +5961,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
     {
       /* The move operation is not part of natural history. We must replicate
        * this move in our history. Record a move in the working copy. */
-      err = svn_wc__move2(ctx->wc_ctx, local_abspath, details->moved_to_abspath,
+      err = svn_wc__move2(ctx->wc_ctx, local_abspath, moved_to_abspath,
                           TRUE, /* this is a meta-data only move */
                           FALSE, /* mixed-revisions don't apply to files */
                           NULL, NULL, /* don't allow user to cancel here */
@@ -6848,6 +6859,7 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
       const char *victim_abspath;
       struct repos_move_info *move;
       const char *moved_to_abspath;
+      apr_array_header_t *possible_moved_to_abspaths;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->id = svn_client_conflict_option_incoming_move_file_text_merge;
@@ -6863,16 +6875,26 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
       while (move->next)
         move = move->next;
 
-      SVN_ERR(svn_wc__guess_incoming_move_target_node(
-                &moved_to_abspath, conflict->ctx->wc_ctx,
-                victim_abspath, victim_node_kind,
+      SVN_ERR(svn_wc__guess_incoming_move_target_nodes(
+                &possible_moved_to_abspaths,
+                conflict->ctx->wc_ctx, victim_abspath, victim_node_kind,
                 move->moved_to_repos_relpath, incoming_new_pegrev,
-                scratch_pool, scratch_pool));
-      if (moved_to_abspath == NULL)
+                conflict->pool, scratch_pool));
+
+      /* Save the move target list for later use. */
+      option->type_data.tree.possible_moved_to_abspaths =
+        possible_moved_to_abspaths;
+      option->type_data.tree.preferred_move_target_idx = 0;
+
+      if (possible_moved_to_abspaths->nelts == 0)
         return SVN_NO_ERROR;
 
-      details->moved_to_abspath = apr_pstrdup(conflict->pool,
-                                              moved_to_abspath);
+      /* Pick the first possible move target from the list.
+       * In most cases there will only be one candidate anyway. */
+      moved_to_abspath = APR_ARRAY_IDX(
+                           possible_moved_to_abspaths,
+                           option->type_data.tree.preferred_move_target_idx,
+                           const char *);
       option->description =
         apr_psprintf(
           options->pool,
@@ -6888,6 +6910,109 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
       APR_ARRAY_PUSH(options, const svn_client_conflict_option_t *) = option;
     }
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_option_get_moved_to_abspath_candidates(
+  apr_array_header_t **possible_moved_to_abspaths,
+  svn_client_conflict_option_t *option,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  svn_client_conflict_t *conflict = option->conflict;
+  struct conflict_tree_incoming_delete_details *details;
+  const char *victim_abspath;
+  apr_array_header_t *option_move_target_list;
+  int i;
+
+  SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_incoming_move_file_text_merge);
+
+  victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+  details = conflict->tree_conflict_incoming_details;
+  if (details == NULL || details->move == NULL)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Getting a list of possible moved targets "
+                               "requires details for tree conflict at '%s' "
+                               "to be fetched from the repository first"),
+                            svn_dirent_local_style(victim_abspath,
+                                                   scratch_pool));
+
+  /* Return a copy of the option's move target candidate list. */
+  option_move_target_list = option->type_data.tree.possible_moved_to_abspaths;
+  *possible_moved_to_abspaths = apr_array_make(result_pool,
+                                               option_move_target_list->nelts,
+                                               sizeof (const char *));
+  for (i = 0; i < option_move_target_list->nelts; i++)
+    {
+      const char *moved_to_abspath;
+
+      moved_to_abspath = APR_ARRAY_IDX(option_move_target_list, i,
+                                       const char *);
+      APR_ARRAY_PUSH(*possible_moved_to_abspaths, const char *) =
+        apr_pstrdup(result_pool, moved_to_abspath);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_option_set_moved_to_abspath(
+  svn_client_conflict_option_t *option,
+  int preferred_move_target_idx,
+  apr_pool_t *scratch_pool)
+{
+  svn_client_conflict_t *conflict = option->conflict;
+  struct conflict_tree_incoming_delete_details *details;
+  const char *victim_abspath;
+  apr_array_header_t *possible_moved_to_abspaths;
+  const char *moved_to_abspath;
+  const char *wcroot_abspath;
+
+  SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_incoming_move_file_text_merge);
+
+  victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+  details = conflict->tree_conflict_incoming_details;
+  if (details == NULL || details->move == NULL)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Setting a possible moved target requires "
+                               "details for tree conflict at '%s' "
+                               "to be fetched from the repository first"),
+                            svn_dirent_local_style(victim_abspath,
+                                                   scratch_pool));
+
+  possible_moved_to_abspaths =
+    option->type_data.tree.possible_moved_to_abspaths;
+  if (preferred_move_target_idx < 0 ||
+      preferred_move_target_idx > possible_moved_to_abspaths->nelts)
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             _("Index '%d' is out of bounds of the possible "
+                               "move target list for '%s'"),
+                            preferred_move_target_idx,
+                            svn_dirent_local_style(victim_abspath,
+                                                   scratch_pool));
+
+  /* Record the user's preference and update the option description. */
+  option->type_data.tree.preferred_move_target_idx = preferred_move_target_idx;
+
+  SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+                             victim_abspath, scratch_pool,
+                             scratch_pool));
+  moved_to_abspath = APR_ARRAY_IDX(possible_moved_to_abspaths,
+                                   preferred_move_target_idx,
+                                   const char *);
+  option->description =
+    apr_psprintf(
+      conflict->pool, /* ### need options->pool here! */
+      _("follow move-away of '%s' and merge with '%s'"),
+      svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                      victim_abspath),
+                             scratch_pool),
+      svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                      moved_to_abspath),
+                             scratch_pool));
   return SVN_NO_ERROR;
 }
 

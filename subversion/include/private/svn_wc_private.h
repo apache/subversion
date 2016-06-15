@@ -1890,31 +1890,31 @@ svn_wc__conflict_tree_update_moved_away_node(svn_wc_context_t *wc_ctx,
                                              void *notify_baton,
                                              apr_pool_t *scratch_pool);
 
-/* Find a node in the working copy which corresponds to the new location
+/* Find nodes in the working copy which corresponds to the new location
  * MOVED_TO_REPOS_RELPATH@REV of the tree conflict victim at VICTIM_ABSPATH.
- * The node must be of the same node kind as VICTIM_NODE_KIND.
- * If no such node can be found, set *MOVED_TO_ABSPATH to NULL.
+ * The nodes must be of the same node kind as VICTIM_NODE_KIND.
+ * If no such node can be found, set *POSSIBLE_TARGETS to an empty array.
  *
- * The node should be useful for conflict resolution, e.g. it should be
- * possible to merge changes into this node to resolve an incoming-move
- * tree conflict. But the exact criteria for selecting the node are left
+ * The nodes should be useful for conflict resolution, e.g. it should be
+ * possible to merge changes into these nodes to resolve an incoming-move
+ * tree conflict. But the exact criteria for selecting a node are left
  * to the implementation of this function.
  * Note that this function may not necessarily return a node which was
  * actually moved. The only hard guarantee is that the node corresponds to
  * the repository node MOVED_TO_REPOS_RELPATH@REV specified by the caller.
  * In many cases, this will be a moved node if the caller's parameters are
- * correct. But users should be able to override the selection made by
- * this function.
+ * correct. Users should be able to perform a sanity check on the results
+ * returned from this function.
  */
 svn_error_t *
-svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
-                                        svn_wc_context_t *wc_ctx,
-                                        const char *victim_abspath,
-                                        svn_node_kind_t victim_node_kind,
-                                        const char *moved_to_repos_relpath,
-                                        svn_revnum_t rev,
-                                        apr_pool_t *result_pool,
-                                        apr_pool_t *scratch_pool);
+svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
+                                         svn_wc_context_t *wc_ctx,
+                                         const char *victim_abspath,
+                                         svn_node_kind_t victim_node_kind,
+                                         const char *moved_to_repos_relpath,
+                                         svn_revnum_t rev,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
 
 /**
  * Move @a src_abspath to @a dst_abspath, by scheduling @a dst_abspath

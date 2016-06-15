@@ -4446,6 +4446,53 @@ svn_client_conflict_option_set_merged_propval(
   const svn_string_t *merged_propval);
 
 /**
+ * Get a list of possible moved-to abspaths in the working copy which can be
+ * applied to the svn_client_conflict_option_incoming_move_file_text_merge
+ * resolution @a option. (If a different option is passed in, this function
+ * will raise an assertion failure.)
+ *
+ * In some situations, there can be multiple possible destinations for an
+ * incoming move. One such situation is where a file was copied and moved
+ * in the same revision: svn cp a b; svn mv a c; svn commit
+ * When this move is merged elsewhere, both b and c will appear as valid move
+ * destinations to the conflict resolver. To resolve such ambiguity, the client
+ * may call this function to obtain a list of possible destinations the user
+ * may choose from.
+ *
+ * The array is allocated in @a result_pool and will have "const char *"
+ * elements pointing to strings also allocated in @a result_pool.
+ *
+ * If no possible moved-to paths can be found, return an empty array.
+ * This doesn't mean that no move happened in the repository. It is possible
+ * that the move destination is outside the scope of the current working copy,
+ * for example, in which case the conflict must be resolved in some other way.
+ *
+ * @see svn_client_conflict_option_set_moved_to_abspath()
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_option_get_moved_to_abspath_candidates(
+  apr_array_header_t **possible_moved_to_abspaths,
+  svn_client_conflict_option_t *option,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Set the preferred moved target abspath for the
+ * svn_client_conflict_option_incoming_move_file_text_merge resolution option.
+ * 
+ * @a preferred_move_target_idx must be a valid index into the list
+ * returned by svn_client_conflict_option_get_moved_to_abspath_candidates().
+ * 
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_option_set_moved_to_abspath(
+  svn_client_conflict_option_t *option,
+  int preferred_move_target_idx,
+  apr_pool_t *scratch_pool);
+
+/**
  * Given an @a option_id, try to find the corresponding option in @a options,
  * which is an array of svn_client_conflict_option_t * elements.
  *

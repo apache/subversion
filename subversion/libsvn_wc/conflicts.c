@@ -50,6 +50,7 @@
 
 #include "private/svn_wc_private.h"
 #include "private/svn_skel.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
 
 #include "svn_private_config.h"
@@ -3695,21 +3696,21 @@ svn_wc__conflict_tree_update_moved_away_node(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
-svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
-                                        svn_wc_context_t *wc_ctx,
-                                        const char *victim_abspath,
-                                        svn_node_kind_t victim_node_kind,
-                                        const char *moved_to_repos_relpath,
-                                        svn_revnum_t rev,
-                                        apr_pool_t *result_pool,
-                                        apr_pool_t *scratch_pool)
+svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
+                                         svn_wc_context_t *wc_ctx,
+                                         const char *victim_abspath,
+                                         svn_node_kind_t victim_node_kind,
+                                         const char *moved_to_repos_relpath,
+                                         svn_revnum_t rev,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool)
 {
   apr_array_header_t *candidates;
   apr_pool_t *iterpool;
   int i;
   apr_size_t longest_ancestor_len = 0;
 
-  *moved_to_abspath = NULL;
+  *possible_targets = apr_array_make(result_pool, 1, sizeof(const char *));
   SVN_ERR(svn_wc__find_repos_node_in_wc(&candidates, wc_ctx->db, victim_abspath,
                                         moved_to_repos_relpath, rev,
                                         scratch_pool, scratch_pool));
@@ -3736,6 +3737,8 @@ svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
       svn_boolean_t is_wcroot;
       svn_boolean_t is_switched;
       svn_node_kind_t node_kind;
+      const char *moved_to_abspath;
+      int insert_index;
 
       svn_pool_clear(iterpool);
 
@@ -3766,6 +3769,12 @@ svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
       if (is_wcroot || is_switched)
         continue;
 
+      /* This might be a move target. Fingers crossed ;-) */
+      moved_to_abspath = apr_pstrdup(result_pool, local_abspath);
+
+      /* Insert the move target into the list. Targets which are closer
+       * (path-wise) to the conflict victim are more likely to be a good
+       * match, so put them at the front of the list. */
       ancestor_abspath = svn_dirent_get_longest_ancestor(local_abspath,
                                                          victim_abspath,
                                                          iterpool);
@@ -3773,10 +3782,14 @@ svn_wc__guess_incoming_move_target_node(const char **moved_to_abspath,
       if (ancestor_len >= longest_ancestor_len)
         {
           longest_ancestor_len = ancestor_len;
-
-          /* This might be a move target. Fingers crossed ;-) */
-          *moved_to_abspath = apr_pstrdup(result_pool, local_abspath);
+          insert_index = 0; /* prepend */
         }
+      else
+        {
+          insert_index = (*possible_targets)->nelts; /* append */
+        }
+      svn_sort__array_insert(*possible_targets, &moved_to_abspath,
+                             insert_index);
     }
 
   svn_pool_destroy(iterpool);
