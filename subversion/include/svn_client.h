@@ -4446,10 +4446,10 @@ svn_client_conflict_option_set_merged_propval(
   const svn_string_t *merged_propval);
 
 /**
- * Get a list of possible moved-to abspaths in the working copy which can be
- * applied to the svn_client_conflict_option_incoming_move_file_text_merge
- * resolution @a option. (If a different option is passed in, this function
- * will raise an assertion failure.)
+ * Get a list of possible repository paths which can be applied to the
+ * svn_client_conflict_option_incoming_move_file_text_merge resolution
+ * @a option. (If a different option is passed in, this function will
+ * raise an assertion failure.)
  *
  * In some situations, there can be multiple possible destinations for an
  * incoming move. One such situation is where a file was copied and moved
@@ -4461,7 +4461,45 @@ svn_client_conflict_option_set_merged_propval(
  *
  * The array is allocated in @a result_pool and will have "const char *"
  * elements pointing to strings also allocated in @a result_pool.
+ * All paths are relpaths, and relative to the repository root.
  *
+ * @see svn_client_conflict_option_set_moved_to_repos_relpath()
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
+  apr_array_header_t **possible_moved_to_repos_relpaths,
+  svn_client_conflict_option_t *option,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Set the preferred moved target repository path for the
+ * svn_client_conflict_option_incoming_move_file_text_merge resolution option.
+ * 
+ * @a preferred_move_target_idx must be a valid index into the list returned
+ * by svn_client_conflict_option_get_moved_to_repos_relpath_candidates().
+ * 
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_option_set_moved_to_repos_relpath(
+  svn_client_conflict_option_t *option,
+  int preferred_move_target_idx,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Get a list of possible moved-to abspaths in the working copy which can be
+ * applied to the svn_client_conflict_option_incoming_move_file_text_merge
+ * resolution @a option. (If a different option is passed in, this function
+ * will raise an assertion failure.)
+ *
+ * All paths in the returned list correspond to the repository path which
+ * is assumed to be the destination of the incoming move operation.
+ * To support cases where this destination path is ambiguous, the client may
+ * call svn_client_conflict_option_get_moved_to_repos_relpath_candidates()
+ * before calling this function to let the user select a repository path first.
+ * 
  * If no possible moved-to paths can be found, return an empty array.
  * This doesn't mean that no move happened in the repository. It is possible
  * that the move destination is outside the scope of the current working copy,
