@@ -122,6 +122,9 @@ struct svn_client_conflict_option_t
   svn_client_conflict_t *conflict;
   conflict_option_resolve_func_t do_resolve_func;
 
+  /* The pool this option was allocated from. */
+  apr_pool_t *pool;
+
   /* Data which is specific to particular conflicts and options. */
   union {
     struct {
@@ -6199,6 +6202,7 @@ svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
            * writable and to localize the description. */
           option = apr_pcalloc(result_pool, sizeof(*option));
           *option = binary_conflict_options[i];
+          option->pool = result_pool;
           option->description = _(option->description);
           APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
             option;
@@ -6214,6 +6218,7 @@ svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
            * writable and to localize the description. */
           option = apr_pcalloc(result_pool, sizeof(*option));
           *option = text_conflict_options[i];
+          option->pool = result_pool;
           option->description = _(option->description);
           APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
             option;
@@ -6243,6 +6248,7 @@ svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
        * writable and to localize the description. */
       option = apr_pcalloc(result_pool, sizeof(*option));
       *option = prop_conflict_options[i];
+      option->pool = result_pool;
       option->description = _(option->description);
       APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
     }
@@ -6265,6 +6271,7 @@ configure_option_accept_current_wc_state(svn_client_conflict_t *conflict,
   local_change = svn_client_conflict_get_local_change(conflict);
 
   option = apr_pcalloc(options->pool, sizeof(*option));
+  option->pool = options->pool;
   option->id = svn_client_conflict_option_accept_current_wc_state;
   option->description = _("accept current working copy state");
   option->conflict = conflict;
@@ -6310,6 +6317,7 @@ configure_option_update_move_destination(svn_client_conflict_t *conflict,
       svn_client_conflict_option_t *option;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
+      option->pool = options->pool;
       option->id = svn_client_conflict_option_update_move_destination;
       option->description = _("apply incoming changes to move destination");
       option->conflict = conflict;
@@ -6347,6 +6355,7 @@ configure_option_update_raise_moved_away_children(
       svn_client_conflict_option_t *option;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
+      option->pool = options->pool;
       option->id = svn_client_conflict_option_update_any_moved_away_children;
       option->description = _("prepare for updating moved-away children, "
                               "if any");
@@ -6386,6 +6395,7 @@ configure_option_merge_incoming_add_ignore(svn_client_conflict_t *conflict,
       const char *wcroot_abspath;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
+      option->pool = options->pool;
       option->id =
         svn_client_conflict_option_merge_incoming_add_ignore;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
@@ -6437,6 +6447,7 @@ configure_option_merge_incoming_added_file_text_merge(
       const char *wcroot_abspath;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
+      option->pool = options->pool;
       option->id =
         svn_client_conflict_option_merge_incoming_added_file_text_merge;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
@@ -6492,6 +6503,7 @@ configure_option_merge_incoming_added_file_replace(
       const char *wcroot_abspath;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
+      option->pool = options->pool;
       option->id = svn_client_conflict_option_merge_incoming_added_file_replace;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
@@ -6546,6 +6558,7 @@ configure_option_merge_incoming_added_file_replace_and_merge(
       const char *wcroot_abspath;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
+      option->pool = options->pool;
       option->id =
         svn_client_conflict_option_merge_incoming_added_file_replace_and_merge;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
@@ -6602,6 +6615,7 @@ configure_option_merge_incoming_added_dir_merge(svn_client_conflict_t *conflict,
       const char *wcroot_abspath;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
+      option->pool = options->pool;
       option->id = svn_client_conflict_option_merge_incoming_added_dir_merge;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
@@ -6656,6 +6670,7 @@ configure_option_merge_incoming_added_dir_replace(
       const char *wcroot_abspath;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
+      option->pool = options->pool;
       option->id =
         svn_client_conflict_option_merge_incoming_added_dir_replace;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
@@ -6711,6 +6726,7 @@ configure_option_merge_incoming_added_dir_replace_and_merge(
       const char *wcroot_abspath;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
+      option->pool = options->pool;
       option->id =
         svn_client_conflict_option_merge_incoming_added_dir_replace_and_merge;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
@@ -6758,6 +6774,7 @@ configure_option_incoming_delete_ignore(svn_client_conflict_t *conflict,
       svn_client_conflict_option_t *option;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
+      option->pool = options->pool;
       option->id = svn_client_conflict_option_incoming_delete_ignore;
       option->description =
         apr_psprintf(options->pool, _("ignore the deletion of '^/%s@%ld'"),
@@ -6797,6 +6814,7 @@ configure_option_incoming_delete_accept(svn_client_conflict_t *conflict,
       const char *local_abspath;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
+      option->pool = options->pool;
       option->id = svn_client_conflict_option_incoming_delete_accept;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
@@ -6862,6 +6880,7 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
       apr_array_header_t *possible_moved_to_abspaths;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
+      option->pool = options->pool;
       option->id = svn_client_conflict_option_incoming_move_file_text_merge;
       victim_abspath = svn_client_conflict_get_local_abspath(conflict);
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
@@ -7005,7 +7024,7 @@ svn_client_conflict_option_set_moved_to_abspath(
                                    const char *);
   option->description =
     apr_psprintf(
-      conflict->pool, /* ### need options->pool here! */
+      option->pool,
       _("follow move-away of '%s' and merge with '%s'"),
       svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
                                                       victim_abspath),
@@ -7031,6 +7050,7 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
 
   /* Add postpone option. */
   option = apr_pcalloc(result_pool, sizeof(*option));
+  option->pool = result_pool;
   option->id = svn_client_conflict_option_postpone;
   option->description = _("skip this conflict and leave it unresolved");
   option->conflict = conflict;
