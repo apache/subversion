@@ -1380,6 +1380,20 @@ handle_prop_conflicts(svn_boolean_t *resolved,
       if (option_id != svn_client_conflict_option_unspecified &&
           option_id != svn_client_conflict_option_postpone)
         {
+          if (merged_propval)
+            {
+              apr_array_header_t *options;
+              svn_client_conflict_option_t *option;
+
+              SVN_ERR(svn_client_conflict_prop_get_resolution_options(
+                        &options, conflict, iterpool, iterpool));
+              option = svn_client_conflict_option_find_by_id(
+                         options, svn_client_conflict_option_merged_text);
+              if (option)
+                svn_client_conflict_option_set_merged_propval(option,
+                                                              merged_propval);
+            }
+
           SVN_ERR(mark_conflict_resolved(conflict, option_id,
                                          FALSE, propname, FALSE,
                                          path_prefix, conflict_stats,
