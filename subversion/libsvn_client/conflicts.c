@@ -7104,14 +7104,17 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
             }
           if (apr_hash_count(details->wc_move_targets) > 0)
             {
+              svn_sort__item_t item;
+
               /* Initialize to the first possible move target. Hopefully,
                * in most cases there will only be one candidate anyway. */
               move_target_repos_relpaths = 
                 svn_sort__hash(details->wc_move_targets,
                                svn_sort_compare_items_as_paths,
                                scratch_pool);
-              details->move_target_repos_relpath =
-                APR_ARRAY_IDX(move_target_repos_relpaths, 0, const char *);
+              item = APR_ARRAY_IDX(move_target_repos_relpaths, 0,
+                                   svn_sort__item_t);
+              details->move_target_repos_relpath = item.key;
               details->wc_move_target_idx = 0;
             }
           else
@@ -7146,6 +7149,121 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
+  apr_array_header_t **possible_moved_to_repos_relpaths,
+  svn_client_conflict_option_t *option,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  svn_client_conflict_t *conflict = option->conflict;
+  struct conflict_tree_incoming_delete_details *details;
+  const char *victim_abspath;
+  apr_array_header_t *sorted_repos_relpaths;
+  int i;
+
+  SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_incoming_move_file_text_merge);
+
+  victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+  details = conflict->tree_conflict_incoming_details;
+  if (details == NULL || details->wc_move_targets == NULL)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Getting a list of possible move targets "
+                               "requires details for tree conflict at '%s' "
+                               "to be fetched from the repository first"),
+                            svn_dirent_local_style(victim_abspath,
+                                                   scratch_pool));
+
+  /* Return a copy of the repos replath candidate list. */
+  sorted_repos_relpaths = svn_sort__hash(details->wc_move_targets,
+                                         svn_sort_compare_items_as_paths,
+                                         scratch_pool);
+
+  *possible_moved_to_repos_relpaths = apr_array_make(
+                                        result_pool,
+                                        sorted_repos_relpaths->nelts,
+                                        sizeof (const char *));
+  for (i = 0; i < sorted_repos_relpaths->nelts; i++)
+    {
+      svn_sort__item_t item;
+      const char *repos_relpath;
+
+      item = APR_ARRAY_IDX(sorted_repos_relpaths, i, svn_sort__item_t);
+      repos_relpath = item.key;
+      APR_ARRAY_PUSH(*possible_moved_to_repos_relpaths, const char *) =
+        apr_pstrdup(result_pool, repos_relpath);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_option_set_moved_to_repos_relpath(
+  svn_client_conflict_option_t *option,
+  int preferred_move_target_idx,
+  apr_pool_t *scratch_pool)
+{
+  svn_client_conflict_t *conflict = option->conflict;
+  struct conflict_tree_incoming_delete_details *details;
+  const char *victim_abspath;
+  apr_array_header_t *move_target_repos_relpaths;
+  svn_sort__item_t item;
+  const char *move_target_repos_relpath;
+  apr_hash_index_t *hi;
+
+  SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_incoming_move_file_text_merge);
+
+  victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+  details = conflict->tree_conflict_incoming_details;
+  if (details == NULL || details->wc_move_targets == NULL)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Setting a move target requires details "
+                               "for tree conflict at '%s' to be fetched "
+                               "from the repository first"),
+                            svn_dirent_local_style(victim_abspath,
+                                                   scratch_pool));
+
+  if (preferred_move_target_idx < 0 ||
+      preferred_move_target_idx >= apr_hash_count(details->wc_move_targets))
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             _("Index '%d' is out of bounds of the possible "
+                               "move target list for '%s'"),
+                            preferred_move_target_idx,
+                            svn_dirent_local_style(victim_abspath,
+                                                   scratch_pool));
+
+  /* Translate the index back into a hash table key. */
+  move_target_repos_relpaths =
+    svn_sort__hash(details->wc_move_targets,
+                   svn_sort_compare_items_as_paths,
+                   scratch_pool);
+  item = APR_ARRAY_IDX(move_target_repos_relpaths, preferred_move_target_idx,
+                       svn_sort__item_t);
+  move_target_repos_relpath = item.key;
+  /* Find our copy of the hash key and remember the user's preference. */
+  for (hi = apr_hash_first(scratch_pool, details->wc_move_targets);
+       hi != NULL;
+       hi = apr_hash_next(hi))
+    {
+      const char *repos_relpath = apr_hash_this_key(hi);
+
+      if (strcmp(move_target_repos_relpath, repos_relpath) == 0)
+        {
+          details->move_target_repos_relpath = repos_relpath;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                           _("Repository path '%s' not found in list of "
+                             "possible move targets for '%s'"),
+                           move_target_repos_relpath,
+                           svn_dirent_local_style(victim_abspath,
+                                                  scratch_pool));
 }
 
 svn_error_t *
