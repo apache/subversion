@@ -446,7 +446,7 @@ static const resolver_option_t builtin_resolver_options[] =
     svn_client_conflict_option_incoming_delete_accept },
 
   /* Options for incoming move vs local edit. */
-  { "m", N_("follow incoming move and merge"), NULL,
+  { "m", NULL, NULL,
     svn_client_conflict_option_incoming_move_file_text_merge },
 
   { NULL }
@@ -502,7 +502,7 @@ static const resolver_option_t extra_resolver_options_prop[] =
                                   svn_client_conflict_option_undefined,
                                   SVN_CL__ACCEPT_EDIT },
   { "h",  N_("help"),             N_("show this help (also '?')"),
-                                   svn_client_conflict_option_undefined },
+                                  svn_client_conflict_option_undefined },
   { NULL }
 };
 
