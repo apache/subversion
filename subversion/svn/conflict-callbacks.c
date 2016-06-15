@@ -388,7 +388,7 @@ typedef struct resolver_option_t
 /* Resolver options for conflict options offered by libsvn_client.  */
 static const resolver_option_t builtin_resolver_options[] =
 {
-  { "r",  N_("mark resolved"),    NULL,
+  { "r",  NULL, NULL,
                                   svn_client_conflict_option_merged_text,
                                   SVN_CL__ACCEPT_WORKING },
   { "mc", NULL, NULL,
@@ -408,7 +408,7 @@ static const resolver_option_t builtin_resolver_options[] =
                                   SVN_CL__ACCEPT_POSTPONE },
 
   /* This option resolves a tree conflict to the current working copy state. */
-  { "r", N_("accept current working copy state"), NULL,
+  { "r", NULL, NULL,
     svn_client_conflict_option_accept_current_wc_state,
     SVN_CL__ACCEPT_WORKING },
 
