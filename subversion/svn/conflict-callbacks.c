@@ -511,8 +511,13 @@ static const resolver_option_t extra_resolver_options_tree[] =
 {
   /* Translators: keep long_desc below 70 characters (wrap with a left
      margin of 9 spaces if needed) */
+  { "c",  N_("choose move destination"),
+          N_("choose a move target path from a list of possible targets"),
+                                  svn_client_conflict_option_undefined },
+
   { "h",  N_("help"),             N_("show this help (also '?')"),
-                                   svn_client_conflict_option_undefined },
+                                  svn_client_conflict_option_undefined },
+
   { NULL }
 };
 
@@ -1418,6 +1423,7 @@ handle_prop_conflicts(svn_boolean_t *resolved,
 /* Set *OPTIONS to an array of resolution options for CONFLICT. */
 static svn_error_t *
 build_tree_conflict_options(resolver_option_t **options,
+                            apr_array_header_t **possible_moved_to_abspaths,
                             svn_client_conflict_t *conflict,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
@@ -1433,9 +1439,10 @@ build_tree_conflict_options(resolver_option_t **options,
                                                           conflict,
                                                           scratch_pool,
                                                           scratch_pool));
-  nopt = builtin_options->nelts + ARRAY_LEN(extra_resolver_options) +
-           ARRAY_LEN(extra_resolver_options_tree);
+  nopt = builtin_options->nelts + ARRAY_LEN(extra_resolver_options_tree) +
+           ARRAY_LEN(extra_resolver_options);
   *options = apr_pcalloc(result_pool, sizeof(*opt) * (nopt + 1));
+  *possible_moved_to_abspaths = NULL;
 
   opt = *options;
   iterpool = svn_pool_create(scratch_pool);
@@ -1463,16 +1470,106 @@ build_tree_conflict_options(resolver_option_t **options,
       opt->accept_arg = known_option->accept_arg;
 
       opt++; 
-    }
 
+      if (id == svn_client_conflict_option_incoming_move_file_text_merge)
+        SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates(
+                  possible_moved_to_abspaths, builtin_option,
+                  result_pool, iterpool));
+    }
 
   svn_pool_destroy(iterpool);
 
+  for (o = extra_resolver_options_tree; o->code; o++)
+    {
+      /* Add the move target choice option only if there are multiple
+       * move targets to choose from. */
+      if (strcmp(o->code, "c") == 0 &&
+          (*possible_moved_to_abspaths == NULL || 
+           (*possible_moved_to_abspaths)->nelts <= 1))
+        continue;
+
+      *opt++ = *o;
+    }
   for (o = extra_resolver_options; o->code; o++)
     *opt++ = *o;
-  for (o = extra_resolver_options_tree; o->code; o++)
-    *opt++ = *o;
 
+  return SVN_NO_ERROR;
+}
+
+/* Make the user select a move target path for the moved-away VICTIM_ABSPATH. */
+static svn_error_t *
+prompt_move_target_abspath(int *preferred_move_target_idx,
+                           apr_array_header_t *possible_moved_to_abspaths,
+                           svn_cmdline_prompt_baton_t *pb,
+                           const char *victim_abspath,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *scratch_pool)
+{
+  const char *move_targets_prompt = "";
+  const char *move_targets_list = "";
+  const char *wcroot_abspath;
+  const char *victim_relpath;
+  int i;
+  apr_int64_t idx;
+  apr_pool_t *iterpool;
+
+  SVN_ERR(svn_client_get_wc_root(&wcroot_abspath, victim_abspath,
+                                 ctx, scratch_pool, scratch_pool));
+  victim_relpath = svn_cl__local_style_skip_ancestor(wcroot_abspath,
+                                                     victim_abspath,
+                                                     scratch_pool),
+  iterpool = svn_pool_create(scratch_pool);
+
+  /* Build the prompt. */
+  for (i = 0; i < possible_moved_to_abspaths->nelts; i++)
+    {
+      const char *moved_to_abspath;
+      const char *moved_to_relpath;
+
+      svn_pool_clear(iterpool);
+
+      moved_to_abspath = APR_ARRAY_IDX(possible_moved_to_abspaths, i,
+                                       const char *);
+      moved_to_relpath = svn_cl__local_style_skip_ancestor(
+                           wcroot_abspath, moved_to_abspath, iterpool),
+      move_targets_list = apr_psprintf(scratch_pool, "%s (%d): %s\n",
+                                       move_targets_list, i + 1,
+                                       moved_to_relpath);
+    }
+  move_targets_prompt =
+    apr_psprintf(scratch_pool,
+                 _("Possible destinations for moved-away '%s' are:\n%s"
+                   "Select a move target path by number: "),
+                 victim_relpath, move_targets_list);
+
+  /* Keep asking the user until we got a valid choice. */
+  while (1)
+    {
+      const char *answer;
+      svn_error_t *err;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_cmdline_prompt_user2(&answer, move_targets_prompt,
+                                       pb, iterpool));
+      err = svn_cstring_strtoi64(&idx, answer, 1,
+                                 possible_moved_to_abspaths->nelts, 10);
+      if (err)
+        {
+          char buf[1024];
+
+          svn_cmdline_fprintf(stderr, iterpool, "%s\n",
+                              svn_err_best_message(err, buf, sizeof(buf)));
+          svn_error_clear(err);
+          continue;
+        }
+
+      break;
+    }
+
+  svn_pool_destroy(iterpool);
+
+  *preferred_move_target_idx = (idx - 1);
   return SVN_NO_ERROR;
 }
 
@@ -1494,11 +1591,14 @@ handle_tree_conflict(svn_boolean_t *resolved,
   apr_pool_t *iterpool;
   resolver_option_t *tree_conflict_options;
   svn_client_conflict_option_id_t option_id;
+  const char *local_abspath;
   const char *conflict_description;
   const char *local_change_description;
   const char *incoming_change_description;
+  apr_array_header_t *possible_moved_to_abspaths;
 
   option_id = svn_client_conflict_option_unspecified;
+  local_abspath = svn_client_conflict_get_local_abspath(conflict);
 
   /* Always show the best possible conflict description and options. */
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, scratch_pool));
@@ -1513,13 +1613,12 @@ handle_tree_conflict(svn_boolean_t *resolved,
     SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
                                 _("Tree conflict on '%s':\n%s\n"),
                                 svn_cl__local_style_skip_ancestor(
-                                  path_prefix,
-                                  svn_client_conflict_get_local_abspath(conflict),
-                                  scratch_pool),
+                                  path_prefix, local_abspath, scratch_pool),
                                 conflict_description));
 
-  SVN_ERR(build_tree_conflict_options(&tree_conflict_options, conflict,
-                                      scratch_pool, scratch_pool));
+  SVN_ERR(build_tree_conflict_options(&tree_conflict_options,
+                                      &possible_moved_to_abspaths,
+                                      conflict, scratch_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
   while (1)
     {
@@ -1528,8 +1627,7 @@ handle_tree_conflict(svn_boolean_t *resolved,
       svn_pool_clear(iterpool);
 
       SVN_ERR(prompt_user(&opt, tree_conflict_options, NULL,
-                          *printed_description ? NULL : conflict_description,
-                          pb, iterpool));
+                          conflict_description, pb, iterpool));
       *printed_description = TRUE;
       if (! opt)
         continue;
@@ -1539,6 +1637,38 @@ handle_tree_conflict(svn_boolean_t *resolved,
           option_id = opt->choice;
           *quit = TRUE;
           break;
+        }
+      else if (strcmp(opt->code, "c") == 0)
+        {
+          int preferred_move_target_idx;
+          apr_array_header_t *options;
+          svn_client_conflict_option_t *conflict_option;
+
+          SVN_ERR(prompt_move_target_abspath(&preferred_move_target_idx,
+                                             possible_moved_to_abspaths, pb,
+                                             local_abspath, ctx, iterpool));
+
+          /* Update preferred move target path. */
+          SVN_ERR(svn_client_conflict_tree_get_resolution_options(&options,
+                                                                  conflict,
+                                                                  iterpool,
+                                                                  iterpool));
+          conflict_option =
+            svn_client_conflict_option_find_by_id( 
+              options,
+              svn_client_conflict_option_incoming_move_file_text_merge);
+          if (conflict_option)
+            {
+              SVN_ERR(svn_client_conflict_option_set_moved_to_abspath(
+                        conflict_option, preferred_move_target_idx, iterpool));
+
+              /* Update option description. */
+              SVN_ERR(build_tree_conflict_options(&tree_conflict_options,
+                                                  &possible_moved_to_abspaths,
+                                                  conflict,
+                                                  scratch_pool, scratch_pool));
+            }
+          continue;
         }
       else if (opt->choice != svn_client_conflict_option_undefined)
         {
