@@ -4406,8 +4406,8 @@ typedef enum svn_client_conflict_option_id_t {
   /* Options for local delete/replace vs incoming edit on update. */
   svn_client_conflict_option_update_any_moved_away_children,
 
-  /* Options for incoming add vs local 'obstruction' on merge. */
-  svn_client_conflict_option_merge_incoming_add_ignore,
+  /* Options for incoming add vs local 'obstruction'. */
+  svn_client_conflict_option_incoming_add_ignore,
 
   /* Options for incoming file add vs local file 'obstruction' on merge. */
   svn_client_conflict_option_merge_incoming_added_file_text_merge,

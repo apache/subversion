@@ -4802,9 +4802,9 @@ resolve_update_moved_away_node(svn_client_conflict_option_t *option,
 
 /* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
-resolve_merge_incoming_add_ignore(svn_client_conflict_option_t *option,
-                                  svn_client_conflict_t *conflict,
-                                  apr_pool_t *scratch_pool)
+resolve_incoming_add_ignore(svn_client_conflict_option_t *option,
+                            svn_client_conflict_t *conflict,
+                            apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
   const char *lock_abspath;
@@ -6530,17 +6530,16 @@ configure_option_merge_incoming_add_ignore(svn_client_conflict_t *conflict,
             NULL, conflict, scratch_pool,
             scratch_pool));
 
-  if (operation == svn_wc_operation_merge &&
-      incoming_change == svn_wc_conflict_action_add &&
-      local_change == svn_wc_conflict_reason_obstructed)
+  if (incoming_change == svn_wc_conflict_action_add &&
+      (local_change == svn_wc_conflict_reason_obstructed ||
+       local_change == svn_wc_conflict_reason_added))
     {
       svn_client_conflict_option_t *option;
       const char *wcroot_abspath;
 
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->pool = options->pool;
-      option->id =
-        svn_client_conflict_option_merge_incoming_add_ignore;
+      option->id = svn_client_conflict_option_incoming_add_ignore;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
@@ -6548,7 +6547,7 @@ configure_option_merge_incoming_add_ignore(svn_client_conflict_t *conflict,
         apr_psprintf(options->pool, _("ignore and do not add '^/%s@%ld' here"),
           incoming_new_repos_relpath, incoming_new_pegrev);
       option->conflict = conflict;
-      option->do_resolve_func = resolve_merge_incoming_add_ignore;
+      option->do_resolve_func = resolve_incoming_add_ignore;
       APR_ARRAY_PUSH(options, const svn_client_conflict_option_t *) = option;
     }
 
