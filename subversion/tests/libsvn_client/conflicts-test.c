@@ -175,7 +175,7 @@ test_option_merge_incoming_added_file_ignore(const svn_test_opts_t *opts,
 
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
-  SVN_ERR(svn_test__sandbox_create(b, "incoming_added_file_ignore",
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_added_file_ignore",
                                    opts, pool));
 
   SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b));
@@ -248,7 +248,7 @@ test_option_merge_incoming_added_file_text_merge(const svn_test_opts_t *opts,
 
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
-  SVN_ERR(svn_test__sandbox_create(b, "incoming_added_file_text_merge",
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_added_file_text_merge",
                                    opts, pool));
 
   SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b));
@@ -322,7 +322,7 @@ test_option_merge_incoming_added_file_replace(const svn_test_opts_t *opts,
 
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
-  SVN_ERR(svn_test__sandbox_create(b, "incoming_added_file_replace",
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_added_file_replace",
                                    opts, pool));
 
   SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b));
@@ -396,8 +396,8 @@ test_option_merge_incoming_added_file_replace_and_merge(
 
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
-  SVN_ERR(svn_test__sandbox_create(b, "incoming_added_file_replace_and_merge",
-                                   opts, pool));
+  SVN_ERR(svn_test__sandbox_create(
+            b, "merge_incoming_added_file_replace_and_merge", opts, pool));
 
   SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b));
 
@@ -609,7 +609,7 @@ test_option_merge_incoming_added_dir_ignore(const svn_test_opts_t *opts,
   svn_opt_revision_t opt_rev;
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
-  SVN_ERR(svn_test__sandbox_create(b, "incoming_added_dir_ignore",
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_added_dir_ignore",
                                    opts, pool));
 
   SVN_ERR(create_wc_with_dir_add_vs_dir_add_merge_conflict(b, FALSE, FALSE,
@@ -680,7 +680,7 @@ test_option_merge_incoming_added_dir_merge(const svn_test_opts_t *opts,
   const svn_string_t *propval;
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
-  SVN_ERR(svn_test__sandbox_create(b, "incoming_added_dir_merge",
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_added_dir_merge",
                                    opts, pool));
 
   SVN_ERR(create_wc_with_dir_add_vs_dir_add_merge_conflict(b, FALSE, FALSE,
@@ -773,7 +773,7 @@ test_option_merge_incoming_added_dir_merge2(const svn_test_opts_t *opts,
   const svn_string_t *propval;
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
-  SVN_ERR(svn_test__sandbox_create(b, "incoming_added_dir_merge2",
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_added_dir_merge2",
                                    opts, pool));
 
   SVN_ERR(create_wc_with_dir_add_vs_dir_add_merge_conflict(b, TRUE, FALSE,
@@ -865,7 +865,7 @@ test_option_merge_incoming_added_dir_merge3(const svn_test_opts_t *opts,
   const svn_string_t *propval;
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
-  SVN_ERR(svn_test__sandbox_create(b, "incoming_added_dir_merge3",
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_added_dir_merge3",
                                    opts, pool));
 
   SVN_ERR(create_wc_with_dir_add_vs_dir_add_merge_conflict(b, TRUE, TRUE,
@@ -976,7 +976,7 @@ test_option_merge_incoming_added_dir_replace(const svn_test_opts_t *opts,
   svn_opt_revision_t opt_rev;
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
-  SVN_ERR(svn_test__sandbox_create(b, "incoming_added_dir_replace",
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_added_dir_replace",
                                    opts, pool));
 
   SVN_ERR(create_wc_with_dir_add_vs_dir_add_merge_conflict(b, FALSE, FALSE,
@@ -1047,7 +1047,8 @@ test_option_merge_incoming_added_dir_replace_and_merge(
   svn_opt_revision_t opt_rev;
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
-  SVN_ERR(svn_test__sandbox_create(b, "incoming_added_dir_replace_and_merge",
+  SVN_ERR(svn_test__sandbox_create(b,
+                                   "merge_incoming_added_dir_replace_and_merge",
                                    opts, pool));
 
   SVN_ERR(create_wc_with_dir_add_vs_dir_add_merge_conflict(b, FALSE, FALSE,
@@ -1132,7 +1133,8 @@ test_option_merge_incoming_added_dir_replace_and_merge2(
   svn_opt_revision_t opt_rev;
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
-  SVN_ERR(svn_test__sandbox_create(b, "incoming_added_dir_replace_and_merge",
+  SVN_ERR(svn_test__sandbox_create(b,
+                                   "merge_incoming_added_dir_replace_and_merge",
                                    opts, pool));
 
   SVN_ERR(create_wc_with_dir_add_vs_dir_add_merge_conflict(b, FALSE, FALSE,
@@ -1286,7 +1288,7 @@ test_option_merge_incoming_delete_ignore(
   struct svn_client_status_t *status;
   svn_opt_revision_t opt_rev;
 
-  SVN_ERR(svn_test__sandbox_create(b, "incoming_delete_ignore",
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_delete_ignore",
                                    opts, pool));
 
   SVN_ERR(create_wc_with_incoming_delete_merge_conflict(b, FALSE, FALSE));
@@ -1352,7 +1354,7 @@ test_option_merge_incoming_delete_accept(
   struct svn_client_status_t *status;
   svn_opt_revision_t opt_rev;
 
-  SVN_ERR(svn_test__sandbox_create(b, "incoming_delete_accept",
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_delete_accept",
                                    opts, pool));
 
   SVN_ERR(create_wc_with_incoming_delete_merge_conflict(b, FALSE, FALSE));
