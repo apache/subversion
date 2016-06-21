@@ -73,7 +73,8 @@ static const char *modified_file_on_branch_content =
 
 /* A helper function which prepares a working copy for the tests below. */
 static svn_error_t *
-create_wc_with_file_add_vs_file_add_merge_conflict(svn_test__sandbox_t *b)
+create_wc_with_file_add_vs_file_add_merge_conflict(svn_test__sandbox_t *b,
+                                                   svn_boolean_t do_switch)
 {
   static const char *new_file_path;
   svn_client_ctx_t *ctx;
@@ -106,25 +107,42 @@ create_wc_with_file_add_vs_file_add_merge_conflict(svn_test__sandbox_t *b)
                           "This is a new file on the branch\n"));
   SVN_ERR(sbox_wc_add(b, new_file_path));
   SVN_ERR(sbox_wc_propset(b, "prop", propval_branch, new_file_path));
-  SVN_ERR(sbox_wc_commit(b, ""));
 
-  /* Run a merge from the trunk to the branch. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
-
-  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
-  trunk_url = apr_pstrcat(b->pool, b->repos_url, "/", trunk_path, SVN_VA_NULL);
 
   opt_rev.kind = svn_opt_revision_head;
   opt_rev.value.number = SVN_INVALID_REVNUM;
-  /* This should raise an "incoming add vs local obstruction" tree conflict. */
-  SVN_ERR(svn_client_merge_peg5(trunk_url, NULL, &opt_rev,
-                                sbox_wc_path(b, branch_path),
-                                svn_depth_infinity,
-                                FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
-                                NULL, ctx, b->pool));
+  trunk_url = apr_pstrcat(b->pool, b->repos_url, "/", trunk_path, SVN_VA_NULL);
+
+  if (do_switch)
+    {
+      svn_revnum_t result_rev;
+
+      /* This should raise an "incoming add vs local add" conflict. */
+      SVN_ERR(svn_client_switch3(&result_rev, sbox_wc_path(b, branch_path),
+                                 trunk_url, &opt_rev, &opt_rev,
+                                 svn_depth_infinity, TRUE, TRUE, FALSE, FALSE,
+                                 ctx, b->pool));
+
+      opt_rev.kind = svn_opt_revision_head;
+    }
+  else
+    {
+      SVN_ERR(sbox_wc_commit(b, ""));
+      SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+
+      /* Run a merge from the trunk to the branch.
+       * This should raise an "incoming add vs local obstruction" conflict. */
+      SVN_ERR(svn_client_merge_peg5(trunk_url, NULL, &opt_rev,
+                                    sbox_wc_path(b, branch_path),
+                                    svn_depth_infinity,
+                                    FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+                                    NULL, ctx, b->pool));
+
+      opt_rev.kind = svn_opt_revision_working;
+    }
 
   /* Ensure that the file has the expected status. */
-  opt_rev.kind = svn_opt_revision_working;
   sb.result_pool = b->pool;
   SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, new_file_path),
                              &opt_rev, svn_depth_unknown, TRUE, TRUE,
@@ -134,9 +152,18 @@ create_wc_with_file_add_vs_file_add_merge_conflict(svn_test__sandbox_t *b)
   SVN_TEST_ASSERT(status->kind == svn_node_file);
   SVN_TEST_ASSERT(status->versioned);
   SVN_TEST_ASSERT(status->conflicted);
-  SVN_TEST_ASSERT(status->node_status == svn_wc_status_normal);
-  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
-  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_normal);
+  if (do_switch)
+    {
+      SVN_TEST_ASSERT(status->node_status == svn_wc_status_replaced);
+      SVN_TEST_ASSERT(status->text_status == svn_wc_status_modified);
+      SVN_TEST_ASSERT(status->prop_status == svn_wc_status_modified);
+    }
+  else
+    {
+      SVN_TEST_ASSERT(status->node_status == svn_wc_status_normal);
+      SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+      SVN_TEST_ASSERT(status->prop_status == svn_wc_status_normal);
+    }
   SVN_TEST_ASSERT(!status->copied);
   SVN_TEST_ASSERT(!status->switched);
   SVN_TEST_ASSERT(!status->file_external);
@@ -150,8 +177,12 @@ create_wc_with_file_add_vs_file_add_merge_conflict(svn_test__sandbox_t *b)
   SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
                                              conflict, b->pool, b->pool));
   SVN_TEST_ASSERT(tree_conflicted);
-  SVN_TEST_ASSERT(svn_client_conflict_get_local_change(conflict) ==
-                  svn_wc_conflict_reason_obstructed);
+  if (do_switch)
+    SVN_TEST_ASSERT(svn_client_conflict_get_local_change(conflict) ==
+                    svn_wc_conflict_reason_added);
+  else
+    SVN_TEST_ASSERT(svn_client_conflict_get_local_change(conflict) ==
+                    svn_wc_conflict_reason_obstructed);
   SVN_TEST_ASSERT(svn_client_conflict_get_incoming_change(conflict) ==
                   svn_wc_conflict_action_add);
 
@@ -178,7 +209,7 @@ test_merge_incoming_added_file_ignore(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_added_file_ignore",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b));
+  SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b, FALSE));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -249,7 +280,7 @@ test_merge_incoming_added_file_text_merge(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_added_file_text_merge",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b));
+  SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b, FALSE));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -323,7 +354,7 @@ test_merge_incoming_added_file_replace(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_added_file_replace",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b));
+  SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b, FALSE));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -396,7 +427,7 @@ test_merge_incoming_added_file_replace_and_merge(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__sandbox_create(
             b, "merge_incoming_added_file_replace_and_merge", opts, pool));
 
-  SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b));
+  SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b, FALSE));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -551,6 +582,77 @@ test_update_incoming_added_file_ignore(const svn_test_opts_t *opts,
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
   new_file_path = svn_relpath_join(trunk_path, new_file_name, b->pool);
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
+                                  ctx, b->pool, b->pool));
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict, svn_client_conflict_option_incoming_add_ignore, b->pool));
+
+  /* Ensure that the file has the expected status. */
+  opt_rev.kind = svn_opt_revision_head;
+  sb.result_pool = b->pool;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, new_file_path),
+                             &opt_rev, svn_depth_unknown, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_file);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_replaced);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(!status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
+                                  ctx, b->pool, b->pool));
+
+  /* The file should not be in conflict. */
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, b->pool, b->pool));
+  SVN_TEST_ASSERT(!text_conflicted &&
+                  props_conflicted->nelts == 0 &&
+                  !tree_conflicted);
+
+  /* Verify the merged property value. */
+  SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx,
+                           sbox_wc_path(b, new_file_path),
+                           "prop", b->pool, b->pool));
+  SVN_TEST_STRING_ASSERT(propval->data, propval_branch);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_switch_incoming_added_file_ignore(const svn_test_opts_t *opts,
+                                       apr_pool_t *pool)
+{
+  svn_client_ctx_t *ctx;
+  svn_client_conflict_t *conflict;
+  const char *new_file_path;
+  svn_boolean_t text_conflicted;
+  apr_array_header_t *props_conflicted;
+  svn_boolean_t tree_conflicted;
+  struct status_baton sb;
+  struct svn_client_status_t *status;
+  svn_opt_revision_t opt_rev;
+  const svn_string_t *propval;
+
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+
+  SVN_ERR(svn_test__sandbox_create(b, "switch_incoming_added_file_ignore",
+                                   opts, pool));
+
+  SVN_ERR(create_wc_with_file_add_vs_file_add_merge_conflict(b, TRUE));
+
+  /* Resolve the tree conflict. */
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  new_file_path = svn_relpath_join(branch_path, new_file_name, b->pool);
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
                                   ctx, b->pool, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
@@ -1837,6 +1939,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test incoming add file replace and merge"),
     SVN_TEST_OPTS_PASS(test_update_incoming_added_file_ignore,
                        "test update incoming add file ignore"),
+    SVN_TEST_OPTS_PASS(test_switch_incoming_added_file_ignore,
+                       "test switch incoming add file ignore"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_added_dir_ignore,
                        "test incoming add dir ignore"),
     SVN_TEST_OPTS_XFAIL(test_merge_incoming_added_dir_merge,
