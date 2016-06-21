@@ -159,8 +159,8 @@ create_wc_with_file_add_vs_file_add_merge_conflict(svn_test__sandbox_t *b)
 }
 
 static svn_error_t *
-test_option_merge_incoming_added_file_ignore(const svn_test_opts_t *opts,
-                                              apr_pool_t *pool)
+test_merge_incoming_added_file_ignore(const svn_test_opts_t *opts,
+                                      apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
   svn_client_conflict_t *conflict;
@@ -230,8 +230,8 @@ test_option_merge_incoming_added_file_ignore(const svn_test_opts_t *opts,
 }
 
 static svn_error_t *
-test_option_merge_incoming_added_file_text_merge(const svn_test_opts_t *opts,
-                                                 apr_pool_t *pool)
+test_merge_incoming_added_file_text_merge(const svn_test_opts_t *opts,
+                                          apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
   svn_client_conflict_t *conflict;
@@ -304,8 +304,8 @@ test_option_merge_incoming_added_file_text_merge(const svn_test_opts_t *opts,
 }
 
 static svn_error_t *
-test_option_merge_incoming_added_file_replace(const svn_test_opts_t *opts,
-                                              apr_pool_t *pool)
+test_merge_incoming_added_file_replace(const svn_test_opts_t *opts,
+                                       apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
   svn_client_conflict_t *conflict;
@@ -377,9 +377,8 @@ test_option_merge_incoming_added_file_replace(const svn_test_opts_t *opts,
 }
 
 static svn_error_t *
-test_option_merge_incoming_added_file_replace_and_merge(
-  const svn_test_opts_t *opts,
-   apr_pool_t *pool)
+test_merge_incoming_added_file_replace_and_merge(const svn_test_opts_t *opts,
+                                                 apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
   svn_client_conflict_t *conflict;
@@ -528,8 +527,8 @@ create_wc_with_file_add_vs_file_add_update_conflict(svn_test__sandbox_t *b)
 }
 
 static svn_error_t *
-test_option_update_incoming_added_file_ignore(const svn_test_opts_t *opts,
-                                              apr_pool_t *pool)
+test_update_incoming_added_file_ignore(const svn_test_opts_t *opts,
+                                       apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
   svn_client_conflict_t *conflict;
@@ -739,8 +738,8 @@ create_wc_with_dir_add_vs_dir_add_merge_conflict(
 }
 
 static svn_error_t *
-test_option_merge_incoming_added_dir_ignore(const svn_test_opts_t *opts,
-                                            apr_pool_t *pool)
+test_merge_incoming_added_dir_ignore(const svn_test_opts_t *opts,
+                                     apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
   svn_client_conflict_t *conflict;
@@ -806,8 +805,8 @@ test_option_merge_incoming_added_dir_ignore(const svn_test_opts_t *opts,
  * support a merge of files which were added in the same revision as their
  * parent directory and were not modified since. */
 static svn_error_t *
-test_option_merge_incoming_added_dir_merge(const svn_test_opts_t *opts,
-                                           apr_pool_t *pool)
+test_merge_incoming_added_dir_merge(const svn_test_opts_t *opts,
+                                    apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
   svn_client_conflict_t *conflict;
@@ -899,8 +898,8 @@ test_option_merge_incoming_added_dir_merge(const svn_test_opts_t *opts,
 /* Same test as above, but with an additional file change on the trunk
  * which makes resolution work as expected. */
 static svn_error_t *
-test_option_merge_incoming_added_dir_merge2(const svn_test_opts_t *opts,
-                                            apr_pool_t *pool)
+test_merge_incoming_added_dir_merge2(const svn_test_opts_t *opts,
+                                     apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
   svn_client_conflict_t *conflict;
@@ -991,8 +990,8 @@ test_option_merge_incoming_added_dir_merge2(const svn_test_opts_t *opts,
 
 /* Same test as above, but with an additional move operation on the trunk. */
 static svn_error_t *
-test_option_merge_incoming_added_dir_merge3(const svn_test_opts_t *opts,
-                                            apr_pool_t *pool)
+test_merge_incoming_added_dir_merge3(const svn_test_opts_t *opts,
+                                     apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
   svn_client_conflict_t *conflict;
@@ -1104,8 +1103,8 @@ test_option_merge_incoming_added_dir_merge3(const svn_test_opts_t *opts,
 }
 
 static svn_error_t *
-test_option_merge_incoming_added_dir_replace(const svn_test_opts_t *opts,
-                                             apr_pool_t *pool)
+test_merge_incoming_added_dir_replace(const svn_test_opts_t *opts,
+                                      apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
   svn_client_conflict_t *conflict;
@@ -1174,8 +1173,8 @@ test_option_merge_incoming_added_dir_replace(const svn_test_opts_t *opts,
  * support a merge of files which were added in the same revision as their
  * parent directory and were not modified since. */
 static svn_error_t *
-test_option_merge_incoming_added_dir_replace_and_merge(
-  const svn_test_opts_t *opts, apr_pool_t *pool)
+test_merge_incoming_added_dir_replace_and_merge(const svn_test_opts_t *opts,
+                                                apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
   svn_client_conflict_t *conflict;
@@ -1260,8 +1259,8 @@ test_option_merge_incoming_added_dir_replace_and_merge(
 /* Same test as above, but with an additional file change on the branch
  * which makes resolution work as expected. */
 static svn_error_t *
-test_option_merge_incoming_added_dir_replace_and_merge2(
-  const svn_test_opts_t *opts, apr_pool_t *pool)
+test_merge_incoming_added_dir_replace_and_merge2(const svn_test_opts_t *opts,
+                                                 apr_pool_t *pool)
 {
   svn_client_ctx_t *ctx;
   svn_client_conflict_t *conflict;
@@ -1416,8 +1415,7 @@ create_wc_with_incoming_delete_merge_conflict(svn_test__sandbox_t *b,
 
 /* Test 'incoming delete ignore' option. */
 static svn_error_t *
-test_option_merge_incoming_delete_ignore(
-  const svn_test_opts_t *opts, apr_pool_t *pool)
+test_merge_incoming_delete_ignore(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
   svn_client_ctx_t *ctx;
@@ -1482,8 +1480,7 @@ test_option_merge_incoming_delete_ignore(
 
 /* Test 'incoming delete accept' option. */
 static svn_error_t *
-test_option_merge_incoming_delete_accept(
-  const svn_test_opts_t *opts, apr_pool_t *pool)
+test_merge_incoming_delete_accept(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
   svn_client_ctx_t *ctx;
@@ -1548,8 +1545,8 @@ test_option_merge_incoming_delete_accept(
 
 /* Test 'incoming move file text merge' option for merge. */
 static svn_error_t *
-test_option_merge_incoming_move_file_text_merge(
-  const svn_test_opts_t *opts, apr_pool_t *pool)
+test_merge_incoming_move_file_text_merge(const svn_test_opts_t *opts,
+                                         apr_pool_t *pool)
 {
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
   svn_client_ctx_t *ctx;
@@ -1688,8 +1685,8 @@ create_wc_with_incoming_delete_update_conflict(svn_test__sandbox_t *b,
 
 /* Test 'incoming move file text merge' option for update. */
 static svn_error_t *
-test_option_update_incoming_move_file_text_merge(
-  const svn_test_opts_t *opts, apr_pool_t *pool)
+test_update_incoming_move_file_text_merge(const svn_test_opts_t *opts,
+                                          apr_pool_t *pool)
 {
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
   svn_client_ctx_t *ctx;
@@ -1756,8 +1753,8 @@ test_option_update_incoming_move_file_text_merge(
 
 /* Test 'incoming move file text merge' option for switch. */
 static svn_error_t *
-test_option_switch_incoming_move_file_text_merge(
-  const svn_test_opts_t *opts, apr_pool_t *pool)
+test_switch_incoming_move_file_text_merge(const svn_test_opts_t *opts,
+                                          apr_pool_t *pool)
 {
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
   svn_client_ctx_t *ctx;
@@ -1830,39 +1827,39 @@ static int max_threads = 1;
 static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_OPTS_PASS(test_option_merge_incoming_added_file_ignore,
+    SVN_TEST_OPTS_PASS(test_merge_incoming_added_file_ignore,
                        "test merge incoming add file ignore"),
-    SVN_TEST_OPTS_PASS(test_option_merge_incoming_added_file_text_merge,
+    SVN_TEST_OPTS_PASS(test_merge_incoming_added_file_text_merge,
                        "test incoming add file text merge"),
-    SVN_TEST_OPTS_PASS(test_option_merge_incoming_added_file_replace,
+    SVN_TEST_OPTS_PASS(test_merge_incoming_added_file_replace,
                        "test incoming add file replace"),
-    SVN_TEST_OPTS_PASS(test_option_merge_incoming_added_file_replace_and_merge,
+    SVN_TEST_OPTS_PASS(test_merge_incoming_added_file_replace_and_merge,
                        "test incoming add file replace and merge"),
-    SVN_TEST_OPTS_PASS(test_option_update_incoming_added_file_ignore,
+    SVN_TEST_OPTS_PASS(test_update_incoming_added_file_ignore,
                        "test update incoming add file ignore"),
-    SVN_TEST_OPTS_PASS(test_option_merge_incoming_added_dir_ignore,
+    SVN_TEST_OPTS_PASS(test_merge_incoming_added_dir_ignore,
                        "test incoming add dir ignore"),
-    SVN_TEST_OPTS_XFAIL(test_option_merge_incoming_added_dir_merge,
+    SVN_TEST_OPTS_XFAIL(test_merge_incoming_added_dir_merge,
                        "test incoming add dir merge"),
-    SVN_TEST_OPTS_PASS(test_option_merge_incoming_added_dir_merge2,
+    SVN_TEST_OPTS_PASS(test_merge_incoming_added_dir_merge2,
                        "test incoming add dir merge with file change"),
-    SVN_TEST_OPTS_XFAIL(test_option_merge_incoming_added_dir_merge3,
+    SVN_TEST_OPTS_XFAIL(test_merge_incoming_added_dir_merge3,
                        "test incoming add dir merge with move history"),
-    SVN_TEST_OPTS_PASS(test_option_merge_incoming_added_dir_replace,
+    SVN_TEST_OPTS_PASS(test_merge_incoming_added_dir_replace,
                        "test incoming add dir replace"),
-    SVN_TEST_OPTS_XFAIL(test_option_merge_incoming_added_dir_replace_and_merge,
+    SVN_TEST_OPTS_XFAIL(test_merge_incoming_added_dir_replace_and_merge,
                        "test incoming add dir replace and merge"),
-    SVN_TEST_OPTS_PASS(test_option_merge_incoming_added_dir_replace_and_merge2,
+    SVN_TEST_OPTS_PASS(test_merge_incoming_added_dir_replace_and_merge2,
                        "test incoming add dir replace + merge file change"),
-    SVN_TEST_OPTS_PASS(test_option_merge_incoming_delete_ignore,
+    SVN_TEST_OPTS_PASS(test_merge_incoming_delete_ignore,
                        "test merge incoming delete ignore"),
-    SVN_TEST_OPTS_PASS(test_option_merge_incoming_delete_accept,
+    SVN_TEST_OPTS_PASS(test_merge_incoming_delete_accept,
                        "test merge incoming delete accept"),
-    SVN_TEST_OPTS_PASS(test_option_merge_incoming_move_file_text_merge,
+    SVN_TEST_OPTS_PASS(test_merge_incoming_move_file_text_merge,
                        "test merge incoming move file text merge"),
-    SVN_TEST_OPTS_PASS(test_option_update_incoming_move_file_text_merge,
+    SVN_TEST_OPTS_PASS(test_update_incoming_move_file_text_merge,
                        "test update incoming move file text merge"),
-    SVN_TEST_OPTS_PASS(test_option_switch_incoming_move_file_text_merge,
+    SVN_TEST_OPTS_PASS(test_switch_incoming_move_file_text_merge,
                        "test switch incoming move file text merge"),
     SVN_TEST_NULL
   };
