@@ -1709,7 +1709,7 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_XFAIL(test_option_merge_incoming_added_dir_replace_and_merge,
                        "test incoming add dir replace and merge"),
     SVN_TEST_OPTS_PASS(test_option_merge_incoming_added_dir_replace_and_merge2,
-                       "test incoming add dir replace and merge"),
+                       "test incoming add dir replace + merge file change"),
     SVN_TEST_OPTS_PASS(test_option_merge_incoming_delete_ignore,
                        "test merge incoming delete ignore"),
     SVN_TEST_OPTS_PASS(test_option_merge_incoming_delete_accept,
