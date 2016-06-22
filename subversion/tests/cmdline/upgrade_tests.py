@@ -1261,12 +1261,17 @@ def upgrade_not_present_replaced(sbox):
                                      sbox.wc_dir)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
-      'A/B/E'         : Item(status='E '),
-      'A/B/E/alpha'   : Item(status='A '),
-      'A/B/E/beta'    : Item(status='A '),
-      'A/B/lambda'    : Item(status='E '),
+      'A/B/E'         : Item(status='  ', treeconflict='C'),
+      'A/B/E/beta'    : Item(status='  ', treeconflict='A'),
+      'A/B/E/alpha'   : Item(status='  ', treeconflict='A'),
+      'A/B/lambda'    : Item(status='  ', treeconflict='C'),
       })
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.tweak('A/B/E', status='R ', treeconflict='C'),
+  expected_status.tweak('A/B/E/beta', status='D '),
+  expected_status.tweak('A/B/E/alpha', status='D '),
+  expected_status.tweak('A/B/lambda', status='R ', treeconflict='C'),
+
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output,
                                         None, expected_status)
 

@@ -143,6 +143,7 @@ typedef enum svn_cl__longopt_t {
   opt_show_passwords,
   opt_pin_externals,
   opt_show_item,
+  opt_adds_as_modification,
 } svn_cl__longopt_t;
 
 
@@ -448,6 +449,15 @@ const apr_getopt_option_t svn_cl__options[] =
                           "                author of 'last-changed-revision'\n"
                           "                             "
                           "   'wc-root'    root of TARGET's working copy")},
+
+  {"adds-as-modification", opt_adds_as_modification, 0,
+                       N_("Local additions are merged with incoming additions "
+                       "                             "
+                       "instead of causing a tree conflict. Use of this\n"
+                       "                             "
+                       "option is not recommended! Use 'svn resolve' to\n"
+                       "                             "
+                       "resolve tree conflicts instead.")},
 
   /* Long-opt Aliases
    *
@@ -1761,7 +1771,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  targets of this operation.\n"),
     {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force,
      opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept,
-     opt_parents},
+     opt_parents, opt_adds_as_modification},
     { {opt_force,
        N_("handle unversioned obstructions as changes")} } },
 
@@ -2430,6 +2440,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_show_item:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         opt_state.show_item = utf8_opt_arg;
+        break;
+      case opt_adds_as_modification:
+        opt_state.adds_as_modification = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
