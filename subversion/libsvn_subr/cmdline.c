@@ -822,7 +822,7 @@ most_similar(const char *needle_cstr,
              apr_size_t haystack_len,
              apr_pool_t *scratch_pool)
 {
-  const char *max_similar;
+  const char *max_similar = NULL;
   apr_size_t max_score = 0;
   apr_size_t i;
   svn_membuf_t membuf;
@@ -847,10 +847,7 @@ most_similar(const char *needle_cstr,
         }
     }
 
-  if (max_score)
-    return max_similar;
-  else
-    return NULL;
+  return max_similar;
 }
 
 /* Verify that NEEDLE is in HAYSTACK, which contains HAYSTACK_LEN elements. */
