@@ -10168,7 +10168,7 @@ db_read_repos_info(svn_revnum_t *revision,
                                                              local_relpath),
                                     result_pool);
             }
-          else
+          else if (base_del_relpath)
             {
               SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, revision,
                                                         repos_relpath,
@@ -10188,6 +10188,8 @@ db_read_repos_info(svn_revnum_t *revision,
                                                              local_relpath),
                                     result_pool);
             }
+          else
+            SVN_ERR_MALFUNCTION();
         }
       else if (status == svn_wc__db_status_excluded)
         {
