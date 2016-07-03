@@ -149,6 +149,15 @@ Candidate changes:
      +1 (non-binding): luke1410
      +1: stsp (without r1746364)
 
+ * r1683266
+   Resolve stack corruption in swig-perl
+   Justification:
+     User requested fix. Breaks git's svn clone support in some
+     use-cases. See
+     http://www.mail-archive.com/git@vger.kernel.org/msg97227.html
+   Votes:
+     +1: rschupp
+
 Veto-blocked changes:
 =====================
 
