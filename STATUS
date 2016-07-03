@@ -149,6 +149,12 @@ Candidate changes:
      +1 (non-binding): luke1410
      +1: stsp (without r1746364)
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1683266
    Resolve stack corruption in swig-perl
    Justification:
@@ -156,10 +162,4 @@ Candidate changes:
      use-cases. See
      http://www.mail-archive.com/git@vger.kernel.org/msg97227.html
    Votes:
-     +1: rschupp
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: rschupp, stsp
