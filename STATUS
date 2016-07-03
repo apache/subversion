@@ -87,21 +87,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1741401
-   Add the OSX 10.11 commercial name for 'svn --version --verbose'.
-   Justification:
-     Minor cosmetic change, but it should have been done before the 1.9.0
-     release since OSX 10.11 was released first.
-   Votes:
-     +1: brane, kotkov
-
- * r1663253, r1704821, r1738659, r1738828
-   Fix a few instances of undefined behavior in Win32 crash reporter.
-   Justification:
-     Potentially crashing in a crash reporter is bad.
-   Votes:
-     +1: kotkov, ivan
-
  * r1663286, r1741071, r1741072, r1741073, r1741078, r1741096, r1741200,
    r1741206
    Fix the source of "database is locked" errors when opening rep-cache.db.
@@ -128,27 +113,14 @@ Candidate changes:
      Resolves build script issues since the old google code URI is 404 now.
    Votes:
      +1 (non-binding): luke1410
+     +1: jamessan
 
  * 1748514
    Fix a crash in 'svn resolve'.
    Justification:
      SVN should not segfault. User complained.
    Votes:
-     +1: stsp
-
- * r1683266, r1683267
-   Avoid possible stack corruption in swig-perl (see also r1683266)
-   Justification:
-     These changes go deeper than r1683266 where the possibility that the
-     Perl stack is re-allocated "from under us" is in plain sight.
-     They bracket calls to functions svn_swig_pl_make_pool and 
-     svn_swig_pl_callback_thunk that call back into Perl which
-     meaning that somewhere even further down the call chain
-     Perl may re-allocate its stack. Note that calling PUTBACK or SPAGAIN
-     is never wrong, it might just be not necessary (if we can prove that 
-     the cached stack pointer (SP) can't change in between).
-   Votes:
-     +1: rschupp
+     +1: stsp, jamessan
 
 Veto-blocked changes:
 =====================
@@ -166,3 +138,33 @@ Approved changes:
      +0: rhuijben
      +1: stsp
      +1: rschupp
+
+ * r1741401
+   Add the OSX 10.11 commercial name for 'svn --version --verbose'.
+   Justification:
+     Minor cosmetic change, but it should have been done before the 1.9.0
+     release since OSX 10.11 was released first.
+   Votes:
+     +1: brane, kotkov, jamessan
+
+ * r1663253, r1704821, r1738659, r1738828
+   Fix a few instances of undefined behavior in Win32 crash reporter.
+   Justification:
+     Potentially crashing in a crash reporter is bad.
+   Votes:
+     +1: kotkov, ivan, jamessan
+
+ * r1683266, r1683267
+   Avoid possible stack corruption in swig-perl (see also r1683266)
+   Justification:
+     These changes go deeper than r1683266 where the possibility that the
+     Perl stack is re-allocated "from under us" is in plain sight.
+     They bracket calls to functions svn_swig_pl_make_pool and 
+     svn_swig_pl_callback_thunk that call back into Perl which
+     meaning that somewhere even further down the call chain
+     Perl may re-allocate its stack. Note that calling PUTBACK or SPAGAIN
+     is never wrong, it might just be not necessary (if we can prove that 
+     the cached stack pointer (SP) can't change in between).
+   Votes:
+     +1: rschupp, jamessan
+
