@@ -136,6 +136,12 @@ Candidate changes:
    Votes:
      +1: stsp
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * 1683266
    Resolve stack corruption in swig-perl
    Justification:
@@ -145,9 +151,3 @@ Candidate changes:
    Votes:
      +0: rhuijben
      +1: stsp
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
