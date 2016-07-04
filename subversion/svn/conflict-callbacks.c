@@ -425,19 +425,19 @@ static const resolver_option_t builtin_resolver_options[] =
 
   /* Options for incoming file add vs local file add upon merge. */
   { "m", N_("merge the files"), NULL,
-    svn_client_conflict_option_merge_incoming_added_file_text_merge },
+    svn_client_conflict_option_incoming_added_file_text_merge },
   { "R", N_("replace my file with incoming file"), NULL,
-    svn_client_conflict_option_merge_incoming_added_file_replace },
+    svn_client_conflict_option_incoming_added_file_replace },
   { "M", N_("replace my file with incoming file and merge the files"), NULL,
-    svn_client_conflict_option_merge_incoming_added_file_replace_and_merge },
+    svn_client_conflict_option_incoming_added_file_replace_and_merge },
 
   /* Options for incoming dir add vs local dir add upon merge. */
   { "m", N_("merge the directories"), NULL,
-    svn_client_conflict_option_merge_incoming_added_dir_merge },
+    svn_client_conflict_option_incoming_added_dir_merge },
   { "R", N_("replace my directory with incoming directory"), NULL,
-    svn_client_conflict_option_merge_incoming_added_dir_replace },
+    svn_client_conflict_option_incoming_added_dir_replace },
   { "M", N_("replace my directory with incoming directory and merge"), NULL,
-    svn_client_conflict_option_merge_incoming_added_dir_replace_and_merge },
+    svn_client_conflict_option_incoming_added_dir_replace_and_merge },
 
   /* Options for incoming delete vs any. */
   { "i", N_("ignore incoming deletion"), NULL,

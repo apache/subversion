@@ -6512,9 +6512,9 @@ configure_option_update_raise_moved_away_children(
 
 /* Configure 'incoming add ignore' resolution option for a tree conflict. */
 static svn_error_t *
-configure_option_merge_incoming_add_ignore(svn_client_conflict_t *conflict,
-                                           apr_array_header_t *options,
-                                           apr_pool_t *scratch_pool)
+configure_option_incoming_add_ignore(svn_client_conflict_t *conflict,
+                                     apr_array_header_t *options,
+                                     apr_pool_t *scratch_pool)
 {
   svn_wc_operation_t operation;
   svn_wc_conflict_action_t incoming_change;
@@ -6557,10 +6557,9 @@ configure_option_merge_incoming_add_ignore(svn_client_conflict_t *conflict,
 /* Configure 'incoming added file text merge' resolution option for a tree
  * conflict. */
 static svn_error_t *
-configure_option_merge_incoming_added_file_text_merge(
-  svn_client_conflict_t *conflict,
-  apr_array_header_t *options,
-  apr_pool_t *scratch_pool)
+configure_option_incoming_added_file_text_merge(svn_client_conflict_t *conflict,
+                                                apr_array_header_t *options,
+                                                apr_pool_t *scratch_pool)
 {
   svn_wc_operation_t operation;
   svn_wc_conflict_action_t incoming_change;
@@ -6591,7 +6590,7 @@ configure_option_merge_incoming_added_file_text_merge(
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->pool = options->pool;
       option->id =
-        svn_client_conflict_option_merge_incoming_added_file_text_merge;
+        svn_client_conflict_option_incoming_added_file_text_merge;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
@@ -6613,10 +6612,9 @@ configure_option_merge_incoming_added_file_text_merge(
 /* Configure 'incoming added file replace' resolution option for a tree
  * conflict. */
 static svn_error_t *
-configure_option_merge_incoming_added_file_replace(
-  svn_client_conflict_t *conflict,
-  apr_array_header_t *options,
-  apr_pool_t *scratch_pool)
+configure_option_incoming_added_file_replace(svn_client_conflict_t *conflict,
+                                             apr_array_header_t *options,
+                                             apr_pool_t *scratch_pool)
 {
   svn_wc_operation_t operation;
   svn_wc_conflict_action_t incoming_change;
@@ -6646,7 +6644,7 @@ configure_option_merge_incoming_added_file_replace(
 
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->pool = options->pool;
-      option->id = svn_client_conflict_option_merge_incoming_added_file_replace;
+      option->id = svn_client_conflict_option_incoming_added_file_replace;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
@@ -6668,7 +6666,7 @@ configure_option_merge_incoming_added_file_replace(
 /* Configure 'incoming added file replace and merge' resolution option for a
  * tree conflict. */
 static svn_error_t *
-configure_option_merge_incoming_added_file_replace_and_merge(
+configure_option_incoming_added_file_replace_and_merge(
   svn_client_conflict_t *conflict,
   apr_array_header_t *options,
   apr_pool_t *scratch_pool)
@@ -6702,7 +6700,7 @@ configure_option_merge_incoming_added_file_replace_and_merge(
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->pool = options->pool;
       option->id =
-        svn_client_conflict_option_merge_incoming_added_file_replace_and_merge;
+        svn_client_conflict_option_incoming_added_file_replace_and_merge;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
@@ -6726,9 +6724,9 @@ configure_option_merge_incoming_added_file_replace_and_merge(
 /* Configure 'incoming added dir merge' resolution option for a tree
  * conflict. */
 static svn_error_t *
-configure_option_merge_incoming_added_dir_merge(svn_client_conflict_t *conflict,
-                                                apr_array_header_t *options,
-                                                apr_pool_t *scratch_pool)
+configure_option_incoming_added_dir_merge(svn_client_conflict_t *conflict,
+                                          apr_array_header_t *options,
+                                          apr_pool_t *scratch_pool)
 {
   svn_wc_operation_t operation;
   svn_wc_conflict_action_t incoming_change;
@@ -6758,7 +6756,7 @@ configure_option_merge_incoming_added_dir_merge(svn_client_conflict_t *conflict,
 
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->pool = options->pool;
-      option->id = svn_client_conflict_option_merge_incoming_added_dir_merge;
+      option->id = svn_client_conflict_option_incoming_added_dir_merge;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
@@ -6780,10 +6778,9 @@ configure_option_merge_incoming_added_dir_merge(svn_client_conflict_t *conflict,
 /* Configure 'incoming added dir replace' resolution option for a tree
  * conflict. */
 static svn_error_t *
-configure_option_merge_incoming_added_dir_replace(
-  svn_client_conflict_t *conflict,
-  apr_array_header_t *options,
-  apr_pool_t *scratch_pool)
+configure_option_incoming_added_dir_replace(svn_client_conflict_t *conflict,
+                                            apr_array_header_t *options,
+                                            apr_pool_t *scratch_pool)
 {
   svn_wc_operation_t operation;
   svn_wc_conflict_action_t incoming_change;
@@ -6814,7 +6811,7 @@ configure_option_merge_incoming_added_dir_replace(
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->pool = options->pool;
       option->id =
-        svn_client_conflict_option_merge_incoming_added_dir_replace;
+        svn_client_conflict_option_incoming_added_dir_replace;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
@@ -6836,7 +6833,7 @@ configure_option_merge_incoming_added_dir_replace(
 /* Configure 'incoming added dir replace and merge' resolution option
  * for a tree conflict. */
 static svn_error_t *
-configure_option_merge_incoming_added_dir_replace_and_merge(
+configure_option_incoming_added_dir_replace_and_merge(
   svn_client_conflict_t *conflict,
   apr_array_header_t *options,
   apr_pool_t *scratch_pool)
@@ -6870,7 +6867,7 @@ configure_option_merge_incoming_added_dir_replace_and_merge(
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->pool = options->pool;
       option->id =
-        svn_client_conflict_option_merge_incoming_added_dir_replace_and_merge;
+        svn_client_conflict_option_incoming_added_dir_replace_and_merge;
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
@@ -7399,21 +7396,22 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   SVN_ERR(configure_option_update_move_destination(conflict, *options));
   SVN_ERR(configure_option_update_raise_moved_away_children(conflict,
                                                             *options));
-  SVN_ERR(configure_option_merge_incoming_add_ignore(conflict, *options,
-                                                     scratch_pool));
-  SVN_ERR(configure_option_merge_incoming_added_file_text_merge(conflict,
+  SVN_ERR(configure_option_incoming_add_ignore(conflict, *options,
+                                               scratch_pool));
+  SVN_ERR(configure_option_incoming_added_file_text_merge(conflict, *options,
+                                                          scratch_pool));
+  SVN_ERR(configure_option_incoming_added_file_replace(conflict, *options,
+                                                       scratch_pool));
+  SVN_ERR(configure_option_incoming_added_file_replace_and_merge(conflict,
+                                                                 *options,
+                                                                 scratch_pool));
+  SVN_ERR(configure_option_incoming_added_dir_merge(conflict, *options,
+                                                    scratch_pool));
+  SVN_ERR(configure_option_incoming_added_dir_replace(conflict, *options,
+                                                      scratch_pool));
+  SVN_ERR(configure_option_incoming_added_dir_replace_and_merge(conflict,
                                                                 *options,
                                                                 scratch_pool));
-  SVN_ERR(configure_option_merge_incoming_added_file_replace(
-            conflict, *options, scratch_pool));
-  SVN_ERR(configure_option_merge_incoming_added_file_replace_and_merge(
-            conflict, *options, scratch_pool));
-  SVN_ERR(configure_option_merge_incoming_added_dir_merge(conflict, *options,
-                                                          scratch_pool));
-  SVN_ERR(configure_option_merge_incoming_added_dir_replace(conflict, *options,
-                                                            scratch_pool));
-  SVN_ERR(configure_option_merge_incoming_added_dir_replace_and_merge(
-            conflict, *options, scratch_pool));
   SVN_ERR(configure_option_incoming_delete_ignore(conflict, *options,
                                                   scratch_pool));
   SVN_ERR(configure_option_incoming_delete_accept(conflict, *options,
