@@ -128,13 +128,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1663253, r1704821, r1738659, r1738828
-   Fix a few instances of undefined behavior in Win32 crash reporter.
-   Justification:
-     Potentially crashing in a crash reporter is bad.
-   Votes:
-     +1: kotkov, ivan, jamessan
-
  * r1683266, r1683267
    Avoid possible stack corruption in swig-perl (see also r1683266)
    Justification:
