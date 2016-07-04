@@ -128,14 +128,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1741401
-   Add the OSX 10.11 commercial name for 'svn --version --verbose'.
-   Justification:
-     Minor cosmetic change, but it should have been done before the 1.9.0
-     release since OSX 10.11 was released first.
-   Votes:
-     +1: brane, kotkov, jamessan
-
  * r1663253, r1704821, r1738659, r1738828
    Fix a few instances of undefined behavior in Win32 crash reporter.
    Justification:
