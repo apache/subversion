@@ -532,8 +532,10 @@
         $1 = NULL;
     }
     else if (SvPOK($input)) {
-        if (_global_pool == NULL)
+        if (_global_pool == NULL) {
             _global_pool = svn_swig_pl_make_pool((SV *)NULL);
+            SPAGAIN;
+        }
         $1 = apr_pstrdup(_global_pool, SvPV_nolen($input));
     }
     else {

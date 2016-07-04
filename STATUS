@@ -127,17 +127,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1683266, r1683267
-   Avoid possible stack corruption in swig-perl (see also r1683266)
-   Justification:
-     These changes go deeper than r1683266 where the possibility that the
-     Perl stack is re-allocated "from under us" is in plain sight.
-     They bracket calls to functions svn_swig_pl_make_pool and 
-     svn_swig_pl_callback_thunk that call back into Perl which
-     meaning that somewhere even further down the call chain
-     Perl may re-allocate its stack. Note that calling PUTBACK or SPAGAIN
-     is never wrong, it might just be not necessary (if we can prove that 
-     the cached stack pointer (SP) can't change in between).
-   Votes:
-     +1: rschupp, jamessan

@@ -293,8 +293,9 @@ Callback: svn_client_diff_summarize_func_t
  */
 #ifdef SWIGPERL
 %typemap(in) apr_hash_t *config {
-  $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
-                                         svn_swig_pl_make_pool ((SV *)NULL));
+  apr_pool_t *pool = svn_swig_pl_make_pool ((SV *)NULL);
+  SPAGAIN;
+  $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *", pool);
 }
 
 %typemap(out) apr_hash_t *config {

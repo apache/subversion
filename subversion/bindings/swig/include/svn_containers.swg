@@ -269,8 +269,10 @@
 %typemap(in) apr_hash_t *PROPHASH
   (apr_pool_t *_global_pool = NULL)
 {
-  if (_global_pool == NULL)
+  if (_global_pool == NULL) {
     _global_pool = svn_swig_pl_make_pool((SV *)NULL);
+    SPAGAIN;
+  }
   $1 = svn_swig_pl_hash_to_prophash($input, _global_pool);  
 }
 %typemap(out) apr_hash_t *PROPHASH
