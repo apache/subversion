@@ -4406,18 +4406,18 @@ typedef enum svn_client_conflict_option_id_t {
   /* Options for local delete/replace vs incoming edit on update. */
   svn_client_conflict_option_update_any_moved_away_children,
 
-  /* Options for incoming add vs local 'obstruction'. */
+  /* Options for incoming add vs local add or obstruction. */
   svn_client_conflict_option_incoming_add_ignore,
 
-  /* Options for incoming file add vs local file 'obstruction' on merge. */
-  svn_client_conflict_option_merge_incoming_added_file_text_merge,
-  svn_client_conflict_option_merge_incoming_added_file_replace,
-  svn_client_conflict_option_merge_incoming_added_file_replace_and_merge,
+  /* Options for incoming file add vs local file add or obstruction. */
+  svn_client_conflict_option_incoming_added_file_text_merge,
+  svn_client_conflict_option_incoming_added_file_replace,
+  svn_client_conflict_option_incoming_added_file_replace_and_merge,
 
-  /* Options for incoming dir add vs local dir 'obstruction' on merge. */
-  svn_client_conflict_option_merge_incoming_added_dir_merge,
-  svn_client_conflict_option_merge_incoming_added_dir_replace,
-  svn_client_conflict_option_merge_incoming_added_dir_replace_and_merge,
+  /* Options for incoming dir add vs local dir add or obstruction. */
+  svn_client_conflict_option_incoming_added_dir_merge,
+  svn_client_conflict_option_incoming_added_dir_replace,
+  svn_client_conflict_option_incoming_added_dir_replace_and_merge,
 
   /* Options for incoming delete vs any */
   svn_client_conflict_option_incoming_delete_ignore,

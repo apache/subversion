@@ -289,7 +289,7 @@ test_merge_incoming_added_file_text_merge(const svn_test_opts_t *opts,
                                   ctx, b->pool, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
-            svn_client_conflict_option_merge_incoming_added_file_text_merge,
+            svn_client_conflict_option_incoming_added_file_text_merge,
             b->pool));
 
   /* Ensure that the file has the expected status. */
@@ -363,7 +363,7 @@ test_merge_incoming_added_file_replace(const svn_test_opts_t *opts,
                                   ctx, b->pool, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
-            svn_client_conflict_option_merge_incoming_added_file_replace,
+            svn_client_conflict_option_incoming_added_file_replace,
             b->pool));
 
   /* Ensure that the file has the expected status. */
@@ -437,7 +437,7 @@ test_merge_incoming_added_file_replace_and_merge(const svn_test_opts_t *opts,
   SVN_ERR(
     svn_client_conflict_tree_resolve_by_id(
       conflict,
-      svn_client_conflict_option_merge_incoming_added_file_replace_and_merge,
+      svn_client_conflict_option_incoming_added_file_replace_and_merge,
       b->pool));
 
   /* Ensure that the file has the expected status. */
@@ -937,7 +937,7 @@ test_merge_incoming_added_dir_merge(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
-            svn_client_conflict_option_merge_incoming_added_dir_merge,
+            svn_client_conflict_option_incoming_added_dir_merge,
             b->pool));
 
   /* Ensure that the directory has the expected status. */
@@ -1030,7 +1030,7 @@ test_merge_incoming_added_dir_merge2(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
-            svn_client_conflict_option_merge_incoming_added_dir_merge,
+            svn_client_conflict_option_incoming_added_dir_merge,
             b->pool));
 
   /* Ensure that the directory has the expected status. */
@@ -1122,7 +1122,7 @@ test_merge_incoming_added_dir_merge3(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
-            svn_client_conflict_option_merge_incoming_added_dir_merge,
+            svn_client_conflict_option_incoming_added_dir_merge,
             b->pool));
 
   /* Ensure that the directory has the expected status. */
@@ -1233,7 +1233,7 @@ test_merge_incoming_added_dir_replace(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
-            svn_client_conflict_option_merge_incoming_added_dir_replace,
+            svn_client_conflict_option_incoming_added_dir_replace,
             b->pool));
 
   /* Ensure that the directory has the expected status. */
@@ -1305,7 +1305,7 @@ test_merge_incoming_added_dir_replace_and_merge(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
-            svn_client_conflict_option_merge_incoming_added_dir_replace_and_merge,
+            svn_client_conflict_option_incoming_added_dir_replace_and_merge,
             b->pool));
 
   /* Ensure that the directory has the expected status. */
@@ -1391,7 +1391,7 @@ test_merge_incoming_added_dir_replace_and_merge2(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
-            svn_client_conflict_option_merge_incoming_added_dir_replace_and_merge,
+            svn_client_conflict_option_incoming_added_dir_replace_and_merge,
             b->pool));
 
   /* Ensure that the directory has the expected status. */
