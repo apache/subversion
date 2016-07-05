@@ -426,7 +426,7 @@ static const resolver_option_t builtin_resolver_options[] =
   /* Options for incoming file add vs local file add upon merge. */
   { "m", N_("merge the files"), NULL,
     svn_client_conflict_option_incoming_added_file_text_merge },
-  { "R", N_("replace my file with incoming file"), NULL,
+  { "R", N_("delete my file and replace it with incoming file"), NULL,
     svn_client_conflict_option_incoming_added_file_replace },
   { "M", N_("replace my file with incoming file and merge the files"), NULL,
     svn_client_conflict_option_incoming_added_file_replace_and_merge },
@@ -434,7 +434,7 @@ static const resolver_option_t builtin_resolver_options[] =
   /* Options for incoming dir add vs local dir add upon merge. */
   { "m", N_("merge the directories"), NULL,
     svn_client_conflict_option_incoming_added_dir_merge },
-  { "R", N_("replace my directory with incoming directory"), NULL,
+  { "R", N_("delete my directory and replace it with incoming directory"), NULL,
     svn_client_conflict_option_incoming_added_dir_replace },
   { "M", N_("replace my directory with incoming directory and merge"), NULL,
     svn_client_conflict_option_incoming_added_dir_replace_and_merge },
