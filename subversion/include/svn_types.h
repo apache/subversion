@@ -416,7 +416,7 @@ svn_tristate__from_word(const char * word);
  *  2. Creating a new textual name similar to
  *     SVN_SUBST__SPECIAL_LINK_STR in libsvn_subr/subst.c.
  *  3. Handling the translation/detranslation case for the new type in
- *     create_special_file and detranslate_special_file, using the
+ *     create_special_file_from_stream and detranslate_special_file, using the
  *     routines from 1.
  */
 
