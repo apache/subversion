@@ -1271,6 +1271,9 @@ struct conflict_tree_local_missing_details
   /* Author who committed DELETED_REV. */
   const char *deleted_rev_author;
 
+  /* The path which was deleted relative to the repository root. */
+  const char *deleted_repos_relpath;
+
   /* Move information. If not NULL, this is an array of repos_move_info *
    * elements. Each element is the head of a move chain which starts in
    * DELETED_REV. */
@@ -1411,6 +1414,9 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
   details = apr_pcalloc(conflict->pool, sizeof(*details));
   details->deleted_rev = deleted_rev;
   details->deleted_rev_author = deleted_rev_author;
+  details->deleted_repos_relpath = svn_relpath_join(parent_repos_relpath,
+                                                    deleted_basename,
+                                                    conflict->pool); 
   details->moves = moves;
                                          
   conflict->tree_conflict_local_details = details;
@@ -1581,8 +1587,9 @@ conflict_tree_get_description_local_missing(const char **description,
     *description = apr_psprintf(
                      result_pool,
                      _("No such file or directory was found in the "
-                       "merge target working copy.\nThe item was "
-                       "deleted in r%ld by %s."),
+                       "merge target working copy.\n'^/%s' was deleted "
+                       "in r%ld by %s."),
+                     details->deleted_repos_relpath,
                      details->deleted_rev, details->deleted_rev_author);
 
   return SVN_NO_ERROR;
