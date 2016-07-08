@@ -947,8 +947,7 @@ describe_local_dir_node_change(const char **description,
       case svn_wc_conflict_reason_missing:
         if (operation == svn_wc_operation_update ||
             operation == svn_wc_operation_switch)
-          *description = _("No such directory was found in the working "
-                           "copy.");
+          *description = _("No such directory was found in the working copy.");
         else if (operation == svn_wc_operation_merge)
           {
             /* ### display deleted revision */
