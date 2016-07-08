@@ -7170,6 +7170,34 @@ configure_option_incoming_delete_ignore(svn_client_conflict_t *conflict,
   if (incoming_change == svn_wc_conflict_action_delete)
     {
       svn_client_conflict_option_t *option;
+      struct conflict_tree_incoming_delete_details *incoming_details;
+      svn_boolean_t is_incoming_move;
+
+      /* If the local item was deleted and conflict details were fetched and
+       * indicate that there was no move, then this is an actual 'delete vs
+       * delete' situation. An option which ignores the incoming deletion makes
+       * no sense in that case because there is no local node to preserve. */
+      incoming_details = conflict->tree_conflict_incoming_details;
+      is_incoming_move = (incoming_details != NULL &&
+                          incoming_details->moves != NULL);
+      if (local_change == svn_wc_conflict_reason_deleted)
+        {
+          if (!is_incoming_move)
+            return SVN_NO_ERROR;
+        }
+      else if (local_change == svn_wc_conflict_reason_missing &&
+               operation == svn_wc_operation_merge)
+        {
+          struct conflict_tree_local_missing_details *local_details;
+          svn_boolean_t is_local_move; /* "local" to branch history */
+
+          local_details = conflict->tree_conflict_local_details;
+          is_local_move = (local_details != NULL &&
+                           local_details->moves != NULL);
+
+          if (!is_incoming_move && !is_local_move)
+            return SVN_NO_ERROR;
+        }
 
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->pool = options->pool;
