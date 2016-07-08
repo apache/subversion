@@ -271,9 +271,10 @@ struct repos_move_info {
   apr_array_header_t *next;
 };
 
-/* Set *RELATED to true if the deleted node at repository relpath
- * DELETED_REPOS_RELPATH@DELETED_REV is ancestrally related to the node at
- * repository relpath COPYFROM_PATH@COPYFROM_REV, else set it to false. */
+/* Set *RELATED to true if the deleted node DELETED_REPOS_RELPATH@DELETED_REV
+ * is an ancestor of the copied node COPYFROM_PATH@COPYFROM_REV, and if the
+ * copied node is a copy of the deleted node's last-changed revision's content,
+ * rather than a copy of some older content. */
 static svn_error_t *
 check_move_ancestry(svn_boolean_t *related,
                     const char *repos_root_url,
@@ -290,6 +291,7 @@ check_move_ancestry(svn_boolean_t *related,
   svn_ra_session_t *ra_session;
   const char *corrected_url;
   apr_array_header_t *location_revisions;
+  svn_dirent_t *dirent;
 
   *related = FALSE;
 
@@ -315,8 +317,16 @@ check_move_ancestry(svn_boolean_t *related,
     {
       if (deleted_location[0] == '/')
         deleted_location++;
-      *related = (strcmp(deleted_location, copyfrom_path) == 0);
+      if (strcmp(deleted_location, copyfrom_path) != 0)
+        return SVN_NO_ERROR;
     }
+
+  /* Verify that copyfrom_rev >= last-changed revision of the deleted node. */
+  SVN_ERR(svn_ra_stat(ra_session, "", deleted_rev - 1, &dirent, scratch_pool));
+  if (dirent == NULL || copyfrom_rev < dirent->created_rev)
+    return SVN_NO_ERROR;
+
+  *related = TRUE;
 
   return SVN_NO_ERROR;
 }
@@ -386,11 +396,6 @@ find_moves_in_revision(apr_hash_t *moves_table,
                                       ctx, iterpool));
           if (!related)
             continue;
-
-          /* ### TODO:
-           * If the node was not copied from the most recent last-changed
-           * revision of the deleted node, this is not a move but a
-           * "copy from the past + delete". */
 
           /* Remember details of this move. */
           move = apr_pcalloc(result_pool, sizeof(*move));
