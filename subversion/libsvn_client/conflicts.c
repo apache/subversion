@@ -6257,7 +6257,19 @@ resolve_incoming_delete_accept(svn_client_conflict_option_t *option,
                        ctx->notify_func2, ctx->notify_baton2,
                        scratch_pool);
   if (err)
-    goto unlock_wc;
+    {
+      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+        {
+          /* Not a versioned path. This can happen if the victim has already
+           * been deleted in our branche's history, for example. Either way,
+           * the item is gone, which is what we want, so don't treat this as
+           * a fatal error. */
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+        }
+      else
+        goto unlock_wc;
+    }
 
   if (ctx->notify_func2)
     ctx->notify_func2(ctx->notify_baton2,
