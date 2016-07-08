@@ -6135,9 +6135,13 @@ resolve_incoming_delete_accept(svn_client_conflict_option_t *option,
            * the item is gone, which is what we want, so don't treat this as
            * a fatal error. */
           svn_error_clear(err);
-          err = SVN_NO_ERROR;
+
+          /* Resolve to current working copy state. */
+          err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath,
+                                          scratch_pool);
         }
-      else
+
+      if (err)
         goto unlock_wc;
     }
 
