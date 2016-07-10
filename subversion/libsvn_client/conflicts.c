@@ -527,6 +527,39 @@ struct find_deleted_rev_baton
   apr_hash_t *moved_paths;
 };
 
+/* Find the youngest common ancestor of REPOS_RELPATH1@PEG_REV1 and
+ * REPOS_RELPATH2@PEG_REV2. Return the result in *YCA_LOC.
+ * Set *YCA_LOC to NULL if no common ancestor exists. */
+static svn_error_t *
+find_yca(svn_client__pathrev_t **yca_loc,
+         const char *repos_relpath1,
+         svn_revnum_t peg_rev1,
+         const char *repos_relpath2,
+         svn_revnum_t peg_rev2,
+         const char *repos_root_url,
+         const char *repos_uuid,
+         svn_client_ctx_t *ctx,
+         apr_pool_t *result_pool,
+         apr_pool_t *scratch_pool)
+{
+  svn_client__pathrev_t *loc1;
+  svn_client__pathrev_t *loc2;
+
+  *yca_loc = NULL;
+
+  loc1 = svn_client__pathrev_create_with_relpath(repos_root_url, repos_uuid,
+                                                 peg_rev1, repos_relpath1,
+                                                 scratch_pool);
+  loc2 = svn_client__pathrev_create_with_relpath(repos_root_url, repos_uuid,
+                                                 peg_rev2, repos_relpath2,
+                                                 scratch_pool);
+  SVN_ERR(svn_client__get_youngest_common_ancestor(yca_loc, loc1, loc2, NULL,
+                                                   ctx, result_pool,
+                                                   scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements svn_log_entry_receiver_t.
  *
  * Find the revision in which a node, optionally ancestrally related to the
@@ -643,27 +676,19 @@ find_deleted_rev(void *baton,
           if (b->related_repos_relpath != NULL &&
               b->related_repos_peg_rev != SVN_INVALID_REVNUM)
             {
-              svn_client__pathrev_t *yca_loc = NULL;
-              svn_client__pathrev_t *loc1;
-              svn_client__pathrev_t *loc2;
+              svn_client__pathrev_t *yca_loc;
 
               /* We found a deleted node which occupies the correct path.
                * To be certain that this is the deleted node we're looking for,
                * we must establish whether it is ancestrally related to the
                * "related node" specified in our baton. */
-              loc1 = svn_client__pathrev_create_with_relpath(
-                       b->repos_root_url, b->repos_uuid,
-                       b->related_repos_peg_rev,
-                       b->related_repos_relpath, iterpool);
-              loc2 = svn_client__pathrev_create_with_relpath(
-                       b->repos_root_url, b->repos_uuid,
-                       log_entry->revision - 1,
-                       b->deleted_repos_relpath, iterpool);
-              SVN_ERR(svn_client__get_youngest_common_ancestor(&yca_loc,
-                                                               loc1, loc2,
-                                                               NULL, b->ctx,
-                                                               iterpool,
-                                                               iterpool));
+              SVN_ERR(find_yca(&yca_loc,
+                               b->related_repos_relpath,
+                               b->related_repos_peg_rev,
+                               b->deleted_repos_relpath,
+                               log_entry->revision - 1,
+                               b->repos_root_url, b->repos_uuid,
+                               b->ctx, iterpool, iterpool));
               deleted_node_found = (yca_loc != NULL);
             }
 
