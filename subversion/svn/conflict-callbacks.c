@@ -446,8 +446,8 @@ static const resolver_option_t builtin_resolver_options[] =
     svn_client_conflict_option_incoming_delete_accept },
 
   /* Options for incoming move vs local edit. */
-  { "m", NULL, NULL,
-    svn_client_conflict_option_incoming_move_file_text_merge },
+  { "m", NULL, NULL, svn_client_conflict_option_incoming_move_file_text_merge },
+  { "m", NULL, NULL, svn_client_conflict_option_incoming_move_dir_merge },
 
   { NULL }
 };
@@ -1478,7 +1478,8 @@ build_tree_conflict_options(
 
       opt++; 
 
-      if (id == svn_client_conflict_option_incoming_move_file_text_merge)
+      if (id == svn_client_conflict_option_incoming_move_file_text_merge ||
+          id == svn_client_conflict_option_incoming_move_dir_merge)
         {
           SVN_ERR(
             svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
@@ -1704,6 +1705,13 @@ handle_tree_conflict(svn_boolean_t *resolved,
             svn_client_conflict_option_find_by_id( 
               options,
               svn_client_conflict_option_incoming_move_file_text_merge);
+          if (conflict_option == NULL)
+            {
+              conflict_option =
+                svn_client_conflict_option_find_by_id( 
+                  options, svn_client_conflict_option_incoming_move_dir_merge);
+            }
+
           if (conflict_option)
             {
               SVN_ERR(svn_client_conflict_option_set_moved_to_repos_relpath(
@@ -1738,6 +1746,13 @@ handle_tree_conflict(svn_boolean_t *resolved,
             svn_client_conflict_option_find_by_id( 
               options,
               svn_client_conflict_option_incoming_move_file_text_merge);
+          if (conflict_option == NULL)
+            {
+              conflict_option =
+                svn_client_conflict_option_find_by_id( 
+                  options, svn_client_conflict_option_incoming_move_dir_merge);
+            }
+
           if (conflict_option)
             {
               SVN_ERR(svn_client_conflict_option_set_moved_to_abspath(

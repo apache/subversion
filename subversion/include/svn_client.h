@@ -4425,6 +4425,7 @@ typedef enum svn_client_conflict_option_id_t {
 
   /* Options for incoming move vs local edit */
   svn_client_conflict_option_incoming_move_file_text_merge,
+  svn_client_conflict_option_incoming_move_dir_merge,
 
 } svn_client_conflict_option_id_t;
 
@@ -4447,7 +4448,8 @@ svn_client_conflict_option_set_merged_propval(
 
 /**
  * Get a list of possible repository paths which can be applied to the
- * svn_client_conflict_option_incoming_move_file_text_merge resolution
+ * svn_client_conflict_option_incoming_move_file_text_merge or
+ * svn_client_conflict_option_incoming_move_dir_merge resolution
  * @a option. (If a different option is passed in, this function will
  * raise an assertion failure.)
  *
@@ -4475,7 +4477,8 @@ svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
 
 /**
  * Set the preferred moved target repository path for the
- * svn_client_conflict_option_incoming_move_file_text_merge resolution option.
+ * svn_client_conflict_option_incoming_move_file_text_merge or
+ * svn_client_conflict_option_incoming_move_dir_merge resolution option.
  * 
  * @a preferred_move_target_idx must be a valid index into the list returned
  * by svn_client_conflict_option_get_moved_to_repos_relpath_candidates().
@@ -4491,8 +4494,9 @@ svn_client_conflict_option_set_moved_to_repos_relpath(
 /**
  * Get a list of possible moved-to abspaths in the working copy which can be
  * applied to the svn_client_conflict_option_incoming_move_file_text_merge
- * resolution @a option. (If a different option is passed in, this function
- * will raise an assertion failure.)
+ * or svn_client_conflict_option_incoming_move_dir_merge resolution @a option.
+ * (If a different option is passed in, this function will raise an assertion
+ * failure.)
  *
  * All paths in the returned list correspond to the repository path which
  * is assumed to be the destination of the incoming move operation.
@@ -4517,7 +4521,8 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
 
 /**
  * Set the preferred moved target abspath for the
- * svn_client_conflict_option_incoming_move_file_text_merge resolution option.
+ * svn_client_conflict_option_incoming_move_file_text_merge or
+ * svn_client_conflict_option_incoming_move_dir_merge resolution option.
  * 
  * @a preferred_move_target_idx must be a valid index into the list
  * returned by svn_client_conflict_option_get_moved_to_abspath_candidates().
