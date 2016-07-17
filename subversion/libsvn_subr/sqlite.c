@@ -19,6 +19,13 @@
  *    under the License.
  * ====================================================================
  */
+#ifdef SVN_SQLITE_INLINE
+/* Include sqlite3 inline, making all symbols private. */
+  #define SQLITE_API static
+  #include <sqlite3.c>
+#else
+  #include <sqlite3.h>
+#endif
 
 #include <apr_pools.h>
 
@@ -40,14 +47,6 @@
 
 #ifdef SQLITE3_DEBUG
 #include "private/svn_debug.h"
-#endif
-
-#ifdef SVN_SQLITE_INLINE
-/* Include sqlite3 inline, making all symbols private. */
-  #define SQLITE_API static
-  #include <sqlite3.c>
-#else
-  #include <sqlite3.h>
 #endif
 
 #if !SQLITE_VERSION_AT_LEAST(3,6,18)
