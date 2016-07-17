@@ -113,7 +113,7 @@ Candidate changes:
    Votes:
      +1: luke1410
 
- * r1753129, r1753130
+ * r1753130
    Fix compile error with VS 2005+ and SQLite 3.12.0+.
    Justification:
      SVN should compile with SQLite 3.12.0 out of the box.
