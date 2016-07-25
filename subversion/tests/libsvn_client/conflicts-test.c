@@ -62,6 +62,9 @@ static const char *trunk_path = "A";
 static const char *branch_path = "A_branch";
 static const char *new_file_name = "newfile.txt";
 static const char *deleted_file_name = "mu";
+static const char *deleted_dir_name = "B";
+static const char *deleted_dir_child = "lambda";
+static const char *new_dir_name = "newdir";
 
 /* File property content. */
 static const char *propval_trunk = "This is a property on the trunk.";
@@ -775,7 +778,6 @@ test_switch_incoming_added_file_ignore(const svn_test_opts_t *opts,
  * The following tests verify resolution of "incoming dir add vs.
  * local dir obstruction upon merge" tree conflicts.
  */
-static const char *new_dir_name = "newdir";
 
 /* A helper function which prepares a working copy for the tests below. */
 static svn_error_t *
@@ -1993,6 +1995,172 @@ test_switch_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* A helper function which prepares a working copy for the tests below. */
+static svn_error_t *
+create_wc_with_incoming_delete_dir_conflict(svn_test__sandbox_t *b,
+                                            svn_boolean_t move,
+                                            svn_boolean_t do_switch)
+{
+  svn_client_ctx_t *ctx;
+  static const char *trunk_url;
+  svn_opt_revision_t opt_rev;
+  const char *deleted_path;
+  const char *deleted_child_path;
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(b));
+
+  /* Create a branch of node "A". */
+  SVN_ERR(sbox_wc_copy(b, trunk_path, branch_path));
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  if (move)
+    {
+      const char *move_target_path;
+
+      /* Move a directory on the trunk. */
+      deleted_path = svn_relpath_join(trunk_path, deleted_dir_name, b->pool);
+      move_target_path = svn_relpath_join(trunk_path, new_dir_name, b->pool);
+      SVN_ERR(sbox_wc_move(b, deleted_path, move_target_path));
+      SVN_ERR(sbox_wc_commit(b, ""));
+    }
+  else
+    {
+      /* Delete a directory on the trunk. */
+      deleted_path = svn_relpath_join(trunk_path, deleted_dir_name, b->pool);
+      SVN_ERR(sbox_wc_delete(b, deleted_path));
+      SVN_ERR(sbox_wc_commit(b, ""));
+    }
+
+  /* Modify a file on the branch. */
+  deleted_child_path = svn_relpath_join(branch_path,
+                                        svn_relpath_join(deleted_dir_name,
+                                                         deleted_dir_child,
+                                                         b->pool),
+                                        b->pool);
+  SVN_ERR(sbox_file_write(b, deleted_child_path,
+                          modified_file_on_branch_content));
+
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  opt_rev.kind = svn_opt_revision_head;
+  opt_rev.value.number = SVN_INVALID_REVNUM;
+  trunk_url = apr_pstrcat(b->pool, b->repos_url, "/", trunk_path,
+                          SVN_VA_NULL);
+  if (do_switch)
+    {
+      /* Switch the branch working copy to trunk. */
+      svn_revnum_t result_rev;
+
+      /* This should raise an "incoming delete vs local edit" tree conflict. */
+      SVN_ERR(svn_client_switch3(&result_rev, sbox_wc_path(b, branch_path),
+                                 trunk_url, &opt_rev, &opt_rev,
+                                 svn_depth_infinity,
+                                 TRUE, FALSE, FALSE, FALSE, ctx, b->pool));
+    }
+  else
+    {
+      /* Commit modifcation and run a merge from the trunk to the branch. */
+      SVN_ERR(sbox_wc_commit(b, ""));
+      SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+      /* This should raise an "incoming delete vs local edit" tree conflict. */
+      SVN_ERR(svn_client_merge_peg5(trunk_url, NULL, &opt_rev,
+                                    sbox_wc_path(b, branch_path),
+                                    svn_depth_infinity,
+                                    FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+                                    NULL, ctx, b->pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Test 'incoming move dir merge' resolution option. */
+static svn_error_t *
+test_merge_incoming_move_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  svn_client_ctx_t *ctx;
+  const char *deleted_path;
+  const char *moved_to_path;
+  const char *child_path;
+  svn_client_conflict_t *conflict;
+  struct status_baton sb;
+  struct svn_client_status_t *status;
+  svn_stringbuf_t *buf;
+  svn_stream_t *stream;
+  svn_opt_revision_t opt_rev;
+
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_move_dir", opts, pool));
+
+  SVN_ERR(create_wc_with_incoming_delete_dir_conflict(b, TRUE, FALSE));
+
+  deleted_path = svn_relpath_join(branch_path, deleted_dir_name, b->pool);
+  moved_to_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
+
+  /* Resolve the tree conflict. */
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
+                                  ctx, b->pool, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict, svn_client_conflict_option_incoming_move_dir_merge,
+            b->pool));
+
+  /* Ensure that the moved-away directory has the expected status. */
+  sb.result_pool = b->pool;
+  opt_rev.kind = svn_opt_revision_working;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, deleted_path),
+                             &opt_rev, svn_depth_empty, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_dir);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_deleted);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(!status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_STRING_ASSERT(status->moved_to_abspath,
+                         sbox_wc_path(b, moved_to_path));
+
+  /* Ensure that the moved-here directory has the expected status. */
+  sb.result_pool = b->pool;
+  opt_rev.kind = svn_opt_revision_working;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, moved_to_path),
+                             &opt_rev, svn_depth_empty, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_dir);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_added);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_STRING_ASSERT(status->moved_from_abspath,
+                         sbox_wc_path(b, deleted_path));
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  /* Ensure that the edited file has the expected content. */
+  child_path = svn_relpath_join(branch_path,
+                                svn_relpath_join(deleted_dir_name,
+                                                 deleted_dir_child,
+                                                 b->pool),
+                                b->pool);
+  SVN_ERR(svn_stream_open_readonly(&stream, sbox_wc_path(b, child_path),
+                                   b->pool, b->pool));
+  SVN_ERR(svn_stringbuf_from_stream(&buf, stream, 0, b->pool));
+  SVN_ERR(svn_stream_close(stream));
+  SVN_TEST_STRING_ASSERT(buf->data, modified_file_on_branch_content);
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -2039,6 +2207,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "update incoming move file text merge"),
     SVN_TEST_OPTS_PASS(test_switch_incoming_move_file_text_merge,
                        "switch incoming move file text merge"),
+    SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir, "merge incoming move dir"),
     SVN_TEST_NULL
   };
 
