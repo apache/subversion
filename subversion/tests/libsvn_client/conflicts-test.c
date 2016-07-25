@@ -2261,6 +2261,106 @@ test_merge_incoming_move_dir2(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* A helper function which prepares a working copy for the tests below. */
+static svn_error_t *
+create_wc_with_incoming_delete_vs_local_delete(svn_test__sandbox_t *b)
+{
+  svn_client_ctx_t *ctx;
+  static const char *trunk_url;
+  svn_opt_revision_t opt_rev;
+  const char *copy_src_path;
+  const char *copy_dst_name;
+  const char *copy_dst_path;
+  const char *deleted_file_path;
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(b));
+
+  /* Create a branch of node "A". */
+  SVN_ERR(sbox_wc_copy(b, trunk_path, branch_path));
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  /* On the trunk, copy "mu" to "mu-copied". */
+  copy_src_path = svn_relpath_join(trunk_path, deleted_file_name, b->pool);
+  copy_dst_name = apr_pstrcat(b->pool, deleted_file_name, "-copied",
+                              SVN_VA_NULL);
+  copy_dst_path = svn_relpath_join(trunk_path, copy_dst_name, b->pool);
+  SVN_ERR(sbox_wc_copy(b, copy_src_path, copy_dst_path));
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  /* Merge the file copy to the branch. */
+  trunk_url = apr_pstrcat(b->pool, b->repos_url, "/", trunk_path, SVN_VA_NULL);
+  opt_rev.kind = svn_opt_revision_head;
+  opt_rev.value.number = SVN_INVALID_REVNUM;
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+  SVN_ERR(svn_client_merge_peg5(trunk_url, NULL, &opt_rev,
+                                sbox_wc_path(b, branch_path),
+                                svn_depth_infinity,
+                                FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+                                NULL, ctx, b->pool));
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  /* Now delete the copied file on the trunk. */
+  deleted_file_path = svn_relpath_join(trunk_path, copy_dst_name, b->pool);
+  SVN_ERR(sbox_wc_delete(b, deleted_file_path));
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  /* Delete the corresponding file on the branch. */
+  deleted_file_path = svn_relpath_join(branch_path, copy_dst_name,
+                                       b->pool);
+  SVN_ERR(sbox_wc_delete(b, deleted_file_path));
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  /* Run a merge from the trunk to the branch.
+   * This should raise an "incoming delete vs local delete" tree conflict. */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+  SVN_ERR(svn_client_merge_peg5(trunk_url, NULL, &opt_rev,
+                                sbox_wc_path(b, branch_path),
+                                svn_depth_infinity,
+                                FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+                                NULL, ctx, b->pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Test for the 'incoming delete vs local delete' bug fixed by r1751893. */
+static svn_error_t *
+test_merge_incoming_delete_vs_local_delete(const svn_test_opts_t *opts,
+                                           apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  svn_client_ctx_t *ctx;
+  const char *copy_dst_name;
+  const char *copy_dst_path;
+  svn_client_conflict_t *conflict;
+  svn_node_kind_t node_kind;
+
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_delete_vs_local_delete",
+                                   opts, pool));
+
+  SVN_ERR(create_wc_with_incoming_delete_vs_local_delete(b));
+
+  copy_dst_name = apr_pstrcat(b->pool, deleted_file_name, "-copied",
+                              SVN_VA_NULL);
+  copy_dst_path = svn_relpath_join(branch_path, copy_dst_name, b->pool);
+
+  /* Resolve the tree conflict. Before r1751893 there was an unintended error.*/
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, copy_dst_path),
+                                  ctx, b->pool, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict, svn_client_conflict_option_incoming_delete_accept,
+            b->pool));
+
+  /* The file should be gone. */
+  SVN_ERR(svn_io_check_path(sbox_wc_path(b, copy_dst_path), &node_kind,
+                            b->pool));
+  SVN_TEST_ASSERT(node_kind == svn_node_none);
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -2310,6 +2410,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir, "merge incoming move dir"),
     SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_dir2,
                        "merge incoming move dir with local mods"),
+    SVN_TEST_OPTS_PASS(test_merge_incoming_delete_vs_local_delete,
+                       "merge incoming delete vs local delete"),
     SVN_TEST_NULL
   };
 
