@@ -581,7 +581,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
   def _find_httpd(self, show_warnings):
     "Find Apache HTTPD and version"
 
-    minimal_httpd_version = (2, 0, 0)
+    minimal_httpd_version = (2, 2, 0)
     if not self.httpd_path:
       return
 
