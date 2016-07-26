@@ -122,6 +122,13 @@ Candidate changes:
    Votes:
      +1: stsp, jamessan
 
+* 1754190
+  Raise min httpd version to 2.2.0 for Windows.
+  Justification:
+    SVN shouldn't suggest to support unsupported dependencies.
+  Votes:
+    +1 (non-binding): luke1410
+
 Veto-blocked changes:
 =====================
 
