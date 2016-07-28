@@ -2408,8 +2408,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_switch_incoming_move_file_text_merge,
                        "switch incoming move file text merge"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir, "merge incoming move dir"),
-    SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_dir2,
-                       "merge incoming move dir with local mods"),
+    SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir2,
+                       "merge incoming move dir with local mod"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_delete_vs_local_delete,
                        "merge incoming delete vs local delete"),
     SVN_TEST_NULL
