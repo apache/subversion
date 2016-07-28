@@ -1890,6 +1890,24 @@ svn_wc__conflict_tree_update_moved_away_node(svn_wc_context_t *wc_ctx,
                                              void *notify_baton,
                                              apr_pool_t *scratch_pool);
 
+/* Merge local changes from a tree conflict victim of an incoming deletion
+ * to the specified DEST_ABSPATH. Both LOCAL_ABSPATH and DEST_ABSPATH must
+ * be directories.
+ *
+ * Assuming DEST_ABSPATH is the correct destination, this function allows
+ * local changes to "follow" incoming moves.
+ *
+ * @since New in 1.10. */
+svn_error_t *
+svn_wc__conflict_tree_merge_local_changes(svn_wc_context_t *wc_ctx,
+                                          const char *local_abspath,
+                                          const char *dest_abspath,
+                                          svn_cancel_func_t cancel_func,
+                                          void *cancel_baton,
+                                          svn_wc_notify_func2_t notify_func,
+                                          void *notify_baton,
+                                          apr_pool_t *scratch_pool);
+
 /* Find nodes in the working copy which corresponds to the new location
  * MOVED_TO_REPOS_RELPATH@REV of the tree conflict victim at VICTIM_ABSPATH.
  * The nodes must be of the same node kind as VICTIM_NODE_KIND.

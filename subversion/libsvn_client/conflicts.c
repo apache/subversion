@@ -6535,47 +6535,47 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
   yca_opt_rev.kind = svn_opt_revision_number;
   yca_opt_rev.value.number = yca_loc->rev;
 
-
   err = verify_local_state_for_incoming_delete(conflict, option, scratch_pool);
   if (err)
     goto unlock_wc;
 
-  /* ### We should support local mods in the WC at the moved-away location!
-   * ### Ideally, the victim abspath in the WC would be our merge-right
-   * ### location, instead of the victim's URL. Perhaps we should merge local
-   * ### mods in a second pass here? Until this is addressed, error out. */
-  err = svn_wc__has_local_mods(&is_modified, ctx->wc_ctx, local_abspath, TRUE,
-                               ctx->cancel_func, ctx->cancel_baton,
+  if (operation == svn_wc_operation_merge)
+    {
+      /* Merge YCA_URL->VICTIM_URL into the incoming move target directory. */
+      err = svn_client__merge_locked(&conflict_report,
+                                     yca_loc->url, &yca_opt_rev,
+                                     victim_url, &victim_opt_rev,
+                                     moved_to_abspath, svn_depth_infinity,
+                                     FALSE, FALSE, FALSE, FALSE, FALSE,
+                                     TRUE, /* Allow mixed-rev just in case,
+                                            * since conflict victims can't be
+                                            * updated to straighten out
+                                            * mixed-rev trees. */
+                                     NULL, ctx, scratch_pool, scratch_pool);
+      if (err)
+        goto unlock_wc;
+    }
+
+  /* Merge local modifications into the incoming move target dir. */
+  err = svn_wc__has_local_mods(&is_modified, ctx->wc_ctx, local_abspath,
+                               TRUE, ctx->cancel_func, ctx->cancel_baton,
                                scratch_pool);
   if (err)
     goto unlock_wc;
+
   if (is_modified)
     {
-      err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                              _("Cannot resolve tree conflict on '%s' by "
-                                "following the incoming move and merging "
-                                "('%s' contains local modifications, and "
-                                "merging local modifications to the incoming "
-                                "move target path is not yet supported)"),
-                              svn_dirent_local_style(local_abspath,
-                                                     scratch_pool),
-                              svn_dirent_local_style(local_abspath,
-                                                     scratch_pool));
-      goto unlock_wc;
+      err = svn_wc__conflict_tree_merge_local_changes(ctx->wc_ctx,
+                                                      local_abspath,
+                                                      moved_to_abspath,
+                                                      ctx->cancel_func,
+                                                      ctx->cancel_baton,
+                                                      ctx->notify_func2,
+                                                      ctx->notify_baton2,
+                                                      scratch_pool);
+      if (err)
+        goto unlock_wc;
     }
-
-  /* Merge YCA_URL->VICTIM_URL into the incoming move target directory. */
-  err = svn_client__merge_locked(&conflict_report,
-                                 yca_loc->url, &yca_opt_rev,
-                                 victim_url, &victim_opt_rev,
-                                 moved_to_abspath, svn_depth_infinity,
-                                 FALSE, FALSE, FALSE, FALSE, FALSE,
-                                 TRUE, /* Allow mixed-rev just in case, since
-                                        * conflict victims can't be updated to
-                                        * straighten out mixed-rev trees. */
-                                 NULL, ctx, scratch_pool, scratch_pool);
-  if (err)
-    goto unlock_wc;
 
   if (operation == svn_wc_operation_update ||
       operation == svn_wc_operation_switch)
