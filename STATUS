@@ -107,13 +107,14 @@ Candidate changes:
    Votes:
      +1: kotkov, ivan
 
- * r1745515, r1746364
+ * r1700130, r1745515, r1746364
    Update serf download URIs to ASF.
    Justification:
      Resolves build script issues since the old google code URI is 404 now.
    Votes:
-     +1 (non-binding): luke1410
-     +1: jamessan
+     +1 (non-binding): luke1410 (without r1700130)
+     +1: jamessan (without r1700130)
+     +1: ivan
 
  * 1748514
    Fix a crash in 'svn resolve'.
