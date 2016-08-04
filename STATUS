@@ -127,13 +127,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1700130, r1745515, r1746364
-   Update serf download URIs to ASF.
-   Justification:
-     Resolves build script issues since the old google code URI is 404 now.
-   Votes:
-     +1 (non-binding): luke1410 (without r1700130)
-     +1: jamessan
-     +1: ivan
-
