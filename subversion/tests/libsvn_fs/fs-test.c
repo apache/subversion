@@ -3593,17 +3593,10 @@ get_file_checksum(svn_checksum_t **checksum,
                   apr_pool_t *pool)
 {
   svn_stream_t *stream;
-  svn_stream_t *checksum_stream;
 
   /* Get a stream for the file contents. */
   SVN_ERR(svn_fs_file_contents(&stream, root, path, pool));
-
-  /* Get a checksummed stream for the contents. */
-  checksum_stream = svn_stream_checksummed2(stream, checksum, NULL,
-                                            checksum_kind, TRUE, pool);
-
-  /* Close the stream, forcing a complete read and copy the digest. */
-  SVN_ERR(svn_stream_close(checksum_stream));
+  SVN_ERR(svn_stream_checksum(checksum, stream, checksum_kind, pool, pool));
 
   return SVN_NO_ERROR;
 }
