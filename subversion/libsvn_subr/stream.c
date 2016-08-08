@@ -1478,6 +1478,51 @@ svn_stream_checksummed2(svn_stream_t *stream,
   return s;
 }
 
+/* Helper for svn_stream_checksum() to compute checksum of KIND of STREAM.
+ * This function doesn't close source stream. */
+static svn_error_t *
+compute_stream_checksum(svn_checksum_t **checksum,
+                        svn_stream_t *stream,
+                        svn_checksum_kind_t kind,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  svn_checksum_ctx_t *ctx = svn_checksum_ctx_create(kind, scratch_pool);
+  char *buf = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
+
+  while (1)
+    {
+      apr_size_t len = SVN__STREAM_CHUNK_SIZE;
+
+      SVN_ERR(svn_stream_read_full(stream, buf, &len));
+
+      if (len > 0)
+        SVN_ERR(svn_checksum_update(ctx, buf, len));
+
+      if (len != SVN__STREAM_CHUNK_SIZE)
+          break;
+    }
+  SVN_ERR(svn_checksum_final(checksum, ctx, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_stream_checksum(svn_checksum_t **checksum,
+                    svn_stream_t *stream,
+                    svn_checksum_kind_t kind,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+  err = compute_stream_checksum(checksum, stream, kind,
+                                result_pool, scratch_pool);
+
+  /* Close source stream in all cases. */
+  return svn_error_compose_create(err, svn_stream_close(stream));
+}
+
 /* Miscellaneous stream functions. */
 
 /*
