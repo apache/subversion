@@ -599,20 +599,7 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
 static BOOL
 is_debugger_present()
 {
-  HANDLE kernel32_dll = LoadLibrary("kernel32.dll");
-  BOOL result;
-
-  ISDEBUGGERPRESENT IsDebuggerPresent_ =
-          (ISDEBUGGERPRESENT)GetProcAddress(kernel32_dll, "IsDebuggerPresent");
-
-  if (IsDebuggerPresent_ && IsDebuggerPresent_())
-    result = TRUE;
-  else
-    result = FALSE;
-
-  FreeLibrary(kernel32_dll);
-
-  return result;
+  return IsDebuggerPresent();
 }
 
 /* Load the dbghelp.dll file, try to find a version that matches our
