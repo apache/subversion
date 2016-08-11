@@ -608,7 +608,7 @@ static BOOL
 load_dbghelp_dll()
 {
   dbghelp_dll = LoadLibrary(DBGHELP_DLL);
-  if (dbghelp_dll != INVALID_HANDLE_VALUE)
+  if (dbghelp_dll != NULL)
     {
       DWORD opts;
 
