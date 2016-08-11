@@ -2650,9 +2650,6 @@ svn_io_remove_file2(const char *path,
          allow us to delete when path is read-only */
       SVN_ERR(svn_io_set_file_read_write(path, ignore_enoent, scratch_pool));
       apr_err = apr_file_remove(path_apr, scratch_pool);
-
-      if (!apr_err)
-        return SVN_NO_ERROR;
     }
 
   /* Check to make sure we aren't trying to delete a directory */
