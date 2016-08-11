@@ -1207,11 +1207,7 @@ svn_cmdline__be_interactive(svn_boolean_t non_interactive,
    * If --force-interactive was passed, always be interactive. */
   if (!force_interactive && !non_interactive)
     {
-#ifdef WIN32
-      return (_isatty(STDIN_FILENO) != 0);
-#else
-      return (isatty(STDIN_FILENO) != 0);
-#endif
+      return svn_cmdline__stdin_is_a_terminal();
     }
   else if (force_interactive)
     return TRUE;
