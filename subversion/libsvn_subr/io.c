@@ -1889,7 +1889,7 @@ io_win_file_attrs_set(const char *fname,
 
 static svn_error_t *win_init_dynamic_imports(void *baton, apr_pool_t *pool)
 {
-  HMODULE kernel32 = GetModuleHandleA("kernel32.dll");
+  HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
 
   if (kernel32)
     {

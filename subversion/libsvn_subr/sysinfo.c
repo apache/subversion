@@ -666,7 +666,7 @@ system_info(SYSTEM_INFO *sysinfo,
             SYSTEM_INFO *local_sysinfo)
 {
   FNGETNATIVESYSTEMINFO GetNativeSystemInfo_ = (FNGETNATIVESYSTEMINFO)
-    GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetNativeSystemInfo");
+    GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "GetNativeSystemInfo");
 
   memset(sysinfo, 0, sizeof *sysinfo);
   if (local_sysinfo)
@@ -875,12 +875,12 @@ enum_loaded_modules(apr_pool_t *pool)
   DWORD size;
   FNENUMPROCESSMODULES EnumProcessModules_;
 
-  psapi_dll = GetModuleHandleA("psapi.dll");
+  psapi_dll = GetModuleHandleW(L"psapi.dll");
 
   if (!psapi_dll)
     {
       /* Load and never unload, just like static linking */
-      psapi_dll = LoadLibraryA("psapi.dll");
+      psapi_dll = LoadLibraryW(L"psapi.dll");
     }
 
   if (!psapi_dll)
