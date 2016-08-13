@@ -933,7 +933,7 @@ repack_file_open(apr_file_t **file,
 {
   apr_int64_t tag;
   const char *tag_string;
-  svn_string_t *new_filename;
+  const char *new_filename;
   int i;
   int manifest_offset
     = (int)(revprops->start_revision - revprops->manifest_start);
@@ -957,18 +957,18 @@ repack_file_open(apr_file_t **file,
                              old_filename);
 
   SVN_ERR(svn_cstring_atoi64(&tag, tag_string + 1));
-  new_filename = svn_string_createf(pool, "%ld.%" APR_INT64_T_FMT,
-                                    revprops->start_revision + start,
-                                    ++tag);
+  new_filename = apr_psprintf(pool, "%ld.%" APR_INT64_T_FMT,
+                              revprops->start_revision + start,
+                              ++tag);
 
   /* update the manifest to point to the new file */
   for (i = start; i < end; ++i)
     APR_ARRAY_IDX(revprops->manifest, i + manifest_offset, const char*)
-      = new_filename->data;
+      = new_filename;
 
   /* open the file */
   SVN_ERR(svn_io_file_open(file, svn_dirent_join(revprops->folder,
-                                                 new_filename->data,
+                                                 new_filename,
                                                  pool),
                            APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
 
