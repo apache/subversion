@@ -1762,7 +1762,7 @@ store_l2p_index_entry(svn_fs_t *fs,
 static svn_error_t *
 store_p2l_index_entry(svn_fs_t *fs,
                       const svn_fs_fs__id_part_t *txn_id,
-                      svn_fs_fs__p2l_entry_t *entry,
+                      const svn_fs_fs__p2l_entry_t *entry,
                       apr_pool_t *pool)
 {
   if (svn_fs_fs__use_log_addressing(fs))
