@@ -836,7 +836,7 @@ serialize_revprops_header(svn_stream_t *stream,
     }
 
   /* the double newline char indicates the end of the header */
-  SVN_ERR(svn_stream_printf(stream, iterpool, "\n"));
+  SVN_ERR(svn_stream_puts(stream, "\n"));
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
