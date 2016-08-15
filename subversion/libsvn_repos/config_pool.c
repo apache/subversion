@@ -199,9 +199,8 @@ auto_parse(svn_config_t **cfg,
   apr_pool_t *cfg_pool;
 
   /* calculate SHA1 over the whole file contents */
-  SVN_ERR(svn_stream_checksum(
-            &checksum, svn_stream_from_stringbuf(contents, scratch_pool),
-            svn_checksum_sha1, scratch_pool, scratch_pool));
+  SVN_ERR(svn_checksum(&checksum, svn_checksum_sha1,
+                       contents->data, contents->len, scratch_pool));
 
   /* return reference to suitable config object if that already exists */
   *key = checksum_as_key(checksum, result_pool);
