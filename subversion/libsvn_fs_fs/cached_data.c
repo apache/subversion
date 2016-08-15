@@ -3379,8 +3379,8 @@ read_item(svn_stream_t **stream,
                  _("Low-level checksum mismatch while reading\n"
                    "%s bytes of meta data at offset %s "
                    "for item %s in revision %ld"),
-                 apr_psprintf(pool, "%" APR_OFF_T_FMT, entry->size),
-                 apr_psprintf(pool, "%" APR_OFF_T_FMT, entry->offset),
+                 apr_off_t_toa(pool, entry->size),
+                 apr_off_t_toa(pool, entry->offset),
                  apr_psprintf(pool, "%" APR_UINT64_T_FMT, entry->item.number),
                  entry->item.revision);
 }

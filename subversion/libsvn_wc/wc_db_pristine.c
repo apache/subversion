@@ -319,8 +319,8 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
               SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
               _("New pristine text '%s' has different size: %s versus %s"),
               svn_checksum_to_cstring_display(sha1_checksum, scratch_pool),
-              apr_psprintf(scratch_pool, "%" APR_OFF_T_FMT, finfo1.size),
-              apr_psprintf(scratch_pool, "%" APR_OFF_T_FMT, finfo2.size));
+              apr_off_t_toa(scratch_pool, finfo1.size),
+              apr_off_t_toa(scratch_pool, finfo2.size));
           }
       }
 #endif
