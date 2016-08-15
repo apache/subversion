@@ -1731,9 +1731,11 @@ svn_fs_fs__add_change(svn_fs_t *fs,
   return svn_io_file_close(file, pool);
 }
 
-/* If the transaction TXN_ID in FS uses logical addressing, store the
- * (ITEM_INDEX, OFFSET) pair in the txn's log-to-phys proto index file.
+/* Store the (ITEM_INDEX, OFFSET) pair in the txn's log-to-phys proto
+ * index file.
  * Use POOL for allocations.
+ * This function assumes that transaction TXN_ID in FS uses logical
+ * addressing.
  */
 static svn_error_t *
 store_l2p_index_entry(svn_fs_t *fs,
@@ -1742,22 +1744,24 @@ store_l2p_index_entry(svn_fs_t *fs,
                       apr_uint64_t item_index,
                       apr_pool_t *pool)
 {
-  if (svn_fs_fs__use_log_addressing(fs))
-    {
-      const char *path = svn_fs_fs__path_l2p_proto_index(fs, txn_id, pool);
-      apr_file_t *file;
-      SVN_ERR(svn_fs_fs__l2p_proto_index_open(&file, path, pool));
-      SVN_ERR(svn_fs_fs__l2p_proto_index_add_entry(file, offset,
-                                                   item_index, pool));
-      SVN_ERR(svn_io_file_close(file, pool));
-    }
+  const char *path;
+  apr_file_t *file;
+
+  SVN_ERR_ASSERT(svn_fs_fs__use_log_addressing(fs));
+
+  path = svn_fs_fs__path_l2p_proto_index(fs, txn_id, pool);
+  SVN_ERR(svn_fs_fs__l2p_proto_index_open(&file, path, pool));
+  SVN_ERR(svn_fs_fs__l2p_proto_index_add_entry(file, offset,
+                                               item_index, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }
 
-/* If the transaction TXN_ID in FS uses logical addressing, store ENTRY
- * in the phys-to-log proto index file of transaction TXN_ID.
+/* Store ENTRY in the phys-to-log proto index file of transaction TXN_ID.
  * Use POOL for allocations.
+ * This function assumes that transaction TXN_ID in FS uses logical
+ * addressing.
  */
 static svn_error_t *
 store_p2l_index_entry(svn_fs_t *fs,
@@ -1765,14 +1769,15 @@ store_p2l_index_entry(svn_fs_t *fs,
                       const svn_fs_fs__p2l_entry_t *entry,
                       apr_pool_t *pool)
 {
-  if (svn_fs_fs__use_log_addressing(fs))
-    {
-      const char *path = svn_fs_fs__path_p2l_proto_index(fs, txn_id, pool);
-      apr_file_t *file;
-      SVN_ERR(svn_fs_fs__p2l_proto_index_open(&file, path, pool));
-      SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry(file, entry, pool));
-      SVN_ERR(svn_io_file_close(file, pool));
-    }
+  const char *path;
+  apr_file_t *file;
+
+  SVN_ERR_ASSERT(svn_fs_fs__use_log_addressing(fs));
+
+  path = svn_fs_fs__path_p2l_proto_index(fs, txn_id, pool);
+  SVN_ERR(svn_fs_fs__p2l_proto_index_open(&file, path, pool));
+  SVN_ERR(svn_fs_fs__p2l_proto_index_add_entry(file, entry, pool));
+  SVN_ERR(svn_io_file_close(file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2191,10 +2196,10 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
                                  b->scratch_pool));
 
   b->file = file;
-  b->rep_stream = fnv1a_wrap_stream(&b->fnv1a_checksum_ctx,
-                                    svn_stream_from_aprfile2(file, TRUE,
-                                                             b->scratch_pool),
-                                    b->scratch_pool);
+  b->rep_stream = svn_stream_from_aprfile2(file, TRUE, b->scratch_pool);
+  if (svn_fs_fs__use_log_addressing(fs))
+    b->rep_stream = fnv1a_wrap_stream(&b->fnv1a_checksum_ctx, b->rep_stream,
+                                      b->scratch_pool);
 
   SVN_ERR(svn_io_file_get_offset(&b->rep_offset, file, b->scratch_pool));
 
@@ -2471,7 +2476,7 @@ rep_write_contents_close(void *baton)
   /* Write out the new node-rev information. */
   SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev,
                                        FALSE, b->scratch_pool));
-  if (!old_rep)
+  if (!old_rep && svn_fs_fs__use_log_addressing(b->fs))
     {
       svn_fs_fs__p2l_entry_t entry;
 
@@ -2698,10 +2703,12 @@ write_container_rep(representation_t *rep,
 
   whb = apr_pcalloc(scratch_pool, sizeof(*whb));
 
-  whb->stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx,
-                                  svn_stream_from_aprfile2(file, TRUE,
-                                                           scratch_pool),
-                                  scratch_pool);
+  whb->stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
+  if (svn_fs_fs__use_log_addressing(fs))
+    whb->stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx, whb->stream,
+                                    scratch_pool);
+  else
+    fnv1a_checksum_ctx = NULL;
   whb->size = 0;
   whb->md5_ctx = svn_checksum_ctx_create(svn_checksum_md5, scratch_pool);
   if (item_type != SVN_FS_FS__ITEM_TYPE_DIR_REP)
@@ -2730,16 +2737,18 @@ write_container_rep(representation_t *rep,
 
       /* Use the old rep for this content. */
       memcpy(rep, old_rep, sizeof (*rep));
+      return SVN_NO_ERROR;
     }
-  else
+
+  /* Write out our cosmetic end marker. */
+  SVN_ERR(svn_stream_puts(whb->stream, "ENDREP\n"));
+
+  SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
+                              offset, scratch_pool));
+
+  if (svn_fs_fs__use_log_addressing(fs))
     {
       svn_fs_fs__p2l_entry_t entry;
-
-      /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_stream_puts(whb->stream, "ENDREP\n"));
-
-      SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
-                                  offset, scratch_pool));
 
       entry.offset = offset;
       SVN_ERR(svn_io_file_get_offset(&offset, file, scratch_pool));
@@ -2752,10 +2761,10 @@ write_container_rep(representation_t *rep,
                                       scratch_pool));
 
       SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
-
-      /* update the representation */
-      rep->size = whb->size;
     }
+
+  /* update the representation */
+  rep->size = whb->size;
 
   return SVN_NO_ERROR;
 }
@@ -2824,10 +2833,12 @@ write_container_delta_rep(representation_t *rep,
       header.type = svn_fs_fs__rep_self_delta;
     }
 
-  file_stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx,
-                                  svn_stream_from_aprfile2(file, TRUE,
-                                                           scratch_pool),
-                                  scratch_pool);
+  file_stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
+  if (svn_fs_fs__use_log_addressing(fs))
+    file_stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx, file_stream,
+                                    scratch_pool);
+  else
+    fnv1a_checksum_ctx = NULL;
   SVN_ERR(svn_fs_fs__write_rep_header(&header, file_stream, scratch_pool));
   SVN_ERR(svn_io_file_get_offset(&delta_start, file, scratch_pool));
 
@@ -2870,17 +2881,19 @@ write_container_delta_rep(representation_t *rep,
 
       /* Use the old rep for this content. */
       memcpy(rep, old_rep, sizeof (*rep));
+      return SVN_NO_ERROR;
     }
-  else
+
+  /* Write out our cosmetic end marker. */
+  SVN_ERR(svn_io_file_get_offset(&rep_end, file, scratch_pool));
+  SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
+
+  SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
+                              offset, scratch_pool));
+
+  if (svn_fs_fs__use_log_addressing(fs))
     {
       svn_fs_fs__p2l_entry_t entry;
-
-      /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_io_file_get_offset(&rep_end, file, scratch_pool));
-      SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
-
-      SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
-                                  offset, scratch_pool));
 
       entry.offset = offset;
       SVN_ERR(svn_io_file_get_offset(&offset, file, scratch_pool));
@@ -2893,10 +2906,10 @@ write_container_delta_rep(representation_t *rep,
                                       scratch_pool));
 
       SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
-
-      /* update the representation */
-      rep->size = rep_end - delta_start;
     }
+
+  /* update the representation */
+  rep->size = rep_end - delta_start;
 
   return SVN_NO_ERROR;
 }
@@ -3228,9 +3241,12 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (at_root)
     SVN_ERR(validate_root_noderev(fs, noderev, rev, pool));
 
-  file_stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx,
-                                  svn_stream_from_aprfile2(file, TRUE, pool),
-                                  pool);
+  file_stream = svn_stream_from_aprfile2(file, TRUE, pool);
+  if (svn_fs_fs__use_log_addressing(fs))
+    file_stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx, file_stream, pool);
+  else
+    fnv1a_checksum_ctx = NULL;
+
   SVN_ERR(svn_fs_fs__write_noderev(file_stream, noderev, ffd->format,
                                    svn_fs_fs__fs_supports_mergeinfo(fs),
                                    pool));
@@ -3277,10 +3293,13 @@ write_final_changed_path_info(apr_off_t *offset_p,
 
   SVN_ERR(svn_io_file_get_offset(&offset, file, pool));
 
-  /* write to target file & calculate checksum */
-  stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx,
-                             svn_stream_from_aprfile2(file, TRUE, pool),
-                             pool);
+  /* write to target file & calculate checksum if needed */
+  stream = svn_stream_from_aprfile2(file, TRUE, pool);
+  if (svn_fs_fs__use_log_addressing(fs))
+    stream = fnv1a_wrap_stream(&fnv1a_checksum_ctx, stream, pool);
+  else
+    fnv1a_checksum_ctx = NULL;
+
   SVN_ERR(svn_fs_fs__write_changes(stream, fs, changed_paths, TRUE, pool));
 
   *offset_p = offset;
