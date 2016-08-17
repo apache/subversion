@@ -1266,11 +1266,11 @@ svn_stream_checksummed(svn_stream_t *stream,
  * @since New in 1.10.
  */
 svn_error_t *
-svn_stream_checksum(svn_checksum_t **checksum,
-                    svn_stream_t *stream,
-                    svn_checksum_kind_t kind,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool);
+svn_stream_contents_checksum(svn_checksum_t **checksum,
+                             svn_stream_t *stream,
+                             svn_checksum_kind_t kind,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 /** Read from a generic stream until @a buffer is filled upto @a *len or
  * until EOF is reached. @see svn_stream_t

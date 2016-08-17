@@ -1478,8 +1478,8 @@ svn_stream_checksummed2(svn_stream_t *stream,
   return s;
 }
 
-/* Helper for svn_stream_checksum() to compute checksum of KIND of STREAM.
- * This function doesn't close source stream. */
+/* Helper for svn_stream_contents_checksum() to compute checksum of
+ * KIND of STREAM. This function doesn't close source stream. */
 static svn_error_t *
 compute_stream_checksum(svn_checksum_t **checksum,
                         svn_stream_t *stream,
@@ -1508,11 +1508,11 @@ compute_stream_checksum(svn_checksum_t **checksum,
 }
 
 svn_error_t *
-svn_stream_checksum(svn_checksum_t **checksum,
-                    svn_stream_t *stream,
-                    svn_checksum_kind_t kind,
-                    apr_pool_t *result_pool,
-                    apr_pool_t *scratch_pool)
+svn_stream_contents_checksum(svn_checksum_t **checksum,
+                             svn_stream_t *stream,
+                             svn_checksum_kind_t kind,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
 

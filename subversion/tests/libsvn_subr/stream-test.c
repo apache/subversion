@@ -855,13 +855,15 @@ test_stream_checksum(apr_pool_t *pool)
     svn_string_create("The quick brown fox jumps over the lazy dog", pool);
   svn_checksum_t *actual;
 
-  SVN_ERR(svn_stream_checksum(&actual, svn_stream_from_string(str, pool),
-                              svn_checksum_md5, pool, pool));
+  SVN_ERR(svn_stream_contents_checksum(&actual,
+                                       svn_stream_from_string(str, pool),
+                                       svn_checksum_md5, pool, pool));
   SVN_TEST_STRING_ASSERT("9e107d9d372bb6826bd81d3542a419d6",
                          svn_checksum_to_cstring(actual, pool));
 
-  SVN_ERR(svn_stream_checksum(&actual, svn_stream_from_string(str, pool),
-                              svn_checksum_sha1, pool, pool));
+  SVN_ERR(svn_stream_contents_checksum(&actual,
+                                       svn_stream_from_string(str, pool),
+                                       svn_checksum_sha1, pool, pool));
   SVN_TEST_STRING_ASSERT("2fd4e1c67a2d28fced849ee1bb76e7391b93eb12",
                          svn_checksum_to_cstring(actual, pool));
 
@@ -900,7 +902,7 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_stream_compressed_read_full,
                    "test compression for streams without partial read"),
     SVN_TEST_PASS2(test_stream_checksum,
-                   "test svn_stream_checksum()"),
+                   "test svn_stream_contents_checksum()"),
     SVN_TEST_NULL
   };
 
