@@ -1254,13 +1254,14 @@ svn_stream_checksummed(svn_stream_t *stream,
                        svn_boolean_t read_all,
                        apr_pool_t *pool);
 
-/** Return in @a *checksum the checksum of type @a kind of @a stream.
+/** Read the contents of the readable stream @a stream and return its
+ * checksum of type @a kind in @a *checksum.
  *
- * Stream will be closed before this function returns (regardless of
- * the result, or any possible error).
+ * The stream will be closed before this function returns (regardless
+ * of the result, or any possible error).
  *
  * Use @a scratch_pool for temporary allocations and @a result_pool
- * to allocate @a *checksum. 
+ * to allocate @a *checksum.
  *
  * @since New in 1.10.
  */
