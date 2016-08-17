@@ -1504,7 +1504,8 @@ svn_fs_file_checksum(svn_checksum_t **checksum,
       svn_stream_t *contents;
 
       SVN_ERR(svn_fs_file_contents(&contents, root, path, pool));
-      SVN_ERR(svn_stream_checksum(checksum, contents, kind, pool, pool));
+      SVN_ERR(svn_stream_contents_checksum(checksum, contents, kind,
+                                           pool, pool));
     }
 
   return SVN_NO_ERROR;

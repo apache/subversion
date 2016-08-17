@@ -1482,7 +1482,8 @@ svn_io_file_checksum2(svn_checksum_t **checksum,
 
   SVN_ERR(svn_io_file_open(&f, file, APR_READ, APR_OS_DEFAULT, pool));
   file_stream = svn_stream_from_aprfile2(f, FALSE, pool);
-  SVN_ERR(svn_stream_checksum(checksum, file_stream, kind, pool, pool));
+  SVN_ERR(svn_stream_contents_checksum(checksum, file_stream, kind,
+                                       pool, pool));
 
   return SVN_NO_ERROR;
 }
