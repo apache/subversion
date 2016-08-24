@@ -3826,6 +3826,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
          ### which will read from the FS stream on demand */
 
       block = apr_palloc(resource->pool, SVN__STREAM_CHUNK_SIZE);
+      bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+
       while (1) {
         apr_size_t bufsize = SVN__STREAM_CHUNK_SIZE;
 
@@ -3833,6 +3835,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
         serr = svn_stream_read_full(stream, block, &bufsize);
         if (serr != NULL)
           {
+            apr_brigade_destroy(bb);
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                         "could not read the file contents",
                                         resource->pool);
@@ -3840,30 +3843,32 @@ deliver(const dav_resource *resource, ap_filter_t *output)
         if (bufsize == 0)
           break;
 
-        /* build a brigade and write to the filter ... */
-        bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+        /* write to the filter ... */
         bkt = apr_bucket_transient_create(block, bufsize,
                                           output->c->bucket_alloc);
         APR_BRIGADE_INSERT_TAIL(bb, bkt);
         if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS) {
+          apr_brigade_destroy(bb);
           /* ### that HTTP code... */
           return dav_svn__new_error(resource->pool,
                                     HTTP_INTERNAL_SERVER_ERROR, 0, status,
                                     "Could not write data to filter.");
         }
+        apr_brigade_cleanup(bb);
       }
 
       /* done with the file. write an EOS bucket now. */
-      bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
       bkt = apr_bucket_eos_create(output->c->bucket_alloc);
       APR_BRIGADE_INSERT_TAIL(bb, bkt);
       if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS) {
+        apr_brigade_destroy(bb);
         /* ### that HTTP code... */
         return dav_svn__new_error(resource->pool,
                                   HTTP_INTERNAL_SERVER_ERROR, 0, status,
                                   "Could not write EOS to filter.");
       }
 
+      apr_brigade_destroy(bb);
       return NULL;
     }
 }
