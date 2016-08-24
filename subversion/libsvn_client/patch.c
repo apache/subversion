@@ -1224,11 +1224,11 @@ init_patch_target(patch_target_t **patch_target,
 
       /* Open a temporary file to write the patched result to. */
       SVN_ERR(svn_io_open_unique_file3(&target->patched_file,
-                                        &target->patched_path, NULL,
-                                        remove_tempfiles ?
-                                          svn_io_file_del_on_pool_cleanup :
-                                          svn_io_file_del_none,
-                                        result_pool, scratch_pool));
+                                       &target->patched_path, NULL,
+                                       remove_tempfiles ?
+                                         svn_io_file_del_on_pool_cleanup :
+                                         svn_io_file_del_none,
+                                       result_pool, scratch_pool));
 
       /* Put the write callback in place. */
       content->write = write_file;
