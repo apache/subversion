@@ -3245,16 +3245,14 @@ static svn_error_t *  __attribute__((warn_unused_result))
 write_to_filter(void *baton, const char *buffer, apr_size_t *len)
 {
   diff_ctx_t *dc = baton;
-  apr_bucket *bkt;
   apr_status_t status;
 
   /* take the current data and shove it into the filter */
-  bkt = apr_bucket_transient_create(buffer, *len, dc->output->c->bucket_alloc);
-  APR_BRIGADE_INSERT_TAIL(dc->bb, bkt);
-  if ((status = ap_pass_brigade(dc->output, dc->bb)) != APR_SUCCESS) {
+  status = apr_brigade_write(dc->bb, ap_filter_flush, dc->output,
+                             buffer, *len);
+  if (status != APR_SUCCESS)
     return svn_error_create(status, NULL,
                             "Could not write data to filter");
-  }
 
   return SVN_NO_ERROR;
 }
