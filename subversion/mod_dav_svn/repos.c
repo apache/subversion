@@ -3237,7 +3237,7 @@ set_headers(request_rec *r, const dav_resource *resource)
 
 typedef struct diff_ctx_t {
   ap_filter_t *output;
-  apr_pool_t *pool;
+  apr_bucket_brigade *bb;
 } diff_ctx_t;
 
 
@@ -3245,15 +3245,13 @@ static svn_error_t *  __attribute__((warn_unused_result))
 write_to_filter(void *baton, const char *buffer, apr_size_t *len)
 {
   diff_ctx_t *dc = baton;
-  apr_bucket_brigade *bb;
   apr_bucket *bkt;
   apr_status_t status;
 
   /* take the current data and shove it into the filter */
-  bb = apr_brigade_create(dc->pool, dc->output->c->bucket_alloc);
   bkt = apr_bucket_transient_create(buffer, *len, dc->output->c->bucket_alloc);
-  APR_BRIGADE_INSERT_TAIL(bb, bkt);
-  if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS) {
+  APR_BRIGADE_INSERT_TAIL(dc->bb, bkt);
+  if ((status = ap_pass_brigade(dc->output, dc->bb)) != APR_SUCCESS) {
     return svn_error_create(status, NULL,
                             "Could not write data to filter");
   }
@@ -3266,15 +3264,13 @@ static svn_error_t *  __attribute__((warn_unused_result))
 close_filter(void *baton)
 {
   diff_ctx_t *dc = baton;
-  apr_bucket_brigade *bb;
   apr_bucket *bkt;
   apr_status_t status;
 
   /* done with the file. write an EOS bucket now. */
-  bb = apr_brigade_create(dc->pool, dc->output->c->bucket_alloc);
   bkt = apr_bucket_eos_create(dc->output->c->bucket_alloc);
-  APR_BRIGADE_INSERT_TAIL(bb, bkt);
-  if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS)
+  APR_BRIGADE_INSERT_TAIL(dc->bb, bkt);
+  if ((status = ap_pass_brigade(dc->output, dc->bb)) != APR_SUCCESS)
     return svn_error_create(status, NULL, "Could not write EOS to filter");
 
   return SVN_NO_ERROR;
@@ -3702,10 +3698,12 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                         "could not prepare to read a delta",
                                         resource->pool);
 
+          bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+
           /* create a stream that svndiff data will be written to,
              which will copy it to the network */
           dc.output = output;
-          dc.pool = resource->pool;
+          dc.bb = bb;
           o_stream = svn_stream_create(&dc, resource->pool);
           svn_stream_set_write(o_stream, write_to_filter);
           svn_stream_set_close(o_stream, close_filter);
@@ -3721,6 +3719,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
              to the network. */
           serr = svn_txdelta_send_txstream(txd_stream, handler, h_baton,
                                            resource->pool);
+          apr_brigade_destroy(bb);
+
           if (serr != NULL)
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                         "could not deliver the txdelta stream",
