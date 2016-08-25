@@ -565,7 +565,7 @@ find_yca(svn_client__pathrev_t **yca_loc,
  * Find the revision in which a node, optionally ancestrally related to the
  * node specified via find_deleted_rev_baton, was deleted, When the revision
  * was found, store it in BATON->DELETED_REV and abort the log operation
- * by raising SVN_ERR_CANCELLED.
+ * by raising SVN_ERR_CEASE_INVOCATION.
  *
  * If no such revision can be found, leave BATON->DELETED_REV and
  * BATON->REPLACING_NODE_KIND alone.
@@ -718,7 +718,7 @@ find_deleted_rev(void *baton,
   if (deleted_node_found)
     {
       /* We're done. Abort the log operation. */
-      return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+      return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
     }
 
   return SVN_NO_ERROR;
@@ -1228,7 +1228,7 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
                         scratch_pool);
   if (err)
     {
-      if (err->apr_err == SVN_ERR_CANCELLED &&
+      if (err->apr_err == SVN_ERR_CEASE_INVOCATION &&
           b.deleted_rev != SVN_INVALID_REVNUM)
 
         {
