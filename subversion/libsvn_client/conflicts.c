@@ -4846,32 +4846,29 @@ verify_local_state_for_incoming_add_upon_update(
   err = svn_wc__node_get_base(&base_kind, &base_rev, &base_repos_relpath,
                               NULL, NULL, NULL, ctx->wc_ctx, local_abspath,
                               FALSE, scratch_pool, scratch_pool);
-  if (err)
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
     {
-      if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          if (option_id == svn_client_conflict_option_incoming_add_ignore)
-            return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, err,
-                                     _("Cannot resolve tree conflict on '%s' "
-                                       "by ignoring the incoming addition "
-                                       "(expected a base node but found none)"),
-                                     local_style_relpath);
-          else if (option_id ==
-                   svn_client_conflict_option_incoming_added_file_replace ||
-                   option_id ==
-                   svn_client_conflict_option_incoming_added_dir_replace)
-            return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, err,
-                                     _("Cannot resolve tree conflict on '%s' "
-                                       "by replacing the locally added node "
-                                       "(expected a base node but found none)"),
-                                     local_style_relpath);
-          else
-            return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, err,
-                                     _("Unexpected option id '%d'"), option_id);
-        }
+      if (option_id == svn_client_conflict_option_incoming_add_ignore)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, err,
+                                 _("Cannot resolve tree conflict on '%s' "
+                                   "by ignoring the incoming addition "
+                                   "(expected a base node but found none)"),
+                                 local_style_relpath);
+      else if (option_id ==
+               svn_client_conflict_option_incoming_added_file_replace ||
+               option_id ==
+               svn_client_conflict_option_incoming_added_dir_replace)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, err,
+                                 _("Cannot resolve tree conflict on '%s' "
+                                   "by replacing the locally added node "
+                                   "(expected a base node but found none)"),
+                                 local_style_relpath);
       else
-        return svn_error_trace(err);
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, err,
+                                 _("Unexpected option id '%d'"), option_id);
     }
+  else if (err)
+    return svn_error_trace(err);
 
   if (base_kind != incoming_new_kind)
     {
