@@ -5402,7 +5402,6 @@ resolve_update_incoming_added_file_replace(svn_client_conflict_option_t *option,
   const char *lock_abspath;
   svn_client_ctx_t *ctx = conflict->ctx;
   svn_error_t *err;
-  apr_file_t *backup_file;
   const char *backup_path;
 
   option_id = svn_client_conflict_option_get_id(option);
@@ -5422,7 +5421,7 @@ resolve_update_incoming_added_file_replace(svn_client_conflict_option_t *option,
    * which means it does not exist in the repository. So it's a good idea 
    * to keep a backup, just in case someone picks this option by accident.
    * First, reserve a name in the filesystem. */
-  err = svn_io_open_uniquely_named(&backup_file, &backup_path,
+  err = svn_io_open_uniquely_named(NULL, &backup_path,
                                    svn_dirent_dirname(local_abspath,
                                                       scratch_pool), 
                                    svn_dirent_basename(local_abspath,
@@ -5433,13 +5432,9 @@ resolve_update_incoming_added_file_replace(svn_client_conflict_option_t *option,
   if (err)
     goto unlock_wc;
 
-  /* Close and remove the file. We're going to move the conflict victim
-   * on top and, at least on Windows, open files can't be replaced.
+  /* Remove the file. We're going to move the conflict victim on top and, at
+   * least on Windows, open files can't be replaced.
    * The WC is locked so anything racing us here is external to SVN. */ 
-  err = svn_io_file_close(backup_file, scratch_pool);
-  if (err)
-    goto unlock_wc;
-
   err = svn_error_compose_create(err, svn_io_remove_file2(backup_path, TRUE,
                                                           scratch_pool));
   if (err)
