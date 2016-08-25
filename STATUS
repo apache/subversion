@@ -137,16 +137,17 @@ Candidate changes:
    mod_dav_svn: Fix unbounded memory usage when handling GET requests
    and properly buffer their responses.
    Justification:
-     Fixes an unbounded memory usage in default (skelta mode) configuration.
-     Proper buffering reduces the amount of data sent over the wire by passing
-     larger chunks to the httpd's chunking filter.
+     Fixes an unbounded memory usage in skelta mode(default for some client
+     versions) configuration. Proper buffering reduces the amount of data
+     sent over the wire by passing larger chunks to the httpd's chunking
+     filter.
    Branch:
      ^/subversion/branches/1.9.x-r1757529-group
    Notes:
      The backport branch is required, because r1757529 produces a text conflict
      in a comment in mod_dav_svn/repos.c
    Votes:
-     +1: kotkov
+     +1: kotkov, rhuijben
 
 Veto-blocked changes:
 =====================
