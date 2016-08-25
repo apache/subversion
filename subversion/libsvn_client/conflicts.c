@@ -5434,7 +5434,7 @@ resolve_update_incoming_added_file_replace(svn_client_conflict_option_t *option,
 
   /* Create a backup by renaming the file on top of the 'reserved' name.
    * Renaming is equally fast for big and small files. */
-  err = svn_io_file_rename2(local_abspath, backup_path, TRUE, scratch_pool);
+  err = svn_io_file_rename2(local_abspath, backup_path, FALSE, scratch_pool);
   if (err)
     goto unlock_wc;
 
