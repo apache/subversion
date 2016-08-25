@@ -122,6 +122,17 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1756266
+   FSFS: Write the sha1->rep mapping in transaction *after* we successfully
+   written node revision to disk. Otherwise may get orphaned sha1->rep mapping
+   entry if an error occurs when writing p2l index entry.
+   Justification:
+     Possible repository corruption.
+     NOTE: Standard Subversion client should not be affected because it
+     aborts transaction on any error.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
