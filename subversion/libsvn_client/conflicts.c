@@ -5432,14 +5432,6 @@ resolve_update_incoming_added_file_replace(svn_client_conflict_option_t *option,
   if (err)
     goto unlock_wc;
 
-  /* Remove the file. We're going to move the conflict victim on top and, at
-   * least on Windows, open files can't be replaced.
-   * The WC is locked so anything racing us here is external to SVN. */ 
-  err = svn_error_compose_create(err, svn_io_remove_file2(backup_path, TRUE,
-                                                          scratch_pool));
-  if (err)
-    goto unlock_wc;
-
   /* Create a backup by renaming the file on top of the 'reserved' name.
    * Renaming is equally fast for big and small files. */
   err = svn_io_file_rename2(local_abspath, backup_path, TRUE, scratch_pool);
