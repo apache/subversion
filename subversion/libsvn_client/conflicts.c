@@ -4533,8 +4533,8 @@ svn_client_conflict_option_set_merged_propval(
 /* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
 resolve_postpone(svn_client_conflict_option_t *option,
-                      svn_client_conflict_t *conflict,
-                      apr_pool_t *scratch_pool)
+                 svn_client_conflict_t *conflict,
+                 apr_pool_t *scratch_pool)
 {
   return SVN_NO_ERROR; /* Nothing to do. */
 }
