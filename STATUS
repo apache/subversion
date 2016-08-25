@@ -87,40 +87,13 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
- * r1663286, r1741071, r1741072, r1741073, r1741078, r1741096, r1741200,
-   r1741206
-   Fix the source of "database is locked" errors when opening rep-cache.db.
-   Justification:
-     Users can get unexpected errors during operations that open rep-cache.db,
-     e.g., when calling 'svnadmin verify'.
-   Branch:
-     ^/subversion/branches/1.9.x-rep-cache-db-fixes
-   Notes:
-     r1663286 only affects maintainer mode and is included to avoid conflicts.
-     r1741073 fixes a potential crash in our sqlite helper.
-     r1741096 and r1741200 are the core fix for this issue.
-     r1741206 fixes a potential problem with the long-living db connection.
-     .
-     The backport branch is required, because r1741096 adds a new error code
-     that can't be backported as is without breaking compatibility between
-     patch versions.
-   Votes:
-     +1: kotkov, ivan
-
- * 1748514
-   Fix a crash in 'svn resolve'.
-   Justification:
-     SVN should not segfault. User complained.
-   Votes:
-     +1: stsp, jamessan
-
  * r1715777
    Convert assertion failure to error if configuration file contains just one
    0xEE character.
    Justification:
      Assertion on invalid config is not good behavior.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
  * r1756266
    FSFS: Write the sha1->rep mapping in transaction *after* we successfully
@@ -131,7 +104,7 @@ Candidate changes:
      NOTE: Standard Subversion client should not be affected because it
      aborts transaction on any error.
    Votes:
-     +1: ivan
+     +1: ivan, rhuijben
 
  * r1757529, r1757532, r1757539
    mod_dav_svn: Fix unbounded memory usage when handling GET requests
@@ -154,3 +127,31 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+
+ * r1663286, r1741071, r1741072, r1741073, r1741078, r1741096, r1741200,
+   r1741206
+   Fix the source of "database is locked" errors when opening rep-cache.db.
+   Justification:
+     Users can get unexpected errors during operations that open rep-cache.db,
+     e.g., when calling 'svnadmin verify'.
+   Branch:
+     ^/subversion/branches/1.9.x-rep-cache-db-fixes
+   Notes:
+     r1663286 only affects maintainer mode and is included to avoid conflicts.
+     r1741073 fixes a potential crash in our sqlite helper.
+     r1741096 and r1741200 are the core fix for this issue.
+     r1741206 fixes a potential problem with the long-living db connection.
+     .
+     The backport branch is required, because r1741096 adds a new error code
+     that can't be backported as is without breaking compatibility between
+     patch versions.
+   Votes:
+     +1: kotkov, ivan, rhuijben
+
+ * r1748514
+   Fix a crash in 'svn resolve'.
+   Justification:
+     SVN should not segfault. User complained.
+   Votes:
+     +1: stsp, jamessan, rhuijben
