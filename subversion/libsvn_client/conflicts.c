@@ -5200,7 +5200,6 @@ merge_incoming_added_file_replace(svn_client_conflict_option_t *option,
   SVN_ERR(svn_stream_copy3(working_file_stream, working_file_tmp_stream,
                            ctx->cancel_func, ctx->cancel_baton,
                            scratch_pool));
-  SVN_ERR(svn_io_file_flush(working_file_tmp, scratch_pool));
 
   /* Get a copy of the working file's properties. */
   SVN_ERR(svn_wc_prop_list2(&working_props, ctx->wc_ctx, local_abspath,
