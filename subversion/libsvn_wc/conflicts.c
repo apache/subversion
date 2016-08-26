@@ -1633,6 +1633,15 @@ build_text_conflict_resolve_items(svn_skel_t **work_items,
                 ? svn_diff_conflict_display_latest
                 : svn_diff_conflict_display_modified;
 
+          if (mine_abspath == NULL)
+            return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                     _("Conflict on '%s' cannot be resolved to "
+                                       "'theirs-conflict' or 'mine-conflict' "
+                                       "because a merged version of the file "
+                                       "cannot be created."),
+                                     svn_dirent_local_style(local_abspath,
+                                                            scratch_pool));
+
           SVN_ERR(merge_showing_conflicts(&install_from_abspath,
                                           db, local_abspath,
                                           style, merge_options,
