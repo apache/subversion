@@ -5198,7 +5198,7 @@ merge_incoming_added_file_replace(svn_client_conflict_option_t *option,
   SVN_ERR(svn_stream_open_readonly(&working_file_stream, local_abspath,
                                    scratch_pool, scratch_pool));
   SVN_ERR(svn_stream_copy3(working_file_stream, working_file_tmp_stream,
-                           ctx->cancel_baton, ctx->cancel_baton,
+                           ctx->cancel_func, ctx->cancel_baton,
                            scratch_pool));
   SVN_ERR(svn_io_file_flush(working_file_tmp, scratch_pool));
 
