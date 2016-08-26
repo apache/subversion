@@ -5175,7 +5175,6 @@ merge_incoming_added_file_replace(svn_client_conflict_option_t *option,
   const char *lock_abspath;
   svn_client_ctx_t *ctx = conflict->ctx;
   const char *wc_tmpdir;
-  apr_file_t *working_file_tmp;
   svn_stream_t *working_file_tmp_stream;
   const char *working_file_tmp_abspath;
   svn_stream_t *working_file_stream;
@@ -5187,12 +5186,10 @@ merge_incoming_added_file_replace(svn_client_conflict_option_t *option,
   /* Set up tempory storage for the working version of file. */
   SVN_ERR(svn_wc__get_tmpdir(&wc_tmpdir, ctx->wc_ctx, local_abspath,
                              scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_open_unique_file3(&working_file_tmp,
-                                   &working_file_tmp_abspath, wc_tmpdir,
-                                   svn_io_file_del_on_pool_cleanup,
-                                   scratch_pool, scratch_pool));
-  working_file_tmp_stream = svn_stream_from_aprfile2(working_file_tmp,
-                                                     FALSE, scratch_pool);
+  SVN_ERR(svn_stream_open_unique(&working_file_tmp_stream,
+                                 &working_file_tmp_abspath, wc_tmpdir,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 scratch_pool, scratch_pool));
 
   /* Copy the working file to temporary storage. */
   SVN_ERR(svn_stream_open_readonly(&working_file_stream, local_abspath,
@@ -6190,7 +6187,6 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
   const char *wc_tmpdir;
-  apr_file_t *ancestor_file;
   const char *ancestor_abspath;
   svn_stream_t *ancestor_stream;
   apr_hash_t *victim_props;
@@ -6237,11 +6233,10 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   /* Set up temporary storage for the common ancestor version of the file. */
   SVN_ERR(svn_wc__get_tmpdir(&wc_tmpdir, ctx->wc_ctx, local_abspath,
                              scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_open_unique_file3(&ancestor_file,
-                                   &ancestor_abspath, wc_tmpdir,
-                                   svn_io_file_del_on_pool_cleanup,
-                                   scratch_pool, scratch_pool));
-  ancestor_stream = svn_stream_from_aprfile2(ancestor_file, TRUE, scratch_pool);
+  SVN_ERR(svn_stream_open_unique(&ancestor_stream,
+                                 &ancestor_abspath, wc_tmpdir,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 scratch_pool, scratch_pool));
 
   /* Fetch the ancestor file's content. */
   ancestor_url = svn_path_url_add_component2(repos_root_url,
@@ -6255,9 +6250,8 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
                           ancestor_stream, NULL, /* fetched_rev */
                           NULL /* we don't need these props */, scratch_pool));
 
-  /* Flush ancestor file to disk. */
+  /* Close stream to flush ancestor file to disk. */
   SVN_ERR(svn_stream_close(ancestor_stream));
-  SVN_ERR(svn_io_file_flush(ancestor_file, scratch_pool));
 
   possible_moved_to_abspaths =
     svn_hash_gets(details->wc_move_targets, details->move_target_repos_relpath);
