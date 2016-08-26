@@ -5033,7 +5033,6 @@ resolve_merge_incoming_added_file_text_merge(
   svn_wc_notify_state_t merge_props_outcome;
   apr_file_t *incoming_new_file;
   const char *incoming_new_tmp_abspath;
-  apr_file_t *empty_file;
   const char *empty_file_abspath;
   svn_stream_t *incoming_new_stream;
   apr_hash_t *incoming_new_props;
@@ -5088,7 +5087,7 @@ resolve_merge_incoming_added_file_text_merge(
 
   /* Create an empty file as fake "merge-base" for the two added files.
    * The files are not ancestrally related so this is the best we can do. */
-  SVN_ERR(svn_io_open_unique_file3(&empty_file, &empty_file_abspath, NULL,
+  SVN_ERR(svn_io_open_unique_file3(NULL, &empty_file_abspath, NULL,
                                    svn_io_file_del_on_pool_cleanup,
                                    scratch_pool, scratch_pool));
 
