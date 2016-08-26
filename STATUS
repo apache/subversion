@@ -106,6 +106,12 @@ Candidate changes:
    Votes:
      +1: ivan, rhuijben
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1757529, r1757532, r1757539
    mod_dav_svn: Fix unbounded memory usage when handling GET requests
    and properly buffer their responses.
@@ -120,10 +126,4 @@ Candidate changes:
      The backport branch is required, because r1757529 produces a text conflict
      in a comment in mod_dav_svn/repos.c
    Votes:
-     +1: kotkov, rhuijben
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: kotkov, rhuijben, ivan
