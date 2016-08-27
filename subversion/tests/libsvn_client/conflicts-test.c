@@ -73,6 +73,8 @@ static const char *propval_branch = "This is a property on the branch.";
 /* File content. */
 static const char *modified_file_on_branch_content =
                         "This is a modified file on the branch\n";
+static const char *added_file_on_branch_content =
+                        "This is a file added on the branch\n";
 static const char *modified_file_in_working_copy_content =
                         "This is a modified file in the working copy\n";
 
@@ -2002,7 +2004,8 @@ static svn_error_t *
 create_wc_with_incoming_delete_dir_conflict(svn_test__sandbox_t *b,
                                             svn_boolean_t move,
                                             svn_boolean_t do_switch,
-                                            svn_boolean_t local_mod)
+                                            svn_boolean_t local_edit,
+                                            svn_boolean_t local_add)
 {
   svn_client_ctx_t *ctx;
   static const char *trunk_url;
@@ -2034,14 +2037,30 @@ create_wc_with_incoming_delete_dir_conflict(svn_test__sandbox_t *b,
       SVN_ERR(sbox_wc_commit(b, ""));
     }
 
-  /* Modify a file on the branch. */
-  deleted_child_path = svn_relpath_join(branch_path,
+  if (local_add)
+    {
+      const char *new_child_path;
+      
+      new_child_path = svn_relpath_join(branch_path,
                                         svn_relpath_join(deleted_dir_name,
-                                                         deleted_dir_child,
+                                                         new_file_name,
                                                          b->pool),
                                         b->pool);
-  SVN_ERR(sbox_file_write(b, deleted_child_path,
-                          modified_file_on_branch_content));
+      /* Add new file on the branch. */
+      SVN_ERR(sbox_file_write(b, new_child_path, added_file_on_branch_content));
+      SVN_ERR(sbox_wc_add(b, new_child_path));
+    }
+  else
+    {
+      /* Modify a file on the branch. */
+      deleted_child_path = svn_relpath_join(branch_path,
+                                            svn_relpath_join(deleted_dir_name,
+                                                             deleted_dir_child,
+                                                             b->pool),
+                                            b->pool);
+      SVN_ERR(sbox_file_write(b, deleted_child_path,
+                              modified_file_on_branch_content));
+    }
 
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
   opt_rev.kind = svn_opt_revision_head;
@@ -2061,11 +2080,11 @@ create_wc_with_incoming_delete_dir_conflict(svn_test__sandbox_t *b,
     }
   else
     {
-      /* Commit modifcation and run a merge from the trunk to the branch. */
+      /* Commit modification and run a merge from the trunk to the branch. */
       SVN_ERR(sbox_wc_commit(b, ""));
       SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
 
-      if (local_mod)
+      if (local_edit)
         {
           /* Modify the file in the working copy. */
           SVN_ERR(sbox_file_write(b, deleted_child_path,
@@ -2101,7 +2120,8 @@ test_merge_incoming_move_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_move_dir", opts, pool));
 
-  SVN_ERR(create_wc_with_incoming_delete_dir_conflict(b, TRUE, FALSE, FALSE));
+  SVN_ERR(create_wc_with_incoming_delete_dir_conflict(b, TRUE, FALSE, FALSE,
+                                                      FALSE));
 
   deleted_path = svn_relpath_join(branch_path, deleted_dir_name, b->pool);
   moved_to_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
@@ -2190,7 +2210,8 @@ test_merge_incoming_move_dir2(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_move_dir2", opts, pool));
 
-  SVN_ERR(create_wc_with_incoming_delete_dir_conflict(b, TRUE, FALSE, TRUE));
+  SVN_ERR(create_wc_with_incoming_delete_dir_conflict(b, TRUE, FALSE, TRUE,
+                                                      FALSE));
 
   deleted_path = svn_relpath_join(branch_path, deleted_dir_name, b->pool);
   moved_to_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
@@ -2257,6 +2278,115 @@ test_merge_incoming_move_dir2(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_stringbuf_from_stream(&buf, stream, 0, b->pool));
   SVN_ERR(svn_stream_close(stream));
   SVN_TEST_STRING_ASSERT(buf->data, modified_file_in_working_copy_content);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_merge_incoming_move_dir3(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  svn_client_ctx_t *ctx;
+  const char *deleted_path;
+  const char *moved_to_path;
+  const char *child_path;
+  svn_client_conflict_t *conflict;
+  struct status_baton sb;
+  struct svn_client_status_t *status;
+  svn_stringbuf_t *buf;
+  svn_stream_t *stream;
+  svn_opt_revision_t opt_rev;
+
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_move_dir3", opts, pool));
+
+  SVN_ERR(create_wc_with_incoming_delete_dir_conflict(b, TRUE, FALSE, FALSE,
+                                                      TRUE));
+
+  deleted_path = svn_relpath_join(branch_path, deleted_dir_name, b->pool);
+  moved_to_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
+
+  /* Resolve the tree conflict. */
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
+                                  ctx, b->pool, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict, svn_client_conflict_option_incoming_move_dir_merge,
+            b->pool));
+
+  /* Ensure that the moved-away directory has the expected status. */
+  sb.result_pool = b->pool;
+  opt_rev.kind = svn_opt_revision_working;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, deleted_path),
+                             &opt_rev, svn_depth_empty, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_dir);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_deleted);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(!status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_STRING_ASSERT(status->moved_to_abspath,
+                         sbox_wc_path(b, moved_to_path));
+
+  /* Ensure that the moved-here directory has the expected status. */
+  sb.result_pool = b->pool;
+  opt_rev.kind = svn_opt_revision_working;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, moved_to_path),
+                             &opt_rev, svn_depth_empty, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_dir);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_added);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_STRING_ASSERT(status->moved_from_abspath,
+                         sbox_wc_path(b, deleted_path));
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  /* Ensure that the added file has the expected content. */
+  child_path = svn_relpath_join(branch_path,
+                                svn_relpath_join(new_dir_name,
+                                                 new_file_name,
+                                                 b->pool),
+                                b->pool);
+  SVN_ERR(svn_stream_open_readonly(&stream, sbox_wc_path(b, child_path),
+                                   b->pool, b->pool));
+  SVN_ERR(svn_stringbuf_from_stream(&buf, stream, 0, b->pool));
+  SVN_ERR(svn_stream_close(stream));
+  SVN_TEST_STRING_ASSERT(buf->data, added_file_on_branch_content);
+
+  /* Ensure that the added file has the expected status. */
+  sb.result_pool = b->pool;
+  opt_rev.kind = svn_opt_revision_working;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, child_path),
+                             &opt_rev, svn_depth_empty, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_file);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_added);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
 
   return SVN_NO_ERROR;
 }
@@ -2409,7 +2539,9 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "switch incoming move file text merge"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir, "merge incoming move dir"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir2,
-                       "merge incoming move dir with local mod"),
+                       "merge incoming move dir with local edit"),
+    SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_dir3,
+                        "merge incoming move dir with local add"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_delete_vs_local_delete,
                        "merge incoming delete vs local delete"),
     SVN_TEST_NULL
