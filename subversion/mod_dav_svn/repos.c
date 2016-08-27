@@ -3242,7 +3242,7 @@ set_headers(request_rec *r, const dav_resource *resource)
 
 typedef struct diff_ctx_t {
   ap_filter_t *output;
-  apr_pool_t *pool;
+  apr_bucket_brigade *bb;
 } diff_ctx_t;
 
 
@@ -3250,18 +3250,14 @@ static svn_error_t *  __attribute__((warn_unused_result))
 write_to_filter(void *baton, const char *buffer, apr_size_t *len)
 {
   diff_ctx_t *dc = baton;
-  apr_bucket_brigade *bb;
-  apr_bucket *bkt;
   apr_status_t status;
 
   /* take the current data and shove it into the filter */
-  bb = apr_brigade_create(dc->pool, dc->output->c->bucket_alloc);
-  bkt = apr_bucket_transient_create(buffer, *len, dc->output->c->bucket_alloc);
-  APR_BRIGADE_INSERT_TAIL(bb, bkt);
-  if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS) {
+  status = apr_brigade_write(dc->bb, ap_filter_flush, dc->output,
+                             buffer, *len);
+  if (status != APR_SUCCESS)
     return svn_error_create(status, NULL,
                             "Could not write data to filter");
-  }
 
   return SVN_NO_ERROR;
 }
@@ -3271,15 +3267,13 @@ static svn_error_t *  __attribute__((warn_unused_result))
 close_filter(void *baton)
 {
   diff_ctx_t *dc = baton;
-  apr_bucket_brigade *bb;
   apr_bucket *bkt;
   apr_status_t status;
 
   /* done with the file. write an EOS bucket now. */
-  bb = apr_brigade_create(dc->pool, dc->output->c->bucket_alloc);
   bkt = apr_bucket_eos_create(dc->output->c->bucket_alloc);
-  APR_BRIGADE_INSERT_TAIL(bb, bkt);
-  if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS)
+  APR_BRIGADE_INSERT_TAIL(dc->bb, bkt);
+  if ((status = ap_pass_brigade(dc->output, dc->bb)) != APR_SUCCESS)
     return svn_error_create(status, NULL, "Could not write EOS to filter");
 
   return SVN_NO_ERROR;
@@ -3706,10 +3700,12 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                         "could not prepare to read a delta",
                                         resource->pool);
 
+          bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+
           /* create a stream that svndiff data will be written to,
              which will copy it to the network */
           dc.output = output;
-          dc.pool = resource->pool;
+          dc.bb = bb;
           o_stream = svn_stream_create(&dc, resource->pool);
           svn_stream_set_write(o_stream, write_to_filter);
           svn_stream_set_close(o_stream, close_filter);
@@ -3725,6 +3721,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
              to the network. */
           serr = svn_txdelta_send_txstream(txd_stream, handler, h_baton,
                                            resource->pool);
+          apr_brigade_destroy(bb);
+
           if (serr != NULL)
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                         "could not deliver the txdelta stream",
@@ -3830,6 +3828,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
          ### which will read from the FS stream on demand */
 
       block = apr_palloc(resource->pool, SVN__STREAM_CHUNK_SIZE);
+      bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+
       while (1) {
         apr_size_t bufsize = SVN__STREAM_CHUNK_SIZE;
 
@@ -3837,6 +3837,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
         serr = svn_stream_read_full(stream, block, &bufsize);
         if (serr != NULL)
           {
+            apr_brigade_destroy(bb);
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                         "could not read the file contents",
                                         resource->pool);
@@ -3844,30 +3845,32 @@ deliver(const dav_resource *resource, ap_filter_t *output)
         if (bufsize == 0)
           break;
 
-        /* build a brigade and write to the filter ... */
-        bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+        /* write to the filter ... */
         bkt = apr_bucket_transient_create(block, bufsize,
                                           output->c->bucket_alloc);
         APR_BRIGADE_INSERT_TAIL(bb, bkt);
         if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS) {
           /* ### what to do with status; and that HTTP code... */
+          apr_brigade_destroy(bb);
           return dav_svn__new_error(resource->pool,
                                     HTTP_INTERNAL_SERVER_ERROR, 0,
                                     "Could not write data to filter.");
         }
+        apr_brigade_cleanup(bb);
       }
 
       /* done with the file. write an EOS bucket now. */
-      bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
       bkt = apr_bucket_eos_create(output->c->bucket_alloc);
       APR_BRIGADE_INSERT_TAIL(bb, bkt);
       if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS) {
         /* ### what to do with status; and that HTTP code... */
+        apr_brigade_destroy(bb);
         return dav_svn__new_error(resource->pool,
                                   HTTP_INTERNAL_SERVER_ERROR, 0,
                                   "Could not write EOS to filter.");
       }
 
+      apr_brigade_destroy(bb);
       return NULL;
     }
 }
