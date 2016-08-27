@@ -52,6 +52,25 @@ status_func(void *baton, const char *path,
   return SVN_NO_ERROR;
 }
 
+struct info_baton
+{
+  svn_client_info2_t *info;
+  apr_pool_t *result_pool;
+};
+
+/* Implements svn_client_info_receiver2_t */
+static svn_error_t *
+info_func(void *baton, const char *abspath_or_url,
+          const svn_client_info2_t *info,
+          apr_pool_t *scratch_pool)
+{
+  struct info_baton *ib = baton;
+
+  ib->info = svn_client_info2_dup(info, ib->result_pool);
+
+  return SVN_NO_ERROR;
+}
+
 /* 
  * The following tests verify resolution of "incoming file add vs.
  * local file obstruction upon merge" tree conflicts.
@@ -61,6 +80,7 @@ status_func(void *baton, const char *path,
 static const char *trunk_path = "A";
 static const char *branch_path = "A_branch";
 static const char *new_file_name = "newfile.txt";
+static const char *new_file_name_branch = "newfile-on-branch.txt";
 static const char *deleted_file_name = "mu";
 static const char *deleted_dir_name = "B";
 static const char *deleted_dir_child = "lambda";
@@ -2012,6 +2032,7 @@ create_wc_with_incoming_delete_dir_conflict(svn_test__sandbox_t *b,
   svn_opt_revision_t opt_rev;
   const char *deleted_path;
   const char *deleted_child_path;
+  const char *new_file_path;
 
   SVN_ERR(sbox_add_and_commit_greek_tree(b));
 
@@ -2019,6 +2040,17 @@ create_wc_with_incoming_delete_dir_conflict(svn_test__sandbox_t *b,
   SVN_ERR(sbox_wc_copy(b, trunk_path, branch_path));
   SVN_ERR(sbox_wc_commit(b, ""));
 
+  /* On the trunk, add a file inside the dir about to be moved/deleted. */
+  new_file_path = svn_relpath_join(trunk_path,
+                                   svn_relpath_join(deleted_dir_name,
+                                                    new_file_name, b->pool),
+                                   b->pool);
+  SVN_ERR(sbox_file_write(b, new_file_path,
+                          "This is a new file on the trunk\n"));
+  SVN_ERR(sbox_wc_add(b, new_file_path));
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
   if (move)
     {
       const char *move_target_path;
@@ -2043,7 +2075,7 @@ create_wc_with_incoming_delete_dir_conflict(svn_test__sandbox_t *b,
       
       new_child_path = svn_relpath_join(branch_path,
                                         svn_relpath_join(deleted_dir_name,
-                                                         new_file_name,
+                                                         new_file_name_branch,
                                                          b->pool),
                                         b->pool);
       /* Add new file on the branch. */
@@ -2290,8 +2322,10 @@ test_merge_incoming_move_dir3(const svn_test_opts_t *opts, apr_pool_t *pool)
   const char *deleted_path;
   const char *moved_to_path;
   const char *child_path;
+  const char *child_url;
   svn_client_conflict_t *conflict;
   struct status_baton sb;
+  struct info_baton ib;
   struct svn_client_status_t *status;
   svn_stringbuf_t *buf;
   svn_stream_t *stream;
@@ -2356,10 +2390,10 @@ test_merge_incoming_move_dir3(const svn_test_opts_t *opts, apr_pool_t *pool)
                          sbox_wc_path(b, deleted_path));
   SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
 
-  /* Ensure that the added file has the expected content. */
+  /* Ensure that the file added on the branch has the expected content. */
   child_path = svn_relpath_join(branch_path,
                                 svn_relpath_join(new_dir_name,
-                                                 new_file_name,
+                                                 new_file_name_branch,
                                                  b->pool),
                                 b->pool);
   SVN_ERR(svn_stream_open_readonly(&stream, sbox_wc_path(b, child_path),
@@ -2368,7 +2402,7 @@ test_merge_incoming_move_dir3(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_stream_close(stream));
   SVN_TEST_STRING_ASSERT(buf->data, added_file_on_branch_content);
 
-  /* Ensure that the added file has the expected status. */
+  /* Ensure that the file added on the branch has the expected status. */
   sb.result_pool = b->pool;
   opt_rev.kind = svn_opt_revision_working;
   SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, child_path),
@@ -2387,6 +2421,58 @@ test_merge_incoming_move_dir3(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_TEST_ASSERT(!status->file_external);
   SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
   SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  /* Ensure that the file added on the trunk has the expected content. */
+  child_path = svn_relpath_join(trunk_path,
+                                svn_relpath_join(new_dir_name,
+                                                 new_file_name,
+                                                 b->pool),
+                                b->pool);
+  SVN_ERR(svn_stream_open_readonly(&stream, sbox_wc_path(b, child_path),
+                                   b->pool, b->pool));
+  SVN_ERR(svn_stringbuf_from_stream(&buf, stream, 0, b->pool));
+  SVN_ERR(svn_stream_close(stream));
+  SVN_TEST_STRING_ASSERT(buf->data, "This is a new file on the trunk\n");
+
+  /* Ensure that the file added on the trunk has the expected status. */
+  sb.result_pool = b->pool;
+  opt_rev.kind = svn_opt_revision_working;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, child_path),
+                             &opt_rev, svn_depth_empty, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_file);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_added);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  /* Commit and make sure both files are present in the resulting revision. */
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  ib.result_pool = b->pool;
+  opt_rev.kind = svn_opt_revision_head;
+
+  /* The file added on the branch should be present. */
+  child_url = apr_pstrcat(b->pool, b->repos_url, "/", branch_path, "/",
+                          new_dir_name, "/", new_file_name_branch, SVN_VA_NULL);
+  SVN_ERR(svn_client_info4(child_url, &opt_rev, &opt_rev, svn_depth_empty,
+                           TRUE, TRUE, TRUE, NULL,
+                           info_func, &ib, ctx, b->pool));
+
+  /* The file added on the trunk should be present. */
+  child_url = apr_pstrcat(b->pool, b->repos_url, "/", branch_path, "/",
+                          new_dir_name, "/", new_file_name, SVN_VA_NULL);
+  SVN_ERR(svn_client_info4(child_url, &opt_rev, &opt_rev, svn_depth_empty,
+                           TRUE, TRUE, TRUE, NULL,
+                           info_func, &ib, ctx, b->pool));
 
   return SVN_NO_ERROR;
 }
