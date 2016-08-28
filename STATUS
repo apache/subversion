@@ -114,6 +114,19 @@ Candidate changes:
    Votes:
      +1 stsp
 
+* r1758128, r1758129, r1758130
+  Fix issue #4647.
+  Justification:
+    Resolves a regression in TSVN 1.9 with the binary conflict resolution
+    dialog erroring out when selecting to resolve the conflict with the
+    local file.
+  Notes:
+    r1758129 contains the actual fix.
+    r1758128 adds the regression test.
+    r1758130 removes the regression test's XFail marker
+  Votes:
+    +1 (non-binding): luke1410
+
 Veto-blocked changes:
 =====================
 
