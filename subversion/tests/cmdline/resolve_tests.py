@@ -602,6 +602,7 @@ def multi_range_merge_with_accept(sbox):
 
 # Test for issue #4647 'auto resolution mine-full fails on binary file'
 @Issue(4647)
+@XFail()
 def automatic_binary_conflict_resolution(sbox):
   "resolve -R --accept [base | mf | tf] binary file"
 
@@ -658,6 +659,11 @@ def automatic_binary_conflict_resolution(sbox):
                                          '-R', '--accept', 'tf',
                                          A_COPY_path)
 
+  # Test 'svn resolve -R --accept working'
+  do_binary_conflicting_merge()
+  svntest.actions.run_and_verify_resolve([theta_branch_path],
+                                         '-R', '--accept', 'working',
+                                         A_COPY_path)
 
 ########################################################################
 # Run the tests
