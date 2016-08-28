@@ -1623,7 +1623,14 @@ build_text_conflict_resolve_items(svn_skel_t **work_items,
         }
       case svn_wc_conflict_choose_mine_full:
         {
-          install_from_abspath = mine_abspath;
+          /* In case of selecting to resolve the conflict choosing the full
+             own file, allow the text conflict resolution to just take the
+             existing local file if no merged file was present (case: binary
+             file conflicts do not generate a locally merge file).
+          */
+          install_from_abspath = mine_abspath
+                                   ? mine_abspath
+                                   : local_abspath;
           break;
         }
       case svn_wc_conflict_choose_theirs_conflict:
