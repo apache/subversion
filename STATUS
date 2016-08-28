@@ -125,7 +125,7 @@ Candidate changes:
     r1758128 adds the regression test.
     r1758130 removes the regression test's XFail marker
   Votes:
-    +1 (non-binding): luke1410
+    -1 (non-binding): luke1410 (invalid test)
 
 Veto-blocked changes:
 =====================
