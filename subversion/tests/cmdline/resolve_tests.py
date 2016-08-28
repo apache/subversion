@@ -642,19 +642,19 @@ def automatic_binary_conflict_resolution(sbox):
 
   # Test 'svn resolve -R --accept base'
   do_binary_conflicting_merge()
-  svntest.actions.run_and_verify_resolve([A_COPY_path],
+  svntest.actions.run_and_verify_resolve([theta_branch_path],
                                          '-R', '--accept', 'base',
                                          A_COPY_path)
 
   # Test 'svn resolve -R --accept mine-full'
   do_binary_conflicting_merge()
-  svntest.actions.run_and_verify_resolve([A_COPY_path],
+  svntest.actions.run_and_verify_resolve([theta_branch_path],
                                          '-R', '--accept', 'mine-full',
                                          A_COPY_path)
 
   # Test 'svn resolve -R --accept theirs-full'
   do_binary_conflicting_merge()
-  svntest.actions.run_and_verify_resolve([A_COPY_path],
+  svntest.actions.run_and_verify_resolve([theta_branch_path],
                                          '-R', '--accept', 'tf',
                                          A_COPY_path)
 
