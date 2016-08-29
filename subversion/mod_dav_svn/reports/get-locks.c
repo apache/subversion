@@ -48,7 +48,7 @@
    path) across OUTPUT using BB.  Use POOL for necessary allocations. */
 static svn_error_t *
 send_get_lock_response(apr_hash_t *locks,
-                       ap_filter_t *output,
+                       dav_svn__output *output,
                        apr_bucket_brigade *bb,
                        apr_pool_t *pool)
 {
@@ -161,7 +161,7 @@ send_get_lock_response(apr_hash_t *locks,
 dav_error *
 dav_svn__get_locks_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
-                          ap_filter_t *output)
+                          dav_svn__output *output)
 {
   apr_bucket_brigade *bb;
   svn_error_t *err;
@@ -211,7 +211,8 @@ dav_svn__get_locks_report(const dav_resource *resource,
     return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
                                 err->message, resource->pool);
 
-  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  bb = apr_brigade_create(resource->pool,
+                          dav_svn__output_get_bucket_alloc(output));
 
   err = send_get_lock_response(locks, output, bb, resource->pool);
   if (err)

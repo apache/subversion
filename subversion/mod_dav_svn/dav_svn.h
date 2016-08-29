@@ -457,6 +457,40 @@ const char *dav_svn__get_vtxn_stub(request_rec *r);
 /* For accessing transaction properties (typically "!svn/vtxr") */
 const char *dav_svn__get_vtxn_root_stub(request_rec *r);
 
+
+/*** Output helpers ***/
+
+/* An opaque type which represents an output for a particular request.
+
+   All writes should target a dav_svn__output object by either using
+   the dav_svn__brigade functions or by preparing a bucket brigade and
+   passing it to the output with dav_svn__output_pass_brigade().
+
+   IMPORTANT:  Don't write to an ap_filter_t coming from mod_dav, and
+   use this wrapper and the corresponding private API instead.  Using
+   the ap_filter_t can cause unbounded memory usage with self-removing
+   output filters (e.g., with the filters installed by mod_headers or
+   mod_deflate).
+
+   See https://mail-archives.apache.org/mod_mbox/httpd-dev/201608.mbox/%3C20160822151917.GA22369%40redhat.com%3E
+*/
+typedef struct dav_svn__output dav_svn__output;
+
+/* Create the output wrapper for request R, allocated in POOL. */
+dav_svn__output *
+dav_svn__output_create(request_rec *r,
+                       apr_pool_t *pool);
+
+/* Get a bucket allocator to use for all bucket/brigade creations
+   when writing to OUTPUT. */
+apr_bucket_alloc_t *
+dav_svn__output_get_bucket_alloc(dav_svn__output *output);
+
+/* Pass the bucket brigade BB down to the OUTPUT's filter stack. */
+svn_error_t *
+dav_svn__output_pass_brigade(dav_svn__output *output,
+                             apr_bucket_brigade *bb);
+
 
 /*** activity.c ***/
 
@@ -645,7 +679,7 @@ dav_svn__insert_all_liveprops(request_rec *r,
 /* Generate the HTTP response body for a successful MERGE. */
 /* ### more docco */
 dav_error *
-dav_svn__merge_response(ap_filter_t *output,
+dav_svn__merge_response(dav_svn__output *output,
                         const dav_svn_repos *repos,
                         svn_revnum_t new_rev,
                         const char *post_commit_err,
@@ -679,49 +713,49 @@ static const dav_report_elem dav_svn__reports_list[] = {
 dav_error *
 dav_svn__update_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
-                       ap_filter_t *output);
+                       dav_svn__output *output);
 dav_error *
 dav_svn__log_report(const dav_resource *resource,
                     const apr_xml_doc *doc,
-                    ap_filter_t *output);
+                    dav_svn__output *output);
 dav_error *
 dav_svn__dated_rev_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
-                          ap_filter_t *output);
+                          dav_svn__output *output);
 dav_error *
 dav_svn__get_locations_report(const dav_resource *resource,
                               const apr_xml_doc *doc,
-                              ap_filter_t *output);
+                              dav_svn__output *output);
 dav_error *
 dav_svn__get_location_segments_report(const dav_resource *resource,
                                       const apr_xml_doc *doc,
-                                      ap_filter_t *output);
+                                      dav_svn__output *output);
 dav_error *
 dav_svn__file_revs_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
-                          ap_filter_t *output);
+                          dav_svn__output *output);
 dav_error *
 dav_svn__replay_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
-                       ap_filter_t *output);
+                       dav_svn__output *output);
 dav_error *
 dav_svn__get_mergeinfo_report(const dav_resource *resource,
                               const apr_xml_doc *doc,
-                              ap_filter_t *output);
+                              dav_svn__output *output);
 dav_error *
 dav_svn__get_locks_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
-                          ap_filter_t *output);
+                          dav_svn__output *output);
 
 dav_error *
 dav_svn__get_deleted_rev_report(const dav_resource *resource,
                                 const apr_xml_doc *doc,
-                                ap_filter_t *output);
+                                dav_svn__output *output);
 
 dav_error *
 dav_svn__get_inherited_props_report(const dav_resource *resource,
                                     const apr_xml_doc *doc,
-                                    ap_filter_t *output);
+                                    dav_svn__output *output);
 
 /*** posts/ ***/
 
@@ -729,11 +763,11 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
 dav_error *
 dav_svn__post_create_txn(const dav_resource *resource,
                          svn_skel_t *request_skel,
-                         ap_filter_t *output);
+                         dav_svn__output *output);
 dav_error *
 dav_svn__post_create_txn_with_props(const dav_resource *resource,
                                     svn_skel_t *request_skel,
-                                    ap_filter_t *output);
+                                    dav_svn__output *output);
 
 /*** authz.c ***/
 
@@ -940,26 +974,26 @@ int dav_svn__find_ns(const apr_array_header_t *namespaces, const char *uri);
 
 /* Write LEN bytes from DATA to OUTPUT using BB.  */
 svn_error_t *dav_svn__brigade_write(apr_bucket_brigade *bb,
-                                    ap_filter_t *output,
+                                    dav_svn__output *output,
                                     const char *buf,
                                     apr_size_t len);
 
 /* Write NULL-terminated string STR to OUTPUT using BB.  */
 svn_error_t *dav_svn__brigade_puts(apr_bucket_brigade *bb,
-                                   ap_filter_t *output,
+                                   dav_svn__output *output,
                                    const char *str);
 
 
 /* Write data to OUTPUT using BB, using FMT as the output format string.  */
 svn_error_t *dav_svn__brigade_printf(apr_bucket_brigade *bb,
-                                     ap_filter_t *output,
+                                     dav_svn__output *output,
                                      const char *fmt,
                                      ...)
   __attribute__((format(printf, 3, 4)));
 
 /* Write an unspecified number of strings to OUTPUT using BB.  */
 svn_error_t *dav_svn__brigade_putstrs(apr_bucket_brigade *bb,
-                                      ap_filter_t *output,
+                                      dav_svn__output *output,
                                       ...) SVN_NEEDS_SENTINEL_NULL;
 
 
@@ -995,11 +1029,10 @@ dav_svn__sanitize_error(svn_error_t *serr,
 
 
 /* Return a writable generic stream that will encode its output to base64
-   and send it to the Apache filter OUTPUT using BB.  Allocate the stream in
-   POOL. */
+   and send it to OUTPUT using BB.  Allocate the stream in POOL. */
 svn_stream_t *
 dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
-                                   ap_filter_t *output,
+                                   dav_svn__output *output,
                                    apr_pool_t *pool);
 
 /* In INFO->r->subprocess_env set "SVN-ACTION" to LINE, "SVN-REPOS" to
@@ -1041,7 +1074,8 @@ dav_svn__operational_log(struct dav_resource_private *info, const char *line);
  */
 dav_error *
 dav_svn__final_flush_or_error(request_rec *r, apr_bucket_brigade *bb,
-                              ap_filter_t *output, dav_error *preferred_err,
+                              dav_svn__output *output,
+                              dav_error *preferred_err,
                               apr_pool_t *pool);
 
 /* Log a DAV error response.

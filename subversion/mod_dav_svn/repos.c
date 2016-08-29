@@ -3236,7 +3236,7 @@ set_headers(request_rec *r, const dav_resource *resource)
 
 
 typedef struct diff_ctx_t {
-  ap_filter_t *output;
+  dav_svn__output *output;
   apr_bucket_brigade *bb;
 } diff_ctx_t;
 
@@ -3245,14 +3245,9 @@ static svn_error_t *  __attribute__((warn_unused_result))
 write_to_filter(void *baton, const char *buffer, apr_size_t *len)
 {
   diff_ctx_t *dc = baton;
-  apr_status_t status;
 
   /* take the current data and shove it into the filter */
-  status = apr_brigade_write(dc->bb, ap_filter_flush, dc->output,
-                             buffer, *len);
-  if (status != APR_SUCCESS)
-    return svn_error_create(status, NULL,
-                            "Could not write data to filter");
+  SVN_ERR(dav_svn__brigade_write(dc->bb, dc->output, buffer, *len));
 
   return SVN_NO_ERROR;
 }
@@ -3263,16 +3258,11 @@ close_filter(void *baton)
 {
   diff_ctx_t *dc = baton;
   apr_bucket *bkt;
-  apr_status_t status;
 
   /* done with the file. write an EOS bucket now. */
-  bkt = apr_bucket_eos_create(dc->output->c->bucket_alloc);
+  bkt = apr_bucket_eos_create(dav_svn__output_get_bucket_alloc(dc->output));
   APR_BRIGADE_INSERT_TAIL(dc->bb, bkt);
-  status = ap_pass_brigade(dc->output, dc->bb);
-  apr_brigade_cleanup(dc->bb);
-
-  if (status != APR_SUCCESS)
-    return svn_error_create(status, NULL, "Could not write EOS to filter");
+  SVN_ERR(dav_svn__output_pass_brigade(dc->output, dc->bb));
 
   return SVN_NO_ERROR;
 }
@@ -3281,7 +3271,7 @@ close_filter(void *baton)
 static svn_error_t *
 emit_collection_head(const dav_resource *resource,
                      apr_bucket_brigade *bb,
-                     ap_filter_t *output,
+                     dav_svn__output *output,
                      svn_boolean_t gen_html,
                      apr_pool_t *pool)
 {
@@ -3409,7 +3399,7 @@ emit_collection_head(const dav_resource *resource,
 static svn_error_t *
 emit_collection_entry(const dav_resource *resource,
                       apr_bucket_brigade *bb,
-                      ap_filter_t *output,
+                      dav_svn__output *output,
                       const svn_fs_dirent_t *entry,
                       svn_boolean_t gen_html,
                       apr_pool_t *pool)
@@ -3490,7 +3480,7 @@ emit_collection_entry(const dav_resource *resource,
 static svn_error_t *
 emit_collection_tail(const dav_resource *resource,
                      apr_bucket_brigade *bb,
-                     ap_filter_t *output,
+                     dav_svn__output *output,
                      svn_boolean_t gen_html,
                      apr_pool_t *pool)
 {
@@ -3525,12 +3515,12 @@ emit_collection_tail(const dav_resource *resource,
 
 
 static dav_error *
-deliver(const dav_resource *resource, ap_filter_t *output)
+deliver(const dav_resource *resource, ap_filter_t *unused)
 {
   svn_error_t *serr;
   apr_bucket_brigade *bb;
   apr_bucket *bkt;
-  apr_status_t status;
+  dav_svn__output *output;
 
   /* Check resource type */
   if (resource->baselined
@@ -3542,6 +3532,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
       return dav_svn__new_error(resource->pool, HTTP_CONFLICT, 0, 0,
                                 "Cannot GET this type of resource.");
     }
+
+  output = dav_svn__output_create(resource->info->r, resource->pool);
 
   if (resource->collection)
     {
@@ -3632,7 +3624,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                         resource->pool);
         }
 
-      bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+      bb = apr_brigade_create(resource->pool,
+                              dav_svn__output_get_bucket_alloc(output));
 
       serr = emit_collection_head(resource, bb, output, gen_html,
                                   resource->pool);
@@ -3695,12 +3688,13 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                     "could not output collection",
                                     resource->pool);
 
-      bkt = apr_bucket_eos_create(output->c->bucket_alloc);
+      bkt = apr_bucket_eos_create(dav_svn__output_get_bucket_alloc(output));
       APR_BRIGADE_INSERT_TAIL(bb, bkt);
-      if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS)
-        return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR,
-                                  0, status,
-                                  "Could not write EOS to filter.");
+      serr = dav_svn__output_pass_brigade(output, bb);
+      if (serr != NULL)
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Could not write EOS to filter.",
+                                    resource->pool);
 
       return NULL;
     }
@@ -3763,7 +3757,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                         "could not prepare to read a delta",
                                         resource->pool);
 
-          bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+          bb = apr_brigade_create(resource->pool,
+                                  dav_svn__output_get_bucket_alloc(output));
 
           /* create a stream that svndiff data will be written to,
              which will copy it to the network */
@@ -3891,7 +3886,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
          ### which will read from the FS stream on demand */
 
       block = apr_palloc(resource->pool, SVN__STREAM_CHUNK_SIZE);
-      bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+      bb = apr_brigade_create(resource->pool,
+                              dav_svn__output_get_bucket_alloc(output));
 
       while (1) {
         apr_size_t bufsize = SVN__STREAM_CHUNK_SIZE;
@@ -3909,29 +3905,32 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           break;
 
         /* write to the filter ... */
-        bkt = apr_bucket_transient_create(block, bufsize,
-                                          output->c->bucket_alloc);
+        bkt = apr_bucket_transient_create(
+          block, bufsize, dav_svn__output_get_bucket_alloc(output));
         APR_BRIGADE_INSERT_TAIL(bb, bkt);
-        if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS) {
-          apr_brigade_destroy(bb);
-          /* ### that HTTP code... */
-          return dav_svn__new_error(resource->pool,
-                                    HTTP_INTERNAL_SERVER_ERROR, 0, status,
-                                    "Could not write data to filter.");
-        }
-        apr_brigade_cleanup(bb);
+        serr = dav_svn__output_pass_brigade(output, bb);
+        if (serr != NULL)
+          {
+            apr_brigade_destroy(bb);
+            /* ### that HTTP code... */
+            return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        "Could not write data to filter.",
+                                        resource->pool);
+          }
       }
 
       /* done with the file. write an EOS bucket now. */
-      bkt = apr_bucket_eos_create(output->c->bucket_alloc);
+      bkt = apr_bucket_eos_create(dav_svn__output_get_bucket_alloc(output));
       APR_BRIGADE_INSERT_TAIL(bb, bkt);
-      if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS) {
-        apr_brigade_destroy(bb);
-        /* ### that HTTP code... */
-        return dav_svn__new_error(resource->pool,
-                                  HTTP_INTERNAL_SERVER_ERROR, 0, status,
-                                  "Could not write EOS to filter.");
-      }
+      serr = dav_svn__output_pass_brigade(output, bb);
+      if (serr != NULL)
+        {
+          apr_brigade_destroy(bb);
+          /* ### that HTTP code... */
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Could not write EOS to filter.",
+                                      resource->pool);
+        }
 
       apr_brigade_destroy(bb);
       return NULL;
@@ -4712,7 +4711,7 @@ dav_svn__create_version_resource(dav_resource **version_res,
 static dav_error *
 handle_post_request(request_rec *r,
                     dav_resource *resource,
-                    ap_filter_t *output)
+                    dav_svn__output *output)
 {
   svn_skel_t *request_skel, *post_skel;
   int status;
@@ -4795,7 +4794,9 @@ int dav_svn__method_post(request_rec *r)
   content_type = apr_table_get(r->headers_in, "content-type");
   if (content_type && (strcmp(content_type, SVN_SKEL_MIME_TYPE) == 0))
     {
-      derr = handle_post_request(r, resource, r->output_filters);
+      dav_svn__output *output = dav_svn__output_create(resource->info->r,
+                                                       resource->pool);
+      derr = handle_post_request(r, resource, output);
     }
   else
     {

@@ -465,6 +465,48 @@ dav_svn__find_ns(const apr_array_header_t *namespaces, const char *uri)
   return -1;
 }
 
+
+/*** Output helpers ***/
+
+
+struct dav_svn__output
+{
+  request_rec *r;
+};
+
+dav_svn__output *
+dav_svn__output_create(request_rec *r,
+                       apr_pool_t *pool)
+{
+  dav_svn__output *output = apr_pcalloc(pool, sizeof(*output));
+  output->r = r;
+  return output;
+}
+
+apr_bucket_alloc_t *
+dav_svn__output_get_bucket_alloc(dav_svn__output *output)
+{
+  return output->r->connection->bucket_alloc;
+}
+
+svn_error_t *
+dav_svn__output_pass_brigade(dav_svn__output *output,
+                             apr_bucket_brigade *bb)
+{
+  apr_status_t status;
+
+  status = ap_pass_brigade(output->r->output_filters, bb);
+  /* Empty the brigade here, as required by ap_pass_brigade(). */
+  apr_brigade_cleanup(bb);
+  if (status)
+    return svn_error_create(status, NULL, "Could not write data to filter");
+
+  /* Check for an aborted connection, since the brigade functions don't
+     appear to return useful errors when the connection is dropped. */
+  if (output->r->connection->aborted)
+    return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, NULL, NULL);
+  return SVN_NO_ERROR;
+}
 
 
 /*** Brigade I/O wrappers ***/
@@ -472,17 +514,18 @@ dav_svn__find_ns(const apr_array_header_t *namespaces, const char *uri)
 
 svn_error_t *
 dav_svn__brigade_write(apr_bucket_brigade *bb,
-                       ap_filter_t *output,
+                       dav_svn__output *output,
                        const char *data,
                        apr_size_t len)
 {
   apr_status_t apr_err;
-  apr_err = apr_brigade_write(bb, ap_filter_flush, output, data, len);
+  apr_err = apr_brigade_write(bb, ap_filter_flush,
+                              output->r->output_filters, data, len);
   if (apr_err)
     return svn_error_create(apr_err, 0, NULL);
   /* Check for an aborted connection, since the brigade functions don't
      appear to be return useful errors when the connection is dropped. */
-  if (output->c->aborted)
+  if (output->r->connection->aborted)
     return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
   return SVN_NO_ERROR;
 }
@@ -490,16 +533,17 @@ dav_svn__brigade_write(apr_bucket_brigade *bb,
 
 svn_error_t *
 dav_svn__brigade_puts(apr_bucket_brigade *bb,
-                      ap_filter_t *output,
+                      dav_svn__output *output,
                       const char *str)
 {
   apr_status_t apr_err;
-  apr_err = apr_brigade_puts(bb, ap_filter_flush, output, str);
+  apr_err = apr_brigade_puts(bb, ap_filter_flush,
+                             output->r->output_filters, str);
   if (apr_err)
     return svn_error_create(apr_err, 0, NULL);
   /* Check for an aborted connection, since the brigade functions don't
      appear to be return useful errors when the connection is dropped. */
-  if (output->c->aborted)
+  if (output->r->connection->aborted)
     return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
   return SVN_NO_ERROR;
 }
@@ -507,7 +551,7 @@ dav_svn__brigade_puts(apr_bucket_brigade *bb,
 
 svn_error_t *
 dav_svn__brigade_printf(apr_bucket_brigade *bb,
-                        ap_filter_t *output,
+                        dav_svn__output *output,
                         const char *fmt,
                         ...)
 {
@@ -515,13 +559,14 @@ dav_svn__brigade_printf(apr_bucket_brigade *bb,
   va_list ap;
 
   va_start(ap, fmt);
-  apr_err = apr_brigade_vprintf(bb, ap_filter_flush, output, fmt, ap);
+  apr_err = apr_brigade_vprintf(bb, ap_filter_flush,
+                                output->r->output_filters, fmt, ap);
   va_end(ap);
   if (apr_err)
     return svn_error_create(apr_err, 0, NULL);
   /* Check for an aborted connection, since the brigade functions don't
      appear to be return useful errors when the connection is dropped. */
-  if (output->c->aborted)
+  if (output->r->connection->aborted)
     return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
   return SVN_NO_ERROR;
 }
@@ -529,20 +574,21 @@ dav_svn__brigade_printf(apr_bucket_brigade *bb,
 
 svn_error_t *
 dav_svn__brigade_putstrs(apr_bucket_brigade *bb,
-                         ap_filter_t *output,
+                         dav_svn__output *output,
                          ...)
 {
   apr_status_t apr_err;
   va_list ap;
 
   va_start(ap, output);
-  apr_err = apr_brigade_vputstrs(bb, ap_filter_flush, output, ap);
+  apr_err = apr_brigade_vputstrs(bb, ap_filter_flush,
+                                 output->r->output_filters, ap);
   va_end(ap);
   if (apr_err)
     return svn_error_create(apr_err, NULL, NULL);
   /* Check for an aborted connection, since the brigade functions don't
      appear to return useful errors when the connection is dropped. */
-  if (output->c->aborted)
+  if (output->r->connection->aborted)
     return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, NULL, NULL);
   return SVN_NO_ERROR;
 }
@@ -609,7 +655,7 @@ dav_svn__sanitize_error(svn_error_t *serr,
 struct brigade_write_baton
 {
   apr_bucket_brigade *bb;
-  ap_filter_t *output;
+  dav_svn__output *output;
 };
 
 
@@ -620,7 +666,8 @@ brigade_write_fn(void *baton, const char *data, apr_size_t *len)
   struct brigade_write_baton *wb = baton;
   apr_status_t apr_err;
 
-  apr_err = apr_brigade_write(wb->bb, ap_filter_flush, wb->output, data, *len);
+  apr_err = apr_brigade_write(wb->bb, ap_filter_flush,
+                              wb->output->r->output_filters, data, *len);
 
   if (apr_err != APR_SUCCESS)
     return svn_error_wrap_apr(apr_err, "Error writing base64 data");
@@ -631,7 +678,7 @@ brigade_write_fn(void *baton, const char *data, apr_size_t *len)
 
 svn_stream_t *
 dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
-                                   ap_filter_t *output,
+                                   dav_svn__output *output,
                                    apr_pool_t *pool)
 {
   struct brigade_write_baton *wb = apr_palloc(pool, sizeof(*wb));
@@ -658,7 +705,7 @@ dav_svn__operational_log(struct dav_resource_private *info, const char *line)
 dav_error *
 dav_svn__final_flush_or_error(request_rec *r,
                               apr_bucket_brigade *bb,
-                              ap_filter_t *output,
+                              dav_svn__output *output,
                               dav_error *preferred_err,
                               apr_pool_t *pool)
 {
@@ -680,7 +727,7 @@ dav_svn__final_flush_or_error(request_rec *r,
      provided a more-important DERR, though. */
   if (do_flush)
     {
-      apr_status_t apr_err = ap_fflush(output, bb);
+      apr_status_t apr_err = ap_fflush(output->r->output_filters, bb);
       if (apr_err && (! derr))
         derr = dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0, apr_err,
                                   "Error flushing brigade.");

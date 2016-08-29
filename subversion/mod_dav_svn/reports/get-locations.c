@@ -45,7 +45,7 @@
 
 
 static svn_error_t *
-send_get_locations_report(ap_filter_t *output,
+send_get_locations_report(dav_svn__output *output,
                           apr_bucket_brigade *bb,
                           const dav_resource *resource,
                           apr_hash_t *fs_locations)
@@ -82,7 +82,7 @@ send_get_locations_report(ap_filter_t *output,
 dav_error *
 dav_svn__get_locations_report(const dav_resource *resource,
                               const apr_xml_doc *doc,
-                              ap_filter_t *output)
+                              dav_svn__output *output)
 {
   svn_error_t *serr;
   dav_error *derr = NULL;
@@ -169,7 +169,8 @@ dav_svn__get_locations_report(const dav_resource *resource,
                                   resource->pool);
     }
 
-  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  bb = apr_brigade_create(resource->pool,
+                          dav_svn__output_get_bucket_alloc(output));
 
   serr = send_get_locations_report(output, bb, resource, fs_locations);
 
