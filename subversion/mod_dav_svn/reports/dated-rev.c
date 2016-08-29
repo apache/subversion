@@ -58,7 +58,6 @@ dav_svn__dated_rev_report(const dav_resource *resource,
   svn_revnum_t rev;
   apr_bucket_brigade *bb;
   svn_error_t *err;
-  apr_status_t apr_err;
   dav_error *derr = NULL;
 
   /* Find the DAV:creationdate element and get the requested time from it. */
@@ -96,14 +95,14 @@ dav_svn__dated_rev_report(const dav_resource *resource,
     }
 
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
-  apr_err = ap_fprintf(output, bb,
+  err = dav_svn__brigade_printf(bb, output,
                        DAV_XML_HEADER DEBUG_CR
                        "<S:dated-rev-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
                        "xmlns:D=\"DAV:\">" DEBUG_CR
                        "<D:" SVN_DAV__VERSION_NAME ">%ld</D:"
                        SVN_DAV__VERSION_NAME ">""</S:dated-rev-report>", rev);
-  if (apr_err)
-    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+  if (err)
+    derr = dav_svn__convert_err(err,
                                 HTTP_INTERNAL_SERVER_ERROR,
                                 "Error writing REPORT response.",
                                 resource->pool);

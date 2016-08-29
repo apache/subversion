@@ -44,23 +44,9 @@
    report in libsvn_ra_neon/get_locks.c.  */
 
 
-#define SVN_APR_ERR(expr)                       \
-  do {                                          \
-    apr_status_t apr_status__temp = (expr);     \
-    if (apr_status__temp)                       \
-      return apr_status__temp;                  \
-  } while (0)
-
-
 /* Transmit LOCKS (a hash of Subversion filesystem locks keyed by
-   path) across OUTPUT using BB.  Use POOL for necessary allocations.
-
-   NOTE:  As written, this function currently returns one of only two
-   status values -- "success", and "we had trouble writing out to the
-   output stream".  If you need to return something more interesting,
-   you'll probably want to generate dav_error's here instead of
-   passing back only apr_status_t's.  */
-static apr_status_t
+   path) across OUTPUT using BB.  Use POOL for necessary allocations. */
+static svn_error_t *
 send_get_lock_response(apr_hash_t *locks,
                        ap_filter_t *output,
                        apr_bucket_brigade *bb,
@@ -70,7 +56,7 @@ send_get_lock_response(apr_hash_t *locks,
   apr_hash_index_t *hi;
 
   /* start sending report */
-  SVN_APR_ERR(ap_fprintf(output, bb,
+  SVN_ERR(dav_svn__brigade_printf(bb, output,
                          DAV_XML_HEADER DEBUG_CR
                          "<S:get-locks-report xmlns:S=\"" SVN_XML_NAMESPACE
                          "\" xmlns:D=\"DAV:\">" DEBUG_CR));
@@ -86,7 +72,7 @@ send_get_lock_response(apr_hash_t *locks,
 
       /* Begin the <S:lock> tag, transmitting the path, token, and
          creation date. */
-      SVN_APR_ERR(ap_fprintf(output, bb,
+      SVN_ERR(dav_svn__brigade_printf(bb, output,
                              "<S:lock>" DEBUG_CR
                              "<S:path>%s</S:path>" DEBUG_CR
                              "<S:token>%s</S:token>" DEBUG_CR
@@ -98,7 +84,7 @@ send_get_lock_response(apr_hash_t *locks,
 
       /* Got expiration date?  Tell the client. */
       if (lock->expiration_date)
-        SVN_APR_ERR(ap_fprintf(output, bb,
+        SVN_ERR(dav_svn__brigade_printf(bb, output,
                                "<S:expirationdate>%s</S:expirationdate>"
                                DEBUG_CR,
                                svn_time_to_cstring(lock->expiration_date,
@@ -126,7 +112,7 @@ send_get_lock_response(apr_hash_t *locks,
               owner = encoded_owner->data;
               owner_base64 = TRUE;
             }
-          SVN_APR_ERR(ap_fprintf(output, bb,
+          SVN_ERR(dav_svn__brigade_printf(bb, output,
                                  "<S:owner %s>%s</S:owner>" DEBUG_CR,
                                  owner_base64 ? "encoding=\"base64\"" : "",
                                  owner));
@@ -154,24 +140,23 @@ send_get_lock_response(apr_hash_t *locks,
               comment = encoded_comment->data;
               comment_base64 = TRUE;
             }
-          SVN_APR_ERR(ap_fprintf(output, bb,
+          SVN_ERR(dav_svn__brigade_printf(bb, output,
                                  "<S:comment %s>%s</S:comment>" DEBUG_CR,
                                  comment_base64 ? "encoding=\"base64\"" : "",
                                  comment));
         }
 
       /* Okay, finish up this lock by closing the <S:lock> tag. */
-      SVN_APR_ERR(ap_fprintf(output, bb, "</S:lock>" DEBUG_CR));
+      SVN_ERR(dav_svn__brigade_printf(bb, output, "</S:lock>" DEBUG_CR));
     }
   svn_pool_destroy(iterpool);
 
   /* Finish the report */
-  SVN_APR_ERR(ap_fprintf(output, bb, "</S:get-locks-report>" DEBUG_CR));
+  SVN_ERR(dav_svn__brigade_printf(bb, output,
+                                  "</S:get-locks-report>" DEBUG_CR));
 
   return APR_SUCCESS;
 }
-
-#undef SVN_APR_ERR
 
 dav_error *
 dav_svn__get_locks_report(const dav_resource *resource,
@@ -181,7 +166,6 @@ dav_svn__get_locks_report(const dav_resource *resource,
   apr_bucket_brigade *bb;
   svn_error_t *err;
   dav_error *derr = NULL;
-  apr_status_t apr_err;
   apr_hash_t *locks;
   dav_svn__authz_read_baton arb;
   svn_depth_t depth = svn_depth_unknown;
@@ -229,8 +213,9 @@ dav_svn__get_locks_report(const dav_resource *resource,
 
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
-  if ((apr_err = send_get_lock_response(locks, output, bb, resource->pool)))
-    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+  err = send_get_lock_response(locks, output, bb, resource->pool);
+  if (err)
+    derr = dav_svn__convert_err(err,
                                 HTTP_INTERNAL_SERVER_ERROR,
                                 "Error writing REPORT response.",
                                 resource->pool);

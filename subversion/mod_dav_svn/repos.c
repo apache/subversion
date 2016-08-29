@@ -3278,7 +3278,7 @@ close_filter(void *baton)
 }
 
 
-static void
+static svn_error_t *
 emit_collection_head(const dav_resource *resource,
                      apr_bucket_brigade *bb,
                      ap_filter_t *output,
@@ -3333,8 +3333,10 @@ emit_collection_head(const dav_resource *resource,
                                  title);
         }
 
-      ap_fprintf(output, bb, "<html><head><title>%s</title></head>\n"
-                 "<body>\n <h2>%s</h2>\n <ul>\n", title, title);
+      SVN_ERR(dav_svn__brigade_printf(bb, output,
+                                      "<html><head><title>%s</title></head>\n"
+                                      "<body>\n <h2>%s</h2>\n <ul>\n",
+                                      title, title));
     }
   else
     {
@@ -3342,28 +3344,33 @@ emit_collection_head(const dav_resource *resource,
       const char *href = resource->info->repos_path;
       const char *base = resource->info->repos->repo_basename;
 
-      ap_fputs(output, bb, "<?xml version=\"1.0\"?>\n");
-      ap_fprintf(output, bb,
-                 "<?xml-stylesheet type=\"text/xsl\" href=\"%s\"?>\n",
-                 resource->info->repos->xslt_uri);
-      ap_fputs(output, bb, xml_index_dtd);
-      ap_fputs(output, bb,
-               "<svn version=\"" SVN_VERSION "\"\n"
-               "     href=\"http://subversion.apache.org/\">\n");
-      ap_fputs(output, bb, "  <index");
-      if (name)
-        ap_fprintf(output, bb, " name=\"%s\"",
-                   apr_xml_quote_string(pool, name, 1));
-      if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
-        ap_fprintf(output, bb, " rev=\"%ld\"",
-                   resource->info->root.rev);
-      if (href)
-        ap_fprintf(output, bb, " path=\"%s\"",
-                   apr_xml_quote_string(pool, href, 1));
-      if (base)
-        ap_fprintf(output, bb, " base=\"%s\"", base);
+      SVN_ERR(dav_svn__brigade_puts(bb, output, "<?xml version=\"1.0\"?>\n"));
+      SVN_ERR(dav_svn__brigade_printf(bb, output,
+                                      "<?xml-stylesheet type=\"text/xsl\" "
+                                      "href=\"%s\"?>\n",
+                                      resource->info->repos->xslt_uri));
+      SVN_ERR(dav_svn__brigade_puts(bb, output, xml_index_dtd));
+      SVN_ERR(dav_svn__brigade_puts(bb, output,
+                         "<svn version=\"" SVN_VERSION "\"\n"
+                         "     href=\"http://subversion.apache.org/\">\n"));
+      SVN_ERR(dav_svn__brigade_puts(bb, output, "  <index"));
 
-      ap_fputs(output, bb, ">\n");
+      if (name)
+        SVN_ERR(dav_svn__brigade_printf(bb, output,
+                                        " name=\"%s\"",
+                                        apr_xml_quote_string(resource->pool,
+                                                             name, 1)));
+      if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
+        SVN_ERR(dav_svn__brigade_printf(bb, output, " rev=\"%ld\"",
+                                        resource->info->root.rev));
+      if (href)
+        SVN_ERR(dav_svn__brigade_printf(bb, output, " path=\"%s\"",
+                                        apr_xml_quote_string(resource->pool,
+                                                             href, 1)));
+      if (base)
+        SVN_ERR(dav_svn__brigade_printf(bb, output, " base=\"%s\"", base));
+
+      SVN_ERR(dav_svn__brigade_puts(bb, output, ">\n"));
     }
 
   if ((resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION)
@@ -3383,17 +3390,23 @@ emit_collection_head(const dav_resource *resource,
 
       if (gen_html)
         {
-          ap_fprintf(output, bb, "  <li><a href=\"%s\">..</a></li>\n", href);
+          SVN_ERR(dav_svn__brigade_printf(bb, output,
+                                          "  <li><a href=\"%s\">..</a></li>\n",
+                                          href));
         }
       else
         {
-          ap_fprintf(output, bb, "    <updir href=\"%s\"/>\n", href);
+          SVN_ERR(dav_svn__brigade_printf(bb, output,
+                                          "    <updir href=\"%s\"/>\n",
+                                          href));
         }
     }
+
+  return SVN_NO_ERROR;
 }
 
 
-static void
+static svn_error_t *
 emit_collection_entry(const dav_resource *resource,
                       apr_bucket_brigade *bb,
                       ap_filter_t *output,
@@ -3436,15 +3449,15 @@ emit_collection_entry(const dav_resource *resource,
          peg-rev, too. */
       if (resource->info->pegged)
         {
-          ap_fprintf(output, bb,
+          SVN_ERR(dav_svn__brigade_printf(bb, output,
                      "  <li><a href=\"%s?p=%ld\">%s</a></li>\n",
-                     href, resource->info->root.rev, name);
+                     href, resource->info->root.rev, name));
         }
       else
         {
-          ap_fprintf(output, bb,
+          SVN_ERR(dav_svn__brigade_printf(bb, output,
                      "  <li><a href=\"%s\">%s</a></li>\n",
-                     href, name);
+                     href, name));
         }
     }
   else
@@ -3458,21 +3471,23 @@ emit_collection_entry(const dav_resource *resource,
          peg-rev, too. */
       if (resource->info->pegged)
         {
-          ap_fprintf(output, bb,
+          SVN_ERR(dav_svn__brigade_printf(bb, output,
                      "    <%s name=\"%s\" href=\"%s?p=%ld\" />\n",
-                     tag, name, href, resource->info->root.rev);
+                     tag, name, href, resource->info->root.rev));
         }
       else
         {
-          ap_fprintf(output, bb,
+          SVN_ERR(dav_svn__brigade_printf(bb, output,
                      "    <%s name=\"%s\" href=\"%s\" />\n",
-                     tag, name, href);
+                     tag, name, href));
         }
     }
+
+  return SVN_NO_ERROR;
 }
 
 
-static void
+static svn_error_t *
 emit_collection_tail(const dav_resource *resource,
                      apr_bucket_brigade *bb,
                      ap_filter_t *output,
@@ -3492,18 +3507,20 @@ emit_collection_tail(const dav_resource *resource,
              to change. (Perhaps we should try to get the Apache folks to
              make this promise, though.  Seems harmless/useful enough...)
           */
-          ap_fputs(output, bb,
+          SVN_ERR(dav_svn__brigade_puts(bb, output,
                    " </ul>\n <hr noshade><em>Powered by "
                    "<a href=\"http://subversion.apache.org/\">"
                    "Apache Subversion"
                    "</a> version " SVN_VERSION "."
-                   "</em>\n</body></html>");
+                   "</em>\n</body></html>"));
         }
       else
-        ap_fputs(output, bb, " </ul>\n</body></html>");
+        SVN_ERR(dav_svn__brigade_puts(bb, output, " </ul>\n</body></html>"));
     }
   else
-    ap_fputs(output, bb, "  </index>\n</svn>\n");
+    SVN_ERR(dav_svn__brigade_puts(bb, output, "  </index>\n</svn>\n"));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -3617,7 +3634,12 @@ deliver(const dav_resource *resource, ap_filter_t *output)
 
       bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
-      emit_collection_head(resource, bb, output, gen_html, resource->pool);
+      serr = emit_collection_head(resource, bb, output, gen_html,
+                                  resource->pool);
+      if (serr != NULL)
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "could not output collection",
+                                    resource->pool);
 
       /* get a sorted list of the entries */
       sorted = svn_sort__hash(entries, svn_sort_compare_items_as_paths,
@@ -3656,13 +3678,22 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                   continue;
             }
 
-          emit_collection_entry(resource, bb, output, entry, gen_html,
-                                entry_pool);
+          serr = emit_collection_entry(resource, bb, output, entry, gen_html,
+                                       entry_pool);
+          if (serr != NULL)
+            return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        "could not output collection entry",
+                                        resource->pool);
         }
 
       svn_pool_destroy(entry_pool);
 
-      emit_collection_tail(resource, bb, output, gen_html, resource->pool);
+      serr = emit_collection_tail(resource, bb, output, gen_html,
+                                  resource->pool);
+      if (serr != NULL)
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "could not output collection",
+                                    resource->pool);
 
       bkt = apr_bucket_eos_create(output->c->bucket_alloc);
       APR_BRIGADE_INSERT_TAIL(bb, bkt);
