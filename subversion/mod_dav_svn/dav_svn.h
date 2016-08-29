@@ -960,7 +960,7 @@ svn_error_t *dav_svn__brigade_printf(apr_bucket_brigade *bb,
 /* Write an unspecified number of strings to OUTPUT using BB.  */
 svn_error_t *dav_svn__brigade_putstrs(apr_bucket_brigade *bb,
                                       ap_filter_t *output,
-                                      ...);
+                                      ...) SVN_NEEDS_SENTINEL_NULL;
 
 
 
