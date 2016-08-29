@@ -639,18 +639,14 @@ def automatic_binary_conflict_resolution(sbox):
   def do_binary_conflicting_merge():
     svntest.actions.run_and_verify_svn(None, [],
                                        'revert', '--recursive', A_COPY_path)
-    svntest.main.run_svn(None, 'merge', sbox.repo_url + "/A/theta", wc_dir + "/A_COPY/theta")
+    svntest.main.run_svn(None, 'merge', sbox.repo_url + "/A/theta",
+                          wc_dir + "/A_COPY/theta")
 
   # Test 'svn resolve -R --accept base'
+  # Regression until r1758160
   do_binary_conflicting_merge()
   svntest.actions.run_and_verify_resolve([theta_branch_path],
                                          '-R', '--accept', 'base',
-                                         A_COPY_path)
-
-  # Test 'svn resolve -R --accept mine-full'
-  do_binary_conflicting_merge()
-  svntest.actions.run_and_verify_resolve([theta_branch_path],
-                                         '-R', '--accept', 'mine-full',
                                          A_COPY_path)
 
   # Test 'svn resolve -R --accept theirs-full'
@@ -660,9 +656,17 @@ def automatic_binary_conflict_resolution(sbox):
                                          A_COPY_path)
 
   # Test 'svn resolve -R --accept working'
+  # Equivalent to 'svn resolved'
   do_binary_conflicting_merge()
   svntest.actions.run_and_verify_resolve([theta_branch_path],
                                          '-R', '--accept', 'working',
+                                         A_COPY_path)
+
+  # Test 'svn resolve -R --accept mine-full'
+  # There is no '.mine' for binary file conflicts. Same handling as 'working'
+  do_binary_conflicting_merge()
+  svntest.actions.run_and_verify_resolve([theta_branch_path],
+                                         '-R', '--accept', 'mine-full',
                                          A_COPY_path)
 
 ########################################################################
