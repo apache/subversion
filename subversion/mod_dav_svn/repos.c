@@ -3278,6 +3278,235 @@ close_filter(void *baton)
 }
 
 
+static void
+emit_collection_head(const dav_resource *resource,
+                     apr_bucket_brigade *bb,
+                     ap_filter_t *output,
+                     svn_boolean_t gen_html,
+                     apr_pool_t *pool)
+{
+  /* XML schema for the directory index if xslt_uri is set:
+
+     <?xml version="1.0"?>
+     <?xml-stylesheet type="text/xsl" href="[info->repos->xslt_uri]"?> */
+  static const char xml_index_dtd[] =
+    "<!DOCTYPE svn [\n"
+    "  <!ELEMENT svn   (index)>\n"
+    "  <!ATTLIST svn   version CDATA #REQUIRED\n"
+    "                  href    CDATA #REQUIRED>\n"
+    "  <!ELEMENT index (updir?, (file | dir)*)>\n"
+    "  <!ATTLIST index name    CDATA #IMPLIED\n"
+    "                  path    CDATA #IMPLIED\n"
+    "                  rev     CDATA #IMPLIED\n"
+    "                  base    CDATA #IMPLIED>\n"
+    "  <!ELEMENT updir EMPTY>\n"
+    "  <!ATTLIST updir href    CDATA #REQUIRED>\n"
+    "  <!ELEMENT file  EMPTY>\n"
+    "  <!ATTLIST file  name    CDATA #REQUIRED\n"
+    "                  href    CDATA #REQUIRED>\n"
+    "  <!ELEMENT dir   EMPTY>\n"
+    "  <!ATTLIST dir   name    CDATA #REQUIRED\n"
+    "                  href    CDATA #REQUIRED>\n"
+    "]>\n";
+
+  if (gen_html)
+    {
+      const char *title;
+      if (resource->info->repos_path == NULL)
+        title = "unknown location";
+      else
+        title = resource->info->repos_path;
+
+      if (resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION)
+        {
+          if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
+            title = apr_psprintf(pool,
+                                 "Revision %ld: %s",
+                                 resource->info->root.rev, title);
+          if (resource->info->repos->repo_basename)
+            title = apr_psprintf(pool, "%s - %s",
+                                 resource->info->repos->repo_basename,
+                                 title);
+          if (resource->info->repos->repo_name)
+            title = apr_psprintf(pool, "%s: %s",
+                                 resource->info->repos->repo_name,
+                                 title);
+        }
+
+      ap_fprintf(output, bb, "<html><head><title>%s</title></head>\n"
+                 "<body>\n <h2>%s</h2>\n <ul>\n", title, title);
+    }
+  else
+    {
+      const char *name = resource->info->repos->repo_name;
+      const char *href = resource->info->repos_path;
+      const char *base = resource->info->repos->repo_basename;
+
+      ap_fputs(output, bb, "<?xml version=\"1.0\"?>\n");
+      ap_fprintf(output, bb,
+                 "<?xml-stylesheet type=\"text/xsl\" href=\"%s\"?>\n",
+                 resource->info->repos->xslt_uri);
+      ap_fputs(output, bb, xml_index_dtd);
+      ap_fputs(output, bb,
+               "<svn version=\"" SVN_VERSION "\"\n"
+               "     href=\"http://subversion.apache.org/\">\n");
+      ap_fputs(output, bb, "  <index");
+      if (name)
+        ap_fprintf(output, bb, " name=\"%s\"",
+                   apr_xml_quote_string(pool, name, 1));
+      if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
+        ap_fprintf(output, bb, " rev=\"%ld\"",
+                   resource->info->root.rev);
+      if (href)
+        ap_fprintf(output, bb, " path=\"%s\"",
+                   apr_xml_quote_string(pool, href, 1));
+      if (base)
+        ap_fprintf(output, bb, " base=\"%s\"", base);
+
+      ap_fputs(output, bb, ">\n");
+    }
+
+  if ((resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION)
+      && resource->info->repos_path
+      && ((resource->info->repos_path[1] != '\0')
+          || dav_svn__get_list_parentpath_flag(resource->info->r)))
+    {
+      const char *href;
+      if (resource->info->pegged)
+        {
+          href = apr_psprintf(pool, "../?p=%ld", resource->info->root.rev);
+        }
+      else
+        {
+          href = "../";
+        }
+
+      if (gen_html)
+        {
+          ap_fprintf(output, bb, "  <li><a href=\"%s\">..</a></li>\n", href);
+        }
+      else
+        {
+          ap_fprintf(output, bb, "    <updir href=\"%s\"/>\n", href);
+        }
+    }
+}
+
+
+static void
+emit_collection_entry(const dav_resource *resource,
+                      apr_bucket_brigade *bb,
+                      ap_filter_t *output,
+                      const svn_fs_dirent_t *entry,
+                      svn_boolean_t gen_html,
+                      apr_pool_t *pool)
+{
+  const char *name = entry->name;
+  const char *href = name;
+  svn_boolean_t is_dir = (entry->kind == svn_node_dir);
+
+  /* append a trailing slash onto the name for directories. we NEED
+     this for the href portion so that the relative reference will
+     descend properly. for the visible portion, it is just nice. */
+  /* ### The xml output doesn't like to see a trailing slash on
+     ### the visible portion, so avoid that. */
+  if (is_dir)
+    href = apr_pstrcat(pool, href, "/", SVN_VA_NULL);
+
+  if (gen_html)
+    name = href;
+
+  /* We quote special characters in both XML and HTML. */
+  name = apr_xml_quote_string(pool, name, !gen_html);
+
+  /* According to httpd-2.0.54/include/httpd.h, ap_os_escape_path()
+     behaves differently on different platforms.  It claims to
+     "convert an OS path to a URL in an OS dependant way".
+     Nevertheless, there appears to be only one implementation
+     of the function in httpd, and the code seems completely
+     platform independent, so we'll assume it's appropriate for
+     mod_dav_svn to use it to quote outbound paths. */
+  href = ap_os_escape_path(pool, href, 0);
+  href = apr_xml_quote_string(pool, href, 1);
+
+  if (gen_html)
+    {
+      /* If our directory was access using the public peg-rev
+         CGI query interface, we'll let its dirents carry that
+         peg-rev, too. */
+      if (resource->info->pegged)
+        {
+          ap_fprintf(output, bb,
+                     "  <li><a href=\"%s?p=%ld\">%s</a></li>\n",
+                     href, resource->info->root.rev, name);
+        }
+      else
+        {
+          ap_fprintf(output, bb,
+                     "  <li><a href=\"%s\">%s</a></li>\n",
+                     href, name);
+        }
+    }
+  else
+    {
+      const char *const tag = (is_dir ? "dir" : "file");
+
+      /* This is where we could search for props */
+
+      /* If our directory was access using the public peg-rev
+         CGI query interface, we'll let its dirents carry that
+         peg-rev, too. */
+      if (resource->info->pegged)
+        {
+          ap_fprintf(output, bb,
+                     "    <%s name=\"%s\" href=\"%s?p=%ld\" />\n",
+                     tag, name, href, resource->info->root.rev);
+        }
+      else
+        {
+          ap_fprintf(output, bb,
+                     "    <%s name=\"%s\" href=\"%s\" />\n",
+                     tag, name, href);
+        }
+    }
+}
+
+
+static void
+emit_collection_tail(const dav_resource *resource,
+                     apr_bucket_brigade *bb,
+                     ap_filter_t *output,
+                     svn_boolean_t gen_html,
+                     apr_pool_t *pool)
+{
+  if (gen_html)
+    {
+      if (strcmp(ap_psignature("FOO", resource->info->r), "") != 0)
+        {
+          /* Apache's signature generation code didn't eat our prefix.
+             ServerSignature must be enabled.  Print our version info.
+
+             WARNING: This is a kludge!! ap_psignature() doesn't promise
+             to return the empty string when ServerSignature is off.  We
+             know it does by code inspection, but this behavior is subject
+             to change. (Perhaps we should try to get the Apache folks to
+             make this promise, though.  Seems harmless/useful enough...)
+          */
+          ap_fputs(output, bb,
+                   " </ul>\n <hr noshade><em>Powered by "
+                   "<a href=\"http://subversion.apache.org/\">"
+                   "Apache Subversion"
+                   "</a> version " SVN_VERSION "."
+                   "</em>\n</body></html>");
+        }
+      else
+        ap_fputs(output, bb, " </ul>\n</body></html>");
+    }
+  else
+    ap_fputs(output, bb, "  </index>\n</svn>\n");
+}
+
+
 static dav_error *
 deliver(const dav_resource *resource, ap_filter_t *output)
 {
@@ -3305,30 +3534,6 @@ deliver(const dav_resource *resource, ap_filter_t *output)
       apr_array_header_t *sorted;
       svn_revnum_t dir_rev = SVN_INVALID_REVNUM;
       int i;
-
-      /* XML schema for the directory index if xslt_uri is set:
-
-         <?xml version="1.0"?>
-         <?xml-stylesheet type="text/xsl" href="[info->repos->xslt_uri]"?> */
-      static const char xml_index_dtd[] =
-        "<!DOCTYPE svn [\n"
-        "  <!ELEMENT svn   (index)>\n"
-        "  <!ATTLIST svn   version CDATA #REQUIRED\n"
-        "                  href    CDATA #REQUIRED>\n"
-        "  <!ELEMENT index (updir?, (file | dir)*)>\n"
-        "  <!ATTLIST index name    CDATA #IMPLIED\n"
-        "                  path    CDATA #IMPLIED\n"
-        "                  rev     CDATA #IMPLIED\n"
-        "                  base    CDATA #IMPLIED>\n"
-        "  <!ELEMENT updir EMPTY>\n"
-        "  <!ATTLIST updir href    CDATA #REQUIRED>\n"
-        "  <!ELEMENT file  EMPTY>\n"
-        "  <!ATTLIST file  name    CDATA #REQUIRED\n"
-        "                  href    CDATA #REQUIRED>\n"
-        "  <!ELEMENT dir   EMPTY>\n"
-        "  <!ATTLIST dir   name    CDATA #REQUIRED\n"
-        "                  href    CDATA #REQUIRED>\n"
-        "]>\n";
 
       /* <svn version="1.3.0 (dev-build)"
               href="http://subversion.apache.org">
@@ -3412,91 +3617,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
 
       bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
-      if (gen_html)
-        {
-          const char *title;
-          if (resource->info->repos_path == NULL)
-            title = "unknown location";
-          else
-            title = resource->info->repos_path;
-
-          if (resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION)
-            {
-              if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
-                title = apr_psprintf(resource->pool,
-                                     "Revision %ld: %s",
-                                     resource->info->root.rev, title);
-              if (resource->info->repos->repo_basename)
-                title = apr_psprintf(resource->pool, "%s - %s",
-                                     resource->info->repos->repo_basename,
-                                     title);
-              if (resource->info->repos->repo_name)
-                title = apr_psprintf(resource->pool, "%s: %s",
-                                     resource->info->repos->repo_name,
-                                     title);
-            }
-
-          ap_fprintf(output, bb, "<html><head><title>%s</title></head>\n"
-                     "<body>\n <h2>%s</h2>\n <ul>\n", title, title);
-        }
-      else
-        {
-          const char *name = resource->info->repos->repo_name;
-          const char *href = resource->info->repos_path;
-          const char *base = resource->info->repos->repo_basename;
-
-          ap_fputs(output, bb, "<?xml version=\"1.0\"?>\n");
-          ap_fprintf(output, bb,
-                     "<?xml-stylesheet type=\"text/xsl\" href=\"%s\"?>\n",
-                     resource->info->repos->xslt_uri);
-          ap_fputs(output, bb, xml_index_dtd);
-          ap_fputs(output, bb,
-                   "<svn version=\"" SVN_VERSION "\"\n"
-                   "     href=\"http://subversion.apache.org/\">\n");
-          ap_fputs(output, bb, "  <index");
-          if (name)
-            ap_fprintf(output, bb, " name=\"%s\"",
-                       apr_xml_quote_string(resource->pool, name, 1));
-          if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
-            ap_fprintf(output, bb, " rev=\"%ld\"",
-                       resource->info->root.rev);
-          if (href)
-            ap_fprintf(output, bb, " path=\"%s\"",
-                       apr_xml_quote_string(resource->pool,
-                                            href,
-                                            1));
-          if (base)
-            ap_fprintf(output, bb, " base=\"%s\"", base);
-
-          ap_fputs(output, bb, ">\n");
-        }
-
-      if ((resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION)
-          && resource->info->repos_path
-          && ((resource->info->repos_path[1] != '\0')
-              || dav_svn__get_list_parentpath_flag(resource->info->r)))
-        {
-          const char *href;
-          if (resource->info->pegged)
-            {
-              href = apr_psprintf(resource->pool, "../?p=%ld",
-                                  resource->info->root.rev);
-            }
-          else
-            {
-              href = "../";
-            }
-
-          if (gen_html)
-            {
-              ap_fprintf(output, bb,
-                         "  <li><a href=\"%s\">..</a></li>\n", href);
-            }
-          else
-            {
-              ap_fprintf(output, bb, "    <updir href=\"%s\"/>\n", href);
-            }
-        }
+      emit_collection_head(resource, bb, output, gen_html, resource->pool);
 
       /* get a sorted list of the entries */
       sorted = svn_sort__hash(entries, svn_sort_compare_items_as_paths,
@@ -3510,8 +3631,6 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                                         const svn_sort__item_t);
           const svn_fs_dirent_t *entry = item->value;
           const char *name = item->key;
-          const char *href = name;
-          svn_boolean_t is_dir = (entry->kind == svn_node_dir);
           const char *repos_relpath = NULL;
 
           svn_pool_clear(entry_pool);
@@ -3537,99 +3656,13 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                   continue;
             }
 
-          /* append a trailing slash onto the name for directories. we NEED
-             this for the href portion so that the relative reference will
-             descend properly. for the visible portion, it is just nice. */
-          /* ### The xml output doesn't like to see a trailing slash on
-             ### the visible portion, so avoid that. */
-          if (is_dir)
-            href = apr_pstrcat(entry_pool, href, "/", SVN_VA_NULL);
-
-          if (gen_html)
-            name = href;
-
-          /* We quote special characters in both XML and HTML. */
-          name = apr_xml_quote_string(entry_pool, name, !gen_html);
-
-          /* According to httpd-2.0.54/include/httpd.h, ap_os_escape_path()
-             behaves differently on different platforms.  It claims to
-             "convert an OS path to a URL in an OS dependant way".
-             Nevertheless, there appears to be only one implementation
-             of the function in httpd, and the code seems completely
-             platform independent, so we'll assume it's appropriate for
-             mod_dav_svn to use it to quote outbound paths. */
-          href = ap_os_escape_path(entry_pool, href, 0);
-          href = apr_xml_quote_string(entry_pool, href, 1);
-
-          if (gen_html)
-            {
-              /* If our directory was access using the public peg-rev
-                 CGI query interface, we'll let its dirents carry that
-                 peg-rev, too. */
-              if (resource->info->pegged)
-                {
-                  ap_fprintf(output, bb,
-                             "  <li><a href=\"%s?p=%ld\">%s</a></li>\n",
-                             href, resource->info->root.rev, name);
-                }
-              else
-                {
-                  ap_fprintf(output, bb,
-                             "  <li><a href=\"%s\">%s</a></li>\n",
-                             href, name);
-                }
-            }
-          else
-            {
-              const char *const tag = (is_dir ? "dir" : "file");
-
-              /* This is where we could search for props */
-
-              /* If our directory was access using the public peg-rev
-                 CGI query interface, we'll let its dirents carry that
-                 peg-rev, too. */
-              if (resource->info->pegged)
-                {
-                  ap_fprintf(output, bb,
-                             "    <%s name=\"%s\" href=\"%s?p=%ld\" />\n",
-                             tag, name, href, resource->info->root.rev);
-                }
-              else
-                {
-                  ap_fprintf(output, bb,
-                             "    <%s name=\"%s\" href=\"%s\" />\n",
-                             tag, name, href);
-                }
-            }
+          emit_collection_entry(resource, bb, output, entry, gen_html,
+                                entry_pool);
         }
 
       svn_pool_destroy(entry_pool);
 
-      if (gen_html)
-        {
-          if (strcmp(ap_psignature("FOO", resource->info->r), "") != 0)
-            {
-              /* Apache's signature generation code didn't eat our prefix.
-                 ServerSignature must be enabled.  Print our version info.
-
-                 WARNING: This is a kludge!! ap_psignature() doesn't promise
-                 to return the empty string when ServerSignature is off.  We
-                 know it does by code inspection, but this behavior is subject
-                 to change. (Perhaps we should try to get the Apache folks to
-                 make this promise, though.  Seems harmless/useful enough...)
-              */
-              ap_fputs(output, bb,
-                       " </ul>\n <hr noshade><em>Powered by "
-                       "<a href=\"http://subversion.apache.org/\">"
-                       "Apache Subversion"
-                       "</a> version " SVN_VERSION "."
-                       "</em>\n</body></html>");
-            }
-          else
-            ap_fputs(output, bb, " </ul>\n</body></html>");
-        }
-      else
-        ap_fputs(output, bb, "  </index>\n</svn>\n");
+      emit_collection_tail(resource, bb, output, gen_html, resource->pool);
 
       bkt = apr_bucket_eos_create(output->c->bucket_alloc);
       APR_BRIGADE_INSERT_TAIL(bb, bkt);
