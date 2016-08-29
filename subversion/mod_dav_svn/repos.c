@@ -3268,7 +3268,10 @@ close_filter(void *baton)
   /* done with the file. write an EOS bucket now. */
   bkt = apr_bucket_eos_create(dc->output->c->bucket_alloc);
   APR_BRIGADE_INSERT_TAIL(dc->bb, bkt);
-  if ((status = ap_pass_brigade(dc->output, dc->bb)) != APR_SUCCESS)
+  status = ap_pass_brigade(dc->output, dc->bb);
+  apr_brigade_cleanup(dc->bb);
+
+  if (status != APR_SUCCESS)
     return svn_error_create(status, NULL, "Could not write EOS to filter");
 
   return SVN_NO_ERROR;
