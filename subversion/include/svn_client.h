@@ -4533,6 +4533,7 @@ svn_error_t *
 svn_client_conflict_option_set_moved_to_abspath(
   svn_client_conflict_option_t *option,
   int preferred_move_target_idx,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool);
 
 /**
@@ -4639,6 +4640,7 @@ svn_client_conflict_tree_get_description(
   const char **incoming_change_description,
   const char **local_change_description,
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
@@ -4651,6 +4653,7 @@ svn_client_conflict_tree_get_description(
 svn_error_t *
 svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
                                                 svn_client_conflict_t *conflict,
+                                                svn_client_ctx_t *ctx,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool);
 
@@ -4663,6 +4666,7 @@ svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
 svn_error_t *
 svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
                                                 svn_client_conflict_t *conflict,
+                                                svn_client_ctx_t *ctx,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool);
 
@@ -4679,6 +4683,7 @@ svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
 svn_error_t *
 svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
                                                 svn_client_conflict_t *conflict,
+                                                svn_client_ctx_t *ctx,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool);
 
@@ -4691,12 +4696,14 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
  * A call to svn_client_conflict_tree_get_resolution_options() may provide
  * more useful resolution options if this function has been called.
  *
- * This function may contact the repository.
+ * This function may contact the repository. Use the authentication baton
+ * cached in @a ctx for authentication if contacting the repository.
  *
  * @since New in 1.10.
  */
 svn_error_t *
 svn_client_conflict_tree_get_details(svn_client_conflict_t *conflict,
+                                     svn_client_ctx_t *ctx,
                                      apr_pool_t *scratch_pool);
 
 /**
@@ -4859,6 +4866,7 @@ svn_client_conflict_tree_get_victim_node_kind(svn_client_conflict_t *conflict);
 svn_error_t *
 svn_client_conflict_tree_resolve(svn_client_conflict_t *conflict,
                                  svn_client_conflict_option_t *option,
+                                 svn_client_ctx_t *ctx,
                                  apr_pool_t *scratch_pool);
 
 /**
@@ -4875,6 +4883,7 @@ svn_error_t *
 svn_client_conflict_tree_resolve_by_id(
   svn_client_conflict_t *conflict,
   svn_client_conflict_option_id_t option_id,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool);
 
 /**
@@ -4930,6 +4939,7 @@ svn_error_t *
 svn_client_conflict_prop_resolve(svn_client_conflict_t *conflict,
                                  const char *propname,
                                  svn_client_conflict_option_t *option,
+                                 svn_client_ctx_t *ctx,
                                  apr_pool_t *scratch_pool);
 /**
  * If the provided @a option_id is the ID of an option which resolves
@@ -4944,6 +4954,7 @@ svn_client_conflict_prop_resolve_by_id(
   svn_client_conflict_t *conflict,
   const char *propname,
   svn_client_conflict_option_id_t option_id,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool);
 
 /**
@@ -4994,6 +5005,7 @@ svn_client_conflict_text_get_contents(const char **base_abspath,
 svn_error_t *
 svn_client_conflict_text_resolve(svn_client_conflict_t *conflict,
                                  svn_client_conflict_option_t *option,
+                                 svn_client_ctx_t *ctx,
                                  apr_pool_t *scratch_pool);
 
 /**
@@ -5007,6 +5019,7 @@ svn_error_t *
 svn_client_conflict_text_resolve_by_id(
   svn_client_conflict_t *conflict,
   svn_client_conflict_option_id_t option_id,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool);
 
 /**

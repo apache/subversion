@@ -244,7 +244,7 @@ test_merge_incoming_added_file_ignore(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
                                   ctx, b->pool, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
-            conflict, svn_client_conflict_option_incoming_add_ignore, b->pool));
+            conflict, svn_client_conflict_option_incoming_add_ignore, ctx, b->pool));
 
   /* Ensure that the file has the expected status. */
   opt_rev.kind = svn_opt_revision_working;
@@ -317,7 +317,7 @@ test_merge_incoming_added_file_text_merge(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
             svn_client_conflict_option_incoming_added_file_text_merge,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the file has the expected status. */
   opt_rev.kind = svn_opt_revision_working;
@@ -391,7 +391,7 @@ test_merge_incoming_added_file_replace(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
             svn_client_conflict_option_incoming_added_file_replace,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the file has the expected status. */
   opt_rev.kind = svn_opt_revision_working;
@@ -465,7 +465,7 @@ test_merge_incoming_added_file_replace_and_merge(const svn_test_opts_t *opts,
     svn_client_conflict_tree_resolve_by_id(
       conflict,
       svn_client_conflict_option_incoming_added_file_replace_and_merge,
-      b->pool));
+      ctx, b->pool));
 
   /* Ensure that the file has the expected status. */
   opt_rev.kind = svn_opt_revision_working;
@@ -612,7 +612,8 @@ test_update_incoming_added_file_ignore(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
                                   ctx, b->pool, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
-            conflict, svn_client_conflict_option_incoming_add_ignore, b->pool));
+            conflict, svn_client_conflict_option_incoming_add_ignore, ctx,
+            b->pool));
 
   /* Ensure that the file has the expected status. */
   opt_rev.kind = svn_opt_revision_head;
@@ -684,7 +685,7 @@ test_update_incoming_added_file_replace(const svn_test_opts_t *opts,
                                   ctx, b->pool, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_added_file_replace,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the file has the expected status. */
   opt_rev.kind = svn_opt_revision_head;
@@ -755,7 +756,8 @@ test_switch_incoming_added_file_ignore(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
                                   ctx, b->pool, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
-            conflict, svn_client_conflict_option_incoming_add_ignore, b->pool));
+            conflict, svn_client_conflict_option_incoming_add_ignore, ctx,
+            b->pool));
 
   /* Ensure that the file has the expected status. */
   opt_rev.kind = svn_opt_revision_head;
@@ -964,7 +966,8 @@ test_merge_incoming_added_dir_ignore(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
                                   ctx, b->pool, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
-            conflict, svn_client_conflict_option_incoming_add_ignore, b->pool));
+            conflict, svn_client_conflict_option_incoming_add_ignore, ctx,
+            b->pool));
 
   /* Ensure that the directory has the expected status. */
   opt_rev.kind = svn_opt_revision_working;
@@ -1032,10 +1035,10 @@ test_merge_incoming_added_dir_merge(const svn_test_opts_t *opts,
   new_dir_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
-            svn_client_conflict_option_incoming_added_dir_merge,
+            svn_client_conflict_option_incoming_added_dir_merge, ctx,
             b->pool));
 
   /* Ensure that the directory has the expected status. */
@@ -1125,11 +1128,11 @@ test_merge_incoming_added_dir_merge2(const svn_test_opts_t *opts,
   new_dir_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
             svn_client_conflict_option_incoming_added_dir_merge,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the directory has the expected status. */
   opt_rev.kind = svn_opt_revision_working;
@@ -1217,11 +1220,11 @@ test_merge_incoming_added_dir_merge3(const svn_test_opts_t *opts,
   new_dir_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
             svn_client_conflict_option_incoming_added_dir_merge,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the directory has the expected status. */
   opt_rev.kind = svn_opt_revision_working;
@@ -1328,11 +1331,11 @@ test_merge_incoming_added_dir_replace(const svn_test_opts_t *opts,
   new_dir_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
             svn_client_conflict_option_incoming_added_dir_replace,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the directory has the expected status. */
   opt_rev.kind = svn_opt_revision_working;
@@ -1400,11 +1403,11 @@ test_merge_incoming_added_dir_replace_and_merge(const svn_test_opts_t *opts,
   new_dir_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
             svn_client_conflict_option_incoming_added_dir_replace_and_merge,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the directory has the expected status. */
   opt_rev.kind = svn_opt_revision_working;
@@ -1486,11 +1489,11 @@ test_merge_incoming_added_dir_replace_and_merge2(const svn_test_opts_t *opts,
   new_dir_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
             svn_client_conflict_option_incoming_added_dir_replace_and_merge,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the directory has the expected status. */
   opt_rev.kind = svn_opt_revision_working;
@@ -1638,10 +1641,10 @@ test_merge_incoming_delete_ignore(const svn_test_opts_t *opts, apr_pool_t *pool)
   deleted_path = svn_relpath_join(branch_path, deleted_file_name, b->pool);
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_delete_ignore,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the deleted file has the expected status. */
   opt_rev.kind = svn_opt_revision_working;
@@ -1703,10 +1706,10 @@ test_merge_incoming_delete_accept(const svn_test_opts_t *opts, apr_pool_t *pool)
   deleted_path = svn_relpath_join(branch_path, deleted_file_name, b->pool);
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_delete_accept,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the deleted file has the expected status. */
   opt_rev.kind = svn_opt_revision_working;
@@ -1772,10 +1775,10 @@ test_merge_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   deleted_path = svn_relpath_join(branch_path, deleted_file_name, b->pool);
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_move_file_text_merge,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the deleted file has the expected status. */
   opt_rev.kind = svn_opt_revision_working;
@@ -1910,10 +1913,10 @@ test_update_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   deleted_path = svn_relpath_join(trunk_path, deleted_file_name, b->pool);
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_move_file_text_merge,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the deleted file is gone. */
   SVN_ERR(svn_io_check_path(sbox_wc_path(b, deleted_path), &node_kind,
@@ -1978,10 +1981,10 @@ test_switch_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   deleted_path = svn_relpath_join(branch_path, deleted_file_name, b->pool);
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_move_file_text_merge,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the deleted file is gone. */
   SVN_ERR(svn_io_check_path(sbox_wc_path(b, deleted_path), &node_kind,
@@ -2162,10 +2165,10 @@ test_merge_incoming_move_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_move_dir_merge,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the moved-away directory has the expected status. */
   sb.result_pool = b->pool;
@@ -2252,10 +2255,10 @@ test_merge_incoming_move_dir2(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_move_dir_merge,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the moved-away directory has the expected status. */
   sb.result_pool = b->pool;
@@ -2343,10 +2346,10 @@ test_merge_incoming_move_dir3(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_move_dir_merge,
-            b->pool));
+            ctx, b->pool));
 
   /* Ensure that the moved-away directory has the expected status. */
   sb.result_pool = b->pool;
@@ -2564,10 +2567,10 @@ test_merge_incoming_delete_vs_local_delete(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, copy_dst_path),
                                   ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, b->pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_delete_accept,
-            b->pool));
+            ctx, b->pool));
 
   /* The file should be gone. */
   SVN_ERR(svn_io_check_path(sbox_wc_path(b, copy_dst_path), &node_kind,
