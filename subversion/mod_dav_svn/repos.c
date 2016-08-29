@@ -3539,7 +3539,7 @@ deliver(const dav_resource *resource, ap_filter_t *unused)
     {
       const int gen_html = !resource->info->repos->xslt_uri;
       apr_hash_t *entries;
-      apr_pool_t *entry_pool;
+      apr_pool_t *iterpool;
       apr_array_header_t *sorted;
       svn_revnum_t dir_rev = SVN_INVALID_REVNUM;
       int i;
@@ -3638,7 +3638,7 @@ deliver(const dav_resource *resource, ap_filter_t *unused)
       sorted = svn_sort__hash(entries, svn_sort_compare_items_as_paths,
                               resource->pool);
 
-      entry_pool = svn_pool_create(resource->pool);
+      iterpool = svn_pool_create(resource->pool);
 
       for (i = 0; i < sorted->nelts; ++i)
         {
@@ -3648,7 +3648,7 @@ deliver(const dav_resource *resource, ap_filter_t *unused)
           const char *name = item->key;
           const char *repos_relpath = NULL;
 
-          svn_pool_clear(entry_pool);
+          svn_pool_clear(iterpool);
 
           /* DIR_REV is set to a valid revision if we're looking at
              the entries of a versioned directory.  Otherwise, we're
@@ -3656,30 +3656,30 @@ deliver(const dav_resource *resource, ap_filter_t *unused)
           if (SVN_IS_VALID_REVNUM(dir_rev))
             {
               repos_relpath = svn_fspath__join(resource->info->repos_path,
-                                               name, entry_pool);
+                                               name, iterpool);
               if (! dav_svn__allow_read(resource->info->r,
                                         resource->info->repos,
                                         repos_relpath,
                                         dir_rev,
-                                        entry_pool))
+                                        iterpool))
                 continue;
             }
           else
             {
                 if (! dav_svn__allow_list_repos(resource->info->r,
-                                                entry->name, entry_pool))
+                                                entry->name, iterpool))
                   continue;
             }
 
           serr = emit_collection_entry(resource, bb, output, entry, gen_html,
-                                       entry_pool);
+                                       iterpool);
           if (serr != NULL)
             return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                         "could not output collection entry",
                                         resource->pool);
         }
 
-      svn_pool_destroy(entry_pool);
+      svn_pool_destroy(iterpool);
 
       serr = emit_collection_tail(resource, bb, output, gen_html,
                                   resource->pool);
