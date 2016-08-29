@@ -106,7 +106,7 @@ Candidate changes:
    Votes:
      +1: ivan, rhuijben
 
- * r1758069
+ * r1758269
    Fix issue #4652.
    Justification:
      We should return error messages when users provide invalid input, instead
