@@ -53,6 +53,7 @@
 typedef svn_error_t *(*tree_conflict_get_description_func_t)(
   const char **change_description,
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
@@ -60,12 +61,12 @@ typedef svn_error_t *(*tree_conflict_get_description_func_t)(
  * This function may contact the repository. */
 typedef svn_error_t *(*tree_conflict_get_details_func_t)(
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool);
 
 struct svn_client_conflict_t
 {
   const char *local_abspath;
-  svn_client_ctx_t *ctx;
   apr_hash_t *prop_conflicts;
 
   /* Indicate which options were chosen to resolve a text or tree conflict
@@ -112,6 +113,7 @@ struct svn_client_conflict_t
 typedef svn_error_t *(*conflict_option_resolve_func_t)(
   svn_client_conflict_option_t *option,
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool);
 
 struct svn_client_conflict_option_t
@@ -729,6 +731,7 @@ find_deleted_rev(void *baton,
 static svn_error_t *
 describe_local_file_node_change(const char **description,
                                 svn_client_conflict_t *conflict,
+                                svn_client_ctx_t *ctx,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool)
 {
@@ -788,7 +791,7 @@ describe_local_file_node_change(const char **description,
           const char *moved_to_abspath;
 
           SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, NULL, 
-                                              conflict->ctx->wc_ctx,
+                                              ctx->wc_ctx,
                                               conflict->local_abspath,
                                               scratch_pool,
                                               scratch_pool));
@@ -807,7 +810,7 @@ describe_local_file_node_change(const char **description,
                   const char *wcroot_abspath;
 
                   SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
-                                             conflict->ctx->wc_ctx,
+                                             ctx->wc_ctx,
                                              conflict->local_abspath,
                                              scratch_pool,
                                              scratch_pool));
@@ -840,7 +843,7 @@ describe_local_file_node_change(const char **description,
                   const char *wcroot_abspath;
 
                   SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
-                                             conflict->ctx->wc_ctx,
+                                             ctx->wc_ctx,
                                              conflict->local_abspath,
                                              scratch_pool,
                                              scratch_pool));
@@ -862,7 +865,7 @@ describe_local_file_node_change(const char **description,
           const char *moved_from_abspath;
 
           SVN_ERR(svn_wc__node_was_moved_here(&moved_from_abspath, NULL, 
-                                              conflict->ctx->wc_ctx,
+                                              ctx->wc_ctx,
                                               conflict->local_abspath,
                                               scratch_pool,
                                               scratch_pool));
@@ -881,7 +884,7 @@ describe_local_file_node_change(const char **description,
                   const char *wcroot_abspath;
 
                   SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
-                                             conflict->ctx->wc_ctx,
+                                             ctx->wc_ctx,
                                              conflict->local_abspath,
                                              scratch_pool,
                                              scratch_pool));
@@ -913,7 +916,7 @@ describe_local_file_node_change(const char **description,
                   const char *wcroot_abspath;
 
                   SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
-                                             conflict->ctx->wc_ctx,
+                                             ctx->wc_ctx,
                                              conflict->local_abspath,
                                              scratch_pool,
                                              scratch_pool));
@@ -941,6 +944,7 @@ describe_local_file_node_change(const char **description,
 static svn_error_t *
 describe_local_dir_node_change(const char **description,
                                svn_client_conflict_t *conflict,
+                               svn_client_ctx_t *ctx,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
@@ -1001,7 +1005,7 @@ describe_local_dir_node_change(const char **description,
           const char *moved_to_abspath;
 
           SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, NULL, 
-                                              conflict->ctx->wc_ctx,
+                                              ctx->wc_ctx,
                                               conflict->local_abspath,
                                               scratch_pool,
                                               scratch_pool));
@@ -1020,7 +1024,7 @@ describe_local_dir_node_change(const char **description,
                   const char *wcroot_abspath;
 
                   SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
-                                             conflict->ctx->wc_ctx,
+                                             ctx->wc_ctx,
                                              conflict->local_abspath,
                                              scratch_pool,
                                              scratch_pool));
@@ -1053,7 +1057,7 @@ describe_local_dir_node_change(const char **description,
                   const char *wcroot_abspath;
 
                   SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
-                                             conflict->ctx->wc_ctx,
+                                             ctx->wc_ctx,
                                              conflict->local_abspath,
                                              scratch_pool,
                                              scratch_pool));
@@ -1075,7 +1079,7 @@ describe_local_dir_node_change(const char **description,
           const char *moved_from_abspath;
 
           SVN_ERR(svn_wc__node_was_moved_here(&moved_from_abspath, NULL, 
-                                              conflict->ctx->wc_ctx,
+                                              ctx->wc_ctx,
                                               conflict->local_abspath,
                                               scratch_pool,
                                               scratch_pool));
@@ -1094,7 +1098,7 @@ describe_local_dir_node_change(const char **description,
                   const char *wcroot_abspath;
 
                   SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
-                                             conflict->ctx->wc_ctx,
+                                             ctx->wc_ctx,
                                              conflict->local_abspath,
                                              scratch_pool,
                                              scratch_pool));
@@ -1127,7 +1131,7 @@ describe_local_dir_node_change(const char **description,
                   const char *wcroot_abspath;
 
                   SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath,
-                                             conflict->ctx->wc_ctx,
+                                             ctx->wc_ctx,
                                              conflict->local_abspath,
                                              scratch_pool,
                                              scratch_pool));
@@ -1171,6 +1175,7 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
                                      svn_revnum_t end_rev,
                                      const char *related_repos_relpath,
                                      svn_revnum_t related_peg_rev,
+                                     svn_client_ctx_t *ctx,
                                      apr_pool_t *result_pool,
                                      apr_pool_t *scratch_pool)
 {
@@ -1194,7 +1199,7 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
                                     scratch_pool);
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
                                                url, NULL, NULL, FALSE, FALSE,
-                                               conflict->ctx, scratch_pool,
+                                               ctx, scratch_pool,
                                                scratch_pool));
 
   paths = apr_array_make(scratch_pool, 1, sizeof(const char *));
@@ -1213,7 +1218,7 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
   b.replacing_node_kind = svn_node_unknown;
   b.repos_root_url = repos_root_url;
   b.repos_uuid = repos_uuid;
-  b.ctx = conflict->ctx;
+  b.ctx = ctx;
   b.moves_table = apr_hash_make(result_pool);
   b.moved_paths = apr_hash_make(scratch_pool);
   b.result_pool = result_pool;
@@ -1312,6 +1317,7 @@ struct conflict_tree_local_missing_details
 /* Implements tree_conflict_get_details_func_t. */
 static svn_error_t *
 conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
+                                        svn_client_ctx_t *ctx,
                                         apr_pool_t *scratch_pool)
 {
   const char *old_repos_relpath;
@@ -1346,7 +1352,7 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
                                          scratch_pool);
   SVN_ERR(svn_wc__node_get_repos_info(NULL, &parent_repos_relpath,
                                       NULL, NULL,
-                                      conflict->ctx->wc_ctx,
+                                      ctx->wc_ctx,
                                       svn_dirent_dirname(
                                         conflict->local_abspath,
                                         scratch_pool),
@@ -1383,7 +1389,7 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
                                                    NULL,
                                                    FALSE,
                                                    FALSE,
-                                                   conflict->ctx,
+                                                   ctx,
                                                    scratch_pool,
                                                    scratch_pool));
       SVN_ERR(svn_ra_check_path(ra_session, "", related_peg_rev,
@@ -1418,7 +1424,7 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
                     related_parent_repos_relpath,
                     old_rev < new_rev ? new_rev : old_rev, 0,
                     older_incoming_repos_relpath, older_incoming_peg_rev,
-                    conflict->pool, scratch_pool));
+                    ctx, conflict->pool, scratch_pool));
 
           /* If we can't find a related node, bail. */
           if (related_deleted_rev == SVN_INVALID_REVNUM)
@@ -1434,7 +1440,7 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
             conflict, deleted_basename, parent_repos_relpath,
             old_rev < new_rev ? new_rev : old_rev, 0,
             related_repos_relpath,
-            related_peg_rev,
+            related_peg_rev, ctx,
             conflict->pool, scratch_pool));
 
   if (deleted_rev == SVN_INVALID_REVNUM)
@@ -1551,6 +1557,7 @@ append_moved_to_chain_description(const char *description,
 static svn_error_t *
 conflict_tree_get_local_description_generic(const char **description,
                                             svn_client_conflict_t *conflict,
+                                            svn_client_ctx_t *ctx,
                                             apr_pool_t *result_pool,
                                             apr_pool_t *scratch_pool)
 {
@@ -1564,11 +1571,11 @@ conflict_tree_get_local_description_generic(const char **description,
     {
       case svn_node_file:
       case svn_node_symlink:
-        SVN_ERR(describe_local_file_node_change(description, conflict,
+        SVN_ERR(describe_local_file_node_change(description, conflict, ctx,
                                                 result_pool, scratch_pool));
         break;
       case svn_node_dir:
-        SVN_ERR(describe_local_dir_node_change(description, conflict,
+        SVN_ERR(describe_local_dir_node_change(description, conflict, ctx,
                                                result_pool, scratch_pool));
         break;
       case svn_node_none:
@@ -1585,6 +1592,7 @@ conflict_tree_get_local_description_generic(const char **description,
 static svn_error_t *
 conflict_tree_get_description_local_missing(const char **description,
                                             svn_client_conflict_t *conflict,
+                                            svn_client_ctx_t *ctx,
                                             apr_pool_t *result_pool,
                                             apr_pool_t *scratch_pool)
 {
@@ -1593,7 +1601,8 @@ conflict_tree_get_description_local_missing(const char **description,
   details = conflict->tree_conflict_local_details;
   if (details == NULL)
     return svn_error_trace(conflict_tree_get_local_description_generic(
-                             description, conflict, result_pool, scratch_pool));
+                             description, conflict, ctx,
+                             result_pool, scratch_pool));
 
   if (details->moves)
     {
@@ -1862,6 +1871,7 @@ static svn_error_t *
 conflict_tree_get_incoming_description_generic(
   const char **incoming_change_description,
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool)
 {
@@ -3055,6 +3065,7 @@ static svn_error_t *
 conflict_tree_get_description_incoming_delete(
   const char **incoming_change_description,
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool)
 {
@@ -3070,7 +3081,7 @@ conflict_tree_get_description_incoming_delete(
   if (conflict->tree_conflict_incoming_details == NULL)
     return svn_error_trace(conflict_tree_get_incoming_description_generic(
                              incoming_change_description,
-                             conflict, result_pool, scratch_pool));
+                             conflict, ctx, result_pool, scratch_pool));
 
   conflict_operation = svn_client_conflict_get_operation(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
@@ -3273,6 +3284,7 @@ get_incoming_delete_details_for_reverse_addition(
  * Find the revision in which the victim was deleted in the repository. */
 static svn_error_t *
 conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
+                                          svn_client_ctx_t *ctx,
                                           apr_pool_t *scratch_pool)
 {
   const char *old_repos_relpath;
@@ -3309,7 +3321,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
 
           SVN_ERR(svn_wc__node_get_repos_info(NULL, &parent_repos_relpath,
                                               NULL, NULL,
-                                              conflict->ctx->wc_ctx,
+                                              ctx->wc_ctx,
                                               svn_dirent_dirname(
                                                 conflict->local_abspath,
                                                 scratch_pool),
@@ -3321,7 +3333,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                     svn_dirent_basename(conflict->local_abspath, scratch_pool),
                     parent_repos_relpath, new_rev, old_rev,
                     NULL, SVN_INVALID_REVNUM, /* related to self */
-                    conflict->pool, scratch_pool));
+                    ctx, conflict->pool, scratch_pool));
           if (deleted_rev == SVN_INVALID_REVNUM)
             {
               /* We could not determine the revision in which the node was
@@ -3345,7 +3357,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
            * Figure out when this node was added. */
           SVN_ERR(get_incoming_delete_details_for_reverse_addition(
                     &details, repos_root_url, old_repos_relpath,
-                    old_rev, new_rev, conflict->ctx,
+                    old_rev, new_rev, ctx,
                     svn_client_conflict_get_local_abspath(conflict),
                     conflict->pool, scratch_pool));
         }
@@ -3370,7 +3382,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                     &moves, conflict,
                     svn_relpath_basename(new_repos_relpath, scratch_pool),
                     svn_relpath_dirname(new_repos_relpath, scratch_pool),
-                    new_rev, old_rev, old_repos_relpath, old_rev,
+                    new_rev, old_rev, old_repos_relpath, old_rev, ctx,
                     scratch_pool, scratch_pool));
           if (deleted_rev == SVN_INVALID_REVNUM)
             {
@@ -3397,7 +3409,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
            * from another branch, was added. */
           SVN_ERR(get_incoming_delete_details_for_reverse_addition(
                     &details, repos_root_url, old_repos_relpath,
-                    old_rev, new_rev, conflict->ctx,
+                    old_rev, new_rev, ctx,
                     svn_client_conflict_get_local_abspath(conflict),
                     conflict->pool, scratch_pool));
         }
@@ -3441,6 +3453,7 @@ struct conflict_tree_incoming_add_details
  * Find the revision in which the victim was added in the repository. */
 static svn_error_t *
 conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
+                                       svn_client_ctx_t *ctx,
                                        apr_pool_t *scratch_pool)
 {
   const char *old_repos_relpath;
@@ -3489,12 +3502,12 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
                                                    url, NULL, NULL,
                                                    FALSE,
                                                    FALSE,
-                                                   conflict->ctx,
+                                                   ctx,
                                                    scratch_pool,
                                                    scratch_pool));
 
       details = apr_pcalloc(conflict->pool, sizeof(*details));
-      b.ctx = conflict->ctx,
+      b.ctx = ctx,
       b.victim_abspath = svn_client_conflict_get_local_abspath(conflict),
       b.added_rev = SVN_INVALID_REVNUM;
       b.repos_relpath = NULL;
@@ -3557,13 +3570,13 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
                                                        url, NULL, NULL,
                                                        FALSE,
                                                        FALSE,
-                                                       conflict->ctx,
+                                                       ctx,
                                                        scratch_pool,
                                                        scratch_pool));
 
           details = apr_pcalloc(conflict->pool, sizeof(*details));
           b.victim_abspath = svn_client_conflict_get_local_abspath(conflict);
-          b.ctx = conflict->ctx;
+          b.ctx = ctx;
           b.added_rev = SVN_INVALID_REVNUM;
           b.repos_relpath = NULL;
           b.parent_repos_relpath = NULL;
@@ -3604,6 +3617,7 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
                     svn_relpath_dirname(old_repos_relpath, scratch_pool),
                     old_rev, new_rev,
                     NULL, SVN_INVALID_REVNUM, /* related to self */
+                    ctx,
                     conflict->pool, scratch_pool));
           if (deleted_rev == SVN_INVALID_REVNUM)
             {
@@ -3921,6 +3935,7 @@ static svn_error_t *
 conflict_tree_get_description_incoming_add(
   const char **incoming_change_description,
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool)
 {
@@ -3937,8 +3952,8 @@ conflict_tree_get_description_incoming_add(
 
   if (conflict->tree_conflict_incoming_details == NULL)
     return svn_error_trace(conflict_tree_get_incoming_description_generic(
-                             incoming_change_description,
-                             conflict, result_pool, scratch_pool));
+                             incoming_change_description, conflict, ctx,
+                             result_pool, scratch_pool));
 
   conflict_operation = svn_client_conflict_get_operation(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
@@ -4114,6 +4129,7 @@ find_modified_rev(void *baton,
  * repository. */
 static svn_error_t *
 conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
+                                        svn_client_ctx_t *ctx,
                                         apr_pool_t *scratch_pool)
 {
   const char *old_repos_relpath;
@@ -4143,7 +4159,7 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
                                              scratch_pool, scratch_pool));
   operation = svn_client_conflict_get_operation(conflict);
 
-  b.ctx = conflict->ctx;
+  b.ctx = ctx;
   b.victim_abspath = svn_client_conflict_get_local_abspath(conflict);
   b.result_pool = conflict->pool;
   b.scratch_pool = scratch_pool;
@@ -4182,7 +4198,7 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
                                                url, NULL, NULL,
                                                FALSE,
                                                FALSE,
-                                               conflict->ctx,
+                                               ctx,
                                                scratch_pool,
                                                scratch_pool));
 
@@ -4348,6 +4364,7 @@ static svn_error_t *
 conflict_tree_get_description_incoming_edit(
   const char **incoming_change_description,
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool)
 {
@@ -4364,8 +4381,8 @@ conflict_tree_get_description_incoming_edit(
 
   if (conflict->tree_conflict_incoming_details == NULL)
     return svn_error_trace(conflict_tree_get_incoming_description_generic(
-                             incoming_change_description,
-                             conflict, result_pool, scratch_pool));
+                             incoming_change_description, conflict, ctx,
+                             result_pool, scratch_pool));
 
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
             &old_repos_relpath, &old_rev, &old_node_kind, conflict,
@@ -4507,16 +4524,17 @@ svn_client_conflict_tree_get_description(
   const char **incoming_change_description,
   const char **local_change_description,
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool)
 {
   SVN_ERR(conflict->tree_conflict_get_incoming_description_func(
             incoming_change_description,
-            conflict, result_pool, scratch_pool));
+            conflict, ctx, result_pool, scratch_pool));
 
   SVN_ERR(conflict->tree_conflict_get_local_description_func(
             local_change_description,
-            conflict, result_pool, scratch_pool));
+            conflict, ctx, result_pool, scratch_pool));
   
   return SVN_NO_ERROR;
 }
@@ -4534,6 +4552,7 @@ svn_client_conflict_option_set_merged_propval(
 static svn_error_t *
 resolve_postpone(svn_client_conflict_option_t *option,
                  svn_client_conflict_t *conflict,
+                 svn_client_ctx_t *ctx,
                  apr_pool_t *scratch_pool)
 {
   return SVN_NO_ERROR; /* Nothing to do. */
@@ -4543,13 +4562,13 @@ resolve_postpone(svn_client_conflict_option_t *option,
 static svn_error_t *
 resolve_text_conflict(svn_client_conflict_option_t *option,
                       svn_client_conflict_t *conflict,
+                      svn_client_ctx_t *ctx,
                       apr_pool_t *scratch_pool)
 {
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
   const char *lock_abspath;
   svn_wc_conflict_choice_t conflict_choice;
-  svn_client_ctx_t *ctx = conflict->ctx;
   svn_error_t *err;
 
   option_id = svn_client_conflict_option_get_id(option);
@@ -4559,13 +4578,13 @@ resolve_text_conflict(svn_client_conflict_option_t *option,
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
                                                  local_abspath,
                                                  scratch_pool, scratch_pool));
-  err = svn_wc__conflict_text_mark_resolved(conflict->ctx->wc_ctx,
+  err = svn_wc__conflict_text_mark_resolved(ctx->wc_ctx,
                                             local_abspath,
                                             conflict_choice,
-                                            conflict->ctx->cancel_func,
-                                            conflict->ctx->cancel_baton,
-                                            conflict->ctx->notify_func2,
-                                            conflict->ctx->notify_baton2,
+                                            ctx->cancel_func,
+                                            ctx->cancel_baton,
+                                            ctx->notify_func2,
+                                            ctx->notify_baton2,
                                             scratch_pool);
   err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
                                                                  lock_abspath,
@@ -4582,6 +4601,7 @@ resolve_text_conflict(svn_client_conflict_option_t *option,
 static svn_error_t *
 resolve_prop_conflict(svn_client_conflict_option_t *option,
                       svn_client_conflict_t *conflict,
+                      svn_client_ctx_t *ctx,
                       apr_pool_t *scratch_pool)
 {
   svn_client_conflict_option_id_t option_id;
@@ -4589,7 +4609,6 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
   const char *local_abspath;
   const char *lock_abspath;
   const char *propname = option->type_data.prop.propname;
-  svn_client_ctx_t *ctx = conflict->ctx;
   svn_error_t *err;
 
   option_id = svn_client_conflict_option_get_id(option);
@@ -4601,8 +4620,8 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
                                                  scratch_pool, scratch_pool));
   err = svn_wc__conflict_prop_mark_resolved(ctx->wc_ctx, local_abspath,
                                             propname, conflict_choice,
-                                            conflict->ctx->notify_func2,
-                                            conflict->ctx->notify_baton2,
+                                            ctx->notify_func2,
+                                            ctx->notify_baton2,
                                             scratch_pool);
   err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
                                                                  lock_abspath,
@@ -4653,12 +4672,12 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
 static svn_error_t *
 resolve_accept_current_wc_state(svn_client_conflict_option_t *option,
                                 svn_client_conflict_t *conflict,
+                                svn_client_ctx_t *ctx,
                                 apr_pool_t *scratch_pool)
 {
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
   const char *lock_abspath;
-  svn_client_ctx_t *ctx = conflict->ctx;
   svn_error_t *err;
 
   option_id = svn_client_conflict_option_get_id(option);
@@ -4700,11 +4719,11 @@ resolve_accept_current_wc_state(svn_client_conflict_option_t *option,
 static svn_error_t *
 resolve_update_break_moved_away(svn_client_conflict_option_t *option,
                                 svn_client_conflict_t *conflict,
+                                svn_client_ctx_t *ctx,
                                 apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
   const char *lock_abspath;
-  svn_client_ctx_t *ctx = conflict->ctx;
   svn_error_t *err;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
@@ -4733,11 +4752,11 @@ resolve_update_break_moved_away(svn_client_conflict_option_t *option,
 static svn_error_t *
 resolve_update_raise_moved_away(svn_client_conflict_option_t *option,
                                 svn_client_conflict_t *conflict,
+                                svn_client_ctx_t *ctx,
                                 apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
   const char *lock_abspath;
-  svn_client_ctx_t *ctx = conflict->ctx;
   svn_error_t *err;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
@@ -4766,11 +4785,11 @@ resolve_update_raise_moved_away(svn_client_conflict_option_t *option,
 static svn_error_t *
 resolve_update_moved_away_node(svn_client_conflict_option_t *option,
                                svn_client_conflict_t *conflict,
+                               svn_client_ctx_t *ctx,
                                apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
   const char *lock_abspath;
-  svn_client_ctx_t *ctx = conflict->ctx;
   svn_error_t *err;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
@@ -4807,13 +4826,13 @@ static svn_error_t *
 verify_local_state_for_incoming_add_upon_update(
   svn_client_conflict_t *conflict,
   svn_client_conflict_option_t *option,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
   svn_client_conflict_option_id_t option_id;
   const char *wcroot_abspath;
   svn_wc_operation_t operation;
-  svn_client_ctx_t *ctx = conflict->ctx;
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
   svn_node_kind_t incoming_new_kind;
@@ -4964,11 +4983,11 @@ verify_local_state_for_incoming_add_upon_update(
 static svn_error_t *
 resolve_incoming_add_ignore(svn_client_conflict_option_t *option,
                             svn_client_conflict_t *conflict,
+                            svn_client_ctx_t *ctx,
                             apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
   const char *lock_abspath;
-  svn_client_ctx_t *ctx = conflict->ctx;
   svn_wc_operation_t operation;
   svn_error_t *err;
 
@@ -4982,7 +5001,7 @@ resolve_incoming_add_ignore(svn_client_conflict_option_t *option,
   if (operation == svn_wc_operation_update)
     {
       err = verify_local_state_for_incoming_add_upon_update(conflict, option,
-                                                            scratch_pool);
+                                                            ctx, scratch_pool);
       if (err)
         goto unlock_wc;
     }
@@ -5016,6 +5035,7 @@ static svn_error_t *
 resolve_merge_incoming_added_file_text_merge(
   svn_client_conflict_option_t *option,
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool)
 {
   svn_ra_session_t *ra_session;
@@ -5028,7 +5048,6 @@ resolve_merge_incoming_added_file_text_merge(
   svn_revnum_t incoming_new_pegrev;
   const char *local_abspath;
   const char *lock_abspath;
-  svn_client_ctx_t *ctx = conflict->ctx;
   svn_wc_merge_outcome_t merge_content_outcome;
   svn_wc_notify_state_t merge_props_outcome;
   apr_file_t *incoming_new_file;
@@ -5064,7 +5083,7 @@ resolve_merge_incoming_added_file_text_merge(
                                     scratch_pool);
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
                                                url, NULL, NULL, FALSE, FALSE,
-                                               conflict->ctx, scratch_pool,
+                                               ctx, scratch_pool,
                                                scratch_pool));
   SVN_ERR(svn_ra_get_file(ra_session, "", incoming_new_pegrev,
                           incoming_new_stream, NULL, /* fetched_rev */
@@ -5157,6 +5176,7 @@ resolve_merge_incoming_added_file_text_merge(
 static svn_error_t *
 merge_incoming_added_file_replace(svn_client_conflict_option_t *option,
                                   svn_client_conflict_t *conflict,
+                                  svn_client_ctx_t *ctx,
                                   svn_boolean_t merge_files,
                                   apr_pool_t *scratch_pool)
 {
@@ -5172,7 +5192,6 @@ merge_incoming_added_file_replace(svn_client_conflict_option_t *option,
   apr_hash_t *incoming_new_props;
   const char *local_abspath;
   const char *lock_abspath;
-  svn_client_ctx_t *ctx = conflict->ctx;
   const char *wc_tmpdir;
   svn_stream_t *working_file_tmp_stream;
   const char *working_file_tmp_abspath;
@@ -5213,7 +5232,7 @@ merge_incoming_added_file_replace(svn_client_conflict_option_t *option,
                                     scratch_pool);
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
                                                url, NULL, NULL, FALSE, FALSE,
-                                               conflict->ctx, scratch_pool,
+                                               ctx, scratch_pool,
                                                scratch_pool));
   if (corrected_url)
     url = corrected_url;
@@ -5365,10 +5384,12 @@ static svn_error_t *
 resolve_merge_incoming_added_file_replace(
   svn_client_conflict_option_t *option,
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool)
 {
   return svn_error_trace(merge_incoming_added_file_replace(option,
                                                            conflict,
+                                                           ctx,
                                                            FALSE,
                                                            scratch_pool));
 }
@@ -5378,10 +5399,12 @@ static svn_error_t *
 resolve_merge_incoming_added_file_replace_and_merge(
   svn_client_conflict_option_t *option,
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool)
 {
   return svn_error_trace(merge_incoming_added_file_replace(option,
                                                            conflict,
+                                                           ctx,
                                                            TRUE,
                                                            scratch_pool));
 }
@@ -5390,12 +5413,12 @@ resolve_merge_incoming_added_file_replace_and_merge(
 static svn_error_t *
 resolve_update_incoming_added_file_replace(svn_client_conflict_option_t *option,
                                            svn_client_conflict_t *conflict,
+                                           svn_client_ctx_t *ctx,
                                            apr_pool_t *scratch_pool)
 {
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
   const char *lock_abspath;
-  svn_client_ctx_t *ctx = conflict->ctx;
   svn_error_t *err;
   const char *backup_path;
 
@@ -5407,7 +5430,7 @@ resolve_update_incoming_added_file_replace(svn_client_conflict_option_t *option,
                                                  local_abspath,
                                                  scratch_pool, scratch_pool));
 
-  err = verify_local_state_for_incoming_add_upon_update(conflict, option,
+  err = verify_local_state_for_incoming_add_upon_update(conflict, option, ctx,
                                                         scratch_pool);
   if (err)
     goto unlock_wc;
@@ -5463,6 +5486,7 @@ unlock_wc:
 static svn_error_t *
 resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
                                        svn_client_conflict_t *conflict,
+                                       svn_client_ctx_t *ctx,
                                        apr_pool_t *scratch_pool)
 {
   const char *repos_root_url;
@@ -5473,7 +5497,6 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
   svn_revnum_t incoming_new_pegrev;
   const char *local_abspath;
   const char *lock_abspath;
-  svn_client_ctx_t *ctx = conflict->ctx;
   struct conflict_tree_incoming_add_details *details;
   svn_client__conflict_report_t *conflict_report;
   const char *source1;
@@ -5631,6 +5654,7 @@ notification_adjust_func(void *baton,
 static svn_error_t *
 merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
                                  svn_client_conflict_t *conflict,
+                                 svn_client_ctx_t *ctx,
                                  svn_boolean_t merge_dirs,
                                  apr_pool_t *scratch_pool)
 {
@@ -5643,7 +5667,6 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
   svn_revnum_t incoming_new_pegrev;
   const char *local_abspath;
   const char *lock_abspath;
-  svn_client_ctx_t *ctx = conflict->ctx;
   const char *tmpdir_abspath, *tmp_abspath;
   svn_error_t *err;
   svn_revnum_t copy_src_revnum;
@@ -5667,7 +5690,7 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
                                     scratch_pool);
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
                                                url, NULL, NULL, FALSE, FALSE,
-                                               conflict->ctx, scratch_pool,
+                                               ctx, scratch_pool,
                                                scratch_pool));
   if (corrected_url)
     url = corrected_url;
@@ -5876,10 +5899,12 @@ unlock_wc:
 static svn_error_t *
 resolve_merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
                                          svn_client_conflict_t *conflict,
+                                         svn_client_ctx_t *ctx,
                                          apr_pool_t *scratch_pool)
 {
   return svn_error_trace(merge_incoming_added_dir_replace(option,
                                                           conflict,
+                                                          ctx,
                                                           FALSE,
                                                           scratch_pool));
 }
@@ -5889,10 +5914,12 @@ static svn_error_t *
 resolve_merge_incoming_added_dir_replace_and_merge(
   svn_client_conflict_option_t *option,
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool)
 {
   return svn_error_trace(merge_incoming_added_dir_replace(option,
                                                           conflict,
+                                                          ctx,
                                                           TRUE,
                                                           scratch_pool));
 }
@@ -5907,12 +5934,12 @@ resolve_merge_incoming_added_dir_replace_and_merge(
 static svn_error_t *
 verify_local_state_for_incoming_delete(svn_client_conflict_t *conflict,
                                        svn_client_conflict_option_t *option,
+                                        svn_client_ctx_t *ctx,
                                        apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
   const char *wcroot_abspath;
   svn_wc_operation_t operation;
-  svn_client_ctx_t *ctx = conflict->ctx;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
   SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
@@ -6061,12 +6088,12 @@ verify_local_state_for_incoming_delete(svn_client_conflict_t *conflict,
 static svn_error_t *
 resolve_incoming_delete_ignore(svn_client_conflict_option_t *option,
                                svn_client_conflict_t *conflict,
+                               svn_client_ctx_t *ctx,
                                apr_pool_t *scratch_pool)
 {
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
   const char *lock_abspath;
-  svn_client_ctx_t *ctx = conflict->ctx;
   svn_error_t *err;
 
   option_id = svn_client_conflict_option_get_id(option);
@@ -6076,7 +6103,8 @@ resolve_incoming_delete_ignore(svn_client_conflict_option_t *option,
                                                  local_abspath,
                                                  scratch_pool, scratch_pool));
 
-  err = verify_local_state_for_incoming_delete(conflict, option, scratch_pool);
+  err = verify_local_state_for_incoming_delete(conflict, option, ctx,
+                                               scratch_pool);
   if (err)
     goto unlock_wc;
 
@@ -6106,12 +6134,12 @@ unlock_wc:
 static svn_error_t *
 resolve_incoming_delete_accept(svn_client_conflict_option_t *option,
                                svn_client_conflict_t *conflict,
+                               svn_client_ctx_t *ctx,
                                apr_pool_t *scratch_pool)
 {
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
   const char *lock_abspath;
-  svn_client_ctx_t *ctx = conflict->ctx;
   svn_error_t *err;
 
   option_id = svn_client_conflict_option_get_id(option);
@@ -6121,7 +6149,8 @@ resolve_incoming_delete_accept(svn_client_conflict_option_t *option,
                                                  local_abspath,
                                                  scratch_pool, scratch_pool));
 
-  err = verify_local_state_for_incoming_delete(conflict, option, scratch_pool);
+  err = verify_local_state_for_incoming_delete(conflict, option, ctx,
+                                               scratch_pool);
   if (err)
     goto unlock_wc;
 
@@ -6171,13 +6200,13 @@ unlock_wc:
 static svn_error_t *
 resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
                                       svn_client_conflict_t *conflict,
+                                      svn_client_ctx_t *ctx,
                                       apr_pool_t *scratch_pool)
 {
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
   svn_wc_operation_t operation;
   const char *lock_abspath;
-  svn_client_ctx_t *ctx = conflict->ctx;
   svn_error_t *err;
   const char *repos_root_url;
   const char *repos_uuid;
@@ -6243,7 +6272,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
                                              scratch_pool);
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
                                                ancestor_url, NULL, NULL,
-                                               FALSE, FALSE, conflict->ctx,
+                                               FALSE, FALSE, ctx,
                                                scratch_pool, scratch_pool));
   SVN_ERR(svn_ra_get_file(ra_session, "", incoming_old_pegrev,
                           ancestor_stream, NULL, /* fetched_rev */
@@ -6266,7 +6295,8 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
                                             scratch_pool),
             scratch_pool, scratch_pool));
 
-  err = verify_local_state_for_incoming_delete(conflict, option, scratch_pool);
+  err = verify_local_state_for_incoming_delete(conflict, option, ctx,
+                                               scratch_pool);
   if (err)
     goto unlock_wc;
 
@@ -6379,13 +6409,13 @@ unlock_wc:
 static svn_error_t *
 resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
                                 svn_client_conflict_t *conflict,
+                                svn_client_ctx_t *ctx,
                                 apr_pool_t *scratch_pool)
 {
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
   svn_wc_operation_t operation;
   const char *lock_abspath;
-  svn_client_ctx_t *ctx = conflict->ctx;
   svn_error_t *err;
   const char *repos_root_url;
   const char *repos_uuid;
@@ -6511,7 +6541,8 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
   yca_opt_rev.kind = svn_opt_revision_number;
   yca_opt_rev.value.number = yca_loc->rev;
 
-  err = verify_local_state_for_incoming_delete(conflict, option, scratch_pool);
+  err = verify_local_state_for_incoming_delete(conflict, option, ctx,
+                                               scratch_pool);
   if (err)
     goto unlock_wc;
 
@@ -6792,6 +6823,7 @@ assert_tree_conflict(svn_client_conflict_t *conflict, apr_pool_t *scratch_pool)
 svn_error_t *
 svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
                                                 svn_client_conflict_t *conflict,
+                                                svn_client_ctx_t *ctx,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool)
 {
@@ -6843,6 +6875,7 @@ svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
 svn_error_t *
 svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
                                                 svn_client_conflict_t *conflict,
+                                                svn_client_ctx_t *ctx,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool)
 {
@@ -6982,6 +7015,7 @@ configure_option_update_raise_moved_away_children(
 /* Configure 'incoming add ignore' resolution option for a tree conflict. */
 static svn_error_t *
 configure_option_incoming_add_ignore(svn_client_conflict_t *conflict,
+                                     svn_client_ctx_t *ctx,
                                      apr_array_header_t *options,
                                      apr_pool_t *scratch_pool)
 {
@@ -7011,7 +7045,7 @@ configure_option_incoming_add_ignore(svn_client_conflict_t *conflict,
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->pool = options->pool;
       option->id = svn_client_conflict_option_incoming_add_ignore;
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
       if (operation == svn_wc_operation_merge)
@@ -7055,6 +7089,7 @@ configure_option_incoming_add_ignore(svn_client_conflict_t *conflict,
  * conflict. */
 static svn_error_t *
 configure_option_incoming_added_file_text_merge(svn_client_conflict_t *conflict,
+                                                svn_client_ctx_t *ctx,
                                                 apr_array_header_t *options,
                                                 apr_pool_t *scratch_pool)
 {
@@ -7088,7 +7123,7 @@ configure_option_incoming_added_file_text_merge(svn_client_conflict_t *conflict,
       option->pool = options->pool;
       option->id =
         svn_client_conflict_option_incoming_added_file_text_merge;
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
       option->description =
@@ -7110,6 +7145,7 @@ configure_option_incoming_added_file_text_merge(svn_client_conflict_t *conflict,
  * conflict. */
 static svn_error_t *
 configure_option_incoming_added_file_replace(svn_client_conflict_t *conflict,
+                                             svn_client_ctx_t *ctx,
                                              apr_array_header_t *options,
                                              apr_pool_t *scratch_pool)
 {
@@ -7144,7 +7180,7 @@ configure_option_incoming_added_file_replace(svn_client_conflict_t *conflict,
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->pool = options->pool;
       option->id = svn_client_conflict_option_incoming_added_file_replace;
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
       if (operation == svn_wc_operation_update)
@@ -7176,6 +7212,7 @@ configure_option_incoming_added_file_replace(svn_client_conflict_t *conflict,
 static svn_error_t *
 configure_option_incoming_added_file_replace_and_merge(
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_array_header_t *options,
   apr_pool_t *scratch_pool)
 {
@@ -7209,7 +7246,7 @@ configure_option_incoming_added_file_replace_and_merge(
       option->pool = options->pool;
       option->id =
         svn_client_conflict_option_incoming_added_file_replace_and_merge;
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
       option->description =
@@ -7233,6 +7270,7 @@ configure_option_incoming_added_file_replace_and_merge(
  * conflict. */
 static svn_error_t *
 configure_option_incoming_added_dir_merge(svn_client_conflict_t *conflict,
+                                          svn_client_ctx_t *ctx,
                                           apr_array_header_t *options,
                                           apr_pool_t *scratch_pool)
 {
@@ -7265,7 +7303,7 @@ configure_option_incoming_added_dir_merge(svn_client_conflict_t *conflict,
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->pool = options->pool;
       option->id = svn_client_conflict_option_incoming_added_dir_merge;
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
       option->description =
@@ -7287,6 +7325,7 @@ configure_option_incoming_added_dir_merge(svn_client_conflict_t *conflict,
  * conflict. */
 static svn_error_t *
 configure_option_incoming_added_dir_replace(svn_client_conflict_t *conflict,
+                                            svn_client_ctx_t *ctx,
                                             apr_array_header_t *options,
                                             apr_pool_t *scratch_pool)
 {
@@ -7320,7 +7359,7 @@ configure_option_incoming_added_dir_replace(svn_client_conflict_t *conflict,
       option->pool = options->pool;
       option->id =
         svn_client_conflict_option_incoming_added_dir_replace;
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
       option->description =
@@ -7343,6 +7382,7 @@ configure_option_incoming_added_dir_replace(svn_client_conflict_t *conflict,
 static svn_error_t *
 configure_option_incoming_added_dir_replace_and_merge(
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_array_header_t *options,
   apr_pool_t *scratch_pool)
 {
@@ -7376,7 +7416,7 @@ configure_option_incoming_added_dir_replace_and_merge(
       option->pool = options->pool;
       option->id =
         svn_client_conflict_option_incoming_added_dir_replace_and_merge;
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
       option->description =
@@ -7399,6 +7439,7 @@ configure_option_incoming_added_dir_replace_and_merge(
 /* Configure 'incoming delete ignore' resolution option for a tree conflict. */
 static svn_error_t *
 configure_option_incoming_delete_ignore(svn_client_conflict_t *conflict,
+                                        svn_client_ctx_t *ctx,
                                         apr_array_header_t *options,
                                         apr_pool_t *scratch_pool)
 {
@@ -7465,6 +7506,7 @@ configure_option_incoming_delete_ignore(svn_client_conflict_t *conflict,
 /* Configure 'incoming delete accept' resolution option for a tree conflict. */
 static svn_error_t *
 configure_option_incoming_delete_accept(svn_client_conflict_t *conflict,
+                                        svn_client_ctx_t *ctx,
                                         apr_array_header_t *options,
                                         apr_pool_t *scratch_pool)
 {
@@ -7491,7 +7533,7 @@ configure_option_incoming_delete_accept(svn_client_conflict_t *conflict,
       option = apr_pcalloc(options->pool, sizeof(*option));
       option->pool = options->pool;
       option->id = svn_client_conflict_option_incoming_delete_accept;
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
       local_abspath = svn_client_conflict_get_local_abspath(conflict);
@@ -7568,6 +7610,7 @@ follow_move_chains(apr_hash_t *wc_move_targets,
  * a tree conflict. */
 static svn_error_t *
 configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
+                                          svn_client_ctx_t *ctx,
                                           apr_array_header_t *options,
                                           apr_pool_t *scratch_pool)
 {
@@ -7614,7 +7657,7 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
       option->pool = options->pool;
       option->id = svn_client_conflict_option_incoming_move_file_text_merge;
       victim_abspath = svn_client_conflict_get_local_abspath(conflict);
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                                  victim_abspath, scratch_pool,
                                  scratch_pool));
 
@@ -7629,7 +7672,7 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
 
               move = APR_ARRAY_IDX(details->moves, i, struct repos_move_info *);
               SVN_ERR(follow_move_chains(details->wc_move_targets, move,
-                                         conflict->ctx, victim_abspath,
+                                         ctx, victim_abspath,
                                          victim_node_kind,
                                          incoming_new_pegrev,
                                          conflict->pool, scratch_pool));
@@ -7687,6 +7730,7 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
  * a tree conflict. */
 static svn_error_t *
 configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
+                                    svn_client_ctx_t *ctx,
                                     apr_array_header_t *options,
                                     apr_pool_t *scratch_pool)
 {
@@ -7733,7 +7777,7 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
       option->pool = options->pool;
       option->id = svn_client_conflict_option_incoming_move_dir_merge;
       victim_abspath = svn_client_conflict_get_local_abspath(conflict);
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                                  victim_abspath, scratch_pool,
                                  scratch_pool));
 
@@ -7748,7 +7792,7 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
 
               move = APR_ARRAY_IDX(details->moves, i, struct repos_move_info *);
               SVN_ERR(follow_move_chains(details->wc_move_targets, move,
-                                         conflict->ctx, victim_abspath,
+                                         ctx, victim_abspath,
                                          victim_node_kind,
                                          incoming_new_pegrev,
                                          conflict->pool, scratch_pool));
@@ -7973,6 +8017,7 @@ svn_error_t *
 svn_client_conflict_option_set_moved_to_abspath(
   svn_client_conflict_option_t *option,
   int preferred_move_target_idx,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool)
 {
   svn_client_conflict_t *conflict = option->conflict;
@@ -8012,7 +8057,7 @@ svn_client_conflict_option_set_moved_to_abspath(
   /* Record the user's preference and update the option description. */
   details->wc_move_target_idx = preferred_move_target_idx;
 
-  SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, conflict->ctx->wc_ctx,
+  SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                              victim_abspath, scratch_pool,
                              scratch_pool));
   moved_to_abspath = APR_ARRAY_IDX(move_target_wc_abspaths,
@@ -8033,6 +8078,7 @@ svn_client_conflict_option_set_moved_to_abspath(
 svn_error_t *
 svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
                                                 svn_client_conflict_t *conflict,
+                                                svn_client_ctx_t *ctx,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool)
 {
@@ -8059,29 +8105,35 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   SVN_ERR(configure_option_update_move_destination(conflict, *options));
   SVN_ERR(configure_option_update_raise_moved_away_children(conflict,
                                                             *options));
-  SVN_ERR(configure_option_incoming_add_ignore(conflict, *options,
+  SVN_ERR(configure_option_incoming_add_ignore(conflict, ctx, *options,
                                                scratch_pool));
-  SVN_ERR(configure_option_incoming_added_file_text_merge(conflict, *options,
+  SVN_ERR(configure_option_incoming_added_file_text_merge(conflict, ctx,
+                                                          *options,
                                                           scratch_pool));
-  SVN_ERR(configure_option_incoming_added_file_replace(conflict, *options,
+  SVN_ERR(configure_option_incoming_added_file_replace(conflict, ctx,
+                                                       *options,
                                                        scratch_pool));
   SVN_ERR(configure_option_incoming_added_file_replace_and_merge(conflict,
+                                                                 ctx,
                                                                  *options,
                                                                  scratch_pool));
-  SVN_ERR(configure_option_incoming_added_dir_merge(conflict, *options,
+  SVN_ERR(configure_option_incoming_added_dir_merge(conflict, ctx,
+                                                    *options,
                                                     scratch_pool));
-  SVN_ERR(configure_option_incoming_added_dir_replace(conflict, *options,
+  SVN_ERR(configure_option_incoming_added_dir_replace(conflict, ctx,
+                                                      *options,
                                                       scratch_pool));
   SVN_ERR(configure_option_incoming_added_dir_replace_and_merge(conflict,
+                                                                ctx,
                                                                 *options,
                                                                 scratch_pool));
-  SVN_ERR(configure_option_incoming_delete_ignore(conflict, *options,
+  SVN_ERR(configure_option_incoming_delete_ignore(conflict, ctx, *options,
                                                   scratch_pool));
-  SVN_ERR(configure_option_incoming_delete_accept(conflict, *options,
+  SVN_ERR(configure_option_incoming_delete_accept(conflict, ctx, *options,
                                                   scratch_pool));
-  SVN_ERR(configure_option_incoming_move_file_merge(conflict, *options,
+  SVN_ERR(configure_option_incoming_move_file_merge(conflict, ctx, *options,
                                                     scratch_pool));
-  SVN_ERR(configure_option_incoming_dir_merge(conflict, *options,
+  SVN_ERR(configure_option_incoming_dir_merge(conflict, ctx, *options,
                                               scratch_pool));
 
   return SVN_NO_ERROR;
@@ -8089,11 +8141,12 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
 
 svn_error_t *
 svn_client_conflict_tree_get_details(svn_client_conflict_t *conflict,
+                                     svn_client_ctx_t *ctx,
                                      apr_pool_t *scratch_pool)
 {
   SVN_ERR(assert_tree_conflict(conflict, scratch_pool));
 
-  if (conflict->ctx->notify_func2)
+  if (ctx->notify_func2)
     {
       svn_wc_notify_t *notify;
 
@@ -8101,19 +8154,19 @@ svn_client_conflict_tree_get_details(svn_client_conflict_t *conflict,
                  svn_client_conflict_get_local_abspath(conflict),
                  svn_wc_notify_begin_search_tree_conflict_details,
                  scratch_pool),
-      conflict->ctx->notify_func2(conflict->ctx->notify_baton2, notify,
+      ctx->notify_func2(ctx->notify_baton2, notify,
                                   scratch_pool);
     }
 
   if (conflict->tree_conflict_get_incoming_details_func)
-    SVN_ERR(conflict->tree_conflict_get_incoming_details_func(conflict,
+    SVN_ERR(conflict->tree_conflict_get_incoming_details_func(conflict, ctx,
                                                               scratch_pool));
 
   if (conflict->tree_conflict_get_local_details_func)
-    SVN_ERR(conflict->tree_conflict_get_local_details_func(conflict,
+    SVN_ERR(conflict->tree_conflict_get_local_details_func(conflict, ctx,
                                                            scratch_pool));
 
-  if (conflict->ctx->notify_func2)
+  if (ctx->notify_func2)
     {
       svn_wc_notify_t *notify;
 
@@ -8121,7 +8174,7 @@ svn_client_conflict_tree_get_details(svn_client_conflict_t *conflict,
                  svn_client_conflict_get_local_abspath(conflict),
                  svn_wc_notify_end_search_tree_conflict_details,
                  scratch_pool),
-      conflict->ctx->notify_func2(conflict->ctx->notify_baton2, notify,
+      ctx->notify_func2(ctx->notify_baton2, notify,
                                   scratch_pool);
     }
 
@@ -8148,10 +8201,11 @@ svn_client_conflict_option_describe(const char **description,
 svn_error_t *
 svn_client_conflict_text_resolve(svn_client_conflict_t *conflict,
                                  svn_client_conflict_option_t *option,
+                                 svn_client_ctx_t *ctx,
                                  apr_pool_t *scratch_pool)
 {
   SVN_ERR(assert_text_conflict(conflict, scratch_pool));
-  SVN_ERR(option->do_resolve_func(option, conflict, scratch_pool));
+  SVN_ERR(option->do_resolve_func(option, conflict, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -8181,13 +8235,14 @@ svn_error_t *
 svn_client_conflict_text_resolve_by_id(
   svn_client_conflict_t *conflict,
   svn_client_conflict_option_id_t option_id,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool)
 {
   apr_array_header_t *resolution_options;
   svn_client_conflict_option_t *option;
 
   SVN_ERR(svn_client_conflict_text_get_resolution_options(
-            &resolution_options, conflict,
+            &resolution_options, conflict, ctx,
             scratch_pool, scratch_pool));
   option = svn_client_conflict_option_find_by_id(resolution_options,
                                                  option_id);
@@ -8198,7 +8253,7 @@ svn_client_conflict_text_resolve_by_id(
                                "given for conflicted path '%s'"),
                              svn_dirent_local_style(conflict->local_abspath,
                                                     scratch_pool));
-  SVN_ERR(svn_client_conflict_text_resolve(conflict, option, scratch_pool));
+  SVN_ERR(svn_client_conflict_text_resolve(conflict, option, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -8213,11 +8268,12 @@ svn_error_t *
 svn_client_conflict_prop_resolve(svn_client_conflict_t *conflict,
                                  const char *propname,
                                  svn_client_conflict_option_t *option,
+                                 svn_client_ctx_t *ctx,
                                  apr_pool_t *scratch_pool)
 {
   SVN_ERR(assert_prop_conflict(conflict, scratch_pool));
   option->type_data.prop.propname = propname;
-  SVN_ERR(option->do_resolve_func(option, conflict, scratch_pool));
+  SVN_ERR(option->do_resolve_func(option, conflict, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -8227,13 +8283,14 @@ svn_client_conflict_prop_resolve_by_id(
   svn_client_conflict_t *conflict,
   const char *propname,
   svn_client_conflict_option_id_t option_id,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool)
 {
   apr_array_header_t *resolution_options;
   svn_client_conflict_option_t *option;
 
   SVN_ERR(svn_client_conflict_prop_get_resolution_options(
-            &resolution_options, conflict,
+            &resolution_options, conflict, ctx,
             scratch_pool, scratch_pool));
   option = svn_client_conflict_option_find_by_id(resolution_options,
                                                  option_id);
@@ -8244,7 +8301,7 @@ svn_client_conflict_prop_resolve_by_id(
                                "given for conflicted path '%s'"),
                              svn_dirent_local_style(conflict->local_abspath,
                                                     scratch_pool));
-  SVN_ERR(svn_client_conflict_prop_resolve(conflict, propname, option,
+  SVN_ERR(svn_client_conflict_prop_resolve(conflict, propname, option, ctx,
                                            scratch_pool));
 
   return SVN_NO_ERROR;
@@ -8266,10 +8323,11 @@ svn_client_conflict_prop_get_resolution(svn_client_conflict_t *conflict,
 svn_error_t *
 svn_client_conflict_tree_resolve(svn_client_conflict_t *conflict,
                                  svn_client_conflict_option_t *option,
+                                 svn_client_ctx_t *ctx,
                                  apr_pool_t *scratch_pool)
 {
   SVN_ERR(assert_tree_conflict(conflict, scratch_pool));
-  SVN_ERR(option->do_resolve_func(option, conflict, scratch_pool));
+  SVN_ERR(option->do_resolve_func(option, conflict, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -8278,6 +8336,7 @@ svn_error_t *
 svn_client_conflict_tree_resolve_by_id(
   svn_client_conflict_t *conflict,
   svn_client_conflict_option_id_t option_id,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool)
 {
   apr_array_header_t *resolution_options;
@@ -8329,7 +8388,7 @@ svn_client_conflict_tree_resolve_by_id(
     }
   
   SVN_ERR(svn_client_conflict_tree_get_resolution_options(
-            &resolution_options, conflict,
+            &resolution_options, conflict, ctx,
             scratch_pool, scratch_pool));
   option = svn_client_conflict_option_find_by_id(resolution_options,
                                                  option_id);
@@ -8340,7 +8399,7 @@ svn_client_conflict_tree_resolve_by_id(
                                "given for conflicted path '%s'"),
                              svn_dirent_local_style(conflict->local_abspath,
                                                     scratch_pool));
-  SVN_ERR(svn_client_conflict_tree_resolve(conflict, option, scratch_pool));
+  SVN_ERR(svn_client_conflict_tree_resolve(conflict, option, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -8704,7 +8763,6 @@ svn_client_conflict_get(svn_client_conflict_t **conflict,
   (*conflict)->resolution_text = svn_client_conflict_option_unspecified;
   (*conflict)->resolution_tree = svn_client_conflict_option_unspecified;
   (*conflict)->resolved_props = apr_hash_make(result_pool);
-  (*conflict)->ctx = ctx;
   (*conflict)->pool = result_pool;
 
   /* Add all legacy conflict descriptors we can find. Eventually, this code

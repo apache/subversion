@@ -701,6 +701,7 @@ prompt_user(const resolver_option_t **opt,
 static svn_error_t *
 build_text_conflict_options(resolver_option_t **options,
                             svn_client_conflict_t *conflict,
+                            svn_client_ctx_t *ctx,
                             svn_boolean_t is_binary,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
@@ -713,7 +714,7 @@ build_text_conflict_options(resolver_option_t **options,
   apr_pool_t *iterpool;
 
   SVN_ERR(svn_client_conflict_text_get_resolution_options(&builtin_options,
-                                                          conflict,
+                                                          conflict, ctx,
                                                           scratch_pool,
                                                           scratch_pool));
   nopt = builtin_options->nelts + ARRAY_LEN(extra_resolver_options);
@@ -787,7 +788,7 @@ mark_conflict_resolved(svn_client_conflict_t *conflict,
   if (text_conflicted)
     {
       SVN_ERR(svn_client_conflict_text_resolve_by_id(conflict, option_id,
-                                                     scratch_pool));
+                                                     ctx, scratch_pool));
       svn_cl__conflict_stats_resolved(conflict_stats, local_relpath,
                                       svn_wc_conflict_kind_text);
     }
@@ -795,7 +796,7 @@ mark_conflict_resolved(svn_client_conflict_t *conflict,
   if (propname)
     {
       SVN_ERR(svn_client_conflict_prop_resolve_by_id(conflict, propname,
-                                                     option_id,
+                                                     option_id, ctx,
                                                      scratch_pool));
       svn_cl__conflict_stats_resolved(conflict_stats, local_relpath,
                                       svn_wc_conflict_kind_property);
@@ -804,7 +805,7 @@ mark_conflict_resolved(svn_client_conflict_t *conflict,
   if (tree_conflicted)
     {
       SVN_ERR(svn_client_conflict_tree_resolve_by_id(conflict, option_id,
-                                                     scratch_pool));
+                                                     ctx, scratch_pool));
       svn_cl__conflict_stats_resolved(conflict_stats, local_relpath,
                                       svn_wc_conflict_kind_tree);
     }
@@ -886,7 +887,7 @@ handle_text_conflict(svn_boolean_t *resolved,
       || (!base_abspath && my_abspath && their_abspath)))
     diff_allowed = TRUE;
 
-  SVN_ERR(build_text_conflict_options(&text_conflict_options, conflict,
+  SVN_ERR(build_text_conflict_options(&text_conflict_options, conflict, ctx,
                                       is_binary, scratch_pool, scratch_pool));
   while (TRUE)
     {
@@ -1172,6 +1173,7 @@ handle_text_conflict(svn_boolean_t *resolved,
 static svn_error_t *
 build_prop_conflict_options(resolver_option_t **options,
                             svn_client_conflict_t *conflict,
+                            svn_client_ctx_t *ctx,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
@@ -1183,7 +1185,7 @@ build_prop_conflict_options(resolver_option_t **options,
   apr_pool_t *iterpool;
 
   SVN_ERR(svn_client_conflict_prop_get_resolution_options(&builtin_options,
-                                                          conflict,
+                                                          conflict, ctx,
                                                           scratch_pool,
                                                           scratch_pool));
   nopt = builtin_options->nelts + ARRAY_LEN(extra_resolver_options) +
@@ -1241,6 +1243,7 @@ handle_one_prop_conflict(svn_client_conflict_option_id_t *option_id,
                          apr_hash_t *config,
                          svn_client_conflict_t *conflict,
                          const char *propname,
+                         svn_client_ctx_t *ctx,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -1272,7 +1275,7 @@ handle_one_prop_conflict(svn_client_conflict_option_id_t *option_id,
                                                    scratch_pool, scratch_pool));
   SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool, "%s\n", description));
 
-  SVN_ERR(build_prop_conflict_options(&prop_conflict_options, conflict,
+  SVN_ERR(build_prop_conflict_options(&prop_conflict_options, conflict, ctx,
                                       scratch_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
   while (TRUE)
@@ -1384,6 +1387,7 @@ handle_prop_conflicts(svn_boolean_t *resolved,
       SVN_ERR(handle_one_prop_conflict(&option_id, &merged_propval,
                                        quit, path_prefix, pb,
                                        editor_cmd, config, conflict, propname,
+                                       ctx,
                                        iterpool, iterpool));
 
       if (option_id != svn_client_conflict_option_unspecified &&
@@ -1395,7 +1399,7 @@ handle_prop_conflicts(svn_boolean_t *resolved,
               svn_client_conflict_option_t *option;
 
               SVN_ERR(svn_client_conflict_prop_get_resolution_options(
-                        &options, conflict, iterpool, iterpool));
+                        &options, conflict, ctx, iterpool, iterpool));
               option = svn_client_conflict_option_find_by_id(
                          options, svn_client_conflict_option_merged_text);
               if (option)
@@ -1431,6 +1435,7 @@ build_tree_conflict_options(
   apr_array_header_t **possible_moved_to_repos_relpaths,
   apr_array_header_t **possible_moved_to_abspaths,
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool)
 {
@@ -1442,7 +1447,7 @@ build_tree_conflict_options(
   apr_pool_t *iterpool;
 
   SVN_ERR(svn_client_conflict_tree_get_resolution_options(&builtin_options,
-                                                          conflict,
+                                                          conflict, ctx,
                                                           scratch_pool,
                                                           scratch_pool));
   nopt = builtin_options->nelts + ARRAY_LEN(extra_resolver_options_tree) +
@@ -1647,11 +1652,11 @@ handle_tree_conflict(svn_boolean_t *resolved,
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
 
   /* Always show the best possible conflict description and options. */
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, scratch_pool));
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, scratch_pool));
 
   SVN_ERR(svn_client_conflict_tree_get_description(
            &incoming_change_description, &local_change_description,
-           conflict, scratch_pool, scratch_pool));
+           conflict, ctx, scratch_pool, scratch_pool));
   conflict_description = apr_psprintf(scratch_pool, "%s\n%s",
                                       incoming_change_description,
                                       local_change_description);
@@ -1665,7 +1670,8 @@ handle_tree_conflict(svn_boolean_t *resolved,
   SVN_ERR(build_tree_conflict_options(&tree_conflict_options,
                                       &possible_moved_to_repos_relpaths,
                                       &possible_moved_to_abspaths,
-                                      conflict, scratch_pool, scratch_pool));
+                                      conflict, ctx,
+                                      scratch_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
   while (1)
     {
@@ -1699,6 +1705,7 @@ handle_tree_conflict(svn_boolean_t *resolved,
           /* Update preferred move target path. */
           SVN_ERR(svn_client_conflict_tree_get_resolution_options(&options,
                                                                   conflict,
+                                                                  ctx,
                                                                   iterpool,
                                                                   iterpool));
           conflict_option =
@@ -1722,8 +1729,8 @@ handle_tree_conflict(svn_boolean_t *resolved,
                         &tree_conflict_options,
                         &possible_moved_to_repos_relpaths,
                         &possible_moved_to_abspaths,
-                        conflict,
-                                                  scratch_pool, scratch_pool));
+                        conflict, ctx,
+                        scratch_pool, scratch_pool));
             }
           continue;
         }
@@ -1740,6 +1747,7 @@ handle_tree_conflict(svn_boolean_t *resolved,
           /* Update preferred move target path. */
           SVN_ERR(svn_client_conflict_tree_get_resolution_options(&options,
                                                                   conflict,
+                                                                  ctx,
                                                                   iterpool,
                                                                   iterpool));
           conflict_option =
@@ -1756,14 +1764,14 @@ handle_tree_conflict(svn_boolean_t *resolved,
           if (conflict_option)
             {
               SVN_ERR(svn_client_conflict_option_set_moved_to_abspath(
-                        conflict_option, preferred_move_target_idx, iterpool));
+                        conflict_option, preferred_move_target_idx, ctx, iterpool));
 
               /* Update option description. */
               SVN_ERR(build_tree_conflict_options(
                         &tree_conflict_options,
                         &possible_moved_to_repos_relpaths,
                         &possible_moved_to_abspaths,
-                        conflict,
+                        conflict, ctx,
                         scratch_pool, scratch_pool));
             }
           continue;
