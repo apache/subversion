@@ -44,23 +44,20 @@
 #include "../dav_svn.h"
 
 
-static apr_status_t
+static svn_error_t *
 send_get_locations_report(ap_filter_t *output,
                           apr_bucket_brigade *bb,
                           const dav_resource *resource,
                           apr_hash_t *fs_locations)
 {
   apr_hash_index_t *hi;
-  apr_pool_t *pool;
-  apr_status_t apr_err;
+  apr_pool_t *pool = resource->pool;
 
-  pool = resource->pool;
-
-  apr_err = ap_fprintf(output, bb, DAV_XML_HEADER DEBUG_CR
+  SVN_ERR(dav_svn__brigade_printf(
+                       bb, output,
+                       DAV_XML_HEADER DEBUG_CR
                        "<S:get-locations-report xmlns:S=\"" SVN_XML_NAMESPACE
-                       "\" xmlns:D=\"DAV:\">" DEBUG_CR);
-  if (apr_err)
-    return apr_err;
+                       "\" xmlns:D=\"DAV:\">" DEBUG_CR));
 
   for (hi = apr_hash_first(pool, fs_locations); hi; hi = apr_hash_next(hi))
     {
@@ -70,13 +67,15 @@ send_get_locations_report(ap_filter_t *output,
 
       apr_hash_this(hi, &key, NULL, &value);
       path_quoted = apr_xml_quote_string(pool, value, 1);
-      apr_err = ap_fprintf(output, bb, "<S:location "
+      SVN_ERR(dav_svn__brigade_printf(
+                           bb, output, "<S:location "
                            "rev=\"%ld\" path=\"%s\"/>" DEBUG_CR,
-                           *(const svn_revnum_t *)key, path_quoted);
-      if (apr_err)
-        return apr_err;
+                           *(const svn_revnum_t *)key, path_quoted));
     }
-  return ap_fprintf(output, bb, "</S:get-locations-report>" DEBUG_CR);
+
+  SVN_ERR(dav_svn__brigade_printf(bb, output,
+                                  "</S:get-locations-report>" DEBUG_CR));
+  return SVN_NO_ERROR;
 }
 
 
@@ -87,7 +86,6 @@ dav_svn__get_locations_report(const dav_resource *resource,
 {
   svn_error_t *serr;
   dav_error *derr = NULL;
-  apr_status_t apr_err;
   apr_bucket_brigade *bb;
   dav_svn__authz_read_baton arb;
 
@@ -173,10 +171,10 @@ dav_svn__get_locations_report(const dav_resource *resource,
 
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
-  apr_err = send_get_locations_report(output, bb, resource, fs_locations);
+  serr = send_get_locations_report(output, bb, resource, fs_locations);
 
-  if (apr_err)
-    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+  if (serr)
+    derr = dav_svn__convert_err(serr,
                                 HTTP_INTERNAL_SERVER_ERROR,
                                 "Error writing REPORT response.",
                                 resource->pool);

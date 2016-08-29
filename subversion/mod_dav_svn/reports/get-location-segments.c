@@ -79,28 +79,26 @@ location_segment_receiver(svn_location_segment_t *segment,
                           apr_pool_t *pool)
 {
   struct location_segment_baton *b = baton;
-  apr_status_t apr_err;
 
   SVN_ERR(maybe_send_opener(b));
 
   if (segment->path)
     {
       const char *path_quoted = apr_xml_quote_string(pool, segment->path, 1);
-      apr_err = ap_fprintf(b->output, b->bb,
+
+      SVN_ERR(dav_svn__brigade_printf(b->bb, b->output,
                            "<S:location-segment path=\"%s\" "
                            "range-start=\"%ld\" range-end=\"%ld\"/>" DEBUG_CR,
                            path_quoted,
-                           segment->range_start, segment->range_end);
+                           segment->range_start, segment->range_end));
     }
   else
     {
-      apr_err = ap_fprintf(b->output, b->bb,
+      SVN_ERR(dav_svn__brigade_printf(b->bb, b->output,
                            "<S:location-segment "
                            "range-start=\"%ld\" range-end=\"%ld\"/>" DEBUG_CR,
-                           segment->range_start, segment->range_end);
+                           segment->range_start, segment->range_end));
     }
-  if (apr_err)
-    return svn_error_create(apr_err, 0, NULL);
   return SVN_NO_ERROR;
 }
 

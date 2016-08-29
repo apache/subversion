@@ -527,6 +527,27 @@ dav_svn__brigade_printf(apr_bucket_brigade *bb,
 }
 
 
+svn_error_t *
+dav_svn__brigade_putstrs(apr_bucket_brigade *bb,
+                         ap_filter_t *output,
+                         ...)
+{
+  apr_status_t apr_err;
+  va_list ap;
+
+  va_start(ap, output);
+  apr_err = apr_brigade_vputstrs(bb, ap_filter_flush, output, ap);
+  va_end(ap);
+  if (apr_err)
+    return svn_error_create(apr_err, NULL, NULL);
+  /* Check for an aborted connection, since the brigade functions don't
+     appear to return useful errors when the connection is dropped. */
+  if (output->c->aborted)
+    return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, NULL, NULL);
+  return SVN_NO_ERROR;
+}
+
+
 
 
 dav_error *

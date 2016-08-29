@@ -957,6 +957,11 @@ svn_error_t *dav_svn__brigade_printf(apr_bucket_brigade *bb,
                                      ...)
   __attribute__((format(printf, 3, 4)));
 
+/* Write an unspecified number of strings to OUTPUT using BB.  */
+svn_error_t *dav_svn__brigade_putstrs(apr_bucket_brigade *bb,
+                                      ap_filter_t *output,
+                                      ...);
+
 
 
 
