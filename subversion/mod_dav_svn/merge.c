@@ -72,7 +72,7 @@ send_response(const dav_svn_repos *repos,
               svn_fs_root_t *root,
               const char *path,
               svn_boolean_t is_dir,
-              ap_filter_t *output,
+              dav_svn__output *output,
               apr_bucket_brigade *bb,
               apr_pool_t *pool)
 {
@@ -112,7 +112,7 @@ static svn_error_t *
 do_resources(const dav_svn_repos *repos,
              svn_fs_root_t *root,
              svn_revnum_t revision,
-             ap_filter_t *output,
+             dav_svn__output *output,
              apr_bucket_brigade *bb,
              apr_pool_t *pool)
 {
@@ -214,7 +214,7 @@ do_resources(const dav_svn_repos *repos,
 */
 
 dav_error *
-dav_svn__merge_response(ap_filter_t *output,
+dav_svn__merge_response(dav_svn__output *output,
                         const dav_svn_repos *repos,
                         svn_revnum_t new_rev,
                         const char *post_commit_err,
@@ -230,7 +230,6 @@ dav_svn__merge_response(ap_filter_t *output,
   svn_string_t *creationdate, *creator_displayname;
   const char *post_commit_err_elem = NULL,
              *post_commit_header_info = NULL;
-  apr_status_t status;
   apr_hash_t *revprops;
 
   serr = svn_fs_revision_root(&root, repos->fs, new_rev, pool);
@@ -242,7 +241,8 @@ dav_svn__merge_response(ap_filter_t *output,
                                   repos->pool);
     }
 
-  bb = apr_brigade_create(pool, output->c->bucket_alloc);
+  bb = apr_brigade_create(pool,
+                          dav_svn__output_get_bucket_alloc(output));
 
   /* prep some strings */
 
@@ -383,11 +383,11 @@ dav_svn__merge_response(ap_filter_t *output,
                                 repos->pool);
 
   /* send whatever is left in the brigade */
-  status = ap_pass_brigade(output, bb);
-  if (status != APR_SUCCESS)
-    return dav_svn__new_error(repos->pool, HTTP_INTERNAL_SERVER_ERROR,
-                              0, status,
-                              "Could not write output");
+  serr = dav_svn__output_pass_brigade(output, bb);
+  if (serr != NULL)
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Could not write output",
+                                repos->pool);
 
   return NULL;
 }

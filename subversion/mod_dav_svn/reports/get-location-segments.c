@@ -48,7 +48,7 @@
 struct location_segment_baton
 {
   svn_boolean_t sent_opener;
-  ap_filter_t *output;
+  dav_svn__output *output;
   apr_bucket_brigade *bb;
   dav_svn__authz_read_baton arb;
 };
@@ -106,7 +106,7 @@ location_segment_receiver(svn_location_segment_t *segment,
 dav_error *
 dav_svn__get_location_segments_report(const dav_resource *resource,
                                       const apr_xml_doc *doc,
-                                      ap_filter_t *output)
+                                      dav_svn__output *output)
 {
   svn_error_t *serr;
   dav_error *derr = NULL;
@@ -214,7 +214,8 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
   arb.repos = resource->info->repos;
 
   /* Build the bucket brigade we'll use for output. */
-  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  bb = apr_brigade_create(resource->pool,
+                          dav_svn__output_get_bucket_alloc(output));
 
   /* Do what we came here for. */
   location_segment_baton.sent_opener = FALSE;

@@ -68,7 +68,7 @@ typedef struct update_ctx_t {
   apr_bucket_brigade *bb;
 
   /* where to deliver the output */
-  ap_filter_t *output;
+  dav_svn__output *output;
 
   /* where do these editor paths *really* point to? */
   apr_hash_t *pathmap;
@@ -954,7 +954,7 @@ validate_input_revision(svn_revnum_t revision,
 dav_error *
 dav_svn__update_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
-                       ap_filter_t *output)
+                       dav_svn__output *output)
 {
   svn_delta_editor_t *editor;
   apr_xml_elem *child;
@@ -1202,7 +1202,8 @@ dav_svn__update_report(const dav_resource *resource,
   uc.output = output;
   uc.anchor = src_path;
   uc.target = target;
-  uc.bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  uc.bb = apr_brigade_create(resource->pool,
+                             dav_svn__output_get_bucket_alloc(output));
   uc.pathmap = NULL;
   uc.enable_v2_response = ((resource->info->restype == DAV_SVN_RESTYPE_ME)
                            && (resource->info->repos->v2_protocol));

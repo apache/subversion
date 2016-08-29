@@ -41,7 +41,7 @@
 dav_error *
 dav_svn__get_deleted_rev_report(const dav_resource *resource,
                                 const apr_xml_doc *doc,
-                                ap_filter_t *output)
+                                dav_svn__output *output)
 {
   apr_xml_elem *child;
   int ns;
@@ -117,7 +117,8 @@ dav_svn__get_deleted_rev_report(const dav_resource *resource,
                                 "Could not find revision path was deleted.");
     }
 
-  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  bb = apr_brigade_create(resource->pool,
+                          dav_svn__output_get_bucket_alloc(output));
   err = dav_svn__brigade_printf(bb, output,
                        DAV_XML_HEADER DEBUG_CR
                        "<S:get-deleted-rev-report xmlns:S=\""
