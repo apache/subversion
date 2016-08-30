@@ -112,7 +112,7 @@ Candidate changes:
      We should return error messages when users provide invalid input, instead
      of creating a core dump.
    Votes:
-     +1 stsp
+     +1 stsp, ivan
 
 * r1758128, r1758129, r1758130
   Fix issue #4647.
