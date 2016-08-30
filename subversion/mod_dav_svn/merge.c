@@ -102,7 +102,7 @@ send_response(const dav_svn_repos *repos,
                        "<D:status>HTTP/1.1 200 OK</D:status>" DEBUG_CR
                        "</D:propstat>" DEBUG_CR
                        "</D:response>" DEBUG_CR,
-                       NULL));
+                       SVN_VA_NULL));
 
   return SVN_NO_ERROR;
 }
@@ -305,7 +305,7 @@ dav_svn__merge_response(dav_svn__output *output,
                      "<D:resourcetype><D:baseline/></D:resourcetype>" DEBUG_CR,
                      post_commit_err_elem, DEBUG_CR
                      "<D:version-name>", rev, "</D:version-name>" DEBUG_CR,
-                     NULL);
+                     SVN_VA_NULL);
   if (serr != NULL)
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                 "Could not write output",
@@ -317,7 +317,7 @@ dav_svn__merge_response(dav_svn__output *output,
                          "<D:creationdate>",
                          apr_xml_quote_string(pool, creationdate->data, 1),
                          "</D:creationdate>" DEBUG_CR,
-                         NULL);
+                         SVN_VA_NULL);
       if (serr != NULL)
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Could not write output",
@@ -330,7 +330,7 @@ dav_svn__merge_response(dav_svn__output *output,
                          apr_xml_quote_string(pool,
                                               creator_displayname->data, 1),
                          "</D:creator-displayname>" DEBUG_CR,
-                         NULL);
+                         SVN_VA_NULL);
       if (serr != NULL)
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Could not write output",
@@ -341,7 +341,7 @@ dav_svn__merge_response(dav_svn__output *output,
                      "<D:status>HTTP/1.1 200 OK</D:status>" DEBUG_CR
                      "</D:propstat>" DEBUG_CR
                      "</D:response>" DEBUG_CR,
-                     NULL);
+                     SVN_VA_NULL);
   if (serr != NULL)
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                 "Could not write output",
