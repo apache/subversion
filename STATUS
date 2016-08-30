@@ -145,7 +145,7 @@ Candidate changes:
      The backport branch is required, because of the text conflicts in
      mod_dav_svn/repos.c and mod_dav_svn/merge.c.
    Votes:
-     +1: kotkov
+     +1: kotkov, ivan
 
 Veto-blocked changes:
 =====================
