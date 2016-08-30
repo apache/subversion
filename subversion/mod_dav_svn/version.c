@@ -1092,12 +1092,16 @@ static dav_error *
 deliver_report(request_rec *r,
                const dav_resource *resource,
                const apr_xml_doc *doc,
-               ap_filter_t *output)
+               ap_filter_t *unused)
 {
   int ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
 
   if (doc->root->ns == ns)
     {
+      dav_svn__output *output;
+
+      output = dav_svn__output_create(resource->info->r, resource->pool);
+
       /* ### note that these report names should have symbols... */
 
       if (strcmp(doc->root->name, "update-report") == 0)
@@ -1404,7 +1408,7 @@ merge(dav_resource *target,
       int no_auto_merge,
       int no_checkout,
       apr_xml_elem *prop_elem,
-      ap_filter_t *output)
+      ap_filter_t *unused)
 {
   apr_pool_t *pool;
   dav_error *err;
@@ -1415,6 +1419,7 @@ merge(dav_resource *target,
   svn_revnum_t new_rev;
   apr_hash_t *locks;
   svn_boolean_t disable_merge_response = FALSE;
+  dav_svn__output *output;
 
   /* We'll use the target's pool for our operation. We happen to know that
      it matches the request pool, which (should) have the proper lifetime. */
@@ -1584,6 +1589,7 @@ merge(dav_resource *target,
     }
 
   /* process the response for the new revision. */
+  output = dav_svn__output_create(source->info->r, pool);
   return dav_svn__merge_response(output, source->info->repos, new_rev,
                                  post_commit_err, prop_elem,
                                  disable_merge_response, pool);

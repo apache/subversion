@@ -46,7 +46,7 @@
 dav_error *
 dav_svn__get_mergeinfo_report(const dav_resource *resource,
                               const apr_xml_doc *doc,
-                              ap_filter_t *output)
+                              dav_svn__output *output)
 {
   svn_error_t *serr;
   dav_error *derr = NULL;
@@ -124,7 +124,8 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   arb.repos = resource->info->repos;
 
   /* Build mergeinfo brigade */
-  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  bb = apr_brigade_create(resource->pool,
+                          dav_svn__output_get_bucket_alloc(output));
 
   serr = svn_repos_fs_get_mergeinfo(&catalog, repos->repos, paths, rev,
                                     inherit, include_descendants,
