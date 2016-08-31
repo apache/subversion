@@ -72,6 +72,8 @@ Candidate changes:
    Votes:
      +1: stefan2, steveking
      -0: stsp (merge conflict; needs a backport branch)
+              (rhuijben: Are you sure? svn merge doesn't produce a conflict
+               for me)
 
  * r1724448
    Fix handling of newly secured subdirectories in a working copy
@@ -106,14 +108,6 @@ Candidate changes:
    Votes:
      +1: ivan, rhuijben
 
- * r1758269
-   Fix issue #4652.
-   Justification:
-     We should return error messages when users provide invalid input, instead
-     of creating a core dump.
-   Votes:
-     +1 stsp, ivan
-
 * r1758128, r1758129, r1758130
   Fix issue #4647.
   Justification:
@@ -126,6 +120,12 @@ Candidate changes:
     r1758130 removes the regression test's XFail marker
   Votes:
     -1 (non-binding): luke1410 (invalid test)
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
 
  * r1758202, r1758204, r1758207, r1758209, r1758224, r1758385
    Fix unbounded memory usage when mod_dav_svn is paired with mod_headers
@@ -145,10 +145,12 @@ Candidate changes:
      The backport branch is required, because of the text conflicts in
      mod_dav_svn/repos.c and mod_dav_svn/merge.c.
    Votes:
-     +1: kotkov, ivan
+     +1: kotkov, ivan, rhuijben
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+ * r1758269
+   Fix issue #4652.
+   Justification:
+     We should return error messages when users provide invalid input, instead
+     of creating a core dump.
+   Votes:
+     +1 stsp, ivan, rhuijben
