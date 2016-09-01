@@ -44,7 +44,7 @@
 
 typedef struct edit_baton_t {
   apr_bucket_brigade *bb;
-  ap_filter_t *output;
+  dav_svn__output *output;
   svn_boolean_t started;
   svn_boolean_t sending_textdelta;
   int compression_level;
@@ -367,7 +367,7 @@ static void
 make_editor(const svn_delta_editor_t **editor,
             void **edit_baton,
             apr_bucket_brigade *bb,
-            ap_filter_t *output,
+            dav_svn__output *output,
             int compression_level,
             apr_pool_t *pool)
 {
@@ -413,7 +413,7 @@ malformed_element_error(const char *tagname, apr_pool_t *pool)
 dav_error *
 dav_svn__replay_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
-                       ap_filter_t *output)
+                       dav_svn__output *output)
 {
   dav_error *derr = NULL;
   svn_revnum_t low_water_mark = SVN_INVALID_REVNUM;
@@ -530,7 +530,8 @@ dav_svn__replay_report(const dav_resource *resource,
   if (! base_dir)
     base_dir = "";
 
-  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  bb = apr_brigade_create(resource->pool,
+                          dav_svn__output_get_bucket_alloc(output));
 
   if ((err = svn_fs_revision_root(&root, resource->info->repos->fs, rev,
                                   resource->pool)))

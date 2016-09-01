@@ -43,7 +43,7 @@ struct file_rev_baton {
   apr_bucket_brigade *bb;
 
   /* where to deliver the output */
-  ap_filter_t *output;
+  dav_svn__output *output;
 
   /* Whether we've written the <S:file-revs-report> header.  Allows for lazy
      writes to support mod_dav-based error handling. */
@@ -234,7 +234,7 @@ file_rev_handler(void *baton,
 dav_error *
 dav_svn__file_revs_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
-                          ap_filter_t *output)
+                          dav_svn__output *output)
 {
   svn_error_t *serr;
   dav_error *derr = NULL;
@@ -304,7 +304,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
                                   "Not all parameters passed");
 
   frb.bb = apr_brigade_create(resource->pool,
-                              output->c->bucket_alloc);
+                              dav_svn__output_get_bucket_alloc(output));
   frb.output = output;
   frb.needs_header = TRUE;
   frb.svndiff_version = resource->info->svndiff_version;

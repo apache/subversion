@@ -127,26 +127,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1758202, r1758204, r1758207, r1758209, r1758224, r1758385
-   Fix unbounded memory usage when mod_dav_svn is paired with mod_headers
-   or mod_deflate.
-   Justification:
-     Resolves a long-standing memory usage issue that can make Subversion
-     unusable with a seemingly harmless server configuration.  User
-     reported (issue #3084).
-   Branch:
-     ^/subversion/branches/1.9.x-r1758224-group
-   Notes:
-     r1758202 is included to avoid unnecessary conflicts.
-     r1758204, r1758207, r1758209 and r1758385 lay the necessary
-     groundwork for the fix.
-     r1758224 is the fix itself.
-     .
-     The backport branch is required, because of the text conflicts in
-     mod_dav_svn/repos.c and mod_dav_svn/merge.c.
-   Votes:
-     +1: kotkov, ivan, rhuijben
-
  * r1758269
    Fix issue #4652.
    Justification:
