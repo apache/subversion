@@ -1593,7 +1593,7 @@ merge(dav_resource *target,
     }
 
   /* process the response for the new revision. */
-  output = dav_svn__output_create(source->info->r, pool);
+  output = dav_svn__output_create(target->info->r, pool);
   return dav_svn__merge_response(output, source->info->repos, new_rev,
                                  post_commit_err, prop_elem,
                                  disable_merge_response, pool);
