@@ -108,6 +108,19 @@ Candidate changes:
    Votes:
      +1: ivan, rhuijben
 
+ * r1758781
+   Fix a bug in mod_dav_svn's MERGE handler that can cause malformed
+   responses.
+   Justification:
+     Fixes a bug that can cause unexpected errors during 'svn commit' over
+     http://.  This is a follow-up to the '1.9.x-r1758224-group' nomination
+     merged in r1758694.
+   Votes:
+     +1: kotkov, rhuijben
+
+Veto-blocked changes:
+=====================
+
 * r1758128, r1758129, r1758130
   Fix issue #4647.
   Justification:
@@ -120,19 +133,6 @@ Candidate changes:
     r1758130 removes the regression test's XFail marker
   Votes:
     -1 (non-binding): luke1410 (invalid test)
-
- * r1758781
-   Fix a bug in mod_dav_svn's MERGE handler that can cause malformed
-   responses.
-   Justification:
-     Fixes a bug that can cause unexpected errors during 'svn commit' over
-     http://.  This is a follow-up to the '1.9.x-r1758224-group' nomination
-     merged in r1758694.
-   Votes:
-     +1: kotkov
-
-Veto-blocked changes:
-=====================
 
 Approved changes:
 =================
