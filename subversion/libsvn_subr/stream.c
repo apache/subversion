@@ -812,6 +812,17 @@ is_buffered_handler_disown(void *baton)
   return svn_stream__is_buffered(baton);
 }
 
+static svn_error_t *
+readline_handler_disown(void *baton,
+                        svn_stringbuf_t **stringbuf,
+                        const char *eol,
+                        svn_boolean_t *eof,
+                        apr_pool_t *pool)
+{
+  return svn_error_trace(svn_stream_readline(baton, stringbuf, eol,
+                                             eof, pool));
+}
+
 svn_stream_t *
 svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
 {
@@ -824,6 +835,7 @@ svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
   svn_stream_set_seek(s, seek_handler_disown);
   svn_stream_set_data_available(s, data_available_disown);
   svn_stream__set_is_buffered(s, is_buffered_handler_disown);
+  svn_stream_set_readline(s, readline_handler_disown);
 
   return s;
 }
@@ -1675,6 +1687,37 @@ is_buffered_handler_stringbuf(void *baton)
   return TRUE;
 }
 
+static svn_error_t *
+readline_handler_stringbuf(void *baton,
+                           svn_stringbuf_t **stringbuf,
+                           const char *eol,
+                           svn_boolean_t *eof,
+                           apr_pool_t *pool)
+{
+  struct stringbuf_stream_baton *btn = baton;
+  const char *pos = btn->str->data + btn->amt_read;
+  const char *eol_pos;
+
+  eol_pos = strstr(pos, eol);
+  if (eol_pos)
+    {
+      apr_size_t eol_len = strlen(eol);
+
+      *eof = FALSE;
+      *stringbuf = svn_stringbuf_ncreate(pos, eol_pos - pos, pool);
+      btn->amt_read += (eol_pos - pos + eol_len);
+    }
+  else
+    {
+      *eof = TRUE;
+      *stringbuf = svn_stringbuf_ncreate(pos, btn->str->len - btn->amt_read,
+                                         pool);
+      btn->amt_read = btn->str->len;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_stream_t *
 svn_stream_from_stringbuf(svn_stringbuf_t *str,
                           apr_pool_t *pool)
@@ -1696,6 +1739,7 @@ svn_stream_from_stringbuf(svn_stringbuf_t *str,
   svn_stream_set_seek(stream, seek_handler_stringbuf);
   svn_stream_set_data_available(stream, data_available_handler_stringbuf);
   svn_stream__set_is_buffered(stream, is_buffered_handler_stringbuf);
+  svn_stream_set_readline(stream, readline_handler_stringbuf);
   return stream;
 }
 
@@ -1780,6 +1824,37 @@ is_buffered_handler_string(void *baton)
   return TRUE;
 }
 
+static svn_error_t *
+readline_handler_string(void *baton,
+                        svn_stringbuf_t **stringbuf,
+                        const char *eol,
+                        svn_boolean_t *eof,
+                        apr_pool_t *pool)
+{
+  struct string_stream_baton *btn = baton;
+  const char *pos = btn->str->data + btn->amt_read;
+  const char *eol_pos;
+
+  eol_pos = strstr(pos, eol);
+  if (eol_pos)
+    {
+      apr_size_t eol_len = strlen(eol);
+
+      *eof = FALSE;
+      *stringbuf = svn_stringbuf_ncreate(pos, eol_pos - pos, pool);
+      btn->amt_read += (eol_pos - pos + eol_len);
+    }
+  else
+    {
+      *eof = TRUE;
+      *stringbuf = svn_stringbuf_ncreate(pos, btn->str->len - btn->amt_read,
+                                         pool);
+      btn->amt_read = btn->str->len;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_stream_t *
 svn_stream_from_string(const svn_string_t *str,
                        apr_pool_t *pool)
@@ -1800,6 +1875,7 @@ svn_stream_from_string(const svn_string_t *str,
   svn_stream_set_skip(stream, skip_handler_string);
   svn_stream_set_data_available(stream, data_available_handler_string);
   svn_stream__set_is_buffered(stream, is_buffered_handler_string);
+  svn_stream_set_readline(stream, readline_handler_string);
   return stream;
 }
 
@@ -2061,6 +2137,21 @@ is_buffered_lazyopen(void *baton)
   return svn_stream__is_buffered(b->real_stream);
 }
 
+/* Implements svn_stream_readline_fn_t */
+static svn_error_t *
+readline_handler_lazyopen(void *baton,
+                          svn_stringbuf_t **stringbuf,
+                          const char *eol,
+                          svn_boolean_t *eof,
+                          apr_pool_t *pool)
+{
+  lazyopen_baton_t *b = baton;
+
+  SVN_ERR(lazyopen_if_unopened(b));
+  return svn_error_trace(svn_stream_readline(b->real_stream, stringbuf,
+                                             eol, eof, pool));
+}
+
 svn_stream_t *
 svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
                            void *open_baton,
@@ -2086,6 +2177,7 @@ svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
   svn_stream_set_seek(stream, seek_handler_lazyopen);
   svn_stream_set_data_available(stream, data_available_handler_lazyopen);
   svn_stream__set_is_buffered(stream, is_buffered_lazyopen);
+  svn_stream_set_readline(stream, readline_handler_lazyopen);
 
   return stream;
 }
