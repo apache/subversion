@@ -62,6 +62,7 @@ struct svn_stream_t {
   svn_stream_seek_fn_t seek_fn;
   svn_stream_data_available_fn_t data_available_fn;
   svn_stream__is_buffered_fn_t is_buffered_fn;
+  svn_stream_readline_fn_t readline_fn;
   apr_file_t *file; /* Maybe NULL */
 };
 
@@ -143,6 +144,13 @@ svn_stream__set_is_buffered(svn_stream_t *stream,
                             svn_stream__is_buffered_fn_t is_buffered_fn)
 {
   stream->is_buffered_fn = is_buffered_fn;
+}
+
+void
+svn_stream_set_readline(svn_stream_t *stream,
+                        svn_stream_readline_fn_t readline_fn)
+{
+  stream->readline_fn = readline_fn;
 }
 
 /* Standard implementation for svn_stream_read_full() based on
@@ -483,7 +491,7 @@ stream_readline_chunky(svn_stringbuf_t **stringbuf,
   return svn_error_trace(svn_stream_skip(stream, total_parsed));
 }
 
-/* Guts of svn_stream_readline().
+/* Default implementation for svn_stream_readline().
  * Returns the line read from STREAM in *STRINGBUF, and indicates
  * end-of-file in *EOF.  EOL must point to the desired end-of-line
  * indicator.  STRINGBUF is allocated in POOL. */
@@ -532,8 +540,18 @@ svn_stream_readline(svn_stream_t *stream,
                     svn_boolean_t *eof,
                     apr_pool_t *pool)
 {
-  return svn_error_trace(stream_readline(stringbuf, eof, eol, stream,
-                                         pool));
+  if (stream->readline_fn)
+    {
+      /* Use the specific implementation when it's available. */
+      SVN_ERR(stream->readline_fn(stream->baton, stringbuf, eol, eof, pool));
+    }
+  else
+    {
+      /* Use the default implementation. */
+      SVN_ERR(stream_readline(stringbuf, eof, eol, stream, pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
