@@ -1034,6 +1034,67 @@ is_buffered_handler_apr(void *baton)
   return (apr_file_flags_get(btn->file) & APR_BUFFERED) != 0;
 }
 
+static svn_error_t *
+readline_handler_apr(void *baton,
+                     svn_stringbuf_t **stringbuf,
+                     const char *eol,
+                     svn_boolean_t *eof,
+                     apr_pool_t *pool)
+{
+  struct baton_apr *btn = baton;
+  apr_size_t eol_len = strlen(eol);
+  apr_off_t offset;
+  svn_stringbuf_t *buf;
+
+  SVN_ERR(svn_io_file_get_offset(&offset, btn->file, pool));
+
+  buf = svn_stringbuf_create_ensure(SVN__LINE_CHUNK_SIZE, pool);
+  while (1)
+    {
+      apr_size_t bytes_read;
+      svn_boolean_t hit_eof;
+      const char *search_start;
+      const char *eol_pos;
+
+      /* We look for the EOL in the new data plus the last part of the
+         previous chunk because the EOL may span over the boundary
+         between both chunks. */
+      if (buf->len < eol_len)
+        search_start = buf->data;
+      else
+        search_start = buf->data + buf->len - eol_len;
+
+      SVN_ERR(svn_io_file_read_full2(btn->file, buf->data + buf->len,
+                                     buf->blocksize - buf->len - 1,
+                                     &bytes_read, &hit_eof, pool));
+      buf->len += bytes_read;
+      buf->data[buf->len] = '\0';
+
+      /* Do we have the EOL now? */
+      eol_pos = strstr(search_start, eol);
+      if (eol_pos)
+        {
+          svn_stringbuf_chop(buf, buf->data + buf->len - eol_pos);
+          /* Seek to the first position behind the EOL. */
+          offset += (buf->len + eol_len);
+          SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &offset, pool));
+
+          *eof = FALSE;
+          *stringbuf = buf;
+          return SVN_NO_ERROR;
+        }
+      else if (eol_pos == NULL && hit_eof)
+        {
+          *eof = TRUE;
+          *stringbuf = buf;
+          return SVN_NO_ERROR;
+        }
+
+      /* Prepare to read the next chunk. */
+      svn_stringbuf_ensure(buf, buf->blocksize + SVN__LINE_CHUNK_SIZE);
+    }
+}
+
 svn_error_t *
 svn_stream_open_readonly(svn_stream_t **stream,
                          const char *path,
@@ -1113,6 +1174,7 @@ make_stream_from_apr_file(apr_file_t *file,
       svn_stream_set_skip(stream, skip_handler_apr);
       svn_stream_set_mark(stream, mark_handler_apr);
       svn_stream_set_seek(stream, seek_handler_apr);
+      svn_stream_set_readline(stream, readline_handler_apr);
     }
 
   svn_stream_set_data_available(stream, data_available_handler_apr);
