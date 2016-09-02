@@ -128,11 +128,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1715777
-   Convert assertion failure to error if configuration file contains just one
-   0xEE character.
-   Justification:
-     Assertion on invalid config is not good behavior.
-   Votes:
-     +1: ivan, rhuijben, kotkov
