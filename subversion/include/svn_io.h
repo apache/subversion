@@ -918,6 +918,17 @@ typedef svn_error_t *(*svn_stream_seek_fn_t)(void *baton,
 typedef svn_error_t *(*svn_stream_data_available_fn_t)(void *baton,
                                               svn_boolean_t *data_available);
 
+/** Readline handler function for a generic stream. @see svn_stream_t and
+ * svn_stream_readline().
+ *
+ * @since New in 1.10.
+ */
+typedef svn_error_t *(*svn_stream_readline_fn_t)(void *baton,
+                                                 svn_stringbuf_t **stringbuf,
+                                                 const char *eol,
+                                                 svn_boolean_t *eof,
+                                                 apr_pool_t *pool);
+
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
 svn_stream_create(void *baton,
@@ -991,6 +1002,14 @@ svn_stream_set_seek(svn_stream_t *stream,
 void
 svn_stream_set_data_available(svn_stream_t *stream,
                               svn_stream_data_available_fn_t data_available);
+
+/** Set @a stream's readline function to @a readline_fn
+ *
+ * @since New in 1.10.
+ */
+void
+svn_stream_set_readline(svn_stream_t *stream,
+                        svn_stream_readline_fn_t readline_fn);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
