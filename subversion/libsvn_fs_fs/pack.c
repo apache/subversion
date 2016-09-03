@@ -221,7 +221,7 @@ typedef struct pack_context_t
    * to NULL that we already processed. */
   apr_array_header_t *reps;
 
-  /* array of int, marking for each revision, the which offset their items
+  /* array of int, marking for each revision, at which offset their items
    * begin in REPS.  Will be filled in phase 2 and be cleared after
    * each revision range. */
   apr_array_header_t *rev_offsets;
