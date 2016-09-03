@@ -355,6 +355,7 @@ reset_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_file_trunc(context->reps_file, 0, pool));
 
   svn_pool_clear(context->info_pool);
+  context->paths = svn_prefix_tree__create(context->info_pool);
 
   return SVN_NO_ERROR;
 }
