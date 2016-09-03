@@ -442,7 +442,7 @@ get_writable_proto_rev(apr_file_t **file,
   /* Now open the prototype revision file and seek to the end. */
   err = svn_io_file_open(file,
                          svn_fs_fs__path_txn_proto_rev(fs, txn_id, pool),
-                         APR_READ | APR_WRITE | APR_BUFFERED, APR_OS_DEFAULT,
+                         APR_WRITE | APR_BUFFERED, APR_OS_DEFAULT,
                          pool);
 
   /* You might expect that we could dispense with the following seek
