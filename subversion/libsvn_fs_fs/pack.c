@@ -1574,6 +1574,7 @@ pack_log_addressed(svn_fs_t *fs,
     if (   APR_ARRAY_IDX(max_ids, i, apr_uint64_t)
         <= (apr_uint64_t)max_items - item_count)
       {
+        item_count += APR_ARRAY_IDX(max_ids, i, apr_uint64_t);
         context.end_rev++;
       }
     else
