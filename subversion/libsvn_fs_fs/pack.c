@@ -1451,17 +1451,19 @@ append_revision(pack_context_t *context,
   apr_off_t offset = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_fs_fs__revision_file_t *rev_file;
-  svn_filesize_t revfile_size;
+  svn_filesize_t revdata_size;
 
-  /* Copy all the bits from the rev file to the end of the pack file. */
+  /* Copy all non-index contents the rev file to the end of the pack file. */
   SVN_ERR(svn_fs_fs__open_pack_or_rev_file(&rev_file, context->fs,
                                            context->start_rev, pool,
                                            iterpool));
-  /* Get the size of the file. */
-  SVN_ERR(svn_io_file_size_get(&revfile_size, rev_file->file, pool));
+  SVN_ERR(svn_fs_fs__auto_read_footer(rev_file));
+  revdata_size = rev_file->l2p_offset;
 
+  SVN_ERR(svn_io_file_aligned_seek(rev_file->file, ffd->block_size, NULL, 0,
+                                   iterpool));
   SVN_ERR(copy_file_data(context, context->pack_file, rev_file->file,
-                         revfile_size, iterpool));
+                         revdata_size, iterpool));
 
   /* mark the start of a new revision */
   SVN_ERR(svn_fs_fs__l2p_proto_index_add_revision(context->proto_l2p_index,
@@ -1469,7 +1471,7 @@ append_revision(pack_context_t *context,
 
   /* read the phys-to-log index file until we covered the whole rev file.
    * That index contains enough info to build both target indexes from it. */
-  while (offset < revfile_size)
+  while (offset < revdata_size)
     {
       /* read one cluster */
       int i;
@@ -1493,7 +1495,7 @@ append_revision(pack_context_t *context,
 
           /* process entry while inside the rev file */
           offset = entry->offset;
-          if (offset < revfile_size)
+          if (offset < revdata_size)
             {
               entry->offset += context->pack_offset;
               offset += entry->size;
@@ -1507,7 +1509,7 @@ append_revision(pack_context_t *context,
     }
 
   svn_pool_destroy(iterpool);
-  context->pack_offset += revfile_size;
+  context->pack_offset += revdata_size;
 
   SVN_ERR(svn_fs_fs__close_revision_file(rev_file));
 
