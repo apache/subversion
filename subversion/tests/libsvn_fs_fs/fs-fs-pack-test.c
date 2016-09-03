@@ -690,7 +690,7 @@ recover_fully_packed(const svn_test_opts_t *opts,
 
 /* ------------------------------------------------------------------------ */
 /* Regression test for issue #4320 (fsfs file-hinting fails when reading a rep
-   from the transaction that is commiting rev = SHARD_SIZE). */
+   from the transaction that is committing rev = SHARD_SIZE). */
 #define REPO_NAME "test-repo-file-hint-at-shard-boundary"
 #define SHARD_SIZE 4
 #define MAX_REV (SHARD_SIZE - 1)

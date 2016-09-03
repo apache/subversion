@@ -865,7 +865,7 @@ aligned_seek_test(apr_pool_t *pool)
   SVN_ERR(svn_io_file_close(f, pool));
 
   /* now, try read data with buffering disabled.
-     That are a special case because APR reports a buffer size of 0. */
+     That is a special case because APR reports a buffer size of 0. */
   SVN_ERR(svn_io_file_open(&f, tmp_file, APR_READ, APR_OS_DEFAULT, pool));
   SVN_ERR(aligned_read(f, contents,   0x1000, FALSE, pool));
   SVN_ERR(aligned_read(f, contents,   0x8000, FALSE, pool));
