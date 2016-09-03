@@ -29,6 +29,7 @@
 #include "../../libsvn_fs_fs/fs.h"
 #include "../../libsvn_fs_fs/fs_fs.h"
 #include "../../libsvn_fs_fs/low_level.h"
+#include "../../libsvn_fs_fs/pack.h"
 #include "../../libsvn_fs_fs/util.h"
 
 #include "svn_hash.h"
@@ -101,17 +102,16 @@ pack_notify(void *baton,
 
 #define R1_LOG_MSG "Let's serf"
 
-/* Create a packed filesystem in DIR.  Set the shard size to
-   SHARD_SIZE and create NUM_REVS number of revisions (in addition to
-   r0).  Use POOL for allocations.  After this function successfully
-   completes, the filesystem's youngest revision number will be the
-   same as NUM_REVS.  */
+/* Create a filesystem in DIR.  Set the shard size to SHARD_SIZE and create
+   NUM_REVS number of revisions (in addition to r0).  Use POOL for
+   allocations.  After this function successfully completes, the filesystem's
+   youngest revision number will be NUM_REVS.  */
 static svn_error_t *
-create_packed_filesystem(const char *dir,
-                         const svn_test_opts_t *opts,
-                         svn_revnum_t num_revs,
-                         int shard_size,
-                         apr_pool_t *pool)
+create_non_packed_filesystem(const char *dir,
+                             const svn_test_opts_t *opts,
+                             svn_revnum_t num_revs,
+                             int shard_size,
+                             apr_pool_t *pool)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
@@ -119,7 +119,6 @@ create_packed_filesystem(const char *dir,
   const char *conflict;
   svn_revnum_t after_rev;
   apr_pool_t *subpool = svn_pool_create(pool);
-  struct pack_notify_baton pnb;
   apr_pool_t *iterpool;
   apr_hash_t *fs_config;
 
@@ -165,6 +164,28 @@ create_packed_filesystem(const char *dir,
     }
   svn_pool_destroy(iterpool);
   svn_pool_destroy(subpool);
+
+  /* Done */
+  return SVN_NO_ERROR;
+}
+
+/* Create a packed filesystem in DIR.  Set the shard size to
+   SHARD_SIZE and create NUM_REVS number of revisions (in addition to
+   r0).  Use POOL for allocations.  After this function successfully
+   completes, the filesystem's youngest revision number will be the
+   same as NUM_REVS.  */
+static svn_error_t *
+create_packed_filesystem(const char *dir,
+                         const svn_test_opts_t *opts,
+                         svn_revnum_t num_revs,
+                         int shard_size,
+                         apr_pool_t *pool)
+{
+  struct pack_notify_baton pnb;
+
+  /* Create the repo and fill it. */
+  SVN_ERR(create_non_packed_filesystem(dir, opts, num_revs, shard_size,
+                                       pool));
 
   /* Now pack the FS */
   pnb.expected_shard = 0;
@@ -1740,6 +1761,56 @@ compare_0_length_rep(const svn_test_opts_t *opts,
 
 #undef REPO_NAME
 
+/* ------------------------------------------------------------------------ */
+/* Verify that the format 7 pack logic works even if we can't fit all index
+   metadata into memory. */
+#define REPO_NAME "test-repo-pack-with-limited-memory"
+#define SHARD_SIZE 4
+#define MAX_REV (2 * SHARD_SIZE - 1)
+static svn_error_t *
+pack_with_limited_memory(const svn_test_opts_t *opts,
+                         apr_pool_t *pool)
+{
+  apr_size_t max_mem;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* Bail (with success) on known-untestable scenarios */
+  if (opts->server_minor_version && (opts->server_minor_version < 9))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "pre-1.9 SVN doesn't support reordering packs");
+
+  /* Run with an increasing memory allowance such that we cover all
+     splitting scenarios. */
+  for (max_mem = 350; max_mem < 8000; max_mem += max_mem / 2)
+    {
+      const char *dir;
+      svn_fs_t *fs;
+
+      svn_pool_clear(iterpool);
+
+      /* Create a filesystem. */
+      dir = apr_psprintf(iterpool, "%s-%d", REPO_NAME, (int)max_mem);
+      SVN_ERR(create_non_packed_filesystem(dir, opts, MAX_REV, SHARD_SIZE,
+                                           iterpool));
+
+      /* Pack it with a narrow memory budget. */
+      SVN_ERR(svn_fs_open2(&fs, dir, NULL, iterpool, iterpool));
+      SVN_ERR(svn_fs_fs__pack(fs, max_mem, NULL, NULL, NULL, NULL,
+                              iterpool));
+
+      /* To be sure: Verify that we didn't break the repo. */
+      SVN_ERR(svn_fs_verify(dir, NULL, 0, MAX_REV, NULL, NULL, NULL, NULL,
+                            iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+#undef REPO_NAME
+#undef MAX_REV
+#undef SHARD_SIZE
+
 
 /* The test table.  */
 
@@ -1790,6 +1861,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "delta chains starting with PLAIN, issue #4577"),
     SVN_TEST_OPTS_PASS(compare_0_length_rep,
                        "compare empty PLAIN and non-existent reps"),
+    SVN_TEST_OPTS_PASS(pack_with_limited_memory,
+                       "pack with limited memory for metadata"),
     SVN_TEST_NULL
   };
 

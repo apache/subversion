@@ -1840,6 +1840,7 @@ struct pack_baton
   void *notify_baton;
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
+  size_t max_mem;
 
   /* Additional entries valid when entering pack_shard(). */
   const char *revs_dir;
@@ -1964,7 +1965,7 @@ pack_shard(struct pack_baton *baton,
   /* pack the revision content */
   SVN_ERR(pack_rev_shard(baton->fs, rev_pack_file_dir, baton->rev_shard_path,
                          baton->shard, ffd->max_files_per_dir,
-                         DEFAULT_MAX_MEM, ffd->flush_to_disk,
+                         baton->max_mem, ffd->flush_to_disk,
                          baton->cancel_func, baton->cancel_baton, pool));
 
   /* For newer repo formats, we only acquired the pack lock so far.
@@ -2074,6 +2075,7 @@ pack_body(void *baton,
 
 svn_error_t *
 svn_fs_fs__pack(svn_fs_t *fs,
+                apr_size_t max_mem,
                 svn_fs_pack_notify_t notify_func,
                 void *notify_baton,
                 svn_cancel_func_t cancel_func,
@@ -2119,6 +2121,7 @@ svn_fs_fs__pack(svn_fs_t *fs,
   pb.notify_baton = notify_baton;
   pb.cancel_func = cancel_func;
   pb.cancel_baton = cancel_baton;
+  pb.max_mem = max_mem ? max_mem : DEFAULT_MAX_MEM;
 
   if (ffd->format >= SVN_FS_FS__MIN_PACK_LOCK_FORMAT)
     {
