@@ -708,7 +708,7 @@ tweak_path_for_ordering(const char *original,
  */
 static svn_error_t *
 copy_node_to_temp(pack_context_t *context,
-                  apr_file_t *rev_file,
+                  svn_fs_fs__revision_file_t *rev_file,
                   svn_fs_fs__p2l_entry_t *entry,
                   apr_pool_t *pool)
 {
@@ -716,13 +716,10 @@ copy_node_to_temp(pack_context_t *context,
                                          sizeof(*path_order));
   node_revision_t *noderev;
   const char *sort_path;
-  svn_stream_t *stream;
   apr_off_t source_offset = entry->offset;
 
   /* read & parse noderev */
-  stream = svn_stream_from_aprfile2(rev_file, TRUE, pool);
-  SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, pool, pool));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_fs_fs__read_noderev(&noderev, rev_file->stream, pool, pool));
 
   /* create a copy of ENTRY, make it point to the copy destination and
    * store it in CONTEXT */
@@ -732,9 +729,9 @@ copy_node_to_temp(pack_context_t *context,
   add_item_rep_mapping(context, entry);
 
   /* copy the noderev to our temp file */
-  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &source_offset, pool));
-  SVN_ERR(copy_file_data(context, context->reps_file, rev_file, entry->size,
-                         pool));
+  SVN_ERR(svn_io_file_seek(rev_file->file, APR_SET, &source_offset, pool));
+  SVN_ERR(copy_file_data(context, context->reps_file, rev_file->file,
+                         entry->size, pool));
 
   /* if the node has a data representation, make that the node's "base".
    * This will (often) cause the noderev to be placed right in front of
@@ -1392,7 +1389,7 @@ pack_range(pack_context_t *context,
                     SVN_ERR(copy_rep_to_temp(context, rev_file->file, entry,
                                              iterpool2));
                   else if (entry->type == SVN_FS_FS__ITEM_TYPE_NODEREV)
-                    SVN_ERR(copy_node_to_temp(context, rev_file->file, entry,
+                    SVN_ERR(copy_node_to_temp(context, rev_file, entry,
                                               iterpool2));
                   else
                     SVN_ERR_ASSERT(entry->type == SVN_FS_FS__ITEM_TYPE_UNUSED);
