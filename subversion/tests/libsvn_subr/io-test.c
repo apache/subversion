@@ -1102,6 +1102,51 @@ test_file_rename2(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_apr_trunc_workaround(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *tmp_file;
+  apr_file_t *f;
+  apr_size_t len;
+  apr_off_t offset;
+  char dummy;
+
+  /* create a temp folder & schedule it for automatic cleanup */
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_apr_trunc_workaround",
+                                  pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  /* create an r/w file */
+  tmp_file = svn_dirent_join(tmp_dir, "file", pool);
+  SVN_ERR(svn_io_file_open(&f, tmp_file,
+                           APR_READ | APR_WRITE | APR_BUFFERED | APR_CREATE |
+                              APR_TRUNCATE,
+                           APR_OS_DEFAULT, pool));
+
+  /* write some content and put it internally into read mode */
+  len = 10;
+  SVN_ERR(svn_io_file_write(f, "0123456789", &len, pool));
+
+  offset = 0;
+  SVN_ERR(svn_io_file_seek(f, APR_SET, &offset, pool));
+  SVN_ERR(svn_io_file_getc(&dummy, f, pool));
+
+  /* clear the file and write some new content */
+  SVN_ERR(svn_io_file_trunc(f, 0, pool));
+  len = 3;
+  SVN_ERR(svn_io_file_write(f, "abc", &len, pool));
+
+  /* we should now be positioned at the end of the new content */
+  offset = 0;
+  SVN_ERR(svn_io_file_seek(f, APR_CUR, &offset, pool));
+  SVN_TEST_ASSERT(offset == (int)len);
+
+  return SVN_NO_ERROR;  
+}
+
 /* The test table.  */
 
 static int max_threads = 3;
@@ -1137,6 +1182,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_io_file_readline()"),
     SVN_TEST_PASS2(test_open_uniquely_named,
                    "test svn_io_open_uniquely_named()"),
+    SVN_TEST_PASS2(test_apr_trunc_workaround,
+                   "test workaround for APR in svn_io_file_trunc"),
     SVN_TEST_NULL
   };
 
