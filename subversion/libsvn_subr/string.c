@@ -479,7 +479,7 @@ svn_stringbuf_set(svn_stringbuf_t *str, const char *value)
 {
   apr_size_t amt = strlen(value);
 
-  svn_stringbuf_ensure(str, amt);
+  membuf_ensure(&str->data, &str->blocksize, amt + 1, str->pool);
   memcpy(str->data, value, amt + 1);
   str->len = amt;
 }

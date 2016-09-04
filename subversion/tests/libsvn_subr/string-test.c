@@ -893,6 +893,33 @@ test_cstring_skip_prefix(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_stringbuf_set(apr_pool_t *pool)
+{
+  svn_stringbuf_t *str = svn_stringbuf_create_empty(pool);
+
+  SVN_TEST_STRING_ASSERT(str->data, "");
+  SVN_TEST_INT_ASSERT(str->len, 0);
+
+  svn_stringbuf_set(str, "0123456789");
+  SVN_TEST_STRING_ASSERT(str->data, "0123456789");
+  SVN_TEST_INT_ASSERT(str->len, 10);
+
+  svn_stringbuf_set(str, "");
+  SVN_TEST_STRING_ASSERT(str->data, "");
+  SVN_TEST_INT_ASSERT(str->len, 0);
+
+  svn_stringbuf_set(str, "0123456789abcdef");
+  SVN_TEST_STRING_ASSERT(str->data, "0123456789abcdef");
+  SVN_TEST_INT_ASSERT(str->len, 16);
+
+  svn_stringbuf_set(str, "t");
+  SVN_TEST_STRING_ASSERT(str->data, "t");
+  SVN_TEST_INT_ASSERT(str->len, 1);
+
+  return SVN_NO_ERROR;
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -969,6 +996,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test string matching"),
     SVN_TEST_PASS2(test_cstring_skip_prefix,
                    "test svn_cstring_skip_prefix()"),
+    SVN_TEST_PASS2(test_stringbuf_set,
+                   "test svn_stringbuf_set()"),
     SVN_TEST_NULL
   };
 
