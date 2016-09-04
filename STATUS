@@ -114,6 +114,22 @@ Candidate changes:
   Votes:
     +1 (non-binding): luke1410
 
+ * r1759116, r1759116, r1759122, r1759123, r1759124
+   Fix FSFS format 7 packing for revisions packs with lots of changes.
+   Justification:
+     Problem occurred in at least two user repositories.  Without the fix,
+     format 7 repositories with an exceptionally large number of changes in
+     a pack cannot be packed - which renders using f7 pointless for those
+     users.
+   Branch:
+     ^/subversion/branches/1.9.x-fsfs-pack-fixes
+   Notes:
+     r1759116 adds a workaround for trunc() corrupting apr_file_t internal state.
+     r1759116-23 provide the actual fixes.
+     r1759124 adds a regression test with the necessary internal API changes. 
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
