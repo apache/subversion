@@ -227,7 +227,6 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
   const char *local_relpath;
   const char *pristine_abspath;
 
-  SVN_ERR_ASSERT(contents != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
   /* Some 1.6-to-1.7 wc upgrades created rows without checksums and
