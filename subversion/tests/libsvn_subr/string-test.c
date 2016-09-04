@@ -873,7 +873,7 @@ test_string_matching(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_string_skip_prefix(apr_pool_t *pool)
+test_cstring_skip_prefix(apr_pool_t *pool)
 {
   SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("12345", "12345"),
                          "");
@@ -967,7 +967,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test string similarity scores"),
     SVN_TEST_PASS2(test_string_matching,
                    "test string matching"),
-    SVN_TEST_PASS2(test_string_skip_prefix,
+    SVN_TEST_PASS2(test_cstring_skip_prefix,
                    "test svn_cstring_skip_prefix()"),
     SVN_TEST_NULL
   };
