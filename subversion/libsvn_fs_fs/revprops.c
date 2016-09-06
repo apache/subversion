@@ -1286,6 +1286,7 @@ svn_fs_fs__copy_revprops(const char *pack_file_dir,
     {
       const char *path;
       svn_stream_t *stream;
+      apr_file_t *file;
 
       svn_pool_clear(iterpool);
 
@@ -1294,8 +1295,11 @@ svn_fs_fs__copy_revprops(const char *pack_file_dir,
                              iterpool);
 
       /* Copy all the bits from the non-packed revprop file to the end of
-       * the pack file. */
-      SVN_ERR(svn_stream_open_readonly(&stream, path, iterpool, iterpool));
+       * the pack file.  Use unbuffered apr_file_t since we're going to
+       * write using 16kb chunks. */
+      SVN_ERR(svn_io_file_open(&file, path, APR_READ, APR_OS_DEFAULT,
+                               iterpool));
+      stream = svn_stream_from_aprfile2(file, FALSE, iterpool);
       SVN_ERR(svn_stream_copy3(stream, pack_stream,
                                cancel_func, cancel_baton, iterpool));
     }

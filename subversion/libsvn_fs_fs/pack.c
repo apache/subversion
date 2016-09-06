@@ -1732,6 +1732,7 @@ pack_phys_addressed(const char *pack_file_dir,
       svn_stream_t *rev_stream;
       const char *path;
       apr_off_t offset;
+      apr_file_t *rev_file;
 
       svn_pool_clear(iterpool);
 
@@ -1745,8 +1746,12 @@ pack_phys_addressed(const char *pack_file_dir,
       SVN_ERR(svn_stream_printf(manifest_stream, iterpool,
                                 "%" APR_OFF_T_FMT "\n", offset));
 
-      /* Copy all the bits from the rev file to the end of the pack file. */
-      SVN_ERR(svn_stream_open_readonly(&rev_stream, path, iterpool, iterpool));
+      /* Copy all the bits from the rev file to the end of the pack file.
+       * Use unbuffered apr_file_t since we're going to write using 16kb
+       * chunks. */
+      SVN_ERR(svn_io_file_open(&rev_file, path, APR_READ, APR_OS_DEFAULT,
+                               iterpool));
+      rev_stream = svn_stream_from_aprfile2(rev_file, FALSE, iterpool);
       SVN_ERR(svn_stream_copy3(rev_stream,
                                svn_stream_from_aprfile2(pack_file, TRUE,
                                                         iterpool),
