@@ -1748,7 +1748,8 @@ pack_phys_addressed(const char *pack_file_dir,
       /* Copy all the bits from the rev file to the end of the pack file. */
       SVN_ERR(svn_stream_open_readonly(&rev_stream, path, iterpool, iterpool));
       SVN_ERR(svn_stream_copy3(rev_stream,
-                               svn_stream_from_aprfile2(pack_file, TRUE, pool),
+                               svn_stream_from_aprfile2(pack_file, TRUE,
+                                                        iterpool),
                                cancel_func, cancel_baton, iterpool));
     }
 
