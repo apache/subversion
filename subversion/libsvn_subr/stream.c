@@ -854,18 +854,76 @@ data_available_handler_apr(void *baton, svn_boolean_t *data_available)
 }
 
 static svn_error_t *
-readline_handler_apr(void *baton,
+readline_apr_lf(apr_file_t *file,
+                svn_stringbuf_t **stringbuf,
+                svn_boolean_t *eof,
+                apr_pool_t *pool)
+{
+  svn_stringbuf_t *buf;
+
+  buf = svn_stringbuf_create_ensure(SVN__LINE_CHUNK_SIZE, pool);
+  while (1)
+  {
+    apr_status_t status;
+
+    status = apr_file_gets(buf->data + buf->len,
+                           (int) (buf->blocksize - buf->len),
+                           file);
+    buf->len += strlen(buf->data + buf->len);
+
+    if (APR_STATUS_IS_EOF(status))
+      {
+        /* apr_file_gets() keeps the newline; strip it if necessary. */
+        if (buf->len > 0 && buf->data[buf->len - 1] == '\n')
+          svn_stringbuf_chop(buf, 1);
+
+        *eof = TRUE;
+        *stringbuf = buf;
+        return SVN_NO_ERROR;
+      }
+    else if (status != APR_SUCCESS)
+      {
+        const char *fname;
+        svn_error_t *err = svn_io_file_name_get(&fname, file, pool);
+        if (err)
+          fname = NULL;
+        svn_error_clear(err);
+
+        if (fname)
+          return svn_error_wrap_apr(status,
+                                    _("Can't read a line from file '%s'"),
+                                    svn_dirent_local_style(fname, pool));
+        else
+          return svn_error_wrap_apr(status,
+                                    _("Can't read a line from stream"));
+      }
+
+    /* Do we have the EOL?  If yes, strip it and return. */
+    if (buf->len > 0 && buf->data[buf->len - 1] == '\n')
+      {
+        svn_stringbuf_chop(buf, 1);
+        *eof = FALSE;
+        *stringbuf = buf;
+        return SVN_NO_ERROR;
+      }
+
+    /* Otherwise, prepare to read the next chunk. */
+    svn_stringbuf_ensure(buf, buf->blocksize + SVN__LINE_CHUNK_SIZE);
+  }
+}
+
+static svn_error_t *
+readline_apr_generic(apr_file_t *file,
                      svn_stringbuf_t **stringbuf,
                      const char *eol,
                      svn_boolean_t *eof,
                      apr_pool_t *pool)
 {
-  struct baton_apr *btn = baton;
   apr_size_t eol_len = strlen(eol);
   apr_off_t offset;
   svn_stringbuf_t *buf;
 
-  SVN_ERR(svn_io_file_get_offset(&offset, btn->file, pool));
+  SVN_ERR(svn_io_file_get_offset(&offset, file, pool));
 
   buf = svn_stringbuf_create_ensure(SVN__LINE_CHUNK_SIZE, pool);
   while (1)
@@ -883,7 +941,7 @@ readline_handler_apr(void *baton,
       else
         search_start = buf->data + buf->len - eol_len;
 
-      SVN_ERR(svn_io_file_read_full2(btn->file, buf->data + buf->len,
+      SVN_ERR(svn_io_file_read_full2(file, buf->data + buf->len,
                                      buf->blocksize - buf->len - 1,
                                      &bytes_read, &hit_eof, pool));
       buf->len += bytes_read;
@@ -896,7 +954,7 @@ readline_handler_apr(void *baton,
           svn_stringbuf_chop(buf, buf->data + buf->len - eol_pos);
           /* Seek to the first position behind the EOL. */
           offset += (buf->len + eol_len);
-          SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &offset, pool));
+          SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
 
           *eof = FALSE;
           *stringbuf = buf;
@@ -911,6 +969,29 @@ readline_handler_apr(void *baton,
 
       /* Prepare to read the next chunk. */
       svn_stringbuf_ensure(buf, buf->blocksize + SVN__LINE_CHUNK_SIZE);
+    }
+}
+
+static svn_error_t *
+readline_handler_apr(void *baton,
+                     svn_stringbuf_t **stringbuf,
+                     const char *eol,
+                     svn_boolean_t *eof,
+                     apr_pool_t *pool)
+{
+  struct baton_apr *btn = baton;
+
+  if (eol[0] == '\n' && eol[1] == '\0')
+    {
+      /* Optimize the common case when we're looking for an LF ("\n")
+         end-of-line sequence by using apr_file_gets(). */
+      return svn_error_trace(readline_apr_lf(btn->file, stringbuf,
+                                             eof, pool));
+    }
+  else
+    {
+      return svn_error_trace(readline_apr_generic(btn->file, stringbuf,
+                                                  eol, eof, pool));
     }
 }
 
