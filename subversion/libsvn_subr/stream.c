@@ -321,9 +321,7 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
 
 /* Default implementation for svn_stream_readline().
  * Returns the line read from STREAM in *STRINGBUF, and indicates
- * end-of-file in *EOF.  If DETECT_EOL is TRUE, the end-of-line indicator
- * is detected automatically and returned in *EOL.
- * If DETECT_EOL is FALSE, *EOL must point to the desired end-of-line
+ * end-of-file in *EOF.  EOL must point to the desired end-of-line
  * indicator.  STRINGBUF is allocated in POOL. */
 static svn_error_t *
 stream_readline_bytewise(svn_stringbuf_t **stringbuf,
