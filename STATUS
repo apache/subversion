@@ -125,7 +125,7 @@ Candidate changes:
      Very simple fix.  Some very old repositories might contain all-0 SHA1
      due to bugs in older releases.  Handle them gracefulle and don't crash.
    Votes:
-     +1: stefan2
+     +1: stefan2, ivan
 
 Veto-blocked changes:
 =====================
