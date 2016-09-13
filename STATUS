@@ -119,6 +119,26 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1734106
+   Fix a bug where the wrong source left revision was recorded in a tree
+   conflict.
+   Justification:
+     Conflict info recorded in WC should be correct.
+     Fix will help users who upgrade to 1.10 with conflicts recorded in WC.
+     Also, merging this allows r1760570 to merge cleanly.
+   Votes:
+     +1: stsp
+ 
+ * r1760570
+   Fix a spurious 'incoming edit' tree conflict with an unmodified file.
+   Justification:
+     Tree conflicts should not be raised unnecessarily.
+   Notes:
+     Depends on r1734106 to be merged first to avoid a text conflict
+     in the test suite code.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
