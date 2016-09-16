@@ -678,7 +678,7 @@ find_deleted_rev(void *baton,
           if (b->related_repos_relpath != NULL &&
               b->related_repos_peg_rev != SVN_INVALID_REVNUM)
             {
-              svn_client__pathrev_t *yca_loc = NULL;
+              svn_client__pathrev_t *yca_loc;
               svn_error_t *err;
 
               /* We found a deleted node which occupies the correct path.
@@ -696,10 +696,14 @@ find_deleted_rev(void *baton,
                 {
                   /* ### Happens for moves within other moves and copies. */
                   if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
-                    svn_error_clear(err);
+                    {
+                      svn_error_clear(err);
+                      yca_loc = NULL;
+                    }
                   else
                     return svn_error_trace(err);
                 }
+
               deleted_node_found = (yca_loc != NULL);
             }
 
