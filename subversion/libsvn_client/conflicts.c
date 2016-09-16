@@ -5789,7 +5789,7 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
     }
 
   /* Resolve to current working copy state.
-  * svn_client__merge_locked() requires this. */
+   * svn_client__merge_locked() requires this. */
   err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
   if (err)
     goto unlock_wc;
