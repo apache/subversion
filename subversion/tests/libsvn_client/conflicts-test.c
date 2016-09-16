@@ -2204,7 +2204,7 @@ test_merge_incoming_move_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_TEST_ASSERT(!status->conflicted);
   SVN_TEST_ASSERT(status->node_status == svn_wc_status_added);
   SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
-  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
   SVN_TEST_ASSERT(status->copied);
   SVN_TEST_ASSERT(!status->switched);
   SVN_TEST_ASSERT(!status->file_external);
@@ -2213,10 +2213,7 @@ test_merge_incoming_move_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
 
   /* Ensure that the edited file has the expected content. */
-  child_path = svn_relpath_join(branch_path,
-                                svn_relpath_join(deleted_dir_name,
-                                                 deleted_dir_child,
-                                                 b->pool),
+  child_path = svn_relpath_join(moved_to_path, deleted_dir_child,
                                 b->pool);
   SVN_ERR(svn_stream_open_readonly(&stream, sbox_wc_path(b, child_path),
                                    b->pool, b->pool));
@@ -2294,7 +2291,7 @@ test_merge_incoming_move_dir2(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_TEST_ASSERT(!status->conflicted);
   SVN_TEST_ASSERT(status->node_status == svn_wc_status_added);
   SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
-  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
   SVN_TEST_ASSERT(status->copied);
   SVN_TEST_ASSERT(!status->switched);
   SVN_TEST_ASSERT(!status->file_external);
@@ -2303,10 +2300,7 @@ test_merge_incoming_move_dir2(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
 
   /* Ensure that the edited file has the expected content. */
-  child_path = svn_relpath_join(branch_path,
-                                svn_relpath_join(deleted_dir_name,
-                                                 deleted_dir_child,
-                                                 b->pool),
+  child_path = svn_relpath_join(moved_to_path, deleted_dir_child,
                                 b->pool);
   SVN_ERR(svn_stream_open_readonly(&stream, sbox_wc_path(b, child_path),
                                    b->pool, b->pool));
