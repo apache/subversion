@@ -678,19 +678,28 @@ find_deleted_rev(void *baton,
           if (b->related_repos_relpath != NULL &&
               b->related_repos_peg_rev != SVN_INVALID_REVNUM)
             {
-              svn_client__pathrev_t *yca_loc;
+              svn_client__pathrev_t *yca_loc = NULL;
+              svn_error_t *err;
 
               /* We found a deleted node which occupies the correct path.
                * To be certain that this is the deleted node we're looking for,
                * we must establish whether it is ancestrally related to the
                * "related node" specified in our baton. */
-              SVN_ERR(find_yca(&yca_loc,
-                               b->related_repos_relpath,
-                               b->related_repos_peg_rev,
-                               b->deleted_repos_relpath,
-                               log_entry->revision - 1,
-                               b->repos_root_url, b->repos_uuid,
-                               b->ctx, iterpool, iterpool));
+              err = find_yca(&yca_loc,
+                             b->related_repos_relpath,
+                             b->related_repos_peg_rev,
+                             b->deleted_repos_relpath,
+                             log_entry->revision - 1,
+                             b->repos_root_url, b->repos_uuid,
+                             b->ctx, iterpool, iterpool);
+              if (err)
+                {
+                  /* ### Happens for moves within other moves and copies. */
+                  if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+                    svn_error_clear(err);
+                  else
+                    return svn_error_trace(err);
+                }
               deleted_node_found = (yca_loc != NULL);
             }
 
