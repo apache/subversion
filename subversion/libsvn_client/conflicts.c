@@ -6548,12 +6548,39 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
 
   if (operation == svn_wc_operation_merge)
     {
-      /* Merge YCA_URL->VICTIM_URL into the incoming move target directory. */
+      const char *move_target_url;
+      svn_opt_revision_t incoming_new_opt_rev;
+
+      /* Revert the incoming move target directory. */
+      SVN_ERR(svn_wc_revert5(ctx->wc_ctx, moved_to_abspath, svn_depth_infinity,
+                             FALSE, NULL, TRUE, FALSE,
+                             NULL, NULL, /* no cancellation */
+                             ctx->notify_func2, ctx->notify_baton2,
+                             scratch_pool));
+
+      /* The move operation is not part of natural history. We must replicate
+       * this move in our history. Record a move in the working copy. */
+      err = svn_wc__move2(ctx->wc_ctx, local_abspath, moved_to_abspath,
+                          FALSE, /* this is not a meta-data only move */
+                          TRUE, /* allow mixed-revisions just in case */
+                          NULL, NULL, /* don't allow user to cancel here */
+                          ctx->notify_func2, ctx->notify_baton2,
+                          scratch_pool);
+      if (err)
+        goto unlock_wc;
+
+      /* Merge YCA_URL@YCA_REV->MOVE_TARGET_URL@MERGE_RIGHT into move target. */
+      move_target_url = apr_pstrcat(scratch_pool, repos_root_url, "/",
+                                    details->move_target_repos_relpath,
+                                    SVN_VA_NULL);
+      incoming_new_opt_rev.kind = svn_opt_revision_number;
+      incoming_new_opt_rev.value.number = incoming_new_pegrev;
       err = svn_client__merge_locked(&conflict_report,
                                      yca_loc->url, &yca_opt_rev,
-                                     victim_url, &victim_opt_rev,
+                                     move_target_url, &incoming_new_opt_rev,
                                      moved_to_abspath, svn_depth_infinity,
-                                     FALSE, FALSE, FALSE, FALSE, FALSE,
+                                     TRUE, TRUE, /* do a no-ancestry merge */
+                                     FALSE, FALSE, FALSE,
                                      TRUE, /* Allow mixed-rev just in case,
                                             * since conflict victims can't be
                                             * updated to straighten out
@@ -6562,31 +6589,32 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
       if (err)
         goto unlock_wc;
     }
-
-  /* Merge local modifications into the incoming move target dir. */
-  err = svn_wc__has_local_mods(&is_modified, ctx->wc_ctx, local_abspath,
-                               TRUE, ctx->cancel_func, ctx->cancel_baton,
-                               scratch_pool);
-  if (err)
-    goto unlock_wc;
-
-  if (is_modified)
+  else
     {
-      err = svn_wc__conflict_tree_merge_local_changes(ctx->wc_ctx,
-                                                      local_abspath,
-                                                      moved_to_abspath,
-                                                      ctx->cancel_func,
-                                                      ctx->cancel_baton,
-                                                      ctx->notify_func2,
-                                                      ctx->notify_baton2,
-                                                      scratch_pool);
+      SVN_ERR_ASSERT(operation == svn_wc_operation_update ||
+                     operation == svn_wc_operation_switch);
+
+      /* Merge local modifications into the incoming move target dir. */
+      err = svn_wc__has_local_mods(&is_modified, ctx->wc_ctx, local_abspath,
+                                   TRUE, ctx->cancel_func, ctx->cancel_baton,
+                                   scratch_pool);
       if (err)
         goto unlock_wc;
-    }
 
-  if (operation == svn_wc_operation_update ||
-      operation == svn_wc_operation_switch)
-    {
+      if (is_modified)
+        {
+          err = svn_wc__conflict_tree_merge_local_changes(ctx->wc_ctx,
+                                                          local_abspath,
+                                                          moved_to_abspath,
+                                                          ctx->cancel_func,
+                                                          ctx->cancel_baton,
+                                                          ctx->notify_func2,
+                                                          ctx->notify_baton2,
+                                                          scratch_pool);
+          if (err)
+            goto unlock_wc;
+        }
+
       /* The move operation is part of our natural history.
        * Delete the tree conflict victim (clears the tree conflict marker). */
       err = svn_wc_delete4(ctx->wc_ctx, local_abspath, FALSE, FALSE,
@@ -6596,25 +6624,6 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
       if (err)
         goto unlock_wc;
     }
-  else if (operation == svn_wc_operation_merge)
-    {
-      /* The move operation is not part of natural history. We must replicate
-       * this move in our history. Record a move in the working copy. */
-      err = svn_wc__move2(ctx->wc_ctx, local_abspath, moved_to_abspath,
-                          TRUE, /* this is a meta-data only move */
-                          FALSE, /* mixed-revisions don't apply to files */
-                          NULL, NULL, /* don't allow user to cancel here */
-                          NULL, NULL, /* no extra notification */
-                          scratch_pool);
-      if (err)
-        goto unlock_wc;
-    }
-  else
-    return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
-                             _("Invalid operation code '%d' recorded for "
-                               "conflict at '%s'"), operation,
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
 
   if (ctx->notify_func2)
     {
