@@ -127,7 +127,7 @@ Candidate changes:
      Fix will help users who upgrade to 1.10 with conflicts recorded in WC.
      Also, merging this allows r1760570 to merge cleanly.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1760570
    Fix a spurious 'incoming edit' tree conflict with an unmodified file.
@@ -146,6 +146,7 @@ Candidate changes:
      ./configure with no arguments should just work.
    Votes:
      +1: brane
+     +0: rhuijben (patch looks safe, but not sure enough for +1)
 
 Veto-blocked changes:
 =====================
