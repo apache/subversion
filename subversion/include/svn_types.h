@@ -1078,6 +1078,11 @@ typedef svn_error_t *(*svn_log_message_receiver_t)(
  * @a commit_info, along with the @a baton closure.
  * @a pool can be used for temporary allocations.
  *
+ * @note Implementers of this callback that pass this callback to
+ * svn_ra_get_commit_editor3() should be careful with returning errors
+ * as these might be returned as commit errors. See the documentation
+ * of svn_ra_get_commit_editor3() for more details.
+ *
  * @since New in 1.4.
  */
 typedef svn_error_t *(*svn_commit_callback2_t)(

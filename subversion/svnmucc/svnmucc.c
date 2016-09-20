@@ -74,6 +74,7 @@ check_lib_versions(void)
   return svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
 }
 
+/* Implements svn_commit_callback2_t */
 static svn_error_t *
 commit_callback(const svn_commit_info_t *commit_info,
                 void *baton,
@@ -84,6 +85,15 @@ commit_callback(const svn_commit_info_t *commit_info,
                              (commit_info->author
                               ? commit_info->author : "(no author)"),
                              commit_info->date));
+
+  /* Writing to stdout, as there maybe systems that consider the
+   * presence of stderr as an indication of commit failure.
+   * OTOH, this is only of informational nature to the user as
+   * the commit has succeeded. */
+  if (commit_info->post_commit_err)
+    SVN_ERR(svn_cmdline_printf(pool, _("\nWarning: %s\n"),
+                               commit_info->post_commit_err));
+
   return SVN_NO_ERROR;
 }
 
