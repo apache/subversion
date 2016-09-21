@@ -148,6 +148,13 @@ Candidate changes:
      +1: brane
      +0: rhuijben (patch looks safe, but not sure enough for +1)
 
+ * r1761755
+   Fix link error with --disable-keychain behavior on OS/X
+   Justification:
+     User reported problem. Easy fix.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
