@@ -148,6 +148,14 @@ Candidate changes:
      +1: brane
      +0: rhuijben (patch looks safe, but not sure enough for +1)
 
+ * r1761653
+   * subversion/libsvn_repos/repos.c   (create_hooks): Fix typo in
+   SVN_REPOS__HOOK_POST_LOCK description
+   Justification:
+     Obvious fix
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
