@@ -153,11 +153,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1761653
-   Fix typo in SVN_REPOS__HOOK_POST_LOCK description
-   Justification:
-     Obvious fix
-   Votes:
-     +1: jamessan
-
