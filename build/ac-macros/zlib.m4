@@ -88,14 +88,14 @@ AC_DEFUN(SVN_ZLIB_PKG_CONFIG,
 [
   AC_MSG_NOTICE([zlib library configuration via pkg-config])
   if test -n "$PKG_CONFIG"; then
-  AC_MSG_CHECKING([for zlib library])
-      if $PKG_CONFIG zlib --exists; then
-        AC_MSG_RESULT([yes])
-          zlib_found=yes
-          SVN_ZLIB_INCLUDES=`$PKG_CONFIG zlib --cflags`
-          SVN_ZLIB_LIBS=`$PKG_CONFIG zlib --libs`
-      else
-        AC_MSG_RESULT([no])
-      fi
+    AC_MSG_CHECKING([for zlib library])
+    if $PKG_CONFIG zlib --exists; then
+      AC_MSG_RESULT([yes])
+      zlib_found=yes
+      SVN_ZLIB_INCLUDES=`$PKG_CONFIG zlib --cflags`
+      SVN_ZLIB_LIBS=`$PKG_CONFIG zlib --libs`
+    else
+      AC_MSG_RESULT([no])
+    fi
   fi
 ])
