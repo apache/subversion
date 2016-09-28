@@ -2379,7 +2379,7 @@ test_merge_incoming_move_dir3(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_TEST_ASSERT(!status->conflicted);
   SVN_TEST_ASSERT(status->node_status == svn_wc_status_added);
   SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
-  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
   SVN_TEST_ASSERT(status->copied);
   SVN_TEST_ASSERT(!status->switched);
   SVN_TEST_ASSERT(!status->file_external);
@@ -2410,9 +2410,9 @@ test_merge_incoming_move_dir3(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_TEST_ASSERT(status->kind == svn_node_file);
   SVN_TEST_ASSERT(status->versioned);
   SVN_TEST_ASSERT(!status->conflicted);
-  SVN_TEST_ASSERT(status->node_status == svn_wc_status_added);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_normal);
   SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
-  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
   SVN_TEST_ASSERT(status->copied);
   SVN_TEST_ASSERT(!status->switched);
   SVN_TEST_ASSERT(!status->file_external);
@@ -2442,10 +2442,10 @@ test_merge_incoming_move_dir3(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_TEST_ASSERT(status->kind == svn_node_file);
   SVN_TEST_ASSERT(status->versioned);
   SVN_TEST_ASSERT(!status->conflicted);
-  SVN_TEST_ASSERT(status->node_status == svn_wc_status_added);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_normal);
   SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
-  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_normal);
-  SVN_TEST_ASSERT(status->copied);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(!status->copied);
   SVN_TEST_ASSERT(!status->switched);
   SVN_TEST_ASSERT(!status->file_external);
   SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
@@ -2623,8 +2623,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir, "merge incoming move dir"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir2,
                        "merge incoming move dir with local edit"),
-    SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_dir3,
-                        "merge incoming move dir with local add"),
+    SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir3,
+                       "merge incoming move dir with local add"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_delete_vs_local_delete,
                        "merge incoming delete vs local delete"),
     SVN_TEST_NULL
