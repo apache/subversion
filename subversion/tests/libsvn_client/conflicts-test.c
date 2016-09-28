@@ -1764,6 +1764,7 @@ test_merge_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   svn_opt_revision_t opt_rev;
   svn_stream_t *stream;
   svn_stringbuf_t *buf;
+  svn_node_kind_t kind;
 
   SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_move_file_text_merge",
                                    opts, pool));
@@ -1834,6 +1835,10 @@ test_merge_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   SVN_TEST_STRING_ASSERT(status->moved_from_abspath,
                          sbox_wc_path(b, deleted_path));
   SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  /* Ensure that the original file was removed. */
+  SVN_ERR(svn_io_check_path(sbox_wc_path(b, deleted_path), &kind, b->pool));
+  SVN_TEST_ASSERT(kind == svn_node_none);
 
   /* Ensure that the moved file has the expected content. */
   SVN_ERR(svn_stream_open_readonly(&stream, sbox_wc_path(b, new_file_path),
