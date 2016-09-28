@@ -6390,6 +6390,11 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
                           scratch_pool);
       if (err)
         goto unlock_wc;
+
+      /* Delete the original file from disk. */
+      err = svn_io_remove_file2(local_abspath, FALSE, scratch_pool);
+      if (err)
+        goto unlock_wc;
     }
   else
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
