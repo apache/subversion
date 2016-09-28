@@ -103,6 +103,7 @@ Candidate changes:
     r1758130 removes the regression test's XFail marker
   Votes:
     +1 (non-binding): luke1410
+    +1: stsp
 
  * r1759116, r1759116, r1759122, r1759123, r1759124
    Fix FSFS format 7 packing for revisions packs with lots of changes.
