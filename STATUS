@@ -74,6 +74,7 @@ Candidate changes:
      -0: stsp (merge conflict; needs a backport branch)
               (rhuijben: Are you sure? svn merge doesn't produce a conflict
                for me)
+              (stsp: Merge conflict appears only with svn-trunk, not 1.9.x)
 
  * r1724448
    Fix handling of newly secured subdirectories in a working copy
