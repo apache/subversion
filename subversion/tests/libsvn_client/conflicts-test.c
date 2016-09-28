@@ -1762,7 +1762,6 @@ test_merge_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   struct status_baton sb;
   struct svn_client_status_t *status;
   svn_opt_revision_t opt_rev;
-  svn_stream_t *stream;
   svn_stringbuf_t *buf;
   svn_node_kind_t kind;
 
@@ -1841,10 +1840,8 @@ test_merge_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(kind == svn_node_none);
 
   /* Ensure that the moved file has the expected content. */
-  SVN_ERR(svn_stream_open_readonly(&stream, sbox_wc_path(b, new_file_path),
-                                   b->pool, b->pool));
-  SVN_ERR(svn_stringbuf_from_stream(&buf, stream, 0, b->pool));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, new_file_path),
+                                   b->pool));
   SVN_TEST_STRING_ASSERT(buf->data, modified_file_on_branch_content);
 
   return SVN_NO_ERROR;
@@ -1905,7 +1902,6 @@ test_update_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   struct svn_client_status_t *status;
   svn_opt_revision_t opt_rev;
   svn_node_kind_t node_kind;
-  svn_stream_t *stream;
   svn_stringbuf_t *buf;
 
   SVN_ERR(svn_test__sandbox_create(b, "update_incoming_move_file_text_merge",
@@ -1950,10 +1946,8 @@ test_update_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
 
   /* Ensure that the moved file has the expected content. */
-  SVN_ERR(svn_stream_open_readonly(&stream, sbox_wc_path(b, new_file_path),
-                                   b->pool, b->pool));
-  SVN_ERR(svn_stringbuf_from_stream(&buf, stream, 0, b->pool));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, new_file_path),
+                                   b->pool));
   SVN_TEST_STRING_ASSERT(buf->data, modified_file_on_branch_content);
 
   return SVN_NO_ERROR;
@@ -1973,7 +1967,6 @@ test_switch_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   struct svn_client_status_t *status;
   svn_opt_revision_t opt_rev;
   svn_node_kind_t node_kind;
-  svn_stream_t *stream;
   svn_stringbuf_t *buf;
 
   SVN_ERR(svn_test__sandbox_create(b, "switch_incoming_move_file_text_merge",
@@ -2018,10 +2011,8 @@ test_switch_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
 
   /* Ensure that the moved file has the expected content. */
-  SVN_ERR(svn_stream_open_readonly(&stream, sbox_wc_path(b, new_file_path),
-                                   b->pool, b->pool));
-  SVN_ERR(svn_stringbuf_from_stream(&buf, stream, 0, b->pool));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, new_file_path),
+                                   b->pool));
   SVN_TEST_STRING_ASSERT(buf->data, modified_file_on_branch_content);
 
   return SVN_NO_ERROR;
@@ -2155,7 +2146,6 @@ test_merge_incoming_move_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
   struct status_baton sb;
   struct svn_client_status_t *status;
   svn_stringbuf_t *buf;
-  svn_stream_t *stream;
   svn_opt_revision_t opt_rev;
 
   SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_move_dir", opts, pool));
@@ -2220,10 +2210,8 @@ test_merge_incoming_move_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
   /* Ensure that the edited file has the expected content. */
   child_path = svn_relpath_join(moved_to_path, deleted_dir_child,
                                 b->pool);
-  SVN_ERR(svn_stream_open_readonly(&stream, sbox_wc_path(b, child_path),
-                                   b->pool, b->pool));
-  SVN_ERR(svn_stringbuf_from_stream(&buf, stream, 0, b->pool));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, child_path),
+                                   b->pool));
   SVN_TEST_STRING_ASSERT(buf->data, modified_file_on_branch_content);
 
   return SVN_NO_ERROR;
@@ -2242,7 +2230,6 @@ test_merge_incoming_move_dir2(const svn_test_opts_t *opts, apr_pool_t *pool)
   struct status_baton sb;
   struct svn_client_status_t *status;
   svn_stringbuf_t *buf;
-  svn_stream_t *stream;
   svn_opt_revision_t opt_rev;
 
   SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_move_dir2", opts, pool));
@@ -2307,10 +2294,8 @@ test_merge_incoming_move_dir2(const svn_test_opts_t *opts, apr_pool_t *pool)
   /* Ensure that the edited file has the expected content. */
   child_path = svn_relpath_join(moved_to_path, deleted_dir_child,
                                 b->pool);
-  SVN_ERR(svn_stream_open_readonly(&stream, sbox_wc_path(b, child_path),
-                                   b->pool, b->pool));
-  SVN_ERR(svn_stringbuf_from_stream(&buf, stream, 0, b->pool));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, child_path),
+                                   b->pool));
   SVN_TEST_STRING_ASSERT(buf->data, modified_file_in_working_copy_content);
 
   return SVN_NO_ERROR;
@@ -2330,7 +2315,6 @@ test_merge_incoming_move_dir3(const svn_test_opts_t *opts, apr_pool_t *pool)
   struct info_baton ib;
   struct svn_client_status_t *status;
   svn_stringbuf_t *buf;
-  svn_stream_t *stream;
   svn_opt_revision_t opt_rev;
 
   SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_move_dir3", opts, pool));
@@ -2398,10 +2382,8 @@ test_merge_incoming_move_dir3(const svn_test_opts_t *opts, apr_pool_t *pool)
                                                  new_file_name_branch,
                                                  b->pool),
                                 b->pool);
-  SVN_ERR(svn_stream_open_readonly(&stream, sbox_wc_path(b, child_path),
-                                   b->pool, b->pool));
-  SVN_ERR(svn_stringbuf_from_stream(&buf, stream, 0, b->pool));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, child_path),
+                                   b->pool));
   SVN_TEST_STRING_ASSERT(buf->data, added_file_on_branch_content);
 
   /* Ensure that the file added on the branch has the expected status. */
@@ -2430,10 +2412,8 @@ test_merge_incoming_move_dir3(const svn_test_opts_t *opts, apr_pool_t *pool)
                                                  new_file_name,
                                                  b->pool),
                                 b->pool);
-  SVN_ERR(svn_stream_open_readonly(&stream, sbox_wc_path(b, child_path),
-                                   b->pool, b->pool));
-  SVN_ERR(svn_stringbuf_from_stream(&buf, stream, 0, b->pool));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, child_path),
+                                   b->pool));
   SVN_TEST_STRING_ASSERT(buf->data, "This is a new file on the trunk\n");
 
   /* Ensure that the file added on the trunk has the expected status. */
