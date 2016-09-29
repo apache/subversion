@@ -3493,6 +3493,18 @@ svn_wc__find_repos_node_in_wc(apr_array_header_t **local_abspath_list,
                               svn_revnum_t rev,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__db_get_merge_incoming_add_diff_processor(
+  const svn_diff_tree_processor_t **diff_processor,
+  void **diff_processor_baton,
+  const char *target_abspath,
+  const char *prefix_relpath,
+  svn_boolean_t reverse_merge,
+  svn_wc__db_t *db,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
 /* @} */
 
 typedef svn_error_t * (*svn_wc__db_verify_cb_t)(void *baton,
