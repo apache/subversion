@@ -3874,3 +3874,20 @@ svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__get_merge_incoming_add_diff_processor(
+  const svn_diff_tree_processor_t **diff_processor,
+  void **diff_processor_baton,
+  const char *target_abspath,
+  const char *prefix_relpath,
+  svn_boolean_t reverse_merge,
+  svn_wc_context_t *wc_ctx,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_wc__db_get_merge_incoming_add_diff_processor(
+                           diff_processor, diff_processor_baton,
+                           target_abspath, prefix_relpath, reverse_merge,
+                           wc_ctx->db, result_pool, scratch_pool));
+}

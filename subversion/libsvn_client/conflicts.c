@@ -38,6 +38,7 @@
 #include "svn_hash.h"
 #include "svn_sorts.h"
 #include "client.h"
+#include "private/svn_ra_private.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_token.h"
 #include "private/svn_wc_private.h"
@@ -5495,6 +5496,84 @@ unlock_wc:
   return SVN_NO_ERROR;
 }
 
+/* Merge a newly added directory into TARGET_ABSPATH in the working copy.
+ *
+ * This uses a diff-tree processor because our standard merge operation
+ * is not set up for merges where the merge-source anchor is itself an
+ * added directory (i.e. does not exist on one side of the diff).
+ * The standard merge will only merge additions of children of a path
+ * that exists across the entire revision range being merged.
+ * But in our case, SOURCE1 does not yet exist in REV1, but SOURCE2
+ * does exist in REV2. Thus we use a diff processor.
+ */
+static svn_error_t *
+merge_newly_added_dir(svn_client__conflict_report_t **conflict_report,
+                      const char *source1,
+                      svn_revnum_t rev1,
+                      const char *source2,
+                      svn_revnum_t rev2,
+                      const char *target_abspath,
+                      svn_boolean_t reverse_merge,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  const svn_diff_tree_processor_t *diff_processor;
+  void *diff_processor_baton;
+  svn_ra_session_t *ra_session;
+  const char *corrected_url;
+  svn_ra_session_t *extra_ra_session;
+  const svn_ra_reporter3_t *reporter;
+  void *reporter_baton;
+  const svn_delta_editor_t *diff_editor;
+  void *diff_edit_baton;
+  const char *anchor1;
+  const char *anchor2;
+  const char *target1;
+  const char *target2;
+
+  svn_uri_split(&anchor1, &target1, source1, scratch_pool);
+  svn_uri_split(&anchor2, &target2, source2, scratch_pool);
+
+  SVN_ERR(svn_wc__get_merge_incoming_add_diff_processor(
+            &diff_processor, &diff_processor_baton,
+            target_abspath, target1, reverse_merge, ctx->wc_ctx,
+            scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
+                                               anchor2, NULL, NULL, FALSE,
+                                               FALSE, ctx,
+                                               scratch_pool, scratch_pool));
+  if (corrected_url)
+    anchor2 = corrected_url;
+
+  /* Extra RA session is used during the editor calls to fetch file contents. */
+  SVN_ERR(svn_ra__dup_session(&extra_ra_session, ra_session, anchor2,
+                              scratch_pool, scratch_pool));
+
+  /* Create a repos-repos diff editor. */
+  SVN_ERR(svn_client__get_diff_editor2(
+                &diff_editor, &diff_edit_baton,
+                extra_ra_session, svn_depth_infinity, rev1, TRUE,
+                diff_processor, ctx->cancel_func, ctx->cancel_baton,
+                scratch_pool));
+
+  /* We want to switch our txn into URL2 */
+  SVN_ERR(svn_ra_do_diff3(ra_session, &reporter, &reporter_baton,
+                          rev2, target1, svn_depth_infinity, TRUE, TRUE,
+                          source2, diff_editor, diff_edit_baton, scratch_pool));
+
+  /* Drive the reporter; do the diff. */
+  SVN_ERR(reporter->set_path(reporter_baton, "", rev1,
+                             svn_depth_infinity,
+                             FALSE, NULL,
+                             scratch_pool));
+
+  SVN_ERR(reporter->finish_report(reporter_baton, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
 resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
@@ -5513,9 +5592,9 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
   struct conflict_tree_incoming_add_details *details;
   svn_client__conflict_report_t *conflict_report;
   const char *source1;
-  svn_opt_revision_t revision1;
+  svn_revnum_t rev1;
   const char *source2;
-  svn_opt_revision_t revision2;
+  svn_revnum_t rev2;
   svn_error_t *err;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
@@ -5537,7 +5616,6 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
   source1 = svn_path_url_add_component2(repos_root_url,
                                         details->repos_relpath,
                                         scratch_pool);
-  revision1.kind = svn_opt_revision_number;
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
             &incoming_old_repos_relpath, &incoming_old_pegrev,
             NULL, conflict, scratch_pool, scratch_pool));
@@ -5552,13 +5630,11 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
                                    "added the repository"),
                                  svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
-      revision1.value.number = details->added_rev;
-
+      rev1 = details->added_rev - 1;
       source2 = svn_path_url_add_component2(repos_root_url,
                                             incoming_new_repos_relpath,
                                             scratch_pool);
-      revision2.kind = svn_opt_revision_number;
-      revision2.value.number = incoming_new_pegrev;
+      rev2 = incoming_new_pegrev;
     }
   else /* reverse-merge */
     {
@@ -5568,13 +5644,11 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
                                    "deleted from the repository"),
                                  svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
-      revision1.value.number = details->deleted_rev;
-
+      rev1 = details->deleted_rev;
       source2 = svn_path_url_add_component2(repos_root_url,
                                             incoming_old_repos_relpath,
                                             scratch_pool);
-      revision2.kind = svn_opt_revision_number;
-      revision2.value.number = incoming_old_pegrev;
+      rev2 = incoming_old_pegrev;
     }
 
   /* ### The following WC modifications should be atomic. */
@@ -5582,38 +5656,18 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
                                                  local_abspath,
                                                  scratch_pool, scratch_pool));
 
-  /* Resolve to current working copy state. The merge requires this. */
-  err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
-  if (err)
-    return svn_error_compose_create(err,
-                                    svn_wc__release_write_lock(ctx->wc_ctx,
-                                                               lock_abspath,
-                                                               scratch_pool));
-
-  /* ### Should we do anything about mergeinfo? We need to run a no-ancestry
-   * ### merge to get a useful result because mergeinfo-aware merges may split
-   * ### this merge into several ranges and then abort early as soon as a
-   * ### conflict occurs (which will happen invariably when merging unrelated
-   * ### trees). The original merge which raised the tree conflict in the
-   * ### first place created mergeinfo which also describes this merge,
-   * ### unless 1) the working copy's mergeinfo was changed since, or
-   * ### 2) the newly added directory's history has location segments with
-   * ### paths outside the original merge source's natural history's path
-   * ### (see the test_option_merge_incoming_added_dir_merge3() test). */
-  err = svn_client__merge_locked(&conflict_report,
-                                 source1, &revision1,
-                                 source2, &revision2,
-                                 local_abspath, svn_depth_infinity,
-                                 TRUE, TRUE, /* do a no-ancestry merge */
-                                 FALSE, FALSE, FALSE,
-                                 TRUE, /* Allow mixed-rev just in case, since
-                                        * conflict victims can't be updated to
-                                        * straighten out mixed-rev trees. */
-                                 NULL, ctx, scratch_pool, scratch_pool);
+  /* ### wrap in a transaction */
+  err = merge_newly_added_dir(&conflict_report, source1, rev1, source2, rev2,
+                              local_abspath,
+                              (incoming_old_pegrev > incoming_new_pegrev),
+                              ctx, scratch_pool, scratch_pool);
 
   err = svn_error_compose_create(err,
                                  svn_client__make_merge_conflict_error(
                                    conflict_report, scratch_pool));
+  if (!err)
+    err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
+
   err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
                                                                  lock_abspath,
                                                                  scratch_pool));
