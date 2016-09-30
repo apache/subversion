@@ -71,6 +71,47 @@ info_func(void *baton, const char *abspath_or_url,
   return SVN_NO_ERROR;
 }
 
+/* A helper function which checks offered conflict resolution options. */
+static svn_error_t *
+assert_tree_conflict_options(svn_client_conflict_t *conflict,
+                             svn_client_ctx_t *ctx,
+                             const svn_client_conflict_option_id_t *expected,
+                             apr_pool_t *pool)
+{
+  apr_array_header_t *actual;
+  svn_stringbuf_t *actual_str = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_t *expected_str = svn_stringbuf_create_empty(pool);
+  int i;
+
+  SVN_ERR(svn_client_conflict_tree_get_resolution_options(&actual, conflict,
+                                                          ctx, pool, pool));
+  for (i = 0; i < actual->nelts; i++)
+    {
+      svn_client_conflict_option_t *opt;
+      svn_client_conflict_option_id_t id;
+
+      opt = APR_ARRAY_IDX(actual, i, svn_client_conflict_option_t *);
+
+      if (i > 0)
+        svn_stringbuf_appendcstr(actual_str, ", ");
+
+      id = svn_client_conflict_option_get_id(opt);
+      svn_stringbuf_appendcstr(actual_str, apr_itoa(pool, id));
+    }
+
+  for (i = 0; expected[i] >= 0; i++)
+    {
+      if (i > 0)
+        svn_stringbuf_appendcstr(expected_str, ", ");
+
+      svn_stringbuf_appendcstr(expected_str, apr_itoa(pool, expected[i]));
+    }
+
+  SVN_TEST_STRING_ASSERT(actual_str->data, expected_str->data);
+
+  return SVN_NO_ERROR;
+}
+
 /* 
  * The following tests verify resolution of "incoming file add vs.
  * local file obstruction upon merge" tree conflicts.
@@ -1641,7 +1682,33 @@ test_merge_incoming_delete_ignore(const svn_test_opts_t *opts, apr_pool_t *pool)
   deleted_path = svn_relpath_join(branch_path, deleted_file_name, b->pool);
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
+
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_delete_ignore,
             ctx, b->pool));
@@ -1706,7 +1773,33 @@ test_merge_incoming_delete_accept(const svn_test_opts_t *opts, apr_pool_t *pool)
   deleted_path = svn_relpath_join(branch_path, deleted_file_name, b->pool);
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
+
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_delete_accept,
             ctx, b->pool));
@@ -2546,7 +2639,31 @@ test_merge_incoming_delete_vs_local_delete(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, copy_dst_path),
                                   ctx, b->pool, b->pool));
+
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_delete_accept,
             ctx, b->pool));
