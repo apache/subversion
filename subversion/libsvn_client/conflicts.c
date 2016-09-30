@@ -5550,7 +5550,7 @@ diff_dir_added(const char *relpath,
   return SVN_NO_ERROR;
 }
 
-/* An svn_wc_diff_callbacks4_t function. */
+/* An svn_diff_tree_processor_t callback. */
 static svn_error_t *
 diff_dir_changed(const char *relpath,
                  const svn_diff_source_t *left_source,
