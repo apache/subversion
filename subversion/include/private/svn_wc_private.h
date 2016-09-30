@@ -2046,17 +2046,6 @@ svn_wc__read_conflict_descriptions2_t(const apr_array_header_t **conflicts,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
-svn_error_t *
-svn_wc__get_merge_incoming_add_diff_processor(
-  const svn_diff_tree_processor_t **diff_processor,
-  void **diff_processor_baton,
-  const char *target_abspath,
-  const char *prefix_relpath,
-  svn_boolean_t reverse_merge,
-  svn_wc_context_t *wc_ctx,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
