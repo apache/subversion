@@ -7490,15 +7490,22 @@ configure_option_incoming_delete_ignore(svn_client_conflict_t *conflict,
       struct conflict_tree_incoming_delete_details *incoming_details;
       svn_boolean_t is_incoming_move;
 
-      /* If the local item was deleted and conflict details were fetched and
-       * indicate that there was no move, then this is an actual 'delete vs
-       * delete' situation. An option which ignores the incoming deletion makes
-       * no sense in that case because there is no local node to preserve. */
       incoming_details = conflict->tree_conflict_incoming_details;
       is_incoming_move = (incoming_details != NULL &&
                           incoming_details->moves != NULL);
-      if (local_change == svn_wc_conflict_reason_deleted)
+      if (local_change == svn_wc_conflict_reason_edited && is_incoming_move)
         {
+          /* An option which ignores the incoming deletion makes no sense
+           * if we know it is actually a move. */
+          return SVN_NO_ERROR;
+        }
+      else if (local_change == svn_wc_conflict_reason_deleted)
+        {
+          /* If the local item was deleted and conflict details were fetched
+           * and indicate that there was no move, then this is an actual
+           * 'delete vs delete' situation. An option which ignores the incoming
+           * deletion makes no sense in that case because there is no local
+           * node to preserve. */
           if (!is_incoming_move)
             return SVN_NO_ERROR;
         }
@@ -7553,25 +7560,40 @@ configure_option_incoming_delete_accept(svn_client_conflict_t *conflict,
 
   if (incoming_change == svn_wc_conflict_action_delete)
     {
-      svn_client_conflict_option_t *option;
-      const char *wcroot_abspath;
-      const char *local_abspath;
+      struct conflict_tree_incoming_delete_details *incoming_details;
 
-      option = apr_pcalloc(options->pool, sizeof(*option));
-      option->pool = options->pool;
-      option->id = svn_client_conflict_option_incoming_delete_accept;
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
-                                 conflict->local_abspath, scratch_pool,
-                                 scratch_pool));
-      local_abspath = svn_client_conflict_get_local_abspath(conflict);
-      option->description =
-        apr_psprintf(options->pool, _("accept the deletion of '%s'"),
-          svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                          local_abspath),
-                                 scratch_pool));
-      option->conflict = conflict;
-      option->do_resolve_func = resolve_incoming_delete_accept;
-      APR_ARRAY_PUSH(options, const svn_client_conflict_option_t *) = option;
+      incoming_details = conflict->tree_conflict_incoming_details;
+
+      if (local_change == svn_wc_conflict_reason_edited &&
+          incoming_details != NULL && incoming_details->moves != NULL)
+        {
+          /* An option which accepts the incoming deletion makes no sense
+           * if we know it is actually a move. */
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          svn_client_conflict_option_t *option;
+          const char *wcroot_abspath;
+          const char *local_abspath;
+
+          option = apr_pcalloc(options->pool, sizeof(*option));
+          option->pool = options->pool;
+          option->id = svn_client_conflict_option_incoming_delete_accept;
+          SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
+                                     conflict->local_abspath, scratch_pool,
+                                     scratch_pool));
+          local_abspath = svn_client_conflict_get_local_abspath(conflict);
+          option->description =
+            apr_psprintf(options->pool, _("accept the deletion of '%s'"),
+              svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                              local_abspath),
+                                     scratch_pool));
+          option->conflict = conflict;
+          option->do_resolve_func = resolve_incoming_delete_accept;
+          APR_ARRAY_PUSH(options,
+                         const svn_client_conflict_option_t *) = option;
+        }
     }
 
   return SVN_NO_ERROR;
