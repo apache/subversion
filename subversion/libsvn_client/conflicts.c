@@ -5513,8 +5513,30 @@ diff_dir_added(const char *relpath,
                apr_pool_t *scratch_pool)
 {
   struct merge_newly_added_dir_baton *b = processor->baton;
+  const char *local_abspath;
+  svn_node_kind_t db_kind;
+  svn_node_kind_t on_disk_kind;
 
-  SVN_DBG(("%s: %s\n", __func__, relpath));
+  local_abspath = svn_dirent_join(b->target_abspath, relpath, scratch_pool);
+
+  SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
+                            FALSE, FALSE, scratch_pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
+  SVN_DBG(("%s: %s (db: %s / disk: %s)\n", __func__, relpath,
+      svn_node_kind_to_word(db_kind), svn_node_kind_to_word(on_disk_kind)));
+
+  if (db_kind != svn_node_none && db_kind != svn_node_unknown)
+    {
+      SVN_DBG(("%s: tree conflict: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
+
+  if (on_disk_kind != svn_node_none)
+    {
+      SVN_DBG(("%s: obstructed: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
+
   if (copyfrom_source)
     SVN_DBG(("%s: copyfrom source: %s@%lu\n", __func__,
       copyfrom_source->repos_relpath, copyfrom_source->revision));
@@ -5537,8 +5559,35 @@ diff_dir_changed(const char *relpath,
                  apr_pool_t *scratch_pool)
 {
   struct merge_newly_added_dir_baton *b = processor->baton;
+  const char *local_abspath;
+  svn_node_kind_t db_kind;
+  svn_node_kind_t on_disk_kind;
 
-  SVN_DBG(("%s: %s\n", __func__, relpath));
+  local_abspath = svn_dirent_join(b->target_abspath, relpath, scratch_pool);
+
+  SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
+                            FALSE, FALSE, scratch_pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
+  SVN_DBG(("%s: %s (db: %s / disk: %s)\n", __func__, relpath,
+      svn_node_kind_to_word(db_kind), svn_node_kind_to_word(on_disk_kind)));
+
+  if (db_kind != svn_node_dir)
+    {
+      SVN_DBG(("%s: tree conflict: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
+
+  if (on_disk_kind == svn_node_none)
+    {
+      SVN_DBG(("%s: file missing: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
+  else if (on_disk_kind != svn_node_dir)
+    {
+      SVN_DBG(("%s: tree conflict; not a dir: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
+
   SVN_DBG(("%s: left source: %s@%lu\n", __func__,
     left_source->repos_relpath, left_source->revision));
   SVN_DBG(("%s: right source: %s@%lu\n", __func__,
@@ -5557,8 +5606,35 @@ diff_dir_deleted(const char *relpath,
                  apr_pool_t *scratch_pool)
 {
   struct merge_newly_added_dir_baton *b = processor->baton;
+  const char *local_abspath;
+  svn_node_kind_t db_kind;
+  svn_node_kind_t on_disk_kind;
 
-  SVN_DBG(("%s: %s\n", __func__, relpath));
+  local_abspath = svn_dirent_join(b->target_abspath, relpath, scratch_pool);
+
+  SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
+                            FALSE, FALSE, scratch_pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
+  SVN_DBG(("%s: %s (db: %s / disk: %s)\n", __func__, relpath,
+      svn_node_kind_to_word(db_kind), svn_node_kind_to_word(on_disk_kind)));
+
+  if (db_kind != svn_node_dir)
+    {
+      SVN_DBG(("%s: tree conflict: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
+
+  if (on_disk_kind != svn_node_dir)
+    {
+      SVN_DBG(("%s: obstruction; not a dir: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
+  else if (on_disk_kind == svn_node_none)
+    {
+      SVN_DBG(("%s: file missing: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
+
   SVN_DBG(("%s: left source: %s@%lu\n", __func__,
     left_source->repos_relpath, left_source->revision));
 
@@ -5580,12 +5656,22 @@ diff_file_added(const char *relpath,
 {
   struct merge_newly_added_dir_baton *b = processor->baton;
   const char *local_abspath;
-  svn_node_kind_t on_disk_kind;
   svn_node_kind_t db_kind;
+  svn_node_kind_t on_disk_kind;
 
   local_abspath = svn_dirent_join(b->target_abspath, relpath, scratch_pool);
 
+  SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
+                            FALSE, FALSE, scratch_pool));
   SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
+  SVN_DBG(("%s: %s (db: %s / disk: %s)\n", __func__, relpath,
+      svn_node_kind_to_word(db_kind), svn_node_kind_to_word(on_disk_kind)));
+
+  if (db_kind != svn_node_none && db_kind != svn_node_unknown)
+    {
+      SVN_DBG(("%s: tree conflict: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
 
   if (on_disk_kind != svn_node_none)
     {
@@ -5593,16 +5679,6 @@ diff_file_added(const char *relpath,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
-                            FALSE, FALSE, scratch_pool));
-  if (db_kind != svn_node_none && db_kind != svn_node_unknown)
-    {
-      SVN_DBG(("%s: tree conflict: %s\n", __func__, local_abspath));
-      return SVN_NO_ERROR;
-    }
-
-  SVN_DBG(("%s: %s (%s: %s)\n", __func__, relpath,
-      svn_node_kind_to_word(on_disk_kind), local_abspath));
   if (copyfrom_source)
     SVN_DBG(("%s: copyfrom source: %s@%lu\n", __func__,
       copyfrom_source->repos_relpath, copyfrom_source->revision));
@@ -5629,8 +5705,35 @@ diff_file_changed(const char *relpath,
                   apr_pool_t *scratch_pool)
 {
   struct merge_newly_added_dir_baton *b = processor->baton;
+  const char *local_abspath;
+  svn_node_kind_t db_kind;
+  svn_node_kind_t on_disk_kind;
 
-  SVN_DBG(("%s: %s\n", __func__, relpath));
+  local_abspath = svn_dirent_join(b->target_abspath, relpath, scratch_pool);
+
+  SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
+                            FALSE, FALSE, scratch_pool));
+  SVN_DBG(("%s: %s (db: %s / disk: %s)\n", __func__, relpath,
+      svn_node_kind_to_word(db_kind), svn_node_kind_to_word(on_disk_kind)));
+  SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
+
+  if (db_kind != svn_node_file)
+    {
+      SVN_DBG(("%s: tree conflict: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
+
+  if (on_disk_kind == svn_node_none)
+    {
+      SVN_DBG(("%s: file missing: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
+  else if (on_disk_kind != svn_node_file)
+    {
+      SVN_DBG(("%s: tree conflict; not a file: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
+
   SVN_DBG(("%s: left source: %s@%lu\n", __func__,
     left_source->repos_relpath, left_source->revision));
   SVN_DBG(("%s: right source: %s@%lu\n", __func__,
@@ -5651,8 +5754,35 @@ diff_file_deleted(const char *relpath,
                   apr_pool_t *scratch_pool)
 {
   struct merge_newly_added_dir_baton *b = processor->baton;
+  const char *local_abspath;
+  svn_node_kind_t db_kind;
+  svn_node_kind_t on_disk_kind;
 
-  SVN_DBG(("%s: %s\n", __func__, relpath));
+  local_abspath = svn_dirent_join(b->target_abspath, relpath, scratch_pool);
+
+  SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
+                            FALSE, FALSE, scratch_pool));
+  SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
+  SVN_DBG(("%s: %s (db: %s / disk: %s)\n", __func__, relpath,
+      svn_node_kind_to_word(db_kind), svn_node_kind_to_word(on_disk_kind)));
+
+  if (db_kind != svn_node_file)
+    {
+      SVN_DBG(("%s: tree conflict: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
+
+  if (on_disk_kind != svn_node_file)
+    {
+      SVN_DBG(("%s: obstruction; not a file: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
+  else if (on_disk_kind == svn_node_none)
+    {
+      SVN_DBG(("%s: file missing: %s\n", __func__, local_abspath));
+      return SVN_NO_ERROR;
+    }
+
   SVN_DBG(("%s: left source: %s@%lu\n", __func__,
     left_source->repos_relpath, left_source->revision));
 
