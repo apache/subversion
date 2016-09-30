@@ -5496,9 +5496,59 @@ unlock_wc:
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+raise_tree_conflict(const char *local_abspath,
+                    svn_wc_conflict_action_t incoming_change,
+                    svn_wc_conflict_reason_t local_change,
+                    svn_node_kind_t local_node_kind,
+                    svn_node_kind_t merge_left_kind,
+                    svn_node_kind_t merge_right_kind,
+                    const char *repos_root_url,
+                    const char *repos_uuid,
+                    const char *repos_relpath,
+                    svn_revnum_t merge_left_rev,
+                    svn_revnum_t merge_right_rev,
+                    svn_wc_context_t *wc_ctx,
+                    apr_pool_t *scratch_pool)
+{
+  svn_wc_conflict_description2_t *conflict;
+  const svn_wc_conflict_version_t *left_version;
+  const svn_wc_conflict_version_t *right_version;
+
+  left_version = svn_wc_conflict_version_create2(repos_root_url,
+                                                 repos_uuid,
+                                                 repos_relpath,
+                                                 merge_left_rev,
+                                                 merge_left_kind,
+                                                 scratch_pool);
+  right_version = svn_wc_conflict_version_create2(repos_root_url,
+                                                  repos_uuid,
+                                                  repos_relpath,
+                                                  merge_right_rev,
+                                                  merge_right_kind,
+                                                  scratch_pool);
+  conflict = svn_wc_conflict_description_create_tree2(local_abspath,
+                                                      local_node_kind,
+                                                      svn_wc_operation_merge,
+                                                      left_version,
+                                                      right_version,
+                                                      scratch_pool);
+  conflict->action = incoming_change;
+  conflict->reason = local_change;
+
+  SVN_ERR(svn_wc__add_tree_conflict(wc_ctx, conflict, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 struct merge_newly_added_dir_baton {
   const char *target_abspath;
   svn_client_ctx_t *ctx;
+  const char *repos_root_url;
+  const char *repos_uuid;
+  const char *added_repos_relpath;
+  svn_revnum_t merge_left_rev;
+  svn_revnum_t merge_right_rev;
 };
 
 /* An svn_diff_tree_processor_t callback. */
@@ -5531,13 +5581,26 @@ diff_dir_added(const char *relpath,
 
   if (db_kind != svn_node_none && db_kind != svn_node_unknown)
     {
-      SVN_DBG(("%s: tree conflict: %s\n", __func__, local_abspath));
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_add,
+                svn_wc_conflict_reason_obstructed,
+                db_kind, svn_node_none, svn_node_dir,
+                b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
 
   if (on_disk_kind != svn_node_none)
     {
-      SVN_DBG(("%s: obstructed: %s\n", __func__, local_abspath));
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_add,
+                svn_wc_conflict_reason_obstructed, db_kind,
+                svn_node_none, svn_node_dir, b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5577,18 +5640,37 @@ diff_dir_changed(const char *relpath,
 
   if (db_kind != svn_node_dir)
     {
-      SVN_DBG(("%s: tree conflict: %s\n", __func__, local_abspath));
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_edit,
+                svn_wc_conflict_reason_obstructed,
+                db_kind, svn_node_dir, svn_node_dir,
+                b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
 
   if (on_disk_kind == svn_node_none)
     {
-      SVN_DBG(("%s: file missing: %s\n", __func__, local_abspath));
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_edit,
+                svn_wc_conflict_reason_missing, on_disk_kind,
+                svn_node_dir, svn_node_dir, b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
   else if (on_disk_kind != svn_node_dir)
     {
-      SVN_DBG(("%s: tree conflict; not a dir: %s\n", __func__, local_abspath));
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_edit,
+                svn_wc_conflict_reason_obstructed, on_disk_kind,
+                svn_node_dir, svn_node_dir, b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5624,18 +5706,45 @@ diff_dir_deleted(const char *relpath,
 
   if (db_kind != svn_node_dir)
     {
-      SVN_DBG(("%s: tree conflict: %s\n", __func__, local_abspath));
+      svn_wc_conflict_reason_t local_change;
+
+      if (db_kind != svn_node_none && db_kind != svn_node_unknown)
+        local_change = svn_wc_conflict_reason_obstructed;
+      else
+        local_change = svn_wc_conflict_reason_missing;
+
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_delete,
+                local_change, db_kind, svn_node_dir, svn_node_none,
+                b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
 
   if (on_disk_kind != svn_node_dir)
     {
-      SVN_DBG(("%s: obstruction; not a dir: %s\n", __func__, local_abspath));
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_delete,
+                svn_wc_conflict_reason_obstructed, on_disk_kind,
+                svn_node_dir, svn_node_none,
+                b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
   else if (on_disk_kind == svn_node_none)
     {
-      SVN_DBG(("%s: file missing: %s\n", __func__, local_abspath));
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_delete,
+                svn_wc_conflict_reason_missing, on_disk_kind,
+                svn_node_dir, svn_node_none,
+                b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5673,13 +5782,26 @@ diff_file_added(const char *relpath,
 
   if (db_kind != svn_node_none && db_kind != svn_node_unknown)
     {
-      SVN_DBG(("%s: tree conflict: %s\n", __func__, local_abspath));
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_add,
+                svn_wc_conflict_reason_obstructed,
+                db_kind, svn_node_none, svn_node_file,
+                b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
 
   if (on_disk_kind != svn_node_none)
     {
-      SVN_DBG(("%s: obstructed: %s\n", __func__, local_abspath));
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_add,
+                svn_wc_conflict_reason_obstructed, db_kind,
+                svn_node_none, svn_node_file, b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5723,18 +5845,37 @@ diff_file_changed(const char *relpath,
 
   if (db_kind != svn_node_file)
     {
-      SVN_DBG(("%s: tree conflict: %s\n", __func__, local_abspath));
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_edit,
+                svn_wc_conflict_reason_obstructed,
+                db_kind, svn_node_file, svn_node_file,
+                b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
 
   if (on_disk_kind == svn_node_none)
     {
-      SVN_DBG(("%s: file missing: %s\n", __func__, local_abspath));
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_edit,
+                svn_wc_conflict_reason_missing, on_disk_kind,
+                svn_node_file, svn_node_file, b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
   else if (on_disk_kind != svn_node_file)
     {
-      SVN_DBG(("%s: tree conflict; not a file: %s\n", __func__, local_abspath));
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_edit,
+                svn_wc_conflict_reason_obstructed, on_disk_kind,
+                svn_node_file, svn_node_file, b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5772,18 +5913,45 @@ diff_file_deleted(const char *relpath,
 
   if (db_kind != svn_node_file)
     {
-      SVN_DBG(("%s: tree conflict: %s\n", __func__, local_abspath));
+      svn_wc_conflict_reason_t local_change;
+
+      if (db_kind != svn_node_none && db_kind != svn_node_unknown)
+        local_change = svn_wc_conflict_reason_obstructed;
+      else
+        local_change = svn_wc_conflict_reason_missing;
+
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_delete,
+                local_change, db_kind, svn_node_file, svn_node_none,
+                b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
 
   if (on_disk_kind != svn_node_file)
     {
-      SVN_DBG(("%s: obstruction; not a file: %s\n", __func__, local_abspath));
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_delete,
+                svn_wc_conflict_reason_obstructed, on_disk_kind,
+                svn_node_file, svn_node_none,
+                b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
   else if (on_disk_kind == svn_node_none)
     {
-      SVN_DBG(("%s: file missing: %s\n", __func__, local_abspath));
+      SVN_ERR(raise_tree_conflict(
+                local_abspath, svn_wc_conflict_action_delete,
+                svn_wc_conflict_reason_missing, on_disk_kind,
+                svn_node_file, svn_node_none,
+                b->repos_root_url, b->repos_uuid,
+                svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
+                b->merge_left_rev, b->merge_right_rev,
+                b->ctx->wc_ctx, scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5805,6 +5973,7 @@ diff_file_deleted(const char *relpath,
  */
 static svn_error_t *
 merge_newly_added_dir(svn_client__conflict_report_t **conflict_report,
+                      const char *added_repos_relpath,
                       const char *source1,
                       svn_revnum_t rev1,
                       const char *source2,
@@ -5835,6 +6004,13 @@ merge_newly_added_dir(svn_client__conflict_report_t **conflict_report,
 
   baton.target_abspath = target_abspath;
   baton.ctx = ctx;
+  baton.added_repos_relpath = added_repos_relpath;
+  SVN_ERR(svn_wc__node_get_repos_info(NULL, NULL,
+                                      &baton.repos_root_url, &baton.repos_uuid,
+                                      ctx->wc_ctx, target_abspath,
+                                      scratch_pool, scratch_pool));
+  baton.merge_left_rev = rev1;
+  baton.merge_right_rev = rev2;
 
   processor = svn_diff__tree_processor_create(&baton, scratch_pool);
   processor->dir_added = diff_dir_added;
@@ -5906,6 +6082,7 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
   const char *lock_abspath;
   struct conflict_tree_incoming_add_details *details;
   svn_client__conflict_report_t *conflict_report;
+  const char *added_repos_relpath;
   const char *source1;
   svn_revnum_t rev1;
   const char *source2;
@@ -5950,6 +6127,7 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
                                             incoming_new_repos_relpath,
                                             scratch_pool);
       rev2 = incoming_new_pegrev;
+      added_repos_relpath = incoming_new_repos_relpath;
     }
   else /* reverse-merge */
     {
@@ -5964,6 +6142,7 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
                                             incoming_old_repos_relpath,
                                             scratch_pool);
       rev2 = incoming_old_pegrev;
+      added_repos_relpath = incoming_new_repos_relpath;
     }
 
   /* ### The following WC modifications should be atomic. */
@@ -5972,7 +6151,8 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
                                                  scratch_pool, scratch_pool));
 
   /* ### wrap in a transaction */
-  err = merge_newly_added_dir(&conflict_report, source1, rev1, source2, rev2,
+  err = merge_newly_added_dir(&conflict_report, added_repos_relpath,
+                              source1, rev1, source2, rev2,
                               local_abspath,
                               (incoming_old_pegrev > incoming_new_pegrev),
                               ctx, scratch_pool, scratch_pool);
