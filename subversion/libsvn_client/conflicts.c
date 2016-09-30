@@ -5517,6 +5517,10 @@ diff_dir_added(const char *relpath,
   svn_node_kind_t db_kind;
   svn_node_kind_t on_disk_kind;
 
+  /* Skip adding the root of the added directory tree itself. */
+  if (relpath[0] == '\0')
+    return SVN_NO_ERROR;
+
   local_abspath = svn_dirent_join(b->target_abspath, relpath, scratch_pool);
 
   SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
