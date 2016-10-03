@@ -6875,6 +6875,7 @@ svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
           *option = binary_conflict_options[i];
           option->pool = result_pool;
           option->description = _(option->description);
+          option->conflict = conflict;
           APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
             option;
         }
@@ -6891,6 +6892,7 @@ svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
           *option = text_conflict_options[i];
           option->pool = result_pool;
           option->description = _(option->description);
+          option->conflict = conflict;
           APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) =
             option;
         }
@@ -6922,6 +6924,7 @@ svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
       *option = prop_conflict_options[i];
       option->pool = result_pool;
       option->description = _(option->description);
+      option->conflict = conflict;
       APR_ARRAY_PUSH((*options), const svn_client_conflict_option_t *) = option;
     }
 
