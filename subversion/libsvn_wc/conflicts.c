@@ -3408,6 +3408,7 @@ svn_wc__conflict_prop_mark_resolved(svn_wc_context_t *wc_ctx,
                                     const char *local_abspath,
                                     const char *propname,
                                     svn_wc_conflict_choice_t choice,
+                                    const svn_string_t *merged_value,
                                     svn_wc_notify_func2_t notify_func,
                                     void *notify_baton,
                                     apr_pool_t *scratch_pool)
@@ -3424,7 +3425,7 @@ svn_wc__conflict_prop_mark_resolved(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(resolve_prop_conflict_on_node(&did_resolve, wc_ctx->db,
                                         local_abspath, conflicts,
-                                        propname, choice, NULL, NULL,
+                                        propname, choice, NULL, merged_value,
                                         NULL, NULL, scratch_pool));
 
   if (did_resolve && notify_func)

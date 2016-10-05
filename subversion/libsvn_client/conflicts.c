@@ -4623,16 +4623,23 @@ resolve_prop_conflict(svn_client_conflict_option_t *option,
   const char *lock_abspath;
   const char *propname = option->type_data.prop.propname;
   svn_error_t *err;
+  const svn_string_t *merged_value;
 
   option_id = svn_client_conflict_option_get_id(option);
   conflict_choice = conflict_option_id_to_wc_conflict_choice(option_id);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
+
+  if (option_id == svn_client_conflict_option_merged_text)
+    merged_value = option->type_data.prop.merged_propval;
+  else
+    merged_value = NULL;
 
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
                                                  local_abspath,
                                                  scratch_pool, scratch_pool));
   err = svn_wc__conflict_prop_mark_resolved(ctx->wc_ctx, local_abspath,
                                             propname, conflict_choice,
+                                            merged_value,
                                             ctx->notify_func2,
                                             ctx->notify_baton2,
                                             scratch_pool);

@@ -1402,6 +1402,10 @@ handle_prop_conflicts(svn_boolean_t *resolved,
                         &options, conflict, ctx, iterpool, iterpool));
               option = svn_client_conflict_option_find_by_id(
                          options, svn_client_conflict_option_merged_text);
+
+              /* ### The mark_conflict_resolved() call below ignores the
+               * ### option change, because it recreates the whole option list.
+               * ### This requires a separate fix. */
               if (option)
                 svn_client_conflict_option_set_merged_propval(option,
                                                               merged_propval);
