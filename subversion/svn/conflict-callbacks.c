@@ -345,7 +345,7 @@ edit_prop_conflict(const svn_string_t **merged_propval,
 
   SVN_ERR(svn_io_open_unique_file3(&file, &file_path, NULL,
                                    svn_io_file_del_on_pool_cleanup,
-                                   result_pool, scratch_pool));
+                                   scratch_pool, scratch_pool));
   merged_prop = svn_stream_from_aprfile2(file, TRUE /* disown */,
                                          scratch_pool);
   SVN_ERR(merge_prop_conflict(merged_prop, base_propval, my_propval,
