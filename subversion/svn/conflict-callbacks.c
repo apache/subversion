@@ -338,16 +338,13 @@ edit_prop_conflict(const svn_string_t **merged_propval,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
-  apr_file_t *file;
   const char *file_path;
   svn_boolean_t performed_edit = FALSE;
   svn_stream_t *merged_prop;
 
-  SVN_ERR(svn_io_open_unique_file3(&file, &file_path, NULL,
-                                   svn_io_file_del_on_pool_cleanup,
-                                   scratch_pool, scratch_pool));
-  merged_prop = svn_stream_from_aprfile2(file, FALSE /* disown */,
-                                         scratch_pool);
+  SVN_ERR(svn_stream_open_unique(&merged_prop, &file_path, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 scratch_pool, scratch_pool));
   SVN_ERR(merge_prop_conflict(merged_prop, base_propval, my_propval,
                               their_propval, NULL,
                               pb->cancel_func,
