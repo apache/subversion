@@ -165,6 +165,13 @@ Candidate changes:
    Votes:
      +1: kotkov
 
+ * r1763934
+   Add the OSX 10.12 commercial name for 'svn --version --verbose'.
+   Justification:
+     Very minor change makes SVN look slightly more polished.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
