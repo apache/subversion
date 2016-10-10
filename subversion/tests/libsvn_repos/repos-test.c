@@ -1467,7 +1467,7 @@ authz(apr_pool_t *pool)
 /* Test that the latest definition wins, regardless of whether the ":glob:"
  * or the repo prefix has been given. */
 static svn_error_t *
-authz_authz_prefixes(apr_pool_t *pool)
+test_authz_prefixes(apr_pool_t *pool)
 {
   svn_authz_t *authz_cfg;
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -4086,7 +4086,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "authz for svn_repos_trace_node_locations"),
     SVN_TEST_OPTS_PASS(commit_aborted_txn,
                        "test committing a previously aborted txn"),
-    SVN_TEST_PASS2(authz_authz_prefixes,
+    SVN_TEST_PASS2(test_authz_prefixes,
                    "test authz prefixes"),
     SVN_TEST_NULL
   };
