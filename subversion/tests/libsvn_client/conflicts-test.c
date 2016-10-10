@@ -2356,6 +2356,9 @@ test_merge_incoming_move_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
   struct svn_client_status_t *status;
   svn_stringbuf_t *buf;
   svn_opt_revision_t opt_rev;
+  apr_array_header_t *options;
+  svn_client_conflict_option_t *option;
+  apr_array_header_t *possible_moved_to_abspaths;
 
   SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_move_dir", opts, pool));
 
@@ -2365,11 +2368,36 @@ test_merge_incoming_move_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
   deleted_path = svn_relpath_join(branch_path, deleted_dir_name, b->pool);
   moved_to_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
 
-  /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+
+  /* Check possible move destinations for the directory. */
+  SVN_ERR(svn_client_conflict_tree_get_resolution_options(&options, conflict,
+                                                          ctx, b->pool,
+                                                          b->pool));
+  option = svn_client_conflict_option_find_by_id(
+             options, svn_client_conflict_option_incoming_move_dir_merge);
+  SVN_TEST_ASSERT(option != NULL);
+
+  SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates(
+            &possible_moved_to_abspaths, option, b->pool, b->pool));
+
+  /* XFAIL: Currently, the resolver finds two possible destinations for
+   * the moved folder:
+   *
+   *   Possible working copy destinations for moved-away 'A_branch/B' are:
+   *    (1): 'A_branch/newdir'
+   *    (2): 'A/newdir'
+   *   Only one destination can be a move; the others are copies.
+   */
+  SVN_TEST_INT_ASSERT(possible_moved_to_abspaths->nelts, 1);
+  SVN_TEST_STRING_ASSERT(
+    APR_ARRAY_IDX(possible_moved_to_abspaths, 0, const char *),
+    sbox_wc_path(b, moved_to_path));
+
+  /* Resolve the tree conflict. */
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_move_dir_merge,
             ctx, b->pool));
@@ -3294,7 +3322,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "update incoming move file text merge"),
     SVN_TEST_OPTS_PASS(test_switch_incoming_move_file_text_merge,
                        "switch incoming move file text merge"),
-    SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir, "merge incoming move dir"),
+    SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_dir,
+                        "merge incoming move dir"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir2,
                        "merge incoming move dir with local edit"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir3,
