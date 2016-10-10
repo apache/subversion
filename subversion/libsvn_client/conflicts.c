@@ -38,6 +38,8 @@
 #include "svn_hash.h"
 #include "svn_sorts.h"
 #include "client.h"
+
+#include "private/svn_diff_tree.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_token.h"
