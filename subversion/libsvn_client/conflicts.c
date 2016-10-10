@@ -5516,6 +5516,8 @@ raise_tree_conflict(const char *local_abspath,
                     svn_revnum_t merge_left_rev,
                     svn_revnum_t merge_right_rev,
                     svn_wc_context_t *wc_ctx,
+                    svn_wc_notify_func2_t notify_func2,
+                    void *notify_baton2,
                     apr_pool_t *scratch_pool)
 {
   svn_wc_conflict_description2_t *conflict;
@@ -5544,6 +5546,16 @@ raise_tree_conflict(const char *local_abspath,
   conflict->reason = local_change;
 
   SVN_ERR(svn_wc__add_tree_conflict(wc_ctx, conflict, scratch_pool));
+
+  if (notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_tree_conflict,
+                                    scratch_pool);
+      notify->kind = local_node_kind;
+      notify_func2(notify_baton2, notify, scratch_pool);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -5595,7 +5607,8 @@ diff_dir_added(const char *relpath,
                 b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5607,7 +5620,8 @@ diff_dir_added(const char *relpath,
                 svn_node_none, svn_node_dir, b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5654,7 +5668,8 @@ diff_dir_changed(const char *relpath,
                 b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5666,7 +5681,8 @@ diff_dir_changed(const char *relpath,
                 svn_node_dir, svn_node_dir, b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
   else if (on_disk_kind != svn_node_dir)
@@ -5677,7 +5693,8 @@ diff_dir_changed(const char *relpath,
                 svn_node_dir, svn_node_dir, b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5726,7 +5743,8 @@ diff_dir_deleted(const char *relpath,
                 b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5739,7 +5757,8 @@ diff_dir_deleted(const char *relpath,
                 b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
   else if (on_disk_kind == svn_node_none)
@@ -5751,7 +5770,8 @@ diff_dir_deleted(const char *relpath,
                 b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5796,7 +5816,8 @@ diff_file_added(const char *relpath,
                 b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5808,7 +5829,8 @@ diff_file_added(const char *relpath,
                 svn_node_none, svn_node_file, b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5859,7 +5881,8 @@ diff_file_changed(const char *relpath,
                 b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5871,7 +5894,8 @@ diff_file_changed(const char *relpath,
                 svn_node_file, svn_node_file, b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
   else if (on_disk_kind != svn_node_file)
@@ -5882,7 +5906,8 @@ diff_file_changed(const char *relpath,
                 svn_node_file, svn_node_file, b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5933,7 +5958,8 @@ diff_file_deleted(const char *relpath,
                 b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
 
@@ -5945,8 +5971,9 @@ diff_file_deleted(const char *relpath,
                 svn_node_file, svn_node_none,
                 b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
-                b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->merge_left_rev, b->merge_right_rev, b->ctx->wc_ctx,
+                b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
   else if (on_disk_kind == svn_node_none)
@@ -5958,7 +5985,8 @@ diff_file_deleted(const char *relpath,
                 b->repos_root_url, b->repos_uuid,
                 svn_relpath_join(b->added_repos_relpath, relpath, scratch_pool),
                 b->merge_left_rev, b->merge_right_rev,
-                b->ctx->wc_ctx, scratch_pool));
+                b->ctx->wc_ctx, b->ctx->notify_func2, b->ctx->notify_baton2,
+                scratch_pool));
       return SVN_NO_ERROR;
     }
 
