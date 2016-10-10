@@ -5585,8 +5585,10 @@ diff_dir_added(const char *relpath,
 {
   struct merge_newly_added_dir_baton *b = processor->baton;
   const char *local_abspath;
+  const char *copyfrom_url;
   svn_node_kind_t db_kind;
   svn_node_kind_t on_disk_kind;
+  apr_hash_index_t *hi;
 
   /* Skip adding the root of the added directory tree itself. */
   if (relpath[0] == '\0')
@@ -5632,6 +5634,30 @@ diff_dir_added(const char *relpath,
       copyfrom_source->repos_relpath, copyfrom_source->revision));
   SVN_DBG(("%s: right source: %s@%lu\n", __func__,
     right_source->repos_relpath, right_source->revision));
+
+  SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
+  copyfrom_url = apr_pstrcat(scratch_pool, b->repos_root_url, "/",
+                             right_source->repos_relpath, SVN_VA_NULL);
+  SVN_ERR(svn_wc_add4(b->ctx->wc_ctx, local_abspath, svn_depth_infinity,
+                      copyfrom_url, right_source->revision,
+                      NULL, NULL, /* cancel func/baton */
+                      b->ctx->notify_func2, b->ctx->notify_baton2,
+                      scratch_pool));
+
+  for (hi = apr_hash_first(scratch_pool, right_props);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *propname = apr_hash_this_key(hi);
+      const svn_string_t *propval = apr_hash_this_val(hi);
+
+      SVN_ERR(svn_wc_prop_set4(b->ctx->wc_ctx, local_abspath,
+                               propname, propval, svn_depth_empty,
+                               FALSE, NULL /* do not skip checks */,
+                               NULL, NULL, /* cancel func/baton */
+                               b->ctx->notify_func2, b->ctx->notify_baton2,
+                               scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
