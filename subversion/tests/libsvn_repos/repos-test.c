@@ -1464,6 +1464,78 @@ authz(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Test that the latest definition wins, regardless of whether the ":glob:"
+ * or the repo prefix has been given. */
+static svn_error_t *
+authz_authz_prefixes(apr_pool_t *pool)
+{
+  svn_authz_t *authz_cfg;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int i, combi;
+
+  /* Set all rights at some folder and replace them again.  Make sure to
+   * cover the "/" b/c that already has an implicit rule, so we* overwrite
+   * it twice.  The first 2 string placeholders in the rules are for the
+   * repository name and the optional glob support marker. */
+  const char *contents_format =
+    "[%s%s%s]"                                                              NL
+    "* = r"                                                                 NL
+    "plato = rw"                                                            NL
+    ""                                                                      NL
+    "[%s%s%s]"                                                              NL
+    "* ="                                                                   NL
+    "plato = r"                                                             NL;
+
+  /* The paths on which to apply this test. */
+  enum { PATH_COUNT = 2 };
+  const char *test_paths[PATH_COUNT] = { "/", "/A" };
+
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set[] = {
+    /* Test that read rules are correctly used. */
+    { "", "greek", NULL, svn_authz_read, FALSE },
+    /* Test that write rules are correctly used. */
+    { "", "greek", "plato", svn_authz_read, TRUE },
+    { "", "greek", "plato", svn_authz_write, FALSE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* There is a total of 16 combinations of authz content. */
+  for (combi = 0; combi < 16; ++combi)
+    {
+      const char *contents;
+      const char *glob1 = (combi & 1) ? ":glob:" : "";
+      const char *glob2 = (combi & 2) ? ":glob:" : "";
+      const char *repo1 = (combi & 4) ? "greek:" : "";
+      const char *repo2 = (combi & 4) ? "" : "greek:";
+      const char *test_path = test_paths[combi / 8];
+
+      /* Create and parse the authz rules. */
+      svn_pool_clear(iterpool);
+      contents = apr_psprintf(iterpool, contents_format,
+                              glob1, repo1, test_path,
+                              glob2, repo2, test_path);
+      SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, iterpool));
+
+      /* iterate over all test paths */
+      for (i = combi / 8; i < PATH_COUNT; ++i)
+        {
+          /* Set the path for all test cases to the current test path. */
+          struct check_access_tests *test;
+          for (test = test_set; test->path != NULL; ++test)
+            test->path = test_paths[i];
+
+          /* Loop over the test array and test each case. */
+          SVN_ERR(authz_check_access(authz_cfg, test_set, iterpool));
+        }
+    }
+
+  /* That's a wrap! */
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 
 /* Test in-repo authz paths */
 static svn_error_t *
@@ -4014,6 +4086,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "authz for svn_repos_trace_node_locations"),
     SVN_TEST_OPTS_PASS(commit_aborted_txn,
                        "test committing a previously aborted txn"),
+    SVN_TEST_PASS2(authz_authz_prefixes,
+                   "test authz prefixes"),
     SVN_TEST_NULL
   };
 
