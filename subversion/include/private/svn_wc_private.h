@@ -1767,7 +1767,9 @@ svn_wc__conflict_text_mark_resolved(svn_wc_context_t *wc_ctx,
 
 /** 
  * Resolve the conflicted property PROPNAME at LOCAL_ABSPATH as per CHOICE,
- * and then mark the conflict resolved.
+ * and then mark the conflict resolved.  If MERGED_VALUE is not NULL, this is
+ * the new merged property, used when choosing #svn_wc_conflict_choose_merged.
+ *
  * The working copy must already be locked for resolving, e.g. by calling
  * svn_wc__acquire_write_lock_for_resolve() first.
  * @since New in 1.10.
@@ -1777,6 +1779,7 @@ svn_wc__conflict_prop_mark_resolved(svn_wc_context_t *wc_ctx,
                                     const char *local_abspath,
                                     const char *propname,
                                     svn_wc_conflict_choice_t choice,
+                                    const svn_string_t *merged_value,
                                     svn_wc_notify_func2_t notify_func,
                                     void *notify_baton,
                                     apr_pool_t *scratch_pool);
