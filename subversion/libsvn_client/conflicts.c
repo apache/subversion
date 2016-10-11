@@ -70,7 +70,7 @@ struct svn_client_conflict_t
   apr_hash_t *prop_conflicts;
 
   /* Indicate which options were chosen to resolve a text or tree conflict
-   * on the conflited node. */
+   * on the conflicted node. */
   svn_client_conflict_option_id_t resolution_text;
   svn_client_conflict_option_id_t resolution_tree;
 
