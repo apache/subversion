@@ -274,9 +274,10 @@ struct repos_move_info {
 };
 
 /* Set *RELATED to true if the deleted node DELETED_REPOS_RELPATH@DELETED_REV
- * is an ancestor of the copied node COPYFROM_PATH@COPYFROM_REV, and if the
- * copied node is a copy of the deleted node's last-changed revision's content,
- * rather than a copy of some older content. */
+ * is an ancestor of the copied node COPYFROM_PATH@COPYFROM_REV.
+ * If CHECK_LAST_CHANGED_REV is non-zero, also ensure that the copied node
+ * is a copy of the deleted node's last-changed revision's content, rather
+ * than a copy of some older content. If it's not, set *RELATED to false. */
 static svn_error_t *
 check_move_ancestry(svn_boolean_t *related,
                     const char *repos_root_url,
@@ -284,6 +285,7 @@ check_move_ancestry(svn_boolean_t *related,
                     svn_revnum_t deleted_rev,
                     const char *copyfrom_path,
                     svn_revnum_t copyfrom_rev,
+                    svn_boolean_t check_last_changed_rev,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool)
 {
@@ -293,7 +295,6 @@ check_move_ancestry(svn_boolean_t *related,
   svn_ra_session_t *ra_session;
   const char *corrected_url;
   apr_array_header_t *location_revisions;
-  svn_dirent_t *dirent;
 
   location_revisions = apr_array_make(scratch_pool, 1, sizeof(svn_revnum_t));
   APR_ARRAY_PUSH(location_revisions, svn_revnum_t) = copyfrom_rev;
@@ -329,13 +330,20 @@ check_move_ancestry(svn_boolean_t *related,
       return SVN_NO_ERROR;
     }
 
-  /* Verify that copyfrom_rev >= last-changed revision of the deleted node. */
-  SVN_ERR(svn_ra_stat(ra_session, "", deleted_rev - 1, &dirent, scratch_pool));
-  if (dirent == NULL || copyfrom_rev < dirent->created_rev)
-    {
-      *related = FALSE;
-      return SVN_NO_ERROR;
-    }
+  if (check_last_changed_rev)
+  {
+    svn_dirent_t *dirent;
+
+    /* Verify that copyfrom_rev >= last-changed revision of the
+     * deleted node. */
+    SVN_ERR(svn_ra_stat(ra_session, "", deleted_rev - 1, &dirent,
+                        scratch_pool));
+    if (dirent == NULL || copyfrom_rev < dirent->created_rev)
+      {
+        *related = FALSE;
+        return SVN_NO_ERROR;
+      }
+  }
 
   *related = TRUE;
   return SVN_NO_ERROR;
@@ -403,7 +411,7 @@ find_moves_in_revision(apr_hash_t *moves_table,
                                       log_entry->revision,
                                       copy->copyfrom_path,
                                       copy->copyfrom_rev,
-                                      ctx, iterpool));
+                                      TRUE, ctx, iterpool));
           if (!related)
             continue;
 
@@ -432,7 +440,7 @@ find_moves_in_revision(apr_hash_t *moves_table,
                                           next_move->rev,
                                           move->moved_from_repos_relpath,
                                           move->copyfrom_rev,
-                                          ctx, iterpool));
+                                          FALSE, ctx, iterpool));
               if (related)
                 {
                   SVN_ERR_ASSERT(move->rev < next_move->rev);
