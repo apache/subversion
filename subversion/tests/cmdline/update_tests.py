@@ -92,7 +92,7 @@ def update_binary_file(sbox):
 
   # Make a change to the binary file in the original working copy
   svntest.main.file_append(theta_path, "revision 3 text")
-  theta_contents_r3 = theta_contents + "revision 3 text"
+  theta_contents_r3 = theta_contents + b"revision 3 text"
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -113,7 +113,7 @@ def update_binary_file(sbox):
 
   # Make a local mod to theta
   svntest.main.file_append(theta_backup_path, "extra theta text")
-  theta_contents_local = theta_contents + "extra theta text"
+  theta_contents_local = theta_contents + b"extra theta text"
 
   # Create expected output tree for an update of wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
@@ -196,9 +196,9 @@ def update_binary_file_2(sbox):
 
   # Make some mods to the binary files.
   svntest.main.file_append(theta_path, "foobar")
-  new_theta_contents = theta_contents + "foobar"
+  new_theta_contents = theta_contents + b"foobar"
   svntest.main.file_append(zeta_path, "foobar")
-  new_zeta_contents = zeta_contents + "foobar"
+  new_zeta_contents = zeta_contents + b"foobar"
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -286,7 +286,7 @@ def update_binary_file_3(sbox):
 
   # Make some mods to the binary files.
   svntest.main.file_append(theta_path, "foobar")
-  new_theta_contents = theta_contents + "foobar"
+  new_theta_contents = theta_contents + b"foobar"
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -1657,6 +1657,9 @@ def conflict_markers_matching_eol(sbox):
   else:
     crlf = '\r\n'
 
+  # Strict EOL style matching breaks Windows tests at least with Python 2
+  keep_eol_style = not svntest.main.is_os_windows()
+
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
   svntest.actions.run_and_verify_svn(None, [], 'checkout',
@@ -1757,10 +1760,11 @@ def conflict_markers_matching_eol(sbox):
     expected_backup_status.tweak(wc_rev = cur_rev)
 
     # Do the update and check the results in three ways.
-    svntest.actions.run_and_verify_update(wc_backup,
-                                          expected_backup_output,
-                                          expected_backup_disk,
-                                          expected_backup_status)
+    svntest.actions.run_and_verify_update2(wc_backup,
+                                           expected_backup_output,
+                                           expected_backup_disk,
+                                           expected_backup_status,
+                                           keep_eol_style=keep_eol_style)
 
     # cleanup for next run
     svntest.main.run_svn(None, 'revert', '-R', wc_backup)
@@ -1788,6 +1792,9 @@ def update_eolstyle_handling(sbox):
   else:
     crlf = '\r\n'
 
+  # Strict EOL style matching breaks Windows tests at least with Python 2
+  keep_eol_style = not svntest.main.is_os_windows()
+
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
   svntest.actions.run_and_verify_svn(None, [], 'checkout',
@@ -1814,10 +1821,11 @@ def update_eolstyle_handling(sbox):
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 2)
   expected_backup_status.tweak('A/mu', status='M ')
 
-  svntest.actions.run_and_verify_update(wc_backup,
-                                        expected_backup_output,
-                                        expected_backup_disk,
-                                        expected_backup_status)
+  svntest.actions.run_and_verify_update2(wc_backup,
+                                         expected_backup_output,
+                                         expected_backup_disk,
+                                         expected_backup_status,
+                                         keep_eol_style=keep_eol_style)
 
   # Test 2: now change the eol-style property to another value and commit,
   # update the still changed mu in the second working copy; there should be
@@ -1839,10 +1847,11 @@ def update_eolstyle_handling(sbox):
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 3)
   expected_backup_status.tweak('A/mu', status='M ')
 
-  svntest.actions.run_and_verify_update(wc_backup,
-                                        expected_backup_output,
-                                        expected_backup_disk,
-                                        expected_backup_status)
+  svntest.actions.run_and_verify_update2(wc_backup,
+                                         expected_backup_output,
+                                         expected_backup_disk,
+                                         expected_backup_status,
+                                         keep_eol_style=keep_eol_style)
 
   # Test 3: now delete the eol-style property and commit, update the still
   # changed mu in the second working copy; there should be no conflict!
@@ -1863,10 +1872,11 @@ def update_eolstyle_handling(sbox):
 
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 4)
   expected_backup_status.tweak('A/mu', status='M ')
-  svntest.actions.run_and_verify_update(wc_backup,
-                                        expected_backup_output,
-                                        expected_backup_disk,
-                                        expected_backup_status)
+  svntest.actions.run_and_verify_update2(wc_backup,
+                                         expected_backup_output,
+                                         expected_backup_disk,
+                                         expected_backup_status,
+                                         keep_eol_style=keep_eol_style)
 
 # Bug in which "update" put a bogus revision number on a schedule-add file,
 # causing the wrong version of it to be committed.
@@ -2710,6 +2720,7 @@ def update_with_obstructing_additions(sbox):
                                         expected_disk,
                                         expected_status,
                                         [], True,
+                                        '--adds-as-modification', wc_backup,
                                         extra_files=extra_files)
 
   # Some obstructions are still not permitted:
@@ -2820,6 +2831,7 @@ def update_with_obstructing_additions(sbox):
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
                                         [], False,
+                                        '--adds-as-modification',
                                         A_path)
 
   # Resolve the tree conflict.
@@ -2839,7 +2851,7 @@ def update_with_obstructing_additions(sbox):
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
                                         [], False,
-                                        wc_dir, '-N')
+                                        wc_dir, '-N', '--adds-as-modification')
 
   # Resolve the tree conflict.
   svntest.main.run_svn(None, 'resolved', omicron_path)
@@ -3610,7 +3622,7 @@ def update_output_with_conflicts(rev, target, paths=None, resolved=False):
   lines += ['Updated to revision %d.\n' % rev]
   if resolved:
     for path in paths:
-      lines += ["Resolved conflicted state of '%s'\n" % path]
+      lines += ["Merge conflicts in '%s' marked as resolved.\n" % path]
     lines += svntest.main.summary_of_conflicts(text_resolved=len(paths))
   else:
     lines += svntest.main.summary_of_conflicts(text_conflicts=len(paths))
@@ -6343,28 +6355,37 @@ def windows_update_backslash(sbox):
                     'mkdir', 'A/completely\\unusable\\dir')
 
   # No error and a proper skip + recording in the working copy would also
-  # be a good result. This just verifies current behavior.
-
-  if sbox.repo_url.startswith('http'):
-    # Apache Httpd doesn't allow paths with '\\' in them on Windows, so the
-    # test if a user is allowed to read them returns a failure. This makes
-    # mod_dav_svn report the path as server excluded (aka absent), which
-    # doesn't produce output when updating.
-    expected_output = [
-      "Updating '%s':\n" % wc_dir,
-      "At revision 2.\n"
-    ]
-    expected_err = []
-  else:
-    expected_output = None
-    expected_err = 'svn: E155000: .* is not valid.*'
-
-  svntest.actions.run_and_verify_svn(expected_output, expected_err,
-                                     'up', wc_dir)
-
-  if sbox.repo_url.startswith('http'):
+  # be a good result. This just verifies current behavior:
+  #
+  # - Error via file://, svn:// or http:// with SVNPathAuthz short_circuit
+  #
+  # - No error via http:// with SVNPathAuthz on
+  #   (The reason is that Apache Httpd doesn't allow paths with '\\' in
+  #    them on Windows, and a subrequest-based access check returns 404.
+  #    This makes mod_dav_svn report the path as server excluded (aka
+  #    absent), which doesn't produce output when updating.)
+  #
+  # Since https://issues.apache.org/jira/browse/SVN-3288 is about a crash,
+  # we're fine with either result -- that is, if `svn update' finished
+  # without an error, we expect specific stdout and proper wc state.
+  # If it failed, we expect to get the following error:
+  #
+  #  svn: E155000: 'completely\unusable\dir' is not valid as filename
+  #  in directory [...]
+  #
+  exit_code, output, errput = svntest.main.run_svn(1, 'up', wc_dir)
+  if exit_code == 0:
+    verify.verify_outputs("Unexpected output", output, errput, [
+                           "Updating '%s':\n" % wc_dir,
+                           "At revision 2.\n"
+                          ], [])
     expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
     svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  elif exit_code == 1:
+    verify.verify_outputs("Unexpected output", output, errput,
+                          None, 'svn: E155000: .* is not valid.*')
+  else:
+    raise verify.SVNUnexpectedExitCode(exit_code)
 
 def update_moved_away(sbox):
   "update subtree of moved away"
@@ -6614,7 +6635,9 @@ def update_conflict_details(sbox):
                                prev_status='  ', prev_treeconflict='C'),
   })
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
-                                        None, expected_status)
+                                        None, expected_status,
+                                        [], False,
+                                        '--adds-as-modification', wc_dir)
 
   # Update can't pass source as none at a specific URL@revision,
   # because it doesn't know... the working copy could be mixed

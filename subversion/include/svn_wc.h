@@ -998,7 +998,10 @@ typedef enum svn_wc_notify_action_t
   /** A revert operation has failed. */
   svn_wc_notify_failed_revert,
 
-  /** Resolving a conflict. */
+  /** All conflicts on a path were marked as resolved.
+   * @note As of 1.10, separate notifications are sent for individually
+   * resolved text, property, and tree conflicts. This notification is used
+   * only if all conflicts on a path were marked resolved at once. */
   svn_wc_notify_resolved,
 
   /** Skipping a path. */
@@ -1274,7 +1277,34 @@ typedef enum svn_wc_notify_action_t
 
   /** Finalizing commit.
    * @since New in 1.9. */
-  svn_wc_notify_commit_finalizing
+  svn_wc_notify_commit_finalizing,
+
+  /** All text conflicts in a file were marked as resolved.
+   * @since New in 1.10. */
+  svn_wc_notify_resolved_text,
+
+  /** A property conflict on a path was marked as resolved.
+   * The name of the property is specified in #svn_wc_notify_t.prop_name.
+   * @since New in 1.10. */
+  svn_wc_notify_resolved_prop,
+
+  /** A tree conflict on a path was marked as resolved.
+   * @since New in 1.10. */
+  svn_wc_notify_resolved_tree,
+
+  /** Starting to search the repository for details about a tree conflict.
+   * @since New in 1.10. */
+  svn_wc_notify_begin_search_tree_conflict_details,
+
+  /** Progressing in search of repository for details about a tree conflict.
+   * The revision being searched is specified in #svn_wc_notify_t.revision.
+   * @since New in 1.10. */
+  svn_wc_notify_tree_conflict_details_progress,
+
+  /** Done searching the repository for details about a conflict.
+   * @since New in 1.10. */
+  svn_wc_notify_end_search_tree_conflict_details,
+
 } svn_wc_notify_action_t;
 
 
@@ -5054,7 +5084,11 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
  * Temporary allocations will be performed in @a scratch_pool.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.9 API.
+ * Use svn_client_conflict_text_resolve(), svn_client_conflict_prop_resolve(),
+ * and svn_client_conflict_tree_resolve() instead.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
                           const char *local_abspath,

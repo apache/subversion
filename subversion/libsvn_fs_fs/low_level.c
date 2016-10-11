@@ -482,10 +482,10 @@ read_change(change_t **change_p,
 svn_error_t *
 svn_fs_fs__read_changes(apr_array_header_t **changes,
                         svn_stream_t *stream,
+                        int max_count,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  change_t *change;
   apr_pool_t *iterpool;
 
   /* Pre-allocate enough room for most change lists.
@@ -498,13 +498,16 @@ svn_fs_fs__read_changes(apr_array_header_t **changes,
    */
   *changes = apr_array_make(result_pool, 63, sizeof(change_t *));
 
-  SVN_ERR(read_change(&change, stream, result_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
-  while (change)
+  for (; max_count > 0; --max_count)
     {
-      APR_ARRAY_PUSH(*changes, change_t*) = change;
-      SVN_ERR(read_change(&change, stream, result_pool, iterpool));
+      change_t *change;
       svn_pool_clear(iterpool);
+      SVN_ERR(read_change(&change, stream, result_pool, iterpool));
+      if (!change)
+        break;
+ 
+      APR_ARRAY_PUSH(*changes, change_t*) = change;
     }
   svn_pool_destroy(iterpool);
 
@@ -797,7 +800,11 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
 
   SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_md5, str,
                                  scratch_pool));
-  memcpy(rep->md5_digest, checksum->digest, sizeof(rep->md5_digest));
+
+  /* If STR is a all-zero checksum, CHECKSUM will be NULL and REP already
+     contains the correct value. */
+  if (checksum)
+    memcpy(rep->md5_digest, checksum->digest, sizeof(rep->md5_digest));
 
   /* The remaining fields are only used for formats >= 4, so check that. */
   str = svn_cstring_tokenize(" ", &string);
@@ -811,8 +818,16 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
 
   SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1, str,
                                  scratch_pool));
+
+  /* We do have a valid SHA1 but it might be all 0.
+     We cannot be sure where that came from (Alas! legacy), so let's not
+     claim we know the SHA1 in that case. */
   rep->has_sha1 = checksum != NULL;
-  memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
+
+  /* If STR is a all-zero checksum, CHECKSUM will be NULL and REP already
+     contains the correct value. */
+  if (checksum)
+    memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
 
   /* Read the uniquifier. */
   str = svn_cstring_tokenize("/", &string);

@@ -23,12 +23,14 @@ backport.merger - library for running STATUS merges
 
 import backport.status
 
+import contextlib
 import functools
 import logging
 import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 import unittest
 
@@ -43,25 +45,26 @@ class UnableToMergeException(Exception):
   pass
 
 
-def invoke_svn(argv, extra_env={}):
+def invoke_svn(argv):
   "Run svn with ARGV as argv[1:].  Return (exit_code, stdout, stderr)."
   # TODO(interactive mode): disable --non-interactive
   child_env = os.environ.copy()
-  child_env.update(extra_env)
-  child = subprocess.Popen([SVN, '--non-interactive'] + argv,
+  child_env.update({'LC_ALL': 'C'})
+  argv = [SVN, '--non-interactive', '--config-option=config:miscellany:log-encoding=UTF-8'] + argv
+  child = subprocess.Popen(argv,
                            stdout=subprocess.PIPE,
                            stderr=subprocess.PIPE,
                            env=child_env)
   stdout, stderr = child.communicate()
   return child.returncode, stdout.decode('UTF-8'), stderr.decode('UTF-8')
 
-def run_svn(argv, expected_stderr=None, extra_env={'LC_ALL': 'C'}):
+def run_svn(argv, expected_stderr=None):
   """Run svn with ARGV as argv[1:].  If EXPECTED_STDERR is None, raise if the
   exit code is non-zero or stderr is non-empty.  Else, treat EXPECTED_STDERR as
   a regexp, and ignore an errorful exit or stderr messages if the latter match
   the regexp.  Return exit_code, stdout, stderr."""
 
-  exit_code, stdout, stderr = invoke_svn(argv, extra_env)
+  exit_code, stdout, stderr = invoke_svn(argv)
   if exit_code == 0 and not stderr:
     return exit_code, stdout, stderr
   elif expected_stderr and re.compile(expected_stderr).search(stderr):
@@ -141,6 +144,14 @@ def _includes_only_svn_mergeinfo_changes(status_output):
   return False
 
 
+@contextlib.contextmanager
+def log_message_file(logmsg):
+  "Context manager that returns a file containing the text LOGMSG."
+  with tempfile.NamedTemporaryFile(mode='w+', encoding="UTF-8") as logmsg_file:
+    logmsg_file.write(logmsg)
+    logmsg_file.flush()
+    yield logmsg_file.name
+  
 def merge(entry, expected_stderr=None, *, commit=False):
   """Merges ENTRY into the working copy at cwd.
 
@@ -209,7 +220,9 @@ def merge(entry, expected_stderr=None, *, commit=False):
       s = s[:-1]
     open('./STATUS', 'w').write(s)
 
-    run_svn_quiet(['commit', '-m', logmsg])
+    # Don't assume we can pass UTF-8 in argv.
+    with log_message_file(logmsg) as logmsg_filename:
+      run_svn_quiet(['commit', '-F', logmsg_filename])
 
   # TODO(interactive mode): add the 'svn status' display
 
@@ -217,9 +230,9 @@ def merge(entry, expected_stderr=None, *, commit=False):
     revnum = last_changed_revision('./STATUS')
     
     if commit:
-      # TODO: disable this for test runs
       # Sleep to avoid out-of-order commit notifications
-      time.sleep(15)
+      if not os.getenv("SVN_BACKPORT_DONT_SLEEP"): # enabled by the test suite
+          time.sleep(15)
       second_logmsg = "Remove the {!r} branch, {} in r{}."\
                           .format(entry.branch, reintegrated_word, revnum)
       run_svn(['rm', '-m', second_logmsg, '--', branch_url])

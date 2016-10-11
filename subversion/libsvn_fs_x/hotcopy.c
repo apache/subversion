@@ -555,7 +555,7 @@ typedef struct hotcopy_body_baton_t {
  * An incremental hotcopy copies only changed or new files to the destination,
  * and removes files from the destination no longer present in the source.
  * While the incremental hotcopy is running, readers should still be able
- * to access the destintation repository without error and should not see
+ * to access the destination repository without error and should not see
  * revisions currently in progress of being copied. Readers are able to see
  * new fully copied revisions even if the entire incremental hotcopy procedure
  * has not yet completed.

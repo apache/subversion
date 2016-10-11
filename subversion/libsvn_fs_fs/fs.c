@@ -292,6 +292,7 @@ initialize_fs_struct(svn_fs_t *fs)
   fs_fs_data_t *ffd = apr_pcalloc(fs->pool, sizeof(*ffd));
   ffd->use_log_addressing = FALSE;
   ffd->revprop_prefix = 0;
+  ffd->flush_to_disk = TRUE;
 
   fs->vtable = &fs_vtable;
   fs->fsap_data = ffd;
@@ -474,7 +475,7 @@ fs_pack(svn_fs_t *fs,
         apr_pool_t *common_pool)
 {
   SVN_ERR(fs_open(fs, path, common_pool_lock, pool, common_pool));
-  return svn_fs_fs__pack(fs, notify_func, notify_baton,
+  return svn_fs_fs__pack(fs, 0, notify_func, notify_baton,
                          cancel_func, cancel_baton, pool);
 }
 

@@ -43,6 +43,7 @@
 #include "private/svn_fs_util.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_fspath.h"
+#include "private/svn_sqlite.h"
 
 #include "../svn_test_fs.h"
 
@@ -3592,17 +3593,11 @@ get_file_checksum(svn_checksum_t **checksum,
                   apr_pool_t *pool)
 {
   svn_stream_t *stream;
-  svn_stream_t *checksum_stream;
 
   /* Get a stream for the file contents. */
   SVN_ERR(svn_fs_file_contents(&stream, root, path, pool));
-
-  /* Get a checksummed stream for the contents. */
-  checksum_stream = svn_stream_checksummed2(stream, checksum, NULL,
-                                            checksum_kind, TRUE, pool);
-
-  /* Close the stream, forcing a complete read and copy the digest. */
-  SVN_ERR(svn_stream_close(checksum_stream));
+  SVN_ERR(svn_stream_contents_checksum(checksum, stream, checksum_kind,
+                                       pool, pool));
 
   return SVN_NO_ERROR;
 }
@@ -6701,6 +6696,9 @@ test_fsfs_config_opts(const svn_test_opts_t *opts,
   svn_fs_t *fs;
   const svn_fs_info_placeholder_t *fs_info;
   const svn_fs_fsfs_info_t *fsfs_info;
+  const char *dir_name = "test-repo-fsfs-config-opts";
+  const char *repo_name_default = "test-repo-fsfs-config-opts/default";
+  const char *repo_name_custom = "test-repo-fsfs-config-opts/custom";
 
   /* Bail (with SKIP) on known-untestable scenarios */
   if (strcmp(opts->fs_type, SVN_FS_TYPE_FSFS) != 0)
@@ -6708,20 +6706,19 @@ test_fsfs_config_opts(const svn_test_opts_t *opts,
                             "this will test FSFS repositories only");
 
   /* Remove the test directory from previous runs. */
-  SVN_ERR(svn_io_remove_dir2("test-repo-fsfs-config-opts", TRUE, NULL, NULL,
-                             pool));
+  SVN_ERR(svn_io_remove_dir2(dir_name, TRUE, NULL, NULL, pool));
 
   /* Create the test directory and add it to the test cleanup list. */
-  SVN_ERR(svn_io_dir_make("test-fsfs-config-opts", APR_OS_DEFAULT, pool));
-  svn_test_add_dir_cleanup("test-fsfs-config-opts");
+  SVN_ERR(svn_io_dir_make(dir_name, APR_OS_DEFAULT, pool));
+  svn_test_add_dir_cleanup(dir_name);
 
   /* Create an FSFS filesystem with default config.*/
   fs_config = apr_hash_make(pool);
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, SVN_FS_TYPE_FSFS);
-  SVN_ERR(svn_fs_create(&fs, "test-fsfs-config-opts/default", fs_config, pool));
+  SVN_ERR(svn_fs_create(&fs, repo_name_default, fs_config, pool));
 
   /* Re-open FS to test the data on disk. */
-  SVN_ERR(svn_fs_open2(&fs, "test-fsfs-config-opts/default", NULL, pool, pool));
+  SVN_ERR(svn_fs_open2(&fs, repo_name_default, NULL, pool, pool));
 
   SVN_ERR(svn_fs_info(&fs_info, fs, pool, pool));
   SVN_TEST_STRING_ASSERT(fs_info->fs_type, SVN_FS_TYPE_FSFS);
@@ -6738,10 +6735,10 @@ test_fsfs_config_opts(const svn_test_opts_t *opts,
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FS_TYPE, SVN_FS_TYPE_FSFS);
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_LOG_ADDRESSING, "false");
   svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_SHARD_SIZE, "123");
-  SVN_ERR(svn_fs_create(&fs, "test-fsfs-config-opts/custom", fs_config, pool));
+  SVN_ERR(svn_fs_create(&fs, repo_name_custom, fs_config, pool));
 
   /* Re-open FS to test the data on disk. */
-  SVN_ERR(svn_fs_open2(&fs, "test-fsfs-config-opts/custom", NULL, pool, pool));
+  SVN_ERR(svn_fs_open2(&fs, repo_name_custom, NULL, pool, pool));
 
   SVN_ERR(svn_fs_info(&fs_info, fs, pool, pool));
   SVN_TEST_STRING_ASSERT(fs_info->fs_type, SVN_FS_TYPE_FSFS);
@@ -6982,13 +6979,13 @@ freeze_and_commit(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root;
   svn_revnum_t new_rev = 0;
   apr_pool_t *subpool = svn_pool_create(pool);
+  const char *repo_name = "test-repo-freeze-and-commit";
 
   if (!strcmp(opts->fs_type, "bdb"))
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "this will not test BDB repositories");
 
-  SVN_ERR(svn_test__create_fs(&fs, "test-repo-freeze-and-commit", opts,
-                              subpool));
+  SVN_ERR(svn_test__create_fs(&fs, repo_name, opts, subpool));
 
   /* This test used to FAIL with an SQLite error since svn_fs_freeze()
    * wouldn't unlock rep-cache.db.  Therefore, part of the role of creating
@@ -7020,13 +7017,172 @@ freeze_and_commit(const svn_test_opts_t *opts,
   SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
 
   /* Re-open FS and make another commit. */
-  SVN_ERR(svn_fs_open(&fs, "test-freeze-and-commit", NULL, subpool));
+  SVN_ERR(svn_fs_open(&fs, repo_name, NULL, subpool));
   SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_change_node_prop(txn_root, "/", "temperature",
                                   svn_string_create("451", pool),
                                   pool));
   SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Number of changes in a revision.
+ * Should be > 100 to span multiple blocks. */
+#define CHANGES_COUNT 1017
+
+/* Check that REVISION in FS reports the expected changes. */
+static svn_error_t *
+verify_added_files_list(svn_fs_t *fs,
+                        svn_revnum_t revision,
+                        apr_pool_t *scratch_pool)
+{
+  int i;
+  svn_fs_root_t *root;
+  apr_hash_t *changed_paths;
+  svn_fs_path_change_iterator_t *iterator;
+  svn_fs_path_change3_t *change;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  /* Collect changes and test that no path gets reported twice. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, revision, scratch_pool));
+  SVN_ERR(svn_fs_paths_changed3(&iterator, root, scratch_pool, scratch_pool));
+
+  changed_paths = apr_hash_make(scratch_pool);
+  SVN_ERR(svn_fs_path_change_get(&change, iterator));
+  while (change)
+    {
+      const char *path = apr_pstrmemdup(scratch_pool, change->path.data,
+                                        change->path.len);
+      SVN_TEST_ASSERT(change->change_kind == svn_fs_path_change_add);
+      SVN_TEST_ASSERT(!apr_hash_get(changed_paths, path, change->path.len));
+
+      apr_hash_set(changed_paths, path, change->path.len, path);
+      SVN_ERR(svn_fs_path_change_get(&change, iterator));
+    }
+
+  /* Verify that we've got exactly all paths that we added. */
+  SVN_TEST_ASSERT(CHANGES_COUNT == apr_hash_count(changed_paths));
+  for (i = 0; i < CHANGES_COUNT; ++i)
+    {
+      const char *file_name;
+      svn_pool_clear(iterpool);
+
+      file_name = apr_psprintf(iterpool, "/file-%d", i);
+      SVN_TEST_ASSERT(svn_hash_gets(changed_paths, file_name));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_large_changed_paths_list(const svn_test_opts_t *opts,
+                              apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  int i;
+  svn_revnum_t rev = 0;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  const char *repo_name = "test-repo-changed-paths-list";
+
+  SVN_ERR(svn_test__create_fs(&fs, repo_name, opts, pool));
+
+  /* r1: Add many empty files - just to amass a long list of changes. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+
+  for (i = 0; i < CHANGES_COUNT; ++i)
+    {
+      const char *file_name;
+      svn_pool_clear(iterpool);
+
+      file_name = apr_psprintf(iterpool, "/file-%d", i);
+      SVN_ERR(svn_fs_make_file(txn_root, file_name, iterpool));
+    }
+
+  SVN_ERR(test_commit_txn(&rev, txn, NULL, pool));
+
+  /* Now, read the change list.
+   * Do it twice to cover cached data as well. */
+  svn_pool_clear(iterpool);
+  SVN_ERR(verify_added_files_list(fs, rev, iterpool));
+  svn_pool_clear(iterpool);
+  SVN_ERR(verify_added_files_list(fs, rev, iterpool));
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+#undef CHANGES_COUNT
+
+static svn_error_t *
+commit_with_locked_rep_cache(const svn_test_opts_t *opts,
+                             apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t new_rev;
+  svn_sqlite__db_t *sdb;
+  svn_error_t *err;
+  const char *fs_path;
+  const char *statements[] = { "SELECT MAX(revision) FROM rep_cache", NULL };
+
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "this will not test BDB repositories");
+
+  if (opts->server_minor_version && (opts->server_minor_version < 6))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "pre-1.6 SVN doesn't support FSFS rep-sharing");
+
+  fs_path = "test-repo-commit-with-locked-rep-cache";
+  SVN_ERR(svn_test__create_fs(&fs, fs_path, opts, pool));
+
+  /* r1: Add a file. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "/foo", pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "/foo", "a", pool));
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+  SVN_TEST_INT_ASSERT(new_rev, 1);
+
+  /* Begin a new transaction based on r1. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 1, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "/foo", "b", pool));
+
+  /* Obtain a shared lock on the rep-cache.db by starting a new read
+   * transaction. */
+  SVN_ERR(svn_sqlite__open(&sdb,
+                           svn_dirent_join(fs_path, "rep-cache.db", pool),
+                           svn_sqlite__mode_readonly, statements, 0, NULL,
+                           0, pool, pool));
+  SVN_ERR(svn_sqlite__begin_transaction(sdb));
+  SVN_ERR(svn_sqlite__exec_statements(sdb, 0));
+
+  /* Attempt to commit fs transaction.  This should result in a commit
+   * post-processing error due to us still holding the shared lock on the
+   * rep-cache.db. */
+  err = svn_fs_commit_txn(NULL, &new_rev, txn, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_SQLITE_BUSY);
+  SVN_TEST_INT_ASSERT(new_rev, 2);
+
+  /* Release the shared lock. */
+  SVN_ERR(svn_sqlite__finish_transaction(sdb, SVN_NO_ERROR));
+  SVN_ERR(svn_sqlite__close(sdb));
+
+  /* Try an operation that reads from rep-cache.db.
+   *
+   * XFAIL: Around r1740802, this call was producing an error due to the
+   * svn_fs_t keeping an unusable db connection (and associated file
+   * locks) within it.
+   */
+  SVN_ERR(svn_fs_verify(fs_path, NULL, 0, SVN_INVALID_REVNUM, NULL, NULL,
+                        NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -7165,6 +7321,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_check_related for transactions"),
     SVN_TEST_OPTS_PASS(freeze_and_commit,
                        "freeze and commit"),
+    SVN_TEST_OPTS_PASS(test_large_changed_paths_list,
+                       "test reading a large changed paths list"),
+    SVN_TEST_OPTS_PASS(commit_with_locked_rep_cache,
+                       "test commit with locked rep-cache"),
     SVN_TEST_NULL
   };
 

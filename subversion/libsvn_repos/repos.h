@@ -390,17 +390,6 @@ svn_repos__authz_validate(svn_authz_t *authz,
 
 /*** Utility Functions ***/
 
-/* Set *CHANGED_P to TRUE if ROOT1/PATH1 and ROOT2/PATH2 have
-   different contents, FALSE if they have the same contents.
-   Use POOL for temporary allocation. */
-svn_error_t *
-svn_repos__compare_files(svn_boolean_t *changed_p,
-                         svn_fs_root_t *root1,
-                         const char *path1,
-                         svn_fs_root_t *root2,
-                         const char *path2,
-                         apr_pool_t *pool);
-
 /* Set *PREV_PATH and *PREV_REV to the path and revision which
    represent the location at which PATH in FS was located immediately
    prior to REVISION iff there was a copy operation (to PATH or one of

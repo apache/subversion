@@ -206,7 +206,7 @@ svn_fs_x__p2l_index_append(svn_checksum_t **checksum,
 /* Use the phys-to-log mapping files in FS to build a list of entries
  * that (at least partly) overlap with the range given by BLOCK_START
  * offset and BLOCK_SIZE in the rep / pack file containing REVISION.
- * Return the array in *ENTRIES with svn_fs_fs__p2l_entry_t as elements,
+ * Return the array in *ENTRIES with svn_fs_x__p2l_entry_t as elements,
  * allocated in RESULT_POOL.  REV_FILE determines whether to access single
  * rev or pack file data.  If that is not available anymore (neither in
  * cache nor on disk), return an error.  Use SCRATCH_POOL for temporary
@@ -309,7 +309,7 @@ svn_fs_x__p2l_get_max_offset(apr_off_t *offset,
 
 /* For FS, create a new L2P auto-deleting proto index file in POOL and return
  * its name in *PROTONAME.  All entries to write are given in ENTRIES and
- * entries are of type svn_fs_fs__p2l_entry_t* (sic!).  The ENTRIES array
+ * entries are of type svn_fs_x__p2l_entry_t* (sic!).  The ENTRIES array
  * will be reordered.  Give the proto index file the lifetime of RESULT_POOL
  * and use SCRATCH_POOL for temporary allocations.
  */
@@ -322,7 +322,7 @@ svn_fs_x__l2p_index_from_p2l_entries(const char **protoname,
 
 /* For FS, create a new P2L auto-deleting proto index file in POOL and return
  * its name in *PROTONAME.  All entries to write are given in ENTRIES and
- * of type svn_fs_fs__p2l_entry_t*.  The FVN1 checksums are not taken from
+ * of type svn_fs_x__p2l_entry_t*.  The FVN1 checksums are not taken from
  * ENTRIES but are begin calculated from the current contents of REV_FILE
  * as we go.  Give the proto index file the lifetime of RESULT_POOL and use
  * SCRATCH_POOL for temporary allocations.

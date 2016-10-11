@@ -19,7 +19,7 @@ Blanket commit access:
           fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
         daniel   Daniel Stenberg <daniel@haxx.se>
       cmpilato   C. Michael Pilato <cmpilato@collab.net>
-        philip   Philip Martin <philip.martin@wandisco.com>
+        philip   Philip Martin <philip@apache.org>
    jerenkrantz   Justin Erenkrantz <justin@erenkrantz.com>
         rooneg   Garrett Rooney <rooneg@electricjellyfish.net>
          blair   Blair Zajac <blair@orcaware.com>
@@ -55,7 +55,7 @@ Blanket commit access:
      jwhitlock   Jeremy Whitlock <jcscoobyrs@gmail.com>
        sbutler   Stephen Butler <sbutler@elego.de>
         dannas   Daniel Näslund <dannas@dannas.name>
-       stefan2   Stefan Fuhrmann <stefan.fuhrmann@wandisco.com>
+       stefan2   Stefan Fuhrmann <stefan2@apache.org>
        jcorvel   Johan Corveleyn <jcorvel@gmail.com>
          trent   Trent Nelson <trent@snakebite.org>
         kotkov   Evgeny Kotkov <evgeny.kotkov@visualsvn.com>
@@ -190,8 +190,7 @@ Commit access for specific areas:
           lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN) [EMAIL
                                                              IS BOUNCING]
 giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
-        nebiac   Federico Nebiacolombo <cint1@amsjv.it>      (po: it) [EMAIL
-                                                             IS BOUNCING]
+        nebiac   Federico Nebiacolombo <cint1@amsjv.it>      (po: it)
         fabien   Fabien Coelho <fabien@coelho.net>           (po: fr)
        marcelg   Marcel Gosselin <marcel.gosselin@polymtl.ca> (po: fr)
       mattiase   Mattias Engdegård <mattiase@acm.org>        (po: sv)

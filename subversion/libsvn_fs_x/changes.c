@@ -21,6 +21,7 @@
  */
 
 #include "svn_private_config.h"
+#include "svn_sorts.h"
 
 #include "private/svn_packed_data.h"
 
@@ -37,8 +38,8 @@
 /* the change contains a property modification */
 #define CHANGE_PROP_MOD     0x00002
 
-/* the last part (rev_id) of node revision ID is a transaction ID */
-#define CHANGE_TXN_NODE     0x00004
+/* the change contains a mergeinfo modification */
+#define CHANGE_MERGEINFO_MOD 0x00004
 
 /* (flags & CHANGE_NODE_MASK) >> CHANGE_NODE_SHIFT extracts the node type */
 #define CHANGE_NODE_SHIFT   0x00003
@@ -52,16 +53,13 @@
 
 /* (flags & CHANGE_KIND_MASK) >> CHANGE_KIND_SHIFT extracts the change type */
 #define CHANGE_KIND_SHIFT   0x00005
-#define CHANGE_KIND_MASK    0x000E0
+#define CHANGE_KIND_MASK    0x00060
 
 /* node types according to svn_fs_path_change_kind_t */
 #define CHANGE_KIND_MODIFY  0x00000
 #define CHANGE_KIND_ADD     0x00020
 #define CHANGE_KIND_DELETE  0x00040
 #define CHANGE_KIND_REPLACE 0x00060
-#define CHANGE_KIND_RESET   0x00080
-#define CHANGE_KIND_MOVE    0x000A0
-#define CHANGE_KIND_MOVEREPLACE 0x000C0
 
 /* Our internal representation of a change */
 typedef struct binary_change_t
@@ -76,10 +74,6 @@ typedef struct binary_change_t
    * Not present if COPYFROM_REV is SVN_INVALID_REVNUM. */
   svn_revnum_t copyfrom_rev;
   apr_size_t copyfrom_path;
-
-  /* Relevant parts of the node revision ID of the change.
-   * Empty, if REV_ID is not "used". */
-  svn_fs_x__id_t noderev_id;
 
 } binary_change_t;
 
@@ -138,20 +132,16 @@ append_change(svn_fs_x__changes_t *changes,
               svn_fs_x__change_t *change)
 {
   binary_change_t binary_change = { 0 };
-  svn_boolean_t is_txn_id;
 
   /* CHANGE must be sufficiently complete */
   SVN_ERR_ASSERT(change);
   SVN_ERR_ASSERT(change->path.data);
 
-  /* Relevant parts of the revision ID of the change. */
-  binary_change.noderev_id = change->noderev_id;
-
   /* define the kind of change and what specific information is present */
-  is_txn_id = svn_fs_x__is_txn(binary_change.noderev_id.change_set);
   binary_change.flags = (change->text_mod ? CHANGE_TEXT_MOD : 0)
                       | (change->prop_mod ? CHANGE_PROP_MOD : 0)
-                      | (is_txn_id ? CHANGE_TXN_NODE : 0)
+                      | (change->mergeinfo_mod == svn_tristate_true
+                                          ? CHANGE_MERGEINFO_MOD : 0)
                       | ((int)change->change_kind << CHANGE_KIND_SHIFT)
                       | ((int)change->node_kind << CHANGE_NODE_SHIFT);
 
@@ -222,8 +212,11 @@ svn_error_t *
 svn_fs_x__changes_get_list(apr_array_header_t **list,
                            const svn_fs_x__changes_t *changes,
                            apr_size_t idx,
+                           svn_fs_x__changes_context_t *context,
                            apr_pool_t *result_pool)
 {
+  int list_first;
+  int list_last;
   int first;
   int last;
   int i;
@@ -242,8 +235,16 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
                              idx, changes->offsets->nelts - 1);
 
   /* range of changes to return */
-  first = APR_ARRAY_IDX(changes->offsets, (int)idx, int);
-  last = APR_ARRAY_IDX(changes->offsets, (int)idx + 1, int);
+  list_first = APR_ARRAY_IDX(changes->offsets, (int)idx, int);
+  list_last = APR_ARRAY_IDX(changes->offsets, (int)idx + 1, int);
+
+  /* Restrict it to the sub-range requested by the caller.
+   * Clip the range to never exceed the list's content. */
+  first = MIN(context->next + list_first, list_last);
+  last = MIN(first + SVN_FS_X__CHANGES_BLOCK_SIZE, list_last);
+
+  /* Indicate to the caller whether the end of the list has been reached. */
+  context->eol = last == list_last;
 
   /* construct result */
   *list = apr_array_make(result_pool, last - first,
@@ -260,13 +261,13 @@ svn_fs_x__changes_get_list(apr_array_header_t **list,
                                                      &change->path.len,
                                                      result_pool);
 
-      if (binary_change->noderev_id.change_set != SVN_FS_X__INVALID_CHANGE_SET)
-        change->noderev_id = binary_change->noderev_id;
-
       change->change_kind = (svn_fs_path_change_kind_t)
         ((binary_change->flags & CHANGE_KIND_MASK) >> CHANGE_KIND_SHIFT);
       change->text_mod = (binary_change->flags & CHANGE_TEXT_MOD) != 0;
       change->prop_mod = (binary_change->flags & CHANGE_PROP_MOD) != 0;
+      change->mergeinfo_mod = (binary_change->flags & CHANGE_MERGEINFO_MOD)
+                            ? svn_tristate_true
+                            : svn_tristate_false;
       change->node_kind = (svn_node_kind_t)
         ((binary_change->flags & CHANGE_NODE_MASK) >> CHANGE_NODE_SHIFT);
 
@@ -312,8 +313,6 @@ svn_fs_x__write_changes_container(svn_stream_t *stream,
   svn_packed__create_int_substream(changes_stream, TRUE, FALSE);
   svn_packed__create_int_substream(changes_stream, TRUE, TRUE);
   svn_packed__create_int_substream(changes_stream, TRUE, FALSE);
-  svn_packed__create_int_substream(changes_stream, TRUE, TRUE);
-  svn_packed__create_int_substream(changes_stream, TRUE, FALSE);
 
   /* serialize offsets array */
   for (i = 0; i < changes->offsets->nelts; ++i)
@@ -331,9 +330,6 @@ svn_fs_x__write_changes_container(svn_stream_t *stream,
 
       svn_packed__add_int(changes_stream, change->copyfrom_rev);
       svn_packed__add_uint(changes_stream, change->copyfrom_path);
-
-      svn_packed__add_int(changes_stream, change->noderev_id.change_set);
-      svn_packed__add_uint(changes_stream, change->noderev_id.number);
     }
 
   /* write to disk */
@@ -387,9 +383,6 @@ svn_fs_x__read_changes_container(svn_fs_x__changes_t **changes_p,
 
       change.copyfrom_rev = (svn_revnum_t)svn_packed__get_int(changes_stream);
       change.copyfrom_path = (apr_size_t)svn_packed__get_uint(changes_stream);
-
-      change.noderev_id.change_set = svn_packed__get_int(changes_stream);
-      change.noderev_id.number = svn_packed__get_uint(changes_stream);
 
       APR_ARRAY_PUSH(changes->changes, binary_change_t) = change;
     }
@@ -465,7 +458,8 @@ svn_fs_x__changes_get_list_func(void **out,
   int i;
   apr_array_header_t *list;
 
-  apr_uint32_t idx = *(apr_uint32_t *)baton;
+  svn_fs_x__changes_get_list_baton_t *b = baton;
+  apr_uint32_t idx = b->sub_item;
   const svn_fs_x__changes_t *container = data;
 
   /* resolve all the sub-container pointers we need */
@@ -496,6 +490,12 @@ svn_fs_x__changes_get_list_func(void **out,
   first = offsets[idx];
   last = offsets[idx+1];
 
+  /* Restrict range to the block requested by the BATON.
+   * Tell the caller whether we reached the end of the list. */
+  first = MIN(first + b->start, last);
+  last = MIN(first + SVN_FS_X__CHANGES_BLOCK_SIZE, last);
+  *b->eol = last == offsets[idx+1];
+
   /* construct result */
   list = apr_array_make(pool, last - first, sizeof(svn_fs_x__change_t*));
 
@@ -508,8 +508,6 @@ svn_fs_x__changes_get_list_func(void **out,
       change->path.data
         = svn_fs_x__string_table_get_func(paths, binary_change->path,
                                           &change->path.len, pool);
-
-      change->noderev_id = binary_change->noderev_id;
 
       change->change_kind = (svn_fs_path_change_kind_t)
         ((binary_change->flags & CHANGE_KIND_MASK) >> CHANGE_KIND_SHIFT);

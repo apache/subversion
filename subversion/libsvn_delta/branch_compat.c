@@ -1763,35 +1763,6 @@ compat_branch_txn_get_branches(const svn_branch__txn_t *txn,
 
 /* An #svn_branch__txn_t method. */
 static svn_error_t *
-compat_branch_txn_add_branch(svn_branch__txn_t *txn,
-                             svn_branch__state_t *branch,
-                             apr_pool_t *scratch_pool)
-{
-  /* Just forwarding: nothing more is needed. */
-  SVN_ERR(svn_branch__txn_add_branch(txn->priv->txn,
-                                     branch,
-                                     scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_branch__txn_t method. */
-static svn_branch__state_t *
-compat_branch_txn_add_new_branch(svn_branch__txn_t *txn,
-                                 const char *bid,
-                                 int root_eid,
-                                 apr_pool_t *scratch_pool)
-{
-  /* Just forwarding: nothing more is needed. */
-  svn_branch__state_t *new_branch
-    = svn_branch__txn_add_new_branch(txn->priv->txn,
-                                     bid, root_eid,
-                                     scratch_pool);
-
-  return new_branch;
-}
-
-/* An #svn_branch__txn_t method. */
-static svn_error_t *
 compat_branch_txn_delete_branch(svn_branch__txn_t *txn,
                                 const char *bid,
                                 apr_pool_t *scratch_pool)
@@ -1846,38 +1817,16 @@ compat_branch_txn_open_branch(svn_branch__txn_t *txn,
                               svn_branch__state_t **new_branch_p,
                               const char *new_branch_id,
                               int root_eid,
+                              svn_branch__rev_bid_eid_t *tree_ref,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
   /* Just forwarding: nothing more is needed. */
   SVN_ERR(svn_branch__txn_open_branch(txn->priv->txn,
                                       new_branch_p,
-                                      new_branch_id, root_eid,
+                                      new_branch_id, root_eid, tree_ref,
                                       result_pool,
                                       scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-/* An #svn_branch__txn_t method. */
-static svn_error_t *
-compat_branch_txn_branch(svn_branch__txn_t *txn,
-                         svn_branch__state_t **new_branch_p,
-                         svn_branch__rev_bid_eid_t *from,
-                         const char *new_branch_id,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
-{
-  svn_branch__state_t *new_branch;
-
-  /* Just forwarding: nothing more is needed. */
-  SVN_ERR(svn_branch__txn_branch(txn->priv->txn,
-                                 &new_branch, from,
-                                 new_branch_id,
-                                 result_pool,
-                                 scratch_pool));
-
-  if (new_branch_p)
-    *new_branch_p = new_branch;
   return SVN_NO_ERROR;
 }
 
@@ -2012,13 +1961,10 @@ svn_branch__compat_txn_from_delta_for_commit(
   static const svn_branch__txn_vtable_t vtable = {
     {0},
     compat_branch_txn_get_branches,
-    compat_branch_txn_add_branch,
-    compat_branch_txn_add_new_branch,
     compat_branch_txn_delete_branch,
     compat_branch_txn_get_num_new_eids,
     compat_branch_txn_new_eid,
     compat_branch_txn_open_branch,
-    compat_branch_txn_branch,
     compat_branch_txn_finalize_eids,
     compat_branch_txn_serialize,
     compat_branch_txn_sequence_point,

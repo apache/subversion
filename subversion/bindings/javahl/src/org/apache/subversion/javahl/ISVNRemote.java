@@ -507,11 +507,11 @@ public interface ISVNRemote
         private static final long serialVersionUID = 1L;
 
         /**
-         * Private constructor called by the native implementation.
+         * Constructor called by the native implementation.
          */
-        private LocationSegment(String path,
-                                long startRevision,
-                                long endRevision)
+        LocationSegment(String path,
+                        long startRevision,
+                        long endRevision)
         {
             this.path = path;
             this.startRevision = startRevision;
@@ -594,13 +594,13 @@ public interface ISVNRemote
         private static final long serialVersionUID = 1L;
 
         /**
-         * Private constructor called by the native implementation.
+         * Constructor called by the native implementation.
          */
-        private FileRevision(String path, long revision,
-                             boolean resultOfMerge,
-                             Map<String, byte[]> revisionProperties,
-                             Map<String, byte[]> propertiesDelta,
-                             boolean textDelta)
+        FileRevision(String path, long revision,
+                     boolean resultOfMerge,
+                     Map<String, byte[]> revisionProperties,
+                     Map<String, byte[]> propertiesDelta,
+                     boolean textDelta)
         {
             this.path = path;
             this.revision = revision;

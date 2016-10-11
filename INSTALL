@@ -715,9 +715,8 @@ II.   INSTALLATION
         Note that Python 3.x is not supported (yet).
       * Perl 5.8 or higher from http://www.perl.org/get.html
       * Awk (from http://www.cs.princeton.edu/~bwk/btl.mirror/awk95.exe) is
-        needed to compile Apache or APR without using CMake.  Note that this
-        is the actual awk program, not an installer - just rename it to
-        awk.exe and it is ready to use.
+        needed to compile Apache.  Note that this is the actual awk program,
+        not an installer - just rename it to awk.exe and it is ready to use.
       * Apache apr, apr-util, and optionally apr-iconv libraries, version
         1.3 or later (1.2 for apr-iconv). If you are building from a Subversion
         checkout and have not downloaded Apache 2, then get these 3 libraries

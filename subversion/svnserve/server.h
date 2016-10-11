@@ -65,8 +65,10 @@ typedef struct repository_t {
   enum username_case_type username_case; /* Case-normalize the username? */
   svn_boolean_t use_sasl;  /* Use Cyrus SASL for authentication;
                               always false if SVN_HAVE_SASL not defined */
+#ifdef SVN_HAVE_SASL
   unsigned min_ssf;        /* min-encryption SASL parameter */
   unsigned max_ssf;        /* max-encryption SASL parameter */
+#endif
 
   enum access_type auth_access; /* access granted to authenticated users */
   enum access_type anon_access; /* access granted to annonymous users */

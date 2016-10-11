@@ -89,6 +89,10 @@ struct svn_diff_hunk_t {
   /* Did we see a 'file does not end with eol' marker in this hunk? */
   svn_boolean_t original_no_final_eol;
   svn_boolean_t modified_no_final_eol;
+
+  /* Fuzz penalty, triggered by bad patch targets */
+  svn_linenum_t original_fuzz;
+  svn_linenum_t modified_fuzz;
 };
 
 struct svn_diff_binary_patch_t {
@@ -122,7 +126,7 @@ add_or_delete_single_line(svn_diff_hunk_t **hunk_out,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  svn_diff_hunk_t *hunk = apr_palloc(result_pool, sizeof(*hunk));
+  svn_diff_hunk_t *hunk = apr_pcalloc(result_pool, sizeof(*hunk));
   static const char *hunk_header[] = { "@@ -1 +0,0 @@\n", "@@ -0,0 +1 @@\n" };
   const apr_size_t header_len = strlen(hunk_header[add]);
   const apr_size_t len = strlen(line);
@@ -283,6 +287,12 @@ svn_linenum_t
 svn_diff_hunk_get_trailing_context(const svn_diff_hunk_t *hunk)
 {
   return hunk->trailing_context;
+}
+
+svn_linenum_t
+svn_diff_hunk__get_fuzz_penalty(const svn_diff_hunk_t *hunk)
+{
+  return hunk->patch->reverse ? hunk->original_fuzz : hunk->modified_fuzz;
 }
 
 /* Baton for the base85 stream implementation */
@@ -1183,24 +1193,38 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
             }
 
           c = line->data[0];
-          if (original_lines > 0 && modified_lines > 0 &&
-              ((c == ' ')
+          if (c == ' '
+              || ((original_lines > 0 && modified_lines > 0)
+                  && ( 
                /* Tolerate chopped leading spaces on empty lines. */
-               || (! eof && line->len == 0)
+                      (! eof && line->len == 0)
                /* Maybe tolerate chopped leading spaces on non-empty lines. */
-               || (ignore_whitespace && c != del && c != add)))
+                      || (ignore_whitespace && c != del && c != add))))
             {
               /* It's a "context" line in the hunk. */
               hunk_seen = TRUE;
-              original_lines--;
-              modified_lines--;
+              if (original_lines > 0)
+                original_lines--;
+              else
+                {
+                  (*hunk)->original_length++;
+                  (*hunk)->original_fuzz++;
+                }
+              if (modified_lines > 0)
+                modified_lines--;
+              else
+                {
+                  (*hunk)->modified_length++;
+                  (*hunk)->modified_fuzz++;
+                }
               if (changed_line_seen)
                 trailing_context++;
               else
                 leading_context++;
               last_line_type = context_line;
             }
-          else if (original_lines > 0 && c == del)
+          else if (c == del
+                   && (original_lines > 0 || line->data[1] != del))
             {
               /* It's a "deleted" line in the hunk. */
               hunk_seen = TRUE;
@@ -1211,10 +1235,17 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
               if (trailing_context > 0)
                 trailing_context = 0;
 
-              original_lines--;
+              if (original_lines > 0)
+                original_lines--;
+              else
+                {
+                  (*hunk)->original_length++;
+                  (*hunk)->original_fuzz++;
+                }
               last_line_type = original_line;
             }
-          else if (modified_lines > 0 && c == add)
+          else if (c == add
+                   && (modified_lines > 0 || line->data[1] != add))
             {
               /* It's an "added" line in the hunk. */
               hunk_seen = TRUE;
@@ -1225,7 +1256,13 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
               if (trailing_context > 0)
                 trailing_context = 0;
 
-              modified_lines--;
+              if (modified_lines > 0)
+                modified_lines--;
+              else
+                {
+                  (*hunk)->modified_length++;
+                  (*hunk)->modified_fuzz++;
+                }
               last_line_type = modified_line;
             }
           else
@@ -1241,7 +1278,6 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
                    * after the hunk text. */
                   end = last_line;
                 }
-
               if (original_end == 0)
                 original_end = end;
               if (modified_end == 0)
@@ -1318,6 +1354,21 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
 
   if (hunk_seen && start < end)
     {
+      /* Did we get the number of context lines announced in the header?
+
+         If not... let's limit the number from the header to what we
+         actually have, and apply a fuzz penalty */
+      if (original_lines)
+        {
+          (*hunk)->original_length -= original_lines;
+          (*hunk)->original_fuzz += original_lines;
+        }
+      if (modified_lines)
+        {
+          (*hunk)->modified_length -= modified_lines;
+          (*hunk)->modified_fuzz += modified_lines;
+        }
+
       (*hunk)->patch = patch;
       (*hunk)->apr_file = apr_file;
       (*hunk)->leading_context = leading_context;
@@ -2224,11 +2275,14 @@ svn_diff_parse_next_patch(svn_patch_t **patch_p,
             patch->operation = svn_diff_op_added;
             break;
 
-          /* ### case svn_diff_op_copied:
-             ### case svn_diff_op_moved:*/
-
           case svn_diff_op_modified:
-            break; /* Stays modify */
+            break; /* Stays modified. */
+
+          case svn_diff_op_copied:
+          case svn_diff_op_moved:
+            break; /* Stays copied or moved, just in the other direction. */
+          case svn_diff_op_unchanged:
+            break; /* Stays unchanged, of course. */
         }
 
       ts_tmp = patch->old_executable_bit;

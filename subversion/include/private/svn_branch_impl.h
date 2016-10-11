@@ -59,17 +59,6 @@ typedef apr_array_header_t *(*svn_branch__txn_v_get_branches_t)(
   const svn_branch__txn_t *txn,
   apr_pool_t *result_pool);
 
-typedef svn_error_t *(*svn_branch__txn_v_add_branch_t)(
-  svn_branch__txn_t *txn,
-  svn_branch__state_t *branch,
-  apr_pool_t *scratch_pool);
-
-typedef svn_branch__state_t *(*svn_branch__txn_v_add_new_branch_t)(
-  svn_branch__txn_t *txn,
-  const char *bid,
-  int root_eid,
-  apr_pool_t *scratch_pool);
-
 typedef svn_error_t *(*svn_branch__txn_v_delete_branch_t)(
   svn_branch__txn_t *txn,
   const char *bid,
@@ -90,14 +79,7 @@ typedef svn_error_t *(*svn_branch__txn_v_open_branch_t)(
   svn_branch__state_t **new_branch_p,
   const char *new_branch_id,
   int root_eid,
-  apr_pool_t *result_pool,
-  apr_pool_t *scratch_pool);
-
-typedef svn_error_t *(*svn_branch__txn_v_branch_t)(
-  svn_branch__txn_t *txn,
-  svn_branch__state_t **new_branch_p,
   svn_branch__rev_bid_eid_t *from,
-  const char *new_branch_id,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
@@ -128,13 +110,10 @@ struct svn_branch__txn_vtable_t
 
   /* Methods. */
   svn_branch__txn_v_get_branches_t get_branches;
-  svn_branch__txn_v_add_branch_t add_branch;
-  svn_branch__txn_v_add_new_branch_t add_new_branch;
   svn_branch__txn_v_delete_branch_t delete_branch;
   svn_branch__txn_v_get_num_new_eids_t get_num_new_eids;
   svn_branch__txn_v_new_eid_t new_eid;
   svn_branch__txn_v_open_branch_t open_branch;
-  svn_branch__txn_v_branch_t branch;
   svn_branch__txn_v_finalize_eids_t finalize_eids;
   svn_branch__txn_v_serialize_t serialize;
   svn_branch__txn_v_sequence_point_t sequence_point;

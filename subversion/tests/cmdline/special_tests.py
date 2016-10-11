@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import sys, os, re, copy
+import sys, os, re, copy, stat
 
 # Our testing module
 import svntest
@@ -972,7 +972,7 @@ def replace_symlinks(sbox):
             'A/D/Hx/psi.sh',
             ]:
       file_write(wc(p), '#!/bin/sh\necho "hello, svn!"\n')
-      os.chmod(wc(p), 0775)
+      os.chmod(wc(p), svntest.main.S_ALL_RW | stat.S_IXUSR)
       sbox.simple_add(p)
       if not svntest.main.is_posix_os():
         sbox.simple_propset('svn:executable', 'X', p)

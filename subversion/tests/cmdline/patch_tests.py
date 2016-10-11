@@ -1581,6 +1581,9 @@ def patch_no_svn_eol_style(sbox):
   else:
     crlf = '\r\n'
 
+  # Strict EOL style matching breaks Windows tests at least with Python 2
+  keep_eol_style = not svntest.main.is_os_windows()
+
   eols = [crlf, '\015', '\n', '\012']
   for target_eol in eols:
     for patch_eol in eols:
@@ -1657,13 +1660,13 @@ def patch_no_svn_eol_style(sbox):
 
       expected_skip = wc.State('', { })
 
-      svntest.actions.run_and_verify_patch(wc_dir,
-                                           patch_file_path,
-                                           expected_output,
-                                           expected_disk,
-                                           expected_status,
-                                           expected_skip,
-                                           [], True, True)
+      svntest.actions.run_and_verify_patch2(wc_dir,
+                                            patch_file_path,
+                                            expected_output,
+                                            expected_disk,
+                                            expected_status,
+                                            expected_skip,
+                                            [], True, True, keep_eol_style)
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
       svntest.actions.run_and_verify_svn(expected_output, [],
@@ -1684,6 +1687,9 @@ def patch_with_svn_eol_style(sbox):
     crlf = '\n'
   else:
     crlf = '\r\n'
+
+  # Strict EOL style matching breaks Windows tests at least with Python 2
+  keep_eol_style = not svntest.main.is_os_windows()
 
   eols = [crlf, '\015', '\n', '\012']
   eol_styles = ['CRLF', 'CR', 'native', 'LF']
@@ -1771,15 +1777,16 @@ def patch_with_svn_eol_style(sbox):
 
       expected_skip = wc.State('', { })
 
-      svntest.actions.run_and_verify_patch(wc_dir,
-                                           patch_file_path,
-                                           expected_output,
-                                           expected_disk,
-                                           expected_status,
-                                           expected_skip,
-                                           None, # expected err
-                                           1, # check-props
-                                           1) # dry-run
+      svntest.actions.run_and_verify_patch2(wc_dir,
+                                            patch_file_path,
+                                            expected_output,
+                                            expected_disk,
+                                            expected_status,
+                                            expected_skip,
+                                            None, # expected err
+                                            1, # check-props
+                                            1, # dry-run
+                                            keep_eol_style) # keep-eol-style
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
       svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
@@ -1799,6 +1806,9 @@ def patch_with_svn_eol_style_uncommitted(sbox):
     crlf = '\n'
   else:
     crlf = '\r\n'
+
+  # Strict EOL style matching breaks Windows tests at least with Python 2
+  keep_eol_style = not svntest.main.is_os_windows()
 
   eols = [crlf, '\015', '\n', '\012']
   eol_styles = ['CRLF', 'CR', 'native', 'LF']
@@ -1880,15 +1890,16 @@ def patch_with_svn_eol_style_uncommitted(sbox):
 
       expected_skip = wc.State('', { })
 
-      svntest.actions.run_and_verify_patch(wc_dir,
-                                           patch_file_path,
-                                           expected_output,
-                                           expected_disk,
-                                           expected_status,
-                                           expected_skip,
-                                           None, # expected err
-                                           1, # check-props
-                                           1) # dry-run
+      svntest.actions.run_and_verify_patch2(wc_dir,
+                                            patch_file_path,
+                                            expected_output,
+                                            expected_disk,
+                                            expected_status,
+                                            expected_skip,
+                                            None, # expected err
+                                            1, # check-props
+                                            1, # dry-run
+                                            keep_eol_style) # keep-eol-style
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
       svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
@@ -3461,7 +3472,7 @@ def patch_one_property(sbox, trailing_eol):
                                        1, # dry-run
                                        '--strip', '3')
 
-  svntest.actions.check_prop('k', wc_dir, [value])
+  svntest.actions.check_prop('k', wc_dir, [value.encode()])
 
 def patch_strip_cwd(sbox):
   "patch --strip propchanges cwd"
@@ -4518,7 +4529,7 @@ def patch_empty_file(sbox):
     "--- lf.txt\t(revision 2)\n",
     "+++ lf.txt\t(working copy)\n",
     "@@ -1 +1 @@\n",
-    "\n"
+    "-\n"
     "+replacement\n",
 
   # patch a new file 'new.txt\n'
@@ -4553,7 +4564,7 @@ def patch_empty_file(sbox):
   # Current result: lf.txt patched ok, new created, empty succeeds with offset.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
-    'lf.txt'            : Item(contents="\n"),
+    'lf.txt'            : Item(contents="replacement\n"),
     'new.txt'           : Item(contents="new file\n"),
     'empty.txt'         : Item(contents="replacement\n"),
   })
@@ -5788,7 +5799,7 @@ def patch_binary_file(sbox):
 
   # Make the file binary by putting some non ascii chars inside or propset
   # will return a warning
-  sbox.simple_append('iota', '\0\202\203\204\205\206\207nsomething\nelse\xFF')
+  sbox.simple_append('iota', b'\0\202\203\204\205\206\207nsomething\nelse\xFF')
   sbox.simple_propset('svn:mime-type', 'application/binary', 'iota')
 
   expected_output = [
@@ -5827,8 +5838,8 @@ def patch_binary_file(sbox):
   expected_disk.tweak('iota',
                       props={'svn:mime-type':'application/binary'},
                       contents =
-                      'This is the file \'iota\'.\n'
-                      '\0\202\203\204\205\206\207nsomething\nelse\xFF')
+                      b'This is the file \'iota\'.\n' +
+                      b'\0\202\203\204\205\206\207nsomething\nelse\xFF')
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', status='MM')
   expected_skip = wc.State('', { })
@@ -7528,6 +7539,288 @@ def patch_move_and_change(sbox):
                                        [], True, True,
                                        '--reverse-diff')
 
+@Issue(4609)
+def missing_trailing_context(sbox):
+  "missing trailing context"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_append('A/mu',
+                     'a\n'
+                     'b\n'
+                     'c\n'
+                     'd\n'
+                     'e\n',
+                     truncate=True)
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # The hunk is expected to have two lines of trailing context but
+  # only has one.
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 2)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -1,5 +1,5 @@\n",
+    " a\n",
+    " b\n",
+    "-c\n",
+    "+cc\n",
+    " d\n",
+  ]
+  patch_file_path = sbox.get_tempname('my.patch')
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch), 'wb')
+
+  # GNU patch will apply the hunk with fuzz 1 and modify only the 'c' line.
+  # Our patch file finds the length mismatch and applies a penalty.
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -1,4 +1,4 @@ with fuzz 1\n',
+  ]
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/mu', contents =
+                     'a\n'
+                     'b\n'
+                     'cc\n'
+                     'd\n'
+                     'e\n')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('A/mu', status='M ')
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Try reverse patch
+  expected_disk.tweak('A/mu', contents =
+                     'a\n'
+                     'b\n'
+                     'c\n'
+                     'd\n'
+                     'e\n')
+  expected_status.tweak('A/mu', status='  ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], False, True, '--reverse-diff')
+
+  # The hunk is expected to have two lines of trailing context but
+  # only has one.
+  unidiff_patch = [
+    "Index: A/mu\n"
+    "===================================================================\n",
+    "--- A/mu\t(revision 2)\n",
+    "+++ A/mu\t(working copy)\n",
+    "@@ -1,4 +1,4 @@\n",
+    " a\n",
+    " b\n",
+    "-c\n",
+    "+cc\n",
+    " d\n",
+    " e\n",
+  ]
+  patch_file_path = sbox.get_tempname('my2.patch')
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch), 'wb')
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('A/mu'),
+    '>         applied hunk @@ -1,5 +1,5 @@ with fuzz 1\n',
+  ]
+  expected_disk.tweak('A/mu', contents =
+                     'a\n'
+                     'b\n'
+                     'cc\n'
+                     'd\n'
+                     'e\n')
+  expected_status.tweak('A/mu', status='M ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+  # Try reverse patch
+  expected_disk.tweak('A/mu', contents =
+                     'a\n'
+                     'b\n'
+                     'c\n'
+                     'd\n'
+                     'e\n')
+  expected_status.tweak('A/mu', status='  ')
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], False, True, '--reverse-diff')
+
+def patch_missed_trail(sbox):
+  "apply a patch to an empty file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  patch_file_path = sbox.get_tempname('my.patch')
+  svntest.main.file_write(patch_file_path, ''.join([
+  # Add a line to a file with just '\n' with bad header (should be +1,2)
+    "Index: lf.txt\n",
+    "===================================================================\n",
+    "--- lf.txt\t(revision 2)\n",
+    "+++ lf.txt\t(working copy)\n",
+    "@@ -1 +1 @@\n",
+    "\n"
+    "+replacement\n",
+  ]))
+
+  sbox.simple_add_text('\n', 'lf.txt')
+  sbox.simple_commit()
+
+  expected_output = [
+    'U         %s\n' % sbox.ospath('lf.txt'),
+    '>         applied hunk @@ -1,1 +1,2 @@ with fuzz 1\n',
+  ]
+
+  # Current result: lf.txt patched ok, new created, empty succeeds with offset.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'lf.txt'            : Item(contents="\nreplacement\n"),
+  })
+  expected_skip = wc.State(wc_dir, {})
+  expected_status = None
+
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip)
+
+def patch_merge(sbox):
+  "patching a specific merge"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  repo_url = sbox.repo_url
+
+  sbox.simple_add_text('A\n'
+                       'B\n'
+                       'C\n'
+                       'J\n'
+                       'K\n'
+                       'L', 'new.txt')
+  sbox.simple_commit()
+
+  remote_patch = sbox.get_tempname('remote.patch')
+  svntest.main.file_write(remote_patch,
+      '--- new.txt\t(revision 6)\n'
+      '+++ new.txt\t(revision 7)\n'
+      '@@ -1,6 +1,9 @@\n'
+      ' A\n'
+      ' B\n'
+      '-C\n'
+      '+ C\n'
+      '+D\n'
+      '+E\n'
+      '+F\n'
+      ' J\n'
+      ' K\n'
+      ' L\n'
+      '\ No newline at end of file', mode='wb')
+
+  expected_skip = wc.State('', { })
+  expected_output = wc.State(wc_dir, {
+      'new.txt' : Item(status='U '),
+    })
+  svntest.actions.run_and_verify_patch(wc_dir, remote_patch,
+                                       expected_output, None,
+                                       None, expected_skip)
+  sbox.simple_commit()
+  sbox.simple_update(revision=2)
+
+  local_patch = sbox.get_tempname('local.patch')
+  svntest.main.file_write(local_patch,
+      '--- new.txt\t(revision 3)\n'
+      '+++ new.txt\t(revision 4)\n'
+      '@@ -1,6 +1,9 @@\n'
+      ' A\n'
+      ' B\n'
+      ' C\n'
+      '+D\n'
+      '+E\n'
+      '+F\n'
+      ' J\n'
+      ' K\n'
+      ' L\n'
+      '\ No newline at end of file', mode='wb')
+
+  svntest.actions.run_and_verify_patch(wc_dir, local_patch,
+                                       expected_output, None,
+                                       None, expected_skip)
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'new.txt' : Item(contents='A\n'
+                              'B\n'
+                              '<<<<<<< .mine\n'
+                              'C\n'
+                              'D\n'
+                              'E\n'
+                              'F\n'
+                              '||||||| .r2\n'
+                              'C\n'
+                              '=======\n'
+                             ' C\n'
+                             'D\n'
+                             'E\n'
+                             'F\n'
+                             '>>>>>>> .r3\n'
+                             'J\n'
+                             'K\n'
+                             'L'),
+    'new.txt.mine'      : Item(contents="A\nB\nC\nD\nE\nF\nJ\nK\nL"),
+    'new.txt.r2'        : Item(contents="A\nB\nC\nJ\nK\nL"),
+    'new.txt.r3'        : Item(contents="A\nB\n C\nD\nE\nF\nJ\nK\nL"),
+  })
+  expected_output.tweak('new.txt', status='C ')
+  svntest.actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
+                                        None, [])
+
+  # Revert to base position
+  sbox.simple_revert('new.txt')
+  sbox.simple_update(revision=2)
+
+  # And now do the same thing as a merge instead of an update
+  expected_output.tweak('new.txt', status='U ')
+  svntest.actions.run_and_verify_patch(wc_dir, local_patch,
+                                       expected_output, None,
+                                       None, expected_skip)
+
+  expected_output.tweak('new.txt', status='C ')
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'new.txt' : Item(contents='A\n'
+                              'B\n'
+                              '<<<<<<< .working\n'
+                              'C\n'
+                              'D\n'
+                              'E\n'
+                              'F\n'
+                              '||||||| .merge-left.r2\n'
+                              'C\n'
+                              '=======\n'
+                             ' C\n'
+                             'D\n'
+                             'E\n'
+                             'F\n'
+                             '>>>>>>> .merge-right.r3\n'
+                             'J\n'
+                             'K\n'
+                             'L'),
+    'new.txt.working'        : Item(contents="A\nB\nC\nD\nE\nF\nJ\nK\nL"),
+    'new.txt.merge-left.r2'  : Item(contents="A\nB\nC\nJ\nK\nL"),
+    'new.txt.merge-right.r3' : Item(contents="A\nB\n C\nD\nE\nF\nJ\nK\nL"),
+  })
+
+  svntest.actions.run_and_verify_merge(wc_dir, 2, 3, repo_url, repo_url,
+                                       expected_output, None, None,
+                                       expected_disk, None,
+                                       expected_skip)
+
 ########################################################################
 #Run the tests
 
@@ -7608,6 +7901,9 @@ test_list = [ None,
               patch_add_one_line,
               patch_with_mergeinfo,
               patch_move_and_change,
+              missing_trailing_context,
+              patch_missed_trail,
+              patch_merge,
             ]
 
 if __name__ == '__main__':

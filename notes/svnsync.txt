@@ -152,9 +152,6 @@ $ svnsync sync file://`pwd`/dest
    was secretproject, only the changes starting from the revision in which the
    rename to project1 was committed will be synced.
 
-   If you need any of these abilities right now, you may want to look into SVK
-   (http://svk.bestpractical.com/).
-
 Q: What happens when I change a revprop on the master server?
 
 A: That depends, did you change it on a revision that had already been

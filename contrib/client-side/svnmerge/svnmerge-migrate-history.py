@@ -39,12 +39,12 @@ try:
   import svn.core
   import svn.fs
   import svn.repos
-except ImportError, e:
-  print >> sys.stderr, \
+except ImportError as e:
+  sys.stderr.write(\
         "ERROR: Unable to import Subversion's Python bindings: '%s'\n" \
         "Hint: Set your PYTHONPATH environment variable, or adjust your " \
         "PYTHONSTARTUP\nfile to point to your Subversion install " \
-        "location's svn-python directory." % e
+        "location's svn-python directory.\n" % e)
   sys.exit(1)
 
 # Convenience shortcut.
@@ -67,8 +67,8 @@ def usage_and_exit(error_msg=None):
 
   stream = error_msg and sys.stderr or sys.stdout
   if error_msg:
-    print >> stream, "ERROR: %s\n" % error_msg
-  print >> stream, """Usage: %s REPOS_PATH [PATH_PREFIX...] [OPTIONS]
+    stream.write("ERROR: %s\n\n" % error_msg)
+  stream.write("""Usage: %s REPOS_PATH [PATH_PREFIX...] [OPTIONS]
        %s --help
 
 Migrate merge history from svnmerge.py's format to Subversion 1.5's
@@ -88,7 +88,7 @@ Options:
 Example:
 
    %s /path/to/repos trunk branches tags
-""" % (progname, progname, progname)
+""" % (progname, progname, progname))
   sys.exit(error_msg and 1 or 0)
 
 class Migrator:
@@ -105,7 +105,7 @@ class Migrator:
   def log(self, message, only_when_verbose=True):
     if only_when_verbose and not self.verbose:
       return
-    print message
+    print(message)
 
   def run(self):
     self.repos = svn.repos.open(self.repos_path)
@@ -230,7 +230,7 @@ class Migrator:
             filtered_mergeinfo = \
                 svn.core.svn_mergeinfo_merge(filtered_mergeinfo,
                                              source_history)
-          except svn.core.SubversionException, e:
+          except svn.core.SubversionException as e:
             if not (e.apr_err == svn.core.SVN_ERR_FS_NOT_FOUND
                     or e.apr_err == svn.core.SVN_ERR_FS_NO_SUCH_REVISION):
               raise

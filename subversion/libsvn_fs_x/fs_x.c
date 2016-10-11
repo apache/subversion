@@ -201,7 +201,7 @@ svn_fs_x__write_format(svn_fs_t *fs,
     {
       SVN_ERR(svn_io_write_atomic2(path, sb->data, sb->len,
                                    NULL /* copy_perms_path */,
-                                   TRUE, scratch_pool));
+                                   ffd->flush_to_disk, scratch_pool));
     }
 
   /* And set the perms to make it read only */
@@ -535,6 +535,20 @@ write_config(svn_fs_t *fs,
                             fsx_conf_contents, scratch_pool);
 }
 
+/* Read / Evaluate the global configuration in FS->CONFIG to set up
+ * parameters in FS. */
+static svn_error_t *
+read_global_config(svn_fs_t *fs)
+{
+  svn_fs_x__data_t *ffd = fs->fsap_data;
+
+  ffd->flush_to_disk = !svn_hash__get_bool(fs->config,
+                                           SVN_FS_CONFIG_NO_FLUSH_TO_DISK,
+                                           FALSE);
+
+  return SVN_NO_ERROR;
+}
+
 /* Read FS's UUID file and store the data in the FS struct. */
 static svn_error_t *
 read_uuid(svn_fs_t *fs,
@@ -602,6 +616,9 @@ svn_fs_x__open(svn_fs_t *fs,
 
   /* Read the configuration file. */
   SVN_ERR(read_config(ffd, fs->path, fs->pool, scratch_pool));
+
+  /* Global configuration options. */
+  SVN_ERR(read_global_config(fs));
 
   ffd->youngest_rev_cache = 0;
 
@@ -860,8 +877,6 @@ write_revision_zero(svn_fs_t *fs,
   const char *path_revision_zero = svn_fs_x__path_rev(fs, 0, scratch_pool);
   apr_hash_t *proplist;
   svn_string_t date;
-  svn_stream_t *stream;
-  svn_stringbuf_t *revprops;
 
   apr_array_header_t *index_entries;
   svn_fs_x__p2l_entry_t *entry;
@@ -934,15 +949,13 @@ write_revision_zero(svn_fs_t *fs,
   proplist = apr_hash_make(scratch_pool);
   svn_hash_sets(proplist, SVN_PROP_REVISION_DATE, &date);
 
-  revprops = svn_stringbuf_create_empty(scratch_pool);
-  stream = svn_stream_from_stringbuf(revprops, scratch_pool);
-  SVN_ERR(svn_fs_x__write_properties(stream, proplist, scratch_pool));
-  SVN_ERR(svn_stream_close(stream));
-
-  SVN_ERR(svn_io_file_create_bytes(svn_fs_x__path_revprops(fs, 0,
-                                                           scratch_pool),
-                                   revprops->data, revprops->len,
-                                   scratch_pool));
+  SVN_ERR(svn_io_file_open(&apr_file,
+                           svn_fs_x__path_revprops(fs, 0, scratch_pool),
+                           APR_WRITE | APR_CREATE, APR_OS_DEFAULT, 
+                           scratch_pool));
+  SVN_ERR(svn_fs_x__write_non_packed_revprops(apr_file, proplist,
+                                              scratch_pool));
+  SVN_ERR(svn_io_file_close(apr_file, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -989,6 +1002,9 @@ svn_fs_x__create_file_tree(svn_fs_t *fs,
   /* Create the fsfs.conf file. */
   SVN_ERR(write_config(fs, scratch_pool));
   SVN_ERR(read_config(ffd, fs->path, fs->pool, scratch_pool));
+
+  /* Global configuration options. */
+  SVN_ERR(read_global_config(fs));
 
   /* Add revision 0. */
   SVN_ERR(write_revision_zero(fs, scratch_pool));
@@ -1100,7 +1116,7 @@ svn_fs_x__set_uuid(svn_fs_t *fs,
       SVN_ERR(svn_io_write_atomic2(uuid_path, contents->data, contents->len,
                                    /* perms */
                                    svn_fs_x__path_current(fs, scratch_pool),
-                                   TRUE, scratch_pool));
+                                   ffd->flush_to_disk, scratch_pool));
     }
 
   fs->uuid = apr_pstrdup(fs->pool, uuid);

@@ -530,6 +530,9 @@ sbox_wc_update_depth(svn_test__sandbox_t *b,
   APR_ARRAY_PUSH(paths, const char *) = sbox_wc_path(b, path);
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
 
+  /* Note: Tree conflict resolver tests for libsvn_client depend on this
+   * passing FALSE for adds_as_modifications so that tree conflicts are
+   * created in case of add vs add upon update. */
   return svn_client_update4(&result_revs, paths, &revision, depth,
                             sticky, FALSE, FALSE, FALSE, FALSE,
                             ctx, b->pool);

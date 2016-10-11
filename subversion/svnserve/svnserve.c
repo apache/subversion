@@ -221,6 +221,7 @@ void winservice_notify_stop(void)
 #define SVNSERVE_OPT_BLOCK_READ      273
 #define SVNSERVE_OPT_MAX_REQUEST     274
 #define SVNSERVE_OPT_MAX_RESPONSE    275
+#define SVNSERVE_OPT_CACHE_NODEPROPS 276
 
 /* Text macro because we can't use #ifdef sections inside a N_("...")
    macro expansion. */
@@ -318,6 +319,12 @@ static const apr_getopt_option_t svnserve__options[] =
         "Default is no.\n"
         "                             "
         "[used for FSFS and FSX repositories only]")},
+    {"cache-nodeprops", SVNSERVE_OPT_CACHE_NODEPROPS, 1,
+     N_("enable or disable caching of node properties\n"
+        "                             "
+        "Default is yes.\n"
+        "                             "
+        "[used for FSFS repositories only]")},
     {"client-speed", SVNSERVE_OPT_CLIENT_SPEED, 1,
      N_("Optimize network handling based on the assumption\n"
         "                             "
@@ -714,6 +721,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t is_multi_threaded;
   enum connection_handling_mode handling_mode = CONNECTION_DEFAULT;
   svn_boolean_t cache_fulltexts = TRUE;
+  svn_boolean_t cache_nodeprops = TRUE;
   svn_boolean_t cache_txdeltas = TRUE;
   svn_boolean_t cache_revprops = FALSE;
   svn_boolean_t use_block_read = FALSE;
@@ -906,6 +914,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           cache_revprops = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
 
+        case SVNSERVE_OPT_CACHE_NODEPROPS:
+          cache_nodeprops = svn_tristate__from_word(arg) == svn_tristate_true;
+          break;
+
         case SVNSERVE_OPT_BLOCK_READ:
           use_block_read = svn_tristate__from_word(arg) == svn_tristate_true;
           break;
@@ -1024,6 +1036,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                 cache_txdeltas ? "1" :"0");
   svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                 cache_fulltexts ? "1" :"0");
+  svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_CACHE_NODEPROPS,
+                cache_nodeprops ? "1" :"0");
   svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_CACHE_REVPROPS,
                 cache_revprops ? "2" :"0");
   svn_hash_sets(params.fs_config, SVN_FS_CONFIG_FSFS_BLOCK_READ,

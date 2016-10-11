@@ -26,13 +26,13 @@
 
 
 def shebang_line(out):
-  print >> out, '#!/bin/sh'
+  out.write('#!/bin/sh\n')
 
 def command(out, cmd, *args):
   """Write the shell command CMD with the arguments ARGS to the file-like
      object OUT.
   """
-  print >> out, ' '.join((cmd,) + args)
+  out.write(' '.join((cmd,) + args) + "\n")
 
 def svn(out, subcmd, *args):
   """Write an svn command with the given subcommand and arguments.  Write
@@ -43,7 +43,7 @@ def svn(out, subcmd, *args):
 def comment(out, text):
   """Write the comment TEXT to the file-like object OUT.
   """
-  print >> out, '#', text
+  out.write('# %s\n' % text)
 
 def node_branch(node_name):
   """Extract branch name from a node name.

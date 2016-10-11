@@ -195,6 +195,22 @@ svn_fs__get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/** Determine the previous location of @a path under @a root and return it
+ * as @a *node_path under @a *node_root.  This may be called for arbitrary
+ * nodes but is intended for nodes that got deleted in @a root, i.e. when
+ * standard navigation fails.  It also works if @a root is transaction root.
+ *
+ * Allocate @a *node_path and @a *node_root in @a result_pool while using
+ * @a scratch_pool for temporaries.
+ */
+svn_error_t *
+svn_fs__get_deleted_node(svn_fs_root_t **node_root,
+                         const char **node_path,
+                         svn_fs_root_t *root,
+                         const char *path,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
+
 
 /** @} */
 

@@ -726,12 +726,13 @@ diff_props_changed(const char *diff_relpath,
   return SVN_NO_ERROR;
 }
 
-/* Given a file TMPFILE, return a path to a temporary file that lives at least
-   as long as RESULT_POOL, containing the git-like represention of TMPFILE */
+/* Given a file ORIG_TMPFILE, return a path to a temporary file that lives at
+ * least as long as RESULT_POOL, containing the git-like represention of
+ * ORIG_TMPFILE */
 static svn_error_t *
 transform_link_to_git(const char **new_tmpfile,
                       const char **git_sha1,
-                      const char *tmpfile,
+                      const char *orig_tmpfile,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
 {
@@ -741,7 +742,7 @@ transform_link_to_git(const char **new_tmpfile,
 
   *git_sha1 = NULL;
 
-  SVN_ERR(svn_io_file_open(&orig, tmpfile, APR_READ, APR_OS_DEFAULT,
+  SVN_ERR(svn_io_file_open(&orig, orig_tmpfile, APR_READ, APR_OS_DEFAULT,
                            scratch_pool));
   SVN_ERR(svn_io_open_unique_file3(&gitlike, new_tmpfile, NULL,
                                    svn_io_file_del_on_pool_cleanup,
@@ -773,7 +774,7 @@ transform_link_to_git(const char **new_tmpfile,
   else
     {
       /* Not a link... so can't convert */
-      *new_tmpfile = apr_pstrdup(result_pool, tmpfile);
+      *new_tmpfile = apr_pstrdup(result_pool, orig_tmpfile);
     }
 
   SVN_ERR(svn_io_file_close(orig, scratch_pool));
@@ -2238,22 +2239,20 @@ diff_repos_wc(const char **root_relpath,
   else
     diff_depth = svn_depth_unknown;
 
-
+  /* Tell the RA layer we want a delta to change our txn to URL1 */
+  SVN_ERR(svn_ra_do_diff3(ra_session,
+                          &reporter, &reporter_baton,
+                          loc1->rev,
+                          target,
+                          diff_depth,
+                          ignore_ancestry,
+                          TRUE, /* text_deltas */
+                          loc1->url,
+                          diff_editor, diff_edit_baton,
+                          scratch_pool));
 
   if (is_copy && revision2_kind != svn_opt_revision_base)
     {
-      /* Tell the RA layer we want a delta to change our txn to URL1 */
-      SVN_ERR(svn_ra_do_diff3(ra_session,
-                              &reporter, &reporter_baton,
-                              loc1->rev,
-                              target,
-                              diff_depth,
-                              ignore_ancestry,
-                              TRUE,  /* text_deltas */
-                              loc1->url,
-                              diff_editor, diff_edit_baton,
-                              scratch_pool));
-
       /* Report the copy source. */
       if (cf_depth == svn_depth_unknown)
         cf_depth = svn_depth_infinity;
@@ -2277,18 +2276,6 @@ diff_repos_wc(const char **root_relpath,
     }
   else
     {
-      /* Tell the RA layer we want a delta to change our txn to URL1 */
-      SVN_ERR(svn_ra_do_diff3(ra_session,
-                              &reporter, &reporter_baton,
-                              loc1->rev,
-                              target,
-                              diff_depth,
-                              ignore_ancestry,
-                              TRUE,  /* text_deltas */
-                              loc1->url,
-                              diff_editor, diff_edit_baton,
-                              scratch_pool));
-
       /* Create a txn mirror of path2;  the diff editor will print
          diffs in reverse.  :-)  */
       SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, abspath2,

@@ -127,7 +127,7 @@ def locate_db_dump():
     try:
       if subprocess.Popen([db_dump_name, "-V"]).wait() == 0:
         return db_dump_name
-    except OSError, e:
+    except OSError as e:
       pass
   return 'none'
 

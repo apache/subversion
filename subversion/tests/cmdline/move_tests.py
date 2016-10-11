@@ -237,7 +237,7 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     copied='+', wc_rev='-')})
   mc = {}
   mc['output'] = svntest.verify.ExpectedOutput(
-    "Resolved conflicted state of '%s'\n" % source_path, match_all=False
+    "Tree conflict at '%s' marked as resolved.\n" % source_path, match_all=False
   )
   mc['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   mc['status'].tweak(source, status='D ', moved_to=dest)
@@ -250,7 +250,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['output'] = svntest.verify.ExpectedOutput(
     [
       "Breaking move with source path '%s'\n" % source_path,
-      "Resolved conflicted state of '%s'\n" % source_path,
+      "Tree conflict at '%s' marked as resolved.\n" % source_path,
     ]
   )
   working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
@@ -280,15 +280,15 @@ def build_simple_file_move_tests(sbox, source, dest):
   test['up_status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   test['up_status'].tweak(source, status='! ', treeconflict='C', wc_rev=None)
   test['up_status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
-  # mine-conflict doen't work.
+  # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
   # XXX: Doesn't say it broke the move it should.
   working['output'] = svntest.verify.ExpectedOutput(
-    "Resolved conflicted state of '%s'\n" % source_path, match_all=False
+    "Tree conflict at '%s' marked as resolved.\n" % source_path, match_all=False
   )
   # move is broken now
   working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
@@ -323,13 +323,13 @@ def build_simple_file_move_tests(sbox, source, dest):
   test['up_status'].add({dest: Item(status='A ', copied='+', wc_rev='-')})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
   # XXX: Broke the move but doesn't notify that it does.
   working['output'] = svntest.verify.ExpectedOutput(
-    "Resolved conflicted state of '%s'\n" % source_path, match_all=False
+    "Tree conflict at '%s' marked as resolved.\n" % source_path, match_all=False
   )
   # XXX: Not sure this status is really correct here
   working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
@@ -362,13 +362,13 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     wc_rev='-', moved_from=source)})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
   # XXX: Doesn't say what it did.
   working['output'] = svntest.verify.ExpectedOutput(
-    "Resolved conflicted state of '%s'\n" % dest_path, match_all=False
+    "Tree conflict at '%s' marked as resolved.\n" % dest_path, match_all=False
   )
   # working converts the move into a replacement
   working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
@@ -403,14 +403,14 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     wc_rev='-', moved_from=source)})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
   working['accept'] = 'working'
   # XXX: Doesn't say what it did.
   working['output'] = svntest.verify.ExpectedOutput(
-    "Resolved conflicted state of '%s'\n" % dest_path, match_all=False
+    "Tree conflict at '%s' marked as resolved.\n" % dest_path, match_all=False
   )
   # working converts the move into a replacement
   working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
@@ -468,13 +468,13 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     wc_rev='-', moved_from=source)})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
   # XXX: Doesn't say what it did.
   working['output'] = svntest.verify.ExpectedOutput(
-    "Resolved conflicted state of '%s'\n" % dest_path, match_all=False
+    "Tree conflict at '%s' marked as resolved.\n" % dest_path, match_all=False
   )
   # working converts the move into a replacement
   working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
@@ -508,13 +508,13 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     wc_rev='-', moved_from=source)})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
   # XXX: Doesn't say what it did.
   working['output'] = svntest.verify.ExpectedOutput(
-    "Resolved conflicted state of '%s'\n" % dest_path, match_all=False
+    "Tree conflict at '%s' marked as resolved.\n" % dest_path, match_all=False
   )
   # working converts the move into a replacement
   working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
@@ -548,13 +548,13 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     wc_rev='-', moved_from=source)})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
   # XXX: Didn't tell us what it did.
   working['output'] = svntest.verify.ExpectedOutput(
-    "Resolved conflicted state of '%s'\n" % dest_path, match_all=False
+    "Tree conflict at '%s' marked as resolved.\n" % dest_path, match_all=False
   )
   # working converts the move into a replacement
   working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
@@ -588,13 +588,13 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     wc_rev='-', moved_from=source)})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
   # XXX: Doesn't tell you what it did.
   working['output'] = svntest.verify.ExpectedOutput(
-    "Resolved conflicted state of '%s'\n" % dest_path, match_all=False
+    "Tree conflict at '%s' marked as resolved.\n" % dest_path, match_all=False
   )
   # working converts the move into a replacement
   working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
@@ -628,13 +628,13 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     wc_rev='-', moved_from=source)})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
   # XXX: Doesn't tell you what it did.
   working['output'] = svntest.verify.ExpectedOutput(
-    "Resolved conflicted state of '%s'\n" % dest_path, match_all=False
+    "Tree conflict at '%s' marked as resolved.\n" % dest_path, match_all=False
   )
   # working converts the move into a replacement
   working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
@@ -670,7 +670,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   # TODO: Should check that the output includes that the update was applied to
   # the destination
   mc['output'] = svntest.verify.ExpectedOutput(
-    "Resolved conflicted state of '%s'\n" % source_path, match_all=False
+    "Tree conflict at '%s' marked as resolved.\n" % source_path, match_all=False
   )
   mc['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   mc['status'].tweak(source, status='D ', moved_to=dest)
@@ -682,7 +682,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['output'] = svntest.verify.ExpectedOutput(
     [
       "Breaking move with source path '%s'\n" % source_path,
-      "Resolved conflicted state of '%s'\n" % source_path
+      "Tree conflict at '%s' marked as resolved.\n" % source_path
     ]
   )
   # XXX: working breaks the move?  Is that right?
@@ -718,7 +718,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   # TODO: Should check that the output includes that the update was applied to
   # the destination
   mc['output'] = svntest.verify.ExpectedOutput(
-    "Resolved conflicted state of '%s'\n" % source_path, match_all=False
+    "Tree conflict at '%s' marked as resolved.\n" % source_path, match_all=False
   )
   mc['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   mc['status'].tweak(source, status='D ', moved_to=dest)
@@ -730,7 +730,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['output'] = svntest.verify.ExpectedOutput(
     [
       "Breaking move with source path '%s'\n" % source_path,
-      "Resolved conflicted state of '%s'\n" % source_path
+      "Tree conflict at '%s' marked as resolved.\n" % source_path
     ]
   )
   # XXX: working breaks the move?  Is that right?
@@ -766,7 +766,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   # TODO: Should check that the output includes that the update was applied to
   # the destination
   mc['output'] = svntest.verify.ExpectedOutput(
-    "Resolved conflicted state of '%s'\n" % source_path, match_all=False
+    "Tree conflict at '%s' marked as resolved.\n" % source_path, match_all=False
   )
   mc['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
   mc['status'].tweak(source, status='D ', moved_to=dest)
@@ -778,7 +778,7 @@ def build_simple_file_move_tests(sbox, source, dest):
   working['output'] = svntest.verify.ExpectedOutput(
     [
       "Breaking move with source path '%s'\n" % source_path,
-      "Resolved conflicted state of '%s'\n" % source_path
+      "Tree conflict at '%s' marked as resolved.\n" % source_path
     ]
   )
   # XXX: working breaks the move?  Is that right?
@@ -815,12 +815,12 @@ def build_simple_file_move_tests(sbox, source, dest):
                                     treeconflict='C')})
   # mine-conflict doesn't work.
   mc = {}
-  mc['error'] = svntest.verify.RegexOutput(".*: .*: W155027:.*", match_all=False)
+  mc['error'] = svntest.verify.RegexOutput(".*: .*: W195024:.*", match_all=False)
   mc['status'] = test['up_status']
   mc['disk'] = test['up_disk']
   working = {}
   working['output'] = svntest.verify.ExpectedOutput(
-    "Resolved conflicted state of '%s'\n" % source_path, match_all=False
+    "Tree conflict at '%s' marked as resolved.\n" % source_path, match_all=False
   )
   # move is broken now
   working['status'] = svntest.actions.get_virginal_state(wc_dir, test['end_rev'])
@@ -1250,7 +1250,7 @@ def nested_replaces(sbox):
   svntest.actions.run_and_verify_status(wc_dir, r2_status)
 
   svntest.main.run_svn(None, 'commit', '-m', 'r2: juggle the tree', wc_dir)
-  expected_output = svntest.verify.UnorderedRegexListOutput(map(re.escape, [
+  escaped = svntest.main.ensure_list(map(re.escape, [
     '   R /A (from /X/Y/Z:1)',
     '   A /A/B (from /A/B:1)',
     '   R /A/B/C (from /X:1)',
@@ -1259,9 +1259,9 @@ def nested_replaces(sbox):
     '   R /X/Y/Z (from /A:1)',
     '   D /X/Y/Z/B',
     '   D /A/B/C/Y',
-  ]) + [
-    '^-', '^r2', '^-', '^Changed paths:',
-  ])
+  ]))
+  expected_output = svntest.verify.UnorderedRegexListOutput(escaped
+                    + [ '^-', '^r2', '^-', '^Changed paths:', ])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-qvr2', repo_url)
 
@@ -1609,7 +1609,7 @@ def move_conflict_details(sbox):
     "   C %s\n" % sbox.ospath('B/F'),
     "   C %s\n" % sbox.ospath('B/lambda'),
     "Updated to revision 2.\n",
-    "Resolved conflicted state of '%s'\n" % sbox.ospath('A/B')
+    "Tree conflict at '%s' marked as resolved.\n" % sbox.ospath('A/B')
   ]
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'resolve', sbox.ospath('A/B'),

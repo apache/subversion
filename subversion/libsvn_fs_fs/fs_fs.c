@@ -492,6 +492,7 @@ read_format(int *pformat,
       svn_error_clear(err);
       *pformat = 1;
       *max_files_per_dir = 0;
+      *use_log_addressing = FALSE;
 
       return SVN_NO_ERROR;
     }
@@ -623,7 +624,8 @@ svn_fs_fs__write_format(svn_fs_t *fs,
   else
     {
       SVN_ERR(svn_io_write_atomic2(path, sb->data, sb->len,
-                                   NULL /* copy_perms_path */, TRUE, pool));
+                                   NULL /* copy_perms_path */,
+                                   ffd->flush_to_disk, pool));
     }
 
   /* And set the perms to make it read only */
@@ -1031,13 +1033,12 @@ read_global_config(svn_fs_t *fs)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  /* Providing a config hash is optional. */
-  if (fs->config)
-    ffd->use_block_read = svn_hash__get_bool(fs->config,
-                                             SVN_FS_CONFIG_FSFS_BLOCK_READ,
-                                             FALSE);
-  else
-    ffd->use_block_read = FALSE;
+  ffd->use_block_read = svn_hash__get_bool(fs->config,
+                                           SVN_FS_CONFIG_FSFS_BLOCK_READ,
+                                           FALSE);
+  ffd->flush_to_disk = !svn_hash__get_bool(fs->config,
+                                           SVN_FS_CONFIG_NO_FLUSH_TO_DISK,
+                                           FALSE);
 
   /* Ignore the user-specified larger block size if we don't use block-read.
      Defaulting to 4k gives us the same access granularity in format 7 as in
@@ -1868,7 +1869,7 @@ svn_fs_fs__set_uuid(svn_fs_t *fs,
      file does not exist during repository creation. */
   SVN_ERR(svn_io_write_atomic2(uuid_path, contents->data, contents->len,
                                svn_fs_fs__path_current(fs, pool) /* perms */,
-                               TRUE, pool));
+                               ffd->flush_to_disk, pool));
 
   fs->uuid = apr_pstrdup(fs->pool, uuid);
 

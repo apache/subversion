@@ -3404,6 +3404,22 @@ svn_wc__db_update_moved_away_conflict_victim(svn_wc__db_t *db,
                                              void *notify_baton,
                                              apr_pool_t *scratch_pool);
 
+/* Merge local changes from tree conflict victim at LOCAL_ABSPATH into the
+   directory at DEST_ABSPATH. This function requires that LOCAL_ABSPATH is
+   a directory and a tree-conflict victim. DST_ABSPATH must be a directory. */
+svn_error_t *
+svn_wc__db_merge_local_changes(svn_wc__db_t *db,
+                               const char *local_abspath,
+                               const char *dest_abspath,
+                               svn_wc_operation_t operation,
+                               svn_wc_conflict_action_t action,
+                               svn_wc_conflict_reason_t reason,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               svn_wc_notify_func2_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *scratch_pool);
+
 /* LOCAL_ABSPATH is moved to MOVE_DST_ABSPATH.  MOVE_SRC_ROOT_ABSPATH
  * is the root of the move to MOVE_DST_OP_ROOT_ABSPATH.
  * DELETE_ABSPATH is the op-root of the move; it's the same
@@ -3438,7 +3454,7 @@ svn_wc__db_op_raise_moved_away(svn_wc__db_t *db,
                                apr_pool_t *scratch_pool);
 
 /* Breaks all moves of nodes that exist at or below LOCAL_ABSPATH as
-   shadowed (read: deleted) by the opration rooted at
+   shadowed (read: deleted) by the operation rooted at
    delete_op_root_abspath.
  */
 svn_error_t *
@@ -3459,6 +3475,24 @@ svn_wc__required_lock_for_resolve(const char **required_abspath,
                                   const char *local_abspath,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
+
+/* Return an array of const char * elements, which represent local absolute
+ * paths for nodes, within the working copy indicated by WRI_ABSPATH, which
+ * correspond to REPOS_RELPATH@REV.
+ * If no such nodes exist, return an empty array.
+ *
+ * Note that this function returns each and every such node that is known
+ * in the WC, including, for example, nodes that were children of a directory
+ * which has been replaced.
+ */
+svn_error_t *
+svn_wc__find_repos_node_in_wc(apr_array_header_t **local_abspath_list,
+                              svn_wc__db_t *db,
+                              const char *wri_abspath,
+                              const char *repos_relpath,
+                              svn_revnum_t rev,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 /* @} */
 
 typedef svn_error_t * (*svn_wc__db_verify_cb_t)(void *baton,

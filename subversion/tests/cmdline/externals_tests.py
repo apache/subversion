@@ -918,43 +918,43 @@ def disallow_propset_invalid_formatted_externals(sbox):
 
   # It should not be possible to set these external properties on a
   # directory.
-  for ext in [ 'arg1',
-               'arg1 arg2 arg3',
-               'arg1 arg2 arg3 arg4',
-               'arg1 arg2 arg3 arg4 arg5',
-               '-r',
-               '-r1',
-               '-r 1',
-               '-r1 arg1',
-               '-r 1 arg1',
-               'arg1 -r',
-               'arg1 -r1',
-               'arg1 -r 1',
+  for ext in [ b'arg1',
+               b'arg1 arg2 arg3',
+               b'arg1 arg2 arg3 arg4',
+               b'arg1 arg2 arg3 arg4 arg5',
+               b'-r',
+               b'-r1',
+               b'-r 1',
+               b'-r1 arg1',
+               b'-r 1 arg1',
+               b'arg1 -r',
+               b'arg1 -r1',
+               b'arg1 -r 1',
                ]:
     change_external_expect_error(A_path, ext,
                                  '.*Error parsing svn:externals.*')
 
-  for ext in [ '-r abc arg1 arg2',
-               '-rabc arg1 arg2',
-               'arg1 -r abc arg2',
-               'arg1 -rabc arg2',
+  for ext in [ b'-r abc arg1 arg2',
+               b'-rabc arg1 arg2',
+               b'arg1 -r abc arg2',
+               b'arg1 -rabc arg2',
                ]:
     change_external_expect_error(A_path, ext,
                                  '.*Error parsing svn:externals.*')
 
-  for ext in [ 'http://example.com/ http://example.com/',
-               '-r1 http://example.com/ http://example.com/',
-               '-r 1 http://example.com/ http://example.com/',
-               'http://example.com/ -r1 http://example.com/',
-               'http://example.com/ -r 1 http://example.com/',
+  for ext in [ b'http://example.com/ http://example.com/',
+               b'-r1 http://example.com/ http://example.com/',
+               b'-r 1 http://example.com/ http://example.com/',
+               b'http://example.com/ -r1 http://example.com/',
+               b'http://example.com/ -r 1 http://example.com/',
                ]:
     change_external_expect_error(A_path, ext,
                                  '.*cannot use two absolute URLs.*')
 
-  for ext in [ 'http://example.com/ -r1 foo',
-               'http://example.com/ -r 1 foo',
-               '-r1 foo http://example.com/',
-               '-r 1 foo http://example.com/'
+  for ext in [ b'http://example.com/ -r1 foo',
+               b'http://example.com/ -r 1 foo',
+               b'-r1 foo http://example.com/',
+               b'-r 1 foo http://example.com/'
                ]:
     change_external_expect_error(A_path, ext,
                                  '.*cannot use a URL \'.*\' as the ' \
@@ -3076,6 +3076,7 @@ def list_include_externals(sbox):
     expected_stdout, [], 0, 'ls', '--include-externals', C_url)
 
 @Issue(4293)
+@XFail()
 def move_with_file_externals(sbox):
   "move with file externals"
 
@@ -3243,7 +3244,7 @@ def file_external_unversioned_obstruction(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  expected_output = verify.RegexOutput('r2 committed .*')
+  expected_output = verify.RegexOutput(b'r2 committed .*')
   svntest.actions.run_and_verify_svnmucc(expected_output, [],
                            '-U', sbox.repo_url, '-m', 'r2: set external',
                            'propset', 'svn:externals', '^/A/mu mu-ext', 'A')
@@ -3252,18 +3253,28 @@ def file_external_unversioned_obstruction(sbox):
 
   # Update reports a tree-conflict but status doesn't show any such
   # conflict.  I'm no sure whether this is correct.
-  expected_output = svntest.wc.State(wc_dir, {
-      'A'        : Item(status=' U'),
-      'A/mu-ext' : Item(status='  ', treeconflict='A'),
-      })
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
       'A/mu-ext' : Item('unversioned obstruction'),
       })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.add({
-      'A/mu-ext' : Item(status='M ', wc_rev='2', switched='X'),
+  svntest.actions.run_and_verify_svn(
+                  None,
+                  ".*svn: warning: W155014: The file external '.*mu-ext'"
+                  " can not be created because the node exists.*",
+                  'up', wc_dir)
+  svntest.actions.verify_disk(wc_dir, expected_disk)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  os.remove(sbox.ospath('A/mu-ext'))
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/mu-ext' : Item(status='A '),
       })
+  expected_status.add({
+      'A/mu-ext' : Item(status='  ', wc_rev='2', switched='X'),
+      })
+  expected_disk.tweak('A/mu-ext', contents="This is the file 'mu'.\n")
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, expected_disk,
                                         expected_status)

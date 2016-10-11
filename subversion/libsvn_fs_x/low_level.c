@@ -829,14 +829,6 @@ read_change(svn_fs_x__change_t **change_p,
   change = apr_pcalloc(result_pool, sizeof(*change));
   last_str = line->data;
 
-  /* Get the node-id of the change. */
-  str = svn_cstring_tokenize(" ", &last_str);
-  if (str == NULL)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Invalid changes line in rev-file"));
-
-  SVN_ERR(svn_fs_x__id_parse(&change->noderev_id, str));
-
   /* Get the change type. */
   str = svn_cstring_tokenize(" ", &last_str);
   if (str == NULL)
@@ -982,10 +974,10 @@ read_change(svn_fs_x__change_t **change_p,
 svn_error_t *
 svn_fs_x__read_changes(apr_array_header_t **changes,
                        svn_stream_t *stream,
+                       int max_count,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  svn_fs_x__change_t *change;
   apr_pool_t *iterpool;
 
   /* Pre-allocate enough room for most change lists.
@@ -998,13 +990,16 @@ svn_fs_x__read_changes(apr_array_header_t **changes,
    */
   *changes = apr_array_make(result_pool, 63, sizeof(svn_fs_x__change_t *));
 
-  SVN_ERR(read_change(&change, stream, result_pool, scratch_pool));
   iterpool = svn_pool_create(scratch_pool);
-  while (change)
+  for (; max_count > 0; --max_count)
     {
-      APR_ARRAY_PUSH(*changes, svn_fs_x__change_t*) = change;
-      SVN_ERR(read_change(&change, stream, result_pool, iterpool));
+      svn_fs_x__change_t *change;
       svn_pool_clear(iterpool);
+      SVN_ERR(read_change(&change, stream, result_pool, iterpool));
+      if (!change)
+        break;
+ 
+      APR_ARRAY_PUSH(*changes, svn_fs_x__change_t*) = change;
     }
   svn_pool_destroy(iterpool);
 
@@ -1044,7 +1039,6 @@ write_change_entry(svn_stream_t *stream,
                    svn_fs_x__change_t *change,
                    apr_pool_t *scratch_pool)
 {
-  const char *idstr;
   const char *change_string = NULL;
   const char *kind_string = "";
   svn_stringbuf_t *buf;
@@ -1070,8 +1064,6 @@ write_change_entry(svn_stream_t *stream,
                                change->change_kind);
     }
 
-  idstr = svn_fs_x__id_unparse(&change->noderev_id, scratch_pool)->data;
-
   SVN_ERR_ASSERT(change->node_kind == svn_node_dir
                  || change->node_kind == svn_node_file);
   kind_string = apr_psprintf(scratch_pool, "-%s",
@@ -1079,8 +1071,8 @@ write_change_entry(svn_stream_t *stream,
                              ? SVN_FS_X__KIND_DIR
                              : SVN_FS_X__KIND_FILE);
 
-  buf = svn_stringbuf_createf(scratch_pool, "%s %s%s %s %s %s %s\n",
-                              idstr, change_string, kind_string,
+  buf = svn_stringbuf_createf(scratch_pool, "%s%s %s %s %s %s\n",
+                              change_string, kind_string,
                               change->text_mod ? FLAG_TRUE : FLAG_FALSE,
                               change->prop_mod ? FLAG_TRUE : FLAG_FALSE,
                               change->mergeinfo_mod == svn_tristate_true

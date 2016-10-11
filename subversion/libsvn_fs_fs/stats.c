@@ -681,19 +681,25 @@ get_phys_change_count(query_t *query,
                       revision_info_t *revision_info,
                       apr_pool_t *scratch_pool)
 {
-  /* We are going to use our own sub-pool here because the changes object
-   * may well be >100MB and SCRATCH_POOL may not get cleared until all other
-   * info has been read by read_phys_revision().  Therefore, tidy up early.
-   */
-  apr_pool_t *subpool = svn_pool_create(scratch_pool);
-  apr_array_header_t *changes;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  svn_fs_fs__changes_context_t *context;
 
-  SVN_ERR(svn_fs_fs__get_changes(&changes, query->fs,
-                                 revision_info->revision, subpool));
-  revision_info->change_count = changes->nelts;
+  /* Fetch the first block of data. */
+  SVN_ERR(svn_fs_fs__create_changes_context(&context, query->fs,
+                                            revision_info->revision,
+                                            scratch_pool));
 
-  /* Release potentially tons of memory. */
-  svn_pool_destroy(subpool);
+  revision_info->change_count = 0;
+  while (!context->eol)
+    {
+      apr_array_header_t *changes;
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_fs_fs__get_changes(&changes, context, iterpool, iterpool));
+      revision_info->change_count = changes->nelts;
+    }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

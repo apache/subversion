@@ -150,8 +150,7 @@ svn_cl__try(svn_error_t *err,
 
 
 /* Our cancellation callback. */
-svn_error_t *
-svn_cl__check_cancel(void *baton);
+extern svn_cancel_func_t svn_cl__check_cancel;
 
 
 

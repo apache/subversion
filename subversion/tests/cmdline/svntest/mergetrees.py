@@ -29,7 +29,7 @@ import shutil, sys, re, os
 import time
 
 # Our testing module
-import main, wc, verify, actions, testcase
+from svntest import main, wc, verify, actions, testcase
 
 from prop_tests import binary_mime_type_on_text_file_warning
 

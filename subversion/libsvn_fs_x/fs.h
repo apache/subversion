@@ -37,7 +37,7 @@
 #include "private/svn_sqlite.h"
 #include "private/svn_mutex.h"
 
-#include "id.h"
+#include "rev_file.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -136,6 +136,11 @@ extern "C" {
 #else
 #define SVN_FS_X__USE_LOCK_MUTEX 0
 #endif
+
+/* Maximum number of changes we deliver per request when listing the
+   changed paths for a given revision.   Anything > 0 will do.
+   At 100..300 bytes per entry, this limits the allocation to ~30kB. */
+#define SVN_FS_X__CHANGES_BLOCK_SIZE 100
 
 /* Private FSX-specific data shared between all svn_txn_t objects that
    relate to a particular transaction in a filesystem (as identified
@@ -319,8 +324,8 @@ typedef struct svn_fs_x__data_t
      the key is a (pack file revision, file offset) pair */
   svn_cache__t *noderevs_container_cache;
 
-  /* Cache for change lists as APR arrays of svn_fs_x__change_t * objects;
-     the key is the revision */
+  /* Cache for change lists n blocks as svn_fs_x__changes_list_t * objects;
+     the key is the (revision, first-element-in-block) pair. */
   svn_cache__t *changes_cache;
 
   /* Cache for change_list_t containers;
@@ -397,6 +402,9 @@ typedef struct svn_fs_x__data_t
      still be distinguishable (e.g. backups produced by svn_fs_hotcopy()
      or dump / load cycles). */
   const char *instance_id;
+
+  /* Ensure that all filesystem changes are written to disk. */
+  svn_boolean_t flush_to_disk;
 
   /* Pointer to svn_fs_open. */
   svn_error_t *(*svn_fs_open_)(svn_fs_t **, const char *, apr_hash_t *,
@@ -481,7 +489,8 @@ typedef struct svn_fs_x__noderev_t
   /* node kind */
   svn_node_kind_t kind;
 
-  /* number of predecessors this node revision has (recursively). */
+  /* Number of predecessors this node revision has (recursively).
+     A difference from the BDB backend is that it cannot be -1. */
   int predecessor_count;
 
   /* representation key for this node's properties.  may be NULL if
@@ -521,29 +530,31 @@ typedef struct svn_fs_x__dirent_t
 
 
 /*** Change ***/
-typedef struct svn_fs_x__change_t
+typedef svn_fs_path_change3_t svn_fs_x__change_t;
+
+/*** Context for reading changed paths lists iteratively. */
+typedef struct svn_fs_x__changes_context_t
 {
-  /* Path of the change. */
-  svn_string_t path;
+  /* Repository to fetch from. */
+  svn_fs_t *fs;
 
-  /* node revision id of changed path */
-  svn_fs_x__id_t noderev_id;
+  /* Revision that we read from. */
+  svn_revnum_t revision;
 
-  /* See svn_fs_path_change2_t for a description for the remaining elements.
-   */
-  svn_fs_path_change_kind_t change_kind;
+  /* Revision file object to use when needed. */
+  svn_fs_x__revision_file_t *revision_file;
 
-  svn_boolean_t text_mod;
-  svn_boolean_t prop_mod;
-  svn_node_kind_t node_kind;
+  /* Index of the next change to fetch. */
+  apr_size_t next;
 
-  svn_boolean_t copyfrom_known;
-  svn_revnum_t copyfrom_rev;
-  const char *copyfrom_path;
+  /* Offset, within the changed paths list on disk, of the next change to
+     fetch. */
+  apr_off_t next_offset;
 
-  svn_tristate_t mergeinfo_mod;
-} svn_fs_x__change_t;
+  /* Has the end of the list been reached? */
+  svn_boolean_t eol;
 
+} svn_fs_x__changes_context_t;
 
 /*** Directory (only used at the cache interface) ***/
 typedef struct svn_fs_x__dir_data_t

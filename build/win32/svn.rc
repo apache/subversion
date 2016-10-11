@@ -70,7 +70,7 @@ BEGIN
   BEGIN
     BLOCK "040904B0"
     BEGIN
-      VALUE "CompanyName", "http://subversion.apache.org/\0"
+      VALUE "CompanyName", "Apache Software Foundation\0"
       VALUE "FileDescription", APR_STRINGIFY(SVN_FILE_DESCRIPTION) "\0"
       VALUE "FileVersion", SVN_VER_NUMBER "\0"
       VALUE "InternalName", "SVN\0"

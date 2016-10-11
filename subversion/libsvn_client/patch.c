@@ -67,7 +67,10 @@ typedef struct hunk_info_t {
 
   /* The fuzz factor used when matching this hunk, i.e. how many
    * lines of leading and trailing context to ignore during matching. */
-  svn_linenum_t fuzz;
+  svn_linenum_t match_fuzz;
+
+  /* match_fuzz + the penalty caused by bad patch files */
+  svn_linenum_t report_fuzz;
 } hunk_info_t;
 
 /* A struct carrying information related to the patched and unpatched
@@ -1038,7 +1041,6 @@ init_patch_target(patch_target_t **patch_target,
   target->operation = patch->operation;
 
   if (patch->operation == svn_diff_op_added /* Allow replacing */
-      || patch->operation == svn_diff_op_added
       || patch->operation == svn_diff_op_moved)
     {
       follow_moves = FALSE;
@@ -1222,11 +1224,11 @@ init_patch_target(patch_target_t **patch_target,
 
       /* Open a temporary file to write the patched result to. */
       SVN_ERR(svn_io_open_unique_file3(&target->patched_file,
-                                        &target->patched_path, NULL,
-                                        remove_tempfiles ?
-                                          svn_io_file_del_on_pool_cleanup :
-                                          svn_io_file_del_none,
-                                        result_pool, scratch_pool));
+                                       &target->patched_path, NULL,
+                                       remove_tempfiles ?
+                                         svn_io_file_del_on_pool_cleanup :
+                                         svn_io_file_del_none,
+                                       result_pool, scratch_pool));
 
       /* Put the write callback in place. */
       content->write = write_file;
@@ -1567,11 +1569,19 @@ match_hunk(svn_boolean_t *matched, target_content_t *content,
   svn_linenum_t hunk_length;
   svn_linenum_t leading_context;
   svn_linenum_t trailing_context;
+  svn_linenum_t fuzz_penalty;
 
   *matched = FALSE;
 
   if (content->eof)
     return SVN_NO_ERROR;
+
+  fuzz_penalty = svn_diff_hunk__get_fuzz_penalty(hunk);
+
+  if (fuzz_penalty > fuzz)
+    return SVN_NO_ERROR;
+  else
+    fuzz -= fuzz_penalty;
 
   saved_line = content->current_line;
   lines_read = 0;
@@ -2079,7 +2089,8 @@ get_hunk_info(hunk_info_t **hi, patch_target_t *target,
   (*hi)->matched_line = matched_line;
   (*hi)->rejected = (matched_line == 0);
   (*hi)->already_applied = already_applied;
-  (*hi)->fuzz = fuzz;
+  (*hi)->report_fuzz = fuzz;
+  (*hi)->match_fuzz = fuzz - svn_diff_hunk__get_fuzz_penalty(hunk);
 
   return SVN_NO_ERROR;
 }
@@ -2201,6 +2212,7 @@ apply_hunk(patch_target_t *target, target_content_t *content,
   svn_linenum_t lines_read;
   svn_boolean_t eof;
   apr_pool_t *iterpool;
+  svn_linenum_t fuzz = hi->match_fuzz;
 
   /* ### Is there a cleaner way to describe if we have an existing target?
    */
@@ -2212,13 +2224,13 @@ apply_hunk(patch_target_t *target, target_content_t *content,
        * Also copy leading lines of context which matched with fuzz.
        * The target has changed on the fuzzy-matched lines,
        * so we should retain the target's version of those lines. */
-      SVN_ERR(copy_lines_to_target(content, hi->matched_line + hi->fuzz,
+      SVN_ERR(copy_lines_to_target(content, hi->matched_line + fuzz,
                                    pool));
 
       /* Skip the target's version of the hunk.
        * Don't skip trailing lines which matched with fuzz. */
       line = content->current_line +
-             svn_diff_hunk_get_original_length(hi->hunk) - (2 * hi->fuzz);
+             svn_diff_hunk_get_original_length(hi->hunk) - (2 * fuzz);
       SVN_ERR(seek_to_line(content, line, pool));
       if (content->current_line != line && ! content->eof)
         {
@@ -2245,8 +2257,8 @@ apply_hunk(patch_target_t *target, target_content_t *content,
                                                    &eol_str, &eof,
                                                    iterpool, iterpool));
       lines_read++;
-      if (lines_read > hi->fuzz &&
-          lines_read <= svn_diff_hunk_get_modified_length(hi->hunk) - hi->fuzz)
+      if (lines_read > fuzz &&
+          lines_read <= svn_diff_hunk_get_modified_length(hi->hunk) - fuzz)
         {
           apr_size_t len;
 
@@ -2315,7 +2327,7 @@ send_hunk_notification(const hunk_info_t *hi,
   notify->hunk_modified_length =
     svn_diff_hunk_get_modified_length(hi->hunk);
   notify->hunk_matched_line = hi->matched_line;
-  notify->hunk_fuzz = hi->fuzz;
+  notify->hunk_fuzz = hi->report_fuzz;
   notify->prop_name = prop_name;
 
   ctx->notify_func2(ctx->notify_baton2, notify, pool);
@@ -3292,6 +3304,7 @@ install_patched_target(patch_target_t *target, const char *abs_wc_path,
  */
 static svn_error_t *
 write_out_rejected_hunks(patch_target_t *target,
+                         const char *root_abspath,
                          svn_boolean_t dry_run,
                          apr_pool_t *scratch_pool)
 {
@@ -3299,17 +3312,33 @@ write_out_rejected_hunks(patch_target_t *target,
     {
       /* Write out rejected hunks, if any. */
       apr_file_t *reject_file;
+      svn_error_t *err;
 
-      SVN_ERR(svn_io_open_uniquely_named(&reject_file, NULL,
-                                         svn_dirent_dirname(
-                                              target->local_abspath,
-                                              scratch_pool),
-                                         svn_dirent_basename(
-                                              target->local_abspath,
-                                              NULL),
-                                         ".svnpatch.rej",
-                                         svn_io_file_del_none,
-                                         scratch_pool, scratch_pool));
+      err = svn_io_open_uniquely_named(&reject_file, NULL,
+                                       svn_dirent_dirname(target->local_abspath,
+                                                          scratch_pool),
+                                       svn_dirent_basename(
+                                         target->local_abspath,
+                                         NULL),
+                                       ".svnpatch.rej",
+                                       svn_io_file_del_none,
+                                       scratch_pool, scratch_pool);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          /* The hunk applies to a file in a directory which does not exist.
+           * Put the reject file into the working copy root instead. */
+          svn_error_clear(err);
+          SVN_ERR(svn_io_open_uniquely_named(&reject_file, NULL,
+                                             root_abspath,
+                                             svn_dirent_basename(
+                                               target->local_abspath,
+                                               NULL),
+                                             ".svnpatch.rej",
+                                             svn_io_file_del_none,
+                                             scratch_pool, scratch_pool));
+        }
+      else
+        SVN_ERR(err);
 
       SVN_ERR(svn_stream_reset(target->reject_stream));
 
@@ -3665,7 +3694,8 @@ apply_patches(/* The path to the patch file. */
                     SVN_ERR(install_patched_prop_targets(target, ctx,
                                                          dry_run, iterpool));
 
-                  SVN_ERR(write_out_rejected_hunks(target, dry_run, iterpool));
+                  SVN_ERR(write_out_rejected_hunks(target, root_abspath,
+                                                   dry_run, iterpool));
 
                   APR_ARRAY_PUSH(targets_info,
                                  patch_target_info_t *) = target_info;

@@ -139,9 +139,18 @@ if test "$svn_lib_apr_memcache" = "yes"; then
             [Defined if apr_memcache (standalone or in apr-util) is present])
 fi
 
+AC_ARG_ENABLE(apache-whitelist,
+  AS_HELP_STRING([--enable-apache-whitelist=VER],
+                 [Whitelist a particular Apache version number,
+                  typically used to enable the use of a old version
+                  patched by a distribution.]),
+                 [apache_whitelist_ver=$enableval],
+                 [apache_whitelist_ver=no])
+HTTPD_WHITELIST="$apache_whitelist_ver"
+AC_SUBST(HTTPD_WHITELIST)
 
 dnl Find Apache with a recent-enough magic module number
-SVN_FIND_APACHE(20051115)
+SVN_FIND_APACHE(20051115, $apache_whitelist_ver)
 
 dnl Search for SQLite.  If you change SQLITE_URL from a .zip to
 dnl something else also update build/ac-macros/sqlite.m4 to reflect
@@ -202,7 +211,10 @@ localedir='${datadir}/locale'
 AC_SUBST(localedir)
 
 dnl For SVN_LOCALE_DIR, we have to expand it to something.  See SVN_BINDIR.
-if test "${datadir}" = '${prefix}/share' && test "${prefix}" = "NONE"; then
+if test "${prefix}" = "NONE" \
+  && ( test "${datadir}" = '${prefix}/share' \
+       || ( test "${datadir}" = '${datarootdir}' \
+            && test "${datarootdir}" = '${prefix}/share' ) ); then
   exp_localedir='${ac_default_prefix}/share/locale'
 else
   exp_localedir=$localedir
@@ -626,27 +638,27 @@ AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 
 dnl Googlemock -----------------
-AC_ARG_ENABLE([gmock],
-  AS_HELP_STRING([--disable-gmock],
+AC_ARG_ENABLE([googlemock],
+  AS_HELP_STRING([--disable-googlemock],
                  [Do not use the Googlemock testing framework]),
   [],
-  [enable_gmock=yes])
+  [enable_googlemock=yes])
 
-AC_SUBST([GMOCK_SRCDIR], [$abs_srcdir/gmock-fused])
+AC_SUBST([GOOGLEMOCK_SRCDIR], [$abs_srcdir/googlemock])
 AC_MSG_CHECKING([whether use Googlemock])
-if test "$enable_gmock" != "no"; then
-  if test -d "$GMOCK_SRCDIR"; then
+if test "$enable_googlemock" != "no"; then
+  if test -d "$GOOGLEMOCK_SRCDIR"; then
     AC_MSG_RESULT([yes])
-    SVN_USE_GMOCK=true
+    SVN_USE_GOOGLEMOCK=true
   else
     AC_MSG_RESULT([no])
-    SVN_USE_GMOCK=false
+    SVN_USE_GOOGLEMOCK=false
   fi
 else
   AC_MSG_RESULT([no])
-  SVN_USE_GMOCK_SOURCES=false
+  SVN_USE_GOOGLEMOCK=false
 fi
-AC_SUBST([SVN_USE_GMOCK])
+AC_SUBST([SVN_USE_GOOGLEMOCK])
 
 dnl Ev2 experimental features ----------------------
 dnl Note: The Ev2 implementations will be built unconditionally, but by
@@ -1539,6 +1551,7 @@ fi
 # Need to strip '-no-cpp-precomp' from CPPFLAGS for SWIG as well.
 SWIG_CPPFLAGS="$CPPFLAGS"
 SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-no-cpp-precomp ])
+SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-Wdate-time ])
 AC_SUBST([SWIG_CPPFLAGS])
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'

@@ -66,8 +66,9 @@ normalize_key_part(const char *original,
   return normalized->data;
 }
 
-/* *CACHE_TXDELTAS, *CACHE_FULLTEXTS flags will be set according to
-   FS->CONFIG.  *CACHE_NAMESPACE receives the cache prefix to use.
+/* *CACHE_TXDELTAS, *CACHE_FULLTEXTS, *CACHE_NODEPROPS flags will be set
+   according to FS->CONFIG. *CACHE_NAMESPACE receives the cache prefix to
+   use.
 
    Use FS->pool for allocating the memcache and CACHE_NAMESPACE, and POOL
    for temporary allocations. */
@@ -75,6 +76,7 @@ static svn_error_t *
 read_config(const char **cache_namespace,
             svn_boolean_t *cache_txdeltas,
             svn_boolean_t *cache_fulltexts,
+            svn_boolean_t *cache_nodeprops,
             svn_fs_t *fs,
             apr_pool_t *pool)
 {
@@ -117,6 +119,14 @@ read_config(const char **cache_namespace,
                          SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                          TRUE);
 
+  /* by default, cache nodeprops: this will match pre-1.10
+   * behavior where node properties caching was controlled
+   * by SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS configuration option.
+   */
+  *cache_nodeprops
+    = svn_hash__get_bool(fs->config,
+                         SVN_FS_CONFIG_FSFS_CACHE_NODEPROPS,
+                         TRUE);
   return SVN_NO_ERROR;
 }
 
@@ -353,6 +363,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   svn_boolean_t no_handler = ffd->fail_stop;
   svn_boolean_t cache_txdeltas;
   svn_boolean_t cache_fulltexts;
+  svn_boolean_t cache_nodeprops;
   const char *cache_namespace;
   svn_boolean_t has_namespace;
 
@@ -360,6 +371,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   SVN_ERR(read_config(&cache_namespace,
                       &cache_txdeltas,
                       &cache_fulltexts,
+                      &cache_nodeprops,
                       fs,
                       pool));
 
@@ -438,7 +450,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        svn_fs_fs__deserialize_dir_entries,
                        sizeof(pair_cache_key_t),
                        apr_pstrcat(pool, prefix, "DIR", SVN_VA_NULL),
-                       SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                       SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
                        has_namespace,
                        fs,
                        no_handler,
@@ -498,7 +510,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                        1, 8, /* 1k / entry; 8 entries total, rarely used */
                        svn_fs_fs__serialize_changes,
                        svn_fs_fs__deserialize_changes,
-                       sizeof(svn_revnum_t),
+                       sizeof(pair_cache_key_t),
                        apr_pstrcat(pool, prefix, "CHANGES", SVN_VA_NULL),
                        0,
                        has_namespace,
@@ -538,21 +550,6 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
                            no_handler,
                            fs->pool, pool));
 
-      SVN_ERR(create_cache(&(ffd->properties_cache),
-                           NULL,
-                           membuffer,
-                           0, 0, /* Do not use the inprocess cache */
-                           svn_fs_fs__serialize_properties,
-                           svn_fs_fs__deserialize_properties,
-                           sizeof(pair_cache_key_t),
-                           apr_pstrcat(pool, prefix, "PROP",
-                                       SVN_VA_NULL),
-                           SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
-                           has_namespace,
-                           fs,
-                           no_handler,
-                           fs->pool, pool));
-
       SVN_ERR(create_cache(&(ffd->mergeinfo_cache),
                            NULL,
                            membuffer,
@@ -586,9 +583,31 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   else
     {
       ffd->fulltext_cache = NULL;
-      ffd->properties_cache = NULL;
       ffd->mergeinfo_cache = NULL;
       ffd->mergeinfo_existence_cache = NULL;
+    }
+
+  /* if enabled, cache node properties */
+  if (cache_nodeprops)
+    {
+      SVN_ERR(create_cache(&(ffd->properties_cache),
+                           NULL,
+                           membuffer,
+                           0, 0, /* Do not use the inprocess cache */
+                           svn_fs_fs__serialize_properties,
+                           svn_fs_fs__deserialize_properties,
+                           sizeof(pair_cache_key_t),
+                           apr_pstrcat(pool, prefix, "PROP",
+                                       SVN_VA_NULL),
+                           SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                           has_namespace,
+                           fs,
+                           no_handler,
+                           fs->pool, pool));
+    }
+  else
+    {
+      ffd->properties_cache = NULL;
     }
 
   /* if enabled, cache text deltas and their combinations */
@@ -830,27 +849,37 @@ svn_fs_fs__initialize_txn_caches(svn_fs_t *fs,
 
   /* Transaction content needs to be carefully prefixed to virtually
      eliminate any chance for conflicts. The (repo, txn_id) pair
-     should be unique but if a transaction fails, it might be possible
-     to start a new transaction later that receives the same id.
-     Therefore, throw in a uuid as well - just to be sure. */
-  prefix = apr_pstrcat(pool,
-                       "fsfs:", fs->uuid,
-                       "/", fs->path,
-                       ":", txn_id,
-                       ":", svn_uuid_generate(pool),
-                       ":", "TXNDIR",
-                       SVN_VA_NULL);
+     should be unique but if the filesystem format doesn't store the
+     global transaction ID via the txn-current file, and a transaction
+     fails, it might be possible to start a new transaction later that
+     receives the same id.  For such older formats, throw in an uuid as
+     well -- just to be sure. */
+  if (ffd->format >= SVN_FS_FS__MIN_TXN_CURRENT_FORMAT)
+    prefix = apr_pstrcat(pool,
+                         "fsfs:", fs->uuid,
+                         "/", fs->path,
+                         ":", txn_id,
+                         ":", "TXNDIR",
+                         SVN_VA_NULL);
+  else
+    prefix = apr_pstrcat(pool,
+                         "fsfs:", fs->uuid,
+                         "/", fs->path,
+                         ":", txn_id,
+                         ":", svn_uuid_generate(pool),
+                         ":", "TXNDIR",
+                         SVN_VA_NULL);
 
   /* create a txn-local directory cache */
   SVN_ERR(create_cache(&ffd->txn_dir_cache,
                        NULL,
                        svn_cache__get_global_membuffer_cache(),
                        1024, 8,
-                       svn_fs_fs__serialize_dir_entries,
+                       svn_fs_fs__serialize_txndir_entries,
                        svn_fs_fs__deserialize_dir_entries,
                        APR_HASH_KEY_STRING,
                        prefix,
-                       0,
+                       SVN_CACHE__MEMBUFFER_HIGH_PRIORITY,
                        TRUE, /* The TXN-ID is our namespace. */
                        fs,
                        TRUE,

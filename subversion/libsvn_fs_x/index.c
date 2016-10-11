@@ -57,7 +57,7 @@ const apr_uint64_t off_t_max = (sizeof(apr_off_t) == sizeof(apr_int64_t))
                              : APR_INT32_MAX;
 
 /* We store P2L proto-index entries as 6 values, 64 bits each on disk.
- * See also svn_fs_fs__p2l_proto_index_add_entry().
+ * See also svn_fs_x__p2l_proto_index_add_entry().
  */
 #define P2L_PROTO_INDEX_ENTRY_SIZE (6 * sizeof(apr_uint64_t))
 
@@ -231,7 +231,7 @@ stream_error_create(svn_fs_x__packed_number_stream_t *stream,
   apr_off_t offset;
   SVN_ERR(svn_io_file_name_get(&file_name, stream->file,
                                stream->pool));
-  SVN_ERR(svn_fs_x__get_file_offset(&offset, stream->file, stream->pool));
+  SVN_ERR(svn_io_file_get_offset(&offset, stream->file, stream->pool));
 
   return svn_error_createf(err, NULL, message, file_name,
                            apr_psprintf(stream->pool,
@@ -3166,7 +3166,7 @@ compare_p2l_entry_offsets(const void *lhs,
 }
 
 /* Cached data extraction utility.  DATA is a P2L index page, e.g. an APR
- * array of svn_fs_fs__p2l_entry_t elements.  Return the entry for the item,
+ * array of svn_fs_x__p2l_entry_t elements.  Return the entry for the item,
  * allocated in RESULT_POOL, starting at OFFSET or NULL if that's not an
  * the start offset of any item. Use SCRATCH_POOL for temporary allocations.
  */

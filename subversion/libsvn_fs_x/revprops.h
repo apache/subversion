@@ -46,6 +46,17 @@ svn_fs_x__reset_revprop_generation_file(svn_fs_t *fs,
 void
 svn_fs_x__invalidate_revprop_generation(svn_fs_t *fs);
 
+/* Utility function serializing PROPLIST into FILE and adding the checksum.
+ * Use SCRATCH_POOL for temporary allocations.
+ *
+ * Call this only when creating initial revprop file contents.
+ * For modifications use svn_fs_x__set_revision_proplist.
+ */
+svn_error_t *
+svn_fs_x__write_non_packed_revprops(apr_file_t *file,
+                                    apr_hash_t *proplist,
+                                    apr_pool_t *scratch_pool);
+
 /* Read the revprops for revision REV in FS and return them in *PROPLIST_P.
  * If BYPASS_CACHE is set, don't consult the disks but always read from disk.
  * If REFRESH is set, update the revprop generation info; otherwise access

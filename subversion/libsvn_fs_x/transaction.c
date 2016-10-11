@@ -43,6 +43,7 @@
 #include "rep-cache.h"
 #include "index.h"
 #include "batch_fsync.h"
+#include "revprops.h"
 
 #include "private/svn_fs_util.h"
 #include "private/svn_fspath.h"
@@ -972,16 +973,6 @@ fold_change(apr_hash_t *changed_paths,
     {
       /* This path already exists in the hash, so we have to merge
          this change into the already existing one. */
-
-      /* Sanity check: we should be talking about the same node
-         revision ID as our last change except where the last change
-         was a deletion. */
-      if (!svn_fs_x__id_eq(&old_change->noderev_id, &change->noderev_id)
-          && (old_change->change_kind != svn_fs_path_change_delete))
-        return svn_error_create
-          (SVN_ERR_FS_CORRUPT, NULL,
-           _("Invalid change ordering: new node revision ID "
-             "without delete"));
 
       /* Sanity check: an add, replacement, or reset must be the first
          thing to follow a deletion. */
@@ -1941,7 +1932,6 @@ svn_error_t *
 svn_fs_x__add_change(svn_fs_t *fs,
                      svn_fs_x__txn_id_t txn_id,
                      const char *path,
-                     const svn_fs_x__id_t *id,
                      svn_fs_path_change_kind_t change_kind,
                      svn_boolean_t text_mod,
                      svn_boolean_t prop_mod,
@@ -1964,7 +1954,6 @@ svn_fs_x__add_change(svn_fs_t *fs,
 
   change.path.data = path;
   change.path.len = strlen(path);
-  change.noderev_id = *id;
   change.change_kind = change_kind;
   change.text_mod = text_mod;
   change.prop_mod = prop_mod;
@@ -2289,7 +2278,7 @@ rep_write_get_baton(rep_write_baton_t **wb_p,
                                                        b->local_pool),
                               b->local_pool);
 
-  SVN_ERR(svn_fs_x__get_file_offset(&b->rep_offset, file, b->local_pool));
+  SVN_ERR(svn_io_file_get_offset(&b->rep_offset, file, b->local_pool));
 
   /* Get the base for this delta. */
   SVN_ERR(choose_delta_base(&base_rep, fs, noderev, FALSE, b->local_pool));
@@ -2312,8 +2301,7 @@ rep_write_get_baton(rep_write_baton_t **wb_p,
                                      b->local_pool));
 
   /* Now determine the offset of the actual svndiff data. */
-  SVN_ERR(svn_fs_x__get_file_offset(&b->delta_start, file,
-                                    b->local_pool));
+  SVN_ERR(svn_io_file_get_offset(&b->delta_start, file, b->local_pool));
 
   /* Cleanup in case something goes wrong. */
   apr_pool_cleanup_register(b->local_pool, b, rep_write_cleanup,
@@ -2525,7 +2513,7 @@ rep_write_contents_close(void *baton)
   SVN_ERR(svn_stream_close(b->delta_stream));
 
   /* Determine the length of the svndiff data. */
-  SVN_ERR(svn_fs_x__get_file_offset(&offset, b->file, b->local_pool));
+  SVN_ERR(svn_io_file_get_offset(&offset, b->file, b->local_pool));
   rep->size = offset - b->delta_start;
 
   /* Fill in the rest of the representation field. */
@@ -2577,7 +2565,7 @@ rep_write_contents_close(void *baton)
       noderev_id.number = rep->id.number;
 
       entry.offset = b->rep_offset;
-      SVN_ERR(svn_fs_x__get_file_offset(&offset, b->file, b->local_pool));
+      SVN_ERR(svn_io_file_get_offset(&offset, b->file, b->local_pool));
       entry.size = offset - b->rep_offset;
       entry.type = SVN_FS_X__ITEM_TYPE_FILE_REP;
       entry.item_count = 1;
@@ -2816,7 +2804,7 @@ write_container_delta_rep(svn_fs_x__representation_t *rep,
   SVN_ERR(choose_delta_base(&base_rep, fs, noderev, is_props, scratch_pool));
   SVN_ERR(svn_fs_x__get_contents(&source, fs, base_rep, FALSE, scratch_pool));
 
-  SVN_ERR(svn_fs_x__get_file_offset(&offset, file, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&offset, file, scratch_pool));
 
   /* Write out the rep header. */
   if (base_rep)
@@ -2837,7 +2825,7 @@ write_container_delta_rep(svn_fs_x__representation_t *rep,
                                                            scratch_pool),
                                   scratch_pool);
   SVN_ERR(svn_fs_x__write_rep_header(&header, file_stream, scratch_pool));
-  SVN_ERR(svn_fs_x__get_file_offset(&delta_start, file, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&delta_start, file, scratch_pool));
 
   /* Prepare to write the svndiff data. */
   svn_txdelta_to_svndiff3(&diff_wh,
@@ -2886,7 +2874,7 @@ write_container_delta_rep(svn_fs_x__representation_t *rep,
       svn_fs_x__id_t noderev_id;
 
       /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_fs_x__get_file_offset(&rep_end, file, scratch_pool));
+      SVN_ERR(svn_io_file_get_offset(&rep_end, file, scratch_pool));
       SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
       SVN_ERR(svn_stream_close(file_stream));
 
@@ -2899,7 +2887,7 @@ write_container_delta_rep(svn_fs_x__representation_t *rep,
       noderev_id.number = rep->id.number;
 
       entry.offset = offset;
-      SVN_ERR(svn_fs_x__get_file_offset(&offset, file, scratch_pool));
+      SVN_ERR(svn_io_file_get_offset(&offset, file, scratch_pool));
       entry.size = offset - entry.offset;
       entry.type = item_type;
       entry.item_count = 1;
@@ -3042,7 +3030,6 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
   svn_fs_x__change_set_t change_set = svn_fs_x__change_set_by_rev(rev);
   svn_stream_t *file_stream;
   apr_pool_t *subpool;
-  svn_fs_x__change_t *change;
 
   /* Check to see if this is a transaction node. */
   if (txn_id == SVN_FS_X__INVALID_TXN_ID)
@@ -3153,7 +3140,7 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
   if (noderev->copyroot_rev == SVN_INVALID_REVNUM)
     noderev->copyroot_rev = rev;
 
-  SVN_ERR(svn_fs_x__get_file_offset(&my_offset, file, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&my_offset, file, scratch_pool));
 
   SVN_ERR(store_l2p_index_entry(fs, txn_id, my_offset,
                                 noderev->noderev_id.number, scratch_pool));
@@ -3212,7 +3199,7 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
   noderev_id.change_set = SVN_FS_X__INVALID_CHANGE_SET;
 
   entry.offset = my_offset;
-  SVN_ERR(svn_fs_x__get_file_offset(&my_offset, file, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&my_offset, file, scratch_pool));
   entry.size = my_offset - entry.offset;
   entry.type = SVN_FS_X__ITEM_TYPE_NODEREV;
   entry.item_count = 1;
@@ -3220,34 +3207,8 @@ write_final_rev(svn_fs_x__id_t *new_id_p,
 
   SVN_ERR(store_p2l_index_entry(fs, txn_id, &entry, scratch_pool));
 
-  /* Update the ID within the changed paths list. */
-  change = svn_hash_gets(changed_paths, noderev->created_path);
-  if (change)
-    change->noderev_id = noderev->noderev_id;
-
   /* Return our ID that references the revision file. */
   *new_id_p = new_id;
-
-  return SVN_NO_ERROR;
-}
-
-/* Reset all in-transaction noderev-IDs in CHANGED_PATHS.  They should
-   belong to deleted nodes only.  At any rate, these IDs become invalid
-   as soon as transaction got committed.
-   Perform temporary allocations in SCRATCH_POOL. */
-static svn_error_t *
-sanitize_changed_path_info(apr_hash_t *changed_paths,
-                           apr_pool_t *scratch_pool)
-{
-  apr_hash_index_t *hi;
-  for (hi = apr_hash_first(scratch_pool, changed_paths);
-       hi;
-       hi = apr_hash_next(hi))
-    {
-      svn_fs_x__change_t *change = apr_hash_this_val(hi);
-      if (svn_fs_x__is_txn(change->noderev_id.change_set))
-        svn_fs_x__id_reset(&change->noderev_id);
-    }
 
   return SVN_NO_ERROR;
 }
@@ -3272,7 +3233,7 @@ write_final_changed_path_info(apr_off_t *offset_p,
   svn_fs_x__id_t rev_item
     = {SVN_INVALID_REVNUM, SVN_FS_X__ITEM_INDEX_CHANGES};
 
-  SVN_ERR(svn_fs_x__get_file_offset(&offset, file, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&offset, file, scratch_pool));
 
   /* write to target file & calculate checksum */
   stream = svn_checksum__wrap_write_stream_fnv1a_32x4(&entry.fnv1_checksum,
@@ -3286,7 +3247,7 @@ write_final_changed_path_info(apr_off_t *offset_p,
 
   /* reference changes from the indexes */
   entry.offset = offset;
-  SVN_ERR(svn_fs_x__get_file_offset(&offset, file, scratch_pool));
+  SVN_ERR(svn_io_file_get_offset(&offset, file, scratch_pool));
   entry.size = offset - entry.offset;
   entry.type = SVN_FS_X__ITEM_TYPE_CHANGES;
   entry.item_count = 1;
@@ -3434,7 +3395,6 @@ write_final_revprop(const char **path,
   svn_string_t date;
   svn_string_t *client_date;
   apr_file_t *file;
-  svn_stream_t *stream;
 
   SVN_ERR(svn_fs_x__txn_proplist(&props, txn, scratch_pool));
 
@@ -3463,9 +3423,7 @@ write_final_revprop(const char **path,
   SVN_ERR(svn_fs_x__batch_fsync_open_file(&file, batch, *path, scratch_pool));
 
   /* Write the new contents to the final revprops file. */
-  stream = svn_stream_from_aprfile2(file, TRUE, scratch_pool);
-  SVN_ERR(svn_fs_x__write_properties(stream, props, scratch_pool));
-  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_fs_x__write_non_packed_revprops(file, props, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3636,36 +3594,30 @@ write_next_file(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Baton type to be used with bump_ids. */
-typedef struct bump_ids_baton_t
-{
-  svn_fs_t *fs;
-  svn_revnum_t new_rev;
-  svn_fs_x__batch_fsync_t *batch;
-} bump_ids_baton_t;
-
-/* Bump the 'current' and 'txn-current' files in BATON->FS. */
+/* Bump the 'current' file in FS to NEW_REV.  Schedule fsyncs in BATCH.
+ * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-bump_ids(void *baton,
-         apr_pool_t *scratch_pool)
+bump_current(svn_fs_t *fs,
+             svn_revnum_t new_rev,
+             svn_fs_x__batch_fsync_t *batch,
+             apr_pool_t *scratch_pool)
 {
-  bump_ids_baton_t *b = baton;
   const char *current_filename;
 
   /* Write the 'next' file. */
-  SVN_ERR(write_next_file(b->fs, b->new_rev, b->batch, scratch_pool));
+  SVN_ERR(write_next_file(fs, new_rev, batch, scratch_pool));
 
   /* Commit all changes to disk. */
-  SVN_ERR(svn_fs_x__batch_fsync_run(b->batch, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_run(batch, scratch_pool));
 
   /* Make the revision visible to all processes and threads. */
-  current_filename = svn_fs_x__path_current(b->fs, scratch_pool);
-  SVN_ERR(svn_fs_x__move_into_place(svn_fs_x__path_next(b->fs, scratch_pool),
+  current_filename = svn_fs_x__path_current(fs, scratch_pool);
+  SVN_ERR(svn_fs_x__move_into_place(svn_fs_x__path_next(fs, scratch_pool),
                                     current_filename, current_filename,
-                                    b->batch, scratch_pool));
+                                    batch, scratch_pool));
 
   /* Make the new revision permanently visible. */
-  SVN_ERR(svn_fs_x__batch_fsync_run(b->batch, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_run(batch, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3733,7 +3685,6 @@ commit_body(void *baton,
   svn_fs_x__txn_id_t txn_id = svn_fs_x__txn_get_id(cb->txn);
   apr_hash_t *changed_paths;
   svn_fs_x__batch_fsync_t *batch;
-  bump_ids_baton_t bump_ids_baton;
   apr_array_header_t *directory_ids
     = apr_array_make(scratch_pool, 4, sizeof(svn_fs_x__pair_cache_key_t));
 
@@ -3779,7 +3730,8 @@ commit_body(void *baton,
 
   /* Use this to force all data to be flushed to physical storage
      (to the degree our environment will allow). */
-  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, scratch_pool));
+  SVN_ERR(svn_fs_x__batch_fsync_create(&batch, ffd->flush_to_disk,
+                                       scratch_pool));
 
   /* Set up the target directory. */
   SVN_ERR(auto_create_shard(cb->fs, new_rev, batch, subpool));
@@ -3791,7 +3743,7 @@ commit_body(void *baton,
      ### not complete for any reason the transaction will be lost. */
   SVN_ERR(get_writable_final_rev(&proto_file, cb->fs, txn_id, new_rev,
                                  batch, subpool));
-  SVN_ERR(svn_fs_x__get_file_offset(&initial_offset, proto_file, subpool));
+  SVN_ERR(svn_io_file_get_offset(&initial_offset, proto_file, subpool));
   svn_pool_clear(subpool);
 
   /* Write out all the node-revisions and directory contents. */
@@ -3803,7 +3755,6 @@ commit_body(void *baton,
   svn_pool_clear(subpool);
 
   /* Write the changed-path information. */
-  SVN_ERR(sanitize_changed_path_info(changed_paths, subpool));
   SVN_ERR(write_final_changed_path_info(&changed_path_offset, proto_file,
                                         cb->fs, txn_id, changed_paths,
                                         new_rev, subpool));
@@ -3833,16 +3784,8 @@ commit_body(void *baton,
   SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev,
                                                       subpool));
 
-  /* Bump 'current' and 'txn-current'.
-     The latter is a piggy-back allocation of a new txn ID such that
-     reusing this FS for multiple commits does not involve additional
-     fsync latencies.  If that txn ID goes to waste, it's not a big loss
-     because we've got 18 quintillion of them ... */
-  bump_ids_baton.fs = cb->fs;
-  bump_ids_baton.new_rev = new_rev;
-  bump_ids_baton.batch = batch;
-  SVN_ERR(svn_fs_x__with_txn_current_lock(cb->fs, bump_ids, &bump_ids_baton,
-                                          subpool));
+  /* Bump 'current'. */
+  SVN_ERR(bump_current(cb->fs, new_rev, batch, subpool));
 
   /* At this point the new revision is committed and globally visible
      so let the caller know it succeeded by giving it the new revision
@@ -3920,6 +3863,8 @@ svn_fs_x__commit(svn_revnum_t *new_rev_p,
 
   if (ffd->rep_sharing_allowed)
     {
+      svn_error_t *err;
+
       SVN_ERR(svn_fs_x__open_rep_cache(fs, scratch_pool));
 
       /* Write new entries to the rep-sharing database.
@@ -3930,9 +3875,21 @@ svn_fs_x__commit(svn_revnum_t *new_rev_p,
       /* ### A commit that touches thousands of files will starve other
              (reader/writer) commits for the duration of the below call.
              Maybe write in batches? */
-      SVN_SQLITE__WITH_TXN(
-        write_reps_to_cache(fs, cb.reps_to_cache, scratch_pool),
-        ffd->rep_cache_db);
+      SVN_ERR(svn_sqlite__begin_transaction(ffd->rep_cache_db));
+      err = write_reps_to_cache(fs, cb.reps_to_cache, scratch_pool);
+      err = svn_sqlite__finish_transaction(ffd->rep_cache_db, err);
+
+      if (svn_error_find_cause(err, SVN_ERR_SQLITE_ROLLBACK_FAILED))
+        {
+          /* Failed rollback means that our db connection is unusable, and
+             the only thing we can do is close it.  The connection will be
+             reopened during the next operation with rep-cache.db. */
+          return svn_error_trace(
+              svn_error_compose_create(err,
+                                       svn_fs_x__close_rep_cache(fs)));
+        }
+      else if (err)
+        return svn_error_trace(err);
     }
 
   return SVN_NO_ERROR;

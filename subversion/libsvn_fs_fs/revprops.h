@@ -111,8 +111,9 @@ svn_fs_fs__packed_revprop_available(svn_boolean_t *missing,
  * a hint on which initial buffer size we should use to hold the pack file
  * content.
  *
- * CANCEL_FUNC and CANCEL_BATON are used as usual. Temporary allocations
- * are done in SCRATCH_POOL.
+ * If FLUSH_TO_DISK is non-zero, do not return until the data has actually
+ * been written on the disk.  CANCEL_FUNC and CANCEL_BATON are used as usual.
+ * Temporary allocations are done in SCRATCH_POOL.
  */
 svn_error_t *
 svn_fs_fs__copy_revprops(const char *pack_file_dir,
@@ -123,6 +124,7 @@ svn_fs_fs__copy_revprops(const char *pack_file_dir,
                          apr_array_header_t *sizes,
                          apr_size_t total_size,
                          int compression_level,
+                         svn_boolean_t flush_to_disk,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
                          apr_pool_t *scratch_pool);
@@ -134,8 +136,9 @@ svn_fs_fs__copy_revprops(const char *pack_file_dir,
  * have no unpacked data anymore.  Call upgrade_cleanup_pack_revprops after
  * the bump.
  *
- * NOTIFY_FUNC and NOTIFY_BATON as well as CANCEL_FUNC and CANCEL_BATON are
- * used in the usual way.  Temporary allocations are done in SCRATCH_POOL.
+ * If FLUSH_TO_DISK is non-zero, do not return until the data has actually
+ * been written on the disk.  CANCEL_FUNC and CANCEL_BATON areused in the
+ * usual way.  Temporary allocations are done in SCRATCH_POOL.
  */
 svn_error_t *
 svn_fs_fs__pack_revprops_shard(const char *pack_file_dir,
@@ -144,6 +147,7 @@ svn_fs_fs__pack_revprops_shard(const char *pack_file_dir,
                                int max_files_per_dir,
                                apr_int64_t max_pack_size,
                                int compression_level,
+                               svn_boolean_t flush_to_disk,
                                svn_cancel_func_t cancel_func,
                                void *cancel_baton,
                                apr_pool_t *scratch_pool);

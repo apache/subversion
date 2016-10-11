@@ -150,6 +150,29 @@ svn_repos__retrieve_config(svn_config_t **cfg_p,
                            apr_pool_t *pool);
 
 /**
+ * Non-deprecated alias for svn_repos_get_logs4.
+ *
+ * Since the mapping of log5 to ra_get_log is would basically duplicate the
+ * log5->log4 adapter, we provide this log4 wrapper that does not create a
+ * deprecation warning.
+ */
+svn_error_t *
+svn_repos__get_logs_compat(svn_repos_t *repos,
+                           const apr_array_header_t *paths,
+                           svn_revnum_t start,
+                           svn_revnum_t end,
+                           int limit,
+                           svn_boolean_t discover_changed_paths,
+                           svn_boolean_t strict_node_history,
+                           svn_boolean_t include_merged_revisions,
+                           const apr_array_header_t *revprops,
+                           svn_repos_authz_func_t authz_read_func,
+                           void *authz_read_baton,
+                           svn_log_entry_receiver_t receiver,
+                           void *receiver_baton,
+                           apr_pool_t *pool);
+
+/**
  * @defgroup svn_config_pool Configuration object pool API
  * @{
  */

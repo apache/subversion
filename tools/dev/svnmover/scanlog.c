@@ -119,7 +119,7 @@ svn_client__format_move_chain_for_display(svn_repos_move_info_t *first_move,
   return s;
 }
 
-struct scan_moves_log_receiver_baton {
+typedef struct scan_moves_log_receiver_baton {
   /*const char *anchor_abspath;*/
   svn_client_ctx_t *ctx;
   svn_revnum_t start;
@@ -162,7 +162,7 @@ struct scan_moves_log_receiver_baton {
   apr_hash_t *moves_by_target_path;
 } scan_moves_log_receiver_baton;
 
-struct copy_info {
+typedef struct copy_info {
   const char *copyto_path;
   const char *copyfrom_path;
   svn_revnum_t copyfrom_rev;

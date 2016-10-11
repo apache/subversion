@@ -203,6 +203,9 @@ struct svn_fs_x__batch_fsync_t
 
   /* Counts the number of completed fsync tasks. */
   waitable_counter_t *counter;
+
+  /* Perform fsyncs only if this flag has been set. */
+  svn_boolean_t flush_to_disk;
 };
 
 /* Data structures for concurrent fsync execution are only available if
@@ -299,10 +302,12 @@ fsync_batch_cleanup(void *data)
 
 svn_error_t *
 svn_fs_x__batch_fsync_create(svn_fs_x__batch_fsync_t **result_p,
+                             svn_boolean_t flush_to_disk,
                              apr_pool_t *result_pool)
 {
   svn_fs_x__batch_fsync_t *result = apr_pcalloc(result_pool, sizeof(*result));
   result->files = svn_hash__make(result_pool);
+  result->flush_to_disk = flush_to_disk;
 
   SVN_ERR(waitable_counter__create(&result->counter, result_pool));
   apr_pool_cleanup_register(result_pool, result, fsync_batch_cleanup,
@@ -493,33 +498,38 @@ svn_fs_x__batch_fsync_run(svn_fs_x__batch_fsync_t *batch,
                                    waitable_counter__reset(batch->counter));
 
   /* Start the actual fsyncing process. */
-  for (hi = apr_hash_first(scratch_pool, batch->files);
-       hi;
-       hi = apr_hash_next(hi))
+  if (batch->flush_to_disk)
     {
-      to_sync_t *to_sync = apr_hash_this_val(hi);
+      for (hi = apr_hash_first(scratch_pool, batch->files);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          to_sync_t *to_sync = apr_hash_this_val(hi);
 
 #if APR_HAS_THREADS
 
-      /* If there are multiple fsyncs to perform, run them in parallel.
-       * Otherwise, skip the thread-pool and synchronization overhead. */
-      if (apr_hash_count(batch->files) > 1)
-        {
-          apr_status_t status = APR_SUCCESS;
-          status = apr_thread_pool_push(thread_pool, flush_task, to_sync,
-                                        0, NULL);
-          if (status)
-            to_sync->result = svn_error_wrap_apr(status, _("Can't push task"));
+          /* If there are multiple fsyncs to perform, run them in parallel.
+           * Otherwise, skip the thread-pool and synchronization overhead. */
+          if (apr_hash_count(batch->files) > 1)
+            {
+              apr_status_t status = APR_SUCCESS;
+              status = apr_thread_pool_push(thread_pool, flush_task, to_sync,
+                                            0, NULL);
+              if (status)
+                to_sync->result = svn_error_wrap_apr(status,
+                                                     _("Can't push task"));
+              else
+                tasks++;
+            }
           else
-            tasks++;
-        }
-      else
 
 #endif
 
-        {
-          to_sync->result = svn_error_trace(svn_io_file_flush_to_disk
-                                              (to_sync->file, to_sync->pool));
+            {
+              to_sync->result = svn_error_trace(svn_io_file_flush_to_disk
+                                                  (to_sync->file,
+                                                   to_sync->pool));
+            }
         }
     }
 
@@ -534,7 +544,9 @@ svn_fs_x__batch_fsync_run(svn_fs_x__batch_fsync_t *batch,
        hi = apr_hash_next(hi))
     {
       to_sync_t *to_sync = apr_hash_this_val(hi);
-      chain = svn_error_compose_create(chain, to_sync->result);
+      if (batch->flush_to_disk)
+        chain = svn_error_compose_create(chain, to_sync->result);
+
       chain = svn_error_compose_create(chain,
                                        svn_io_file_close(to_sync->file,
                                                          scratch_pool));

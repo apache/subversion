@@ -71,13 +71,15 @@ svn_fs_x__changes_estimate_size(const svn_fs_x__changes_t *changes);
 
 /* Read changes containers. */
 
-/* From CHANGES, extract the change list with the given IDX.  Allocate
- * the result in POOL and return it in *LIST.
+/* From CHANGES, access the change list with the given IDX and extract the
+ * next entries according to CONTEXT.  Allocate the result in RESULT_POOL
+ * and return it in *LIST.
  */
 svn_error_t *
 svn_fs_x__changes_get_list(apr_array_header_t **list,
                            const svn_fs_x__changes_t *changes,
                            apr_size_t idx,
+                           svn_fs_x__changes_context_t *context,
                            apr_pool_t *result_pool);
 
 /* I/O interface. */
@@ -116,11 +118,25 @@ svn_fs_x__deserialize_changes_container(void **out,
                                         apr_size_t data_len,
                                         apr_pool_t *result_pool);
 
+/* Baton type to be used with svn_fs_x__changes_get_list_func. */
+typedef struct svn_fs_x__changes_get_list_baton_t
+{
+  /* Sub-item to query */
+  apr_uint32_t sub_item;
+
+  /* Deliver data starting from this index within the changes list. */
+  int start;
+
+  /* To be set by svn_fs_x__changes_get_list_func:
+     Did we deliver the last change in that list? */
+  svn_boolean_t *eol;
+} svn_fs_x__changes_get_list_baton_t;
+
 /* Implements svn_cache__partial_getter_func_t for svn_fs_x__changes_t,
  * setting *OUT to the change list (apr_array_header_t *) selected by
- * the apr_uint32_t index passed in as *BATON.  This function is similar
- * to svn_fs_x__changes_get_list but operates on the cache serialized
- * representation of the container.
+ * the svn_fs_x__changes_get_list_baton_t passed in as *BATON.  This
+ * function is similar to svn_fs_x__changes_get_list but operates on
+ * the cache serialized representation of the container.
  */
 svn_error_t *
 svn_fs_x__changes_get_list_func(void **out,

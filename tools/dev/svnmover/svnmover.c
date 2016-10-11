@@ -917,6 +917,7 @@ svn_branch__replay(svn_branch__txn_t *edit_txn,
               SVN_ERR(svn_branch__txn_open_branch(edit_txn, &edit_subbranch,
                                                   new_branch_id,
                                                   svn_branch__root_eid(right_subbranch),
+                                                  NULL /*tree_ref*/,
                                                   scratch_pool, scratch_pool));
             }
 
@@ -1095,6 +1096,7 @@ update_wc_base_r(svnmover_wc_t *wc,
                                                   &base_subbranch,
                                                   new_branch_id,
                                                   svn_branch__root_eid(work_subbranch),
+                                                  NULL /*tree_ref*/,
                                                   scratch_pool, scratch_pool));
               SVN_ERR(svn_branch__state_get_history(
                         work_subbranch, &history, scratch_pool));
@@ -1743,7 +1745,7 @@ list_branches(svn_branch__txn_t *txn,
 
       SVN_ERR(list_branch(branch, with_elements, scratch_pool));
       if (with_elements) /* separate branches by a blank line */
-        svnmover_notify("");
+        svnmover_notify("%s", "");
     }
 
   for (i = 0; i < branches->nelts; i++)
@@ -1767,7 +1769,7 @@ list_branches(svn_branch__txn_t *txn,
         }
       SVN_ERR(list_branch(branch, with_elements, scratch_pool));
       if (with_elements) /* separate branches by a blank line */
-        svnmover_notify("");
+        svnmover_notify("%s", "");
     }
 
   return SVN_NO_ERROR;
@@ -1794,7 +1796,7 @@ list_all_branches(svn_branch__txn_t *txn,
 
       SVN_ERR(list_branch(branch, with_elements, scratch_pool));
       if (with_elements) /* separate branches by a blank line */
-        svnmover_notify("");
+        svnmover_notify("%s", "");
     }
 
   return SVN_NO_ERROR;
@@ -2432,7 +2434,7 @@ do_put_file(svn_branch__txn_t *txn,
       SVN_ERR(svn_stream_open_readonly(&src, local_file_path,
                                        scratch_pool, scratch_pool));
     else
-      SVN_ERR(svn_stream_for_stdin(&src, scratch_pool));
+      SVN_ERR(svn_stream_for_stdin2(&src, FALSE, scratch_pool));
 
     svn_stringbuf_from_stream(&text, src, 0, scratch_pool);
   }
@@ -2634,6 +2636,7 @@ do_mkbranch(const char **new_branch_id_p,
                                       scratch_pool);
   SVN_ERR(svn_branch__txn_open_branch(txn, &new_branch,
                                       new_branch_id, new_inner_eid,
+                                      NULL /*tree_ref*/,
                                       scratch_pool, scratch_pool));
   SVN_ERR(svn_branch__state_alter_one(new_branch, new_inner_eid,
                                       -1, "", payload, scratch_pool));
@@ -2683,9 +2686,9 @@ do_branch(svn_branch__state_t **new_branch_p,
 
   new_branch_id = svn_branch__id_nest(to_outer_branch_id, to_outer_eid,
                                       scratch_pool);
-  SVN_ERR(svn_branch__txn_branch(txn, &new_branch,
-                                 from, new_branch_id,
-                                 result_pool, scratch_pool));
+  SVN_ERR(svn_branch__txn_open_branch(txn, &new_branch,
+                                      new_branch_id, from->eid, from,
+                                      result_pool, scratch_pool));
   history = svn_branch__history_create_empty(scratch_pool);
   SVN_ERR(svn_branch__history_add_parent(history, from->rev, from->bid,
                                          scratch_pool));
@@ -2718,9 +2721,9 @@ do_topbranch(svn_branch__state_t **new_branch_p,
   SVN_ERR(svn_branch__txn_new_eid(txn, &outer_eid, scratch_pool));
   new_branch_id = svn_branch__id_nest(NULL /*outer_branch*/, outer_eid,
                                       scratch_pool);
-  SVN_ERR(svn_branch__txn_branch(txn, &new_branch,
-                                 from, new_branch_id,
-                                 result_pool, scratch_pool));
+  SVN_ERR(svn_branch__txn_open_branch(txn, &new_branch,
+                                      new_branch_id, from->eid, from,
+                                      result_pool, scratch_pool));
 
   svnmover_notify_v("A+   (branch %s)",
                     new_branch->bid);

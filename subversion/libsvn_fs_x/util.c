@@ -535,6 +535,7 @@ svn_fs_x__write_min_unpacked_rev(svn_fs_t *fs,
                                  svn_revnum_t revnum,
                                  apr_pool_t *scratch_pool)
 {
+  svn_fs_x__data_t *ffd = fs->fsap_data;
   const char *final_path;
   char buf[SVN_INT64_BUFFER_SIZE];
   apr_size_t len = svn__i64toa(buf, revnum);
@@ -543,8 +544,8 @@ svn_fs_x__write_min_unpacked_rev(svn_fs_t *fs,
   final_path = svn_fs_x__path_min_unpacked_rev(fs, scratch_pool);
 
   SVN_ERR(svn_io_write_atomic2(final_path, buf, len + 1,
-                               final_path /* copy_perms */, TRUE,
-                               scratch_pool));
+                               final_path /* copy_perms */,
+                               ffd->flush_to_disk, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -567,7 +568,7 @@ svn_fs_x__read_current(svn_revnum_t *rev,
   return SVN_NO_ERROR;
 }
 
-/* Atomically update the 'current' file to hold the specifed REV.
+/* Atomically update the 'current' file to hold the specified REV.
    Perform temporary allocations in SCRATCH_POOL. */
 svn_error_t *
 svn_fs_x__write_current(svn_fs_t *fs,
@@ -643,22 +644,6 @@ svn_fs_x__try_stringbuf_from_file(svn_stringbuf_t **content,
 }
 
 /* Fetch the current offset of FILE into *OFFSET_P. */
-svn_error_t *
-svn_fs_x__get_file_offset(apr_off_t *offset_p,
-                          apr_file_t *file,
-                          apr_pool_t *scratch_pool)
-{
-  apr_off_t offset;
-
-  /* Note that, for buffered files, one (possibly surprising) side-effect
-     of this call is to flush any unwritten data to disk. */
-  offset = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_CUR, &offset, scratch_pool));
-  *offset_p = offset;
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_fs_x__read_content(svn_stringbuf_t **content,
                        const char *fname,

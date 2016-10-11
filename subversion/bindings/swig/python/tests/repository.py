@@ -319,7 +319,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     fs.lock(self.fs, '/trunk/README.txt', None, None, 0, 0, self.rev, False)
     try:
       fs.lock(self.fs, '/trunk/README.txt', None, None, 0, 0, self.rev, False)
-    except core.SubversionException, exc:
+    except core.SubversionException as exc:
       self.assertEqual(exc.apr_err, core.SVN_ERR_FS_PATH_ALREADY_LOCKED)
     fs.lock(self.fs, '/trunk/README.txt', None, None, 0, 0, self.rev, True)
 

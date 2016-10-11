@@ -496,16 +496,10 @@ def simple_property_merges(sbox):
   beta_path = sbox.ospath('A/B/E/beta')
   E_path = sbox.ospath('A/B/E')
 
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'propset', 'foo', 'foo_val',
-                                     alpha_path)
+  svntest.actions.set_prop('foo', 'foo_val', alpha_path)
   # A binary, non-UTF8 property value
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'propset', 'foo', 'foo\201val',
-                                     beta_path)
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'propset', 'foo', 'foo_val',
-                                     E_path)
+  svntest.actions.set_prop('foo', b'foo\201val', beta_path)
+  svntest.actions.set_prop('foo', 'foo_val', E_path)
 
   # Commit change as rev 2
   expected_output = svntest.wc.State(wc_dir, {
@@ -530,18 +524,12 @@ def simple_property_merges(sbox):
   svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
 
   # Modify a property and add a property for the file and directory
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'propset', 'foo', 'mod_foo', alpha_path)
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'propset', 'bar', 'bar_val', alpha_path)
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'propset', 'foo', 'mod\201foo', beta_path)
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'propset', 'bar', 'bar\201val', beta_path)
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'propset', 'foo', 'mod_foo', E_path)
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'propset', 'bar', 'bar_val', E_path)
+  svntest.actions.set_prop('foo', 'mod_foo', alpha_path)
+  svntest.actions.set_prop('bar', 'bar_val', alpha_path)
+  svntest.actions.set_prop('foo', b'mod\201foo', beta_path)
+  svntest.actions.set_prop('bar', b'bar\201val', beta_path)
+  svntest.actions.set_prop('foo', 'mod_foo', E_path)
+  svntest.actions.set_prop('bar', 'bar_val', E_path)
 
   # Commit change as rev 4
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
@@ -585,7 +573,7 @@ def simple_property_merges(sbox):
   expected_disk.tweak('E', 'E/alpha',
                       props={'foo' : 'mod_foo', 'bar' : 'bar_val'})
   expected_disk.tweak('E/beta',
-                      props={'foo' : 'mod\201foo', 'bar' : 'bar\201val'})
+                      props={'foo' : b'mod\201foo', 'bar' : b'bar\201val'})
   expected_status = wc.State(B2_path, {
     ''        : Item(status=' M'),
     'E'       : Item(status=' M'),
@@ -645,7 +633,7 @@ def simple_property_merges(sbox):
     : Item(error_message('foo', 'foo?\\81val', 'mod?\\81foo')),
     })
   expected_disk.tweak('E', 'E/alpha', props={'bar' : 'bar_val'})
-  expected_disk.tweak('E/beta', props={'bar' : 'bar\201val'})
+  expected_disk.tweak('E/beta', props={'bar' : b'bar\201val'})
   expected_status.tweak('', status=' M')
   expected_status.tweak('E', 'E/alpha', 'E/beta', status=' C')
   expected_output.tweak('E', 'E/alpha', 'E/beta', status=' C')
@@ -1202,7 +1190,7 @@ def merge_binary_file(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     ''        : Item(props={SVN_PROP_MERGEINFO : '/:3'}),
-    'A/theta' : Item(theta_contents + "some extra junk",
+    'A/theta' : Item(theta_contents + b"some extra junk",
                      props={'svn:mime-type' : 'application/octet-stream'}),
     })
   expected_status = svntest.actions.get_virginal_state(other_wc, 1)
@@ -1834,7 +1822,7 @@ def merge_binary_with_common_ancestry(sbox):
   # Add a binary file to the common ancestry path
   theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
   theta_I_path = os.path.join(I_path, 'theta')
-  svntest.main.file_write(theta_I_path, theta_contents)
+  svntest.main.file_write(theta_I_path, theta_contents, mode='wb')
   svntest.main.run_svn(None, 'add', theta_I_path)
   svntest.main.run_svn(None, 'propset', 'svn:mime-type',
                        'application/octet-stream', theta_I_path)
@@ -3306,17 +3294,17 @@ def merge_ignore_eolstyle(sbox):
   expected_status.tweak(file_name, status='M ', wc_rev=2)
   expected_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_merge(sbox.wc_dir, '2', '3',
-                                       sbox.repo_url, None,
-                                       expected_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
-                                       expected_disk,
-                                       expected_status,
-                                       expected_skip,
-                                       [], False, False,
-                                       '--allow-mixed-revisions',
-                                       '-x', '--ignore-eol-style', wc_dir)
+  svntest.actions.run_and_verify_merge2(sbox.wc_dir, '2', '3',
+                                        sbox.repo_url, None,
+                                        expected_output,
+                                        expected_mergeinfo_output,
+                                        expected_elision_output,
+                                        expected_disk,
+                                        expected_status,
+                                        expected_skip,
+                                        [], False, False, True,
+                                        '--allow-mixed-revisions',
+                                        '-x', '--ignore-eol-style', wc_dir)
 
 #----------------------------------------------------------------------
 # eol-style handling during merge with conflicts, scenario 1:
@@ -3341,6 +3329,9 @@ def merge_conflict_markers_matching_eol(sbox):
     crlf = '\n'
   else:
     crlf = '\r\n'
+
+  # Strict EOL style matching breaks Windows tests at least with Python 2
+  keep_eol_style = not svntest.main.is_os_windows()
 
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
@@ -3446,14 +3437,15 @@ def merge_conflict_markers_matching_eol(sbox):
       })
     expected_backup_skip = wc.State('', { })
 
-    svntest.actions.run_and_verify_merge(wc_backup, cur_rev - 1, cur_rev,
-                                         sbox.repo_url, None,
-                                         expected_backup_output,
-                                         expected_mergeinfo_output,
-                                         expected_elision_output,
-                                         expected_backup_disk,
-                                         expected_backup_status,
-                                         expected_backup_skip)
+    svntest.actions.run_and_verify_merge2(wc_backup, cur_rev - 1, cur_rev,
+                                          sbox.repo_url, None,
+                                          expected_backup_output,
+                                          expected_mergeinfo_output,
+                                          expected_elision_output,
+                                          expected_backup_disk,
+                                          expected_backup_status,
+                                          expected_backup_skip,
+                                          keep_eol_style=keep_eol_style)
 
     # cleanup for next run
     svntest.main.run_svn(None, 'revert', '-R', wc_backup)
@@ -3482,6 +3474,9 @@ def merge_eolstyle_handling(sbox):
     crlf = '\n'
   else:
     crlf = '\r\n'
+
+  # Strict EOL style matching breaks Windows tests at least with Python 2
+  keep_eol_style = not svntest.main.is_os_windows()
 
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
@@ -3515,13 +3510,15 @@ def merge_eolstyle_handling(sbox):
 
   expected_backup_skip = wc.State('', { })
 
-  svntest.actions.run_and_verify_merge(wc_backup, '1', '2', sbox.repo_url, None,
-                                       expected_backup_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
-                                       expected_backup_disk,
-                                       expected_backup_status,
-                                       expected_backup_skip)
+  svntest.actions.run_and_verify_merge2(wc_backup, '1', '2', sbox.repo_url,
+                                        None,
+                                        expected_backup_output,
+                                        expected_mergeinfo_output,
+                                        expected_elision_output,
+                                        expected_backup_disk,
+                                        expected_backup_status,
+                                        expected_backup_skip,
+                                        keep_eol_style=keep_eol_style)
 
   # Test 2: now change the eol-style property to another value and commit,
   # merge this revision in the still changed mu in the second working copy;
@@ -3544,13 +3541,15 @@ def merge_eolstyle_handling(sbox):
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 1)
   expected_backup_status.tweak('', status=' M')
   expected_backup_status.tweak('A/mu', status='MM')
-  svntest.actions.run_and_verify_merge(wc_backup, '2', '3', sbox.repo_url, None,
-                                       expected_backup_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
-                                       expected_backup_disk,
-                                       expected_backup_status,
-                                       expected_backup_skip)
+  svntest.actions.run_and_verify_merge2(wc_backup, '2', '3', sbox.repo_url,
+                                        None,
+                                        expected_backup_output,
+                                        expected_mergeinfo_output,
+                                        expected_elision_output,
+                                        expected_backup_disk,
+                                        expected_backup_status,
+                                        expected_backup_skip,
+                                        keep_eol_style=keep_eol_style)
 
   # Test 3: now delete the eol-style property and commit, merge this revision
   # in the still changed mu in the second working copy; there should be no
@@ -3571,13 +3570,15 @@ def merge_eolstyle_handling(sbox):
   expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 1)
   expected_backup_status.tweak('', status=' M')
   expected_backup_status.tweak('A/mu', status='M ')
-  svntest.actions.run_and_verify_merge(wc_backup, '3', '4', sbox.repo_url, None,
-                                       expected_backup_output,
-                                       expected_mergeinfo_output,
-                                       expected_elision_output,
-                                       expected_backup_disk,
-                                       expected_backup_status,
-                                       expected_backup_skip)
+  svntest.actions.run_and_verify_merge2(wc_backup, '3', '4', sbox.repo_url,
+                                        None,
+                                        expected_backup_output,
+                                        expected_mergeinfo_output,
+                                        expected_elision_output,
+                                        expected_backup_disk,
+                                        expected_backup_status,
+                                        expected_backup_skip,
+                                        keep_eol_style=keep_eol_style)
 
 #----------------------------------------------------------------------
 def create_deep_trees(wc_dir):
@@ -15995,7 +15996,7 @@ def dry_run_merge_conflicting_binary(sbox):
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     ''        : Item(props={SVN_PROP_MERGEINFO : '/:3'}),
-    'A/theta' : Item(theta_contents + "some other junk",
+    'A/theta' : Item(theta_contents + b"some other junk",
                      props={'svn:mime-type' : 'application/octet-stream'}),
     })
 
@@ -16007,7 +16008,7 @@ def dry_run_merge_conflicting_binary(sbox):
   # verify content of theirs(right) file
   expected_disk.add({
   'A/theta.merge-right.r3' :
-    Item(contents= theta_contents + "some extra junk")
+    Item(contents= theta_contents + b"some extra junk")
   })
 
   expected_status = svntest.actions.get_virginal_state(other_wc, 1)
