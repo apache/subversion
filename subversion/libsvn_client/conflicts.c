@@ -331,19 +331,19 @@ check_move_ancestry(svn_boolean_t *related,
     }
 
   if (check_last_changed_rev)
-  {
-    svn_dirent_t *dirent;
+    {
+      svn_dirent_t *dirent;
 
-    /* Verify that copyfrom_rev >= last-changed revision of the
-     * deleted node. */
-    SVN_ERR(svn_ra_stat(ra_session, "", deleted_rev - 1, &dirent,
-                        scratch_pool));
-    if (dirent == NULL || copyfrom_rev < dirent->created_rev)
-      {
-        *related = FALSE;
-        return SVN_NO_ERROR;
-      }
-  }
+      /* Verify that copyfrom_rev >= last-changed revision of the
+       * deleted node. */
+      SVN_ERR(svn_ra_stat(ra_session, "", deleted_rev - 1, &dirent,
+                          scratch_pool));
+      if (dirent == NULL || copyfrom_rev < dirent->created_rev)
+        {
+          *related = FALSE;
+          return SVN_NO_ERROR;
+        }
+    }
 
   *related = TRUE;
   return SVN_NO_ERROR;
