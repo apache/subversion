@@ -5894,14 +5894,14 @@ diff_file_added(const char *relpath,
   const char *local_abspath;
   svn_node_kind_t db_kind;
   svn_node_kind_t on_disk_kind;
+  apr_array_header_t *propsarray;
+  apr_array_header_t *regular_props;
 
   local_abspath = svn_dirent_join(b->target_abspath, relpath, scratch_pool);
 
   SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
                             FALSE, FALSE, scratch_pool));
   SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
-  SVN_DBG(("%s: %s (db: %s / disk: %s)\n", __func__, relpath,
-      svn_node_kind_to_word(db_kind), svn_node_kind_to_word(on_disk_kind)));
 
   if (db_kind != svn_node_none && db_kind != svn_node_unknown)
     {
@@ -5930,12 +5930,15 @@ diff_file_added(const char *relpath,
       return SVN_NO_ERROR;
     }
 
-  if (copyfrom_source)
-    SVN_DBG(("%s: copyfrom source: %s@%lu\n", __func__,
-      copyfrom_source->repos_relpath, copyfrom_source->revision));
-  SVN_DBG(("%s: right source: %s@%lu\n", __func__,
-    right_source->repos_relpath, right_source->revision));
-  SVN_DBG(("%s: right file: %s\n", __func__, right_file));
+  propsarray = svn_prop_hash_to_array(right_props, scratch_pool);
+  SVN_ERR(svn_categorize_props(propsarray, NULL, NULL, &regular_props,
+                               scratch_pool));
+  SVN_ERR(svn_io_copy_file(right_file, local_abspath, FALSE, scratch_pool));
+  SVN_ERR(svn_wc_add_from_disk3(b->ctx->wc_ctx, local_abspath,
+                                svn_prop_array_to_hash(regular_props,
+                                                       scratch_pool),
+                                FALSE, b->ctx->notify_func2,
+                                b->ctx->notify_baton2, scratch_pool));
 
   return SVN_NO_ERROR;
 }
