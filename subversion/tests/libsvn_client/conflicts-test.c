@@ -1216,8 +1216,7 @@ test_merge_incoming_added_dir_merge(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-/* Same test as above, but with an additional file change on the trunk
- * which makes resolution work as expected. */
+/* Same test as above, but with an additional file change on the trunk. */
 static svn_error_t *
 test_merge_incoming_added_dir_merge2(const svn_test_opts_t *opts,
                                      apr_pool_t *pool)
