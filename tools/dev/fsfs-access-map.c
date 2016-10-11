@@ -34,7 +34,7 @@ typedef struct file_stats_t
   /* file name as found in the open() call */
   const char *name;
 
-  /* file size as determined during the this tool run.  Will be 0 for
+  /* file size as determined during the tool run.  Will be 0 for
    * files that no longer exist.  However, there may still be entries
    * in the read_map. */
   apr_int64_t size;
