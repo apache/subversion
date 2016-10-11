@@ -322,6 +322,8 @@ check_move_ancestry(svn_boolean_t *related,
       if (strcmp(deleted_location, copyfrom_path) != 0)
         return SVN_NO_ERROR;
     }
+  else
+    return SVN_NO_ERROR;
 
   /* Verify that copyfrom_rev >= last-changed revision of the deleted node. */
   SVN_ERR(svn_ra_stat(ra_session, "", deleted_rev - 1, &dirent, scratch_pool));
