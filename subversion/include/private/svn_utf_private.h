@@ -198,7 +198,7 @@ svn_utf__encode_ucs4_string(svn_membuf_t *buffer,
                             apr_size_t length,
                             apr_size_t *result_length);
 
-/* Pattern matching similar to the the SQLite LIKE and GLOB
+/* Pattern matching similar to the SQLite LIKE and GLOB
  * operators. PATTERN, KEY and ESCAPE must all point to UTF-8
  * strings. Furthermore, ESCAPE, if provided, must be a character from
  * the ASCII subset.

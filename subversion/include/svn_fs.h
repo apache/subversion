@@ -2731,7 +2731,7 @@ svn_fs_deltify_revision(svn_fs_t *fs,
  * as old as the last barrier.
  *
  * The intended use of this is implementing efficient queries in upper layers
- * where the result only needs to include all changes up the the start of
+ * where the result only needs to include all changes up to the start of
  * that query but does not need to pick up on changes while the query is
  * running:
  *

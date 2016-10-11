@@ -540,7 +540,7 @@ find_option(const resolver_option_t *options,
 }
 
 /* Return a pointer to the option description in OPTIONS matching the
- * the conflict option ID CHOICE.  Return NULL if not found. */
+ * conflict option ID CHOICE.  Return NULL if not found. */
 static const resolver_option_t *
 find_option_by_id(const resolver_option_t *options,
                   svn_client_conflict_option_id_t choice)
