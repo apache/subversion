@@ -1374,6 +1374,7 @@ fs_git_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
 static const root_vtable_t root_vtable =
 {
   fs_git_paths_changed,
+  NULL,
   fs_git_check_path,
   fs_git_node_history,
   fs_git_node_id,
