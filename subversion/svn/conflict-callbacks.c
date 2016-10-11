@@ -229,8 +229,8 @@ merge_prop_conflict(svn_stream_t *output,
     base_propval = svn_string_create_empty(pool);
   if (my_propval == NULL)
     my_propval = svn_string_create_empty(pool);
-  if (my_propval == NULL)
-    my_propval = svn_string_create_empty(pool);
+  if (their_propval == NULL)
+    their_propval = svn_string_create_empty(pool);
     
   options->ignore_eol_style = TRUE;
   SVN_ERR(svn_diff_mem_string_diff3(&diff, base_propval,
