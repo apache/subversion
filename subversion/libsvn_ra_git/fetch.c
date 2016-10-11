@@ -62,19 +62,6 @@ do_libgit2_init(void *baton, apr_pool_t *pool)
 
 /*** Miscellaneous helper functions ***/
 
-svn_error_t *
-svn_ra_git__wrap_git_error(void)
-{
-  git_error git_err;
-
-  if (giterr_detach(&git_err) == -1)
-    SVN_ERR_MALFUNCTION();
-
-  /* ### TODO: map error code */
-  return svn_error_createf(SVN_ERR_FS_GIT_LIBGIT2_ERROR, NULL,
-                           _("git: %s"), git_err.message);
-}
-
 static apr_status_t
 cleanup_git_remote(void *baton)
 {
@@ -155,7 +142,8 @@ svn_ra_git__split_url(const char **repos_root_url,
                                 apr_pool_cleanup_null);
 
       /* ... and try to connect to it. */
-      git_err = git_remote_connect(remote, GIT_DIRECTION_FETCH, callbacks);
+      git_err = git_remote_connect(remote, GIT_DIRECTION_FETCH, callbacks,
+		                           NULL /* custom_headers */);
       if (!git_err)
         {
           found_remote = TRUE;

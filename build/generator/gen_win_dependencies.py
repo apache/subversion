@@ -113,6 +113,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         'intl',
         'serf',
         'libgit2',
+        'libssh2',
         'sasl',
         'swig',
         'perl',
