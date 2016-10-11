@@ -2356,6 +2356,9 @@ test_merge_incoming_move_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
   struct svn_client_status_t *status;
   svn_stringbuf_t *buf;
   svn_opt_revision_t opt_rev;
+  apr_array_header_t *options;
+  svn_client_conflict_option_t *option;
+  apr_array_header_t *possible_moved_to_abspaths;
 
   SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_move_dir", opts, pool));
 
@@ -2365,11 +2368,36 @@ test_merge_incoming_move_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
   deleted_path = svn_relpath_join(branch_path, deleted_dir_name, b->pool);
   moved_to_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
 
-  /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+
+  /* Check possible move destinations for the directory. */
+  SVN_ERR(svn_client_conflict_tree_get_resolution_options(&options, conflict,
+                                                          ctx, b->pool,
+                                                          b->pool));
+  option = svn_client_conflict_option_find_by_id(
+             options, svn_client_conflict_option_incoming_move_dir_merge);
+  SVN_TEST_ASSERT(option != NULL);
+
+  SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates(
+            &possible_moved_to_abspaths, option, b->pool, b->pool));
+
+  /* XFAIL: Currently, the resolver finds two possible destinations for
+   * the moved folder:
+   *
+   *   Possible working copy destinations for moved-away 'A_branch/B' are:
+   *    (1): 'A_branch/newdir'
+   *    (2): 'A/newdir'
+   *   Only one destination can be a move; the others are copies.
+   */
+  SVN_TEST_INT_ASSERT(possible_moved_to_abspaths->nelts, 1);
+  SVN_TEST_STRING_ASSERT(
+    APR_ARRAY_IDX(possible_moved_to_abspaths, 0, const char *),
+    sbox_wc_path(b, moved_to_path));
+
+  /* Resolve the tree conflict. */
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_move_dir_merge,
             ctx, b->pool));
@@ -3039,6 +3067,483 @@ test_merge_incoming_move_file_text_merge_conflict(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_merge_incoming_edit_file_moved_away(const svn_test_opts_t *opts,
+                                         apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  svn_client_ctx_t *ctx;
+  svn_opt_revision_t opt_rev;
+  svn_client_conflict_t *conflict;
+  svn_boolean_t text_conflicted;
+  apr_array_header_t *props_conflicted;
+  svn_boolean_t tree_conflicted;
+  svn_stringbuf_t *buf;
+
+  SVN_ERR(svn_test__sandbox_create(
+            b, "merge_incoming_edit_file_moved_away", opts, pool));
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(b));
+  /* Create a copy of node "A". */
+  SVN_ERR(sbox_wc_copy(b, "A", "A1"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+  /* On "trunk", edit the file. */
+  SVN_ERR(sbox_file_write(b, "A/mu", "New trunk content.\n"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+  /* On "branch", move the file. */
+  SVN_ERR(sbox_wc_move(b, "A1/mu", "A1/mu-moved"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, pool));
+
+  /* Merge "trunk" to "branch". */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+  opt_rev.kind = svn_opt_revision_head;
+  opt_rev.value.number = SVN_INVALID_REVNUM;
+  SVN_ERR(svn_client_merge_peg5(svn_path_url_add_component2(b->repos_url, "A",
+                                                            pool),
+                                NULL, &opt_rev, sbox_wc_path(b, "A1"),
+                                svn_depth_infinity,
+                                FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+                                NULL, ctx, pool));
+
+  /* We should have a tree conflict in the file "mu". */
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A1/mu"), ctx,
+                                  pool, pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, pool, pool));
+  SVN_TEST_ASSERT(!text_conflicted);
+  SVN_TEST_INT_ASSERT(props_conflicted->nelts, 0);
+  SVN_TEST_ASSERT(tree_conflicted);
+
+  /* Check available tree conflict resolution options. */
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, pool));
+
+  /* XFAIL: We don't offer an option to apply incoming changes to move
+   * destination in the remote edit vs local (to branch history) move
+   * during merge. Not too sure if the currently expected
+   * svn_client_conflict_option_update_move_destination is the proper
+   * expectation, or if we need a separate option, but currently the
+   * tree conflict resolver offers only the "postpone" and "mark as
+   * resolved" option. */
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_update_move_destination,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
+  }
+
+  /* Resolve the tree conflict by applying the incoming edit to the local
+   * move destination "mu-moved". */
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict, svn_client_conflict_option_update_move_destination,
+            ctx, pool));
+
+  /* The file should not be in conflict. */
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A1/mu-moved"),
+                                  ctx, pool, pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, pool, pool));
+  SVN_TEST_ASSERT(!text_conflicted);
+  SVN_TEST_INT_ASSERT(props_conflicted->nelts, 0);
+  SVN_TEST_ASSERT(!tree_conflicted);
+
+  /* And it should have the expected content. */
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A1/mu-moved"),
+                                   pool));
+  SVN_TEST_STRING_ASSERT(buf->data, "New trunk content.\n");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_merge_incoming_chained_move_local_edit(const svn_test_opts_t *opts,
+                                            apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  svn_client_ctx_t *ctx;
+  svn_opt_revision_t opt_rev;
+  svn_client_conflict_t *conflict;
+  svn_boolean_t text_conflicted;
+  apr_array_header_t *props_conflicted;
+  svn_boolean_t tree_conflicted;
+  svn_stringbuf_t *buf;
+
+  SVN_ERR(svn_test__sandbox_create(
+            b, "merge_incoming_chained_move_local_edit", opts, pool));
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(b));
+  /* Create a copy of node "A". */
+  SVN_ERR(sbox_wc_copy(b, "A", "A1"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+  /* On "trunk", move the file. */
+  SVN_ERR(sbox_wc_move(b, "A/mu", "A/mu-moved"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+  /* On "trunk", move the file again. */
+  SVN_ERR(sbox_wc_move(b, "A/mu-moved", "A/mu-moved-again"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+  /* On "branch", edit the file. */
+  SVN_ERR(sbox_file_write(b, "A1/mu", "New branch content.\n"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, pool));
+
+  /* Merge "trunk" to "branch". */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+  opt_rev.kind = svn_opt_revision_head;
+  opt_rev.value.number = SVN_INVALID_REVNUM;
+  SVN_ERR(svn_client_merge_peg5(svn_path_url_add_component2(b->repos_url, "A",
+                                                            pool),
+                                NULL, &opt_rev, sbox_wc_path(b, "A1"),
+                                svn_depth_infinity,
+                                FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+                                NULL, ctx, pool));
+
+  /* We should have a tree conflict in the file "mu". */
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A1/mu"), ctx,
+                                  pool, pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, pool, pool));
+  SVN_TEST_ASSERT(!text_conflicted);
+  SVN_TEST_INT_ASSERT(props_conflicted->nelts, 0);
+  SVN_TEST_ASSERT(tree_conflicted);
+
+  /* Check available tree conflict resolution options. */
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, pool));
+
+  /* XFAIL: The conflict resolver doesn't find the move, and doesn't offer
+   * the svn_client_conflict_option_incoming_move_file_text_merge option. */
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_move_file_text_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
+  }
+
+  /* Resolve the tree conflict by moving "mu" to "mu-moved-again". */
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict, svn_client_conflict_option_incoming_move_file_text_merge,
+            ctx, pool));
+
+  /* The file should not be in conflict. */
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A1/mu"),
+                                  ctx, pool, pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, pool, pool));
+  SVN_TEST_ASSERT(!text_conflicted);
+  SVN_TEST_INT_ASSERT(props_conflicted->nelts, 0);
+  SVN_TEST_ASSERT(!tree_conflicted);
+
+  /* The move destination should have the expected content. */
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A1/mu-moved-again"),
+                                   pool));
+  SVN_TEST_STRING_ASSERT(buf->data, "New branch content.\n");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_merge_incoming_move_dir_with_moved_file(const svn_test_opts_t *opts,
+                                             apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  svn_client_ctx_t *ctx;
+  svn_opt_revision_t opt_rev;
+  svn_client_conflict_t *conflict;
+  svn_boolean_t text_conflicted;
+  apr_array_header_t *props_conflicted;
+  svn_boolean_t tree_conflicted;
+  struct status_baton sb;
+  struct svn_client_status_t *status;
+
+  SVN_ERR(svn_test__sandbox_create(
+            b, "merge_incoming_move_dir_with_moved_file", opts, pool));
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(b));
+  /* Create a copy of node "A". */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+  SVN_ERR(sbox_wc_copy(b, "A", "A1"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+  /* On "trunk", move a file and then move the dir containing the file. */
+  SVN_ERR(sbox_wc_move(b, "A/B/lambda", "A/B/lambda-moved"));
+  SVN_ERR(sbox_wc_move(b, "A/B", "A/B-moved"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+  /* On "branch", edit the file. */
+  SVN_ERR(sbox_file_write(b, "A1/B/lambda", "New branch content.\n"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, pool));
+
+  /* Merge "trunk" to "branch". */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+  opt_rev.kind = svn_opt_revision_head;
+  opt_rev.value.number = SVN_INVALID_REVNUM;
+  SVN_ERR(svn_client_merge_peg5(svn_path_url_add_component2(b->repos_url, "A",
+                                                            pool),
+                                NULL, &opt_rev, sbox_wc_path(b, "A1"),
+                                svn_depth_infinity,
+                                FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+                                NULL, ctx, pool));
+
+  /* We should have a tree conflict on the dir. */
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A1/B"), ctx,
+                                  pool, pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, pool, pool));
+  SVN_TEST_ASSERT(!text_conflicted);
+  SVN_TEST_INT_ASSERT(props_conflicted->nelts, 0);
+  SVN_TEST_ASSERT(tree_conflicted);
+
+  /* Check available tree conflict resolution options. */
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, pool));
+
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_move_dir_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
+  }
+
+  /* Resolve the tree conflict by moving the local directory and merging. */
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict, svn_client_conflict_option_incoming_move_dir_merge,
+            ctx, pool));
+
+  /* The dir should not be in conflict. */
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A1/B"),
+                                  ctx, pool, pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, pool, pool));
+  SVN_TEST_ASSERT(!text_conflicted);
+  SVN_TEST_INT_ASSERT(props_conflicted->nelts, 0);
+  SVN_TEST_ASSERT(!tree_conflicted);
+
+  /* Ensure that the move source dir has the expected status. */
+  opt_rev.kind = svn_opt_revision_working;
+  sb.result_pool = pool;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, "A1/B"),
+                             &opt_rev, svn_depth_empty, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, pool));
+  status = sb.status;
+  SVN_TEST_INT_ASSERT(status->kind, svn_node_dir);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_INT_ASSERT(status->node_status, svn_wc_status_deleted);
+  SVN_TEST_INT_ASSERT(status->text_status, svn_wc_status_normal);
+  SVN_TEST_INT_ASSERT(status->prop_status, svn_wc_status_none);
+  SVN_TEST_ASSERT(!status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_STRING_ASSERT(status->moved_from_abspath, NULL);
+  SVN_TEST_STRING_ASSERT(status->moved_to_abspath,
+                         sbox_wc_path(b, "A1/B-moved"));
+
+  /* Ensure that the move destination dir has the expected status. */
+  opt_rev.kind = svn_opt_revision_working;
+  sb.result_pool = pool;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, "A1/B-moved"),
+                             &opt_rev, svn_depth_empty, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, pool));
+  status = sb.status;
+  SVN_TEST_INT_ASSERT(status->kind, svn_node_dir);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_INT_ASSERT(status->node_status, svn_wc_status_added);
+  SVN_TEST_INT_ASSERT(status->text_status, svn_wc_status_normal);
+  SVN_TEST_INT_ASSERT(status->prop_status, svn_wc_status_none);
+  SVN_TEST_ASSERT(status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_STRING_ASSERT(status->moved_from_abspath,
+                         sbox_wc_path(b, "A1/B"));
+  SVN_TEST_STRING_ASSERT(status->moved_to_abspath, NULL);
+
+  /* We should have another tree conflict on the moved-away file. */
+  SVN_ERR(svn_client_conflict_get(&conflict,
+                                  sbox_wc_path(b, "A1/B-moved/lambda"),
+                                  ctx, pool, pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, pool, pool));
+  SVN_TEST_ASSERT(!text_conflicted);
+  SVN_TEST_INT_ASSERT(props_conflicted->nelts, 0);
+  SVN_TEST_ASSERT(tree_conflicted);
+
+  /* Check available tree conflict resolution options. */
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, pool));
+
+  /* XFAIL: The conflict resolver doesn't find the move, and doesn't offer
+   * the svn_client_conflict_option_incoming_move_file_text_merge option. */
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_move_file_text_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
+  }
+
+  /* ### Need to test resolving the conflict on "A1/B-moved/lambda". */
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_merge_incoming_file_move_new_line_of_history(const svn_test_opts_t *opts,
+                                                  apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  svn_client_ctx_t *ctx;
+  svn_opt_revision_t opt_rev;
+  svn_client_conflict_t *conflict;
+  svn_boolean_t text_conflicted;
+  apr_array_header_t *props_conflicted;
+  svn_boolean_t tree_conflicted;
+
+  SVN_ERR(svn_test__sandbox_create(
+            b, "merge_incoming_file_move_new_line_of_history", opts, pool));
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(b));
+  /* Create a copy of node "A". */
+  SVN_ERR(sbox_wc_copy(b, "A", "A1"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+  /* On "trunk", move the file. */
+  SVN_ERR(sbox_wc_move(b, "A/mu", "A/mu-moved"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+  /* On "trunk", change the line of history of the moved file by
+   * replacing it. */
+  SVN_ERR(sbox_wc_delete(b, "A/mu-moved"));
+  SVN_ERR(sbox_file_write(b, "A/mu-moved", "x"));
+  SVN_ERR(sbox_wc_add(b, "A/mu-moved"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+  /* On "trunk", move the replaced file. */
+  SVN_ERR(sbox_wc_move(b, "A/mu-moved", "A/mu-moved-again"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+  /* On "branch", edit the file. */
+  SVN_ERR(sbox_file_write(b, "A1/mu", "New branch content.\n"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, pool));
+
+  /* Merge "trunk" to "branch". */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+  opt_rev.kind = svn_opt_revision_head;
+  opt_rev.value.number = SVN_INVALID_REVNUM;
+  SVN_ERR(svn_client_merge_peg5(svn_path_url_add_component2(b->repos_url, "A",
+                                                            pool),
+                                NULL, &opt_rev, sbox_wc_path(b, "A1"),
+                                svn_depth_infinity,
+                                FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+                                NULL, ctx, pool));
+
+  /* We should have a tree conflict in the file "mu". */
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A1/mu"), ctx,
+                                  pool, pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, pool, pool));
+  SVN_TEST_ASSERT(!text_conflicted);
+  SVN_TEST_INT_ASSERT(props_conflicted->nelts, 0);
+  SVN_TEST_ASSERT(tree_conflicted);
+
+  /* Check available tree conflict resolution options. */
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, pool));
+
+  /* The svn_client_conflict_option_incoming_move_file_text_merge option
+   * should not be available, as the "mu" file was actually deleted at
+   * some point (and the remaining move is a part of the new line of
+   * history). */
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -3085,7 +3590,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "update incoming move file text merge"),
     SVN_TEST_OPTS_PASS(test_switch_incoming_move_file_text_merge,
                        "switch incoming move file text merge"),
-    SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir, "merge incoming move dir"),
+    SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_dir,
+                        "merge incoming move dir"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir2,
                        "merge incoming move dir with local edit"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir3,
@@ -3096,6 +3602,14 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge file property"),
     SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_file_text_merge_conflict,
                         "merge incoming move file merge with text conflict"),
+    SVN_TEST_OPTS_XFAIL(test_merge_incoming_edit_file_moved_away,
+                        "merge incoming edit for a moved-away working file"),
+    SVN_TEST_OPTS_XFAIL(test_merge_incoming_chained_move_local_edit,
+                        "merge incoming chained move vs local edit"),
+    SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_dir_with_moved_file,
+                        "merge incoming moved dir with moved file"),
+    SVN_TEST_OPTS_PASS(test_merge_incoming_file_move_new_line_of_history,
+                       "merge incoming file move with new line of history"),
     SVN_TEST_NULL
   };
 
