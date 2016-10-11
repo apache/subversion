@@ -1536,6 +1536,243 @@ test_authz_prefixes(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_authz_recursive_override(apr_pool_t *pool)
+{
+  svn_authz_t *authz_cfg;
+
+  /* Set all rights at some folder and replace them again.  Make sure to
+   * cover the "/" b/c that already has an implicit rule, so we* overwrite
+   * it twice.  The first 2 string placeholders in the rules are for the
+   * repository name and the optional glob support marker. */
+  const char *contents =
+    "[:glob:/A/B]"                                                          NL
+    "plato = rw"                                                            NL
+    ""                                                                      NL
+    "[:glob:/A/**]"                                                         NL
+    "plato = r"                                                             NL
+    ""                                                                      NL
+    "[:glob:/B/C]"                                                          NL
+    "plato ="                                                               NL
+    ""                                                                      NL
+    "[:glob:/B/**]"                                                         NL
+    "plato = rw"                                                            NL
+    ""                                                                      NL
+    "[:glob:/C/D]"                                                          NL
+    "plato = rw"                                                            NL
+    ""                                                                      NL
+    "[:glob:/C/**/E]"                                                       NL
+    "plato = r"                                                             NL
+    ""                                                                      NL
+    "[:glob:/D/E]"                                                          NL
+    "plato = r"                                                             NL
+    ""                                                                      NL
+    "[:glob:/D/**/F]"                                                       NL
+    "plato = rw"                                                            NL;
+
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set[] = {
+    /* The root shall not be affected -> defaults to "no access". */
+    { "/", NULL, "plato", svn_authz_read, FALSE },
+    /* Recursive restriction of rights shall work. */
+    { "/A", NULL, "plato", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/A", NULL, "plato", svn_authz_write | svn_authz_recursive, FALSE },
+    /* Recursive extension of rights shall work. */
+    { "/B", NULL, "plato", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/B", NULL, "plato", svn_authz_write | svn_authz_recursive, TRUE },
+    /* Partial replacements shall not result in recursive rights. */
+    { "/C", NULL, "plato", svn_authz_read | svn_authz_recursive, FALSE },
+    { "/C/D", NULL, "plato", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/C/D", NULL, "plato", svn_authz_write | svn_authz_recursive, FALSE },
+    { "/D", NULL, "plato", svn_authz_read | svn_authz_recursive, FALSE },
+    { "/D/E", NULL, "plato", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/D/E", NULL, "plato", svn_authz_write | svn_authz_recursive, FALSE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, pool));
+
+  /* Loop over the test array and test each case. */
+  SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
+
+  /* That's a wrap! */
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_authz_pattern_tests(apr_pool_t *pool)
+{
+  svn_authz_t *authz_cfg;
+
+  /* Rules will be considered for recursive access checks irrespective of
+   * whether the respective paths actually do exist. */
+  const char *contents =
+    "[:glob:/**/Yeti]"                                                      NL
+    "plato = r"                                                             NL
+    ""                                                                      NL
+    "[/]"                                                                   NL
+    "plato = r"                                                             NL
+    ""                                                                      NL
+    "[/trunk]"                                                              NL
+    "plato = rw"                                                            NL;
+
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set[] = {
+    /* We have no recursive write access anywhere. */
+    { "/", NULL, "plato", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/", NULL, "plato", svn_authz_write | svn_authz_recursive, FALSE },
+    { "/trunk", NULL, "plato", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/trunk", NULL, "plato", svn_authz_write | svn_authz_recursive, FALSE },
+
+    /* We do have ordinary write access to anything under /trunk that is
+     * not a Yeti. */
+    { "/trunk", NULL, "plato", svn_authz_write, TRUE },
+    { "/trunk/A/B/C", NULL, "plato", svn_authz_write, TRUE },
+
+    /* We don't have write access to Yetis. */
+    { "/trunk/A/B/C/Yeti", NULL, "plato", svn_authz_write, FALSE },
+    { "/trunk/Yeti", NULL, "plato", svn_authz_write, FALSE },
+    { "/Yeti", NULL, "plato", svn_authz_write, FALSE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  const char *contents2 =
+    "[:glob:/X]"                                                            NL
+    "user1 ="                                                               NL
+    ""                                                                      NL
+    "[:glob:/X/**]"                                                         NL
+    "user1 = rw"                                                            NL
+    "user2 = rw"                                                            NL
+    ""                                                                      NL
+    "[:glob:/X/Y/Z]"                                                        NL
+    "user2 ="                                                               NL;
+
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set2[] = {
+    /* No access at the root*/
+    { "/", NULL, "user1", svn_authz_read, FALSE },
+    { "/", NULL, "user2", svn_authz_read, FALSE },
+
+    /* User 1 has recursive write access anywhere. */
+    { "/X", NULL, "user1", svn_authz_write | svn_authz_recursive, TRUE },
+    { "/X/Y", NULL, "user1", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/X/Y/Z", NULL, "user1", svn_authz_read | svn_authz_recursive, TRUE },
+
+    /* User 2 only has recursive read access to X/Y/Z. */
+    { "/X", NULL, "user1", svn_authz_read | svn_authz_recursive, TRUE },
+    { "/X", NULL, "user2", svn_authz_write | svn_authz_recursive, FALSE },
+    { "/X/Y", NULL, "user2", svn_authz_write | svn_authz_recursive, FALSE },
+    { "/X/Y/Z", NULL, "user2", svn_authz_write | svn_authz_recursive, FALSE },
+
+    /* However, user2 has ordinary write access X and recursive write access
+     * to anything not in X/Y/Z. */
+    { "/X", NULL, "user2", svn_authz_write, TRUE },
+    { "/X/A", NULL, "user2", svn_authz_write | svn_authz_recursive, TRUE },
+    { "/X/Y/A", NULL, "user2", svn_authz_write | svn_authz_recursive, TRUE },
+
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  const char *contents3 =
+    "[groups]"                                                              NL
+    "Team1 = user1"                                                         NL
+    "Team2 = user1, user2"                                                  NL
+    ""                                                                      NL
+    "[/]"                                                                   NL
+    "* ="                                                                   NL
+    ""                                                                      NL
+    "[:glob:Repo1:/**/folder*]"                                             NL
+    "@Team1 = rw"                                                           NL
+    ""                                                                      NL
+    "[Repo2:/]"                                                             NL
+    "@Team2 = r"                                                            NL;
+
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set3[] = {
+    /* No access at the root*/
+    { "/", "Repo1", "user1", svn_authz_read, FALSE },
+    { "/", "Repo1", "user2", svn_authz_read, FALSE },
+    { "/", "Repo2", "user1", svn_authz_read, TRUE },
+    { "/", "Repo2", "user2", svn_authz_read, TRUE },
+    { "/", "Repo2", "user1", svn_authz_write, FALSE },
+    { "/", "Repo2", "user2", svn_authz_write, FALSE },
+
+    /* User 1 has recursive write access anywhere. */
+    { "/folder_1", "Repo1", "user1",
+      svn_authz_write | svn_authz_recursive, TRUE },
+    { "/folder_1", "Repo1", "user2", svn_authz_read, FALSE },
+    { "/1_folder", "Repo1", "user1", svn_authz_read, FALSE },
+    { "/foo/bar/folder_2/random", "Repo1", "user1",
+      svn_authz_write | svn_authz_recursive, TRUE },
+    { "/foo/bar/folder_2/random", "Repo1", "user2", svn_authz_read, FALSE },
+    { "/foo/bar/2_folder/random", "Repo1", "user1", svn_authz_read, FALSE },
+    { "/foo/bar/folder", "Repo1", "user1",
+      svn_authz_write | svn_authz_recursive, TRUE },
+    { "/foo/bar/folder", "Repo1", "user2", svn_authz_read, FALSE },
+    { "/foo/bar/folde", "Repo1", "user1", svn_authz_read, FALSE },
+    { "/foo/bar/folde", "Repo1", "user2", svn_authz_read, FALSE },
+
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  const char *contents4 =
+    "[groups]"                                                              NL
+    "team1 = user1, user3"                                                  NL
+    "team2 = user2, user3"                                                  NL
+    ""                                                                      NL
+    "[:glob:Repo1:/trunk/**]"                                               NL
+    "@team2 = rw"                                                           NL
+    ""                                                                      NL
+    "[:glob:Repo1:/trunk/*]"                                                NL
+    "@team1 = r"                                                            NL;
+
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set4[] = {
+    /* Team2 has r/w access to /trunk */
+    { "/trunk", "Repo1", "user1", svn_authz_read, FALSE },
+    { "/trunk", "Repo1", "user2", svn_authz_write, TRUE },
+    { "/trunk", "Repo1", "user3", svn_authz_write, TRUE },
+
+    /* At the first sub-level, team1 has only read access;
+     * the remainder of team2 has write access. */
+    { "/trunk/A", "Repo1", "user1", svn_authz_read, TRUE },
+    { "/trunk/A", "Repo1", "user3", svn_authz_read, TRUE },
+    { "/trunk/A", "Repo1", "user1", svn_authz_write, FALSE },
+    { "/trunk/A", "Repo1", "user2", svn_authz_write, TRUE },
+    { "/trunk/A", "Repo1", "user3", svn_authz_write, FALSE },
+
+    /* At the second sub-level, team2 has full write access;
+     * the remainder of team1 has still r/o access. */
+    { "/trunk/A/B", "Repo1", "user2", svn_authz_write, TRUE },
+    { "/trunk/A/B", "Repo1", "user3", svn_authz_write, TRUE },
+    { "/trunk/A/B", "Repo1", "user1", svn_authz_read, TRUE },
+    { "/trunk/A/B", "Repo1", "user1", svn_authz_write, FALSE },
+
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* Verify that the rules are applies as expected. */
+  SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, pool));
+  SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
+
+  SVN_ERR(authz_get_handle(&authz_cfg, contents2, FALSE, pool));
+  SVN_ERR(authz_check_access(authz_cfg, test_set2, pool));
+
+  SVN_ERR(authz_get_handle(&authz_cfg, contents3, FALSE, pool));
+  SVN_ERR(authz_check_access(authz_cfg, test_set3, pool));
+
+  SVN_ERR(authz_get_handle(&authz_cfg, contents4, FALSE, pool));
+  SVN_ERR(authz_check_access(authz_cfg, test_set4, pool));
+
+  /* That's a wrap! */
+  return SVN_NO_ERROR;
+}
+
 
 /* Test in-repo authz paths */
 static svn_error_t *
@@ -4088,6 +4325,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test committing a previously aborted txn"),
     SVN_TEST_PASS2(test_authz_prefixes,
                    "test authz prefixes"),
+    SVN_TEST_PASS2(test_authz_recursive_override,
+                   "test recursively authz rule override"),
+    SVN_TEST_PASS2(test_authz_pattern_tests,
+                   "test various basic authz pattern combinations"),
     SVN_TEST_NULL
   };
 
