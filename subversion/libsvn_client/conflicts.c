@@ -295,8 +295,6 @@ check_move_ancestry(svn_boolean_t *related,
   apr_array_header_t *location_revisions;
   svn_dirent_t *dirent;
 
-  *related = FALSE;
-
   location_revisions = apr_array_make(scratch_pool, 1, sizeof(svn_revnum_t));
   APR_ARRAY_PUSH(location_revisions, svn_revnum_t) = copyfrom_rev;
   deleted_url = svn_uri_canonicalize(apr_pstrcat(scratch_pool,
@@ -320,18 +318,26 @@ check_move_ancestry(svn_boolean_t *related,
       if (deleted_location[0] == '/')
         deleted_location++;
       if (strcmp(deleted_location, copyfrom_path) != 0)
-        return SVN_NO_ERROR;
+        {
+          *related = FALSE;
+          return SVN_NO_ERROR;
+        }
     }
   else
-    return SVN_NO_ERROR;
+    {
+      *related = FALSE;
+      return SVN_NO_ERROR;
+    }
 
   /* Verify that copyfrom_rev >= last-changed revision of the deleted node. */
   SVN_ERR(svn_ra_stat(ra_session, "", deleted_rev - 1, &dirent, scratch_pool));
   if (dirent == NULL || copyfrom_rev < dirent->created_rev)
-    return SVN_NO_ERROR;
+    {
+      *related = FALSE;
+      return SVN_NO_ERROR;
+    }
 
   *related = TRUE;
-
   return SVN_NO_ERROR;
 }
 
