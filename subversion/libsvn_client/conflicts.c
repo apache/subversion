@@ -5572,6 +5572,71 @@ struct merge_newly_added_dir_baton {
   svn_revnum_t merge_right_rev;
 };
 
+static svn_error_t *
+merge_added_dir_props(const char *target_abspath,
+                      const char *added_repos_relpath,
+                      apr_hash_t *added_props,
+                      const char *repos_root_url,
+                      const char *repos_uuid,
+                      svn_revnum_t merge_left_rev,
+                      svn_revnum_t merge_right_rev,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *scratch_pool)
+{
+  svn_wc_notify_state_t property_state;
+  apr_array_header_t *propchanges;
+  const svn_wc_conflict_version_t *left_version;
+  const svn_wc_conflict_version_t *right_version;
+  apr_hash_index_t *hi;
+
+  left_version = svn_wc_conflict_version_create2(
+                   repos_root_url, repos_uuid, added_repos_relpath,
+                   merge_left_rev, svn_node_none, scratch_pool);
+
+  right_version = svn_wc_conflict_version_create2(
+                    repos_root_url, repos_uuid, added_repos_relpath,
+                    merge_right_rev, svn_node_dir, scratch_pool);
+
+  propchanges = apr_array_make(scratch_pool, apr_hash_count(added_props),
+                               sizeof(svn_prop_t));
+  for (hi = apr_hash_first(scratch_pool, added_props);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      svn_prop_t prop;
+
+      prop.name = apr_hash_this_key(hi);
+      prop.value = apr_hash_this_val(hi);
+
+      if (svn_wc_is_normal_prop(prop.name))
+        APR_ARRAY_PUSH(propchanges, svn_prop_t) = prop;
+    }
+
+  SVN_ERR(svn_wc_merge_props3(&property_state, ctx->wc_ctx,
+                              target_abspath,
+                              left_version, right_version,
+                              apr_hash_make(scratch_pool),
+                              propchanges,
+                              FALSE, /* not a dry-run */
+                              NULL, NULL, NULL, NULL,
+                              scratch_pool));
+
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(target_abspath,
+                                    svn_wc_notify_update_update,
+                                    scratch_pool);
+      notify->kind = svn_node_dir;
+      notify->content_state = svn_wc_notify_state_unchanged;;
+      notify->prop_state = property_state;
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* An svn_diff_tree_processor_t callback. */
 static svn_error_t *
 diff_dir_added(const char *relpath,
@@ -5590,9 +5655,20 @@ diff_dir_added(const char *relpath,
   svn_node_kind_t on_disk_kind;
   apr_hash_index_t *hi;
 
-  /* Skip adding the root of the added directory tree itself. */
+  /* Handle the root of the added directory tree. */
   if (relpath[0] == '\0')
-    return SVN_NO_ERROR;
+    {
+      /* ### svn_wc_merge_props3() requires this... */
+      SVN_ERR(svn_wc__del_tree_conflict(b->ctx->wc_ctx, b->target_abspath,
+                                        scratch_pool));
+      SVN_ERR(merge_added_dir_props(b->target_abspath,
+                                    b->added_repos_relpath, right_props,
+                                    b->repos_root_url, b->repos_uuid,
+                                    b->merge_left_rev, b->merge_right_rev,
+                                    b->ctx, scratch_pool));
+      return SVN_NO_ERROR;
+
+    }
 
   local_abspath = svn_dirent_join(b->target_abspath, relpath, scratch_pool);
 
