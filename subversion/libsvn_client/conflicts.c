@@ -5752,8 +5752,6 @@ diff_dir_changed(const char *relpath,
   SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
                             FALSE, FALSE, scratch_pool));
   SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
-  SVN_DBG(("%s: %s (db: %s / disk: %s)\n", __func__, relpath,
-      svn_node_kind_to_word(db_kind), svn_node_kind_to_word(on_disk_kind)));
 
   if (db_kind != svn_node_dir)
     {
@@ -5794,11 +5792,6 @@ diff_dir_changed(const char *relpath,
       return SVN_NO_ERROR;
     }
 
-  SVN_DBG(("%s: left source: %s@%lu\n", __func__,
-    left_source->repos_relpath, left_source->revision));
-  SVN_DBG(("%s: right source: %s@%lu\n", __func__,
-    right_source->repos_relpath, right_source->revision));
-
   return SVN_NO_ERROR;
 }
 
@@ -5821,8 +5814,6 @@ diff_dir_deleted(const char *relpath,
   SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
                             FALSE, FALSE, scratch_pool));
   SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
-  SVN_DBG(("%s: %s (db: %s / disk: %s)\n", __func__, relpath,
-      svn_node_kind_to_word(db_kind), svn_node_kind_to_word(on_disk_kind)));
 
   if (db_kind != svn_node_dir)
     {
@@ -5870,9 +5861,6 @@ diff_dir_deleted(const char *relpath,
                 scratch_pool));
       return SVN_NO_ERROR;
     }
-
-  SVN_DBG(("%s: left source: %s@%lu\n", __func__,
-    left_source->repos_relpath, left_source->revision));
 
   return SVN_NO_ERROR;
 }
@@ -5967,8 +5955,6 @@ diff_file_changed(const char *relpath,
 
   SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
                             FALSE, FALSE, scratch_pool));
-  SVN_DBG(("%s: %s (db: %s / disk: %s)\n", __func__, relpath,
-      svn_node_kind_to_word(db_kind), svn_node_kind_to_word(on_disk_kind)));
   SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
 
   if (db_kind != svn_node_file)
@@ -6010,12 +5996,6 @@ diff_file_changed(const char *relpath,
       return SVN_NO_ERROR;
     }
 
-  SVN_DBG(("%s: left source: %s@%lu\n", __func__,
-    left_source->repos_relpath, left_source->revision));
-  SVN_DBG(("%s: right source: %s@%lu\n", __func__,
-    right_source->repos_relpath, right_source->revision));
-  SVN_DBG(("%s: right file: %s\n", __func__, right_file));
-
   return SVN_NO_ERROR;
 }
 
@@ -6039,8 +6019,6 @@ diff_file_deleted(const char *relpath,
   SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
                             FALSE, FALSE, scratch_pool));
   SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
-  SVN_DBG(("%s: %s (db: %s / disk: %s)\n", __func__, relpath,
-      svn_node_kind_to_word(db_kind), svn_node_kind_to_word(on_disk_kind)));
 
   if (db_kind != svn_node_file)
     {
@@ -6088,9 +6066,6 @@ diff_file_deleted(const char *relpath,
                 scratch_pool));
       return SVN_NO_ERROR;
     }
-
-  SVN_DBG(("%s: left source: %s@%lu\n", __func__,
-    left_source->repos_relpath, left_source->revision));
 
   return SVN_NO_ERROR;
 }
