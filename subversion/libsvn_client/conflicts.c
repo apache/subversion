@@ -5675,8 +5675,6 @@ diff_dir_added(const char *relpath,
   SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
                             FALSE, FALSE, scratch_pool));
   SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
-  SVN_DBG(("%s: %s (db: %s / disk: %s)\n", __func__, relpath,
-      svn_node_kind_to_word(db_kind), svn_node_kind_to_word(on_disk_kind)));
 
   if (db_kind != svn_node_none && db_kind != svn_node_unknown)
     {
@@ -5704,12 +5702,6 @@ diff_dir_added(const char *relpath,
                 scratch_pool));
       return SVN_NO_ERROR;
     }
-
-  if (copyfrom_source)
-    SVN_DBG(("%s: copyfrom source: %s@%lu\n", __func__,
-      copyfrom_source->repos_relpath, copyfrom_source->revision));
-  SVN_DBG(("%s: right source: %s@%lu\n", __func__,
-    right_source->repos_relpath, right_source->revision));
 
   SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
   copyfrom_url = apr_pstrcat(scratch_pool, b->repos_root_url, "/",
