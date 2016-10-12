@@ -1914,11 +1914,9 @@ conflict_tree_get_incoming_description_generic(
   svn_node_kind_t incoming_kind;
   svn_wc_conflict_action_t conflict_action;
   svn_wc_operation_t conflict_operation;
-  svn_node_kind_t conflict_node_kind;
 
   conflict_action = svn_client_conflict_get_incoming_change(conflict);
   conflict_operation = svn_client_conflict_get_operation(conflict);
-  conflict_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
 
   /* Determine the node kind of the incoming change. */
   incoming_kind = svn_node_unknown;
@@ -4404,7 +4402,6 @@ conflict_tree_get_description_incoming_edit(
   apr_pool_t *scratch_pool)
 {
   const char *action;
-  svn_node_kind_t victim_node_kind;
   svn_wc_operation_t conflict_operation;
   const char *old_repos_relpath;
   svn_revnum_t old_rev;
@@ -4427,7 +4424,6 @@ conflict_tree_get_description_incoming_edit(
             scratch_pool, scratch_pool));
 
   conflict_operation = svn_client_conflict_get_operation(conflict);
-  victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
 
   edits = conflict->tree_conflict_incoming_details;
 
@@ -6801,9 +6797,7 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
   const char *victim_repos_relpath;
-  const char *victim_url;
   svn_revnum_t victim_peg_rev;
-  svn_opt_revision_t victim_opt_rev;
   const char *moved_to_repos_relpath;
   svn_revnum_t moved_to_peg_rev;
   struct conflict_tree_incoming_delete_details *details;
@@ -6853,10 +6847,6 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
     SVN_ERR(svn_wc__node_get_repos_info(&victim_peg_rev, &victim_repos_relpath,
                                         NULL, NULL, ctx->wc_ctx, local_abspath,
                                         scratch_pool, scratch_pool));
-  victim_url = apr_pstrcat(scratch_pool, repos_root_url, "/",
-                           victim_repos_relpath, SVN_VA_NULL);
-  victim_opt_rev.kind = svn_opt_revision_number;
-  victim_opt_rev.value.number = victim_peg_rev;
 
   /* Get repository location of the moved-here node (incoming move). */
   possible_moved_to_abspaths =
@@ -7741,13 +7731,11 @@ configure_option_incoming_delete_accept(svn_client_conflict_t *conflict,
                                         apr_array_header_t *options,
                                         apr_pool_t *scratch_pool)
 {
-  svn_wc_operation_t operation;
   svn_wc_conflict_action_t incoming_change;
   svn_wc_conflict_reason_t local_change;
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
 
-  operation = svn_client_conflict_get_operation(conflict);
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
   local_change = svn_client_conflict_get_local_change(conflict);
   SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
@@ -7860,7 +7848,6 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
 {
   svn_node_kind_t victim_node_kind;
   svn_wc_conflict_action_t incoming_change;
-  svn_wc_conflict_reason_t local_change;
   const char *incoming_old_repos_relpath;
   svn_revnum_t incoming_old_pegrev;
   svn_node_kind_t incoming_old_kind;
@@ -7874,7 +7861,6 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
     return SVN_NO_ERROR;
 
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
-  local_change = svn_client_conflict_get_local_change(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
             &incoming_old_repos_relpath, &incoming_old_pegrev,
@@ -7980,7 +7966,6 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
 {
   svn_node_kind_t victim_node_kind;
   svn_wc_conflict_action_t incoming_change;
-  svn_wc_conflict_reason_t local_change;
   const char *incoming_old_repos_relpath;
   svn_revnum_t incoming_old_pegrev;
   svn_node_kind_t incoming_old_kind;
@@ -7994,7 +7979,6 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
     return SVN_NO_ERROR;
 
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
-  local_change = svn_client_conflict_get_local_change(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
             &incoming_old_repos_relpath, &incoming_old_pegrev,
