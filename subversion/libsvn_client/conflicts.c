@@ -283,21 +283,20 @@ struct repos_move_info {
  * than a copy of some older content. If it's not, set *RELATED to false. */
 static svn_error_t *
 check_move_ancestry(svn_boolean_t *related,
+                    svn_ra_session_t *ra_session,
                     const char *repos_root_url,
                     const char *deleted_repos_relpath,
                     svn_revnum_t deleted_rev,
                     const char *copyfrom_path,
                     svn_revnum_t copyfrom_rev,
                     svn_boolean_t check_last_changed_rev,
-                    svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool)
 {
   apr_hash_t *locations;
   const char *deleted_url;
   const char *deleted_location;
-  svn_ra_session_t *ra_session;
-  const char *corrected_url;
   apr_array_header_t *location_revisions;
+  const char *old_session_url;
 
   location_revisions = apr_array_make(scratch_pool, 1, sizeof(svn_revnum_t));
   APR_ARRAY_PUSH(location_revisions, svn_revnum_t) = copyfrom_rev;
@@ -306,11 +305,8 @@ check_move_ancestry(svn_boolean_t *related,
                                                  deleted_repos_relpath,
                                                  NULL),
                                      scratch_pool);
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
-                                               deleted_url, NULL,
-                                               NULL, FALSE, FALSE,
-                                               ctx, scratch_pool,
-                                               scratch_pool));
+  SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
+                                            deleted_url, scratch_pool));
   SVN_ERR(svn_ra_get_locations(ra_session, &locations, "",
                                deleted_rev - 1, location_revisions,
                                scratch_pool));
@@ -359,15 +355,16 @@ struct copy_info {
 };
 
 /* Update MOVES_TABLE and MOVED_PATHS based on information from
- * revision data in LOG_ENTRY, COPIES, and DELETED_PATHS. */
+ * revision data in LOG_ENTRY, COPIES, and DELETED_PATHS.
+ * Use RA_SESSION to perform the necessary requests. */
 static svn_error_t *
-find_moves_in_revision(apr_hash_t *moves_table,
+find_moves_in_revision(svn_ra_session_t *ra_session,
+                       apr_hash_t *moves_table,
                        apr_hash_t *moved_paths,
                        svn_log_entry_t *log_entry,
                        apr_hash_t *copies,
                        apr_array_header_t *deleted_paths,
                        const char *repos_root_url,
-                       svn_client_ctx_t *ctx,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
@@ -409,12 +406,12 @@ find_moves_in_revision(apr_hash_t *moves_table,
            * from revision log_entry->revision-1 (where the deleted node is
            * guaranteed to exist) to the copyfrom-revision, we must end up
            * at the copyfrom-path. */
-          SVN_ERR(check_move_ancestry(&related, repos_root_url,
+          SVN_ERR(check_move_ancestry(&related, ra_session, repos_root_url,
                                       deleted_repos_relpath,
                                       log_entry->revision,
                                       copy->copyfrom_path,
                                       copy->copyfrom_rev,
-                                      TRUE, ctx, iterpool));
+                                      TRUE, iterpool));
           if (!related)
             continue;
 
@@ -438,12 +435,12 @@ find_moves_in_revision(apr_hash_t *moves_table,
               /* Tracing back history of the delete-half of the next move
                * to the copyfrom-revision of the prior move we must end up
                * at the delete-half of the prior move. */
-              SVN_ERR(check_move_ancestry(&related, repos_root_url,
+              SVN_ERR(check_move_ancestry(&related, ra_session, repos_root_url,
                                           next_move->moved_from_repos_relpath,
                                           next_move->rev,
                                           move->moved_from_repos_relpath,
                                           move->copyfrom_rev,
-                                          FALSE, ctx, iterpool));
+                                          FALSE, iterpool));
               if (related)
                 {
                   SVN_ERR_ASSERT(move->rev < next_move->rev);
@@ -546,6 +543,9 @@ struct find_deleted_rev_baton
   /* Temporary map of moved paths to struct repos_move_info.
    * Used to link multiple moves of the same node across revisions. */
   apr_hash_t *moved_paths;
+
+  /* Extra RA session that can be used to make additional requests. */
+  svn_ra_session_t *extra_ra_session;
 };
 
 /* Find the youngest common ancestor of REPOS_RELPATH1@PEG_REV1 and
@@ -745,9 +745,10 @@ find_deleted_rev(void *baton,
   svn_pool_destroy(iterpool);
 
   /* Check for moves in this revision */
-  SVN_ERR(find_moves_in_revision(b->moves_table, b->moved_paths,
+  SVN_ERR(find_moves_in_revision(b->extra_ra_session,
+                                 b->moves_table, b->moved_paths,
                                  log_entry, copies, deleted_paths,
-                                 b->repos_root_url, b->ctx,
+                                 b->repos_root_url,
                                  b->result_pool, scratch_pool));
   if (deleted_node_found)
     {
@@ -1254,6 +1255,8 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
   b.moves_table = apr_hash_make(result_pool);
   b.moved_paths = apr_hash_make(scratch_pool);
   b.result_pool = result_pool;
+  SVN_ERR(svn_ra__dup_session(&b.extra_ra_session, ra_session, NULL,
+                              scratch_pool, scratch_pool));
 
   err = svn_ra_get_log2(ra_session, paths, start_rev, end_rev,
                         0, /* no limit */
