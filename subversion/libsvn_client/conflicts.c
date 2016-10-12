@@ -5692,6 +5692,17 @@ diff_dir_added(const char *relpath,
                             FALSE, FALSE, scratch_pool));
   SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
 
+  if (db_kind == svn_node_dir && on_disk_kind == svn_node_dir)
+    {
+      SVN_ERR(merge_added_dir_props(svn_dirent_join(b->target_abspath, relpath,
+                                                    scratch_pool),
+                                    b->added_repos_relpath, right_props,
+                                    b->repos_root_url, b->repos_uuid,
+                                    b->merge_left_rev, b->merge_right_rev,
+                                    b->ctx, scratch_pool));
+      return SVN_NO_ERROR;
+    }
+
   if (db_kind != svn_node_none && db_kind != svn_node_unknown)
     {
       SVN_ERR(raise_tree_conflict(
