@@ -1638,6 +1638,7 @@ test_authz_pattern_tests(apr_pool_t *pool)
     { NULL, NULL, NULL, svn_authz_none, FALSE }
   };
 
+  /* Global override via "**" and selective override for a specific path. */
   const char *contents2 =
     "[:glob:/X]"                                                            NL
     "user1 ="                                                               NL
@@ -1676,6 +1677,7 @@ test_authz_pattern_tests(apr_pool_t *pool)
     { NULL, NULL, NULL, svn_authz_none, FALSE }
   };
 
+  /* Global patterns vs. global path rules. */
   const char *contents3 =
     "[groups]"                                                              NL
     "Team1 = user1"                                                         NL
@@ -1692,15 +1694,19 @@ test_authz_pattern_tests(apr_pool_t *pool)
 
   /* Definition of the paths to test and expected replies for each. */
   struct check_access_tests test_set3[] = {
-    /* No access at the root*/
+    /* No access at the root of Repo1 (inherited from global settings) */
     { "/", "Repo1", "user1", svn_authz_read, FALSE },
     { "/", "Repo1", "user2", svn_authz_read, FALSE },
+
+    /* r/o access for both users at the root of Repo2 */
     { "/", "Repo2", "user1", svn_authz_read, TRUE },
     { "/", "Repo2", "user2", svn_authz_read, TRUE },
     { "/", "Repo2", "user1", svn_authz_write, FALSE },
     { "/", "Repo2", "user2", svn_authz_write, FALSE },
 
-    /* User 1 has recursive write access anywhere. */
+    /* user1 has recursive write access (b/c there are no further rules
+     * restricting the access once granted at the parent) wherever there is
+     * a "folder..." in the  path, while user2 has no access at all. */
     { "/folder_1", "Repo1", "user1",
       svn_authz_write | svn_authz_recursive, TRUE },
     { "/folder_1", "Repo1", "user2", svn_authz_read, FALSE },
@@ -1712,6 +1718,8 @@ test_authz_pattern_tests(apr_pool_t *pool)
     { "/foo/bar/folder", "Repo1", "user1",
       svn_authz_write | svn_authz_recursive, TRUE },
     { "/foo/bar/folder", "Repo1", "user2", svn_authz_read, FALSE },
+
+    /* Doesn't quite match the pattern: */
     { "/foo/bar/folde", "Repo1", "user1", svn_authz_read, FALSE },
     { "/foo/bar/folde", "Repo1", "user2", svn_authz_read, FALSE },
 
@@ -1719,6 +1727,11 @@ test_authz_pattern_tests(apr_pool_t *pool)
     { NULL, NULL, NULL, svn_authz_none, FALSE }
   };
 
+  /* Illustrate the difference between "matching" rule and "applying" rule.
+   * "*" only _matches_ a single level and will _apply_ to sub-paths only
+   * if no other rule _applies_.  The "**" rule applies to all paths in
+   * trunk and will only be eclipsed for members of team1 and then only for
+   * the first sub-level. */
   const char *contents4 =
     "[groups]"                                                              NL
     "team1 = user1, user3"                                                  NL
@@ -1747,8 +1760,10 @@ test_authz_pattern_tests(apr_pool_t *pool)
 
     /* At the second sub-level, team2 has full write access;
      * the remainder of team1 has still r/o access. */
-    { "/trunk/A/B", "Repo1", "user2", svn_authz_write, TRUE },
-    { "/trunk/A/B", "Repo1", "user3", svn_authz_write, TRUE },
+    { "/trunk/A/B", "Repo1", "user2",
+      svn_authz_write | svn_authz_recursive, TRUE },
+    { "/trunk/A/B", "Repo1", "user3",
+      svn_authz_write | svn_authz_recursive, TRUE },
     { "/trunk/A/B", "Repo1", "user1", svn_authz_read, TRUE },
     { "/trunk/A/B", "Repo1", "user1", svn_authz_write, FALSE },
 
