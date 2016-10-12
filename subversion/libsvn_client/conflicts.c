@@ -5823,8 +5823,7 @@ diff_file_added(const char *relpath,
  * does exist in REV2. Thus we use a diff processor.
  */
 static svn_error_t *
-merge_newly_added_dir(svn_client__conflict_report_t **conflict_report,
-                      const char *added_repos_relpath,
+merge_newly_added_dir(const char *added_repos_relpath,
                       const char *source1,
                       svn_revnum_t rev1,
                       const char *source2,
@@ -5928,7 +5927,6 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
   const char *local_abspath;
   const char *lock_abspath;
   struct conflict_tree_incoming_add_details *details;
-  svn_client__conflict_report_t *conflict_report;
   const char *added_repos_relpath;
   const char *source1;
   svn_revnum_t rev1;
@@ -5998,15 +5996,11 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
                                                  scratch_pool, scratch_pool));
 
   /* ### wrap in a transaction */
-  err = merge_newly_added_dir(&conflict_report, added_repos_relpath,
+  err = merge_newly_added_dir(added_repos_relpath,
                               source1, rev1, source2, rev2,
                               local_abspath,
                               (incoming_old_pegrev > incoming_new_pegrev),
                               ctx, scratch_pool, scratch_pool);
-
-  err = svn_error_compose_create(err,
-                                 svn_client__make_merge_conflict_error(
-                                   conflict_report, scratch_pool));
   if (!err)
     err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
 
