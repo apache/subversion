@@ -5412,21 +5412,6 @@ unlock_wc:
 
 /* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
-resolve_merge_incoming_added_file_replace(
-  svn_client_conflict_option_t *option,
-  svn_client_conflict_t *conflict,
-  svn_client_ctx_t *ctx,
-  apr_pool_t *scratch_pool)
-{
-  return svn_error_trace(merge_incoming_added_file_replace(option,
-                                                           conflict,
-                                                           ctx,
-                                                           FALSE,
-                                                           scratch_pool));
-}
-
-/* Implements conflict_option_resolve_func_t. */
-static svn_error_t *
 resolve_merge_incoming_added_file_replace_and_merge(
   svn_client_conflict_option_t *option,
   svn_client_conflict_t *conflict,
@@ -5438,79 +5423,6 @@ resolve_merge_incoming_added_file_replace_and_merge(
                                                            ctx,
                                                            TRUE,
                                                            scratch_pool));
-}
-
-/* Implements conflict_option_resolve_func_t. */
-static svn_error_t *
-resolve_update_incoming_added_file_replace(svn_client_conflict_option_t *option,
-                                           svn_client_conflict_t *conflict,
-                                           svn_client_ctx_t *ctx,
-                                           apr_pool_t *scratch_pool)
-{
-  svn_client_conflict_option_id_t option_id;
-  const char *local_abspath;
-  const char *lock_abspath;
-  svn_error_t *err;
-  const char *backup_path;
-
-  option_id = svn_client_conflict_option_get_id(option);
-  local_abspath = svn_client_conflict_get_local_abspath(conflict);
-
-  /* ### The following WC modifications should be atomic. */
-  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
-                                                 local_abspath,
-                                                 scratch_pool, scratch_pool));
-
-  err = verify_local_state_for_incoming_add_upon_update(conflict, option, ctx,
-                                                        scratch_pool);
-  if (err)
-    goto unlock_wc;
-
-  /* We create a backup of the original file. This file is a local addition
-   * which means it does not exist in the repository. So it's a good idea 
-   * to keep a backup, just in case someone picks this option by accident.
-   * First, reserve a name in the filesystem. */
-  err = svn_io_open_uniquely_named(NULL, &backup_path,
-                                   svn_dirent_dirname(local_abspath,
-                                                      scratch_pool), 
-                                   svn_dirent_basename(local_abspath,
-                                                       scratch_pool),
-                                   ".local-add.bak",
-                                   svn_io_file_del_none,
-                                   scratch_pool,scratch_pool);
-  if (err)
-    goto unlock_wc;
-
-  /* Create a backup by renaming the file on top of the 'reserved' name.
-   * Renaming is equally fast for big and small files. */
-  err = svn_io_file_rename2(local_abspath, backup_path, FALSE, scratch_pool);
-  if (err)
-    goto unlock_wc;
-
-  /* Revert to the BASE working copy node to restore the incoming new node.
-   * This also clears the conflict marker. */
-  err = svn_wc_revert5(ctx->wc_ctx, local_abspath, svn_depth_empty, FALSE,
-                       NULL, FALSE, FALSE,
-                       NULL, NULL, /* do not allow the user to cancel here */
-                       ctx->notify_func2, ctx->notify_baton2,
-                       scratch_pool);
-
-  if (ctx->notify_func2)
-    ctx->notify_func2(ctx->notify_baton2,
-                      svn_wc_create_notify(local_abspath,
-                                           svn_wc_notify_resolved_tree,
-                                           scratch_pool),
-                      scratch_pool);
-
-unlock_wc:
-  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
-                                                                 lock_abspath,
-                                                                 scratch_pool));
-  SVN_ERR(err);
-
-  conflict->resolution_tree = option_id;
-
-  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
