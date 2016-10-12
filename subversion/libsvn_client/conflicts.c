@@ -4913,8 +4913,6 @@ verify_local_state_for_incoming_add_upon_update(
                                    "(expected a base node but found none)"),
                                  local_style_relpath);
       else if (option_id ==
-               svn_client_conflict_option_incoming_added_file_replace ||
-               option_id ==
                svn_client_conflict_option_incoming_added_dir_replace)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, err,
                                  _("Cannot resolve tree conflict on '%s' "
@@ -4940,8 +4938,6 @@ verify_local_state_for_incoming_add_upon_update(
                                  svn_node_kind_to_word(incoming_new_kind),
                                  svn_node_kind_to_word(base_kind));
       else if (option_id ==
-               svn_client_conflict_option_incoming_added_file_replace ||
-               option_id ==
                svn_client_conflict_option_incoming_added_dir_replace)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                                  _("Cannot resolve tree conflict on '%s' "
@@ -4970,8 +4966,6 @@ verify_local_state_for_incoming_add_upon_update(
                                  incoming_new_pegrev,
                                  base_repos_relpath, base_rev);
       else if (option_id ==
-               svn_client_conflict_option_incoming_added_file_replace ||
-               option_id ==
                svn_client_conflict_option_incoming_added_dir_replace)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                                  _("Cannot resolve tree conflict on '%s' "
@@ -5000,8 +4994,6 @@ verify_local_state_for_incoming_add_upon_update(
                                  local_style_relpath);
 
       else if (option_id ==
-               svn_client_conflict_option_incoming_added_file_replace ||
-               option_id ==
                svn_client_conflict_option_incoming_added_dir_replace)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                                  _("Cannot resolve tree conflict on '%s' "
@@ -7380,7 +7372,9 @@ configure_option_incoming_add_ignore(svn_client_conflict_t *conflict,
             NULL, conflict, scratch_pool,
             scratch_pool));
 
-  if (incoming_change == svn_wc_conflict_action_add &&
+  /* This option is only available for directories. */
+  if (victim_node_kind == svn_node_dir &&
+      incoming_change == svn_wc_conflict_action_add &&
       (local_change == svn_wc_conflict_reason_obstructed ||
        local_change == svn_wc_conflict_reason_added))
     {
@@ -7476,74 +7470,6 @@ configure_option_incoming_added_file_text_merge(svn_client_conflict_t *conflict,
         options, conflict,
         svn_client_conflict_option_incoming_added_file_text_merge,
         description, resolve_merge_incoming_added_file_text_merge);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Configure 'incoming added file replace' resolution option for a tree
- * conflict. */
-static svn_error_t *
-configure_option_incoming_added_file_replace(svn_client_conflict_t *conflict,
-                                             svn_client_ctx_t *ctx,
-                                             apr_array_header_t *options,
-                                             apr_pool_t *scratch_pool)
-{
-  svn_wc_operation_t operation;
-  svn_wc_conflict_action_t incoming_change;
-  svn_wc_conflict_reason_t local_change;
-  svn_node_kind_t victim_node_kind;
-  const char *incoming_new_repos_relpath;
-  svn_revnum_t incoming_new_pegrev;
-  svn_node_kind_t incoming_new_kind;
-
-  operation = svn_client_conflict_get_operation(conflict);
-  incoming_change = svn_client_conflict_get_incoming_change(conflict);
-  local_change = svn_client_conflict_get_local_change(conflict);
-  victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
-  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
-            &incoming_new_repos_relpath, &incoming_new_pegrev,
-            &incoming_new_kind, conflict, scratch_pool,
-            scratch_pool));
-
-  if ((operation == svn_wc_operation_merge ||
-       operation == svn_wc_operation_update) &&
-      victim_node_kind == svn_node_file &&
-      incoming_new_kind == svn_node_file &&
-      incoming_change == svn_wc_conflict_action_add &&
-      (local_change == svn_wc_conflict_reason_obstructed ||
-       local_change == svn_wc_conflict_reason_added))
-    {
-      const char *description;
-      conflict_option_resolve_func_t do_resolve_func;
-      const char *wcroot_abspath;
-
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
-                                 conflict->local_abspath, scratch_pool,
-                                 scratch_pool));
-      if (operation == svn_wc_operation_update)
-        description =
-          apr_psprintf(scratch_pool,
-                       _("revert the locally added file to keep '^/%s@%ld'"),
-                       incoming_new_repos_relpath, incoming_new_pegrev);
-      else
-        description =
-          apr_psprintf(scratch_pool, _("delete '%s' and copy '^/%s@%ld' here"),
-                       svn_dirent_local_style(
-                         svn_dirent_skip_ancestor(wcroot_abspath,
-                                                  conflict->local_abspath),
-                         scratch_pool),
-                       incoming_new_repos_relpath, incoming_new_pegrev);
-
-      if (operation == svn_wc_operation_update)
-        do_resolve_func = resolve_update_incoming_added_file_replace;
-      else
-        do_resolve_func = resolve_merge_incoming_added_file_replace;
-
-      add_resolution_option(
-        options, conflict,
-        svn_client_conflict_option_incoming_added_file_replace,
-        description, do_resolve_func);
     }
 
   return SVN_NO_ERROR;
@@ -8455,9 +8381,6 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   SVN_ERR(configure_option_incoming_added_file_text_merge(conflict, ctx,
                                                           *options,
                                                           scratch_pool));
-  SVN_ERR(configure_option_incoming_added_file_replace(conflict, ctx,
-                                                       *options,
-                                                       scratch_pool));
   SVN_ERR(configure_option_incoming_added_file_replace_and_merge(conflict,
                                                                  ctx,
                                                                  *options,
