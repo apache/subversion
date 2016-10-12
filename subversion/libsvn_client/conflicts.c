@@ -7135,7 +7135,7 @@ svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
 
   SVN_ERR(assert_text_conflict(conflict, scratch_pool));
 
-  *options = apr_array_make(result_pool, 6,
+  *options = apr_array_make(result_pool, 7,
                             sizeof(svn_client_conflict_option_t *));
 
   add_resolution_option(*options, conflict,
