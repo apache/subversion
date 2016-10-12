@@ -70,7 +70,7 @@ Candidate changes:
      A test for this issue was added in r1717874, but requires plumbing
      that isn't available on 1.8.x
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1663500
    Fix issue #4557, "ra_serf fails to delete directory containing many files"
@@ -123,7 +123,7 @@ Candidate changes:
    Justification:
      Some passwords don't work.
    Votes:
-     +1: philip
+     +1: philip, stefan2
 
  * r1745515, r1746364
    Update serf download URIs to ASF.
@@ -135,6 +135,7 @@ Candidate changes:
    Votes:
      +1 (non-binding): luke1410
      +1: stsp (without r1746364)
+     +1: stefan2
 
  * r1761334
    Fix issue #4653: SVN_LOCALE_DIR incorrectly interpolated when
