@@ -43,14 +43,6 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1722164
-   Filter out -Wdate-time from SWIG_CPPFLAGS
-   Justification:
-     Fixes bindings build failure when -Wdate-time is present in $CPPFLAGS
-   Votes:
-     +1: jamessan
-     +1: rhuijben (Would prefer some redesign for trunk though)
-
  * r1721488, r1721648
    Enable building bindings with SWIG >= 3.0.6
    Justification:
@@ -60,7 +52,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.9.x-r1721488
    Votes:
-     +1: jamessan
+     +1: jamessan, stefan2
 
  * r1721285
    Quadruple the maximum cacheable directory size in FSFS.
@@ -103,7 +95,7 @@ Candidate changes:
     r1758130 removes the regression test's XFail marker
   Votes:
     +1 (non-binding): luke1410
-    +1: stsp
+    +1: stsp, stefan2
 
  * r1759116, r1759116, r1759122, r1759123, r1759124
    Fix FSFS format 7 packing for revisions packs with lots of changes.
@@ -139,7 +131,7 @@ Candidate changes:
      Depends on r1734106 to be merged first to avoid a text conflict
      in the test suite code.
    Votes:
-     +1: stsp
+     +1: stsp, stefan2
 
  * r1761334
    Fix issue #4653: SVN_LOCALE_DIR incorrectly interpolated when
@@ -155,7 +147,7 @@ Candidate changes:
    Justification:
      User reported problem. Easy fix.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1762338, r1762339
    Fix issue #4655: add zlib discovery through pkg-config.
@@ -186,4 +178,12 @@ Approved changes:
      Task Manager.
    Votes:
      +1: ivan, brane, stefan2
+
+ * r1722164
+   Filter out -Wdate-time from SWIG_CPPFLAGS
+   Justification:
+     Fixes bindings build failure when -Wdate-time is present in $CPPFLAGS
+   Votes:
+     +1: jamessan, stefan2
+     +1: rhuijben (Would prefer some redesign for trunk though)
 
