@@ -2905,8 +2905,6 @@ def fold_tree_with_deleted_moved_items(sbox):
                                                              infinity=True)
 
   A_path = sbox.ospath('A')
-  C_path = os.path.join(A_path, 'C')
-  C_moved_path = os.path.join(A_path, 'C_moved')
 
   # Delete file lambda, move file pi and directory C
   sbox.simple_rm('A/B/lambda')
