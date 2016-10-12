@@ -2919,8 +2919,9 @@ test_merge_incoming_chained_move_local_edit(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, pool));
 
-  /* XFAIL: The conflict resolver doesn't find the move, and doesn't offer
-   * the svn_client_conflict_option_incoming_move_file_text_merge option. */
+  /* This used to fail around r1764234. The conflict resolver was
+   * unable to detect the move, and didn't offer the
+   * svn_client_conflict_option_incoming_move_file_text_merge option. */
   {
     svn_client_conflict_option_id_t expected_opts[] = {
       svn_client_conflict_option_postpone,
