@@ -5640,6 +5640,66 @@ diff_dir_added(const char *relpath,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+merge_added_files(const char *local_abspath,
+                  const char *incoming_added_file_abspath,
+                  apr_hash_t *incoming_added_file_props,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *scratch_pool)
+{
+  svn_wc_merge_outcome_t merge_content_outcome;
+  svn_wc_notify_state_t merge_props_outcome;
+  apr_file_t *empty_file;
+  const char *empty_file_abspath;
+  apr_array_header_t *propdiffs;
+  apr_hash_t *working_props;
+
+  /* Create an empty file as fake "merge-base" for the two added files.
+   * The files are not ancestrally related so this is the best we can do. */
+  SVN_ERR(svn_io_open_unique_file3(&empty_file, &empty_file_abspath, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   scratch_pool, scratch_pool));
+
+  /* Get a copy of the working file's properties. */
+  SVN_ERR(svn_wc_prop_list2(&working_props, ctx->wc_ctx, local_abspath,
+                            scratch_pool, scratch_pool));
+
+  /* Create a property diff for the files. */
+  SVN_ERR(svn_prop_diffs(&propdiffs, incoming_added_file_props,
+                         working_props, scratch_pool));
+
+  /* Perform the file merge. */
+  SVN_ERR(svn_wc_merge5(&merge_content_outcome, &merge_props_outcome,
+                        ctx->wc_ctx, empty_file_abspath,
+                        incoming_added_file_abspath, local_abspath,
+                        NULL, NULL, NULL, /* labels */
+                        NULL, NULL, /* conflict versions */
+                        FALSE, /* dry run */
+                        NULL, NULL, /* diff3_cmd, merge_options */
+                        NULL, propdiffs,
+                        NULL, NULL, /* conflict func/baton */
+                        NULL, NULL, /* don't allow user to cancel here */
+                        scratch_pool));
+
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify = svn_wc_create_notify(
+                                   local_abspath,
+                                   svn_wc_notify_update_update,
+                                   scratch_pool);
+
+      if (merge_content_outcome == svn_wc_merge_conflict)
+        notify->content_state = svn_wc_notify_state_conflicted;
+      else
+        notify->content_state = svn_wc_notify_state_merged;
+      notify->prop_state = merge_props_outcome;
+      notify->kind = svn_node_file;
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* An svn_diff_tree_processor_t callback. */
 static svn_error_t *
 diff_file_added(const char *relpath,
@@ -5665,6 +5725,18 @@ diff_file_added(const char *relpath,
   SVN_ERR(svn_wc_read_kind2(&db_kind, b->ctx->wc_ctx, local_abspath,
                             FALSE, FALSE, scratch_pool));
   SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
+
+  if (db_kind == svn_node_file && db_kind == svn_node_file)
+    {
+      propsarray = svn_prop_hash_to_array(right_props, scratch_pool);
+      SVN_ERR(svn_categorize_props(propsarray, NULL, NULL, &regular_props,
+                                   scratch_pool));
+      SVN_ERR(merge_added_files(local_abspath, right_file,
+                                svn_prop_array_to_hash(regular_props,
+                                                       scratch_pool),
+                                b->ctx, scratch_pool));
+      return SVN_NO_ERROR;
+    }
 
   if (db_kind != svn_node_none && db_kind != svn_node_unknown)
     {

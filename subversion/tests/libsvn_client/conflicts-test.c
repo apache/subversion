@@ -792,31 +792,10 @@ test_merge_incoming_added_dir_merge(const svn_test_opts_t *opts,
                   props_conflicted->nelts == 0 &&
                   !tree_conflicted);
 
-
-  /* There should now be an 'add vs add' conflict on the new file. */
   new_file_path = svn_relpath_join(branch_path,
                                    svn_relpath_join(new_dir_name,
                                                     new_file_name, b->pool),
                                    b->pool);
-  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
-                                  ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
-                                             &props_conflicted,
-                                             &tree_conflicted,
-                                             conflict, b->pool, b->pool));
-  SVN_TEST_ASSERT(!text_conflicted &&
-                  props_conflicted->nelts == 0 &&
-                  tree_conflicted);
-
-  /* Resolve the tree conflict. */
-  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
-  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
-                                  ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
-  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
-            conflict,
-            svn_client_conflict_option_incoming_added_file_text_merge, ctx,
-            b->pool));
 
   /* Ensure that the file has the expected status. */
   SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, new_file_path),
@@ -923,30 +902,10 @@ test_merge_incoming_added_dir_merge2(const svn_test_opts_t *opts,
                   props_conflicted->nelts == 0 &&
                   !tree_conflicted);
 
-  /* There should now be an 'add vs add' conflict on the new file. */
   new_file_path = svn_relpath_join(branch_path,
                                    svn_relpath_join(new_dir_name,
                                                     new_file_name, b->pool),
                                    b->pool);
-  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
-                                  ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
-                                             &props_conflicted,
-                                             &tree_conflicted,
-                                             conflict, b->pool, b->pool));
-  SVN_TEST_ASSERT(!text_conflicted &&
-                  props_conflicted->nelts == 0 &&
-                  tree_conflicted);
-
-  /* Resolve the tree conflict. */
-  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
-  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
-                                  ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
-  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
-            conflict,
-            svn_client_conflict_option_incoming_added_file_text_merge, ctx,
-            b->pool));
 
   /* Ensure that the file has the expected status. */
   SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, new_file_path),
@@ -1063,25 +1022,6 @@ test_merge_incoming_added_dir_merge3(const svn_test_opts_t *opts,
                                    svn_relpath_join(new_dir_name,
                                                     new_file_name, b->pool),
                                    b->pool);
-  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
-                                  ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
-                                             &props_conflicted,
-                                             &tree_conflicted,
-                                             conflict, b->pool, b->pool));
-  SVN_TEST_ASSERT(!text_conflicted &&
-                  props_conflicted->nelts == 0 &&
-                  tree_conflicted);
-
-  /* Resolve the tree conflict. */
-  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
-  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
-                                  ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
-  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
-            conflict,
-            svn_client_conflict_option_incoming_added_file_text_merge, ctx,
-            b->pool));
 
   /* Ensure that the file has the expected status. */
   SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, new_file_path),
