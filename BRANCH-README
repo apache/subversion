@@ -5,3 +5,908 @@ protect disk-cached Subversion credentials.
 
 See http://wiki.apache.org/subversion/MasterPassphrase and
 http://subversion.tigris.org/issues/show_bug.cgi?id=4145 for details.
+
+cmpilato had to bail on this work, but left behind the following
+(presumably incomplete, at-best-partially functional) patch:
+
+{{{
+Index: subversion/include/private/svn_auth_private.h
+===================================================================
+--- subversion/include/private/svn_auth_private.h	(revision 1367185)
++++ subversion/include/private/svn_auth_private.h	(working copy)
+@@ -32,6 +32,8 @@
+ 
+ #include "svn_types.h"
+ #include "svn_error.h"
++#include "svn_auth.h"
++#include "svn_private_config.h"
+ 
+ #ifdef __cplusplus
+ extern "C" {
+@@ -48,6 +50,12 @@
+ #define SVN_AUTH__GNOME_KEYRING_PASSWORD_TYPE      "gnome-keyring"
+ #define SVN_AUTH__GPG_AGENT_PASSWORD_TYPE          "gpg-agent"
+ 
++/* Default ordered list of available third-party password storage
++ * providers.
++ */
++#define SVN_AUTH__DEFAULT_PROVIDER_LIST \
++         "gnome-keyring,kwallet,keychain,gpg-agent,windows-cryptoapi"
++
+ /* A function that stores in *PASSWORD (potentially after decrypting it)
+    the user's password.  It might be obtained directly from CREDS, or
+    from an external store, using REALMSTRING and USERNAME as keys.
+@@ -213,6 +221,42 @@
+                                  svn_boolean_t non_interactive,
+                                  apr_pool_t *pool);
+ 
++
++/*** Master passphrase providers. */
++
++#if defined(SVN_HAVE_GPG_AGENT)
++/* Set *PROVIDER to a master passphrase provider which uses the GPG
++   Agent for storage/retrieval.  */
++void svn_auth__get_gpg_agent_masterpass_provider(
++         svn_auth_masterpass_provider_object_t **provider,
++         apr_pool_t *pool);
++#endif /* defined(SVN_HAVE_GPG_AGENT) */
++
++#ifdef SVN_HAVE_KEYCHAIN_SERVICES
++/* Set *PROVIDER to a master passphrase provider which uses the MacOS
++   X Keychain services for storage/retrieval.  */
++void svn_auth__get_keychain_masterpass_provider(
++         svn_auth_masterpass_provider_object_t **provider,
++         apr_pool_t *pool);
++#endif
++
++#if defined(SVN_HAVE_GNOME_KEYRING) 
++/* Set *PROVIDER to a master passphrase provider which uses the GNOME
++   Keyring service for storage/retrieval.  */
++void svn_auth__get_gnome_keyring_masterpass_provider(
++         svn_auth_masterpass_provider_object_t **provider,
++         apr_pool_t *pool);
++#endif
++
++#if defined(SVN_HAVE_KWALLET)
++/* Set *PROVIDER to a master passphrase provider which uses the KDE
++   Wallet service for storage/retrieval.  */
++void svn_auth__get_kwallet_masterpass_provider(
++         svn_auth_masterpass_provider_object_t **provider,
++         apr_pool_t *pool);
++#endif
++
++
+ #ifdef __cplusplus
+ }
+ #endif /* __cplusplus */
+Index: subversion/include/svn_auth.h
+===================================================================
+--- subversion/include/svn_auth.h	(revision 1367185)
++++ subversion/include/svn_auth.h	(working copy)
+@@ -1247,7 +1247,88 @@
+   int retry_limit,
+   apr_pool_t *pool);
+ 
++
++/** Generic third-party master password caching mechanisms.
++ *
++ * @defgroup auth_mp_fns Master password functions
++ * @{
++ */
++ 
++/** The master passphrase "provider" vtable.
++ *
++ * @since New in 1.8.
++ */
++typedef struct svn_auth_masterpass_provider_t
++{
++  /** Set @a passphrase_digest to the value of the Subversion master
++    * passphrase hash digest string.  If @a non_interactive is set, do
++    * not prompt the user.  Set @a *done to TRUE if the passphrase is
++    * successfully fetched; to FALSE otherwise.
++    */
++  svn_error_t * (*first_masterpass)(const svn_string_t **passphrase_digest,
++                                    svn_boolean_t non_interactive,
++                                    void *provider_baton,
++                                    apr_pool_t *pool);
+ 
++  /** Set @a passphrase_digest to the value of the Subversion master
++    * passphrase hash digest string.  If @a non_interactive is set, do
++    * not prompt the user.  Set @a *done to TRUE if the passphrase is
++    * successfully fetched; to FALSE otherwise.
++    *
++    * This function is optional, and used only after @c
++    * first_masterpass has been called for this provider.
++    */
++  svn_error_t * (*next_masterpass)(const svn_string_t **passphrase_digest,
++                                         svn_boolean_t non_interactive,
++                                         void *provider_baton,
++                                         apr_pool_t *pool);
++
++  /** Store @a passphrase_digest as the value of the Subversion master
++   * passphrase hash digest string.  If @a non_interactive is set, do
++   * not prompt the user.  Set @a *stored to TRUE if the passphrase is
++   * successfully stored; to FALSE otherwise.
++   */
++  svn_error_t * (*store_masterpass)(svn_boolean_t *stored,
++                                    const svn_string_t *passphrase_digest,
++                                    svn_boolean_t non_interactive,
++                                    void *provider_baton,
++                                    apr_pool_t *pool);
++
++} svn_auth_masterpass_provider_t;
++
++/** A master passphrase provider object and baton.
++ *
++ * @since New in 1.8.
++ */
++typedef struct svn_auth_masterpass_provider_object_t
++{
++  const svn_auth_masterpass_provider_t *vtable;
++  void *provider_baton;
++
++} svn_auth_masterpass_provider_object_t;
++
++/** A type of function which returns a master passphrase provider.
++ *
++ * @since New in 1.8.
++ */
++typedef void (*svn_auth_masterpass_provider_func_t)(
++                   svn_auth_masterpass_provider_object_t **provider,
++                   apr_pool_t *pool);
++
++/** Set @a *providers to an array of @c svn_auth_provider_object_t's
++ * appropriate for the client platform and which honor the allowed,
++ * ordered providers specified in @a config.  Allocate providers from
++ * @a pool.
++ *
++ * @since New in 1.8.
++ */
++svn_error_t *
++svn_auth_get_masterpass_providers(apr_array_header_t **providers,
++                                  svn_config_t *config,
++                                  apr_pool_t *pool);
++
++/** @} */
++
+ #ifdef __cplusplus
+ }
+ #endif /* __cplusplus */
+Index: subversion/include/svn_cmdline.h
+===================================================================
+--- subversion/include/svn_cmdline.h	(revision 1367185)
++++ subversion/include/svn_cmdline.h	(working copy)
+@@ -324,7 +324,7 @@
+  */
+ svn_error_t *
+ svn_cmdline_auth_master_passphrase_prompt(const svn_string_t **secret,
+-                                          void *baton, 
++                                          svn_cmdline_prompt_baton2_t *baton,
+                                           apr_pool_t *result_pool,
+                                           apr_pool_t *scratch_pool);
+ 
+Index: subversion/libsvn_subr/auth.c
+===================================================================
+--- subversion/libsvn_subr/auth.c	(revision 1367185)
++++ subversion/libsvn_subr/auth.c	(working copy)
+@@ -34,6 +34,7 @@
+ #include "svn_private_config.h"
+ #include "svn_dso.h"
+ #include "svn_version.h"
++#include "private/svn_auth_private.h"
+ 
+ /* AN OVERVIEW
+    ===========
+@@ -519,38 +520,28 @@
+                                                 apr_pool_t *pool)
+ {
+   svn_auth_provider_object_t *provider;
+-  const char *password_stores_config_option;
++  const char *password_stores_config_option = SVN_AUTH__DEFAULT_PROVIDER_LIST;
+   apr_array_header_t *password_stores;
+   int i;
+ 
+-#define SVN__DEFAULT_AUTH_PROVIDER_LIST \
+-         "gnome-keyring,kwallet,keychain,gpg-agent,windows-cryptoapi"
+-
+   if (config)
+     {
+-      svn_config_get
+-        (config,
+-         &password_stores_config_option,
+-         SVN_CONFIG_SECTION_AUTH,
+-         SVN_CONFIG_OPTION_PASSWORD_STORES,
+-         SVN__DEFAULT_AUTH_PROVIDER_LIST);
++      svn_config_get(config, &password_stores_config_option,
++                     SVN_CONFIG_SECTION_AUTH,
++                     SVN_CONFIG_OPTION_PASSWORD_STORES,
++                     SVN_AUTH__DEFAULT_PROVIDER_LIST);
+     }
+-  else
+-    {
+-      password_stores_config_option = SVN__DEFAULT_AUTH_PROVIDER_LIST;
+-    }
+ 
+   *providers = apr_array_make(pool, 12, sizeof(svn_auth_provider_object_t *));
+ 
+-  password_stores
+-    = svn_cstring_split(password_stores_config_option, " ,", TRUE, pool);
++  password_stores = svn_cstring_split(password_stores_config_option,
++                                      " ,", TRUE, pool);
+ 
+   for (i = 0; i < password_stores->nelts; i++)
+     {
+       const char *password_store = APR_ARRAY_IDX(password_stores, i,
+                                                  const char *);
+ 
+-
+       /* GNOME Keyring */
+       if (apr_strnatcmp(password_store, "gnome-keyring") == 0)
+         {
+Index: subversion/libsvn_subr/auth_masterpass.c
+===================================================================
+--- subversion/libsvn_subr/auth_masterpass.c	(revision 0)
++++ subversion/libsvn_subr/auth_masterpass.c	(working copy)
+@@ -0,0 +1,321 @@
++/*
++ * auth_store.c: Generic authentication credential storage routines.
++ *
++ * ====================================================================
++ *    Licensed to the Apache Software Foundation (ASF) under one
++ *    or more contributor license agreements.  See the NOTICE file
++ *    distributed with this work for additional information
++ *    regarding copyright ownership.  The ASF licenses this file
++ *    to you under the Apache License, Version 2.0 (the
++ *    "License"); you may not use this file except in compliance
++ *    with the License.  You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ *    Unless required by applicable law or agreed to in writing,
++ *    software distributed under the License is distributed on an
++ *    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
++ *    KIND, either express or implied.  See the License for the
++ *    specific language governing permissions and limitations
++ *    under the License.
++ * ====================================================================
++ */
++
++#include "svn_auth.h"
++#include "svn_string.h"
++#include "svn_dso.h"
++#include "svn_version.h"
++#include "svn_private_config.h"
++#include "private/svn_auth_private.h"
++
++
++
++/*** Private Helper Functions ***/
++
++static svn_error_t *
++get_masterpass_provider(svn_auth_masterpass_provider_object_t **provider,
++                        const char *provider_name,
++                        apr_pool_t *pool)
++{
++  *provider = NULL;
++
++  if (apr_strnatcmp(provider_name, "gnome_keyring") == 0 ||
++      apr_strnatcmp(provider_name, "kwallet") == 0)
++    {
++#if (defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_KWALLET))
++      apr_dso_handle_t *dso;
++      apr_dso_handle_sym_t provider_func_symbol, version_func_symbol;
++      const char *provider_func_name, *version_func_name;
++      const char *library_label, *library_name;
++
++      library_name = apr_psprintf(pool, "libsvn_auth_%s-%d.so.0",
++                                  provider_name, SVN_VER_MAJOR);
++      library_label = apr_psprintf(pool, "svn_%s", provider_name);
++      provider_func_name = apr_psprintf(pool,
++                                        "svn_auth__get_%s_masterpass_provider",
++                                        provider_name);
++      version_func_name = apr_psprintf(pool,
++                                       "svn_auth_%s_version",
++                                       provider_name);
++      SVN_ERR(svn_dso_load(&dso, library_name));
++      if (dso)
++        {
++          if (apr_dso_sym(&version_func_symbol, dso, version_func_name) == 0)
++            {
++              svn_version_func_t version_func = version_func_symbol;
++              svn_version_checklist_t check_list[2];
++
++              check_list[0].label = library_label;
++              check_list[0].version_query = version_func;
++              check_list[1].label = NULL;
++              check_list[1].version_query = NULL;
++              SVN_ERR(svn_ver_check_list(svn_subr_version(), check_list));
++            }
++          if (apr_dso_sym(&provider_func_symbol, dso, provider_func_name) == 0)
++            {
++              svn_auth_masterpass_provider_func_t provider_func =
++                provider_func_symbol;
++              provider_func(provider, pool);
++            }
++        }
++#endif /* defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_KWALLET) */
++    }
++  else if (strcmp(provider_name, "gpg_agent") == 0)
++    {
++#if defined(SVN_HAVE_GPG_AGENT)
++      svn_auth__get_gpg_agent_masterpass_provider(provider, pool);
++#endif /* defined(SVN_HAVE_GPG_AGENT) */
++    }
++  else if (strcmp(provider_name, "keychain") == 0)
++    {
++#ifdef SVN_HAVE_KEYCHAIN_SERVICES
++      svn_auth__get_keychain_masterpass_provider(provider, pool);
++#endif /* SVN_HAVE_KEYCHAIN_SERVICES */
++    }
++
++  return SVN_NO_ERROR;
++}
++
++svn_error_t *
++svn_auth__masterpass_fetch(const svn_string_t **passphrase_digest,
++                           apr_array_header_t *providers,
++                           svn_boolean_t non_interactive,
++                           apr_pool_t *result_pool,
++                           apr_pool_t *scratch_pool)
++{
++  int i;
++
++  *passphrase_digest = NULL;
++
++  for (i = 0; i < providers->nelts; i++)
++    {
++      svn_auth_masterpass_provider_object_t *provider =
++        APR_ARRAY_IDX(providers, i, svn_auth_masterpass_provider_object_t *);
++      const svn_string_t *pw_digest;
++      svn_error_t *err;
++
++      /* No vtable?  Weird, but whatever... */
++      if (! provider->vtable)
++        continue;
++
++      /* No fetch function in the vtable?  So much for "providing" ... */
++      if (! provider->vtable->masterpass_fetch)
++        continue;
++
++      err = provider->vtable->masterpass_fetch(&pw_digest, non_interactive,
++                                               provider->provider_baton,
++                                               result_pool);
++      if (err)
++        {
++          svn_error_clear(err);
++        }
++      else if (pw_digest)
++        {
++          *passphrase_digest = pw_digest;
++          return SVN_NO_ERROR;
++        }
++    }
++
++  return SVN_NO_ERROR;
++}
++
++svn_error_t *
++svn_auth__masterpass_store(apr_array_header_t *providers,
++                           const svn_string_t **passphrase_digest,
++                           apr_pool_t *result_pool,
++                           apr_pool_t *scratch_pool)
++{
++  int i;
++
++  for (i = 0; i < providers->nelts; i++)
++    {
++      svn_auth_masterpass_provider_object_t *provider =
++        APR_ARRAY_IDX(providers, i, svn_auth_masterpass_provider_object_t *);
++      svn_boolean_t pw_stored;
++      svn_error_t *err;
++
++      /* No vtable or storage function?  Nothing to do. */
++      if (! (provider->vtable && provider->vtable->masterpass_store))
++        continue;
++
++      err = provider->vtable->masterpass_store(&pw_stored, passphrase_digest,
++                                               non_interactive,
++                                               provider->provider_baton,
++                                               result_pool);
++      if (err)
++        {
++          svn_error_clear(err);
++        }
++      else if (pw_stored)
++        {
++          return SVN_NO_ERROR;
++        }
++    }
++
++  return SVN_NO_ERROR;
++}
++
++
++
++/*** Master Password Prompting Provider (fetch-only) ***/
++
++/* Implements svn_auth_masterpass_fetch_t. */
++static svn_error_t *
++prompt_masterpass_fetch(const svn_string_t **passphrase_digest,
++                        svn_boolean_t non_interactive,
++                        void *provider_baton,
++                        apr_pool_t *pool)
++{
++  if (! non_interactive)
++    {
++      svn_cmdline_prompt_baton2_t *pb = provider_baton;
++
++      SVN_ERR(svn_cmdline_auth_master_passphrase_prompt(passphrase_digest, pb,
++                                                        pool, pool));
++    }
++  return SVN_NO_ERROR;
++}
++
++/* Implements svn_auth__masterpass_store_t. */
++static svn_error_t *
++prompt_masterpass_store(svn_boolean_t *stored,
++                        const svn_string_t *passphrase,
++                        svn_boolean_t non_interactive,
++                        void *provider_baton,
++                        apr_pool_t *pool)
++{
++  *stored = FALSE;
++  return SVN_NO_ERROR;
++}
++
++/* Prompting master password provider. */
++static const svn_auth_masterpass_provider_t
++prompt_masterpass_provider = {
++  prompt_masterpass_fetch,
++  prompt_masterpass_store
++};
++
++
++
++/*** Public APIs ***/
++
++/* If provider P is non-NULL, add it to the providers LIST. */
++#define SVN__MAYBE_ADD_PROVIDER(list,p)                                   \
++  { if (p) APR_ARRAY_PUSH(list,                                           \
++                          svn_auth_masterpass_provider_object_t *) = p; } \
++
++svn_error_t *
++svn_auth_get_masterpass_providers(apr_array_header_t **providers,
++                                  svn_config_t *config,
++                                  apr_pool_t *pool)
++{
++  svn_auth_masterpass_provider_object_t *provider;
++  const char *password_stores_config_option = SVN_AUTH__DEFAULT_PROVIDER_LIST;
++  apr_array_header_t *password_stores;
++  int i;
++
++  /* Initialize our output. */
++  *providers = apr_array_make(pool, 12,
++                              sizeof(svn_auth_masterpass_provider_object_t *));
++
++  if (config)
++    {
++      svn_config_get(config, &password_stores_config_option,
++                     SVN_CONFIG_SECTION_AUTH,
++                     SVN_CONFIG_OPTION_PASSWORD_STORES,
++                     SVN_AUTH__DEFAULT_PROVIDER_LIST);
++    }
++
++  password_stores = svn_cstring_split(password_stores_config_option,
++                                      " ,", TRUE, pool);
++  for (i = 0; i < password_stores->nelts; i++)
++    {
++      const char *password_store = APR_ARRAY_IDX(password_stores, i,
++                                                 const char *);
++
++#if 0
++      /* GNOME Keyring */
++      if (apr_strnatcmp(password_store, "gnome-keyring") == 0)
++        {
++          SVN_ERR(get_masterpass_provider(&provider, "gnome_keyring", pool));
++          SVN__MAYBE_ADD_PROVIDER(*providers, provider);
++          continue;
++        }
++#endif
++
++      /* GPG-Agent */
++      if (apr_strnatcmp(password_store, "gpg-agent") == 0)
++        {
++          SVN_ERR(get_masterpass_provider(&provider, "gpg_agent", pool));
++          SVN__MAYBE_ADD_PROVIDER(*providers, provider);
++          continue;
++        }
++
++#if 0
++      /* KWallet */
++      if (apr_strnatcmp(password_store, "kwallet") == 0)
++        {
++          SVN_ERR(get_masterpass_provider(&provider, "kwallet", pool));
++          SVN__MAYBE_ADD_PROVIDER(*providers, provider);
++          continue;
++        }
++
++      /* Keychain */
++      if (apr_strnatcmp(password_store, "keychain") == 0)
++        {
++          SVN_ERR(get_masterpass_provider(&provider, "keychain", pool));
++          SVN__MAYBE_ADD_PROVIDER(*providers, provider);
++          continue;
++        }
++
++      /* Windows */
++      if (apr_strnatcmp(password_store, "windows-cryptoapi") == 0)
++        {
++          SVN_ERR(get_masterpass_provider(&provider, "windows", pool));
++          SVN__MAYBE_ADD_PROVIDER(*providers, provider);
++          continue;
++        }
++#endif
++
++      return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
++                               _("Invalid config: unknown password store '%s'"),
++                               password_store);
++    }
++
++  return SVN_NO_ERROR;
++}
++
++#undef SVN__MAYBE_ADD_PROVIDER
++
++void
++svn_auth_get_prompt_masterpass_provider(
++    svn_auth_masterpass_provider_object_t **provider,
++    svn_cmdline_prompt_baton2_t *pb,
++    apr_pool_t *pool)
++{
++  svn_auth_masterpass_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
++  
++  po->vtable = &prompt_masterpass_provider;
++  po->provider_baton = pb;
++  *provider = po;
++}
+
+Property changes on: subversion/libsvn_subr/auth_masterpass.c
+___________________________________________________________________
+Added: svn:mime-type
+## -0,0 +1 ##
++text/x-csrc
+\ No newline at end of property
+Added: svn:eol-style
+## -0,0 +1 ##
++native
+\ No newline at end of property
+Index: subversion/libsvn_subr/cmdline.c
+===================================================================
+--- subversion/libsvn_subr/cmdline.c	(revision 1367185)
++++ subversion/libsvn_subr/cmdline.c	(working copy)
+@@ -451,6 +451,7 @@
+ static svn_error_t *
+ open_auth_store(svn_auth__store_t **auth_store_p,
+                 const char *config_dir,
++                svn_config_t *cfg,
+                 svn_boolean_t use_master_password,
+                 svn_cmdline_prompt_baton2_t *pb,
+                 apr_pool_t *pool)
+@@ -461,7 +462,9 @@
+     {
+       svn_crypto__ctx_t *crypto_ctx;
+       const char *auth_config_path;
++      apr_array_header_t *providers;
+ 
++      SVN_ERR(svn_auth_get_masterpass_providers(&providers, cfg, pool));
+       SVN_ERR(svn_config_get_user_config_path(&auth_config_path, config_dir,
+                                               SVN_CONFIG__AUTH_SUBDIR, pool));
+       SVN_ERR(svn_crypto__context_create(&crypto_ctx, pool));
+@@ -620,7 +623,7 @@
+                            auth_password);
+ 
+   /* Open the appropriate auth store, and cache it in the auth baton. */
+-  SVN_ERR(open_auth_store(&auth_store, config_dir, use_master_password,
++  SVN_ERR(open_auth_store(&auth_store, config_dir, cfg, use_master_password,
+                           pb, pool));
+   svn_auth_set_parameter(*ab, SVN_AUTH_PARAM_AUTH_STORE, auth_store);
+ 
+Index: subversion/libsvn_subr/gpg_agent.c
+===================================================================
+--- subversion/libsvn_subr/gpg_agent.c	(revision 1367185)
++++ subversion/libsvn_subr/gpg_agent.c	(working copy)
+@@ -57,13 +57,10 @@
+ 
+ /*** Includes. ***/
+ 
+-#ifndef WIN32
++#include "svn_private_config.h" /* for SVN_HAVE_GPG_AGENT */
+ 
+-#include <unistd.h>
++#ifdef SVN_HAVE_GPG_AGENT
+ 
+-#include <sys/socket.h>
+-#include <sys/un.h>
+-
+ #include <apr_pools.h>
+ #include "svn_auth.h"
+ #include "svn_config.h"
+@@ -72,32 +69,18 @@
+ #include "svn_cmdline.h"
+ #include "svn_checksum.h"
+ #include "svn_string.h"
+-
+ #include "private/svn_auth_private.h"
+ 
+-#include "svn_private_config.h"
+ 
+-#ifdef SVN_HAVE_GPG_AGENT
++/*** NOTE:  We only support GPG-Agent on non-Windows platforms. */
++#ifndef WIN32
+ 
++#include <unistd.h>
++#include <sys/socket.h>
++#include <sys/un.h>
++
+ #define BUFFER_SIZE 1024
+ 
+-/* Modify STR in-place such that blanks are escaped as required by the
+- * gpg-agent protocol. Return a pointer to STR. */
+-static char *
+-escape_blanks(char *str)
+-{
+-  char *s = str;
+-
+-  while (*s)
+-    {
+-      if (*s == ' ')
+-        *s = '+';
+-      s++;
+-    }
+-
+-  return str;
+-}
+-
+ /* Attempt to read a gpg-agent response message from the socket SD into
+  * buffer BUF. Buf is assumed to be N bytes large. Return TRUE if a response
+  * message could be read that fits into the buffer. Else return FALSE.
+@@ -152,17 +135,19 @@
+   return (strncmp(buf, "OK", 2) == 0);
+ }
+ 
+-/* Implementation of svn_auth__password_get_t that retrieves the password
+-   from gpg-agent */
++/* Set *PASSWORD to the password (retrieved from GPG-Agent) associated
++   with CACHE_ID.  Use PASSWORD_PROMPT and REALM_PROMPT to construct a
++   prompt for the user when the password isn't found in the agent.  If
++   NON_INTERACTIVE is set, though, don't do any prompting.  Set *DONE
++   iff the operation completes.  */
+ static svn_error_t *
+-password_get_gpg_agent(svn_boolean_t *done,
+-                       const char **password,
+-                       apr_hash_t *creds,
+-                       const char *realmstring,
+-                       const char *username,
+-                       apr_hash_t *parameters,
+-                       svn_boolean_t non_interactive,
+-                       apr_pool_t *pool)
++password_get_gpg_agent_helper(svn_boolean_t *done,
++                              const char **password,
++                              const char *password_prompt,
++                              const char *realm_prompt,
++                              const char *cache_id,
++                              svn_boolean_t non_interactive,
++                              apr_pool_t *pool)
+ {
+   int sd;
+   char *gpg_agent_info = NULL;
+@@ -172,16 +157,12 @@
+ 
+   apr_array_header_t *socket_details;
+   const char *request = NULL;
+-  const char *cache_id = NULL;
+   struct sockaddr_un addr;
+   const char *tty_name;
+   const char *tty_type;
+   const char *lc_ctype;
+   const char *display;
+   const char *socket_name = NULL;
+-  svn_checksum_t *digest = NULL;
+-  char *password_prompt;
+-  char *realm_prompt;
+ 
+   *done = FALSE;
+ 
+@@ -330,22 +311,11 @@
+         }
+     }
+ 
+-  /* Create the CACHE_ID which will be generated based on REALMSTRING similar
+-     to other password caching mechanisms. */
+-  svn_checksum(&digest, svn_checksum_md5, realmstring, strlen(realmstring),
+-               pool);
+-  cache_id = svn_checksum_to_cstring(digest, pool);
+-
+-  password_prompt = apr_psprintf(pool, _("Password for '%s': "), username);
+-  realm_prompt = apr_psprintf(pool, _("Enter your Subversion password for %s"),
+-                              realmstring);
+   request = apr_psprintf(pool,
+                          "GET_PASSPHRASE --data %s--repeat=1 "
+                          "%s X %s %s\n",
+                          non_interactive ? "--no-ask " : "",
+-                         cache_id,
+-                         escape_blanks(password_prompt),
+-                         escape_blanks(realm_prompt));
++                         cache_id, password_prompt, realm_prompt);
+ 
+   if (write(sd, request, strlen(request)) == -1)
+     {
+@@ -380,7 +350,83 @@
+   return SVN_NO_ERROR;
+ }
+ 
++#else /* !WIN32 */
+ 
++static svn_error_t *
++password_get_gpg_agent_helper(svn_boolean_t *done,
++                              const char **password,
++                              const char *password_prompt,
++                              const char *realm_prompt,
++                              const char *cache_id,
++                              svn_boolean_t non_interactive,
++                              apr_pool_t *pool)
++{
++  return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, 0,
++                          "GPG Agent is currently unsupported on this system");
++}
++
++#endif /* !WIN32 */
++
++
++/* Modify STR in-place such that blanks are escaped as required by the
++ * gpg-agent protocol. Return a pointer to STR. */
++static char *
++escape_blanks(char *str)
++{
++  char *s = str;
++
++  while (*s)
++    {
++      if (*s == ' ')
++        *s = '+';
++      s++;
++    }
++
++  return str;
++}
++
++/* Create the CACHE_ID which will be generated based on REALMSTRING
++   (similar to other password caching mechanisms). */
++static const char *
++cacheid_from_realmstring(const char *realmstring,
++                         apr_pool_t *pool)
++{
++  svn_checksum_t *digest = svn_checksum_create(svn_checksum_md5, pool);
++  svn_checksum(&digest, svn_checksum_md5, realmstring,
++               strlen(realmstring), pool);
++  return svn_checksum_to_cstring(digest, pool);
++}
++
++
++/* Implementation of svn_auth__password_get_t that retrieves the password
++   from gpg-agent */
++static svn_error_t *
++password_get_gpg_agent(svn_boolean_t *done,
++                       const char **password,
++                       apr_hash_t *creds,
++                       const char *realmstring,
++                       const char *username,
++                       apr_hash_t *parameters,
++                       svn_boolean_t non_interactive,
++                       apr_pool_t *pool)
++{
++  const char *cache_id = cacheid_from_realmstring(realmstring, pool);
++  char *password_prompt =
++    apr_psprintf(pool, _("Password for '%s': "), username);
++  char *realm_prompt =
++    apr_psprintf(pool, _("Enter your Subversion password for %s"), realmstring);
++
++  escape_blanks(realm_prompt);
++  escape_blanks(password_prompt);
++
++  return svn_error_trace(password_get_gpg_agent_helper(done, password,
++                                                       cache_id,
++                                                       password_prompt,
++                                                       realm_prompt,
++                                                       non_interactive,
++                                                       pool));
++}
++
+ /* Implementation of svn_auth__password_set_t that would store the
+    password in GPG Agent if that's how this particular integration
+    worked.  But it isn't.  GPG Agent stores the password provided by
+@@ -456,5 +502,63 @@
+   *provider = po;
+ }
+ 
++
++
++/*-----------------------------------------------------------------------*/
++/* GPG Agent master passphrase.                                          */
++/*-----------------------------------------------------------------------*/
++
++/* Implements svn_auth_masterpass_fetch_t. */
++static svn_error_t *
++gpg_agent_masterpass_fetch(const char **passphrase,
++                           svn_boolean_t non_interactive,
++                           void *provider_baton,
++                           apr_pool_t *pool)
++{
++  const char *cache_id = "Subversion Master Password";
++  const char *password_prompt = _("Password:");
++  const char *realm_prompt = _("Enter+your+Subversion+master+password");
++  svn_boolean_t done;
++  const char *password;
++  svn_checksum_t *digest;
++  
++  SVN_ERR(password_get_gpg_agent_helper(&done, &password, cache_id,
++                                        password_prompt, realm_prompt,
++                                        non_interactive, pool));
++
++  /* ### FIXME: Should be SHA-256 */
++  svn_checksum(&digest, svn_checksum_sha1, password, strlen(password), pool);
++  *passphrase = svn_checksum_to_cstring_display(digest, pool);
++  return SVN_NO_ERROR;
++}
++
++/* Implements svn_auth__masterpass_store_t. */
++static svn_error_t *
++gpg_agent_masterpass_store(const char *passphrase,
++                           svn_boolean_t non_interactive,
++                           void *provider_baton,
++                           apr_pool_t *pool)
++{
++  return SVN_NO_ERROR;
++}
++
++static const svn_auth_masterpass_provider_t
++gpg_agent_masterpass_provider = {
++  gpg_agent_masterpass_fetch,
++  gpg_agent_masterpass_store
++};
++
++/* Public API */
++void
++svn_auth__get_gpg_agent_masterpass_provider(
++    svn_auth_masterpass_provider_object_t **provider,
++    apr_pool_t *pool)
++{
++  svn_auth_masterpass_provider_object_t *po = apr_pcalloc(pool, sizeof(*po));
++
++  po->vtable = &gpg_agent_masterpass_provider;
++  *provider = po;
++}
++
++
+ #endif /* SVN_HAVE_GPG_AGENT */
+-#endif /* !WIN32 */
+Index: subversion/libsvn_subr/prompt.c
+===================================================================
+--- subversion/libsvn_subr/prompt.c	(revision 1367185)
++++ subversion/libsvn_subr/prompt.c	(working copy)
+@@ -501,13 +501,12 @@
+ /* This implements 'svn_auth__master_passphrase_fetch_t'. */
+ svn_error_t *
+ svn_cmdline_auth_master_passphrase_prompt(const svn_string_t **secret,
+-                                          void *baton, 
++                                          svn_cmdline_prompt_baton2_t *pb,
+                                           apr_pool_t *result_pool,
+                                           apr_pool_t *scratch_pool)
+ {
+   const char *response;
+   int response_len;
+-  svn_cmdline_prompt_baton2_t *pb = baton;
+   svn_checksum_t *checksum;
+ 
+   SVN_ERR(prompt(&response, _("Enter master passphrase: "),
+}}}
