@@ -43,16 +43,6 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1721285
-   Quadruple the maximum cacheable directory size in FSFS.
-   Justification:
-     Not caching large directories has a massive impact on runtime with
-     the cutoff point being about 9000 entries for the default cache size.
-     Also, memory usage with mod_dav_svn may go through the roof for
-     uncached directories.
-   Votes:
-     +1: stefan2, steveking
-
  * r1724448
    Fix handling of newly secured subdirectories in a working copy
    Justification:
@@ -182,4 +172,14 @@ Approved changes:
      ^/subversion/branches/1.9.x-r1721488
    Votes:
      +1: jamessan, stefan2
+
+ * r1721285
+   Quadruple the maximum cacheable directory size in FSFS.
+   Justification:
+     Not caching large directories has a massive impact on runtime with
+     the cutoff point being about 9000 entries for the default cache size.
+     Also, memory usage with mod_dav_svn may go through the roof for
+     uncached directories.
+   Votes:
+     +1: stefan2, steveking, jcorvel
 
