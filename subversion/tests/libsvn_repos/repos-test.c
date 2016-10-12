@@ -1234,8 +1234,6 @@ authz(apr_pool_t *pool)
   svn_error_t *err;
   svn_boolean_t access_granted;
   apr_pool_t *subpool = svn_pool_create(pool);
-  int i, k;
-  apr_time_t start, end;
 
   /* Definition of the paths to test and expected replies for each. */
   struct check_access_tests test_set[] = {
@@ -1385,8 +1383,36 @@ authz(apr_pool_t *pool)
   SVN_TEST_ASSERT_ERROR(authz_get_handle(&authz_cfg, contents, FALSE, subpool),
                         SVN_ERR_AUTHZ_INVALID_CONFIG);
 
-  /* The authz rules for the phase 5 tests */
-  contents =
+  /* Verify that the rule on /dir2/secret doesn't affect this
+     request */
+  SVN_ERR(svn_repos_authz_check_access(authz_cfg, "greek",
+                                       "/dir", NULL,
+                                       (svn_authz_read
+                                        | svn_authz_recursive),
+                                       &access_granted, subpool));
+  if (!access_granted)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Regression: incomplete ancestry test "
+                            "for recursive access lookup.");
+
+  /* That's a wrap! */
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
+/* Test the authz performance with wildcard rules. */
+static svn_error_t *
+test_authz_wildcard_performance(apr_pool_t *pool)
+{
+  svn_authz_t *authz_cfg;
+  svn_boolean_t access_granted;
+  int i, k;
+  apr_time_t start, end;
+
+  /* Some non-trivially overlapping wildcard rules, convering all types
+   * of wildcards: "any", "any-var", "prefix", "postfix" and "complex".
+   */
+  const char *contents =
     "[:glob:greek:/A/*/G]"                                                   NL
     "* ="                                                                    NL
     ""                                                                       NL
@@ -1403,64 +1429,48 @@ authz(apr_pool_t *pool)
     "* = rw"                                                                 NL;
 
   /* Load the test authz rules. */
-  SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, subpool));
+  SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, pool));
 
   start = apr_time_now();
   for (k = 0; k < 100000; ++k)
-  for (i = 1; i < 4; ++i)
-    {
-      const char **path;
-      const char *paths[] =
-      { "/iota",
-        "/A",
-        "/A/mu",
-        "/A/B",
-        "/A/B/lambda",
-        "/A/B/E",
-        "/A/B/E/alpha",
-        "/A/B/E/beta",
-        "/A/B/F",
-        "/A/C",
-        "/A/D",
-        "/A/D/gamma",
-        "/A/D/G",
-        "/A/D/G/pi",
-        "/A/D/G/rho",
-        "/A/D/G/tau",
-        "/A/D/H",
-        "/A/D/H/chi",
-        "/A/D/H/psi",
-        "/A/D/H/omega",
-        NULL
-      };
+    for (i = 1; i < 4; ++i)
+      {
+        const char **path;
+        const char *paths[] =
+        { "/iota",
+          "/A",
+          "/A/mu",
+          "/A/B",
+          "/A/B/lambda",
+          "/A/B/E",
+          "/A/B/E/alpha",
+          "/A/B/E/beta",
+          "/A/B/F",
+          "/A/C",
+          "/A/D",
+          "/A/D/gamma",
+          "/A/D/G",
+          "/A/D/G/pi",
+          "/A/D/G/rho",
+          "/A/D/G/tau",
+          "/A/D/H",
+          "/A/D/H/chi",
+          "/A/D/H/psi",
+          "/A/D/H/omega",
+          NULL
+        };
 
-      for (path = paths; *path; ++path)
-        {
+        for (path = paths; *path; ++path)
           SVN_ERR(svn_repos_authz_check_access(authz_cfg, "greek",
                                                *path, NULL, i,
-                                               &access_granted, subpool));
-/*          if (access_granted)
-            printf("%i %s\n", i, *path);*/
-        }
-    }
-  end = apr_time_now();
-  printf("%"APR_TIME_T_FMT"\n", end - start);
-  printf("%"APR_TIME_T_FMT"\n", (k * (i - 1) * 20 * 1000000l) / (end - start));
+                                               &access_granted, pool));
+      }
 
-  /* Verify that the rule on /dir2/secret doesn't affect this
-     request */
-/*  SVN_ERR(svn_repos_authz_check_access(authz_cfg, "greek",
-                                       "/dir", NULL,
-                                       (svn_authz_read
-                                        | svn_authz_recursive),
-                                       &access_granted, subpool));
-  if (!access_granted)
-    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
-                            "Regression: incomplete ancestry test "
-                            "for recursive access lookup.");
-*/
-  /* That's a wrap! */
-  svn_pool_destroy(subpool);
+  end = apr_time_now();
+  printf("%"APR_TIME_T_FMT" musecs\n", end - start);
+  printf("%"APR_TIME_T_FMT" checks / sec\n",
+           (k * (i - 1) * 20 * 1000000l) / (end - start));
+
   return SVN_NO_ERROR;
 }
 
@@ -2218,6 +2228,24 @@ groups_authz(const svn_test_opts_t *opts,
       authz_groups_get_handle(&authz_cfg, authz_contents,
                               groups_contents, TRUE, pool),
       SVN_ERR_AUTHZ_INVALID_CONFIG);
+  SVN_TEST_ASSERT_ERROR(
+      authz_groups_get_handle(&authz_cfg, authz_contents,
+                              groups_contents, FALSE, pool),
+      SVN_ERR_AUTHZ_INVALID_CONFIG);
+
+  groups_contents =
+    "[groups]"                                                               NL
+    "philosophers = socrates"                                                NL
+    ""                                                                       NL;
+  SVN_ERR(authz_groups_get_handle(&authz_cfg, authz_contents,
+                                  groups_contents, TRUE, pool));
+
+  SVN_ERR(authz_check_access(authz_cfg, test_set2, pool));
+
+  SVN_ERR(authz_groups_get_handle(&authz_cfg, authz_contents,
+                                  groups_contents, FALSE, pool));
+
+  SVN_ERR(authz_check_access(authz_cfg, test_set2, pool));
 
   /* Local groups cannot be used in conjunction with global groups. */
   groups_contents =
@@ -4344,6 +4372,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test recursively authz rule override"),
     SVN_TEST_PASS2(test_authz_pattern_tests,
                    "test various basic authz pattern combinations"),
+    SVN_TEST_SKIP2(test_authz_wildcard_performance, TRUE,
+                   "optional authz wildcard performance test"),
     SVN_TEST_NULL
   };
 
