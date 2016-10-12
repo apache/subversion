@@ -7059,147 +7059,6 @@ unlock_wc:
   return SVN_NO_ERROR;
 }
 
-/* Resolver options for a text conflict */
-static const svn_client_conflict_option_t text_conflict_options[] =
-{
-  {
-    svn_client_conflict_option_postpone,
-    N_("skip this conflict and leave it unresolved"),
-    NULL,
-    resolve_postpone
-  },
-
-  {
-    svn_client_conflict_option_base_text,
-    N_("discard local and incoming changes for this file"),
-    NULL,
-    resolve_text_conflict
-  },
-
-  {
-    svn_client_conflict_option_incoming_text,
-    N_("accept incoming version of entire file"),
-    NULL,
-    resolve_text_conflict
-  },
-
-  {
-    svn_client_conflict_option_working_text,
-    N_("reject all incoming changes for this file"),
-    NULL,
-    resolve_text_conflict
-  },
-
-  {
-    svn_client_conflict_option_incoming_text_where_conflicted,
-    N_("accept changes only where they conflict"),
-    NULL,
-    resolve_text_conflict
-  },
-
-  {
-    svn_client_conflict_option_working_text_where_conflicted,
-    N_("reject changes which conflict and accept the rest"),
-    NULL,
-    resolve_text_conflict
-  },
-
-  {
-    svn_client_conflict_option_merged_text,
-    N_("accept the file as it appears in the working copy"),
-    NULL,
-    resolve_text_conflict
-  },
-
-};
-
-/* Resolver options for a binary file conflict */
-static const svn_client_conflict_option_t binary_conflict_options[] =
-{
-  {
-    svn_client_conflict_option_postpone,
-    N_("skip this conflict and leave it unresolved"),
-    NULL,
-    resolve_postpone,
-  },
-
-  {
-    svn_client_conflict_option_base_text,
-    N_("discard local and incoming changes for this binary file"),
-    NULL,
-    resolve_text_conflict
-  },
-
-  {
-    svn_client_conflict_option_incoming_text,
-    N_("accept incoming version of binary file"),
-    NULL,
-    resolve_text_conflict
-  },
-
-  {
-    svn_client_conflict_option_merged_text,
-    N_("accept binary file as it appears in the working copy"),
-    NULL,
-    resolve_text_conflict
-  },
-
-};
-
-/* Resolver options for a property conflict */
-static const svn_client_conflict_option_t prop_conflict_options[] =
-{
-  {
-    svn_client_conflict_option_postpone,
-    N_("skip this conflict and leave it unresolved"),
-    NULL,
-    resolve_postpone
-  },
-
-  {
-    svn_client_conflict_option_base_text,
-    N_("discard local and incoming changes for this property"),
-    NULL,
-    resolve_prop_conflict
-  },
-
-  {
-    svn_client_conflict_option_incoming_text,
-    N_("accept incoming version of entire property value"),
-    NULL,
-    resolve_prop_conflict
-  },
-
-  {
-    svn_client_conflict_option_working_text,
-    N_("accept working copy version of entire property value"),
-    NULL,
-    resolve_prop_conflict
-  },
-
-  {
-    svn_client_conflict_option_incoming_text_where_conflicted,
-    N_("accept changes only where they conflict"),
-    NULL,
-    resolve_prop_conflict
-  },
-
-  {
-    svn_client_conflict_option_working_text_where_conflicted,
-    N_("reject changes which conflict and accept the rest"),
-    NULL,
-    resolve_prop_conflict
-  },
-
-  {
-    svn_client_conflict_option_merged_text,
-    N_("accept merged version of property value"),
-    NULL,
-    resolve_prop_conflict
-  },
-
-};
-
 static svn_error_t *
 assert_text_conflict(svn_client_conflict_t *conflict, apr_pool_t *scratch_pool)
 {
@@ -7276,37 +7135,68 @@ svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
                                                 apr_pool_t *scratch_pool)
 {
   const char *mime_type;
-  int i;
 
   SVN_ERR(assert_text_conflict(conflict, scratch_pool));
 
-  *options = apr_array_make(result_pool, ARRAY_LEN(text_conflict_options),
+  *options = apr_array_make(result_pool, 6,
                             sizeof(svn_client_conflict_option_t *));
+
+  add_resolution_option(*options, conflict,
+      svn_client_conflict_option_postpone,
+      _("skip this conflict and leave it unresolved"),
+      resolve_postpone);
 
   mime_type = svn_client_conflict_text_get_mime_type(conflict);
   if (mime_type && svn_mime_type_is_binary(mime_type))
     {
-      for (i = 0; i < ARRAY_LEN(binary_conflict_options); i++)
-        {
-          /* We must make a copy to make the memory for option->type_data
-           * writable and to localize the description. */
-          add_resolution_option(*options, conflict,
-                                binary_conflict_options[i].id,
-                                _(binary_conflict_options[i].description),
-                                binary_conflict_options[i].do_resolve_func);
-        }
-    }
+      /* Resolver options for a binary file conflict. */
+      add_resolution_option(*options, conflict,
+        svn_client_conflict_option_base_text,
+        _("discard local and incoming changes for this binary file"),
+        resolve_text_conflict);
+
+      add_resolution_option(*options, conflict,
+        svn_client_conflict_option_incoming_text,
+        _("accept incoming version of binary file"),
+        resolve_text_conflict);
+
+      add_resolution_option(*options, conflict,
+        svn_client_conflict_option_merged_text,
+        _("accept binary file as it appears in the working copy"),
+        resolve_text_conflict);
+  }
   else
     {
-      for (i = 0; i < ARRAY_LEN(text_conflict_options); i++)
-        {
-          /* We must make a copy to make the memory for option->type_data
-           * writable and to localize the description. */
-          add_resolution_option(*options, conflict,
-                                text_conflict_options[i].id,
-                                _(text_conflict_options[i].description),
-                                text_conflict_options[i].do_resolve_func);
-        }
+      /* Resolver options for a text file conflict. */
+      add_resolution_option(*options, conflict,
+        svn_client_conflict_option_base_text,
+        _("discard local and incoming changes for this file"),
+        resolve_text_conflict);
+
+      add_resolution_option(*options, conflict,
+        svn_client_conflict_option_incoming_text,
+        _("accept incoming version of entire file"),
+        resolve_text_conflict);
+
+      add_resolution_option(*options, conflict,
+        svn_client_conflict_option_working_text,
+        _("reject all incoming changes for this file"),
+        resolve_text_conflict);
+
+      add_resolution_option(*options, conflict,
+        svn_client_conflict_option_incoming_text_where_conflicted,
+        _("accept changes only where they conflict"),
+        resolve_text_conflict);
+
+      add_resolution_option(*options, conflict,
+        svn_client_conflict_option_working_text_where_conflicted,
+        _("reject changes which conflict and accept the rest"),
+        resolve_text_conflict);
+
+      add_resolution_option(*options, conflict,
+        svn_client_conflict_option_merged_text,
+        _("accept the file as it appears in the working copy"),
+        resolve_text_conflict);
     }
 
   return SVN_NO_ERROR;
@@ -7319,21 +7209,45 @@ svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool)
 {
-  int i;
-
   SVN_ERR(assert_prop_conflict(conflict, scratch_pool));
 
-  *options = apr_array_make(result_pool, ARRAY_LEN(prop_conflict_options),
+  *options = apr_array_make(result_pool, 7,
                             sizeof(svn_client_conflict_option_t *));
-  for (i = 0; i < ARRAY_LEN(prop_conflict_options); i++)
-    {
-      /* We must make a copy to make the memory for option->type_data
-       * writable and to localize the description. */
-      add_resolution_option(*options, conflict,
-                            prop_conflict_options[i].id,
-                            _(prop_conflict_options[i].description),
-                            prop_conflict_options[i].do_resolve_func);
-    }
+
+  add_resolution_option(*options, conflict,
+    svn_client_conflict_option_postpone,
+    _("skip this conflict and leave it unresolved"),
+    resolve_postpone);
+
+  add_resolution_option(*options, conflict,
+    svn_client_conflict_option_base_text,
+    _("discard local and incoming changes for this property"),
+    resolve_prop_conflict);
+
+  add_resolution_option(*options, conflict,
+    svn_client_conflict_option_incoming_text,
+    _("accept incoming version of entire property value"),
+    resolve_prop_conflict);
+
+  add_resolution_option(*options, conflict,
+    svn_client_conflict_option_working_text,
+    _("accept working copy version of entire property value"),
+    resolve_prop_conflict);
+
+  add_resolution_option(*options, conflict,
+    svn_client_conflict_option_incoming_text_where_conflicted,
+    N_("accept changes only where they conflict"),
+    resolve_prop_conflict);
+
+  add_resolution_option(*options, conflict,
+    svn_client_conflict_option_working_text_where_conflicted,
+    _("reject changes which conflict and accept the rest"),
+    resolve_prop_conflict);
+
+  add_resolution_option(*options, conflict,
+    svn_client_conflict_option_merged_text,
+    _("accept merged version of property value"),
+    resolve_prop_conflict);
 
   return SVN_NO_ERROR;
 }
