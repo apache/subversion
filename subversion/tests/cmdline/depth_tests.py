@@ -2897,6 +2897,68 @@ def commit_excluded(sbox):
                                         [], False,
                                         "--set-depth=infinity", wc_dir)
 
+@Issue(4636)
+@XFail()
+def fold_tree_with_deleted_moved_items(sbox):
+  "deleted & moved items left untouched"
+  ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
+                                                             infinity=True)
+
+  A_path = sbox.ospath('A')
+  C_path = os.path.join(A_path, 'C')
+  C_moved_path = os.path.join(A_path, 'C_moved')
+
+  # Delete file lambda, move file pi and directory C
+  sbox.simple_rm('A/B/lambda')
+  sbox.simple_move('A/D/G/pi', 'A/D/G/pi_moved')
+  sbox.simple_move('A/C', 'A/C_moved')
+
+  # Fold the A dir to empty, expect the deleted & moved items ones left
+  # and visible in status, rather than gone without a trace.
+
+  # Directories B and D won't be deleted, because that would remove their
+  # local modifications. Their unmodified descendants are deleted though.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'          : Item(status='D '),
+    'A/B/F'          : Item(status='D '),
+    'A/D/G/rho'      : Item(status='D '),
+    'A/D/G/tau'      : Item(status='D '),
+    'A/D/H'          : Item(status='D '),
+    'A/D/gamma'      : Item(status='D '),
+    'A/mu'           : Item(status='D '),
+    })
+  expected_status = svntest.wc.State(wc_dir, {
+    ''               : Item(status='  ', wc_rev=1),
+    'iota'           : Item(status='  ', wc_rev=1),
+    'A'              : Item(status='  ', wc_rev=1),
+    'A/B'            : Item(status='  ', wc_rev=1),
+    'A/B/lambda'     : Item(status='D ', wc_rev=1),
+    'A/C'            : Item(status='D ', wc_rev=1, moved_to='A/C_moved'),
+    'A/C_moved'      : Item(status='A ', wc_rev='-', copied='+',
+	                        moved_from='A/C'),
+    'A/D'            : Item(status='  ', wc_rev=1),
+    'A/D/G'          : Item(status='  ', wc_rev=1),
+    'A/D/G/pi'       : Item(status='D ', wc_rev=1, moved_to='A/D/G/pi_moved'),
+    'A/D/G/pi_moved' : Item(status='A ', wc_rev='-', copied='+',
+	                        moved_from='A/D/G/pi'),
+    })
+  expected_disk = svntest.wc.State('', {
+    'iota'           : Item(contents="This is the file 'iota'.\n"),
+    'A'              : Item(contents=None),
+    'A/B'            : Item(contents=None),
+    'A/C_moved'      : Item(contents=None),
+    'A/D'            : Item(contents=None),
+    'A/D/G'          : Item(contents=None),
+    'A/D/G/pi_moved' : Item(contents="This is the file 'pi'.\n"),
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        [], False,
+                                        '--set-depth', 'empty', A_path)
+  verify_depth(None, "empty", A_path)
+
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,
@@ -2948,6 +3010,7 @@ test_list = [ None,
               revert_depth_files,
               spurious_nodes_row,
               commit_excluded,
+			  fold_tree_with_deleted_moved_items,
               ]
 
 if __name__ == "__main__":
