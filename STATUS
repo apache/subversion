@@ -165,12 +165,18 @@ Candidate changes:
    Votes:
      +1: kotkov
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1763934
    Add the OSX 10.12 commercial name for 'svn --version --verbose'.
    Justification:
      Very minor change makes SVN look slightly more polished.
    Votes:
-     +1: brane, ivan
+     +1: brane, ivan, stefan2
 
  * r1764034
    Use 'Apache Software Foundation' instead of 'http://subversion.apache.org'
@@ -179,10 +185,5 @@ Candidate changes:
      Minor tweak that makes Subversion look a little bit better in Windows
      Task Manager.
    Votes:
-     +1: ivan, brane
+     +1: ivan, brane, stefan2
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
