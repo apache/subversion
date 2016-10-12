@@ -42,13 +42,14 @@ Candidate changes:
      <http://mail-archives.apache.org/mod_mbox/subversion-dev/201508.mbox/%3CCALeEUB56NVCR0nCZ2rYki6oKQNcVPPLvWTeCoYyrMqitsov0ag@mail.gmail.com%3E>.
    Votes:
      +0: julianfoad (he says it works, but I haven't reviewed or tested)
+     +1: stefan2
 
  * r1706783
    Really pass patch result to svn_client_patch() filter 
    Justification:
      Without this fix the filter can't determine the result of a patch.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1711346
    Properly remove tempfiles in svnlook on diff errors such as EPIPE.
@@ -56,7 +57,7 @@ Candidate changes:
      Simple fix makes it far less likely that tempfiles are left behind
      on the server.
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1717875, r1717878
    Make inherited property api consistent over all ra layers
