@@ -1774,7 +1774,7 @@ svn_io__utf8_to_unicode_longpath(const WCHAR **result,
      * than the original number of utf-8 narrow chars.
      */
     const WCHAR *prefix = NULL;
-    const int srclen = strlen(source);
+    const size_t srclen = strlen(source);
     WCHAR *buffer;
 
     if (srclen > 248)

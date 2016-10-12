@@ -380,7 +380,7 @@ write_value(FILE *log_file, DWORD64 mod_base, DWORD type, void *value_addr)
         }
         break;
       case 12: /* SymTagEnum */
-          fprintf(log_file, "%d", *(DWORD_PTR *)value_addr);
+          fprintf(log_file, "%Id", *(DWORD_PTR *)value_addr);
           break;
       case 13: /* SymTagFunctionType */
           fprintf(log_file, FORMAT_PTR, *(DWORD_PTR *)value_addr);
