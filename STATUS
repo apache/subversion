@@ -150,18 +150,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1702299, r1702300, r1702397, r1702407, r1702565
-   Handle merging to local add as error instead of segfault.
-   Justification:
-     Segfault. User reported.
-   Notes:
-     r1702299 adds a testcase.
-     r1702397 fixes the problem with automatic merge and updates the test.
-     r1702565 fixes a quite similar segfault with --reintegrate merge.
-     The other revisions are minor cleanup.
-   Branch:
-     ^/subversion/branches/1.8.x-r1702299
-   Votes:
-     +1: rhuijben, julianfoad, stefan2
-
