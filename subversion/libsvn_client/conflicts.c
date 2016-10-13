@@ -599,7 +599,7 @@ find_yca(svn_client__pathrev_t **yca_loc,
  * works in cases where we do not already know a revision in which the deleted
  * node once used to exist.
  * 
- * If the node node was moved, rather than deleted, return move information
+ * If the node was moved, rather than deleted, return move information
  * in BATON->MOVE.
  */
 static svn_error_t *
