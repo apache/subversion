@@ -136,6 +136,3 @@ Veto-blocked changes:
      +1: stefan2
      -1: ivan (apr_file_trunc() bug should be reported and fixed in APR,
                not by unreliable workaround with unknown consequences)
-
-Approved changes:
-=================
