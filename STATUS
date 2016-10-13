@@ -124,7 +124,7 @@ Candidate changes:
      a pack cannot be packed - which renders using f7 pointless for those
      users.
    Branch:
-     ^/subversion/branches/1.9.x-fsfs-pack-fixes
+     ^/subversion/branches/1.9.x-fsfs-pack-fixes@r1764683
    Notes:
      r1759117-23 provide the actual fixes.
      r1759124 adds a regression test with the necessary internal API changes.
