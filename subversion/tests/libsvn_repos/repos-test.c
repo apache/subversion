@@ -1400,6 +1400,106 @@ authz(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Test the supported authz wildcard variants. */
+static svn_error_t *
+test_authz_wildcards(apr_pool_t *pool)
+{
+  svn_authz_t *authz_cfg;
+
+  /* Some non-trivially overlapping wildcard rules, convering all types
+   * of wildcards: "any", "any-var", "prefix", "postfix" and "complex".
+   *
+   * Note that the rules are not in 1:1 correspondence to that enumeration.
+   */
+  const char *contents =
+    "[:glob:greek:/**/G]"                                                    NL
+    "* = r"                                                                  NL
+    ""                                                                       NL
+    "[:glob:greek:/A/*/G]"                                                   NL
+    "* ="                                                                    NL
+    ""                                                                       NL
+    "[:glob:greek:/A/**/*a*]"                                                NL
+    "* = r"                                                                  NL
+    ""                                                                       NL
+    "[:glob:greek:/**/*a]"                                                   NL
+    "* = rw"                                                                 NL
+    ""                                                                       NL
+    "[:glob:greek:/A/**/g*]"                                                 NL
+    "* ="                                                                    NL
+    ""                                                                       NL
+    "[:glob:greek:/**/lambda]"                                               NL
+    "* = rw"                                                                 NL;
+
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set[] = {
+    /* Test that read rules are correctly used. */
+    { "/", NULL, NULL, svn_authz_read, FALSE },              /* default */
+    { "/iota", NULL, NULL, svn_authz_write, TRUE },          /* rule 4 */
+    { "/A", NULL, NULL, svn_authz_read, FALSE },             /* inherited */
+    { "/A/mu", NULL, NULL, svn_authz_read, FALSE },          /* inherited */
+    { "/A/B", NULL, NULL, svn_authz_read, FALSE },           /* inherited */
+    { "/A/B/lambda", NULL, NULL, svn_authz_write, TRUE },    /* rule 6 */
+    { "/A/B/E", NULL, NULL, svn_authz_read, FALSE },         /* inherited */
+    { "/A/B/E/alpha", NULL, NULL, svn_authz_write, TRUE },   /* rule 4 */
+    { "/A/B/E/beta", NULL, NULL, svn_authz_write, TRUE },    /* rule 4 */
+    { "/A/B/F", NULL, NULL, svn_authz_read, FALSE },         /* inherited */
+    { "/A/C", NULL, NULL, svn_authz_read, FALSE },           /* inherited */
+    { "/A/D", NULL, NULL, svn_authz_read, FALSE },           /* inherited */
+    { "/A/D/gamma", NULL, NULL, svn_authz_read, FALSE },     /* rule 5 */
+    { "/A/D/G", NULL, NULL, svn_authz_read, FALSE },         /* rule 2 */
+    { "/A/D/G/pi", NULL, NULL, svn_authz_read, FALSE },      /* inherited */
+    { "/A/D/G/rho", NULL, NULL, svn_authz_read, FALSE },     /* inherited */
+    { "/A/D/G/tau", NULL, NULL, svn_authz_read, TRUE },      /* rule 3 */
+    { "/A/D/G/tau", NULL, NULL, svn_authz_write, FALSE },    /* rule 3 */
+    { "/A/D/H", NULL, NULL, svn_authz_read, FALSE },         /* inherited */
+    { "/A/D/H/chi", NULL, NULL, svn_authz_read, FALSE },     /* inherited */
+    { "/A/D/H/psi", NULL, NULL, svn_authz_read, FALSE },     /* inherited */
+    { "/A/D/H/omega", NULL, NULL, svn_authz_write, TRUE },   /* rule 4 */
+    /* Non-greek tree paths: */
+    { "/A/G", NULL, NULL, svn_authz_read, TRUE },            /* rule 1 */
+    { "/A/G", NULL, NULL, svn_authz_write, FALSE },          /* rule 1 */
+    { "/A/G/G", NULL, NULL, svn_authz_read, FALSE },         /* rule 2 */
+    { "/G", NULL, NULL, svn_authz_read, TRUE },              /* rule 1 */
+    { "/G", NULL, NULL, svn_authz_write, FALSE },            /* rule 1 */
+    { "/Y/G", NULL, NULL, svn_authz_read, TRUE },            /* rule 1 */
+    { "/Y/G", NULL, NULL, svn_authz_write, FALSE },          /* rule 1 */
+    { "/X/Z/G", NULL, NULL, svn_authz_read, TRUE },          /* rule 1 */
+    { "/X/Z/G", NULL, NULL, svn_authz_write, FALSE },        /* rule 1 */
+    /* Rule 5 prevents recursive access anywhere. */
+    { "/", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/iota", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/mu", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/B", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/B/lambda", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/B/E", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/B/E/alpha", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/B/E/beta", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/B/F", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/C", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/gamma", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/G", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/G/pi", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/G/rho", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/G/tau", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/H", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/H/chi", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/H/psi", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/A/D/H/omega", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* Load the test authz rules. */
+  SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, pool));
+
+  /* Loop over the test array and test each case. */
+  SVN_ERR(authz_check_access(authz_cfg, test_set, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Test the authz performance with wildcard rules. */
 static svn_error_t *
 test_authz_wildcard_performance(apr_pool_t *pool)
@@ -4372,6 +4472,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test recursively authz rule override"),
     SVN_TEST_PASS2(test_authz_pattern_tests,
                    "test various basic authz pattern combinations"),
+    SVN_TEST_PASS2(test_authz_wildcards,
+                   "test the different types of authz wildcards"),
     SVN_TEST_SKIP2(test_authz_wildcard_performance, TRUE,
                    "optional authz wildcard performance test"),
     SVN_TEST_NULL
