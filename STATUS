@@ -136,3 +136,35 @@ Veto-blocked changes:
      +1: stefan2
      -1: ivan (apr_file_trunc() bug should be reported and fixed in APR,
                not by unreliable workaround with unknown consequences)
+
+Approved changes:
+=================
+
+ * r1722164
+   Filter out -Wdate-time from SWIG_CPPFLAGS
+   Justification:
+     Fixes bindings build failure when -Wdate-time is present in $CPPFLAGS
+   Votes:
+     +1: jamessan, stefan2
+     +1: rhuijben (Would prefer some redesign for trunk though)
+
+ * r1721488, r1721648
+   Enable building bindings with SWIG >= 3.0.6
+   Justification:
+     Enable building bindings with SWIG 3.x.  SWIG 2.x is end-of-life (no
+     releases since 2014) and is starting to be removed from Linux
+     distributions.
+   Branch:
+     ^/subversion/branches/1.9.x-r1721488
+   Votes:
+     +1: jamessan, stefan2
+
+ * r1721285
+   Quadruple the maximum cacheable directory size in FSFS.
+   Justification:
+     Not caching large directories has a massive impact on runtime with
+     the cutoff point being about 9000 entries for the default cache size.
+     Also, memory usage with mod_dav_svn may go through the roof for
+     uncached directories.
+   Votes:
+     +1: stefan2, steveking, jcorvel
