@@ -119,7 +119,7 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
- * r1759116, r1759117, r1759122, r1759123, r1759124
+ * r1759117, r1759122, r1759123, r1759124, 1764676
    Fix FSFS format 7 packing for revisions packs with lots of changes.
    Justification:
      Problem occurred in at least two user repositories.  Without the fix,
@@ -129,12 +129,13 @@ Veto-blocked changes:
    Branch:
      ^/subversion/branches/1.9.x-fsfs-pack-fixes
    Notes:
-     r1759116 adds a workaround for trunc() corrupting apr_file_t internal state.
      r1759117-23 provide the actual fixes.
      r1759124 adds a regression test with the necessary internal API changes.
+     r1764676 eliminates our reliance on the currently broken APR trunc().
    Votes:
      +1: stefan2
-     -1: ivan (apr_file_trunc() bug should be reported and fixed in APR,
+     -1: ivan (with r1759116 instead of r1764676)
+              (apr_file_trunc() bug should be reported and fixed in APR,
                not by unreliable workaround with unknown consequences)
 
 Approved changes:
