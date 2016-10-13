@@ -1412,22 +1412,22 @@ test_authz_wildcards(apr_pool_t *pool)
    * Note that the rules are not in 1:1 correspondence to that enumeration.
    */
   const char *contents =
-    "[:glob:greek:/**/G]"                                                    NL
+    "[:glob:/**/G]"                                                          NL
     "* = r"                                                                  NL
     ""                                                                       NL
-    "[:glob:greek:/A/*/G]"                                                   NL
+    "[:glob:/A/*/G]"                                                         NL
     "* ="                                                                    NL
     ""                                                                       NL
-    "[:glob:greek:/A/**/*a*]"                                                NL
+    "[:glob:/A/**/*a*]"                                                      NL
     "* = r"                                                                  NL
     ""                                                                       NL
-    "[:glob:greek:/**/*a]"                                                   NL
+    "[:glob:/**/*a]"                                                         NL
     "* = rw"                                                                 NL
     ""                                                                       NL
-    "[:glob:greek:/A/**/g*]"                                                 NL
+    "[:glob:/A/**/g*]"                                                       NL
     "* ="                                                                    NL
     ""                                                                       NL
-    "[:glob:greek:/**/lambda]"                                               NL
+    "[:glob:/**/lambda]"                                                     NL
     "* = rw"                                                                 NL;
 
   /* Definition of the paths to test and expected replies for each. */
@@ -1465,9 +1465,10 @@ test_authz_wildcards(apr_pool_t *pool)
     { "/Y/G", NULL, NULL, svn_authz_write, FALSE },          /* rule 1 */
     { "/X/Z/G", NULL, NULL, svn_authz_read, TRUE },          /* rule 1 */
     { "/X/Z/G", NULL, NULL, svn_authz_write, FALSE },        /* rule 1 */
-    /* Rule 5 prevents recursive access anywhere. */
+    /* Rule 5 prevents recursive access anywhere below /A. */
     { "/", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
-    { "/iota", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
+    { "/iota", NULL, NULL, svn_authz_read | svn_authz_recursive, TRUE },
+    { "/iota", NULL, NULL, svn_authz_write | svn_authz_recursive, FALSE },
     { "/A", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
     { "/A/mu", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
     { "/A/B", NULL, NULL, svn_authz_read | svn_authz_recursive, FALSE },
