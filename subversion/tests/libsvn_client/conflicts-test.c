@@ -3276,8 +3276,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                         "merge incoming edit for a moved-away working file"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_chained_move_local_edit,
                        "merge incoming chained move vs local edit"),
-    SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_dir_with_moved_file,
-                        "merge incoming moved dir with moved file"),
+    SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir_with_moved_file,
+                       "merge incoming moved dir with moved file"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_file_move_new_line_of_history,
                        "merge incoming file move with new line of history"),
     SVN_TEST_NULL
