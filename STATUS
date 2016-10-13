@@ -116,9 +116,6 @@ Candidate changes:
    Votes:
      +1: kotkov
 
-Veto-blocked changes:
-=====================
-
  * r1759117, r1759122, r1759123, r1759124, 1764676
    Fix FSFS format 7 packing for revisions packs with lots of changes.
    Justification:
@@ -134,9 +131,9 @@ Veto-blocked changes:
      r1764676 eliminates our reliance on the currently broken APR trunc().
    Votes:
      +1: stefan2
-     -1: ivan (with r1759116 instead of r1764676)
-              (apr_file_trunc() bug should be reported and fixed in APR,
-               not by unreliable workaround with unknown consequences)
+
+Veto-blocked changes:
+=====================
 
 Approved changes:
 =================
