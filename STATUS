@@ -140,15 +140,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1764034
-   Use 'Apache Software Foundation' instead of 'http://subversion.apache.org'
-   as CompanyName/Publisher for Windows executables.
-   Justification:
-     Minor tweak that makes Subversion look a little bit better in Windows
-     Task Manager.
-   Votes:
-     +1: ivan, brane, stefan2
-
  * r1722164
    Filter out -Wdate-time from SWIG_CPPFLAGS
    Justification:
