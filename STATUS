@@ -140,14 +140,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1722164
-   Filter out -Wdate-time from SWIG_CPPFLAGS
-   Justification:
-     Fixes bindings build failure when -Wdate-time is present in $CPPFLAGS
-   Votes:
-     +1: jamessan, stefan2
-     +1: rhuijben (Would prefer some redesign for trunk though)
-
  * r1721488, r1721648
    Enable building bindings with SWIG >= 3.0.6
    Justification:
