@@ -640,7 +640,7 @@ svn_fs_x__order_dir_entries(svn_fs_t *fs,
   return result;
 }
 
-/* Return a duplicate of the the ORIGINAL path and with special sub-strins
+/* Return a duplicate of the ORIGINAL path and with special sub-strings
  * (e.g. "trunk") modified in such a way that have a lower lexicographic
  * value than any other "normal" file name.
  */

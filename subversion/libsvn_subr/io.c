@@ -1478,18 +1478,14 @@ svn_io_file_checksum2(svn_checksum_t **checksum,
                       apr_pool_t *pool)
 {
   svn_stream_t *file_stream;
-  svn_stream_t *checksum_stream;
   apr_file_t* f;
 
   SVN_ERR(svn_io_file_open(&f, file, APR_READ, APR_OS_DEFAULT, pool));
   file_stream = svn_stream_from_aprfile2(f, FALSE, pool);
-  checksum_stream = svn_stream_checksummed2(file_stream, checksum, NULL, kind,
-                                            TRUE, pool);
+  SVN_ERR(svn_stream_contents_checksum(checksum, file_stream, kind,
+                                       pool, pool));
 
-  /* Because the checksummed stream will force the reading (and
-     checksumming) of all the file's bytes, we can just close the stream
-     and let its magic work. */
-  return svn_stream_close(checksum_stream);
+  return SVN_NO_ERROR;
 }
 
 
@@ -1778,7 +1774,7 @@ svn_io__utf8_to_unicode_longpath(const WCHAR **result,
      * than the original number of utf-8 narrow chars.
      */
     const WCHAR *prefix = NULL;
-    const int srclen = strlen(source);
+    const size_t srclen = strlen(source);
     WCHAR *buffer;
 
     if (srclen > 248)
@@ -1894,7 +1890,7 @@ io_win_file_attrs_set(const char *fname,
 
 static svn_error_t *win_init_dynamic_imports(void *baton, apr_pool_t *pool)
 {
-  HMODULE kernel32 = GetModuleHandleA("kernel32.dll");
+  HMODULE kernel32 = GetModuleHandleW(L"kernel32.dll");
 
   if (kernel32)
     {
@@ -2655,9 +2651,6 @@ svn_io_remove_file2(const char *path,
          allow us to delete when path is read-only */
       SVN_ERR(svn_io_set_file_read_write(path, ignore_enoent, scratch_pool));
       apr_err = apr_file_remove(path_apr, scratch_pool);
-
-      if (!apr_err)
-        return SVN_NO_ERROR;
     }
 
   /* Check to make sure we aren't trying to delete a directory */
@@ -4071,6 +4064,26 @@ svn_io_write_atomic2(const char *final_path,
 svn_error_t *
 svn_io_file_trunc(apr_file_t *file, apr_off_t offset, apr_pool_t *pool)
 {
+  /* Workaround for yet another APR issue with trunc.
+
+     If the APR file internally is in read mode, the current buffer pointer
+     will not be clipped to the valid data range. get_file_offset may then
+     return an invalid position *after* new data was written to it.
+
+     To prevent this, write 1 dummy byte just after the OFFSET at which we
+     will trunc it.  That will force the APR file into write mode
+     internally and the flush() work-around below becomes affective. */
+  apr_off_t position = 0;
+
+  /* A frequent usage is OFFSET==0, in which case we don't need to preserve
+     any file content or file pointer. */
+  if (offset)
+    {
+      SVN_ERR(svn_io_file_seek(file, APR_CUR, &position, pool));
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
+    }
+  SVN_ERR(svn_io_file_putc(0, file, pool));
+
   /* This is a work-around. APR would flush the write buffer
      _after_ truncating the file causing now invalid buffered
      data to be written behind OFFSET. */
@@ -4079,10 +4092,17 @@ svn_io_file_trunc(apr_file_t *file, apr_off_t offset, apr_pool_t *pool)
                                      N_("Can't flush stream"),
                                      pool));
 
-  return do_io_file_wrapper_cleanup(file, apr_file_trunc(file, offset),
-                                    N_("Can't truncate file '%s'"),
-                                    N_("Can't truncate stream"),
-                                    pool);
+  SVN_ERR(do_io_file_wrapper_cleanup(file, apr_file_trunc(file, offset),
+                                     N_("Can't truncate file '%s'"),
+                                     N_("Can't truncate stream"),
+                                     pool));
+
+  /* Restore original file pointer, if necessary.
+     It's currently at OFFSET. */
+  if (position < offset)
+    SVN_ERR(svn_io_file_seek(file, APR_SET, &position, pool));
+
+  return SVN_NO_ERROR;
 }
 
 

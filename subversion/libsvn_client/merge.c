@@ -1210,7 +1210,7 @@ struct merge_file_baton_t
 
   /* If a tree conflict will be installed once edited, it's reason. If a skip
      should be produced its reason. Some special values are defined. See the
-     merge_tree_baton_t for an explanation. */
+     merge_dir_baton_t for an explanation. */
   svn_wc_conflict_reason_t tree_conflict_reason;
   svn_wc_conflict_action_t tree_conflict_action;
   svn_node_kind_t tree_conflict_local_node_kind;

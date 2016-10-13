@@ -50,6 +50,7 @@
 
 #include "private/svn_wc_private.h"
 #include "private/svn_skel.h"
+#include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
 
 #include "svn_private_config.h"
@@ -1622,7 +1623,14 @@ build_text_conflict_resolve_items(svn_skel_t **work_items,
         }
       case svn_wc_conflict_choose_mine_full:
         {
-          install_from_abspath = mine_abspath;
+          /* In case of selecting to resolve the conflict choosing the full
+             own file, allow the text conflict resolution to just take the
+             existing local file if no merged file was present (case: binary
+             file conflicts do not generate a locally merge file).
+          */
+          install_from_abspath = mine_abspath
+                                   ? mine_abspath
+                                   : local_abspath;
           break;
         }
       case svn_wc_conflict_choose_theirs_conflict:
@@ -1632,6 +1640,15 @@ build_text_conflict_resolve_items(svn_skel_t **work_items,
             = choice == svn_wc_conflict_choose_theirs_conflict
                 ? svn_diff_conflict_display_latest
                 : svn_diff_conflict_display_modified;
+
+          if (mine_abspath == NULL)
+            return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                     _("Conflict on '%s' cannot be resolved to "
+                                       "'theirs-conflict' or 'mine-conflict' "
+                                       "because a merged version of the file "
+                                       "cannot be created."),
+                                     svn_dirent_local_style(local_abspath,
+                                                            scratch_pool));
 
           SVN_ERR(merge_showing_conflicts(&install_from_abspath,
                                           db, local_abspath,
@@ -3391,6 +3408,7 @@ svn_wc__conflict_prop_mark_resolved(svn_wc_context_t *wc_ctx,
                                     const char *local_abspath,
                                     const char *propname,
                                     svn_wc_conflict_choice_t choice,
+                                    const svn_string_t *merged_value,
                                     svn_wc_notify_func2_t notify_func,
                                     void *notify_baton,
                                     apr_pool_t *scratch_pool)
@@ -3407,7 +3425,7 @@ svn_wc__conflict_prop_mark_resolved(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(resolve_prop_conflict_on_node(&did_resolve, wc_ctx->db,
                                         local_abspath, conflicts,
-                                        propname, choice, NULL, NULL,
+                                        propname, choice, NULL, merged_value,
                                         NULL, NULL, scratch_pool));
 
   if (did_resolve && notify_func)
@@ -3681,6 +3699,179 @@ svn_wc__conflict_tree_update_moved_away_node(svn_wc_context_t *wc_ctx,
                                      svn_wc_notify_resolved_tree,
                                      scratch_pool),
                 scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__conflict_tree_merge_local_changes(svn_wc_context_t *wc_ctx,
+                                          const char *local_abspath,
+                                          const char *dest_abspath,
+                                          svn_cancel_func_t cancel_func,
+                                          void *cancel_baton,
+                                          svn_wc_notify_func2_t notify_func,
+                                          void *notify_baton,
+                                          apr_pool_t *scratch_pool)
+{
+  svn_wc_conflict_reason_t local_change;
+  svn_wc_conflict_action_t incoming_change;
+  svn_wc_operation_t operation;
+  svn_boolean_t tree_conflicted;
+  const apr_array_header_t *conflicts;
+  svn_skel_t *conflict_skel;
+
+  SVN_ERR(svn_wc__read_conflicts(&conflicts, &conflict_skel,
+                                 wc_ctx->db, local_abspath,
+                                 FALSE, /* no tempfiles */
+                                 FALSE, /* only tree conflicts */
+                                 scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__conflict_read_info(&operation, NULL, NULL, NULL,
+                                     &tree_conflicted, wc_ctx->db,
+                                     local_abspath, conflict_skel,
+                                     scratch_pool, scratch_pool));
+  if (!tree_conflicted)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_wc__conflict_read_tree_conflict(&local_change, &incoming_change,
+                                              NULL, wc_ctx->db, local_abspath,
+                                              conflict_skel,
+                                              scratch_pool, scratch_pool));
+
+  /* Make sure the expected conflict is recorded. */
+  if (operation != svn_wc_operation_update &&
+      operation != svn_wc_operation_switch &&
+      operation != svn_wc_operation_merge)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Unexpected conflict operation '%s' on '%s'"),
+                             svn_token__to_word(operation_map, operation),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+  if (local_change != svn_wc_conflict_reason_edited)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Unexpected conflict reason '%s' on '%s'"),
+                             svn_token__to_word(reason_map, local_change),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+  if (incoming_change != svn_wc_conflict_action_delete)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Unexpected conflict action '%s' on '%s'"),
+                             svn_token__to_word(action_map, incoming_change),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  /* Merge local changes. */
+  SVN_ERR(svn_wc__db_merge_local_changes(wc_ctx->db, local_abspath,
+                                         dest_abspath, operation,
+                                         incoming_change, local_change,
+                                         cancel_func, cancel_baton,
+                                         notify_func, notify_baton,
+                                         scratch_pool));
+
+  SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath, cancel_func, cancel_baton,
+                         scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
+                                         svn_wc_context_t *wc_ctx,
+                                         const char *victim_abspath,
+                                         svn_node_kind_t victim_node_kind,
+                                         const char *moved_to_repos_relpath,
+                                         svn_revnum_t rev,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *candidates;
+  apr_pool_t *iterpool;
+  int i;
+  apr_size_t longest_ancestor_len = 0;
+
+  *possible_targets = apr_array_make(result_pool, 1, sizeof(const char *));
+  SVN_ERR(svn_wc__find_repos_node_in_wc(&candidates, wc_ctx->db, victim_abspath,
+                                        moved_to_repos_relpath, rev,
+                                        scratch_pool, scratch_pool));
+
+  /* Find a "useful move target" node in our set of candidates.
+   * Since there is no way to be certain, filter out nodes which seem
+   * unlikely candidates, and return the first node which is "good enough".
+   * Nodes which are tree conflict victims don't count, and nodes which
+   * cannot be modified (e.g. replaced or deleted nodes) don't count.
+   * Nodes which are of a different node kind don't count either.
+   * Ignore switched nodes as well, since that is an unlikely case during
+   * update/swtich/merge conflict resolution. And externals shouldn't even
+   * be on our candidate list in the first place.
+   * If multiple candidates match these criteria, choose the one which
+   * shares the longest common ancestor with the victim. */
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < candidates->nelts; i++)
+    {
+      const char *local_abspath;
+      const char *ancestor_abspath;
+      apr_size_t ancestor_len;
+      svn_boolean_t tree_conflicted;
+      svn_wc__db_status_t status;
+      svn_boolean_t is_wcroot;
+      svn_boolean_t is_switched;
+      svn_node_kind_t node_kind;
+      const char *moved_to_abspath;
+      int insert_index;
+
+      svn_pool_clear(iterpool);
+
+      local_abspath = APR_ARRAY_IDX(candidates, i, const char *);
+
+      SVN_ERR(svn_wc__internal_conflicted_p(NULL, NULL, &tree_conflicted,
+                                            wc_ctx->db, local_abspath,
+                                            iterpool));
+      if (tree_conflicted)
+        continue;
+
+      SVN_ERR(svn_wc__db_read_info(&status, &node_kind,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                   NULL, NULL, NULL, NULL,
+                                   wc_ctx->db, local_abspath, iterpool,
+                                   iterpool));
+      if (status != svn_wc__db_status_normal &&
+          status != svn_wc__db_status_added)
+        continue;
+
+      if (node_kind != victim_node_kind)
+        continue;
+
+      SVN_ERR(svn_wc__db_is_switched(&is_wcroot, &is_switched, NULL,
+                                     wc_ctx->db, local_abspath, iterpool));
+      if (is_wcroot || is_switched)
+        continue;
+
+      /* This might be a move target. Fingers crossed ;-) */
+      moved_to_abspath = apr_pstrdup(result_pool, local_abspath);
+
+      /* Insert the move target into the list. Targets which are closer
+       * (path-wise) to the conflict victim are more likely to be a good
+       * match, so put them at the front of the list. */
+      ancestor_abspath = svn_dirent_get_longest_ancestor(local_abspath,
+                                                         victim_abspath,
+                                                         iterpool);
+      ancestor_len = strlen(ancestor_abspath);
+      if (ancestor_len >= longest_ancestor_len)
+        {
+          longest_ancestor_len = ancestor_len;
+          insert_index = 0; /* prepend */
+        }
+      else
+        {
+          insert_index = (*possible_targets)->nelts; /* append */
+        }
+      svn_sort__array_insert(*possible_targets, &moved_to_abspath,
+                             insert_index);
+    }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

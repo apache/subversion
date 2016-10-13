@@ -918,6 +918,17 @@ typedef svn_error_t *(*svn_stream_seek_fn_t)(void *baton,
 typedef svn_error_t *(*svn_stream_data_available_fn_t)(void *baton,
                                               svn_boolean_t *data_available);
 
+/** Readline handler function for a generic stream. @see svn_stream_t and
+ * svn_stream_readline().
+ *
+ * @since New in 1.10.
+ */
+typedef svn_error_t *(*svn_stream_readline_fn_t)(void *baton,
+                                                 svn_stringbuf_t **stringbuf,
+                                                 const char *eol,
+                                                 svn_boolean_t *eof,
+                                                 apr_pool_t *pool);
+
 /** Create a generic stream.  @see svn_stream_t. */
 svn_stream_t *
 svn_stream_create(void *baton,
@@ -991,6 +1002,14 @@ svn_stream_set_seek(svn_stream_t *stream,
 void
 svn_stream_set_data_available(svn_stream_t *stream,
                               svn_stream_data_available_fn_t data_available);
+
+/** Set @a stream's readline function to @a readline_fn
+ *
+ * @since New in 1.10.
+ */
+void
+svn_stream_set_readline(svn_stream_t *stream,
+                        svn_stream_readline_fn_t readline_fn);
 
 /** Create a stream that is empty for reading and infinite for writing. */
 svn_stream_t *
@@ -1253,6 +1272,24 @@ svn_stream_checksummed(svn_stream_t *stream,
                        const unsigned char **write_digest,
                        svn_boolean_t read_all,
                        apr_pool_t *pool);
+
+/** Read the contents of the readable stream @a stream and return its
+ * checksum of type @a kind in @a *checksum.
+ *
+ * The stream will be closed before this function returns (regardless
+ * of the result, or any possible error).
+ *
+ * Use @a scratch_pool for temporary allocations and @a result_pool
+ * to allocate @a *checksum.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_stream_contents_checksum(svn_checksum_t **checksum,
+                             svn_stream_t *stream,
+                             svn_checksum_kind_t kind,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 /** Read from a generic stream until @a buffer is filled upto @a *len or
  * until EOF is reached. @see svn_stream_t

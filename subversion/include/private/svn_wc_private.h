@@ -1767,7 +1767,9 @@ svn_wc__conflict_text_mark_resolved(svn_wc_context_t *wc_ctx,
 
 /** 
  * Resolve the conflicted property PROPNAME at LOCAL_ABSPATH as per CHOICE,
- * and then mark the conflict resolved.
+ * and then mark the conflict resolved.  If MERGED_VALUE is not NULL, this is
+ * the new merged property, used when choosing #svn_wc_conflict_choose_merged.
+ *
  * The working copy must already be locked for resolving, e.g. by calling
  * svn_wc__acquire_write_lock_for_resolve() first.
  * @since New in 1.10.
@@ -1777,6 +1779,7 @@ svn_wc__conflict_prop_mark_resolved(svn_wc_context_t *wc_ctx,
                                     const char *local_abspath,
                                     const char *propname,
                                     svn_wc_conflict_choice_t choice,
+                                    const svn_string_t *merged_value,
                                     svn_wc_notify_func2_t notify_func,
                                     void *notify_baton,
                                     apr_pool_t *scratch_pool);
@@ -1889,6 +1892,50 @@ svn_wc__conflict_tree_update_moved_away_node(svn_wc_context_t *wc_ctx,
                                              svn_wc_notify_func2_t notify_func,
                                              void *notify_baton,
                                              apr_pool_t *scratch_pool);
+
+/* Merge local changes from a tree conflict victim of an incoming deletion
+ * to the specified DEST_ABSPATH. Both LOCAL_ABSPATH and DEST_ABSPATH must
+ * be directories.
+ *
+ * Assuming DEST_ABSPATH is the correct destination, this function allows
+ * local changes to "follow" incoming moves.
+ *
+ * @since New in 1.10. */
+svn_error_t *
+svn_wc__conflict_tree_merge_local_changes(svn_wc_context_t *wc_ctx,
+                                          const char *local_abspath,
+                                          const char *dest_abspath,
+                                          svn_cancel_func_t cancel_func,
+                                          void *cancel_baton,
+                                          svn_wc_notify_func2_t notify_func,
+                                          void *notify_baton,
+                                          apr_pool_t *scratch_pool);
+
+/* Find nodes in the working copy which corresponds to the new location
+ * MOVED_TO_REPOS_RELPATH@REV of the tree conflict victim at VICTIM_ABSPATH.
+ * The nodes must be of the same node kind as VICTIM_NODE_KIND.
+ * If no such node can be found, set *POSSIBLE_TARGETS to an empty array.
+ *
+ * The nodes should be useful for conflict resolution, e.g. it should be
+ * possible to merge changes into these nodes to resolve an incoming-move
+ * tree conflict. But the exact criteria for selecting a node are left
+ * to the implementation of this function.
+ * Note that this function may not necessarily return a node which was
+ * actually moved. The only hard guarantee is that the node corresponds to
+ * the repository node MOVED_TO_REPOS_RELPATH@REV specified by the caller.
+ * In many cases, this will be a moved node if the caller's parameters are
+ * correct. Users should be able to perform a sanity check on the results
+ * returned from this function.
+ */
+svn_error_t *
+svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
+                                         svn_wc_context_t *wc_ctx,
+                                         const char *victim_abspath,
+                                         svn_node_kind_t victim_node_kind,
+                                         const char *moved_to_repos_relpath,
+                                         svn_revnum_t rev,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
 
 /**
  * Move @a src_abspath to @a dst_abspath, by scheduling @a dst_abspath

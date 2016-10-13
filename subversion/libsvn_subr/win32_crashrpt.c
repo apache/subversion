@@ -380,7 +380,7 @@ write_value(FILE *log_file, DWORD64 mod_base, DWORD type, void *value_addr)
         }
         break;
       case 12: /* SymTagEnum */
-          fprintf(log_file, "%d", *(DWORD_PTR *)value_addr);
+          fprintf(log_file, "%Id", *(DWORD_PTR *)value_addr);
           break;
       case 13: /* SymTagFunctionType */
           fprintf(log_file, FORMAT_PTR, *(DWORD_PTR *)value_addr);
@@ -599,20 +599,7 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
 static BOOL
 is_debugger_present()
 {
-  HANDLE kernel32_dll = LoadLibrary("kernel32.dll");
-  BOOL result;
-
-  ISDEBUGGERPRESENT IsDebuggerPresent_ =
-          (ISDEBUGGERPRESENT)GetProcAddress(kernel32_dll, "IsDebuggerPresent");
-
-  if (IsDebuggerPresent_ && IsDebuggerPresent_())
-    result = TRUE;
-  else
-    result = FALSE;
-
-  FreeLibrary(kernel32_dll);
-
-  return result;
+  return IsDebuggerPresent();
 }
 
 /* Load the dbghelp.dll file, try to find a version that matches our
@@ -621,7 +608,7 @@ static BOOL
 load_dbghelp_dll()
 {
   dbghelp_dll = LoadLibrary(DBGHELP_DLL);
-  if (dbghelp_dll != INVALID_HANDLE_VALUE)
+  if (dbghelp_dll != NULL)
     {
       DWORD opts;
 

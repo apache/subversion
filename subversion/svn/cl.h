@@ -249,6 +249,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t show_passwords;    /* show cached passwords */
   svn_boolean_t pin_externals;     /* pin externals to last-changed revisions */
   const char *show_item;           /* print only the given item */
+  svn_boolean_t adds_as_modification; /* update 'add vs add' no tree conflict */
 } svn_cl__opt_state_t;
 
 /* Conflict stats for operations such as update and merge. */

@@ -51,7 +51,7 @@ svn_fs_fs__noderev_deserialize(void *buffer,
 
 
 /**
- * Adds position information to the the raw window data in WINDOW.
+ * Adds position information to the raw window data in WINDOW.
  */
 typedef struct
 {

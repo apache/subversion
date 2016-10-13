@@ -227,7 +227,6 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
   const char *local_relpath;
   const char *pristine_abspath;
 
-  SVN_ERR_ASSERT(contents != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
   /* Some 1.6-to-1.7 wc upgrades created rows without checksums and
@@ -317,9 +316,10 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
           {
             return svn_error_createf(
               SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-              _("New pristine text '%s' has different size: %ld versus %ld"),
+              _("New pristine text '%s' has different size: %s versus %s"),
               svn_checksum_to_cstring_display(sha1_checksum, scratch_pool),
-              (long int)finfo1.size, (long int)finfo2.size);
+              apr_off_t_toa(scratch_pool, finfo1.size),
+              apr_off_t_toa(scratch_pool, finfo2.size));
           }
       }
 #endif

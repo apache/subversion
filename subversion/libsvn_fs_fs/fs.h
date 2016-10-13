@@ -530,7 +530,7 @@ typedef struct representation_t
   /* Revision where this representation is located. */
   svn_revnum_t revision;
 
-  /* Item index with the the revision. */
+  /* Item index with the revision. */
   apr_uint64_t item_index;
 
   /* The size of the representation in bytes as seen in the revision

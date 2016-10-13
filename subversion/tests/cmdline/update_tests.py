@@ -2720,6 +2720,7 @@ def update_with_obstructing_additions(sbox):
                                         expected_disk,
                                         expected_status,
                                         [], True,
+                                        '--adds-as-modification', wc_backup,
                                         extra_files=extra_files)
 
   # Some obstructions are still not permitted:
@@ -2830,6 +2831,7 @@ def update_with_obstructing_additions(sbox):
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
                                         [], False,
+                                        '--adds-as-modification',
                                         A_path)
 
   # Resolve the tree conflict.
@@ -2849,7 +2851,7 @@ def update_with_obstructing_additions(sbox):
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status,
                                         [], False,
-                                        wc_dir, '-N')
+                                        wc_dir, '-N', '--adds-as-modification')
 
   # Resolve the tree conflict.
   svntest.main.run_svn(None, 'resolved', omicron_path)
@@ -6633,7 +6635,9 @@ def update_conflict_details(sbox):
                                prev_status='  ', prev_treeconflict='C'),
   })
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
-                                        None, expected_status)
+                                        None, expected_status,
+                                        [], False,
+                                        '--adds-as-modification', wc_dir)
 
   # Update can't pass source as none at a specific URL@revision,
   # because it doesn't know... the working copy could be mixed

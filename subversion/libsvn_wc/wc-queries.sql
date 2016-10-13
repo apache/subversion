@@ -1291,6 +1291,10 @@ PRAGMA locking_mode = exclusive;
    exclusive-locking is mostly used on remote file systems. */
 PRAGMA journal_mode = DELETE
 
+-- STMT_FIND_REPOS_PATH_IN_WC
+SELECT local_relpath FROM nodes_current
+  WHERE wc_id = ?1 AND repos_path = ?2 AND revision = ?3
+
 /* ------------------------------------------------------------------------- */
 
 /* these are used in entries.c  */

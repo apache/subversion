@@ -208,7 +208,10 @@ localedir='${datadir}/locale'
 AC_SUBST(localedir)
 
 dnl For SVN_LOCALE_DIR, we have to expand it to something.  See SVN_BINDIR.
-if test "${datadir}" = '${prefix}/share' && test "${prefix}" = "NONE"; then
+if test "${prefix}" = "NONE" \
+  && ( test "${datadir}" = '${prefix}/share' \
+       || ( test "${datadir}" = '${datarootdir}' \
+            && test "${datarootdir}" = '${prefix}/share' ) ); then
   exp_localedir='${ac_default_prefix}/share/locale'
 else
   exp_localedir=$localedir
