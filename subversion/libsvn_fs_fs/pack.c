@@ -341,20 +341,38 @@ static svn_error_t *
 reset_pack_context(pack_context_t *context,
                    apr_pool_t *pool)
 {
+  const char *temp_dir;
+
   apr_array_clear(context->changes);
-  SVN_ERR(svn_io_file_trunc(context->changes_file, 0, pool));
+  SVN_ERR(svn_io_file_close(context->changes_file, pool));
   apr_array_clear(context->file_props);
-  SVN_ERR(svn_io_file_trunc(context->file_props_file, 0, pool));
+  SVN_ERR(svn_io_file_close(context->file_props_file, pool));
   apr_array_clear(context->dir_props);
-  SVN_ERR(svn_io_file_trunc(context->dir_props_file, 0, pool));
+  SVN_ERR(svn_io_file_close(context->dir_props_file, pool));
 
   apr_array_clear(context->rev_offsets);
   apr_array_clear(context->path_order);
   apr_array_clear(context->references);
   apr_array_clear(context->reps);
-  SVN_ERR(svn_io_file_trunc(context->reps_file, 0, pool));
+  SVN_ERR(svn_io_file_close(context->reps_file, pool));
 
   svn_pool_clear(context->info_pool);
+
+  /* The new temporary files must live at least as long as any other info
+   * object in CONTEXT. */
+  SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
+  SVN_ERR(svn_io_open_unique_file3(&context->changes_file, NULL, temp_dir,
+                                   svn_io_file_del_on_close,
+                                   context->info_pool, pool));
+  SVN_ERR(svn_io_open_unique_file3(&context->file_props_file, NULL, temp_dir,
+                                   svn_io_file_del_on_close,
+                                   context->info_pool, pool));
+  SVN_ERR(svn_io_open_unique_file3(&context->dir_props_file, NULL, temp_dir,
+                                   svn_io_file_del_on_close,
+                                   context->info_pool, pool));
+  SVN_ERR(svn_io_open_unique_file3(&context->reps_file, NULL, temp_dir,
+                                   svn_io_file_del_on_close,
+                                   context->info_pool, pool));
   context->paths = svn_prefix_tree__create(context->info_pool);
 
   return SVN_NO_ERROR;
