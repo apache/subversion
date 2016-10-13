@@ -61,7 +61,7 @@ struct svn_stream_t {
   svn_stream_mark_fn_t mark_fn;
   svn_stream_seek_fn_t seek_fn;
   svn_stream_data_available_fn_t data_available_fn;
-  svn_stream__is_buffered_fn_t is_buffered_fn;
+  svn_stream_readline_fn_t readline_fn;
   apr_file_t *file; /* Maybe NULL */
 };
 
@@ -139,10 +139,10 @@ svn_stream_set_data_available(svn_stream_t *stream,
 }
 
 void
-svn_stream__set_is_buffered(svn_stream_t *stream,
-                            svn_stream__is_buffered_fn_t is_buffered_fn)
+svn_stream_set_readline(svn_stream_t *stream,
+                        svn_stream_readline_fn_t readline_fn)
 {
-  stream->is_buffered_fn = is_buffered_fn;
+  stream->readline_fn = readline_fn;
 }
 
 /* Standard implementation for svn_stream_read_full() based on
@@ -265,15 +265,6 @@ svn_stream_data_available(svn_stream_t *stream,
                                                    data_available));
 }
 
-svn_boolean_t
-svn_stream__is_buffered(svn_stream_t *stream)
-{
-  if (stream->is_buffered_fn == NULL)
-    return FALSE;
-
-  return stream->is_buffered_fn(stream->baton);
-}
-
 svn_error_t *
 svn_stream_close(svn_stream_t *stream)
 {
@@ -328,11 +319,9 @@ svn_stream_printf_from_utf8(svn_stream_t *stream,
   return svn_error_trace(svn_stream_puts(stream, translated));
 }
 
-/* Guts of svn_stream_readline().
+/* Default implementation for svn_stream_readline().
  * Returns the line read from STREAM in *STRINGBUF, and indicates
- * end-of-file in *EOF.  If DETECT_EOL is TRUE, the end-of-line indicator
- * is detected automatically and returned in *EOL.
- * If DETECT_EOL is FALSE, *EOL must point to the desired end-of-line
+ * end-of-file in *EOF.  EOL must point to the desired end-of-line
  * indicator.  STRINGBUF is allocated in POOL. */
 static svn_error_t *
 stream_readline_bytewise(svn_stringbuf_t **stringbuf,
@@ -381,150 +370,6 @@ stream_readline_bytewise(svn_stringbuf_t **stringbuf,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-stream_readline_chunky(svn_stringbuf_t **stringbuf,
-                       svn_boolean_t *eof,
-                       const char *eol,
-                       svn_stream_t *stream,
-                       apr_pool_t *pool)
-{
-  /* Read larger chunks of data at once into this buffer and scan
-   * that for EOL. A good chunk size should be about 80 chars since
-   * most text lines will be shorter. However, don't use a much
-   * larger value because filling the buffer from the stream takes
-   * time as well.
-   */
-  char buffer[SVN__LINE_CHUNK_SIZE+1];
-
-  /* variables */
-  svn_stream_mark_t *mark;
-  apr_size_t numbytes;
-  const char *eol_pos;
-  apr_size_t total_parsed = 0;
-
-  /* invariant for this call */
-  const size_t eol_len = strlen(eol);
-
-  /* Remember the line start so this plus the line length will be
-   * the position to move to at the end of this function.
-   */
-  SVN_ERR(svn_stream_mark(stream, &mark, pool));
-
-  /* Read the first chunk. */
-  numbytes = SVN__LINE_CHUNK_SIZE;
-  SVN_ERR(svn_stream_read_full(stream, buffer, &numbytes));
-  buffer[numbytes] = '\0';
-
-  /* Look for the EOL in this first chunk. If we find it, we are done here.
-   */
-  eol_pos = strstr(buffer, eol);
-  if (eol_pos != NULL)
-    {
-      *stringbuf = svn_stringbuf_ncreate(buffer, eol_pos - buffer, pool);
-      total_parsed = eol_pos - buffer + eol_len;
-    }
-  else if (numbytes < SVN__LINE_CHUNK_SIZE)
-    {
-      /* We hit EOF but not EOL.
-       */
-      *stringbuf = svn_stringbuf_ncreate(buffer, numbytes, pool);
-      *eof = TRUE;
-      return SVN_NO_ERROR;
-     }
-  else
-    {
-      /* A larger buffer for the string is needed. */
-      svn_stringbuf_t *str;
-      str = svn_stringbuf_create_ensure(2*SVN__LINE_CHUNK_SIZE, pool);
-      svn_stringbuf_appendbytes(str, buffer, numbytes);
-      *stringbuf = str;
-
-      /* Loop reading chunks until an EOL was found. If we hit EOF, fall
-       * back to the standard implementation. */
-      do
-      {
-        /* Append the next chunk to the string read so far.
-         */
-        svn_stringbuf_ensure(str, str->len + SVN__LINE_CHUNK_SIZE);
-        numbytes = SVN__LINE_CHUNK_SIZE;
-        SVN_ERR(svn_stream_read_full(stream, str->data + str->len, &numbytes));
-        str->len += numbytes;
-        str->data[str->len] = '\0';
-
-        /* Look for the EOL in the new data plus the last part of the
-         * previous chunk because the EOL may span over the boundary
-         * between both chunks.
-         */
-        eol_pos = strstr(str->data + str->len - numbytes - (eol_len-1), eol);
-
-        if ((numbytes < SVN__LINE_CHUNK_SIZE) && (eol_pos == NULL))
-        {
-          /* We hit EOF instead of EOL. */
-          *eof = TRUE;
-          return SVN_NO_ERROR;
-        }
-      }
-      while (eol_pos == NULL);
-
-      /* Number of bytes we actually consumed (i.e. line + EOF).
-       * We need to "return" the rest to the stream by moving its
-       * read pointer.
-       */
-      total_parsed = eol_pos - str->data + eol_len;
-
-      /* Terminate the string at the EOL postion and return it. */
-      str->len = eol_pos - str->data;
-      str->data[str->len] = 0;
-    }
-
-  /* Move the stream read pointer to the first position behind the EOL.
-   */
-  SVN_ERR(svn_stream_seek(stream, mark));
-  return svn_error_trace(svn_stream_skip(stream, total_parsed));
-}
-
-/* Guts of svn_stream_readline().
- * Returns the line read from STREAM in *STRINGBUF, and indicates
- * end-of-file in *EOF.  EOL must point to the desired end-of-line
- * indicator.  STRINGBUF is allocated in POOL. */
-static svn_error_t *
-stream_readline(svn_stringbuf_t **stringbuf,
-                svn_boolean_t *eof,
-                const char *eol,
-                svn_stream_t *stream,
-                apr_pool_t *pool)
-{
-  *eof = FALSE;
-
-  /* Often, we operate on APR file or string-based streams and know what
-   * EOL we are looking for. Optimize that common case.
-   */
-  if (svn_stream_supports_mark(stream) &&
-      svn_stream__is_buffered(stream))
-    {
-      /* We can efficiently read chunks speculatively and reposition the
-       * stream pointer to the end of the line once we found that.
-       */
-      SVN_ERR(stream_readline_chunky(stringbuf,
-                                     eof,
-                                     eol,
-                                     stream,
-                                     pool));
-    }
-  else
-    {
-      /* Use the standard byte-byte implementation.
-       */
-      SVN_ERR(stream_readline_bytewise(stringbuf,
-                                       eof,
-                                       eol,
-                                       stream,
-                                       pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_stream_readline(svn_stream_t *stream,
                     svn_stringbuf_t **stringbuf,
@@ -532,8 +377,18 @@ svn_stream_readline(svn_stream_t *stream,
                     svn_boolean_t *eof,
                     apr_pool_t *pool)
 {
-  return svn_error_trace(stream_readline(stringbuf, eof, eol, stream,
-                                         pool));
+  if (stream->readline_fn)
+    {
+      /* Use the specific implementation when it's available. */
+      SVN_ERR(stream->readline_fn(stream->baton, stringbuf, eol, eof, pool));
+    }
+  else
+    {
+      /* Use the default implementation. */
+      SVN_ERR(stream_readline_bytewise(stringbuf, eof, eol, stream, pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_stream_copy3(svn_stream_t *from, svn_stream_t *to,
@@ -664,11 +519,6 @@ seek_handler_empty(void *baton, const svn_stream_mark_t *mark)
   return SVN_NO_ERROR;
 }
 
-static svn_boolean_t
-is_buffered_handler_empty(void *baton)
-{
-  return FALSE;
-}
 
 
 svn_stream_t *
@@ -681,7 +531,6 @@ svn_stream_empty(apr_pool_t *pool)
   svn_stream_set_write(stream, write_handler_empty);
   svn_stream_set_mark(stream, mark_handler_empty);
   svn_stream_set_seek(stream, seek_handler_empty);
-  svn_stream__set_is_buffered(stream, is_buffered_handler_empty);
   return stream;
 }
 
@@ -788,10 +637,15 @@ data_available_disown(void *baton, svn_boolean_t *data_available)
   return svn_error_trace(svn_stream_data_available(baton, data_available));
 }
 
-static svn_boolean_t
-is_buffered_handler_disown(void *baton)
+static svn_error_t *
+readline_handler_disown(void *baton,
+                        svn_stringbuf_t **stringbuf,
+                        const char *eol,
+                        svn_boolean_t *eof,
+                        apr_pool_t *pool)
 {
-  return svn_stream__is_buffered(baton);
+  return svn_error_trace(svn_stream_readline(baton, stringbuf, eol,
+                                             eof, pool));
 }
 
 svn_stream_t *
@@ -805,7 +659,7 @@ svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
   svn_stream_set_mark(s, mark_handler_disown);
   svn_stream_set_seek(s, seek_handler_disown);
   svn_stream_set_data_available(s, data_available_disown);
-  svn_stream__set_is_buffered(s, is_buffered_handler_disown);
+  svn_stream_set_readline(s, readline_handler_disown);
 
   return s;
 }
@@ -997,11 +851,146 @@ data_available_handler_apr(void *baton, svn_boolean_t *data_available)
 #endif
 }
 
-static svn_boolean_t
-is_buffered_handler_apr(void *baton)
+static svn_error_t *
+readline_apr_lf(apr_file_t *file,
+                svn_stringbuf_t **stringbuf,
+                svn_boolean_t *eof,
+                apr_pool_t *pool)
+{
+  svn_stringbuf_t *buf;
+
+  buf = svn_stringbuf_create_ensure(SVN__LINE_CHUNK_SIZE, pool);
+  while (1)
+  {
+    apr_status_t status;
+
+    status = apr_file_gets(buf->data + buf->len,
+                           (int) (buf->blocksize - buf->len),
+                           file);
+    buf->len += strlen(buf->data + buf->len);
+
+    if (APR_STATUS_IS_EOF(status))
+      {
+        /* apr_file_gets() keeps the newline; strip it if necessary. */
+        if (buf->len > 0 && buf->data[buf->len - 1] == '\n')
+          svn_stringbuf_chop(buf, 1);
+
+        *eof = TRUE;
+        *stringbuf = buf;
+        return SVN_NO_ERROR;
+      }
+    else if (status != APR_SUCCESS)
+      {
+        const char *fname;
+        svn_error_t *err = svn_io_file_name_get(&fname, file, pool);
+        if (err)
+          fname = NULL;
+        svn_error_clear(err);
+
+        if (fname)
+          return svn_error_wrap_apr(status,
+                                    _("Can't read a line from file '%s'"),
+                                    svn_dirent_local_style(fname, pool));
+        else
+          return svn_error_wrap_apr(status,
+                                    _("Can't read a line from stream"));
+      }
+
+    /* Do we have the EOL?  If yes, strip it and return. */
+    if (buf->len > 0 && buf->data[buf->len - 1] == '\n')
+      {
+        svn_stringbuf_chop(buf, 1);
+        *eof = FALSE;
+        *stringbuf = buf;
+        return SVN_NO_ERROR;
+      }
+
+    /* Otherwise, prepare to read the next chunk. */
+    svn_stringbuf_ensure(buf, buf->blocksize + SVN__LINE_CHUNK_SIZE);
+  }
+}
+
+static svn_error_t *
+readline_apr_generic(apr_file_t *file,
+                     svn_stringbuf_t **stringbuf,
+                     const char *eol,
+                     svn_boolean_t *eof,
+                     apr_pool_t *pool)
+{
+  apr_size_t eol_len = strlen(eol);
+  apr_off_t offset;
+  svn_stringbuf_t *buf;
+
+  SVN_ERR(svn_io_file_get_offset(&offset, file, pool));
+
+  buf = svn_stringbuf_create_ensure(SVN__LINE_CHUNK_SIZE, pool);
+  while (1)
+    {
+      apr_size_t bytes_read;
+      svn_boolean_t hit_eof;
+      const char *search_start;
+      const char *eol_pos;
+
+      /* We look for the EOL in the new data plus the last part of the
+         previous chunk because the EOL may span over the boundary
+         between both chunks. */
+      if (buf->len < eol_len)
+        search_start = buf->data;
+      else
+        search_start = buf->data + buf->len - eol_len;
+
+      SVN_ERR(svn_io_file_read_full2(file, buf->data + buf->len,
+                                     buf->blocksize - buf->len - 1,
+                                     &bytes_read, &hit_eof, pool));
+      buf->len += bytes_read;
+      buf->data[buf->len] = '\0';
+
+      /* Do we have the EOL now? */
+      eol_pos = strstr(search_start, eol);
+      if (eol_pos)
+        {
+          svn_stringbuf_chop(buf, buf->data + buf->len - eol_pos);
+          /* Seek to the first position behind the EOL. */
+          offset += (buf->len + eol_len);
+          SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
+
+          *eof = FALSE;
+          *stringbuf = buf;
+          return SVN_NO_ERROR;
+        }
+      else if (eol_pos == NULL && hit_eof)
+        {
+          *eof = TRUE;
+          *stringbuf = buf;
+          return SVN_NO_ERROR;
+        }
+
+      /* Prepare to read the next chunk. */
+      svn_stringbuf_ensure(buf, buf->blocksize + SVN__LINE_CHUNK_SIZE);
+    }
+}
+
+static svn_error_t *
+readline_handler_apr(void *baton,
+                     svn_stringbuf_t **stringbuf,
+                     const char *eol,
+                     svn_boolean_t *eof,
+                     apr_pool_t *pool)
 {
   struct baton_apr *btn = baton;
-  return (apr_file_flags_get(btn->file) & APR_BUFFERED) != 0;
+
+  if (eol[0] == '\n' && eol[1] == '\0')
+    {
+      /* Optimize the common case when we're looking for an LF ("\n")
+         end-of-line sequence by using apr_file_gets(). */
+      return svn_error_trace(readline_apr_lf(btn->file, stringbuf,
+                                             eof, pool));
+    }
+  else
+    {
+      return svn_error_trace(readline_apr_generic(btn->file, stringbuf,
+                                                  eol, eof, pool));
+    }
 }
 
 svn_error_t *
@@ -1083,10 +1072,10 @@ make_stream_from_apr_file(apr_file_t *file,
       svn_stream_set_skip(stream, skip_handler_apr);
       svn_stream_set_mark(stream, mark_handler_apr);
       svn_stream_set_seek(stream, seek_handler_apr);
+      svn_stream_set_readline(stream, readline_handler_apr);
     }
 
   svn_stream_set_data_available(stream, data_available_handler_apr);
-  svn_stream__set_is_buffered(stream, is_buffered_handler_apr);
   stream->file = file;
 
   if (! disown)
@@ -1478,6 +1467,51 @@ svn_stream_checksummed2(svn_stream_t *stream,
   return s;
 }
 
+/* Helper for svn_stream_contents_checksum() to compute checksum of
+ * KIND of STREAM. This function doesn't close source stream. */
+static svn_error_t *
+compute_stream_checksum(svn_checksum_t **checksum,
+                        svn_stream_t *stream,
+                        svn_checksum_kind_t kind,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  svn_checksum_ctx_t *ctx = svn_checksum_ctx_create(kind, scratch_pool);
+  char *buf = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
+
+  while (1)
+    {
+      apr_size_t len = SVN__STREAM_CHUNK_SIZE;
+
+      SVN_ERR(svn_stream_read_full(stream, buf, &len));
+
+      if (len > 0)
+        SVN_ERR(svn_checksum_update(ctx, buf, len));
+
+      if (len != SVN__STREAM_CHUNK_SIZE)
+          break;
+    }
+  SVN_ERR(svn_checksum_final(checksum, ctx, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_stream_contents_checksum(svn_checksum_t **checksum,
+                             svn_stream_t *stream,
+                             svn_checksum_kind_t kind,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+  err = compute_stream_checksum(checksum, stream, kind,
+                                result_pool, scratch_pool);
+
+  /* Close source stream in all cases. */
+  return svn_error_compose_create(err, svn_stream_close(stream));
+}
+
 /* Miscellaneous stream functions. */
 
 /*
@@ -1606,10 +1640,35 @@ data_available_handler_stringbuf(void *baton, svn_boolean_t *data_available)
   return SVN_NO_ERROR;
 }
 
-static svn_boolean_t
-is_buffered_handler_stringbuf(void *baton)
+static svn_error_t *
+readline_handler_stringbuf(void *baton,
+                           svn_stringbuf_t **stringbuf,
+                           const char *eol,
+                           svn_boolean_t *eof,
+                           apr_pool_t *pool)
 {
-  return TRUE;
+  struct stringbuf_stream_baton *btn = baton;
+  const char *pos = btn->str->data + btn->amt_read;
+  const char *eol_pos;
+
+  eol_pos = strstr(pos, eol);
+  if (eol_pos)
+    {
+      apr_size_t eol_len = strlen(eol);
+
+      *eof = FALSE;
+      *stringbuf = svn_stringbuf_ncreate(pos, eol_pos - pos, pool);
+      btn->amt_read += (eol_pos - pos + eol_len);
+    }
+  else
+    {
+      *eof = TRUE;
+      *stringbuf = svn_stringbuf_ncreate(pos, btn->str->len - btn->amt_read,
+                                         pool);
+      btn->amt_read = btn->str->len;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_stream_t *
@@ -1632,7 +1691,7 @@ svn_stream_from_stringbuf(svn_stringbuf_t *str,
   svn_stream_set_mark(stream, mark_handler_stringbuf);
   svn_stream_set_seek(stream, seek_handler_stringbuf);
   svn_stream_set_data_available(stream, data_available_handler_stringbuf);
-  svn_stream__set_is_buffered(stream, is_buffered_handler_stringbuf);
+  svn_stream_set_readline(stream, readline_handler_stringbuf);
   return stream;
 }
 
@@ -1711,10 +1770,35 @@ data_available_handler_string(void *baton, svn_boolean_t *data_available)
   return SVN_NO_ERROR;
 }
 
-static svn_boolean_t
-is_buffered_handler_string(void *baton)
+static svn_error_t *
+readline_handler_string(void *baton,
+                        svn_stringbuf_t **stringbuf,
+                        const char *eol,
+                        svn_boolean_t *eof,
+                        apr_pool_t *pool)
 {
-  return TRUE;
+  struct string_stream_baton *btn = baton;
+  const char *pos = btn->str->data + btn->amt_read;
+  const char *eol_pos;
+
+  eol_pos = strstr(pos, eol);
+  if (eol_pos)
+    {
+      apr_size_t eol_len = strlen(eol);
+
+      *eof = FALSE;
+      *stringbuf = svn_stringbuf_ncreate(pos, eol_pos - pos, pool);
+      btn->amt_read += (eol_pos - pos + eol_len);
+    }
+  else
+    {
+      *eof = TRUE;
+      *stringbuf = svn_stringbuf_ncreate(pos, btn->str->len - btn->amt_read,
+                                         pool);
+      btn->amt_read = btn->str->len;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_stream_t *
@@ -1736,7 +1820,7 @@ svn_stream_from_string(const svn_string_t *str,
   svn_stream_set_seek(stream, seek_handler_string);
   svn_stream_set_skip(stream, skip_handler_string);
   svn_stream_set_data_available(stream, data_available_handler_string);
-  svn_stream__set_is_buffered(stream, is_buffered_handler_string);
+  svn_stream_set_readline(stream, readline_handler_string);
   return stream;
 }
 
@@ -1985,17 +2069,19 @@ data_available_handler_lazyopen(void *baton,
                                                    data_available));
 }
 
-/* Implements svn_stream__is_buffered_fn_t */
-static svn_boolean_t
-is_buffered_lazyopen(void *baton)
+/* Implements svn_stream_readline_fn_t */
+static svn_error_t *
+readline_handler_lazyopen(void *baton,
+                          svn_stringbuf_t **stringbuf,
+                          const char *eol,
+                          svn_boolean_t *eof,
+                          apr_pool_t *pool)
 {
   lazyopen_baton_t *b = baton;
 
-  /* No lazy open as we cannot handle an open error. */
-  if (!b->real_stream)
-    return FALSE;
-
-  return svn_stream__is_buffered(b->real_stream);
+  SVN_ERR(lazyopen_if_unopened(b));
+  return svn_error_trace(svn_stream_readline(b->real_stream, stringbuf,
+                                             eol, eof, pool));
 }
 
 svn_stream_t *
@@ -2022,7 +2108,7 @@ svn_stream_lazyopen_create(svn_stream_lazyopen_func_t open_func,
   svn_stream_set_mark(stream, mark_handler_lazyopen);
   svn_stream_set_seek(stream, seek_handler_lazyopen);
   svn_stream_set_data_available(stream, data_available_handler_lazyopen);
-  svn_stream__set_is_buffered(stream, is_buffered_lazyopen);
+  svn_stream_set_readline(stream, readline_handler_lazyopen);
 
   return stream;
 }

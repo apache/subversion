@@ -4406,22 +4406,25 @@ typedef enum svn_client_conflict_option_id_t {
   /* Options for local delete/replace vs incoming edit on update. */
   svn_client_conflict_option_update_any_moved_away_children,
 
-  /* Options for incoming add vs local 'obstruction' on merge. */
-  svn_client_conflict_option_merge_incoming_add_ignore,
+  /* Options for incoming add vs local add or obstruction. */
+  svn_client_conflict_option_incoming_add_ignore,
 
-  /* Options for incoming file add vs local file 'obstruction' on merge. */
-  svn_client_conflict_option_merge_incoming_added_file_text_merge,
-  svn_client_conflict_option_merge_incoming_added_file_replace,
-  svn_client_conflict_option_merge_incoming_added_file_replace_and_merge,
+  /* Options for incoming file add vs local file add or obstruction. */
+  svn_client_conflict_option_incoming_added_file_text_merge,
+  svn_client_conflict_option_incoming_added_file_replace_and_merge,
 
-  /* Options for incoming dir add vs local dir 'obstruction' on merge. */
-  svn_client_conflict_option_merge_incoming_added_dir_merge,
-  svn_client_conflict_option_merge_incoming_added_dir_replace,
-  svn_client_conflict_option_merge_incoming_added_dir_replace_and_merge,
+  /* Options for incoming dir add vs local dir add or obstruction. */
+  svn_client_conflict_option_incoming_added_dir_merge,
+  svn_client_conflict_option_incoming_added_dir_replace,
+  svn_client_conflict_option_incoming_added_dir_replace_and_merge,
 
   /* Options for incoming delete vs any */
   svn_client_conflict_option_incoming_delete_ignore,
   svn_client_conflict_option_incoming_delete_accept,
+
+  /* Options for incoming move vs local edit */
+  svn_client_conflict_option_incoming_move_file_text_merge,
+  svn_client_conflict_option_incoming_move_dir_merge,
 
 } svn_client_conflict_option_id_t;
 
@@ -4441,6 +4444,96 @@ void
 svn_client_conflict_option_set_merged_propval(
   svn_client_conflict_option_t *option,
   const svn_string_t *merged_propval);
+
+/**
+ * Get a list of possible repository paths which can be applied to the
+ * svn_client_conflict_option_incoming_move_file_text_merge or
+ * svn_client_conflict_option_incoming_move_dir_merge resolution
+ * @a option. (If a different option is passed in, this function will
+ * raise an assertion failure.)
+ *
+ * In some situations, there can be multiple possible destinations for an
+ * incoming move. One such situation is where a file was copied and moved
+ * in the same revision: svn cp a b; svn mv a c; svn commit
+ * When this move is merged elsewhere, both b and c will appear as valid move
+ * destinations to the conflict resolver. To resolve such ambiguity, the client
+ * may call this function to obtain a list of possible destinations the user
+ * may choose from.
+ *
+ * The array is allocated in @a result_pool and will have "const char *"
+ * elements pointing to strings also allocated in @a result_pool.
+ * All paths are relpaths, and relative to the repository root.
+ *
+ * @see svn_client_conflict_option_set_moved_to_repos_relpath()
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
+  apr_array_header_t **possible_moved_to_repos_relpaths,
+  svn_client_conflict_option_t *option,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Set the preferred moved target repository path for the
+ * svn_client_conflict_option_incoming_move_file_text_merge or
+ * svn_client_conflict_option_incoming_move_dir_merge resolution option.
+ * 
+ * @a preferred_move_target_idx must be a valid index into the list returned
+ * by svn_client_conflict_option_get_moved_to_repos_relpath_candidates().
+ * 
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_option_set_moved_to_repos_relpath(
+  svn_client_conflict_option_t *option,
+  int preferred_move_target_idx,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Get a list of possible moved-to abspaths in the working copy which can be
+ * applied to the svn_client_conflict_option_incoming_move_file_text_merge
+ * or svn_client_conflict_option_incoming_move_dir_merge resolution @a option.
+ * (If a different option is passed in, this function will raise an assertion
+ * failure.)
+ *
+ * All paths in the returned list correspond to the repository path which
+ * is assumed to be the destination of the incoming move operation.
+ * To support cases where this destination path is ambiguous, the client may
+ * call svn_client_conflict_option_get_moved_to_repos_relpath_candidates()
+ * before calling this function to let the user select a repository path first.
+ * 
+ * If no possible moved-to paths can be found, return an empty array.
+ * This doesn't mean that no move happened in the repository. It is possible
+ * that the move destination is outside the scope of the current working copy,
+ * for example, in which case the conflict must be resolved in some other way.
+ *
+ * @see svn_client_conflict_option_set_moved_to_abspath()
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_option_get_moved_to_abspath_candidates(
+  apr_array_header_t **possible_moved_to_abspaths,
+  svn_client_conflict_option_t *option,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Set the preferred moved target abspath for the
+ * svn_client_conflict_option_incoming_move_file_text_merge or
+ * svn_client_conflict_option_incoming_move_dir_merge resolution option.
+ * 
+ * @a preferred_move_target_idx must be a valid index into the list
+ * returned by svn_client_conflict_option_get_moved_to_abspath_candidates().
+ * 
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_conflict_option_set_moved_to_abspath(
+  svn_client_conflict_option_t *option,
+  int preferred_move_target_idx,
+  svn_client_ctx_t *ctx,
+  apr_pool_t *scratch_pool);
 
 /**
  * Given an @a option_id, try to find the corresponding option in @a options,
@@ -4546,6 +4639,7 @@ svn_client_conflict_tree_get_description(
   const char **incoming_change_description,
   const char **local_change_description,
   svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool);
 
@@ -4558,6 +4652,7 @@ svn_client_conflict_tree_get_description(
 svn_error_t *
 svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
                                                 svn_client_conflict_t *conflict,
+                                                svn_client_ctx_t *ctx,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool);
 
@@ -4570,6 +4665,7 @@ svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
 svn_error_t *
 svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
                                                 svn_client_conflict_t *conflict,
+                                                svn_client_ctx_t *ctx,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool);
 
@@ -4586,6 +4682,7 @@ svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
 svn_error_t *
 svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
                                                 svn_client_conflict_t *conflict,
+                                                svn_client_ctx_t *ctx,
                                                 apr_pool_t *result_pool,
                                                 apr_pool_t *scratch_pool);
 
@@ -4598,12 +4695,14 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
  * A call to svn_client_conflict_tree_get_resolution_options() may provide
  * more useful resolution options if this function has been called.
  *
- * This function may contact the repository.
+ * This function may contact the repository. Use the authentication baton
+ * cached in @a ctx for authentication if contacting the repository.
  *
  * @since New in 1.10.
  */
 svn_error_t *
 svn_client_conflict_tree_get_details(svn_client_conflict_t *conflict,
+                                     svn_client_ctx_t *ctx,
                                      apr_pool_t *scratch_pool);
 
 /**
@@ -4766,6 +4865,7 @@ svn_client_conflict_tree_get_victim_node_kind(svn_client_conflict_t *conflict);
 svn_error_t *
 svn_client_conflict_tree_resolve(svn_client_conflict_t *conflict,
                                  svn_client_conflict_option_t *option,
+                                 svn_client_ctx_t *ctx,
                                  apr_pool_t *scratch_pool);
 
 /**
@@ -4782,6 +4882,7 @@ svn_error_t *
 svn_client_conflict_tree_resolve_by_id(
   svn_client_conflict_t *conflict,
   svn_client_conflict_option_id_t option_id,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool);
 
 /**
@@ -4837,6 +4938,7 @@ svn_error_t *
 svn_client_conflict_prop_resolve(svn_client_conflict_t *conflict,
                                  const char *propname,
                                  svn_client_conflict_option_t *option,
+                                 svn_client_ctx_t *ctx,
                                  apr_pool_t *scratch_pool);
 /**
  * If the provided @a option_id is the ID of an option which resolves
@@ -4851,6 +4953,7 @@ svn_client_conflict_prop_resolve_by_id(
   svn_client_conflict_t *conflict,
   const char *propname,
   svn_client_conflict_option_id_t option_id,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool);
 
 /**
@@ -4901,6 +5004,7 @@ svn_client_conflict_text_get_contents(const char **base_abspath,
 svn_error_t *
 svn_client_conflict_text_resolve(svn_client_conflict_t *conflict,
                                  svn_client_conflict_option_t *option,
+                                 svn_client_ctx_t *ctx,
                                  apr_pool_t *scratch_pool);
 
 /**
@@ -4914,6 +5018,7 @@ svn_error_t *
 svn_client_conflict_text_resolve_by_id(
   svn_client_conflict_t *conflict,
   svn_client_conflict_option_id_t option_id,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool);
 
 /**

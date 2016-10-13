@@ -472,6 +472,21 @@ notify_body(struct notify_baton *nb,
                                  path_local));
       break;
 
+    case svn_wc_notify_begin_search_tree_conflict_details:
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 _("Searching tree conflict details for '%s' "
+                                   "in repository:\n"),
+                                 path_local));
+      break;
+
+    case svn_wc_notify_tree_conflict_details_progress:
+      SVN_ERR(svn_cmdline_printf(pool, _("\rChecking r%ld..."), n->revision));
+      break;
+
+    case svn_wc_notify_end_search_tree_conflict_details:
+      SVN_ERR(svn_cmdline_printf(pool, _(" done\n")));
+      break;
+
     case svn_wc_notify_add:
       /* We *should* only get the MIME_TYPE if PATH is a file.  If we
          do get it, and the mime-type is not textual, note that this

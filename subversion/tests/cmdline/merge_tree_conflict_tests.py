@@ -2299,6 +2299,72 @@ def added_revision_recording_in_tree_conflict(sbox):
   ]
   svntest.actions.run_and_verify_info(expected_info, sbox.ospath('branch/foo'))
 
+def spurios_tree_conflict_with_added_file(sbox):
+  "spurious tree conflict with unmodified added file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a branch of A, A_copy
+  sbox.simple_copy('A', 'A_branch')
+  sbox.simple_commit()
+
+  # Create a new file on the trunk
+  sbox.simple_append('A/new', 'new\n')
+  sbox.simple_add('A/new')
+  sbox.simple_commit()
+
+  # Sync the branch with the trunk
+  sbox.simple_update()
+  expected_output = wc.State(wc_dir, {
+    "A_branch/new" : Item(status="A "),
+    })
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_merge(sbox.ospath('A_branch'),
+                                       None, None, '^/A', None,
+                                       expected_output,
+                                       None, None,
+                                       None, None, expected_skip)
+  sbox.simple_commit()
+
+  # Reintegrate the branch (a no-op change, but users are free to do this)
+  sbox.simple_update()
+  expected_output = wc.State(wc_dir, { })
+  svntest.actions.run_and_verify_merge(sbox.ospath('A'),
+                                       None, None, '^/A_branch', None,
+                                       expected_output,
+                                       None, None,
+                                       None, None, expected_skip,
+                                       [], False, True, '--reintegrate',
+                                       sbox.ospath('A'))
+
+  # Delete the new file on the branch
+  sbox.simple_rm('A_branch/new')
+  sbox.simple_commit()
+
+  # Make an unrelated change on the trunk
+  sbox.simple_append('A/mu', 'more text\n')
+  sbox.simple_commit()
+
+  # Merge the trunk to the branch. Forcing a reintegrate merge here since
+  # this is what the automatic merge does, as of the time this test was written.
+  # This merge would raise an 'local missing vs incoming edit' tree conflict
+  # on the new file, which is bogus since there are no incoming edits.
+  expected_output = wc.State(wc_dir, {
+    'A_branch/mu' : Item(status='U '),
+  })
+  expected_mergeinfo_output = wc.State(wc_dir, {
+    'A_branch' : Item(status=' U'),
+    })
+  svntest.actions.run_and_verify_merge(sbox.ospath('A_branch'),
+                                       None, None, '^/A', None,
+                                       expected_output,
+                                       expected_mergeinfo_output, None,
+                                       None, None, expected_skip,
+                                       [], False, True, '--reintegrate',
+                                       sbox.ospath('A_branch'))
+
+
 ########################################################################
 # Run the tests
 
@@ -2332,6 +2398,7 @@ test_list = [ None,
               merge_conflict_details,
               merge_obstruction_recording,
               added_revision_recording_in_tree_conflict,
+              spurios_tree_conflict_with_added_file,
              ]
 
 if __name__ == '__main__':

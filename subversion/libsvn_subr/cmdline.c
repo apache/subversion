@@ -822,7 +822,7 @@ most_similar(const char *needle_cstr,
              apr_size_t haystack_len,
              apr_pool_t *scratch_pool)
 {
-  const char *max_similar;
+  const char *max_similar = NULL;
   apr_size_t max_score = 0;
   apr_size_t i;
   svn_membuf_t membuf;
@@ -847,10 +847,7 @@ most_similar(const char *needle_cstr,
         }
     }
 
-  if (max_score)
-    return max_similar;
-  else
-    return NULL;
+  return max_similar;
 }
 
 /* Verify that NEEDLE is in HAYSTACK, which contains HAYSTACK_LEN elements. */
@@ -1210,11 +1207,7 @@ svn_cmdline__be_interactive(svn_boolean_t non_interactive,
    * If --force-interactive was passed, always be interactive. */
   if (!force_interactive && !non_interactive)
     {
-#ifdef WIN32
-      return (_isatty(STDIN_FILENO) != 0);
-#else
-      return (isatty(STDIN_FILENO) != 0);
-#endif
+      return svn_cmdline__stdin_is_a_terminal();
     }
   else if (force_interactive)
     return TRUE;

@@ -85,32 +85,6 @@ svn_io__file_lock_autocreate(const char *lock_file,
                              apr_pool_t *pool);
 
 
-/** Buffer test handler function for a generic stream. @see svn_stream_t
- * and svn_stream__is_buffered().
- *
- * @since New in 1.7.
- */
-typedef svn_boolean_t (*svn_stream__is_buffered_fn_t)(void *baton);
-
-/** Set @a stream's buffer test function to @a is_buffered_fn
- *
- * @since New in 1.7.
- */
-void
-svn_stream__set_is_buffered(svn_stream_t *stream,
-                            svn_stream__is_buffered_fn_t is_buffered_fn);
-
-/** Return whether this generic @a stream uses internal buffering.
- * This may be used to work around subtle differences between buffered
- * and non-buffered APR files.  A lazy-open stream cannot report the
- * true buffering state until after the lazy open: a stream that
- * initially reports as non-buffered may report as buffered later.
- *
- * @since New in 1.7.
- */
-svn_boolean_t
-svn_stream__is_buffered(svn_stream_t *stream);
-
 /** Return the underlying file, if any, associated with the stream, or
  * NULL if not available.  Accessing the file bypasses the stream.
  */
