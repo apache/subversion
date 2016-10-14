@@ -531,6 +531,7 @@ Prompter::ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred_p,
     case org_apache_subversion_javahl_callback_UserPasswordCallback_AcceptTemporary:
       *cred_p = ret;
       ret->may_save = FALSE;
+      ret->accepted_failures = failures;
       break;
     case org_apache_subversion_javahl_callback_UserPasswordCallback_AcceptPermanently:
       *cred_p = ret;
