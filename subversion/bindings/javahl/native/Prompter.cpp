@@ -597,6 +597,7 @@ CompatPrompter::dispatch_ssl_server_trust_prompt(
     {
     case org_apache_subversion_javahl_callback_UserPasswordCallback_AcceptTemporary:
       cred->may_save = FALSE;
+      cred->accepted_failures = failures;
       *cred_p = cred;
       break;
     case org_apache_subversion_javahl_callback_UserPasswordCallback_AcceptPermanently:
