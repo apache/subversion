@@ -560,7 +560,7 @@ find_option_by_builtin(client_option_t **out,
           client_opt->label = svn_client_conflict_option_get_label(
               builtin_option,
               result_pool);
-          client_opt->long_desc = svn_client_conflict_option_describe(
+          client_opt->long_desc = svn_client_conflict_option_get_description(
                                     builtin_option,
                                     result_pool);
           client_opt->accept_arg = opt->accept_arg;
