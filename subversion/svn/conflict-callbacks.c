@@ -443,6 +443,9 @@ static const resolver_option_t builtin_resolver_options[] =
   { "m", NULL, NULL, svn_client_conflict_option_incoming_move_file_text_merge },
   { "m", NULL, NULL, svn_client_conflict_option_incoming_move_dir_merge },
 
+  /* Options for local move vs incoming edit. */
+  { "m", NULL, NULL, svn_client_conflict_option_local_move_file_text_merge },
+
   { NULL }
 };
 

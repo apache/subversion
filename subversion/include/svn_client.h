@@ -4426,6 +4426,8 @@ typedef enum svn_client_conflict_option_id_t {
   svn_client_conflict_option_incoming_move_file_text_merge,
   svn_client_conflict_option_incoming_move_dir_merge,
 
+  /* Options for local move vs incoming edit on merge. */
+  svn_client_conflict_option_local_move_file_text_merge,
 } svn_client_conflict_option_id_t;
 
 /**

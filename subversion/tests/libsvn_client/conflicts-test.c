@@ -2809,18 +2809,11 @@ test_merge_incoming_edit_file_moved_away(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, pool));
 
-  /* XFAIL: We don't offer an option to apply incoming changes to move
-   * destination in the remote edit vs local (to branch history) move
-   * during merge. Not too sure if the currently expected
-   * svn_client_conflict_option_update_move_destination is the proper
-   * expectation, or if we need a separate option, but currently the
-   * tree conflict resolver offers only the "postpone" and "mark as
-   * resolved" option. */
   {
     svn_client_conflict_option_id_t expected_opts[] = {
       svn_client_conflict_option_postpone,
       svn_client_conflict_option_accept_current_wc_state,
-      svn_client_conflict_option_update_move_destination,
+      svn_client_conflict_option_local_move_file_text_merge,
       -1 /* end of list */
     };
     SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
@@ -2829,7 +2822,7 @@ test_merge_incoming_edit_file_moved_away(const svn_test_opts_t *opts,
   /* Resolve the tree conflict by applying the incoming edit to the local
    * move destination "mu-moved". */
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
-            conflict, svn_client_conflict_option_update_move_destination,
+            conflict, svn_client_conflict_option_local_move_file_text_merge,
             ctx, pool));
 
   /* The file should not be in conflict. */
@@ -3272,8 +3265,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge file property"),
     SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_file_text_merge_conflict,
                         "merge incoming move file merge with text conflict"),
-    SVN_TEST_OPTS_XFAIL(test_merge_incoming_edit_file_moved_away,
-                        "merge incoming edit for a moved-away working file"),
+    SVN_TEST_OPTS_PASS(test_merge_incoming_edit_file_moved_away,
+                       "merge incoming edit for a moved-away working file"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_chained_move_local_edit,
                        "merge incoming chained move vs local edit"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir_with_moved_file,
