@@ -136,6 +136,7 @@ Candidate changes:
      +1 (non-binding): luke1410
      +1: stsp (without r1746364)
      +1: stefan2
+     -0: rhuijben (Makefile.svn is patched but not fixed)
 
  * r1761334
    Fix issue #4653: SVN_LOCALE_DIR incorrectly interpolated when
