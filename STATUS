@@ -132,6 +132,13 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1764851
+   Fix temporary accepting an SSL server certificate in JavaHL
+   Justification:
+     User reported problem. Simple fix.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
