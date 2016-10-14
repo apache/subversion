@@ -4743,11 +4743,9 @@ svn_client_conflict_option_get_label(svn_client_conflict_option_t *option,
  *
  * @since New in 1.10.
  */
-svn_error_t *
-svn_client_conflict_option_describe(const char **description,
-                                    svn_client_conflict_option_t *option,
-                                    apr_pool_t *result_pool,
-                                    apr_pool_t *scratch_pool);
+const char *
+svn_client_conflict_option_describe(svn_client_conflict_option_t *option,
+                                    apr_pool_t *result_pool);
 
 /**
  * Return the absolute path to the conflicted working copy node described
