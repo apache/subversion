@@ -933,10 +933,9 @@ handle_text_conflict(svn_boolean_t *resolved,
           if (knows_something || is_binary)
             *next_option++ = "r";
 
-          /* The 'mine-full' option selects the ".mine" file so only offer
-           * it if that file exists. It does not exist for binary files,
-           * for example (questionable historical behaviour since 1.0). */
-          if (my_abspath)
+          /* The 'mine-full' option selects the ".mine" file for texts or
+           * the current working directory file for binary files. */
+          if (my_abspath || is_binary)
             *next_option++ = "mf";
 
           *next_option++ = "tf";
