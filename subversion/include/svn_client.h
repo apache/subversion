@@ -4720,6 +4720,20 @@ svn_client_conflict_option_id_t
 svn_client_conflict_option_get_id(svn_client_conflict_option_t *option);
 
 /**
+ * Return a textual human-readable label of @a option, allocated in
+ * @a result_pool. The label is encoded in UTF-8 and usually
+ * contains up to three words.
+ *
+ * Additionally, the label may be localized to the language used
+ * by the current locale.
+ *
+ * @since New in 1.10.
+ */
+const char *
+svn_client_conflict_option_get_label(svn_client_conflict_option_t *option,
+                                     apr_pool_t *result_pool);
+
+/**
  * Return a textual human-readable description of @a option, allocated in
  * @a result_pool. The description is encoded in UTF-8 and may contain
  * multiple lines separated by @c APR_EOL_STR.

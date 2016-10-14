@@ -122,6 +122,7 @@ typedef svn_error_t *(*conflict_option_resolve_func_t)(
 struct svn_client_conflict_option_t
 {
   svn_client_conflict_option_id_t id;
+  const char *label;
   const char *description;
 
   svn_client_conflict_t *conflict;
@@ -7312,6 +7313,7 @@ static svn_client_conflict_option_t *
 add_resolution_option(apr_array_header_t *options,
                       svn_client_conflict_t *conflict,
                       svn_client_conflict_option_id_t id,
+                      const char *label,
                       const char *description,
                       conflict_option_resolve_func_t resolve_func)
 {
@@ -7320,6 +7322,7 @@ add_resolution_option(apr_array_header_t *options,
     option = apr_pcalloc(options->pool, sizeof(*option));
     option->pool = options->pool;
     option->id = id;
+    option->label = apr_pstrdup(option->pool, label);
     option->description = apr_pstrdup(option->pool, description);
     option->conflict = conflict;
     option->do_resolve_func = resolve_func;
@@ -7345,6 +7348,7 @@ svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
 
   add_resolution_option(*options, conflict,
       svn_client_conflict_option_postpone,
+      _("Postpone"),
       _("skip this conflict and leave it unresolved"),
       resolve_postpone);
 
@@ -7354,16 +7358,19 @@ svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
       /* Resolver options for a binary file conflict. */
       add_resolution_option(*options, conflict,
         svn_client_conflict_option_base_text,
+        _("Accept base"),
         _("discard local and incoming changes for this binary file"),
         resolve_text_conflict);
 
       add_resolution_option(*options, conflict,
         svn_client_conflict_option_incoming_text,
+        _("Accept incoming"),
         _("accept incoming version of binary file"),
         resolve_text_conflict);
 
       add_resolution_option(*options, conflict,
         svn_client_conflict_option_merged_text,
+        _("Mark as resolved"),
         _("accept binary file as it appears in the working copy"),
         resolve_text_conflict);
   }
@@ -7372,31 +7379,37 @@ svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
       /* Resolver options for a text file conflict. */
       add_resolution_option(*options, conflict,
         svn_client_conflict_option_base_text,
+        _("Accept base"),
         _("discard local and incoming changes for this file"),
         resolve_text_conflict);
 
       add_resolution_option(*options, conflict,
         svn_client_conflict_option_incoming_text,
+        _("Accept incoming"),
         _("accept incoming version of entire file"),
         resolve_text_conflict);
 
       add_resolution_option(*options, conflict,
         svn_client_conflict_option_working_text,
+        _("Reject incoming"),
         _("reject all incoming changes for this file"),
         resolve_text_conflict);
 
       add_resolution_option(*options, conflict,
         svn_client_conflict_option_incoming_text_where_conflicted,
+        _("Accept incoming for conflicts"),
         _("accept changes only where they conflict"),
         resolve_text_conflict);
 
       add_resolution_option(*options, conflict,
         svn_client_conflict_option_working_text_where_conflicted,
+        _("Reject conflicts"),
         _("reject changes which conflict and accept the rest"),
         resolve_text_conflict);
 
       add_resolution_option(*options, conflict,
         svn_client_conflict_option_merged_text,
+        _("Mark as resolved"),
         _("accept the file as it appears in the working copy"),
         resolve_text_conflict);
     }
@@ -7418,36 +7431,43 @@ svn_client_conflict_prop_get_resolution_options(apr_array_header_t **options,
 
   add_resolution_option(*options, conflict,
     svn_client_conflict_option_postpone,
+    _("Postpone"),
     _("skip this conflict and leave it unresolved"),
     resolve_postpone);
 
   add_resolution_option(*options, conflict,
     svn_client_conflict_option_base_text,
+    _("Accept base"),
     _("discard local and incoming changes for this property"),
     resolve_prop_conflict);
 
   add_resolution_option(*options, conflict,
     svn_client_conflict_option_incoming_text,
+    _("Accept incoming"),
     _("accept incoming version of entire property value"),
     resolve_prop_conflict);
 
   add_resolution_option(*options, conflict,
     svn_client_conflict_option_working_text,
+    _("Mark as resolved"),
     _("accept working copy version of entire property value"),
     resolve_prop_conflict);
 
   add_resolution_option(*options, conflict,
     svn_client_conflict_option_incoming_text_where_conflicted,
-    N_("accept changes only where they conflict"),
+    _("Accept incoming for conflicts"),
+    _("accept incoming changes only where they conflict"),
     resolve_prop_conflict);
 
   add_resolution_option(*options, conflict,
     svn_client_conflict_option_working_text_where_conflicted,
+    _("Reject conflicts"),
     _("reject changes which conflict and accept the rest"),
     resolve_prop_conflict);
 
   add_resolution_option(*options, conflict,
     svn_client_conflict_option_merged_text,
+    _("Accept merged"),
     _("accept merged version of property value"),
     resolve_prop_conflict);
 
@@ -7486,6 +7506,7 @@ configure_option_accept_current_wc_state(svn_client_conflict_t *conflict,
 
   add_resolution_option(options, conflict,
                         svn_client_conflict_option_accept_current_wc_state,
+                        _("Mark as resolved"),
                         _("accept current working copy state"),
                         do_resolve_func);
 
@@ -7513,6 +7534,7 @@ configure_option_update_move_destination(svn_client_conflict_t *conflict,
       add_resolution_option(
         options, conflict,
         svn_client_conflict_option_update_move_destination,
+        _("Update move destination"),
         _("apply incoming changes to move destination"),
         resolve_update_moved_away_node);
     }
@@ -7547,6 +7569,7 @@ configure_option_update_raise_moved_away_children(
       add_resolution_option(
         options, conflict,
         svn_client_conflict_option_update_any_moved_away_children,
+        _("Update any moved-away children"),
         _("prepare for updating moved-away children, if any"),
         resolve_update_raise_moved_away);
     }
@@ -7620,7 +7643,7 @@ configure_option_incoming_add_ignore(svn_client_conflict_t *conflict,
                                  operation);
       add_resolution_option(
         options, conflict, svn_client_conflict_option_incoming_add_ignore,
-        description, resolve_incoming_add_ignore);
+        _("Ignore incoming addition"), description, resolve_incoming_add_ignore);
     }
 
   return SVN_NO_ERROR;
@@ -7674,7 +7697,8 @@ configure_option_incoming_added_file_text_merge(svn_client_conflict_t *conflict,
       add_resolution_option(
         options, conflict,
         svn_client_conflict_option_incoming_added_file_text_merge,
-        description, resolve_merge_incoming_added_file_text_merge);
+        _("Merge the files"), description,
+        resolve_merge_incoming_added_file_text_merge);
     }
 
   return SVN_NO_ERROR;
@@ -7730,6 +7754,7 @@ configure_option_incoming_added_file_replace_and_merge(
       add_resolution_option(
         options, conflict,
         svn_client_conflict_option_incoming_added_file_replace_and_merge,
+        _("Replace and merge"),
         description, resolve_merge_incoming_added_file_replace_and_merge);
     }
 
@@ -7782,7 +7807,7 @@ configure_option_incoming_added_dir_merge(svn_client_conflict_t *conflict,
             scratch_pool));
       add_resolution_option(options, conflict,
                             svn_client_conflict_option_incoming_added_dir_merge,
-                            description,
+                            _("Merge the directories"), description,
                             resolve_merge_incoming_added_dir_merge);
     }
 
@@ -7836,8 +7861,8 @@ configure_option_incoming_added_dir_replace(svn_client_conflict_t *conflict,
       add_resolution_option(
         options, conflict,
         svn_client_conflict_option_incoming_added_dir_replace,
-        description,
-        resolve_merge_incoming_added_dir_replace);
+        _("Delete my directory and replace it with incoming directory"),
+        description, resolve_merge_incoming_added_dir_replace);
     }
 
   return SVN_NO_ERROR;
@@ -7893,8 +7918,8 @@ configure_option_incoming_added_dir_replace_and_merge(
       add_resolution_option(
         options, conflict,
         svn_client_conflict_option_incoming_added_dir_replace_and_merge,
-        description,
-        resolve_merge_incoming_added_dir_replace_and_merge);
+        _("Replace and merge"),
+        description, resolve_merge_incoming_added_dir_replace_and_merge);
     }
 
   return SVN_NO_ERROR;
@@ -7966,7 +7991,7 @@ configure_option_incoming_delete_ignore(svn_client_conflict_t *conflict,
 
       add_resolution_option(options, conflict,
                             svn_client_conflict_option_incoming_delete_ignore,
-                            description,
+                            _("Ignore incoming deletion"), description,
                             resolve_incoming_delete_ignore);
     }
 
@@ -8023,7 +8048,7 @@ configure_option_incoming_delete_accept(svn_client_conflict_t *conflict,
           add_resolution_option(
             options, conflict,
             svn_client_conflict_option_incoming_delete_accept,
-            description,
+            _("Accept incoming deletion"), description,
             resolve_incoming_delete_accept);
         }
     }
@@ -8198,7 +8223,7 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
       add_resolution_option(
         options, conflict,
         svn_client_conflict_option_incoming_move_file_text_merge,
-        description,
+        _("Move and merge"), description,
         resolve_incoming_move_file_text_merge);
     }
 
@@ -8314,7 +8339,7 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
                                  scratch_pool));
       add_resolution_option(options, conflict,
                             svn_client_conflict_option_incoming_move_dir_merge,
-                            description,
+                            _("Move and merge"), description,
                             resolve_incoming_move_dir_merge);
     }
 
@@ -8406,6 +8431,7 @@ configure_option_local_move_file_merge(svn_client_conflict_t *conflict,
               add_resolution_option(
                 options, conflict,
                 svn_client_conflict_option_local_move_file_text_merge,
+                _("Apply to move destination"),
                 description, resolve_local_move_file_merge);
             }
           else
@@ -8660,6 +8686,7 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   /* Add postpone option. */
   add_resolution_option(*options, conflict,
                         svn_client_conflict_option_postpone,
+                        _("Postpone"),
                         _("skip this conflict and leave it unresolved"),
                         resolve_postpone);
 
@@ -8749,6 +8776,13 @@ svn_client_conflict_option_id_t
 svn_client_conflict_option_get_id(svn_client_conflict_option_t *option)
 {
   return option->id;
+}
+
+const char *
+svn_client_conflict_option_get_label(svn_client_conflict_option_t *option,
+                                     apr_pool_t *result_pool)
+{
+  return apr_pstrdup(result_pool, option->label);
 }
 
 svn_error_t *
