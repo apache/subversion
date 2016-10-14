@@ -1488,14 +1488,12 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
   if (related_repos_relpath != NULL && related_peg_rev != SVN_INVALID_REVNUM)
     {
       const char *repos_root_url;
-      const char *repos_uuid;
       const char *related_url;
       const char *corrected_url;
       svn_node_kind_t related_node_kind;
       svn_ra_session_t *ra_session;
 
-      SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url,
-                                                 &repos_uuid,
+      SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL,
                                                  conflict,
                                                  scratch_pool, scratch_pool));
       related_url = svn_path_url_add_component2(repos_root_url,
@@ -3406,7 +3404,6 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
   const char *old_repos_relpath;
   const char *new_repos_relpath;
   const char *repos_root_url;
-  const char *repos_uuid;
   svn_revnum_t old_rev;
   svn_revnum_t new_rev;
   struct conflict_tree_incoming_delete_details *details;
@@ -3418,7 +3415,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
   SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
             &new_repos_relpath, &new_rev, NULL, conflict, scratch_pool,
             scratch_pool));
-  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL,
                                              conflict,
                                              scratch_pool, scratch_pool));
   operation = svn_client_conflict_get_operation(conflict);
@@ -3575,7 +3572,6 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
   const char *old_repos_relpath;
   const char *new_repos_relpath;
   const char *repos_root_url;
-  const char *repos_uuid;
   svn_revnum_t old_rev;
   svn_revnum_t new_rev;
   struct conflict_tree_incoming_add_details *details;
@@ -3587,7 +3583,7 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
   SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
             &new_repos_relpath, &new_rev, NULL, conflict, scratch_pool,
             scratch_pool));
-  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL,
                                              conflict,
                                              scratch_pool, scratch_pool));
   operation = svn_client_conflict_get_operation(conflict);
@@ -4251,7 +4247,6 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
   const char *old_repos_relpath;
   const char *new_repos_relpath;
   const char *repos_root_url;
-  const char *repos_uuid;
   svn_revnum_t old_rev;
   svn_revnum_t new_rev;
   svn_node_kind_t old_node_kind;
@@ -4270,7 +4265,7 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
   SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
             &new_repos_relpath, &new_rev, &new_node_kind, conflict,
             scratch_pool, scratch_pool));
-  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL,
                                              conflict,
                                              scratch_pool, scratch_pool));
   operation = svn_client_conflict_get_operation(conflict);
@@ -5155,7 +5150,6 @@ resolve_merge_incoming_added_file_text_merge(
   const char *url;
   const char *corrected_url;
   const char *repos_root_url;
-  const char *repos_uuid;
   const char *wc_tmpdir;
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
@@ -5189,7 +5183,7 @@ resolve_merge_incoming_added_file_text_merge(
             &incoming_new_repos_relpath, &incoming_new_pegrev,
             NULL, conflict, scratch_pool,
             scratch_pool));
-  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL,
                                              conflict, scratch_pool,
                                              scratch_pool));
   url = svn_path_url_add_component2(repos_root_url, incoming_new_repos_relpath,
@@ -5295,7 +5289,6 @@ resolve_merge_incoming_added_file_replace_and_merge(
   const char *url;
   const char *corrected_url;
   const char *repos_root_url;
-  const char *repos_uuid;
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
   apr_file_t *incoming_new_file;
@@ -5342,7 +5335,7 @@ resolve_merge_incoming_added_file_replace_and_merge(
             &incoming_new_repos_relpath, &incoming_new_pegrev,
             NULL, conflict, scratch_pool,
             scratch_pool));
-  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL,
                                              conflict, scratch_pool,
                                              scratch_pool));
   url = svn_path_url_add_component2(repos_root_url, incoming_new_repos_relpath,
@@ -5967,7 +5960,6 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
                                        apr_pool_t *scratch_pool)
 {
   const char *repos_root_url;
-  const char *repos_uuid;
   const char *incoming_old_repos_relpath;
   svn_revnum_t incoming_old_pegrev;
   const char *incoming_new_repos_relpath;
@@ -5995,7 +5987,7 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
                                                    scratch_pool));
 
   /* Set up merge sources to merge the entire incoming added directory tree. */
-  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL,
                                              conflict, scratch_pool,
                                              scratch_pool));
   source1 = svn_path_url_add_component2(repos_root_url,
@@ -6113,7 +6105,6 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
   const char *url;
   const char *corrected_url;
   const char *repos_root_url;
-  const char *repos_uuid;
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
   const char *local_abspath;
@@ -6134,7 +6125,7 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
             &incoming_new_repos_relpath, &incoming_new_pegrev,
             NULL, conflict, scratch_pool,
             scratch_pool));
-  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL,
                                              conflict, scratch_pool,
                                              scratch_pool));
   url = svn_path_url_add_component2(repos_root_url, incoming_new_repos_relpath,
@@ -6660,7 +6651,6 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   const char *lock_abspath;
   svn_error_t *err;
   const char *repos_root_url;
-  const char *repos_uuid;
   const char *incoming_old_repos_relpath;
   svn_revnum_t incoming_old_pegrev;
   const char *incoming_new_repos_relpath;
@@ -6697,7 +6687,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
                  option_id ==
                  svn_client_conflict_option_incoming_move_dir_merge);
                   
-  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL,
                                              conflict, scratch_pool,
                                              scratch_pool));
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
