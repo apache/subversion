@@ -8775,15 +8775,11 @@ svn_client_conflict_option_get_label(svn_client_conflict_option_t *option,
   return apr_pstrdup(result_pool, option->label);
 }
 
-svn_error_t *
-svn_client_conflict_option_describe(const char **description,
-                                    svn_client_conflict_option_t *option,
-                                    apr_pool_t *result_pool,
-                                    apr_pool_t *scratch_pool)
+const char *
+svn_client_conflict_option_describe(svn_client_conflict_option_t *option,
+                                    apr_pool_t *result_pool)
 {
-  *description = apr_pstrdup(result_pool, option->description);
-
-  return SVN_NO_ERROR;
+  return apr_pstrdup(result_pool, option->description);
 }
 
 svn_error_t *
