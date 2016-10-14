@@ -1426,6 +1426,9 @@ struct conflict_tree_local_missing_details
    * elements. Each element is the head of a move chain which starts in
    * DELETED_REV. */
   apr_array_header_t *moves;
+
+  /* If not NULL, this is the move target abspath. */
+  const char *moved_to_abspath;
 };
 
 /* Implements tree_conflict_get_details_func_t. */
@@ -7091,6 +7094,173 @@ unlock_wc:
   return SVN_NO_ERROR;
 }
 
+/* Implements conflict_option_resolve_func_t. */
+static svn_error_t *
+resolve_local_move_file_merge(svn_client_conflict_option_t *option,
+                              svn_client_conflict_t *conflict,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *scratch_pool)
+{
+  const char *lock_abspath;
+  svn_error_t *err;
+  const char *repos_root_url;
+  const char *incoming_old_repos_relpath;
+  svn_revnum_t incoming_old_pegrev;
+  const char *incoming_new_repos_relpath;
+  svn_revnum_t incoming_new_pegrev;
+  const char *wc_tmpdir;
+  const char *ancestor_tmp_abspath;
+  const char *incoming_tmp_abspath;
+  apr_hash_t *ancestor_props;
+  apr_hash_t *incoming_props;
+  svn_stream_t *stream;
+  const char *url;
+  const char *corrected_url;
+  const char *old_session_url;
+  svn_ra_session_t *ra_session;
+  svn_wc_merge_outcome_t merge_content_outcome;
+  svn_wc_notify_state_t merge_props_outcome;
+  apr_array_header_t *propdiffs;
+  struct conflict_tree_local_missing_details *details;
+  apr_hash_index_t *hi;
+
+  details = conflict->tree_conflict_local_details;
+
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL,
+                                             conflict, scratch_pool,
+                                             scratch_pool));
+  SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+            &incoming_old_repos_relpath, &incoming_old_pegrev,
+            NULL, conflict, scratch_pool,
+            scratch_pool));
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            &incoming_new_repos_relpath, &incoming_new_pegrev,
+            NULL, conflict, scratch_pool,
+            scratch_pool));
+
+  SVN_ERR(svn_wc__get_tmpdir(&wc_tmpdir, ctx->wc_ctx,
+                             details->moved_to_abspath,
+                             scratch_pool, scratch_pool));
+
+  /* Fetch the common ancestor file's content. */
+  SVN_ERR(svn_stream_open_unique(&stream, &ancestor_tmp_abspath, wc_tmpdir,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 scratch_pool, scratch_pool));
+  url = svn_path_url_add_component2(repos_root_url,
+                                    incoming_old_repos_relpath,
+                                    scratch_pool);
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
+                                               url, NULL, NULL,
+                                               FALSE, FALSE, ctx,
+                                               scratch_pool, scratch_pool));
+  SVN_ERR(svn_ra_get_file(ra_session, "", incoming_old_pegrev, stream, NULL,
+                          &ancestor_props, scratch_pool));
+  /* Delete entry and wc props from the returned set of properties. */
+  for (hi = apr_hash_first(scratch_pool, ancestor_props);
+       hi != NULL;
+       hi = apr_hash_next(hi))
+    {
+      const char *propname = apr_hash_this_key(hi);
+
+      if (!svn_wc_is_normal_prop(propname))
+        svn_hash_sets(ancestor_props, propname, NULL);
+    }
+  /* Close stream to flush the file to disk. */
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Do the same for the incoming file's content. */
+  SVN_ERR(svn_stream_open_unique(&stream, &incoming_tmp_abspath, wc_tmpdir,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 scratch_pool, scratch_pool));
+  url = svn_path_url_add_component2(repos_root_url,
+                                    incoming_new_repos_relpath,
+                                    scratch_pool);
+  SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
+                                            url, scratch_pool));
+  SVN_ERR(svn_ra_get_file(ra_session, "", incoming_new_pegrev, stream, NULL,
+                          &incoming_props, scratch_pool));
+  /* Close stream to flush the file to disk. */
+  SVN_ERR(svn_stream_close(stream));
+  /* Delete entry and wc props from the returned set of properties. */
+  for (hi = apr_hash_first(scratch_pool, incoming_props);
+       hi != NULL;
+       hi = apr_hash_next(hi))
+    {
+      const char *propname = apr_hash_this_key(hi);
+
+      if (!svn_wc_is_normal_prop(propname))
+        svn_hash_sets(incoming_props, propname, NULL);
+    }
+
+  /* Create a property diff for the files. */
+  SVN_ERR(svn_prop_diffs(&propdiffs, incoming_props, ancestor_props,
+                         scratch_pool));
+
+  /* ### The following WC modifications should be atomic. */
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(
+            &lock_abspath, ctx->wc_ctx,
+            svn_dirent_get_longest_ancestor(conflict->local_abspath,
+                                            details->moved_to_abspath,
+                                            scratch_pool),
+            scratch_pool, scratch_pool));
+
+  /* Perform the file merge. */
+  err = svn_wc_merge5(&merge_content_outcome, &merge_props_outcome,
+                      ctx->wc_ctx,
+                      ancestor_tmp_abspath, incoming_tmp_abspath,
+                      details->moved_to_abspath,
+                      NULL, NULL, NULL, /* labels */
+                      NULL, NULL, /* conflict versions */
+                      FALSE, /* dry run */
+                      NULL, NULL, /* diff3_cmd, merge_options */
+                      ancestor_props, propdiffs,
+                      NULL, NULL, /* conflict func/baton */
+                      NULL, NULL, /* don't allow user to cancel here */
+                      scratch_pool);
+  svn_io_sleep_for_timestamps(details->moved_to_abspath, scratch_pool);
+  if (err)
+    return svn_error_compose_create(err,
+                                    svn_wc__release_write_lock(ctx->wc_ctx,
+                                                               lock_abspath,
+                                                               scratch_pool));
+
+  err = svn_wc__del_tree_conflict(ctx->wc_ctx, conflict->local_abspath,
+                                  scratch_pool);
+  err = svn_error_compose_create(err,
+                                 svn_wc__release_write_lock(ctx->wc_ctx,
+                                                            lock_abspath,
+                                                            scratch_pool));
+  if (err)
+    return svn_error_trace(err);
+
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      /* Tell the world about the file merge that just happened. */
+      notify = svn_wc_create_notify(details->moved_to_abspath,
+                                    svn_wc_notify_update_update,
+                                    scratch_pool);
+      if (merge_content_outcome == svn_wc_merge_conflict)
+        notify->content_state = svn_wc_notify_state_conflicted;
+      else
+        notify->content_state = svn_wc_notify_state_merged;
+      notify->prop_state = merge_props_outcome;
+      notify->kind = svn_node_file;
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+
+      /* And also about the successfully resolved tree conflict. */
+      notify = svn_wc_create_notify(conflict->local_abspath,
+                                    svn_wc_notify_resolved_tree,
+                                    scratch_pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+    }
+
+  conflict->resolution_tree = svn_client_conflict_option_get_id(option);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 assert_text_conflict(svn_client_conflict_t *conflict, apr_pool_t *scratch_pool)
 {
@@ -8151,6 +8321,101 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
   return SVN_NO_ERROR;
 }
 
+/* Configure 'local move file merge' resolution option for
+ * a tree conflict. */
+static svn_error_t *
+configure_option_local_move_file_merge(svn_client_conflict_t *conflict,
+                                       svn_client_ctx_t *ctx,
+                                       apr_array_header_t *options,
+                                       apr_pool_t *scratch_pool)
+{
+  svn_wc_operation_t operation;
+  svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_reason_t local_change;
+  const char *incoming_new_repos_relpath;
+  svn_revnum_t incoming_new_pegrev;
+
+  operation = svn_client_conflict_get_operation(conflict);
+  incoming_change = svn_client_conflict_get_incoming_change(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            &incoming_new_repos_relpath, &incoming_new_pegrev,
+            NULL, conflict, scratch_pool,
+            scratch_pool));
+
+  if (operation == svn_wc_operation_merge &&
+      incoming_change == svn_wc_conflict_action_edit &&
+      local_change == svn_wc_conflict_reason_missing)
+    {
+      struct conflict_tree_local_missing_details *details;
+
+      details = conflict->tree_conflict_local_details;
+      if (details != NULL && details->moves != NULL)
+        {
+          apr_hash_t *wc_move_targets = apr_hash_make(scratch_pool);
+          apr_pool_t *iterpool;
+          int i;
+
+          iterpool = svn_pool_create(scratch_pool);
+          for (i = 0; i < details->moves->nelts; i++)
+            {
+              struct repos_move_info *move;
+
+              svn_pool_clear(iterpool);
+              move = APR_ARRAY_IDX(details->moves, i, struct repos_move_info *);
+              SVN_ERR(follow_move_chains(wc_move_targets, move, ctx,
+                                         conflict->local_abspath,
+                                         svn_node_file,
+                                         incoming_new_pegrev,
+                                         scratch_pool, iterpool));
+            }
+          svn_pool_destroy(iterpool);
+
+          if (apr_hash_count(wc_move_targets) > 0)
+            {
+              apr_array_header_t *move_target_repos_relpaths;
+              const svn_sort__item_t *item;
+              apr_array_header_t *moved_to_abspaths;
+              const char *description;
+              const char *wcroot_abspath;
+
+              /* Initialize to the first possible move target. Hopefully,
+               * in most cases there will only be one candidate anyway. */
+              move_target_repos_relpaths = svn_sort__hash(
+                                             wc_move_targets,
+                                             svn_sort_compare_items_as_paths,
+                                             scratch_pool);
+              item = &APR_ARRAY_IDX(move_target_repos_relpaths,
+                                    0, svn_sort__item_t);
+              moved_to_abspaths = item->value;
+              details->moved_to_abspath =
+                apr_pstrdup(conflict->pool,
+                            APR_ARRAY_IDX(moved_to_abspaths, 0, const char *));
+
+              SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
+                                         conflict->local_abspath,
+                                         scratch_pool, scratch_pool));
+              description =
+                apr_psprintf(
+                  scratch_pool, _("apply changes to move destination '%s'"),
+                  svn_dirent_local_style(
+                    svn_dirent_skip_ancestor(wcroot_abspath,
+                                             details->moved_to_abspath),
+                    scratch_pool));
+
+              add_resolution_option(
+                options, conflict,
+                svn_client_conflict_option_local_move_file_text_merge,
+                description, resolve_local_move_file_merge);
+            }
+          else
+            details->moved_to_abspath = NULL;
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
   apr_array_header_t **possible_moved_to_repos_relpaths,
@@ -8432,6 +8697,8 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
                                                     scratch_pool));
   SVN_ERR(configure_option_incoming_dir_merge(conflict, ctx, *options,
                                               scratch_pool));
+  SVN_ERR(configure_option_local_move_file_merge(conflict, ctx, *options,
+                                                 scratch_pool));
 
   return SVN_NO_ERROR;
 }
