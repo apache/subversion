@@ -143,7 +143,7 @@ typedef enum svn_cl__longopt_t {
   opt_show_passwords,
   opt_pin_externals,
   opt_show_item,
-  opt_adds_as_modification,
+  opt_adds_as_modification
 } svn_cl__longopt_t;
 
 

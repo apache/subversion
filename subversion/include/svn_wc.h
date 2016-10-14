@@ -1303,7 +1303,7 @@ typedef enum svn_wc_notify_action_t
 
   /** Done searching the repository for details about a conflict.
    * @since New in 1.10. */
-  svn_wc_notify_end_search_tree_conflict_details,
+  svn_wc_notify_end_search_tree_conflict_details
 
 } svn_wc_notify_action_t;
 

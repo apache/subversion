@@ -480,7 +480,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     non_interactive_opt,
     force_interactive_opt,
     trust_server_cert_opt,
-    trust_server_cert_failures_opt,
+    trust_server_cert_failures_opt
   };
   static const apr_getopt_option_t options[] = {
     {"message", 'm', 1, ""},
