@@ -133,10 +133,11 @@ Candidate changes:
      Merge with --accept=working due to absence of
      tools/dev/build-svn-deps-win.pl on the 1.8 branch.
    Votes:
-     +1 (non-binding): luke1410
      +1: stsp (without r1746364)
      +1: stefan2
      -0: rhuijben (Makefile.svn is patched but not fixed)
+     -0 (non-binding): luke1410 (r1700130 is missing - will have to create a
+                       backport branch)
 
  * r1761334
    Fix issue #4653: SVN_LOCALE_DIR incorrectly interpolated when
