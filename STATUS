@@ -57,21 +57,6 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
-* r1758128, r1758129, r1758130, r1758153
-  Fix issue #4647.
-  Justification:
-    Resolves a regression in TSVN 1.9 with the binary conflict resolution
-    dialog erroring out when selecting to resolve the conflict with the
-    local file.
-  Notes:
-    r1758129 contains the actual fix.
-    r1758153 corrects paths in the original fix.
-    r1758128 adds the regression test.
-    r1758130 removes the regression test's XFail marker
-  Votes:
-    +1 (non-binding): luke1410
-    +1: stsp, stefan2
-
  * r1734106
    Fix a bug where the wrong source left revision was recorded in a tree
    conflict.
@@ -144,3 +129,18 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+* r1758128, r1758129, r1758130, r1758153
+  Fix issue #4647.
+  Justification:
+    Resolves a regression in TSVN 1.9 with the binary conflict resolution
+    dialog erroring out when selecting to resolve the conflict with the
+    local file.
+  Notes:
+    r1758129 contains the actual fix.
+    r1758153 corrects paths in the original fix.
+    r1758128 adds the regression test.
+    r1758130 removes the regression test's XFail marker
+  Votes:
+    +1 (non-binding): luke1410
+    +1: stsp, stefan2, rhuijben
