@@ -3882,6 +3882,51 @@ commit_aborted_txn(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+list_callback(const char *path,
+              svn_dirent_t *dirent,
+              void *baton,
+              apr_pool_t *pool)
+{
+  *(int *)baton += 1;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_list(const svn_test_opts_t *opts,
+          apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t youngest_rev;
+  int counter = 0;
+
+  /* Create yet another greek tree repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-list", opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Prepare a txn to receive the greek tree. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+
+  /* List all nodes under /A that contain an 'a'. */
+
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, pool));
+  SVN_ERR(svn_repos_list(rev_root, "/A", "*a*", svn_depth_infinity, FALSE,
+                         NULL, NULL, list_callback, &counter, NULL, NULL,
+                         pool));
+  SVN_TEST_ASSERT(counter == 6);
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 static int max_threads = 4;
@@ -3941,6 +3986,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "authz for svn_repos_trace_node_locations"),
     SVN_TEST_OPTS_PASS(commit_aborted_txn,
                        "test committing a previously aborted txn"),
+    SVN_TEST_OPTS_PASS(test_list,
+                       "test svn_repos_list"),
     SVN_TEST_NULL
   };
 

@@ -1707,6 +1707,66 @@ svn_repos_stat(svn_dirent_t **dirent,
                const char *path,
                apr_pool_t *pool);
 
+/**
+ * Callback type to be used with @c svn_repos_list.  It will be invoked for
+ * every directory entry found.
+ *
+ * The full path of the entry is given in @a path and @a dirent contains
+ * various additional information.  If @c svn_repos_list has been called
+ * with @a path_info_only set, only the @a kind element of this struct
+ * will be valid.
+ *
+ * @a baton is the user-provided receiver baton.  @a pool may be used for
+ * temporary allocations.
+ *
+ * @since New in 1.10.
+ */
+typedef svn_error_t *(* svn_repos_dirent_receiver_t)(const char *path,
+                                                     svn_dirent_t *dirent,
+                                                     void *baton,
+                                                     apr_pool_t *pool);
+
+/**
+ * Efficiently list everything within a sub-tree.  Specify a glob pattern
+ * to search for specific files and folders.
+ *
+ * Walk the sub-tree starting at @a path under @a root up to the given
+ * @a depth.  For each directory entry found, @a receiver will be called
+ * with @a receiver_baton.  The starting @a path will be reported as well.
+ * Because retrieving all elements of a @c svn_dirent_t can be expensive,
+ * you may set @a path_info_only to receive only the path name and the node
+ * kind.
+ *
+ * If @a pattern is not @c NULL, only those entries will be reported whose
+ * last path segment matches @a pattern.  This feature uses @c apr_fnmatch
+ * for glob matching and requiring '.' to matched by dots in the path.
+ *
+ * If @a authz_read_func is not @c NULL, this function will neither report
+ * entries nor recurse into directories that the user has no access to.
+ *
+ * Cancellation support is provided in the usual way through the optional
+ * @a cancel_func and @a cancel_baton.
+ *
+ * @a path must point to a directory and @a depth must be at least
+ * @c svn_depth_empty.
+ *
+ * Use @a pool for temporary memory allocation.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_repos_list(svn_fs_root_t *root,
+               const char *path,
+               const char *pattern,
+               svn_depth_t depth,
+               svn_boolean_t path_info_only,
+               svn_repos_authz_func_t authz_read_func,
+               void *authz_read_baton,
+               svn_repos_dirent_receiver_t receiver,
+               void *receiver_baton,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               apr_pool_t *pool);
 
 /**
  * Given @a path which exists at revision @a start in @a fs, set
