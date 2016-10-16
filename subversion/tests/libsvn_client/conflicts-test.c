@@ -1217,9 +1217,8 @@ test_merge_incoming_added_dir_replace_and_merge2(const svn_test_opts_t *opts,
   svn_opt_revision_t opt_rev;
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
 
-  SVN_ERR(svn_test__sandbox_create(b,
-                                   "merge_incoming_added_dir_replace_and_merge",
-                                   opts, pool));
+  SVN_ERR(svn_test__sandbox_create(
+            b, "merge_incoming_added_dir_replace_and_merge2", opts, pool));
 
   SVN_ERR(create_wc_with_dir_add_vs_dir_add_merge_conflict(b, FALSE, FALSE,
                                                            TRUE));
