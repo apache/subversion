@@ -8908,18 +8908,14 @@ svn_client_conflict_text_resolve_by_id(
                                                  option_id);
 
   /* Support svn_client_conflict_option_merged_text for binary conflicts by
-   * mapping this onto the semantically equal
-   * svn_client_conflict_option_working_text.
-   */
-  if (option == NULL)
-  {
-    if (option_id == svn_client_conflict_option_merged_text) {
+   * mapping this option to svn_client_conflict_option_working_text. */
+  if (option == NULL && option_id == svn_client_conflict_option_merged_text)
+    {
       mime_type = svn_client_conflict_text_get_mime_type(conflict);
       if (mime_type && svn_mime_type_is_binary(mime_type))
         option = svn_client_conflict_option_find_by_id(resolution_options,
                    svn_client_conflict_option_working_text);
     }
-  }
 
   if (option == NULL)
       return svn_error_createf(SVN_ERR_CLIENT_CONFLICT_OPTION_NOT_APPLICABLE,
