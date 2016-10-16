@@ -6311,11 +6311,6 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
 
   if (merge_dirs)
     {
-      svn_client__conflict_report_t *conflict_report;
-      const char *source1;
-      svn_opt_revision_t revision1;
-      const char *source2;
-      svn_opt_revision_t revision2;
       svn_revnum_t base_revision;
       const char *base_repos_relpath;
       struct find_added_rev_baton b;
@@ -6363,29 +6358,12 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
        * We do not need to consider a reverse-merge here since the source of
        * this merge was part of the merge target working copy, not a branch
        * in the repository. */
-      source1 = url;
-      revision1.kind = svn_opt_revision_number;
-      /* ### Our merge logic doesn't support the merge -c ADDED_REV case.
-       * ### It errors out with 'path not found', unlike diff -c ADDED_REV. */
-      if (b.added_rev == base_revision)
-        revision1.value.number = b.added_rev - 1; /* merge -c ADDED_REV */
-      else
-        revision1.value.number = b.added_rev; /* merge -r ADDED_REV:BASE_REV */
-      source2 = url;
-      revision2.kind = svn_opt_revision_number;
-      revision2.value.number = base_revision;
-      
-      err = svn_client__merge_locked(&conflict_report,
-                                     source1, &revision1,
-                                     source2, &revision2,
-                                     local_abspath, svn_depth_infinity,
-                                     TRUE, TRUE, /* do a no-ancestry merge */
-                                     FALSE, FALSE, FALSE,
-                                     FALSE, /* no need to allow mixed-rev */
-                                     NULL, ctx, scratch_pool, scratch_pool);
-      err = svn_error_compose_create(err,
-                                     svn_client__make_merge_conflict_error(
-                                       conflict_report, scratch_pool));
+      err = merge_newly_added_dir(base_repos_relpath,
+                                  url, b.added_rev - 1, url, base_revision,
+                                  local_abspath, FALSE,
+                                  ctx, scratch_pool, scratch_pool);
+      if (err)
+        goto unlock_wc;
     }
 
 unlock_wc:
