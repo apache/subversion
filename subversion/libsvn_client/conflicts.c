@@ -976,12 +976,23 @@ describe_local_file_node_change(const char **description,
       case svn_wc_conflict_reason_moved_away:
         {
           const char *moved_to_abspath;
+          svn_error_t *err;
 
-          SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, NULL, 
-                                              ctx->wc_ctx,
-                                              conflict->local_abspath,
-                                              scratch_pool,
-                                              scratch_pool));
+          err = svn_wc__node_was_moved_away(&moved_to_abspath, NULL, 
+                                            ctx->wc_ctx,
+                                            conflict->local_abspath,
+                                            scratch_pool,
+                                            scratch_pool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+                {
+                  moved_to_abspath = NULL;
+                  svn_error_clear(err);
+                }
+              else
+                return svn_error_trace(err);
+            }
           if (operation == svn_wc_operation_update ||
               operation == svn_wc_operation_switch)
             {
@@ -1190,12 +1201,24 @@ describe_local_dir_node_change(const char **description,
       case svn_wc_conflict_reason_moved_away:
         {
           const char *moved_to_abspath;
+          svn_error_t *err;
 
-          SVN_ERR(svn_wc__node_was_moved_away(&moved_to_abspath, NULL, 
-                                              ctx->wc_ctx,
-                                              conflict->local_abspath,
-                                              scratch_pool,
-                                              scratch_pool));
+          err = svn_wc__node_was_moved_away(&moved_to_abspath, NULL, 
+                                            ctx->wc_ctx,
+                                            conflict->local_abspath,
+                                            scratch_pool,
+                                            scratch_pool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+                {
+                  moved_to_abspath = NULL;
+                  svn_error_clear(err);
+                }
+              else
+                return svn_error_trace(err);
+            }
+
           if (operation == svn_wc_operation_update ||
               operation == svn_wc_operation_switch)
             {
