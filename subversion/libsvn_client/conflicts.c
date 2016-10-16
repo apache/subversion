@@ -3570,7 +3570,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                     svn_relpath_basename(new_repos_relpath, scratch_pool),
                     svn_relpath_dirname(new_repos_relpath, scratch_pool),
                     new_rev, old_rev, old_repos_relpath, old_rev, ctx,
-                    scratch_pool, scratch_pool));
+                    conflict->pool, scratch_pool));
           if (deleted_rev == SVN_INVALID_REVNUM)
             {
               /* We could not determine the revision in which the node was
