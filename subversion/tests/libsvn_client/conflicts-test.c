@@ -1988,23 +1988,25 @@ test_merge_incoming_move_dir(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates(
             &possible_moved_to_abspaths, option, b->pool, b->pool));
 
-  /* XFAIL: Currently, the resolver finds two possible destinations for
-   * the moved folder:
+  /* The resolver finds two possible destinations for the moved folder:
    *
    *   Possible working copy destinations for moved-away 'A_branch/B' are:
    *    (1): 'A_branch/newdir'
    *    (2): 'A/newdir'
    *   Only one destination can be a move; the others are copies.
    */
-  SVN_TEST_INT_ASSERT(possible_moved_to_abspaths->nelts, 1);
+  SVN_TEST_INT_ASSERT(possible_moved_to_abspaths->nelts, 2);
   SVN_TEST_STRING_ASSERT(
     APR_ARRAY_IDX(possible_moved_to_abspaths, 0, const char *),
     sbox_wc_path(b, moved_to_path));
+  SVN_TEST_STRING_ASSERT(
+    APR_ARRAY_IDX(possible_moved_to_abspaths, 1, const char *),
+    sbox_wc_path(b, svn_relpath_join(trunk_path, new_dir_name, b->pool)));
 
   /* Resolve the tree conflict. */
-  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
-            conflict, svn_client_conflict_option_incoming_move_dir_merge,
-            ctx, b->pool));
+  SVN_ERR(svn_client_conflict_option_set_moved_to_abspath(option, 0,
+                                                          ctx, b->pool));
+  SVN_ERR(svn_client_conflict_tree_resolve(conflict, option, ctx, b->pool));
 
   /* Ensure that the moved-away directory has the expected status. */
   sb.result_pool = b->pool;
@@ -3176,8 +3178,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "update incoming move file text merge"),
     SVN_TEST_OPTS_PASS(test_switch_incoming_move_file_text_merge,
                        "switch incoming move file text merge"),
-    SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_dir,
-                        "merge incoming move dir"),
+    SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir,
+                       "merge incoming move dir"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir2,
                        "merge incoming move dir with local edit"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir3,
