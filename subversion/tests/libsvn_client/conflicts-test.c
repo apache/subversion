@@ -3036,8 +3036,6 @@ test_merge_incoming_move_dir_with_moved_file(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, pool));
 
-  /* XFAIL: The conflict resolver doesn't find the move, and doesn't offer
-   * the svn_client_conflict_option_incoming_move_file_text_merge option. */
   {
     svn_client_conflict_option_id_t expected_opts[] = {
       svn_client_conflict_option_postpone,
