@@ -257,7 +257,6 @@ walk_conflicts(svn_client_ctx_t *ctx,
 
       for (; hi && !err; hi = apr_hash_next(hi))
         {
-          const char *relpath;
           svn_pool_clear(iterpool);
 
           tc_abspath = apr_hash_this_key(hi);
@@ -265,24 +264,8 @@ walk_conflicts(svn_client_ctx_t *ctx,
           if (ctx->cancel_func)
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-          relpath = svn_dirent_skip_ancestor(local_abspath,
-                                             tc_abspath);
-
-          if (!relpath
-              || (depth >= svn_depth_empty
-                  && depth < svn_depth_infinity
-                  && strchr(relpath, '/')))
-            {
-              continue;
-            }
-
           SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, tc_abspath,
                                  iterpool, iterpool));
-
-          if (depth == svn_depth_files
-              && status->kind == svn_node_dir)
-            continue;
-
           err = svn_error_trace(conflict_status_walker(&cswb, tc_abspath,
                                                        status, scratch_pool));
         }
