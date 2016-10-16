@@ -3142,6 +3142,97 @@ test_merge_incoming_file_move_new_line_of_history(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
+                                                    apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  const char *deleted_dir;
+  const char *moved_dir;
+  const char *deleted_file;
+  const char *moved_file;
+  svn_client_ctx_t *ctx;
+  svn_client_conflict_t *conflict;
+  svn_boolean_t text_conflicted;
+  apr_array_header_t *props_conflicted;
+  svn_boolean_t tree_conflicted;
+
+  SVN_ERR(svn_test__sandbox_create(
+            b, "update_incoming_dir_move_with_moved_file", opts, pool));
+  SVN_ERR(sbox_add_and_commit_greek_tree(b));
+
+  /* Move a directory on the trunk into another directory. */
+  deleted_dir = svn_relpath_join(trunk_path, "B", b->pool);
+  moved_dir = svn_relpath_join(trunk_path, "C/B", b->pool);
+  SVN_ERR(sbox_wc_move(b, deleted_dir, moved_dir));
+
+  /* Rename a file inside the moved directory. */
+  deleted_file = svn_relpath_join(moved_dir, "lambda" , b->pool);
+  moved_file = svn_relpath_join(moved_dir, "lamdba-moved", b->pool);
+  SVN_ERR(sbox_wc_move(b, deleted_file, moved_file));
+
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  /* Update into the past. */
+  SVN_ERR(sbox_wc_update(b, "", 1));
+
+  /* Modify a file in the working copy. */
+  deleted_file = svn_relpath_join(trunk_path, "B/lamdba", b->pool);
+  SVN_ERR(sbox_file_write(b, deleted_file, "This is a modified file\n"));
+
+  /* Update to HEAD.
+   * This should raise an "incoming move vs local edit" tree conflict. */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, pool));
+
+  /* We should have a tree conflict in the directory "A/B". */
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A/B"), ctx,
+                                  pool, pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, pool, pool));
+  SVN_TEST_ASSERT(!text_conflicted);
+  SVN_TEST_INT_ASSERT(props_conflicted->nelts, 0);
+  SVN_TEST_ASSERT(tree_conflicted);
+
+  /* Check available tree conflict resolution options. */
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, pool));
+
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_move_dir_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
+  }
+
+  /* XFAIL: This results in a corrupt working copy:
+   * 
+   * E155009: Failed to run the WC DB work queue associated with 'A/B',
+   * work item 26 (file-install A/C/B/lambda 1 0 1 1)
+   */
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict, svn_client_conflict_option_incoming_move_dir_merge,
+            ctx, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -3198,6 +3289,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge incoming moved dir with moved file"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_file_move_new_line_of_history,
                        "merge incoming file move with new line of history"),
+    SVN_TEST_OPTS_XFAIL(test_update_incoming_dir_move_with_nested_file_move,
+                       "update incoming dir move with nested file move"),
     SVN_TEST_NULL
   };
 
