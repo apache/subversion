@@ -880,7 +880,8 @@ find_deleted_rev(void *baton,
               /* Remember details of this move. */
               move = apr_pcalloc(b->result_pool, sizeof(*move));
               move->moved_from_repos_relpath = moved_from_repos_relpath;
-              move->moved_to_repos_relpath = copy->copyto_path;
+              move->moved_to_repos_relpath = apr_pstrdup(b->result_pool,
+                                                         copy->copyto_path);
               move->rev = log_entry->revision;
               author = svn_hash_gets(log_entry->revprops,
                                      SVN_PROP_REVISION_AUTHOR);
