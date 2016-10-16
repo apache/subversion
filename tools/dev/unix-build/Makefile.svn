@@ -1411,6 +1411,8 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 			$(SVN_WITH_SASL) \
 			$(SERF_FLAG) \
 			--with-sqlite="$(PREFIX)/sqlite" \
+			--with-zlib="/usr" \
+			--without-gnome-keyring \
 			--with-berkeley-db="$(BDB_FLAG)" \
 			--with-ruby-sitedir="$(SVN_PREFIX)/lib/ruby/site_ruby" \
 			--disable-mod-activation \
