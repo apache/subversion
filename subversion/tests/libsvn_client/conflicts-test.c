@@ -3162,7 +3162,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge incoming add dir merge with move history"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_added_dir_replace,
                        "merge incoming add dir replace"),
-    SVN_TEST_OPTS_XFAIL(test_merge_incoming_added_dir_replace_and_merge,
+    SVN_TEST_OPTS_PASS(test_merge_incoming_added_dir_replace_and_merge,
                        "merge incoming add dir replace and merge"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_added_dir_replace_and_merge2,
                        "merge incoming add dir replace with file change"),
