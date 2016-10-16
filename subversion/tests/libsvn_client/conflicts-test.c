@@ -282,6 +282,30 @@ create_wc_with_file_add_vs_file_add_merge_conflict(svn_test__sandbox_t *b,
 
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
                                   ctx, b->pool, b->pool));
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_added_file_text_merge,
+      svn_client_conflict_option_incoming_added_file_replace_and_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_added_file_text_merge,
+      svn_client_conflict_option_incoming_added_file_replace_and_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
 
   /* Ensure that the expected tree conflict is present. */
   SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
@@ -574,6 +598,35 @@ create_wc_with_dir_add_vs_dir_add_merge_conflict(
 
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
                                   ctx, b->pool, b->pool));
+
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_add_ignore,
+      svn_client_conflict_option_incoming_added_dir_merge,
+      svn_client_conflict_option_incoming_added_dir_replace,
+      svn_client_conflict_option_incoming_added_dir_replace_and_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_add_ignore,
+      svn_client_conflict_option_incoming_added_dir_merge,
+      svn_client_conflict_option_incoming_added_dir_replace,
+      svn_client_conflict_option_incoming_added_dir_replace_and_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
 
   /* Ensure that the expected tree conflict is present. */
   SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
