@@ -74,8 +74,7 @@ err_end_elem(void *baton, const char *name)
 {
   svn_xml_parser_t **parser = baton;
 
-  svn_xml_signal_bailout(svn_error_create(SVN_ERR_ASSERTION_FAIL, NULL,
-                                          NULL),
+  svn_xml_signal_bailout(svn_error_create(APR_EGENERAL, NULL, NULL),
                          *parser);
 }
 
@@ -145,7 +144,7 @@ test_signal_bailout(apr_pool_t *pool)
 
   parser = svn_xml_make_parser(&parser, NULL, err_end_elem, NULL, pool);
   err = svn_xml_parse(parser, xml, strlen(xml), TRUE);
-  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_ASSERTION_FAIL);
+  SVN_TEST_ASSERT_ERROR(err, APR_EGENERAL);
 
   return SVN_NO_ERROR;
 }
@@ -167,7 +166,7 @@ test_invalid_xml_signal_bailout(apr_pool_t *pool)
   SVN_TEST_ASSERT_ANY_ERROR(err);
 
   if (err->apr_err != SVN_ERR_XML_MALFORMED &&
-      err->apr_err != SVN_ERR_ASSERTION_FAIL)
+      err->apr_err != APR_EGENERAL)
     {
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                "Got unxpected error '%s'",
