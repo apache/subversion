@@ -176,6 +176,42 @@ test_invalid_xml_signal_bailout(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_parser_free(apr_pool_t *pool)
+{
+  int i;
+  apr_pool_t *iterpool;
+
+  /* Test explicit svn_xml_free_parser() calls. */
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < 100; i++)
+  {
+      svn_xml_parser_t *parser;
+
+      svn_pool_clear(iterpool);
+
+      parser = svn_xml_make_parser(&parser, NULL, NULL, NULL, iterpool);
+      svn_xml_free_parser(parser);
+  }
+  svn_pool_destroy(iterpool);
+
+  /* Test parser free using pool cleanup. */
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < 100; i++)
+  {
+      svn_xml_parser_t *parser;
+
+      svn_pool_clear(iterpool);
+
+      parser = svn_xml_make_parser(&parser, NULL, NULL, NULL, iterpool);
+      /* We didn't call svn_xml_free_parser(): the parser will be freed on
+         pool cleanup. */
+  }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 static int max_threads = 1;
 
@@ -190,6 +226,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_xml_signal_bailout()"),
     SVN_TEST_PASS2(test_invalid_xml_signal_bailout,
                    "test svn_xml_signal_bailout() for invalid XML"),
+    SVN_TEST_PASS2(test_parser_free,
+                   "test svn_xml_parser_free()"),
     SVN_TEST_NULL
   };
 

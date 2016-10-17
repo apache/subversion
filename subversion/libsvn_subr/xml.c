@@ -364,6 +364,19 @@ static void expat_data_handler(void *userData, const XML_Char *s, int len)
 
 /*** Making a parser. ***/
 
+static apr_status_t parser_cleanup(void *data)
+{
+  svn_xml_parser_t *svn_parser = data;
+
+  /* Free Expat parser. */
+  if (svn_parser->parser)
+    {
+      XML_ParserFree(svn_parser->parser);
+      svn_parser->parser = NULL;
+    }
+  return APR_SUCCESS;
+}
+
 svn_xml_parser_t *
 svn_xml_make_parser(void *baton,
                     svn_xml_start_elem start_handler,
@@ -372,8 +385,6 @@ svn_xml_make_parser(void *baton,
                     apr_pool_t *pool)
 {
   svn_xml_parser_t *svn_parser;
-  apr_pool_t *subpool;
-
   XML_Parser parser = XML_ParserCreate(NULL);
 
   XML_SetElementHandler(parser,
@@ -382,21 +393,22 @@ svn_xml_make_parser(void *baton,
   XML_SetCharacterDataHandler(parser,
                               data_handler ? expat_data_handler : NULL);
 
-  /* ### we probably don't want this pool; or at least we should pass it
-     ### to the callbacks and clear it periodically.  */
-  subpool = svn_pool_create(pool);
-
-  svn_parser = apr_pcalloc(subpool, sizeof(*svn_parser));
+  svn_parser = apr_pcalloc(pool, sizeof(*svn_parser));
 
   svn_parser->parser = parser;
   svn_parser->start_handler = start_handler;
   svn_parser->end_handler = end_handler;
   svn_parser->data_handler = data_handler;
   svn_parser->baton = baton;
-  svn_parser->pool = subpool;
+  svn_parser->pool = pool;
 
   /* store our parser info as the UserData in the Expat parser */
   XML_SetUserData(parser, svn_parser);
+
+  /* Register pool cleanup handler to free Expat XML parser on cleanup,
+     if svn_xml_free_parser() was not called explicitly. */
+  apr_pool_cleanup_register(svn_parser->pool, svn_parser,
+                            parser_cleanup, apr_pool_cleanup_null);
 
   return svn_parser;
 }
@@ -406,11 +418,7 @@ svn_xml_make_parser(void *baton,
 void
 svn_xml_free_parser(svn_xml_parser_t *svn_parser)
 {
-  /* Free the expat parser */
-  XML_ParserFree(svn_parser->parser);
-
-  /* Free the subversion parser */
-  svn_pool_destroy(svn_parser->pool);
+  apr_pool_cleanup_run(svn_parser->pool, svn_parser, parser_cleanup);
 }
 
 
