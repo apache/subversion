@@ -86,13 +86,6 @@ Candidate changes:
      +1: brane
      +0: rhuijben (patch looks safe, but not sure enough for +1)
 
- * r1761755
-   Fix link error with --disable-keychain behavior on OS/X
-   Justification:
-     User reported problem. Easy fix.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1762338, r1762339
    Fix issue #4655: add zlib discovery through pkg-config.
    Justification:
@@ -122,6 +115,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1761755
+   Fix link error with --disable-keychain behavior on OS/X
+   Justification:
+     User reported problem. Easy fix.
+   Votes:
+     +1: rhuijben, stefan2, brane
 
  * r1764851
    Fix temporary accepting an SSL server certificate in JavaHL
