@@ -428,6 +428,14 @@ svn_xml_parse(svn_xml_parser_t *svn_parser,
   /* Parse some xml data */
   success = XML_Parse(svn_parser->parser, buf, (int) len, is_final);
 
+  /* Did an error occur somewhere *inside* the expat callbacks? */
+  if (svn_parser->error)
+    {
+      /* Kill all parsers and return the error */
+      svn_xml_free_parser(svn_parser);
+      return svn_parser->error;
+    }
+
   /* If expat choked internally, return its error. */
   if (! success)
     {
@@ -440,14 +448,6 @@ svn_xml_parse(svn_xml_parser_t *svn_parser,
          XML_ErrorString(XML_GetErrorCode(svn_parser->parser)), line);
 
       /* Kill all parsers and return the expat error */
-      svn_xml_free_parser(svn_parser);
-      return err;
-    }
-
-  /* Did an error occur somewhere *inside* the expat callbacks? */
-  if (svn_parser->error)
-    {
-      err = svn_parser->error;
       svn_xml_free_parser(svn_parser);
       return err;
     }
