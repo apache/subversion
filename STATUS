@@ -116,13 +116,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1761755
-   Fix link error with --disable-keychain behavior on OS/X
-   Justification:
-     User reported problem. Easy fix.
-   Votes:
-     +1: rhuijben, stefan2, brane
-
  * r1764851
    Fix temporary accepting an SSL server certificate in JavaHL
    Justification:
