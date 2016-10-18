@@ -2703,10 +2703,6 @@ test_merge_incoming_move_file_text_merge_conflict(const svn_test_opts_t *opts,
   SVN_ERR(svn_stringbuf_from_file2(&buf, incoming_old_abspath, pool));
   SVN_TEST_STRING_ASSERT(buf->data, "Initial content.\n");
 
-  /* XFAIL: We merge from trunk (/A) to branch (/A1). The working version
-   * should say "New branch content", and the incoming version should
-   * say "New trunk content", not vice versa.
-   */
   SVN_ERR(svn_stringbuf_from_file2(&buf, working_abspath, pool));
   SVN_TEST_STRING_ASSERT(buf->data, "New branch content.\n");
 
@@ -3753,8 +3749,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge incoming delete vs local delete"),
     SVN_TEST_OPTS_PASS(test_merge_file_prop,
                        "merge file property"),
-    SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_file_text_merge_conflict,
-                        "merge incoming move file merge with text conflict"),
+    SVN_TEST_OPTS_PASS(test_merge_incoming_move_file_text_merge_conflict,
+                       "merge incoming move file merge with text conflict"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_edit_file_moved_away,
                        "merge incoming edit for a moved-away working file"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_chained_move_local_edit,
