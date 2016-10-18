@@ -6656,14 +6656,17 @@ resolve_incoming_delete_accept(svn_client_conflict_option_t *option,
 {
   svn_client_conflict_option_id_t option_id;
   const char *local_abspath;
+  const char *parent_abspath;
   const char *lock_abspath;
   svn_error_t *err;
 
   option_id = svn_client_conflict_option_get_id(option);
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
 
+  /* Deleting a node requires a lock on the node's parent. */
+  parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
-                                                 local_abspath,
+                                                 parent_abspath,
                                                  scratch_pool, scratch_pool));
 
   err = verify_local_state_for_incoming_delete(conflict, option, ctx,
