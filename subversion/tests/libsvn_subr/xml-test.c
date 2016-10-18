@@ -28,23 +28,29 @@
 
 #include "../svn_test.h"
 
+typedef struct xml_callbacks_baton_t
+{
+  svn_stringbuf_t *buf;
+  svn_xml_parser_t *parser;
+} xml_callbacks_baton_t;
+
 /* Implements svn_xml_start_elem. Logs all invocations to svn_stringbuf_t
  * provided via BATTON. */
 static void
 strbuf_start_elem(void *baton, const char *name, const char **atts)
 {
-  svn_stringbuf_t *buf = baton;
-  svn_stringbuf_appendcstr(buf, "<");
-  svn_stringbuf_appendcstr(buf, name);
+  xml_callbacks_baton_t *b = baton;
+  svn_stringbuf_appendcstr(b->buf, "<");
+  svn_stringbuf_appendcstr(b->buf, name);
   while (*atts)
   {
-    svn_stringbuf_appendcstr(buf, " ");
-    svn_stringbuf_appendcstr(buf, atts[0]);
-    svn_stringbuf_appendcstr(buf, "=");
-    svn_stringbuf_appendcstr(buf, atts[1]);
+    svn_stringbuf_appendcstr(b->buf, " ");
+    svn_stringbuf_appendcstr(b->buf, atts[0]);
+    svn_stringbuf_appendcstr(b->buf, "=");
+    svn_stringbuf_appendcstr(b->buf, atts[1]);
     atts += 2;
   }
-  svn_stringbuf_appendcstr(buf, ">");
+  svn_stringbuf_appendcstr(b->buf, ">");
 }
 
 /* Implements svn_xml_end_elem. Logs all invocations to svn_stringbuf_t
@@ -52,10 +58,10 @@ strbuf_start_elem(void *baton, const char *name, const char **atts)
 static void
 strbuf_end_elem(void *baton, const char *name)
 {
-  svn_stringbuf_t *buf = baton;
-  svn_stringbuf_appendcstr(buf, "</");
-  svn_stringbuf_appendcstr(buf, name);
-  svn_stringbuf_appendcstr(buf, ">");
+  xml_callbacks_baton_t *b = baton;
+  svn_stringbuf_appendcstr(b->buf, "</");
+  svn_stringbuf_appendcstr(b->buf, name);
+  svn_stringbuf_appendcstr(b->buf, ">");
 }
 
 /* Implements svn_xml_char_data. Logs all invocations to svn_stringbuf_t
@@ -63,19 +69,22 @@ strbuf_end_elem(void *baton, const char *name)
 static void
 strbuf_cdata(void *baton, const char *data, apr_size_t len)
 {
-  svn_stringbuf_t *buf = baton;
-  svn_stringbuf_appendbytes(buf, data, len);
+  xml_callbacks_baton_t *b = baton;
+  svn_stringbuf_appendbytes(b->buf, data, len);
 }
 
-/* Implements svn_xml_end_elem. Callback used in test_signal_bailout and
- * test_invalid_xml_signal_bailout tests.  BATON is 'svn_xml_parser_t **'. */
+/* Implements svn_xml_char_data. Calls strbuf_end_elem() but also
+ * signals XML parser bailout. */
 static void
 err_end_elem(void *baton, const char *name)
 {
-  svn_xml_parser_t **parser = baton;
+  xml_callbacks_baton_t *b = baton;
+
+  /* Log invocation first. */
+  strbuf_end_elem(baton, name);
 
   svn_xml_signal_bailout(svn_error_create(APR_EGENERAL, NULL, NULL),
-                         *parser);
+                         b->parser);
 }
 
 static svn_error_t *
@@ -83,33 +92,32 @@ test_simple(apr_pool_t *pool)
 {
   const char *xml = "<root><tag1>value</tag1><tag2 a='v' /></root>";
   const char *p;
-  svn_stringbuf_t *buf = svn_stringbuf_create_empty(pool);
-  svn_xml_parser_t *parser;
+  xml_callbacks_baton_t b;
 
   /* Test parsing XML in one chunk.*/
-  parser = svn_xml_make_parser(buf, strbuf_start_elem, strbuf_end_elem,
-                               strbuf_cdata, pool);
+  b.buf = svn_stringbuf_create_empty(pool);
+  b.parser = svn_xml_make_parser(&b, strbuf_start_elem, strbuf_end_elem,
+                                 strbuf_cdata, pool);
 
-  SVN_ERR(svn_xml_parse(parser, xml, strlen(xml), TRUE));
+  SVN_ERR(svn_xml_parse(b.parser, xml, strlen(xml), TRUE));
 
-  SVN_TEST_STRING_ASSERT(buf->data,
+  SVN_TEST_STRING_ASSERT(b.buf->data,
                          "<root><tag1>value</tag1><tag2 a=v></tag2></root>");
-  svn_xml_free_parser(parser);
+  svn_xml_free_parser(b.parser);
 
   /* Test parsing XML byte by byte.*/
-  buf = svn_stringbuf_create_empty(pool);
-
-  parser = svn_xml_make_parser(buf, strbuf_start_elem, strbuf_end_elem,
-                               strbuf_cdata, pool);
+  b.buf = svn_stringbuf_create_empty(pool);
+  b.parser = svn_xml_make_parser(&b, strbuf_start_elem, strbuf_end_elem,
+                                 strbuf_cdata, pool);
 
   for (p = xml; *p; p++)
     {
-      SVN_ERR(svn_xml_parse(parser, p, 1, FALSE));
+      SVN_ERR(svn_xml_parse(b.parser, p, 1, FALSE));
     }
-  SVN_ERR(svn_xml_parse(parser, NULL, 0, TRUE));
-  svn_xml_free_parser(parser);
+  SVN_ERR(svn_xml_parse(b.parser, NULL, 0, TRUE));
+  svn_xml_free_parser(b.parser);
 
-  SVN_TEST_STRING_ASSERT(buf->data,
+  SVN_TEST_STRING_ASSERT(b.buf->data,
                          "<root><tag1>value</tag1><tag2 a=v></tag2></root>");
 
   return SVN_NO_ERROR;
@@ -120,14 +128,14 @@ test_invalid_xml(apr_pool_t *pool)
 {
   /* Invalid XML (missing </root>) */
   const char *xml = "<root><tag1>value</tag1>";
-  svn_stringbuf_t *buf = svn_stringbuf_create_empty(pool);
-  svn_xml_parser_t *parser;
+  xml_callbacks_baton_t b;
   svn_error_t *err;
 
-  parser = svn_xml_make_parser(buf, strbuf_start_elem, strbuf_end_elem,
-                               strbuf_cdata, pool);
+  b.buf = svn_stringbuf_create_empty(pool);
+  b.parser = svn_xml_make_parser(&b, strbuf_start_elem, strbuf_end_elem,
+                                 strbuf_cdata, pool);
 
-  err = svn_xml_parse(parser, xml, strlen(xml), TRUE);
+  err = svn_xml_parse(b.parser, xml, strlen(xml), TRUE);
 
   SVN_TEST_ASSERT_ERROR(err, SVN_ERR_XML_MALFORMED);
 
@@ -139,12 +147,16 @@ test_signal_bailout(apr_pool_t *pool)
 {
   /* Invalid XML (missing </root>) */
   const char *xml = "<root><tag1></tag1></root>";
-  svn_xml_parser_t *parser;
+  xml_callbacks_baton_t b;
   svn_error_t *err;
 
-  parser = svn_xml_make_parser(&parser, NULL, err_end_elem, NULL, pool);
-  err = svn_xml_parse(parser, xml, strlen(xml), TRUE);
+  b.buf = svn_stringbuf_create_empty(pool);
+  b.parser = svn_xml_make_parser(&b, strbuf_start_elem, err_end_elem,
+                                 strbuf_cdata, pool);
+  err = svn_xml_parse(b.parser, xml, strlen(xml), TRUE);
   SVN_TEST_ASSERT_ERROR(err, APR_EGENERAL);
+  SVN_TEST_STRING_ASSERT(b.buf->data,
+                         "<root><tag1></tag1>");
 
   return SVN_NO_ERROR;
 }
@@ -154,11 +166,12 @@ test_invalid_xml_signal_bailout(apr_pool_t *pool)
 {
   /* Invalid XML (missing </root>) */
   const char *xml = "<root><tag1></tag1>";
-  svn_xml_parser_t *parser;
+  xml_callbacks_baton_t b;
   svn_error_t *err;
 
-  parser = svn_xml_make_parser(&parser, NULL, err_end_elem, NULL, pool);
-  err = svn_xml_parse(parser, xml, strlen(xml), TRUE);
+  b.buf = svn_stringbuf_create_empty(pool);
+  b.parser = svn_xml_make_parser(&b, NULL, err_end_elem, NULL, pool);
+  err = svn_xml_parse(b.parser, xml, strlen(xml), TRUE);
 
   /* We may get SVN_ERR_XML_MALFORMED or error from err_end_elem() callback.
    * This behavior depends how XML parser works: it may pre-parse data before
