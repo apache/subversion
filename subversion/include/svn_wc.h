@@ -4578,7 +4578,7 @@ svn_wc_move(svn_wc_context_t *wc_ctx,
  * and everything below @a local_abspath.
  *
  * If @a keep_local is FALSE, this function immediately deletes all files,
- * modified and unmodified, versioned and of @a delete_unversioned is TRUE,
+ * modified and unmodified, versioned and if @a delete_unversioned is TRUE,
  * unversioned from the working copy.
  * It also immediately deletes unversioned directories and directories that
  * are scheduled to be added below @a local_abspath.  Only versioned may
