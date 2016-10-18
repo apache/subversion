@@ -42,6 +42,14 @@
 #include <expat.h>
 #endif
 
+#ifndef XML_VERSION_AT_LEAST
+#define XML_VERSION_AT_LEAST(major,minor,patch)                  \
+(((major) < XML_MAJOR_VERSION)                                       \
+ || ((major) == XML_MAJOR_VERSION && (minor) < XML_MINOR_VERSION)    \
+ || ((major) == XML_MAJOR_VERSION && (minor) == XML_MINOR_VERSION && \
+     (patch) <= XML_MICRO_VERSION))
+#endif /* XML_VERSION_AT_LEAST */
+
 #ifdef XML_UNICODE
 #error Expat is unusable -- it has been compiled for wide characters
 #endif
@@ -345,6 +353,15 @@ static void expat_start_handler(void *userData,
   svn_xml_parser_t *svn_parser = userData;
 
   (*svn_parser->start_handler)(svn_parser->baton, name, atts);
+
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+  /* Stop XML parsing if svn_xml_signal_bailout() was called.
+     We cannot do this in svn_xml_signal_bailout() because Expat
+     documentation states that XML_StopParser() must be called only from
+     callbacks. */
+  if (svn_parser->error)
+    (void) XML_StopParser(svn_parser->parser, 0 /* resumable */);
+#endif
 }
 
 static void expat_end_handler(void *userData, const XML_Char *name)
@@ -352,6 +369,15 @@ static void expat_end_handler(void *userData, const XML_Char *name)
   svn_xml_parser_t *svn_parser = userData;
 
   (*svn_parser->end_handler)(svn_parser->baton, name);
+
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+  /* Stop XML parsing if svn_xml_signal_bailout() was called.
+     We cannot do this in svn_xml_signal_bailout() because Expat
+     documentation states that XML_StopParser() must be called only from
+     callbacks. */
+  if (svn_parser->error)
+    (void) XML_StopParser(svn_parser->parser, 0 /* resumable */);
+#endif
 }
 
 static void expat_data_handler(void *userData, const XML_Char *s, int len)
@@ -359,6 +385,15 @@ static void expat_data_handler(void *userData, const XML_Char *s, int len)
   svn_xml_parser_t *svn_parser = userData;
 
   (*svn_parser->data_handler)(svn_parser->baton, s, (apr_size_t)len);
+
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+  /* Stop XML parsing if svn_xml_signal_bailout() was called.
+     We cannot do this in svn_xml_signal_bailout() because Expat
+     documentation states that XML_StopParser() must be called only from
+     callbacks. */
+  if (svn_parser->error)
+    (void) XML_StopParser(svn_parser->parser, 0 /* resumable */);
+#endif
 }
 
 
