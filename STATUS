@@ -95,7 +95,8 @@ Candidate changes:
      +1: kotkov
 
  * r1759117, r1759122, r1759123, r1759124, 1764676
-   Fix FSFS format 7 packing for revisions packs with lots of changes.
+   Fix issue #4657: "Offset too large" error when packing repository in
+   FSFS 7 format.
    Justification:
      Problem occurred in at least two user repositories.  Without the fix,
      format 7 repositories with an exceptionally large number of changes in
