@@ -195,11 +195,8 @@ def merge(entry, expected_stderr=None, *, commit=False):
     mergeargs.extend(['--', sf.trunk_url()])
   logmsg += entry.raw
 
-  # TODO(interactive mode): exclude STATUS from reverts
-  # TODO(interactive mode): save local mods to disk, as backport.pl does
-  run_revert()
+  no_local_mods('.')
 
-  run_svn_quiet(['update'])
   # TODO: use select() to restore interweaving of stdout/stderr
   _, stdout, stderr = run_svn_quiet(['merge'] + mergeargs, expected_stderr)
   sys.stdout.write(stdout)

@@ -40,11 +40,14 @@ if sys.argv[1:]:
   sys.exit(0)
 
 backport.merger.no_local_mods('./STATUS')
-sf = backport.status.StatusFile(open('./STATUS', encoding="UTF-8"))
 
-# Duplicate sf.paragraphs, since merge() will be removing elements from it.
-entries_paras = list(sf.entries_paras())
-for entry_para in entries_paras:
-  if entry_para.approved():
-    entry = entry_para.entry()
-    backport.merger.merge(entry, commit=True)
+while True:
+    backport.merger.run_svn_quiet(['update'])
+    sf = backport.status.StatusFile(open('./STATUS', encoding="UTF-8"))
+    for entry_para in sf.entries_paras():
+        if entry_para.approved():
+            entry = entry_para.entry()
+            backport.merger.merge(entry, commit=True)
+            break # 'continue' the outer loop
+    else:
+        break
