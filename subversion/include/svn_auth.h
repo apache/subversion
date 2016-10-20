@@ -440,7 +440,7 @@ typedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t)(
   svn_auth_cred_ssl_server_trust_t **cred,
   void *baton,
   const char *realm,
-  apr_uint32_t failures,
+  apr_uint32_t *failures,    //apr_uint32_t failures,
   const svn_auth_ssl_server_cert_info_t *cert_info,
   svn_boolean_t may_save,
   apr_pool_t *pool);
