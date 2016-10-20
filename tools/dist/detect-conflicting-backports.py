@@ -77,6 +77,7 @@ ERRORS = collections.defaultdict(list)
 for entry_para in sf.entries_paras():
     entry = entry_para.entry()
     # SVN_ERR_WC_FOUND_CONFLICT = 155015
+    backport.merger.run_svn_quiet(['update']) # TODO: what to do if this pulls in a STATUS mod?
     backport.merger.merge(entry, 'svn: E155015' if entry.depends else None)
 
     _, output, _ = backport.merger.run_svn(['status'])
