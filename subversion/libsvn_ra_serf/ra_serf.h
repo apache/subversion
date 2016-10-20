@@ -26,7 +26,6 @@
 
 
 #include <serf.h>
-#include <expat.h>  /* for XML_Parser  */
 #include <apr_uri.h>
 
 #include "svn_types.h"
