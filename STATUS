@@ -111,6 +111,14 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1766240
+   Fix a test failure in Ruby bindings due to modifying a frozen object
+   (NilClass)
+   Justification:
+     Fixes ruby test failures with ruby >= 2.2
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
