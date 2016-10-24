@@ -119,6 +119,14 @@ Candidate changes:
    Votes:
      +1: jamessan
 
+ * r1766323
+   Unconditionally call bye_gpg_agent when we're done with gpg-agent to fix a
+   file descriptor leak.
+   Justification:
+     Fixes a file descriptor leak
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
