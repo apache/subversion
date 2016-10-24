@@ -610,11 +610,10 @@ simple_gpg_agent_next_creds(void **credentials,
       return SVN_NO_ERROR;
     }
 
+  bye_gpg_agent(sd);
+
   if (strncmp(buffer, "OK\n", 3) != 0)
-    {
-      bye_gpg_agent(sd);
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   /* TODO: This attempt limit hard codes it at 3 attempts (or 2 retries)
    * which matches svn command line client's retry_limit as set in
