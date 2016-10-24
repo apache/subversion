@@ -127,6 +127,14 @@ Candidate changes:
    Votes:
      +1: jamessan
 
+ * r1766327
+   Improve discovery of gpg-agent sockets.
+   Justification:
+     Honor the user's request to use a different gpg configuration/home
+     directory
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
