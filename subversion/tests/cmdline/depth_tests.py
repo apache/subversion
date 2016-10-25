@@ -2933,12 +2933,12 @@ def fold_tree_with_deleted_moved_items(sbox):
     'A/B/lambda'     : Item(status='D ', wc_rev=1),
     'A/C'            : Item(status='D ', wc_rev=1, moved_to='A/C_moved'),
     'A/C_moved'      : Item(status='A ', wc_rev='-', copied='+',
-	                        moved_from='A/C'),
+                            moved_from='A/C'),
     'A/D'            : Item(status='  ', wc_rev=1),
     'A/D/G'          : Item(status='  ', wc_rev=1),
     'A/D/G/pi'       : Item(status='D ', wc_rev=1, moved_to='A/D/G/pi_moved'),
     'A/D/G/pi_moved' : Item(status='A ', wc_rev='-', copied='+',
-	                        moved_from='A/D/G/pi'),
+                            moved_from='A/D/G/pi'),
     })
   expected_disk = svntest.wc.State('', {
     'iota'           : Item(contents="This is the file 'iota'.\n"),
@@ -3008,8 +3008,8 @@ test_list = [ None,
               revert_depth_files,
               spurious_nodes_row,
               commit_excluded,
-			  fold_tree_with_deleted_moved_items,
-              ]
+              fold_tree_with_deleted_moved_items,
+             ]
 
 if __name__ == "__main__":
   svntest.main.run_tests(test_list)
