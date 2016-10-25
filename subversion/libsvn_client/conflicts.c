@@ -5898,7 +5898,7 @@ diff_file_added(const char *relpath,
                             FALSE, FALSE, scratch_pool));
   SVN_ERR(svn_io_check_path(local_abspath, &on_disk_kind, scratch_pool));
 
-  if (db_kind == svn_node_file && db_kind == svn_node_file)
+  if (db_kind == svn_node_file && on_disk_kind == svn_node_file)
     {
       propsarray = svn_prop_hash_to_array(right_props, scratch_pool);
       SVN_ERR(svn_categorize_props(propsarray, NULL, NULL, &regular_props,
