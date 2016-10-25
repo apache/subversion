@@ -125,7 +125,7 @@ Candidate changes:
    Justification:
      Fixes a file descriptor leak
    Votes:
-     +1: jamessan
+     +1: jamessan, rhuijben
 
  * r1766327
    Improve discovery of gpg-agent sockets.
@@ -133,7 +133,7 @@ Candidate changes:
      Honor the user's request to use a different gpg configuration/home
      directory
    Votes:
-     +1: jamessan
+     +1: jamessan, rhuijben
 
 Veto-blocked changes:
 =====================
