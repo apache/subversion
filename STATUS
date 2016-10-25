@@ -111,14 +111,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1766240
-   Fix a test failure in Ruby bindings due to modifying a frozen object
-   (NilClass)
-   Justification:
-     Fixes ruby test failures with ruby >= 2.2
-   Votes:
-     +1: jamessan
-
  * r1766323
    Unconditionally call bye_gpg_agent when we're done with gpg-agent to fix a
    file descriptor leak.
@@ -140,3 +132,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1766240
+   Fix a test failure in Ruby bindings due to modifying a frozen object
+   (NilClass)
+   Justification:
+     Fixes ruby test failures with ruby >= 2.2
+   Votes:
+     +1: jamessan
+     +0: rhuijben (Fix is ok, but I think just removing the whole line makes
+                   more sense. Casting +0 as it just affects the tests)
