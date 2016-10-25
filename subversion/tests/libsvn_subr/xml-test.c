@@ -183,7 +183,7 @@ test_invalid_xml_signal_bailout(apr_pool_t *pool)
   if (status != SVN_ERR_XML_MALFORMED && status != APR_EGENERAL)
     {
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                               "Got unxpected error '%s'",
+                               "Got unexpected error '%s'",
                                svn_error_symbolic_name(status));
     }
 
