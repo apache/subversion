@@ -140,5 +140,4 @@ Approved changes:
      Fixes ruby test failures with ruby >= 2.2
    Votes:
      +1: jamessan
-     +0: rhuijben (Fix is ok, but I think just removing the whole line makes
-                   more sense. Casting +0 as it just affects the tests)
+     +0: rhuijben
