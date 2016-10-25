@@ -168,6 +168,7 @@ test_invalid_xml_signal_bailout(apr_pool_t *pool)
   const char *xml = "<root><tag1></tag1>";
   xml_callbacks_baton_t b;
   svn_error_t *err;
+  apr_status_t status;
 
   b.buf = svn_stringbuf_create_empty(pool);
   b.parser = svn_xml_make_parser(&b, NULL, err_end_elem, NULL, pool);
@@ -176,14 +177,14 @@ test_invalid_xml_signal_bailout(apr_pool_t *pool)
   /* We may get SVN_ERR_XML_MALFORMED or error from err_end_elem() callback.
    * This behavior depends how XML parser works: it may pre-parse data before
    * callback invocation. */
-  SVN_TEST_ASSERT_ANY_ERROR(err);
+  status = err->apr_err;
+  SVN_TEST_ASSERT_ANY_ERROR(err); /* This clears err! */
 
-  if (err->apr_err != SVN_ERR_XML_MALFORMED &&
-      err->apr_err != APR_EGENERAL)
+  if (status != SVN_ERR_XML_MALFORMED && status != APR_EGENERAL)
     {
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                "Got unxpected error '%s'",
-                               svn_error_symbolic_name(err->apr_err));
+                               svn_error_symbolic_name(status));
     }
 
   return SVN_NO_ERROR;
