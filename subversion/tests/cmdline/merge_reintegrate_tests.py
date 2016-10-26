@@ -2825,15 +2825,11 @@ def renamed_branch_reintegrate(sbox):
 
 @SkipUnless(server_has_mergeinfo)
 @XFail()
-def reintegrate_unsynced_into_renamed_branch(sbox):
-  """reintegrate unsynced branch into renamed branch"""
-
-  # The idea of this test is to ensure that the reintegrate merge is able to
-  # cope when one or both of the branches have been renamed.
-  # This test checks whether the reintegrate merge behaves correctly
-  # when checking for unsync revision ranges in the reintegrate source.
-  # The reintegrate merge should error out because of unsynced ranges.
-  # At the time this test was written, it failed with 'path not found'.
+def reintegrate_noop_branch_into_renamed_branch(sbox):
+  """reintegrate no-op branch into renamed branch"""
+  # In this test, the branch has no unique changes but contains a
+  # revision cherry-picked from trunk. Reintegrating such a branch
+  # should work, but used to error out when this test was written.
 
   # Make A_COPY branch in r2, and do a few more commits to A in r3-6.
   sbox.build()
@@ -2855,13 +2851,9 @@ def reintegrate_unsynced_into_renamed_branch(sbox):
   sbox.simple_commit()
   sbox.simple_update()
 
-  # Try to reintegrate the branch. This should fail with an
-  # 'unsynced ranges' error. But it fails instead with:
+  # Try to reintegrate the branch. This should work but used to fail with:
   # svn: E160013: File not found: revision 5, path '/A_RENAMED'
-  run_reintegrate_expect_error(sbox.repo_url + '/A_COPY',
-                               sbox.ospath('A_RENAMED'),
-                               [],
-                               "svn: E195016: Reintegrate can only be used if.*")
+  run_reintegrate(sbox.repo_url + '/A_COPY', sbox.ospath('A_RENAMED'))
 
 
 ########################################################################
@@ -2891,7 +2883,7 @@ test_list = [ None,
               reintegrate_symlink_deletion,
               no_op_reintegrate,
               renamed_branch_reintegrate,
-              reintegrate_unsynced_into_renamed_branch,
+              reintegrate_noop_branch_into_renamed_branch,
              ]
 
 if __name__ == '__main__':
