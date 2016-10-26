@@ -2824,7 +2824,6 @@ def renamed_branch_reintegrate(sbox):
   run_reintegrate(sbox.repo_url + '/RENAMED@8', A_path)
 
 @SkipUnless(server_has_mergeinfo)
-@XFail()
 def reintegrate_noop_branch_into_renamed_branch(sbox):
   """reintegrate no-op branch into renamed branch"""
   # In this test, the branch has no unique changes but contains a
