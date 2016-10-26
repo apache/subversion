@@ -2823,6 +2823,47 @@ def renamed_branch_reintegrate(sbox):
   # ### TODO: Check the result more carefully than merely that it completed.
   run_reintegrate(sbox.repo_url + '/RENAMED@8', A_path)
 
+@SkipUnless(server_has_mergeinfo)
+@XFail()
+def reintegrate_unsynced_into_renamed_branch(sbox):
+  """reintegrate unsynced branch into renamed branch"""
+
+  # The idea of this test is to ensure that the reintegrate merge is able to
+  # cope when one or both of the branches have been renamed.
+  # This test checks whether the reintegrate merge behaves correctly
+  # when checking for unsync revision ranges in the reintegrate source.
+  # The reintegrate merge should error out because of unsynced ranges.
+  # At the time this test was written, it failed with 'path not found'.
+
+  # Make A_COPY branch in r2, and do a few more commits to A in r3-6.
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  A_path = sbox.ospath('A')
+  A_COPY_path = sbox.ospath('A_COPY')
+  expected_disk, expected_status = set_up_branch(sbox)
+
+  # Cherry-pick merge from trunk to branch
+  youngest_rev = sbox.youngest()
+  svntest.main.run_svn(None, 'merge', '-c', youngest_rev,
+                       sbox.repo_url + '/A', A_COPY_path)
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Rename the trunk
+  sbox.simple_move('A', 'A_RENAMED')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Try to reintegrate the branch. This should fail with an
+  # 'unsynced ranges' error. But it fails instead with:
+  # svn: E160013: File not found: revision 5, path '/A_RENAMED'
+  run_reintegrate_expect_error(sbox.repo_url + '/A_COPY',
+                               sbox.ospath('A_RENAMED'),
+                               [],
+                               "svn: E195016: Reintegrate can only be used if.*")
+
+
 ########################################################################
 # Run the tests
 
@@ -2850,6 +2891,7 @@ test_list = [ None,
               reintegrate_symlink_deletion,
               no_op_reintegrate,
               renamed_branch_reintegrate,
+              reintegrate_unsynced_into_renamed_branch,
              ]
 
 if __name__ == '__main__':
