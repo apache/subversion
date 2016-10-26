@@ -138,6 +138,15 @@ Candidate changes:
    Votes:
      +1: stefan2
 
+ * r1766699, r1766704, r1766711
+   Fix a bug where reintegrate merges access a non-existent path and error out.
+   Justification:
+     This problem can prevent reintegration of branches in some situations.
+     Advanced users can fall back to a 2-URL merge but most users won't
+     realize how they can work around the problem.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
