@@ -1130,6 +1130,65 @@ svn_ra_get_dir(svn_ra_session_t *session,
                apr_pool_t *pool);
 
 /**
+ * Callback type to be used with @c svn_repos_list.  It will be invoked for
+ * every directory entry found.
+ *
+ * The full path of the entry is given in @a path and @a dirent contains
+ * various additional information.  If @c svn_repos_list has been called
+ * with @a path_info_only set, only the @a kind element of this struct
+ * will be valid.
+ *
+ * @a baton is the user-provided receiver baton.  @a scratch_pool may be
+ * used for temporary allocations.
+ *
+ * @since New in 1.10.
+ */
+typedef svn_error_t *(* svn_ra_dirent_receiver_t)(const char *rel_path,
+                                                  svn_dirent_t *dirent,
+                                                  void *baton,
+                                                  apr_pool_t *scratch_pool);
+
+/**
+ * Efficiently list everything within a sub-tree.  Specify a glob pattern
+ * to search for specific files and folders.
+ *
+ * Walk the sub-tree starting at @a path under @a root up to the given
+ * @a depth.  For each directory entry found, @a receiver will be called
+ * with @a receiver_baton.  The starting @a path will be reported as well.
+ * Because retrieving all elements of a @c svn_dirent_t can be expensive,
+ * you may set @a path_info_only to receive only the path name and the node
+ * kind.
+ *
+ * @a patterns is an array of <tt>const char *</tt>.  If it is not empty,
+ * only those directory entries will be reported whose last path segment
+ * matches at least one of these patterns.  This feature uses @c apr_fnmatch
+ * for glob matching and requiring '.' to matched by dots in the path.
+ *
+ * If @a authz_read_func is not @c NULL, this function will neither report
+ * entries nor recurse into directories that the user has no access to.
+ *
+ * Cancellation support is provided in the usual way through the optional
+ * @a cancel_func and @a cancel_baton.
+ *
+ * @a path must point to a directory and @a depth must be at least
+ * @c svn_depth_empty.
+ *
+ * Use @a scratch_pool for temporary memory allocation.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_ra_list(svn_ra_session_t *session,
+            const char *path,
+            svn_revnum_t revision,
+            apr_array_header_t *patterns,
+            svn_depth_t depth,
+            apr_uint32_t dirent_fields,
+            svn_ra_dirent_receiver_t receiver,
+            void *receiver_baton,
+            apr_pool_t *scratch_pool);
+
+/**
  * Set @a *catalog to a mergeinfo catalog for the paths in @a paths.
  * If no mergeinfo is available, set @a *catalog to @c NULL.  The
  * requested mergeinfo hashes are for @a paths (which are relative to
@@ -2174,6 +2233,13 @@ svn_ra_has_capability(svn_ra_session_t *session,
  * @since New in 1.8.
  */
 #define SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE "get-file-revs-reversed"
+
+/**
+ * The capability of a server to understand the list command.
+ *
+ * @since New in 1.10.
+ */
+#define SVN_RA_CAPABILITY_LIST "list"
 
 
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
