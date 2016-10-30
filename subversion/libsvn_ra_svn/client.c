@@ -2948,6 +2948,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_get_deleted_rev,
   ra_svn_get_inherited_props,
   NULL /* ra_set_svn_ra_open */,
+  NULL /* svn_ra_list */,
   ra_svn_register_editor_shim_callbacks,
   NULL /* commit_ev2 */,
   NULL /* replay_range_ev2 */

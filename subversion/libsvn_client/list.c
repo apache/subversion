@@ -221,6 +221,53 @@ get_dir_contents(apr_uint32_t dirent_fields,
   return SVN_NO_ERROR;
 }
 
+/* Baton type to be used with list_receiver. */
+typedef struct receiver_baton_t
+{
+  /* Wrapped callback function to invoke. */
+  svn_client_list_func2_t list_func;
+
+  /* Baton to be used with LIST_FUNC. */
+  void *list_baton;
+
+  /* Client context providing cancellation support. */
+  svn_client_ctx_t *ctx;
+
+  /* All locks found for the whole tree; pick yours. */
+  apr_hash_t *locks;
+
+  /* Start path of the operation. */
+  const char *fs_base_path;
+} receiver_baton_t;
+
+/* Implement svn_ra_dirent_receiver_t.
+   The BATON type must be a receiver_baton_t. */
+static svn_error_t *
+list_receiver(const char *rel_path,
+              svn_dirent_t *dirent,
+              void *baton,
+              apr_pool_t *pool)
+{
+  receiver_baton_t *b = baton;
+  const svn_lock_t *lock = NULL;
+
+  /* We only report the path relative to the start path. */
+  rel_path = svn_dirent_skip_ancestor(b->fs_base_path, rel_path);
+
+  if (b->locks)
+    {
+      const char *abs_path = svn_dirent_join(b->fs_base_path, rel_path, pool);
+      lock = svn_hash_gets(b->locks, abs_path);
+    }
+
+  if (b->ctx->cancel_func)
+    SVN_ERR(b->ctx->cancel_func(b->ctx->cancel_baton));
+
+  SVN_ERR(b->list_func(b->list_baton, rel_path, dirent, lock,
+                       b->fs_base_path, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
 
 /* List the file/directory entries for PATH_OR_URL at REVISION.
    The actual node revision selected is determined by the path as
@@ -300,12 +347,6 @@ list_internal(const char *path_or_url,
 
   fs_path = svn_client__pathrev_fspath(loc, pool);
 
-  SVN_ERR(svn_ra_stat(ra_session, "", loc->rev, &dirent, pool));
-  if (! dirent)
-    return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                             _("URL '%s' non-existent in revision %ld"),
-                             loc->url, loc->rev);
-
   /* Maybe get all locks under url. */
   if (fetch_locks)
     {
@@ -323,6 +364,33 @@ list_internal(const char *path_or_url,
     }
   else
     locks = NULL;
+
+  /* Try to use the efficient and fully authz-filtered code path. */
+  if (!include_externals)
+    {
+      receiver_baton_t receiver_baton;
+      receiver_baton.list_baton = baton;
+      receiver_baton.ctx = ctx;
+      receiver_baton.list_func = list_func;
+      receiver_baton.locks = locks;
+      receiver_baton.fs_base_path = fs_path;
+
+      err = svn_ra_list(ra_session, "", loc->rev, patterns, depth,
+                        dirent_fields, list_receiver, &receiver_baton, pool);
+
+      if (   svn_error_find_cause(err, SVN_ERR_UNSUPPORTED_FEATURE)
+          || svn_error_find_cause(err, SVN_ERR_RA_NOT_IMPLEMENTED))
+        svn_error_clear(err);
+      else
+        return svn_error_trace(err);
+    }
+
+  /* Stat for the file / directory node itself. */
+  SVN_ERR(svn_ra_stat(ra_session, "", loc->rev, &dirent, pool));
+  if (! dirent)
+    return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                             _("URL '%s' non-existent in revision %ld"),
+                             loc->url, loc->rev);
 
   /* Report the dirent for the target. */
   if (match_patterns(svn_dirent_dirname(fs_path, pool), patterns))

@@ -645,6 +645,29 @@ svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
                                   path, revision, dirent_fields, pool);
 }
 
+svn_error_t *
+svn_ra_list(svn_ra_session_t *session,
+            const char *path,
+            svn_revnum_t revision,
+            apr_array_header_t *patterns,
+            svn_depth_t depth,
+            apr_uint32_t dirent_fields,
+            svn_ra_dirent_receiver_t receiver,
+            void *receiver_baton,
+            apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
+  if (!session->vtable->list)
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+
+  SVN_ERR(svn_ra__assert_capable_server(session, SVN_RA_CAPABILITY_LIST,
+                                        NULL, scratch_pool));
+
+  return session->vtable->list(session, path, revision, patterns, depth,
+                               dirent_fields, receiver, receiver_baton,
+                               scratch_pool);
+}
+
 svn_error_t *svn_ra_get_mergeinfo(svn_ra_session_t *session,
                                   svn_mergeinfo_catalog_t *catalog,
                                   const apr_array_header_t *paths,
