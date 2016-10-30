@@ -1671,6 +1671,9 @@ vparse_tuple(const svn_ra_svn__list_t *items,
             case '3':
               *va_arg(*ap, svn_tristate_t *) = svn_tristate_unknown;
               break;
+            case 'b':
+              *va_arg(*ap, svn_boolean_t *) = FALSE;
+              break;
             case '(':
               nesting_level++;
               break;
