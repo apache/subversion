@@ -1324,6 +1324,35 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Write the protocol words that correspond to DIRENT_FIELDS to CONN
+ * and use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+send_dirent_fields(svn_ra_svn_conn_t *conn,
+                   apr_uint32_t dirent_fields,
+                   apr_pool_t *scratch_pool)
+{
+  if (dirent_fields & SVN_DIRENT_KIND)
+    SVN_ERR(svn_ra_svn__write_word(conn, scratch_pool,
+                                   SVN_RA_SVN_DIRENT_KIND));
+  if (dirent_fields & SVN_DIRENT_SIZE)
+    SVN_ERR(svn_ra_svn__write_word(conn, scratch_pool,
+                                   SVN_RA_SVN_DIRENT_SIZE));
+  if (dirent_fields & SVN_DIRENT_HAS_PROPS)
+    SVN_ERR(svn_ra_svn__write_word(conn, scratch_pool,
+                                   SVN_RA_SVN_DIRENT_HAS_PROPS));
+  if (dirent_fields & SVN_DIRENT_CREATED_REV)
+    SVN_ERR(svn_ra_svn__write_word(conn, scratch_pool,
+                                   SVN_RA_SVN_DIRENT_CREATED_REV));
+  if (dirent_fields & SVN_DIRENT_TIME)
+    SVN_ERR(svn_ra_svn__write_word(conn, scratch_pool,
+                                   SVN_RA_SVN_DIRENT_TIME));
+  if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
+    SVN_ERR(svn_ra_svn__write_word(conn, scratch_pool,
+                                   SVN_RA_SVN_DIRENT_LAST_AUTHOR));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
                                    apr_hash_t **dirents,
                                    svn_revnum_t *fetched_rev,
@@ -1340,18 +1369,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
 
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w(c(?r)bb(!", "get-dir", path,
                                   rev, (props != NULL), (dirents != NULL)));
-  if (dirent_fields & SVN_DIRENT_KIND)
-    SVN_ERR(svn_ra_svn__write_word(conn, pool, SVN_RA_SVN_DIRENT_KIND));
-  if (dirent_fields & SVN_DIRENT_SIZE)
-    SVN_ERR(svn_ra_svn__write_word(conn, pool, SVN_RA_SVN_DIRENT_SIZE));
-  if (dirent_fields & SVN_DIRENT_HAS_PROPS)
-    SVN_ERR(svn_ra_svn__write_word(conn, pool, SVN_RA_SVN_DIRENT_HAS_PROPS));
-  if (dirent_fields & SVN_DIRENT_CREATED_REV)
-    SVN_ERR(svn_ra_svn__write_word(conn, pool, SVN_RA_SVN_DIRENT_CREATED_REV));
-  if (dirent_fields & SVN_DIRENT_TIME)
-    SVN_ERR(svn_ra_svn__write_word(conn, pool, SVN_RA_SVN_DIRENT_TIME));
-  if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
-    SVN_ERR(svn_ra_svn__write_word(conn, pool, SVN_RA_SVN_DIRENT_LAST_AUTHOR));
+  SVN_ERR(send_dirent_fields(conn, dirent_fields, pool));
 
   /* Always send the, nominally optional, want-iprops as "false" to
      workaround a bug in svnserve 1.8.0-1.8.8 that causes the server

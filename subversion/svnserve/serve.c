@@ -1679,11 +1679,11 @@ get_file(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+/* Translate all the words in DIRENT_FIELDS_LIST into the flags in
+ * DIRENT_FIELDS_P.  If DIRENT_FIELDS_LIST is NULL, set all flags. */
 static svn_error_t *
-get_dir(svn_ra_svn_conn_t *conn,
-        apr_pool_t *pool,
-        svn_ra_svn__list_t *params,
-        void *baton)
+parse_dirent_fields(apr_uint64_t *dirent_fields_p,
+                    svn_ra_svn__list_t *dirent_fields_list)
 {
   static const svn_string_t str_kind
     = SVN__STATIC_STRING(SVN_RA_SVN_DIRENT_KIND);
@@ -1698,32 +1698,7 @@ get_dir(svn_ra_svn_conn_t *conn,
   static const svn_string_t str_last_author
     = SVN__STATIC_STRING(SVN_RA_SVN_DIRENT_LAST_AUTHOR);
 
-  server_baton_t *b = baton;
-  const char *path, *full_path;
-  svn_revnum_t rev;
-  apr_hash_t *entries, *props = NULL;
-  apr_array_header_t *inherited_props;
-  apr_hash_index_t *hi;
-  svn_fs_root_t *root;
-  apr_pool_t *subpool;
-  svn_boolean_t want_props, want_contents;
-  apr_uint64_t wants_inherited_props;
   apr_uint64_t dirent_fields;
-  svn_ra_svn__list_t *dirent_fields_list = NULL;
-  svn_ra_svn__item_t *elt;
-  int i;
-  authz_baton_t ab;
-
-  ab.server = b;
-  ab.conn = conn;
-
-  SVN_ERR(svn_ra_svn__parse_tuple(params, "c(?r)bb?l?B", &path, &rev,
-                                  &want_props, &want_contents,
-                                  &dirent_fields_list,
-                                  &wants_inherited_props));
-
-  if (wants_inherited_props == SVN_RA_SVN_UNSPECIFIED_NUMBER)
-    wants_inherited_props = FALSE;
 
   if (! dirent_fields_list)
     {
@@ -1731,15 +1706,17 @@ get_dir(svn_ra_svn_conn_t *conn,
     }
   else
     {
+      int i;
       dirent_fields = 0;
 
       for (i = 0; i < dirent_fields_list->nelts; ++i)
         {
-          elt = &SVN_RA_SVN__LIST_ITEM(dirent_fields_list, i);
+          svn_ra_svn__item_t *elt
+            = &SVN_RA_SVN__LIST_ITEM(dirent_fields_list, i);
 
           if (elt->kind != SVN_RA_SVN_WORD)
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                    "Dirent field not a string");
+                                    "Dirent field not a word");
 
           if (svn_string_compare(&str_kind, &elt->u.word))
             dirent_fields |= SVN_DIRENT_KIND;
@@ -1756,6 +1733,43 @@ get_dir(svn_ra_svn_conn_t *conn,
         }
     }
 
+  *dirent_fields_p = dirent_fields;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+get_dir(svn_ra_svn_conn_t *conn,
+        apr_pool_t *pool,
+        svn_ra_svn__list_t *params,
+        void *baton)
+{
+  server_baton_t *b = baton;
+  const char *path, *full_path;
+  svn_revnum_t rev;
+  apr_hash_t *entries, *props = NULL;
+  apr_array_header_t *inherited_props;
+  apr_hash_index_t *hi;
+  svn_fs_root_t *root;
+  apr_pool_t *subpool;
+  svn_boolean_t want_props, want_contents;
+  apr_uint64_t wants_inherited_props;
+  apr_uint64_t dirent_fields;
+  svn_ra_svn__list_t *dirent_fields_list = NULL;
+  int i;
+  authz_baton_t ab;
+
+  ab.server = b;
+  ab.conn = conn;
+
+  SVN_ERR(svn_ra_svn__parse_tuple(params, "c(?r)bb?l?B", &path, &rev,
+                                  &want_props, &want_contents,
+                                  &dirent_fields_list,
+                                  &wants_inherited_props));
+
+  if (wants_inherited_props == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    wants_inherited_props = FALSE;
+
+  SVN_ERR(parse_dirent_fields(&dirent_fields, dirent_fields_list));
   full_path = svn_fspath__join(b->repository->fs_path->data,
                                svn_relpath_canonicalize(path, pool), pool);
 
