@@ -6402,13 +6402,18 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * its children.  If @a path_or_url is non-existent, return
  * #SVN_ERR_FS_NOT_FOUND.
  *
+ * If the @a pattern array of <tt>const char *</tt> is not empty, only
+ * report paths whose last segment matches one of the specified glob
+ * patterns.  This does not affect the size of the tree nor the number of
+ * externals being covered.
+ *
  * If @a fetch_locks is TRUE, include locks when reporting directory entries.
  *
  * If @a include_externals is TRUE, also list all external items
  * reached by recursion. @a depth value passed to the original list target
  * applies for the externals also.
  *
- * Use @a pool for temporary allocations.
+ * Use @a scratch_pool for temporary allocations.
  *
  * Use authentication baton cached in @a ctx to authenticate against the
  * repository.
@@ -6424,8 +6429,29 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * otherwise simply bitwise OR together the combination of @c SVN_DIRENT_
  * fields you care about.
  *
- * @since New in 1.8.
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_client_list4(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 apr_array_header_t *patterns,
+                 svn_depth_t depth,
+                 apr_uint32_t dirent_fields,
+                 svn_boolean_t fetch_locks,
+                 svn_boolean_t include_externals,
+                 svn_client_list_func2_t list_func,
+                 void *baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *scratch_pool);
+
+/** Similar to svn_client_list4(), but with @a patterm left empty.
+ *
+ * @since New in 1.8.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.9 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_list3(const char *path_or_url,
                  const svn_opt_revision_t *peg_revision,

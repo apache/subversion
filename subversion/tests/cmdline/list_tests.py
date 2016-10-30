@@ -94,6 +94,20 @@ def list_verbose(sbox):
     expected, [], 'list', path, '--depth=infinity', "-v")
 
 
+def list_filtered(sbox):
+  "filtered list"
+
+  sbox.build(read_only=True)
+  path = sbox.repo_url + "/A/D"
+
+  # check plain info
+  expected = [ "H/omega\n",
+               "gamma\n" ]
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    None, [], 'list', path, '--depth=infinity', '--search=*a')
+
+
 ########################################################################
 # Run the tests
 
@@ -101,6 +115,7 @@ def list_verbose(sbox):
 test_list = [ None,
               list_plain,
               list_verbose,
+              list_filtered,
              ]
 
 if __name__ == '__main__':

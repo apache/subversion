@@ -21,6 +21,8 @@
  * ====================================================================
  */
 
+#include <apr_fnmatch.h>
+
 #include "svn_client.h"
 #include "svn_dirent_uri.h"
 #include "svn_hash.h"
@@ -41,6 +43,7 @@
 /* Prototypes for referencing before declaration */
 static svn_error_t *
 list_externals(apr_hash_t *externals,
+               apr_array_header_t *patterns,
                svn_depth_t depth,
                apr_uint32_t dirent_fields,
                svn_boolean_t fetch_locks,
@@ -53,6 +56,7 @@ static svn_error_t *
 list_internal(const char *path_or_url,
               const svn_opt_revision_t *peg_revision,
               const svn_opt_revision_t *revision,
+              apr_array_header_t *patterns,
               svn_depth_t depth,
               apr_uint32_t dirent_fields,
               svn_boolean_t fetch_locks,
@@ -64,6 +68,25 @@ list_internal(const char *path_or_url,
               svn_client_ctx_t *ctx,
               apr_pool_t *pool);
 
+/* Return TRUE if S matches any of the const char * in PATTERNS.
+ * Note that any S will match if PATTERNS is empty. */
+static svn_boolean_t
+match_patterns(const char *s,
+               apr_array_header_t *patterns)
+{
+  int i;
+  if (patterns->nelts == 0)
+    return TRUE;
+
+  for (i = 0; i < patterns->nelts; ++i)
+    {
+      const char *pattern = APR_ARRAY_IDX(patterns, i, const char *);
+      if (apr_fnmatch(pattern, s, APR_FNM_PERIOD) == APR_SUCCESS)
+        return TRUE;
+    }
+
+  return FALSE;
+}
 
 /* Get the directory entries of DIR at REV (relative to the root of
    RA_SESSION), getting at least the fields specified by DIRENT_FIELDS.
@@ -74,6 +97,10 @@ list_internal(const char *path_or_url,
    if svn_depth_immediates, invoke it on file and directory entries;
    if svn_depth_infinity, invoke it on file and directory entries and
    recurse into the directory entries with the same depth.
+
+   If PATTERNS is not empty, the last path segments must match at least
+   one of const char * patterns in it or the respective dirent will not
+   be reported.
 
    LOCKS, if non-NULL, is a hash mapping const char * paths to svn_lock_t
    objects and FS_PATH is the absolute filesystem path of the RA session.
@@ -94,6 +121,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
                  svn_ra_session_t *ra_session,
                  apr_hash_t *locks,
                  const char *fs_path,
+                 apr_array_header_t *patterns,
                  svn_depth_t depth,
                  svn_client_ctx_t *ctx,
                  apr_hash_t *externals,
@@ -175,14 +203,15 @@ get_dir_contents(apr_uint32_t dirent_fields,
       if (the_ent->kind == svn_node_file
           || depth == svn_depth_immediates
           || depth == svn_depth_infinity)
-        SVN_ERR(list_func(baton, path, the_ent, lock, fs_path,
-                          external_parent_url, external_target, iterpool));
+        if (match_patterns(item->key, patterns))
+          SVN_ERR(list_func(baton, path, the_ent, lock, fs_path,
+                            external_parent_url, external_target, iterpool));
 
       /* If externals is non-NULL, populate the externals hash table
          recursively for all directory entries. */
       if (depth == svn_depth_infinity && the_ent->kind == svn_node_dir)
-        SVN_ERR(get_dir_contents(dirent_fields, path, rev,
-                                 ra_session, locks, fs_path, depth, ctx,
+        SVN_ERR(get_dir_contents(dirent_fields, path, rev, ra_session,
+                                 locks, fs_path, patterns, depth, ctx,
                                  externals, external_parent_url,
                                  external_target, list_func, baton,
                                  result_pool, iterpool));
@@ -203,6 +232,10 @@ get_dir_contents(apr_uint32_t dirent_fields,
    svn_depth_immediates, list all files and include immediate
    subdirectories (at svn_depth_empty).  Else if DEPTH is
    svn_depth_empty, just list PATH_OR_URL with none of its entries.
+
+   If PATTERNS is not empty, the last path segments must match at least
+   one of const char * patterns in it or the respective dirent will not
+   be reported.
 
    DIRENT_FIELDS controls which fields in the svn_dirent_t's are
    filled in.  To have them totally filled in use SVN_DIRENT_ALL,
@@ -230,6 +263,7 @@ static svn_error_t *
 list_internal(const char *path_or_url,
               const svn_opt_revision_t *peg_revision,
               const svn_opt_revision_t *revision,
+              apr_array_header_t *patterns,
               svn_depth_t depth,
               apr_uint32_t dirent_fields,
               svn_boolean_t fetch_locks,
@@ -291,17 +325,18 @@ list_internal(const char *path_or_url,
     locks = NULL;
 
   /* Report the dirent for the target. */
-  SVN_ERR(list_func(baton, "", dirent, locks
-                    ? (svn_hash_gets(locks, fs_path))
-                    : NULL, fs_path, external_parent_url,
-                    external_target, pool));
+  if (match_patterns(svn_dirent_dirname(fs_path, pool), patterns))
+    SVN_ERR(list_func(baton, "", dirent, locks
+                      ? (svn_hash_gets(locks, fs_path))
+                      : NULL, fs_path, external_parent_url,
+                      external_target, pool));
 
   if (dirent->kind == svn_node_dir
       && (depth == svn_depth_files
           || depth == svn_depth_immediates
           || depth == svn_depth_infinity))
     SVN_ERR(get_dir_contents(dirent_fields, "", loc->rev, ra_session, locks,
-                             fs_path, depth, ctx, externals,
+                             fs_path, patterns, depth, ctx, externals,
                              external_parent_url, external_target, list_func,
                              baton, pool, pool));
 
@@ -312,7 +347,7 @@ list_internal(const char *path_or_url,
     {
       /* The 'externals' hash populated by get_dir_contents() is processed
          here. */
-      SVN_ERR(list_externals(externals, depth, dirent_fields,
+      SVN_ERR(list_externals(externals, patterns, depth, dirent_fields,
                              fetch_locks, list_func, baton,
                              ctx, pool));
     }
@@ -349,6 +384,7 @@ wrap_list_error(const svn_client_ctx_t *ctx,
 static svn_error_t *
 list_external_items(apr_array_header_t *external_items,
                     const char *externals_parent_url,
+                    apr_array_header_t *patterns,
                     svn_depth_t depth,
                     apr_uint32_t dirent_fields,
                     svn_boolean_t fetch_locks,
@@ -389,6 +425,7 @@ list_external_items(apr_array_header_t *external_items,
                               list_internal(resolved_url,
                                             &item->peg_revision,
                                             &item->revision,
+                                            patterns,
                                             depth, dirent_fields,
                                             fetch_locks,
                                             TRUE,
@@ -411,6 +448,7 @@ list_external_items(apr_array_header_t *external_items,
    passed to svn_client_list(). */
 static svn_error_t *
 list_externals(apr_hash_t *externals,
+               apr_array_header_t *patterns,
                svn_depth_t depth,
                apr_uint32_t dirent_fields,
                svn_boolean_t fetch_locks,
@@ -440,9 +478,10 @@ list_externals(apr_hash_t *externals,
       if (! external_items->nelts)
         continue;
 
-      SVN_ERR(list_external_items(external_items, externals_parent_url, depth,
-                                  dirent_fields, fetch_locks, list_func,
-                                  baton, ctx, iterpool));
+      SVN_ERR(list_external_items(external_items, externals_parent_url,
+                                  patterns, depth, dirent_fields,
+                                  fetch_locks, list_func, baton, ctx,
+                                  iterpool));
 
     }
   svn_pool_destroy(iterpool);
@@ -452,9 +491,10 @@ list_externals(apr_hash_t *externals,
 
 
 svn_error_t *
-svn_client_list3(const char *path_or_url,
+svn_client_list4(const char *path_or_url,
                  const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *revision,
+                 apr_array_header_t *patterns,
                  svn_depth_t depth,
                  apr_uint32_t dirent_fields,
                  svn_boolean_t fetch_locks,
@@ -462,14 +502,14 @@ svn_client_list3(const char *path_or_url,
                  svn_client_list_func2_t list_func,
                  void *baton,
                  svn_client_ctx_t *ctx,
-                 apr_pool_t *pool)
+                 apr_pool_t *scratch_pool)
 {
 
   return svn_error_trace(list_internal(path_or_url, peg_revision,
-                                       revision,
+                                       revision, patterns,
                                        depth, dirent_fields,
                                        fetch_locks,
                                        include_externals,
                                        NULL, NULL, list_func,
-                                       baton, ctx, pool));
+                                       baton, ctx, scratch_pool));
 }
