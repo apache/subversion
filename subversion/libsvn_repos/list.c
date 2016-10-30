@@ -239,7 +239,7 @@ svn_repos_list(svn_fs_root_t *root,
 
   /* Report directory contents if requested. */
   if (depth > svn_depth_empty)
-    SVN_ERR(do_list(root, path, pattern, svn_depth_infinity,
+    SVN_ERR(do_list(root, path, pattern, depth,
                     path_info_only, authz_read_func, authz_read_baton,
                     receiver, receiver_baton, cancel_func, cancel_baton,
                     pool));
