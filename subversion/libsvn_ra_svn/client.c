@@ -2838,6 +2838,7 @@ ra_svn_has_capability(svn_ra_session_t *session,
                                           SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS},
       {SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
                                        SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE},
+      {SVN_RA_CAPABILITY_LIST, SVN_RA_SVN_CAP_LIST},
 
       {NULL, NULL} /* End of list marker */
   };
@@ -2927,6 +2928,77 @@ ra_svn_get_inherited_props(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+ra_svn_list(svn_ra_session_t *session,
+            const char *path,
+            svn_revnum_t revision,
+            apr_array_header_t *patterns,
+            svn_depth_t depth,
+            apr_uint32_t dirent_fields,
+            svn_ra_dirent_receiver_t receiver,
+            void *receiver_baton,
+            apr_pool_t *scratch_pool)
+{
+  svn_ra_svn__session_baton_t *sess_baton = session->priv;
+  svn_ra_svn_conn_t *conn = sess_baton->conn;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  /* Send the list request. */
+  SVN_ERR(svn_ra_svn__write_tuple(conn, scratch_pool, "w(c(?r)w(!", "list",
+                                  path, revision, svn_depth_to_word(depth)));
+  SVN_ERR(send_dirent_fields(conn, dirent_fields, scratch_pool));
+  SVN_ERR(svn_ra_svn__write_tuple(conn, scratch_pool, "!)(!"));
+
+  for (i = 0; i < patterns->nelts; ++i)
+    {
+      const char *pattern = APR_ARRAY_IDX(patterns, i, const char *);
+      SVN_ERR(svn_ra_svn__write_cstring(conn, scratch_pool, pattern));
+    }
+
+  SVN_ERR(svn_ra_svn__write_tuple(conn, scratch_pool, "!))"));
+
+  /* Handle auth request by server */
+  SVN_ERR(handle_auth_request(sess_baton, scratch_pool));
+
+  /* Read and process list response. */
+  while (1)
+    {
+      svn_ra_svn__item_t *item;
+      const char *dirent_path;
+      const char *kind_word, *date;
+      svn_dirent_t dirent = { 0 };
+
+      svn_pool_clear(iterpool);
+
+      /* Read the next dirent or bail out on "done", respectively */
+      SVN_ERR(svn_ra_svn__read_item(conn, iterpool, &item));
+      if (is_done_response(item))
+        break;
+      if (item->kind != SVN_RA_SVN_LIST)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                _("List entry not a list"));
+      SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list,
+                                      "cw?(nbr(?c)(?c))",
+                                      &dirent_path, &kind_word, &dirent.size,
+                                      &dirent.has_props, &dirent.created_rev,
+                                      &date, &dirent.last_author));
+
+      /* Convert data. */
+      dirent.kind = svn_node_kind_from_word(kind_word);
+      if (date)
+        SVN_ERR(svn_time_from_cstring(&dirent.time, date, iterpool));
+
+      /* Invoke RECEIVER */
+      SVN_ERR(receiver(dirent_path, &dirent, receiver_baton, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  /* Read the actual command response. */
+  SVN_ERR(svn_ra_svn__read_cmd_response(conn, scratch_pool, ""));
+  return SVN_NO_ERROR;
+}
+
 static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
   ra_svn_get_description,
@@ -2966,7 +3038,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_get_deleted_rev,
   ra_svn_get_inherited_props,
   NULL /* ra_set_svn_ra_open */,
-  NULL /* svn_ra_list */,
+  ra_svn_list,
   ra_svn_register_editor_shim_callbacks,
   NULL /* commit_ev2 */,
   NULL /* replay_range_ev2 */
