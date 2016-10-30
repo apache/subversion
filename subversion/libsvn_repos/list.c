@@ -301,9 +301,16 @@ svn_repos_list(svn_fs_root_t *root,
    * Note that we must do this after the authz check to not indirectly
    * confirm the existence of PATH. */
   SVN_ERR(svn_fs_check_path(&kind, root, path, scratch_pool));
-  if (kind != svn_node_dir)
-    return svn_error_createf(SVN_ERR_FS_NOT_DIRECTORY, NULL,
-                             "There is no directory '%s'", path);
+  if (kind == svn_node_file)
+    {
+      /* There is no recursion on files. */
+      depth = svn_depth_empty;
+    }
+  else if (kind != svn_node_dir)
+    {
+      return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                               _("Path '%s' not found"), path);
+    }
 
   /* Actually report PATH, if it passes the filters. */
   if (matches_any(svn_dirent_dirname(path, scratch_pool), patterns))
