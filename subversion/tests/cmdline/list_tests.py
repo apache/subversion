@@ -54,7 +54,7 @@ def list_plain(sbox):
   "basic, recursive list"
 
   sbox.build(read_only=True)
-  path = os.path.join(sbox.repo_url, 'A', 'D')
+  path = sbox.repo_url + "/A/D"
 
   # check plain info
   expected = [ "G/\n",
@@ -75,7 +75,7 @@ def list_verbose(sbox):
   "verbose recursive list"
 
   sbox.build(read_only=True)
-  path = os.path.join(sbox.repo_url, 'A', 'D')
+  path = sbox.repo_url + "/A/D"
 
   # check plain info
   expected = svntest.verify.RegexListOutput([
