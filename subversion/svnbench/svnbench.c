@@ -41,6 +41,7 @@
 #include "private/svn_opt_private.h"
 #include "private/svn_cmdline_private.h"
 #include "private/svn_string_private.h"
+#include "private/svn_utf_private.h"
 
 #include "svn_private_config.h"
 
@@ -67,7 +68,8 @@ typedef enum svn_cl__longopt_t {
   opt_with_no_revprops,
   opt_trust_server_cert,
   opt_trust_server_cert_failures,
-  opt_changelist
+  opt_changelist,
+  opt_search
 } svn_cl__longopt_t;
 
 
@@ -164,6 +166,8 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("use/display additional information from merge\n"
                        "                             "
                        "history")},
+  {"search", opt_search, 1,
+                       N_("use ARG as search pattern (glob syntax)")},
 
   /* Long-opt Aliases
    *
@@ -256,7 +260,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"),
-    {'r', 'v', 'q', 'R', opt_depth} },
+    {'r', 'v', 'q', 'R', opt_depth, opt_search} },
 
   { "null-log", svn_cl__null_log, {0}, N_
     ("Fetch the log messages for a set of revision(s) and/or path(s).\n"
@@ -345,6 +349,24 @@ ra_progress_func(apr_off_t progress,
 /* Our cancellation callback. */
 svn_cancel_func_t svn_cl__check_cancel = NULL;
 
+/* Add a --search argument to OPT_STATE.
+ * These options start a new search pattern group. */
+static void
+add_search_pattern_group(svn_cl__opt_state_t *opt_state,
+                         const char *pattern,
+                         apr_pool_t *result_pool)
+{
+  apr_array_header_t *group = NULL;
+
+  if (opt_state->search_patterns == NULL)
+    opt_state->search_patterns = apr_array_make(result_pool, 1,
+                                                sizeof(apr_array_header_t *));
+
+  group = apr_array_make(result_pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(group, const char *) = pattern;
+  APR_ARRAY_PUSH(opt_state->search_patterns, apr_array_header_t *) = group;
+}
+
 
 /*** Main. ***/
 
@@ -371,8 +393,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t use_notifier = TRUE;
   apr_time_t start_time, time_taken;
   ra_progress_baton_t ra_progress_baton = {0};
+  svn_membuf_t buf;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
+
+  /* Init the temporary buffer. */
+  svn_membuf__create(&buf, 0, pool);
 
   /* Check library versions */
   SVN_ERR(check_lib_versions());
@@ -655,6 +681,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case 'g':
         opt_state.use_merge_history = TRUE;
+        break;
+      case opt_search:
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(svn_utf__xfrm(&utf8_opt_arg, utf8_opt_arg,
+                              strlen(utf8_opt_arg), TRUE, TRUE, &buf));
+        add_search_pattern_group(&opt_state,
+                                 apr_pstrdup(pool, utf8_opt_arg),
+                                 pool);
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
