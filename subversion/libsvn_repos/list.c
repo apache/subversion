@@ -29,6 +29,7 @@
 #include "svn_time.h"
 
 #include "private/svn_repos_private.h"
+#include "private/svn_sorts_private.h"
 #include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
 
 #include "repos.h"
@@ -87,11 +88,31 @@ svn_repos_stat(svn_dirent_t **dirent,
   return SVN_NO_ERROR;
 }
 
+/* Return TRUE of DIRNAME matches any of the const char * in PATTERNS.
+ * Note that any DIRNAME will match if PATTERNS is empty. */
+static svn_boolean_t
+matches_any(const char *dirname,
+            apr_array_header_t *patterns)
+{
+  int i;
+  if (!patterns->nelts)
+    return TRUE;
+
+  for (i = 0; i < patterns->nelts; ++i)
+    {
+      const char *pattern = APR_ARRAY_IDX(patterns, i, const char *);
+      if (apr_fnmatch(pattern, dirname, APR_FNM_PERIOD) == APR_SUCCESS)
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
 /* Utility to prevent code duplication.
  *
- * If DIRNAME matches the optional PATTERN, construct a svn_dirent_t for
- * PATH of type KIND under ROOT and, if PATH_INFO_ONLY is not set, fill it.
- * Call RECEIVER with the result and RECEIVER_BATON.
+ * Construct a svn_dirent_t for PATH of type KIND under ROOT and, if
+ * PATH_INFO_ONLY is not set, fill it.  Call RECEIVER with the result
+ * and RECEIVER_BATON.
  *
  * Use POOL for temporary allocations.
  */
@@ -99,8 +120,6 @@ static svn_error_t *
 report_dirent(svn_fs_root_t *root,
               const char *path,
               svn_node_kind_t kind,
-              const char *dirname,
-              const char *pattern,
               svn_boolean_t path_info_only,
               svn_repos_dirent_receiver_t receiver,
               void *receiver_baton,
@@ -108,17 +127,37 @@ report_dirent(svn_fs_root_t *root,
 {
   svn_dirent_t dirent = { 0 };
 
-  if (   pattern
-      && (apr_fnmatch(pattern, dirname, APR_FNM_PERIOD) != APR_SUCCESS))
-    return SVN_NO_ERROR;
-
+  /* Fetch the details to report - if required. */
   dirent.kind = kind;
   if (!path_info_only)
     SVN_ERR(fill_dirent(&dirent, root, path, pool));
 
+  /* Report the entry. */
   SVN_ERR(receiver(path, &dirent, receiver_baton, pool));
 
   return SVN_NO_ERROR;
+}
+
+/* Utility data struct, used to attach a filter result flag to a dirent. */
+typedef struct filtered_dirent_t
+{
+  /* Actual dirent, never NULL. */
+  svn_fs_dirent_t *dirent;
+
+  /* DIRENT passed the filter. */
+  svn_boolean_t is_match;
+} filtered_dirent_t;
+
+/* Implement a standard sort function for filtered_dirent_t *, sorting them
+ * by entry name. */
+static int
+compare_filtered_dirent(const void *lhs,
+                        const void *rhs)
+{
+  const filtered_dirent_t *lhs_dirent = (const filtered_dirent_t *)lhs;
+  const filtered_dirent_t *rhs_dirent = (const filtered_dirent_t *)rhs;
+
+  return strcmp(lhs_dirent->dirent->name, rhs_dirent->dirent->name);
 }
 
 /* Core of svn_repos_list with the same parameter list.
@@ -129,7 +168,7 @@ report_dirent(svn_fs_root_t *root,
 static svn_error_t *
 do_list(svn_fs_root_t *root,
         const char *path,
-        const char *pattern,
+        apr_array_header_t *patterns,
         svn_depth_t depth,
         svn_boolean_t path_info_only,
         svn_repos_authz_func_t authz_read_func,
@@ -143,21 +182,53 @@ do_list(svn_fs_root_t *root,
   apr_hash_t *entries;
   apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
+  apr_array_header_t *sorted;
+  int i;
 
-  /* Iterate over all directory entries, filter and report them.
-   * Recurse into sub-directories if requested. */
+  /* Fetch all directory entries, filter and sort them.
+   *
+   * Performance trade-off:
+   * Constructing a full path vs. faster sort due to authz filtering.
+   * We filter according to DEPTH and PATTERNS only because constructing
+   * the full path required for authz is somewhat expensive and we don't
+   * want to do this twice while authz will rarely filter paths out.
+   */
   SVN_ERR(svn_fs_dir_entries(&entries, root, path, pool));
+  sorted = apr_array_make(pool, apr_hash_count(entries),
+                          sizeof(filtered_dirent_t));
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      svn_fs_dirent_t *dirent;
-      const char *sub_path;
+      filtered_dirent_t filtered;
       svn_pool_clear(iterpool);
 
-      dirent = apr_hash_this_val(hi);
+      filtered.dirent = apr_hash_this_val(hi);
 
       /* Skip directories if we want to report files only. */
-      if (dirent->kind == svn_node_dir && depth == svn_depth_files)
+      if (filtered.dirent->kind == svn_node_dir && depth == svn_depth_files)
         continue;
+
+      /* We can skip files that don't match any of the search patterns. */
+      filtered.is_match = matches_any(filtered.dirent->name, patterns);
+      if (!filtered.is_match && filtered.dirent->kind == svn_node_file)
+        continue;
+
+      APR_ARRAY_PUSH(sorted, filtered_dirent_t) = filtered;
+    }
+
+  svn_sort__array(sorted, compare_filtered_dirent);
+
+  /* Iterate over all remaining directory entries and report them.
+   * Recurse into sub-directories if requested. */
+  for (i = 0; i < sorted->nelts; ++i)
+    {
+      const char *sub_path;
+      filtered_dirent_t *filtered;
+      svn_fs_dirent_t *dirent;
+
+      svn_pool_clear(iterpool);
+
+      filtered = &APR_ARRAY_IDX(sorted, i, filtered_dirent_t);
+      dirent = filtered->dirent;
 
       /* Skip paths that we don't have access to? */
       sub_path = svn_dirent_join(path, dirent->name, iterpool);
@@ -170,10 +241,10 @@ do_list(svn_fs_root_t *root,
             continue;
         }
 
-      /* Report entry, if it passes the filter. */
-      SVN_ERR(report_dirent(root, sub_path, dirent->kind, dirent->name,
-                            pattern, path_info_only,
-                            receiver, receiver_baton, iterpool));
+      /* Report entry, if it passed the filter. */
+      if (filtered->is_match)
+        SVN_ERR(report_dirent(root, sub_path, dirent->kind, path_info_only,
+                              receiver, receiver_baton, iterpool));
 
       /* Check for cancellation before recursing down.  This should be
        * slightly more responsive for deep trees. */
@@ -182,7 +253,7 @@ do_list(svn_fs_root_t *root,
 
       /* Recurse on directories. */
       if (depth == svn_depth_infinity && dirent->kind == svn_node_dir)
-        SVN_ERR(do_list(root, sub_path, pattern, svn_depth_infinity,
+        SVN_ERR(do_list(root, sub_path, patterns, svn_depth_infinity,
                         path_info_only, authz_read_func, authz_read_baton,
                         receiver, receiver_baton, cancel_func,
                         cancel_baton, iterpool));
@@ -196,7 +267,7 @@ do_list(svn_fs_root_t *root,
 svn_error_t *
 svn_repos_list(svn_fs_root_t *root,
                const char *path,
-               const char *pattern,
+               apr_array_header_t *patterns,
                svn_depth_t depth,
                svn_boolean_t path_info_only,
                svn_repos_authz_func_t authz_read_func,
@@ -233,13 +304,13 @@ svn_repos_list(svn_fs_root_t *root,
                              "There is no directory '%s'", path);
 
   /* Actually report PATH, if it passes the filters. */
-  SVN_ERR(report_dirent(root, path, kind, svn_dirent_dirname(path, pool),
-                        pattern, path_info_only, receiver, receiver_baton,
-                        pool));
+  if (matches_any(svn_dirent_dirname(path, pool), patterns))
+    SVN_ERR(report_dirent(root, path, kind, path_info_only,
+                          receiver, receiver_baton, pool));
 
   /* Report directory contents if requested. */
   if (depth > svn_depth_empty)
-    SVN_ERR(do_list(root, path, pattern, depth,
+    SVN_ERR(do_list(root, path, patterns, depth,
                     path_info_only, authz_read_func, authz_read_baton,
                     receiver, receiver_baton, cancel_func, cancel_baton,
                     pool));

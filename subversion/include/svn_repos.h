@@ -1727,7 +1727,7 @@ typedef svn_error_t *(* svn_repos_dirent_receiver_t)(const char *path,
                                                      apr_pool_t *pool);
 
 /**
- * Efficiently list everything within a sub-tree.  Specify a glob pattern
+ * Efficiently list everything within a sub-tree.  Specify glob patterns
  * to search for specific files and folders.
  *
  * Walk the sub-tree starting at @a path under @a root up to the given
@@ -1735,10 +1735,11 @@ typedef svn_error_t *(* svn_repos_dirent_receiver_t)(const char *path,
  * with @a receiver_baton.  The starting @a path will be reported as well.
  * Because retrieving all elements of a @c svn_dirent_t can be expensive,
  * you may set @a path_info_only to receive only the path name and the node
- * kind.
+ * kind.  The entries will be reported ordered by their path.
  *
- * If @a pattern is not @c NULL, only those entries will be reported whose
- * last path segment matches @a pattern.  This feature uses @c apr_fnmatch
+ * @a patterns is an array of <tt>const char *</tt>.  If it is not empty,
+ * only those directory entries will be reported whose last path segment
+ * matches at least one of these patterns.  This feature uses @c apr_fnmatch
  * for glob matching and requiring '.' to matched by dots in the path.
  *
  * If @a authz_read_func is not @c NULL, this function will neither report
@@ -1757,7 +1758,7 @@ typedef svn_error_t *(* svn_repos_dirent_receiver_t)(const char *path,
 svn_error_t *
 svn_repos_list(svn_fs_root_t *root,
                const char *path,
-               const char *pattern,
+               apr_array_header_t *patterns,
                svn_depth_t depth,
                svn_boolean_t path_info_only,
                svn_repos_authz_func_t authz_read_func,
