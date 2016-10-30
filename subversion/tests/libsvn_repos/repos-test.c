@@ -3904,6 +3904,7 @@ test_list(const svn_test_opts_t *opts,
   svn_fs_root_t *txn_root, *rev_root;
   svn_revnum_t youngest_rev;
   int counter = 0;
+  apr_array_header_t *patterns;
 
   /* Create yet another greek tree repository. */
   SVN_ERR(svn_test__create_repos(&repos, "test-repo-list", opts, pool));
@@ -3918,8 +3919,10 @@ test_list(const svn_test_opts_t *opts,
 
   /* List all nodes under /A that contain an 'a'. */
 
+  patterns = apr_array_make(pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(patterns, const char *) = "*a*";
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest_rev, pool));
-  SVN_ERR(svn_repos_list(rev_root, "/A", "*a*", svn_depth_infinity, FALSE,
+  SVN_ERR(svn_repos_list(rev_root, "/A", patterns, svn_depth_infinity, FALSE,
                          NULL, NULL, list_callback, &counter, NULL, NULL,
                          pool));
   SVN_TEST_ASSERT(counter == 6);
