@@ -43,21 +43,23 @@ static svn_error_t *
 fill_dirent(svn_dirent_t *dirent,
             svn_fs_root_t *root,
             const char *path,
-            apr_pool_t *pool)
+            apr_pool_t *scratch_pool)
 {
   const char *datestring;
 
   if (dirent->kind == svn_node_file)
-    SVN_ERR(svn_fs_file_length(&(dirent->size), root, path, pool));
+    SVN_ERR(svn_fs_file_length(&(dirent->size), root, path, scratch_pool));
 
-  SVN_ERR(svn_fs_node_has_props(&dirent->has_props, root, path, pool));
+  SVN_ERR(svn_fs_node_has_props(&dirent->has_props, root, path,
+                                scratch_pool));
 
   SVN_ERR(svn_repos_get_committed_info(&(dirent->created_rev),
                                        &datestring,
                                        &(dirent->last_author),
-                                       root, path, pool));
+                                       root, path, scratch_pool));
   if (datestring)
-    SVN_ERR(svn_time_from_cstring(&(dirent->time), datestring, pool));
+    SVN_ERR(svn_time_from_cstring(&(dirent->time), datestring,
+                                  scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -114,7 +116,7 @@ matches_any(const char *dirname,
  * PATH_INFO_ONLY is not set, fill it.  Call RECEIVER with the result
  * and RECEIVER_BATON.
  *
- * Use POOL for temporary allocations.
+ * Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
 report_dirent(svn_fs_root_t *root,
@@ -123,17 +125,17 @@ report_dirent(svn_fs_root_t *root,
               svn_boolean_t path_info_only,
               svn_repos_dirent_receiver_t receiver,
               void *receiver_baton,
-              apr_pool_t *pool)
+              apr_pool_t *scratch_pool)
 {
   svn_dirent_t dirent = { 0 };
 
   /* Fetch the details to report - if required. */
   dirent.kind = kind;
   if (!path_info_only)
-    SVN_ERR(fill_dirent(&dirent, root, path, pool));
+    SVN_ERR(fill_dirent(&dirent, root, path, scratch_pool));
 
   /* Report the entry. */
-  SVN_ERR(receiver(path, &dirent, receiver_baton, pool));
+  SVN_ERR(receiver(path, &dirent, receiver_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -177,10 +179,10 @@ do_list(svn_fs_root_t *root,
         void *receiver_baton,
         svn_cancel_func_t cancel_func,
         void *cancel_baton,
-        apr_pool_t *pool)
+        apr_pool_t *scratch_pool)
 {
   apr_hash_t *entries;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_index_t *hi;
   apr_array_header_t *sorted;
   int i;
@@ -193,10 +195,10 @@ do_list(svn_fs_root_t *root,
    * the full path required for authz is somewhat expensive and we don't
    * want to do this twice while authz will rarely filter paths out.
    */
-  SVN_ERR(svn_fs_dir_entries(&entries, root, path, pool));
-  sorted = apr_array_make(pool, apr_hash_count(entries),
+  SVN_ERR(svn_fs_dir_entries(&entries, root, path, scratch_pool));
+  sorted = apr_array_make(scratch_pool, apr_hash_count(entries),
                           sizeof(filtered_dirent_t));
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
     {
       filtered_dirent_t filtered;
       svn_pool_clear(iterpool);
@@ -276,7 +278,7 @@ svn_repos_list(svn_fs_root_t *root,
                void *receiver_baton,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
-               apr_pool_t *pool)
+               apr_pool_t *scratch_pool)
 {
   /* Parameter check. */
   svn_node_kind_t kind;
@@ -289,7 +291,7 @@ svn_repos_list(svn_fs_root_t *root,
     {
       svn_boolean_t has_access;
       SVN_ERR(authz_read_func(&has_access, root, path, authz_read_baton,
-                              pool));
+                              scratch_pool));
       if (!has_access)
         return SVN_NO_ERROR;
     }
@@ -298,22 +300,22 @@ svn_repos_list(svn_fs_root_t *root,
    *
    * Note that we must do this after the authz check to not indirectly
    * confirm the existence of PATH. */
-  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
+  SVN_ERR(svn_fs_check_path(&kind, root, path, scratch_pool));
   if (kind != svn_node_dir)
     return svn_error_createf(SVN_ERR_FS_NOT_DIRECTORY, NULL,
                              "There is no directory '%s'", path);
 
   /* Actually report PATH, if it passes the filters. */
-  if (matches_any(svn_dirent_dirname(path, pool), patterns))
+  if (matches_any(svn_dirent_dirname(path, scratch_pool), patterns))
     SVN_ERR(report_dirent(root, path, kind, path_info_only,
-                          receiver, receiver_baton, pool));
+                          receiver, receiver_baton, scratch_pool));
 
   /* Report directory contents if requested. */
   if (depth > svn_depth_empty)
     SVN_ERR(do_list(root, path, patterns, depth,
                     path_info_only, authz_read_func, authz_read_baton,
                     receiver, receiver_baton, cancel_func, cancel_baton,
-                    pool));
+                    scratch_pool));
 
   return SVN_NO_ERROR;
 }
