@@ -3538,6 +3538,123 @@ get_inherited_props(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+/* Baton type to be used with list_receiver. */
+typedef struct list_receiver_baton_t
+{
+  /* Send the data through this connection. */
+  svn_ra_svn_conn_t *conn;
+
+  /* If set, send path and kind only. */
+  svn_boolean_t path_info_only;
+} list_receiver_baton_t;
+
+/* Implements svn_repos_dirent_receiver_t, sending DIRENT and PATH to the
+ * client.  BATON must be a list_receiver_baton_t. */
+static svn_error_t *
+list_receiver(const char *path,
+              svn_dirent_t *dirent,
+              void *baton,
+              apr_pool_t *pool)
+{
+  list_receiver_baton_t *b = baton;
+
+  if (b->path_info_only)
+    SVN_ERR(svn_ra_svn__write_tuple(b->conn, pool, "cw", path,
+                                    svn_node_kind_to_word(dirent->kind)));
+  else
+    SVN_ERR(svn_ra_svn__write_tuple(b->conn, pool, "cw(nbr(?c)(?c))", path,
+                                    svn_node_kind_to_word(dirent->kind),
+                                    (apr_uint64_t) dirent->size,
+                                    dirent->has_props, dirent->created_rev,
+                                    svn_time_to_cstring(dirent->time, pool),
+                                    dirent->last_author));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+list(svn_ra_svn_conn_t *conn,
+     apr_pool_t *pool,
+     svn_ra_svn__list_t *params,
+     void *baton)
+{
+  server_baton_t *b = baton;
+  const char *path, *full_path;
+  svn_revnum_t rev;
+  svn_depth_t depth;
+  apr_array_header_t *patterns;
+  svn_fs_root_t *root;
+  const char *depth_word;
+  apr_uint64_t dirent_fields;
+  svn_ra_svn__list_t *dirent_fields_list = NULL;
+  svn_ra_svn__list_t *patterns_list = NULL;
+  int i;
+  list_receiver_baton_t rb;
+  svn_error_t *err, *write_err;
+
+  authz_baton_t ab;
+  ab.server = b;
+  ab.conn = conn;
+
+  /* Read the command parameters. */
+  SVN_ERR(svn_ra_svn__parse_tuple(params, "c(?r)w?l?l", &path, &rev,
+                                  &depth_word, &dirent_fields_list,
+                                  &patterns_list));
+
+  depth = svn_depth_from_word(depth_word);
+  SVN_ERR(parse_dirent_fields(&dirent_fields, dirent_fields_list));
+
+  full_path = svn_fspath__join(b->repository->fs_path->data,
+                               svn_relpath_canonicalize(path, pool), pool);
+
+  /* Read the patterns list.  */
+  patterns = apr_array_make(pool, 0, sizeof(const char *));
+  for (i = 0; i < patterns_list->nelts; ++i)
+    {
+      svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(patterns_list, i);
+
+      if (elt->kind != SVN_RA_SVN_STRING)
+        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                "Pattern field not a string");
+
+      APR_ARRAY_PUSH(patterns, const char *) = elt->u.string.data;
+    }
+
+  /* Check authorizations */
+  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read,
+                           full_path, FALSE));
+
+  if (!SVN_IS_VALID_REVNUM(rev))
+    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->repository->fs, pool));
+
+  SVN_ERR(log_command(b, conn, pool, "%s",
+                      svn_log__list(full_path, rev, patterns, depth,
+                                    dirent_fields, pool)));
+
+  /* Fetch the root of the appropriate revision. */
+  SVN_CMD_ERR(svn_fs_revision_root(&root, b->repository->fs, rev, pool));
+
+  /* Fetch the directory entries if requested and send them immediately. */
+  rb.conn = conn;
+  rb.path_info_only = (dirent_fields & ~SVN_DIRENT_KIND) == 0;
+
+  err = svn_repos_list(root, full_path, patterns, depth, rb.path_info_only,
+                       authz_check_access_cb_func(b), &ab, list_receiver,
+                       &rb, NULL, NULL, pool);
+
+
+  /* Finish response. */
+  write_err = svn_ra_svn__write_word(conn, pool, "done");
+  if (write_err)
+    {
+      svn_error_clear(err);
+      return write_err;
+    }
+  SVN_CMD_ERR(err);
+
+  return svn_error_trace(svn_ra_svn__write_cmd_response(conn, pool, ""));
+}
+
 static const svn_ra_svn__cmd_entry_t main_commands[] = {
   { "reparent",        reparent },
   { "get-latest-rev",  get_latest_rev },
@@ -3570,6 +3687,7 @@ static const svn_ra_svn__cmd_entry_t main_commands[] = {
   { "replay-range",    replay_range },
   { "get-deleted-rev", get_deleted_rev },
   { "get-iprops",      get_inherited_props },
+  { "list",            list },
   { NULL }
 };
 
@@ -3968,7 +4086,7 @@ construct_server_baton(server_baton_t **baton,
    * send an empty mechlist. */
   if (params->compression_level > 0)
     SVN_ERR(svn_ra_svn__write_cmd_response(conn, scratch_pool,
-                                           "nn()(wwwwwwwwwww)",
+                                           "nn()(wwwwwwwwwwww)",
                                            (apr_uint64_t) 2, (apr_uint64_t) 2,
                                            SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                            SVN_RA_SVN_CAP_SVNDIFF1,
@@ -3980,11 +4098,12 @@ construct_server_baton(server_baton_t **baton,
                                            SVN_RA_SVN_CAP_PARTIAL_REPLAY,
                                            SVN_RA_SVN_CAP_INHERITED_PROPS,
                                            SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS,
-                                           SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE
+                                           SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE,
+                                           SVN_RA_SVN_CAP_LIST
                                            ));
   else
     SVN_ERR(svn_ra_svn__write_cmd_response(conn, scratch_pool,
-                                           "nn()(wwwwwwwwww)",
+                                           "nn()(wwwwwwwwwww)",
                                            (apr_uint64_t) 2, (apr_uint64_t) 2,
                                            SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                            SVN_RA_SVN_CAP_ABSENT_ENTRIES,
@@ -3995,7 +4114,8 @@ construct_server_baton(server_baton_t **baton,
                                            SVN_RA_SVN_CAP_PARTIAL_REPLAY,
                                            SVN_RA_SVN_CAP_INHERITED_PROPS,
                                            SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS,
-                                           SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE
+                                           SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE,
+                                           SVN_RA_SVN_CAP_LIST
                                            ));
 
   /* Read client response, which we assume to be in version 2 format:
