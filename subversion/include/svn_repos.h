@@ -1716,15 +1716,15 @@ svn_repos_stat(svn_dirent_t **dirent,
  * with @a path_info_only set, only the @a kind element of this struct
  * will be valid.
  *
- * @a baton is the user-provided receiver baton.  @a pool may be used for
- * temporary allocations.
+ * @a baton is the user-provided receiver baton.  @a scratch_pool may be
+ * used for temporary allocations.
  *
  * @since New in 1.10.
  */
 typedef svn_error_t *(* svn_repos_dirent_receiver_t)(const char *path,
                                                      svn_dirent_t *dirent,
                                                      void *baton,
-                                                     apr_pool_t *pool);
+                                                     apr_pool_t *scratch_pool);
 
 /**
  * Efficiently list everything within a sub-tree.  Specify glob patterns
@@ -1751,7 +1751,7 @@ typedef svn_error_t *(* svn_repos_dirent_receiver_t)(const char *path,
  * @a path must point to a directory and @a depth must be at least
  * @c svn_depth_empty.
  *
- * Use @a pool for temporary memory allocation.
+ * Use @a scratch_pool for temporary memory allocation.
  *
  * @since New in 1.10.
  */
@@ -1767,7 +1767,7 @@ svn_repos_list(svn_fs_root_t *root,
                void *receiver_baton,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
-               apr_pool_t *pool);
+               apr_pool_t *scratch_pool);
 
 /**
  * Given @a path which exists at revision @a start in @a fs, set
