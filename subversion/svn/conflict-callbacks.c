@@ -445,7 +445,7 @@ static const client_option_t extra_resolver_options[] =
 {
   /* Translators: keep long_desc below 70 characters (wrap with a left
      margin of 9 spaces if needed) */
-  { "q",  N_("quit resolution"),  N_("postpone all remaining conflicts"),
+  { "q",  N_("Quit resolution"),  N_("postpone all remaining conflicts"),
                                   svn_client_conflict_option_postpone },
   { NULL }
 };
@@ -456,24 +456,24 @@ static const client_option_t extra_resolver_options_text[] =
 {
   /* Translators: keep long_desc below 70 characters (wrap with a left
      margin of 9 spaces if needed) */
-  { "e",  N_("edit file"),        N_("change merged file in an editor"),
+  { "e",  N_("Edit file"),        N_("change merged file in an editor"),
                                   svn_client_conflict_option_undefined,
                                   SVN_CL__ACCEPT_EDIT },
-  { "df", N_("show diff"),        N_("show all changes made to merged file"),
+  { "df", N_("Show diff"),        N_("show all changes made to merged file"),
                                   svn_client_conflict_option_undefined},
-  { "dc", N_("display conflict"), N_("show all conflicts "
+  { "dc", N_("Display conflict"), N_("show all conflicts "
                                      "(ignoring merged version)"),
                                   svn_client_conflict_option_undefined },
-  { "m",  N_("merge"),            N_("use merge tool to resolve conflict"),
+  { "m",  N_("Merge"),            N_("use merge tool to resolve conflict"),
                                   svn_client_conflict_option_undefined },
-  { "l",  N_("launch tool"),      N_("launch external merge tool to resolve "
+  { "l",  N_("Launch tool"),      N_("launch external merge tool to resolve "
                                      "conflict"),
                                   svn_client_conflict_option_undefined,
                                   SVN_CL__ACCEPT_LAUNCH },
-  { "i",  N_("internal merge tool"), N_("use built-in merge tool to "
+  { "i",  N_("Internal merge tool"), N_("use built-in merge tool to "
                                      "resolve conflict"),
                                   svn_client_conflict_option_undefined },
-  { "s",  N_("show all options"), N_("show this list (also 'h', '?')"),
+  { "s",  N_("Show all options"), N_("show this list (also 'h', '?')"),
                                   svn_client_conflict_option_undefined },
   { NULL }
 };
@@ -483,13 +483,13 @@ static const client_option_t extra_resolver_options_prop[] =
 {
   /* Translators: keep long_desc below 70 characters (wrap with a left
      margin of 9 spaces if needed) */
-  { "dc", N_("display conflict"), N_("show conflicts in this property"),
+  { "dc", N_("Display conflict"), N_("show conflicts in this property"),
                                   svn_client_conflict_option_undefined },
-  { "e",  N_("edit property"),    N_("change merged property value in an "
+  { "e",  N_("Edit property"),    N_("change merged property value in an "
                                      "editor"),
                                   svn_client_conflict_option_undefined,
                                   SVN_CL__ACCEPT_EDIT },
-  { "h",  N_("help"),             N_("show this help (also '?')"),
+  { "h",  N_("Help"),             N_("show this help (also '?')"),
                                   svn_client_conflict_option_undefined },
   { NULL }
 };
@@ -499,15 +499,15 @@ static const client_option_t extra_resolver_options_tree[] =
 {
   /* Translators: keep long_desc below 70 characters (wrap with a left
      margin of 9 spaces if needed) */
-  { "d",  N_("set repository move destination path"),
+  { "d",  N_("Set repository move destination path"),
           N_("pick repository move target from list of possible targets"),
                                   svn_client_conflict_option_undefined },
 
-  { "w",  N_("set working copy move destination path"),
+  { "w",  N_("Set working copy move destination path"),
           N_("pick working copy move target from list of possible targets"),
                                   svn_client_conflict_option_undefined },
 
-  { "h",  N_("help"),             N_("show this help (also '?')"),
+  { "h",  N_("Help"),             N_("show this help (also '?')"),
                                   svn_client_conflict_option_undefined },
 
   { NULL }
