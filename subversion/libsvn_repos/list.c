@@ -237,8 +237,8 @@ do_list(svn_fs_root_t *root,
       if (authz_read_func)
         {
           svn_boolean_t has_access;
-          SVN_ERR(authz_read_func(&has_access, root, path, authz_read_baton,
-                                  iterpool));
+          SVN_ERR(authz_read_func(&has_access, root, sub_path,
+                                  authz_read_baton, iterpool));
           if (!has_access)
             continue;
         }
