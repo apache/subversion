@@ -171,6 +171,13 @@ Candidate changes:
      r1766590 adds a test case for it.
    Votes:
      +1: stefan2
+     +0: rhuijben
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
 
  * r1767768
    Fix for "Perl bindings corrupt "{DATE}" revision variable"
@@ -178,10 +185,4 @@ Candidate changes:
      User reported problem. Simple fix.
    Votes:
      +1: rschupp
-     +0: danielsh
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +0: danielsh, rhuijben
