@@ -254,10 +254,10 @@ svn_ra_svn__flush(svn_ra_svn_conn_t *conn,
  * to transmit an array or other unusual data.  For example, to write
  * a tuple containing a revision, an array of words, and a boolean:
  * @code
-     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(!", rev));
+     SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "r(!", rev));
      for (i = 0; i < n; i++)
-       SVN_ERR(svn_ra_svn_write_word(conn, pool, words[i]));
-     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b", flag)); @endcode
+       SVN_ERR(svn_ra_svn__write_word(conn, pool, words[i]));
+     SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!)b", flag)); @endcode
  */
 svn_error_t *
 svn_ra_svn__write_tuple(svn_ra_svn_conn_t *conn,
