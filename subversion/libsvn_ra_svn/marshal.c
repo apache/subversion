@@ -2916,6 +2916,57 @@ svn_ra_svn__write_data_log_entry(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_ra_svn__write_dirent(svn_ra_svn_conn_t *conn,
+                         apr_pool_t *pool,
+                         const char *path,
+                         svn_dirent_t *dirent,
+                         apr_uint64_t dirent_fields)
+{
+  const char *kind = (dirent_fields & SVN_DIRENT_KIND)
+                   ? svn_node_kind_to_word(dirent->kind)
+                   : "unknown";
+
+  if (dirent_fields & ~SVN_DIRENT_KIND)
+    {
+      SVN_ERR(write_tuple_start_list(conn, pool));
+      SVN_ERR(write_tuple_cstring(conn, pool, path));
+      SVN_ERR(writebuf_write(conn, pool, kind, strlen(kind)));
+
+      SVN_ERR(writebuf_write_literal(conn, pool, " ( "));
+      if (dirent_fields & SVN_DIRENT_SIZE)
+        SVN_ERR(svn_ra_svn__write_number(conn, pool, dirent->size));
+
+      SVN_ERR(writebuf_write_literal(conn, pool, ") ( "));
+      if (dirent_fields & SVN_DIRENT_HAS_PROPS)
+        SVN_ERR(write_tuple_boolean(conn, pool, dirent->has_props));
+
+      SVN_ERR(writebuf_write_literal(conn, pool, ") ( "));
+      if (dirent_fields & SVN_DIRENT_CREATED_REV)
+        SVN_ERR(write_tuple_revision(conn, pool, dirent->created_rev));
+
+      SVN_ERR(writebuf_write_literal(conn, pool, ") ( "));
+      if (dirent_fields & SVN_DIRENT_TIME)
+        SVN_ERR(write_tuple_cstring_opt(conn, pool,
+                                  svn_time_to_cstring(dirent->time, pool)));
+
+      SVN_ERR(writebuf_write_literal(conn, pool, ") ( "));
+      if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
+        SVN_ERR(write_tuple_cstring_opt(conn, pool, dirent->last_author));
+
+      SVN_ERR(writebuf_write_literal(conn, pool, ") ) "));
+    }
+  else
+    {
+      SVN_ERR(write_tuple_start_list(conn, pool));
+      SVN_ERR(write_tuple_cstring(conn, pool, path));
+      SVN_ERR(writebuf_write(conn, pool, kind, strlen(kind)));
+      SVN_ERR(writebuf_write_literal(conn, pool, " ) "));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* If condition COND is not met, return a "malformed network data" error.
  */
 #define CHECK_PROTOCOL_COND(cond)\
