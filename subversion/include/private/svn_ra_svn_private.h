@@ -314,9 +314,9 @@ svn_ra_svn__skip_leading_garbage(svn_ra_svn_conn_t *conn,
  *
  * If an optional part of a tuple contains no data, 'r' values will be
  * set to @c SVN_INVALID_REVNUM; 'n' and 'B' values will be set to
- * #SVN_RA_SVN_UNSPECIFIED_NUMBER; 's', 'c', 'w', and 'l' values
- * will be set to @c NULL; and '3' values will be set to #svn_tristate_unknown
- * 'b' may not appear inside an optional tuple specification; use '3' instead.
+ * #SVN_RA_SVN_UNSPECIFIED_NUMBER; 's', 'c', 'w', and 'l' values will
+ * be set to @c NULL; '3' values will be set to #svn_tristate_unknown;
+ * and 'b' values will be set to @c FALSE.
  */
 svn_error_t *
 svn_ra_svn__parse_tuple(const svn_ra_svn__list_t *list,
