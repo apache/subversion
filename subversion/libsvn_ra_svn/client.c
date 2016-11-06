@@ -2979,7 +2979,7 @@ ra_svn_list(svn_ra_session_t *session,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("List entry not a list"));
       SVN_ERR(svn_ra_svn__parse_tuple(&item->u.list,
-                                      "cw?(nbr(?c)(?c))",
+                                      "cw?(?n)(?b)(?r)(?c)(?c)",
                                       &dirent_path, &kind_word, &dirent.size,
                                       &dirent.has_props, &dirent.created_rev,
                                       &date, &dirent.last_author));

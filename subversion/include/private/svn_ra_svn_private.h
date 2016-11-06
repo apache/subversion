@@ -1008,6 +1008,19 @@ svn_ra_svn__write_data_log_entry(svn_ra_svn_conn_t *conn,
                                  svn_boolean_t invalid_revnum,
                                  unsigned revprop_count);
 
+/** Send a directory entry @a dirent for @a path over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * Depending on the flags in @a dirent_fields, only selected elements will
+ * be transmitted.
+ */
+svn_error_t *
+svn_ra_svn__write_dirent(svn_ra_svn_conn_t *conn,
+                         apr_pool_t *pool,
+                         const char *path,
+                         svn_dirent_t *dirent,
+                         apr_uint64_t dirent_fields);
+
 /**
  * @}
  */

@@ -3544,8 +3544,8 @@ typedef struct list_receiver_baton_t
   /* Send the data through this connection. */
   svn_ra_svn_conn_t *conn;
 
-  /* If set, send path and kind only. */
-  svn_boolean_t path_info_only;
+  /* Send the field selected by these flags. */
+  apr_uint64_t dirent_fields;
 } list_receiver_baton_t;
 
 /* Implements svn_repos_dirent_receiver_t, sending DIRENT and PATH to the
@@ -3557,19 +3557,8 @@ list_receiver(const char *path,
               apr_pool_t *pool)
 {
   list_receiver_baton_t *b = baton;
-
-  if (b->path_info_only)
-    SVN_ERR(svn_ra_svn__write_tuple(b->conn, pool, "cw", path,
-                                    svn_node_kind_to_word(dirent->kind)));
-  else
-    SVN_ERR(svn_ra_svn__write_tuple(b->conn, pool, "cw(nbr(?c)(?c))", path,
-                                    svn_node_kind_to_word(dirent->kind),
-                                    (apr_uint64_t) dirent->size,
-                                    dirent->has_props, dirent->created_rev,
-                                    svn_time_to_cstring(dirent->time, pool),
-                                    dirent->last_author));
-
-  return SVN_NO_ERROR;
+  return svn_error_trace(svn_ra_svn__write_dirent(b->conn, pool, path, dirent,
+                                                  b->dirent_fields));
 }
 
 static svn_error_t *
@@ -3585,7 +3574,7 @@ list(svn_ra_svn_conn_t *conn,
   apr_array_header_t *patterns;
   svn_fs_root_t *root;
   const char *depth_word;
-  apr_uint64_t dirent_fields;
+  svn_boolean_t path_info_only;
   svn_ra_svn__list_t *dirent_fields_list = NULL;
   svn_ra_svn__list_t *patterns_list = NULL;
   int i;
@@ -3601,9 +3590,10 @@ list(svn_ra_svn_conn_t *conn,
                                   &depth_word, &dirent_fields_list,
                                   &patterns_list));
 
-  depth = svn_depth_from_word(depth_word);
-  SVN_ERR(parse_dirent_fields(&dirent_fields, dirent_fields_list));
+  rb.conn = conn;
+  SVN_ERR(parse_dirent_fields(&rb.dirent_fields, dirent_fields_list));
 
+  depth = svn_depth_from_word(depth_word);
   full_path = svn_fspath__join(b->repository->fs_path->data,
                                svn_relpath_canonicalize(path, pool), pool);
 
@@ -3629,16 +3619,14 @@ list(svn_ra_svn_conn_t *conn,
 
   SVN_ERR(log_command(b, conn, pool, "%s",
                       svn_log__list(full_path, rev, patterns, depth,
-                                    dirent_fields, pool)));
+                                    rb.dirent_fields, pool)));
 
   /* Fetch the root of the appropriate revision. */
   SVN_CMD_ERR(svn_fs_revision_root(&root, b->repository->fs, rev, pool));
 
   /* Fetch the directory entries if requested and send them immediately. */
-  rb.conn = conn;
-  rb.path_info_only = (dirent_fields & ~SVN_DIRENT_KIND) == 0;
-
-  err = svn_repos_list(root, full_path, patterns, depth, rb.path_info_only,
+  path_info_only = (rb.dirent_fields & ~SVN_DIRENT_KIND) == 0;
+  err = svn_repos_list(root, full_path, patterns, depth, path_info_only,
                        authz_check_access_cb_func(b), &ab, list_receiver,
                        &rb, NULL, NULL, pool);
 
