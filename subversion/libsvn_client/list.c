@@ -378,8 +378,7 @@ list_internal(const char *path_or_url,
       err = svn_ra_list(ra_session, "", loc->rev, patterns, depth,
                         dirent_fields, list_receiver, &receiver_baton, pool);
 
-      if (   svn_error_find_cause(err, SVN_ERR_UNSUPPORTED_FEATURE)
-          || svn_error_find_cause(err, SVN_ERR_RA_NOT_IMPLEMENTED))
+      if (svn_error_find_cause(err, SVN_ERR_UNSUPPORTED_FEATURE))
         svn_error_clear(err);
       else
         return svn_error_trace(err);

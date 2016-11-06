@@ -1173,6 +1173,10 @@ typedef svn_error_t *(* svn_ra_dirent_receiver_t)(const char *rel_path,
  * @a path must point to a directory and @a depth must be at least
  * @c svn_depth_empty.
  *
+ * If the server doesn't support the 'list' command, return
+ * @c SVN_ERR_UNSUPPORTED_FEATURE in preference to any other error that
+ * might otherwise be returned.
+ *
  * Use @a scratch_pool for temporary memory allocation.
  *
  * @since New in 1.10.

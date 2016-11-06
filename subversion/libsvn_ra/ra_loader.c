@@ -658,7 +658,7 @@ svn_ra_list(svn_ra_session_t *session,
 {
   SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
   if (!session->vtable->list)
-    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+    return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL, NULL);
 
   SVN_ERR(svn_ra__assert_capable_server(session, SVN_RA_CAPABILITY_LIST,
                                         NULL, scratch_pool));
