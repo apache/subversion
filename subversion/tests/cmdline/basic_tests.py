@@ -3116,6 +3116,20 @@ def plaintext_password_storage_disabled(sbox):
       f.close()
 
 
+
+def filtered_ls(sbox):
+  "filtered 'svn ls'"
+
+  sbox.build(read_only=True)
+  path = sbox.repo_url + "/A/D"
+
+  # check plain info
+  expected = [ "H/omega\n",
+               "gamma\n" ]
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    None, [], 'ls', path, '--depth=infinity', '--search=*a')
+
 ########################################################################
 # Run the tests
 
@@ -3186,6 +3200,7 @@ test_list = [ None,
               peg_rev_on_non_existent_wc_path,
               mkdir_parents_target_exists_on_disk,
               plaintext_password_storage_disabled,
+              filtered_ls,
              ]
 
 if __name__ == '__main__':
