@@ -8952,12 +8952,12 @@ svn_client_conflict_text_resolve_by_id(
     }
 
   if (option == NULL)
-      return svn_error_createf(SVN_ERR_CLIENT_CONFLICT_OPTION_NOT_APPLICABLE,
-                               NULL,
-                               _("Inapplicable conflict resolution option "
-                                 "given for conflicted path '%s'"),
-                               svn_dirent_local_style(conflict->local_abspath,
-                                                      scratch_pool));
+    return svn_error_createf(SVN_ERR_CLIENT_CONFLICT_OPTION_NOT_APPLICABLE,
+                             NULL,
+                             _("Inapplicable conflict resolution option "
+                               "given for conflicted path '%s'"),
+                             svn_dirent_local_style(conflict->local_abspath,
+                                                    scratch_pool));
 
   SVN_ERR(svn_client_conflict_text_resolve(conflict, option, ctx, scratch_pool));
 
