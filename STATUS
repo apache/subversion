@@ -147,6 +147,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1769152
+   Make hook script environments actually work with svnserve.
+   Justification:
+     svnserve should enable this feature just like mov_dav_svn and ra_local do.
+     User complained.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
