@@ -8933,24 +8933,12 @@ svn_client_conflict_text_resolve_by_id(
 {
   apr_array_header_t *resolution_options;
   svn_client_conflict_option_t *option;
-  const char *mime_type;
 
   SVN_ERR(svn_client_conflict_text_get_resolution_options(
             &resolution_options, conflict, ctx,
             scratch_pool, scratch_pool));
   option = svn_client_conflict_option_find_by_id(resolution_options,
                                                  option_id);
-
-  /* Support svn_client_conflict_option_merged_text for binary conflicts by
-   * mapping this option to svn_client_conflict_option_working_text. */
-  if (option == NULL && option_id == svn_client_conflict_option_merged_text)
-    {
-      mime_type = svn_client_conflict_text_get_mime_type(conflict);
-      if (mime_type && svn_mime_type_is_binary(mime_type))
-        option = svn_client_conflict_option_find_by_id(resolution_options,
-                   svn_client_conflict_option_working_text);
-    }
-
   if (option == NULL)
     return svn_error_createf(SVN_ERR_CLIENT_CONFLICT_OPTION_NOT_APPLICABLE,
                              NULL,
@@ -9048,51 +9036,6 @@ svn_client_conflict_tree_resolve_by_id(
   apr_array_header_t *resolution_options;
   svn_client_conflict_option_t *option;
 
-  /* Backwards compatibility hack: Upper layers may still try to resolve
-   * these two tree conflicts as 'mine-conflict' as Subversion 1.9 did.
-   * Fix up if necessary... */
-  if (option_id == svn_client_conflict_option_working_text_where_conflicted)
-    {
-      svn_wc_operation_t operation;
-
-      operation = svn_client_conflict_get_operation(conflict);
-      if (operation == svn_wc_operation_update ||
-          operation == svn_wc_operation_switch)
-        {
-          svn_wc_conflict_reason_t reason;
-
-          reason = svn_client_conflict_get_local_change(conflict);
-          if (reason == svn_wc_conflict_reason_moved_away)
-            {
-              /* Map 'mine-conflict' to 'update move destination'. */
-              option_id = svn_client_conflict_option_update_move_destination;
-            }
-          else if (reason == svn_wc_conflict_reason_deleted ||
-                   reason == svn_wc_conflict_reason_replaced)
-            {
-              svn_wc_conflict_action_t action;
-              svn_node_kind_t node_kind;
-
-              action = svn_client_conflict_get_incoming_change(conflict);
-              node_kind =
-                svn_client_conflict_tree_get_victim_node_kind(conflict);
-
-              if (action == svn_wc_conflict_action_edit &&
-                  node_kind == svn_node_dir)
-                {
-                  /* Map 'mine-conflict' to 'update any moved away children'. */
-                  option_id =
-                    svn_client_conflict_option_update_any_moved_away_children;
-                }
-            }
-        }
-    }
-  else if (option_id == svn_client_conflict_option_merged_text)
-    {
-      /* Another backwards compatibility hack for 'choose merged'. */
-      option_id = svn_client_conflict_option_accept_current_wc_state;
-    }
-  
   SVN_ERR(svn_client_conflict_tree_get_resolution_options(
             &resolution_options, conflict, ctx,
             scratch_pool, scratch_pool));
