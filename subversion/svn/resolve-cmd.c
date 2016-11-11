@@ -43,12 +43,11 @@
 struct conflict_status_walker_baton
 {
   svn_client_ctx_t *ctx;
-  svn_client_conflict_option_id_t option_id;
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
   svn_boolean_t resolved_one;
   apr_hash_t *resolve_later;
-  svn_cl__accept_t *accept_which;
+  svn_cl__accept_t accept_which;
   svn_boolean_t *quit;
   svn_boolean_t *external_failed;
   svn_boolean_t *printed_summary;
@@ -141,14 +140,12 @@ conflict_status_walker(void *baton,
                                   iterpool, iterpool));
   SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
                                              conflict, iterpool, iterpool));
-  err = svn_cl__resolve_conflict(&resolved, cswb->accept_which,
-                                 cswb->quit, cswb->external_failed,
-                                 cswb->printed_summary,
-                                 conflict, cswb->editor_cmd,
+  err = svn_cl__resolve_conflict(&resolved, cswb->quit, cswb->external_failed,
+                                 cswb->printed_summary, conflict,
+                                 cswb->accept_which, cswb->editor_cmd,
                                  cswb->config, cswb->path_prefix,
                                  cswb->pb, cswb->conflict_stats,
-                                 cswb->option_id, cswb->ctx,
-                                 scratch_pool);
+                                 cswb->ctx, scratch_pool);
   if (err)
     {
       if (tree_conflicted)
@@ -175,8 +172,7 @@ static svn_error_t *
 walk_conflicts(svn_client_ctx_t *ctx,
                const char *local_abspath,
                svn_depth_t depth,
-               svn_client_conflict_option_id_t option_id,
-               svn_cl__accept_t *accept_which,
+               svn_cl__accept_t accept_which,
                svn_boolean_t *quit,
                svn_boolean_t *external_failed,
                svn_boolean_t *printed_summary,
@@ -195,7 +191,6 @@ walk_conflicts(svn_client_ctx_t *ctx,
     depth = svn_depth_infinity;
 
   cswb.ctx = ctx;
-  cswb.option_id = option_id;
 
   cswb.resolved_one = FALSE;
   cswb.resolve_later = (depth != svn_depth_empty)
@@ -339,7 +334,6 @@ walk_conflicts(svn_client_ctx_t *ctx,
 svn_error_t *
 svn_cl__walk_conflicts(apr_array_header_t *targets,
                        svn_cl__conflict_stats_t *conflict_stats,
-                       svn_boolean_t is_resolve_cmd,
                        svn_cl__opt_state_t *opt_state,
                        svn_client_ctx_t *ctx,
                        apr_pool_t *scratch_pool)
@@ -348,7 +342,6 @@ svn_cl__walk_conflicts(apr_array_header_t *targets,
   svn_boolean_t quit = FALSE;
   svn_boolean_t external_failed = FALSE;
   svn_boolean_t printed_summary = FALSE;
-  svn_client_conflict_option_id_t option_id;
   svn_cmdline_prompt_baton_t *pb = apr_palloc(scratch_pool, sizeof(*pb));
   const char *path_prefix;
   svn_error_t *err;
@@ -359,51 +352,6 @@ svn_cl__walk_conflicts(apr_array_header_t *targets,
 
   pb->cancel_func = ctx->cancel_func;
   pb->cancel_baton = ctx->cancel_baton;
-
-  switch (opt_state->accept_which)
-    {
-    case svn_cl__accept_working:
-      option_id = svn_client_conflict_option_merged_text;
-      break;
-    case svn_cl__accept_base:
-      option_id = svn_client_conflict_option_base_text;
-      break;
-    case svn_cl__accept_theirs_conflict:
-      option_id = svn_client_conflict_option_incoming_text_where_conflicted;
-      break;
-    case svn_cl__accept_mine_conflict:
-      option_id = svn_client_conflict_option_working_text_where_conflicted;
-      break;
-    case svn_cl__accept_theirs_full:
-      option_id = svn_client_conflict_option_incoming_text;
-      break;
-    case svn_cl__accept_mine_full:
-      option_id = svn_client_conflict_option_working_text;
-      break;
-    case svn_cl__accept_unspecified:
-      if (is_resolve_cmd && opt_state->non_interactive)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("missing --accept option"));
-      option_id = svn_client_conflict_option_unspecified;
-      break;
-    case svn_cl__accept_postpone:
-      if (is_resolve_cmd)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("invalid 'accept' ARG"));
-      option_id = svn_client_conflict_option_postpone;
-      break;
-    case svn_cl__accept_edit:
-    case svn_cl__accept_launch:
-      if (is_resolve_cmd)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("invalid 'accept' ARG"));
-      option_id = svn_client_conflict_option_unspecified;
-      break;
-    default:
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("invalid 'accept' ARG"));
-    }
-
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < targets->nelts; i++)
@@ -425,19 +373,18 @@ svn_cl__walk_conflicts(apr_array_header_t *targets,
           SVN_ERR(svn_client_conflict_get(&conflict, local_abspath, ctx,
                                           iterpool, iterpool));
           err = svn_cl__resolve_conflict(&resolved,
-                                         &opt_state->accept_which,
                                          &quit, &external_failed,
                                          &printed_summary,
-                                         conflict, opt_state->editor_cmd,
+                                         conflict, opt_state->accept_which,
+                                         opt_state->editor_cmd,
                                          ctx->config, path_prefix,
                                          pb, conflict_stats,
-                                         option_id, ctx,
-                                         iterpool);
+                                         ctx, iterpool);
         }
       else
         {
           err = walk_conflicts(ctx, local_abspath, opt_state->depth,
-                               option_id, &opt_state->accept_which,
+                               opt_state->accept_which,
                                &quit, &external_failed, &printed_summary,
                                opt_state->editor_cmd, ctx->config,
                                path_prefix, pb, conflict_stats, iterpool);
@@ -490,7 +437,21 @@ svn_cl__resolve(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
 
-  SVN_ERR(svn_cl__walk_conflicts(targets, conflict_stats, TRUE,
+  if (opt_state->accept_which == svn_cl__accept_unspecified &&
+      opt_state->non_interactive)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("missing --accept option"));
+    }
+  else if (opt_state->accept_which == svn_cl__accept_postpone ||
+           opt_state->accept_which == svn_cl__accept_edit ||
+           opt_state->accept_which == svn_cl__accept_launch)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("invalid 'accept' ARG"));
+    }
+
+  SVN_ERR(svn_cl__walk_conflicts(targets, conflict_stats,
                                  opt_state, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
