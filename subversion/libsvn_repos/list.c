@@ -97,7 +97,7 @@ matches_any(const char *dirname,
             apr_array_header_t *patterns)
 {
   int i;
-  if (!patterns->nelts)
+  if (!patterns)
     return TRUE;
 
   for (i = 0; i < patterns->nelts; ++i)
@@ -311,6 +311,11 @@ svn_repos_list(svn_fs_root_t *root,
       return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
                                _("Path '%s' not found"), path);
     }
+
+  /* Special case: Empty pattern list.
+   * We don't want the server to waste time here. */
+  if (patterns && patterns->nelts == 0)
+    return SVN_NO_ERROR;
 
   /* Actually report PATH, if it passes the filters. */
   if (matches_any(svn_dirent_dirname(path, scratch_pool), patterns))

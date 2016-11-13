@@ -1343,9 +1343,8 @@ svn_client_list3(const char *path_or_url,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  apr_array_header_t *patterns = apr_array_make(pool, 0, sizeof(const char *));
   return svn_error_trace(svn_client_list4(path_or_url, peg_revision,
-                                          revision, patterns, depth,
+                                          revision, NULL, depth,
                                           dirent_fields, fetch_locks,
                                           include_externals,
                                           list_func, baton, ctx, pool));

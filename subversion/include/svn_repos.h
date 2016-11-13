@@ -1737,10 +1737,11 @@ typedef svn_error_t *(* svn_repos_dirent_receiver_t)(const char *path,
  * you may set @a path_info_only to receive only the path name and the node
  * kind.  The entries will be reported ordered by their path.
  *
- * @a patterns is an array of <tt>const char *</tt>.  If it is not empty,
- * only those directory entries will be reported whose last path segment
- * matches at least one of these patterns.  This feature uses @c apr_fnmatch
- * for glob matching and requiring '.' to matched by dots in the path.
+ * @a patterns is an optional array of <tt>const char *</tt>.  If it is
+ * not @c NULL, only those directory entries will be reported whose last
+ * path segment matches at least one of these patterns.  This feature uses
+ * @c apr_fnmatch for glob matching and requiring '.' to matched by dots
+ * in the path.
  *
  * If @a authz_read_func is not @c NULL, this function will neither report
  * entries nor recurse into directories that the user has no access to.

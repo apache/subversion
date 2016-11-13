@@ -75,7 +75,7 @@ match_patterns(const char *s,
                apr_array_header_t *patterns)
 {
   int i;
-  if (patterns->nelts == 0)
+  if (!patterns)
     return TRUE;
 
   for (i = 0; i < patterns->nelts; ++i)
@@ -280,7 +280,7 @@ list_receiver(const char *rel_path,
    subdirectories (at svn_depth_empty).  Else if DEPTH is
    svn_depth_empty, just list PATH_OR_URL with none of its entries.
 
-   If PATTERNS is not empty, the last path segments must match at least
+   If PATTERNS is not NULL, the last path segments must match at least
    one of const char * patterns in it or the respective dirent will not
    be reported.
 
