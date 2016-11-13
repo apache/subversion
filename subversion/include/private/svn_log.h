@@ -262,7 +262,7 @@ svn_log__get_inherited_props(const char *path,
 const char *
 svn_log__list(const char *path, svn_revnum_t revision,
               apr_array_header_t *patterns, svn_depth_t depth,
-              apr_uint32_t dirent_fields, apr_pool_t *pool);
+              apr_uint64_t dirent_fields, apr_pool_t *pool);
 
 #ifdef __cplusplus
 }
