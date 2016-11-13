@@ -3571,7 +3571,7 @@ list(svn_ra_svn_conn_t *conn,
   const char *path, *full_path;
   svn_revnum_t rev;
   svn_depth_t depth;
-  apr_array_header_t *patterns;
+  apr_array_header_t *patterns = NULL;
   svn_fs_root_t *root;
   const char *depth_word;
   svn_boolean_t path_info_only;
@@ -3598,16 +3598,19 @@ list(svn_ra_svn_conn_t *conn,
                                svn_relpath_canonicalize(path, pool), pool);
 
   /* Read the patterns list.  */
-  patterns = apr_array_make(pool, 0, sizeof(const char *));
-  for (i = 0; i < patterns_list->nelts; ++i)
+  if (patterns_list)
     {
-      svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(patterns_list, i);
+      patterns = apr_array_make(pool, 0, sizeof(const char *));
+      for (i = 0; i < patterns_list->nelts; ++i)
+        {
+          svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(patterns_list, i);
 
-      if (elt->kind != SVN_RA_SVN_STRING)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                "Pattern field not a string");
+          if (elt->kind != SVN_RA_SVN_STRING)
+            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                    "Pattern field not a string");
 
-      APR_ARRAY_PUSH(patterns, const char *) = elt->u.string.data;
+          APR_ARRAY_PUSH(patterns, const char *) = elt->u.string.data;
+        }
     }
 
   /* Check authorizations */

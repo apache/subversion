@@ -2948,12 +2948,16 @@ ra_svn_list(svn_ra_session_t *session,
   SVN_ERR(svn_ra_svn__write_tuple(conn, scratch_pool, "w(c(?r)w(!", "list",
                                   path, revision, svn_depth_to_word(depth)));
   SVN_ERR(send_dirent_fields(conn, dirent_fields, scratch_pool));
-  SVN_ERR(svn_ra_svn__write_tuple(conn, scratch_pool, "!)(!"));
 
-  for (i = 0; i < patterns->nelts; ++i)
+  if (patterns)
     {
-      const char *pattern = APR_ARRAY_IDX(patterns, i, const char *);
-      SVN_ERR(svn_ra_svn__write_cstring(conn, scratch_pool, pattern));
+      SVN_ERR(svn_ra_svn__write_tuple(conn, scratch_pool, "!)(!"));
+
+      for (i = 0; i < patterns->nelts; ++i)
+        {
+          const char *pattern = APR_ARRAY_IDX(patterns, i, const char *);
+          SVN_ERR(svn_ra_svn__write_cstring(conn, scratch_pool, pattern));
+        }
     }
 
   SVN_ERR(svn_ra_svn__write_tuple(conn, scratch_pool, "!))"));

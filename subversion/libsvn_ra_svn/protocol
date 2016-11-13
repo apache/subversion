@@ -491,7 +491,7 @@ second place for auth-request point as noted below.
 
   list
     params:   ( path:string [ rev:number ] depth:word
-                ( field:dirent-field ... ) ( pattern:string ... ) )
+                ( field:dirent-field ... ) ? ( pattern:string ... ) )
     Before sending response, server sends dirents, ending with "done".
     dirent:   ( rel-path:string kind:node-kind
                 ? [ size:number ] [ has-props:bool ] [ created-rev:number ]

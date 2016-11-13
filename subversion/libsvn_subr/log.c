@@ -410,11 +410,18 @@ svn_log__list(const char *path, svn_revnum_t revision,
   else
     log_path = "/";
 
-  for (i = 0; i < patterns->nelts; ++i)
+  if (patterns)
     {
-      const char *pattern = APR_ARRAY_IDX(patterns, i, const char *);
-      svn_stringbuf_appendbyte(pattern_text, ' ');
-      svn_stringbuf_appendcstr(pattern_text, pattern);
+      for (i = 0; i < patterns->nelts; ++i)
+        {
+          const char *pattern = APR_ARRAY_IDX(patterns, i, const char *);
+          svn_stringbuf_appendbyte(pattern_text, ' ');
+          svn_stringbuf_appendcstr(pattern_text, pattern);
+        }
+    }
+  else
+    {
+      svn_stringbuf_appendcstr(pattern_text, " <ANY>");
     }
 
   return apr_psprintf(pool, "list %s r%ld%s%s", log_path, revision,

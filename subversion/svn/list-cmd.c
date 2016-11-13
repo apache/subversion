@@ -351,7 +351,7 @@ svn_cl__list(apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       const char *truepath;
       svn_opt_revision_t peg_revision;
-      apr_array_header_t *patterns;
+      apr_array_header_t *patterns = NULL;
       int k;
 
       /* Initialize the following variables for
@@ -362,7 +362,6 @@ svn_cl__list(apr_getopt_t *os,
 
       svn_pool_clear(subpool);
 
-      patterns = apr_array_make(subpool, 4, sizeof(const char *));
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
       /* Get peg revisions. */
@@ -379,20 +378,23 @@ svn_cl__list(apr_getopt_t *os,
         }
 
       if (opt_state->search_patterns)
-        for (k = 0; k < opt_state->search_patterns->nelts; ++k)
-          {
-            apr_array_header_t *pattern_group
-              = APR_ARRAY_IDX(opt_state->search_patterns, k,
-                              apr_array_header_t *);
+        {
+          patterns = apr_array_make(subpool, 4, sizeof(const char *));
+          for (k = 0; k < opt_state->search_patterns->nelts; ++k)
+            {
+              apr_array_header_t *pattern_group
+                = APR_ARRAY_IDX(opt_state->search_patterns, k,
+                                apr_array_header_t *);
 
-            /* Should never fail but ... */
-            if (pattern_group->nelts != 1)
-              return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("'search-and' option is not supported"));
+              /* Should never fail but ... */
+              if (pattern_group->nelts != 1)
+                return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                  _("'search-and' option is not supported"));
 
-            APR_ARRAY_PUSH(patterns, const char *)
-              = APR_ARRAY_IDX(pattern_group, 0, const char *);
-          }
+              APR_ARRAY_PUSH(patterns, const char *)
+                = APR_ARRAY_IDX(pattern_group, 0, const char *);
+            }
+        }
 
       err = svn_client_list4(truepath, &peg_revision,
                              &(opt_state->start_revision), patterns,
