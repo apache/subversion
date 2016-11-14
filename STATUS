@@ -50,7 +50,7 @@ Candidate changes:
      (still) exists locally but to which a user has no access is handled as
      a local obstruction on the next update that brings a change to this tree
      and the local working copy state is broken. This patch handles the
-     incomming change as a delete, properly marking a tree conflict if
+     incoming change as a delete, properly marking a tree conflict if
      necessary, allowing a user to make a copy of local changes.
      (Committing a copy would be hard though... as the user most likely
       doesn't have the rights to copy from what is now hidden).
@@ -93,6 +93,7 @@ Candidate changes:
      with libraries in $zlib_prefix/lib/hpux32 on HP-UX.
    Votes:
      +1: kotkov
+     +0: rhuijben (patch looks good. Untested)
 
  * r1759117, r1759122, r1759123, r1759124, 1764676
    Fix issue #4657: "Offset too large" error when packing repository in
@@ -120,7 +121,7 @@ Candidate changes:
      r1766352 contains the actual fix.
      r1766590 adds a test case for it.
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
  * r1766699, r1766704, r1766711
    Fix a bug where reintegrate merges access a non-existent path and error out.
@@ -130,6 +131,7 @@ Candidate changes:
      realize how they can work around the problem.
    Votes:
      +1: stsp
+     +0: rhuijben
 
  * r1769152
    Make hook script environments actually work with svnserve.
@@ -137,7 +139,7 @@ Candidate changes:
      svnserve should enable this feature just like mov_dav_svn and ra_local do.
      User complained.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
 * r1769456
   Fix issue #4660: svn info --show-item=revision contains trailing whitespaces.
@@ -146,6 +148,7 @@ Candidate changes:
     which is one of the main purposes of the new --show-item option.
   Votes:
     +1 (non-binding): luke1410
+    +1: rhuijben
 
 Veto-blocked changes:
 =====================
