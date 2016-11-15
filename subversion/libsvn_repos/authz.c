@@ -779,7 +779,7 @@ finalize_tree(node_t *node,
  * Return the filtered rule tree.
  */
 static node_t *
-create_user_authz(svn_authz_t *authz,
+create_user_authz(authz_full_t *authz,
                   const char *repository,
                   const char *user,
                   apr_pool_t *result_pool,
@@ -1467,7 +1467,7 @@ get_filtered_tree(svn_authz_t *authz,
   authz->user_rules[i]->pool = pool;
   authz->user_rules[i]->repository = apr_pstrdup(pool, repos_name);
   authz->user_rules[i]->user = user ? apr_pstrdup(pool, user) : NULL;
-  authz->user_rules[i]->root = create_user_authz(authz,
+  authz->user_rules[i]->root = create_user_authz(authz->full,
                                                  repos_name, user, pool,
                                                  scratch_pool);
   authz->user_rules[i]->lookup_state = create_lookup_state(pool);
@@ -1550,7 +1550,7 @@ svn_repos__retrieve_config(svn_config_t **cfg_p,
    undefined.  If MUST_EXIST is TRUE, a missing authz or global groups file
    is also an error. */
 svn_error_t *
-authz_read(svn_authz_t **authz_p,
+authz_read(authz_full_t **authz_p,
            const char *path,
            const char *groups_path,
            svn_boolean_t must_exist,
@@ -1594,11 +1594,15 @@ svn_repos_authz_read2(svn_authz_t **authz_p, const char *path,
                       apr_pool_t *pool)
 {
   apr_pool_t *scratch_pool = svn_pool_create(pool);
+  svn_authz_t *authz = apr_pcalloc(pool, sizeof(*authz));
+  authz->pool = pool;
 
-  SVN_ERR(authz_read(authz_p, path, groups_path, must_exist, pool,
+  SVN_ERR(authz_read(&authz->full, path, groups_path, must_exist, pool,
                      scratch_pool));
 
   svn_pool_destroy(scratch_pool);
+
+  *authz_p = authz;
   return SVN_NO_ERROR;
 }
 
@@ -1608,12 +1612,16 @@ svn_repos_authz_parse(svn_authz_t **authz_p, svn_stream_t *stream,
                       svn_stream_t *groups_stream, apr_pool_t *pool)
 {
   apr_pool_t *scratch_pool = svn_pool_create(pool);
+  svn_authz_t *authz = apr_pcalloc(pool, sizeof(*authz));
+  authz->pool = pool;
 
   /* Parse the configuration and construct the full authz model from it. */
-  SVN_ERR(svn_authz__parse(authz_p, stream, groups_stream, pool,
+  SVN_ERR(svn_authz__parse(&authz->full, stream, groups_stream, pool,
                            scratch_pool));
 
   svn_pool_destroy(scratch_pool);
+
+  *authz_p = authz;
   return SVN_NO_ERROR;
 }
 

@@ -75,7 +75,7 @@ typedef struct parsed_group_t
 typedef struct ctor_baton_t
 {
   /* The final output of the parser. */
-  svn_authz_t *authz;
+  authz_full_t *authz;
 
   /* Interned-string set, allocated in AUTHZ->pool.
      Stores singleton instances of user, group and repository names,
@@ -205,7 +205,7 @@ create_ctor_baton(apr_pool_t *result_pool,
   apr_pool_t *const parser_pool = svn_pool_create(scratch_pool);
   ctor_baton_t *const cb = apr_pcalloc(parser_pool, sizeof(*cb));
 
-  svn_authz_t *const authz = apr_pcalloc(result_pool, sizeof(*authz));
+  authz_full_t *const authz = apr_pcalloc(result_pool, sizeof(*authz));
   init_global_rights(&authz->anon_rights, anon_access_token, result_pool);
   init_global_rights(&authz->authn_rights, authn_access_token, result_pool);
   authz->user_rights = svn_hash__make(result_pool);
@@ -1293,7 +1293,7 @@ compare_parsed_acls(const void *va, const void *vb)
 
 
 svn_error_t *
-svn_authz__parse(svn_authz_t **authz,
+svn_authz__parse(authz_full_t **authz,
                  svn_stream_t *rules,
                  svn_stream_t *groups,
                  apr_pool_t *result_pool,
