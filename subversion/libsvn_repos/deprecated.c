@@ -29,6 +29,7 @@
 #include "svn_repos.h"
 #include "svn_compat.h"
 #include "svn_hash.h"
+#include "svn_path.h"
 #include "svn_props.h"
 #include "svn_pools.h"
 
@@ -1175,10 +1176,11 @@ svn_error_t *
 svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
                      svn_boolean_t must_exist, apr_pool_t *pool)
 {
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
-  SVN_ERR(svn_repos__authz_read(authz_p, file, NULL, must_exist,
-                                FALSE, pool, scratch_pool));
-  svn_pool_destroy(scratch_pool);
+  /* Prevent accidental new features in existing API. */
+  if (svn_path_is_url(file))
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             "'%s' is not a file name", file);
 
-  return SVN_NO_ERROR;
+  return svn_error_trace(svn_repos_authz_read2(authz_p, file, NULL,
+                                               must_exist, pool));
 }
