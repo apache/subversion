@@ -138,7 +138,7 @@ typedef struct authz_global_rights_t
 
 
 /* Immutable authorization info */
-struct svn_authz_t
+typedef struct authz_full_t
 {
   /* All ACLs from the authz file, in the order of definition. */
   apr_array_header_t *acls;
@@ -155,6 +155,22 @@ struct svn_authz_t
      in the authz file. The key is the user name, the value is
      an authz_global_rights_t*. */
   apr_hash_t *user_rights;
+
+  /* The pool from which all the parsed authz data is allocated.
+     This is the RESULT_POOL passed to svn_authz__tng_parse.
+
+     It's a good idea to dedicate a pool for the authz structure, so
+     that the whole authz representation can be deallocated by
+     destroying the pool. */
+  apr_pool_t *pool;
+} authz_full_t;
+
+
+/* Dynamic authorization info */
+struct svn_authz_t
+{
+  /* The parsed and pre-processed contents of the authz file. */
+  authz_full_t *full;
 
   /* A cache of rules filtered for a particular user.
      These will be generated on-demand. */
@@ -292,7 +308,7 @@ typedef struct authz_ace_t
  * The function uses SCRATCH_POOL for temporary allocations.
  */
 svn_error_t *
-svn_authz__parse(svn_authz_t **authz,
+svn_authz__parse(authz_full_t **authz,
                  svn_stream_t *rules,
                  svn_stream_t *groups,
                  apr_pool_t *result_pool,
@@ -337,7 +353,7 @@ svn_authz__get_acl_access(authz_access_t *access,
  */
 svn_boolean_t
 svn_authz__get_global_rights(authz_rights_t *rights,
-                             const svn_authz_t *authz,
+                             const authz_full_t *authz,
                              const char *user, const char *repos);
 
 

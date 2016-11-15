@@ -119,7 +119,7 @@ resolve_global_rights(authz_rights_t *rights_p,
 
 svn_boolean_t
 svn_authz__get_global_rights(authz_rights_t *rights_p,
-                             const svn_authz_t *authz,
+                             const authz_full_t *authz,
                              const char *user, const char *repos)
 {
   if (!user || 0 == strcmp(user, AUTHZ_ANONYMOUS_USER))

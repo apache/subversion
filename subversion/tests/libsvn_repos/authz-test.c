@@ -188,7 +188,7 @@ test_authz_parse(const svn_test_opts_t *opts,
   const char *groups_path;
   apr_file_t *groups_file;
   svn_stream_t *groups;
-  svn_authz_t *authz;
+  authz_full_t *authz;
   apr_hash_t *groupdefs = svn_hash__make(pool);
   int i;
 
