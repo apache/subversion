@@ -33,6 +33,7 @@
 
 #include "wc.h"
 #include "adm_files.h"
+#include "temp_pristines.h"
 #include "wc_db_private.h"
 #include "wc-queries.h"
 
@@ -234,6 +235,7 @@ svn_wc__db_open(svn_wc__db_t **db,
   (*db)->dir_data = apr_hash_make(result_pool);
 
   (*db)->state_pool = result_pool;
+  (*db)->temp_pristines = svn_wc__temp_pristines_create(result_pool);
 
   /* Don't need to initialize (*db)->parse_cache, due to the calloc above */
   if (config)

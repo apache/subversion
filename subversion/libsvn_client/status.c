@@ -517,6 +517,9 @@ svn_client_status6(svn_revnum_t *result_rev,
           svn_revnum_t revnum;
           report_baton_t rb;
           svn_depth_t status_depth;
+          rev_file_func_t rev_file_func;
+          void *rev_file_baton;
+          const char *repos_root_url;
 
           if (revision->kind == svn_opt_revision_head)
             {
@@ -556,6 +559,12 @@ svn_client_status6(svn_revnum_t *result_rev,
           else
             rb.depth = depth;
 
+          /* Repository access callback for pristine-less working copies. */
+          SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
+          SVN_ERR(svn_client__get_rev_file_func(&rev_file_func,
+                                                &rev_file_baton,
+                                                ctx, repos_root_url, pool));
+
           /* Drive the reporter structure, describing the revisions
              within PATH.  When we call reporter->finish_report,
              EDITOR will be driven to describe differences between our
@@ -567,6 +576,7 @@ svn_client_status6(svn_revnum_t *result_rev,
                                           depth, (! depth_as_sticky),
                                           (! server_supports_depth),
                                           FALSE /* use_commit_times */,
+                                          rev_file_func, rev_file_baton,
                                           ctx->cancel_func, ctx->cancel_baton,
                                           NULL, NULL, pool));
         }

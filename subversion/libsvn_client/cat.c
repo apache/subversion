@@ -44,6 +44,33 @@
 
 
 /*** Code. ***/
+/* A baton for wc_info_receiver(), containing the wrapped receiver. */
+typedef struct wc_info_receiver_baton_t
+{
+  const char *repos_relpath;
+  svn_revnum_t revision;
+
+  apr_pool_t *pool;
+} wc_info_receiver_baton_t;
+
+/* A receiver for WC info, implementing svn_client_info_receiver2_t.
+ * Convert the WC info to client info and pass it to the client info
+ * receiver (BATON->client_receiver_func with BATON->client_receiver_baton). */
+static svn_error_t *
+wc_info_receiver(void *baton,
+                 const char *abspath_or_url,
+                 const svn_wc__info2_t *wc_info,
+                 apr_pool_t *scratch_pool)
+{
+  wc_info_receiver_baton_t *b = baton;
+  const char *relpath = svn_dirent_skip_ancestor(wc_info->repos_root_URL,
+                                                 wc_info->URL);
+
+  b->repos_relpath = apr_pstrdup(b->pool, relpath);
+  b->revision = wc_info->rev;
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_client__get_normalized_stream(svn_stream_t **normal_stream,
@@ -52,6 +79,8 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
                                   const svn_opt_revision_t *revision,
                                   svn_boolean_t expand_keywords,
                                   svn_boolean_t normalize_eols,
+                                  rev_file_func_t rev_file_func,
+                                  void *rev_file_baton,
                                   svn_cancel_func_t cancel_func,
                                   void *cancel_baton,
                                   apr_pool_t *result_pool,
@@ -85,8 +114,25 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
 
   if (revision->kind != svn_opt_revision_working)
     {
-      SVN_ERR(svn_wc_get_pristine_contents2(&input, wc_ctx, local_abspath,
-                                            result_pool, scratch_pool));
+      svn_error_t *err;
+      err = svn_wc_get_pristine_contents2(&input, wc_ctx, local_abspath,
+                                          result_pool, scratch_pool);
+      if (err && err->apr_err == SVN_ERR_WC_NO_PRISTINE && rev_file_func)
+        {
+          wc_info_receiver_baton_t b;
+
+          b.pool = scratch_pool;
+          svn_error_clear(err);
+
+          SVN_ERR(svn_wc__get_info(wc_ctx, local_abspath, svn_depth_empty,
+                                   FALSE, TRUE, NULL, wc_info_receiver, &b,
+                                   NULL, NULL, scratch_pool));
+          err = rev_file_func(&input, b.repos_relpath, b.revision,
+                              rev_file_baton, result_pool, scratch_pool);
+        }
+
+      SVN_ERR(err);
+
       if (input == NULL)
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                  _("'%s' has no pristine version until it is committed"),
@@ -213,12 +259,20 @@ svn_client_cat3(apr_hash_t **returned_props,
     {
       const char *local_abspath;
       svn_stream_t *normal_stream;
+      rev_file_func_t rev_file_func;
+      void *rev_file_baton;
+      const char *repo_root;
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url,
                                       scratch_pool));
+      SVN_ERR(svn_client_get_repos_root(&repo_root, NULL, local_abspath, ctx,
+                                        scratch_pool, scratch_pool));
+      SVN_ERR(svn_client__get_rev_file_func(&rev_file_func, &rev_file_baton,
+                                            ctx, repo_root, scratch_pool));
       SVN_ERR(svn_client__get_normalized_stream(&normal_stream, ctx->wc_ctx,
                                             local_abspath, revision,
                                             expand_keywords, FALSE,
+                                            rev_file_func, rev_file_baton,
                                             ctx->cancel_func, ctx->cancel_baton,
                                             scratch_pool, scratch_pool));
 

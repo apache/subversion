@@ -160,7 +160,7 @@ compare_and_verify(svn_boolean_t *modified_p,
   if (special && need_translation)
     {
       SVN_ERR(svn_subst_read_specialfile(&v_stream, versioned_file_abspath,
-                                          scratch_pool, scratch_pool));
+                                         scratch_pool, scratch_pool));
     }
   else
     {
@@ -178,44 +178,21 @@ compare_and_verify(svn_boolean_t *modified_p,
 
       if (need_translation)
         {
-          if (!exact_comparison)
-            {
-              if (eol_style == svn_subst_eol_style_native)
-                eol_str = SVN_SUBST_NATIVE_EOL_STR;
-              else if (eol_style != svn_subst_eol_style_fixed
-                       && eol_style != svn_subst_eol_style_none)
-                return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL,
-                                        svn_stream_close(v_stream), NULL);
+          if (eol_style == svn_subst_eol_style_native)
+            eol_str = SVN_SUBST_NATIVE_EOL_STR;
+          else if (eol_style != svn_subst_eol_style_fixed
+                    && eol_style != svn_subst_eol_style_none)
+            return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL,
+                                    svn_stream_close(v_stream), NULL);
 
-              /* Wrap file stream to detranslate into normal form,
-               * "repairing" the EOL style if it is inconsistent. */
-              v_stream = svn_subst_stream_translated(v_stream,
-                                                     eol_str,
-                                                     TRUE /* repair */,
-                                                     keywords,
-                                                     FALSE /* expand */,
-                                                     scratch_pool);
-            }
-          else
-            {
-              svn_boolean_t same;
-              svn_stream_t *pristine_stream;
-
-              SVN_ERR(svn_wc__db_pristine_read(&pristine_stream, NULL,
-                                               db, versioned_file_abspath,
-                                               pristine_checksum,
-                                               scratch_pool, scratch_pool));
-              /* Wrap base stream to translate into working copy form, and
-               * arrange to throw an error if its EOL style is inconsistent. */
-              pristine_stream = svn_subst_stream_translated(pristine_stream,
-                                                            eol_str, FALSE,
-                                                            keywords, TRUE,
-                                                            scratch_pool);
-              SVN_ERR(svn_stream_contents_same2(&same, pristine_stream, v_stream,
-                                                scratch_pool));
-              *modified_p = (! same);
-              return SVN_NO_ERROR;
-            }
+          /* Wrap file stream to detranslate into normal form,
+           * "repairing" the EOL style if it is inconsistent. */
+          v_stream = svn_subst_stream_translated(v_stream,
+                                                 eol_str,
+                                                 TRUE /* repair */,
+                                                 keywords,
+                                                 FALSE /* expand */,
+                                                 scratch_pool);
         }
     }
 

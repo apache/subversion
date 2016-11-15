@@ -245,6 +245,8 @@ update_internal(svn_revnum_t *result_rev,
   svn_config_t *cfg = ctx->config
                       ? svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG)
                       : NULL;
+  rev_file_func_t rev_file_func;
+  void *rev_file_baton;
 
   if (result_rev)
     *result_rev = SVN_INVALID_REVNUM;
@@ -460,6 +462,10 @@ update_internal(svn_revnum_t *result_rev,
                                             revnum, depth, ra_session,
                                             ctx, scratch_pool, scratch_pool));
 
+  /* Repository access callback for pristine-less working copies. */
+  SVN_ERR(svn_client__get_rev_file_func(&rev_file_func, &rev_file_baton,
+                                        ctx, repos_root_url, scratch_pool));
+
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
   SVN_ERR(svn_wc__get_update_editor(&update_editor, &update_edit_baton,
@@ -475,6 +481,7 @@ update_internal(svn_revnum_t *result_rev,
                                     conflicted_paths ? record_conflict : NULL,
                                     conflicted_paths,
                                     NULL, NULL,
+                                    rev_file_func, rev_file_baton,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     scratch_pool, scratch_pool));
@@ -503,6 +510,7 @@ update_internal(svn_revnum_t *result_rev,
                                   depth, (! depth_is_sticky),
                                   (! server_supports_depth),
                                   use_commit_times,
+                                  rev_file_func, rev_file_baton,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   ctx->notify_func2, ctx->notify_baton2,
                                   scratch_pool));

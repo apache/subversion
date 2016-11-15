@@ -89,6 +89,9 @@ struct diff_baton
   /* Should this diff ignore node ancestry? */
   svn_boolean_t ignore_ancestry;
 
+  rev_file_func_t rev_file_func;
+  void *rev_file_baton;
+
   /* Cancel function/baton */
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
@@ -333,6 +336,8 @@ diff_status_callback(void *baton,
                                               SVN_INVALID_REVNUM,
                                               eb->processor,
                                               eb->cur ? eb->cur->baton : NULL,
+                                              eb->rev_file_func,
+                                              eb->rev_file_baton,
                                               scratch_pool));
         else if (base_kind == svn_node_dir)
           SVN_ERR(svn_wc__diff_base_only_dir(db, child_abspath,
@@ -341,6 +346,8 @@ diff_status_callback(void *baton,
                                              depth_below_here,
                                              eb->processor,
                                              eb->cur ? eb->cur->baton : NULL,
+                                             eb->rev_file_func,
+                                             eb->rev_file_baton,
                                              eb->cancel_func,
                                              eb->cancel_baton,
                                              scratch_pool));
@@ -358,6 +365,8 @@ diff_status_callback(void *baton,
                                                         ? eb->cur->baton
                                                         : NULL,
                                                    FALSE,
+                                                   eb->rev_file_func,
+                                                   eb->rev_file_baton,
                                                    eb->cancel_func,
                                                    eb->cancel_baton,
                                                    scratch_pool));
@@ -408,6 +417,8 @@ diff_status_callback(void *baton,
                                                eb->processor,
                                                eb->cur ? eb->cur->baton : NULL,
                                                FALSE,
+                                               eb->rev_file_func,
+                                               eb->rev_file_baton,
                                                eb->cancel_func,
                                                eb->cancel_baton,
                                                scratch_pool));
@@ -418,6 +429,8 @@ diff_status_callback(void *baton,
                                               eb->processor,
                                               eb->cur ? eb->cur->baton : NULL,
                                               FALSE,
+                                              eb->rev_file_func,
+                                              eb->rev_file_baton,
                                               eb->cancel_func,
                                               eb->cancel_baton,
                                               scratch_pool));
@@ -441,6 +454,8 @@ svn_wc__diff7(const char **root_relpath,
               svn_boolean_t ignore_ancestry,
               const apr_array_header_t *changelist_filter,
               const svn_diff_tree_processor_t *diff_processor,
+              rev_file_func_t rev_file_func,
+              void *rev_file_baton,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
               apr_pool_t *result_pool,
@@ -494,6 +509,8 @@ svn_wc__diff7(const char **root_relpath,
   eb.db = wc_ctx->db;
   eb.processor = diff_processor;
   eb.ignore_ancestry = ignore_ancestry;
+  eb.rev_file_func = rev_file_func;
+  eb.rev_file_baton = rev_file_baton;
   eb.pool = scratch_pool;
 
   if (ignore_ancestry)
@@ -578,6 +595,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
                                        ignore_ancestry,
                                        changelist_filter,
                                        processor,
+                                       NULL, NULL,
                                        cancel_func, cancel_baton,
                                        scratch_pool, scratch_pool));
 }

@@ -30,6 +30,7 @@
 #ifndef WC_DB_PRIVATE_H
 #define WC_DB_PRIVATE_H
 
+#include "temp_pristines.h"
 #include "wc_db.h"
 
 
@@ -66,6 +67,8 @@ struct svn_wc__db_t {
 
   /* As we grow the state of this DB, allocate that state here. */
   apr_pool_t *state_pool;
+
+  temp_pristines_t *temp_pristines;
 };
 
 

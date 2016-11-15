@@ -1811,6 +1811,9 @@ diff_wc_wc(const char **root_relpath,
            apr_pool_t *scratch_pool)
 {
   const char *abspath1;
+  rev_file_func_t rev_file_func;
+  void *rev_file_baton;
+  svn_wc_status3_t *status;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path1));
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
@@ -1841,10 +1844,18 @@ diff_wc_wc(const char **root_relpath,
         ddi->anchor = path1;
     }
 
+  /* Repository access callback for pristine-less working copies. */
+  SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, abspath1,
+                         scratch_pool, scratch_pool));
+  SVN_ERR(svn_client__get_rev_file_func(&rev_file_func, &rev_file_baton,
+                                        ctx, status->repos_root_url,
+                                        scratch_pool));
+
   SVN_ERR(svn_wc__diff7(root_relpath, root_is_dir,
                         ctx->wc_ctx, abspath1, depth,
                         ignore_ancestry, changelists,
                         diff_processor,
+                        rev_file_func, rev_file_baton,
                         ctx->cancel_func, ctx->cancel_baton,
                         result_pool, scratch_pool));
   return SVN_NO_ERROR;
@@ -2067,6 +2078,9 @@ diff_repos_wc(const char **root_relpath,
   const char *copy_root_abspath;
   const char *target_url;
   svn_client__pathrev_t *loc1;
+  const char *repos_root_url;
+  rev_file_func_t rev_file_func;
+  void *rev_file_baton;
 
   SVN_ERR_ASSERT(! svn_path_is_url(path2));
 
@@ -2185,11 +2199,10 @@ diff_repos_wc(const char **root_relpath,
     }
 
   SVN_ERR(svn_ra_reparent(ra_session, anchor_url, scratch_pool));
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, scratch_pool));
 
   if (ddi)
     {
-      const char *repos_root_url;
-
       ddi->anchor = anchor;
 
       if (!reverse)
@@ -2205,9 +2218,6 @@ diff_repos_wc(const char **root_relpath,
           ddi->orig_path_2 = apr_pstrdup(result_pool, loc1->url);
         }
 
-      SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url,
-                                      scratch_pool));
-
       ddi->session_relpath = svn_uri_skip_ancestor(repos_root_url,
                                                    anchor_url,
                                                    result_pool);
@@ -2216,6 +2226,10 @@ diff_repos_wc(const char **root_relpath,
   if (reverse)
     diff_processor = svn_diff__tree_processor_reverse_create(
                               diff_processor, NULL, scratch_pool);
+
+  /* Repository access callback for pristine-less working copies. */
+  SVN_ERR(svn_client__get_rev_file_func(&rev_file_func, &rev_file_baton,
+                                        ctx, repos_root_url, scratch_pool));
 
   /* Use the diff editor to generate the diff. */
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
@@ -2231,6 +2245,7 @@ diff_repos_wc(const char **root_relpath,
                                   server_supports_depth,
                                   changelists,
                                   diff_processor,
+                                  rev_file_func, rev_file_baton,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   scratch_pool, scratch_pool));
 
@@ -2283,6 +2298,7 @@ diff_repos_wc(const char **root_relpath,
                                       FALSE, depth, TRUE,
                                       (! server_supports_depth),
                                       FALSE,
+                                      rev_file_func, rev_file_baton,
                                       ctx->cancel_func, ctx->cancel_baton,
                                       NULL, NULL, /* notification is N/A */
                                       scratch_pool));

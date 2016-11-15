@@ -463,6 +463,7 @@ run_file_install(work_item_baton_t *wqb,
   const char *local_abspath;
   svn_boolean_t use_commit_times;
   svn_boolean_t record_fileinfo;
+  svn_boolean_t temp_source;
   svn_boolean_t special;
   svn_stream_t *src_stream;
   svn_subst_eol_style_t style;
@@ -476,6 +477,10 @@ run_file_install(work_item_baton_t *wqb,
   const svn_checksum_t *checksum;
   apr_hash_t *props;
   apr_time_t changed_date;
+  svn_boolean_t needs_translation;
+  svn_boolean_t move_into_place;
+  const char *repo_relpath;
+  svn_revnum_t revision;
 
   local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
@@ -489,9 +494,11 @@ run_file_install(work_item_baton_t *wqb,
   SVN_ERR(svn_wc__db_read_node_install_info(&wcroot_abspath,
                                             &checksum, &props,
                                             &changed_date,
+                                            &repo_relpath, &revision,
                                             db, local_abspath, wri_abspath,
                                             scratch_pool, scratch_pool));
 
+  temp_source = FALSE;
   if (arg4 != NULL)
     {
       /* Use the provided path for the source.  */
@@ -502,9 +509,9 @@ run_file_install(work_item_baton_t *wqb,
     }
   else if (! checksum)
     {
-      /* This error replaces a previous assertion. Reporting an error from here
-         leaves the workingqueue operation in place, so the working copy is
-         still broken!
+      /* This error replaces a previous assertion. Reporting an error from
+         here leaves the working queue operation in place, so the working
+         copy is still broken!
 
          But when we report this error the user at least knows what node has
          this specific problem, so maybe we can find out why users see this
@@ -518,14 +525,17 @@ run_file_install(work_item_baton_t *wqb,
     }
   else
     {
-      SVN_ERR(svn_wc__db_pristine_get_future_path(&source_abspath,
-                                                  wcroot_abspath,
-                                                  checksum,
-                                                  scratch_pool, scratch_pool));
+      source_abspath = svn_wc__db_pristine_get_temp(db, checksum,
+                                                    scratch_pool);
+      if (source_abspath)
+        temp_source = TRUE;
+      else
+        SVN_ERR(svn_wc__db_pristine_get_future_path(&source_abspath,
+                                                    wcroot_abspath,
+                                                    checksum,
+                                                    scratch_pool,
+                                                    scratch_pool));
     }
-
-  SVN_ERR(svn_stream_open_readonly(&src_stream, source_abspath,
-                                   scratch_pool, scratch_pool));
 
   /* Fetch all the translation bits.  */
   SVN_ERR(svn_wc__get_translate_info(&style, &eol,
@@ -542,9 +552,13 @@ run_file_install(work_item_baton_t *wqb,
 
       /* Copy the "repository normal" form of the special file into the
          special stream.  */
+      SVN_ERR(svn_stream_open_readonly(&src_stream, source_abspath,
+                                       scratch_pool, scratch_pool));
       SVN_ERR(svn_stream_copy3(src_stream, dst_stream,
                                cancel_func, cancel_baton,
                                scratch_pool));
+      if (temp_source)
+        SVN_ERR(svn_io_remove_file2(source_abspath, FALSE, scratch_pool));
 
       /* No need to set exec or read-only flags on special files.  */
 
@@ -552,41 +566,61 @@ run_file_install(work_item_baton_t *wqb,
       return SVN_NO_ERROR;
     }
 
-  if (svn_subst_translation_required(style, eol, keywords,
-                                     FALSE /* special */,
-                                     TRUE /* force_eol_check */))
+  /* How efficiently can we get the data into place? */
+  needs_translation = svn_subst_translation_required(style, eol, keywords,
+                                                FALSE /* special */,
+                                                TRUE /* force_eol_check */);
+  move_into_place = temp_source && !needs_translation;
+
+  /* Get it to the target position. */
+  if (move_into_place)
     {
-      /* Wrap it in a translating (expanding) stream.  */
-      src_stream = svn_subst_stream_translated(src_stream, eol,
-                                               TRUE /* repair */,
-                                               keywords,
-                                               TRUE /* expand */,
-                                               scratch_pool);
+      SVN_ERR(svn_io_file_move(source_abspath, local_abspath, scratch_pool));
     }
+  else
+    {
+      SVN_ERR(svn_stream_open_readonly(&src_stream, source_abspath,
+                                       scratch_pool, scratch_pool));
 
-  /* Where is the Right Place to put a temp file in this working copy?  */
-  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath,
-                                         db, wcroot_abspath,
-                                         scratch_pool, scratch_pool));
+      if (needs_translation)
+        {
+          /* Wrap it in a translating (expanding) stream.  */
+          src_stream = svn_subst_stream_translated(src_stream, eol,
+                                                   TRUE /* repair */,
+                                                   keywords,
+                                                   TRUE /* expand */,
+                                                   scratch_pool);
+        }
 
-  /* Translate to a temporary file. We don't want the user seeing a partial
-     file, nor let them muck with it while we translate. We may also need to
-     get its TRANSLATED_SIZE before the user can monkey it.  */
-  SVN_ERR(svn_stream__create_for_install(&dst_stream, temp_dir_abspath,
-                                         scratch_pool, scratch_pool));
+      /* Where is the Right Place to put a temp file in this working copy? */
+      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath,
+                                             db, wcroot_abspath,
+                                             scratch_pool, scratch_pool));
 
-  /* Copy from the source to the dest, translating as we go. This will also
-     close both streams.  */
-  SVN_ERR(svn_stream_copy3(src_stream, dst_stream,
-                           cancel_func, cancel_baton,
-                           scratch_pool));
+      /* Translate to a temporary file. We don't want the user seeing a
+         partial file, nor let them muck with it while we translate. We may
+         also need to get its TRANSLATED_SIZE before the user can monkey it. */
+      SVN_ERR(svn_stream__create_for_install(&dst_stream, temp_dir_abspath,
+                                             scratch_pool, scratch_pool));
 
-  /* All done. Move the file into place.  */
-  /* With a single db we might want to install files in a missing directory.
-     Simply trying this scenario on error won't do any harm and at least
-     one user reported this problem on IRC. */
-  SVN_ERR(svn_stream__install_stream(dst_stream, local_abspath,
-                                     TRUE /* make_parents*/, scratch_pool));
+      /* Copy from the source to the dest, translating as we go. This will
+         also close both streams. */
+      SVN_ERR(svn_stream_copy3(src_stream, dst_stream,
+                               cancel_func, cancel_baton,
+                               scratch_pool));
+
+      /* All done. Move the file into place.  */
+      /* With a single db we might want to install files in a missing
+         directory.  Simply trying this scenario on error won't do any harm
+         and at least one user reported this problem on IRC. */
+      SVN_ERR(svn_stream__install_stream(dst_stream, local_abspath,
+                                         TRUE /* make_parents*/,
+                                         scratch_pool));
+
+      /* Source cleanup. */
+      if (temp_source)
+        SVN_ERR(svn_io_remove_file2(source_abspath, FALSE, scratch_pool));
+    }
 
   /* Tweak the on-disk file according to its properties.  */
 #ifndef WIN32

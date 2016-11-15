@@ -390,6 +390,7 @@ svn_cl__walk_conflicts(apr_array_header_t *targets,
                                path_prefix, pb, conflict_stats, iterpool);
         }
 
+      SVN_ERR(err);
       if (err)
         {
           svn_handle_warning2(stderr, svn_error_root_cause(err), "svn: ");

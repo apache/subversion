@@ -571,6 +571,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 41,
              "Duplicate targets in svn:externals property")
 
+  /** @since New in 1.10 */
+  SVN_ERRDEF(SVN_ERR_WC_NO_PRISTINE,
+             SVN_ERR_WC_CATEGORY_START + 42,
+             "Pristine not available")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,

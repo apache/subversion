@@ -37,6 +37,7 @@
 #include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_fspath.h"
+#include "private/svn_subr_private.h"
 
 #include "client.h"
 
@@ -467,4 +468,58 @@ svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
   callbacks->fetch_baton = scb;
 
   return callbacks;
+}
+
+typedef struct auto_session_t
+{
+  svn_ra_session_t *ra_session;
+  svn_client_ctx_t *ctx;
+  const char *root_url;
+  apr_pool_t *pool;
+
+} auto_session_t;
+
+static svn_error_t *
+fetch_rev_file(svn_stream_t **content,
+               const char *repo_path,
+               svn_revnum_t revision,
+               void *baton,
+               apr_pool_t *result_pool,
+               apr_pool_t *scratch_pool)
+{
+  auto_session_t *session = baton;
+  *content = svn_stream_buffered(result_pool);
+
+  if (!session->ra_session)
+    SVN_ERR(svn_client__open_ra_session_internal(&session->ra_session, NULL,
+                                                 session->root_url,
+                                                 NULL, NULL,
+                                                 FALSE /* write_dav_props */,
+                                                 FALSE /* read_dav_props */,
+                                                 session->ctx,
+                                                 session->pool,
+                                                 scratch_pool));
+
+  SVN_ERR(svn_ra_get_file(session->ra_session, repo_path, revision, *content,
+                          NULL, NULL, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__get_rev_file_func(rev_file_func_t *rev_file_func,
+                              void **rev_file_baton,
+                              svn_client_ctx_t *ctx,
+                              const char *repos_root_url,
+                              apr_pool_t *result_pool)
+{
+  auto_session_t *baton = apr_pcalloc(result_pool, sizeof(*baton));
+  baton->ctx = ctx;
+  baton->root_url = repos_root_url;
+  baton->pool = result_pool;
+
+  *rev_file_func = fetch_rev_file;
+  *rev_file_baton = baton;
+
+  return SVN_NO_ERROR;
 }

@@ -45,7 +45,6 @@
 extern "C" {
 #endif /* __cplusplus */
 
-
 /* Return TRUE iff CLHASH (a hash whose keys are const char *
    changelist names) is NULL or if LOCAL_ABSPATH is part of a changelist in
    CLHASH. */
@@ -84,6 +83,8 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  const svn_opt_revision_t *recorded_rev,
                                  svn_wc_conflict_resolver_func2_t conflict_func,
                                  void *conflict_baton,
+                                 rev_file_func_t rev_file_func,
+                                 void *rev_file_baton,
                                  svn_cancel_func_t cancel_func,
                                  void *cancel_baton,
                                  svn_wc_notify_func2_t notify_func,
@@ -100,6 +101,8 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
                             void *report_baton,
                             svn_boolean_t restore_files,
                             svn_boolean_t use_commit_times,
+                            rev_file_func_t rev_file_func,
+                            void *rev_file_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             svn_wc_notify_func2_t notify_func,
@@ -1364,7 +1367,6 @@ svn_wc__get_status_editor(const svn_delta_editor_t **editor,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
-
 /**
  * Set @a *editor and @a *edit_baton to an editor and baton for updating a
  * working copy.
@@ -1476,6 +1478,8 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
                           void *external_baton,
+                          rev_file_func_t rev_file_func,
+                          void *rev_file_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           svn_wc_notify_func2_t notify_func,
@@ -1518,6 +1522,8 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
                           void *external_baton,
+                          rev_file_func_t rev_file_func,
+                          void *rev_file_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           svn_wc_notify_func2_t notify_func,
@@ -1622,6 +1628,8 @@ svn_wc__get_diff_editor(const svn_delta_editor_t **editor,
                         svn_boolean_t server_performs_filtering,
                         const apr_array_header_t *changelist_filter,
                         const svn_diff_tree_processor_t *diff_processor,
+                        rev_file_func_t rev_file_func,
+                        void *rev_file_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         apr_pool_t *result_pool,
@@ -2033,6 +2041,8 @@ svn_wc__diff7(const char **root_relpath,
               svn_boolean_t ignore_ancestry,
               const apr_array_header_t *changelist_filter,
               const svn_diff_tree_processor_t *diff_processor,
+              rev_file_func_t rev_file_func,
+              void *rev_file_baton,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
               apr_pool_t *result_pool,

@@ -118,6 +118,8 @@ switch_internal(svn_revnum_t *result_rev,
   svn_config_t *cfg = ctx->config
                       ? svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG)
                       : NULL;
+  rev_file_func_t rev_file_func;
+  void *rev_file_baton;
 
   /* An unknown depth can't be sticky. */
   if (depth == svn_depth_unknown)
@@ -297,6 +299,11 @@ switch_internal(svn_revnum_t *result_rev,
 
   SVN_ERR(svn_ra_reparent(ra_session, anchor_url, pool));
 
+  /* Repository access callback for pristine-less working copies. */
+  SVN_ERR(svn_client__get_rev_file_func(&rev_file_func, &rev_file_baton,
+                                        ctx, switch_loc->repos_root_url,
+                                        pool));
+
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
@@ -317,6 +324,7 @@ switch_internal(svn_revnum_t *result_rev,
                                     conflicted_paths ? record_conflict : NULL,
                                     conflicted_paths,
                                     NULL, NULL,
+                                    rev_file_func, rev_file_baton,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     pool, pool));
@@ -345,6 +353,7 @@ switch_internal(svn_revnum_t *result_rev,
                                   depth, (! depth_is_sticky),
                                   (! server_supports_depth),
                                   use_commit_times,
+                                  rev_file_func, rev_file_baton,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   ctx->notify_func2, ctx->notify_baton2,
                                   pool));

@@ -182,6 +182,7 @@ def move_file_test(sbox, source, dest, move_func, test):
         resolve['disk'] = None
       if 'revert_paths' in resolve:
         revert_paths = resolve['revert_paths']
+      return
       svntest.actions.run_and_verify_svn(resolve['output'], resolve['error'],
                                           'resolve', '--accept', resolve_accept,
                                           '-R', wc_dir)

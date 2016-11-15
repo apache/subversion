@@ -34,6 +34,8 @@
 #define SVN_WC__I_AM_WC_DB
 #include "../../libsvn_wc/wc_db_private.h"
 #include "../../libsvn_wc/token-map.h"
+#include "../../libsvn_client/client.h"
+
 svn_error_t *
 svn_test__create_client_ctx(svn_client_ctx_t **ctx,
                             svn_test__sandbox_t *sbox,
@@ -411,24 +413,43 @@ sbox_wc_revert(svn_test__sandbox_t *b, const char *path, svn_depth_t depth)
   const char *abspath = sbox_wc_path(b, path);
   const char *dir_abspath;
   const char *lock_root_abspath;
+  const char *repos_root_url;
+  apr_pool_t *subpool = svn_pool_create(b->pool);
+  rev_file_func_t rev_file_func;
+  void *rev_file_baton;
+  svn_client_ctx_t *ctx;
 
   if (strcmp(abspath, b->wc_abspath))
     dir_abspath = svn_dirent_dirname(abspath, b->pool);
   else
     dir_abspath = abspath;
 
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, subpool));
+
   SVN_ERR(svn_wc__acquire_write_lock(&lock_root_abspath, b->wc_ctx,
                                      dir_abspath, FALSE /* lock_anchor */,
-                                     b->pool, b->pool));
+                                     subpool, subpool));
+  SVN_ERR(svn_wc__node_get_base(NULL, NULL, NULL, &repos_root_url,
+                                NULL, NULL, b->wc_ctx, dir_abspath,
+                                TRUE /* ignore_enoent */,
+                                subpool, subpool));
+  SVN_ERR(svn_client__get_rev_file_func(&rev_file_func, &rev_file_baton,
+                                        ctx, repos_root_url,
+                                        subpool));
   SVN_ERR(svn_wc_revert5(b->wc_ctx, abspath, depth,
                          FALSE /* use_commit_times */,
                          NULL /* changelist_filter */,
                          FALSE /* clear_changelists */,
                          FALSE /* metadata_only */,
+                         rev_file_func, rev_file_baton,
                          NULL, NULL, /* cancel baton + func */
                          NULL, NULL, /* notify baton + func */
-                         b->pool));
-  SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, lock_root_abspath, b->pool));
+                         subpool));
+  SVN_ERR(svn_wc__release_write_lock(b->wc_ctx, lock_root_abspath, subpool));
+
+  ctx->wc_ctx = NULL;
+  svn_pool_destroy(subpool);
+
   return SVN_NO_ERROR;
 }
 

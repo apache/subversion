@@ -5457,6 +5457,13 @@ svn_wc_process_committed(const char *path,
 
 
 
+typedef svn_error_t * (*rev_file_func_t)(svn_stream_t **content,
+                                         const char *repo_path,
+                                         svn_revnum_t revision,
+                                         void *baton,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
+
 /**
  * Do a depth-first crawl in a working copy, beginning at @a local_abspath,
  * using @a wc_ctx for accessing the working copy.
@@ -5526,6 +5533,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                         svn_boolean_t honor_depth_exclude,
                         svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
+                        rev_file_func_t rev_file_func,
+                        void *rev_file_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         svn_wc_notify_func2_t notify_func,
@@ -7578,6 +7587,7 @@ svn_wc_relocate(const char *path,
                 apr_pool_t *pool);
 
 
+
 /**
  * Revert changes to @a local_abspath.  Perform necessary allocations in
  * @a scratch_pool.
@@ -7632,6 +7642,8 @@ svn_wc_revert5(svn_wc_context_t *wc_ctx,
                const apr_array_header_t *changelist_filter,
                svn_boolean_t clear_changelists,
                svn_boolean_t metadata_only,
+               rev_file_func_t rev_file_func,
+               void *rev_file_baton,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -7733,6 +7745,8 @@ svn_error_t *
 svn_wc_restore(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_boolean_t use_commit_times,
+               rev_file_func_t rev_file_func,
+               void *rev_file_baton,
                apr_pool_t *scratch_pool);
 
 

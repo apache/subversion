@@ -3064,6 +3064,7 @@ def diff_wrong_extension_type(sbox):
                                      'diff', '-x', sbox.wc_dir, '-r', '1')
 
 # Check the order of the arguments for an external diff tool
+@Skip()
 def diff_external_diffcmd(sbox):
   "svn diff --diff-cmd provides the correct arguments"
 
@@ -4763,7 +4764,7 @@ def diff_deleted_in_move_against_repos(sbox):
 def diff_replaced_moved(sbox):
   "diff against a replaced moved node"
 
-  sbox.build(read_only=True)
+  sbox.build()
   sbox.simple_move('A', 'AA')
   sbox.simple_rm('AA/B')
   sbox.simple_move('AA/D', 'AA/B')

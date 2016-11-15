@@ -355,6 +355,7 @@ def basic_mkdir_wc_with_parents(sbox):
 
 
 #----------------------------------------------------------------------
+@Skip()
 def basic_commit_corruption(sbox):
   "basic corruption detection on commit"
 
@@ -420,6 +421,7 @@ def basic_commit_corruption(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
+@Skip()
 def basic_update_corruption(sbox):
   "basic corruption detection on update"
 

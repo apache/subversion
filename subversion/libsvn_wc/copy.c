@@ -116,6 +116,7 @@ copy_to_tmpdir(svn_skel_t **work_item,
 
   if (file_copy && !unversioned)
     {
+#if 0
       svn_boolean_t modified;
       /* It's faster to look for mods on the source now, as
          the timestamp might match, than to examine the
@@ -145,6 +146,7 @@ copy_to_tmpdir(svn_skel_t **work_item,
                                                 result_pool, scratch_pool));
           return SVN_NO_ERROR;
         }
+#endif
     }
   else if (*kind == svn_node_dir && !file_copy)
     {

@@ -52,6 +52,8 @@ struct revert_with_write_lock_baton {
   svn_boolean_t clear_changelists;
   svn_boolean_t metadata_only;
   svn_client_ctx_t *ctx;
+  rev_file_func_t rev_file_func;
+  void *rev_file_baton;
 };
 
 /* (Note: All arguments are in the baton above.)
@@ -87,6 +89,7 @@ revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
                        b->changelists,
                        b->clear_changelists,
                        b->metadata_only,
+                       b->rev_file_func, b->rev_file_baton,
                        b->ctx->cancel_func, b->ctx->cancel_baton,
                        b->ctx->notify_func2, b->ctx->notify_baton2,
                        scratch_pool);
@@ -164,6 +167,7 @@ svn_client_revert3(const apr_array_header_t *paths,
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
       const char *local_abspath, *lock_target;
+      const char *repos_root_url;
       svn_boolean_t wc_root;
 
       svn_pool_clear(iterpool);
@@ -190,6 +194,16 @@ svn_client_revert3(const apr_array_header_t *paths,
         goto errorful;
       lock_target = wc_root ? local_abspath
                             : svn_dirent_dirname(local_abspath, pool);
+      /* Repository access callback for pristine-less working copies. */
+      SVN_ERR(svn_wc__node_get_base(NULL, NULL, NULL, &repos_root_url,
+                                    NULL, NULL, ctx->wc_ctx, local_abspath,
+                                    TRUE /* ignore_enoent */,
+                                    iterpool, iterpool));
+      SVN_ERR(svn_client__get_rev_file_func(&baton.rev_file_func,
+                                            &baton.rev_file_baton,
+                                            ctx, repos_root_url,
+                                            iterpool));
+
       err = svn_wc__call_with_write_lock(revert, &baton, ctx->wc_ctx,
                                          lock_target, FALSE,
                                          iterpool, iterpool);

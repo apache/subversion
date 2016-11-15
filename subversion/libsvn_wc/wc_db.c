@@ -10027,6 +10027,8 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
                                   const svn_checksum_t **sha1_checksum,
                                   apr_hash_t **pristine_props,
                                   apr_time_t *changed_date,
+                                  const char **repo_relpath,
+                                  svn_revnum_t *revision,
                                   svn_wc__db_t *db,
                                   const char *local_abspath,
                                   const char *wri_abspath,
@@ -10087,6 +10089,12 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
 
       if (changed_date)
         *changed_date = svn_sqlite__column_int64(stmt, 9);
+
+      if (repo_relpath)
+        *repo_relpath = svn_sqlite__column_text(stmt, 2, result_pool);
+
+      if (revision)
+        *revision = svn_sqlite__column_revnum(stmt, 5);
     }
   else
     return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND,

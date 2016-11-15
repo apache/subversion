@@ -475,6 +475,9 @@ struct edit_baton
   /* Introducing a new file external */
   svn_boolean_t added;
 
+  rev_file_func_t rev_file_func;
+  void *rev_file_baton;
+
   svn_wc_conflict_resolver_func2_t conflict_func;
   void *conflict_baton;
   svn_cancel_func_t cancel_func;
@@ -631,9 +634,12 @@ apply_textdelta(void *file_baton,
                                                            pool)));
         }
 
-      SVN_ERR(svn_wc__db_pristine_read(&src_stream, NULL, eb->db,
-                                       eb->wri_abspath, eb->original_checksum,
-                                       pool, pool));
+      SVN_ERR(svn_wc__pristine_get(&src_stream, NULL, eb->db,
+                                   eb->wri_abspath, eb->original_checksum,
+                                   eb->old_repos_relpath,
+                                   eb->original_revision,
+                                   eb->rev_file_func, eb->rev_file_baton,
+                                   pool, pool));
     }
   else
     src_stream = svn_stream_empty(pool);
@@ -872,6 +878,8 @@ close_file(void *file_baton,
                                                    *eb->target_revision,
                                                    eb->propchanges,
                                                    eb->diff3cmd,
+                                                   eb->rev_file_func,
+                                                   eb->rev_file_baton,
                                                    eb->cancel_func,
                                                    eb->cancel_baton,
                                                    pool, pool));
@@ -1069,6 +1077,8 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
                                  const svn_opt_revision_t *recorded_rev,
                                  svn_wc_conflict_resolver_func2_t conflict_func,
                                  void *conflict_baton,
+                                 rev_file_func_t rev_file_func,
+                                 void *rev_file_baton,
                                  svn_cancel_func_t cancel_func,
                                  void *cancel_baton,
                                  svn_wc_notify_func2_t notify_func,
@@ -1122,6 +1132,8 @@ svn_wc__get_file_external_editor(const svn_delta_editor_t **editor,
 
   eb->conflict_func = conflict_func;
   eb->conflict_baton = conflict_baton;
+  eb->rev_file_func = rev_file_func;
+  eb->rev_file_baton = rev_file_baton;
   eb->cancel_func = cancel_func;
   eb->cancel_baton = cancel_baton;
   eb->notify_func = notify_func;
@@ -1151,6 +1163,8 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
                             void *report_baton,
                             svn_boolean_t restore_files,
                             svn_boolean_t use_commit_times,
+                            rev_file_func_t rev_file_func,
+                            void *rev_file_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             svn_wc_notify_func2_t notify_func,
@@ -1208,6 +1222,7 @@ svn_wc__crawl_file_external(svn_wc_context_t *wc_ctx,
           if (disk_kind == svn_node_none)
             {
               err = svn_wc_restore(wc_ctx, local_abspath, use_commit_times,
+                                   rev_file_func, rev_file_baton,
                                    scratch_pool);
 
               if (err)

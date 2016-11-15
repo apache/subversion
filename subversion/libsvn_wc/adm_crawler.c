@@ -69,11 +69,19 @@ restore_file(svn_wc__db_t *db,
              const char *local_abspath,
              svn_boolean_t use_commit_times,
              svn_boolean_t mark_resolved_text_conflict,
+             const char *repos_relpath,
+             svn_revnum_t revision,
+             rev_file_func_t rev_file_func,
+             void *rev_file_baton,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
              apr_pool_t *scratch_pool)
 {
   svn_skel_t *work_item;
+
+  SVN_ERR(svn_wc__pristine_add(db, local_abspath, repos_relpath,
+                               revision, rev_file_func,
+                               rev_file_baton, scratch_pool));
 
   SVN_ERR(svn_wc__wq_build_file_install(&work_item,
                                         db, local_abspath,
@@ -104,6 +112,8 @@ svn_error_t *
 svn_wc_restore(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_boolean_t use_commit_times,
+               rev_file_func_t rev_file_func,
+               void *rev_file_baton,
                apr_pool_t *scratch_pool)
 {
   /* ### If ever revved: Add cancel func. */
@@ -111,6 +121,8 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
   svn_node_kind_t kind;
   svn_node_kind_t disk_kind;
   const svn_checksum_t *checksum;
+  const char *repos_relpath;
+  svn_revnum_t revision;
 
   SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
 
@@ -120,10 +132,11 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, &checksum, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, &revision, &repos_relpath,
+                               NULL, NULL, NULL, NULL, NULL, NULL, &checksum,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL,
                                wc_ctx->db, local_abspath,
                                scratch_pool, scratch_pool));
 
@@ -143,6 +156,8 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
   if (kind == svn_node_file || kind == svn_node_symlink)
     SVN_ERR(restore_file(wc_ctx->db, local_abspath, use_commit_times,
                          FALSE /*mark_resolved_text_conflict*/,
+                         repos_relpath, revision,
+                         rev_file_func, rev_file_baton,
                          NULL, NULL /* cancel func, baton */,
                          scratch_pool));
   else
@@ -164,6 +179,10 @@ restore_node(svn_wc__db_t *db,
              svn_node_kind_t kind,
              svn_boolean_t mark_resolved_text_conflict,
              svn_boolean_t use_commit_times,
+             const char *repos_relpath,
+             svn_revnum_t revision,
+             rev_file_func_t rev_file_func,
+             void *rev_file_baton,
              svn_cancel_func_t cancel_func,
              void *cancel_baton,
              svn_wc_notify_func2_t notify_func,
@@ -175,6 +194,8 @@ restore_node(svn_wc__db_t *db,
       /* Recreate file from text-base; mark any text conflict as resolved */
       SVN_ERR(restore_file(db, local_abspath, use_commit_times,
                            mark_resolved_text_conflict,
+                           repos_relpath, revision,
+                           rev_file_func, rev_file_baton,
                            cancel_func, cancel_baton,
                            scratch_pool));
     }
@@ -256,6 +277,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
                             svn_boolean_t depth_compatibility_trick,
                             svn_boolean_t report_everything,
                             svn_boolean_t use_commit_times,
+                            rev_file_func_t rev_file_func,
+                            void *rev_file_baton,
                             svn_cancel_func_t cancel_func,
                             void *cancel_baton,
                             svn_wc_notify_func2_t notify_func,
@@ -386,8 +409,11 @@ report_revisions_and_depths(svn_wc__db_t *db,
           svn_node_kind_t wrk_kind;
           const svn_checksum_t *checksum;
           svn_boolean_t conflicted;
+          const char *repos_relpath;
+          svn_revnum_t revision;
 
-          SVN_ERR(svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL,
+          SVN_ERR(svn_wc__db_read_info(&wrk_status, &wrk_kind, &revision,
+                                       &repos_relpath,
                                        NULL, NULL, NULL, NULL, NULL, NULL,
                                        &checksum, NULL, NULL, NULL, NULL, NULL,
                                        NULL, NULL, NULL, NULL, &conflicted,
@@ -411,6 +437,8 @@ report_revisions_and_depths(svn_wc__db_t *db,
                 {
                   SVN_ERR(restore_node(db, this_abspath, wrk_kind,
                                        conflicted, use_commit_times,
+                                       repos_relpath, revision,
+                                       rev_file_func, rev_file_baton,
                                        cancel_func, cancel_baton,
                                        notify_func, notify_baton, iterpool));
                 }
@@ -611,6 +639,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
                                                   depth_compatibility_trick,
                                                   start_empty,
                                                   use_commit_times,
+                                                  rev_file_func, rev_file_baton,
                                                   cancel_func, cancel_baton,
                                                   notify_func, notify_baton,
                                                   iterpool));
@@ -639,6 +668,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                         svn_boolean_t honor_depth_exclude,
                         svn_boolean_t depth_compatibility_trick,
                         svn_boolean_t use_commit_times,
+                        rev_file_func_t rev_file_func,
+                        void *rev_file_baton,
                         svn_cancel_func_t cancel_func,
                         void *cancel_baton,
                         svn_wc_notify_func2_t notify_func,
@@ -747,6 +778,8 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
         {
           SVN_ERR(restore_node(wc_ctx->db, local_abspath,
                                wrk_kind, conflicted, use_commit_times,
+                               repos_relpath, target_rev,
+                               rev_file_func, rev_file_baton,
                                cancel_func, cancel_baton,
                                notify_func, notify_baton,
                                scratch_pool));
@@ -786,6 +819,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                                             depth_compatibility_trick,
                                             start_empty,
                                             use_commit_times,
+                                            rev_file_func, rev_file_baton,
                                             cancel_func, cancel_baton,
                                             notify_func, notify_baton,
                                             scratch_pool);
@@ -953,9 +987,20 @@ read_and_checksum_pristine_text(svn_stream_t **stream,
                                 apr_pool_t *scratch_pool)
 {
   svn_stream_t *base_stream;
+  svn_error_t *err;
 
-  SVN_ERR(svn_wc__get_pristine_contents(&base_stream, NULL, db, local_abspath,
-                                        result_pool, scratch_pool));
+  err = svn_wc__get_pristine_contents(&base_stream, NULL, db, local_abspath,
+                                      result_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_NO_PRISTINE)
+    {
+      svn_error_clear(err);
+      base_stream = NULL;
+    }
+  else
+    {
+      SVN_ERR(err);
+    }
+
   if (base_stream == NULL)
     {
       base_stream = svn_stream_empty(result_pool);

@@ -7099,10 +7099,16 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
     {
       const char *move_target_url;
       svn_opt_revision_t incoming_new_opt_rev;
+      rev_file_func_t rev_file_func;
+      void *rev_file_baton;
 
       /* Revert the incoming move target directory. */
+      SVN_ERR(svn_client__get_rev_file_func(&rev_file_func, &rev_file_baton,
+                                            ctx, repos_root_url,
+                                            scratch_pool));
       SVN_ERR(svn_wc_revert5(ctx->wc_ctx, moved_to_abspath, svn_depth_infinity,
                              FALSE, NULL, TRUE, FALSE,
+                             rev_file_func, rev_file_baton,
                              NULL, NULL, /* no cancellation */
                              ctx->notify_func2, ctx->notify_baton2,
                              scratch_pool));

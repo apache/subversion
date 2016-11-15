@@ -150,6 +150,15 @@ svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
   return SVN_NO_ERROR;
 }
 
+const char *
+svn_wc__db_pristine_get_temp(svn_wc__db_t *db,
+                             const svn_checksum_t *sha1_checksum,
+                             apr_pool_t *result_pool)
+{
+  return svn_wc__temp_pristines_get(db->temp_pristines, sha1_checksum,
+                                    result_pool);
+}
+
 /* Set *CONTENTS to a readable stream from which the pristine text
  * identified by SHA1_CHECKSUM and PRISTINE_ABSPATH can be read from the
  * pristine store of WCROOT.  If SIZE is not null, set *SIZE to the size
@@ -227,6 +236,11 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
   const char *local_relpath;
   const char *pristine_abspath;
 
+  if (contents)
+    return svn_error_createf(SVN_ERR_WC_NO_PRISTINE, NULL,
+                            _("Pristine not available for '%s'"),
+                            svn_dirent_local_style(wri_abspath, scratch_pool));
+
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
   /* Some 1.6-to-1.7 wc upgrades created rows without checksums and
@@ -247,7 +261,7 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
                              sha1_checksum,
                              scratch_pool, scratch_pool));
   SVN_WC__DB_WITH_TXN(
-    pristine_read_txn(contents, size,
+    pristine_read_txn(NULL, size,
                       wcroot, sha1_checksum, pristine_abspath,
                       result_pool, scratch_pool),
     wcroot);
@@ -287,6 +301,7 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
                      const svn_checksum_t *sha1_checksum,
                      /* The pristine text's MD-5 checksum. */
                      const svn_checksum_t *md5_checksum,
+                     apr_off_t file_length,
                      apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
@@ -301,7 +316,7 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
 
   if (have_row)
     {
-#ifdef SVN_DEBUG
+#if 0
       /* Consistency checks.  Verify both files exist and match.
        * ### We could check much more. */
       {
@@ -325,35 +340,121 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
 #endif
 
       /* Remove the temp file: it's already there */
-      SVN_ERR(svn_stream__install_delete(install_stream, scratch_pool));
+/*      SVN_ERR(svn_stream__install_delete(install_stream, scratch_pool)); */
       return SVN_NO_ERROR;
     }
 
   /* Move the file to its target location.  (If it is already there, it is
    * an orphan file and it doesn't matter if we overwrite it.) */
   {
-    apr_finfo_t finfo;
-    SVN_ERR(svn_stream__install_get_info(&finfo, install_stream,
-                                         APR_FINFO_SIZE, scratch_pool));
-    SVN_ERR(svn_stream__install_stream(install_stream, pristine_abspath,
+/*    SVN_ERR(svn_stream__install_stream(install_stream, pristine_abspath,
                                        TRUE, scratch_pool));
+*/
 
     SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_PRISTINE));
     SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
     SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
-    SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 3, file_length));
     SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
-    SVN_ERR(svn_io_set_file_read_only(pristine_abspath, FALSE, scratch_pool));
+/*    SVN_ERR(svn_io_set_file_read_only(pristine_abspath, FALSE, scratch_pool));*/
   }
 
   return SVN_NO_ERROR;
 }
 
+struct checksum_stream_counting
+{
+  apr_off_t *read_counter;  /* Output value. */
+  apr_off_t *write_counter;  /* Output value. */
+  svn_stream_t *proxy;
+};
+
+static svn_error_t *
+read_handler_counting(void *baton, char *buffer, apr_size_t *len)
+{
+  struct checksum_stream_counting *btn = baton;
+
+  SVN_ERR(svn_stream_read2(btn->proxy, buffer, len));
+
+  if (btn->read_counter)
+    (*btn->read_counter) += *len;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+read_full_handler_counting(void *baton, char *buffer, apr_size_t *len)
+{
+  struct checksum_stream_counting *btn = baton;
+
+  SVN_ERR(svn_stream_read_full(btn->proxy, buffer, len));
+
+  if (btn->read_counter)
+    (*btn->read_counter) += *len;
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+write_handler_counting(void *baton, const char *buffer, apr_size_t *len)
+{
+  struct checksum_stream_counting *btn = baton;
+
+  if (btn->write_counter)
+    (*btn->write_counter) += *len;
+
+  return svn_error_trace(svn_stream_write(btn->proxy, buffer, len));
+}
+
+static svn_error_t *
+data_available_handler_counting(void *baton, svn_boolean_t *data_available)
+{
+  struct checksum_stream_counting *btn = baton;
+
+  return svn_error_trace(svn_stream_data_available(btn->proxy,
+                                                   data_available));
+}
+
+static svn_error_t *
+close_handler_counting(void *baton)
+{
+  struct checksum_stream_counting *btn = baton;
+
+  return svn_error_trace(svn_stream_close(btn->proxy));
+}
+
+
+static svn_stream_t *
+count_stream(svn_stream_t *stream,
+             apr_off_t *read_counter,
+             apr_off_t *write_counter,
+             apr_pool_t *pool)
+{
+  svn_stream_t *s;
+  struct checksum_stream_counting *baton;
+
+  baton = apr_palloc(pool, sizeof(*baton));
+  baton->read_counter = read_counter;
+  baton->write_counter = write_counter;
+  baton->proxy = stream;
+
+  s = svn_stream_create(baton, pool);
+  svn_stream_set_read2(s, read_handler_counting, read_full_handler_counting);
+  svn_stream_set_write(s, write_handler_counting);
+  svn_stream_set_data_available(s, data_available_handler_counting);
+  svn_stream_set_close(s, close_handler_counting);
+  return s;
+}
+
 struct svn_wc__db_install_data_t
 {
   svn_wc__db_wcroot_t *wcroot;
+  temp_pristines_t *temp_pristines;
   svn_stream_t *inner_stream;
+  const char *temp_abspath;
+  apr_off_t size;
 };
 
 svn_error_t *
@@ -369,6 +470,7 @@ svn_wc__db_pristine_prepare_install(svn_stream_t **stream,
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
   const char *temp_dir_abspath;
+  const char *temp_file_abspath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
@@ -377,16 +479,21 @@ svn_wc__db_pristine_prepare_install(svn_stream_t **stream,
   VERIFY_USABLE_WCROOT(wcroot);
 
   temp_dir_abspath = pristine_get_tempdir(wcroot, scratch_pool, scratch_pool);
+  SVN_ERR(svn_stream_open_unique(stream, &temp_file_abspath, temp_dir_abspath,
+                                 svn_io_file_del_none, result_pool,
+                                 scratch_pool));
 
-  *install_data = apr_pcalloc(result_pool, sizeof(**install_data));
-  (*install_data)->wcroot = wcroot;
-
-  SVN_ERR_W(svn_stream__create_for_install(stream,
+/*  SVN_ERR_W(svn_stream__create_for_install(stream,
                                            temp_dir_abspath,
                                            result_pool, scratch_pool),
             _("Unable to create pristine install stream"));
-
+*/
+  *install_data = apr_pcalloc(result_pool, sizeof(**install_data));
+  (*install_data)->wcroot = wcroot;
   (*install_data)->inner_stream = *stream;
+  (*install_data)->temp_pristines = db->temp_pristines;
+  (*install_data)->temp_abspath = temp_file_abspath;
+  *stream = count_stream(*stream, NULL, &(*install_data)->size, result_pool);
 
   if (md5_checksum)
     *stream = svn_stream_checksummed2(*stream, NULL, md5_checksum,
@@ -416,12 +523,15 @@ svn_wc__db_pristine_install(svn_wc__db_install_data_t *install_data,
                              sha1_checksum,
                              scratch_pool, scratch_pool));
 
+  svn_wc__temp_pristines_add(install_data->temp_pristines, sha1_checksum,
+                             install_data->temp_abspath);
+
   /* Ensure the SQL txn has at least a 'RESERVED' lock before we start looking
    * at the disk, to ensure no concurrent pristine install/delete txn. */
   SVN_SQLITE__WITH_IMMEDIATE_TXN(
     pristine_install_txn(wcroot->sdb,
                          install_data->inner_stream, pristine_abspath,
-                         sha1_checksum, md5_checksum,
+                         sha1_checksum, md5_checksum, install_data->size,
                          scratch_pool),
     wcroot->sdb);
 
@@ -525,14 +635,16 @@ maybe_transfer_one_pristine(svn_wc__db_wcroot_t *src_wcroot,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool)
 {
-  const char *pristine_abspath;
   svn_sqlite__stmt_t *stmt;
+  int affected_rows;
+#if 0
+  const char *pristine_abspath;
   svn_stream_t *src_stream;
   svn_stream_t *dst_stream;
   const char *tmp_abspath;
   const char *src_abspath;
-  int affected_rows;
   svn_error_t *err;
+#endif
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, dst_wcroot->sdb,
                                     STMT_INSERT_OR_IGNORE_PRISTINE));
@@ -545,6 +657,7 @@ maybe_transfer_one_pristine(svn_wc__db_wcroot_t *src_wcroot,
   if (affected_rows == 0)
     return SVN_NO_ERROR;
 
+#if 0
   SVN_ERR(svn_stream_open_unique(&dst_stream, &tmp_abspath,
                                  pristine_get_tempdir(dst_wcroot,
                                                       scratch_pool,
@@ -592,6 +705,7 @@ maybe_transfer_one_pristine(svn_wc__db_wcroot_t *src_wcroot,
     }
   else
     SVN_ERR(err);
+#endif
 
   return SVN_NO_ERROR;
 }
@@ -898,7 +1012,7 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
   SVN_ERR_ASSERT(sha1_checksum != NULL);
 
-  if (sha1_checksum->kind != svn_checksum_sha1)
+/*  if (sha1_checksum->kind != svn_checksum_sha1) */
     {
       *present = FALSE;
       return SVN_NO_ERROR;

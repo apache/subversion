@@ -858,6 +858,7 @@ svn_client_blame5(const char *target,
           SVN_ERR(svn_client__get_normalized_stream(&wcfile, ctx->wc_ctx,
                                                     target_abspath_or_url, &rev,
                                                     FALSE, normalize_eols,
+                                                    NULL, NULL,
                                                     ctx->cancel_func,
                                                     ctx->cancel_baton,
                                                     pool, pool));

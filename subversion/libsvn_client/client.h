@@ -40,6 +40,7 @@
 #include "private/svn_client_private.h"
 #include "private/svn_diff_tree.h"
 #include "private/svn_editor.h"
+#include "private/svn_wc_private.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1086,6 +1087,8 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
                                   const svn_opt_revision_t *revision,
                                   svn_boolean_t expand_keywords,
                                   svn_boolean_t normalize_eols,
+                                  rev_file_func_t rev_file_func,
+                                  void *rev_file_baton,
                                   svn_cancel_func_t cancel_func,
                                   void *cancel_baton,
                                   apr_pool_t *result_pool,
@@ -1096,6 +1099,13 @@ svn_delta_shim_callbacks_t *
 svn_client__get_shim_callbacks(svn_wc_context_t *wc_ctx,
                                apr_hash_t *relpath_map,
                                apr_pool_t *result_pool);
+
+svn_error_t *
+svn_client__get_rev_file_func(rev_file_func_t *rev_file_func,
+                              void **rev_file_baton,
+                              svn_client_ctx_t *ctx,
+                              const char *repos_root_url,
+                              apr_pool_t *result_pool);
 
 /* Return REVISION unless its kind is 'unspecified' in which case return
  * a pointer to a statically allocated revision structure of kind 'head'

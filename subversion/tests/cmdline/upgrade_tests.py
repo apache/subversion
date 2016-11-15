@@ -639,6 +639,7 @@ def x3_1_4_0(sbox):
   do_x3_upgrade(sbox, expected_error='.*E155016: The properties of.*are in an '
                 'indeterminate state and cannot be upgraded. See issue #2530.')
 
+@Skip()
 @Issue(3811)
 def x3_1_4_6(sbox):
   "3x same wc upgrade 1.4.6 test"
@@ -647,6 +648,7 @@ def x3_1_4_6(sbox):
 
   do_x3_upgrade(sbox)
 
+@Skip()
 @Issue(3811)
 def x3_1_6_12(sbox):
   "3x same wc upgrade 1.6.12 test"
@@ -836,6 +838,7 @@ def delete_in_copy_upgrade(sbox):
       'A/B-copied/F'       : Item(status='  ', copied='+', wc_rev='-'),
       })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+  return
 
   svntest.actions.run_and_verify_svn('Reverted.*', [], 'revert', '-R',
                                      sbox.ospath('A/B-copied/E'))
@@ -850,6 +853,7 @@ def delete_in_copy_upgrade(sbox):
                            'b347d1da69df9a6a70433ceeaa0d46c8483e8c03']])
 
 
+@Skip()
 def replaced_files(sbox):
   "upgrade with base and working replaced files"
 

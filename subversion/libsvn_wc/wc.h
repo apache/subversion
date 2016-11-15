@@ -673,6 +673,8 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_revnum_t target_revision,
                            const apr_array_header_t *propchanges,
                            const char *diff3_cmd,
+                           rev_file_func_t rev_file_func,
+                           void *rev_file_baton,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *result_pool,
@@ -713,6 +715,40 @@ svn_wc__fetch_base_func(const char **filename,
                         svn_revnum_t base_revision,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__pristine_get(svn_stream_t **contents,
+                     svn_filesize_t *size,
+                     svn_wc__db_t *db,
+                     const char *wri_abspath,
+                     const svn_checksum_t *sha1_checksum,
+                     const char *repos_relpath,
+                     svn_revnum_t revision,
+                     rev_file_func_t rev_file_func,
+                     void *rev_file_baton,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__pristine_get_path(const char **pristine_abspath,
+                          svn_wc__db_t *db,
+                          const char *wri_abspath,
+                          const svn_checksum_t *sha1_checksum,
+                          const char *local_abspath,
+                          svn_revnum_t revision,
+                          rev_file_func_t rev_file_func,
+                          void *rev_file_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+svn_error_t *
+svn_wc__pristine_add(svn_wc__db_t *db,
+                     const char *wri_abspath,
+                     const char *repos_relpath,
+                     svn_revnum_t revision,
+                     rev_file_func_t rev_file_func,
+                     void *rev_file_baton,
+                     apr_pool_t *scratch_pool);
 
 /* Find duplicate targets in *EXTERNALS, a list of svn_wc_external_item2_t*
  * elements, and store each target string in *DUPLICATE_TARGETS as const

@@ -510,3 +510,141 @@ svn_wc__fetch_base_func(const char **filename,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__pristine_get(svn_stream_t **contents,
+                     svn_filesize_t *size,
+                     svn_wc__db_t *db,
+                     const char *wri_abspath,
+                     const svn_checksum_t *sha1_checksum,
+                     const char *repos_relpath,
+                     svn_revnum_t revision,
+                     rev_file_func_t rev_file_func,
+                     void *rev_file_baton,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  svn_error_t *err = svn_wc__db_pristine_read(contents, size, db,
+                                              wri_abspath, sha1_checksum,
+                                              result_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_WC_NO_PRISTINE && rev_file_func)
+    {
+      svn_error_clear(err);
+      err = rev_file_func(contents, repos_relpath, revision, rev_file_baton,
+                          result_pool, scratch_pool);
+    }
+
+  SVN_ERR(err);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__pristine_get_path(const char **pristine_abspath,
+                          svn_wc__db_t *db,
+                          const char *wri_abspath,
+                          const svn_checksum_t *sha1_checksum,
+                          const char *local_abspath,
+                          svn_revnum_t revision,
+                          rev_file_func_t rev_file_func,
+                          void *rev_file_baton,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  if (rev_file_func)
+    {
+      svn_boolean_t present;
+
+      if (sha1_checksum->kind != svn_checksum_sha1)
+        SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, db, wri_abspath,
+                                            sha1_checksum,
+                                            scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_pristine_check(&present, db, wri_abspath,
+                                        sha1_checksum, scratch_pool));
+
+      if (!present)
+        {
+          svn_stream_t *contents, *tmp_stream;
+          const char *repos_relpath, *local_relpath;
+
+          /* LOCAL_ABSPATH might not be under version control right now
+           * (in transient update & merge states). */
+          if (svn_dirent_is_absolute(local_abspath))
+            {
+              svn_error_t *err;
+              err = svn_wc__db_base_get_info(NULL, NULL, NULL, &repos_relpath,
+                                             NULL, NULL, NULL, NULL, NULL,
+                                             NULL, NULL, NULL, NULL, NULL,
+                                             NULL, NULL, db, local_abspath,
+                                             scratch_pool, scratch_pool);
+              if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+                {
+                  svn_error_clear(err);
+                  SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL, &repos_relpath,
+                                                   NULL, NULL, NULL, NULL, NULL,
+                                                   NULL, NULL, NULL, NULL, NULL,
+                                                   NULL, NULL, db, wri_abspath,
+                                                   scratch_pool, scratch_pool));
+                  local_relpath = svn_dirent_skip_ancestor(wri_abspath,
+                                                           local_abspath);
+                  repos_relpath = svn_dirent_join(repos_relpath, local_relpath,
+                                                  scratch_pool);
+                }
+              else
+                {
+                  SVN_ERR(err);
+                }
+            }
+          else
+            repos_relpath = local_abspath;
+
+          SVN_ERR(rev_file_func(&contents, repos_relpath, revision,
+                                rev_file_baton, scratch_pool, scratch_pool));
+          SVN_ERR(svn_stream_open_unique(&tmp_stream, pristine_abspath, NULL,
+                                         svn_io_file_del_on_pool_cleanup,
+                                         result_pool, scratch_pool));
+          SVN_ERR(svn_stream_copy3(contents, tmp_stream, NULL, NULL,
+                                   scratch_pool));
+
+          return SVN_NO_ERROR;
+        }
+    }
+
+  SVN_ERR(svn_wc__db_pristine_get_path(pristine_abspath, db,
+                                       wri_abspath, sha1_checksum,
+                                       result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__pristine_add(svn_wc__db_t *db,
+                     const char *wri_abspath,
+                     const char *repos_relpath,
+                     svn_revnum_t revision,
+                     rev_file_func_t rev_file_func,
+                     void *rev_file_baton,
+                     apr_pool_t *scratch_pool)
+{
+  if (rev_file_func)
+    {
+      svn_stream_t *contents, *dest;
+      svn_checksum_t *md5_checksum, *sha1_checksum;
+      svn_wc__db_install_data_t *install_data;
+
+      SVN_ERR(rev_file_func(&contents, repos_relpath, revision,
+                            rev_file_baton, scratch_pool, scratch_pool));
+
+      SVN_ERR(svn_wc__db_pristine_prepare_install(&dest, &install_data,
+                                                  &sha1_checksum,
+                                                  &md5_checksum,
+                                                  db, wri_abspath,
+                                                  scratch_pool,
+                                                  scratch_pool));
+      SVN_ERR(svn_stream_copy3(contents, dest, NULL, NULL, scratch_pool));
+      SVN_ERR(svn_wc__db_pristine_install(install_data, sha1_checksum,
+                                          md5_checksum, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}

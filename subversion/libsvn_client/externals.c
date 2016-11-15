@@ -550,6 +550,8 @@ switch_file_external(const char *local_abspath,
     svn_revnum_t revnum;
     apr_array_header_t *inherited_props;
     const char *target = svn_dirent_basename(local_abspath, scratch_pool);
+    rev_file_func_t rev_file_func;
+    void *rev_file_baton;
 
     /* Get the external file's iprops. */
     SVN_ERR(svn_ra_get_inherited_props(ra_session, &inherited_props, "",
@@ -559,6 +561,10 @@ switch_file_external(const char *local_abspath,
     SVN_ERR(svn_ra_reparent(ra_session,
                             svn_uri_dirname(switch_loc->url, scratch_pool),
                             scratch_pool));
+
+    SVN_ERR(svn_client__get_rev_file_func(&rev_file_func, &rev_file_baton,
+                                          ctx, switch_loc->repos_root_url,
+                                          scratch_pool));
 
     SVN_ERR(svn_wc__get_file_external_editor(&switch_editor, &switch_baton,
                                              &revnum, ctx->wc_ctx,
@@ -576,6 +582,8 @@ switch_file_external(const char *local_abspath,
                                              record_revision,
                                              ctx->conflict_func2,
                                              ctx->conflict_baton2,
+                                             rev_file_func,
+                                             rev_file_baton,
                                              ctx->cancel_func,
                                              ctx->cancel_baton,
                                              ctx->notify_func2,
@@ -595,6 +603,7 @@ switch_file_external(const char *local_abspath,
     SVN_ERR(svn_wc__crawl_file_external(ctx->wc_ctx, local_abspath,
                                         reporter, report_baton,
                                         TRUE,  use_commit_times,
+                                        rev_file_func, rev_file_baton,
                                         ctx->cancel_func, ctx->cancel_baton,
                                         ctx->notify_func2, ctx->notify_baton2,
                                         scratch_pool));

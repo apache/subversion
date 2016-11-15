@@ -312,9 +312,9 @@ static int max_threads = -1;
 static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_OPTS_PASS(pristine_write_read,
+    SVN_TEST_OPTS_SKIP(pristine_write_read, TRUE,
                        "pristine_write_read"),
-    SVN_TEST_OPTS_PASS(pristine_delete_while_open,
+    SVN_TEST_OPTS_SKIP(pristine_delete_while_open, TRUE,
                        "pristine_delete_while_open"),
     SVN_TEST_OPTS_PASS(reject_mismatching_text,
                        "reject_mismatching_text"),

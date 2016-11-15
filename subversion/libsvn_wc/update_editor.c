@@ -227,6 +227,9 @@ struct edit_baton
   svn_wc_external_update_t external_func;
   void *external_baton;
 
+  rev_file_func_t rev_file_func;
+  void *rev_file_baton;
+
   /* This editor sends back notifications as it edits. */
   svn_wc_notify_func2_t notify_func;
   void *notify_baton;
@@ -3557,12 +3560,12 @@ lazy_open_source(svn_stream_t **stream,
                  apr_pool_t *scratch_pool)
 {
   struct file_baton *fb = baton;
-
-  SVN_ERR(svn_wc__db_pristine_read(stream, NULL, fb->edit_baton->db,
-                                   fb->local_abspath,
-                                   fb->original_checksum,
-                                   result_pool, scratch_pool));
-
+  SVN_ERR(svn_wc__pristine_get(stream, NULL, fb->edit_baton->db,
+                               fb->local_abspath, fb->original_checksum,
+                               fb->old_repos_relpath, fb->old_revision,
+                               fb->edit_baton->rev_file_func,
+                               fb->edit_baton->rev_file_baton,
+                               result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -3852,6 +3855,8 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_revnum_t target_revision,
                            const apr_array_header_t *propchanges,
                            const char *diff3_cmd,
+                           rev_file_func_t rev_file_func,
+                           void *rev_file_baton,
                            svn_cancel_func_t cancel_func,
                            void *cancel_baton,
                            apr_pool_t *result_pool,
@@ -3870,9 +3875,11 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
 
   *work_items = NULL;
 
-  SVN_ERR(svn_wc__db_pristine_get_path(&new_pristine_abspath,
-                                       db, wri_abspath, new_checksum,
-                                       scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__pristine_get_path(&new_pristine_abspath,
+                                    db, wri_abspath, new_checksum,
+                                    local_abspath, target_revision,
+                                    rev_file_func, rev_file_baton,
+                                    scratch_pool, scratch_pool));
 
   /* If we have any file extensions we're supposed to
      preserve in generated conflict file names, then find
@@ -3911,9 +3918,11 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
       delete_left = TRUE;
     }
   else
-    SVN_ERR(svn_wc__db_pristine_get_path(&merge_left, db, wri_abspath,
-                                         original_checksum,
-                                         result_pool, scratch_pool));
+    SVN_ERR(svn_wc__pristine_get_path(&merge_left, db, wri_abspath,
+                                      original_checksum,
+                                      local_abspath, old_revision,
+                                      rev_file_func, rev_file_baton,
+                                      result_pool, scratch_pool));
 
   /* Merge the changes from the old textbase to the new
      textbase into the file we're updating.
@@ -4090,6 +4099,8 @@ merge_file(svn_skel_t **work_items,
                                          *eb->target_revision,
                                          fb->propchanges,
                                          eb->diff3_cmd,
+                                         eb->rev_file_func,
+                                         eb->rev_file_baton,
                                          eb->cancel_func, eb->cancel_baton,
                                          result_pool, scratch_pool));
     } /* end: working file exists and has mods */
@@ -4411,6 +4422,17 @@ close_file(void *file_baton,
       if (install_pristine)
         {
           svn_boolean_t record_fileinfo;
+
+          /* Did we receive the contents?  If not, a pristine-less working
+             copy must fetch it from the server.  Alternatively, we could
+             update the current contents by updating the keyword expansions
+             in it. */
+          if (!fb->new_text_base_sha1_checksum)
+            SVN_ERR(svn_wc__pristine_add(eb->db, fb->local_abspath,
+                                         fb->new_repos_relpath,
+                                         fb->changed_rev,
+                                         eb->rev_file_func,
+                                         eb->rev_file_baton, scratch_pool));
 
           /* If we are installing from the pristine contents, then go ahead and
              record the fileinfo. That will be the "proper" values. Installing
@@ -4882,6 +4904,8 @@ make_editor(svn_revnum_t *target_revision,
             void *conflict_baton,
             svn_wc_external_update_t external_func,
             void *external_baton,
+            rev_file_func_t rev_file_func,
+            void *rev_file_baton,
             const char *diff3_cmd,
             const apr_array_header_t *preserved_exts,
             const svn_delta_editor_t **editor,
@@ -4954,6 +4978,8 @@ make_editor(svn_revnum_t *target_revision,
   eb->notify_baton             = notify_baton;
   eb->external_func            = external_func;
   eb->external_baton           = external_baton;
+  eb->rev_file_func            = rev_file_func;
+  eb->rev_file_baton           = rev_file_baton;
   eb->diff3_cmd                = diff3_cmd;
   eb->cancel_func              = cancel_func;
   eb->cancel_baton             = cancel_baton;
@@ -5168,6 +5194,8 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
                           void *external_baton,
+                          rev_file_func_t rev_file_func,
+                          void *rev_file_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           svn_wc_notify_func2_t notify_func,
@@ -5185,6 +5213,7 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                      fetch_dirents_func, fetch_dirents_baton,
                      conflict_func, conflict_baton,
                      external_func, external_baton,
+                     rev_file_func, rev_file_baton,
                      diff3_cmd, preserved_exts, editor, edit_baton,
                      result_pool, scratch_pool);
 }
@@ -5211,6 +5240,8 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                           void *conflict_baton,
                           svn_wc_external_update_t external_func,
                           void *external_baton,
+                          rev_file_func_t rev_file_func,
+                          void *rev_file_baton,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           svn_wc_notify_func2_t notify_func,
@@ -5232,6 +5263,7 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                      fetch_dirents_func, fetch_dirents_baton,
                      conflict_func, conflict_baton,
                      external_func, external_baton,
+                     rev_file_func, rev_file_baton,
                      diff3_cmd, preserved_exts,
                      editor, edit_baton,
                      result_pool, scratch_pool);
