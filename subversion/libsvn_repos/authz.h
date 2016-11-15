@@ -299,6 +299,26 @@ svn_authz__parse(svn_authz_t **authz,
                  apr_pool_t *scratch_pool);
 
 
+/* Read authz configuration data from PATH into *AUTHZ_P, allocated in
+   RESULT_POOL.  If GROUPS_PATH is set, use the global groups parsed from it.
+   Use SCRATCH_POOL for temporary allocations.
+
+   PATH and GROUPS_PATH may be a dirent or a registry path and iff ACCEPT_URLS
+   is set it may also be an absolute file url.
+
+   If PATH or GROUPS_PATH is not a valid authz rule file, then return
+   SVN_AUTHZ_INVALID_CONFIG.  The contents of *AUTHZ_P is then
+   undefined.  If MUST_EXIST is TRUE, a missing authz or global groups file
+   is also an error. */
+svn_error_t *
+svn_repos__authz_read(svn_authz_t **authz_p,
+                      const char *path,
+                      const char *groups_path,
+                      svn_boolean_t must_exist,
+                      svn_boolean_t accept_urls,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
 /* Reverse a STRING of length LEN in place. */
 void
 svn_authz__reverse_string(char *string, apr_size_t len);
