@@ -1538,38 +1538,37 @@ svn_repos__retrieve_config(svn_config_t **cfg_p,
   return SVN_NO_ERROR;
 }
 
+/* Read authz configuration data from PATH into *AUTHZ_P, allocated in
+   RESULT_POOL.  If GROUPS_PATH is set, use the global groups parsed from it.
+   Use SCRATCH_POOL for temporary allocations.
+
+   PATH and GROUPS_PATH may be a dirent, a registry path or an absolute file
+   url.
+
+   If PATH or GROUPS_PATH is not a valid authz rule file, then return
+   SVN_AUTHZ_INVALID_CONFIG.  The contents of *AUTHZ_P is then
+   undefined.  If MUST_EXIST is TRUE, a missing authz or global groups file
+   is also an error. */
 svn_error_t *
-svn_repos__authz_read(svn_authz_t **authz_p, const char *path,
-                      const char *groups_path, svn_boolean_t must_exist,
-                      svn_boolean_t accept_urls, apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
+authz_read(svn_authz_t **authz_p,
+           const char *path,
+           const char *groups_path,
+           svn_boolean_t must_exist,
+           apr_pool_t *result_pool,
+           apr_pool_t *scratch_pool)
 {
   svn_stream_t *rules;
-  svn_stream_t *groups;
+  svn_stream_t *groups = NULL;
   svn_error_t* err;
 
   /* Open the main authz file */
-  if (accept_urls)
-    SVN_ERR(retrieve_config(&rules, path, must_exist, scratch_pool,
-                            scratch_pool));
-  else
-    SVN_ERR(authz_retrieve_config_file(&rules, path, must_exist,
-                                       scratch_pool, scratch_pool));
+  SVN_ERR(retrieve_config(&rules, path, must_exist, scratch_pool,
+                          scratch_pool));
 
   /* Open the optional groups file */
   if (groups_path)
-    {
-      if (accept_urls)
-        SVN_ERR(retrieve_config(&groups, groups_path, must_exist,
-                                scratch_pool, scratch_pool));
-      else
-        SVN_ERR(authz_retrieve_config_file(&groups, groups_path, must_exist,
-                                           scratch_pool, scratch_pool));
-    }
-  else
-    {
-      groups = NULL;
-    }
+    SVN_ERR(retrieve_config(&groups, groups_path, must_exist,
+                            scratch_pool, scratch_pool));
 
   /* Parse the configuration(s) and construct the full authz model from it. */
   err = svn_authz__parse(authz_p, rules, groups, result_pool,
@@ -1596,8 +1595,8 @@ svn_repos_authz_read2(svn_authz_t **authz_p, const char *path,
 {
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-  SVN_ERR(svn_repos__authz_read(authz_p, path, groups_path, must_exist,
-                                TRUE, pool, scratch_pool));
+  SVN_ERR(authz_read(authz_p, path, groups_path, must_exist, pool,
+                     scratch_pool));
 
   svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
