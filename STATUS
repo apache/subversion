@@ -67,16 +67,6 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1760570
-   Fix a spurious 'incoming edit' tree conflict with an unmodified file.
-   Justification:
-     Tree conflicts should not be raised unnecessarily.
-   Notes:
-     Depends on r1734106 to be merged first to avoid a text conflict
-     in the test suite code.
-   Votes:
-     +1: stsp, stefan2
-
  * r1761334
    Fix issue #4653: SVN_LOCALE_DIR incorrectly interpolated when
    prefix is not set explicitly.
@@ -156,3 +146,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1760570
+   Fix a spurious 'incoming edit' tree conflict with an unmodified file.
+   Justification:
+     Tree conflicts should not be raised unnecessarily.
+   Notes:
+     Depends on r1734106 to be merged first to avoid a text conflict
+     in the test suite code.
+   Votes:
+     +1: stsp, stefan2, rhuijben
