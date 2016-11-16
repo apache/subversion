@@ -102,6 +102,9 @@ Candidate changes:
      r1764676 eliminates our reliance on the currently broken APR trunc().
    Votes:
      +1: stefan2
+     +1: stsp (There is a no-op whitespace change in the file
+               subversion/tests/libsvn_subr/io-test.c -- would be
+               nice to get rid of that before merging the branch)
 
  * r1766352, r1766590
    Fix issue #4658: Can't reconstruct fulltext from DELTA against PLAIN in FSFS
