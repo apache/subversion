@@ -78,12 +78,12 @@ auto_parse(svn_config_t **cfg,
   /* return reference to suitable config object if that already exists */
   *key = checksum_as_key(checksum, result_pool);
   SVN_ERR(svn_object_pool__lookup((void **)cfg, config_pool,
-                                  *key, NULL, result_pool));
+                                  *key, result_pool));
   if (*cfg)
     return SVN_NO_ERROR;
 
   /* create a pool for the new config object and parse the data into it  */
-  cfg_pool = svn_object_pool__new_wrapper_pool(config_pool);
+  cfg_pool = svn_object_pool__new_item_pool(config_pool);
 
   SVN_ERR(svn_config_parse(&config,
                            svn_stream_from_stringbuf(contents, scratch_pool),
@@ -94,7 +94,7 @@ auto_parse(svn_config_t **cfg,
 
   /* add config in pool, handle loads races and return the right config */
   SVN_ERR(svn_object_pool__insert((void **)cfg, config_pool, *key, config,
-                                  NULL, cfg_pool, result_pool));
+                                  cfg_pool, result_pool));
 
   return SVN_NO_ERROR;
 }
@@ -171,7 +171,7 @@ find_repos_config(svn_config_t **cfg,
     {
       *key = checksum_as_key(checksum, scratch_pool);
       SVN_ERR(svn_object_pool__lookup((void **)cfg, config_pool,
-                                      *key, NULL, result_pool));
+                                      *key, result_pool));
     }
 
   /* not parsed, yet? */
@@ -204,7 +204,7 @@ svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
                               svn_boolean_t thread_safe,
                               apr_pool_t *pool)
 {
-  return svn_error_trace(svn_object_pool__create(config_pool, NULL, NULL,
+  return svn_error_trace(svn_object_pool__create(config_pool,
                                                  thread_safe, pool));
 }
 
