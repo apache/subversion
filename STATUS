@@ -55,7 +55,7 @@ Candidate changes:
      (Committing a copy would be hard though... as the user most likely
       doesn't have the rights to copy from what is now hidden).
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stsp
 
  * r1734106
    Fix a bug where the wrong source left revision was recorded in a tree
