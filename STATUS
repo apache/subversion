@@ -83,7 +83,7 @@ Candidate changes:
    Justification:
      ./configure with no arguments should just work.
    Votes:
-     +1: brane
+     +1: brane, stsp
      +0: rhuijben (patch looks safe, but not sure enough for +1)
 
  * r1762338, r1762339
