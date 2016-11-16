@@ -3932,7 +3932,7 @@ test_config_pool(const svn_test_opts_t *opts,
                                     svn_dirent_join(wrk_dir,
                                                     "config-pool-test1.cfg",
                                                     pool),
-                                    TRUE, TRUE, NULL, subpool));
+                                    TRUE, NULL, subpool));
 
       if (sections1 == NULL)
         sections1 = cfg->sections;
@@ -3951,7 +3951,7 @@ test_config_pool(const svn_test_opts_t *opts,
                                     svn_dirent_join(wrk_dir,
                                                     "config-pool-test2.cfg",
                                                     pool),
-                                    TRUE, TRUE, NULL, subpool));
+                                    TRUE, NULL, subpool));
 
       SVN_TEST_ASSERT(cfg->sections == sections1);
 
@@ -3967,7 +3967,7 @@ test_config_pool(const svn_test_opts_t *opts,
                                     svn_dirent_join(wrk_dir,
                                                     "config-pool-test3.cfg",
                                                     pool),
-                                    TRUE, TRUE, NULL, subpool));
+                                    TRUE, NULL, subpool));
 
       if (sections2 == NULL)
         sections2 = cfg->sections;
@@ -3997,7 +3997,7 @@ test_config_pool(const svn_test_opts_t *opts,
                                      svn_path_url_add_component2(
                                                     repo_root_url,
                                                     "dir/config", pool),
-                                     TRUE, TRUE, NULL, subpool));
+                                     TRUE, NULL, subpool));
   SVN_TEST_ASSERT(cfg->sections == sections1);
   svn_pool_clear(subpool);
 
@@ -4015,7 +4015,7 @@ test_config_pool(const svn_test_opts_t *opts,
                                      svn_path_url_add_component2(
                                                     repo_root_url,
                                                     "dir/config", pool),
-                                     TRUE, TRUE, NULL, subpool));
+                                     TRUE, NULL, subpool));
   SVN_TEST_ASSERT(cfg->sections == sections2);
   svn_pool_clear(subpool);
 
@@ -4025,7 +4025,7 @@ test_config_pool(const svn_test_opts_t *opts,
                                                     repo_root_url,
                                                     "another-dir/config",
                                                     pool),
-                                     TRUE, TRUE, NULL, subpool));
+                                     TRUE, NULL, subpool));
   SVN_TEST_ASSERT(cfg->sections == sections1);
   svn_pool_clear(subpool);
 
@@ -4034,14 +4034,14 @@ test_config_pool(const svn_test_opts_t *opts,
                                      svn_path_url_add_component2(
                                                     repo_root_url,
                                                     "dir/config", pool),
-                                     TRUE, TRUE, NULL, subpool));
+                                     TRUE, NULL, subpool));
   SVN_TEST_ASSERT(cfg->sections == sections2);
   SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
                                      svn_path_url_add_component2(
                                                     repo_root_url,
                                                     "another-dir/config",
                                                     pool),
-                                     TRUE, TRUE, NULL, subpool));
+                                     TRUE, NULL, subpool));
   SVN_TEST_ASSERT(cfg->sections == sections1);
   svn_pool_clear(subpool);
 
@@ -4049,10 +4049,10 @@ test_config_pool(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT_ERROR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
                           svn_path_url_add_component2(repo_root_url, "X",
                                                       pool),
-                          TRUE, TRUE, NULL, subpool),
+                          TRUE, NULL, subpool),
                         SVN_ERR_ILLEGAL_TARGET);
   err = svn_repos__config_pool_get(&cfg, NULL, config_pool, "X.cfg",
-                                   TRUE, TRUE, NULL, subpool);
+                                   TRUE, NULL, subpool);
   SVN_TEST_ASSERT(err && APR_STATUS_IS_ENOENT(err->apr_err));
   svn_error_clear(err);
   svn_pool_clear(subpool);
