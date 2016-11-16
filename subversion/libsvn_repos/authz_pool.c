@@ -100,16 +100,6 @@ construct_key(svn_membuf_t *authz_key,
   return result;
 }
 
-/* Implement svn_object_pool__getter_t on authz_object_t structures.
- */
-static void *
-getter(void *object,
-       void *baton,
-       apr_pool_t *pool)
-{
-  return ((authz_object_t *)object)->authz;
-}
-
 /* API implementation */
 
 svn_error_t *
@@ -122,8 +112,7 @@ svn_repos__authz_pool_create(svn_repos__authz_pool_t **authz_pool,
   svn_object_pool__t *object_pool;
 
   /* there is no setter as we don't need to update existing authz */
-  SVN_ERR(svn_object_pool__create(&object_pool, getter, NULL, thread_safe,
-                                  pool));
+  SVN_ERR(svn_object_pool__create(&object_pool, thread_safe, pool));
 
   result = apr_pcalloc(pool, sizeof(*result));
   result->object_pool = object_pool;
