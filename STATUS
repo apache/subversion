@@ -86,14 +86,15 @@ Candidate changes:
      +1: brane, stsp
      +0: rhuijben (patch looks safe, but not sure enough for +1)
 
- * r1762338, r1762339
+ * r1762338, r1762339, r1769973
    Fix issue #4655: add zlib discovery through pkg-config.
    Justification:
      Allows building Subversion with non-default zlib layouts, such as
      with libraries in $zlib_prefix/lib/hpux32 on HP-UX.
    Votes:
-     +1: kotkov
-     +0: rhuijben (patch looks good. Untested)
+     +1: stsp
+     +1: kotkov (without r1769973)
+     +0: rhuijben (patch looks good. Untested) (without r1769973)
 
  * r1759117, r1759122, r1759123, r1759124, 1764676
    Fix issue #4657: "Offset too large" error when packing repository in
