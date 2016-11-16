@@ -1549,7 +1549,7 @@ svn_repos__retrieve_config(svn_config_t **cfg_p,
    SVN_AUTHZ_INVALID_CONFIG.  The contents of *AUTHZ_P is then
    undefined.  If MUST_EXIST is TRUE, a missing authz or global groups file
    is also an error. */
-svn_error_t *
+static svn_error_t *
 authz_read(authz_full_t **authz_p,
            const char *path,
            const char *groups_path,
