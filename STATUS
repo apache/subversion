@@ -132,15 +132,6 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
-* r1769456
-  Fix issue #4660: svn info --show-item=revision contains trailing whitespaces.
-  Justification:
-    Having trailing whitespaces in the output complicates the usage in scripts
-    which is one of the main purposes of the new --show-item option.
-  Votes:
-    +1 (non-binding): luke1410
-    +1: rhuijben, danielsh (via IRC)
-
 Veto-blocked changes:
 =====================
 
@@ -156,3 +147,12 @@ Approved changes:
      in the test suite code.
    Votes:
      +1: stsp, stefan2, rhuijben
+
+* r1769456
+  Fix issue #4660: svn info --show-item=revision contains trailing whitespaces.
+  Justification:
+    Having trailing whitespaces in the output complicates the usage in scripts
+    which is one of the main purposes of the new --show-item option.
+  Votes:
+    +1 (non-binding): luke1410
+    +1: rhuijben, danielsh (via IRC), stsp
