@@ -34,6 +34,7 @@
 #include "svn_editor.h"
 #include "svn_config.h"
 
+#include "private/svn_object_pool.h"
 #include "private/svn_string_private.h"
 
 #ifdef __cplusplus
@@ -185,7 +186,7 @@ svn_repos__get_logs_compat(svn_repos_t *repos,
  * from multiple threads.  Configuration objects no longer referenced by
  * any user may linger for a while before being cleaned up.
  */
-typedef struct svn_repos__config_pool_t svn_repos__config_pool_t;
+typedef svn_object_pool__t svn_repos__config_pool_t;
 
 /* Create a new configuration pool object with a lifetime determined by
  * POOL and return it in *CONFIG_POOL.
@@ -203,10 +204,10 @@ svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
  * data from a local repository.  CONFIG_POOL will store the configuration
  * and make further callers use the same instance if the content matches.
  * If KEY is not NULL, *KEY will be set to a unique ID - if available.
+ * Section and option names will be case-insensitive.
  *
  * If MUST_EXIST is TRUE, a missing config file is also an error, *CFG
- * is otherwise simply NULL.  The CASE_SENSITIVE controls the lookup
- * behavior for section and option names alike.
+ * is otherwise simply NULL.
  *
  * PREFERRED_REPOS is only used if it is not NULL and PATH is a URL.
  * If it matches the URL, access the repository through this object
@@ -223,7 +224,6 @@ svn_repos__config_pool_get(svn_config_t **cfg,
                            svn_repos__config_pool_t *config_pool,
                            const char *path,
                            svn_boolean_t must_exist,
-                           svn_boolean_t case_sensitive,
                            svn_repos_t *preferred_repos,
                            apr_pool_t *pool);
 

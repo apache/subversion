@@ -1061,7 +1061,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                          params.config_pool,
                                          config_filename,
                                          TRUE, /* must_exist */
-                                         FALSE, /* names_case_sensitive */
                                          NULL,
                                          pool));
     }
