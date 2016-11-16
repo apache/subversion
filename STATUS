@@ -43,30 +43,6 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1724448
-   Fix handling of newly secured subdirectories in a working copy
-   Justification:
-     Regression against <= 1.6.x. Without this patch a directory that
-     (still) exists locally but to which a user has no access is handled as
-     a local obstruction on the next update that brings a change to this tree
-     and the local working copy state is broken. This patch handles the
-     incoming change as a delete, properly marking a tree conflict if
-     necessary, allowing a user to make a copy of local changes.
-     (Committing a copy would be hard though... as the user most likely
-      doesn't have the rights to copy from what is now hidden).
-   Votes:
-     +1: rhuijben, stsp
-
- * r1734106
-   Fix a bug where the wrong source left revision was recorded in a tree
-   conflict.
-   Justification:
-     Conflict info recorded in WC should be correct.
-     Fix will help users who upgrade to 1.10 with conflicts recorded in WC.
-     Also, merging this allows r1760570 to merge cleanly.
-   Votes:
-     +1: stsp, rhuijben
-
  * r1761334
    Fix issue #4653: SVN_LOCALE_DIR incorrectly interpolated when
    prefix is not set explicitly.
@@ -116,19 +92,21 @@ Candidate changes:
      +1: stsp
      +0: rhuijben
 
- * r1769152
-   Make hook script environments actually work with svnserve.
-   Justification:
-     svnserve should enable this feature just like mov_dav_svn and ra_local do.
-     User complained.
-   Votes:
-     +1: stsp, rhuijben
-
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1734106
+   Fix a bug where the wrong source left revision was recorded in a tree
+   conflict.
+   Justification:
+     Conflict info recorded in WC should be correct.
+     Fix will help users who upgrade to 1.10 with conflicts recorded in WC.
+     Also, merging this allows r1760570 to merge cleanly.
+   Votes:
+     +1: stsp, rhuijben, stefan2
 
  * r1760570
    Fix a spurious 'incoming edit' tree conflict with an unmodified file.
@@ -160,3 +138,25 @@ Approved changes:
      The merge conflicts if a trunk client is used! 
    Votes:
      +1: stefan2, rhuijben, stsp
+
+ * r1724448
+   Fix handling of newly secured subdirectories in a working copy
+   Justification:
+     Regression against <= 1.6.x. Without this patch a directory that
+     (still) exists locally but to which a user has no access is handled as
+     a local obstruction on the next update that brings a change to this tree
+     and the local working copy state is broken. This patch handles the
+     incoming change as a delete, properly marking a tree conflict if
+     necessary, allowing a user to make a copy of local changes.
+     (Committing a copy would be hard though... as the user most likely
+      doesn't have the rights to copy from what is now hidden).
+   Votes:
+     +1: rhuijben, stsp, stefan2
+
+ * r1769152
+   Make hook script environments actually work with svnserve.
+   Justification:
+     svnserve should enable this feature just like mov_dav_svn and ra_local do.
+     User complained.
+   Votes:
+     +1: stsp, rhuijben, stefan2
