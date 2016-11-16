@@ -84,7 +84,7 @@ Candidate changes:
    Votes:
      +1: stsp
      +1: kotkov (without r1769973)
-     +0: rhuijben (patch looks good. Untested) (without r1769973)
+     +0: rhuijben (patch looks good. Untested) (+1 for r1769973)
 
  * r1759117, r1759122, r1759123, r1759124, 1764676
    Fix issue #4657: "Offset too large" error when packing repository in
