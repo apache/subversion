@@ -89,16 +89,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1734106
-   Fix a bug where the wrong source left revision was recorded in a tree
-   conflict.
-   Justification:
-     Conflict info recorded in WC should be correct.
-     Fix will help users who upgrade to 1.10 with conflicts recorded in WC.
-     Also, merging this allows r1760570 to merge cleanly.
-   Votes:
-     +1: stsp, rhuijben, stefan2
-
  * r1760570
    Fix a spurious 'incoming edit' tree conflict with an unmodified file.
    Justification:
