@@ -145,7 +145,7 @@ Candidate changes:
    Justification:
      ./configure with no arguments should just work.
    Votes:
-     +1: brane
+     +1: brane, stsp
 
  * r1764851
    Fix temporary accepting an SSL server certificate in JavaHL
