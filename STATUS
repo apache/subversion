@@ -118,13 +118,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
- * r1728387
-   Fix issue 4611, gpg-agent and passwords with a percent character.
-   Justification:
-     Some passwords don't work.
-   Votes:
-     +1: philip, stefan2
-
  * r1745515, r1746364
    Update serf download URIs to ASF.
    Justification:
@@ -159,6 +152,21 @@ Veto-blocked changes:
 Approved changes:
 =================
 
+ * r1728387
+   Fix issue 4611, gpg-agent and passwords with a percent character.
+   Justification:
+     Some passwords don't work.
+   Votes:
+     +1: philip, stefan2, brane
+
+ * r1761334
+   Fix issue #4653: SVN_LOCALE_DIR incorrectly interpolated when
+   prefix is not set explicitly.
+   Justification:
+     ./configure with no arguments should just work.
+   Votes:
+     +1: brane, stsp, stefan2
+
  * r1764851
    Fix temporary accepting an SSL server certificate in JavaHL
    Justification:
@@ -169,12 +177,4 @@ Approved changes:
      The code was refactored for 1.9.x. Old versions of neon and serf
      didn't properly verify the accepted failures values.
    Votes:
-     +1: rhuijben, stefan2
-
- * r1761334
-   Fix issue #4653: SVN_LOCALE_DIR incorrectly interpolated when
-   prefix is not set explicitly.
-   Justification:
-     ./configure with no arguments should just work.
-   Votes:
-     +1: brane, stsp, stefan2
+     +1: rhuijben, stefan2, brane
