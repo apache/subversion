@@ -43,16 +43,6 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1762338, r1762339, r1769973
-   Fix issue #4655: add zlib discovery through pkg-config.
-   Justification:
-     Allows building Subversion with non-default zlib layouts, such as
-     with libraries in $zlib_prefix/lib/hpux32 on HP-UX.
-   Votes:
-     +1: stsp, brane
-     +1: kotkov (without r1769973)
-     +0: rhuijben (patch looks good. Untested) (+1 for r1769973)
-
 Veto-blocked changes:
 =====================
 
@@ -84,3 +74,12 @@ Approved changes:
      r1764676 eliminates our reliance on the currently broken APR trunc().
    Votes:
      +1: stefan2, stsp, rhuijben
+
+ * r1762338, r1762339, r1769973
+   Fix issue #4655: add zlib discovery through pkg-config.
+   Justification:
+     Allows building Subversion with non-default zlib layouts, such as
+     with libraries in $zlib_prefix/lib/hpux32 on HP-UX.
+   Votes:
+     +1: stsp, brane, kotkov
+     +0: rhuijben (patch looks good. Untested) (+1 for r1769973)
