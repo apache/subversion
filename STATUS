@@ -89,15 +89,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
-* r1769456
-  Fix issue #4660: svn info --show-item=revision contains trailing whitespaces.
-  Justification:
-    Having trailing whitespaces in the output complicates the usage in scripts
-    which is one of the main purposes of the new --show-item option.
-  Votes:
-    +1 (non-binding): luke1410
-    +1: rhuijben, danielsh (via IRC), stsp
-
  * r1766352, r1766590
    Fix issue #4658: Can't reconstruct fulltext from DELTA against PLAIN in FSFS
    Justification:
