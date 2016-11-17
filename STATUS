@@ -85,7 +85,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-portability
    Votes:
-     +1: stefan2
+     +1: stefan2, stsp
 
  * r1724448
    Fix handling of newly secured subdirectories in a working copy
