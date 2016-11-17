@@ -72,8 +72,10 @@ Candidate changes:
      +1: stsp (There is a no-op whitespace change in the file
                subversion/tests/libsvn_subr/io-test.c -- would be
                nice to get rid of that before merging the branch)
+         stefan2: fixed by r1770158
      -0: rhuijben (Merging this branch now introduces conflicts. Caused
                    by the 2016-11-17 merges)
+         stefan2: fixed by r1770156
 
  * r1766699, r1766704, r1766711
    Fix a bug where reintegrate merges access a non-existent path and error out.
