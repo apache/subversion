@@ -52,16 +52,15 @@ checksum_as_key(svn_checksum_t *checksum,
   return result;
 }
 
-/* Set *CFG to the configuration passed in as text in CONTENTS and *KEY to
- * the corresponding object pool key.  If no such configuration exists in
- * CONFIG_POOL, yet, parse CONTENTS and cache the result.
+/* Set *CFG to the configuration passed in as text in CONTENTS.  If no such
+ * configuration exists in CONFIG_POOL, yet, parse CONTENTS and cache the
+ * result.
  *
  * RESULT_POOL determines the lifetime of the returned reference and
  * SCRATCH_POOL is being used for temporary allocations.
  */
 static svn_error_t *
 auto_parse(svn_config_t **cfg,
-           svn_membuf_t **key,
            svn_repos__config_pool_t *config_pool,
            svn_stringbuf_t *contents,
            apr_pool_t *result_pool,
@@ -70,15 +69,16 @@ auto_parse(svn_config_t **cfg,
   svn_checksum_t *checksum;
   svn_config_t *config;
   apr_pool_t *cfg_pool;
+  svn_membuf_t *key;
 
   /* calculate SHA1 over the whole file contents */
   SVN_ERR(svn_checksum(&checksum, svn_checksum_sha1,
                        contents->data, contents->len, scratch_pool));
 
   /* return reference to suitable config object if that already exists */
-  *key = checksum_as_key(checksum, result_pool);
+  key = checksum_as_key(checksum, result_pool);
   SVN_ERR(svn_object_pool__lookup((void **)cfg, config_pool,
-                                  *key, result_pool));
+                                  key, result_pool));
   if (*cfg)
     return SVN_NO_ERROR;
 
@@ -93,7 +93,7 @@ auto_parse(svn_config_t **cfg,
   svn_config__set_read_only(config, cfg_pool);
 
   /* add config in pool, handle loads races and return the right config */
-  SVN_ERR(svn_object_pool__insert((void **)cfg, config_pool, *key, config,
+  SVN_ERR(svn_object_pool__insert((void **)cfg, config_pool, key, config,
                                   cfg_pool, result_pool));
 
   return SVN_NO_ERROR;
@@ -108,7 +108,6 @@ auto_parse(svn_config_t **cfg,
  */
 static svn_error_t *
 find_repos_config(svn_config_t **cfg,
-                  svn_membuf_t **key,
                   svn_repos__config_pool_t *config_pool,
                   const char *url,
                   svn_repos_t *preferred_repos,
@@ -169,9 +168,9 @@ find_repos_config(svn_config_t **cfg,
                                FALSE, scratch_pool));
   if (checksum)
     {
-      *key = checksum_as_key(checksum, scratch_pool);
+      svn_membuf_t *key = checksum_as_key(checksum, scratch_pool);
       SVN_ERR(svn_object_pool__lookup((void **)cfg, config_pool,
-                                      *key, result_pool));
+                                      key, result_pool));
     }
 
   /* not parsed, yet? */
@@ -190,7 +189,7 @@ find_repos_config(svn_config_t **cfg,
                                         (apr_size_t)length, scratch_pool));
 
       /* handle it like ordinary file contents and cache it */
-      SVN_ERR(auto_parse(cfg, key, config_pool, contents,
+      SVN_ERR(auto_parse(cfg, config_pool, contents,
                          result_pool, scratch_pool));
     }
 
@@ -210,7 +209,6 @@ svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
 
 svn_error_t *
 svn_repos__config_pool_get(svn_config_t **cfg,
-                           svn_membuf_t **key,
                            svn_repos__config_pool_t *config_pool,
                            const char *path,
                            svn_boolean_t must_exist,
@@ -220,17 +218,11 @@ svn_repos__config_pool_get(svn_config_t **cfg,
   svn_error_t *err = SVN_NO_ERROR;
   apr_pool_t *scratch_pool = svn_pool_create(pool);
 
-  /* make sure we always have a *KEY object */
-  svn_membuf_t *local_key = NULL;
-  if (key == NULL)
-    key = &local_key;
-  else
-    *key = NULL;
 
   if (svn_path_is_url(path))
     {
       /* Read and cache the configuration.  This may fail. */
-      err = find_repos_config(cfg, key, config_pool, path,
+      err = find_repos_config(cfg, config_pool, path,
                               preferred_repos, pool, scratch_pool);
       if (err || !*cfg)
         {
@@ -254,7 +246,7 @@ svn_repos__config_pool_get(svn_config_t **cfg,
       else
         {
           /* parsing and caching will always succeed */
-          err = auto_parse(cfg, key, config_pool, contents,
+          err = auto_parse(cfg, config_pool, contents,
                            pool, scratch_pool);
         }
     }
