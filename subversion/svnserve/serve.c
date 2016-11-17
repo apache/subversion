@@ -226,7 +226,7 @@ load_pwdb_config(repository_t *repository,
       pwdb_path = svn_dirent_internal_style(pwdb_path, pool);
       pwdb_path = svn_dirent_join(repository->base, pwdb_path, pool);
 
-      err = svn_repos__config_pool_get(&repository->pwdb, NULL, config_pool,
+      err = svn_repos__config_pool_get(&repository->pwdb, config_pool,
                                        pwdb_path, TRUE,
                                        repository->repos, pool);
       if (err)
@@ -3699,7 +3699,7 @@ find_repos(const char *url,
     {
       repository->base = svn_repos_conf_dir(repository->repos, result_pool);
 
-      SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
+      SVN_ERR(svn_repos__config_pool_get(&cfg, config_pool,
                                          svn_repos_svnserve_conf
                                             (repository->repos, result_pool),
                                          FALSE, repository->repos,

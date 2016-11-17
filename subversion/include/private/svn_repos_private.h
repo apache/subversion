@@ -203,7 +203,6 @@ svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
  * configuration specified by PATH.  If the latter is a URL, we read the
  * data from a local repository.  CONFIG_POOL will store the configuration
  * and make further callers use the same instance if the content matches.
- * If KEY is not NULL, *KEY will be set to a unique ID - if available.
  * Section and option names will be case-insensitive.
  *
  * If MUST_EXIST is TRUE, a missing config file is also an error, *CFG
@@ -220,7 +219,6 @@ svn_repos__config_pool_create(svn_repos__config_pool_t **config_pool,
  */
 svn_error_t *
 svn_repos__config_pool_get(svn_config_t **cfg,
-                           svn_membuf_t **key,
                            svn_repos__config_pool_t *config_pool,
                            const char *path,
                            svn_boolean_t must_exist,

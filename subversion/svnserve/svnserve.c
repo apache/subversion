@@ -1057,7 +1057,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {
       params.base = svn_dirent_dirname(config_filename, pool);
 
-      SVN_ERR(svn_repos__config_pool_get(&params.cfg, NULL,
+      SVN_ERR(svn_repos__config_pool_get(&params.cfg,
                                          params.config_pool,
                                          config_filename,
                                          TRUE, /* must_exist */
