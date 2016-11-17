@@ -53,21 +53,6 @@ Candidate changes:
      +1: kotkov (without r1769973)
      +0: rhuijben (patch looks good. Untested) (+1 for r1769973)
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
-
- * r1766699, r1766704, r1766711
-   Fix a bug where reintegrate merges access a non-existent path and error out.
-   Justification:
-     This problem can prevent reintegration of branches in some situations.
-     Advanced users can fall back to a 2-URL merge but most users won't
-     realize how they can work around the problem.
-   Votes:
-     +1: stsp, rhuijben, stefan2
-
  * r1759117, r1759122, r1759123, r1759124, 1764676
    Fix issue #4657: "Offset too large" error when packing repository in
    FSFS 7 format.
@@ -83,4 +68,22 @@ Approved changes:
      r1759124 adds a regression test with the necessary internal API changes.
      r1764676 eliminates our reliance on the currently broken APR trunc().
    Votes:
-     +1: stefan2, stsp, rhuijben
+     +1: stefan2, stsp
+     -0: rhuijben (Merging this branch now introduces conflicts. Caused
+                   by the 2016-11-17 merges)
+         stefan2: fixed by r1770156
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
+ * r1766699, r1766704, r1766711
+   Fix a bug where reintegrate merges access a non-existent path and error out.
+   Justification:
+     This problem can prevent reintegration of branches in some situations.
+     Advanced users can fall back to a 2-URL merge but most users won't
+     realize how they can work around the problem.
+   Votes:
+     +1: stsp, rhuijben, stefan2
