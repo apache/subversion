@@ -44,14 +44,6 @@ Candidate changes:
      +0: julianfoad (he says it works, but I haven't reviewed or tested)
      +1: stefan2
 
- * r1711346
-   Properly remove tempfiles in svnlook on diff errors such as EPIPE.
-   Justification:
-     Simple fix makes it far less likely that tempfiles are left behind
-     on the server.
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1717875, r1717878
    Make inherited property api consistent over all ra layers
    Justification:
@@ -178,5 +170,13 @@ Approved changes:
      Without this fix the filter can't determine the result of a patch.
    Notes:
      Merge conflicts if a trunk client is used.
+   Votes:
+     +1: rhuijben, stefan2, stsp
+
+ * r1711346
+   Properly remove tempfiles in svnlook on diff errors such as EPIPE.
+   Justification:
+     Simple fix makes it far less likely that tempfiles are left behind
+     on the server.
    Votes:
      +1: rhuijben, stefan2, stsp
