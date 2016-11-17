@@ -82,8 +82,7 @@ Candidate changes:
      Advanced users can fall back to a 2-URL merge but most users won't
      realize how they can work around the problem.
    Votes:
-     +1: stsp
-     +0: rhuijben
+     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
