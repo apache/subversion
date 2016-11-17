@@ -49,7 +49,7 @@ Candidate changes:
      Allows building Subversion with non-default zlib layouts, such as
      with libraries in $zlib_prefix/lib/hpux32 on HP-UX.
    Votes:
-     +1: stsp
+     +1: stsp, brane
      +1: kotkov (without r1769973)
      +0: rhuijben (patch looks good. Untested) (+1 for r1769973)
 
