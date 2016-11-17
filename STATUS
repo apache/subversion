@@ -89,18 +89,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1766352, r1766590
-   Fix issue #4658: Can't reconstruct fulltext from DELTA against PLAIN in FSFS
-   Justification:
-     Prevents access to committed data.  This is as close to a corruption one
-     could get without actually corrupting anything.  User reported issue.
-   Notes:
-     r1766352 contains the actual fix.
-     r1766590 adds a test case for it.
-     The merge conflicts if a trunk client is used! 
-   Votes:
-     +1: stefan2, rhuijben, stsp
-
  * r1724448
    Fix handling of newly secured subdirectories in a working copy
    Justification:
