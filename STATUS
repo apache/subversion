@@ -89,16 +89,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1760570
-   Fix a spurious 'incoming edit' tree conflict with an unmodified file.
-   Justification:
-     Tree conflicts should not be raised unnecessarily.
-   Notes:
-     Depends on r1734106 to be merged first to avoid a text conflict
-     in the test suite code.
-   Votes:
-     +1: stsp, stefan2, rhuijben
-
 * r1769456
   Fix issue #4660: svn info --show-item=revision contains trailing whitespaces.
   Justification:
