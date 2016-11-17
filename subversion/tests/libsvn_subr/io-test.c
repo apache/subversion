@@ -782,7 +782,7 @@ test_install_stream_to_longpath(apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
-
+
 /* The test table.  */
 
 static int max_threads = 3;
