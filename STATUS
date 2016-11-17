@@ -89,20 +89,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1724448
-   Fix handling of newly secured subdirectories in a working copy
-   Justification:
-     Regression against <= 1.6.x. Without this patch a directory that
-     (still) exists locally but to which a user has no access is handled as
-     a local obstruction on the next update that brings a change to this tree
-     and the local working copy state is broken. This patch handles the
-     incoming change as a delete, properly marking a tree conflict if
-     necessary, allowing a user to make a copy of local changes.
-     (Committing a copy would be hard though... as the user most likely
-      doesn't have the rights to copy from what is now hidden).
-   Votes:
-     +1: rhuijben, stsp, stefan2
-
  * r1769152
    Make hook script environments actually work with svnserve.
    Justification:
