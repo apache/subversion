@@ -89,14 +89,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1769152
-   Make hook script environments actually work with svnserve.
-   Justification:
-     svnserve should enable this feature just like mov_dav_svn and ra_local do.
-     User complained.
-   Votes:
-     +1: stsp, rhuijben, stefan2
-
  * r1761334
    Fix issue #4653: SVN_LOCALE_DIR incorrectly interpolated when
    prefix is not set explicitly.
