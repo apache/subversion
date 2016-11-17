@@ -73,6 +73,7 @@ Candidate changes:
                subversion/tests/libsvn_subr/io-test.c -- would be
                nice to get rid of that before merging the branch)
          stefan2: fixed by r1770158
+         stsp: No it isn't, io-test.c still gets modified by the merge
      -0: rhuijben (Merging this branch now introduces conflicts. Caused
                    by the 2016-11-17 merges)
          stefan2: fixed by r1770156
