@@ -82,7 +82,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-issue4557
    Votes:
-     +1: stsp
+     +1: stsp, stefan2
 
  * r1722860, r1722879, r1722887
    Memory access portability issues.
@@ -116,7 +116,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-r1724448
    Votes:
-     +1: rhuijben
+     +1: rhuijben, stefan2
 
  * r1728387
    Fix issue 4611, gpg-agent and passwords with a percent character.
@@ -139,26 +139,6 @@ Candidate changes:
      -0 (non-binding): luke1410 (r1700130 is missing - will have to create a
                        backport branch)
 
- * r1761334
-   Fix issue #4653: SVN_LOCALE_DIR incorrectly interpolated when
-   prefix is not set explicitly.
-   Justification:
-     ./configure with no arguments should just work.
-   Votes:
-     +1: brane, stsp
-
- * r1764851
-   Fix temporary accepting an SSL server certificate in JavaHL
-   Justification:
-     User reported problem. Simple fix.
-   Branch:
-     ^/subversion/branches/1.8.x-r1764851
-   Notes:
-     The code was refactored for 1.9.x. Old versions of neon and serf
-     didn't properly verify the accepted failures values.
-   Votes:
-     +1: rhuijben
-
  * r1766352, r1766590
    Fix issue #4658: Can't reconstruct fulltext from DELTA against PLAIN in FSFS
    Justification:
@@ -178,3 +158,23 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1764851
+   Fix temporary accepting an SSL server certificate in JavaHL
+   Justification:
+     User reported problem. Simple fix.
+   Branch:
+     ^/subversion/branches/1.8.x-r1764851
+   Notes:
+     The code was refactored for 1.9.x. Old versions of neon and serf
+     didn't properly verify the accepted failures values.
+   Votes:
+     +1: rhuijben, stefan2
+
+ * r1761334
+   Fix issue #4653: SVN_LOCALE_DIR incorrectly interpolated when
+   prefix is not set explicitly.
+   Justification:
+     ./configure with no arguments should just work.
+   Votes:
+     +1: brane, stsp, stefan2
