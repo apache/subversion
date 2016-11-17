@@ -128,7 +128,7 @@ Candidate changes:
      r1766352 contains the actual fix.
      r1766590 adds a test case for it.
    Votes:
-     +1: stefan2
+     +1: stefan2, stsp
      +0: rhuijben
 
 Veto-blocked changes:
