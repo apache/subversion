@@ -43,76 +43,46 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1722164
-   Filter out -Wdate-time from SWIG_CPPFLAGS
+ * r1762338, r1762339, r1769973
+   Fix issue #4655: add zlib discovery through pkg-config.
    Justification:
-     Fixes bindings build failure when -Wdate-time is present in $CPPFLAGS
+     Allows building Subversion with non-default zlib layouts, such as
+     with libraries in $zlib_prefix/lib/hpux32 on HP-UX.
    Votes:
-     +1: jamessan
-     +1: rhuijben (Would prefer some redesign for trunk though)
+     +1: stsp
+     +1: kotkov (without r1769973)
+     +0: rhuijben (patch looks good. Untested) (+1 for r1769973)
 
- * r1721488, r1721648
-   Enable building bindings with SWIG >= 3.0.6
+ * r1759117, r1759122, r1759123, r1759124, 1764676
+   Fix issue #4657: "Offset too large" error when packing repository in
+   FSFS 7 format.
    Justification:
-     Enable building bindings with SWIG 3.x.  SWIG 2.x is end-of-life (no
-     releases since 2014) and is starting to be removed from Linux
-     distributions.
+     Problem occurred in at least two user repositories.  Without the fix,
+     format 7 repositories with an exceptionally large number of changes in
+     a pack cannot be packed - which renders using f7 pointless for those
+     users.
    Branch:
-     ^/subversion/branches/1.9.x-r1721488
+     ^/subversion/branches/1.9.x-fsfs-pack-fixes@r1764683
+   Notes:
+     r1759117-23 provide the actual fixes.
+     r1759124 adds a regression test with the necessary internal API changes.
+     r1764676 eliminates our reliance on the currently broken APR trunc().
    Votes:
-     +1: jamessan
+     +1: stefan2
+     +1: stsp (There is a no-op whitespace change in the file
+               subversion/tests/libsvn_subr/io-test.c -- would be
+               nice to get rid of that before merging the branch)
+     -0: rhuijben (Merging this branch now introduces conflicts. Caused
+                   by the 2016-11-17 merges)
 
- * r1721285
-   Quadruple the maximum cacheable directory size in FSFS.
+ * r1766699, r1766704, r1766711
+   Fix a bug where reintegrate merges access a non-existent path and error out.
    Justification:
-     Not caching large directories has a massive impact on runtime with
-     the cutoff point being about 9000 entries for the default cache size.
-     Also, memory usage with mod_dav_svn may go through the roof for
-     uncached directories.
+     This problem can prevent reintegration of branches in some situations.
+     Advanced users can fall back to a 2-URL merge but most users won't
+     realize how they can work around the problem.
    Votes:
-     +1: stefan2, steveking
-     -0: stsp (merge conflict; needs a backport branch)
-              (rhuijben: Are you sure? svn merge doesn't produce a conflict
-               for me)
-
- * r1724448
-   Fix handling of newly secured subdirectories in a working copy
-   Justification:
-     Regression against <= 1.6.x. Without this patch a directory that
-     (still) exists locally but to which a user has no access is handled as
-     a local obstruction on the next update that brings a change to this tree
-     and the local working copy state is broken. This patch handles the
-     incomming change as a delete, properly marking a tree conflict if
-     necessary, allowing a user to make a copy of local changes.
-     (Committing a copy would be hard though... as the user most likely
-      doesn't have the rights to copy from what is now hidden).
-   Votes:
-     +1: rhuijben
-
- * r1756266
-   FSFS: Write the sha1->rep mapping in transaction *after* we successfully
-   written node revision to disk. Otherwise may get orphaned sha1->rep mapping
-   entry if an error occurs when writing p2l index entry.
-   Justification:
-     Possible repository corruption.
-     NOTE: Standard Subversion client should not be affected because it
-     aborts transaction on any error.
-   Votes:
-     +1: ivan, rhuijben
-
-* r1758128, r1758129, r1758130, r1758153
-  Fix issue #4647.
-  Justification:
-    Resolves a regression in TSVN 1.9 with the binary conflict resolution
-    dialog erroring out when selecting to resolve the conflict with the
-    local file.
-  Notes:
-    r1758129 contains the actual fix.
-    r1758153 corrects paths in the original fix.
-    r1758128 adds the regression test.
-    r1758130 removes the regression test's XFail marker
-  Votes:
-    +1 (non-binding): luke1410
+     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================

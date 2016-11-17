@@ -2194,6 +2194,178 @@ def merge_obstruction_recording(sbox):
 
   # A resolver action could be smarter though...
 
+def added_revision_recording_in_tree_conflict(sbox):
+  "tree conflict stores added revision for victim"
+
+  sbox.build(empty=True)
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_mkdir('trunk')
+  sbox.simple_commit() #r1
+
+  # Create a branch
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'copy', sbox.repo_url + '/trunk',
+                                     sbox.repo_url + '/branch',
+                                     '-mcopy') # r2
+
+  sbox.simple_add_text('The file on trunk\n', 'trunk/foo')
+  sbox.simple_commit() #r3
+
+  sbox.simple_update()
+
+  # Merge ^/trunk into ^/branch
+  expected_output = svntest.wc.State(sbox.ospath('branch'), {
+    'foo'          : Item(status='A '),
+  })
+  expected_mergeinfo_output = wc.State(sbox.ospath('branch'), {
+    ''                  : Item(status=' U')
+  })
+  expected_elision_output = wc.State(wc_dir, {
+  })
+  expected_disk = wc.State('', {
+    'foo'              : Item(contents="The file on trunk\n"),
+    '.'                 : Item(props={u'svn:mergeinfo': u'/trunk:2-3'}),
+  })
+  expected_status = wc.State(sbox.ospath('branch'), {
+    ''                  : Item(status=' M', wc_rev='3'),
+    'foo'              : Item(status='A ', copied='+', wc_rev='-'),
+  })
+  expected_skip = wc.State('', {
+  })
+  svntest.actions.run_and_verify_merge(sbox.ospath('branch'), None, None,
+                                       sbox.repo_url + '/trunk',
+                                       None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       check_props=True)
+
+  sbox.simple_commit() #r4
+
+  # Edit the file on the branch
+  sbox.simple_append('branch/foo', 'The file on the branch\n')
+  sbox.simple_commit() #r5
+
+  # Replace file with a directory on trunk
+  sbox.simple_rm('trunk/foo')
+  sbox.simple_mkdir('trunk/foo')
+  sbox.simple_commit() #r6
+
+  sbox.simple_update()
+
+  # Merge ^/trunk into ^/branch
+  expected_output = svntest.wc.State(sbox.ospath('branch'), {
+    'foo'               : Item(status='  ', treeconflict='C')
+  })
+  expected_mergeinfo_output = wc.State(sbox.ospath('branch'), {
+    ''                  : Item(status=' U'),
+  })
+  expected_elision_output = wc.State(wc_dir, {
+  })
+  expected_disk = wc.State('', {
+    'foo'     : Item(contents="The file on trunk\nThe file on the branch\n"),
+      '.'     : Item(props={u'svn:mergeinfo': u'/trunk:2-6'}),
+  })
+  expected_status = wc.State(sbox.ospath('branch'), {
+    ''                  : Item(status=' M', wc_rev='6'),
+    'foo'               : Item(status='  ', treeconflict='C', wc_rev='6'),
+  })
+  expected_skip = wc.State('', {
+  })
+  svntest.actions.run_and_verify_merge(sbox.ospath('branch'), None, None,
+                                       sbox.repo_url + '/trunk',
+                                       None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       check_props=True)
+
+  # Ensure that revisions in tree conflict info match what we expect.
+  # We used to record source left as ^/trunk/foo@1 instead of ^/trunk/foo@3.
+  # Note that foo was first added in r3.
+  expected_info = [
+    {
+      "Path" : re.escape(sbox.ospath('branch/foo')),
+      "Tree conflict": re.escape(
+        'local file edit, incoming replace with dir upon merge' +
+        ' Source  left: (file) ^/trunk/foo@3' +
+        ' Source right: (dir) ^/trunk/foo@6'),
+    },
+  ]
+  svntest.actions.run_and_verify_info(expected_info, sbox.ospath('branch/foo'))
+
+def spurios_tree_conflict_with_added_file(sbox):
+  "spurious tree conflict with unmodified added file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a branch of A, A_copy
+  sbox.simple_copy('A', 'A_branch')
+  sbox.simple_commit()
+
+  # Create a new file on the trunk
+  sbox.simple_append('A/new', 'new\n')
+  sbox.simple_add('A/new')
+  sbox.simple_commit()
+
+  # Sync the branch with the trunk
+  sbox.simple_update()
+  expected_output = wc.State(wc_dir, {
+    "A_branch/new" : Item(status="A "),
+    })
+  expected_skip = wc.State('', { })
+  svntest.actions.run_and_verify_merge(sbox.ospath('A_branch'),
+                                       None, None, '^/A', None,
+                                       expected_output,
+                                       None, None,
+                                       None, None, expected_skip)
+  sbox.simple_commit()
+
+  # Reintegrate the branch (a no-op change, but users are free to do this)
+  sbox.simple_update()
+  expected_output = wc.State(wc_dir, { })
+  svntest.actions.run_and_verify_merge(sbox.ospath('A'),
+                                       None, None, '^/A_branch', None,
+                                       expected_output,
+                                       None, None,
+                                       None, None, expected_skip,
+                                       [], False, True, '--reintegrate',
+                                       sbox.ospath('A'))
+
+  # Delete the new file on the branch
+  sbox.simple_rm('A_branch/new')
+  sbox.simple_commit()
+
+  # Make an unrelated change on the trunk
+  sbox.simple_append('A/mu', 'more text\n')
+  sbox.simple_commit()
+
+  # Merge the trunk to the branch. Forcing a reintegrate merge here since
+  # this is what the automatic merge does, as of the time this test was written.
+  # This merge would raise an 'local missing vs incoming edit' tree conflict
+  # on the new file, which is bogus since there are no incoming edits.
+  expected_output = wc.State(wc_dir, {
+    'A_branch/mu' : Item(status='U '),
+  })
+  expected_mergeinfo_output = wc.State(wc_dir, {
+    'A_branch' : Item(status=' U'),
+    })
+  svntest.actions.run_and_verify_merge(sbox.ospath('A_branch'),
+                                       None, None, '^/A', None,
+                                       expected_output,
+                                       expected_mergeinfo_output, None,
+                                       None, None, expected_skip,
+                                       [], False, True, '--reintegrate',
+                                       sbox.ospath('A_branch'))
+
 
 ########################################################################
 # Run the tests
@@ -2227,6 +2399,8 @@ test_list = [ None,
               merge_replace_on_del_fails,
               merge_conflict_details,
               merge_obstruction_recording,
+              added_revision_recording_in_tree_conflict,
+              spurios_tree_conflict_with_added_file,
              ]
 
 if __name__ == '__main__':
