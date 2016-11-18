@@ -1635,8 +1635,6 @@ def remove_access_after_commit(sbox):
   expected_status.remove('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F',
                          'A/B/lambda')
 
-  # And expect a mixed rev copy
-  expected_status.tweak('A/D/G/rho', status='A ', entry_status='  ')
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
