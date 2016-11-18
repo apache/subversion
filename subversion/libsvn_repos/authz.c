@@ -41,6 +41,7 @@
 #include "private/svn_subr_private.h"
 #include "repos.h"
 #include "authz.h"
+#include "config_file.h"
 
 
 /*** Access rights. ***/
@@ -1542,8 +1543,8 @@ svn_repos__retrieve_config(svn_config_t **cfg_p,
    RESULT_POOL.  If GROUPS_PATH is set, use the global groups parsed from it.
    Use SCRATCH_POOL for temporary allocations.
 
-   PATH and GROUPS_PATH may be a dirent, a registry path or an absolute file
-   url.
+   PATH and GROUPS_PATH may be a dirent or an absolute file url.  REPOS_HINT
+   may be specified to speed up access to in-repo authz file.
 
    If PATH or GROUPS_PATH is not a valid authz rule file, then return
    SVN_AUTHZ_INVALID_CONFIG.  The contents of *AUTHZ_P is then
@@ -1554,34 +1555,38 @@ authz_read(authz_full_t **authz_p,
            const char *path,
            const char *groups_path,
            svn_boolean_t must_exist,
+           svn_repos_t *repos_hint,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
 {
-  svn_stream_t *rules;
-  svn_stream_t *groups = NULL;
-  svn_error_t* err;
+  svn_error_t* err = NULL;
+  svn_stream_t *rules_stream = NULL;
+  svn_stream_t *groups_stream = NULL;
+  svn_checksum_t *rules_checksum = NULL;
+  svn_checksum_t *groups_checksum = NULL;
+
+  config_access_t *access = svn_repos__create_config_access(repos_hint,
+                                                            scratch_pool);
 
   /* Open the main authz file */
-  SVN_ERR(retrieve_config(&rules, path, must_exist, scratch_pool,
-                          scratch_pool));
+  SVN_ERR(svn_repos__get_config(&rules_stream, &rules_checksum, access,
+                                path, must_exist, scratch_pool));
 
   /* Open the optional groups file */
   if (groups_path)
-    SVN_ERR(retrieve_config(&groups, groups_path, must_exist,
-                            scratch_pool, scratch_pool));
+    SVN_ERR(svn_repos__get_config(&groups_stream, &groups_checksum, access,
+                                  groups_path, must_exist, scratch_pool));
 
   /* Parse the configuration(s) and construct the full authz model from it. */
-  err = svn_authz__parse(authz_p, rules, groups, result_pool,
-                         scratch_pool);
+  err = svn_error_quick_wrapf(svn_authz__parse(authz_p, rules_stream,
+                                               groups_stream,
+                                               result_pool, scratch_pool),
+                              "Error while parsing authz file: '%s':",
+                              path);
 
-  /* Add the URL / file name to the error stack since the parser doesn't
-   * have it. */
-  if (err != SVN_NO_ERROR)
-    return svn_error_createf(err->apr_err, err,
-                             "Error while parsing config file: '%s':",
-                             path);
+  svn_repos__destroy_config_access(access);
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 
@@ -1597,8 +1602,8 @@ svn_repos_authz_read2(svn_authz_t **authz_p, const char *path,
   svn_authz_t *authz = apr_pcalloc(pool, sizeof(*authz));
   authz->pool = pool;
 
-  SVN_ERR(authz_read(&authz->full, path, groups_path, must_exist, pool,
-                     scratch_pool));
+  SVN_ERR(authz_read(&authz->full, path, groups_path, must_exist, NULL,
+                     pool, scratch_pool));
 
   svn_pool_destroy(scratch_pool);
 
