@@ -1173,6 +1173,22 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
 /*** From authz.c ***/
 
 svn_error_t *
+svn_repos_authz_read2(svn_authz_t **authz_p,
+                      const char *path,
+                      const char *groups_path,
+                      svn_boolean_t must_exist,
+                      apr_pool_t *pool)
+{
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  svn_error_t *err = svn_repos_authz_read3(authz_p, path, groups_path,
+                                           must_exist, NULL,
+                                           pool, scratch_pool);
+  svn_pool_destroy(scratch_pool);
+
+  return svn_error_trace(err);
+}
+
+svn_error_t *
 svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
                      svn_boolean_t must_exist, apr_pool_t *pool)
 {

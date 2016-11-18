@@ -322,9 +322,9 @@ load_authz_config(repository_t *repository,
                                        repos_root, pool);
 
       if (!err)
-        err = svn_repos__authz_pool_get(&repository->authzdb, authz_pool,
-                                        authzdb_path, groupsdb_path, TRUE,
-                                        repository->repos, pool);
+        err = svn_repos_authz_read3(&repository->authzdb, authzdb_path,
+                                    groupsdb_path, TRUE, repository->repos,
+                                    pool, pool);
 
       if (err)
         return svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, err, NULL);
