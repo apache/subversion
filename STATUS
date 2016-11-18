@@ -118,9 +118,6 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
-Approved changes:
-=================
-
  * r1724448
    Fix handling of newly secured subdirectories in a working copy
    Justification:
@@ -135,4 +132,8 @@ Approved changes:
    Branch:
      ^/subversion/branches/1.8.x-r1724448
    Votes:
-     +1: rhuijben, stefan2, stsp
+     +1: rhuijben, stsp
+     -1: stefan2 (breaks authz test 30)
+
+Approved changes:
+=================
