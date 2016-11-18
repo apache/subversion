@@ -208,9 +208,6 @@ typedef struct patch_target_t {
   /* True if the target had to be skipped for some reason. */
   svn_boolean_t skipped;
 
-  /* True if the target has been filtered by the patch callback. */
-  svn_boolean_t filtered;
-
   /* True if at least one hunk was rejected. */
   svn_boolean_t had_rejects;
 
@@ -2124,8 +2121,6 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
                 int strip_count,
                 svn_boolean_t ignore_whitespace,
                 svn_boolean_t remove_tempfiles,
-                svn_client_patch_func_t patch_func,
-                void *patch_baton,
                 svn_cancel_func_t cancel_func,
                 void *cancel_baton,
                 apr_pool_t *result_pool, apr_pool_t *scratch_pool)
@@ -2142,19 +2137,6 @@ apply_one_patch(patch_target_t **patch_target, svn_patch_t *patch,
     {
       *patch_target = target;
       return SVN_NO_ERROR;
-    }
-
-  if (patch_func)
-    {
-      SVN_ERR(patch_func(patch_baton, &target->filtered,
-                         target->canon_path_from_patchfile,
-                         target->patched_path, target->reject_path,
-                         scratch_pool));
-      if (target->filtered)
-        {
-          *patch_target = target;
-          return SVN_NO_ERROR;
-        }
     }
 
   iterpool = svn_pool_create(scratch_pool);
@@ -2986,14 +2968,23 @@ apply_patches(/* The path to the patch file. */
       if (patch)
         {
           patch_target_t *target;
+          svn_boolean_t filtered = FALSE;
 
           SVN_ERR(apply_one_patch(&target, patch, abs_wc_path,
                                   ctx->wc_ctx, strip_count,
                                   ignore_whitespace, remove_tempfiles,
-                                  patch_func, patch_baton,
                                   ctx->cancel_func, ctx->cancel_baton,
                                   iterpool, iterpool));
-          if (! target->filtered)
+
+          if (!target->skipped && patch_func)
+            {
+              SVN_ERR(patch_func(patch_baton, &filtered,
+                                 target->canon_path_from_patchfile,
+                                 target->patched_path, target->reject_path,
+                                 iterpool));
+            }
+
+          if (! filtered)
             {
               /* Save info we'll still need when we're done patching. */
               patch_target_info_t *target_info =
