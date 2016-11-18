@@ -3889,6 +3889,17 @@ svn_repos_get_fs_build_parser(const svn_repos_parser_fns_t **parser,
 typedef struct svn_authz_t svn_authz_t;
 
 /**
+ * This should be called before any other authz function.
+ *
+ * @a pool must support multi-threaded access if the application will use
+ * authz from multiple threads.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_repos_authz_initialize(apr_pool_t *pool);
+
+/**
  * Read authz configuration data from @a path (a dirent, an absolute file url
  * or a registry path) into @a *authz_p, allocated in @a pool.
  *

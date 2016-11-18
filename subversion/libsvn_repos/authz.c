@@ -35,6 +35,7 @@
 #include "svn_repos.h"
 #include "svn_config.h"
 #include "svn_ctype.h"
+#include "private/svn_atomic.h"
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_sorts_private.h"
@@ -1353,6 +1354,67 @@ get_filtered_tree(svn_authz_t *authz,
   return authz->user_rules[i];
 }
 
+
+
+/*** Authz cache access. ***/
+
+/* All authz instances currently in use will be cached here.
+ * Will be instantiated at most once. */
+svn_object_pool__t *authz_pool = NULL;
+static svn_atomic_t authz_pool_initialized = FALSE;
+
+/* Implements svn_atomic__err_init_func_t. */
+static svn_error_t *
+synchronized_authz_initialize(void *baton, apr_pool_t *pool)
+{
+  svn_boolean_t multi_threaded
+    = apr_allocator_mutex_get(apr_pool_allocator_get(pool)) != NULL;
+
+  return svn_error_trace(svn_object_pool__create(&authz_pool, multi_threaded,
+                                                 pool));
+}
+
+svn_error_t *
+svn_repos_authz_initialize(apr_pool_t *pool)
+{
+  /* Protect against multiple calls. */
+  return svn_error_trace(svn_atomic__init_once(&authz_pool_initialized,
+                                               synchronized_authz_initialize,
+                                               NULL, pool));
+}
+
+/* Return a combination of AUTHZ_KEY and GROUPS_KEY, allocated in RESULT_POOL.
+ * GROUPS_KEY may be NULL.
+ */
+static svn_membuf_t *
+construct_key(const svn_checksum_t *authz_key,
+              const svn_checksum_t *groups_key,
+              apr_pool_t *result_pool)
+{
+  svn_membuf_t *result = apr_pcalloc(result_pool, sizeof(*result));
+  if (groups_key)
+    {
+      apr_size_t authz_size = svn_checksum_size(authz_key);
+      apr_size_t groups_size = svn_checksum_size(groups_key);
+
+      svn_membuf__create(result, authz_size + groups_size, result_pool);
+      result->size = authz_size + groups_size; /* exact length is required! */
+
+      memcpy(result->data, authz_key->digest, authz_size);
+      memcpy((char *)result->data + authz_size,
+             groups_key->digest, groups_size);
+    }
+  else
+    {
+      apr_size_t size = svn_checksum_size(authz_key);
+      svn_membuf__create(result, size, result_pool);
+      result->size = size; /* exact length is required! */
+      memcpy(result->data, authz_key->digest, size);
+    }
+
+  return result;
+}
+
 
 /* Read authz configuration data from PATH into *AUTHZ_P, allocated in
    RESULT_POOL.  If GROUPS_PATH is set, use the global groups parsed from it.
@@ -1379,6 +1441,7 @@ authz_read(authz_full_t **authz_p,
   svn_stream_t *groups_stream = NULL;
   svn_checksum_t *rules_checksum = NULL;
   svn_checksum_t *groups_checksum = NULL;
+  svn_membuf_t *key;
 
   config_access_t *access = svn_repos__create_config_access(repos_hint,
                                                             scratch_pool);
@@ -1392,12 +1455,52 @@ authz_read(authz_full_t **authz_p,
     SVN_ERR(svn_repos__get_config(&groups_stream, &groups_checksum, access,
                                   groups_path, must_exist, scratch_pool));
 
-  /* Parse the configuration(s) and construct the full authz model from it. */
-  err = svn_error_quick_wrapf(svn_authz__parse(authz_p, rules_stream,
-                                               groups_stream,
-                                               result_pool, scratch_pool),
-                              "Error while parsing authz file: '%s':",
-                              path);
+  /* The authz cache is optional. */
+  if (authz_pool)
+    {
+      /* Cache lookup. */
+      key = construct_key(rules_checksum, groups_checksum, scratch_pool);
+      SVN_ERR(svn_object_pool__lookup((void **)authz_p, authz_pool, key,
+                                      result_pool));
+
+      /* If not found, parse and add to cache. */
+      if (!*authz_p)
+        {
+          apr_pool_t *item_pool = svn_object_pool__new_item_pool(authz_pool);
+
+          /* Parse the configuration(s) and construct the full authz model
+           * from it. */
+          err = svn_authz__parse(authz_p, rules_stream, groups_stream,
+                                item_pool, scratch_pool);
+          if (err != SVN_NO_ERROR)
+            {
+              /* That pool would otherwise never get destroyed. */
+              svn_pool_destroy(item_pool);
+
+              /* Add the URL / file name to the error stack since the parser
+               * doesn't have it. */
+              err = svn_error_quick_wrapf(err,
+                                   "Error while parsing config file: '%s':",
+                                   path);
+            }
+          else
+            {
+              SVN_ERR(svn_object_pool__insert((void **)authz_p, authz_pool,
+                                              key, *authz_p,
+                                              item_pool, result_pool));
+            }
+        }
+    }
+  else
+    {
+      /* Parse the configuration(s) and construct the full authz model from
+       * it. */
+      err = svn_error_quick_wrapf(svn_authz__parse(authz_p, rules_stream,
+                                                   groups_stream,
+                                                   result_pool, scratch_pool),
+                                  "Error while parsing authz file: '%s':",
+                                  path);
+    }
 
   svn_repos__destroy_config_access(access);
 
