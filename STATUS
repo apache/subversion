@@ -121,18 +121,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1764851
-   Fix temporary accepting an SSL server certificate in JavaHL
-   Justification:
-     User reported problem. Simple fix.
-   Branch:
-     ^/subversion/branches/1.8.x-r1764851
-   Notes:
-     The code was refactored for 1.9.x. Old versions of neon and serf
-     didn't properly verify the accepted failures values.
-   Votes:
-     +1: rhuijben, stefan2, brane
-
  * r1706783
    Really pass patch result to svn_client_patch() filter 
    Justification:
