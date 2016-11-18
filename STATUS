@@ -49,23 +49,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1759117, r1759122, r1759123, r1759124, 1764676
-   Fix issue #4657: "Offset too large" error when packing repository in
-   FSFS 7 format.
-   Justification:
-     Problem occurred in at least two user repositories.  Without the fix,
-     format 7 repositories with an exceptionally large number of changes in
-     a pack cannot be packed - which renders using f7 pointless for those
-     users.
-   Branch:
-     ^/subversion/branches/1.9.x-fsfs-pack-fixes@r1770158
-   Notes:
-     r1759117-23 provide the actual fixes.
-     r1759124 adds a regression test with the necessary internal API changes.
-     r1764676 eliminates our reliance on the currently broken APR trunc().
-   Votes:
-     +1: stefan2, stsp, rhuijben
-
  * r1762338, r1762339, r1769973
    Fix issue #4655: add zlib discovery through pkg-config.
    Justification:
