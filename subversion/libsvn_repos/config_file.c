@@ -164,6 +164,35 @@ representation_stream(svn_fs_root_t *root,
   return stream;
 }
 
+/* Handle the case of a file PATH / url pointing to anything that is either
+ * not a file or does not exist at all.   The case is given by NODE_KIND.
+ *
+ * If MUST_EXIST is not set and the file does not exist at all, return a
+ * default *STREAM and *CHECKSUM allocated in the context of ACCESS, or an
+ * error otherwise.
+ */
+static svn_error_t *
+handle_missing_file(svn_stream_t **stream,
+                    svn_checksum_t **checksum,
+                    config_access_t *access,
+                    const char *path,
+                    svn_boolean_t must_exist,
+                    svn_node_kind_t node_kind)
+{
+  if (node_kind == svn_node_none && !must_exist)
+    {
+      *stream = svn_stream_empty(access->pool);
+      SVN_ERR(svn_checksum(checksum, svn_checksum_md5, "", 0, access->pool));
+    }
+  else if (node_kind != svn_node_file)
+    {
+      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                               "'%s' is not a file", path);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Open the in-repository file at URL, return its content checksum in
  * *CHECKSUM and the content itself through *STREAM.  Allocate those with
  * the lifetime of ACCESS and use SCRATCH_POOL for temporaries.
@@ -222,14 +251,11 @@ get_repos_config(svn_stream_t **stream,
   SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, scratch_pool));
   SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, access->pool));
 
-  /* Special case: non-existent paths are handled as "empty" contents. */
+  /* Special case: non-existent paths may be handled as "empty" contents. */
   SVN_ERR(svn_fs_check_path(&node_kind, root, fs_path, scratch_pool));
-  if (node_kind == svn_node_none && !must_exist)
-    {
-      *stream = svn_stream_empty(access->pool);
-      SVN_ERR(svn_checksum(checksum, svn_checksum_md5, "", 0, access->pool));
-      return SVN_NO_ERROR;
-    }
+  if (node_kind != svn_node_file)
+    return svn_error_trace(handle_missing_file(stream, checksum, access,
+                                               url, must_exist, node_kind));
 
   /* Fetch checksum and see whether we already have a matching config */
   SVN_ERR(svn_fs_file_checksum(checksum, svn_checksum_md5, root, fs_path,
@@ -248,9 +274,20 @@ static svn_error_t *
 get_file_config(svn_stream_t **stream,
                 svn_checksum_t **checksum,
                 config_access_t *access,
-                const char *path)
+                const char *path,
+                svn_boolean_t must_exist,
+                apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *contents;
+  svn_node_kind_t node_kind;
+
+  /* Special case: non-existent paths may be handled as "empty" contents. */
+  SVN_ERR(svn_io_check_path(path, &node_kind, scratch_pool));
+  if (node_kind != svn_node_file)
+    return svn_error_trace(handle_missing_file(stream, checksum, access,
+                                               path, must_exist, node_kind));
+
+  /* Now, we should be able to read the file. */
   SVN_ERR(svn_stringbuf_from_file2(&contents, path, access->pool));
 
   /* calculate MD5 over the whole file contents */
@@ -292,7 +329,8 @@ svn_repos__get_config(svn_stream_t **stream,
     SVN_ERR(get_repos_config(stream, checksum, access, path, must_exist,
                              scratch_pool));
   else
-    SVN_ERR(get_file_config(stream, checksum, access, path));
+    SVN_ERR(get_file_config(stream, checksum, access, path, must_exist,
+                            scratch_pool));
 
   return SVN_NO_ERROR;
 }

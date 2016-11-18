@@ -123,7 +123,10 @@ svn_repos__config_pool_get(svn_config_t **cfg,
   err = svn_repos__get_config(&stream, &checksum, access, path, must_exist,
                               scratch_pool);
   if (!err)
-    err = find_config(cfg, config_pool, stream, checksum, pool, scratch_pool);
+    err = svn_error_quick_wrapf(find_config(cfg, config_pool, stream,
+                                            checksum, pool, scratch_pool),
+                                "Error while parsing config file: '%s':",
+                                path);
 
   svn_error_clear(err);
   if (!*cfg)
