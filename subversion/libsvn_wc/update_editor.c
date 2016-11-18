@@ -2989,7 +2989,10 @@ absent_node(const char *path,
   if (pb->skip_this)
     return SVN_NO_ERROR;
 
+  SVN_ERR(mark_directory_edited(pb, scratch_pool));
+
   local_abspath = svn_dirent_join(pb->local_abspath, name, scratch_pool);
+
   /* If an item by this name is scheduled for addition that's a
      genuine tree-conflict.  */
   err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
@@ -3008,10 +3011,6 @@ absent_node(const char *path,
       status = svn_wc__db_status_not_present;
       kind = svn_node_unknown;
     }
-
-  if (status != svn_wc__db_status_server_excluded)
-    SVN_ERR(mark_directory_edited(pb, scratch_pool));
-  /* Else fall through as we should update the revision anyway */
 
   if (status == svn_wc__db_status_normal)
     {
@@ -3036,53 +3035,31 @@ absent_node(const char *path,
         }
       else
         {
-          svn_boolean_t file_external;
-          svn_revnum_t revnum;
+          /* The server asks us to replace a file external
+             (Existing BASE node; not reported by the working copy crawler or
+              there would have been a delete_entry() call.
 
-          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &revnum, NULL, NULL,
-                                           NULL, NULL, NULL, NULL, NULL, NULL,
-                                           NULL, NULL, NULL, NULL,
-                                           &file_external,
-                                           eb->db, local_abspath,
-                                           scratch_pool, scratch_pool));
+             There is no way we can store this state in the working copy as
+             the BASE layer is already filled.
 
-          if (file_external)
+             We could error out, but that is not helping anybody; the user is not
+             even seeing with what the file external would be replaced, so let's
+             report a skip and continue the update.
+           */
+
+          if (eb->notify_func)
             {
-              /* The server asks us to replace a file external
-                 (Existing BASE node; not reported by the working copy crawler
-                  or there would have been a delete_entry() call.
-
-                 There is no way we can store this state in the working copy as
-                 the BASE layer is already filled.
-                 We could error out, but that is not helping anybody; the user is not
-                 even seeing with what the file external would be replaced, so let's
-                 report a skip and continue the update.
-               */
-
-              if (eb->notify_func)
-                {
-                  svn_wc_notify_t *notify;
-                  notify = svn_wc_create_notify(
+              svn_wc_notify_t *notify;
+              notify = svn_wc_create_notify(
                                     local_abspath,
                                     svn_wc_notify_update_skip_obstruction,
                                     scratch_pool);
 
-                  eb->notify_func(eb->notify_baton, notify, scratch_pool);
-                }
-
-              svn_pool_destroy(scratch_pool);
-              return SVN_NO_ERROR;
+              eb->notify_func(eb->notify_baton, notify, scratch_pool);
             }
-          else
-            {
-              /* We have a normal local node that will now be hidden for the
-                 user. Let's try to delete what is there. This may introduce
-                 tree conflicts if there are local changes */
-              SVN_ERR(delete_entry(path, revnum, pb, scratch_pool));
 
-              /* delete_entry() promises that BASE is empty after the operation,
-                 so we can just fall through now */
-            }
+          svn_pool_destroy(scratch_pool);
+          return SVN_NO_ERROR;
         }
     }
   else if (status == svn_wc__db_status_not_present
