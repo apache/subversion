@@ -42,9 +42,9 @@ extern "C" {
 typedef struct config_access_t config_access_t;
 
 /* Return a new config access struct allocated in RESULT_POOL.
- * Try to access PREFERRED_REPOS first when resolving URLs; may be NULL. */
+ * Try to access REPOS_HINT first when resolving URLs; may be NULL. */
 config_access_t *
-svn_repos__create_config_access(svn_repos_t *preferred_repos,
+svn_repos__create_config_access(svn_repos_t *repos_hint,
                                 apr_pool_t *result_pool);
 
 /* Release all resources allocated while using ACCESS. */
