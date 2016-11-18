@@ -149,7 +149,7 @@ representation_stream(svn_fs_root_t *root,
   svn_stream_t *stream;
   presentation_stream_baton_t *baton;
 
-  baton = apr_palloc(pool, sizeof(*baton));
+  baton = apr_pcalloc(pool, sizeof(*baton));
   baton->root = root;
   baton->fs_path = fs_path;
   baton->pool = pool;
