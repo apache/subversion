@@ -188,8 +188,8 @@ get_repos_config(svn_stream_t **stream,
 
   SVN_ERR(svn_uri_get_dirent_from_file_url(&dirent, url, access->pool));
 
-  /* maybe we can use the preferred repos instance instead of creating a
-   * new one */
+  /* Maybe we can use the repos hint instance instead of creating a
+   * new one. */
   if (access->repos)
     {
       repos_root_dirent = svn_repos_path(access->repos, scratch_pool);
@@ -202,7 +202,7 @@ get_repos_config(svn_stream_t **stream,
         access->repos = NULL;
     }
 
-  /* open repos if no suitable preferred repos was provided. */
+  /* Open repos if no suitable repos is available. */
   if (!access->repos)
     {
       /* Search for a repository in the full path. */
@@ -262,13 +262,13 @@ get_file_config(svn_stream_t **stream,
 }
 
 config_access_t *
-svn_repos__create_config_access(svn_repos_t *preferred_repos,
+svn_repos__create_config_access(svn_repos_t *repos_hint,
                                 apr_pool_t *result_pool)
 {
   apr_pool_t *pool = svn_pool_create(result_pool);
   config_access_t *result = apr_pcalloc(pool, sizeof(*result));
 
-  result->repos = preferred_repos;
+  result->repos = repos_hint;
   result->pool = pool;
 
   return result;
