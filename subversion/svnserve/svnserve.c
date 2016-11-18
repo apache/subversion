@@ -752,6 +752,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* Initialize the FS library. */
   SVN_ERR(svn_fs_initialize(pool));
 
+  /* Initialize the efficient Authz support. */
+  SVN_ERR(svn_repos_authz_initialize(pool));
+
   SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
 
   params.root = "/";
