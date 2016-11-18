@@ -766,7 +766,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
   params.logger = NULL;
   params.config_pool = NULL;
-  params.authz_pool = NULL;
   params.fs_config = NULL;
   params.vhost = FALSE;
   params.username_case = CASE_ASIS;
@@ -1049,10 +1048,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   SVN_ERR(svn_repos__config_pool_create(&params.config_pool,
                                         is_multi_threaded,
                                         pool));
-  SVN_ERR(svn_repos__authz_pool_create(&params.authz_pool,
-                                       params.config_pool,
-                                       is_multi_threaded,
-                                       pool));
 
   /* If a configuration file is specified, load it and any referenced
    * password and authorization files. */

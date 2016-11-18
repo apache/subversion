@@ -203,62 +203,6 @@ svn_repos__config_pool_get(svn_config_t **cfg,
 
 /** @} */
 
-/**
- * @defgroup svn_authz_pool Authz object pool API
- * @{
- */
-
-/* Opaque thread-safe factory and container for authorization objects.
- *
- * Instances handed out are read-only and may be given to multiple callers
- * from multiple threads.  Authorization objects no longer referenced by
- * any user may linger for a while before being cleaned up.
- */
-typedef struct svn_repos__authz_pool_t svn_repos__authz_pool_t;
-
-/* Create a new authorization pool object with a lifetime determined by
- * POOL and return it in *AUTHZ_POOL.  CONFIG_POOL will be the common
- * source for the configuration data underlying the authz objects and must
- * remain valid at least until POOL cleanup.
- *
- * The THREAD_SAFE flag indicates whether the pool actually needs to be
- * thread-safe and POOL must be also be thread-safe if this flag is set.
- */
-svn_error_t *
-svn_repos__authz_pool_create(svn_repos__authz_pool_t **authz_pool,
-                             svn_repos__config_pool_t *config_pool,
-                             svn_boolean_t thread_safe,
-                             apr_pool_t *pool);
-
-/* Set *AUTHZ_P to a read-only reference to the current contents of the
- * authorization specified by PATH and GROUPS_PATH.  If these are URLs,
- * we read the data from a local repository (see #svn_repos_authz_read2).
- * AUTHZ_POOL will store the authz data and make further callers use the
- * same instance if the content matches.
- *
- * If MUST_EXIST is TRUE, a missing config file is also an error, *AUTHZ_P
- * is otherwise simply NULL.
- *
- * PREFERRED_REPOS is only used if it is not NULL and PATH is a URL.
- * If it matches the URL, access the repository through this object
- * instead of creating a new repo instance.  Note that this might not
- * return the latest content.
- *
- * POOL determines the minimum lifetime of *AUTHZ_P (may remain cached
- * after release) but must not exceed the lifetime of the pool provided to
- * svn_repos__authz_pool_create.
- */
-svn_error_t *
-svn_repos__authz_pool_get(svn_authz_t **authz_p,
-                          svn_repos__authz_pool_t *authz_pool,
-                          const char *path,
-                          const char *groups_path,
-                          svn_boolean_t must_exist,
-                          svn_repos_t *preferred_repos,
-                          apr_pool_t *pool);
-
-/** @} */
-
 /* Adjust mergeinfo paths and revisions in ways that are useful when loading
  * a dump stream.
  *

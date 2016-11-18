@@ -285,8 +285,8 @@ canonicalize_access_file(const char **access_file, repository_t *repository,
   return SVN_NO_ERROR;
 }
 
-/* Load the authz database for the listening server through AUTHZ_POOL
-   based on the entries in the SERVER struct.
+/* Load the authz database for the listening server based on the entries
+   in the SERVER struct.
 
    SERVER and CONN must not be NULL. The real errors will be logged with
    SERVER and CONN but return generic errors to the client. */
@@ -294,7 +294,6 @@ static svn_error_t *
 load_authz_config(repository_t *repository,
                   const char *repos_root,
                   svn_config_t *cfg,
-                  svn_repos__authz_pool_t *authz_pool,
                   apr_pool_t *pool)
 {
   const char *authzdb_path;
@@ -3616,8 +3615,7 @@ repos_path_valid(const char *path)
  * and fs_path fields of REPOSITORY.  VHOST and READ_ONLY flags are the
  * same as in the server baton.
  *
- * CONFIG_POOL and AUTHZ_POOL shall be used to load any object of the
- * respective type.
+ * CONFIG_POOL shall be used to load config objects.
  *
  * Use SCRATCH_POOL for temporary allocations.
  *
@@ -3630,7 +3628,6 @@ find_repos(const char *url,
            svn_config_t *cfg,
            repository_t *repository,
            svn_repos__config_pool_t *config_pool,
-           svn_repos__authz_pool_t *authz_pool,
            apr_hash_t *fs_config,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
@@ -3708,7 +3705,7 @@ find_repos(const char *url,
 
   SVN_ERR(load_pwdb_config(repository, cfg, config_pool, result_pool));
   SVN_ERR(load_authz_config(repository, repository->repos_root, cfg,
-                            authz_pool, result_pool));
+                            result_pool));
 
 #ifdef SVN_HAVE_SASL
     {
@@ -4039,7 +4036,7 @@ construct_server_baton(server_baton_t **baton,
   err = handle_config_error(find_repos(client_url, params->root, b->vhost,
                                        b->read_only, params->cfg,
                                        b->repository, params->config_pool,
-                                       params->authz_pool, params->fs_config,
+                                       params->fs_config,
                                        conn_pool, scratch_pool),
                             b);
   if (!err)
