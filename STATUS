@@ -121,14 +121,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1761334
-   Fix issue #4653: SVN_LOCALE_DIR incorrectly interpolated when
-   prefix is not set explicitly.
-   Justification:
-     ./configure with no arguments should just work.
-   Votes:
-     +1: brane, stsp, stefan2
-
  * r1764851
    Fix temporary accepting an SSL server certificate in JavaHL
    Justification:
