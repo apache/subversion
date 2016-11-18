@@ -1512,18 +1512,19 @@ authz_read(authz_full_t **authz_p,
 /*** Public functions. ***/
 
 svn_error_t *
-svn_repos_authz_read2(svn_authz_t **authz_p, const char *path,
-                      const char *groups_path, svn_boolean_t must_exist,
-                      apr_pool_t *pool)
+svn_repos_authz_read3(svn_authz_t **authz_p,
+                      const char *path,
+                      const char *groups_path,
+                      svn_boolean_t must_exist,
+                      svn_repos_t *repos_hint,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
-  apr_pool_t *scratch_pool = svn_pool_create(pool);
-  svn_authz_t *authz = apr_pcalloc(pool, sizeof(*authz));
-  authz->pool = pool;
+  svn_authz_t *authz = apr_pcalloc(result_pool, sizeof(*authz));
+  authz->pool = result_pool;
 
-  SVN_ERR(authz_read(&authz->full, path, groups_path, must_exist, NULL,
-                     pool, scratch_pool));
-
-  svn_pool_destroy(scratch_pool);
+  SVN_ERR(authz_read(&authz->full, path, groups_path, must_exist,
+                     repos_hint, result_pool, scratch_pool));
 
   *authz_p = authz;
   return SVN_NO_ERROR;
