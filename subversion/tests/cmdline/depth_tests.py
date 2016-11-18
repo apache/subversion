@@ -2957,6 +2957,24 @@ def fold_tree_with_deleted_moved_items(sbox):
                                         '--set-depth', 'empty', A_path)
   verify_depth(None, "empty", A_path)
 
+@Issue(4642)
+@XFail()
+def fold_tree_with_unversioned_items(sbox):
+  "unversioned files in excluded directory"
+  ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
+                                                             infinity=True)
+
+  # create an unversioned directory within a versioned one
+  A_path = sbox.ospath('A')
+  A_local_path = os.path.join(A_path, 'A_local')
+  os.mkdir(A_local_path)
+
+  # Set A to be excluded.
+  svntest.main.run_svn(None, 'update', '--set-depth=exclude', A_path)
+  
+  # try a simple update afterwards
+  sbox.simple_update()
+  
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,
@@ -3009,6 +3027,7 @@ test_list = [ None,
               spurious_nodes_row,
               commit_excluded,
               fold_tree_with_deleted_moved_items,
+              fold_tree_with_unversioned_items,
              ]
 
 if __name__ == "__main__":
