@@ -121,14 +121,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1711346
-   Properly remove tempfiles in svnlook on diff errors such as EPIPE.
-   Justification:
-     Simple fix makes it far less likely that tempfiles are left behind
-     on the server.
-   Votes:
-     +1: rhuijben, stefan2, stsp
-
  * r1724448
    Fix handling of newly secured subdirectories in a working copy
    Justification:
