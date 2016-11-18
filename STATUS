@@ -136,7 +136,7 @@ Veto-blocked changes:
    Votes:
      +1: stsp
      +1: rhuijben (without r1770355)
-     -1: stefan2, brane (breaks authz test 30)
+     -1: stefan2, brane (breaks authz test 30) (without r1770355)
 
 Approved changes:
 =================
