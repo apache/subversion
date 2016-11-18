@@ -128,15 +128,13 @@ svn_repos__config_pool_get(svn_config_t **cfg,
                                 "Error while parsing config file: '%s':",
                                 path);
 
-  svn_error_clear(err);
-  if (!*cfg)
+  /* Let the standard implementation handle all the difficult cases.
+   * Note that for in-repo configs, there are no further special cases to
+   * check for and deal with. */
+  if (!*cfg && !svn_path_is_url(path))
     {
-      /* let the standard implementation handle all the difficult cases */
-      if (svn_path_is_url(path))
-        err = svn_repos__retrieve_config(cfg, path, must_exist, FALSE,
-                                         pool, scratch_pool);
-      else
-        err = svn_config_read3(cfg, path, must_exist, FALSE, FALSE, pool);
+      svn_error_clear(err);
+      err = svn_config_read3(cfg, path, must_exist, FALSE, FALSE, pool);
     }
 
   svn_repos__destroy_config_access(access);
