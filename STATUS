@@ -118,7 +118,7 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
- * r1724448
+ * r1724448, r1770355
    Fix handling of newly secured subdirectories in a working copy
    Justification:
      Regression against <= 1.6.x. Without this patch a directory that
@@ -131,8 +131,11 @@ Veto-blocked changes:
       doesn't have the rights to copy from what is now hidden).
    Branch:
      ^/subversion/branches/1.8.x-r1724448
+   Notes:
+     r1770355 fixes a test failure specific to the backport branch.
    Votes:
-     +1: rhuijben, stsp
+     +1: stsp
+     +1: rhuijben (without r1770355)
      -1: stefan2, brane (breaks authz test 30)
 
 Approved changes:
