@@ -133,7 +133,7 @@ Veto-blocked changes:
      ^/subversion/branches/1.8.x-r1724448
    Votes:
      +1: rhuijben, stsp
-     -1: stefan2 (breaks authz test 30)
+     -1: stefan2, brane (breaks authz test 30)
 
 Approved changes:
 =================
