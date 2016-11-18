@@ -128,30 +128,6 @@ svn_repos__replay_ev2(svn_fs_root_t *root,
                       void *authz_read_baton,
                       apr_pool_t *scratch_pool);
 
-/* Given a PATH which might be a relative repo URL (^/), an absolute
- * local repo URL (file://), an absolute path outside of the repo
- * or a location in the Windows registry.
- *
- * Retrieve the configuration data that PATH points at and parse it into
- * CFG_P allocated in RESULT_POOL.  Use SCRATCH_POOL for temporary
- * allocations.
- *
- * If PATH cannot be parsed as a config file then an error is returned.  The
- * contents of CFG_P is then undefined.  If MUST_EXIST is TRUE, a missing
- * authz file is also an error.  The CASE_SENSITIVE controls the lookup
- * behavior for section and option names alike.
- *
- * REPOS_ROOT points at the root of the repos you are
- * going to apply the authz against, can be NULL if you are sure that you
- * don't have a repos relative URL in PATH. */
-svn_error_t *
-svn_repos__retrieve_config(svn_config_t **cfg_p,
-                           const char *path,
-                           svn_boolean_t must_exist,
-                           svn_boolean_t case_sensitive,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
-
 /**
  * Non-deprecated alias for svn_repos_get_logs4.
  *
