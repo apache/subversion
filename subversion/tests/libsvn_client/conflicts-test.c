@@ -3394,6 +3394,7 @@ test_update_incoming_added_file_text_merge(const svn_test_opts_t *opts,
     svn_client_conflict_option_id_t expected_opts[] = {
       svn_client_conflict_option_postpone,
       svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_added_file_text_merge,
       -1 /* end of list */
     };
     SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
@@ -3401,14 +3402,13 @@ test_update_incoming_added_file_text_merge(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, pool));
 
-  /* Check available tree conflict resolution options. */
-  /* XFAIL: The list of options remains unchanged after get_details(). */
+  /* Check available tree conflict resolution options.
+   * The list of options remains unchanged after get_details(). */
   {
     svn_client_conflict_option_id_t expected_opts[] = {
       svn_client_conflict_option_postpone,
       svn_client_conflict_option_accept_current_wc_state,
       svn_client_conflict_option_incoming_added_file_text_merge,
-      svn_client_conflict_option_incoming_added_file_replace_and_merge,
       -1 /* end of list */
     };
     SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
@@ -3430,7 +3430,7 @@ test_update_incoming_added_file_text_merge(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(status->kind == svn_node_file);
   SVN_TEST_ASSERT(status->versioned);
   SVN_TEST_ASSERT(status->conflicted);
-  SVN_TEST_ASSERT(status->node_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_conflicted);
   SVN_TEST_ASSERT(status->text_status == svn_wc_status_conflicted);
   SVN_TEST_ASSERT(status->prop_status == svn_wc_status_modified);
   SVN_TEST_ASSERT(!status->copied);
@@ -3438,6 +3438,7 @@ test_update_incoming_added_file_text_merge(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(!status->file_external);
   SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
   SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
 
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_file_path),
                                   ctx, b->pool, b->pool));
@@ -3761,7 +3762,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge incoming file move with new line of history"),
     SVN_TEST_OPTS_XFAIL(test_update_incoming_dir_move_with_nested_file_move,
                        "update incoming dir move with nested file move"),
-    SVN_TEST_OPTS_XFAIL(test_update_incoming_added_file_text_merge,
+    SVN_TEST_OPTS_PASS(test_update_incoming_added_file_text_merge,
                        "update incoming add file text merge"),
     SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_file_prop_merge_conflict,
                         "merge incoming move file merge with prop conflict"),

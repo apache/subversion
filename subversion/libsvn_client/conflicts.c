@@ -5235,6 +5235,144 @@ unlock_wc:
 
   return SVN_NO_ERROR;
 }
+
+/* Implements conflict_option_resolve_func_t. */
+static svn_error_t *
+resolve_merge_incoming_added_file_text_update(
+  svn_client_conflict_option_t *option,
+  svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
+  apr_pool_t *scratch_pool)
+{
+  const char *wc_tmpdir;
+  const char *local_abspath;
+  const char *lock_abspath;
+  svn_wc_merge_outcome_t merge_content_outcome;
+  svn_wc_notify_state_t merge_props_outcome;
+  const char *empty_file_abspath;
+  const char *working_file_tmp_abspath;
+  svn_stream_t *working_file_stream;
+  svn_stream_t *working_file_tmp_stream;
+  apr_hash_t *working_props;
+  apr_hash_index_t *hi;
+  apr_array_header_t *propdiffs;
+  svn_error_t *err;
+
+  local_abspath = svn_client_conflict_get_local_abspath(conflict);
+
+  /* Set up tempory storage for the working version of file. */
+  SVN_ERR(svn_wc__get_tmpdir(&wc_tmpdir, ctx->wc_ctx, local_abspath,
+                             scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_open_unique(&working_file_tmp_stream,
+                                 &working_file_tmp_abspath, wc_tmpdir,
+                                 /* Don't delete automatically! */
+                                 svn_io_file_del_none,
+                                 scratch_pool, scratch_pool));
+
+  /* Copy the working file to temporary storage. */
+  SVN_ERR(svn_stream_open_readonly(&working_file_stream, local_abspath,
+                                   scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(working_file_stream, working_file_tmp_stream,
+                           ctx->cancel_func, ctx->cancel_baton,
+                           scratch_pool));
+
+  /* Get a copy of the working file's properties. */
+  SVN_ERR(svn_wc_prop_list2(&working_props, ctx->wc_ctx, local_abspath,
+                            scratch_pool, scratch_pool));
+
+  /* Delete entry and wc props from the returned set of properties.. */
+  for (hi = apr_hash_first(scratch_pool, working_props);
+       hi != NULL;
+       hi = apr_hash_next(hi))
+    {
+      const char *propname = apr_hash_this_key(hi);
+
+      if (!svn_wc_is_normal_prop(propname))
+        svn_hash_sets(working_props, propname, NULL);
+    }
+
+  /* Create an empty file as fake "merge-base" for the two added files.
+   * The files are not ancestrally related so this is the best we can do. */
+  SVN_ERR(svn_io_open_unique_file3(NULL, &empty_file_abspath, NULL,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   scratch_pool, scratch_pool));
+
+  /* Create a property diff which shows all props as added. */
+  SVN_ERR(svn_prop_diffs(&propdiffs, working_props,
+                         apr_hash_make(scratch_pool), scratch_pool));
+
+  /* ### The following WC modifications should be atomic. */
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
+                                                 local_abspath,
+                                                 scratch_pool, scratch_pool));
+
+  /* Revert the path in order to restore the repository's line of
+   * history, which is part of the BASE tree. This revert operation
+   * is why are being careful about not losing the temporary copy. */
+  err = svn_wc_revert5(ctx->wc_ctx, local_abspath, svn_depth_empty,
+                       FALSE, NULL, TRUE, FALSE,
+                       NULL, NULL, /* no cancellation */
+                       ctx->notify_func2, ctx->notify_baton2,
+                       scratch_pool);
+  if (err)
+    goto unlock_wc;
+
+  /* Perform the file merge. ### Merge into tempfile and then rename on top? */
+  err = svn_wc_merge5(&merge_content_outcome, &merge_props_outcome,
+                      ctx->wc_ctx, empty_file_abspath,
+                      working_file_tmp_abspath, local_abspath,
+                      NULL, NULL, NULL, /* labels */
+                      NULL, NULL, /* conflict versions */
+                      FALSE, /* dry run */
+                      NULL, NULL, /* diff3_cmd, merge_options */
+                      NULL, propdiffs,
+                      NULL, NULL, /* conflict func/baton */
+                      NULL, NULL, /* don't allow user to cancel here */
+                      scratch_pool);
+
+unlock_wc:
+  if (err)
+      err = svn_error_quick_wrapf(
+              err, _("If needed, a backup copy of '%s' can be found at '%s'"),
+              svn_dirent_local_style(local_abspath, scratch_pool),
+              svn_dirent_local_style(working_file_tmp_abspath, scratch_pool));
+  err = svn_error_compose_create(err,
+                                 svn_wc__release_write_lock(ctx->wc_ctx,
+                                                            lock_abspath,
+                                                            scratch_pool));
+  svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
+  SVN_ERR(err);
+  
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      /* Tell the world about the file merge that just happened. */
+      notify = svn_wc_create_notify(local_abspath,
+                                    svn_wc_notify_update_update,
+                                    scratch_pool);
+      if (merge_content_outcome == svn_wc_merge_conflict)
+        notify->content_state = svn_wc_notify_state_conflicted;
+      else
+        notify->content_state = svn_wc_notify_state_merged;
+      notify->prop_state = merge_props_outcome;
+      notify->kind = svn_node_file;
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+
+      /* And also about the successfully resolved tree conflict. */
+      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_resolved_tree,
+                                    scratch_pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+    }
+
+  conflict->resolution_tree = svn_client_conflict_option_get_id(option);
+
+  /* All is good -- remove temporary copy of the working file. */
+  SVN_ERR(svn_io_remove_file2(working_file_tmp_abspath, TRUE, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
 resolve_merge_incoming_added_file_text_merge(
@@ -7773,11 +7911,11 @@ configure_option_incoming_added_file_text_merge(svn_client_conflict_t *conflict,
             &incoming_new_kind, conflict, scratch_pool,
             scratch_pool));
 
-  if (operation == svn_wc_operation_merge &&
-      victim_node_kind == svn_node_file &&
+  if (victim_node_kind == svn_node_file &&
       incoming_new_kind == svn_node_file &&
       incoming_change == svn_wc_conflict_action_add &&
-      local_change == svn_wc_conflict_reason_obstructed)
+      (local_change == svn_wc_conflict_reason_obstructed ||
+       local_change == svn_wc_conflict_reason_added))
     {
       const char *description;
       const char *wcroot_abspath;
@@ -7785,19 +7923,31 @@ configure_option_incoming_added_file_text_merge(svn_client_conflict_t *conflict,
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
-      description =
-        apr_psprintf(scratch_pool, _("merge '^/%s@%ld' into '%s'"),
-          incoming_new_repos_relpath, incoming_new_pegrev,
-          svn_dirent_local_style(
-            svn_dirent_skip_ancestor(wcroot_abspath,
-                                     conflict->local_abspath),
-            scratch_pool));
+
+      if (operation == svn_wc_operation_merge)
+        description =
+          apr_psprintf(scratch_pool, _("merge '^/%s@%ld' into '%s'"),
+            incoming_new_repos_relpath, incoming_new_pegrev,
+            svn_dirent_local_style(
+              svn_dirent_skip_ancestor(wcroot_abspath,
+                                       conflict->local_abspath),
+              scratch_pool));
+      else
+        description =
+          apr_psprintf(scratch_pool, _("merge local '%s' and '^/%s@%ld'"),
+            svn_dirent_local_style(
+              svn_dirent_skip_ancestor(wcroot_abspath,
+                                       conflict->local_abspath),
+              scratch_pool),
+            incoming_new_repos_relpath, incoming_new_pegrev);
 
       add_resolution_option(
         options, conflict,
         svn_client_conflict_option_incoming_added_file_text_merge,
         _("Merge the files"), description,
-        resolve_merge_incoming_added_file_text_merge);
+        operation == svn_wc_operation_merge
+          ? resolve_merge_incoming_added_file_text_merge
+          : resolve_merge_incoming_added_file_text_update);
     }
 
   return SVN_NO_ERROR;
