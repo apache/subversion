@@ -7152,14 +7152,14 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
 
       if (is_modified)
         {
-          err = svn_wc__conflict_tree_merge_local_changes(ctx->wc_ctx,
-                                                          local_abspath,
-                                                          moved_to_abspath,
-                                                          ctx->cancel_func,
-                                                          ctx->cancel_baton,
-                                                          ctx->notify_func2,
-                                                          ctx->notify_baton2,
-                                                          scratch_pool);
+          err = svn_wc__conflict_tree_update_incoming_move(ctx->wc_ctx,
+                                                           local_abspath,
+                                                           moved_to_abspath,
+                                                           ctx->cancel_func,
+                                                           ctx->cancel_baton,
+                                                           ctx->notify_func2,
+                                                           ctx->notify_baton2,
+                                                           scratch_pool);
           if (err)
             goto unlock_wc;
         }
