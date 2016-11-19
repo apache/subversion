@@ -2053,13 +2053,14 @@ update_incoming_moved_node(node_move_baton_t *nmb,
   if (b->cancel_func)
     SVN_ERR(b->cancel_func(b->cancel_baton));
 
-  SVN_ERR(get_working_info(&src_props, &src_checksum, &src_children,
-                           &src_kind, src_relpath, wcroot, scratch_pool,
-                           scratch_pool));
-
-  SVN_ERR(get_info(&dst_props, &dst_checksum, &dst_children, &dst_kind,
-                   dst_relpath, b->dst_op_depth,
-                   wcroot, scratch_pool, scratch_pool));
+  /* Compare the tree conflict victim's copied layer (the "source") with
+   * the working layer, i.e. look for changes layered on top of the copy. */
+  SVN_ERR(get_info(&src_props, &src_checksum, &src_children, &src_kind,
+                   src_relpath, b->src_op_depth, wcroot, scratch_pool,
+                   scratch_pool));
+  SVN_ERR(get_working_info(&dst_props, &dst_checksum,
+                           &dst_children, &dst_kind, dst_relpath,
+                           wcroot, scratch_pool, scratch_pool));
 
   if (src_kind == svn_node_none
       || (dst_kind != svn_node_none && src_kind != dst_kind))
