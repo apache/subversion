@@ -2038,11 +2038,11 @@ get_working_info(apr_hash_t **props,
 /* ### Drive TC_EDITOR so as to ...
  */
 static svn_error_t *
-walk_local_changes(node_move_baton_t *nmb,
-                   svn_wc__db_wcroot_t *wcroot,
-                   const char *src_relpath,
-                   const char *dst_relpath,
-                   apr_pool_t *scratch_pool)
+update_incoming_moved_node(node_move_baton_t *nmb,
+                           svn_wc__db_wcroot_t *wcroot,
+                           const char *src_relpath,
+                           const char *dst_relpath,
+                           apr_pool_t *scratch_pool)
 {
   update_move_baton_t *b = nmb->umb;
   svn_node_kind_t src_kind, dst_kind;
@@ -2175,8 +2175,8 @@ walk_local_changes(node_move_baton_t *nmb,
                                         cnmb.dst_relpath, b->dst_op_depth,
                                         iterpool));
 
-          SVN_ERR(walk_local_changes(&cnmb, wcroot, cnmb.src_relpath,
-                                     cnmb.dst_relpath, iterpool));
+          SVN_ERR(update_incoming_moved_node(&cnmb, wcroot, cnmb.src_relpath,
+                                             cnmb.dst_relpath, iterpool));
 
           if (!dst_only)
             ++i;
@@ -2276,8 +2276,8 @@ update_incoming_move(svn_revnum_t *old_rev,
   /* We walk the move source, comparing each node with the equivalent node at
    * the move destination and applying any local changes to nodes at the move
    destination. */
-  SVN_ERR(walk_local_changes(&nmb, wcroot, local_relpath, dst_relpath,
-                             scratch_pool));
+  SVN_ERR(update_incoming_moved_node(&nmb, wcroot, local_relpath, dst_relpath,
+                                     scratch_pool));
 
   return SVN_NO_ERROR;
 }
