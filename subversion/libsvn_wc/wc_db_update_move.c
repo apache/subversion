@@ -2214,20 +2214,12 @@ update_incoming_move(svn_revnum_t *old_rev,
 
   SVN_ERR_ASSERT(svn_relpath_skip_ancestor(dst_relpath, local_relpath) == NULL);
 
-  /* In case of 'merge' the source is in the BASE tree (+ local mods) and the
-   * destination is a copied tree. For update/switch the source is a copied
-   * tree (copied from the pre-update BASE revision when the tree conflict
-   * was raised), and the destination is in the BASE tree. */
-  if (operation == svn_wc_operation_merge)
-    {
-      umb.src_op_depth = 0;
-      umb.dst_op_depth = relpath_depth(dst_relpath);
-    }
-  else
-    {
-      umb.src_op_depth = relpath_depth(local_relpath);
-      umb.dst_op_depth = 0;
-    }
+  /* For incoming moves during update/switch, the move source is a copied
+   * tree which was copied from the pre-update BASE revision while raising
+   * the tree conflict, when the update attempted to delete the move source.
+   * The move destination is now in the BASE tree at DEST_RELPATH. */
+  umb.src_op_depth = relpath_depth(local_relpath);
+  umb.dst_op_depth = 0;
 
   SVN_ERR(verify_write_lock(wcroot, local_relpath, scratch_pool));
   SVN_ERR(verify_write_lock(wcroot, dst_relpath, scratch_pool));
@@ -2267,9 +2259,6 @@ update_incoming_move(svn_revnum_t *old_rev,
   umb.wcroot = wcroot;
   umb.cancel_func = cancel_func;
   umb.cancel_baton = cancel_baton;
-
-  if (umb.src_op_depth == 0)
-    SVN_ERR(suitable_for_move(wcroot, local_relpath, scratch_pool));
 
   /* Create a new, and empty, list for notification information. */
   SVN_ERR(svn_sqlite__exec_statements(wcroot->sdb,
