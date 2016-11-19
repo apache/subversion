@@ -2191,9 +2191,9 @@ walk_local_changes(node_move_baton_t *nmb,
   return SVN_NO_ERROR;
 }
 
-/* The body of svn_wc__db_merge_local_changes(). */
+/* The body of svn_wc__db_update_incoming_move(). */
 static svn_error_t *
-merge_local_changes(svn_revnum_t *old_rev,
+update_incoming_move(svn_revnum_t *old_rev,
                     svn_revnum_t *new_rev,
                     svn_wc__db_t *db,
                     svn_wc__db_wcroot_t *wcroot,
@@ -2294,17 +2294,17 @@ merge_local_changes(svn_revnum_t *old_rev,
 }
 
 svn_error_t *
-svn_wc__db_merge_local_changes(svn_wc__db_t *db,
-                               const char *local_abspath,
-                               const char *dest_abspath,
-                               svn_wc_operation_t operation,
-                               svn_wc_conflict_action_t action,
-                               svn_wc_conflict_reason_t reason,
-                               svn_cancel_func_t cancel_func,
-                               void *cancel_baton,
-                               svn_wc_notify_func2_t notify_func,
-                               void *notify_baton,
-                               apr_pool_t *scratch_pool)
+svn_wc__db_update_incoming_move(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const char *dest_abspath,
+                                svn_wc_operation_t operation,
+                                svn_wc_conflict_action_t action,
+                                svn_wc_conflict_reason_t reason,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
+                                svn_wc_notify_func2_t notify_func,
+                                void *notify_baton,
+                                apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   svn_revnum_t old_rev, new_rev;
@@ -2321,11 +2321,11 @@ svn_wc__db_merge_local_changes(svn_wc__db_t *db,
   dest_relpath
     = svn_dirent_skip_ancestor(wcroot->abspath, dest_abspath);
 
-  SVN_WC__DB_WITH_TXN(merge_local_changes(&old_rev, &new_rev, db, wcroot,
-                                          local_relpath, dest_relpath,
-                                          operation, action, reason,
-                                          cancel_func, cancel_baton,
-                                          scratch_pool),
+  SVN_WC__DB_WITH_TXN(update_incoming_move(&old_rev, &new_rev, db, wcroot,
+                                           local_relpath, dest_relpath,
+                                           operation, action, reason,
+                                           cancel_func, cancel_baton,
+                                           scratch_pool),
                       wcroot);
 
   /* Send all queued up notifications. */
