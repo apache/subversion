@@ -29,19 +29,6 @@ Candidate changes:
      +1: stefan2, breser
      -0: julianfoad (test is missing from branch -- how do we know it works?)
 
- * r1717875, r1717878
-   Make inherited property api consistent over all ra layers
-   Justification:
-     Our ra implementations should follow the documentation... and should
-     be as consistent as possible between each other. Only because the
-     caller uses svn_path_url_add_component2() this wasn't noticed by
-     our code.
-   Notes:
-     A test for this issue was added in r1717874, but requires plumbing
-     that isn't available on 1.8.x
-   Votes:
-     +1: rhuijben, stefan2
-
  * r1745515, r1746364
    Update serf download URIs to ASF.
    Justification:
@@ -89,6 +76,19 @@ Approved changes:
      ^/subversion/branches/1.8.x-issue4557
    Votes:
      +1: stsp, stefan2, brane
+
+ * r1717875, r1717878
+   Make inherited property api consistent over all ra layers
+   Justification:
+     Our ra implementations should follow the documentation... and should
+     be as consistent as possible between each other. Only because the
+     caller uses svn_path_url_add_component2() this wasn't noticed by
+     our code.
+   Notes:
+     A test for this issue was added in r1717874, but requires plumbing
+     that isn't available on 1.8.x
+   Votes:
+     +1: rhuijben, stefan2, brane
 
  * r1722860, r1722879, r1722887
    Memory access portability issues.
