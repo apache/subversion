@@ -54,24 +54,6 @@ Candidate changes:
    Votes:
      +1: stsp, stefan2
 
- * r1722860, r1722879, r1722887
-   Memory access portability issues.
-   Justification:
-     Not complying to the C standard is bad.  At the very least we
-     improve the signal/noise ratio when using memory sanitizers.
-     Part of this patch set (r1722879) fixes a crash on SPARC that
-     apparently gets masked by some lucky caller pattern.
-     Finally, these changes make the code actually simpler.
-   Notes:
-     r1722860 fixes the issue originally reported on dev@.
-     r1722879 fixes a follow-up issue found by the SPARC buildbot.
-     r1722887 removes similar logic from the membuffer cache although
-              that had not been reported a faulty.
-   Branch:
-     ^/subversion/branches/1.8.x-portability
-   Votes:
-     +1: stefan2, stsp
-
  * r1745515, r1746364
    Update serf download URIs to ASF.
    Justification:
@@ -107,6 +89,32 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1722860, r1722879, r1722887
+   Memory access portability issues.
+   Justification:
+     Not complying to the C standard is bad.  At the very least we
+     improve the signal/noise ratio when using memory sanitizers.
+     Part of this patch set (r1722879) fixes a crash on SPARC that
+     apparently gets masked by some lucky caller pattern.
+     Finally, these changes make the code actually simpler.
+   Notes:
+     r1722860 fixes the issue originally reported on dev@.
+     r1722879 fixes a follow-up issue found by the SPARC buildbot.
+     r1722887 removes similar logic from the membuffer cache although
+              that had not been reported a faulty.
+   Branch:
+     ^/subversion/branches/1.8.x-portability
+   Votes:
+     +1: stefan2, stsp
+     +1: brane, however: [[[
+         subversion/libsvn_subr/utf_validate.c:273:28: warning: comparison of constant 128 with expression
+               of type 'const char' is always false [-Wtautological-constant-out-of-range-compare]
+             if (*data < 0 || *data >= 0x80)
+                              ~~~~~ ^  ~~~~
+
+        This is happily not exactly a bug because the '< 0' branch will
+        catch these cases, but it's really messy ...]]]
 
  * r1724448, r1770355
    Fix handling of newly secured subdirectories in a working copy
