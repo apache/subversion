@@ -42,18 +42,6 @@ Candidate changes:
    Votes:
      +1: rhuijben, stefan2
 
- * r1663500
-   Fix issue #4557, "ra_serf fails to delete directory containing many files"
-   Justification:
-     Regression introduced in 1.8.10.
-   Notes:
-     The associated test is still failing because it was extended to check
-     COPY as well as DELETE. Issue #4557 is just about DELETE requests.  
-   Branch:
-     ^/subversion/branches/1.8.x-issue4557
-   Votes:
-     +1: stsp, stefan2
-
  * r1745515, r1746364
    Update serf download URIs to ASF.
    Justification:
@@ -89,6 +77,18 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1663500
+   Fix issue #4557, "ra_serf fails to delete directory containing many files"
+   Justification:
+     Regression introduced in 1.8.10.
+   Notes:
+     The associated test is still failing because it was extended to check
+     COPY as well as DELETE. Issue #4557 is just about DELETE requests.
+   Branch:
+     ^/subversion/branches/1.8.x-issue4557
+   Votes:
+     +1: stsp, stefan2, brane
 
  * r1722860, r1722879, r1722887
    Memory access portability issues.
