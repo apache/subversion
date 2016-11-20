@@ -134,9 +134,9 @@ Veto-blocked changes:
    Notes:
      r1770355 fixes a test failure specific to the backport branch.
    Votes:
-     +1: stsp
+     +1: stsp, stefan2
      +1: rhuijben (without r1770355)
-     -1: stefan2, brane (breaks authz test 30) (without r1770355)
+     -1: brane (breaks authz test 30) (without r1770355)
 
 Approved changes:
 =================
