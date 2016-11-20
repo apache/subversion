@@ -101,22 +101,11 @@ Candidate changes:
      -0 (non-binding): luke1410 (r1700130 is missing - will have to create a
                        backport branch)
 
- * r1766352, r1766590
-   Fix issue #4658: Can't reconstruct fulltext from DELTA against PLAIN in FSFS
-   Justification:
-     Prevents access to committed data.  This is as close to a corruption one
-     could get without actually corrupting anything.  User reported issue.
-   Branch:
-     ^/subversion/branches/1.8.x-issue4658
-   Notes:
-     r1766352 contains the actual fix.
-     r1766590 adds a test case for it.
-   Votes:
-     +1: stefan2, stsp
-     +0: rhuijben
-
 Veto-blocked changes:
 =====================
+
+Approved changes:
+=================
 
  * r1724448, r1770355
    Fix handling of newly secured subdirectories in a working copy
@@ -134,9 +123,19 @@ Veto-blocked changes:
    Notes:
      r1770355 fixes a test failure specific to the backport branch.
    Votes:
-     +1: stsp, stefan2
+     +1: stsp, stefan2, brane
      +1: rhuijben (without r1770355)
-     -1: brane (breaks authz test 30) (without r1770355)
 
-Approved changes:
-=================
+ * r1766352, r1766590
+   Fix issue #4658: Can't reconstruct fulltext from DELTA against PLAIN in FSFS
+   Justification:
+     Prevents access to committed data.  This is as close to a corruption one
+     could get without actually corrupting anything.  User reported issue.
+   Branch:
+     ^/subversion/branches/1.8.x-issue4658
+   Notes:
+     r1766352 contains the actual fix.
+     r1766590 adds a test case for it.
+   Votes:
+     +1: stefan2, stsp, brane
+     +0: rhuijben
