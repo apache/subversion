@@ -65,18 +65,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1663500
-   Fix issue #4557, "ra_serf fails to delete directory containing many files"
-   Justification:
-     Regression introduced in 1.8.10.
-   Notes:
-     The associated test is still failing because it was extended to check
-     COPY as well as DELETE. Issue #4557 is just about DELETE requests.
-   Branch:
-     ^/subversion/branches/1.8.x-issue4557
-   Votes:
-     +1: stsp, stefan2, brane
-
  * r1717875, r1717878
    Make inherited property api consistent over all ra layers
    Justification:
