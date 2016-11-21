@@ -1,9 +1,41 @@
+Version 1.8.17
+(29 Nov 2016, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.17
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * fix handling of newly secured subdirectories in working copy (r1724448)
+    * ra_serf: fix deleting directories with many files (issue #4557)
+    * svnlook: properly remove tempfiles on diff errors (r1711346)
+    * gpg-agent: properly handle passwords with percent characters (issue #4611)
+    * merge: fix crash when merging to a local add (r1702299 et al)
+
+  - Server-side bugfixes:
+    * fsfs: fix possible data reconstruction error (issue #4658)
+
+  - Client-side and server-side bugfixes:
+    * fix potential memory access bugs (r1722860 et al)
+
+  - Bindings bugfixes:
+    * javahl: fix temporary accepting SSL server certificates (r1764851)
+    * swig-pl: do not corrupt "{DATE}" revision variable (r1767768)
+    * swig-pl: fix possible stack corruption (r1683266)
+
+ Developer-visible changes:
+  - General:
+    * fix inconsistent behavior of inherited property API (r1717875, r1717878)
+    * fix patch filter invocation in svn_client_patch() (r1706783)
+    * fix potential build issue with invalid SVN_LOCALE_DIR (issue #4653)
+
+
 Version 1.8.16
 (28 Apr 2016, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.16
 
  User-visible changes:
   - Server-side bugfixes:
+    * mod_authz_svn: fix crash in COPY/MOVE authorization check (CVE-2016-2168)
+    * svnserve/sasl: fix authenticating users with wrong realm (CVE-2016-2167)
     * mod_authz_svn: fix authz with mod_auth_kerb/mod_auth_ntlm (issue #4602)
     * dump: don't write broken dump files in some ambiguously encoded fsfs
       repositories (issue #4554)
