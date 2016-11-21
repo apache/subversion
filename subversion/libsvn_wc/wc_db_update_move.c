@@ -2045,55 +2045,55 @@ update_incoming_moved_node(node_move_baton_t *nmb,
                            apr_pool_t *scratch_pool)
 {
   update_move_baton_t *b = nmb->umb;
-  svn_node_kind_t src_kind, dst_kind;
+  svn_node_kind_t orig_kind, working_kind;
   const char *victim_relpath = src_relpath;
-  const svn_checksum_t *src_checksum, *dst_checksum;
-  apr_hash_t *src_props, *dst_props;
-  apr_array_header_t *src_children, *dst_children;
+  const svn_checksum_t *orig_checksum, *working_checksum;
+  apr_hash_t *orig_props, *working_props;
+  apr_array_header_t *orig_children, *working_children;
 
   if (b->cancel_func)
     SVN_ERR(b->cancel_func(b->cancel_baton));
 
-  /* Compare the tree conflict victim's copied layer (the "source") with
+  /* Compare the tree conflict victim's copied layer (the "original") with
    * the working layer, i.e. look for changes layered on top of the copy. */
-  SVN_ERR(get_info(&src_props, &src_checksum, &src_children, &src_kind,
+  SVN_ERR(get_info(&orig_props, &orig_checksum, &orig_children, &orig_kind,
                    victim_relpath, b->src_op_depth, wcroot, scratch_pool,
                    scratch_pool));
-  SVN_ERR(get_working_info(&dst_props, &dst_checksum,
-                           &dst_children, &dst_kind, victim_relpath,
+  SVN_ERR(get_working_info(&working_props, &working_checksum,
+                           &working_children, &working_kind, victim_relpath,
                            wcroot, scratch_pool, scratch_pool));
 
-  if (src_kind == svn_node_none
-      || (dst_kind != svn_node_none && src_kind != dst_kind))
+  if (orig_kind == svn_node_none
+      || (working_kind != svn_node_none && orig_kind != working_kind))
     {
-      SVN_ERR(tc_editor_delete(nmb, dst_relpath, dst_kind, src_kind,
+      SVN_ERR(tc_editor_delete(nmb, dst_relpath, working_kind, orig_kind,
                                scratch_pool));
     }
 
   if (nmb->skip)
     return SVN_NO_ERROR;
 
-  if (src_kind != svn_node_none && src_kind != dst_kind)
+  if (orig_kind != svn_node_none && orig_kind != working_kind)
     {
-      if (src_kind == svn_node_file || src_kind == svn_node_symlink)
+      if (orig_kind == svn_node_file || orig_kind == svn_node_symlink)
         {
-          SVN_ERR(tc_editor_add_file(nmb, dst_relpath, dst_kind,
-                                     src_checksum, src_props,
+          SVN_ERR(tc_editor_add_file(nmb, dst_relpath, working_kind,
+                                     orig_checksum, orig_props,
                                      scratch_pool));
         }
-      else if (src_kind == svn_node_dir)
+      else if (orig_kind == svn_node_dir)
         {
-          SVN_ERR(tc_editor_add_directory(nmb, dst_relpath, dst_kind,
-                                          src_props, scratch_pool));
+          SVN_ERR(tc_editor_add_directory(nmb, dst_relpath, working_kind,
+                                          orig_props, scratch_pool));
         }
     }
-  else if (src_kind != svn_node_none)
+  else if (orig_kind != svn_node_none)
     {
       svn_boolean_t props_equal;
 
-      SVN_ERR(props_match(&props_equal, src_props, dst_props, scratch_pool));
+      SVN_ERR(props_match(&props_equal, orig_props, working_props, scratch_pool));
 
-      if (src_kind == svn_node_file || src_kind == svn_node_symlink)
+      if (orig_kind == svn_node_file || orig_kind == svn_node_symlink)
         {
           svn_boolean_t is_modified;
 
@@ -2107,17 +2107,17 @@ update_incoming_moved_node(node_move_baton_t *nmb,
           if (!props_equal || is_modified)
             SVN_ERR(tc_editor_merge_local_file_change(nmb, dst_relpath,
                                                       victim_relpath,
-                                                      src_checksum,
-                                                      dst_checksum,
-                                                      dst_props, src_props,
+                                                      orig_checksum,
+                                                      working_checksum,
+                                                      working_props, orig_props,
                                                       is_modified,
                                                       scratch_pool));
         }
-      else if (src_kind == svn_node_dir)
+      else if (orig_kind == svn_node_dir)
         {
           if (!props_equal)
             SVN_ERR(tc_editor_alter_directory(nmb, dst_relpath,
-                                              dst_props, src_props,
+                                              working_props, orig_props,
                                               scratch_pool));
         }
     }
@@ -2125,15 +2125,15 @@ update_incoming_moved_node(node_move_baton_t *nmb,
   if (nmb->skip)
     return SVN_NO_ERROR;
 
-  if (src_kind == svn_node_dir)
+  if (orig_kind == svn_node_dir)
     {
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       int i = 0, j = 0;
 
-      while (i < src_children->nelts || j < dst_children->nelts)
+      while (i < orig_children->nelts || j < working_children->nelts)
         {
           const char *child_name;
-          svn_boolean_t src_only = FALSE, dst_only = FALSE;
+          svn_boolean_t orig_only = FALSE, working_only = FALSE;
           node_move_baton_t cnmb = { 0 };
 
           cnmb.pb = nmb;
@@ -2141,30 +2141,30 @@ update_incoming_moved_node(node_move_baton_t *nmb,
           cnmb.shadowed = nmb->shadowed;
 
           svn_pool_clear(iterpool);
-          if (i >= src_children->nelts)
+          if (i >= orig_children->nelts)
             {
-              dst_only = TRUE;
-              child_name = APR_ARRAY_IDX(dst_children, j, const char *);
+              working_only = TRUE;
+              child_name = APR_ARRAY_IDX(working_children, j, const char *);
             }
-          else if (j >= dst_children->nelts)
+          else if (j >= working_children->nelts)
             {
-              src_only = TRUE;
-              child_name = APR_ARRAY_IDX(src_children, i, const char *);
+              orig_only = TRUE;
+              child_name = APR_ARRAY_IDX(orig_children, i, const char *);
             }
           else
             {
-              const char *src_name = APR_ARRAY_IDX(src_children, i,
-                                                   const char *);
-              const char *dst_name = APR_ARRAY_IDX(dst_children, j,
-                                                   const char *);
-              int cmp = strcmp(src_name, dst_name);
+              const char *orig_name = APR_ARRAY_IDX(orig_children, i,
+                                                    const char *);
+              const char *working_name = APR_ARRAY_IDX(working_children, j,
+                                                       const char *);
+              int cmp = strcmp(orig_name, working_name);
 
               if (cmp > 0)
-                dst_only = TRUE;
+                working_only = TRUE;
               else if (cmp < 0)
-                src_only = TRUE;
+                orig_only = TRUE;
 
-              child_name = dst_only ? dst_name : src_name;
+              child_name = working_only ? working_name : orig_name;
             }
 
           cnmb.src_relpath = svn_relpath_join(src_relpath, child_name,
@@ -2180,9 +2180,9 @@ update_incoming_moved_node(node_move_baton_t *nmb,
           SVN_ERR(update_incoming_moved_node(&cnmb, wcroot, cnmb.src_relpath,
                                              cnmb.dst_relpath, iterpool));
 
-          if (!dst_only)
+          if (!working_only)
             ++i;
-          if (!src_only)
+          if (!orig_only)
             ++j;
 
           if (nmb->skip) /* Does parent now want a skip? */
