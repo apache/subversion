@@ -64,6 +64,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
-        This is happily not exactly a bug because the '< 0' branch will
-        catch these cases, but it's really messy ...]]]
