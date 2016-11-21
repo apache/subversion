@@ -396,6 +396,28 @@ static void expat_data_handler(void *userData, const XML_Char *s, int len)
 #endif
 }
 
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+static void expat_entity_declaration(void *userData,
+                                     const XML_Char *entityName,
+                                     int is_parameter_entity,
+                                     const XML_Char *value,
+                                     int value_length,
+                                     const XML_Char *base,
+                                     const XML_Char *systemId,
+                                     const XML_Char *publicId,
+                                     const XML_Char *notationName)
+{
+  svn_xml_parser_t *svn_parser = userData;
+
+  /* Stop the parser if an entity declaration is hit. */
+  XML_StopParser(svn_parser->parser, 0 /* resumable */);
+}
+#else
+/* A noop default_handler. */
+static void expat_default_handler(void *userData, const XML_Char *s, int len)
+{
+}
+#endif
 
 /*** Making a parser. ***/
 
@@ -427,6 +449,12 @@ svn_xml_make_parser(void *baton,
                         end_handler ? expat_end_handler : NULL);
   XML_SetCharacterDataHandler(parser,
                               data_handler ? expat_data_handler : NULL);
+
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+  XML_SetEntityDeclHandler(parser, expat_entity_declaration);
+#else
+  XML_SetDefaultHandler(parser, expat_default_handler);
+#endif
 
   svn_parser = apr_pcalloc(pool, sizeof(*svn_parser));
 
@@ -506,7 +534,9 @@ void svn_xml_signal_bailout(svn_error_t *error,
   /* This will cause the current XML_Parse() call to finish quickly! */
   XML_SetElementHandler(svn_parser->parser, NULL, NULL);
   XML_SetCharacterDataHandler(svn_parser->parser, NULL);
-
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+  XML_SetEntityDeclHandler(svn_parser->parser, NULL);
+#endif
   /* Once outside of XML_Parse(), the existence of this field will
      cause svn_delta_parse()'s main read-loop to return error. */
   svn_parser->error = error;
