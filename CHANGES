@@ -1,3 +1,54 @@
+Version 1.9.5
+(29 Nov 2016, from /branches/1.9.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.9.5
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * fix accessing non-existent paths during reintegrate merge (r1766699 et al)
+    * fix handling of newly secured subdirectories in working copy (r1724448)
+    * info: remove trailing whitespace in --show-item=revision (issue #4660)
+    * fix recording wrong revisions for tree conflicts (r1734106)
+    * gpg-agent: improve discovery of gpg-agent sockets (r1766327)
+    * gpg-agent: fix file descriptor leak (r1766323)
+    * resolve: fix --accept=mine-full for binary files (issue #4647)
+    * merge: fix possible crash (issue #4652)
+    * resolve: fix possible crash (r1748514)
+    * fix potential crash in Win32 crash reporter (r1663253 et al)
+
+  - Server-side bugfixes:
+    * fsfs: fix "offset too large" error during pack (issue #4657)
+    * svnserve: enable hook script environments (r1769152)
+    * fsfs: fix possible data reconstruction error (issue #4658)
+    * fix source of spurious 'incoming edit' tree conflicts (r1770108)
+    * fsfs: improve caching for large directories (r1721285)
+    * fsfs: fix crash when encountering all-zero checksums (r1759686)
+    * fsfs: fix potential source of repository corruptions (r1756266)
+    * mod_dav_svn: fix excessive memory usage with mod_headers/mod_deflate
+      (issue #3084)
+    * mod_dav_svn: reduce memory usage during GET requests (r1757529 et al)
+    * fsfs: fix unexpected "database is locked" errors (r1741096 et al)
+    * fsfs: fix opening old repositories without db/format files (r1720015)
+
+  - Client-side and server-side bugfixes:
+    * fix possible crash when reading invalid configuration files (r1715777)
+
+  - Bindings bugfixes:
+    * swig-pl: do not corrupt "{DATE}" revision variable (r1767768)
+    * javahl: fix temporary accepting SSL server certificates (r1764851)
+    * swig-pl: fix possible stack corruption (r1683266, r1683267)
+
+ Developer-visible changes:
+  - General:
+    * add zlib discovery through pkg-config (issue #4655)
+    * fix potential build issue with invalid SVN_LOCALE_DIR (issue #4653)
+    * ruby: fix test failures with ruby >= 2.2 (r1766621)
+    * fix link error with --disable-keychain on OS X (r1765385)
+    * swig: enable building with SWIG >= 3.0.6 (r1721488 et al)
+    * swig: fix building with -Wdate-time in $CPPFLAGS (r1722164)
+    * update serf download URI in build scripts (r1700130 et al)
+    * raise minimal httpd version from 2.0 to 2.2 (r1754193)
+
+
 Version 1.9.4
 (28 Apr 2016, from /branches/1.9.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.9.4
@@ -881,6 +932,36 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: requires Java 1.6 (r1677003)
     * javahl: on OS X use /usr/libexec/java_home to find the JDK (r1675774)
     * javahl: allow compiling with a C++11 compiler (r1684412)
+
+
+Version 1.8.17
+(29 Nov 2016, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.17
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * fix handling of newly secured subdirectories in working copy (r1724448)
+    * ra_serf: fix deleting directories with many files (issue #4557)
+    * svnlook: properly remove tempfiles on diff errors (r1711346)
+    * gpg-agent: properly handle passwords with percent characters (issue #4611)
+    * merge: fix crash when merging to a local add (r1702299 et al)
+
+  - Server-side bugfixes:
+    * fsfs: fix possible data reconstruction error (issue #4658)
+
+  - Client-side and server-side bugfixes:
+    * fix potential memory access bugs (r1722860 et al)
+
+  - Bindings bugfixes:
+    * javahl: fix temporary accepting SSL server certificates (r1764851)
+    * swig-pl: do not corrupt "{DATE}" revision variable (r1767768)
+    * swig-pl: fix possible stack corruption (r1683266)
+
+ Developer-visible changes:
+  - General:
+    * fix inconsistent behavior of inherited property API (r1717875, r1717878)
+    * fix patch filter invocation in svn_client_patch() (r1706783)
+    * fix potential build issue with invalid SVN_LOCALE_DIR (issue #4653)
 
 
 Version 1.8.16
