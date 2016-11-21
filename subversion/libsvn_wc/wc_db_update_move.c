@@ -2046,6 +2046,7 @@ update_incoming_moved_node(node_move_baton_t *nmb,
 {
   update_move_baton_t *b = nmb->umb;
   svn_node_kind_t src_kind, dst_kind;
+  const char *victim_relpath = src_relpath;
   const svn_checksum_t *src_checksum, *dst_checksum;
   apr_hash_t *src_props, *dst_props;
   apr_array_header_t *src_children, *dst_children;
@@ -2056,10 +2057,10 @@ update_incoming_moved_node(node_move_baton_t *nmb,
   /* Compare the tree conflict victim's copied layer (the "source") with
    * the working layer, i.e. look for changes layered on top of the copy. */
   SVN_ERR(get_info(&src_props, &src_checksum, &src_children, &src_kind,
-                   src_relpath, b->src_op_depth, wcroot, scratch_pool,
+                   victim_relpath, b->src_op_depth, wcroot, scratch_pool,
                    scratch_pool));
   SVN_ERR(get_working_info(&dst_props, &dst_checksum,
-                           &dst_children, &dst_kind, src_relpath,
+                           &dst_children, &dst_kind, victim_relpath,
                            wcroot, scratch_pool, scratch_pool));
 
   if (src_kind == svn_node_none
@@ -2099,13 +2100,13 @@ update_incoming_moved_node(node_move_baton_t *nmb,
           SVN_ERR(svn_wc__internal_file_modified_p(&is_modified, b->db,
                                                    svn_dirent_join(
                                                      b->wcroot->abspath,
-                                                     src_relpath,
+                                                     victim_relpath,
                                                      scratch_pool),
                                                    FALSE /* exact_comparison */,
                                                    scratch_pool));
           if (!props_equal || is_modified)
             SVN_ERR(tc_editor_merge_local_file_change(nmb, dst_relpath,
-                                                      src_relpath,
+                                                      victim_relpath,
                                                       src_checksum,
                                                       dst_checksum,
                                                       dst_props, src_props,
