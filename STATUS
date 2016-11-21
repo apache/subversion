@@ -68,25 +68,6 @@ Approved changes:
         This is happily not exactly a bug because the '< 0' branch will
         catch these cases, but it's really messy ...]]]
 
- * r1724448, r1770355
-   Fix handling of newly secured subdirectories in a working copy
-   Justification:
-     Regression against <= 1.6.x. Without this patch a directory that
-     (still) exists locally but to which a user has no access is handled as
-     a local obstruction on the next update that brings a change to this tree
-     and the local working copy state is broken. This patch handles the
-     incomming change as a delete, properly marking a tree conflict if
-     necessary, allowing a user to make a copy of local changes.
-     (Committing a copy would be hard though... as the user most likely
-      doesn't have the rights to copy from what is now hidden).
-   Branch:
-     ^/subversion/branches/1.8.x-r1724448
-   Notes:
-     r1770355 fixes a test failure specific to the backport branch.
-   Votes:
-     +1: stsp, stefan2, brane
-     +1: rhuijben (without r1770355)
-
  * r1766352, r1766590
    Fix issue #4658: Can't reconstruct fulltext from DELTA against PLAIN in FSFS
    Justification:
