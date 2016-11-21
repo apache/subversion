@@ -67,17 +67,3 @@ Approved changes:
 
         This is happily not exactly a bug because the '< 0' branch will
         catch these cases, but it's really messy ...]]]
-
- * r1766352, r1766590
-   Fix issue #4658: Can't reconstruct fulltext from DELTA against PLAIN in FSFS
-   Justification:
-     Prevents access to committed data.  This is as close to a corruption one
-     could get without actually corrupting anything.  User reported issue.
-   Branch:
-     ^/subversion/branches/1.8.x-issue4658
-   Notes:
-     r1766352 contains the actual fix.
-     r1766590 adds a test case for it.
-   Votes:
-     +1: stefan2, stsp, brane
-     +0: rhuijben
