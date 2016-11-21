@@ -42,6 +42,14 @@
 
 extern module AP_MODULE_DECLARE_DATA dontdothat_module;
 
+#ifndef XML_VERSION_AT_LEAST
+#define XML_VERSION_AT_LEAST(major,minor,patch)                  \
+(((major) < XML_MAJOR_VERSION)                                       \
+ || ((major) == XML_MAJOR_VERSION && (minor) < XML_MINOR_VERSION)    \
+ || ((major) == XML_MAJOR_VERSION && (minor) == XML_MINOR_VERSION && \
+     (patch) <= XML_MICRO_VERSION))
+#endif /* XML_VERSION_AT_LEAST */
+
 typedef struct dontdothat_config_rec {
   const char *config_file;
   const char *base_path;
@@ -551,6 +559,31 @@ end_element(void *baton, const char *name)
     }
 }
 
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+static void
+expat_entity_declaration(void *userData,
+                         const XML_Char *entityName,
+                         int is_parameter_entity,
+                         const XML_Char *value,
+                         int value_length,
+                         const XML_Char *base,
+                         const XML_Char *systemId,
+                         const XML_Char *publicId,
+                         const XML_Char *notationName)
+{
+  dontdothat_filter_ctx *ctx = userData;
+
+  /* Stop the parser if an entity declaration is hit. */
+  XML_StopParser(ctx->xmlp, 0 /* resumable */);
+}
+#else
+/* A noop default_handler. */
+static void
+expat_default_handler(void *userData, const XML_Char *s, int len)
+{
+}
+#endif
+
 static svn_boolean_t
 is_valid_wildcard(const char *wc)
 {
@@ -695,6 +728,12 @@ dontdothat_insert_filters(request_rec *r)
       XML_SetUserData(ctx->xmlp, ctx);
       XML_SetElementHandler(ctx->xmlp, start_element, end_element);
       XML_SetCharacterDataHandler(ctx->xmlp, cdata);
+
+#if XML_VERSION_AT_LEAST(1, 95, 8)
+      XML_SetEntityDeclHandler(ctx->xmlp, expat_entity_declaration);
+#else
+      XML_SetDefaultHandler(ctx->xmlp, expat_default_handler);
+#endif
 
       ap_add_input_filter("DONTDOTHAT_FILTER", ctx, r, r->connection);
     }
