@@ -226,6 +226,112 @@ test_parser_free(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Test that builtin XML entities are expanded as expected. */
+static svn_error_t *
+test_xml_builtin_entity_expansion(apr_pool_t *pool)
+{
+  const char *xml =
+    "<?xml version='1.0'?>\n"
+    "<root a='&amp;'>&amp;&#9;</root>";
+
+  xml_callbacks_baton_t b;
+
+  b.buf = svn_stringbuf_create_empty(pool);
+  b.parser = svn_xml_make_parser(&b, strbuf_start_elem, strbuf_end_elem,
+                                 strbuf_cdata, pool);
+
+  SVN_ERR(svn_xml_parse(b.parser, xml, strlen(xml), TRUE));
+
+  SVN_TEST_STRING_ASSERT(b.buf->data,
+                         "<root a=&>&\t</root>");
+
+  return SVN_NO_ERROR;
+}
+
+/* Test that custom XML entities are not allowed. */
+static svn_error_t *
+test_xml_custom_entity_expansion(apr_pool_t *pool)
+{
+  const char *xml =
+    "<?xml version='1.0'?>\n"
+    "<!DOCTYPE test ["
+    "<!ELEMENT root (#PCDATA)>"
+    "<!ENTITY xmlentity 'val'>"
+    "]>"
+    "<root>&xmlentity;</root>";
+
+  xml_callbacks_baton_t b;
+  svn_error_t *err;
+
+  b.buf = svn_stringbuf_create_empty(pool);
+  b.parser = svn_xml_make_parser(&b, strbuf_start_elem, strbuf_end_elem,
+                                 strbuf_cdata, pool);
+
+  err = svn_xml_parse(b.parser, xml, strlen(xml), TRUE);
+
+  /* XML entity declarations will be either silently ignored or error
+     will be returned depending on Expat version. */
+  if (err)
+    {
+      SVN_TEST_ASSERT_ERROR(err, SVN_ERR_XML_MALFORMED);
+      SVN_TEST_STRING_ASSERT(b.buf->data,
+                             "");
+    }
+  else
+    {
+      SVN_TEST_STRING_ASSERT(b.buf->data,
+                             "<root></root>");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_xml_doctype_declaration(apr_pool_t *pool)
+{
+  const char *xml =
+    "<?xml version='1.0'?>\n"
+    "<?xml-stylesheet type='text/xsl' href='/svnindex.xsl'?>"
+    "<!DOCTYPE svn ["
+    "  <!ELEMENT svn   (index)>"
+    "  <!ATTLIST svn   version CDATA #REQUIRED"
+    "                  href    CDATA #REQUIRED>"
+    "  <!ELEMENT index (updir?, (file | dir)*)>"
+    "  <!ATTLIST index name    CDATA #IMPLIED"
+    "                  path    CDATA #IMPLIED"
+    "                  rev     CDATA #IMPLIED"
+    "                  base    CDATA #IMPLIED>"
+    "  <!ELEMENT updir EMPTY>"
+    "  <!ATTLIST updir href    CDATA #REQUIRED>"
+    "  <!ELEMENT file  EMPTY>"
+    "  <!ATTLIST file  name    CDATA #REQUIRED"
+    "                  href    CDATA #REQUIRED>"
+    "  <!ELEMENT dir   EMPTY>"
+    "  <!ATTLIST dir   name    CDATA #REQUIRED"
+    "                  href    CDATA #REQUIRED>"
+    "]>"
+    "<svn version='1.9.4'>"
+    "  <index rev='0' path='Collection of Repositories'>"
+    "  </index>"
+    "</svn>";
+
+  xml_callbacks_baton_t b;
+
+  b.buf = svn_stringbuf_create_empty(pool);
+  b.parser = svn_xml_make_parser(&b, strbuf_start_elem, strbuf_end_elem,
+                                 strbuf_cdata, pool);
+
+  SVN_ERR(svn_xml_parse(b.parser, xml, strlen(xml), TRUE));
+
+  SVN_TEST_STRING_ASSERT(b.buf->data,
+                         "<svn version=1.9.4>"
+                         "  <index rev=0 path=Collection of Repositories>"
+                         "  </index>"
+                         "</svn>");
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 static int max_threads = 1;
 
@@ -242,6 +348,12 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_xml_signal_bailout() for invalid XML"),
     SVN_TEST_PASS2(test_parser_free,
                    "test svn_xml_parser_free()"),
+    SVN_TEST_PASS2(test_xml_builtin_entity_expansion,
+                   "test XML builtin entity expansion"),
+    SVN_TEST_PASS2(test_xml_custom_entity_expansion,
+                   "test XML custom entity expansion"),
+    SVN_TEST_PASS2(test_xml_doctype_declaration,
+                   "test XML doctype declaration"),
     SVN_TEST_NULL
   };
 
