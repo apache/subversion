@@ -3760,7 +3760,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge incoming moved dir with moved file"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_file_move_new_line_of_history,
                        "merge incoming file move with new line of history"),
-    SVN_TEST_OPTS_XFAIL(test_update_incoming_dir_move_with_nested_file_move,
+    SVN_TEST_OPTS_PASS(test_update_incoming_dir_move_with_nested_file_move,
                        "update incoming dir move with nested file move"),
     SVN_TEST_OPTS_PASS(test_update_incoming_added_file_text_merge,
                        "update incoming add file text merge"),

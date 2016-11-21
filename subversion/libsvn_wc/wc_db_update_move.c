@@ -2059,7 +2059,7 @@ update_incoming_moved_node(node_move_baton_t *nmb,
                    src_relpath, b->src_op_depth, wcroot, scratch_pool,
                    scratch_pool));
   SVN_ERR(get_working_info(&dst_props, &dst_checksum,
-                           &dst_children, &dst_kind, dst_relpath,
+                           &dst_children, &dst_kind, src_relpath,
                            wcroot, scratch_pool, scratch_pool));
 
   if (src_kind == svn_node_none
