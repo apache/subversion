@@ -14,6 +14,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.4
     * ra_serf: fix deleting directories with many files (issue #4557)
 
   - Server-side bugfixes:
+    * mod_authz_svn: fix crash in COPY/MOVE authorization check (CVE-2016-2168)
+    * svnserve/sasl: fix authenticating users with wrong realm (CVE-2016-2167)
     * improve documentation for AuthzSVNGroupsFile and groups-db (r1730856)
     * fsfs: reduce peak memory usage when listing large directories (r1725180)
     * fsfs: fix a rare source of incomplete dump files and reports (r1717876)
@@ -31,8 +33,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.4
     * fix ruby test suite to work with test-unit gem (r1714790)
     * allow building against KDE4 without conflict with KDE5 (r1734926)
     * fix update_tests.py#76 with SVNPathAuthz short_circuit (r1736432)
-    * build system tweaks:
-    * tweak how symbolic error names in maintainer mode (r1735179)
+    * tweak getting symbolic error names in maintainer mode (r1735179)
     * fix inconsistent behavior of inherited property API (r1717874 et al)
 
   - API changes:
@@ -888,6 +889,8 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.16
 
  User-visible changes:
   - Server-side bugfixes:
+    * mod_authz_svn: fix crash in COPY/MOVE authorization check (CVE-2016-2168)
+    * svnserve/sasl: fix authenticating users with wrong realm (CVE-2016-2167)
     * mod_authz_svn: fix authz with mod_auth_kerb/mod_auth_ntlm (issue #4602)
     * dump: don't write broken dump files in some ambiguously encoded fsfs
       repositories (issue #4554)
