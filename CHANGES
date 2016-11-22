@@ -105,7 +105,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.3
     * svn: report lock/unlock errors as failures (r1701598 et al)
     * svn: cleanup user deleted external registrations (r1705843, r1710558)
     * svn: allow simple resolving of binary file text conflicts (r1703581)
-    * svnlook: properly remove tempfiles on diff errors (r1711346)
     * ra_serf: report built- and run-time versions of libserf (r1704847)
     * ra_serf: set Content-Type header in outgoing requests (r1715224 et al)
     * svn: fix merging deletes of svn:eol-style CRLF/CR files (r1703689 et al)
@@ -118,6 +117,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.3
     * mod_dav_svn: use LimitXMLRequestBody for skel-encoded requests (r1687812)
     * svnadmin dump: preserve no-op changes (r1709388 et al, issue #4598)
     * fsfs: avoid unneeded I/O when opening transactions (r1715793)
+    * svnlook: properly remove tempfiles on diff errors (r1711346)
 
   - Client-side and server-side bugfixes:
     * fix heap overflow in svn:// protocol parser (CVE-2015-5259)
@@ -942,12 +942,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.17
   - Client-side bugfixes:
     * fix handling of newly secured subdirectories in working copy (r1724448)
     * ra_serf: fix deleting directories with many files (issue #4557)
-    * svnlook: properly remove tempfiles on diff errors (r1711346)
     * gpg-agent: properly handle passwords with percent characters (issue #4611)
     * merge: fix crash when merging to a local add (r1702299 et al)
 
   - Server-side bugfixes:
     * fsfs: fix possible data reconstruction error (issue #4658)
+    * svnlook: properly remove tempfiles on diff errors (r1711346)
 
   - Client-side and server-side bugfixes:
     * fix potential memory access bugs (r1722860 et al)
