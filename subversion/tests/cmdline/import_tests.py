@@ -446,8 +446,7 @@ def import_inherited_ignores(sbox):
   #   DIR7
   #     file7.foo
   #     DIR8.noo
-  import_tree_dir = os.path.join(os.path.dirname(sys.argv[0]),
-                                 'import_tests_data', 'import_tree')
+  import_tree_dir = os.path.join(tmp_dir, 'import_tree_' + sbox.name)
 
   # Relative WC paths of the imported tree.
   dir1_path  = os.path.join('DIR1.noo')
@@ -465,6 +464,33 @@ def import_inherited_ignores(sbox):
   dir7_path  = os.path.join('DIR6', 'DIR7')
   file7_path = os.path.join('DIR6', 'DIR7', 'file7.foo')
   dir8_path  = os.path.join('DIR6', 'DIR7', 'DIR8.noo')
+
+  import_dirs = [
+    dir1_path,
+    dir2_path,
+    dir3_path,
+    dir4_path,
+    dir5_path,
+    dir6_path,
+    dir7_path,
+    dir8_path,
+    ]
+  import_files = [
+    file1_path,
+    file2_path,
+    file3_path,
+    file4_path,
+    file5_path,
+    file6_path,
+    file7_path,
+    ]
+
+  # Create the (unversioned) tree to be imported.
+  os.mkdir(import_tree_dir)
+  for p in import_dirs:
+    os.mkdir(os.path.join(import_tree_dir, p))
+  for p in import_files:
+    svntest.main.file_write(os.path.join(import_tree_dir, p), 'A file')
 
   # Import the tree to ^/A/B/E.
   # We should not see any *.noo paths because those are blocked at the
