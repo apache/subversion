@@ -2248,32 +2248,44 @@ update_incoming_move(svn_revnum_t *old_rev,
   /* For incoming moves during update/switch, the move source is a copied
    * tree which was copied from the pre-update BASE revision while raising
    * the tree conflict, when the update attempted to delete the move source.
-   * The move destination is now in the BASE tree at DEST_RELPATH. */
-  umb.src_op_depth = relpath_depth(local_relpath);
+   * This copy is our "original" state (SRC of the diff) and the local changes
+   * on top of this copy at the top-most WORKING layer are used to drive the
+   * editor (DST of the diff).
+   *
+   * The move destination, where changes are applied to, is now in the BASE
+   * tree at DST_RELPATH. This repository-side move is the "incoming change"
+   * recorded for any tree conflicts created during the editor drive.
+   * We assume this path contains no local changes, and create local changes
+   * in DST_RELPATH corresponding to changes contained in the conflict victim.
+   */
+  umb.src_op_depth = relpath_depth(local_relpath); /* SRC of diff */
   umb.dst_op_depth = 0;
 
   SVN_ERR(verify_write_lock(wcroot, local_relpath, scratch_pool));
   SVN_ERR(verify_write_lock(wcroot, dst_relpath, scratch_pool));
 
-  SVN_ERR(svn_wc__db_depth_get_info(NULL, &new_version.node_kind,
-                                    &new_version.peg_rev,
-                                    &new_version.path_in_repos, &repos_id,
-                                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                    NULL,
-                                    wcroot, local_relpath, umb.src_op_depth,
-                                    scratch_pool, scratch_pool));
+  /* Read version info from the updated incoming post-move location. */
+  SVN_ERR(svn_wc__db_base_get_info_internal(NULL, &new_version.node_kind,
+                                            &new_version.peg_rev,
+                                            &new_version.path_in_repos,
+                                            &repos_id,
+                                            NULL, NULL, NULL, NULL, NULL,
+                                            NULL, NULL, NULL, NULL, NULL,
+                                            wcroot, dst_relpath,
+                                            scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_fetch_repos_info(&new_version.repos_url,
                                       &new_version.repos_uuid,
                                       wcroot, repos_id,
                                       scratch_pool));
 
+  /* Read version info from the victim's location. */
   SVN_ERR(svn_wc__db_depth_get_info(NULL, &old_version.node_kind,
                                     &old_version.peg_rev,
                                     &old_version.path_in_repos, &repos_id,
                                     NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                    NULL,
-                                    wcroot, dst_relpath, umb.dst_op_depth,
+                                    NULL, wcroot,
+                                    local_relpath, umb.src_op_depth,
                                     scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_fetch_repos_info(&old_version.repos_url,
