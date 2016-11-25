@@ -392,6 +392,16 @@ svn_cl__walk_conflicts(apr_array_header_t *targets,
 
       if (err)
         {
+          svn_error_t *root = svn_error_root_cause(err);
+
+          if (root->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+            {
+              /* ### Ignore. These errors can happen due to the working copy
+               * ### being re-arranged during tree conflict resolution. */
+              svn_error_clear(err);
+              continue;
+            }
+
           svn_handle_warning2(stderr, svn_error_root_cause(err), "svn: ");
           svn_error_clear(err);
           had_error = TRUE;
