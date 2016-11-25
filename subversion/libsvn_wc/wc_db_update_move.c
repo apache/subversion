@@ -2091,37 +2091,38 @@ update_incoming_moved_node(node_move_baton_t *nmb,
                            &working_children, &working_kind, victim_relpath,
                            wcroot, scratch_pool, scratch_pool));
 
-  if (orig_kind == svn_node_none
-      || (working_kind != svn_node_none && orig_kind != working_kind))
+  if (working_kind == svn_node_none
+      || (orig_kind != svn_node_none && orig_kind != working_kind))
     {
-      SVN_ERR(tc_editor_delete(nmb, dst_relpath, working_kind, orig_kind,
+      SVN_ERR(tc_editor_delete(nmb, dst_relpath, orig_kind, working_kind,
                                scratch_pool));
     }
 
   if (nmb->skip)
     return SVN_NO_ERROR;
 
-  if (orig_kind != svn_node_none && orig_kind != working_kind)
+  if (working_kind != svn_node_none && orig_kind != working_kind)
     {
-      if (orig_kind == svn_node_file || orig_kind == svn_node_symlink)
+      if (working_kind == svn_node_file || working_kind == svn_node_symlink)
         {
           SVN_ERR(tc_editor_add_file(nmb, dst_relpath, working_kind,
-                                     orig_checksum, orig_props,
+                                     working_checksum, working_props,
                                      scratch_pool));
         }
-      else if (orig_kind == svn_node_dir)
+      else if (working_kind == svn_node_dir)
         {
           SVN_ERR(tc_editor_add_directory(nmb, dst_relpath, working_kind,
-                                          orig_props, scratch_pool));
+                                          working_props, scratch_pool));
         }
     }
-  else if (orig_kind != svn_node_none)
+  else if (working_kind != svn_node_none)
     {
       svn_boolean_t props_equal;
 
-      SVN_ERR(props_match(&props_equal, orig_props, working_props, scratch_pool));
+      SVN_ERR(props_match(&props_equal, orig_props, working_props,
+                          scratch_pool));
 
-      if (orig_kind == svn_node_file || orig_kind == svn_node_symlink)
+      if (working_kind == svn_node_file || working_kind == svn_node_symlink)
         {
           svn_boolean_t is_modified;
 
@@ -2135,17 +2136,17 @@ update_incoming_moved_node(node_move_baton_t *nmb,
           if (!props_equal || is_modified)
             SVN_ERR(tc_editor_merge_local_file_change(nmb, dst_relpath,
                                                       victim_relpath,
-                                                      orig_checksum,
                                                       working_checksum,
-                                                      working_props, orig_props,
+                                                      orig_checksum,
+                                                      orig_props, working_props,
                                                       is_modified,
                                                       scratch_pool));
         }
-      else if (orig_kind == svn_node_dir)
+      else if (working_kind == svn_node_dir)
         {
           if (!props_equal)
             SVN_ERR(tc_editor_alter_directory(nmb, dst_relpath,
-                                              working_props, orig_props,
+                                              orig_props, working_props,
                                               scratch_pool));
         }
     }
