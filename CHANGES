@@ -953,7 +953,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.17
     * fix potential memory access bugs (r1722860 et al)
 
   - Bindings bugfixes:
-    * javahl: fix temporary accepting SSL server certificates (r1764851)
+    * javahl: fix temporarily accepting SSL server certificates (r1764851)
     * swig-pl: do not corrupt "{DATE}" revision variable (r1767768)
     * swig-pl: fix possible stack corruption (r1683266)
 
