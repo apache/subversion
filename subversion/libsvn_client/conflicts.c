@@ -8378,11 +8378,13 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
   svn_revnum_t incoming_new_pegrev;
   svn_node_kind_t incoming_new_kind;
   struct conflict_tree_incoming_delete_details *details;
+  svn_wc_operation_t operation;
 
   details = conflict->tree_conflict_incoming_details;
   if (details == NULL || details->moves == NULL)
     return SVN_NO_ERROR;
 
+  operation = svn_client_conflict_get_operation(conflict);
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
@@ -8459,15 +8461,27 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
       moved_to_abspath = APR_ARRAY_IDX(move_target_wc_abspaths,
                                        details->wc_move_target_idx,
                                        const char *);
-      description =
-        apr_psprintf(
-          scratch_pool, _("move '%s' to '%s' and merge"),
-          svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                          victim_abspath),
-                                 scratch_pool),
-          svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                          moved_to_abspath),
-                                 scratch_pool));
+
+      if (operation == svn_wc_operation_merge)
+        description =
+          apr_psprintf(
+            scratch_pool, _("move '%s' to '%s' and merge"),
+            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                            victim_abspath),
+                                   scratch_pool),
+            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                            moved_to_abspath),
+                                   scratch_pool));
+      else
+        description =
+          apr_psprintf(
+            scratch_pool, _("move and merge local changes from '%s' into '%s'"),
+            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                            victim_abspath),
+                                   scratch_pool),
+            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                            moved_to_abspath),
+                                   scratch_pool));
 
       add_resolution_option(
         options, conflict,
@@ -8496,11 +8510,13 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
   svn_revnum_t incoming_new_pegrev;
   svn_node_kind_t incoming_new_kind;
   struct conflict_tree_incoming_delete_details *details;
+  svn_wc_operation_t operation;
 
   details = conflict->tree_conflict_incoming_details;
   if (details == NULL || details->moves == NULL)
     return SVN_NO_ERROR;
 
+  operation = svn_client_conflict_get_operation(conflict);
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
@@ -8577,15 +8593,28 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
       moved_to_abspath = APR_ARRAY_IDX(move_target_wc_abspaths,
                                        details->wc_move_target_idx,
                                        const char *);
-      description =
-        apr_psprintf(
-          scratch_pool, _("move '%s' to '%s' and merge"),
-          svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                          victim_abspath),
-                                 scratch_pool),
-          svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                          moved_to_abspath),
-                                 scratch_pool));
+
+      if (operation == svn_wc_operation_merge)
+        description =
+          apr_psprintf(
+            scratch_pool, _("move '%s' to '%s' and merge"),
+            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                            victim_abspath),
+                                   scratch_pool),
+            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                            moved_to_abspath),
+                                   scratch_pool));
+      else
+        description =
+          apr_psprintf(
+            scratch_pool, _("move and merge local changes from '%s' into '%s'"),
+            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                            victim_abspath),
+                                   scratch_pool),
+            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                            moved_to_abspath),
+                                   scratch_pool));
+
       add_resolution_option(options, conflict,
                             svn_client_conflict_option_incoming_move_dir_merge,
                             _("Move and merge"), description,
