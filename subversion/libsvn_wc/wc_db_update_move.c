@@ -21,13 +21,15 @@
  * ====================================================================
  */
 
-/* This file implements an editor and an edit driver which are used
- * to resolve an "incoming edit, local move-away" tree conflict resulting
- * from an update (or switch).
+/* This implements editors and an edit drivers which are used to resolve
+ * "incoming edit, local move-away" and "incoming move, local edit" tree
+ * conflict resulting from an update (or switch).
  *
  * Our goal is to be able to resolve this conflict such that the end
  * result is just the same as if the user had run the update *before*
- * the local move.
+ * the local (or incoming) move.
+ *
+ * -- Updating local moves --
  *
  * When an update (or switch) produces incoming changes for a locally
  * moved-away subtree, it updates the base nodes of the moved-away tree
@@ -72,6 +74,34 @@
  *     representing a replacement, but this editor only reads from the
  *     single-op-depth layer of it, and makes no changes of any kind
  *     within the source tree.
+ *
+ * -- Updating incoming moves --
+ *
+ * When an update (or switch) produces an incoming move, it deletes the
+ * moved node at the old location from the BASE tree and adds a node at
+ * the new location to the BASE tree. If the old location contains local
+ * changes, a tree conflict is raised, and the former BASE tree which
+ * the local changes were based on (the tree conflict victim) is re-added
+ * as a copy which contains these local changes.
+ *
+ * The driver sees two NODES trees: The op-root of the copy, and the
+ * WORKING layer on top of this copy which represents the local changes.
+ * The driver will compare the two NODES trees and drive an editor to
+ * change the move destination's WORKING tree so that it now contains
+ * the local changes seen in the copy of the victim's tree.
+ *
+ * We require that no local changes exist at the destination, in order
+ * to avoid tree conflicts where the "incoming" and "local" change both
+ * originated in the working copy, because the resolver code cannot handle
+ * such tree conflicts at present.
+ * 
+ * The whole drive occurs as one single wc.db transaction.  At the end
+ * of the transaction the destination NODES table should have a WORKING
+ * layer that is equivalent to the WORKING layer found in the copied victim
+ * tree, and there should be workqueue items to make any required changes
+ * to working files/directories in the move destination, and there should be
+ * tree-conflicts in the move destination where it was not possible to
+ * update the working files/directories.
  */
 
 #define SVN_WC__I_AM_WC_DB
