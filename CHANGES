@@ -34,7 +34,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.5
 
   - Bindings bugfixes:
     * swig-pl: do not corrupt "{DATE}" revision variable (r1767768)
-    * javahl: fix temporary accepting SSL server certificates (r1764851)
+    * javahl: fix temporarily accepting SSL server certificates (r1764851)
     * swig-pl: fix possible stack corruption (r1683266, r1683267)
 
  Developer-visible changes:
