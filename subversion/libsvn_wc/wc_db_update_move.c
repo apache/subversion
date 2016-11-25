@@ -852,6 +852,115 @@ tc_editor_add_file(node_move_baton_t *nmb,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+tc_editor_incoming_add_file(node_move_baton_t *nmb,
+                            const char *dst_relpath,
+                            svn_node_kind_t old_kind,
+                            const svn_checksum_t *checksum,
+                            apr_hash_t *props,
+                            const char *src_relpath,
+                            const char *content_abspath,
+                            apr_pool_t *scratch_pool)
+{
+  update_move_baton_t *b = nmb->umb;
+  svn_wc_conflict_reason_t reason = svn_wc_conflict_reason_unversioned;
+  svn_node_kind_t wc_kind;
+  const char *dst_abspath;
+  svn_skel_t *work_items = NULL;
+  svn_skel_t *work_item = NULL;
+  svn_skel_t *conflict = NULL;
+
+  SVN_ERR(mark_parent_edited(nmb, scratch_pool));
+  if (nmb->skip)
+    return SVN_NO_ERROR;
+
+  dst_abspath = svn_dirent_join(b->wcroot->abspath, dst_relpath, scratch_pool);
+
+  /* Check for unversioned tree-conflict */
+  SVN_ERR(svn_io_check_path(dst_abspath, &wc_kind, scratch_pool));
+
+  if (wc_kind != svn_node_none
+      && (nmb->shadowed || wc_kind != old_kind)) /* replace */
+    {
+      SVN_ERR(create_node_tree_conflict(&conflict, nmb, dst_relpath,
+                                        old_kind, svn_node_file,
+                                        reason,
+                                        (old_kind == svn_node_none)
+                                          ? svn_wc_conflict_action_add
+                                          : svn_wc_conflict_action_replace,
+                                        NULL,
+                                        scratch_pool, scratch_pool));
+      nmb->skip = TRUE;
+    }
+  else
+    {
+      svn_sqlite__stmt_t *stmt;
+      svn_boolean_t have_row;
+      const char *dst_parent_relpath = svn_relpath_dirname(dst_relpath,
+                                                           scratch_pool);
+      const char *src_abspath = svn_dirent_join(b->wcroot->abspath,
+                                                src_relpath, scratch_pool);
+
+      /* Add a WORKING row for the new file, based on the source. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                        STMT_INSERT_WORKING_NODE_COPY_FROM));
+      SVN_ERR(svn_sqlite__bindf(stmt, "issdst",
+                    b->wcroot->wc_id, src_relpath,
+                    dst_relpath, relpath_depth(dst_relpath),
+                    dst_parent_relpath,
+                    presence_map, svn_wc__db_status_normal));
+      SVN_ERR(svn_sqlite__step_done(stmt));
+
+      /* Copy properties over.  ### This loses changelist association. */
+      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                        STMT_SELECT_ACTUAL_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id, src_relpath));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      if (have_row)
+        {
+          apr_size_t props_size;
+          const char *properties;
+
+          properties = svn_sqlite__column_blob(stmt, 1, &props_size,
+                                               scratch_pool);
+          SVN_ERR(svn_sqlite__reset(stmt));
+          SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
+                                            STMT_INSERT_ACTUAL_NODE));
+          SVN_ERR(svn_sqlite__bindf(stmt, "issbs",
+                                    b->wcroot->wc_id, dst_relpath,
+                                    svn_relpath_dirname(dst_relpath,
+                                                        scratch_pool),
+                                    properties, props_size, NULL));
+          SVN_ERR(svn_sqlite__step(&have_row, stmt));
+        }
+
+      /* Update working file. */
+      SVN_ERR(svn_wc__wq_build_file_install(&work_item, b->db, dst_abspath,
+                                            src_abspath,
+                                            FALSE /* FIXME: use_commit_times?*/,
+                                            TRUE  /* record_file_info */,
+                                            scratch_pool, scratch_pool));
+      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+
+      /* Queue removal of temporary content copy. */
+      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, b->db,
+                                           b->wcroot->abspath, src_abspath,
+                                           scratch_pool, scratch_pool));
+    
+      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+    }
+
+  SVN_ERR(update_move_list_add(b->wcroot, dst_relpath, b->db,
+                               (old_kind == svn_node_none)
+                                  ? svn_wc_notify_update_add
+                                  : svn_wc_notify_update_replace,
+                               svn_node_file,
+                               svn_wc_notify_state_inapplicable,
+                               svn_wc_notify_state_inapplicable,
+                               conflict, work_items, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 /* All the info we need about one version of a working node. */
 typedef struct working_node_version_t
 {
@@ -2192,9 +2301,32 @@ update_incoming_moved_node(node_move_baton_t *nmb,
     {
       if (working_kind == svn_node_file || working_kind == svn_node_symlink)
         {
-          SVN_ERR(tc_editor_add_file(nmb, dst_relpath, working_kind,
-                                     working_checksum, working_props,
-                                     scratch_pool));
+          const char *victim_abspath;
+          const char *wctemp_abspath;
+          svn_stream_t *working_stream;
+          svn_stream_t *temp_stream;
+          const char *temp_abspath;
+
+          /* Copy the victim's content to a safe place and add it from there. */
+          SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&wctemp_abspath, b->db,
+                                                 b->wcroot->abspath,
+                                                 scratch_pool,
+                                                 scratch_pool));
+
+          victim_abspath = svn_dirent_join(b->wcroot->abspath,
+                                           victim_relpath, scratch_pool);
+          SVN_ERR(svn_stream_open_readonly(&working_stream, victim_abspath,
+                                           scratch_pool, scratch_pool));
+          SVN_ERR(svn_stream_open_unique(&temp_stream, &temp_abspath,
+                                         wctemp_abspath, svn_io_file_del_none,
+                                         scratch_pool, scratch_pool));
+          SVN_ERR(svn_stream_copy3(working_stream, temp_stream, NULL, NULL,
+                                   scratch_pool));
+
+          SVN_ERR(tc_editor_incoming_add_file(nmb, dst_relpath, working_kind,
+                                              working_checksum, working_props,
+                                              victim_relpath, temp_abspath,
+                                              scratch_pool));
         }
       else if (working_kind == svn_node_dir)
         {
