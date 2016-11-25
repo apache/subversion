@@ -2323,7 +2323,7 @@ update_incoming_moved_node(node_move_baton_t *nmb,
           SVN_ERR(svn_stream_copy3(working_stream, temp_stream, NULL, NULL,
                                    scratch_pool));
 
-          SVN_ERR(tc_editor_incoming_add_file(nmb, dst_relpath, working_kind,
+          SVN_ERR(tc_editor_incoming_add_file(nmb, dst_relpath, orig_kind,
                                               working_checksum, working_props,
                                               victim_relpath, temp_abspath,
                                               scratch_pool));
