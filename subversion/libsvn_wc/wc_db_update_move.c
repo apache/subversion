@@ -521,7 +521,7 @@ create_node_tree_conflict(svn_skel_t **conflict_p,
   update_move_baton_t *umb = nmb->umb;
   const char *dst_repos_relpath;
   const char *dst_root_relpath = svn_relpath_prefix(nmb->dst_relpath,
-                                                    nmb->umb->dst_op_depth,
+                                                    umb->dst_op_depth,
                                                     scratch_pool);
 
   dst_repos_relpath =
