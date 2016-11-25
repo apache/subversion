@@ -530,8 +530,6 @@ create_node_tree_conflict(svn_skel_t **conflict_p,
                                                        nmb->dst_relpath),
                              scratch_pool);
 
-
-
   return svn_error_trace(
             create_tree_conflict(conflict_p, umb->wcroot, dst_local_relpath,
                                  svn_relpath_prefix(dst_local_relpath,
