@@ -2063,8 +2063,8 @@ get_working_info(apr_hash_t **props,
   return SVN_NO_ERROR;
 }
 
-/* ### Drive TC_EDITOR so as to ...
- */
+/* Apply changes found in the victim node at SRC_RELPATH to the incoming
+ * move at DST_RELPATH. */
 static svn_error_t *
 update_incoming_moved_node(node_move_baton_t *nmb,
                            svn_wc__db_wcroot_t *wcroot,
@@ -2305,7 +2305,7 @@ update_incoming_move(svn_revnum_t *old_rev,
 
   /* We walk the move source, comparing each node with the equivalent node at
    * the move destination and applying any local changes to nodes at the move
-   destination. */
+   * destination. */
   SVN_ERR(update_incoming_moved_node(&nmb, wcroot, local_relpath, dst_relpath,
                                      scratch_pool));
 
