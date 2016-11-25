@@ -2288,11 +2288,6 @@ update_incoming_moved_node(node_move_baton_t *nmb,
           cnmb.dst_relpath = svn_relpath_join(dst_relpath, child_name,
                                               iterpool);
 
-          if (!cnmb.shadowed)
-            SVN_ERR(check_node_shadowed(&cnmb.shadowed, wcroot,
-                                        cnmb.dst_relpath, b->dst_op_depth,
-                                        iterpool));
-
           SVN_ERR(update_incoming_moved_node(&cnmb, wcroot, cnmb.src_relpath,
                                              cnmb.dst_relpath, iterpool));
 
