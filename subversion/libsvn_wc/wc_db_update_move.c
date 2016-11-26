@@ -2459,6 +2459,7 @@ update_incoming_move(svn_revnum_t *old_rev,
   svn_wc_conflict_version_t new_version;
   apr_int64_t repos_id;
   node_move_baton_t nmb = { 0 };
+  svn_boolean_t is_modified;
 
   SVN_ERR_ASSERT(svn_relpath_skip_ancestor(dst_relpath, local_relpath) == NULL);
 
@@ -2480,6 +2481,28 @@ update_incoming_move(svn_revnum_t *old_rev,
 
   SVN_ERR(verify_write_lock(wcroot, local_relpath, scratch_pool));
   SVN_ERR(verify_write_lock(wcroot, dst_relpath, scratch_pool));
+
+  /* Make sure there are no local modifications in the move destination. */
+  SVN_ERR(svn_wc__node_has_local_mods(&is_modified, NULL, db,
+                                      svn_dirent_join(wcroot->abspath,
+                                                      dst_relpath,
+                                                      scratch_pool),
+                                      TRUE, cancel_func, cancel_baton,
+                                      scratch_pool));
+  if (is_modified)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Cannot merge local changes from '%s' because "
+                               "'%s' already contains other local changes "
+                               "(please commit or revert these other changes "
+                               "and try again)"),
+                             svn_dirent_local_style(
+                               svn_dirent_join(wcroot->abspath, local_relpath,
+                                               scratch_pool),
+                               scratch_pool),
+                             svn_dirent_local_style(
+                               svn_dirent_join(wcroot->abspath, dst_relpath,
+                                               scratch_pool),
+                               scratch_pool));
 
   /* Read version info from the updated incoming post-move location. */
   SVN_ERR(svn_wc__db_base_get_info_internal(NULL, &new_version.node_kind,
