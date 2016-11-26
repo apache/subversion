@@ -977,7 +977,10 @@ tc_editor_incoming_add_file(node_move_baton_t *nmb,
 
   SVN_ERR(mark_parent_edited(nmb, scratch_pool));
   if (nmb->skip)
-    return SVN_NO_ERROR;
+    {
+      SVN_ERR(svn_io_remove_file2(content_abspath, TRUE, scratch_pool));
+      return SVN_NO_ERROR;
+    }
 
   dst_abspath = svn_dirent_join(b->wcroot->abspath, dst_relpath, scratch_pool);
 
@@ -995,6 +998,7 @@ tc_editor_incoming_add_file(node_move_baton_t *nmb,
                                         NULL,
                                         scratch_pool, scratch_pool));
       nmb->skip = TRUE;
+      SVN_ERR(svn_io_remove_file2(content_abspath, TRUE, scratch_pool));
     }
   else
     {
@@ -2384,6 +2388,7 @@ update_incoming_moved_node(node_move_baton_t *nmb,
           svn_stream_t *working_stream;
           svn_stream_t *temp_stream;
           const char *temp_abspath;
+          svn_error_t *err;
 
           /* Copy the victim's content to a safe place and add it from there. */
           SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&wctemp_abspath, b->db,
@@ -2398,9 +2403,18 @@ update_incoming_moved_node(node_move_baton_t *nmb,
           SVN_ERR(svn_stream_open_unique(&temp_stream, &temp_abspath,
                                          wctemp_abspath, svn_io_file_del_none,
                                          scratch_pool, scratch_pool));
-          SVN_ERR(svn_stream_copy3(working_stream, temp_stream, NULL, NULL,
-                                   scratch_pool));
+          err = svn_stream_copy3(working_stream, temp_stream, 
+                                 b->cancel_func, b->cancel_baton,
+                                 scratch_pool);
+          if (err && err->apr_err == SVN_ERR_CANCELLED)
+            {
+              svn_error_t *err2;
 
+              err2 = svn_io_remove_file2(temp_abspath, TRUE, scratch_pool);
+              return svn_error_compose_create(err, err2);
+            }
+          else
+            SVN_ERR(err);
           SVN_ERR(tc_editor_incoming_add_file(nmb, dst_relpath, orig_kind,
                                               working_checksum, working_props,
                                               victim_relpath, temp_abspath,
