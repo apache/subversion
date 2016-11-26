@@ -2395,7 +2395,6 @@ update_incoming_moved_node(node_move_baton_t *nmb,
                                                  b->wcroot->abspath,
                                                  scratch_pool,
                                                  scratch_pool));
-
           victim_abspath = svn_dirent_join(b->wcroot->abspath,
                                            victim_relpath, scratch_pool);
           SVN_ERR(svn_stream_open_readonly(&working_stream, victim_abspath,
@@ -2415,6 +2414,7 @@ update_incoming_moved_node(node_move_baton_t *nmb,
             }
           else
             SVN_ERR(err);
+
           SVN_ERR(tc_editor_incoming_add_file(nmb, dst_relpath, orig_kind,
                                               working_checksum, working_props,
                                               victim_relpath, temp_abspath,
