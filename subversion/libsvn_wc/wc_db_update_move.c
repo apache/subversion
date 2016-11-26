@@ -2453,7 +2453,7 @@ update_incoming_moved_node(node_move_baton_t *nmb,
   if (nmb->skip)
     return SVN_NO_ERROR;
 
-  if (orig_kind == svn_node_dir)
+  if (working_kind == svn_node_dir)
     {
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
       int i = 0, j = 0;
