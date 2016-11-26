@@ -1000,6 +1000,8 @@ create_conflict_markers(svn_skel_t **work_items,
   if (part == NULL)
     part = svn_relpath_skip_ancestor(conflicted_version->path_in_repos,
                                      repos_relpath);
+  SVN_ERR_ASSERT(part != NULL);
+
   conflicted_version->path_in_repos
     = svn_relpath_join(conflicted_version->path_in_repos, part, scratch_pool);
   original_version->path_in_repos = repos_relpath;
