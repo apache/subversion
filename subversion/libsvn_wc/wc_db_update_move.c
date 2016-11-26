@@ -1976,28 +1976,30 @@ suitable_for_move(svn_wc__db_wcroot_t *wcroot,
   while (have_row)
     {
       svn_revnum_t node_revision = svn_sqlite__column_revnum(stmt, 2);
-      const char *relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      const char *relpath;
 
       svn_pool_clear(iterpool);
 
-      relpath = svn_relpath_skip_ancestor(local_relpath, relpath);
+      relpath = svn_relpath_skip_ancestor(local_relpath, child_relpath);
       relpath = svn_relpath_join(repos_relpath, relpath, iterpool);
 
       if (revision != node_revision)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                  svn_sqlite__reset(stmt),
-                                 _("Cannot apply update because move source "
-                                   "%s' is a mixed-revision working copy"),
+                                 _("Cannot apply update because '%s' is a "
+                                   "mixed-revision working copy (please "
+                                   "update and try again)"),
                                  path_for_error_message(wcroot, local_relpath,
                                                         scratch_pool));
 
       if (strcmp(relpath, svn_sqlite__column_text(stmt, 1, NULL)))
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
                                  svn_sqlite__reset(stmt),
-                                 _("Cannot apply update because move source "
-                                   "'%s' is a switched subtree"),
-                                 path_for_error_message(wcroot,
-                                                        local_relpath,
+                                 _("Cannot apply update because '%s' is a "
+                                   "switched path (please switch it back to "
+                                   "its original URL and try again)"),
+                                 path_for_error_message(wcroot, child_relpath,
                                                         scratch_pool));
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
