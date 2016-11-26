@@ -2636,8 +2636,8 @@ update_incoming_move(svn_revnum_t *old_rev,
   /* nmb.edited = FALSE; */
   /* nmb.skip_children = FALSE; */
 
-  /* We walk the move source, comparing each node with the equivalent node at
-   * the move destination and applying any local changes to nodes at the move
+  /* We walk the conflict victim, comparing each node with the equivalent node
+   * at the WORKING layer, applying any local changes to nodes at the move
    * destination. */
   SVN_ERR(update_incoming_moved_node(&nmb, wcroot, local_relpath, dst_relpath,
                                      scratch_pool));
