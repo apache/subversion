@@ -2462,6 +2462,7 @@ update_incoming_move(svn_revnum_t *old_rev,
   apr_int64_t repos_id;
   node_move_baton_t nmb = { 0 };
   svn_boolean_t is_modified;
+  svn_boolean_t is_switched;
 
   SVN_ERR_ASSERT(svn_relpath_skip_ancestor(dst_relpath, local_relpath) == NULL);
 
@@ -2497,6 +2498,25 @@ update_incoming_move(svn_revnum_t *old_rev,
                                "'%s' already contains other local changes "
                                "(please commit or revert these other changes "
                                "and try again)"),
+                             svn_dirent_local_style(
+                               svn_dirent_join(wcroot->abspath, local_relpath,
+                                               scratch_pool),
+                               scratch_pool),
+                             svn_dirent_local_style(
+                               svn_dirent_join(wcroot->abspath, dst_relpath,
+                                               scratch_pool),
+                               scratch_pool));
+
+  /* Make sure the move destination contains no switched subtrees. */
+  SVN_ERR(svn_wc__db_has_switched_subtrees(&is_switched, db,
+                                           svn_dirent_join(wcroot->abspath,
+                                                           dst_relpath,
+                                                           scratch_pool),
+                                            NULL, scratch_pool));
+  if (is_switched)
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Cannot merge local changes from '%s' because "
+                               "'%s' contains switched subtrees."),
                              svn_dirent_local_style(
                                svn_dirent_join(wcroot->abspath, local_relpath,
                                                scratch_pool),
