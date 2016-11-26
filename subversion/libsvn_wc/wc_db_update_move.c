@@ -1471,12 +1471,14 @@ tc_editor_merge_local_file_change(node_move_baton_t *nmb,
     {
       const char *old_pristine_abspath;
       const char *src_abspath;
+      const char *label_left;
+      const char *label_target;
 
       /*
        * Run a 3-way merge to update the file at its post-move location, using
        * the pre-move file's pristine text as the merge base, the post-move
-       * content as the merge-left version, and the current content of the
-       * working file at the pre-move location as the merge-right version.
+       * content as the merge-right version, and the current content of the
+       * working file at the pre-move location as the merge-left version.
        */
       SVN_ERR(svn_wc__db_pristine_get_path(&old_pristine_abspath,
                                            b->db, b->wcroot->abspath,
@@ -1484,13 +1486,18 @@ tc_editor_merge_local_file_change(node_move_baton_t *nmb,
                                            scratch_pool, scratch_pool));
       src_abspath = svn_dirent_join(b->wcroot->abspath, src_relpath,
                                     scratch_pool);
+      label_left = apr_psprintf(scratch_pool, ".r%ld", b->old_version->peg_rev);
+      label_target = apr_psprintf(scratch_pool, ".r%ld",
+                                  b->new_version->peg_rev);
       SVN_ERR(svn_wc__internal_merge(&work_item, &conflict_skel,
                                      &merge_outcome, b->db,
                                      old_pristine_abspath,
                                      src_abspath,
                                      dst_abspath,
                                      dst_abspath,
-                                     NULL, NULL, NULL, /* diff labels */
+                                     label_left,
+                                     _(".working"),
+                                     label_target,
                                      actual_props,
                                      FALSE, /* dry-run */
                                      NULL, /* diff3-cmd */
