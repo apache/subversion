@@ -984,8 +984,7 @@ tc_editor_incoming_add_file(node_move_baton_t *nmb,
   /* Check for unversioned tree-conflict */
   SVN_ERR(svn_io_check_path(dst_abspath, &wc_kind, scratch_pool));
 
-  if (wc_kind != svn_node_none
-      && (nmb->shadowed || wc_kind != old_kind)) /* replace */
+  if (wc_kind != svn_node_none && wc_kind != old_kind) /* replace */
     {
       SVN_ERR(create_node_tree_conflict(&conflict, nmb, dst_relpath,
                                         old_kind, svn_node_file,
