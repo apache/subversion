@@ -765,6 +765,53 @@ tc_editor_add_directory(node_move_baton_t *nmb,
 }
 
 static svn_error_t *
+copy_working_node(const char *src_relpath,
+                  const char *dst_relpath,
+                  svn_wc__db_wcroot_t *wcroot,
+                  apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  const char *dst_parent_relpath = svn_relpath_dirname(dst_relpath,
+                                                       scratch_pool);
+
+  /* Add a WORKING row for the new node, based on the source. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt,wcroot->sdb,
+                                    STMT_INSERT_WORKING_NODE_COPY_FROM));
+  SVN_ERR(svn_sqlite__bindf(stmt, "issdst", wcroot->wc_id, src_relpath,
+                            dst_relpath, relpath_depth(dst_relpath),
+                            dst_parent_relpath, presence_map,
+                            svn_wc__db_status_normal));
+  SVN_ERR(svn_sqlite__step_done(stmt));
+
+  /* Copy properties over.  ### This loses changelist association. */
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SELECT_ACTUAL_NODE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, src_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  if (have_row)
+    {
+      apr_size_t props_size;
+      const char *properties;
+
+      properties = svn_sqlite__column_blob(stmt, 1, &props_size,
+                                           scratch_pool);
+      SVN_ERR(svn_sqlite__reset(stmt));
+      SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                        STMT_INSERT_ACTUAL_NODE));
+      SVN_ERR(svn_sqlite__bindf(stmt, "issbs",
+                                wcroot->wc_id, dst_relpath,
+                                svn_relpath_dirname(dst_relpath,
+                                                    scratch_pool),
+                                properties, props_size, NULL));
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 tc_editor_incoming_add_directory(node_move_baton_t *nmb,
                                  const char *dst_relpath,
                                  svn_node_kind_t old_kind,
@@ -805,45 +852,8 @@ tc_editor_incoming_add_directory(node_move_baton_t *nmb,
     }
   else
     {
-      svn_sqlite__stmt_t *stmt;
-      svn_boolean_t have_row;
-      const char *dst_parent_relpath = svn_relpath_dirname(dst_relpath,
-                                                           scratch_pool);
-
-      /* Add a WORKING row for the new dir, based on the source. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                        STMT_INSERT_WORKING_NODE_COPY_FROM));
-      SVN_ERR(svn_sqlite__bindf(stmt, "issdst",
-                    b->wcroot->wc_id, src_relpath,
-                    dst_relpath, relpath_depth(dst_relpath),
-                    dst_parent_relpath,
-                    presence_map, svn_wc__db_status_normal));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-
-      /* Copy properties over.  ### This loses changelist association. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                        STMT_SELECT_ACTUAL_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id, src_relpath));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      if (have_row)
-        {
-          apr_size_t props_size;
-          const char *properties;
-
-          properties = svn_sqlite__column_blob(stmt, 1, &props_size,
-                                               scratch_pool);
-          SVN_ERR(svn_sqlite__reset(stmt));
-          SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                            STMT_INSERT_ACTUAL_NODE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "issbs",
-                                    b->wcroot->wc_id, dst_relpath,
-                                    svn_relpath_dirname(dst_relpath,
-                                                        scratch_pool),
-                                    properties, props_size, NULL));
-          SVN_ERR(svn_sqlite__step(&have_row, stmt));
-        }
-      SVN_ERR(svn_sqlite__reset(stmt));
-
+      SVN_ERR(copy_working_node(src_relpath, dst_relpath, b->wcroot,
+                                scratch_pool));
       SVN_ERR(svn_wc__wq_build_dir_install(&work_item, b->db, dst_abspath,
                                            scratch_pool, scratch_pool));
     }
@@ -989,47 +999,14 @@ tc_editor_incoming_add_file(node_move_baton_t *nmb,
     }
   else
     {
-      svn_sqlite__stmt_t *stmt;
-      svn_boolean_t have_row;
-      const char *dst_parent_relpath = svn_relpath_dirname(dst_relpath,
-                                                           scratch_pool);
-      const char *src_abspath = svn_dirent_join(b->wcroot->abspath,
-                                                src_relpath, scratch_pool);
+      const char *src_abspath;
 
-      /* Add a WORKING row for the new file, based on the source. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                        STMT_INSERT_WORKING_NODE_COPY_FROM));
-      SVN_ERR(svn_sqlite__bindf(stmt, "issdst",
-                    b->wcroot->wc_id, src_relpath,
-                    dst_relpath, relpath_depth(dst_relpath),
-                    dst_parent_relpath,
-                    presence_map, svn_wc__db_status_normal));
-      SVN_ERR(svn_sqlite__step_done(stmt));
-
-      /* Copy properties over.  ### This loses changelist association. */
-      SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                        STMT_SELECT_ACTUAL_NODE));
-      SVN_ERR(svn_sqlite__bindf(stmt, "is", b->wcroot->wc_id, src_relpath));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
-      if (have_row)
-        {
-          apr_size_t props_size;
-          const char *properties;
-
-          properties = svn_sqlite__column_blob(stmt, 1, &props_size,
-                                               scratch_pool);
-          SVN_ERR(svn_sqlite__reset(stmt));
-          SVN_ERR(svn_sqlite__get_statement(&stmt, b->wcroot->sdb,
-                                            STMT_INSERT_ACTUAL_NODE));
-          SVN_ERR(svn_sqlite__bindf(stmt, "issbs",
-                                    b->wcroot->wc_id, dst_relpath,
-                                    svn_relpath_dirname(dst_relpath,
-                                                        scratch_pool),
-                                    properties, props_size, NULL));
-          SVN_ERR(svn_sqlite__step(&have_row, stmt));
-        }
+      SVN_ERR(copy_working_node(src_relpath, dst_relpath, b->wcroot,
+                                scratch_pool));
 
       /* Update working file. */
+      src_abspath = svn_dirent_join(b->wcroot->abspath, src_relpath,
+                                    scratch_pool);
       SVN_ERR(svn_wc__wq_build_file_install(&work_item, b->db, dst_abspath,
                                             src_abspath,
                                             FALSE /* FIXME: use_commit_times?*/,
