@@ -6855,6 +6855,7 @@ get_keywords(apr_hash_t **keywords,
   apr_hash_t *props;
   svn_string_t *keywords_val;
 
+  *keywords = NULL;
   SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, local_abspath,
                             scratch_pool, scratch_pool));
   keywords_val = svn_hash_gets(props, SVN_PROP_KEYWORDS);
