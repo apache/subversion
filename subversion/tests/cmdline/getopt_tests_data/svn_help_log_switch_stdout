@@ -19,6 +19,17 @@ usage: 1. log [PATH][@REV]
   reverse ranges is allowed.
 
   With -v, also print all affected paths with each log message.
+  Each changed path is preceded with a symbol describing the change:
+    A: The path was added or copied.
+    D: The path was deleted.
+    R: The path was replaced (deleted and re-added in the same revision).
+    M: The path's file and/or property content was modified.
+  If an added or replaced path was copied from somewhere else, the copy
+  source path and revision are shown in parentheses.
+  If a file or directory was moved from one path to another with 'svn move'
+  the old path will be listed as deleted and the new path will be listed
+  as copied from the old path at a prior revision.
+
   With -q, don't print the log message body itself (note that this is
   compatible with -v).
 
@@ -72,6 +83,11 @@ usage: 1. log [PATH][@REV]
     Show the log message for the revision in which /branches/foo
     was created:
       svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo
+
+    If ^/trunk/foo.c was moved to ^/trunk/bar.c' in revision 22, 'svn log -v'
+    shows a deletion and a copy in its changed paths list, such as:
+       D /trunk/foo.c
+       A /trunk/bar.c (from /trunk/foo.c:21)
 
 Valid options:
   -r [--revision] ARG      : ARG (some commands also take ARG1:ARG2 range)
