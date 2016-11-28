@@ -3501,7 +3501,7 @@ test_merge_incoming_move_file_prop_merge_conflict(const svn_test_opts_t *opts,
   opt_rev.value.number = SVN_INVALID_REVNUM;
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, pool));
 
-  /* Merge "A" to "A1". */
+  /* Merge "trunk" to "branch". */
   SVN_ERR(svn_client_merge_peg5(svn_path_url_add_component2(b->repos_url, "A",
                                                             pool),
                                 NULL, &opt_rev, sbox_wc_path(b, "A1"),
@@ -3549,10 +3549,7 @@ test_merge_incoming_move_file_prop_merge_conflict(const svn_test_opts_t *opts,
             conflict, svn_client_conflict_option_incoming_move_file_text_merge,
             ctx, pool));
 
-  /* We should now have a property conflict in the file "mu-moved".
-   *
-   * XFAIL: Currently, there is no property conflict.
-   */
+  /* We should now have a property conflict in the file "mu-moved". */
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A1/mu-moved"),
                                   ctx, pool, pool));
   SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
@@ -3764,8 +3761,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "update incoming dir move with nested file move"),
     SVN_TEST_OPTS_PASS(test_update_incoming_added_file_text_merge,
                        "update incoming add file text merge"),
-    SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_file_prop_merge_conflict,
-                        "merge incoming move file merge with prop conflict"),
+    SVN_TEST_OPTS_PASS(test_merge_incoming_move_file_prop_merge_conflict,
+                       "merge incoming move file merge with prop conflict"),
     SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_file_text_merge_keywords,
                         "merge incoming move file merge with keywords"),
     SVN_TEST_NULL

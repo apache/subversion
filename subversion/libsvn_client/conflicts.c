@@ -6874,6 +6874,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   const char *wc_tmpdir;
   const char *ancestor_abspath;
   svn_stream_t *ancestor_stream;
+  apr_hash_t *ancestor_props;
   apr_hash_t *victim_props;
   apr_hash_t *move_target_props;
   const char *ancestor_url;
@@ -6886,6 +6887,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   apr_array_header_t *possible_moved_to_abspaths;
   const char *moved_to_abspath;
   const char *incoming_abspath;
+  apr_hash_index_t *hi;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
   operation = svn_client_conflict_get_operation(conflict);
@@ -6940,7 +6942,17 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
                                                scratch_pool, scratch_pool));
   SVN_ERR(svn_ra_get_file(ra_session, "", incoming_old_pegrev,
                           ancestor_stream, NULL, /* fetched_rev */
-                          NULL /* we don't need these props */, scratch_pool));
+                          &ancestor_props, scratch_pool));
+  /* Delete entry and wc props from the returned set of properties. */
+  for (hi = apr_hash_first(scratch_pool, ancestor_props);
+       hi != NULL;
+       hi = apr_hash_next(hi))
+    {
+      const char *propname = apr_hash_this_key(hi);
+
+      if (!svn_wc_is_normal_prop(propname))
+        svn_hash_sets(ancestor_props, propname, NULL);
+    }
 
   /* Close stream to flush ancestor file to disk. */
   SVN_ERR(svn_stream_close(ancestor_stream));
@@ -6978,7 +6990,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
     goto unlock_wc;
 
   /* Create a property diff for the files. */
-  err = svn_prop_diffs(&propdiffs, victim_props, move_target_props,
+  err = svn_prop_diffs(&propdiffs, move_target_props, victim_props,
                        scratch_pool);
   if (err)
     goto unlock_wc;
@@ -7041,7 +7053,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
                       NULL, NULL, /* conflict versions */
                       FALSE, /* dry run */
                       NULL, NULL, /* diff3_cmd, merge_options */
-                      NULL, propdiffs,
+                      ancestor_props, propdiffs,
                       NULL, NULL, /* conflict func/baton */
                       NULL, NULL, /* don't allow user to cancel here */
                       scratch_pool);
