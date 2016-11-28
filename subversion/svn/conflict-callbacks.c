@@ -1436,6 +1436,7 @@ build_tree_conflict_options(
   apr_array_header_t **options,
   apr_array_header_t **possible_moved_to_repos_relpaths,
   apr_array_header_t **possible_moved_to_abspaths,
+  svn_boolean_t *all_options_are_dumb,
   svn_client_conflict_t *conflict,
   svn_client_ctx_t *ctx,
   apr_pool_t *result_pool,
@@ -1446,6 +1447,9 @@ build_tree_conflict_options(
   apr_size_t nopt;
   int i;
   apr_pool_t *iterpool;
+
+  if (all_options_are_dumb != NULL)
+    *all_options_are_dumb = TRUE;
 
   SVN_ERR(svn_client_conflict_tree_get_resolution_options(&builtin_options,
                                                           conflict, ctx,
@@ -1478,6 +1482,13 @@ build_tree_conflict_options(
       APR_ARRAY_PUSH(*options, client_option_t *) = opt;
 
       id = svn_client_conflict_option_get_id(builtin_option);
+
+      /* Check if we got a "smart" tree conflict option. */
+      if (all_options_are_dumb != NULL &&
+          *all_options_are_dumb &&
+          id != svn_client_conflict_option_postpone &&
+          id != svn_client_conflict_option_accept_current_wc_state)
+        *all_options_are_dumb = FALSE;
 
       if (id == svn_client_conflict_option_incoming_move_file_text_merge ||
           id == svn_client_conflict_option_incoming_move_dir_merge)
@@ -1643,6 +1654,7 @@ handle_tree_conflict(svn_boolean_t *resolved,
   const char *incoming_change_description;
   apr_array_header_t *possible_moved_to_repos_relpaths;
   apr_array_header_t *possible_moved_to_abspaths;
+  svn_boolean_t all_options_are_dumb;
 
   option_id = svn_client_conflict_option_unspecified;
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
@@ -1666,8 +1678,16 @@ handle_tree_conflict(svn_boolean_t *resolved,
   SVN_ERR(build_tree_conflict_options(&tree_conflict_options,
                                       &possible_moved_to_repos_relpaths,
                                       &possible_moved_to_abspaths,
+                                      &all_options_are_dumb,
                                       conflict, ctx,
                                       scratch_pool, scratch_pool));
+
+  if (all_options_are_dumb)
+    SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,
+                                _("\nSubversion is not smart enough to resolve "
+                                  "this tree conflict automatically!\nSee 'svn "
+                                  "help resolve' for more information.\n\n")));
+    
   iterpool = svn_pool_create(scratch_pool);
   while (1)
     {
@@ -1725,7 +1745,7 @@ handle_tree_conflict(svn_boolean_t *resolved,
                         &tree_conflict_options,
                         &possible_moved_to_repos_relpaths,
                         &possible_moved_to_abspaths,
-                        conflict, ctx,
+                        NULL, conflict, ctx,
                         scratch_pool, scratch_pool));
             }
           continue;
@@ -1767,7 +1787,7 @@ handle_tree_conflict(svn_boolean_t *resolved,
                         &tree_conflict_options,
                         &possible_moved_to_repos_relpaths,
                         &possible_moved_to_abspaths,
-                        conflict, ctx,
+                        NULL, conflict, ctx,
                         scratch_pool, scratch_pool));
             }
           continue;
