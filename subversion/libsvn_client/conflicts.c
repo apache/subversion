@@ -5254,6 +5254,58 @@ filter_props(apr_hash_t *props, apr_pool_t *scratch_pool)
     }
 }
 
+/* Get KEYWORDS for LOCAL_ABSPATH.
+ * WC_CTX is a context for the working copy the patch is applied to.
+ * Use RESULT_POOL for allocations of fields in TARGET.
+ * Use SCRATCH_POOL for all other allocations. */
+static svn_error_t *
+get_keywords(apr_hash_t **keywords,
+             svn_wc_context_t *wc_ctx,
+             const char *local_abspath,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  apr_hash_t *props;
+  svn_string_t *keywords_val;
+
+  *keywords = NULL;
+  SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, local_abspath,
+                            scratch_pool, scratch_pool));
+  keywords_val = svn_hash_gets(props, SVN_PROP_KEYWORDS);
+  if (keywords_val)
+    {
+      svn_revnum_t changed_rev;
+      apr_time_t changed_date;
+      const char *rev_str;
+      const char *author;
+      const char *url;
+      const char *repos_root_url;
+      const char *repos_relpath;
+
+      SVN_ERR(svn_wc__node_get_changed_info(&changed_rev,
+                                            &changed_date,
+                                            &author, wc_ctx,
+                                            local_abspath,
+                                            scratch_pool,
+                                            scratch_pool));
+      rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
+      SVN_ERR(svn_wc__node_get_repos_info(NULL, &repos_relpath, &repos_root_url,
+                                          NULL,
+                                          wc_ctx, local_abspath,
+                                          scratch_pool, scratch_pool));
+      url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                        scratch_pool);
+
+      SVN_ERR(svn_subst_build_keywords3(keywords,
+                                        keywords_val->data,
+                                        rev_str, url, repos_root_url,
+                                        changed_date,
+                                        author, result_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
 resolve_merge_incoming_added_file_text_update(
@@ -6837,58 +6889,6 @@ unlock_wc:
   SVN_ERR(err);
 
   conflict->resolution_tree = option_id;
-
-  return SVN_NO_ERROR;
-}
-
-/* Get KEYWORDS for LOCAL_ABSPATH.
- * WC_CTX is a context for the working copy the patch is applied to.
- * Use RESULT_POOL for allocations of fields in TARGET.
- * Use SCRATCH_POOL for all other allocations. */
-static svn_error_t *
-get_keywords(apr_hash_t **keywords,
-             svn_wc_context_t *wc_ctx,
-             const char *local_abspath,
-             apr_pool_t *result_pool,
-             apr_pool_t *scratch_pool)
-{
-  apr_hash_t *props;
-  svn_string_t *keywords_val;
-
-  *keywords = NULL;
-  SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, local_abspath,
-                            scratch_pool, scratch_pool));
-  keywords_val = svn_hash_gets(props, SVN_PROP_KEYWORDS);
-  if (keywords_val)
-    {
-      svn_revnum_t changed_rev;
-      apr_time_t changed_date;
-      const char *rev_str;
-      const char *author;
-      const char *url;
-      const char *repos_root_url;
-      const char *repos_relpath;
-
-      SVN_ERR(svn_wc__node_get_changed_info(&changed_rev,
-                                            &changed_date,
-                                            &author, wc_ctx,
-                                            local_abspath,
-                                            scratch_pool,
-                                            scratch_pool));
-      rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
-      SVN_ERR(svn_wc__node_get_repos_info(NULL, &repos_relpath, &repos_root_url,
-                                          NULL,
-                                          wc_ctx, local_abspath,
-                                          scratch_pool, scratch_pool));
-      url = svn_path_url_add_component2(repos_root_url, repos_relpath,
-                                        scratch_pool);
-
-      SVN_ERR(svn_subst_build_keywords3(keywords,
-                                        keywords_val->data,
-                                        rev_str, url, repos_root_url,
-                                        changed_date,
-                                        author, result_pool));
-    }
 
   return SVN_NO_ERROR;
 }
