@@ -3271,11 +3271,6 @@ test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
     SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
   }
 
-  /* XFAIL: This results in a corrupt working copy:
-   * 
-   * E155009: Failed to run the WC DB work queue associated with 'A/B',
-   * work item 26 (file-install A/C/B/lambda 1 0 1 1)
-   */
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_move_dir_merge,
             ctx, pool));
