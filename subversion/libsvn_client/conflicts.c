@@ -5323,9 +5323,11 @@ resolve_merge_incoming_added_file_text_update(
   const char *working_file_tmp_abspath;
   svn_stream_t *working_file_stream;
   svn_stream_t *working_file_tmp_stream;
+  svn_stream_t *normalized_stream;
   apr_hash_t *working_props;
   apr_array_header_t *propdiffs;
   svn_error_t *err;
+  apr_hash_t *keywords;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
 
@@ -5341,7 +5343,13 @@ resolve_merge_incoming_added_file_text_update(
   /* Copy the working file to temporary storage. */
   SVN_ERR(svn_stream_open_readonly(&working_file_stream, local_abspath,
                                    scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_copy3(working_file_stream, working_file_tmp_stream,
+  SVN_ERR(get_keywords(&keywords, ctx->wc_ctx, local_abspath,
+                       scratch_pool, scratch_pool));
+  normalized_stream = svn_subst_stream_translated(working_file_stream,
+                                                  "\n", TRUE,
+                                                  keywords, FALSE,
+                                                  scratch_pool);
+  SVN_ERR(svn_stream_copy3(normalized_stream, working_file_tmp_stream,
                            ctx->cancel_func, ctx->cancel_baton,
                            scratch_pool));
 
