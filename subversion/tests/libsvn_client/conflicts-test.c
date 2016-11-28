@@ -3679,10 +3679,7 @@ test_merge_incoming_move_file_text_merge_keywords(const svn_test_opts_t *opts,
 
   /* The file should no longer be in conflict, and should not have a
    * text conflict, because the contents are identical in "trunk" and
-   * in the "branch".
-   *
-   * XFAIL: Currently, there is an unexpected text conflict.
-   */
+   * in the "branch". */
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A1/mu-moved"),
                                   ctx, pool, pool));
   SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
@@ -3696,7 +3693,7 @@ test_merge_incoming_move_file_text_merge_keywords(const svn_test_opts_t *opts,
   /* And it should have expected contents (with expanded keywords). */
   SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A1/mu-moved"),
                                    pool));
-  SVN_TEST_STRING_ASSERT(buf->data, "$Revision: 4 $\n");
+  SVN_TEST_STRING_ASSERT(buf->data, "$Revision: 5 $\n");
 
   return SVN_NO_ERROR;
 }
@@ -3763,8 +3760,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "update incoming add file text merge"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_file_prop_merge_conflict,
                        "merge incoming move file merge with prop conflict"),
-    SVN_TEST_OPTS_XFAIL(test_merge_incoming_move_file_text_merge_keywords,
-                        "merge incoming move file merge with keywords"),
+    SVN_TEST_OPTS_PASS(test_merge_incoming_move_file_text_merge_keywords,
+                       "merge incoming move file merge with keywords"),
     SVN_TEST_NULL
   };
 
