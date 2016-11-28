@@ -5591,8 +5591,10 @@ resolve_merge_incoming_added_file_replace_and_merge(
   const char *wc_tmpdir;
   svn_stream_t *working_file_tmp_stream;
   const char *working_file_tmp_abspath;
+  svn_stream_t *normalized_stream;
   svn_stream_t *working_file_stream;
   apr_hash_t *working_props;
+  apr_hash_t *keywords;
   svn_error_t *err;
   svn_wc_merge_outcome_t merge_content_outcome;
   svn_wc_notify_state_t merge_props_outcome;
@@ -5613,7 +5615,13 @@ resolve_merge_incoming_added_file_replace_and_merge(
   /* Copy the working file to temporary storage. */
   SVN_ERR(svn_stream_open_readonly(&working_file_stream, local_abspath,
                                    scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_copy3(working_file_stream, working_file_tmp_stream,
+  SVN_ERR(get_keywords(&keywords, ctx->wc_ctx, local_abspath,
+                       scratch_pool, scratch_pool));
+  normalized_stream = svn_subst_stream_translated(working_file_stream,
+                                                  "\n", TRUE,
+                                                  keywords, FALSE,
+                                                  scratch_pool);
+  SVN_ERR(svn_stream_copy3(normalized_stream, working_file_tmp_stream,
                            ctx->cancel_func, ctx->cancel_baton,
                            scratch_pool));
 
