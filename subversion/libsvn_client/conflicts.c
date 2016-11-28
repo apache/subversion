@@ -7043,7 +7043,39 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   if (operation == svn_wc_operation_update ||
       operation == svn_wc_operation_switch)
     {
-      incoming_abspath = local_abspath;
+      svn_stream_t *working_stream;
+      svn_stream_t *incoming_stream;
+      svn_stream_t *normalized_stream;
+      apr_hash_t *keywords;
+
+      /* Create a temporary copy of the working file in repository-normal form.
+       * Set up this temporary file to be automatically removed. */
+      err = svn_stream_open_unique(&incoming_stream,
+                                   &incoming_abspath, wc_tmpdir,
+                                   svn_io_file_del_on_pool_cleanup,
+                                   scratch_pool, scratch_pool);
+      if (err)
+        goto unlock_wc;
+
+      err = svn_stream_open_readonly(&working_stream, local_abspath,
+                                     scratch_pool, scratch_pool);
+      if (err)
+        goto unlock_wc;
+
+      err = get_keywords(&keywords, ctx->wc_ctx, local_abspath,
+                         scratch_pool, scratch_pool);
+      if (err)
+        goto unlock_wc;
+
+      normalized_stream = svn_subst_stream_translated(working_stream,
+                                                      "\n", TRUE,
+                                                      keywords, FALSE,
+                                                      scratch_pool);
+      err = svn_stream_copy3(normalized_stream, incoming_stream,
+                             NULL, NULL, /* no cancellation */
+                             scratch_pool);
+      if (err)
+        goto unlock_wc;
     }
   else if (operation == svn_wc_operation_merge)
     {
@@ -7056,7 +7088,8 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
        * the move, and only then perform a three-way text merge between
        * the ancestor's file, our working file (which we would move to
        * the destination), and the file that we have set aside, which
-       * contains the incoming fulltext. */
+       * contains the incoming fulltext.
+       * Set up this temporary file to NOT be automatically removed. */
       err = svn_stream_open_unique(&incoming_stream,
                                    &incoming_abspath, wc_tmpdir,
                                    svn_io_file_del_none,
