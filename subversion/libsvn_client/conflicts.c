@@ -5236,6 +5236,23 @@ unlock_wc:
   return SVN_NO_ERROR;
 }
 
+/* Delete entry and wc props from a set of properties. */
+static void
+filter_props(apr_hash_t *props, apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, props);
+       hi != NULL;
+       hi = apr_hash_next(hi))
+    {
+      const char *propname = apr_hash_this_key(hi);
+
+      if (!svn_wc_is_normal_prop(propname))
+        svn_hash_sets(props, propname, NULL);
+    }
+}
+
 /* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
 resolve_merge_incoming_added_file_text_update(
@@ -5254,7 +5271,6 @@ resolve_merge_incoming_added_file_text_update(
   svn_stream_t *working_file_stream;
   svn_stream_t *working_file_tmp_stream;
   apr_hash_t *working_props;
-  apr_hash_index_t *hi;
   apr_array_header_t *propdiffs;
   svn_error_t *err;
 
@@ -5279,17 +5295,7 @@ resolve_merge_incoming_added_file_text_update(
   /* Get a copy of the working file's properties. */
   SVN_ERR(svn_wc_prop_list2(&working_props, ctx->wc_ctx, local_abspath,
                             scratch_pool, scratch_pool));
-
-  /* Delete entry and wc props from the returned set of properties.. */
-  for (hi = apr_hash_first(scratch_pool, working_props);
-       hi != NULL;
-       hi = apr_hash_next(hi))
-    {
-      const char *propname = apr_hash_this_key(hi);
-
-      if (!svn_wc_is_normal_prop(propname))
-        svn_hash_sets(working_props, propname, NULL);
-    }
+  filter_props(working_props, scratch_pool);
 
   /* Create an empty file as fake "merge-base" for the two added files.
    * The files are not ancestrally related so this is the best we can do. */
@@ -5397,7 +5403,6 @@ resolve_merge_incoming_added_file_text_merge(
   const char *empty_file_abspath;
   svn_stream_t *incoming_new_stream;
   apr_hash_t *incoming_new_props;
-  apr_hash_index_t *hi;
   apr_array_header_t *propdiffs;
   svn_error_t *err;
 
@@ -5435,16 +5440,7 @@ resolve_merge_incoming_added_file_text_merge(
   SVN_ERR(svn_stream_close(incoming_new_stream));
   SVN_ERR(svn_io_file_flush(incoming_new_file, scratch_pool));
 
-  /* Delete entry and wc props from the returned set of properties.. */
-  for (hi = apr_hash_first(scratch_pool, incoming_new_props);
-       hi != NULL;
-       hi = apr_hash_next(hi))
-    {
-      const char *propname = apr_hash_this_key(hi);
-
-      if (!svn_wc_is_normal_prop(propname))
-        svn_hash_sets(incoming_new_props, propname, NULL);
-    }
+  filter_props(incoming_new_props, scratch_pool);
 
   /* Create an empty file as fake "merge-base" for the two added files.
    * The files are not ancestrally related so this is the best we can do. */
@@ -5542,7 +5538,6 @@ resolve_merge_incoming_added_file_replace_and_merge(
   apr_file_t *empty_file;
   const char *empty_file_abspath;
   apr_array_header_t *propdiffs;
-  apr_hash_index_t *hi;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
 
@@ -5642,16 +5637,7 @@ resolve_merge_incoming_added_file_replace_and_merge(
   if (err)
     goto unlock_wc;
 
-  /* Delete entry and wc props from the returned set of properties.. */
-  for (hi = apr_hash_first(scratch_pool, incoming_new_props);
-       hi != NULL;
-       hi = apr_hash_next(hi))
-    {
-      const char *propname = apr_hash_this_key(hi);
-
-      if (!svn_wc_is_normal_prop(propname))
-        svn_hash_sets(incoming_new_props, propname, NULL);
-    }
+  filter_props(incoming_new_props, scratch_pool);
 
   /* Create a property diff for the files. */
   err = svn_prop_diffs(&propdiffs, incoming_new_props,
@@ -6887,7 +6873,6 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   apr_array_header_t *possible_moved_to_abspaths;
   const char *moved_to_abspath;
   const char *incoming_abspath;
-  apr_hash_index_t *hi;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
   operation = svn_client_conflict_get_operation(conflict);
@@ -6943,16 +6928,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   SVN_ERR(svn_ra_get_file(ra_session, "", incoming_old_pegrev,
                           ancestor_stream, NULL, /* fetched_rev */
                           &ancestor_props, scratch_pool));
-  /* Delete entry and wc props from the returned set of properties. */
-  for (hi = apr_hash_first(scratch_pool, ancestor_props);
-       hi != NULL;
-       hi = apr_hash_next(hi))
-    {
-      const char *propname = apr_hash_this_key(hi);
-
-      if (!svn_wc_is_normal_prop(propname))
-        svn_hash_sets(ancestor_props, propname, NULL);
-    }
+  filter_props(ancestor_props, scratch_pool);
 
   /* Close stream to flush ancestor file to disk. */
   SVN_ERR(svn_stream_close(ancestor_stream));
@@ -7372,7 +7348,6 @@ resolve_local_move_file_merge(svn_client_conflict_option_t *option,
   svn_wc_notify_state_t merge_props_outcome;
   apr_array_header_t *propdiffs;
   struct conflict_tree_local_missing_details *details;
-  apr_hash_index_t *hi;
 
   details = conflict->tree_conflict_local_details;
 
@@ -7405,16 +7380,8 @@ resolve_local_move_file_merge(svn_client_conflict_option_t *option,
                                                scratch_pool, scratch_pool));
   SVN_ERR(svn_ra_get_file(ra_session, "", incoming_old_pegrev, stream, NULL,
                           &ancestor_props, scratch_pool));
-  /* Delete entry and wc props from the returned set of properties. */
-  for (hi = apr_hash_first(scratch_pool, ancestor_props);
-       hi != NULL;
-       hi = apr_hash_next(hi))
-    {
-      const char *propname = apr_hash_this_key(hi);
+  filter_props(ancestor_props, scratch_pool);
 
-      if (!svn_wc_is_normal_prop(propname))
-        svn_hash_sets(ancestor_props, propname, NULL);
-    }
   /* Close stream to flush the file to disk. */
   SVN_ERR(svn_stream_close(stream));
 
@@ -7431,16 +7398,8 @@ resolve_local_move_file_merge(svn_client_conflict_option_t *option,
                           &incoming_props, scratch_pool));
   /* Close stream to flush the file to disk. */
   SVN_ERR(svn_stream_close(stream));
-  /* Delete entry and wc props from the returned set of properties. */
-  for (hi = apr_hash_first(scratch_pool, incoming_props);
-       hi != NULL;
-       hi = apr_hash_next(hi))
-    {
-      const char *propname = apr_hash_this_key(hi);
 
-      if (!svn_wc_is_normal_prop(propname))
-        svn_hash_sets(incoming_props, propname, NULL);
-    }
+  filter_props(incoming_props, scratch_pool);
 
   /* Create a property diff for the files. */
   SVN_ERR(svn_prop_diffs(&propdiffs, incoming_props, ancestor_props,
