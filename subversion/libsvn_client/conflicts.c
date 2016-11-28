@@ -7017,10 +7017,6 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
    *  ### Need to fix what we pass as "right_abspath" here, as svn_wc_merge5()
    *  ### expects to see the fulltext in repository-normal form (linefeeds,
    *  ### with keywords contracted).
-   *
-   *  ### And I think we also need to patch up what we pass as original_props,
-   *  ### so that conflicting properties would actually produce a conflict.
-   *  ### See what resolve_local_move_file_merge() does.
    */
   err = svn_wc_merge5(&merge_content_outcome, &merge_props_outcome,
                       ctx->wc_ctx, ancestor_abspath,
