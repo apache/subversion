@@ -1421,15 +1421,15 @@ tc_editor_alter_file(node_move_baton_t *nmb,
 }
 
 static svn_error_t *
-tc_editor_merge_local_file_change(node_move_baton_t *nmb,
-                                  const char *dst_relpath,
-                                  const char *src_relpath,
-                                  const svn_checksum_t *src_checksum,
-                                  const svn_checksum_t *dst_checksum,
-                                  apr_hash_t *dst_props,
-                                  apr_hash_t *src_props,
-                                  svn_boolean_t do_text_merge,
-                                  apr_pool_t *scratch_pool)
+tc_editor_update_incoming_moved_file(node_move_baton_t *nmb,
+                                     const char *dst_relpath,
+                                     const char *src_relpath,
+                                     const svn_checksum_t *src_checksum,
+                                     const svn_checksum_t *dst_checksum,
+                                     apr_hash_t *dst_props,
+                                     apr_hash_t *src_props,
+                                     svn_boolean_t do_text_merge,
+                                     apr_pool_t *scratch_pool)
 {
   update_move_baton_t *b = nmb->umb;
   working_node_version_t old_version, new_version;
@@ -2512,13 +2512,14 @@ update_incoming_moved_node(node_move_baton_t *nmb,
                                                    FALSE /* exact_comparison */,
                                                    scratch_pool));
           if (!props_equal || is_modified)
-            SVN_ERR(tc_editor_merge_local_file_change(nmb, dst_relpath,
-                                                      victim_relpath,
-                                                      working_checksum,
-                                                      orig_checksum,
-                                                      orig_props, working_props,
-                                                      is_modified,
-                                                      scratch_pool));
+            SVN_ERR(tc_editor_update_incoming_moved_file(nmb, dst_relpath,
+                                                         victim_relpath,
+                                                         working_checksum,
+                                                         orig_checksum,
+                                                         orig_props,
+                                                         working_props,
+                                                         is_modified,
+                                                         scratch_pool));
         }
       else if (working_kind == svn_node_dir)
         {
