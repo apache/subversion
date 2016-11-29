@@ -1559,10 +1559,6 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
   const char *related_repos_relpath;
   svn_revnum_t related_peg_rev;
 
-  /* We only handle merges here. */
-  if (svn_client_conflict_get_operation(conflict) != svn_wc_operation_merge)
-    return SVN_NO_ERROR;
-
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
             &old_repos_relpath, &old_rev, NULL, conflict,
             scratch_pool, scratch_pool));
@@ -1570,9 +1566,8 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
             &new_repos_relpath, &new_rev, NULL, conflict,
             scratch_pool, scratch_pool));
 
-  /* A deletion of the node may have happened on the branch we
-   * merged to. Scan the conflict victim's parent's log to find
-   * a revision which deleted the node. */
+  /* Scan the conflict victim's parent's log to find a revision which
+   * deleted the node. */
   deleted_basename = svn_dirent_basename(conflict->local_abspath,
                                          scratch_pool);
   SVN_ERR(svn_wc__node_get_repos_info(NULL, &parent_repos_relpath,
