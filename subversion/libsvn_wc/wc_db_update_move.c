@@ -1491,7 +1491,7 @@ tc_editor_merge_local_file_change(node_move_baton_t *nmb,
       conflict_skel == NULL)
     {
       SVN_ERR(create_node_tree_conflict(&conflict_skel, nmb, dst_relpath,
-                                        svn_node_file, dst_kind_on_disk,
+                                        svn_node_file, dst_db_kind,
                                         dst_db_kind == svn_node_none
                                           ? svn_wc_conflict_reason_missing
                                           : svn_wc_conflict_reason_obstructed,
