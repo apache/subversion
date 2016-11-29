@@ -1443,7 +1443,7 @@ tc_editor_update_incoming_moved_file(node_move_baton_t *nmb,
   svn_skel_t *work_item, *work_items = NULL;
   svn_node_kind_t dst_kind_on_disk;
   const char *dst_repos_relpath;
-  svn_boolean_t obstructed = FALSE;
+  svn_boolean_t tree_conflict = FALSE;
   svn_node_kind_t dst_db_kind;
   svn_error_t *err;
 
@@ -1482,7 +1482,7 @@ tc_editor_update_incoming_moved_file(node_move_baton_t *nmb,
                                            svn_relpath_basename(dst_relpath,
                                                                 scratch_pool),
                                            scratch_pool);
-      obstructed = TRUE;
+      tree_conflict = TRUE;
     }
   else
     SVN_ERR(err);
@@ -1498,7 +1498,7 @@ tc_editor_update_incoming_moved_file(node_move_baton_t *nmb,
                                         svn_wc_conflict_action_edit,
                                         NULL,
                                         scratch_pool, scratch_pool));
-      obstructed = TRUE;
+      tree_conflict = TRUE;
     }
 
   SVN_ERR(svn_io_check_path(dst_abspath, &dst_kind_on_disk, scratch_pool));
@@ -1513,7 +1513,7 @@ tc_editor_update_incoming_moved_file(node_move_baton_t *nmb,
                                         svn_wc_conflict_action_edit,
                                         NULL,
                                         scratch_pool, scratch_pool));
-      obstructed = TRUE;
+      tree_conflict = TRUE;
     }
 
   old_version.location_and_kind = b->old_version;
@@ -1591,7 +1591,7 @@ tc_editor_update_incoming_moved_file(node_move_baton_t *nmb,
       SVN_ERR(create_conflict_markers(&work_item, dst_abspath, b->db,
                                       dst_repos_relpath, conflict_skel,
                                       b->operation, &old_version, &new_version,
-                                      svn_node_file, !obstructed,
+                                      svn_node_file, !tree_conflict,
                                       scratch_pool, scratch_pool));
 
       work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
