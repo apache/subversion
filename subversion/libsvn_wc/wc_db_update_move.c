@@ -1090,6 +1090,13 @@ create_conflict_markers(svn_skel_t **work_items,
                     conflicted_version,
                     scratch_pool, scratch_pool));
         }
+      else if (operation == svn_wc_operation_merge)
+        {
+          SVN_ERR(svn_wc__conflict_skel_set_op_merge(
+                    conflict_skel, original_version,
+                    conflicted_version,
+                    scratch_pool, scratch_pool));
+        }
       else
         {
           SVN_ERR(svn_wc__conflict_skel_set_op_switch(
