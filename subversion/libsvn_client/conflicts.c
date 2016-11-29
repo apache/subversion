@@ -278,6 +278,15 @@ struct repos_move_info {
   apr_array_header_t *next;
 };
 
+static svn_revnum_t
+rev_below(svn_revnum_t rev)
+{
+  SVN_ERR_ASSERT_NO_RETURN(rev != SVN_INVALID_REVNUM);
+  SVN_ERR_ASSERT_NO_RETURN(rev > 0);
+
+  return rev == 1 ? 1 : rev - 1;
+}
+
 /* Set *RELATED to true if the deleted node DELETED_REPOS_RELPATH@DELETED_REV
  * is an ancestor of the copied node COPYFROM_PATH@COPYFROM_REV.
  * If CHECK_LAST_CHANGED_REV is non-zero, also ensure that the copied node
@@ -310,7 +319,7 @@ check_move_ancestry(svn_boolean_t *related,
   SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
                                             deleted_url, scratch_pool));
   SVN_ERR(svn_ra_get_locations(ra_session, &locations, "",
-                               deleted_rev - 1, location_revisions,
+                               rev_below(deleted_rev), location_revisions,
                                scratch_pool));
 
   deleted_location = apr_hash_get(locations, &copyfrom_rev,
@@ -337,7 +346,7 @@ check_move_ancestry(svn_boolean_t *related,
 
       /* Verify that copyfrom_rev >= last-changed revision of the
        * deleted node. */
-      SVN_ERR(svn_ra_stat(ra_session, "", deleted_rev - 1, &dirent,
+      SVN_ERR(svn_ra_stat(ra_session, "", rev_below(deleted_rev), &dirent,
                           scratch_pool));
       if (dirent == NULL || copyfrom_rev < dirent->created_rev)
         {
@@ -684,7 +693,7 @@ find_nested_move(const char **moved_from_repos_relpath,
       copy = APR_ARRAY_IDX(copies_with_same_source_path, 0, struct copy_info *);
       SVN_ERR(check_move_ancestry(&related, ra_session, repos_root_url,
                                   moved_along_repos_relpath,
-                                  revision - 1,
+                                  rev_below(revision),
                                   copy->copyfrom_path,
                                   copy->copyfrom_rev,
                                   TRUE, iterpool));
@@ -822,7 +831,7 @@ find_deleted_rev(void *baton,
                              b->related_repos_relpath,
                              b->related_repos_peg_rev,
                              b->deleted_repos_relpath,
-                             log_entry->revision - 1,
+                             rev_below(log_entry->revision),
                              b->repos_root_url, b->repos_uuid,
                              b->ctx, iterpool, iterpool);
               if (err)
@@ -1645,7 +1654,7 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
             return SVN_NO_ERROR;
 
           /* The node should exist in the revision before it was deleted. */
-          related_peg_rev = related_deleted_rev - 1;
+          related_peg_rev = rev_below(related_deleted_rev);
         }
     }
     
@@ -3481,7 +3490,8 @@ get_incoming_delete_details_for_reverse_addition(
     {
       svn_node_kind_t replaced_node_kind;
 
-      SVN_ERR(svn_ra_check_path(ra_session, "", (*details)->added_rev - 1,
+      SVN_ERR(svn_ra_check_path(ra_session, "",
+                                rev_below((*details)->added_rev),
                                 &replaced_node_kind, scratch_pool));
       if (replaced_node_kind != svn_node_none)
         SVN_ERR(svn_ra_check_path(ra_session, "", (*details)->added_rev,
@@ -4099,7 +4109,7 @@ describe_incoming_reverse_deletion_upon_merge(
                             _("A new directory appeared during reverse-merge "
                               "of\n'^/%s:%ld-%ld'.\n"
                               "It was deleted by %s in r%ld."),
-                            old_repos_relpath, new_rev, old_rev - 1,
+                            old_repos_relpath, new_rev, rev_below(old_rev),
                             details->deleted_rev_author,
                             details->deleted_rev);
     }
@@ -6302,7 +6312,7 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
                                    "added the repository"),
                                  svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
-      rev1 = details->added_rev - 1;
+      rev1 = rev_below(details->added_rev);
       source2 = svn_path_url_add_component2(repos_root_url,
                                             incoming_new_repos_relpath,
                                             scratch_pool);
@@ -6581,8 +6591,8 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
        * this merge was part of the merge target working copy, not a branch
        * in the repository. */
       err = merge_newly_added_dir(base_repos_relpath,
-                                  url, b.added_rev - 1, url, base_revision,
-                                  local_abspath, FALSE,
+                                  url, rev_below(b.added_rev), url,
+                                  base_revision, local_abspath, FALSE,
                                   ctx, scratch_pool, scratch_pool);
       if (err)
         goto unlock_wc;
