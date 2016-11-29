@@ -3277,9 +3277,8 @@ test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
             conflict, svn_client_conflict_option_incoming_move_dir_merge,
             ctx, pool));
 
-  /* There should now be a tree conflict inside the moved directory,
-   * signaling a missing file. */
-  deleted_file = svn_relpath_join(moved_dir, "lambda" , b->pool);
+  /* There should now be a tree conflict on the moved file,
+   * signaling an "edit vs delete or move". */
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_file),
                                   ctx, pool, pool));
   SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
@@ -3290,9 +3289,9 @@ test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
   SVN_TEST_INT_ASSERT(props_conflicted->nelts, 0);
   SVN_TEST_ASSERT(tree_conflicted);
   SVN_TEST_ASSERT(svn_client_conflict_get_local_change(conflict) ==
-                  svn_wc_conflict_reason_missing);
+                  svn_wc_conflict_reason_edited);
   SVN_TEST_ASSERT(svn_client_conflict_get_incoming_change(conflict) ==
-                  svn_wc_conflict_action_edit);
+                  svn_wc_conflict_action_delete);
 
   return SVN_NO_ERROR;
 }
