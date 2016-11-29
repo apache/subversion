@@ -175,6 +175,8 @@ static const char *propval_branch = "This is a property on the branch.";
 static const char *propval_different = "This is a different property value.";
 
 /* File content. */
+static const char *modified_file_content =
+                        "This is a modified file\n";
 static const char *modified_file_on_branch_content =
                         "This is a modified file on the branch\n";
 static const char *added_file_on_branch_content =
@@ -3218,7 +3220,7 @@ test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
 
   /* Rename a file inside the moved directory. */
   deleted_file = svn_relpath_join(moved_dir, "lambda" , b->pool);
-  moved_file = svn_relpath_join(moved_dir, "lamdba-moved", b->pool);
+  moved_file = svn_relpath_join(moved_dir, "lambda-moved", b->pool);
   SVN_ERR(sbox_wc_move(b, deleted_file, moved_file));
 
   SVN_ERR(sbox_wc_commit(b, ""));
@@ -3227,8 +3229,8 @@ test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
   SVN_ERR(sbox_wc_update(b, "", 1));
 
   /* Modify a file in the working copy. */
-  deleted_file = svn_relpath_join(trunk_path, "B/lamdba", b->pool);
-  SVN_ERR(sbox_file_write(b, deleted_file, "This is a modified file\n"));
+  deleted_file = svn_relpath_join(trunk_path, "B/lambda", b->pool);
+  SVN_ERR(sbox_file_write(b, deleted_file, modified_file_content));
 
   /* Update to HEAD.
    * This should raise an "incoming move vs local edit" tree conflict. */
@@ -3274,6 +3276,23 @@ test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict, svn_client_conflict_option_incoming_move_dir_merge,
             ctx, pool));
+
+  /* There should now be a tree conflict inside the moved directory,
+   * signaling a missing file. */
+  deleted_file = svn_relpath_join(moved_dir, "lambda" , b->pool);
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_file),
+                                  ctx, pool, pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, pool, pool));
+  SVN_TEST_ASSERT(!text_conflicted);
+  SVN_TEST_INT_ASSERT(props_conflicted->nelts, 0);
+  SVN_TEST_ASSERT(tree_conflicted);
+  SVN_TEST_ASSERT(svn_client_conflict_get_local_change(conflict) ==
+                  svn_wc_conflict_reason_missing);
+  SVN_TEST_ASSERT(svn_client_conflict_get_incoming_change(conflict) ==
+                  svn_wc_conflict_action_edit);
 
   return SVN_NO_ERROR;
 }
