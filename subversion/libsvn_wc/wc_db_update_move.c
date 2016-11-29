@@ -2631,9 +2631,14 @@ update_incoming_move(svn_revnum_t *old_rev,
    * recorded for any tree conflicts created during the editor drive.
    * We assume this path contains no local changes, and create local changes
    * in DST_RELPATH corresponding to changes contained in the conflict victim.
+   * 
+   * DST_OP_DEPTH is used to infer the "op-root" of the incoming move. This
+   * "op-root" is virtual because all nodes belonging to the incoming move
+   * live in the BASE tree. It is used for constructing repository paths
+   * when new tree conflicts need to be raised.
    */
   umb.src_op_depth = relpath_depth(local_relpath); /* SRC of diff */
-  umb.dst_op_depth = 0;
+  umb.dst_op_depth = relpath_depth(dst_relpath); /* virtual DST op-root */
 
   SVN_ERR(verify_write_lock(wcroot, local_relpath, scratch_pool));
   SVN_ERR(verify_write_lock(wcroot, dst_relpath, scratch_pool));
