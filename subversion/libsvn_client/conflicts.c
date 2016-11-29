@@ -4367,22 +4367,14 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
                                              conflict,
                                              scratch_pool, scratch_pool));
   operation = svn_client_conflict_get_operation(conflict);
-
-  b.ctx = ctx;
-  b.victim_abspath = svn_client_conflict_get_local_abspath(conflict);
-  b.result_pool = conflict->pool;
-  b.scratch_pool = scratch_pool;
-  b.edits = apr_array_make(
-               conflict->pool, 0,
-               sizeof(struct conflict_tree_incoming_edit_details *));
-  paths = apr_array_make(scratch_pool, 1, sizeof(const char *));
-  APR_ARRAY_PUSH(paths, const char *) = "";
-
-  revprops = apr_array_make(scratch_pool, 1, sizeof(const char *));
-  APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
-
   if (operation == svn_wc_operation_update)
     {
+      b.node_kind = old_rev < new_rev ? new_node_kind : old_node_kind;
+
+      /* If there is no node then we cannot find any edits. */
+      if (b.node_kind == svn_node_none)
+        return SVN_NO_ERROR;
+
       url = svn_path_url_add_component2(repos_root_url,
                                         old_rev < new_rev ? new_repos_relpath
                                                           : old_repos_relpath,
@@ -4390,7 +4382,6 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
 
       b.repos_relpath = old_rev < new_rev ? new_repos_relpath
                                           : old_repos_relpath;
-      b.node_kind = old_rev < new_rev ? new_node_kind : old_node_kind;
     }
   else if (operation == svn_wc_operation_switch ||
            operation == svn_wc_operation_merge)
@@ -4410,6 +4401,20 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
                                                ctx,
                                                scratch_pool,
                                                scratch_pool));
+
+  paths = apr_array_make(scratch_pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(paths, const char *) = "";
+
+  revprops = apr_array_make(scratch_pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
+
+  b.ctx = ctx;
+  b.victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+  b.result_pool = conflict->pool;
+  b.scratch_pool = scratch_pool;
+  b.edits = apr_array_make(
+               conflict->pool, 0,
+               sizeof(struct conflict_tree_incoming_edit_details *));
 
   SVN_ERR(svn_ra_get_log2(ra_session, paths,
                           old_rev < new_rev ? old_rev : new_rev,
