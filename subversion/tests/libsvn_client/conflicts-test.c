@@ -3208,6 +3208,7 @@ test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
   svn_boolean_t text_conflicted;
   apr_array_header_t *props_conflicted;
   svn_boolean_t tree_conflicted;
+  svn_stringbuf_t *buf;
 
   SVN_ERR(svn_test__sandbox_create(
             b, "update_incoming_dir_move_with_moved_file", opts, pool));
@@ -3290,9 +3291,13 @@ test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
   SVN_TEST_INT_ASSERT(props_conflicted->nelts, 0);
   SVN_TEST_ASSERT(tree_conflicted);
   SVN_TEST_ASSERT(svn_client_conflict_get_local_change(conflict) ==
-                  svn_wc_conflict_reason_missing);
+                  svn_wc_conflict_reason_edited);
   SVN_TEST_ASSERT(svn_client_conflict_get_incoming_change(conflict) ==
-                  svn_wc_conflict_action_edit);
+                  svn_wc_conflict_action_delete);
+
+  /* Make sure the file has the expected content. */
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, deleted_file), pool));
+  SVN_TEST_STRING_ASSERT(buf->data, modified_file_content);
 
   return SVN_NO_ERROR;
 }
