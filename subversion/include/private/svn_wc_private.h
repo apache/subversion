@@ -1900,13 +1900,9 @@ svn_wc__conflict_tree_update_moved_away_node(svn_wc_context_t *wc_ctx,
  * Assuming DEST_ABSPATH is the correct move destination, this function
  * allows local changes to "follow" incoming moves during updates.
  *
- * Indicate in *NEW_CONFLICTS_REMAIN whether new conflicts were raised
- * while updating the incoming move.
- *
  * @since New in 1.10. */
 svn_error_t *
-svn_wc__conflict_tree_update_incoming_move(svn_boolean_t *new_conflicts_remain,
-                                           svn_wc_context_t *wc_ctx,
+svn_wc__conflict_tree_update_incoming_move(svn_wc_context_t *wc_ctx,
                                            const char *local_abspath,
                                            const char *dest_abspath,
                                            svn_cancel_func_t cancel_func,

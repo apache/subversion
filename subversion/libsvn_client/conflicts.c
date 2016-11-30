@@ -7401,8 +7401,6 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
     }
   else
     {
-      svn_boolean_t new_conflicts_remain = FALSE;
-
       SVN_ERR_ASSERT(operation == svn_wc_operation_update ||
                      operation == svn_wc_operation_switch);
 
@@ -7415,34 +7413,26 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
 
       if (is_modified)
         {
-          err = svn_wc__conflict_tree_update_incoming_move(
-                  &new_conflicts_remain, ctx->wc_ctx, local_abspath,
-                  moved_to_abspath, ctx->cancel_func, ctx->cancel_baton,
-                  ctx->notify_func2, ctx->notify_baton2, scratch_pool);
+          err = svn_wc__conflict_tree_update_incoming_move(ctx->wc_ctx,
+                                                           local_abspath,
+                                                           moved_to_abspath,
+                                                           ctx->cancel_func,
+                                                           ctx->cancel_baton,
+                                                           ctx->notify_func2,
+                                                           ctx->notify_baton2,
+                                                           scratch_pool);
           if (err)
             goto unlock_wc;
         }
 
-      if (new_conflicts_remain)
-        {
-          /* Clear the conflict marker on this victim, but do not delete
-           * it to allow the new conflicts to be dealt with. */
-          err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath,
-                                          scratch_pool);
-          if (err)
-            goto unlock_wc;
-        }
-      else
-        {
-          /* The move operation is part of our natural history. Delete the
-           * tree conflict victim (clears the tree conflict marker). */
-          err = svn_wc_delete4(ctx->wc_ctx, local_abspath, FALSE, FALSE,
-                               NULL, NULL, /* don't allow user to cancel here */
-                               NULL, NULL, /* no extra notification */
-                               scratch_pool);
-          if (err)
-            goto unlock_wc;
-        }
+      /* The move operation is part of our natural history.
+       * Delete the tree conflict victim (clears the tree conflict marker). */
+      err = svn_wc_delete4(ctx->wc_ctx, local_abspath, FALSE, FALSE,
+                           NULL, NULL, /* don't allow user to cancel here */
+                           NULL, NULL, /* no extra notification */
+                           scratch_pool);
+      if (err)
+        goto unlock_wc;
     }
 
   if (ctx->notify_func2)

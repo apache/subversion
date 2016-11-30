@@ -3704,8 +3704,7 @@ svn_wc__conflict_tree_update_moved_away_node(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
-svn_wc__conflict_tree_update_incoming_move(svn_boolean_t *new_conflicts_remain,
-                                           svn_wc_context_t *wc_ctx,
+svn_wc__conflict_tree_update_incoming_move(svn_wc_context_t *wc_ctx,
                                            const char *local_abspath,
                                            const char *dest_abspath,
                                            svn_cancel_func_t cancel_func,
@@ -3720,9 +3719,6 @@ svn_wc__conflict_tree_update_incoming_move(svn_boolean_t *new_conflicts_remain,
   svn_boolean_t tree_conflicted;
   const apr_array_header_t *conflicts;
   svn_skel_t *conflict_skel;
-
-  if (new_conflicts_remain != NULL)
-    *new_conflicts_remain = FALSE;
 
   SVN_ERR(svn_wc__read_conflicts(&conflicts, &conflict_skel,
                                  wc_ctx->db, local_abspath,
@@ -3764,8 +3760,7 @@ svn_wc__conflict_tree_update_incoming_move(svn_boolean_t *new_conflicts_remain,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
-  SVN_ERR(svn_wc__db_update_incoming_move(new_conflicts_remain,
-                                          wc_ctx->db, local_abspath,
+  SVN_ERR(svn_wc__db_update_incoming_move(wc_ctx->db, local_abspath,
                                           dest_abspath, operation,
                                           incoming_change, local_change,
                                           cancel_func, cancel_baton,
