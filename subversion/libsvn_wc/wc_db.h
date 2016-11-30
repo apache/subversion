@@ -3406,11 +3406,9 @@ svn_wc__db_update_moved_away_conflict_victim(svn_wc__db_t *db,
 
 /* Merge local changes from tree conflict victim at LOCAL_ABSPATH into the
    directory at DEST_ABSPATH. This function requires that LOCAL_ABSPATH is
-   a directory and a tree-conflict victim. DST_ABSPATH must be a directory.
-   See also svn_wc__conflict_tree_update_incoming_move(). */
+   a directory and a tree-conflict victim. DST_ABSPATH must be a directory. */
 svn_error_t *
-svn_wc__db_update_incoming_move(svn_boolean_t *new_conflicts_remain,
-                                svn_wc__db_t *db,
+svn_wc__db_update_incoming_move(svn_wc__db_t *db,
                                 const char *local_abspath,
                                 const char *dest_abspath,
                                 svn_wc_operation_t operation,
