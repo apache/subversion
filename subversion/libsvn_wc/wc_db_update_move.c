@@ -1461,14 +1461,27 @@ tc_editor_update_incoming_moved_file(node_move_baton_t *nmb,
     {
       const char *dst_parent_relpath;
       const char *dst_parent_repos_relpath;
+      const char *src_abspath;
+
+      /* If the file cannot be found, it was either deleted at the
+       * move destination, or it was moved after its parent was moved.
+       * We cannot deal with this problem right now. Instead, we will
+       * raise a new tree conflict at the location where this file should
+       * have been, and let another run of the resolver deal with the
+       * new conflict later on. */
 
       svn_error_clear(err);
 
+      /* Create a WORKING node for this file at the move destination. */
+      SVN_ERR(copy_working_node(src_relpath, dst_relpath, b->wcroot,
+                                scratch_pool));
+
+      /* Raise a tree conflict at the new WORKING node. */
       dst_db_kind = svn_node_none;
       SVN_ERR(create_node_tree_conflict(&conflict_skel, nmb, dst_relpath,
                                         svn_node_file, dst_db_kind,
-                                        svn_wc_conflict_reason_missing,
-                                        svn_wc_conflict_action_edit,
+                                        svn_wc_conflict_reason_edited,
+                                        svn_wc_conflict_action_delete,
                                         NULL, scratch_pool, scratch_pool));
       dst_parent_relpath = svn_relpath_dirname(dst_relpath, scratch_pool);
       SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, NULL,
@@ -1483,6 +1496,17 @@ tc_editor_update_incoming_moved_file(node_move_baton_t *nmb,
                                                                 scratch_pool),
                                            scratch_pool);
       tree_conflict = TRUE;
+
+      /* Schedule a copy of the victim's file content to the new node's path. */
+      src_abspath = svn_dirent_join(b->wcroot->abspath, src_relpath,
+                                    scratch_pool);
+      SVN_ERR(svn_wc__wq_build_file_install(&work_item, b->db,
+                                            dst_abspath,
+                                            src_abspath,
+                                            FALSE /*FIXME: use_commit_times?*/,
+                                            TRUE  /* record_file_info */,
+                                            scratch_pool, scratch_pool));
+      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
     }
   else
     SVN_ERR(err);
