@@ -6773,19 +6773,28 @@ verify_local_state_for_incoming_delete(svn_client_conflict_t *conflict,
                                      wcroot_abspath, conflict->local_abspath),
                                    scratch_pool),
                                   details->added_rev, copyfrom_rev);
+      else if (operation == svn_wc_operation_update)
+        {
+          const char *old_repos_relpath;
 
-      else if (operation == svn_wc_operation_update &&
-               strcmp(copyfrom_repos_relpath, details->repos_relpath) != 0)
-        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                 _("Cannot resolve tree conflict on '%s' "
-                                   "(expected an item copied from '^/%s', "
-                                   "but the item was copied from '^/%s@%ld')"),
-                                 svn_dirent_local_style(
-                                   svn_dirent_skip_ancestor(
-                                     wcroot_abspath, conflict->local_abspath),
-                                   scratch_pool),
-                                 details->repos_relpath,
-                                 copyfrom_repos_relpath, copyfrom_rev);
+          SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+                    &old_repos_relpath, NULL, NULL, conflict,
+                    scratch_pool, scratch_pool));
+          if (strcmp(copyfrom_repos_relpath, details->repos_relpath) != 0 &&
+              strcmp(copyfrom_repos_relpath, old_repos_relpath) != 0)
+            return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                     _("Cannot resolve tree conflict on '%s' "
+                                       "(expected an item copied from '^/%s' "
+                                       "or from '^/%s' but the item was "
+                                       "copied from '^/%s@%ld')"),
+                                     svn_dirent_local_style(
+                                       svn_dirent_skip_ancestor(
+                                         wcroot_abspath, conflict->local_abspath),
+                                       scratch_pool),
+                                     details->repos_relpath,
+                                     old_repos_relpath,
+                                     copyfrom_repos_relpath, copyfrom_rev);
+        }
       else if (operation == svn_wc_operation_switch)
         {
           const char *old_repos_relpath;
