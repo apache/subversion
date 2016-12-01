@@ -5137,14 +5137,12 @@ verify_local_state_for_incoming_add_upon_update(
       if (option_id == svn_client_conflict_option_incoming_add_ignore)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, err,
                                  _("Cannot resolve tree conflict on '%s' "
-                                   "by ignoring the incoming addition "
                                    "(expected a base node but found none)"),
                                  local_style_relpath);
       else if (option_id ==
                svn_client_conflict_option_incoming_added_dir_replace)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, err,
                                  _("Cannot resolve tree conflict on '%s' "
-                                   "by replacing the locally added node "
                                    "(expected a base node but found none)"),
                                  local_style_relpath);
       else
@@ -5158,8 +5156,7 @@ verify_local_state_for_incoming_add_upon_update(
     {
       if (option_id == svn_client_conflict_option_incoming_add_ignore)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                 _("Cannot resolve tree conflict on '%s' by "
-                                   "ignoring the incoming addition "
+                                 _("Cannot resolve tree conflict on '%s' "
                                    "(expected base node kind '%s', "
                                    "but found '%s')"),
                                  local_style_relpath,
@@ -5169,7 +5166,6 @@ verify_local_state_for_incoming_add_upon_update(
                svn_client_conflict_option_incoming_added_dir_replace)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                                  _("Cannot resolve tree conflict on '%s' "
-                                   "by replacing the locally added node "
                                    "(expected base node kind '%s', "
                                    "but found '%s')"),
                                   local_style_relpath,
@@ -5185,8 +5181,7 @@ verify_local_state_for_incoming_add_upon_update(
     {
       if (option_id == svn_client_conflict_option_incoming_add_ignore)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                 _("Cannot resolve tree conflict on '%s' by "
-                                   "ignoring the incoming addition "
+                                 _("Cannot resolve tree conflict on '%s' "
                                    "(expected base node from '^/%s@%ld', "
                                    "but found '^/%s@%ld')"),
                                  local_style_relpath,
@@ -5197,7 +5192,6 @@ verify_local_state_for_incoming_add_upon_update(
                svn_client_conflict_option_incoming_added_dir_replace)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                                  _("Cannot resolve tree conflict on '%s' "
-                                   "by replacing the locally added node "
                                    "(expected base node from '^/%s@%ld', "
                                    "but found '^/%s@%ld')"),
                                  local_style_relpath,
@@ -5215,8 +5209,7 @@ verify_local_state_for_incoming_add_upon_update(
     {
       if (option_id == svn_client_conflict_option_incoming_add_ignore)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                 _("Cannot resolve tree conflict on '%s' by "
-                                   "ignoring the incoming addition "
+                                 _("Cannot resolve tree conflict on '%s' "
                                    "(expected an added item, but the item "
                                    "is not added)"),
                                  local_style_relpath);
@@ -5225,7 +5218,6 @@ verify_local_state_for_incoming_add_upon_update(
                svn_client_conflict_option_incoming_added_dir_replace)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                                  _("Cannot resolve tree conflict on '%s' "
-                                   "by replacing the locally added node "
                                    "(expected an added item, but the item "
                                    "is not added)"),
                                  local_style_relpath);
@@ -6738,8 +6730,7 @@ verify_local_state_for_incoming_delete(svn_client_conflict_t *conflict,
                                       scratch_pool, scratch_pool));
       if (!is_copy)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                 _("Cannot resolve tree conflict on '%s' by "
-                                   "ignoring the incoming deletion "
+                                 _("Cannot resolve tree conflict on '%s' "
                                    "(expected a copied item, but the item "
                                    "is not a copy)"),
                                  svn_dirent_local_style(
@@ -6760,11 +6751,10 @@ verify_local_state_for_incoming_delete(svn_client_conflict_t *conflict,
       else if (details->deleted_rev != SVN_INVALID_REVNUM &&
                copyfrom_rev >= details->deleted_rev)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                 _("Cannot resolve tree conflict on '%s' by "
-                                   "ignoring the incoming deletion (expected "
-                                   "an item copied from a revision smaller "
-                                   "than r%ld, but the item was copied from "
-                                   "r%ld)"),
+                                 _("Cannot resolve tree conflict on '%s' "
+                                   "(expected an item copied from a revision "
+                                   "smaller than r%ld, but the item was "
+                                   "copied from r%ld)"),
                                  svn_dirent_local_style(
                                    svn_dirent_skip_ancestor(
                                      wcroot_abspath, conflict->local_abspath),
@@ -6774,10 +6764,10 @@ verify_local_state_for_incoming_delete(svn_client_conflict_t *conflict,
       else if (details->added_rev != SVN_INVALID_REVNUM &&
                copyfrom_rev < details->added_rev)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                 _("Cannot resolve tree conflict on '%s' by "
-                                   "ignoring the incoming deletion (expected "
-                                   "an item copied from a revision larger than "
-                                   "r%ld, but the item was copied from r%ld)"),
+                                 _("Cannot resolve tree conflict on '%s' "
+                                   "(expected an item copied from a revision "
+                                   "larger than r%ld, but the item was "
+                                   "copied from r%ld)"),
                                  svn_dirent_local_style(
                                    svn_dirent_skip_ancestor(
                                      wcroot_abspath, conflict->local_abspath),
@@ -6787,10 +6777,9 @@ verify_local_state_for_incoming_delete(svn_client_conflict_t *conflict,
       else if (operation == svn_wc_operation_update &&
                strcmp(copyfrom_repos_relpath, details->repos_relpath) != 0)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                 _("Cannot resolve tree conflict on '%s' by "
-                                   "ignoring the incoming deletion (expected "
-                                   "an item copied from '^/%s', but the item "
-                                   "was copied from '^/%s@%ld')"),
+                                 _("Cannot resolve tree conflict on '%s' "
+                                   "(expected an item copied from '^/%s', "
+                                   "but the item was copied from '^/%s@%ld')"),
                                  svn_dirent_local_style(
                                    svn_dirent_skip_ancestor(
                                      wcroot_abspath, conflict->local_abspath),
@@ -6808,7 +6797,6 @@ verify_local_state_for_incoming_delete(svn_client_conflict_t *conflict,
           if (strcmp(copyfrom_repos_relpath, old_repos_relpath) != 0)
             return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                                      _("Cannot resolve tree conflict on '%s' "
-                                       "by ignoring the incoming deletion "
                                        "(expected an item copied from '^/%s', "
                                        "but the item was copied from "
                                         "'^/%s@%ld')"),
@@ -6833,9 +6821,8 @@ verify_local_state_for_incoming_delete(svn_client_conflict_t *conflict,
 
       if (victim_node_kind != on_disk_kind)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                 _("Cannot resolve tree conflict on '%s' by "
-                                   "ignoring the incoming deletion (expected "
-                                   "node kind '%s' but found '%s')"),
+                                 _("Cannot resolve tree conflict on '%s' "
+                                   "(expected node kind '%s' but found '%s')"),
                                  svn_dirent_local_style(
                                    svn_dirent_skip_ancestor(
                                      wcroot_abspath, conflict->local_abspath),
@@ -7360,8 +7347,7 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
   if (!is_copy && operation == svn_wc_operation_merge)
     {
       err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                              _("Cannot resolve tree conflict on '%s' by "
-                                "following the incoming move and merging "
+                              _("Cannot resolve tree conflict on '%s' "
                                 "(expected a copied item at '%s', but the "
                                 "item is not a copy)"),
                               svn_dirent_local_style(local_abspath,
@@ -7374,8 +7360,7 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
   if (moved_to_repos_relpath == NULL || moved_to_peg_rev == SVN_INVALID_REVNUM)
     {
       err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                              _("Cannot resolve tree conflict on '%s' by "
-                                "following the incoming move and merging "
+                              _("Cannot resolve tree conflict on '%s' "
                                 "(could not determine origin of '%s')"),
                               svn_dirent_local_style(local_abspath,
                                                      scratch_pool),
