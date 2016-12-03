@@ -1377,51 +1377,43 @@ get_filtered_tree(svn_authz_t *authz,
                   apr_pool_t *scratch_pool)
 {
   apr_pool_t *pool;
-  apr_size_t i;
+  node_t *root;
 
   /* Search our cache for a suitable previously filtered tree. */
-  for (i = 0; i < AUTHZ_FILTERED_CACHE_SIZE && authz->user_rules[i]; ++i)
+  if (authz->filtered)
     {
       /* Is this a suitable filtered tree? */
-      if (!matches_filtered_tree(&authz->user_rules[i], repos_name, user))
-        continue;
-
-      /* LRU: Move up to first entry. */
-      if (i > 0)
+      if (matches_filtered_tree(authz->filtered, repos_name, user))
         {
-          authz_user_rules_t *temp = authz->user_rules[i];
-          memmove(&authz->user_rules[1], &authz->user_rules[0],
-                  i * sizeof(temp));
-          authz->user_rules[0] = temp;
+          if (*path)
+            *path = init_lockup_state(authz->filtered->lookup_state,
+                                      authz->filtered->root,
+                                      *path);
+
+          return authz->filtered;
         }
 
-      if (*path)
-        *path = init_lockup_state(authz->user_rules[0]->lookup_state,
-                                  authz->user_rules[0]->root,
-                                  *path);
-
-      return authz->user_rules[0];
+      /* Drop the old filtered tree before creating a new one. */
+      svn_pool_destroy(authz->filtered->pool);
+      authz->filtered = NULL;
     }
 
-  /* Cache full? Drop last (i.e. oldest) entry. */
-  if (i == AUTHZ_FILTERED_CACHE_SIZE)
-    svn_pool_destroy(authz->user_rules[--i]->pool);
+  /* Global cache lookup.  Filter the full model only if necessary. */
+  pool = svn_pool_create(authz->pool);
+  root = create_user_authz(authz->full, repos_name, user, pool,
+                           scratch_pool);
 
   /* Write a new entry. */
-  pool = svn_pool_create(authz->pool);
-  authz->user_rules[i] = apr_palloc(pool, sizeof(*authz->user_rules[i]));
-  authz->user_rules[i]->pool = pool;
-  authz->user_rules[i]->repository = apr_pstrdup(pool, repos_name);
-  authz->user_rules[i]->user = user ? apr_pstrdup(pool, user) : NULL;
-  authz->user_rules[i]->root = create_user_authz(authz->full,
-                                                 repos_name, user, pool,
-                                                 scratch_pool);
-  authz->user_rules[i]->lookup_state = create_lookup_state(pool);
+  authz->filtered = apr_palloc(pool, sizeof(*authz->filtered));
+  authz->filtered->pool = pool;
+  authz->filtered->repository = apr_pstrdup(pool, repos_name);
+  authz->filtered->user = user ? apr_pstrdup(pool, user) : NULL;
+  authz->filtered->lookup_state = create_lookup_state(pool);
+  authz->filtered->root = root;
   if (*path)
-    init_lockup_state(authz->user_rules[i]->lookup_state,
-                      authz->user_rules[i]->root, *path);
+    init_lockup_state(authz->filtered->lookup_state, root, *path);
 
-  return authz->user_rules[i];
+  return authz->filtered;
 }
 
 

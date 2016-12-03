@@ -41,20 +41,6 @@ extern "C" {
  *   Authz and global group file parsing
  */
 
-/* Number of (user, repository) combinations per authz for which we can
- * cache the corresponding filtered path rule trees.
- *
- * Since authz instance are per connection and there is usually only one
- * repository per connection, 2 (user + anonymous) would be sufficient in
- * most cases.  Having 4 adds plenty of headroom and we expect high locality
- * in any case.
- *
- * ### This number will be far too low if/when the parsed authz info
- *     becomes shared between multiple sessions.
- */
-#define AUTHZ_FILTERED_CACHE_SIZE 4
-
-
 /* A dictionary of rules that are specific to a particular
    (user, repository) combination. */
 typedef struct authz_user_rules_t authz_user_rules_t;
@@ -172,9 +158,9 @@ struct svn_authz_t
   /* The parsed and pre-processed contents of the authz file. */
   authz_full_t *full;
 
-  /* A cache of rules filtered for a particular user.
-     These will be generated on-demand. */
-  authz_user_rules_t *user_rules[AUTHZ_FILTERED_CACHE_SIZE];
+  /* Rules filtered for a particular user-repository combination.
+   * May be NULL. */
+  authz_user_rules_t *filtered;
 
   /* The pool from which all the parsed authz data is allocated.
      This is the RESULT_POOL passed to svn_authz__tng_parse.
