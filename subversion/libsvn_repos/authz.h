@@ -32,6 +32,8 @@
 #include "svn_io.h"
 #include "svn_repos.h"
 
+#include "private/svn_string_private.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -157,6 +159,10 @@ struct svn_authz_t
 {
   /* The parsed and pre-processed contents of the authz file. */
   authz_full_t *full;
+
+  /* Identifies the authz model content
+   * (a hash value that can be used for e.g. cache lookups). */
+  svn_membuf_t *authz_id;
 
   /* Rules filtered for a particular user-repository combination.
    * May be NULL. */

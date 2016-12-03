@@ -123,9 +123,11 @@ combine_right_limits(limited_rights_t *target,
 
 /*** Authz cache access. ***/
 
-/* All authz instances currently in use will be cached here.
- * Will be instantiated at most once. */
+/* All authz instances currently in use as well as all filtered authz
+ * instances in use will be cached here.
+ * Both caches will be instantiated at most once. */
 svn_object_pool__t *authz_pool = NULL;
+svn_object_pool__t *filtered_pool = NULL;
 static svn_atomic_t authz_pool_initialized = FALSE;
 
 /* Implements svn_atomic__err_init_func_t. */
@@ -136,6 +138,7 @@ synchronized_authz_initialize(void *baton, apr_pool_t *pool)
     = apr_allocator_mutex_get(apr_pool_allocator_get(pool)) != NULL;
 
   SVN_ERR(svn_object_pool__create(&authz_pool, multi_threaded, pool));
+  SVN_ERR(svn_object_pool__create(&filtered_pool, multi_threaded, pool));
 
   return SVN_NO_ERROR;
 }
@@ -177,6 +180,33 @@ construct_authz_key(const svn_checksum_t *authz_key,
       result->size = size; /* exact length is required! */
       memcpy(result->data, authz_key->digest, size);
     }
+
+  return result;
+}
+
+/* Return a combination of REPOS_NAME, USER and AUTHZ_ID, allocated in
+ * RESULT_POOL.  USER may be NULL.  This is the key for the FILTERED_POOL.
+ */
+static svn_membuf_t *
+construct_filtered_key(const char *repos_name,
+                       const char *user,
+                       const svn_membuf_t *authz_id,
+                       apr_pool_t *result_pool)
+{
+  svn_membuf_t *result = apr_pcalloc(result_pool, sizeof(*result));
+  size_t repos_len = strlen(repos_name);
+  size_t user_len = user ? strlen(user) : 1;
+  const char *nullable_user = user ? user : "\0";
+  size_t size = authz_id->size + repos_len + 1 + user_len + 1;
+
+  svn_membuf__create(result, size, result_pool);
+  result->size = size;
+
+  memcpy(result->data, repos_name, repos_len + 1);
+  size = repos_len + 1;
+  memcpy((char *)result->data + size, nullable_user, user_len + 1);
+  size += user_len + 1;
+  memcpy((char *)result->data + size, authz_id->data, authz_id->size);
 
   return result;
 }
@@ -1400,8 +1430,47 @@ get_filtered_tree(svn_authz_t *authz,
 
   /* Global cache lookup.  Filter the full model only if necessary. */
   pool = svn_pool_create(authz->pool);
-  root = create_user_authz(authz->full, repos_name, user, pool,
-                           scratch_pool);
+  if (filtered_pool)
+    {
+      svn_membuf_t *key = construct_filtered_key(repos_name, user,
+                                                 authz->authz_id,
+                                                 scratch_pool);
+
+      /* Cache lookup. */
+      svn_error_clear(svn_object_pool__lookup((void **)&root, filtered_pool,
+                                              key, pool));
+
+      if (!root)
+        {
+          apr_pool_t *item_pool = svn_object_pool__new_item_pool(authz_pool);
+          authz_full_t *add_ref = NULL;
+
+          /* Make sure the underlying full authz object lives as long as the
+           * filtered one that we are about to create.  We do this by adding
+           * a reference to it in ITEM_POOL (which may live longer than AUTHZ).
+           *
+           * Note that we already have a reference to that full authz in
+           * AUTHZ->FULL. Assert that we actually don't created multiple
+           * instances of the same full model.
+           */
+          svn_error_clear(svn_object_pool__lookup((void **)&add_ref,
+                                                  authz_pool, authz->authz_id,
+                                                  item_pool));
+          SVN_ERR_ASSERT_NO_RETURN(add_ref == authz->full);
+
+          /* Now construct the new filtered tree and cache it. */
+          root = create_user_authz(authz->full, repos_name, user, item_pool,
+                                   scratch_pool);
+          svn_error_clear(svn_object_pool__insert((void **)&root,
+                                                  filtered_pool, key, root,
+                                                  item_pool, pool));
+        }
+     }
+  else
+    {
+      root = create_user_authz(authz->full, repos_name, user, pool,
+                               scratch_pool);
+    }
 
   /* Write a new entry. */
   authz->filtered = apr_palloc(pool, sizeof(*authz->filtered));
@@ -1419,11 +1488,12 @@ get_filtered_tree(svn_authz_t *authz,
 
 
 /* Read authz configuration data from PATH into *AUTHZ_P, allocated in
-   RESULT_POOL.  If GROUPS_PATH is set, use the global groups parsed from it.
-   Use SCRATCH_POOL for temporary allocations.
+   RESULT_POOL.  Return the cache key in *AUTHZ_ID.  If GROUPS_PATH is set,
+   use the global groups parsed from it.  Use SCRATCH_POOL for temporary
+   allocations.
 
    PATH and GROUPS_PATH may be a dirent or an absolute file url.  REPOS_HINT
-   may be specified to speed up access to in-repo authz file.
+   may be specified to speed up access to in-repo authz files.
 
    If PATH or GROUPS_PATH is not a valid authz rule file, then return
    SVN_AUTHZ_INVALID_CONFIG.  The contents of *AUTHZ_P is then
@@ -1431,6 +1501,7 @@ get_filtered_tree(svn_authz_t *authz,
    is also an error. */
 static svn_error_t *
 authz_read(authz_full_t **authz_p,
+           svn_membuf_t **authz_id,
            const char *path,
            const char *groups_path,
            svn_boolean_t must_exist,
@@ -1443,7 +1514,6 @@ authz_read(authz_full_t **authz_p,
   svn_stream_t *groups_stream = NULL;
   svn_checksum_t *rules_checksum = NULL;
   svn_checksum_t *groups_checksum = NULL;
-  svn_membuf_t *key;
 
   config_access_t *access = svn_repos__create_config_access(repos_hint,
                                                             scratch_pool);
@@ -1458,12 +1528,13 @@ authz_read(authz_full_t **authz_p,
                                   groups_path, must_exist, scratch_pool));
 
   /* The authz cache is optional. */
+  *authz_id = construct_authz_key(rules_checksum, groups_checksum,
+                                  result_pool);
   if (authz_pool)
     {
       /* Cache lookup. */
-      key = construct_authz_key(rules_checksum, groups_checksum, scratch_pool);
-      SVN_ERR(svn_object_pool__lookup((void **)authz_p, authz_pool, key,
-                                      result_pool));
+      SVN_ERR(svn_object_pool__lookup((void **)authz_p, authz_pool,
+                                      *authz_id, result_pool));
 
       /* If not found, parse and add to cache. */
       if (!*authz_p)
@@ -1488,7 +1559,7 @@ authz_read(authz_full_t **authz_p,
           else
             {
               SVN_ERR(svn_object_pool__insert((void **)authz_p, authz_pool,
-                                              key, *authz_p,
+                                              *authz_id, *authz_p,
                                               item_pool, result_pool));
             }
         }
@@ -1525,8 +1596,8 @@ svn_repos_authz_read3(svn_authz_t **authz_p,
   svn_authz_t *authz = apr_pcalloc(result_pool, sizeof(*authz));
   authz->pool = result_pool;
 
-  SVN_ERR(authz_read(&authz->full, path, groups_path, must_exist,
-                     repos_hint, result_pool, scratch_pool));
+  SVN_ERR(authz_read(&authz->full, &authz->authz_id, path, groups_path,
+                     must_exist, repos_hint, result_pool, scratch_pool));
 
   *authz_p = authz;
   return SVN_NO_ERROR;
