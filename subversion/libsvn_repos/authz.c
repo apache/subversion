@@ -1338,6 +1338,27 @@ struct authz_user_rules_t
   apr_pool_t *pool;
 };
 
+/* Return TRUE, iff AUTHZ matches the pair of REPOS_NAME and USER.
+ * Note that USER may be NULL.
+ */
+static svn_boolean_t
+matches_filtered_tree(const authz_user_rules_t *authz,
+                      const char *repos_name,
+                      const char *user)
+{
+  /* Does the user match? */
+  if (user)
+    {
+      if (authz->user == NULL || strcmp(user, authz->user))
+        return FALSE;
+    }
+  else if (authz->user != NULL)
+    return FALSE;
+
+  /* Does the repository match as well? */
+  return strcmp(repos_name, authz->repository) == 0;
+}
+
 /* Look through AUTHZ's cache for a path rule tree already filtered for
  * this USER, REPOS_NAME combination.  If that does not exist, yet, create
  * one and return the fully initialized authz_user_rules_t to start lookup
@@ -1361,21 +1382,8 @@ get_filtered_tree(svn_authz_t *authz,
   /* Search our cache for a suitable previously filtered tree. */
   for (i = 0; i < AUTHZ_FILTERED_CACHE_SIZE && authz->user_rules[i]; ++i)
     {
-      /* Does the user match? */
-      if (user == NULL)
-        {
-          if (authz->user_rules[i]->user != NULL)
-            continue;
-        }
-      else
-        {
-          if (   authz->user_rules[i]->user == NULL
-              || strcmp(user, authz->user_rules[i]->user))
-            continue;
-        }
-
-      /* Does the repository match as well? */
-      if (strcmp(repos_name, authz->user_rules[i]->repository))
+      /* Is this a suitable filtered tree? */
+      if (!matches_filtered_tree(&authz->user_rules[i], repos_name, user))
         continue;
 
       /* LRU: Move up to first entry. */
