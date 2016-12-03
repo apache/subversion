@@ -385,17 +385,16 @@ svn_cl__print_conflict_stats(svn_cl__conflict_stats_t *conflict_stats,
  */
 svn_error_t *
 svn_cl__resolve_conflict(svn_boolean_t *resolved,
-                         svn_cl__accept_t *accept_which,
                          svn_boolean_t *quit,
                          svn_boolean_t *external_failed,
                          svn_boolean_t *printed_summary,
                          svn_client_conflict_t *conflict,
+                         svn_cl__accept_t accept_which,
                          const char *editor_cmd,
                          apr_hash_t *config,
                          const char *path_prefix,
                          svn_cmdline_prompt_baton_t *pb,
                          svn_cl__conflict_stats_t *conflict_stats,
-                         svn_client_conflict_option_id_t option_id,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool);
 
@@ -406,7 +405,6 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
 svn_error_t *
 svn_cl__walk_conflicts(apr_array_header_t *targets,
                        svn_cl__conflict_stats_t *conflict_stats,
-                       svn_boolean_t is_resolve_cmd,
                        svn_cl__opt_state_t *opt_state,
                        svn_client_ctx_t *ctx,
                        apr_pool_t *scratch_pool);

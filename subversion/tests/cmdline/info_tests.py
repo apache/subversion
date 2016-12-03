@@ -641,7 +641,7 @@ def info_item_simple(sbox):
 
   sbox.build(read_only=True)
   svntest.actions.run_and_verify_svn(
-    '1', [],
+    ['1'], [],
     'info', '--show-item=revision', '--no-newline',
     sbox.ospath(''))
 

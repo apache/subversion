@@ -287,7 +287,7 @@ prefix_pool_create(prefix_pool_t **prefix_pool,
        * substantially below this.  If we accidentally do, we will simply
        * run out of entries in the VALUES array before running out of
        * allocated memory. */
-      ESTIMATED_BYTES_PER_ENTRY = 120,
+      ESTIMATED_BYTES_PER_ENTRY = 120
     };
 
   /* Number of entries we are going to support. */

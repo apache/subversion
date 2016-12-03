@@ -3704,14 +3704,14 @@ svn_wc__conflict_tree_update_moved_away_node(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
-svn_wc__conflict_tree_merge_local_changes(svn_wc_context_t *wc_ctx,
-                                          const char *local_abspath,
-                                          const char *dest_abspath,
-                                          svn_cancel_func_t cancel_func,
-                                          void *cancel_baton,
-                                          svn_wc_notify_func2_t notify_func,
-                                          void *notify_baton,
-                                          apr_pool_t *scratch_pool)
+svn_wc__conflict_tree_update_incoming_move(svn_wc_context_t *wc_ctx,
+                                           const char *local_abspath,
+                                           const char *dest_abspath,
+                                           svn_cancel_func_t cancel_func,
+                                           void *cancel_baton,
+                                           svn_wc_notify_func2_t notify_func,
+                                           void *notify_baton,
+                                           apr_pool_t *scratch_pool)
 {
   svn_wc_conflict_reason_t local_change;
   svn_wc_conflict_action_t incoming_change;
@@ -3760,13 +3760,12 @@ svn_wc__conflict_tree_merge_local_changes(svn_wc_context_t *wc_ctx,
                              svn_dirent_local_style(local_abspath,
                                                     scratch_pool));
 
-  /* Merge local changes. */
-  SVN_ERR(svn_wc__db_merge_local_changes(wc_ctx->db, local_abspath,
-                                         dest_abspath, operation,
-                                         incoming_change, local_change,
-                                         cancel_func, cancel_baton,
-                                         notify_func, notify_baton,
-                                         scratch_pool));
+  SVN_ERR(svn_wc__db_update_incoming_move(wc_ctx->db, local_abspath,
+                                          dest_abspath, operation,
+                                          incoming_change, local_change,
+                                          cancel_func, cancel_baton,
+                                          notify_func, notify_baton,
+                                          scratch_pool));
 
   SVN_ERR(svn_wc__wq_run(wc_ctx->db, local_abspath, cancel_func, cancel_baton,
                          scratch_pool));

@@ -68,6 +68,8 @@ extern "C" {
 #define SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS "ephemeral-txnprops"
 /* maps to SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE */
 #define SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE "file-revs-reverse"
+/* maps to SVN_RA_CAPABILITY_LIST */
+#define SVN_RA_SVN_CAP_LIST "list"
 
 
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of

@@ -1678,11 +1678,11 @@ get_file(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+/* Translate all the words in DIRENT_FIELDS_LIST into the flags in
+ * DIRENT_FIELDS_P.  If DIRENT_FIELDS_LIST is NULL, set all flags. */
 static svn_error_t *
-get_dir(svn_ra_svn_conn_t *conn,
-        apr_pool_t *pool,
-        svn_ra_svn__list_t *params,
-        void *baton)
+parse_dirent_fields(apr_uint64_t *dirent_fields_p,
+                    svn_ra_svn__list_t *dirent_fields_list)
 {
   static const svn_string_t str_kind
     = SVN__STATIC_STRING(SVN_RA_SVN_DIRENT_KIND);
@@ -1697,32 +1697,7 @@ get_dir(svn_ra_svn_conn_t *conn,
   static const svn_string_t str_last_author
     = SVN__STATIC_STRING(SVN_RA_SVN_DIRENT_LAST_AUTHOR);
 
-  server_baton_t *b = baton;
-  const char *path, *full_path;
-  svn_revnum_t rev;
-  apr_hash_t *entries, *props = NULL;
-  apr_array_header_t *inherited_props;
-  apr_hash_index_t *hi;
-  svn_fs_root_t *root;
-  apr_pool_t *subpool;
-  svn_boolean_t want_props, want_contents;
-  apr_uint64_t wants_inherited_props;
   apr_uint64_t dirent_fields;
-  svn_ra_svn__list_t *dirent_fields_list = NULL;
-  svn_ra_svn__item_t *elt;
-  int i;
-  authz_baton_t ab;
-
-  ab.server = b;
-  ab.conn = conn;
-
-  SVN_ERR(svn_ra_svn__parse_tuple(params, "c(?r)bb?l?B", &path, &rev,
-                                  &want_props, &want_contents,
-                                  &dirent_fields_list,
-                                  &wants_inherited_props));
-
-  if (wants_inherited_props == SVN_RA_SVN_UNSPECIFIED_NUMBER)
-    wants_inherited_props = FALSE;
 
   if (! dirent_fields_list)
     {
@@ -1730,15 +1705,17 @@ get_dir(svn_ra_svn_conn_t *conn,
     }
   else
     {
+      int i;
       dirent_fields = 0;
 
       for (i = 0; i < dirent_fields_list->nelts; ++i)
         {
-          elt = &SVN_RA_SVN__LIST_ITEM(dirent_fields_list, i);
+          svn_ra_svn__item_t *elt
+            = &SVN_RA_SVN__LIST_ITEM(dirent_fields_list, i);
 
           if (elt->kind != SVN_RA_SVN_WORD)
             return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                    "Dirent field not a string");
+                                    "Dirent field not a word");
 
           if (svn_string_compare(&str_kind, &elt->u.word))
             dirent_fields |= SVN_DIRENT_KIND;
@@ -1755,6 +1732,43 @@ get_dir(svn_ra_svn_conn_t *conn,
         }
     }
 
+  *dirent_fields_p = dirent_fields;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+get_dir(svn_ra_svn_conn_t *conn,
+        apr_pool_t *pool,
+        svn_ra_svn__list_t *params,
+        void *baton)
+{
+  server_baton_t *b = baton;
+  const char *path, *full_path;
+  svn_revnum_t rev;
+  apr_hash_t *entries, *props = NULL;
+  apr_array_header_t *inherited_props;
+  apr_hash_index_t *hi;
+  svn_fs_root_t *root;
+  apr_pool_t *subpool;
+  svn_boolean_t want_props, want_contents;
+  apr_uint64_t wants_inherited_props;
+  apr_uint64_t dirent_fields;
+  svn_ra_svn__list_t *dirent_fields_list = NULL;
+  int i;
+  authz_baton_t ab;
+
+  ab.server = b;
+  ab.conn = conn;
+
+  SVN_ERR(svn_ra_svn__parse_tuple(params, "c(?r)bb?l?B", &path, &rev,
+                                  &want_props, &want_contents,
+                                  &dirent_fields_list,
+                                  &wants_inherited_props));
+
+  if (wants_inherited_props == SVN_RA_SVN_UNSPECIFIED_NUMBER)
+    wants_inherited_props = FALSE;
+
+  SVN_ERR(parse_dirent_fields(&dirent_fields, dirent_fields_list));
   full_path = svn_fspath__join(b->repository->fs_path->data,
                                svn_relpath_canonicalize(path, pool), pool);
 
@@ -3523,6 +3537,114 @@ get_inherited_props(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+/* Baton type to be used with list_receiver. */
+typedef struct list_receiver_baton_t
+{
+  /* Send the data through this connection. */
+  svn_ra_svn_conn_t *conn;
+
+  /* Send the field selected by these flags. */
+  apr_uint64_t dirent_fields;
+} list_receiver_baton_t;
+
+/* Implements svn_repos_dirent_receiver_t, sending DIRENT and PATH to the
+ * client.  BATON must be a list_receiver_baton_t. */
+static svn_error_t *
+list_receiver(const char *path,
+              svn_dirent_t *dirent,
+              void *baton,
+              apr_pool_t *pool)
+{
+  list_receiver_baton_t *b = baton;
+  return svn_error_trace(svn_ra_svn__write_dirent(b->conn, pool, path, dirent,
+                                                  b->dirent_fields));
+}
+
+static svn_error_t *
+list(svn_ra_svn_conn_t *conn,
+     apr_pool_t *pool,
+     svn_ra_svn__list_t *params,
+     void *baton)
+{
+  server_baton_t *b = baton;
+  const char *path, *full_path;
+  svn_revnum_t rev;
+  svn_depth_t depth;
+  apr_array_header_t *patterns = NULL;
+  svn_fs_root_t *root;
+  const char *depth_word;
+  svn_boolean_t path_info_only;
+  svn_ra_svn__list_t *dirent_fields_list = NULL;
+  svn_ra_svn__list_t *patterns_list = NULL;
+  int i;
+  list_receiver_baton_t rb;
+  svn_error_t *err, *write_err;
+
+  authz_baton_t ab;
+  ab.server = b;
+  ab.conn = conn;
+
+  /* Read the command parameters. */
+  SVN_ERR(svn_ra_svn__parse_tuple(params, "c(?r)w?l?l", &path, &rev,
+                                  &depth_word, &dirent_fields_list,
+                                  &patterns_list));
+
+  rb.conn = conn;
+  SVN_ERR(parse_dirent_fields(&rb.dirent_fields, dirent_fields_list));
+
+  depth = svn_depth_from_word(depth_word);
+  full_path = svn_fspath__join(b->repository->fs_path->data,
+                               svn_relpath_canonicalize(path, pool), pool);
+
+  /* Read the patterns list.  */
+  if (patterns_list)
+    {
+      patterns = apr_array_make(pool, 0, sizeof(const char *));
+      for (i = 0; i < patterns_list->nelts; ++i)
+        {
+          svn_ra_svn__item_t *elt = &SVN_RA_SVN__LIST_ITEM(patterns_list, i);
+
+          if (elt->kind != SVN_RA_SVN_STRING)
+            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                    "Pattern field not a string");
+
+          APR_ARRAY_PUSH(patterns, const char *) = elt->u.string.data;
+        }
+    }
+
+  /* Check authorizations */
+  SVN_ERR(must_have_access(conn, pool, b, svn_authz_read,
+                           full_path, FALSE));
+
+  if (!SVN_IS_VALID_REVNUM(rev))
+    SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->repository->fs, pool));
+
+  SVN_ERR(log_command(b, conn, pool, "%s",
+                      svn_log__list(full_path, rev, patterns, depth,
+                                    rb.dirent_fields, pool)));
+
+  /* Fetch the root of the appropriate revision. */
+  SVN_CMD_ERR(svn_fs_revision_root(&root, b->repository->fs, rev, pool));
+
+  /* Fetch the directory entries if requested and send them immediately. */
+  path_info_only = (rb.dirent_fields & ~SVN_DIRENT_KIND) == 0;
+  err = svn_repos_list(root, full_path, patterns, depth, path_info_only,
+                       authz_check_access_cb_func(b), &ab, list_receiver,
+                       &rb, NULL, NULL, pool);
+
+
+  /* Finish response. */
+  write_err = svn_ra_svn__write_word(conn, pool, "done");
+  if (write_err)
+    {
+      svn_error_clear(err);
+      return write_err;
+    }
+  SVN_CMD_ERR(err);
+
+  return svn_error_trace(svn_ra_svn__write_cmd_response(conn, pool, ""));
+}
+
 static const svn_ra_svn__cmd_entry_t main_commands[] = {
   { "reparent",        reparent },
   { "get-latest-rev",  get_latest_rev },
@@ -3555,6 +3677,7 @@ static const svn_ra_svn__cmd_entry_t main_commands[] = {
   { "replay-range",    replay_range },
   { "get-deleted-rev", get_deleted_rev },
   { "get-iprops",      get_inherited_props },
+  { "list",            list },
   { NULL }
 };
 
@@ -3744,6 +3867,7 @@ find_repos(const char *url,
   if (hooks_env)
     hooks_env = svn_dirent_internal_style(hooks_env, scratch_pool);
 
+  SVN_ERR(svn_repos_hooks_setenv(repository->repos, hooks_env, scratch_pool));
   repository->hooks_env = apr_pstrdup(result_pool, hooks_env);
 
   return SVN_NO_ERROR;
@@ -3951,7 +4075,7 @@ construct_server_baton(server_baton_t **baton,
    * send an empty mechlist. */
   if (params->compression_level > 0)
     SVN_ERR(svn_ra_svn__write_cmd_response(conn, scratch_pool,
-                                           "nn()(wwwwwwwwwww)",
+                                           "nn()(wwwwwwwwwwww)",
                                            (apr_uint64_t) 2, (apr_uint64_t) 2,
                                            SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                            SVN_RA_SVN_CAP_SVNDIFF1,
@@ -3963,11 +4087,12 @@ construct_server_baton(server_baton_t **baton,
                                            SVN_RA_SVN_CAP_PARTIAL_REPLAY,
                                            SVN_RA_SVN_CAP_INHERITED_PROPS,
                                            SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS,
-                                           SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE
+                                           SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE,
+                                           SVN_RA_SVN_CAP_LIST
                                            ));
   else
     SVN_ERR(svn_ra_svn__write_cmd_response(conn, scratch_pool,
-                                           "nn()(wwwwwwwwww)",
+                                           "nn()(wwwwwwwwwww)",
                                            (apr_uint64_t) 2, (apr_uint64_t) 2,
                                            SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                            SVN_RA_SVN_CAP_ABSENT_ENTRIES,
@@ -3978,7 +4103,8 @@ construct_server_baton(server_baton_t **baton,
                                            SVN_RA_SVN_CAP_PARTIAL_REPLAY,
                                            SVN_RA_SVN_CAP_INHERITED_PROPS,
                                            SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS,
-                                           SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE
+                                           SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE,
+                                           SVN_RA_SVN_CAP_LIST
                                            ));
 
   /* Read client response, which we assume to be in version 2 format:
