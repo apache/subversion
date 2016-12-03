@@ -11,7 +11,6 @@ https://wiki.apache.org/subversion/AuthzImprovements
 
 TODO:
 
-* implement precedence rules
 * remove no-op escape sequences from wildcard rule segments
 * implement lookup access rights
 
@@ -38,3 +37,7 @@ DONE:
 * implement wildcard escaping in glob rules
 * in the implementation, replace the public access rights enum
   with a private variant, in preparation for adding lookup access rights.
+* implement precedence rules
+* make models read-only such that they may be cached
+* implement global authz and filtered tree caches
+* add fast lookup path for in-repository authz files
