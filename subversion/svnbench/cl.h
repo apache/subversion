@@ -95,6 +95,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t trust_server_cert_expired;
   svn_boolean_t trust_server_cert_not_yet_valid;
   svn_boolean_t trust_server_cert_other_failure;
+  apr_array_header_t* search_patterns; /* pattern arguments for --search */
 } svn_cl__opt_state_t;
 
 

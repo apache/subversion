@@ -2061,45 +2061,6 @@ svn_repos_version(void)
   SVN_VERSION_BODY;
 }
 
-
-
-svn_error_t *
-svn_repos_stat(svn_dirent_t **dirent,
-               svn_fs_root_t *root,
-               const char *path,
-               apr_pool_t *pool)
-{
-  svn_node_kind_t kind;
-  svn_dirent_t *ent;
-  const char *datestring;
-
-  SVN_ERR(svn_fs_check_path(&kind, root, path, pool));
-
-  if (kind == svn_node_none)
-    {
-      *dirent = NULL;
-      return SVN_NO_ERROR;
-    }
-
-  ent = svn_dirent_create(pool);
-  ent->kind = kind;
-
-  if (kind == svn_node_file)
-    SVN_ERR(svn_fs_file_length(&(ent->size), root, path, pool));
-
-  SVN_ERR(svn_fs_node_has_props(&ent->has_props, root, path, pool));
-
-  SVN_ERR(svn_repos_get_committed_info(&(ent->created_rev),
-                                       &datestring,
-                                       &(ent->last_author),
-                                       root, path, pool));
-  if (datestring)
-    SVN_ERR(svn_time_from_cstring(&(ent->time), datestring, pool));
-
-  *dirent = ent;
-  return SVN_NO_ERROR;
-}
-
 svn_error_t *
 svn_repos_remember_client_capabilities(svn_repos_t *repos,
                                        const apr_array_header_t *capabilities)
