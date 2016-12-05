@@ -628,13 +628,13 @@ map_deleted_path_to_move(const char *deleted_relpath,
 }
 
 static svn_error_t *
-find_nested_move(const char **moved_from_repos_relpath,
-                 struct copy_info **move_destination,
+find_nested_move(struct repos_move_info **nested_move,
                  const char *deleted_repos_relpath,
                  apr_array_header_t *moves,
                  apr_hash_t *copies,
                  apr_array_header_t *deleted_paths,
                  svn_revnum_t revision,
+                 svn_string_t *author,
                  const char *repos_root_url,
                  const char *repos_uuid,
                  svn_ra_session_t *ra_session,
@@ -644,9 +644,10 @@ find_nested_move(const char **moved_from_repos_relpath,
 {
   int i;
   apr_pool_t *iterpool;
+  struct copy_info *move_destination = NULL;
+  const char *moved_from_repos_relpath = NULL;
 
-  *moved_from_repos_relpath = NULL;
-  *move_destination = NULL;
+  *nested_move = NULL;
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < deleted_paths->nelts; i++)
@@ -698,13 +699,31 @@ find_nested_move(const char **moved_from_repos_relpath,
 
       if (related)
         {
-          *moved_from_repos_relpath =
+          moved_from_repos_relpath =
             apr_pstrdup(result_pool, moved_along_repos_relpath);
-          *move_destination = copy;
+          move_destination = copy;
           break;
         }
     }
   svn_pool_destroy(iterpool);
+
+  if (moved_from_repos_relpath && move_destination)
+    {
+      struct repos_move_info *move;
+
+      /* Remember details of this move. */
+      move = apr_pcalloc(result_pool, sizeof(*move));
+      move->moved_from_repos_relpath = moved_from_repos_relpath;
+      move->moved_to_repos_relpath =
+        apr_pstrdup(result_pool,
+                    move_destination->copyto_path);
+      move->rev = revision;
+      move->rev_author = apr_pstrdup(result_pool, author->data);
+      move->copyfrom_rev = move_destination->copyfrom_rev;
+
+      APR_ARRAY_PUSH(moves, struct repos_move_info *) = move;
+      *nested_move = move;
+    }
 
   return SVN_NO_ERROR;
 }
@@ -867,36 +886,22 @@ find_deleted_rev(void *baton,
                            sizeof(svn_revnum_t));
       if (moves)
         {
-          const char *moved_from_repos_relpath;
-          struct copy_info *copy;
-          svn_string_t *author;
+          struct repos_move_info *nested_move;
 
-          SVN_ERR(find_nested_move(&moved_from_repos_relpath, &copy,
+          SVN_ERR(find_nested_move(&nested_move,
                                    b->deleted_repos_relpath,
                                    moves, copies, deleted_paths,
                                    log_entry->revision,
+                                   svn_hash_gets(log_entry->revprops,
+                                                 SVN_PROP_REVISION_AUTHOR),
                                    b->repos_root_url,
                                    b->repos_uuid,
                                    b->extra_ra_session, b->ctx,
                                    b->result_pool, scratch_pool));
-          if (moved_from_repos_relpath && copy)
+          if (nested_move)
             {
-              struct repos_move_info *move;
-
-              /* Remember details of this move. */
-              move = apr_pcalloc(b->result_pool, sizeof(*move));
-              move->moved_from_repos_relpath = moved_from_repos_relpath;
-              move->moved_to_repos_relpath = apr_pstrdup(b->result_pool,
-                                                         copy->copyto_path);
-              move->rev = log_entry->revision;
-              author = svn_hash_gets(log_entry->revprops,
-                                     SVN_PROP_REVISION_AUTHOR);
-              move->rev_author = apr_pstrdup(b->result_pool, author->data);
-              move->copyfrom_rev = copy->copyfrom_rev;
-
-              APR_ARRAY_PUSH(moves, struct repos_move_info *) = move;
               deleted_node_found = TRUE;
-              b->deleted_repos_relpath = move->moved_from_repos_relpath;
+              b->deleted_repos_relpath = nested_move->moved_from_repos_relpath;
             }
         }
     }
