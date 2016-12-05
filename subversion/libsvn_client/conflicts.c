@@ -675,9 +675,9 @@ find_nested_move(struct repos_move_info **nested_move,
       /* Consider: svn mv A B; svn mv B/foo C/foo
        * Copyfrom for C/foo is A/foo, even though C/foo was moved here from
        * B/foo. A/foo was not deleted. It is B/foo which was deleted.
-       * We now know the move A->B and child_repath "foo". Try to detect an
-       * ancestral relationship between A/foo and the known related path.
-       */
+       * We now know about the move A->B and moved-along child_relpath "foo".
+       * Try to detect an ancestral relationship between A/foo and the
+       * moved-along path. */
       moved_along_repos_relpath =
         svn_relpath_join(move->moved_from_repos_relpath, child_relpath,
                          iterpool);
