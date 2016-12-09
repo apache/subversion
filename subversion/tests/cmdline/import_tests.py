@@ -316,9 +316,7 @@ enable-auto-props = yes
 *.dsp = svn:eol-style=CRLF
 *.txt = svn:eol-style=native
 '''
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
-  config_dir = os.path.join(tmp_dir, 'autoprops_config')
-  svntest.main.create_config_dir(config_dir, config_contents)
+  config_dir = sbox.create_config_dir(config_contents)
 
   # create a new file and import it
   file_name = "test.dsp"
@@ -418,9 +416,7 @@ def import_inherited_ignores(sbox):
   #
   #   [miscellany]
   #   global-ignores = *.boo *.goo
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
-  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
-  create_inherited_ignores_config(config_dir)
+  config_dir = create_inherited_ignores_config(sbox)
 
   # Set some ignore properties.
   sbox.simple_propset(SVN_PROP_INHERITABLE_IGNORES, '*.voo *.noo *.loo', '.')
@@ -446,6 +442,7 @@ def import_inherited_ignores(sbox):
   #   DIR7
   #     file7.foo
   #     DIR8.noo
+  tmp_dir = os.path.abspath(svntest.main.temp_dir)
   import_tree_dir = os.path.join(tmp_dir, 'import_tree_' + sbox.name)
 
   # Relative WC paths of the imported tree.

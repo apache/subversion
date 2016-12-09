@@ -702,8 +702,6 @@ def timestamp_behaviour(sbox):
   text_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'cleanup')
 
   # Create a config to enable use-commit-times
-  config_dir = os.path.join(os.path.abspath(svntest.main.temp_dir),
-                            'use_commit_config')
   config_contents = '''\
 [auth]
 password-stores =
@@ -711,7 +709,7 @@ password-stores =
 [miscellany]
 use-commit-times = yes
 '''
-  svntest.main.create_config_dir(config_dir, config_contents)
+  config_dir = sbox.create_config_dir(config_contents)
 
   other_wc = sbox.add_wc_path('other')
   svntest.actions.run_and_verify_svn(None, [],
