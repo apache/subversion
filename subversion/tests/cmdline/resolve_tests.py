@@ -602,7 +602,6 @@ def multi_range_merge_with_accept(sbox):
 
 # Test for issue #4647 'auto resolution mine-full fails on binary file'
 @Issue(4647)
-@XFail()
 def automatic_binary_conflict_resolution(sbox):
   "resolve -R --accept [base | mf | tf] binary file"
 

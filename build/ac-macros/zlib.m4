@@ -94,6 +94,7 @@ AC_DEFUN(SVN_ZLIB_PKG_CONFIG,
       zlib_found=yes
       SVN_ZLIB_INCLUDES=`$PKG_CONFIG zlib --cflags`
       SVN_ZLIB_LIBS=`$PKG_CONFIG zlib --libs`
+      SVN_ZLIB_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($SVN_ZLIB_LIBS)`"
     else
       AC_MSG_RESULT([no])
     fi

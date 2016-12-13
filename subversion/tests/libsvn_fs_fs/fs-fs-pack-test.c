@@ -1811,6 +1811,83 @@ pack_with_limited_memory(const svn_test_opts_t *opts,
 #undef MAX_REV
 #undef SHARD_SIZE
 
+/* ------------------------------------------------------------------------ */
+
+#define REPO_NAME "test-repo-large_delta_against_plain"
+
+static svn_error_t *
+large_delta_against_plain(const svn_test_opts_t *opts,
+                          apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  fs_fs_data_t *ffd;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *root;
+  svn_revnum_t rev;
+  svn_stringbuf_t *prop_value;
+  svn_string_t *prop_read;
+  int i;
+  apr_hash_t *fs_config;
+
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL, NULL);
+
+  /* Create a repo that and explicitly enable rep sharing. */
+  SVN_ERR(svn_test__create_fs(&fs, REPO_NAME, opts, pool));
+  ffd = fs->fsap_data;
+
+  /* Make sure all props are stored as PLAIN reps. */
+  ffd->deltify_properties = FALSE;
+
+  /* Construct a property larger than 2 txdelta windows. */
+  prop_value = svn_stringbuf_create("prop", pool);
+  while (prop_value->len <= 2 * 102400)
+    svn_stringbuf_appendstr(prop_value, prop_value);
+
+  /* Revision 1: create a property rep. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "/", "p",
+                                  svn_string_create(prop_value->data, pool),
+                                  pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Now, store them as DELTA reps. */
+  ffd->deltify_properties = TRUE;
+
+  /* Construct a property larger than 2 txdelta windows, distinct from the
+   * previous one but with a matching "tail". */
+  prop_value = svn_stringbuf_create("blob", pool);
+  while (prop_value->len <= 2 * 102400)
+    svn_stringbuf_appendstr(prop_value, prop_value);
+  for (i = 0; i < 100; ++i)
+    svn_stringbuf_appendcstr(prop_value, "prop");
+
+  /* Revision 2: modify the property. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 1, pool));
+  SVN_ERR(svn_fs_txn_root(&root, txn, pool));
+  SVN_ERR(svn_fs_change_node_prop(root, "/", "p",
+                                  svn_string_create(prop_value->data, pool),
+                                  pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+
+  /* Reconstructing the property deltified must work.  To make sure we
+   * actually read from disk, use a new FS instance with disjoint caches. */
+  fs_config = apr_hash_make(pool);
+  svn_hash_sets(fs_config, SVN_FS_CONFIG_FSFS_CACHE_NS,
+                           svn_uuid_generate(pool));
+  SVN_ERR(svn_fs_open2(&fs, REPO_NAME, fs_config, pool, pool));
+
+  SVN_ERR(svn_fs_revision_root(&root, fs, rev, pool));
+  SVN_ERR(svn_fs_node_prop(&prop_read, root, "/", "p", pool));
+  SVN_TEST_STRING_ASSERT(prop_read->data, prop_value->data);
+
+  return SVN_NO_ERROR;
+}
+
+#undef REPO_NAME
+
+
 
 /* The test table.  */
 
@@ -1863,6 +1940,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "compare empty PLAIN and non-existent reps"),
     SVN_TEST_OPTS_PASS(pack_with_limited_memory,
                        "pack with limited memory for metadata"),
+    SVN_TEST_OPTS_PASS(large_delta_against_plain,
+                       "large deltas against PLAIN, issue #4658"),
     SVN_TEST_NULL
   };
 

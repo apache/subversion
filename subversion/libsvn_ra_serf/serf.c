@@ -734,11 +734,14 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
     new_sess->server_allows_bulk = apr_pstrdup(result_pool,
                                                new_sess->server_allows_bulk);
 
-  new_sess->repos_root_str = apr_pstrdup(result_pool,
-                                         new_sess->repos_root_str);
-  SVN_ERR(svn_ra_serf__uri_parse(&new_sess->repos_root,
-                                 new_sess->repos_root_str,
-                                 result_pool));
+  if (new_sess->repos_root_str)
+    {
+      new_sess->repos_root_str = apr_pstrdup(result_pool,
+                                             new_sess->repos_root_str);
+      SVN_ERR(svn_ra_serf__uri_parse(&new_sess->repos_root,
+                                     new_sess->repos_root_str,
+                                     result_pool));
+    }
 
   new_sess->session_url_str = apr_pstrdup(result_pool, new_session_url);
 
@@ -1052,6 +1055,7 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__get_deleted_rev,
   svn_ra_serf__get_inherited_props,
   NULL /* set_svn_ra_open */,
+  NULL /* svn_ra_list */,
   svn_ra_serf__register_editor_shim_callbacks,
   NULL /* commit_ev2 */,
   NULL /* replay_range_ev2 */

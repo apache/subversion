@@ -60,7 +60,7 @@ def check_proplist(path, exp_out):
 
 #----------------------------------------------------------------------
 
-def create_config(config_dir, enable_flag):
+def create_config(sbox, enable_flag):
   "create config directories and files"
 
   # contents of the file 'config'
@@ -82,7 +82,7 @@ quotetest = svn:keywords="Author Date Id Rev URL";
 * = auto=oui
 ''' % (enable_flag and 'yes' or 'no')
 
-  svntest.main.create_config_dir(config_dir, config_contents)
+  return sbox.create_config_dir(config_contents)
 
 #----------------------------------------------------------------------
 
@@ -103,8 +103,10 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
   # some directories
   wc_dir = sbox.wc_dir
   tmp_dir = os.path.abspath(sbox.add_wc_path('autoprops'))
-  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
+  os.makedirs(tmp_dir)
   repos_url = sbox.repo_url
+
+  config_dir = create_config(sbox, cfgenable)
 
   # initialize parameters
   if cmd == 'import':
@@ -115,8 +117,6 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
     files_dir = wc_dir
 
   parameters = parameters + ['--config-dir', config_dir]
-
-  create_config(config_dir, cfgenable)
 
   # add comandline flags
   if clienable == 1:
@@ -327,7 +327,7 @@ def fail_add_mixed_eol_style(sbox):
 
 #----------------------------------------------------------------------
 
-def create_inherited_autoprops_config(config_dir, enable_flag):
+def create_inherited_autoprops_config(sbox, enable_flag):
   "create config stuffs for inherited autoprops tests"
 
   # contents of the file 'config'
@@ -342,7 +342,7 @@ enable-auto-props = %s
 *.c = svn:keywords=Author Date Id Rev URL;svn:eol-style=native;
 ''' % (enable_flag and 'yes' or 'no')
 
-  svntest.main.create_config_dir(config_dir, config_contents)
+  return sbox.create_config_dir(config_contents)
 
 #----------------------------------------------------------------------
 def check_inheritable_autoprops(sbox, auto_props_cfg_enabled,
@@ -416,8 +416,10 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
   # some directories
   wc_dir = sbox.wc_dir
   tmp_dir = os.path.abspath(sbox.add_wc_path('iautoprops'))
-  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
+  os.makedirs(tmp_dir)
   repos_url = sbox.repo_url
+
+  config_dir = create_inherited_autoprops_config(sbox, cfgenable)
 
   # initialize parameters
   if cmd == 'import':
@@ -428,8 +430,6 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
     files_dir = wc_dir
 
   parameters = parameters + ['--config-dir', config_dir]
-
-  create_inherited_autoprops_config(config_dir, cfgenable)
 
   # add comandline flags
   inheritable_auto_props_enabled = 1
@@ -647,10 +647,7 @@ def svn_prop_inheritable_autoprops_add_versioned_target(sbox):
   #
   # Then revert the previous additions and add again, only the
   # svn:auto-props should be applied.
-  tmp_dir = os.path.abspath(sbox.add_wc_path('temp'))
-  config_dir = os.path.join(tmp_dir,
-                            'autoprops_config_disabled_' + sbox.name)
-  create_inherited_autoprops_config(config_dir, False)
+  config_dir = create_inherited_autoprops_config(sbox, False)
 
   svntest.main.run_svn(None, 'revert', '-R', sbox.wc_dir)
   os.chdir(sbox.wc_dir)

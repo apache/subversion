@@ -3048,7 +3048,7 @@ svn_wc__db_wclock_obtain(svn_wc__db_t *db,
                          svn_boolean_t steal_lock,
                          apr_pool_t *scratch_pool);
 
-/* Set LOCK_ABSPATH to the path of the the directory that owns the
+/* Set LOCK_ABSPATH to the path of the directory that owns the
    lock on LOCAL_ABSPATH, or NULL, if LOCAL_ABSPATH is not locked. */
 svn_error_t*
 svn_wc__db_wclock_find_root(const char **lock_abspath,
@@ -3408,17 +3408,17 @@ svn_wc__db_update_moved_away_conflict_victim(svn_wc__db_t *db,
    directory at DEST_ABSPATH. This function requires that LOCAL_ABSPATH is
    a directory and a tree-conflict victim. DST_ABSPATH must be a directory. */
 svn_error_t *
-svn_wc__db_merge_local_changes(svn_wc__db_t *db,
-                               const char *local_abspath,
-                               const char *dest_abspath,
-                               svn_wc_operation_t operation,
-                               svn_wc_conflict_action_t action,
-                               svn_wc_conflict_reason_t reason,
-                               svn_cancel_func_t cancel_func,
-                               void *cancel_baton,
-                               svn_wc_notify_func2_t notify_func,
-                               void *notify_baton,
-                               apr_pool_t *scratch_pool);
+svn_wc__db_update_incoming_move(svn_wc__db_t *db,
+                                const char *local_abspath,
+                                const char *dest_abspath,
+                                svn_wc_operation_t operation,
+                                svn_wc_conflict_action_t action,
+                                svn_wc_conflict_reason_t reason,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
+                                svn_wc_notify_func2_t notify_func,
+                                void *notify_baton,
+                                apr_pool_t *scratch_pool);
 
 /* LOCAL_ABSPATH is moved to MOVE_DST_ABSPATH.  MOVE_SRC_ROOT_ABSPATH
  * is the root of the move to MOVE_DST_OP_ROOT_ABSPATH.

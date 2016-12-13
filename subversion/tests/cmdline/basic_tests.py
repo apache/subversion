@@ -2539,9 +2539,7 @@ def basic_auth_test(sbox):
   wc_dir = sbox.wc_dir
 
   # Set up a custom config directory
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
-  config_dir = os.path.join(tmp_dir, 'auth-test-config')
-  svntest.main.create_config_dir(config_dir, None)
+  config_dir = sbox.create_config_dir()
 
   # Checkout with jrandom
   exit_code, output, errput = svntest.main.run_command(
@@ -3116,6 +3114,20 @@ def plaintext_password_storage_disabled(sbox):
       f.close()
 
 
+
+def filtered_ls(sbox):
+  "filtered 'svn ls'"
+
+  sbox.build(read_only=True)
+  path = sbox.repo_url + "/A/D"
+
+  # check plain info
+  expected = [ "H/omega\n",
+               "gamma\n" ]
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    None, [], 'ls', path, '--depth=infinity', '--search=*a')
+
 ########################################################################
 # Run the tests
 
@@ -3186,6 +3198,7 @@ test_list = [ None,
               peg_rev_on_non_existent_wc_path,
               mkdir_parents_target_exists_on_disk,
               plaintext_password_storage_disabled,
+              filtered_ls,
              ]
 
 if __name__ == '__main__':

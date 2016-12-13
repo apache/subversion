@@ -10957,7 +10957,7 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
                        potentially_unmerged_ranges->nelts - 1,
                        svn_merge_range_t *))->end;
       log_find_operative_baton_t log_baton;
-      const char *old_session_url;
+      const char *old_session_url = NULL;
       svn_error_t *err;
 
       log_baton.merged_catalog = merged_catalog;
@@ -10968,14 +10968,22 @@ find_unsynced_ranges(const svn_client__pathrev_t *source_loc,
         = svn_client__pathrev_fspath(target_loc, scratch_pool);
       log_baton.result_pool = result_pool;
 
-      SVN_ERR(svn_client__ensure_ra_session_url(
-                &old_session_url, ra_session, target_loc->url, scratch_pool));
+      /* Reparent the session to TARGET_LOC if this target location
+       * exists within the unmerged revision range. */
+      if (target_loc->rev <= youngest_rev && target_loc->rev >= oldest_rev)
+        SVN_ERR(svn_client__ensure_ra_session_url(
+                  &old_session_url, ra_session, target_loc->url, scratch_pool));
+
       err = get_log(ra_session, "", youngest_rev, oldest_rev,
                     TRUE, /* discover_changed_paths */
                     log_find_operative_revs, &log_baton,
                     scratch_pool);
-      SVN_ERR(svn_error_compose_create(
-                err, svn_ra_reparent(ra_session, old_session_url, scratch_pool)));
+      if (old_session_url)
+        err = svn_error_compose_create(err,
+                                       svn_ra_reparent(ra_session,
+                                                       old_session_url,
+                                                       scratch_pool));
+      SVN_ERR(err);
     }
 
   return SVN_NO_ERROR;

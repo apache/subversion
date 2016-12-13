@@ -332,6 +332,17 @@ typedef struct svn_ra__vtable_t {
   svn_error_t *(*set_svn_ra_open)(svn_ra_session_t *session,
                                   svn_ra__open_func_t func);
 
+  /* See svn_ra_list(). */
+  svn_error_t *(*list)(svn_ra_session_t *session,
+                       const char *path,
+                       svn_revnum_t revision,
+                       apr_array_header_t *patterns,
+                       svn_depth_t depth,
+                       apr_uint32_t dirent_fields,
+                       svn_ra_dirent_receiver_t receiver,
+                       void *receiver_baton,
+                       apr_pool_t *scratch_pool);
+
   /* Experimental support below here */
 
   /* See svn_ra__register_editor_shim_callbacks() */

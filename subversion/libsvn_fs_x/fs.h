@@ -545,7 +545,7 @@ typedef struct svn_fs_x__changes_context_t
   svn_fs_x__revision_file_t *revision_file;
 
   /* Index of the next change to fetch. */
-  apr_size_t next;
+  int next;
 
   /* Offset, within the changed paths list on disk, of the next change to
      fetch. */

@@ -19,9 +19,9 @@
 #
 
 """
-Send GPG-signed security advisory e-mayails from an @apache.org address
-to a known list of recipients, or write the advisory text in a
-form suitable for publishing on http://subversion.apache.org/.
+Send GPG-signed security advisory e-mails from an @apache.org address
+to a known list of recipients, or write the advisory text in a form
+suitable for publishing on http://subversion.apache.org/.
 
 Usage: cd to the root directory of the advisory descriptions, then:
 
@@ -66,9 +66,9 @@ def parse_args(argv):
     parser = argparse.ArgumentParser(
         prog=os.path.basename(__file__), add_help=True,
         description="""\
-Send GPG-signed security advisory e-mayails from an @apache.org address
-to a known list of recipients, or write the advisory text in a
-form suitable for publishing on http://subversion.apache.org/.
+Send GPG-signed security advisory e-mails from an @apache.org address
+to a known list of recipients, or write the advisory text in a form
+suitable for publishing on http://subversion.apache.org/.
 """)
     parser.add_argument(
         'command', action='store',

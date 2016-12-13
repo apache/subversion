@@ -547,7 +547,7 @@ svn_cl__merge(apr_getopt_t *os,
   SVN_ERR(svn_cl__conflict_stats_get_paths(&conflicted_paths, conflict_stats,
                                            pool, pool));
   if (conflicted_paths)
-    SVN_ERR(svn_cl__walk_conflicts(conflicted_paths, conflict_stats, FALSE,
+    SVN_ERR(svn_cl__walk_conflicts(conflicted_paths, conflict_stats,
                                    opt_state, ctx, pool));
 
   if (!opt_state->quiet)

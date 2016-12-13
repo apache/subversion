@@ -49,7 +49,7 @@ struct svn_prefix_string__t
   /* mandatory prefix */
   node_t *prefix;
 
-  /* 0 ..7 chars to add the the prefix.
+  /* 0 ..7 chars to add the prefix.
    *
    * NUL-terminated, if this is indeed a tree leaf.  We use the same struct
    * within node_t for inner tree nodes, too.  There, DATA[7] is not NUL,

@@ -467,20 +467,23 @@ svn_opt_revision_t *svn_swig_pl_set_revision(svn_opt_revision_t *rev,
             svn_error_t *err;
 
             char *end = strchr(input,'}');
+            char saved_end;
             if (!end)
                 maybe_croak(("unknown opt_revision_t string \"%s\": "
                              "missing closing brace for \"{DATE}\"", input));
+            saved_end = *end;
             *end = '\0';
             err = svn_parse_date (&matched, &tm,
                                   input + 1, apr_time_now(), pool);
+            *end = saved_end;
             if (err) {
                 svn_error_clear (err);
-                maybe_croak(("unknown opt_revision_t string \"{%s}\": "
-                             "internal svn_parse_date error", input + 1));
+                maybe_croak(("unknown opt_revision_t string \"%s\": "
+                             "internal svn_parse_date error", input));
             }
             if (!matched)
-                maybe_croak(("unknown opt_revision_t string \"{%s}\": "
-                             "svn_parse_date failed to parse it", input + 1));
+                maybe_croak(("unknown opt_revision_t string \"%s\": "
+                             "svn_parse_date failed to parse it", input));
 
             rev->kind = svn_opt_revision_date;
             rev->value.date = tm;

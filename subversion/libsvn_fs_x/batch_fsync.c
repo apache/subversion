@@ -332,8 +332,9 @@ internal_open_file(apr_file_t **file,
   svn_error_t *err;
   apr_pool_t *pool;
   to_sync_t *to_sync;
-  svn_node_kind_t kind;
+#ifdef SVN_ON_POSIX
   svn_boolean_t is_new_file;
+#endif
 
   /* If we already have a handle for PATH, return that. */
   to_sync = svn_hash_gets(batch->files, path);
@@ -356,6 +357,7 @@ internal_open_file(apr_file_t **file,
   is_new_file = FALSE;
   if (flags & APR_CREATE)
     {
+      svn_node_kind_t kind;
       /* We might actually be about to create a new file.
        * Check whether the file already exists. */
       SVN_ERR(svn_io_check_path(path, &kind, scratch_pool));

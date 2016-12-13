@@ -4411,7 +4411,6 @@ typedef enum svn_client_conflict_option_id_t {
 
   /* Options for incoming file add vs local file add or obstruction. */
   svn_client_conflict_option_incoming_added_file_text_merge,
-  svn_client_conflict_option_incoming_added_file_replace,
   svn_client_conflict_option_incoming_added_file_replace_and_merge,
 
   /* Options for incoming dir add vs local dir add or obstruction. */
@@ -4427,6 +4426,8 @@ typedef enum svn_client_conflict_option_id_t {
   svn_client_conflict_option_incoming_move_file_text_merge,
   svn_client_conflict_option_incoming_move_dir_merge,
 
+  /* Options for local move vs incoming edit on merge. */
+  svn_client_conflict_option_local_move_file_text_merge
 } svn_client_conflict_option_id_t;
 
 /**
@@ -4719,6 +4720,20 @@ svn_client_conflict_option_id_t
 svn_client_conflict_option_get_id(svn_client_conflict_option_t *option);
 
 /**
+ * Return a textual human-readable label of @a option, allocated in
+ * @a result_pool. The label is encoded in UTF-8 and usually
+ * contains up to three words.
+ *
+ * Additionally, the label may be localized to the language used
+ * by the current locale.
+ *
+ * @since New in 1.10.
+ */
+const char *
+svn_client_conflict_option_get_label(svn_client_conflict_option_t *option,
+                                     apr_pool_t *result_pool);
+
+/**
  * Return a textual human-readable description of @a option, allocated in
  * @a result_pool. The description is encoded in UTF-8 and may contain
  * multiple lines separated by @c APR_EOL_STR.
@@ -4728,11 +4743,9 @@ svn_client_conflict_option_get_id(svn_client_conflict_option_t *option);
  *
  * @since New in 1.10.
  */
-svn_error_t *
-svn_client_conflict_option_describe(const char **description,
-                                    svn_client_conflict_option_t *option,
-                                    apr_pool_t *result_pool,
-                                    apr_pool_t *scratch_pool);
+const char *
+svn_client_conflict_option_get_description(svn_client_conflict_option_t *option,
+                                           apr_pool_t *result_pool);
 
 /**
  * Return the absolute path to the conflicted working copy node described
@@ -6389,13 +6402,18 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * its children.  If @a path_or_url is non-existent, return
  * #SVN_ERR_FS_NOT_FOUND.
  *
+ * If the @a pattern array of <tt>const char *</tt> is not @c NULL, only
+ * report paths whose last segment matches one of the specified glob
+ * patterns.  This does not affect the size of the tree nor the number of
+ * externals being covered.
+ *
  * If @a fetch_locks is TRUE, include locks when reporting directory entries.
  *
  * If @a include_externals is TRUE, also list all external items
  * reached by recursion. @a depth value passed to the original list target
  * applies for the externals also.
  *
- * Use @a pool for temporary allocations.
+ * Use @a scratch_pool for temporary allocations.
  *
  * Use authentication baton cached in @a ctx to authenticate against the
  * repository.
@@ -6411,8 +6429,29 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * otherwise simply bitwise OR together the combination of @c SVN_DIRENT_
  * fields you care about.
  *
- * @since New in 1.8.
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_client_list4(const char *path_or_url,
+                 const svn_opt_revision_t *peg_revision,
+                 const svn_opt_revision_t *revision,
+                 apr_array_header_t *patterns,
+                 svn_depth_t depth,
+                 apr_uint32_t dirent_fields,
+                 svn_boolean_t fetch_locks,
+                 svn_boolean_t include_externals,
+                 svn_client_list_func2_t list_func,
+                 void *baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *scratch_pool);
+
+/** Similar to svn_client_list4(), but with @a patterm set to @c NULL.
+ *
+ * @since New in 1.8.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.9 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_list3(const char *path_or_url,
                  const svn_opt_revision_t *peg_revision,
@@ -6430,9 +6469,9 @@ svn_client_list3(const char *path_or_url,
 /** Similar to svn_client_list3(), but with @a include_externals set
  * to FALSE, and using a #svn_client_list_func_t as callback.
  *
- * @deprecated Provided for backwards compatibility with the 1.7 API.
- *
  * @since New in 1.5.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.7 API.
  */
 SVN_DEPRECATED
 svn_error_t *

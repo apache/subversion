@@ -254,10 +254,10 @@ svn_ra_svn__flush(svn_ra_svn_conn_t *conn,
  * to transmit an array or other unusual data.  For example, to write
  * a tuple containing a revision, an array of words, and a boolean:
  * @code
-     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(!", rev));
+     SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "r(!", rev));
      for (i = 0; i < n; i++)
-       SVN_ERR(svn_ra_svn_write_word(conn, pool, words[i]));
-     SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b", flag)); @endcode
+       SVN_ERR(svn_ra_svn__write_word(conn, pool, words[i]));
+     SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!)b", flag)); @endcode
  */
 svn_error_t *
 svn_ra_svn__write_tuple(svn_ra_svn_conn_t *conn,
@@ -314,9 +314,9 @@ svn_ra_svn__skip_leading_garbage(svn_ra_svn_conn_t *conn,
  *
  * If an optional part of a tuple contains no data, 'r' values will be
  * set to @c SVN_INVALID_REVNUM; 'n' and 'B' values will be set to
- * #SVN_RA_SVN_UNSPECIFIED_NUMBER; 's', 'c', 'w', and 'l' values
- * will be set to @c NULL; and '3' values will be set to #svn_tristate_unknown
- * 'b' may not appear inside an optional tuple specification; use '3' instead.
+ * #SVN_RA_SVN_UNSPECIFIED_NUMBER; 's', 'c', 'w', and 'l' values will
+ * be set to @c NULL; '3' values will be set to #svn_tristate_unknown;
+ * and 'b' values will be set to @c FALSE.
  */
 svn_error_t *
 svn_ra_svn__parse_tuple(const svn_ra_svn__list_t *list,
@@ -1007,6 +1007,19 @@ svn_ra_svn__write_data_log_entry(svn_ra_svn_conn_t *conn,
                                  svn_boolean_t has_children,
                                  svn_boolean_t invalid_revnum,
                                  unsigned revprop_count);
+
+/** Send a directory entry @a dirent for @a path over connection @a conn.
+ * Use @a pool for allocations.
+ *
+ * Depending on the flags in @a dirent_fields, only selected elements will
+ * be transmitted.
+ */
+svn_error_t *
+svn_ra_svn__write_dirent(svn_ra_svn_conn_t *conn,
+                         apr_pool_t *pool,
+                         const char *path,
+                         svn_dirent_t *dirent,
+                         apr_uint64_t dirent_fields);
 
 /**
  * @}

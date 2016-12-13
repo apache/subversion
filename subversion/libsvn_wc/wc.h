@@ -158,6 +158,7 @@ extern "C" {
  * Bumped in r1395109.
  *
  * == 1.8.x shipped with format 31
+ * == 1.9.x shipped with format 31
  *
  * Please document any further format changes here.
  */
