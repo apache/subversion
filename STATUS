@@ -28,6 +28,13 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
+ * r1774109
+   Document the purpose of 'svnadmin freeze' more clearly.
+   Justification:
+     Not very important, nice to have documentation fix. Trivial merge.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
