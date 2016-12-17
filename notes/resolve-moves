@@ -22,7 +22,7 @@ within the operative revision range recorded in conflict data.
 
 The result allows the conflict resolver to offer options which resolve the
 tree conflict by merging appropriate changes from the victim's counterpart
-to a node in the working copy which is represents the conflict victim.
+to a node in the working copy which represents the conflict victim.
 
 == Node ==
 
