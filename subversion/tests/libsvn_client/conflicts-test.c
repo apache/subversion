@@ -3195,8 +3195,10 @@ test_merge_incoming_file_move_new_line_of_history(const svn_test_opts_t *opts,
 }
 
 static svn_error_t *
-test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
-                                                    apr_pool_t *pool)
+run_test_update_incoming_dir_move_with_nested_file_move(
+  const svn_test_opts_t *opts,
+  svn_boolean_t move_parent,
+  apr_pool_t *pool)
 {
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
   const char *deleted_dir;
@@ -3229,6 +3231,17 @@ test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
   SVN_ERR(sbox_wc_move(b, deleted_file, moved_file));
 
   SVN_ERR(sbox_wc_commit(b, ""));
+
+  if (move_parent)
+    {
+      /* Move the directory again. */
+      SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+      deleted_dir = svn_relpath_join(trunk_path, "C/B", b->pool);
+      moved_dir = svn_relpath_join(trunk_path, "D/H/B", b->pool);
+      SVN_ERR(sbox_wc_move(b, deleted_dir, moved_dir));
+
+      SVN_ERR(sbox_wc_commit(b, ""));
+    }
 
   /* Update into the past. */
   SVN_ERR(sbox_wc_update(b, "", 1));
@@ -3372,6 +3385,24 @@ test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
   SVN_TEST_STRING_ASSERT(buf->data, modified_file_content);
 
   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
+                                                    apr_pool_t *pool)
+{
+  return run_test_update_incoming_dir_move_with_nested_file_move(opts, FALSE,
+                                                                 pool);
+}
+
+/* Same test as above, but with a moved parent directory. */
+static svn_error_t *
+test_update_incoming_dir_move_with_nested_file_move2(
+  const svn_test_opts_t *opts,
+  apr_pool_t *pool)
+{
+  return run_test_update_incoming_dir_move_with_nested_file_move(opts, TRUE,
+                                                                 pool);
 }
 
 /* A helper function which prepares a working copy for the tests below. */
@@ -3847,6 +3878,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge incoming file move with new line of history"),
     SVN_TEST_OPTS_PASS(test_update_incoming_dir_move_with_nested_file_move,
                        "update incoming dir move with nested file move"),
+    SVN_TEST_OPTS_XFAIL(test_update_incoming_dir_move_with_nested_file_move2,
+                       "update incoming dir move with nested file move 2"),
     SVN_TEST_OPTS_PASS(test_update_incoming_added_file_text_merge,
                        "update incoming add file text merge"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_file_prop_merge_conflict,
