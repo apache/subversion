@@ -13,6 +13,9 @@ TODO:
 
 * remove no-op escape sequences from wildcard rule segments
 * implement lookup access rights
+* correct the global <-> per-repo rule precedence to match 1.9 behavior
+* support in-registry authz again
+* use a user's accumulated "global" access rights where sufficient
 
 DONE:
 
