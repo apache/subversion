@@ -886,9 +886,40 @@ create_user_authz(authz_full_t *authz,
   /* Use a separate sub-pool to keep memory usage tight. */
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
-  /* Filtering and tree construction. */
+  /* Find all ACLs for REPOSITORY. 
+   * Note that repo-specific rules replace global rules,
+   * even if they don't apply to the current user. */
+  apr_array_header_t *acls = apr_array_make(subpool, authz->acls->nelts,
+                                            sizeof(authz_acl_t *));
   for (i = 0; i < authz->acls->nelts; ++i)
-    process_acl(ctx, &APR_ARRAY_IDX(authz->acls, i, authz_acl_t),
+    {
+      const authz_acl_t *acl = &APR_ARRAY_IDX(authz->acls, i, authz_acl_t);
+      if (svn_authz__acl_applies_to_repo(acl, repository))
+        {
+          /* ACLs in the AUTHZ are sorted by path and repository.
+           * So, if there is a rule for the repo and a global rule for the
+           * same path, we will detect them here. */
+          if (acls->nelts)
+            {
+              const authz_acl_t *prev_acl
+                = APR_ARRAY_IDX(acls, acls->nelts - 1, const authz_acl_t *);
+              if (svn_authz__compare_paths(&prev_acl->rule, &acl->rule) == 0)
+                {
+                  SVN_ERR_ASSERT_NO_RETURN(!strcmp(prev_acl->rule.repos,
+                                                   AUTHZ_ANY_REPOSITORY));
+                  SVN_ERR_ASSERT_NO_RETURN(strcmp(acl->rule.repos,
+                                                  AUTHZ_ANY_REPOSITORY));
+                  apr_array_pop(acls);
+                }
+            }
+
+          APR_ARRAY_PUSH(acls, const authz_acl_t *) = acl;
+        }
+    }
+
+  /* Filtering and tree construction. */
+  for (i = 0; i < acls->nelts; ++i)
+    process_acl(ctx, APR_ARRAY_IDX(acls, i, const authz_acl_t *),
                 root, repository, user, result_pool, subpool);
 
   /* If there is no relevant rule at the root node, the "no access" default
