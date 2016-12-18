@@ -1422,20 +1422,13 @@ matches_filtered_tree(const authz_user_rules_t *authz,
 
 /* Look through AUTHZ's cache for a path rule tree already filtered for
  * this USER, REPOS_NAME combination.  If that does not exist, yet, create
- * one and return the fully initialized authz_user_rules_t to start lookup
- * at *PATH.
- *
- * If *PATH is not NULL, *PATH may be reduced to the sub-path that has 
- * still to be walked leveraging exisiting parent info from previous runs.
- * If *PATH is NULL, keep the lockup_state member as is - assuming the
- * caller will not use it but only the root node data.
+ * one and return the fully initialized authz_user_rules_t.
  */
 static authz_user_rules_t *
-get_filtered_tree(svn_authz_t *authz,
-                  const char *repos_name,
-                  const char **path,
-                  const char *user,
-                  apr_pool_t *scratch_pool)
+get_user_rules(svn_authz_t *authz,
+               const char *repos_name,
+               const char *user,
+               apr_pool_t *scratch_pool)
 {
   apr_pool_t *pool;
   node_t *root;
@@ -1445,14 +1438,7 @@ get_filtered_tree(svn_authz_t *authz,
     {
       /* Is this a suitable filtered tree? */
       if (matches_filtered_tree(authz->filtered, repos_name, user))
-        {
-          if (*path)
-            *path = init_lockup_state(authz->filtered->lookup_state,
-                                      authz->filtered->root,
-                                      *path);
-
-          return authz->filtered;
-        }
+        return authz->filtered;
 
       /* Drop the old filtered tree before creating a new one. */
       svn_pool_destroy(authz->filtered->pool);
@@ -1510,8 +1496,6 @@ get_filtered_tree(svn_authz_t *authz,
   authz->filtered->user = user ? apr_pstrdup(pool, user) : NULL;
   authz->filtered->lookup_state = create_lookup_state(pool);
   authz->filtered->root = root;
-  if (*path)
-    init_lockup_state(authz->filtered->lookup_state, root, *path);
 
   return authz->filtered;
 }
@@ -1665,10 +1649,10 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
      | (required_access & svn_authz_write ? authz_access_write_flag : 0));
 
   /* Pick or create the suitable pre-filtered path rule tree. */
-  authz_user_rules_t *rules = get_filtered_tree(
+  authz_user_rules_t *rules = get_user_rules(
       authz,
       (repos_name ? repos_name : AUTHZ_ANY_REPOSITORY),
-      &path, user, pool);
+      user, pool);
 
   /* If PATH is NULL, check if the user has *any* access. */
   if (!path)
@@ -1681,6 +1665,10 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
     {
       const svn_boolean_t recursive =
         !!(required_access & svn_authz_recursive);
+
+      /* Re-use previous lookup results, if possible. */
+      path = init_lockup_state(authz->filtered->lookup_state,
+                               authz->filtered->root, path);
 
       /* Sanity check. */
       SVN_ERR_ASSERT(path[0] == '/');
