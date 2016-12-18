@@ -31,6 +31,8 @@
 
 #include "../svn_test.h"
 
+/* Used to terminate lines in large multi-line string literals. */
+#define NL APR_EOL_STR
 
 static svn_error_t *
 print_group_member(void *baton,
@@ -285,6 +287,83 @@ test_authz_parse(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_global_rights(apr_pool_t *pool)
+{
+  svn_authz_t *authz;
+  int i;
+
+  /* Some non-trivially overlapping wildcard rules, convering all types
+   * of wildcards: "any", "any-var", "prefix", "postfix" and "complex".
+   */
+  const char *contents =
+    "[/public]"                                                          NL
+    "* = r"                                                              NL
+    ""                                                                   NL
+    "[greek:/A]"                                                         NL
+    "userA = rw"                                                         NL
+    ""                                                                   NL
+    "[repo:/A]"                                                          NL
+    "userA = r"                                                          NL
+    ""                                                                   NL
+    "[repo:/B]"                                                          NL
+    "userA = rw"                                                         NL
+    ""                                                                   NL
+    "[greek:/B]"                                                         NL
+    "userB = rw"                                                         NL;
+
+  const struct
+    {
+      const char *repos;
+      const char *user;
+      authz_rights_t rights;
+      svn_boolean_t found;
+    } test_cases[] =
+    {
+      /* Everyone may get read access b/c there might be a "/public" path. */
+      {      "",      "", { authz_access_none, authz_access_read  },  TRUE },
+      {      "", "userA", { authz_access_none, authz_access_read  },  TRUE },
+      {      "", "userA", { authz_access_none, authz_access_read  },  TRUE },
+      {      "", "userC", { authz_access_none, authz_access_read  },  TRUE },
+
+      /* Two users do even get write access on some paths in "greek".
+       * The root always defaults to n/a due to the default rule. */
+      { "greek",      "", { authz_access_none, authz_access_read  }, FALSE },
+      { "greek", "userA", { authz_access_none, authz_access_write },  TRUE },
+      { "greek", "userB", { authz_access_none, authz_access_write },  TRUE },
+      { "greek", "userC", { authz_access_none, authz_access_read  }, FALSE },
+
+      /* One users has write access to some paths in "repo". */
+      {  "repo",      "", { authz_access_none, authz_access_read  }, FALSE },
+      {  "repo", "userA", { authz_access_none, authz_access_write },  TRUE },
+      {  "repo", "userB", { authz_access_none, authz_access_read  }, FALSE },
+      {  "repo", "userC", { authz_access_none, authz_access_read  }, FALSE },
+
+      /* For unknown repos, we default to the global settings. */
+      {     "X",      "", { authz_access_none, authz_access_read  }, FALSE },
+      {     "X", "userA", { authz_access_none, authz_access_read  }, FALSE },
+      {     "X", "userA", { authz_access_none, authz_access_read  }, FALSE },
+      {     "X", "userC", { authz_access_none, authz_access_read  }, FALSE }
+    };
+
+  svn_stringbuf_t *buffer = svn_stringbuf_create(contents, pool);
+  svn_stream_t *stream = svn_stream_from_stringbuf(buffer, pool);
+  SVN_ERR(svn_repos_authz_parse(&authz, stream, NULL, pool));
+
+  for (i = 0; i < sizeof(test_cases) / sizeof(test_cases[0]); ++i)
+    {
+      authz_rights_t rights = { authz_access_write, authz_access_none };
+      svn_boolean_t found = svn_authz__get_global_rights(&rights, authz->full,
+                                                         test_cases[i].user,
+                                                         test_cases[i].repos);
+
+      SVN_TEST_ASSERT(found == test_cases[i].found);
+      SVN_TEST_ASSERT(rights.min_access == test_cases[i].rights.min_access);
+      SVN_TEST_ASSERT(rights.max_access == test_cases[i].rights.max_access);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 static int max_threads = 4;
 
@@ -293,6 +372,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_OPTS_PASS(test_authz_parse,
                        "test svn_authz__parse"),
+    SVN_TEST_PASS2(test_global_rights,
+                   "test svn_authz__get_global_rights"),
     SVN_TEST_NULL
   };
 

@@ -91,6 +91,18 @@ svn_authz__get_acl_access(authz_access_t *access_p,
   return has_access;
 }
 
+/* Set *RIGHTS_P to the combination of LHS and RHS, i.e. intersect the
+ * minimal rights and join the maximum rights.
+ */
+static void
+combine_rights(authz_rights_t *rights_p,
+               const authz_rights_t *lhs,
+               const authz_rights_t *rhs)
+{
+  rights_p->min_access = lhs->min_access & rhs->min_access;
+  rights_p->max_access = lhs->max_access | rhs->max_access;
+}
+
 
 /* Given GLOBAL_RIGHTS and a repository name REPOS, set *RIGHTS_P to
  * to the actual accumulated rights defined for that repository.
@@ -115,7 +127,7 @@ resolve_global_rights(authz_rights_t *rights_p,
 
       if (rights)
         {
-          *rights_p = *rights;
+          combine_rights(rights_p, rights, &global_rights->any_repos_rights);
           return TRUE;
         }
     }
