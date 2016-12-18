@@ -32,6 +32,16 @@
 
 
 svn_boolean_t
+svn_authz__acl_applies_to_repo(const authz_acl_t *acl,
+                               const char *repos)
+{
+  /* The repository name must match the one in the rule, iff the rule
+     was defined for a specific repository. */
+  return (0 == strcmp(acl->rule.repos, AUTHZ_ANY_REPOSITORY))
+      || (0 == strcmp(repos, acl->rule.repos));
+}
+
+svn_boolean_t
 svn_authz__get_acl_access(authz_access_t *access_p,
                           const authz_acl_t *acl,
                           const char *user, const char *repos)
@@ -42,8 +52,7 @@ svn_authz__get_acl_access(authz_access_t *access_p,
 
   /* The repository name must match the one in the rule, iff the rule
      was defined for a specific repository. */
-  if (strcmp(acl->rule.repos, AUTHZ_ANY_REPOSITORY)
-      && strcmp(repos, acl->rule.repos))
+  if (!svn_authz__acl_applies_to_repo(acl, repos))
     return FALSE;
 
   /* Check anonymous access first. */

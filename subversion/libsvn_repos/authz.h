@@ -312,6 +312,10 @@ void
 svn_authz__reverse_string(char *string, apr_size_t len);
 
 
+/* Compare two rules in lexical order by path only. */
+int
+svn_authz__compare_paths(const authz_rule_t *a, const authz_rule_t *b);
+
 /* Compare two rules in path lexical order, then repository lexical order. */
 int
 svn_authz__compare_rules(const authz_rule_t *a, const authz_rule_t *b);
@@ -327,6 +331,10 @@ svn_authz__compare_rules(const authz_rule_t *a, const authz_rule_t *b);
 /* Rules with this repository name apply to all repositories. */
 #define AUTHZ_ANY_REPOSITORY ((const char*)"")
 
+/* Check if the ACL applies to the REPOS pair. */
+svn_boolean_t
+svn_authz__acl_applies_to_repo(const authz_acl_t *acl,
+                               const char *repos);
 
 /* Check if the ACL applies to the (USER, REPOS) pair.  If it does,
  * and ACCESS is not NULL, set *ACCESS to the actual access rights for

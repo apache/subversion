@@ -1397,7 +1397,7 @@ svn_authz__reverse_string(char *string, apr_size_t len)
 
 
 int
-svn_authz__compare_rules(const authz_rule_t *a, const authz_rule_t *b)
+svn_authz__compare_paths(const authz_rule_t *a, const authz_rule_t *b)
 {
   const int min_len = (a->len > b->len ? b->len : a->len);
   int i;
@@ -1423,6 +1423,16 @@ svn_authz__compare_rules(const authz_rule_t *a, const authz_rule_t *b)
   /* Sort shorter rules first. */
   if (a->len != b->len)
     return a->len - b->len;
+
+  return 0;
+}
+
+int
+svn_authz__compare_rules(const authz_rule_t *a, const authz_rule_t *b)
+{
+  int diff = svn_authz__compare_paths(a, b);
+  if (diff)
+    return diff;
 
   /* Repository names are interned, too. */
   if (a->repos != b->repos)
