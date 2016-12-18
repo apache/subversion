@@ -32,6 +32,7 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_string.h"
+#include "svn_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -108,6 +109,18 @@ svn_config__parse_stream(svn_stream_t *stream,
                          svn_config__constructor_t *constructor,
                          void *constructor_baton,
                          apr_pool_t *scratch_pool);
+
+/*
+ * Write the configuration CFG to STREAM, using SCRATCH_POOL for
+ * temporary allocations.
+ *
+ * Note that option values will not be expanded and that the order
+ * of sections as well as the options within them is undefined.
+ */
+svn_error_t *
+svn_config__write(svn_stream_t *stream,
+                  const svn_config_t *cfg,
+                  apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

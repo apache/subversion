@@ -30,6 +30,7 @@
 
 #include "private/svn_subr_private.h"
 #include "private/svn_repos_private.h"
+#include "private/svn_config_private.h"
 
 #include "config_file.h"
 
@@ -298,6 +299,39 @@ get_file_config(svn_stream_t **stream,
   return SVN_NO_ERROR;
 }
 
+/* Read the configuration from Windows registry sub-tree PATH, return its
+ * content checksum in CHECKSUM and the content itself through *STREAM.
+ * Allocate those with the lifetime of ACCESS.
+ *
+ * Note that although we use this for registry data only, it will work with
+ * any configuration data that svn_config_read3 can process.
+ */
+static svn_error_t *
+get_registry_config(svn_stream_t **stream,
+                    svn_checksum_t **checksum,
+                    config_access_t *access,
+                    const char *path,
+                    svn_boolean_t must_exist,
+                    apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *contents = svn_stringbuf_create_empty(access->pool);
+  svn_config_t *config;
+
+  /* Read the configuration and serialize it into CONTENTS.
+   * That copy can then be processed by the authz parser etc. */
+  SVN_ERR(svn_config_read3(&config, path, must_exist, TRUE, TRUE,
+                           scratch_pool));
+  SVN_ERR(svn_config__write(svn_stream_from_stringbuf(contents, scratch_pool),
+                            config, scratch_pool));
+
+  /* calculate MD5 over the whole file contents */
+  SVN_ERR(svn_checksum(checksum, svn_checksum_md5,
+                       contents->data, contents->len, access->pool));
+  *stream = svn_stream_from_stringbuf(contents, access->pool);
+
+  return SVN_NO_ERROR;
+}
+
 config_access_t *
 svn_repos__create_config_access(svn_repos_t *repos_hint,
                                 apr_pool_t *result_pool)
@@ -325,6 +359,12 @@ svn_repos__get_config(svn_stream_t **stream,
                       svn_boolean_t must_exist,
                       apr_pool_t *scratch_pool)
 {
+#ifdef WIN32
+  if (0 == strncmp(file, SVN_REGISTRY_PREFIX, SVN_REGISTRY_PREFIX_LEN))
+    SVN_ERR(get_registry_config(stream, checksum, access, path, must_exist,
+                                scratch_pool));
+  else
+#endif /* WIN32 */
   if (svn_path_is_url(path))
     SVN_ERR(get_repos_config(stream, checksum, access, path, must_exist,
                              scratch_pool));
