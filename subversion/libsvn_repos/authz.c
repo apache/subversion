@@ -1388,7 +1388,8 @@ struct authz_user_rules_t
    * May be empty but never NULL for used entries. */
   const char *repository;
 
-  /* Root of the filtered path rule tree.  NULL for unused entries. */
+  /* Root of the filtered path rule tree.
+   * Will remain NULL until the first usage. */
   node_t *root;
 
   /* Reusable lookup state instance. */
@@ -1420,18 +1421,16 @@ matches_filtered_tree(const authz_user_rules_t *authz,
   return strcmp(repos_name, authz->repository) == 0;
 }
 
-/* Look through AUTHZ's cache for a path rule tree already filtered for
- * this USER, REPOS_NAME combination.  If that does not exist, yet, create
- * one and return the fully initialized authz_user_rules_t.
+/* Check if AUTHZ's already contains a path rule tree filtered for this
+ * USER, REPOS_NAME combination.  If that does not exist, yet, create one
+ * but don't construct the actual filtered tree, yet.
  */
 static authz_user_rules_t *
 get_user_rules(svn_authz_t *authz,
                const char *repos_name,
-               const char *user,
-               apr_pool_t *scratch_pool)
+               const char *user)
 {
   apr_pool_t *pool;
-  node_t *root;
 
   /* Search our cache for a suitable previously filtered tree. */
   if (authz->filtered)
@@ -1447,6 +1446,30 @@ get_user_rules(svn_authz_t *authz,
 
   /* Global cache lookup.  Filter the full model only if necessary. */
   pool = svn_pool_create(authz->pool);
+
+  /* Write a new entry. */
+  authz->filtered = apr_palloc(pool, sizeof(*authz->filtered));
+  authz->filtered->pool = pool;
+  authz->filtered->repository = apr_pstrdup(pool, repos_name);
+  authz->filtered->user = user ? apr_pstrdup(pool, user) : NULL;
+  authz->filtered->lookup_state = create_lookup_state(pool);
+  authz->filtered->root = NULL;
+
+  return authz->filtered;
+}
+
+/* In AUTHZ's user rules, construct the actual filtered tree.
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+static svn_error_t *
+filter_tree(svn_authz_t *authz,
+            apr_pool_t *scratch_pool)
+{
+  apr_pool_t *pool = authz->filtered->pool;
+  const char *repos_name = authz->filtered->repository;
+  const char *user = authz->filtered->user;
+  node_t *root;
+
   if (filtered_pool)
     {
       svn_membuf_t *key = construct_filtered_key(repos_name, user,
@@ -1454,8 +1477,8 @@ get_user_rules(svn_authz_t *authz,
                                                  scratch_pool);
 
       /* Cache lookup. */
-      svn_error_clear(svn_object_pool__lookup((void **)&root, filtered_pool,
-                                              key, pool));
+      SVN_ERR(svn_object_pool__lookup((void **)&root, filtered_pool, key,
+                                      pool));
 
       if (!root)
         {
@@ -1473,7 +1496,7 @@ get_user_rules(svn_authz_t *authz,
           svn_error_clear(svn_object_pool__lookup((void **)&add_ref,
                                                   authz_pool, authz->authz_id,
                                                   item_pool));
-          SVN_ERR_ASSERT_NO_RETURN(add_ref == authz->full);
+          SVN_ERR_ASSERT(add_ref == authz->full);
 
           /* Now construct the new filtered tree and cache it. */
           root = create_user_authz(authz->full, repos_name, user, item_pool,
@@ -1490,14 +1513,9 @@ get_user_rules(svn_authz_t *authz,
     }
 
   /* Write a new entry. */
-  authz->filtered = apr_palloc(pool, sizeof(*authz->filtered));
-  authz->filtered->pool = pool;
-  authz->filtered->repository = apr_pstrdup(pool, repos_name);
-  authz->filtered->user = user ? apr_pstrdup(pool, user) : NULL;
-  authz->filtered->lookup_state = create_lookup_state(pool);
   authz->filtered->root = root;
 
-  return authz->filtered;
+  return SVN_NO_ERROR;
 }
 
 
@@ -1652,7 +1670,11 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
   authz_user_rules_t *rules = get_user_rules(
       authz,
       (repos_name ? repos_name : AUTHZ_ANY_REPOSITORY),
-      user, pool);
+      user);
+
+  /* Did we already filter the data model? */
+  if (!rules->root)
+    SVN_ERR(filter_tree(authz, pool));
 
   /* If PATH is NULL, check if the user has *any* access. */
   if (!path)
