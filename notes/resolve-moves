@@ -156,10 +156,43 @@ If nested moves are found in a revision, they end up being represented
 the same way as direct moves are (so they are no longer a special case
 from this point onwards).
 
+== Finding missing conflict victims ==
+
+The repository location of the conflict victim is unkown if the victim
+cannot be found in the working copy ("local missing").
+
+To find such missing nodes, SVN must first find all moves in the entire
+history of the parent directory of the conflict victim.
+
+For each such move it checks whether the moved node is related to the known
+node at path@old-rev, or, if that does not exist, path@new-rev, by tracing
+backwards in history from path@old-rev/new-rev if the move's revision is
+smaller than old-rev/new-rev, or by tracing backwards in history from the
+moved path if the move's revision is larger than old-rev/new-rev.
+
+For any such related node's repository path at revision new-rev recorded in the
+conflict, a local path in the working copy is searched which is related to this
+repository path. Any such nodes found in the working copy are candidates for
+the missing conflict victim's current location, unless the node is inside a
+switched subtree or is itself a switched node or is an external.
+
+If multiple matches are found the user must be given a choice with a default
+suggestion. To avoid choosing bad default suggestions in cases where multiple
+branches are checked out into a working copy (such as in SVN's own test suite),
+a path-wise closest node to the conflict victim is the preferred suggestion.
+
+If no such node can be found, SVN assumes that the conflict victim was
+deleted instead of moved.
+
 == Determining which, if any, moves apply ==
 
 Next, SVN must determine whether any moves found between old-rev and
 new-rev link path@old-rev to an path-moved@new-rev, and whether
 path-moved@new-rev is related to the conflict victim.
 
-... TODO ...
+A move of path A to path B in rN applies to a path P@N if P is a path-wise
+child of, or equal to, A.
+
+== Special considerations for reverse operations ==
+
+... TODO talk about reverse-updates and -merges, and switches to older revs ...
