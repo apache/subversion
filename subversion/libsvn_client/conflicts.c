@@ -607,11 +607,13 @@ map_deleted_path_to_move(const char *deleted_relpath,
                          apr_pool_t *scratch_pool)
 {
   int i;
+  struct repos_move_info *closest_move = NULL;
+  int min_components = 0;
 
   for (i = 0; i < moves->nelts; i++)
     {
-      struct repos_move_info *move;
       const char *relpath;
+      struct repos_move_info *move;
           
       move = APR_ARRAY_IDX(moves, i, struct repos_move_info *);
       if (strcmp(move->moved_from_repos_relpath, deleted_relpath) == 0)
@@ -619,12 +621,24 @@ map_deleted_path_to_move(const char *deleted_relpath,
 
       relpath = svn_relpath_skip_ancestor(move->moved_to_repos_relpath,
                                           deleted_relpath);
-      /* ### Should probably return the closest path-wise ancestor. */
       if (relpath)
-        return move;
+        {
+          /* This could be a nested move. Return the path-wise closest move. */
+          int c = svn_path_component_count(relpath);
+          if (c == 0)
+            {
+              closest_move = move;
+              break;
+            }
+          else if (min_components == 0 || c < min_components)
+            {
+              min_components = c;
+              closest_move = move;
+            }
+        }
     }
 
-  return NULL;
+  return closest_move;
 }
 
 static svn_error_t *
