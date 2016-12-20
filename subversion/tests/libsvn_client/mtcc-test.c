@@ -840,7 +840,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test ra_get_file_revs2 both ways"),
     SVN_TEST_OPTS_PASS(test_iprops_path_format,
                        "test iprops url format"),
-    SVN_TEST_OPTS_XFAIL(test_move_and_delete_ancestor,
+    SVN_TEST_OPTS_PASS(test_move_and_delete_ancestor,
                        "test move and delete ancestor (issue 4666)"),
     SVN_TEST_NULL
   };
