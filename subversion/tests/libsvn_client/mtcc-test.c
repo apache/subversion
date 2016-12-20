@@ -783,6 +783,35 @@ test_iprops_path_format(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_move_and_delete_ancestor(const svn_test_opts_t *opts,
+                              apr_pool_t *pool)
+{
+  svn_client__mtcc_t *mtcc;
+  svn_client_ctx_t *ctx;
+  const char *repos_url;
+
+  SVN_ERR(svn_test__create_repos2(NULL, &repos_url, NULL, "mtcc-move-and-delete",
+                                  opts, pool, pool));
+
+  SVN_ERR(make_greek_tree(repos_url, pool));
+
+  SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
+  SVN_ERR(svn_test__init_auth_baton(&ctx->auth_baton, pool));
+
+  SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 1, ctx, pool, pool));
+
+  SVN_ERR(svn_client__mtcc_add_move("A/B", "B", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_move("A/mu", "mu", mtcc, pool));
+  SVN_ERR(svn_client__mtcc_add_delete("A", mtcc, pool));
+
+  SVN_ERR(verify_mtcc_commit(mtcc, 2, pool));
+
+  return SVN_NO_ERROR;
+
+}
+
+
 /* ========================================================================== */
 
 
@@ -811,6 +840,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test ra_get_file_revs2 both ways"),
     SVN_TEST_OPTS_PASS(test_iprops_path_format,
                        "test iprops url format"),
+    SVN_TEST_OPTS_XFAIL(test_move_and_delete_ancestor,
+                       "test move and delete ancestor (issue 4666)"),
     SVN_TEST_NULL
   };
 
