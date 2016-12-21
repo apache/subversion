@@ -452,7 +452,6 @@ find_moves_in_revision(svn_ra_session_t *ra_session,
   for (i = 0; i < deleted_paths->nelts; i++)
     {
       const char *deleted_repos_relpath;
-      struct copy_info *copy;
       struct repos_move_info *move;
       apr_array_header_t *moves;
       apr_array_header_t *copies_with_same_source_path;
@@ -467,53 +466,43 @@ find_moves_in_revision(svn_ra_session_t *ra_session,
       if (copies_with_same_source_path == NULL)
         continue; /* Not a move, or a nested move we handle later on. */
 
-      copy = NULL;
       for (j = 0; j < copies_with_same_source_path->nelts; j++)
         {
-          struct copy_info *this_copy;
+          struct copy_info *copy;
 
-          /* We found a deleted node which matches the copyfrom path of
-           * a copied node. Verify that the deleted node is an ancestor
-           * of the copied node. When tracing back history of the deleted node
-           * from revision log_entry->revision-1 (where the deleted node is
-           * guaranteed to exist) to the copyfrom-revision, we must end up
-           * at the copyfrom-path. */
-          this_copy = APR_ARRAY_IDX(copies_with_same_source_path, j,
-                                    struct copy_info *);
+          /* We found a copy with a copyfrom path which matches a deleted node.
+           * Verify that the deleted node is an ancestor of the copied node. */
+          copy = APR_ARRAY_IDX(copies_with_same_source_path, j,
+                               struct copy_info *);
           SVN_ERR(check_move_ancestry(&related, ra_session, repos_root_url,
                                       deleted_repos_relpath,
                                       log_entry->revision,
-                                      this_copy->copyfrom_path,
-                                      this_copy->copyfrom_rev,
+                                      copy->copyfrom_path,
+                                      copy->copyfrom_rev,
                                       TRUE, iterpool));
           if (related)
             {
-              copy = this_copy;
-              break;
+              /* Remember details of this move. */
+              SVN_ERR(add_new_move(&move, deleted_repos_relpath,
+                                   copy->copyto_path, copy->copyfrom_rev,
+                                   log_entry->revision, author->data,
+                                   moved_paths, ra_session, repos_root_url,
+                                   result_pool, iterpool));
+
+              /* Add this move to the list of moves in this revision. */
+              moves = apr_hash_get(moves_table, &move->rev,
+                                   sizeof(svn_revnum_t));
+              if (moves == NULL)
+                {
+                  /* It is the first move in this revision. Create the list. */
+                  moves = apr_array_make(result_pool, 1,
+                                         sizeof(struct repos_move_info *));
+                  apr_hash_set(moves_table, &move->rev, sizeof(svn_revnum_t),
+                               moves);
+                }
+              APR_ARRAY_PUSH(moves, struct repos_move_info *) = move;
             }
         }
-
-      if (copy == NULL)
-        continue;
-
-      /* Remember details of this move. */
-      SVN_ERR(add_new_move(&move, deleted_repos_relpath,
-                           copy->copyto_path, copy->copyfrom_rev,
-                           log_entry->revision, author->data,
-                           moved_paths, ra_session, repos_root_url,
-                           result_pool, iterpool));
-
-      /* Add this move to the list of moves in this revision. */
-      moves = apr_hash_get(moves_table, &move->rev, sizeof(svn_revnum_t));
-      if (moves == NULL)
-        {
-          /* This is the first move in this revision. Create the list. */
-          moves = apr_array_make(result_pool, 1,
-                                 sizeof(struct repos_move_info *));
-          apr_hash_set(moves_table, &move->rev, sizeof(svn_revnum_t),
-                       moves);
-        }
-      APR_ARRAY_PUSH(moves, struct repos_move_info *) = move;
     }
   svn_pool_destroy(iterpool);
 
