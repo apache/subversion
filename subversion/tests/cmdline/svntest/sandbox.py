@@ -226,6 +226,20 @@ class Sandbox:
 
     return os.path.join(self.tmp_dir, '%s-%s' % (prefix, self.tempname_offs))
 
+  def create_config_dir(self, config_contents=None, server_contents=None,
+                        ssl_cert=None, ssl_url=None, http_proxy=None,
+                        exclusive_wc_locks=None):
+    """Create a config directory with specified or default files.
+       Return its path.
+    """
+
+    tmp_dir = os.path.abspath(svntest.main.temp_dir)
+    config_dir = os.path.join(tmp_dir, 'config_' + self.name)
+    svntest.main.create_config_dir(config_dir, config_contents, server_contents,
+                                   ssl_cert, ssl_url, http_proxy,
+                                   exclusive_wc_locks)
+    return config_dir
+
   def cleanup_test_paths(self):
     "Clean up detritus from this sandbox, and any dependents."
     if self.dependents:

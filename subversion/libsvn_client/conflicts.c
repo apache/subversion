@@ -365,6 +365,68 @@ struct copy_info {
   svn_revnum_t copyfrom_rev;
 };
 
+/* Allocate and return a NEW_MOVE, and update MOVED_PATHS with this new move. */
+static svn_error_t *
+add_new_move(struct repos_move_info **new_move,
+             const char *deleted_repos_relpath,
+             const char *copyto_path,
+             svn_revnum_t copyfrom_rev,
+             svn_revnum_t revision,
+             const char *author,
+             apr_hash_t *moved_paths,
+             svn_ra_session_t *ra_session,
+             const char *repos_root_url, 
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  struct repos_move_info *move;
+  struct repos_move_info *next_move;
+
+  move = apr_pcalloc(result_pool, sizeof(*move));
+  move->moved_from_repos_relpath = apr_pstrdup(result_pool,
+                                               deleted_repos_relpath);
+  move->moved_to_repos_relpath = apr_pstrdup(result_pool, copyto_path);
+  move->rev = revision;
+  move->rev_author = apr_pstrdup(result_pool, author);
+  move->copyfrom_rev = copyfrom_rev;
+
+  /* Link together multiple moves of the same node.
+   * Note that we're traversing history backwards, so moves already
+   * present in the list happened in younger revisions. */
+  next_move = svn_hash_gets(moved_paths, move->moved_to_repos_relpath);
+  if (next_move)
+    {
+      svn_boolean_t related;
+
+      /* Tracing back history of the delete-half of the next move
+       * to the copyfrom-revision of the prior move we must end up
+       * at the delete-half of the prior move. */
+      SVN_ERR(check_move_ancestry(&related, ra_session, repos_root_url,
+                                  next_move->moved_from_repos_relpath,
+                                  next_move->rev,
+                                  move->moved_from_repos_relpath,
+                                  move->copyfrom_rev,
+                                  FALSE, scratch_pool));
+      if (related)
+        {
+          SVN_ERR_ASSERT(move->rev < next_move->rev);
+
+          /* Prepend this move to the linked list. */
+          if (move->next == NULL)
+            move->next = apr_array_make(result_pool, 1,
+                                        sizeof (struct repos_move_info *));
+          APR_ARRAY_PUSH(move->next, struct repos_move_info *) = next_move;
+          next_move->prev = move;
+        }
+    }
+
+  /* Make this move the head of our next-move linking map. */
+  svn_hash_sets(moved_paths, move->moved_from_repos_relpath, move);
+
+  *new_move = move;
+  return SVN_NO_ERROR;
+}
+
 /* Update MOVES_TABLE and MOVED_PATHS based on information from
  * revision data in LOG_ENTRY, COPIES, and DELETED_PATHS.
  * Use RA_SESSION to perform the necessary requests. */
@@ -382,15 +444,15 @@ find_moves_in_revision(svn_ra_session_t *ra_session,
   apr_pool_t *iterpool;
   svn_boolean_t related;
   int i;
+  const svn_string_t *author;
+  
+  author = svn_hash_gets(log_entry->revprops, SVN_PROP_REVISION_AUTHOR);
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < deleted_paths->nelts; i++)
     {
       const char *deleted_repos_relpath;
-      struct copy_info *copy;
       struct repos_move_info *move;
-      struct repos_move_info *next_move;
-      svn_string_t *author;
       apr_array_header_t *moves;
       apr_array_header_t *copies_with_same_source_path;
       int j;
@@ -404,90 +466,43 @@ find_moves_in_revision(svn_ra_session_t *ra_session,
       if (copies_with_same_source_path == NULL)
         continue; /* Not a move, or a nested move we handle later on. */
 
-      copy = NULL;
       for (j = 0; j < copies_with_same_source_path->nelts; j++)
         {
-          struct copy_info *this_copy;
+          struct copy_info *copy;
 
-          /* We found a deleted node which matches the copyfrom path of
-           * a copied node. Verify that the deleted node is an ancestor
-           * of the copied node. When tracing back history of the deleted node
-           * from revision log_entry->revision-1 (where the deleted node is
-           * guaranteed to exist) to the copyfrom-revision, we must end up
-           * at the copyfrom-path. */
-          this_copy = APR_ARRAY_IDX(copies_with_same_source_path, j,
-                                    struct copy_info *);
+          /* We found a copy with a copyfrom path which matches a deleted node.
+           * Verify that the deleted node is an ancestor of the copied node. */
+          copy = APR_ARRAY_IDX(copies_with_same_source_path, j,
+                               struct copy_info *);
           SVN_ERR(check_move_ancestry(&related, ra_session, repos_root_url,
                                       deleted_repos_relpath,
                                       log_entry->revision,
-                                      this_copy->copyfrom_path,
-                                      this_copy->copyfrom_rev,
+                                      copy->copyfrom_path,
+                                      copy->copyfrom_rev,
                                       TRUE, iterpool));
           if (related)
             {
-              copy = this_copy;
-              break;
+              /* Remember details of this move. */
+              SVN_ERR(add_new_move(&move, deleted_repos_relpath,
+                                   copy->copyto_path, copy->copyfrom_rev,
+                                   log_entry->revision, author->data,
+                                   moved_paths, ra_session, repos_root_url,
+                                   result_pool, iterpool));
+
+              /* Add this move to the list of moves in this revision. */
+              moves = apr_hash_get(moves_table, &move->rev,
+                                   sizeof(svn_revnum_t));
+              if (moves == NULL)
+                {
+                  /* It is the first move in this revision. Create the list. */
+                  moves = apr_array_make(result_pool, 1,
+                                         sizeof(struct repos_move_info *));
+                  apr_hash_set(moves_table, &move->rev, sizeof(svn_revnum_t),
+                               moves);
+                }
+              APR_ARRAY_PUSH(moves, struct repos_move_info *) = move;
             }
         }
-
-      if (copy == NULL)
-        continue;
-
-      /* Remember details of this move. */
-      move = apr_pcalloc(result_pool, sizeof(*move));
-      move->moved_from_repos_relpath = apr_pstrdup(result_pool,
-                                                   deleted_repos_relpath);
-      move->moved_to_repos_relpath = apr_pstrdup(result_pool,
-                                                 copy->copyto_path);
-      move->rev = log_entry->revision;
-      author = svn_hash_gets(log_entry->revprops, SVN_PROP_REVISION_AUTHOR);
-      move->rev_author = apr_pstrdup(result_pool, author->data);
-      move->copyfrom_rev = copy->copyfrom_rev;
-
-      /* Link together multiple moves of the same node.
-       * Note that we're traversing history backwards, so moves already
-       * present in the list happened in younger revisions. */
-      next_move = svn_hash_gets(moved_paths, move->moved_to_repos_relpath);
-      if (next_move)
-        {
-          /* Tracing back history of the delete-half of the next move
-           * to the copyfrom-revision of the prior move we must end up
-           * at the delete-half of the prior move. */
-          SVN_ERR(check_move_ancestry(&related, ra_session, repos_root_url,
-                                      next_move->moved_from_repos_relpath,
-                                      next_move->rev,
-                                      move->moved_from_repos_relpath,
-                                      move->copyfrom_rev,
-                                      FALSE, iterpool));
-          if (related)
-            {
-              SVN_ERR_ASSERT(move->rev < next_move->rev);
-
-              /* Prepend this move to the linked list. */
-              if (move->next == NULL)
-                move->next = apr_array_make(
-                               result_pool, 1,
-                               sizeof (struct repos_move_info *));
-              APR_ARRAY_PUSH(move->next,
-                             struct repos_move_info *) = next_move;
-              next_move->prev = move;
-            }
-        }
-
-      /* Make this move the head of our next-move linking map. */
-      svn_hash_sets(moved_paths, move->moved_from_repos_relpath, move);
-
-      /* Add this move to the list of moves in this revision. */
-      moves = apr_hash_get(moves_table, &move->rev, sizeof(svn_revnum_t));
-      if (moves == NULL)
-        {
-          /* This is the first move in this revision. Create the list. */
-          moves = apr_array_make(result_pool, 1,
-                                 sizeof(struct repos_move_info *));
-          apr_hash_set(moves_table, &move->rev, sizeof(svn_revnum_t),
-                       moves);
-        }
-      APR_ARRAY_PUSH(moves, struct repos_move_info *) = move;
     }
   svn_pool_destroy(iterpool);
 
@@ -512,54 +527,8 @@ struct find_deleted_rev_baton
   svn_node_kind_t replacing_node_kind;
   apr_pool_t *result_pool;
 
-  /* A hash table mapping a revision number to an array of struct
-   * repos_move_info * elements, describing moves.
-   *
-   * Must be allocated in RESULT_POOL by the caller of svn_ra_get_log2().
-   *
-   * If the node was moved, the DELETED_REV is present in this table,
-   * perhaps along with additional revisions.
-   *
-   * Given a sequence of moves which happened in the repository, such as:
-   *   rA: mv x->z
-   *   rA: mv a->b
-   *   rB: mv b->c
-   *   rC: mv c->d
-   * we map each revision number to all the moves which happened in the
-   * revision, which looks as follows: 
-   *   rA : [(x->z), (a->b)]
-   *   rB : [(b->c)]
-   *   rC : [(c->d)]
-   * This allows us to later find relevant moves based on a revision number.
-   *
-   * Additionally, we embed the number of the revision in which a move was
-   * found inside the repos_move_info structure:
-   *   rA : [(rA, x->z), (rA, a->b)]
-   *   rB : [(rB, b->c)]
-   *   rC : [(rC, c->d)]
-   * And also, all moves pertaining to the same node are chained into a
-   * doubly-linked list via 'next' and 'prev' pointers (see definition of
-   * struct repos_move_info). This can be visualized as follows:
-   *   rA : [(rA, x->z, prev=>NULL, next=>NULL),
-   *         (rA, a->b, prev=>NULL, next=>(rB, b->c))]
-   *   rB : [(rB, b->c), prev=>(rA, a->b), next=>(rC, c->d)]
-   *   rC : [(rC, c->d), prev=>(rB, c->d), next=>NULL]
-   * This way, we can look up all moves relevant to a node, forwards and
-   * backwards in history, once we have located one move in the chain.
-   *
-   * In the above example, the data tells us that within the revision
-   * range rA:C, a was moved to d. However, within the revision range
-   * rA;B, a was moved to b.
-   */
-  apr_hash_t *moves_table;
-
-  /* Variables below hold state for find_deleted_rev() and are not
-   * intended to be used by the caller of svn_ra_get_log2().
-   * Like all other variables, they must be initialized, however. */
-
-  /* Temporary map of moved paths to struct repos_move_info.
-   * Used to link multiple moves of the same node across revisions. */
-  apr_hash_t *moved_paths;
+  apr_hash_t *moves_table; /* Obtained from find_moves_in_revision(). */
+  struct repos_move_info *move; /* Last known move which affected the node. */
 
   /* Extra RA session that can be used to make additional requests. */
   svn_ra_session_t *extra_ra_session;
@@ -607,11 +576,13 @@ map_deleted_path_to_move(const char *deleted_relpath,
                          apr_pool_t *scratch_pool)
 {
   int i;
+  struct repos_move_info *closest_move = NULL;
+  int min_components = 0;
 
   for (i = 0; i < moves->nelts; i++)
     {
-      struct repos_move_info *move;
       const char *relpath;
+      struct repos_move_info *move;
           
       move = APR_ARRAY_IDX(moves, i, struct repos_move_info *);
       if (strcmp(move->moved_from_repos_relpath, deleted_relpath) == 0)
@@ -619,37 +590,63 @@ map_deleted_path_to_move(const char *deleted_relpath,
 
       relpath = svn_relpath_skip_ancestor(move->moved_to_repos_relpath,
                                           deleted_relpath);
-      /* ### Should probably return the closest path-wise ancestor. */
       if (relpath)
+        {
+          /* This could be a nested move. Return the path-wise closest move. */
+          int c = svn_path_component_count(relpath);
+          if (c == 0)
+             return move;
+          else if (min_components == 0 || c < min_components)
+            {
+              min_components = c;
+              closest_move = move;
+            }
+        }
+    }
+
+  if (closest_move)
+    {
+      const char *relpath;
+      const char *moved_along_path;
+      struct repos_move_info *move;
+      
+      /* See if we can find an even closer move for this moved-along path. */
+      relpath = svn_relpath_skip_ancestor(closest_move->moved_to_repos_relpath,
+                                          deleted_relpath);
+      moved_along_path =
+        svn_relpath_join(closest_move->moved_from_repos_relpath, relpath,
+                         scratch_pool);
+      move = map_deleted_path_to_move(moved_along_path, moves, scratch_pool);
+      if (move)
         return move;
     }
 
-  return NULL;
+  return closest_move;
 }
 
+/* Search for nested moves in REVISION, given the already found MOVES,
+ * all DELETED_PATHS, and all COPIES, from the same revision.
+ * Append any nested moves to the MOVES array. */
 static svn_error_t *
-find_nested_move(const char **moved_from_repos_relpath,
-                 struct copy_info **move_destination,
-                 const char *deleted_repos_relpath,
-                 const char *related_repos_relpath,
-                 svn_revnum_t related_repos_peg_rev,
-                 apr_array_header_t *moves,
-                 apr_hash_t *copies,
-                 apr_array_header_t *deleted_paths,
-                 svn_revnum_t revision,
-                 const char *repos_root_url,
-                 const char *repos_uuid,
-                 svn_ra_session_t *ra_session,
-                 svn_client_ctx_t *ctx,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
+find_nested_moves(apr_array_header_t *moves,
+                  apr_hash_t *copies,
+                  apr_array_header_t *deleted_paths,
+                  apr_hash_t *moved_paths,
+                  svn_revnum_t revision,
+                  svn_string_t *author,
+                  const char *repos_root_url,
+                  const char *repos_uuid,
+                  svn_ra_session_t *ra_session,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
+  apr_array_header_t *nested_moves;
   int i;
   apr_pool_t *iterpool;
 
-  *moved_from_repos_relpath = NULL;
-  *move_destination = NULL;
-
+  nested_moves = apr_array_make(result_pool, 0,
+                                sizeof(struct repos_move_info *));
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < deleted_paths->nelts; i++)
     {
@@ -658,7 +655,7 @@ find_nested_move(const char **moved_from_repos_relpath,
       const char *moved_along_repos_relpath;
       struct repos_move_info *move;
       apr_array_header_t *copies_with_same_source_path;
-      struct copy_info *copy;
+      int j;
       svn_boolean_t related;
 
       svn_pool_clear(iterpool);
@@ -667,46 +664,58 @@ find_nested_move(const char **moved_from_repos_relpath,
       move = map_deleted_path_to_move(deleted_path, moves, iterpool);
       if (move == NULL)
         continue;
-
       child_relpath = svn_relpath_skip_ancestor(move->moved_to_repos_relpath,
-                                                deleted_repos_relpath);
+                                                deleted_path);
       if (child_relpath == NULL || child_relpath[0] == '\0')
         continue; /* not a nested move */
 
       /* Consider: svn mv A B; svn mv B/foo C/foo
        * Copyfrom for C/foo is A/foo, even though C/foo was moved here from
        * B/foo. A/foo was not deleted. It is B/foo which was deleted.
-       * We now know the move A->B and child_repath "foo". Try to detect an
-       * ancestral relationship between A/foo and the known related path.
-       */
+       * We now know about the move A->B and moved-along child_relpath "foo".
+       * Try to detect an ancestral relationship between A/foo and the
+       * moved-along path. */
       moved_along_repos_relpath =
         svn_relpath_join(move->moved_from_repos_relpath, child_relpath,
                          iterpool);
       copies_with_same_source_path = svn_hash_gets(copies,
                                                    moved_along_repos_relpath);
       if (copies_with_same_source_path == NULL)
-        continue;
+        continue; /* not a nested move */
 
-      if (copies_with_same_source_path->nelts > 1)
-        continue; /* ### handle ambiguity! */
-
-      copy = APR_ARRAY_IDX(copies_with_same_source_path, 0, struct copy_info *);
-      SVN_ERR(check_move_ancestry(&related, ra_session, repos_root_url,
-                                  moved_along_repos_relpath,
-                                  rev_below(revision),
-                                  copy->copyfrom_path,
-                                  copy->copyfrom_rev,
-                                  TRUE, iterpool));
-
-      if (related)
+      for (j = 0; j < copies_with_same_source_path->nelts; j++)
         {
-          *moved_from_repos_relpath =
-            apr_pstrdup(result_pool, moved_along_repos_relpath);
-          *move_destination = copy;
-          break;
+          struct copy_info *copy;
+
+          copy = APR_ARRAY_IDX(copies_with_same_source_path, j,
+                               struct copy_info *);
+          SVN_ERR(check_move_ancestry(&related, ra_session, repos_root_url,
+                                      moved_along_repos_relpath,
+                                      revision,
+                                      copy->copyfrom_path,
+                                      copy->copyfrom_rev,
+                                      TRUE, iterpool));
+          if (related)
+            {
+              struct repos_move_info *nested_move;
+
+              /* Remember details of this move. */
+              SVN_ERR(add_new_move(&nested_move, moved_along_repos_relpath,
+                                   copy->copyto_path, copy->copyfrom_rev,
+                                   revision, author->data, moved_paths,
+                                   ra_session, repos_root_url,
+                                   result_pool, iterpool));
+
+              /* Add this move to the list of nested moves in this revision. */
+              APR_ARRAY_PUSH(nested_moves, struct repos_move_info *) =
+                nested_move;
+            }
         }
     }
   svn_pool_destroy(iterpool);
+
+  /* Add all nested moves found to the list of all moves in this revision. */
+  apr_array_cat(moves, nested_moves);
 
   return SVN_NO_ERROR;
 }
@@ -742,8 +751,6 @@ find_deleted_rev(void *baton,
   apr_pool_t *iterpool;
   svn_boolean_t deleted_node_found = FALSE;
   svn_node_kind_t replacing_node_kind = svn_node_none;
-  apr_array_header_t *deleted_paths;
-  apr_hash_t *copies;
 
   if (b->ctx->notify_func2)
     {
@@ -761,8 +768,6 @@ find_deleted_rev(void *baton,
   if (! log_entry->changed_paths2)
     return SVN_NO_ERROR;
 
-  copies = apr_hash_make(scratch_pool);
-  deleted_paths = apr_array_make(scratch_pool, 0, sizeof(const char *));
   iterpool = svn_pool_create(scratch_pool);
   for (hi = apr_hash_first(scratch_pool, log_entry->changed_paths2);
        hi != NULL;
@@ -776,39 +781,6 @@ find_deleted_rev(void *baton,
       /* ### Remove leading slash from paths in log entries. */
       if (changed_path[0] == '/')
           changed_path++;
-
-      /* For move detection, scan for copied nodes in this revision. */
-      if (log_item->action == 'A' && log_item->copyfrom_path)
-        {
-          struct copy_info *copy;
-          apr_array_header_t *copies_with_same_source_path;
-
-          if (log_item->copyfrom_path[0] == '/')
-            log_item->copyfrom_path++;
-
-          copy = apr_palloc(scratch_pool, sizeof(*copy));
-          copy->copyto_path = changed_path;
-          copy->copyfrom_path = log_item->copyfrom_path;
-          copy->copyfrom_rev = log_item->copyfrom_rev;
-          copies_with_same_source_path = apr_hash_get(copies,
-                                                      log_item->copyfrom_path,
-                                                      APR_HASH_KEY_STRING);
-          if (copies_with_same_source_path == NULL)
-            {
-              copies_with_same_source_path = apr_array_make(
-                                               scratch_pool, 1,
-                                               sizeof(struct copy_info *));
-              apr_hash_set(copies, copy->copyfrom_path, APR_HASH_KEY_STRING,
-                           copies_with_same_source_path);
-            }
-          APR_ARRAY_PUSH(copies_with_same_source_path,
-                         struct copy_info *) = copy;
-        }
-
-      /* For move detection, store all deleted_paths. */
-      if (log_item->action == 'D' || log_item->action == 'R')
-        APR_ARRAY_PUSH(deleted_paths, const char *) =
-          apr_pstrdup(scratch_pool, changed_path);
 
       /* Check if we already found the deleted node we're looking for. */
       if (!deleted_node_found &&
@@ -855,12 +827,6 @@ find_deleted_rev(void *baton,
     }
   svn_pool_destroy(iterpool);
 
-  /* Check for moves in this revision */
-  SVN_ERR(find_moves_in_revision(b->extra_ra_session,
-                                 b->moves_table, b->moved_paths,
-                                 log_entry, copies, deleted_paths,
-                                 b->repos_root_url,
-                                 b->result_pool, scratch_pool));
   if (!deleted_node_found)
     {
       apr_array_header_t *moves;
@@ -869,43 +835,26 @@ find_deleted_rev(void *baton,
                            sizeof(svn_revnum_t));
       if (moves)
         {
-          const char *moved_from_repos_relpath;
-          struct copy_info *copy;
-          svn_string_t *author;
+          struct repos_move_info *move;
 
-          SVN_ERR(find_nested_move(&moved_from_repos_relpath, &copy,
-                                   b->deleted_repos_relpath,
-                                   b->related_repos_relpath,
-                                   b->related_repos_peg_rev,
-                                   moves, copies, deleted_paths,
-                                   log_entry->revision,
-                                   b->repos_root_url,
-                                   b->repos_uuid,
-                                   b->extra_ra_session, b->ctx,
-                                   b->result_pool, scratch_pool));
-          if (moved_from_repos_relpath && copy)
+          move = map_deleted_path_to_move(b->deleted_repos_relpath,
+                                          moves, scratch_pool);
+          if (move)
             {
-              struct repos_move_info *move;
+              const char *relpath;
 
-              /* Remember details of this move. */
-              move = apr_pcalloc(b->result_pool, sizeof(*move));
-              move->moved_from_repos_relpath = moved_from_repos_relpath;
-              move->moved_to_repos_relpath = apr_pstrdup(b->result_pool,
-                                                         copy->copyto_path);
-              move->rev = log_entry->revision;
-              author = svn_hash_gets(log_entry->revprops,
-                                     SVN_PROP_REVISION_AUTHOR);
-              move->rev_author = apr_pstrdup(b->result_pool, author->data);
-              move->copyfrom_rev = copy->copyfrom_rev;
-
-              APR_ARRAY_PUSH(moves, struct repos_move_info *) = move;
-              deleted_node_found = TRUE;
-              b->deleted_repos_relpath = move->moved_from_repos_relpath;
+              /* The node was moved. Update our search path accordingly. */
+              b->move = move;
+              relpath = svn_relpath_skip_ancestor(move->moved_to_repos_relpath,
+                                                  b->deleted_repos_relpath);
+              if (relpath)
+                b->deleted_repos_relpath =
+                  svn_relpath_join(move->moved_from_repos_relpath, relpath,
+                                   b->result_pool);
             }
         }
     }
-
-  if (deleted_node_found)
+  else
     {
       svn_string_t *author;
 
@@ -1372,6 +1321,493 @@ describe_local_dir_node_change(const char **description,
   return SVN_NO_ERROR;
 }
 
+struct find_moves_baton
+{
+  /* Variables below are arguments provided by the caller of
+   * svn_ra_get_log2(). */
+  const char *repos_root_url;
+  const char *repos_uuid;
+  svn_client_ctx_t *ctx;
+  const char *victim_abspath; /* for notifications */
+  apr_pool_t *result_pool;
+
+  /* A hash table mapping a revision number to an array of struct
+   * repos_move_info * elements, describing moves.
+   *
+   * Must be allocated in RESULT_POOL by the caller of svn_ra_get_log2().
+   *
+   * If the node was moved, the DELETED_REV is present in this table,
+   * perhaps along with additional revisions.
+   *
+   * Given a sequence of moves which happened in the repository, such as:
+   *   rA: mv x->z
+   *   rA: mv a->b
+   *   rB: mv b->c
+   *   rC: mv c->d
+   * we map each revision number to all the moves which happened in the
+   * revision, which looks as follows: 
+   *   rA : [(x->z), (a->b)]
+   *   rB : [(b->c)]
+   *   rC : [(c->d)]
+   * This allows us to later find relevant moves based on a revision number.
+   *
+   * Additionally, we embed the number of the revision in which a move was
+   * found inside the repos_move_info structure:
+   *   rA : [(rA, x->z), (rA, a->b)]
+   *   rB : [(rB, b->c)]
+   *   rC : [(rC, c->d)]
+   * And also, all moves pertaining to the same node are chained into a
+   * doubly-linked list via 'next' and 'prev' pointers (see definition of
+   * struct repos_move_info). This can be visualized as follows:
+   *   rA : [(rA, x->z, prev=>NULL, next=>NULL),
+   *         (rA, a->b, prev=>NULL, next=>(rB, b->c))]
+   *   rB : [(rB, b->c), prev=>(rA, a->b), next=>(rC, c->d)]
+   *   rC : [(rC, c->d), prev=>(rB, c->d), next=>NULL]
+   * This way, we can look up all moves relevant to a node, forwards and
+   * backwards in history, once we have located one move in the chain.
+   *
+   * In the above example, the data tells us that within the revision
+   * range rA:C, a was moved to d. However, within the revision range
+   * rA;B, a was moved to b.
+   */
+  apr_hash_t *moves_table;
+
+  /* Variables below hold state for find_moves() and are not
+   * intended to be used by the caller of svn_ra_get_log2().
+   * Like all other variables, they must be initialized, however. */
+
+  /* Temporary map of moved paths to struct repos_move_info.
+   * Used to link multiple moves of the same node across revisions. */
+  apr_hash_t *moved_paths;
+
+  /* Extra RA session that can be used to make additional requests. */
+  svn_ra_session_t *extra_ra_session;
+};
+
+/* Implements svn_log_entry_receiver_t. */
+static svn_error_t *
+find_moves(void *baton, svn_log_entry_t *log_entry, apr_pool_t *scratch_pool)
+{
+  struct find_moves_baton *b = baton;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
+  apr_array_header_t *deleted_paths;
+  apr_hash_t *copies;
+  apr_array_header_t *moves;
+
+  if (b->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify;
+
+      notify = svn_wc_create_notify(
+                 b->victim_abspath,
+                 svn_wc_notify_tree_conflict_details_progress,
+                 scratch_pool),
+      notify->revision = log_entry->revision;
+      b->ctx->notify_func2(b->ctx->notify_baton2, notify, scratch_pool);
+    }
+
+  /* No paths were changed in this revision.  Nothing to do. */
+  if (! log_entry->changed_paths2)
+    return SVN_NO_ERROR;
+
+  copies = apr_hash_make(scratch_pool);
+  deleted_paths = apr_array_make(scratch_pool, 0, sizeof(const char *));
+  iterpool = svn_pool_create(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, log_entry->changed_paths2);
+       hi != NULL;
+       hi = apr_hash_next(hi))
+    {
+      const char *changed_path = apr_hash_this_key(hi);
+      svn_log_changed_path2_t *log_item = apr_hash_this_val(hi);
+
+      svn_pool_clear(iterpool);
+
+      /* ### Remove leading slash from paths in log entries. */
+      if (changed_path[0] == '/')
+          changed_path++;
+
+      /* For move detection, scan for copied nodes in this revision. */
+      if (log_item->action == 'A' && log_item->copyfrom_path)
+        {
+          struct copy_info *copy;
+          apr_array_header_t *copies_with_same_source_path;
+
+          if (log_item->copyfrom_path[0] == '/')
+            log_item->copyfrom_path++;
+
+          copy = apr_palloc(scratch_pool, sizeof(*copy));
+          copy->copyto_path = changed_path;
+          copy->copyfrom_path = log_item->copyfrom_path;
+          copy->copyfrom_rev = log_item->copyfrom_rev;
+          copies_with_same_source_path = apr_hash_get(copies,
+                                                      log_item->copyfrom_path,
+                                                      APR_HASH_KEY_STRING);
+          if (copies_with_same_source_path == NULL)
+            {
+              copies_with_same_source_path = apr_array_make(
+                                               scratch_pool, 1,
+                                               sizeof(struct copy_info *));
+              apr_hash_set(copies, copy->copyfrom_path, APR_HASH_KEY_STRING,
+                           copies_with_same_source_path);
+            }
+          APR_ARRAY_PUSH(copies_with_same_source_path,
+                         struct copy_info *) = copy;
+        }
+
+      /* For move detection, store all deleted_paths. */
+      if (log_item->action == 'D' || log_item->action == 'R')
+        APR_ARRAY_PUSH(deleted_paths, const char *) =
+          apr_pstrdup(scratch_pool, changed_path);
+    }
+  svn_pool_destroy(iterpool);
+
+  /* Check for moves in this revision */
+  SVN_ERR(find_moves_in_revision(b->extra_ra_session,
+                                 b->moves_table, b->moved_paths,
+                                 log_entry, copies, deleted_paths,
+                                 b->repos_root_url,
+                                 b->result_pool, scratch_pool));
+
+  moves = apr_hash_get(b->moves_table, &log_entry->revision,
+                       sizeof(svn_revnum_t));
+  if (moves)
+    SVN_ERR(find_nested_moves(moves, copies, deleted_paths,
+                              b->moved_paths, log_entry->revision,
+                              svn_hash_gets(log_entry->revprops,
+                                            SVN_PROP_REVISION_AUTHOR),
+                              b->repos_root_url,
+                              b->repos_uuid,
+                              b->extra_ra_session, b->ctx,
+                              b->result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Find all moves which occured in repository history starting at
+ * REPOS_RELPATH@START_REV until END_REV (where START_REV > END_REV).
+ * Return results in *MOVES_TABLE (see struct find_moves_baton for details). */
+static svn_error_t *
+find_moves_in_revision_range(struct apr_hash_t **moves_table,
+                             const char *repos_relpath,
+                             svn_client_conflict_t *conflict,
+                             svn_revnum_t start_rev,
+                             svn_revnum_t end_rev,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  svn_ra_session_t *ra_session;
+  const char *url;
+  const char *corrected_url;
+  apr_array_header_t *paths;
+  apr_array_header_t *revprops;
+  const char *repos_root_url;
+  const char *repos_uuid;
+  struct find_moves_baton b;
+  svn_error_t *err;
+
+  SVN_ERR_ASSERT(start_rev > end_rev);
+
+  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
+                                             conflict, scratch_pool,
+                                             scratch_pool));
+  url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                    scratch_pool);
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
+                                               url, NULL, NULL, FALSE, FALSE,
+                                               ctx, scratch_pool,
+                                               scratch_pool));
+
+  paths = apr_array_make(scratch_pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(paths, const char *) = "";
+
+  revprops = apr_array_make(scratch_pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
+
+  b.repos_root_url = repos_root_url;
+  b.repos_uuid = repos_uuid;
+  b.ctx = ctx;
+  b.moves_table = apr_hash_make(result_pool);
+  b.moved_paths = apr_hash_make(scratch_pool);
+  b.result_pool = result_pool;
+  SVN_ERR(svn_ra__dup_session(&b.extra_ra_session, ra_session, NULL,
+                              scratch_pool, scratch_pool));
+
+  err = svn_ra_get_log2(ra_session, paths, start_rev, end_rev,
+                        0, /* no limit */
+                        TRUE, /* need the changed paths list */
+                        FALSE, /* need to traverse copies */
+                        FALSE, /* no need for merged revisions */
+                        revprops,
+                        find_moves, &b,
+                        scratch_pool);
+
+  *moves_table = b.moves_table;
+
+  return SVN_NO_ERROR;
+}
+
+/* Return new move information for a moved-along child MOVED_ALONG_RELPATH.
+ * Do not copy MOVE->NEXT and MOVE-PREV.
+ * If MOVED_ALONG_RELPATH is empty, this effectively copies MOVE to
+ * RESULT_POOL with NEXT and PREV pointers cleared. */
+static struct repos_move_info *
+new_path_adjusted_move(struct repos_move_info *move,
+                       const char *moved_along_relpath,
+                       apr_pool_t *result_pool)
+{
+  struct repos_move_info *new_move;
+
+  new_move = apr_pcalloc(result_pool, sizeof(*new_move));
+  new_move->moved_from_repos_relpath =
+    svn_relpath_join(move->moved_from_repos_relpath, moved_along_relpath,
+                     result_pool);
+  new_move->moved_to_repos_relpath =
+    svn_relpath_join(move->moved_to_repos_relpath, moved_along_relpath,
+                     result_pool);
+  new_move->rev = move->rev;
+  new_move->rev_author = apr_pstrdup(result_pool, move->rev_author);
+  new_move->copyfrom_rev = move->copyfrom_rev;
+  /* Ignore prev and next pointers. Caller will set them if needed. */
+
+  return new_move;
+}
+
+/* Given a list of MOVES_IN_REVISION, figure out which of these moves again
+ * move the node which was already moved by PREV_MOVE in the past . */
+static svn_error_t *
+find_next_moves_in_revision(apr_array_header_t **next_moves,
+                            apr_array_header_t *moves_in_revision,
+                            struct repos_move_info *prev_move,
+                            svn_ra_session_t *ra_session,
+                            const char *repos_root_url,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_pool_t *iterpool;
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < moves_in_revision->nelts; i++)
+    {
+      struct repos_move_info *move;
+      const char *relpath;
+      const char *deleted_repos_relpath;
+      svn_boolean_t related;
+      svn_error_t *err;
+
+      svn_pool_clear(iterpool);
+
+      /* Check if this move affects the current known path of our node. */
+      move = APR_ARRAY_IDX(moves_in_revision, i, struct repos_move_info *);
+      relpath = svn_relpath_skip_ancestor(move->moved_from_repos_relpath,
+                                          prev_move->moved_to_repos_relpath);
+      if (relpath == NULL)
+        continue;
+
+      /* It does. So our node must have been deleted again. */
+      deleted_repos_relpath = svn_relpath_join(move->moved_from_repos_relpath,
+                                               relpath, iterpool);
+
+      /* Tracing back history of the delete-half of this move to the
+       * copyfrom-revision of the prior move we must end up at the
+       * delete-half of the prior move. */
+      err = check_move_ancestry(&related, ra_session, repos_root_url,
+                                deleted_repos_relpath, move->rev,
+                                prev_move->moved_from_repos_relpath,
+                                prev_move->copyfrom_rev,
+                                FALSE, scratch_pool);
+      if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+          svn_error_clear(err);
+          continue;
+        }
+      else
+        SVN_ERR(err);
+
+      if (related)
+        {
+          struct repos_move_info *new_move;
+
+          /* We have a winner. */
+          new_move = new_path_adjusted_move(move, relpath, result_pool);
+          if (*next_moves == NULL)
+            *next_moves = apr_array_make(result_pool, 1,
+                                         sizeof(struct repos_move_info *));
+          APR_ARRAY_PUSH(*next_moves, struct repos_move_info *) = new_move;
+        }
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+static int
+compare_items_as_revs(const svn_sort__item_t *a, const svn_sort__item_t *b)
+{
+  return svn_sort_compare_revisions(a->key, b->key);
+}
+
+/* Starting at MOVE->REV, loop over future revisions which contain moves,
+ * and look for matching next moves in each. Once found, return a list of
+ * (ambiguous, if more than one) moves in *NEXT_MOVES. */
+static svn_error_t *
+find_next_moves(apr_array_header_t **next_moves,
+                apr_hash_t *moves_table,
+                struct repos_move_info *move,
+                svn_ra_session_t *ra_session,
+                const char *repos_root_url,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *moves;
+  apr_array_header_t *revisions;
+  apr_pool_t *iterpool;
+  int i;
+
+  *next_moves = NULL;
+  revisions = svn_sort__hash(moves_table, compare_items_as_revs, scratch_pool);
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < revisions->nelts; i++)
+    {
+      svn_sort__item_t item = APR_ARRAY_IDX(revisions, i, svn_sort__item_t);
+      svn_revnum_t rev = *(svn_revnum_t *)item.key;
+
+      svn_pool_clear(iterpool);
+
+      if (rev <= move->rev)
+        continue;
+
+      moves = apr_hash_get(moves_table, &rev, sizeof(rev));
+      SVN_ERR(find_next_moves_in_revision(next_moves, moves, move,
+                                          ra_session, repos_root_url,
+                                          result_pool, iterpool));
+      if (*next_moves)
+        break;
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Trace all future moves of the node moved by MOVE.
+ * Update MOVE->PREV and MOVE->NEXT accordingly. */
+static svn_error_t *
+trace_moved_node(apr_hash_t *moves_table,
+                 struct repos_move_info *move,
+                 svn_ra_session_t *ra_session,
+                 const char *repos_root_url,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *next_moves;
+
+  SVN_ERR(find_next_moves(&next_moves, moves_table, move,
+                          ra_session, repos_root_url,
+                          result_pool, scratch_pool));
+  if (next_moves)
+    {
+      int i;
+      apr_pool_t *iterpool;
+
+      move->next = next_moves;
+      iterpool = svn_pool_create(scratch_pool);
+      for (i = 0; i < next_moves->nelts; i++)
+        {
+          struct repos_move_info *next_move;
+
+          svn_pool_clear(iterpool);
+          next_move = APR_ARRAY_IDX(next_moves, i, struct repos_move_info *);
+          next_move->prev = move;
+          SVN_ERR(trace_moved_node(moves_table, next_move,
+                                   ra_session, repos_root_url,
+                                   result_pool, iterpool));
+        }
+      svn_pool_destroy(iterpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Scan MOVES_TABLE for moves which affect a particular deleted node, and
+ * build a set of new move information for this node.
+ * Return heads of all possible move chains in *MOVES.
+ *
+ * MOVES_TABLE describes moves which happened at arbitrary paths in the
+ * repository. DELETED_REPOS_RELPATH may have been moved directly or it
+ * may have been moved along with a parent path. Move information returned
+ * from this function represents how DELETED_REPOS_RELPATH itself was moved
+ * from one path to another, effectively "zooming in" on the effective move
+ * operations which occurred for this particular node. */
+static svn_error_t *
+find_operative_moves(apr_array_header_t **moves,
+                     apr_hash_t *moves_table,
+                     const char *deleted_repos_relpath,
+                     svn_revnum_t deleted_rev,
+                     svn_ra_session_t *ra_session,
+                     const char *repos_root_url,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *moves_in_deleted_rev;
+  int i;
+  apr_pool_t *iterpool;
+
+  moves_in_deleted_rev = apr_hash_get(moves_table, &deleted_rev,
+                                      sizeof(deleted_rev));
+  if (moves_in_deleted_rev == NULL)
+    {
+      *moves = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  /* Look for operative moves in the revision where the node was deleted. */
+  *moves = apr_array_make(scratch_pool, 0, sizeof(struct repos_move_info *));
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < moves_in_deleted_rev->nelts; i++)
+    {
+      struct repos_move_info *move;
+      const char *relpath;
+
+      svn_pool_clear(iterpool);
+
+      move = APR_ARRAY_IDX(moves_in_deleted_rev, i, struct repos_move_info *);
+      relpath = svn_relpath_skip_ancestor(move->moved_from_repos_relpath,
+                                          deleted_repos_relpath);
+      if (relpath)
+        {
+          struct repos_move_info *new_move;
+
+          new_move = new_path_adjusted_move(move, relpath, result_pool);
+          APR_ARRAY_PUSH(*moves, struct repos_move_info *) = new_move;
+        }
+    }
+
+  /* If we didn't find any applicable moves, return NULL. */
+  if ((*moves)->nelts == 0)
+    {
+      *moves = NULL;
+      svn_pool_destroy(iterpool);
+      return SVN_NO_ERROR;
+   }
+
+  /* Figure out what happened to these moves in future revisions. */
+  for (i = 0; i < (*moves)->nelts; i++)
+    {
+      struct repos_move_info *move;
+
+      svn_pool_clear(iterpool);
+
+      move = APR_ARRAY_IDX(*moves, i, struct repos_move_info *);
+      SVN_ERR(trace_moved_node(moves_table, move, ra_session, repos_root_url,
+                               result_pool, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 /* Try to find a revision older than START_REV, and its author, which deleted
  * DELETED_BASENAME in the directory PARENT_REPOS_RELPATH. Assume the deleted
  * node is ancestrally related to RELATED_REPOS_RELPATH@RELATED_PEG_REV.
@@ -1409,8 +1845,13 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
   struct find_deleted_rev_baton b;
   const char *victim_abspath;
   svn_error_t *err;
+  apr_hash_t *moves_table;
 
   SVN_ERR_ASSERT(start_rev > end_rev);
+
+  SVN_ERR(find_moves_in_revision_range(&moves_table, parent_repos_relpath,
+                                       conflict, start_rev, end_rev,
+                                       ctx, result_pool, scratch_pool));
 
   SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
                                              conflict, scratch_pool,
@@ -1439,8 +1880,7 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
   b.repos_root_url = repos_root_url;
   b.repos_uuid = repos_uuid;
   b.ctx = ctx;
-  b.moves_table = apr_hash_make(result_pool);
-  b.moved_paths = apr_hash_make(scratch_pool);
+  b.moves_table = moves_table;
   b.result_pool = result_pool;
   SVN_ERR(svn_ra__dup_session(&b.extra_ra_session, ra_session, NULL,
                               scratch_pool, scratch_pool));
@@ -1468,51 +1908,40 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
 
   if (b.deleted_rev == SVN_INVALID_REVNUM)
     {
-      /* We could not determine the revision in which the node was
-       * deleted. */
-      *deleted_rev = SVN_INVALID_REVNUM;
-      *deleted_rev_author = NULL;
-      *replacing_node_kind = svn_node_unknown;
-      *moves = NULL;
+      struct repos_move_info *move = b.move;
+
+      if (move)
+        {
+          *deleted_rev = move->rev;
+          *deleted_rev_author = move->rev_author;
+          *replacing_node_kind = b.replacing_node_kind;
+          SVN_ERR(find_operative_moves(moves, moves_table,
+                                       move->moved_from_repos_relpath,
+                                       move->rev,
+                                       ra_session, repos_root_url,
+                                       result_pool, scratch_pool));
+        }
+      else
+        {
+          /* We could not determine the revision in which the node was
+           * deleted. */
+          *deleted_rev = SVN_INVALID_REVNUM;
+          *deleted_rev_author = NULL;
+          *replacing_node_kind = svn_node_unknown;
+          *moves = NULL;
+        }
       return SVN_NO_ERROR;
     }
   else
     {
-      apr_array_header_t *all_moves_in_deleted_rev;
-
       *deleted_rev = b.deleted_rev;
       *deleted_rev_author = b.deleted_rev_author;
       *replacing_node_kind = b.replacing_node_kind;
+      SVN_ERR(find_operative_moves(moves, moves_table,
+                                   b.deleted_repos_relpath, b.deleted_rev,
+                                   ra_session, repos_root_url,
+                                   result_pool, scratch_pool));
 
-      /* Look for a moves which affect the deleted node. */
-      all_moves_in_deleted_rev = apr_hash_get(b.moves_table, &b.deleted_rev,
-                                             sizeof(svn_revnum_t));
-      if (all_moves_in_deleted_rev)
-        {
-          int i;
-
-          *moves = apr_array_make(result_pool, 1, sizeof(const char *));
-          for (i = 0; i < all_moves_in_deleted_rev->nelts; i++)
-            {
-              struct repos_move_info *this_move;
-              
-              this_move = APR_ARRAY_IDX(all_moves_in_deleted_rev, i,
-                                        struct repos_move_info *);
-              if (strcmp(b.deleted_repos_relpath,
-                         this_move->moved_from_repos_relpath) == 0)
-                {
-                  /* Because b->moves_table lives in result_pool
-                   * there is no need to deep-copy here. */
-                   APR_ARRAY_PUSH(*moves, struct repos_move_info *) = this_move;
-                }
-            }
-
-          /* If we didn't find any applicable moves, return NULL. */
-          if ((*moves)->nelts == 0)
-            *moves = NULL;
-        }
-      else
-        *moves = NULL;
     }
 
   return SVN_NO_ERROR;

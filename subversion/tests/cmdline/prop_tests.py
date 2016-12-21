@@ -2374,7 +2374,7 @@ def pristine_props_listed(sbox):
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'proplist', '-R', wc_dir, '-r', 'BASE')
 
-def create_inherited_ignores_config(config_dir):
+def create_inherited_ignores_config(sbox):
   "create config stuffs for inherited ignores tests"
 
   # contents of the file 'config'
@@ -2383,7 +2383,7 @@ def create_inherited_ignores_config(config_dir):
 global-ignores = *.boo *.goo
 '''
 
-  svntest.main.create_config_dir(config_dir, config_contents)
+  return sbox.create_config_dir(config_contents)
 
 def inheritable_ignores(sbox):
   "inheritable ignores with svn:ignores and config"
@@ -2391,9 +2391,7 @@ def inheritable_ignores(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
-  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
-  create_inherited_ignores_config(config_dir)
+  config_dir = create_inherited_ignores_config(sbox)
 
   sbox.simple_propset(SVN_PROP_INHERITABLE_IGNORES, '*.doo', 'A/B')
   sbox.simple_propset(SVN_PROP_INHERITABLE_IGNORES, '*.moo', 'A/D')
