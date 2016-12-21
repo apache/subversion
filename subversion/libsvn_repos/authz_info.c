@@ -132,8 +132,9 @@ resolve_global_rights(authz_rights_t *rights_p,
         }
     }
 
-  /* Fall-through: return accumulated rights across all repositories. */
-  *rights_p = global_rights->all_repos_rights;
+  /* Fall-through: return the rights defined for "any" repository
+     because this user has no specific rules for this specific REPOS. */
+  *rights_p = global_rights->any_repos_rights;
   return FALSE;
 }
 
@@ -157,12 +158,18 @@ svn_authz__get_global_rights(authz_rights_t *rights_p,
 
       if (user_rights)
         {
-          authz_rights_t rights;
-          if (resolve_global_rights(&rights, user_rights, repos))
+          svn_boolean_t explicit
+            = resolve_global_rights(rights_p, user_rights, repos);
+
+          /* Rights given to _any_ authenticated user may apply, too. */
+          if (authz->has_authn_rights)
             {
-              *rights_p = rights;
-              return TRUE;
+              authz_rights_t authn;
+              explicit |= resolve_global_rights(&authn, &authz->authn_rights,
+                                                repos);
+              combine_rights(rights_p, rights_p, &authn);
             }
+          return explicit;
         }
 
       /* Check if we have explicit rights for authenticated access. */

@@ -374,7 +374,72 @@ test_global_rights(apr_pool_t *pool)
       { NULL }
     };
 
+  const char* authz2 =
+    "[/]"                                                                NL
+    "userA = r"                                                          NL
+    ""                                                                   NL
+    "[/public]"                                                          NL
+    "userB = rw"                                                         NL
+    ""                                                                   NL
+    "[repo:/]"                                                           NL
+    "userA = rw"                                                         NL;
+
+  const global_right_text_case_t test_cases2[] =
+    {
+      /* Everyone may get read access b/c there might be a "/public" path. */
+      {      "",      "", { authz_access_none, authz_access_none  },  TRUE },
+      {      "", "userA", { authz_access_none, authz_access_read  },  TRUE },
+      {      "", "userB", { authz_access_none, authz_access_write },  TRUE },
+      {      "", "userC", { authz_access_none, authz_access_none  },  TRUE },
+
+      /* Two users do even get write access on some paths in "greek".
+       * The root always defaults to n/a due to the default rule. */
+      { "greek",      "", { authz_access_none, authz_access_none  }, FALSE },
+      { "greek", "userA", { authz_access_none, authz_access_read  }, FALSE },
+      { "greek", "userB", { authz_access_none, authz_access_write }, FALSE },
+      { "greek", "userC", { authz_access_none, authz_access_none  }, FALSE },
+
+      { NULL }
+    };
+
+  const char* authz3 =
+    "[/]"                                                                NL
+    "userA = r"                                                          NL
+    ""                                                                   NL
+    "[greek:/public]"                                                    NL
+    "userB = rw"                                                         NL
+    ""                                                                   NL
+    "[repo:/users]"                                                      NL
+    "$authenticated = rw"                                                NL;
+
+  const global_right_text_case_t test_cases3[] =
+    {
+      /* Everyone may get read access b/c there might be a "/public" path. */
+      {      "",      "", { authz_access_none, authz_access_none  },  TRUE },
+      {      "", "userA", { authz_access_none, authz_access_read  },  TRUE },
+      {      "", "userB", { authz_access_none, authz_access_none  },  TRUE },
+      {      "", "userC", { authz_access_none, authz_access_none  },  TRUE },
+
+      /* Two users do even get write access on some paths in "greek".
+       * The root always defaults to n/a due to the default rule. */
+      { "greek",      "", { authz_access_none, authz_access_none  }, FALSE },
+      { "greek", "userA", { authz_access_none, authz_access_read  }, FALSE },
+      { "greek", "userB", { authz_access_none, authz_access_write },  TRUE },
+      { "greek", "userC", { authz_access_none, authz_access_none  }, FALSE },
+
+      /* Two users do even get write access on some paths in "greek".
+       * The root always defaults to n/a due to the default rule. */
+      {  "repo",      "", { authz_access_none, authz_access_none  }, FALSE },
+      {  "repo", "userA", { authz_access_none, authz_access_write },  TRUE },
+      {  "repo", "userB", { authz_access_none, authz_access_write },  TRUE },
+      {  "repo", "userC", { authz_access_none, authz_access_write },  TRUE },
+
+      { NULL }
+    };
+
   SVN_ERR(run_global_rights_tests(authz1, test_cases1, pool));
+  SVN_ERR(run_global_rights_tests(authz2, test_cases2, pool));
+  SVN_ERR(run_global_rights_tests(authz3, test_cases3, pool));
 
   return SVN_NO_ERROR;
 }
