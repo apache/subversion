@@ -3238,6 +3238,7 @@ run_test_update_incoming_dir_move_with_nested_file_move(
       SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
       deleted_dir = svn_relpath_join(trunk_path, "C/B", b->pool);
       moved_dir = svn_relpath_join(trunk_path, "D/H/B", b->pool);
+      moved_file = svn_relpath_join(moved_dir, "lambda-moved", b->pool);
       SVN_ERR(sbox_wc_move(b, deleted_dir, moved_dir));
 
       SVN_ERR(sbox_wc_commit(b, ""));
@@ -3878,7 +3879,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge incoming file move with new line of history"),
     SVN_TEST_OPTS_PASS(test_update_incoming_dir_move_with_nested_file_move,
                        "update incoming dir move with nested file move"),
-    SVN_TEST_OPTS_XFAIL(test_update_incoming_dir_move_with_nested_file_move2,
+    SVN_TEST_OPTS_PASS(test_update_incoming_dir_move_with_nested_file_move2,
                        "update incoming dir move with nested file move 2"),
     SVN_TEST_OPTS_PASS(test_update_incoming_added_file_text_merge,
                        "update incoming add file text merge"),
