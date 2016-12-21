@@ -688,7 +688,7 @@ find_nested_moves(apr_array_header_t *moves,
       copy = APR_ARRAY_IDX(copies_with_same_source_path, 0, struct copy_info *);
       SVN_ERR(check_move_ancestry(&related, ra_session, repos_root_url,
                                   moved_along_repos_relpath,
-                                  rev_below(revision),
+                                  revision,
                                   copy->copyfrom_path,
                                   copy->copyfrom_rev,
                                   TRUE, iterpool));
