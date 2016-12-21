@@ -287,16 +287,48 @@ test_authz_parse(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+typedef struct global_right_text_case_t
+{
+  const char *repos;
+  const char *user;
+  authz_rights_t rights;
+  svn_boolean_t found;
+} global_right_text_case_t;
+
+static svn_error_t *
+run_global_rights_tests(const char *contents,
+                        const global_right_text_case_t *test_cases,
+                        apr_pool_t *pool)
+{
+  svn_authz_t *authz;
+
+  svn_stringbuf_t *buffer = svn_stringbuf_create(contents, pool);
+  svn_stream_t *stream = svn_stream_from_stringbuf(buffer, pool);
+  SVN_ERR(svn_repos_authz_parse(&authz, stream, NULL, pool));
+
+  for (; test_cases->repos; ++test_cases)
+    {
+      authz_rights_t rights = { authz_access_write, authz_access_none };
+      svn_boolean_t found = svn_authz__get_global_rights(&rights, authz->full,
+                                                         test_cases->user,
+                                                         test_cases->repos);
+
+      printf("%s %s {%d %d} %d => {%d %d} %d\n",
+        test_cases->repos, test_cases->user,
+        test_cases->rights.min_access, test_cases->rights.max_access,
+        test_cases->found, rights.min_access, rights.max_access, found);
+      SVN_TEST_ASSERT(found == test_cases->found);
+      SVN_TEST_ASSERT(rights.min_access == test_cases->rights.min_access);
+      SVN_TEST_ASSERT(rights.max_access == test_cases->rights.max_access);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 test_global_rights(apr_pool_t *pool)
 {
-  svn_authz_t *authz;
-  int i;
-
-  /* Some non-trivially overlapping wildcard rules, convering all types
-   * of wildcards: "any", "any-var", "prefix", "postfix" and "complex".
-   */
-  const char *contents =
+  const char* authz1 =
     "[/public]"                                                          NL
     "* = r"                                                              NL
     ""                                                                   NL
@@ -312,18 +344,12 @@ test_global_rights(apr_pool_t *pool)
     "[greek:/B]"                                                         NL
     "userB = rw"                                                         NL;
 
-  const struct
-    {
-      const char *repos;
-      const char *user;
-      authz_rights_t rights;
-      svn_boolean_t found;
-    } test_cases[] =
+  const global_right_text_case_t test_cases1[] =
     {
       /* Everyone may get read access b/c there might be a "/public" path. */
       {      "",      "", { authz_access_none, authz_access_read  },  TRUE },
       {      "", "userA", { authz_access_none, authz_access_read  },  TRUE },
-      {      "", "userA", { authz_access_none, authz_access_read  },  TRUE },
+      {      "", "userB", { authz_access_none, authz_access_read  },  TRUE },
       {      "", "userC", { authz_access_none, authz_access_read  },  TRUE },
 
       /* Two users do even get write access on some paths in "greek".
@@ -342,25 +368,13 @@ test_global_rights(apr_pool_t *pool)
       /* For unknown repos, we default to the global settings. */
       {     "X",      "", { authz_access_none, authz_access_read  }, FALSE },
       {     "X", "userA", { authz_access_none, authz_access_read  }, FALSE },
-      {     "X", "userA", { authz_access_none, authz_access_read  }, FALSE },
-      {     "X", "userC", { authz_access_none, authz_access_read  }, FALSE }
+      {     "X", "userB", { authz_access_none, authz_access_read  }, FALSE },
+      {     "X", "userC", { authz_access_none, authz_access_read  }, FALSE },
+
+      { NULL }
     };
 
-  svn_stringbuf_t *buffer = svn_stringbuf_create(contents, pool);
-  svn_stream_t *stream = svn_stream_from_stringbuf(buffer, pool);
-  SVN_ERR(svn_repos_authz_parse(&authz, stream, NULL, pool));
-
-  for (i = 0; i < sizeof(test_cases) / sizeof(test_cases[0]); ++i)
-    {
-      authz_rights_t rights = { authz_access_write, authz_access_none };
-      svn_boolean_t found = svn_authz__get_global_rights(&rights, authz->full,
-                                                         test_cases[i].user,
-                                                         test_cases[i].repos);
-
-      SVN_TEST_ASSERT(found == test_cases[i].found);
-      SVN_TEST_ASSERT(rights.min_access == test_cases[i].rights.min_access);
-      SVN_TEST_ASSERT(rights.max_access == test_cases[i].rights.max_access);
-    }
+  SVN_ERR(run_global_rights_tests(authz1, test_cases1, pool));
 
   return SVN_NO_ERROR;
 }
