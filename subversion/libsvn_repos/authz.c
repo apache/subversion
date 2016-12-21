@@ -1388,6 +1388,9 @@ struct authz_user_rules_t
    * May be empty but never NULL for used entries. */
   const char *repository;
 
+  /* The combined min/max rights USER has on REPOSITORY. */
+  authz_rights_t global_rights;
+
   /* Root of the filtered path rule tree.
    * Will remain NULL until the first usage. */
   node_t *root;
@@ -1454,6 +1457,9 @@ get_user_rules(svn_authz_t *authz,
   authz->filtered->user = user ? apr_pstrdup(pool, user) : NULL;
   authz->filtered->lookup_state = create_lookup_state(pool);
   authz->filtered->root = NULL;
+
+  svn_authz__get_global_rights(&authz->filtered->global_rights,
+                               authz->full, user, repos_name);
 
   return authz->filtered;
 }
@@ -1671,6 +1677,31 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
       authz,
       (repos_name ? repos_name : AUTHZ_ANY_REPOSITORY),
       user);
+
+  /* In many scenarios, users have uniform access to a repository
+   * (blanket access or no access at all).
+   *
+   * In these cases, don't bother creating or consulting the filtered tree.
+   */
+  if ((rules->global_rights.min_access & required) == required)
+    {
+      *access_granted = TRUE;
+      return SVN_NO_ERROR;
+    }
+
+  if ((rules->global_rights.max_access & required) != required)
+    {
+      *access_granted = FALSE;
+      return SVN_NO_ERROR;
+    }
+
+  /* No specific path given, i.e. looking for anywhere in the tree? */
+  if (!path)
+    {
+      *access_granted =
+        ((rules->global_rights.max_access & required) == required);
+      return SVN_NO_ERROR;
+    }
 
   /* Did we already filter the data model? */
   if (!rules->root)

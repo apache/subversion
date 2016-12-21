@@ -13,7 +13,6 @@ TODO:
 
 * remove no-op escape sequences from wildcard rule segments
 * implement lookup access rights
-* use a user's accumulated "global" access rights where sufficient
 
 DONE:
 
@@ -44,3 +43,4 @@ DONE:
 * add fast lookup path for in-repository authz files
 * support in-registry authz
 * correct the global <-> per-repo rule precedence to match 1.9 behavior
+* use a user's accumulated "global" access rights where sufficient
