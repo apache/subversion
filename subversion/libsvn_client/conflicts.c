@@ -654,7 +654,7 @@ find_nested_moves(apr_array_header_t *moves,
       const char *moved_along_repos_relpath;
       struct repos_move_info *move;
       apr_array_header_t *copies_with_same_source_path;
-      struct copy_info *copy;
+      int j;
       svn_boolean_t related;
 
       svn_pool_clear(iterpool);
@@ -680,34 +680,37 @@ find_nested_moves(apr_array_header_t *moves,
       copies_with_same_source_path = svn_hash_gets(copies,
                                                    moved_along_repos_relpath);
       if (copies_with_same_source_path == NULL)
-        continue;
+        continue; /* not a nested move */
 
-      if (copies_with_same_source_path->nelts > 1)
-        continue; /* ### handle ambiguity! */
-
-      copy = APR_ARRAY_IDX(copies_with_same_source_path, 0, struct copy_info *);
-      SVN_ERR(check_move_ancestry(&related, ra_session, repos_root_url,
-                                  moved_along_repos_relpath,
-                                  revision,
-                                  copy->copyfrom_path,
-                                  copy->copyfrom_rev,
-                                  TRUE, iterpool));
-      if (related)
+      for (j = 0; j < copies_with_same_source_path->nelts; j++)
         {
-          struct repos_move_info *nested_move;
+          struct copy_info *copy;
 
-          /* Remember details of this move. */
-          SVN_ERR(add_new_move(&nested_move, moved_along_repos_relpath,
-                               copy->copyto_path, copy->copyfrom_rev,
-                               revision, author->data, moved_paths,
-                               ra_session, repos_root_url,
-                               result_pool, iterpool));
+          copy = APR_ARRAY_IDX(copies_with_same_source_path, j,
+                               struct copy_info *);
+          SVN_ERR(check_move_ancestry(&related, ra_session, repos_root_url,
+                                      moved_along_repos_relpath,
+                                      revision,
+                                      copy->copyfrom_path,
+                                      copy->copyfrom_rev,
+                                      TRUE, iterpool));
+          if (related)
+            {
+              struct repos_move_info *nested_move;
 
-          /* Add this move to the list of nested moves in this revision. */
-          APR_ARRAY_PUSH(nested_moves, struct repos_move_info *) = nested_move;
+              /* Remember details of this move. */
+              SVN_ERR(add_new_move(&nested_move, moved_along_repos_relpath,
+                                   copy->copyto_path, copy->copyfrom_rev,
+                                   revision, author->data, moved_paths,
+                                   ra_session, repos_root_url,
+                                   result_pool, iterpool));
+
+              /* Add this move to the list of nested moves in this revision. */
+              APR_ARRAY_PUSH(nested_moves, struct repos_move_info *) =
+                nested_move;
+            }
         }
     }
-
   svn_pool_destroy(iterpool);
 
   /* Add all nested moves found to the list of all moves in this revision. */
