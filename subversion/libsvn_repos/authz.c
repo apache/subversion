@@ -1703,34 +1703,23 @@ svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
       return SVN_NO_ERROR;
     }
 
+  /* Rules tree lookup */
+
   /* Did we already filter the data model? */
   if (!rules->root)
     SVN_ERR(filter_tree(authz, pool));
 
-  /* If PATH is NULL, check if the user has *any* access. */
-  if (!path)
-    {
-      *access_granted =
-        ((rules->root->rights.max_rights & required) == required);
-      return SVN_NO_ERROR;
-    }
-  else
-    {
-      const svn_boolean_t recursive =
-        !!(required_access & svn_authz_recursive);
+  /* Re-use previous lookup results, if possible. */
+  path = init_lockup_state(authz->filtered->lookup_state,
+                           authz->filtered->root, path);
 
-      /* Re-use previous lookup results, if possible. */
-      path = init_lockup_state(authz->filtered->lookup_state,
-                               authz->filtered->root, path);
+  /* Sanity check. */
+  SVN_ERR_ASSERT(path[0] == '/');
 
-      /* Sanity check. */
-      SVN_ERR_ASSERT(path[0] == '/');
-
-      /* Determine the granted access for the requested path.
-       * PATH does not need to be normalized for lockup(). */
-      *access_granted = lookup(rules->lookup_state, path,
-                               required, recursive, pool);
-    }
+  /* Determine the granted access for the requested path.
+   * PATH does not need to be normalized for lockup(). */
+  *access_granted = lookup(rules->lookup_state, path, required,
+                           !!(required_access & svn_authz_recursive), pool);
 
   return SVN_NO_ERROR;
 }
