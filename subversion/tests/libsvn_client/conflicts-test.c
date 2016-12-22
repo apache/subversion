@@ -3353,6 +3353,7 @@ run_test_update_incoming_dir_move_with_nested_file_move(
   const svn_test_opts_t *opts,
   svn_boolean_t move_parent,
   svn_boolean_t move_back,
+  const char *sandbox_name,
   apr_pool_t *pool)
 {
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
@@ -3371,8 +3372,7 @@ run_test_update_incoming_dir_move_with_nested_file_move(
   svn_client_status_t *status;
   struct status_baton sb;
 
-  SVN_ERR(svn_test__sandbox_create(
-            b, "update_incoming_dir_move_with_moved_file", opts, pool));
+  SVN_ERR(svn_test__sandbox_create(b, sandbox_name, opts, pool));
   SVN_ERR(sbox_add_and_commit_greek_tree(b));
 
   /* Move a directory on the trunk into another directory. */
@@ -3557,30 +3557,31 @@ static svn_error_t *
 test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
                                                     apr_pool_t *pool)
 {
-  return run_test_update_incoming_dir_move_with_nested_file_move(opts, FALSE,
-                                                                 FALSE, pool);
+  return run_test_update_incoming_dir_move_with_nested_file_move(
+           opts, FALSE, FALSE,
+           "update_incoming_dir_move_with_nested_file_move", pool);
 }
 
 /* Same test as above, but with a moved parent directory. */
 static svn_error_t *
-test_update_incoming_dir_move_with_nested_file_move2(
+test_update_incoming_dir_move_with_parent_move(
   const svn_test_opts_t *opts,
   apr_pool_t *pool)
 {
-  return run_test_update_incoming_dir_move_with_nested_file_move(opts, TRUE,
-                                                                 FALSE,
-                                                                 pool);
+  return run_test_update_incoming_dir_move_with_nested_file_move(
+           opts, TRUE, FALSE,
+           "update_incoming_dir_move_with_parent_move", pool);
 }
 
 /* Same test as above, but with a moved parent directory moved back. */
 static svn_error_t *
-test_update_incoming_dir_move_with_nested_file_move3(
+test_update_incoming_dir_move_with_parent_moved_back(
   const svn_test_opts_t *opts,
   apr_pool_t *pool)
 {
-  return run_test_update_incoming_dir_move_with_nested_file_move(opts, TRUE,
-                                                                 TRUE,
-                                                                 pool);
+  return run_test_update_incoming_dir_move_with_nested_file_move(
+           opts, TRUE, TRUE,
+           "update_incoming_dir_move_with_parent_moved_back", pool);
 }
 
 /* A helper function which prepares a working copy for the tests below. */
@@ -4293,10 +4294,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge incoming file move with new line of history"),
     SVN_TEST_OPTS_PASS(test_update_incoming_dir_move_with_nested_file_move,
                        "update incoming dir move with nested file move"),
-    SVN_TEST_OPTS_PASS(test_update_incoming_dir_move_with_nested_file_move2,
-                       "update incoming dir move with nested file move 2"),
-    SVN_TEST_OPTS_PASS(test_update_incoming_dir_move_with_nested_file_move3,
-                       "update incoming dir move with nested file move 3"),
+    SVN_TEST_OPTS_PASS(test_update_incoming_dir_move_with_parent_move,
+                       "update incoming dir move with parent move"),
+    SVN_TEST_OPTS_PASS(test_update_incoming_dir_move_with_parent_moved_back,
+                       "update incoming dir move with parent moved back"),
     SVN_TEST_OPTS_PASS(test_update_incoming_added_file_text_merge,
                        "update incoming add file text merge"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_file_prop_merge_conflict,
