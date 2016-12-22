@@ -1798,6 +1798,65 @@ test_update_incoming_delete_ignore(const svn_test_opts_t *opts, apr_pool_t *pool
   return SVN_NO_ERROR;
 }
 
+/* Test 'incoming delete accept' option. */
+static svn_error_t *
+test_update_incoming_delete_accept(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  svn_client_ctx_t *ctx;
+  const char *deleted_path;
+  svn_client_conflict_t *conflict;
+  svn_node_kind_t node_kind;
+
+  SVN_ERR(svn_test__sandbox_create(b, "update_incoming_delete_accept",
+                                   opts, pool));
+
+  SVN_ERR(create_wc_with_incoming_delete_update_conflict(b, FALSE));
+
+  /* Resolve the tree conflict. */
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  deleted_path = svn_relpath_join(trunk_path, deleted_file_name, b->pool);
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
+                                  ctx, b->pool, b->pool));
+
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict, svn_client_conflict_option_incoming_delete_accept,
+            ctx, b->pool));
+
+  /* Ensure that the deleted file is gone. */
+  SVN_ERR(svn_io_check_path(sbox_wc_path(b, deleted_path), &node_kind,
+                            b->pool));
+  SVN_TEST_ASSERT(node_kind == svn_node_none);
+
+  return SVN_NO_ERROR;
+}
+
 /* Test 'incoming move file text merge' option for update. */
 static svn_error_t *
 test_update_incoming_move_file_text_merge(const svn_test_opts_t *opts,
@@ -4179,6 +4238,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge incoming move file text merge"),
     SVN_TEST_OPTS_PASS(test_update_incoming_delete_ignore,
                        "update incoming delete ignore"),
+    SVN_TEST_OPTS_PASS(test_update_incoming_delete_accept,
+                       "update incoming delete accept"),
     SVN_TEST_OPTS_PASS(test_update_incoming_move_file_text_merge,
                        "update incoming move file text merge"),
     SVN_TEST_OPTS_PASS(test_switch_incoming_move_file_text_merge,
