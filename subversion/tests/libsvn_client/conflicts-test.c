@@ -3352,6 +3352,7 @@ static svn_error_t *
 run_test_update_incoming_dir_move_with_nested_file_move(
   const svn_test_opts_t *opts,
   svn_boolean_t move_parent,
+  svn_boolean_t move_back,
   apr_pool_t *pool)
 {
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
@@ -3392,10 +3393,20 @@ run_test_update_incoming_dir_move_with_nested_file_move(
       SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
       deleted_dir = svn_relpath_join(trunk_path, "C/B", b->pool);
       moved_dir = svn_relpath_join(trunk_path, "D/H/B", b->pool);
-      moved_file = svn_relpath_join(moved_dir, "lambda-moved", b->pool);
       SVN_ERR(sbox_wc_move(b, deleted_dir, moved_dir));
-
       SVN_ERR(sbox_wc_commit(b, ""));
+
+      if (move_back)
+        {
+          /* And back again. */
+          SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+          deleted_dir = svn_relpath_join(trunk_path, "D/H/B", b->pool);
+          moved_dir = svn_relpath_join(trunk_path, "C/B", b->pool);
+          SVN_ERR(sbox_wc_move(b, deleted_dir, moved_dir));
+          SVN_ERR(sbox_wc_commit(b, ""));
+        }
+
+      moved_file = svn_relpath_join(moved_dir, "lambda-moved", b->pool);
     }
 
   /* Update into the past. */
@@ -3547,7 +3558,7 @@ test_update_incoming_dir_move_with_nested_file_move(const svn_test_opts_t *opts,
                                                     apr_pool_t *pool)
 {
   return run_test_update_incoming_dir_move_with_nested_file_move(opts, FALSE,
-                                                                 pool);
+                                                                 FALSE, pool);
 }
 
 /* Same test as above, but with a moved parent directory. */
@@ -3557,6 +3568,18 @@ test_update_incoming_dir_move_with_nested_file_move2(
   apr_pool_t *pool)
 {
   return run_test_update_incoming_dir_move_with_nested_file_move(opts, TRUE,
+                                                                 FALSE,
+                                                                 pool);
+}
+
+/* Same test as above, but with a moved parent directory moved back. */
+static svn_error_t *
+test_update_incoming_dir_move_with_nested_file_move3(
+  const svn_test_opts_t *opts,
+  apr_pool_t *pool)
+{
+  return run_test_update_incoming_dir_move_with_nested_file_move(opts, TRUE,
+                                                                 TRUE,
                                                                  pool);
 }
 
@@ -4272,6 +4295,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "update incoming dir move with nested file move"),
     SVN_TEST_OPTS_PASS(test_update_incoming_dir_move_with_nested_file_move2,
                        "update incoming dir move with nested file move 2"),
+    SVN_TEST_OPTS_PASS(test_update_incoming_dir_move_with_nested_file_move3,
+                       "update incoming dir move with nested file move 3"),
     SVN_TEST_OPTS_PASS(test_update_incoming_added_file_text_merge,
                        "update incoming add file text merge"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_file_prop_merge_conflict,
