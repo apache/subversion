@@ -891,6 +891,10 @@ svn_test_main(int argc, const char *argv[], int max_threads,
 
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, opts.prog_name);
+
+  /* For efficient UTF8 handling (e.g. used by our file I/O routines). */
+  svn_utf_initialize2(FALSE, pool);
+
   while (1)
     {
       const char *opt_arg;
