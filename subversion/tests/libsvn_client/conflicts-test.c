@@ -3432,7 +3432,7 @@ create_wc_with_file_add_vs_file_add_update_conflict(svn_test__sandbox_t *b)
   /* Update into the past. */
   SVN_ERR(sbox_wc_update(b, "", 1));
 
-  /* Add a different file and commit. */
+  /* Add a different file scheduled for commit. */
   new_file_path = svn_relpath_join(trunk_path, new_file_name, b->pool);
   SVN_ERR(sbox_file_write(b, new_file_path,
                           "This is a different new file on the trunk\n"));
