@@ -1289,9 +1289,9 @@ test_merge_incoming_added_dir_replace_and_merge2(const svn_test_opts_t *opts,
 
 /* A helper function which prepares a working copy for the tests below. */
 static svn_error_t *
-create_wc_with_incoming_delete_merge_conflict(svn_test__sandbox_t *b,
-                                              svn_boolean_t move,
-                                              svn_boolean_t do_switch)
+create_wc_with_incoming_delete_file_merge_conflict(svn_test__sandbox_t *b,
+                                                   svn_boolean_t move,
+                                                   svn_boolean_t do_switch)
 {
   svn_client_ctx_t *ctx;
   static const char *trunk_url;
@@ -1360,7 +1360,8 @@ create_wc_with_incoming_delete_merge_conflict(svn_test__sandbox_t *b,
 
 /* Test 'incoming delete ignore' option. */
 static svn_error_t *
-test_merge_incoming_delete_ignore(const svn_test_opts_t *opts, apr_pool_t *pool)
+test_merge_incoming_delete_file_ignore(const svn_test_opts_t *opts,
+                                       apr_pool_t *pool)
 {
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
   svn_client_ctx_t *ctx;
@@ -1373,10 +1374,10 @@ test_merge_incoming_delete_ignore(const svn_test_opts_t *opts, apr_pool_t *pool)
   struct svn_client_status_t *status;
   svn_opt_revision_t opt_rev;
 
-  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_delete_ignore",
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_delete_file_ignore",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_incoming_delete_merge_conflict(b, FALSE, FALSE));
+  SVN_ERR(create_wc_with_incoming_delete_file_merge_conflict(b, FALSE, FALSE));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -1451,7 +1452,8 @@ test_merge_incoming_delete_ignore(const svn_test_opts_t *opts, apr_pool_t *pool)
 
 /* Test 'incoming delete accept' option. */
 static svn_error_t *
-test_merge_incoming_delete_accept(const svn_test_opts_t *opts, apr_pool_t *pool)
+test_merge_incoming_delete_file_accept(const svn_test_opts_t *opts,
+                                        apr_pool_t *pool)
 {
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
   svn_client_ctx_t *ctx;
@@ -1464,10 +1466,10 @@ test_merge_incoming_delete_accept(const svn_test_opts_t *opts, apr_pool_t *pool)
   struct svn_client_status_t *status;
   svn_opt_revision_t opt_rev;
 
-  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_delete_accept",
+  SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_delete_file_accept",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_incoming_delete_merge_conflict(b, FALSE, FALSE));
+  SVN_ERR(create_wc_with_incoming_delete_file_merge_conflict(b, FALSE, FALSE));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -1562,7 +1564,7 @@ test_merge_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__sandbox_create(b, "merge_incoming_move_file_text_merge",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_incoming_delete_merge_conflict(b, TRUE, FALSE));
+  SVN_ERR(create_wc_with_incoming_delete_file_merge_conflict(b, TRUE, FALSE));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -1668,8 +1670,8 @@ test_merge_incoming_move_file_text_merge(const svn_test_opts_t *opts,
 
 /* A helper function which prepares a working copy for the tests below. */
 static svn_error_t *
-create_wc_with_incoming_delete_update_conflict(svn_test__sandbox_t *b,
-                                               svn_boolean_t move)
+create_wc_with_incoming_delete_file_update_conflict(svn_test__sandbox_t *b,
+                                                    svn_boolean_t move)
 {
   const char *deleted_path;
 
@@ -1709,7 +1711,8 @@ create_wc_with_incoming_delete_update_conflict(svn_test__sandbox_t *b,
 
 /* Test 'incoming delete ignore' option. */
 static svn_error_t *
-test_update_incoming_delete_ignore(const svn_test_opts_t *opts, apr_pool_t *pool)
+test_update_incoming_delete_file_ignore(const svn_test_opts_t *opts,
+                                        apr_pool_t *pool)
 {
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
   svn_client_ctx_t *ctx;
@@ -1722,10 +1725,10 @@ test_update_incoming_delete_ignore(const svn_test_opts_t *opts, apr_pool_t *pool
   struct svn_client_status_t *status;
   svn_opt_revision_t opt_rev;
 
-  SVN_ERR(svn_test__sandbox_create(b, "update_incoming_delete_ignore",
+  SVN_ERR(svn_test__sandbox_create(b, "update_incoming_delete_file_ignore",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_incoming_delete_update_conflict(b, FALSE));
+  SVN_ERR(create_wc_with_incoming_delete_file_update_conflict(b, FALSE));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -1800,7 +1803,8 @@ test_update_incoming_delete_ignore(const svn_test_opts_t *opts, apr_pool_t *pool
 
 /* Test 'incoming delete accept' option. */
 static svn_error_t *
-test_update_incoming_delete_accept(const svn_test_opts_t *opts, apr_pool_t *pool)
+test_update_incoming_delete_file_accept(const svn_test_opts_t *opts,
+                                        apr_pool_t *pool)
 {
   svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
   svn_client_ctx_t *ctx;
@@ -1808,10 +1812,10 @@ test_update_incoming_delete_accept(const svn_test_opts_t *opts, apr_pool_t *pool
   svn_client_conflict_t *conflict;
   svn_node_kind_t node_kind;
 
-  SVN_ERR(svn_test__sandbox_create(b, "update_incoming_delete_accept",
+  SVN_ERR(svn_test__sandbox_create(b, "update_incoming_delete_file_accept",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_incoming_delete_update_conflict(b, FALSE));
+  SVN_ERR(create_wc_with_incoming_delete_file_update_conflict(b, FALSE));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -1876,7 +1880,7 @@ test_update_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__sandbox_create(b, "update_incoming_move_file_text_merge",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_incoming_delete_update_conflict(b, TRUE));
+  SVN_ERR(create_wc_with_incoming_delete_file_update_conflict(b, TRUE));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -1966,7 +1970,7 @@ test_switch_incoming_move_file_text_merge(const svn_test_opts_t *opts,
   SVN_ERR(svn_test__sandbox_create(b, "switch_incoming_move_file_text_merge",
                                    opts, pool));
 
-  SVN_ERR(create_wc_with_incoming_delete_merge_conflict(b, TRUE, TRUE));
+  SVN_ERR(create_wc_with_incoming_delete_file_merge_conflict(b, TRUE, TRUE));
 
   /* Resolve the tree conflict. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
@@ -4230,16 +4234,16 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge incoming add dir replace and merge"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_added_dir_replace_and_merge2,
                        "merge incoming add dir replace with file change"),
-    SVN_TEST_OPTS_PASS(test_merge_incoming_delete_ignore,
-                       "merge incoming delete ignore"),
-    SVN_TEST_OPTS_PASS(test_merge_incoming_delete_accept,
-                       "merge incoming delete accept"),
+    SVN_TEST_OPTS_PASS(test_merge_incoming_delete_file_ignore,
+                       "merge incoming delete file ignore"),
+    SVN_TEST_OPTS_PASS(test_merge_incoming_delete_file_accept,
+                       "merge incoming delete file accept"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_file_text_merge,
                        "merge incoming move file text merge"),
-    SVN_TEST_OPTS_PASS(test_update_incoming_delete_ignore,
-                       "update incoming delete ignore"),
-    SVN_TEST_OPTS_PASS(test_update_incoming_delete_accept,
-                       "update incoming delete accept"),
+    SVN_TEST_OPTS_PASS(test_update_incoming_delete_file_ignore,
+                       "update incoming delete file ignore"),
+    SVN_TEST_OPTS_PASS(test_update_incoming_delete_file_accept,
+                       "update incoming delete file accept"),
     SVN_TEST_OPTS_PASS(test_update_incoming_move_file_text_merge,
                        "update incoming move file text merge"),
     SVN_TEST_OPTS_PASS(test_switch_incoming_move_file_text_merge,
