@@ -1707,6 +1707,97 @@ create_wc_with_incoming_delete_update_conflict(svn_test__sandbox_t *b,
   return SVN_NO_ERROR;
 }
 
+/* Test 'incoming delete ignore' option. */
+static svn_error_t *
+test_update_incoming_delete_ignore(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  svn_client_ctx_t *ctx;
+  const char *deleted_path;
+  svn_client_conflict_t *conflict;
+  svn_boolean_t tree_conflicted;
+  svn_boolean_t text_conflicted;
+  apr_array_header_t *props_conflicted;
+  struct status_baton sb;
+  struct svn_client_status_t *status;
+  svn_opt_revision_t opt_rev;
+
+  SVN_ERR(svn_test__sandbox_create(b, "update_incoming_delete_ignore",
+                                   opts, pool));
+
+  SVN_ERR(create_wc_with_incoming_delete_update_conflict(b, FALSE));
+
+  /* Resolve the tree conflict. */
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  deleted_path = svn_relpath_join(trunk_path, deleted_file_name, b->pool);
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
+                                  ctx, b->pool, b->pool));
+
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict, svn_client_conflict_option_incoming_delete_ignore,
+            ctx, b->pool));
+
+  /* Ensure that the deleted file has the expected status. */
+  opt_rev.kind = svn_opt_revision_working;
+  sb.result_pool = b->pool;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, deleted_path),
+                             &opt_rev, svn_depth_unknown, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_file);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_added);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+  
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
+                                  ctx, b->pool, b->pool));
+
+  /* The file should not be in conflict. */
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, b->pool, b->pool));
+  SVN_TEST_ASSERT(!text_conflicted &&
+                  props_conflicted->nelts == 0 &&
+                  !tree_conflicted);
+
+  return SVN_NO_ERROR;
+}
+
 /* Test 'incoming move file text merge' option for update. */
 static svn_error_t *
 test_update_incoming_move_file_text_merge(const svn_test_opts_t *opts,
@@ -4086,6 +4177,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge incoming delete accept"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_file_text_merge,
                        "merge incoming move file text merge"),
+    SVN_TEST_OPTS_PASS(test_update_incoming_delete_ignore,
+                       "update incoming delete ignore"),
     SVN_TEST_OPTS_PASS(test_update_incoming_move_file_text_merge,
                        "update incoming move file text merge"),
     SVN_TEST_OPTS_PASS(test_switch_incoming_move_file_text_merge,
