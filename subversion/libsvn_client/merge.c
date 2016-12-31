@@ -12304,6 +12304,10 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
   svn_revnum_t youngest_merged_rev = SVN_INVALID_REVNUM;
   svn_mergeinfo_catalog_t target_mergeinfo_cat = NULL;
 
+  /* Use a local subpool. Using this for 'target_mergeinfo_cat' in particular
+     makes a big reduction in overall memory usage. */
+  scratch_pool = svn_pool_create(scratch_pool);
+
   source_peg_rev.kind = svn_opt_revision_number;
   source_peg_rev.value.number = source_branch->tip->rev;
   source_start_rev.kind = svn_opt_revision_number;
@@ -12324,7 +12328,7 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
                                       operative_rev_receiver,
                                       &youngest_merged_rev,
                                       ctx, ra_session,
-                                      result_pool, scratch_pool));
+                                      scratch_pool, scratch_pool));
 
   if (!SVN_IS_VALID_REVNUM(youngest_merged_rev))
     {
@@ -12361,6 +12365,7 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
                                           &oldest_eligible_rev,
                                           ctx, ra_session,
                                           scratch_pool, scratch_pool));
+      svn_pool_clear(scratch_pool);
 
       /* If there are revisions eligible for merging, use the oldest one
          to calculate the base.  Otherwise there are no operative revisions
@@ -12382,6 +12387,7 @@ find_last_merged_location(svn_client__pathrev_t **base_p,
                                            result_pool, scratch_pool));
     }
 
+  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
