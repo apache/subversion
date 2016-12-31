@@ -88,7 +88,7 @@ parse_mergeinfo(apr_array_header_t **result_p,
       svn_string_t *mi_string = apr_hash_this_val(hi);
 
       svn_pool_clear(iterpool);
-      SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mi_string->data, scratch_pool));
+      SVN_ERR(svn_mergeinfo_parse(&mergeinfo, mi_string->data, iterpool));
 
       entry->local_path = apr_pstrdup(result_pool, apr_hash_this_key(hi));
       entry->mergeinfo = svn_mergeinfo_dup(mergeinfo, result_pool);
@@ -200,7 +200,10 @@ svn_min__read_mergeinfo(apr_array_header_t **result,
   svn_min__opt_state_t *opt_state = baton->opt_state;
   svn_client_ctx_t *ctx = baton->ctx;
 
+  /* Pools for temporary data - to be cleaned up asap as they
+   * significant amounts of it. */
   apr_pool_t *props_pool = svn_pool_create(scratch_pool);
+  apr_pool_t *props_scratch_pool = svn_pool_create(scratch_pool);
   apr_hash_t *props;
 
   const svn_opt_revision_t rev_working = { svn_opt_revision_working };
@@ -214,11 +217,13 @@ svn_min__read_mergeinfo(apr_array_header_t **result,
                               baton->local_abspath, &rev_working,
                               &rev_working, NULL,
                               opt_state->depth, NULL, ctx,
-                              props_pool, scratch_pool));
-  SVN_ERR(parse_mergeinfo(result, props, result_pool, scratch_pool));
-  SVN_ERR(link_parents(*result, baton, scratch_pool));
+                              props_pool, props_scratch_pool));
+  svn_pool_destroy(props_scratch_pool);
 
+  SVN_ERR(parse_mergeinfo(result, props, result_pool, scratch_pool));
   svn_pool_destroy(props_pool);
+
+  SVN_ERR(link_parents(*result, baton, scratch_pool));
 
   if (!baton->opt_state->quiet)
     SVN_ERR(svn_min__print_mergeinfo_stats(*result, scratch_pool));
