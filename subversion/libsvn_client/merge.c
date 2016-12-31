@@ -6425,6 +6425,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
 {
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *swmi_pool;
   apr_hash_t *subtrees_with_mergeinfo;
   apr_hash_t *excluded_subtrees;
   apr_hash_t *switched_subtrees;
@@ -6433,10 +6434,13 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
   struct pre_merge_status_baton_t pre_merge_status_baton;
 
   /* Case 1: Subtrees with explicit mergeinfo. */
+  /* Use a subpool for subtrees_with_mergeinfo, as it can be very large
+     and is temporary. */
+  swmi_pool = svn_pool_create(scratch_pool);
   SVN_ERR(get_wc_explicit_mergeinfo_catalog(&subtrees_with_mergeinfo,
                                             target->abspath,
                                             depth, ctx,
-                                            result_pool, scratch_pool));
+                                            swmi_pool, swmi_pool));
   if (subtrees_with_mergeinfo)
     {
       apr_hash_index_t *hi;
@@ -6470,6 +6474,7 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
          children with insert_child_to_merge() require this ordering. */
       svn_sort__array(children_with_mergeinfo, compare_merge_path_t_as_paths);
     }
+  svn_pool_destroy(swmi_pool);
 
   /* Case 2: Switched subtrees
      Case 10: Paths at depths of 'empty' or 'files'
