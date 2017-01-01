@@ -590,7 +590,7 @@ def svnauthz_accessof_is_file_test(sbox):
   svntest.main.file_append(authz_path, "x\n")
   # Check that --is returns 1 when the syntax is invalid with a file..
   expected_out = svntest.verify.RegexOutput(
-      ".*Error while parsing config file:",
+      ".*Error while parsing authz file:",
       match_all=False
   )
   svntest.actions.run_and_verify_svnauthz(None, expected_out, 1, False,

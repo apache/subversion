@@ -29,7 +29,9 @@
 #include "svn_repos.h"
 #include "svn_compat.h"
 #include "svn_hash.h"
+#include "svn_path.h"
 #include "svn_props.h"
+#include "svn_pools.h"
 
 #include "svn_private_config.h"
 
@@ -1171,9 +1173,30 @@ svn_repos_fs_begin_txn_for_update(svn_fs_txn_t **txn_p,
 /*** From authz.c ***/
 
 svn_error_t *
+svn_repos_authz_read2(svn_authz_t **authz_p,
+                      const char *path,
+                      const char *groups_path,
+                      svn_boolean_t must_exist,
+                      apr_pool_t *pool)
+{
+  apr_pool_t *scratch_pool = svn_pool_create(pool);
+  svn_error_t *err = svn_repos_authz_read3(authz_p, path, groups_path,
+                                           must_exist, NULL,
+                                           pool, scratch_pool);
+  svn_pool_destroy(scratch_pool);
+
+  return svn_error_trace(err);
+}
+
+svn_error_t *
 svn_repos_authz_read(svn_authz_t **authz_p, const char *file,
                      svn_boolean_t must_exist, apr_pool_t *pool)
 {
-  return svn_repos__authz_read(authz_p, file, NULL, must_exist,
-                               FALSE, pool);
+  /* Prevent accidental new features in existing API. */
+  if (svn_path_is_url(file))
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             "'%s' is not a file name", file);
+
+  return svn_error_trace(svn_repos_authz_read2(authz_p, file, NULL,
+                                               must_exist, pool));
 }

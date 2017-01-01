@@ -137,6 +137,15 @@ init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
       return HTTP_INTERNAL_SERVER_ERROR;
     }
 
+  serr = svn_repos_authz_initialize(p);
+  if (serr)
+    {
+      ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err, p,
+               "mod_dav_svn: error calling svn_repos_authz_initialize: '%s'",
+                    serr->message ? serr->message : "(no more info)");
+      return HTTP_INTERNAL_SERVER_ERROR;
+    }
+
   /* This returns void, so we can't check for error. */
   conf = ap_get_module_config(s->module_config, &dav_svn_module);
   svn_utf_initialize2(conf->use_utf8, p);

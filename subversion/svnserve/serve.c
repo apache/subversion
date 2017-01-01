@@ -226,8 +226,8 @@ load_pwdb_config(repository_t *repository,
       pwdb_path = svn_dirent_internal_style(pwdb_path, pool);
       pwdb_path = svn_dirent_join(repository->base, pwdb_path, pool);
 
-      err = svn_repos__config_pool_get(&repository->pwdb, NULL, config_pool,
-                                       pwdb_path, TRUE, FALSE,
+      err = svn_repos__config_pool_get(&repository->pwdb, config_pool,
+                                       pwdb_path, TRUE,
                                        repository->repos, pool);
       if (err)
         {
@@ -285,8 +285,8 @@ canonicalize_access_file(const char **access_file, repository_t *repository,
   return SVN_NO_ERROR;
 }
 
-/* Load the authz database for the listening server through AUTHZ_POOL
-   based on the entries in the SERVER struct.
+/* Load the authz database for the listening server based on the entries
+   in the SERVER struct.
 
    SERVER and CONN must not be NULL. The real errors will be logged with
    SERVER and CONN but return generic errors to the client. */
@@ -294,7 +294,6 @@ static svn_error_t *
 load_authz_config(repository_t *repository,
                   const char *repos_root,
                   svn_config_t *cfg,
-                  svn_repos__authz_pool_t *authz_pool,
                   apr_pool_t *pool)
 {
   const char *authzdb_path;
@@ -322,9 +321,9 @@ load_authz_config(repository_t *repository,
                                        repos_root, pool);
 
       if (!err)
-        err = svn_repos__authz_pool_get(&repository->authzdb, authz_pool,
-                                        authzdb_path, groupsdb_path, TRUE,
-                                        repository->repos, pool);
+        err = svn_repos_authz_read3(&repository->authzdb, authzdb_path,
+                                    groupsdb_path, TRUE, repository->repos,
+                                    pool, pool);
 
       if (err)
         return svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, err, NULL);
@@ -446,7 +445,7 @@ static svn_error_t *authz_check_access(svn_boolean_t *allowed,
      absolute path. Passing such a malformed path to the authz
      routines throws them into an infinite loop and makes them miss
      ACLs. */
-  if (path)
+  if (path && *path != '/')
     path = svn_fspath__canonicalize(path, pool);
 
   /* If we have a username, and we've not yet used it + any username
@@ -3739,8 +3738,7 @@ repos_path_valid(const char *path)
  * and fs_path fields of REPOSITORY.  VHOST and READ_ONLY flags are the
  * same as in the server baton.
  *
- * CONFIG_POOL and AUTHZ_POOL shall be used to load any object of the
- * respective type.
+ * CONFIG_POOL shall be used to load config objects.
  *
  * Use SCRATCH_POOL for temporary allocations.
  *
@@ -3753,7 +3751,6 @@ find_repos(const char *url,
            svn_config_t *cfg,
            repository_t *repository,
            svn_repos__config_pool_t *config_pool,
-           svn_repos__authz_pool_t *authz_pool,
            apr_hash_t *fs_config,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
@@ -3822,16 +3819,16 @@ find_repos(const char *url,
     {
       repository->base = svn_repos_conf_dir(repository->repos, result_pool);
 
-      SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
+      SVN_ERR(svn_repos__config_pool_get(&cfg, config_pool,
                                          svn_repos_svnserve_conf
                                             (repository->repos, result_pool),
-                                         FALSE, FALSE, repository->repos,
+                                         FALSE, repository->repos,
                                          result_pool));
     }
 
   SVN_ERR(load_pwdb_config(repository, cfg, config_pool, result_pool));
   SVN_ERR(load_authz_config(repository, repository->repos_root, cfg,
-                            authz_pool, result_pool));
+                            result_pool));
 
 #ifdef SVN_HAVE_SASL
     {
@@ -4165,7 +4162,7 @@ construct_server_baton(server_baton_t **baton,
   err = handle_config_error(find_repos(client_url, params->root, b->vhost,
                                        b->read_only, params->cfg,
                                        b->repository, params->config_pool,
-                                       params->authz_pool, params->fs_config,
+                                       params->fs_config,
                                        conn_pool, scratch_pool),
                             b);
   if (!err)

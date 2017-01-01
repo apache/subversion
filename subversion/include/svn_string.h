@@ -294,6 +294,14 @@ svn_stringbuf_isempty(const svn_stringbuf_t *str);
 void
 svn_stringbuf_chop(svn_stringbuf_t *str, apr_size_t nbytes);
 
+/**
+ * Chop @a nbytes bytes off the start of @a str, but not more than @a str->len.
+ *
+ * @since New in 1.10.
+ */
+void
+svn_stringbuf_leftchop(svn_stringbuf_t *str, apr_size_t nbytes);
+
 /** Fill @a str with character @a c. */
 void
 svn_stringbuf_fillchar(svn_stringbuf_t *str, unsigned char c);
@@ -403,6 +411,16 @@ svn_stringbuf_replace(svn_stringbuf_t *str,
                       apr_size_t old_count,
                       const char *bytes,
                       apr_size_t new_count);
+
+/** Replace all occurrences of @a to_find in @a str with @a replacement.
+ * Return the number of replacements made.
+ *
+ * @since New in 1.10.
+ */
+apr_size_t
+svn_stringbuf_replace_all(svn_stringbuf_t *str,
+                          const char *to_find,
+                          const char *replacement);
 
 /** Return a duplicate of @a original_string. */
 svn_stringbuf_t *
