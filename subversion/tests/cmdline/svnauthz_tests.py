@@ -753,7 +753,7 @@ def svnauthz_accessof_is_repo_test(sbox):
 
   # Check that --is returns 1 when the syntax is invalid with a url.
   expected_out = svntest.verify.RegexOutput(
-      ".*Error while parsing config file:",
+      ".*Error while parsing authz file:",
       match_all=False
   )
   svntest.actions.run_and_verify_svnauthz(None, expected_out, 1, False,
