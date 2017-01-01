@@ -275,9 +275,9 @@ get_authz(svn_authz_t **authz, struct svnauthz_opt_state *opt_state,
                               opt_state->txn, pool);
 
   /* Else */
-  return svn_repos_authz_read2(authz, opt_state->authz_file,
+  return svn_repos_authz_read3(authz, opt_state->authz_file,
                                opt_state->groups_file,
-                               TRUE, pool);
+                               TRUE, NULL, pool, pool);
 }
 
 static svn_error_t *

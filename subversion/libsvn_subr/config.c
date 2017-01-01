@@ -33,12 +33,15 @@
 #include <apr_lib.h>
 #include "svn_hash.h"
 #include "svn_error.h"
+#include "svn_string.h"
 #include "svn_pools.h"
 #include "config_impl.h"
 
-#include "svn_private_config.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_config_private.h"
+
+#include "svn_private_config.h"
 
 
 
@@ -108,7 +111,7 @@ svn_config_create2(svn_config_t **cfgp,
 {
   svn_config_t *cfg = apr_palloc(result_pool, sizeof(*cfg));
 
-  cfg->sections = apr_hash_make(result_pool);
+  cfg->sections = svn_hash__make(result_pool);
   cfg->pool = result_pool;
   cfg->x_pool = svn_pool_create(result_pool);
   cfg->x_values = FALSE;
@@ -159,6 +162,18 @@ svn_config_read3(svn_config_t **cfgp, const char *file,
 }
 
 svn_error_t *
+svn_config__default_add_value_fn(void *baton,
+                                 svn_stringbuf_t *section,
+                                 svn_stringbuf_t *option,
+                                 svn_stringbuf_t *value)
+{
+  /* FIXME: We may as well propagate the known string sizes here. */
+  svn_config_set((svn_config_t *)baton, section->data,
+                 option->data, value->data);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_config_parse(svn_config_t **cfgp, svn_stream_t *stream,
                  svn_boolean_t section_names_case_sensitive,
                  svn_boolean_t option_names_case_sensitive,
@@ -174,7 +189,12 @@ svn_config_parse(svn_config_t **cfgp, svn_stream_t *stream,
                            result_pool);
 
   if (err == SVN_NO_ERROR)
-    err = svn_config__parse_stream(cfg, stream, result_pool, scratch_pool);
+    err = svn_config__parse_stream(stream,
+                                   svn_config__constructor_create(
+                                       NULL, NULL,
+                                       svn_config__default_add_value_fn,
+                                       scratch_pool),
+                                   cfg, scratch_pool);
 
   if (err == SVN_NO_ERROR)
     *cfgp = cfg;
@@ -315,7 +335,7 @@ svn_config_get_config(apr_hash_t **cfg_hash,
                       apr_pool_t *pool)
 {
   svn_config_t *cfg;
-  *cfg_hash = apr_hash_make(pool);
+  *cfg_hash = svn_hash__make(pool);
 
   SVN_ERR(get_category_config(&cfg, config_dir, SVN_CONFIG_CATEGORY_SERVERS,
                               pool));
@@ -333,7 +353,7 @@ svn_config__get_default_config(apr_hash_t **cfg_hash,
                                apr_pool_t *pool)
 {
   svn_config_t *empty_cfg;
-  *cfg_hash = apr_hash_make(pool);
+  *cfg_hash = svn_hash__make(pool);
 
   SVN_ERR(svn_config_create2(&empty_cfg, FALSE, FALSE, pool));
   svn_hash_sets(*cfg_hash, SVN_CONFIG_CATEGORY_CONFIG, empty_cfg);
@@ -690,7 +710,8 @@ svn_config_addsection(svn_config_t *cfg,
     hash_key = s->name;
   else
     hash_key = make_hash_key(apr_pstrdup(cfg->pool, section));
-  s->options = apr_hash_make(cfg->pool);
+  s->options = svn_hash__make(cfg->pool);
+
   svn_hash_sets(cfg->sections, hash_key, s);
 
   return s;
@@ -1234,7 +1255,7 @@ svn_config_copy_config(apr_hash_t **cfg_hash,
 {
   apr_hash_index_t *cidx;
 
-  *cfg_hash = apr_hash_make(pool);
+  *cfg_hash = svn_hash__make(pool);
   for (cidx = apr_hash_first(pool, src_hash);
        cidx != NULL;
        cidx = apr_hash_next(cidx))
@@ -1311,3 +1332,40 @@ svn_config_has_section(svn_config_t *cfg, const char *section)
   return NULL != get_hash_value(cfg->sections, cfg->tmp_key, section,
                                 cfg->section_names_case_sensitive);
 }
+
+svn_error_t *
+svn_config__write(svn_stream_t *stream,
+                  const struct svn_config_t *cfg,
+                  apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *section_i;
+  apr_hash_index_t *options_i;
+  apr_pool_t *section_pool = svn_pool_create(scratch_pool);
+  apr_pool_t *options_pool = svn_pool_create(scratch_pool);
+
+  for (section_i = apr_hash_first(scratch_pool, cfg->sections);
+       section_i != NULL;
+       section_i = apr_hash_next(section_i))
+    {
+      cfg_section_t *section = apr_hash_this_val(section_i);
+      svn_pool_clear(section_pool);
+      SVN_ERR(svn_stream_printf(stream, section_pool, "\n[%s]\n",
+                                section->name));
+
+      for (options_i = apr_hash_first(section_pool, section->options);
+           options_i != NULL;
+           options_i = apr_hash_next(options_i))
+        {
+          cfg_option_t *option = apr_hash_this_val(options_i);
+          svn_pool_clear(options_pool);
+          SVN_ERR(svn_stream_printf(stream, options_pool, "%s=%s\n",
+                                    option->name, option->value));
+        }
+    }
+
+  svn_pool_destroy(section_pool);
+  svn_pool_destroy(options_pool);
+
+  return SVN_NO_ERROR;
+}
+

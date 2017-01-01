@@ -3951,6 +3951,17 @@ svn_repos_get_fs_build_parser(const svn_repos_parser_fns_t **parser,
 typedef struct svn_authz_t svn_authz_t;
 
 /**
+ * This should be called before any other authz function.
+ *
+ * @a pool must support multi-threaded access if the application will use
+ * authz from multiple threads.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_repos_authz_initialize(apr_pool_t *pool);
+
+/**
  * Read authz configuration data from @a path (a dirent, an absolute file url
  * or a registry path) into @a *authz_p, allocated in @a pool.
  *
@@ -3963,8 +3974,29 @@ typedef struct svn_authz_t svn_authz_t;
  * is also an error other than #SVN_ERR_AUTHZ_INVALID_CONFIG (exact error
  * depends on the access type).
  *
- * @since New in 1.8.
+ * For efficient access of in-repository authz, you may provide @a repos_hint
+ * which will be tried first and may remove the need to open a temporary
+ * repository instance.  Otherwise, set it to NULL and the repositories will
+ * be opened as needed.
+ *
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_repos_authz_read3(svn_authz_t **authz_p,
+                      const char *path,
+                      const char *groups_path,
+                      svn_boolean_t must_exist,
+                      svn_repos_t *repos_hint,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_repos_authz_read3(), but with @a repos_hint set to @c NULL.
+ *
+ * @since New in 1.8.
+ * @deprecated Provided for backward compatibility with the 1.9 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_authz_read2(svn_authz_t **authz_p,
                       const char *path,

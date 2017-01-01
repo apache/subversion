@@ -752,6 +752,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* Initialize the FS library. */
   SVN_ERR(svn_fs_initialize(pool));
 
+  /* Initialize the efficient Authz support. */
+  SVN_ERR(svn_repos_authz_initialize(pool));
+
   SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
 
   params.root = "/";
@@ -763,7 +766,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
   params.logger = NULL;
   params.config_pool = NULL;
-  params.authz_pool = NULL;
   params.fs_config = NULL;
   params.vhost = FALSE;
   params.username_case = CASE_ASIS;
@@ -1046,10 +1048,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   SVN_ERR(svn_repos__config_pool_create(&params.config_pool,
                                         is_multi_threaded,
                                         pool));
-  SVN_ERR(svn_repos__authz_pool_create(&params.authz_pool,
-                                       params.config_pool,
-                                       is_multi_threaded,
-                                       pool));
 
   /* If a configuration file is specified, load it and any referenced
    * password and authorization files. */
@@ -1057,11 +1055,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {
       params.base = svn_dirent_dirname(config_filename, pool);
 
-      SVN_ERR(svn_repos__config_pool_get(&params.cfg, NULL,
+      SVN_ERR(svn_repos__config_pool_get(&params.cfg,
                                          params.config_pool,
                                          config_filename,
                                          TRUE, /* must_exist */
-                                         FALSE, /* names_case_sensitive */
                                          NULL,
                                          pool));
     }

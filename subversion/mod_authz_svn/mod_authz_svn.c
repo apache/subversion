@@ -154,7 +154,7 @@ canonicalize_access_file(const char *access_file,
     }
 
   /* We don't canonicalize repos relative urls since they get
-   * canonicalized before calling svn_repos_authz_read2() when they
+   * canonicalized before calling svn_repos_authz_read3() when they
    * are resolved. */
 
   return access_file;
@@ -472,10 +472,10 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
   access_conf = user_data;
   if (access_conf == NULL)
     {
-
-      svn_err = svn_repos_authz_read2(&access_conf, access_file,
-                                      groups_file, TRUE,
-                                      r->connection->pool);
+      svn_err = svn_repos_authz_read3(&access_conf, access_file,
+                                      groups_file, TRUE, NULL,
+                                      r->connection->pool,
+                                      scratch_pool);
 
       if (svn_err)
         {
