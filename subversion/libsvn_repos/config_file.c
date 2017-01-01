@@ -299,20 +299,17 @@ get_file_config(svn_stream_t **stream,
   return SVN_NO_ERROR;
 }
 
-/* Read the configuration from Windows registry sub-tree PATH, return its
- * content checksum in CHECKSUM and the content itself through *STREAM.
+/* Read the configuration from path, URL or registry sub-tree PATH, return
+ * its content checksum in CHECKSUM and the content itself through *STREAM.
  * Allocate those with the lifetime of ACCESS.
- *
- * Note that although we use this for registry data only, it will work with
- * any configuration data that svn_config_read3 can process.
  */
 static svn_error_t *
-get_registry_config(svn_stream_t **stream,
-                    svn_checksum_t **checksum,
-                    config_access_t *access,
-                    const char *path,
-                    svn_boolean_t must_exist,
-                    apr_pool_t *scratch_pool)
+get_generic_config(svn_stream_t **stream,
+                   svn_checksum_t **checksum,
+                   config_access_t *access,
+                   const char *path,
+                   svn_boolean_t must_exist,
+                   apr_pool_t *scratch_pool)
 {
   svn_stringbuf_t *contents = svn_stringbuf_create_empty(access->pool);
   svn_config_t *config;
@@ -359,18 +356,31 @@ svn_repos__get_config(svn_stream_t **stream,
                       svn_boolean_t must_exist,
                       apr_pool_t *scratch_pool)
 {
-#ifdef WIN32
-  if (0 == strncmp(file, SVN_REGISTRY_PREFIX, SVN_REGISTRY_PREFIX_LEN))
-    SVN_ERR(get_registry_config(stream, checksum, access, path, must_exist,
-                                scratch_pool));
-  else
-#endif /* WIN32 */
+  svn_error_t *err;
+  /* Directly access the config data. */
   if (svn_path_is_url(path))
-    SVN_ERR(get_repos_config(stream, checksum, access, path, must_exist,
-                             scratch_pool));
+    err = get_repos_config(stream, checksum, access, path, must_exist,
+                           scratch_pool);
   else
-    SVN_ERR(get_file_config(stream, checksum, access, path, must_exist,
-                            scratch_pool));
+    err = get_file_config(stream, checksum, access, path, must_exist,
+                          scratch_pool);
 
-  return SVN_NO_ERROR;
+  /* Fallback to indirect access using the generic config file parser.
+   * This is mainly used for registry support under Win32. */
+  if (err)
+    {
+      svn_error_t *err2 = get_generic_config(stream, checksum, access, path,
+                                             must_exist, scratch_pool);
+      if (err2)
+        {
+          svn_error_clear(err2);
+        }
+      else
+        {
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+        }
+    }
+
+  return svn_error_trace(err);
 }
