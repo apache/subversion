@@ -754,6 +754,40 @@ remove_overlapping_history(svn_rangelist_t **removed,
   return SVN_NO_ERROR;
 }
 
+/* Scan RANGES for non-recursive ranges.  If there are any, remove all
+ * ranges that where the history of SOURCE_PATH@RANGE and TARGET_PATH@HEAD
+ * overlap.  Also remove all ranges that are not operative on OP_PATH.
+ *
+ * The remaining ranges are the ones actually relevant to a future merge.
+ * Return those in *NON_RECURSIVE_RANGES, allocated in RESULT_POOL.
+ * Use SCRATCH_POOL for temporary allocations.
+ *
+ * Note that SOURCE_PATH@RANGE may actually refer to different branches
+ * created or re-created and then deleted at different points in time.
+ */
+static svn_error_t *
+find_relevant_non_recursive_ranges(svn_rangelist_t **non_recursive_ranges,
+                                   svn_rangelist_t *ranges,
+                                   svn_min__log_t *log,
+                                   const char *source_path,
+                                   const char *target_path,
+                                   const char *op_path,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *implied;
+  apr_array_header_t *result
+    = find_non_recursive_ranges(ranges, scratch_pool);
+
+  SVN_ERR(remove_overlapping_history(&implied, &result,
+                                     log, source_path, target_path,
+                                     scratch_pool, scratch_pool));
+  *non_recursive_ranges = svn_min__operative(log, op_path, result,
+                                             result_pool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Show the results of an attempt at "misaligned branch elision".
  * SOURCE_BRANCH was to be elided because TARGET_BRANCH would cover it all.
  * There were MISSING revisions exclusively in SOURCE_BRANCH.  OPT_STATE
@@ -982,9 +1016,13 @@ remove_lines(svn_min__log_t *log,
         }
 
       /* We don't know how to handle non-recursive ranges (they are legal,
-       * though).  So, we must check for them - just to be sure. */
-      non_recursive_ranges = find_non_recursive_ranges(subtree_ranges,
-                                                       iterpool);
+       * though).  So, we must if there are any that would actually
+       * affect future merges. */
+      SVN_ERR(find_relevant_non_recursive_ranges(&non_recursive_ranges,
+                                                 subtree_ranges, log,
+                                                 subtree_path, fs_path,
+                                                 subtree_path,
+                                                 iterpool, iterpool));
       if (non_recursive_ranges->nelts)
         {
           /* We really found non-recursive merges?
@@ -1003,8 +1041,15 @@ remove_lines(svn_min__log_t *log,
 
       if (parent_ranges && parent_ranges->nelts)
         {
-          non_recursive_ranges = find_non_recursive_ranges(parent_ranges,
-                                                          iterpool);
+          /* Any non-recursive ranges at the parent node that are
+           * operative on the sub-node and not implicit part of the
+           * branch history? */
+          SVN_ERR(find_relevant_non_recursive_ranges(&non_recursive_ranges,
+                                                     parent_ranges, log,
+                                                     parent_path,
+                                                     parent_fs_path,
+                                                     subtree_path,
+                                                     iterpool, iterpool));
           if (non_recursive_ranges->nelts)
             {
               /* We really found non-recursive merges at the parent?
