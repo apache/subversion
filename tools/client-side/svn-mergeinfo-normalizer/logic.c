@@ -135,7 +135,7 @@ show_reverse_ranges(const char *subtree_path,
                     svn_min__opt_state_t *opt_state,
                     apr_pool_t *scratch_pool)
 {
-  if (reverse_ranges->nelts)
+  if (!reverse_ranges->nelts)
     return SVN_NO_ERROR;
 
   if (opt_state->verbose || opt_state->run_analysis)
@@ -158,7 +158,7 @@ show_non_recursive_ranges(const char *subtree_path,
                           svn_min__opt_state_t *opt_state,
                           apr_pool_t *scratch_pool)
 {
-  if (non_recursive_ranges->nelts)
+  if (!non_recursive_ranges->nelts)
     return SVN_NO_ERROR;
 
   if (opt_state->verbose || opt_state->run_analysis)
