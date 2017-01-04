@@ -163,7 +163,8 @@ svn_min__get_mergeinfo(apr_array_header_t *mergeinfo,
  * the working copy node that carries the closest parent mergeinfo.
  * return the working.  Set *SUBTREE_MERGEINFO to the parsed mergeinfo at
  * *SUBTREE_RELPATH and *PARENT_MERGEINFO to the parsed mergeinfo at
- * *PARENT_PATH.
+ * *PARENT_PATH.  In *SIBLING_MERGEINFO return the list of immediate sub-node
+ * mergeinfo below *PARENT_PATH, including the *SUBTREE_MERGEINFO.
  *
  * If there is no parent mergeinfo, *PARENT_PATH will be "" and
  * *PARENT_MERGEINFO will be NULL.  If IDX is not a valid array index,
@@ -178,8 +179,22 @@ svn_min__get_mergeinfo_pair(const char **fs_path,
                             const char **subtree_relpath,
                             svn_mergeinfo_t *parent_mergeinfo,
                             svn_mergeinfo_t *subtree_mergeinfo,
+                            apr_array_header_t **siblings_mergeinfo,
                             apr_array_header_t *mergeinfo,
                             int idx);
+
+/* Search SIBLING_MERGEINFO for mergeinfo that intersects PARENT_PATH
+ * and RELEVANT_RANGES.  Return the FS path to range list hash in
+ * *SIBLING_RANGES, allocated in RESULT_POOL.  Use SCRATCH_POOL for
+ * temporary allocations
+ */
+svn_error_t *
+svn_min__sibling_ranges(apr_hash_t **sibling_ranges,
+                        apr_array_header_t *sibling_mergeinfo,
+                        const char *parent_path,
+                        svn_rangelist_t *relevant_ranges,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 
 /* Store the MERGEINFO in the working copy specified by BATON.  Delete
  * the mergeinfo on those nodes where it is empty but keep the empty data
@@ -246,6 +261,20 @@ svn_min__operative_outside_subtree(svn_min__log_t *log,
                                    const char *subtree,
                                    svn_rangelist_t *ranges,
                                    apr_pool_t *result_pool);
+
+/* Scan LOG and return those revisions from RANGES that have changes
+ * operative on the PATH subtree and where at least one of these changes
+ * are not covered by any entry in SIBLING_RANGES.
+ *
+ * Allocate the result in RESULT_POOL and use SCRATCH_POOL for tempoaries.
+ */
+svn_rangelist_t *
+svn_min__operative_outside_all_subtrees(svn_min__log_t *log,
+                                        const char *path,
+                                        svn_rangelist_t *ranges,
+                                        apr_hash_t *sibling_ranges,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool);
 
 /* Scan LOG from START_REV down to END_REV and find the latest deletion of
  * PATH or a parent thereof and return the revision that contains the

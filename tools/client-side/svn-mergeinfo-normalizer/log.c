@@ -465,11 +465,12 @@ is_relevant(const char *changed_path,
 }
 
 /* Return TRUE if PATH is either equal to, a parent of or sub-path of
- * SUB_TREE.  Ignore BATON but keep it for a unified signature to be
- * used with filter_ranges. */
+ * SUB_TREE.  Ignore REVISION and BATON but keep it for a unified signature
+ * to be used with filter_ranges. */
 static svn_boolean_t
 in_subtree(const char *changed_path,
            const char *sub_tree,
+           svn_revnum_t revision,
            const void *baton)
 {
   return svn_dirent_is_ancestor(sub_tree, changed_path);
@@ -477,10 +478,12 @@ in_subtree(const char *changed_path,
 
 /* Return TRUE if
  * - CHANGED_PATH is is either equal to or a sub-node of PATH, and
- * - CHNAGED_PATH is outside the sub-tree given as BATON. */
+ * - CHNAGED_PATH is outside the sub-tree given as BATON.
+ * Ignore REVISION. */
 static svn_boolean_t
 below_path_outside_subtree(const char *changed_path,
                            const char *path,
+                           svn_revnum_t revision,
                            const void *baton)
 {
   const char *subtree = baton;
@@ -491,16 +494,88 @@ below_path_outside_subtree(const char *changed_path,
         && strcmp(path, changed_path);
 }
 
+/* Baton struct to be used with change_outside_all_subtree_ranges. */
+typedef struct change_outside_baton_t
+{
+  /* Maps FS path to revision range lists. */
+  apr_hash_t *sibling_ranges;
+
+  /* Pool for temporary allocations.
+   * Baton users may clear this at will. */
+  apr_pool_t *iterpool;
+} change_outside_baton_t;
+
+/* Comparison function comparing range *LHS to revision *RHS. */
+static int
+compare_range_rev(const void *lhs,
+                  const void *rhs)
+{
+  const svn_merge_range_t *range = *(const svn_merge_range_t * const *)lhs;
+  svn_revnum_t revision = *(const svn_revnum_t *)rhs;
+
+  if (range->start >= revision)
+    return 1;
+
+  return range->end < revision ? 1 : 0;
+}
+
+/* Return TRUE if CHANGED_PATH is either equal to or a sub-node of PATH,
+ * CHNAGED_PATH@REVISION is not covered by BATON->SIBLING_RANGES. */
+static svn_boolean_t
+change_outside_all_subtree_ranges(const char *changed_path,
+                                  const char *path,
+                                  svn_revnum_t revision,
+                                  const void *baton)
+{
+  const change_outside_baton_t *b = baton;
+  svn_boolean_t missing = TRUE;
+  apr_size_t len;
+  svn_rangelist_t *ranges;
+
+  /* Don't collect changes outside the subtree starting at PARENT_PATH. */
+  if (!svn_dirent_is_ancestor(path, changed_path))
+    return FALSE;
+
+  svn_pool_clear(b->iterpool);
+
+  /* All branches that contain CHANGED_PATH, i.e. match either it or one
+   * of its parents, must mention REVISION in their mergeinfo. */
+  for (len = strlen(changed_path);
+       !svn_fspath__is_root(changed_path, len);
+       len = strlen(changed_path))
+    {
+      ranges = apr_hash_get(b->sibling_ranges, changed_path, len);
+      if (ranges)
+        {
+          /* If any of the matching branches does not list REVISION
+           * as already merged, we found an "outside" change. */
+          if (!svn_sort__array_lookup(ranges, &revision, NULL,
+                                      compare_range_rev))
+            return TRUE;
+
+          /* Mergeinfo for this path has been found. */
+          missing = FALSE;
+        }
+
+      changed_path = svn_fspath__dirname(changed_path, b->iterpool);
+    }
+
+  /* Record, if no mergeinfo has been found for this CHANGED_PATH. */
+  return missing;
+}
+
 /* In LOG, scan the revisions given in RANGES and return the revision /
- * ranges that are relevant to PATH with respect to the PATH_RELEVANT
+ * ranges that are relevant to PATH with respect to the CHANGE_RELEVANT
  * criterion using BATON.  Keep revisions that lie outside what is covered
  * by LOG. Allocate the result in RESULT_POOL. */
 static svn_rangelist_t *
 filter_ranges(svn_min__log_t *log,
               const char *path,
               svn_rangelist_t *ranges,
-              svn_boolean_t (*path_relavent)(const char*, const char *,
-                                             const void *),
+              svn_boolean_t (*change_relavent)(const char *,
+                                               const char *,
+                                               svn_revnum_t,
+                                               const void *),
               const void *baton,
               apr_pool_t *result_pool)
 {
@@ -541,7 +616,7 @@ filter_ranges(svn_min__log_t *log,
               const char *changed_path
                 = APR_ARRAY_IDX(entry->paths, l, const char *);
 
-              if (path_relavent(changed_path, path, baton))
+              if (change_relavent(changed_path, path, entry->revision, baton))
                 {
                   append_rev_to_ranges(result, entry->revision,
                                        range.inheritable);
@@ -572,6 +647,26 @@ svn_min__operative_outside_subtree(svn_min__log_t *log,
 {
   return filter_ranges(log, path, ranges, below_path_outside_subtree,
                        subtree, result_pool);
+}
+
+svn_rangelist_t *
+svn_min__operative_outside_all_subtrees(svn_min__log_t *log,
+                                        const char *path,
+                                        svn_rangelist_t *ranges,
+                                        apr_hash_t *sibling_ranges,
+                                        apr_pool_t *result_pool,
+                                        apr_pool_t *scratch_pool)
+{
+  svn_rangelist_t *result;
+  change_outside_baton_t baton;
+  baton.sibling_ranges = sibling_ranges;
+  baton.iterpool = svn_pool_create(scratch_pool);
+
+  result = filter_ranges(log, path, ranges, change_outside_all_subtree_ranges,
+                         &baton, result_pool);
+  svn_pool_destroy(baton.iterpool);
+
+  return result;
 }
 
 svn_revnum_t
