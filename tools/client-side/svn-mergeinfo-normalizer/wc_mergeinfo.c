@@ -34,12 +34,14 @@
 #include "svn_sorts.h"
 #include "svn_dirent_uri.h"
 #include "svn_props.h"
+#include "svn_hash.h"
 
 #include "mergeinfo-normalizer.h"
 
 #include "private/svn_fspath.h"
 #include "private/svn_opt_private.h"
 #include "private/svn_sorts_private.h"
+#include "private/svn_subr_private.h"
 #include "svn_private_config.h"
 
 
@@ -60,6 +62,9 @@ typedef struct mergeinfo_t
   /* Pointer to the closest parent mergeinfo that we found in the working
    * copy.  May be NULL. */
   struct mergeinfo_t *parent;
+
+  /* All mergeinfo_t* who's PARENT points to this.  May be NULL. */
+  apr_array_header_t *children;
 
   /* The parsed mergeinfo. */
   svn_mergeinfo_t mergeinfo;
@@ -140,6 +145,7 @@ link_parents(apr_array_header_t *mergeinfo,
              svn_min__cmd_baton_t *baton,
              apr_pool_t *scratch_pool)
 {
+  apr_pool_t *result_pool = mergeinfo->pool;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
 
@@ -173,6 +179,17 @@ link_parents(apr_array_header_t *mergeinfo,
              && !svn_dirent_is_ancestor(entry->parent->local_path,
                                         entry->local_path))
         entry->parent = entry->parent->parent;
+
+      /* Reverse pointer. */
+      if (entry->parent)
+        {
+          if (!entry->parent->children)
+            entry->parent->children
+              = apr_array_make(result_pool, 4, sizeof(svn_mergeinfo_t));
+
+          APR_ARRAY_PUSH(entry->parent->children, svn_mergeinfo_t)
+            = entry->mergeinfo;
+        }
     }
 
   /* break links for switched paths */
@@ -276,6 +293,7 @@ svn_min__get_mergeinfo_pair(const char **fs_path,
                             const char **subtree_relpath,
                             svn_mergeinfo_t *parent_mergeinfo,
                             svn_mergeinfo_t *subtree_mergeinfo,
+                            apr_array_header_t **siblings_mergeinfo,
                             apr_array_header_t *mergeinfo,
                             int idx)
 {
@@ -287,6 +305,7 @@ svn_min__get_mergeinfo_pair(const char **fs_path,
       *subtree_relpath = "";
       *parent_mergeinfo = NULL;
       *subtree_mergeinfo = NULL;
+      *siblings_mergeinfo = NULL;
 
       return;
     }
@@ -300,6 +319,7 @@ svn_min__get_mergeinfo_pair(const char **fs_path,
       *parent_path = entry->local_path;
       *subtree_relpath = "";
       *parent_mergeinfo = NULL;
+      *siblings_mergeinfo = NULL;
 
       return;
     }
@@ -308,6 +328,7 @@ svn_min__get_mergeinfo_pair(const char **fs_path,
   *subtree_relpath = svn_dirent_skip_ancestor(entry->parent->local_path,
                                               entry->local_path);
   *parent_mergeinfo = entry->parent->mergeinfo;
+  *siblings_mergeinfo = entry->parent->children;
 }
 
 svn_mergeinfo_t
@@ -316,6 +337,53 @@ svn_min__get_mergeinfo(apr_array_header_t *mergeinfo,
 {
   SVN_ERR_ASSERT_NO_RETURN(idx >= 0 && idx < mergeinfo->nelts);
   return APR_ARRAY_IDX(mergeinfo, idx, mergeinfo_t *)->mergeinfo;
+}
+
+svn_error_t *
+svn_min__sibling_ranges(apr_hash_t **sibling_ranges,
+                        apr_array_header_t *sibling_mergeinfo,
+                        const char *parent_path,
+                        svn_rangelist_t *relevant_ranges,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  int i;
+  apr_hash_t *result = svn_hash__make(result_pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  for (i = 0; i < sibling_mergeinfo->nelts; ++i)
+    {
+      svn_mergeinfo_t mergeinfo;
+      apr_hash_index_t *hi;
+
+      svn_pool_clear(iterpool);
+      mergeinfo = APR_ARRAY_IDX(sibling_mergeinfo, i, svn_mergeinfo_t);
+
+      for (hi = apr_hash_first(iterpool, mergeinfo);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *path = apr_hash_this_key(hi);
+          if (svn_dirent_is_ancestor(parent_path, path))
+            {
+              svn_rangelist_t *common, *ranges = apr_hash_this_val(hi);
+              SVN_ERR(svn_rangelist_intersect(&common, ranges,
+                                              relevant_ranges, TRUE,
+                                              result_pool));
+
+              if (common->nelts)
+                {
+                  svn_hash__sets(result, apr_pstrdup(result_pool, path),
+                                 common);
+                }
+            }
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+  *sibling_ranges = result;
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
