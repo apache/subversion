@@ -27,6 +27,10 @@
 #smtp_username = example
 #smtp_password = example
 
+# This option specifies whether to use SSL from the beginning of the SMTP
+# connection.
+#smtp_ssl = yes
+
 # --------------------------------------------------------------------------
 
 #

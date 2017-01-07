@@ -291,7 +291,10 @@ class SMTPOutput(MailedOutput):
     self.write(self.mail_headers(group, params))
 
   def finish(self):
-    server = smtplib.SMTP(self.cfg.general.smtp_hostname)
+    if self.cfg.is_set('general.smtp_ssl') and self.cfg.general.smtp_ssl == 'yes':
+      server = smtplib.SMTP_SSL(self.cfg.general.smtp_hostname)
+    else:
+      server = smtplib.SMTP(self.cfg.general.smtp_hostname)
     if self.cfg.is_set('general.smtp_username'):
       server.login(self.cfg.general.smtp_username,
                    self.cfg.general.smtp_password)
