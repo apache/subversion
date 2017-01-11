@@ -846,7 +846,7 @@ II.   INSTALLATION
       C:>set VER=trunk
       C:>set DIR=trunk
       C:>set BUILD_ROOT=C:\SVN
-      C:>set PYTHONDIR=C:\Python22
+      C:>set PYTHONDIR=C:\Python27
       C:>set AWKDIR=C:\SVN\Awk
       C:>set ASMDIR=C:\SVN\asm
       C:>set SDKINC="C:\Program Files\Microsoft SDK\include"
