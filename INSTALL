@@ -114,6 +114,12 @@ I.    INTRODUCTION
          To use SSL with Subversion's WebDAV server, Apache needs to be
          compiled with OpenSSL as well.
 
+      * Netwide Assembler (OPTIONAL for client and server)
+
+        The Netwide Assembler (NASM) is used to build the (optionally)
+        assembler modules of OpenSSL.  As of OpenSSL 1.1.0 NASM is the
+        only supported assembler.
+
       * Berkeley DB (OPTIONAL for client and server)
 
          There are two different repository 'back-end'
@@ -185,7 +191,7 @@ I.    INTRODUCTION
       Subversion's own configure script may need to be told where to find
       them, if they were not installed in standard system locations.
 
-      Note: there are optional dependencies (such as openssl, swig, and httpd)
+      Note: there are optional dependencies (such as OpenSSL, swig, and httpd)
       which get-deps.sh does not download.
 
       Note: Because previous builds of Subversion may have installed older
@@ -741,6 +747,7 @@ II.   INSTALLATION
         (Version 4.4.20 or in specific cases some higher version recommended)
         For more information see Section I.C.7.
       * [Optional] Openssl can be obtained from https://www.openssl.org/source/
+      * [Optional] NASM can be obtained from http://www.nasm.us/
       * [Optional] A modified version of GNU libintl, called
         svn-win32-libintl.zip, can be used for displaying localized
         messages. Available at:
@@ -778,11 +785,14 @@ II.   INSTALLATION
       * Install Python and add it to your path
       * Install Perl (it should add itself to the path)
         ### Subversion doesn't need perl. Only some dependencies need it
-            (openssl and some apr scripts)
+            (OpenSSL and some apr scripts)
       * Copy AWK (awk95.exe) to awk.exe (e.g. SVN\awk\awk.exe) and add
         the directory containing it (e.g. SVN\awk) to the path.
         ### Subversion doesn't need awk. Only some dependencies need it
             (some apr scripts)
+      * [Optional] Install NASM and add it to your path
+        ### Subversion doesn't need NASM. Only some dependencies need it
+            optionally (OpenSSL)
       * [Optional] If you checked out Subversion from the repository and want
         to build Subversion with http/https access support then install the
         Apache Serf sources into SVN\src-trunk\serf.
@@ -819,7 +829,7 @@ II.   INSTALLATION
         included in the dependencies zip file.
         ### Just use --with-zlib instead of the hardcoded path
       * [Optional] If you want secure connection (https) client support extract
-        openssl into SVN\openssl
+        OpenSSL into SVN\openssl
         ### And pass the path to both serf and gen-make.py
       * [Optional] If you want localized message support, extract
         svn-win32-libintl.zip into SVN\svn-win32-libintl and extract
@@ -857,7 +867,7 @@ II.   INSTALLATION
       C:>set INCLUDE=%SDKINC%;%INCLUDE%
       C:>set LIB=%SDKLIB%;%LIB%
 
-      OpenSSL
+      OpenSSL < 1.1.0
 
       C:>cd openssl
       C:>perl Configure VC-WIN32
@@ -871,6 +881,14 @@ II.   INSTALLATION
              "call ms\do_ms" if you don't have an assembler.
              Also if you are using OpenSSL >= 1.0.0 masm is no longer
              supported. You will have to use do_nasm or do_ms in this case.
+
+      OpenSSL >= 1.1.0
+
+      C:>cd openssl
+      C:>perl Configure VC-WIN32
+      C:>nmake
+      C:>nmake test
+      C:>cd ..
 
       Apache 2
 
