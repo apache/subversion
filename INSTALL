@@ -358,7 +358,7 @@ I.    INTRODUCTION
       You'll need Berkeley DB installed on your system.  You can
       get it from:
 
-      http://www.oracle.com/technology/software/products/berkeley-db/index.html
+      http://www.oracle.com/technetwork/database/database-technologies/berkeleydb/overview/index.html
 
       If you have Berkeley DB installed in a place not searched by default
       for includes and libraries, add something like this:
