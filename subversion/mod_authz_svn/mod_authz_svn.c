@@ -401,7 +401,6 @@ static svn_authz_t *
 get_access_conf(request_rec *r, authz_svn_config_rec *conf,
                 apr_pool_t *scratch_pool)
 {
-  const char *cache_key = NULL;
   const char *access_file;
   const char *groups_file;
   const char *repos_path;
@@ -466,31 +465,19 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
                     "Path to groups file is %s", groups_file);
     }
 
-  cache_key = apr_pstrcat(scratch_pool, "mod_authz_svn:",
-                          access_file, groups_file, SVN_VA_NULL);
-  apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
-  access_conf = user_data;
-  if (access_conf == NULL)
-    {
-      svn_err = svn_repos_authz_read3(&access_conf, access_file,
-                                      groups_file, TRUE, NULL,
-                                      r->connection->pool,
-                                      scratch_pool);
+  svn_err = svn_repos_authz_read3(&access_conf,
+                                  access_file, groups_file,
+                                  TRUE, NULL,
+                                  r->connection->pool, scratch_pool);
 
-      if (svn_err)
-        {
-          log_svn_error(APLOG_MARK, r,
-                        "Failed to load the mod_authz_svn config:",
-                        svn_err, scratch_pool);
-          access_conf = NULL;
-        }
-      else
-        {
-          /* Cache the open repos for the next request on this connection */
-          apr_pool_userdata_set(access_conf, cache_key,
-                                NULL, r->connection->pool);
-        }
+  if (svn_err)
+    {
+      log_svn_error(APLOG_MARK, r,
+                    "Failed to load the mod_authz_svn config:",
+                    svn_err, scratch_pool);
+      access_conf = NULL;
     }
+
   return access_conf;
 }
 
