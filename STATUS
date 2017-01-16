@@ -41,7 +41,10 @@ Candidate changes:
      With large amounts of mergeinfo, memory usage can be prohibitively high.
      This makes a very significant reduction in certain cases.
    Notes:
-     This proposal is not (yet) a complete fix for the issue, just a start.
+     The revisions nominated here are incremental improvements, and can be
+     merged either by themselves or along with other revisions that may be
+     nominated later. The issue #4667 need not be "closed" for this to be
+     a useful backport.
    Votes:
      +1: julianfoad
 
