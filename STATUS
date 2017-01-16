@@ -40,6 +40,8 @@ Candidate changes:
    Justification:
      With large amounts of mergeinfo, memory usage can be prohibitively high.
      This makes a very significant reduction in certain cases.
+   Notes:
+     This proposal is not (yet) a complete fix for the issue, just a start.
    Votes:
      +1: julianfoad
 
