@@ -405,7 +405,6 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
   const char *groups_file;
   const char *repos_path;
   const char *repos_url = NULL;
-  void *user_data = NULL;
   svn_authz_t *access_conf = NULL;
   svn_error_t *svn_err = SVN_NO_ERROR;
   dav_error *dav_err;
