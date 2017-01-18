@@ -6826,6 +6826,39 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
   return SVN_NO_ERROR;
 }
 
+/* Implements conflict_option_resolve_func_t. */
+static svn_error_t *
+resolve_update_incoming_added_dir_merge(svn_client_conflict_option_t *option,
+                                       svn_client_conflict_t *conflict,
+                                       svn_client_ctx_t *ctx,
+                                       apr_pool_t *scratch_pool)
+{
+  const char *local_abspath;
+  const char *lock_abspath;
+  svn_error_t *err;
+
+  local_abspath = svn_client_conflict_get_local_abspath(conflict);
+
+  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(
+            &lock_abspath, ctx->wc_ctx, local_abspath,
+            scratch_pool, scratch_pool));
+
+  err = svn_wc__conflict_tree_update_local_add(ctx->wc_ctx,
+                                               local_abspath,
+                                               ctx->cancel_func,
+                                               ctx->cancel_baton,
+                                               ctx->notify_func2,
+                                               ctx->notify_baton2,
+                                               scratch_pool);
+
+  err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
+                                                                 lock_abspath,
+                                                                 scratch_pool));
+  SVN_ERR(err);
+
+  return SVN_NO_ERROR;
+}
+
 /* A baton for notification_adjust_func(). */
 struct notification_adjust_baton
 {
@@ -8607,11 +8640,13 @@ configure_option_incoming_added_dir_merge(svn_client_conflict_t *conflict,
             &incoming_new_kind, conflict, scratch_pool,
             scratch_pool));
 
-  if (operation == svn_wc_operation_merge &&
-      victim_node_kind == svn_node_dir &&
+  if (victim_node_kind == svn_node_dir &&
       incoming_new_kind == svn_node_dir &&
       incoming_change == svn_wc_conflict_action_add &&
-      local_change == svn_wc_conflict_reason_obstructed)
+      (local_change == svn_wc_conflict_reason_added ||
+       (operation == svn_wc_operation_merge &&
+       local_change == svn_wc_conflict_reason_obstructed)))
+
     {
       const char *description;
       const char *wcroot_abspath;
@@ -8619,17 +8654,29 @@ configure_option_incoming_added_dir_merge(svn_client_conflict_t *conflict,
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
-      description =
-        apr_psprintf(scratch_pool, _("merge '^/%s@%ld' into '%s'"),
-          incoming_new_repos_relpath, incoming_new_pegrev,
-          svn_dirent_local_style(
-            svn_dirent_skip_ancestor(wcroot_abspath,
-                                     conflict->local_abspath),
-            scratch_pool));
+      if (operation == svn_wc_operation_merge)
+        description =
+          apr_psprintf(scratch_pool, _("merge '^/%s@%ld' into '%s'"),
+            incoming_new_repos_relpath, incoming_new_pegrev,
+            svn_dirent_local_style(
+              svn_dirent_skip_ancestor(wcroot_abspath,
+                                       conflict->local_abspath),
+              scratch_pool));
+      else
+        description =
+          apr_psprintf(scratch_pool, _("merge local '%s' and '^/%s@%ld'"),
+            svn_dirent_local_style(
+              svn_dirent_skip_ancestor(wcroot_abspath,
+                                       conflict->local_abspath),
+              scratch_pool),
+            incoming_new_repos_relpath, incoming_new_pegrev);
+
       add_resolution_option(options, conflict,
                             svn_client_conflict_option_incoming_added_dir_merge,
                             _("Merge the directories"), description,
-                            resolve_merge_incoming_added_dir_merge);
+                            operation == svn_wc_operation_merge
+                              ? resolve_merge_incoming_added_dir_merge
+                              : resolve_update_incoming_added_dir_merge);
     }
 
   return SVN_NO_ERROR;
