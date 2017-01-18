@@ -4128,6 +4128,7 @@ create_wc_with_dir_add_vs_dir_add_update_conflict(
       svn_client_conflict_option_postpone,
       svn_client_conflict_option_accept_current_wc_state,
       svn_client_conflict_option_incoming_add_ignore,
+      svn_client_conflict_option_incoming_added_dir_merge,
       -1 /* end of list */
     };
     SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
@@ -4140,6 +4141,7 @@ create_wc_with_dir_add_vs_dir_add_update_conflict(
       svn_client_conflict_option_postpone,
       svn_client_conflict_option_accept_current_wc_state,
       svn_client_conflict_option_incoming_add_ignore,
+      svn_client_conflict_option_incoming_added_dir_merge,
       -1 /* end of list */
     };
     SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
