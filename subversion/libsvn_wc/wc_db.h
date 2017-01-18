@@ -3420,6 +3420,17 @@ svn_wc__db_update_incoming_move(svn_wc__db_t *db,
                                 void *notify_baton,
                                 apr_pool_t *scratch_pool);
 
+/* Merge locally added dir tree conflict victim at LOCAL_ABSPATH with the
+ * directory since added to the BASE layer by an update operation. */
+svn_error_t *
+svn_wc__db_update_local_add(svn_wc__db_t *db,
+                            const char *local_abspath,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            svn_wc_notify_func2_t notify_func,
+                            void *notify_baton,
+                            apr_pool_t *scratch_pool);
+
 /* LOCAL_ABSPATH is moved to MOVE_DST_ABSPATH.  MOVE_SRC_ROOT_ABSPATH
  * is the root of the move to MOVE_DST_OP_ROOT_ABSPATH.
  * DELETE_ABSPATH is the op-root of the move; it's the same
