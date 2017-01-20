@@ -10230,3 +10230,246 @@ svn_client_conflict_get(svn_client_conflict_t **conflict,
 
   return SVN_NO_ERROR;
 }
+
+/* Baton for conflict_status_walker */
+struct conflict_status_walker_baton
+{
+  svn_client_conflict_walk_func_t conflict_walk_func;
+  void *conflict_walk_func_baton;
+  svn_client_ctx_t *ctx;
+  svn_wc_notify_func2_t notify_func;
+  void *notify_baton;
+  svn_boolean_t resolved_a_tree_conflict;
+  apr_hash_t *unresolved_tree_conflicts;
+};
+
+/* Implements svn_wc_notify_func2_t to collect new conflicts caused by
+   resolving a tree conflict. */
+static void
+tree_conflict_collector(void *baton,
+                        const svn_wc_notify_t *notify,
+                        apr_pool_t *pool)
+{
+  struct conflict_status_walker_baton *cswb = baton;
+
+  if (cswb->notify_func)
+    cswb->notify_func(cswb->notify_baton, notify, pool);
+
+  if (cswb->unresolved_tree_conflicts
+      && (notify->action == svn_wc_notify_tree_conflict
+          || notify->prop_state == svn_wc_notify_state_conflicted
+          || notify->content_state == svn_wc_notify_state_conflicted))
+    {
+      if (!svn_hash_gets(cswb->unresolved_tree_conflicts, notify->path))
+        {
+          const char *tc_abspath;
+          apr_pool_t *hash_pool;
+ 
+          hash_pool = apr_hash_pool_get(cswb->unresolved_tree_conflicts);
+          tc_abspath = apr_pstrdup(hash_pool, notify->path);
+          svn_hash_sets(cswb->unresolved_tree_conflicts, tc_abspath, "");
+        }
+    }
+}
+
+/* 
+ * Record a tree conflict resolution failure due to error condition ERR
+ * in the RESOLVE_LATER hash table. If the hash table is not available
+ * (meaning the caller does not wish to retry resolution later), or if
+ * the error condition does not indicate circumstances where another
+ * existing tree conflict is blocking the resolution attempt, then
+ * return the error ERR itself.
+ */
+static svn_error_t *
+handle_tree_conflict_resolution_failure(const char *local_abspath,
+                                        svn_error_t *err,
+                                        apr_hash_t *unresolved_tree_conflicts)
+{
+  const char *dup_abspath;
+
+  if (!unresolved_tree_conflicts
+      || (err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE
+          && err->apr_err != SVN_ERR_WC_FOUND_CONFLICT))
+    return svn_error_trace(err); /* Give up. Do not retry resolution later. */
+
+  svn_error_clear(err);
+  dup_abspath = apr_pstrdup(apr_hash_pool_get(unresolved_tree_conflicts),
+                            local_abspath);
+
+  svn_hash_sets(unresolved_tree_conflicts, dup_abspath, dup_abspath);
+
+  return SVN_NO_ERROR; /* Caller may retry after resolving other conflicts. */
+}
+
+/* Implements svn_wc_status4_t to walk all conflicts to resolve.
+ */
+static svn_error_t *
+conflict_status_walker(void *baton,
+                       const char *local_abspath,
+                       const svn_wc_status3_t *status,
+                       apr_pool_t *scratch_pool)
+{
+  struct conflict_status_walker_baton *cswb = baton;
+  svn_client_conflict_t *conflict;
+  svn_error_t *err;
+  svn_boolean_t tree_conflicted;
+
+  if (!status->conflicted)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_client_conflict_get(&conflict, local_abspath, cswb->ctx,
+                                  scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
+                                             conflict, scratch_pool,
+                                             scratch_pool));
+  err = cswb->conflict_walk_func(cswb->conflict_walk_func_baton,
+                                 conflict, scratch_pool);
+  if (err)
+    {
+      if (tree_conflicted)
+        SVN_ERR(handle_tree_conflict_resolution_failure(
+                  local_abspath, err, cswb->unresolved_tree_conflicts));
+
+      else
+        return svn_error_trace(err);
+    }
+
+  if (tree_conflicted)
+    {
+      svn_client_conflict_option_id_t resolution;
+
+      resolution = svn_client_conflict_tree_get_resolution(conflict);
+      if (resolution != svn_client_conflict_option_unspecified &&
+          resolution != svn_client_conflict_option_postpone)
+        cswb->resolved_a_tree_conflict = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_walk(const char *local_abspath,
+                         svn_depth_t depth,
+                         svn_client_conflict_walk_func_t conflict_walk_func,
+                         void *conflict_walk_func_baton,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool)
+{
+  struct conflict_status_walker_baton cswb;
+  apr_pool_t *iterpool = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
+  cswb.conflict_walk_func = conflict_walk_func;
+  cswb.conflict_walk_func_baton = conflict_walk_func_baton;
+  cswb.ctx = ctx;
+  cswb.resolved_a_tree_conflict = FALSE;
+  cswb.unresolved_tree_conflicts = apr_hash_make(scratch_pool);
+
+  if (ctx->notify_func2)
+    ctx->notify_func2(ctx->notify_baton2,
+                      svn_wc_create_notify(
+                        local_abspath,
+                        svn_wc_notify_conflict_resolver_starting,
+                        scratch_pool),
+                      scratch_pool);
+
+  /* Swap in our notify_func wrapper. We must revert this before returning! */
+  cswb.notify_func = ctx->notify_func2;
+  cswb.notify_baton = ctx->notify_baton2;
+  ctx->notify_func2 = tree_conflict_collector;
+  ctx->notify_baton2 = &cswb;
+
+  err = svn_wc_walk_status(ctx->wc_ctx,
+                           local_abspath,
+                           depth,
+                           FALSE /* get_all */,
+                           FALSE /* no_ignore */,
+                           TRUE /* ignore_text_mods */,
+                           NULL /* ignore_patterns */,
+                           conflict_status_walker, &cswb,
+                           ctx->cancel_func, ctx->cancel_baton,
+                           scratch_pool);
+
+  /* If we got new tree conflicts (or delayed conflicts) during the initial
+     walk, we now walk them one by one as closure. */
+  while (!err && cswb.unresolved_tree_conflicts &&
+         apr_hash_count(cswb.unresolved_tree_conflicts))
+    {
+      apr_hash_index_t *hi;
+      svn_wc_status3_t *status = NULL;
+      const char *tc_abspath = NULL;
+
+      if (iterpool)
+        svn_pool_clear(iterpool);
+      else
+        iterpool = svn_pool_create(scratch_pool);
+
+      hi = apr_hash_first(scratch_pool, cswb.unresolved_tree_conflicts);
+      cswb.unresolved_tree_conflicts = apr_hash_make(scratch_pool);
+      cswb.resolved_a_tree_conflict = FALSE;
+
+      for (; hi && !err; hi = apr_hash_next(hi))
+        {
+          svn_pool_clear(iterpool);
+
+          tc_abspath = apr_hash_this_key(hi);
+
+          if (ctx->cancel_func)
+            {
+              err = ctx->cancel_func(ctx->cancel_baton);
+              if (err)
+                break;
+            }
+
+          err = svn_error_trace(svn_wc_status3(&status, ctx->wc_ctx,
+                                               tc_abspath,
+                                               iterpool, iterpool));
+          if (err)
+            break;
+
+          err = svn_error_trace(conflict_status_walker(&cswb, tc_abspath,
+                                                       status, scratch_pool));
+          if (err)
+            break;
+        }
+  
+      if (!err && !cswb.resolved_a_tree_conflict && tc_abspath &&
+          apr_hash_count(cswb.unresolved_tree_conflicts))
+        {
+          /* None of the remaining conflicts got resolved, without any error.
+           * Disable the 'unresolved_tree_conflicts' cache and try again. */
+          cswb.unresolved_tree_conflicts = NULL;
+
+          /* Run the most recent resolve operation again.
+           * We still have status and tc_abspath for that one.
+           * This should uncover the error which prevents resolution. */
+          err = svn_error_trace(conflict_status_walker(&cswb, tc_abspath,
+                                                       status, scratch_pool));
+          SVN_ERR_ASSERT(err != NULL);
+
+          err = svn_error_createf(
+                    SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, err,
+                    _("Unable to resolve pending conflict on '%s'"),
+                    svn_dirent_local_style(tc_abspath, scratch_pool));
+          break;
+        }
+    }
+
+  if (iterpool)
+    svn_pool_destroy(iterpool);
+
+  ctx->notify_func2 = cswb.notify_func;
+  ctx->notify_baton2 = cswb.notify_baton;
+
+  if (!err && ctx->notify_func2)
+    ctx->notify_func2(ctx->notify_baton2,
+                      svn_wc_create_notify(local_abspath,
+                                          svn_wc_notify_conflict_resolver_done,
+                                          scratch_pool),
+                      scratch_pool);
+
+  return svn_error_trace(err);
+}

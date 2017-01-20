@@ -384,14 +384,12 @@ svn_cl__print_conflict_stats(svn_cl__conflict_stats_t *conflict_stats,
  * TODO: more docs
  */
 svn_error_t *
-svn_cl__resolve_conflict(svn_boolean_t *resolved,
-                         svn_boolean_t *quit,
+svn_cl__resolve_conflict(svn_boolean_t *quit,
                          svn_boolean_t *external_failed,
                          svn_boolean_t *printed_summary,
                          svn_client_conflict_t *conflict,
                          svn_cl__accept_t accept_which,
                          const char *editor_cmd,
-                         apr_hash_t *config,
                          const char *path_prefix,
                          svn_cmdline_prompt_baton_t *pb,
                          svn_cl__conflict_stats_t *conflict_stats,
