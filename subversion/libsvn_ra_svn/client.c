@@ -629,11 +629,17 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   svn_ra_svn__list_t *mechlist, *server_caplist, *repos_caplist;
   const char *client_string = NULL;
   apr_pool_t *pool = result_pool;
+  svn_ra_svn__parent_t *parent;
+
+  parent = apr_pcalloc(pool, sizeof(*parent));
+  parent->url = svn_stringbuf_create(url, pool);
+  parent->server_base_url = svn_stringbuf_create(url, pool);
+  parent->path = svn_stringbuf_create_empty(pool);
 
   sess = apr_palloc(pool, sizeof(*sess));
   sess->pool = pool;
   sess->is_tunneled = (tunnel_name != NULL);
-  sess->url = apr_pstrdup(pool, url);
+  sess->parent = parent;
   sess->user = uri->user;
   sess->hostname = uri->hostname;
   sess->tunnel_name = tunnel_name;
@@ -877,23 +883,29 @@ static svn_error_t *ra_svn_dup_session(svn_ra_session_t *new_session,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
-                                    const char *url,
-                                    apr_pool_t *pool)
+/* Send the "reparent to URL" command to the server for RA_SESSION and
+   update the session state.  Use SCRATCH_POOL for tempoaries.
+ */
+static svn_error_t *
+reparent_server(svn_ra_session_t *ra_session,
+                const char *url,
+                apr_pool_t *scratch_pool)
 {
   svn_ra_svn__session_baton_t *sess = ra_session->priv;
+  svn_ra_svn__parent_t *parent = sess->parent;
   svn_ra_svn_conn_t *conn = sess->conn;
   svn_error_t *err;
   apr_pool_t *sess_pool;
   svn_ra_svn__session_baton_t *new_sess;
   apr_uri_t uri;
 
-  SVN_ERR(svn_ra_svn__write_cmd_reparent(conn, pool, url));
-  err = handle_auth_request(sess, pool);
+  /* Send the request to the server. */
+  SVN_ERR(svn_ra_svn__write_cmd_reparent(conn, scratch_pool, url));
+  err = handle_auth_request(sess, scratch_pool);
   if (! err)
     {
-      SVN_ERR(svn_ra_svn__read_cmd_response(conn, pool, ""));
-      sess->url = apr_pstrdup(sess->pool, url);
+      SVN_ERR(svn_ra_svn__read_cmd_response(conn, scratch_pool, ""));
+      svn_stringbuf_set(parent->server_base_url, url);
       return SVN_NO_ERROR;
     }
   else if (err->apr_err != SVN_ERR_RA_SVN_UNKNOWN_CMD)
@@ -924,11 +936,38 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
+                                    const char *url,
+                                    apr_pool_t *pool)
+{
+  svn_ra_svn__session_baton_t *sess = ra_session->priv;
+  svn_ra_svn__parent_t *parent = sess->parent;
+  svn_ra_svn_conn_t *conn = sess->conn;
+
+  /* Eliminate redundant reparent requests. */
+  if (strcmp(parent->server_base_url->data, url))
+    {
+      /* Send the request to the server. */
+      SVN_ERR(reparent_server(ra_session, url, pool));
+    }
+
+  /* Update the local PARENT information.
+     PARENT.SERVER_BASE_URL is already up-to-date. */
+  svn_stringbuf_set(parent->url, url);
+  svn_stringbuf_setempty(parent->path);
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *ra_svn_get_session_url(svn_ra_session_t *session,
-                                           const char **url, apr_pool_t *pool)
+                                           const char **url,
+                                           apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess = session->priv;
-  *url = apr_pstrdup(pool, sess->url);
+  svn_ra_svn__parent_t *parent = sess->parent;
+
+  *url = apr_pstrmemdup(pool, parent->url->data, parent->url->len);
+
   return SVN_NO_ERROR;
 }
 
@@ -2667,7 +2706,7 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
   int i;
 
   /* Figure out the repository abspath from PATH. */
-  full_url = svn_path_url_add_component2(sess->url, path, pool);
+  full_url = svn_path_url_add_component2(sess->parent->url->data, path, pool);
   SVN_ERR(path_relative_to_root(session, &abs_path, full_url, pool));
   abs_path = svn_fspath__canonicalize(abs_path, pool);
 
