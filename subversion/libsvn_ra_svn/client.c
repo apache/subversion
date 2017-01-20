@@ -968,7 +968,7 @@ reparent_path(svn_ra_session_t *ra_session,
   svn_ra_svn__session_baton_t *sess = ra_session->priv;
   svn_ra_svn__parent_t *parent = sess->parent;
 
-  return svn_dirent_join(parent->path->data, path, result_pool);
+  return svn_relpath_join(parent->path->data, path, result_pool);
 }
 
 /* Return a copy of PATHS, containing the same const char * paths but
@@ -1033,7 +1033,7 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
 
   /* Eliminate reparent requests if they are to a sub-path of the
      server's current parent path. */
-  path = svn_dirent_skip_ancestor(parent->server_base_url->data, url);
+  path = svn_uri_skip_ancestor(parent->server_base_url->data, url, pool);
   if (!path)
     {
       /* Send the request to the server.
@@ -1042,7 +1042,7 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
          because this will maximize the chance to turn future reparent
          requests into a client-side update of the rel path. */
       path = conn->repos_root
-           ? svn_dirent_skip_ancestor(conn->repos_root, url)
+           ? svn_uri_skip_ancestor(conn->repos_root, url, pool)
            : NULL;
 
       if (path)
@@ -1055,7 +1055,7 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
      PARENT.SERVER_BASE_URL is already up-to-date. */
   svn_stringbuf_set(parent->url, url);
   if (path)
-    svn_stringbuf_set(parent->path, svn_path_uri_decode(path, pool));
+    svn_stringbuf_set(parent->path, path);
   else
     svn_stringbuf_setempty(parent->path);
 
@@ -1655,7 +1655,7 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
 
           /* Correct for the (potential) difference between client and
              server-side session parent paths. */
-          path = svn_dirent_skip_ancestor(parent->path->data, path);
+          path = svn_relpath_skip_ancestor(parent->path->data, path);
           svn_hash_sets(*catalog, path, for_path);
         }
     }
