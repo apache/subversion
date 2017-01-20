@@ -2115,7 +2115,7 @@ svn_cl__resolve_conflict(svn_boolean_t *quit,
           SVN_ERR(err);
         }
     }
-  else
+  else if (option_id != svn_client_conflict_option_postpone)
     SVN_ERR(mark_conflict_resolved(conflict, option_id,
                                    text_conflicted,
                                    props_conflicted->nelts > 0 ? "" : NULL,
