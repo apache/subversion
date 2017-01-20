@@ -138,8 +138,7 @@ typedef struct svn_ra_svn__parent_t {
   /* Current server-side base URL. */
   svn_stringbuf_t *server_base_url;
 
-  /* Current parent path relative to CURRENT_URL.
-     Always empty at the moment. */
+  /* Current parent path relative to CURRENT_URL. */
   svn_stringbuf_t *path;
 } svn_ra_svn__parent_t;
 
