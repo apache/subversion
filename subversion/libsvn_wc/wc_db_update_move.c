@@ -3326,6 +3326,9 @@ update_locally_added_node(added_node_baton_t *nb,
   const svn_checksum_t *base_checksum;
   apr_hash_t *base_props, *working_props;
   apr_array_header_t *base_children, *working_children;
+  const char *local_abspath = svn_dirent_join(wcroot->abspath,
+                                              local_relpath,
+                                              scratch_pool);
 
   if (b->cancel_func)
     SVN_ERR(b->cancel_func(b->cancel_baton));
@@ -3343,9 +3346,6 @@ update_locally_added_node(added_node_baton_t *nb,
     {
       svn_node_kind_t kind_on_disk;
       svn_skel_t *work_item = NULL;
-      const char *local_abspath = svn_dirent_join(wcroot->abspath,
-                                                  local_relpath,
-                                                  scratch_pool);
 
       /* Skip obstructed nodes. */
       SVN_ERR(svn_io_check_path(local_abspath, &kind_on_disk,
@@ -3394,7 +3394,7 @@ update_locally_added_node(added_node_baton_t *nb,
           svn_checksum_t *working_checksum = NULL;
 
           if (base_checksum)
-            SVN_ERR(svn_io_file_checksum2(&working_checksum, local_relpath,
+            SVN_ERR(svn_io_file_checksum2(&working_checksum, local_abspath,
                                           base_checksum->kind, scratch_pool));
           SVN_ERR(tc_editor_update_add_new_file(nb, base_kind, base_checksum,
                                                 base_props, working_kind,
@@ -3418,7 +3418,7 @@ update_locally_added_node(added_node_baton_t *nb,
           svn_checksum_t *working_checksum;
 
           SVN_ERR_ASSERT(base_checksum);
-          SVN_ERR(svn_io_file_checksum2(&working_checksum, local_relpath,
+          SVN_ERR(svn_io_file_checksum2(&working_checksum, local_abspath,
                                         base_checksum->kind, scratch_pool));
           if (!props_equal || !svn_checksum_match(base_checksum,
                                                   working_checksum))
