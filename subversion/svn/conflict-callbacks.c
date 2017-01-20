@@ -1875,14 +1875,12 @@ resolve_conflict_interactively(svn_boolean_t *resolved,
 }
 
 svn_error_t *
-svn_cl__resolve_conflict(svn_boolean_t *resolved,
-                         svn_boolean_t *quit,
+svn_cl__resolve_conflict(svn_boolean_t *quit,
                          svn_boolean_t *external_failed,
                          svn_boolean_t *printed_summary,
                          svn_client_conflict_t *conflict,
                          svn_cl__accept_t accept_which,
                          const char *editor_cmd,
-                         apr_hash_t *config,
                          const char *path_prefix,
                          svn_cmdline_prompt_baton_t *pb,
                          svn_cl__conflict_stats_t *conflict_stats,
@@ -2006,7 +2004,8 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
               svn_error_t *err;
 
               err = svn_cmdline__edit_file_externally(local_abspath,
-                                                      editor_cmd, config,
+                                                      editor_cmd,
+                                                      ctx->config,
                                                       scratch_pool);
               if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_EDITOR ||
                           err->apr_err == SVN_ERR_EXTERNAL_PROGRAM))
@@ -2054,7 +2053,7 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
 
               err = svn_cl__merge_file_externally(base_abspath, their_abspath,
                                                   my_abspath, local_abspath,
-                                                  local_abspath, config,
+                                                  local_abspath, ctx->config,
                                                   &remains_in_conflict,
                                                   scratch_pool);
               if (err && (err->apr_err == SVN_ERR_CL_NO_EXTERNAL_MERGE_TOOL ||
@@ -2086,20 +2085,21 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
    * option or the option did not apply, then prompt. */
   if (option_id == svn_client_conflict_option_unspecified)
     {
+      svn_boolean_t resolved = FALSE;
       svn_boolean_t postponed = FALSE;
       svn_boolean_t printed_description = FALSE;
       svn_error_t *err;
 
       *quit = FALSE;
 
-      while (!*resolved && !postponed && !*quit)
+      while (!resolved && !postponed && !*quit)
         {
-          err = resolve_conflict_interactively(resolved, &postponed, quit,
+          err = resolve_conflict_interactively(&resolved, &postponed, quit,
                                                external_failed,
                                                printed_summary,
                                                &printed_description,
                                                conflict,
-                                               editor_cmd, config,
+                                               editor_cmd, ctx->config,
                                                path_prefix, pb,
                                                conflict_stats, ctx,
                                                scratch_pool, scratch_pool);
@@ -2115,20 +2115,13 @@ svn_cl__resolve_conflict(svn_boolean_t *resolved,
           SVN_ERR(err);
         }
     }
-  else if (option_id == svn_client_conflict_option_postpone)
-    {
-      *resolved = FALSE;
-    }
   else
-    {
-      SVN_ERR(mark_conflict_resolved(conflict, option_id,
-                                     text_conflicted,
-                                     props_conflicted->nelts > 0 ? "" : NULL,
-                                     tree_conflicted,
-                                     path_prefix, conflict_stats,
-                                     ctx, scratch_pool));
-      *resolved = TRUE;
-    }
+    SVN_ERR(mark_conflict_resolved(conflict, option_id,
+                                   text_conflicted,
+                                   props_conflicted->nelts > 0 ? "" : NULL,
+                                   tree_conflicted,
+                                   path_prefix, conflict_stats,
+                                   ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
