@@ -4431,6 +4431,155 @@ test_update_incoming_added_dir_merge(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_update_incoming_added_dir_merge2(const svn_test_opts_t *opts,
+                                      apr_pool_t *pool)
+{
+  svn_client_ctx_t *ctx;
+  svn_client_conflict_t *conflict;
+  const char *new_dir_path;
+  const char *new_dir_child_path;
+  const char *new_file_path;
+  const char *new_file_child_path;
+  svn_boolean_t text_conflicted;
+  apr_array_header_t *props_conflicted;
+  svn_boolean_t tree_conflicted;
+  struct status_baton sb;
+  struct svn_client_status_t *status;
+  svn_opt_revision_t opt_rev;
+  const svn_string_t *propval;
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+
+  SVN_ERR(svn_test__sandbox_create(b, "update_incoming_added_dir_merge2",
+                                   opts, pool));
+
+  SVN_ERR(create_wc_with_dir_add_vs_dir_add_update_conflict(b, TRUE));
+
+  /* Resolve the tree conflict. */
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  new_dir_path = svn_relpath_join(trunk_path, new_dir_name, b->pool);
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
+                                  ctx, b->pool, b->pool));
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict, svn_client_conflict_option_incoming_added_dir_merge, ctx,
+            b->pool));
+
+  /* Ensure that the directory has the expected status. */
+  opt_rev.kind = svn_opt_revision_working;
+  sb.result_pool = b->pool;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, new_dir_path),
+                             &opt_rev, svn_depth_empty, TRUE, FALSE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_dir);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(!status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  /* Verify the added dir's property value.  */
+  /* ### Shouldn't there be a property conflict? The local change wins. */
+  SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx,
+                           sbox_wc_path(b, new_dir_path),
+                           "prop", b->pool, b->pool));
+  SVN_TEST_STRING_ASSERT(propval->data, propval_different);
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, new_dir_path),
+                                  ctx, b->pool, b->pool));
+
+  /* The directory should not be in conflict. */
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, b->pool, b->pool));
+  SVN_TEST_ASSERT(!text_conflicted &&
+                  props_conflicted->nelts == 0 &&
+                  !tree_conflicted);
+
+  /* Ensure that the newly added file has the expected status. */
+  opt_rev.kind = svn_opt_revision_working;
+  sb.result_pool = b->pool;
+  new_file_path = svn_relpath_join(trunk_path,
+                                   svn_relpath_join(new_dir_name,
+                                                    new_file_name, b->pool),
+                                   b->pool);
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, new_file_path),
+                             &opt_rev, svn_depth_empty, TRUE, FALSE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_file);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_conflicted);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_conflicted);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(!status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  /* Verify the added file's property value.  */
+  /* ### Shouldn't there be a property conflict? The local change wins. */
+  SVN_ERR(svn_wc_prop_get2(&propval, ctx->wc_ctx,
+                           sbox_wc_path(b, new_file_path),
+                           "prop", b->pool, b->pool));
+  SVN_TEST_STRING_ASSERT(propval->data, propval_different);
+
+  /* Ensure that the obstructing added file child of newdir has the
+   * expected status. */
+  opt_rev.kind = svn_opt_revision_working;
+  sb.result_pool = b->pool;
+  new_dir_child_path = svn_relpath_join(new_dir_path, "dir_child", b->pool);
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, new_dir_child_path),
+                             &opt_rev, svn_depth_empty, TRUE, FALSE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_dir);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_obstructed);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(!status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  /* Ensure that the obstructing added dir child of newdir has the
+   * expected status. */
+  opt_rev.kind = svn_opt_revision_working;
+  sb.result_pool = b->pool;
+  new_file_child_path = svn_relpath_join(new_dir_path, "file_child", b->pool);
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, new_file_child_path),
+                             &opt_rev, svn_depth_empty, TRUE, FALSE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_file);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_obstructed);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(!status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -4509,6 +4658,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "update incoming add dir ignore"),
     SVN_TEST_OPTS_PASS(test_update_incoming_added_dir_merge,
                        "update incoming add dir merge"),
+    SVN_TEST_OPTS_PASS(test_update_incoming_added_dir_merge2,
+                       "update incoming add dir merge with obstructions"),
     SVN_TEST_NULL
   };
 
