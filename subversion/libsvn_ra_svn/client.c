@@ -936,6 +936,92 @@ reparent_server(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+/* Make sure that RA_SESSION's client and server-side parent infp are in
+   sync.  Use SCRATCH_POOL for temporary allocations. */
+static svn_error_t *
+ensure_exact_server_parent(svn_ra_session_t *ra_session,
+                           apr_pool_t *scratch_pool)
+{
+  svn_ra_svn__session_baton_t *sess = ra_session->priv;
+  svn_ra_svn__parent_t *parent = sess->parent;
+
+  /* During e.g. a checkout operation, many requests will be sent for the
+     same URL that was used to create the session.  So, both sides are
+     often already in sync. */
+  if (svn_stringbuf_compare(parent->url, parent->server_base_url))
+    return SVN_NO_ERROR;
+
+  /* Actually reparent the server to the session URL. */
+  SVN_ERR(reparent_server(ra_session, parent->url->data, scratch_pool));
+  svn_stringbuf_setempty(parent->path);
+
+  return SVN_NO_ERROR;
+}
+
+/* Return a copy of PATH, adjusted to the RA_SESSION's server parent URL.
+   Allocate the result in RESULT_POOL. */
+static const char *
+reparent_path(svn_ra_session_t *ra_session,
+              const char *path,
+              apr_pool_t *result_pool)
+{
+  svn_ra_svn__session_baton_t *sess = ra_session->priv;
+  svn_ra_svn__parent_t *parent = sess->parent;
+
+  return svn_dirent_join(parent->path->data, path, result_pool);
+}
+
+/* Return a copy of PATHS, containing the same const char * paths but
+   adjusted to the RA_SESSION's server parent URL.  Returns NULL if
+   PATHS is NULL.  Allocate the result in RESULT_POOL. */
+static apr_array_header_t *
+reparent_path_array(svn_ra_session_t *ra_session,
+                    const apr_array_header_t *paths,
+                    apr_pool_t *result_pool)
+{
+  int i;
+  apr_array_header_t *result;
+
+  if (!paths)
+    return NULL;
+
+  result = apr_array_copy(result_pool, paths);
+  for (i = 0; i < result->nelts; ++i)
+    {
+      const char **path = &APR_ARRAY_IDX(result, i, const char *);
+      *path = reparent_path(ra_session, *path, result_pool);
+    }
+
+  return result;
+}
+
+/* Return a copy of PATHS, containing the same paths for keys but adjusted
+   to the RA_SESSION's server parent URL.  Keeps the values as-are and
+   returns NULL if PATHS is NULL.  Allocate the result in RESULT_POOL. */
+static apr_hash_t *
+reparent_path_hash(svn_ra_session_t *ra_session,
+                   apr_hash_t *paths,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  apr_hash_t *result;
+  apr_hash_index_t *hi;
+
+  if (!paths)
+    return NULL;
+
+  result = svn_hash__make(result_pool);
+  for (hi = apr_hash_first(scratch_pool, paths); hi; hi = apr_hash_next(hi))
+    {
+      const char *path = apr_hash_this_key(hi);
+      svn_hash_sets(result,
+                    reparent_path(ra_session, path, result_pool),
+                    apr_hash_this_val(hi));
+    }
+
+  return result;
+}
+
 static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
                                     const char *url,
                                     apr_pool_t *pool)
@@ -943,18 +1029,35 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
   svn_ra_svn__session_baton_t *sess = ra_session->priv;
   svn_ra_svn__parent_t *parent = sess->parent;
   svn_ra_svn_conn_t *conn = sess->conn;
+  const char *path;
 
-  /* Eliminate redundant reparent requests. */
-  if (strcmp(parent->server_base_url->data, url))
+  /* Eliminate reparent requests if they are to a sub-path of the
+     server's current parent path. */
+  path = svn_dirent_skip_ancestor(parent->server_base_url->data, url);
+  if (!path)
     {
-      /* Send the request to the server. */
-      SVN_ERR(reparent_server(ra_session, url, pool));
+      /* Send the request to the server.
+
+         If within the same repository, reparent to the repo root
+         because this will maximize the chance to turn future reparent
+         requests into a client-side update of the rel path. */
+      path = conn->repos_root
+           ? svn_dirent_skip_ancestor(conn->repos_root, url)
+           : NULL;
+
+      if (path)
+        SVN_ERR(reparent_server(ra_session, conn->repos_root, pool));
+      else
+        SVN_ERR(reparent_server(ra_session, url, pool));
     }
 
   /* Update the local PARENT information.
      PARENT.SERVER_BASE_URL is already up-to-date. */
   svn_stringbuf_set(parent->url, url);
-  svn_stringbuf_setempty(parent->path);
+  if (path)
+    svn_stringbuf_set(parent->path, svn_path_uri_decode(path, pool));
+  else
+    svn_stringbuf_setempty(parent->path);
 
   return SVN_NO_ERROR;
 }
@@ -1176,6 +1279,9 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
                     svn_string_create(sess_baton->useragent, pool));
     }
 
+  /* Callbacks may assume that all data is relative the sessions's URL. */
+  SVN_ERR(ensure_exact_server_parent(session, pool));
+
   /* Tell the server we're starting the commit.
      Send log message here for backwards compatibility with servers
      before 1.5. */
@@ -1301,6 +1407,7 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   svn_checksum_ctx_t *checksum_ctx;
   apr_pool_t *iterpool;
 
+  path = reparent_path(session, path, pool);
   SVN_ERR(svn_ra_svn__write_cmd_get_file(conn, pool, path, rev,
                                          (props != NULL), (stream != NULL)));
   SVN_ERR(handle_auth_request(sess_baton, pool));
@@ -1406,6 +1513,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
   svn_ra_svn__list_t *proplist, *dirlist;
   int i;
 
+  path = reparent_path(session, path, pool);
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w(c(?r)bb(!", "get-dir", path,
                                   rev, (props != NULL), (dirents != NULL)));
   SVN_ERR(send_dirent_fields(conn, dirent_fields, pool));
@@ -1502,12 +1610,14 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
                                          apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
+  svn_ra_svn__parent_t *parent = sess_baton->parent;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   int i;
   svn_ra_svn__list_t *mergeinfo_tuple;
   svn_ra_svn__item_t *elt;
   const char *path;
 
+  paths = reparent_path_array(session, paths, pool);
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w((!", "get-mergeinfo"));
   for (i = 0; i < paths->nelts; i++)
     {
@@ -1537,9 +1647,16 @@ static svn_error_t *ra_svn_get_mergeinfo(svn_ra_session_t *session,
           SVN_ERR(svn_ra_svn__parse_tuple(&elt->u.list, "cc",
                                           &path, &to_parse));
           SVN_ERR(svn_mergeinfo_parse(&for_path, to_parse, pool));
+
           /* Correct for naughty servers that send "relative" paths
              with leading slashes! */
-          svn_hash_sets(*catalog, path[0] == '/' ? path + 1 :path, for_path);
+          if (path[0] == '/')
+            ++path;
+
+          /* Correct for the (potential) difference between client and
+             server-side session parent paths. */
+          path = svn_dirent_skip_ancestor(parent->path->data, path);
+          svn_hash_sets(*catalog, path, for_path);
         }
     }
 
@@ -1560,6 +1677,9 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   svn_boolean_t recurse = DEPTH_TO_RECURSE(depth);
+
+  /* Callbacks may assume that all data is relative the sessions's URL. */
+  SVN_ERR(ensure_exact_server_parent(session, scratch_pool));
 
   /* Tell the server we want to start an update. */
   SVN_ERR(svn_ra_svn__write_cmd_update(conn, pool, rev, target, recurse,
@@ -1592,6 +1712,9 @@ ra_svn_switch(svn_ra_session_t *session,
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   svn_boolean_t recurse = DEPTH_TO_RECURSE(depth);
 
+  /* Callbacks may assume that all data is relative the sessions's URL. */
+  SVN_ERR(ensure_exact_server_parent(session, scratch_pool));
+
   /* Tell the server we want to start a switch. */
   SVN_ERR(svn_ra_svn__write_cmd_switch(conn, pool, rev, target, recurse,
                                        switch_url, depth,
@@ -1616,6 +1739,9 @@ static svn_error_t *ra_svn_status(svn_ra_session_t *session,
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   svn_boolean_t recurse = DEPTH_TO_RECURSE(depth);
+
+  /* Callbacks may assume that all data is relative the sessions's URL. */
+  SVN_ERR(ensure_exact_server_parent(session, pool));
 
   /* Tell the server we want to start a status operation. */
   SVN_ERR(svn_ra_svn__write_cmd_status(conn, pool, target, recurse, rev,
@@ -1643,6 +1769,9 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   svn_boolean_t recurse = DEPTH_TO_RECURSE(depth);
+
+  /* Callbacks may assume that all data is relative the sessions's URL. */
+  SVN_ERR(ensure_exact_server_parent(session, pool));
 
   /* Tell the server we want to start a diff. */
   SVN_ERR(svn_ra_svn__write_cmd_diff(conn, pool, rev, target, recurse,
@@ -1908,6 +2037,16 @@ ra_svn_log(svn_ra_session_t *session,
   svn_error_t *outer_error = NULL;
   svn_error_t *err;
 
+  /* If we don't specify paths, the session's URL is implied.
+
+     Because the paths passed to callbacks are always relative the repos
+     root, there is no need *always* sync the parent URLs despite invoking
+     user-provided callbacks. */
+  if (paths)
+    paths = reparent_path_array(session, paths, pool);
+  else
+    SVN_ERR(ensure_exact_server_parent(session, pool));
+
   err = svn_error_trace(perform_ra_svn_log(&outer_error,
                                            session, paths,
                                            start, end,
@@ -1933,6 +2072,7 @@ static svn_error_t *ra_svn_check_path(svn_ra_session_t *session,
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   const char *kind_word;
 
+  path = reparent_path(session, path, pool);
   SVN_ERR(svn_ra_svn__write_cmd_check_path(conn, pool, path, rev));
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn__read_cmd_response(conn, pool, "w", &kind_word));
@@ -1962,6 +2102,7 @@ static svn_error_t *ra_svn_stat(svn_ra_session_t *session,
   svn_ra_svn__list_t *list = NULL;
   svn_dirent_t *the_dirent;
 
+  path = reparent_path(session, path, pool);
   SVN_ERR(svn_ra_svn__write_cmd_stat(conn, pool, path, rev));
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
                                  N_("'stat' not implemented")));
@@ -2010,6 +2151,8 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
   svn_boolean_t is_done;
   apr_pool_t *iterpool;
   int i;
+
+  path = reparent_path(session, path, pool);
 
   /* Transmit the parameters. */
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w(cr(!",
@@ -2153,6 +2296,7 @@ ra_svn_get_location_segments(svn_ra_session_t *session,
   svn_error_t *outer_err = SVN_NO_ERROR;
   svn_error_t *err;
 
+  path = reparent_path(session, path, pool);
   err = svn_error_trace(
             perform_get_location_segments(&outer_err, session, path,
                                           peg_revision, start_rev, end_rev,
@@ -2177,6 +2321,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
   rev_pool = svn_pool_create(pool);
   chunk_pool = svn_pool_create(pool);
 
+  path = reparent_path(session, path, pool);
   SVN_ERR(svn_ra_svn__write_cmd_get_file_revs(sess_baton->conn, pool,
                                               path, start, end,
                                               include_merged_revisions));
@@ -2415,6 +2560,7 @@ static svn_error_t *ra_svn_lock(svn_ra_session_t *session,
   svn_error_t *err;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
+  path_revs = reparent_path_hash(session, path_revs, pool, pool);
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w((?c)b(!", "lock-many",
                                   comment, steal_lock));
 
@@ -2539,6 +2685,7 @@ static svn_error_t *ra_svn_unlock(svn_ra_session_t *session,
   svn_error_t *err;
   const char *path;
 
+  path_tokens = reparent_path_hash(session, path_tokens, pool, pool);
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w(b(!", "unlock-many",
                                   break_lock));
 
@@ -2658,6 +2805,7 @@ static svn_error_t *ra_svn_get_lock(svn_ra_session_t *session,
   svn_ra_svn_conn_t* conn = sess->conn;
   svn_ra_svn__list_t *list;
 
+  path = reparent_path(session, path, pool);
   SVN_ERR(svn_ra_svn__write_cmd_get_lock(conn, pool, path));
 
   /* Servers before 1.2 doesn't support locking.  Check this here. */
@@ -2767,6 +2915,9 @@ static svn_error_t *ra_svn_replay(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess = session->priv;
 
+  /* Complex EDITOR callbacks may rely on client and server parent path
+     being in sync. */
+  SVN_ERR(ensure_exact_server_parent(session, pool));
   SVN_ERR(svn_ra_svn__write_cmd_replay(sess->conn, pool, revision,
                                        low_water_mark, send_deltas));
 
@@ -2797,6 +2948,9 @@ ra_svn_replay_range(svn_ra_session_t *session,
   svn_revnum_t rev;
   svn_boolean_t drive_aborted = FALSE;
 
+  /* Complex EDITOR callbacks may rely on client and server parent path
+     being in sync. */
+  SVN_ERR(ensure_exact_server_parent(session, pool));
   SVN_ERR(svn_ra_svn__write_cmd_replay_range(sess->conn, pool,
                                              start_revision, end_revision,
                                              low_water_mark, send_deltas));
@@ -2911,6 +3065,8 @@ ra_svn_get_deleted_rev(svn_ra_session_t *session,
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
 
+  path = reparent_path(session, path, pool);
+
   /* Transmit the parameters. */
   SVN_ERR(svn_ra_svn__write_cmd_get_deleted_rev(conn, pool, path,
                                                peg_revision, end_revision));
@@ -2948,6 +3104,7 @@ ra_svn_get_inherited_props(svn_ra_session_t *session,
   svn_ra_svn__list_t *iproplist;
   svn_boolean_t iprop_capable;
 
+  path = reparent_path(session, path, scratch_pool);
   SVN_ERR(ra_svn_has_capability(session, &iprop_capable,
                                 SVN_RA_CAPABILITY_INHERITED_PROPS,
                                 scratch_pool));
@@ -2982,6 +3139,8 @@ ra_svn_list(svn_ra_session_t *session,
   svn_ra_svn_conn_t *conn = sess_baton->conn;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+  path = reparent_path(session, path, scratch_pool);
 
   /* Send the list request. */
   SVN_ERR(svn_ra_svn__write_tuple(conn, scratch_pool, "w(c(?r)w(!", "list",
