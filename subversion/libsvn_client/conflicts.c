@@ -1504,7 +1504,7 @@ find_moves_in_revision_range(struct apr_hash_t **moves_table,
   apr_array_header_t *revprops;
   const char *repos_root_url;
   const char *repos_uuid;
-  struct find_moves_baton b;
+  struct find_moves_baton b = { 0 };
   svn_error_t *err;
 
   SVN_ERR_ASSERT(start_rev > end_rev);
@@ -1528,6 +1528,7 @@ find_moves_in_revision_range(struct apr_hash_t **moves_table,
   b.repos_root_url = repos_root_url;
   b.repos_uuid = repos_uuid;
   b.ctx = ctx;
+  b.victim_abspath = conflict->local_abspath;
   b.moves_table = apr_hash_make(result_pool);
   b.moved_paths = apr_hash_make(scratch_pool);
   b.result_pool = result_pool;
