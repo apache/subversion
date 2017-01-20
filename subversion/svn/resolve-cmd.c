@@ -43,9 +43,9 @@ struct conflict_walker_baton
 {
   svn_client_ctx_t *ctx;
   svn_cl__accept_t accept_which;
-  svn_boolean_t *quit;
-  svn_boolean_t *external_failed;
-  svn_boolean_t *printed_summary;
+  svn_boolean_t quit;
+  svn_boolean_t external_failed;
+  svn_boolean_t printed_summary;
   const char *editor_cmd;
   const char *path_prefix;
   svn_cmdline_prompt_baton_t *pb;
@@ -59,8 +59,8 @@ conflict_walker(void *baton, svn_client_conflict_t *conflict,
 {
   struct conflict_walker_baton *cwb = baton;
 
-  SVN_ERR(svn_cl__resolve_conflict(cwb->quit, cwb->external_failed,
-                                   cwb->printed_summary, conflict,
+  SVN_ERR(svn_cl__resolve_conflict(&cwb->quit, &cwb->external_failed,
+                                   &cwb->printed_summary, conflict,
                                    cwb->accept_which, cwb->editor_cmd,
                                    cwb->path_prefix, cwb->pb,
                                    cwb->conflict_stats,
@@ -76,9 +76,6 @@ svn_cl__walk_conflicts(apr_array_header_t *targets,
                        apr_pool_t *scratch_pool)
 {
   svn_boolean_t had_error = FALSE;
-  svn_boolean_t quit = FALSE;
-  svn_boolean_t external_failed = FALSE;
-  svn_boolean_t printed_summary = FALSE;
   svn_cmdline_prompt_baton_t *pb = apr_palloc(scratch_pool, sizeof(*pb));
   struct conflict_walker_baton cwb = { 0 };
   const char *path_prefix;
@@ -93,9 +90,9 @@ svn_cl__walk_conflicts(apr_array_header_t *targets,
 
   cwb.ctx = ctx;
   cwb.accept_which = opt_state->accept_which;
-  cwb.quit = &quit;
-  cwb.external_failed = &external_failed;
-  cwb.printed_summary = &printed_summary;
+  cwb.quit = FALSE;
+  cwb.external_failed = FALSE;
+  cwb.printed_summary = FALSE;
   cwb.editor_cmd = opt_state->editor_cmd;
   cwb.path_prefix = path_prefix;
   cwb.pb = pb;
@@ -116,12 +113,10 @@ svn_cl__walk_conflicts(apr_array_header_t *targets,
 
       if (opt_state->depth == svn_depth_empty)
         {
-          svn_boolean_t resolved; /*### not needed */
-
           SVN_ERR(svn_client_conflict_get(&conflict, local_abspath, ctx,
                                           iterpool, iterpool));
-          err = svn_cl__resolve_conflict(&quit, &external_failed,
-                                         &printed_summary,
+          err = svn_cl__resolve_conflict(&cwb.quit, &cwb.external_failed,
+                                         &cwb.printed_summary,
                                          conflict, opt_state->accept_which,
                                          opt_state->editor_cmd,
                                          path_prefix, pb, conflict_stats,
