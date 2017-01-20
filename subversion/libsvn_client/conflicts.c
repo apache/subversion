@@ -10285,7 +10285,7 @@ handle_tree_conflict_resolution_failure(const char *local_abspath,
                                         svn_error_t *err,
                                         apr_hash_t *unresolved_tree_conflicts)
 {
-  const char *dup_abspath;
+  const char *tc_abspath;
 
   if (!unresolved_tree_conflicts
       || (err->apr_err != SVN_ERR_WC_OBSTRUCTED_UPDATE
@@ -10293,10 +10293,10 @@ handle_tree_conflict_resolution_failure(const char *local_abspath,
     return svn_error_trace(err); /* Give up. Do not retry resolution later. */
 
   svn_error_clear(err);
-  dup_abspath = apr_pstrdup(apr_hash_pool_get(unresolved_tree_conflicts),
-                            local_abspath);
+  tc_abspath = apr_pstrdup(apr_hash_pool_get(unresolved_tree_conflicts),
+                           local_abspath);
 
-  svn_hash_sets(unresolved_tree_conflicts, dup_abspath, dup_abspath);
+  svn_hash_sets(unresolved_tree_conflicts, tc_abspath, "");
 
   return SVN_NO_ERROR; /* Caller may retry after resolving other conflicts. */
 }
