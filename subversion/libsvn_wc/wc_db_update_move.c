@@ -3319,7 +3319,6 @@ update_locally_added_node(added_node_baton_t *nb,
                           apr_pool_t *scratch_pool)
 {
   update_local_add_baton_t *b = nb->b;
-  const char *local_relpath = nb->local_relpath;
   svn_wc__db_wcroot_t *wcroot = b->wcroot;
   svn_wc__db_t *db = b->db;
   svn_node_kind_t base_kind, working_kind;
@@ -3327,7 +3326,7 @@ update_locally_added_node(added_node_baton_t *nb,
   apr_hash_t *base_props, *working_props;
   apr_array_header_t *base_children, *working_children;
   const char *local_abspath = svn_dirent_join(wcroot->abspath,
-                                              local_relpath,
+                                              nb->local_relpath,
                                               scratch_pool);
 
   if (b->cancel_func)
@@ -3338,9 +3337,9 @@ update_locally_added_node(added_node_baton_t *nb,
 
   /* Compare the tree conflict victim's BASE layer to the working layer. */
   SVN_ERR(get_info(&base_props, &base_checksum, &base_children, &base_kind,
-                   local_relpath, 0, wcroot, scratch_pool, scratch_pool));
+                   nb->local_relpath, 0, wcroot, scratch_pool, scratch_pool));
   SVN_ERR(get_working_info(&working_props, NULL, &working_children,
-                           &working_kind, local_relpath, wcroot,
+                           &working_kind, nb->local_relpath, wcroot,
                            scratch_pool, scratch_pool));
   if (working_kind == svn_node_none)
     {
@@ -3378,7 +3377,7 @@ update_locally_added_node(added_node_baton_t *nb,
                                              scratch_pool, scratch_pool));
 
       if (work_item)
-        SVN_ERR(update_move_list_add(wcroot, local_relpath, db,
+        SVN_ERR(update_move_list_add(wcroot, nb->local_relpath, db,
                                      svn_wc_notify_update_add,
                                      base_kind,
                                      svn_wc_notify_state_inapplicable,
@@ -3478,7 +3477,7 @@ update_locally_added_node(added_node_baton_t *nb,
               child_name = working_only ? working_name : base_name;
             }
 
-          cnb.local_relpath = svn_relpath_join(local_relpath, child_name,
+          cnb.local_relpath = svn_relpath_join(nb->local_relpath, child_name,
                                                iterpool);
 
           SVN_ERR(update_locally_added_node(&cnb, iterpool));
