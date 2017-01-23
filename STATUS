@@ -48,6 +48,15 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1779948
+   Improve error message when copying/moving into unversioned dir.
+   Justification:
+     The current error message is misleading. It says "not a directory"
+     but there is a directory on disk.
+     User complained.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
