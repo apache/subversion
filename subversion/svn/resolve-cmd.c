@@ -65,6 +65,9 @@ conflict_walker(void *baton, svn_client_conflict_t *conflict,
                                    cwb->path_prefix, cwb->pb,
                                    cwb->conflict_stats,
                                    cwb->ctx, scratch_pool));
+  if (cwb->quit)
+    return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+
   return SVN_NO_ERROR;
 }
 
@@ -136,6 +139,11 @@ svn_cl__walk_conflicts(apr_array_header_t *targets,
                * ### being re-arranged during tree conflict resolution. */
               svn_error_clear(err);
               continue;
+            }
+          else if (root->apr_err == SVN_ERR_CANCELLED)
+            {
+              svn_error_clear(err);
+              break;
             }
 
           svn_handle_warning2(stderr, svn_error_root_cause(err), "svn: ");
