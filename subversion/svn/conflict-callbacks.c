@@ -1446,6 +1446,7 @@ build_tree_conflict_options(
   apr_array_header_t *builtin_options;
   apr_size_t nopt;
   int i;
+  int next_unknown_option_code = 1;
   apr_pool_t *iterpool;
 
   if (all_options_are_dumb != NULL)
@@ -1477,7 +1478,18 @@ build_tree_conflict_options(
                                      result_pool,
                                      iterpool));
       if (opt == NULL)
-        continue; /* ### unknown option -- assign a code dynamically? */
+        {
+          /* Unkown option. Assign a dynamic option code. */
+          opt = apr_pcalloc(result_pool, sizeof(*opt));
+          opt->code = apr_psprintf(result_pool, "%d", next_unknown_option_code);
+          next_unknown_option_code++;
+          opt->label = svn_client_conflict_option_get_label(builtin_option,
+                                                            result_pool);
+          opt->long_desc = svn_client_conflict_option_get_description(
+                             builtin_option, result_pool);
+          opt->choice = svn_client_conflict_option_get_id(builtin_option);
+          opt->accept_arg = NULL;
+        }
 
       APR_ARRAY_PUSH(*options, client_option_t *) = opt;
 
