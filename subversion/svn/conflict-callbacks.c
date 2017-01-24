@@ -533,8 +533,8 @@ find_option(const apr_array_header_t *options,
   return NULL;
 }
 
-/* Return a pointer to the option description in OPTIONS matching the
- * conflict option ID CHOICE. @a out will be set to NULL if the
+/* Return a pointer to the client_option_t in OPTIONS matching the ID of
+ * conflict option BUILTIN_OPTION. @a out will be set to NULL if the
  * option was not found. */
 static svn_error_t *
 find_option_by_builtin(client_option_t **out,
