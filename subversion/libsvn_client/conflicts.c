@@ -7652,7 +7652,8 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
                       NULL, NULL, /* conflict versions */
                       FALSE, /* dry run */
                       NULL, NULL, /* diff3_cmd, merge_options */
-                      ancestor_props, propdiffs,
+                      apr_hash_count(ancestor_props) ? ancestor_props : NULL,
+                      propdiffs,
                       NULL, NULL, /* conflict func/baton */
                       NULL, NULL, /* don't allow user to cancel here */
                       scratch_pool);
@@ -8072,7 +8073,8 @@ resolve_local_move_file_merge(svn_client_conflict_option_t *option,
                       NULL, NULL, /* conflict versions */
                       FALSE, /* dry run */
                       NULL, NULL, /* diff3_cmd, merge_options */
-                      ancestor_props, propdiffs,
+                      apr_hash_count(ancestor_props) ? ancestor_props : NULL,
+                      propdiffs,
                       NULL, NULL, /* conflict func/baton */
                       NULL, NULL, /* don't allow user to cancel here */
                       scratch_pool);
