@@ -1842,7 +1842,7 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
   apr_array_header_t *revprops;
   const char *repos_root_url;
   const char *repos_uuid;
-  struct find_deleted_rev_baton b;
+  struct find_deleted_rev_baton b = { 0 };
   const char *victim_abspath;
   svn_error_t *err;
   apr_hash_t *moves_table;
@@ -3896,7 +3896,7 @@ get_incoming_delete_details_for_reverse_addition(
   const char *url;
   const char *corrected_url;
   svn_string_t *author_revprop;
-  struct find_added_rev_baton b;
+  struct find_added_rev_baton b = { 0 };
 
   url = svn_path_url_add_component2(repos_root_url, old_repos_relpath,
                                     scratch_pool);
@@ -4177,7 +4177,7 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
       const char *url;
       const char *corrected_url;
       svn_string_t *author_revprop;
-      struct find_added_rev_baton b;
+      struct find_added_rev_baton b = { 0 };
       svn_ra_session_t *ra_session;
       svn_revnum_t deleted_rev;
       svn_revnum_t head_rev;
@@ -4247,7 +4247,7 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
           const char *url;
           const char *corrected_url;
           svn_string_t *author_revprop;
-          struct find_added_rev_baton b;
+          struct find_added_rev_baton b = { 0 };
           svn_ra_session_t *ra_session;
 
           url = svn_path_url_add_component2(repos_root_url, new_repos_relpath,
@@ -4832,7 +4832,7 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
   svn_ra_session_t *ra_session;
   apr_array_header_t *paths;
   apr_array_header_t *revprops;
-  struct find_modified_rev_baton b;
+  struct find_modified_rev_baton b = { 0 };
 
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
             &old_repos_relpath, &old_rev, &old_node_kind, conflict,
@@ -6640,7 +6640,7 @@ merge_newly_added_dir(const char *added_repos_relpath,
                       apr_pool_t *scratch_pool)
 {
   svn_diff_tree_processor_t *processor;
-  struct merge_newly_added_dir_baton baton;
+  struct merge_newly_added_dir_baton baton = { 0 };
   const svn_diff_tree_processor_t *diff_processor;
   svn_ra_session_t *ra_session;
   const char *corrected_url;
@@ -7037,7 +7037,7 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
     {
       svn_revnum_t base_revision;
       const char *base_repos_relpath;
-      struct find_added_rev_baton b;
+      struct find_added_rev_baton b = { 0 };
 
       /* Find the URL and revision of the directory we have just replaced. */
       err = svn_wc__node_get_base(NULL, &base_revision, &base_repos_relpath,
