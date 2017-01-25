@@ -7847,6 +7847,22 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
                  ctx, scratch_pool, scratch_pool);
   if (err)
     goto unlock_wc;
+
+  if (yca_loc == NULL)
+    {
+      err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                              _("Cannot resolve tree conflict on '%s' "
+                                "(could not find common ancestor of '%s' "
+                                " and '%s')"),
+                              svn_dirent_local_style(local_abspath,
+                                                     scratch_pool),
+                              svn_dirent_local_style(victim_repos_relpath,
+                                                     scratch_pool),
+                              svn_dirent_local_style(moved_to_abspath,
+                                                     scratch_pool));
+      goto unlock_wc;
+    }
+
   yca_opt_rev.kind = svn_opt_revision_number;
   yca_opt_rev.value.number = yca_loc->rev;
 
