@@ -1505,7 +1505,6 @@ find_moves_in_revision_range(struct apr_hash_t **moves_table,
   const char *repos_root_url;
   const char *repos_uuid;
   struct find_moves_baton b = { 0 };
-  svn_error_t *err;
 
   SVN_ERR_ASSERT(start_rev > end_rev);
 
@@ -1535,14 +1534,14 @@ find_moves_in_revision_range(struct apr_hash_t **moves_table,
   SVN_ERR(svn_ra__dup_session(&b.extra_ra_session, ra_session, NULL,
                               scratch_pool, scratch_pool));
 
-  err = svn_ra_get_log2(ra_session, paths, start_rev, end_rev,
-                        0, /* no limit */
-                        TRUE, /* need the changed paths list */
-                        FALSE, /* need to traverse copies */
-                        FALSE, /* no need for merged revisions */
-                        revprops,
-                        find_moves, &b,
-                        scratch_pool);
+  SVN_ERR(svn_ra_get_log2(ra_session, paths, start_rev, end_rev,
+                          0, /* no limit */
+                          TRUE, /* need the changed paths list */
+                          FALSE, /* need to traverse copies */
+                          FALSE, /* no need for merged revisions */
+                          revprops,
+                          find_moves, &b,
+                          scratch_pool));
 
   *moves_table = b.moves_table;
 
