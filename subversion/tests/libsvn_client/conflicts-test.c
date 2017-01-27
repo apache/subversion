@@ -4580,6 +4580,110 @@ test_update_incoming_added_dir_merge2(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* Regression test for chrash fixed in r1780259. */
+static svn_error_t *
+test_cherry_pick_moved_file_with_propdel(const svn_test_opts_t *opts,
+                                          apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  const char *vendor_url;
+  svn_opt_revision_t peg_rev;
+  apr_array_header_t *ranges_to_merge;
+  svn_opt_revision_range_t merge_range;
+  svn_client_ctx_t *ctx;
+  svn_client_conflict_t *conflict;
+  svn_boolean_t tree_conflicted;
+
+  SVN_ERR(svn_test__sandbox_create(b,
+                                   "test_cherry_pick_moved_file_with_propdel",
+                                   opts, pool));
+
+  SVN_ERR(sbox_wc_mkdir(b, "A"));
+  SVN_ERR(sbox_wc_mkdir(b, "A2"));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r1 */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+
+  /* Let A/B/E act as a vendor branch of A2/E; A/B/E/lambda has a property. */
+  SVN_ERR(sbox_wc_mkdir(b, "A/B"));
+  SVN_ERR(sbox_wc_mkdir(b, "A/B/E"));
+  SVN_ERR(sbox_file_write(b, "A/B/E/lambda", "This is the file lambda.\n"));
+  SVN_ERR(sbox_wc_add(b, "A/B/E/lambda"));
+  SVN_ERR(sbox_wc_propset(b, "propname", "propval", "A/B/E/lambda"));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r2 */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+  SVN_ERR(sbox_wc_copy(b, "A/B/E", "A2/E"));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r3 */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+
+  /* Move vendor's E/lambda a level up and delete the property. */
+  SVN_ERR(sbox_wc_move(b, "A/B/E/lambda", "A/B/lambda"));
+  SVN_ERR(sbox_wc_propset(b, "propname", NULL /* propdel */, "A/B/lambda"));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r4 */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+
+  /* Move vendor's lambda to a new subdirectory. */
+  SVN_ERR(sbox_wc_mkdir(b, "A/B/newdir"));
+  SVN_ERR(sbox_wc_move(b, "A/B/lambda", "A/B/newdir/lambda"));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r5 */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+
+  /* Force a cherry-pick merge of A/B@5 to A2/E. */
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  vendor_url = apr_pstrcat(b->pool, b->repos_url, "/A/B", SVN_VA_NULL);
+  peg_rev.kind = svn_opt_revision_number;
+  peg_rev.value.number = 5;
+  merge_range.start.kind = svn_opt_revision_number;
+  merge_range.start.value.number = 4;
+  merge_range.end.kind = svn_opt_revision_number;
+  merge_range.end.value.number = 5;
+  ranges_to_merge = apr_array_make(b->pool, 1,
+                                   sizeof(svn_opt_revision_range_t *));
+  APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = &merge_range;
+  /* This should raise a "local edit vs incoming delete or move" conflict. */
+  SVN_ERR(svn_client_merge_peg5(vendor_url, ranges_to_merge, &peg_rev,
+                                sbox_wc_path(b, "A2/E"), svn_depth_infinity,
+                                TRUE, TRUE, FALSE, FALSE, FALSE, FALSE,
+                                NULL, ctx, b->pool));
+
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A2/E/lambda"),
+                                  ctx, b->pool, b->pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
+                                             conflict, b->pool, b->pool));
+  SVN_TEST_ASSERT(tree_conflicted);
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_move_file_text_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  /* Try to resolve the conflict. This crashed before r1780259 due to the
+   * fact that a non-existent ancestor property was not accounted for. */
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict,
+            svn_client_conflict_option_incoming_move_file_text_merge,
+            ctx, b->pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -4660,6 +4764,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "update incoming add dir merge"),
     SVN_TEST_OPTS_PASS(test_update_incoming_added_dir_merge2,
                        "update incoming add dir merge with obstructions"),
+    SVN_TEST_OPTS_PASS(test_cherry_pick_moved_file_with_propdel,
+                       "cherry-pick with moved file and propdel"),
     SVN_TEST_NULL
   };
 
