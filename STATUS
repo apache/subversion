@@ -57,6 +57,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+* r1706432
+  Fix tests erroring out, if using the --bin option.
+  Justification:
+    Tests should simply work.
+  Votes:
+    +1 (non-binding): luke1410
+
 Veto-blocked changes:
 =====================
 
