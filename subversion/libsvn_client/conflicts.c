@@ -444,9 +444,6 @@ find_moves_in_revision(svn_ra_session_t *ra_session,
   apr_pool_t *iterpool;
   svn_boolean_t related;
   int i;
-  const svn_string_t *author;
-  
-  author = svn_hash_gets(log_entry->revprops, SVN_PROP_REVISION_AUTHOR);
 
   iterpool = svn_pool_create(scratch_pool);
   for (i = 0; i < deleted_paths->nelts; i++)
@@ -482,10 +479,15 @@ find_moves_in_revision(svn_ra_session_t *ra_session,
                                       TRUE, iterpool));
           if (related)
             {
+              const svn_string_t *author;
+              
+              author = svn_hash_gets(log_entry->revprops,
+                                     SVN_PROP_REVISION_AUTHOR);
               /* Remember details of this move. */
               SVN_ERR(add_new_move(&move, deleted_repos_relpath,
                                    copy->copyto_path, copy->copyfrom_rev,
-                                   log_entry->revision, author->data,
+                                   log_entry->revision,
+                                   author ? author->data : _("unknown author"),
                                    moved_paths, ra_session, repos_root_url,
                                    result_pool, iterpool));
 
@@ -633,7 +635,7 @@ find_nested_moves(apr_array_header_t *moves,
                   apr_array_header_t *deleted_paths,
                   apr_hash_t *moved_paths,
                   svn_revnum_t revision,
-                  svn_string_t *author,
+                  const char *author,
                   const char *repos_root_url,
                   const char *repos_uuid,
                   svn_ra_session_t *ra_session,
@@ -702,7 +704,7 @@ find_nested_moves(apr_array_header_t *moves,
               /* Remember details of this move. */
               SVN_ERR(add_new_move(&nested_move, moved_along_repos_relpath,
                                    copy->copyto_path, copy->copyfrom_rev,
-                                   revision, author->data, moved_paths,
+                                   revision, author, moved_paths,
                                    ra_session, repos_root_url,
                                    result_pool, iterpool));
 
@@ -861,7 +863,10 @@ find_deleted_rev(void *baton,
       b->deleted_rev = log_entry->revision;
       author = svn_hash_gets(log_entry->revprops,
                              SVN_PROP_REVISION_AUTHOR);
-      b->deleted_rev_author = apr_pstrdup(b->result_pool, author->data);
+      if (author)
+        b->deleted_rev_author = apr_pstrdup(b->result_pool, author->data);
+      else
+        b->deleted_rev_author = _("unknown author");
           
       b->replacing_node_kind = replacing_node_kind;
 
@@ -1472,14 +1477,18 @@ find_moves(void *baton, svn_log_entry_t *log_entry, apr_pool_t *scratch_pool)
   moves = apr_hash_get(b->moves_table, &log_entry->revision,
                        sizeof(svn_revnum_t));
   if (moves)
-    SVN_ERR(find_nested_moves(moves, copies, deleted_paths,
-                              b->moved_paths, log_entry->revision,
-                              svn_hash_gets(log_entry->revprops,
-                                            SVN_PROP_REVISION_AUTHOR),
-                              b->repos_root_url,
-                              b->repos_uuid,
-                              b->extra_ra_session, b->ctx,
-                              b->result_pool, scratch_pool));
+    {
+      const svn_string_t *author;
+
+      author = svn_hash_gets(log_entry->revprops, SVN_PROP_REVISION_AUTHOR);
+      SVN_ERR(find_nested_moves(moves, copies, deleted_paths,
+                                b->moved_paths, log_entry->revision,
+                                author ? author->data : _("unknown author"),
+                                b->repos_root_url,
+                                b->repos_uuid,
+                                b->extra_ra_session, b->ctx,
+                                b->result_pool, scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -3929,7 +3938,10 @@ get_incoming_delete_details_for_reverse_addition(
   (*details)->deleted_rev = SVN_INVALID_REVNUM;
   (*details)->added_rev = b.added_rev;
   (*details)->repos_relpath = apr_pstrdup(result_pool, b.repos_relpath);
-  (*details)->rev_author = apr_pstrdup(result_pool, author_revprop->data);
+  if (author_revprop)
+    (*details)->rev_author = apr_pstrdup(result_pool, author_revprop->data);
+  else
+    (*details)->rev_author = _("unknown author");
 
   /* Check for replacement. */
   (*details)->replacing_node_kind = svn_node_none;
@@ -4212,9 +4224,11 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
                               &author_revprop, scratch_pool));
       details->repos_relpath = apr_pstrdup(conflict->pool, b.repos_relpath);
       details->added_rev = b.added_rev;
-      details->added_rev_author = apr_pstrdup(conflict->pool,
-                                        author_revprop->data);
-
+      if (author_revprop)
+        details->added_rev_author = apr_pstrdup(conflict->pool,
+                                          author_revprop->data);
+      else
+        details->added_rev_author = _("unknown author");
       details->deleted_rev = SVN_INVALID_REVNUM;
       details->deleted_rev_author = NULL;
 
@@ -4232,8 +4246,11 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
                                       SVN_PROP_REVISION_AUTHOR,
                                       &author_revprop, scratch_pool));
               details->deleted_rev = deleted_rev;
-              details->deleted_rev_author = apr_pstrdup(conflict->pool,
-                                                        author_revprop->data);
+              if (author_revprop)
+                details->deleted_rev_author = apr_pstrdup(conflict->pool,
+                                                          author_revprop->data);
+              else
+                details->deleted_rev_author = _("unknown author");
             }
         }
     }
@@ -4280,9 +4297,11 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
                                   &author_revprop, scratch_pool));
           details->repos_relpath = apr_pstrdup(conflict->pool, b.repos_relpath);
           details->added_rev = b.added_rev;
-          details->added_rev_author = apr_pstrdup(conflict->pool,
-                                                  author_revprop->data);
-
+          if (author_revprop)
+            details->added_rev_author = apr_pstrdup(conflict->pool,
+                                                    author_revprop->data);
+          else
+            details->added_rev_author = _("unknown author");
           details->deleted_rev = SVN_INVALID_REVNUM;
           details->deleted_rev_author = NULL;
         }
@@ -4756,7 +4775,10 @@ find_modified_rev(void *baton,
   details = apr_pcalloc(b->result_pool, sizeof(*details));
   details->rev = log_entry->revision;
   author = svn_hash_gets(log_entry->revprops, SVN_PROP_REVISION_AUTHOR);
-  details->author = apr_pstrdup(b->result_pool, author->data);
+  if (author)
+    details->author = apr_pstrdup(b->result_pool, author->data);
+  else
+    details->author = _("unknown author");
 
   details->text_modified = svn_tristate_unknown;
   details->props_modified = svn_tristate_unknown;
