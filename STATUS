@@ -61,6 +61,8 @@ Candidate changes:
   Fix tests erroring out, if using the --bin option.
   Justification:
     Tests should simply work.
+  Notes:
+    Regression introduced in 1.9.2.
   Votes:
     +1 (non-binding): luke1410
 
