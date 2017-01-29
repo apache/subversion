@@ -577,9 +577,9 @@ map_deleted_path_to_move(const char *deleted_relpath,
                          apr_array_header_t *moves,
                          apr_pool_t *scratch_pool)
 {
-  int i;
   struct repos_move_info *closest_move = NULL;
-  int min_components = 0;
+  apr_size_t min_components = 0;
+  int i;
 
   for (i = 0; i < moves->nelts; i++)
     {
@@ -595,7 +595,7 @@ map_deleted_path_to_move(const char *deleted_relpath,
       if (relpath)
         {
           /* This could be a nested move. Return the path-wise closest move. */
-          int c = svn_path_component_count(relpath);
+          const apr_size_t c = svn_path_component_count(relpath);
           if (c == 0)
              return move;
           else if (min_components == 0 || c < min_components)
