@@ -38,6 +38,7 @@
 #include "repos.h"
 
 #include "private/svn_repos_private.h"
+#include "private/svn_subr_private.h"
 
 
 
@@ -507,6 +508,45 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
                                                  authz_read_baton, pool));
 }
 
+static svn_error_t *
+mergeinfo_receiver(const char *path,
+                   svn_mergeinfo_t mergeinfo,
+                   void *baton,
+                   apr_pool_t *scratch_pool)
+{
+  svn_mergeinfo_catalog_t catalog = baton;
+  apr_pool_t *result_pool = apr_hash_pool_get(catalog);
+  apr_size_t len = strlen(path);
+
+  apr_hash_set(catalog,
+               apr_pstrmemdup(result_pool, path, len),
+               len,
+               svn_mergeinfo_dup(mergeinfo, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
+                           svn_repos_t *repos,
+                           const apr_array_header_t *paths,
+                           svn_revnum_t rev,
+                           svn_mergeinfo_inheritance_t inherit,
+                           svn_boolean_t include_descendants,
+                           svn_repos_authz_func_t authz_read_func,
+                           void *authz_read_baton,
+                           apr_pool_t *pool)
+{
+  svn_mergeinfo_catalog_t result_catalog = svn_hash__make(pool);
+  SVN_ERR(svn_repos_fs_get_mergeinfo2(repos, paths, rev, inherit,
+                                      include_descendants,
+                                      authz_read_func, authz_read_baton,
+                                      mergeinfo_receiver, result_catalog,
+                                      pool));
+  *mergeinfo = result_catalog;
+
+  return SVN_NO_ERROR;
+}
 
 /*** From logs.c ***/
 svn_error_t *

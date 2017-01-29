@@ -2227,10 +2227,18 @@ svn_repos_get_logs(svn_repos_t *repos,
 
 /* Retrieving mergeinfo. */
 
+/** Receives parsed @a mergeinfo for the file system path @a path.
+ *
+ * The user-provided @a baton is being passed through by the retrieval
+ * function and @a scratch_pool will be cleared between invocations.
+ *
+ * @since New in 1.10.
+ */
+typedef svn_fs_mergeinfo_receiver_t svn_repos_mergeinfo_receiver_t;
+
 /**
- * Fetch the mergeinfo for @a paths at @a revision in @a repos, and
- * set @a *catalog to a catalog of this mergeinfo.  @a *catalog will
- * never be @c NULL but may be empty.
+ * For each node found with mergeinfo on it, invoke @a receiver with
+ * the provided @a receiver_baton.
  *
  * The paths in @a paths, and the keys of @a catalog, start with '/'.
  *
@@ -2251,10 +2259,31 @@ svn_repos_get_logs(svn_repos_t *repos,
  * of each path which mergeinfo was requested for (from @a paths).
  * Silently omit unreadable paths from the request for mergeinfo.
  *
- * Use @a pool for all allocations.
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_repos_fs_get_mergeinfo2(svn_repos_t *repos,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t revision,
+                            svn_mergeinfo_inheritance_t inherit,
+                            svn_boolean_t include_descendants,
+                            svn_repos_authz_func_t authz_read_func,
+                            void *authz_read_baton,
+                            svn_repos_mergeinfo_receiver_t receiver,
+                            void *receiver_baton,
+                            apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_repos_fs_get_mergeinfo2(), but all mergeinfo is being collected
+ * and returned in @a *catalog.  It will never be @c NULL, but may be empty.
  *
  * @since New in 1.5.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
                            svn_repos_t *repos,
