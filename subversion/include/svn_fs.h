@@ -2166,6 +2166,8 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  *
  * The user-provided @a baton is being passed through by the retrieval
  * function and @a scratch_pool will be cleared between invocations.
+ *
+ * @since New in 1.10.
  */
 typedef svn_error_t *
 (*svn_fs_mergeinfo_receiver_t)(const char *path,
