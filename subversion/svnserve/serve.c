@@ -2122,6 +2122,61 @@ diff(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+/* Baton type to be used with mergeinfo_receiver. */
+typedef struct mergeinfo_receiver_baton_t
+{
+  /* Send the response over this connection. */
+  svn_ra_svn_conn_t *conn;
+
+  /* Start path of the query; report paths relative to this one. */
+  const char *fs_path;
+
+  /* Did we already send the opening sequence? */
+  svn_boolean_t starting_tuple_sent;
+} mergeinfo_receiver_baton_t;
+
+/* Utility method sending the start of the "get m/i" response once
+   over BATON->CONN. */
+static svn_error_t *
+send_mergeinfo_starting_tuple(mergeinfo_receiver_baton_t *baton,
+                              apr_pool_t *scratch_pool)
+{
+  if (baton->starting_tuple_sent)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_ra_svn__write_tuple(baton->conn, scratch_pool,
+                                  "w((!", "success"));
+  baton->starting_tuple_sent = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_repos_mergeinfo_receiver_t, sending the MERGEINFO
+ * out over the connection in the mergeinfo_receiver_baton_t * BATON. */
+static svn_error_t *
+mergeinfo_receiver(const char *path,
+                   svn_mergeinfo_t mergeinfo,
+                   void *baton,
+                   apr_pool_t *scratch_pool)
+{
+  mergeinfo_receiver_baton_t *b = baton;
+  svn_string_t *mergeinfo_string;
+
+  /* Delay starting the response until we checked that the initial
+     request went through.  We are at that point now b/c we've got
+     the first results in. */
+  SVN_ERR(send_mergeinfo_starting_tuple(b, scratch_pool));
+
+  /* Adjust the path info and send the m/i. */
+  path = svn_fspath__skip_ancestor(b->fs_path, path);
+  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string, mergeinfo,
+                                  scratch_pool));
+  SVN_ERR(svn_ra_svn__write_tuple(b->conn, scratch_pool, "cs", path,
+                                  mergeinfo_string));
+
+  return SVN_NO_ERROR;
+}
+
 /* Regardless of whether a client's capabilities indicate an
    understanding of this command (by way of SVN_RA_SVN_CAP_MERGEINFO),
    we provide a response.
@@ -2138,17 +2193,19 @@ get_mergeinfo(svn_ra_svn_conn_t *conn,
   svn_revnum_t rev;
   svn_ra_svn__list_t *paths;
   apr_array_header_t *canonical_paths;
-  svn_mergeinfo_catalog_t mergeinfo;
   int i;
-  apr_hash_index_t *hi;
   const char *inherit_word;
   svn_mergeinfo_inheritance_t inherit;
   svn_boolean_t include_descendants;
-  apr_pool_t *iterpool;
   authz_baton_t ab;
+  mergeinfo_receiver_baton_t mergeinfo_baton;
 
   ab.server = b;
   ab.conn = conn;
+
+  mergeinfo_baton.conn = conn;
+  mergeinfo_baton.fs_path = b->repository->fs_path->data;
+  mergeinfo_baton.starting_tuple_sent = FALSE;
 
   SVN_ERR(svn_ra_svn__parse_tuple(params, "l(?r)wb", &paths, &rev,
                                   &inherit_word, &include_descendants));
@@ -2175,29 +2232,19 @@ get_mergeinfo(svn_ra_svn_conn_t *conn,
                                              pool)));
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(svn_repos_fs_get_mergeinfo(&mergeinfo, b->repository->repos,
-                                         canonical_paths, rev,
-                                         inherit,
-                                         include_descendants,
-                                         authz_check_access_cb_func(b), &ab,
-                                         pool));
-  SVN_ERR(svn_mergeinfo__remove_prefix_from_catalog(&mergeinfo, mergeinfo,
-                                      b->repository->fs_path->data, pool));
-  SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w((!", "success"));
-  iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
-    {
-      const char *key = apr_hash_this_key(hi);
-      svn_mergeinfo_t value = apr_hash_this_val(hi);
-      svn_string_t *mergeinfo_string;
 
-      svn_pool_clear(iterpool);
+  SVN_CMD_ERR(svn_repos_fs_get_mergeinfo2(b->repository->repos,
+                                          canonical_paths, rev,
+                                          inherit,
+                                          include_descendants,
+                                          authz_check_access_cb_func(b), &ab,
+                                          mergeinfo_receiver,
+                                          &mergeinfo_baton,
+                                          pool));
 
-      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string, value, iterpool));
-      SVN_ERR(svn_ra_svn__write_tuple(conn, iterpool, "cs", key,
-                                      mergeinfo_string));
-    }
-  svn_pool_destroy(iterpool);
+  /* We might not have sent anything
+     => ensure to begin the response in any case. */
+  SVN_ERR(send_mergeinfo_starting_tuple(&mergeinfo_baton, pool));
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!))"));
 
   return SVN_NO_ERROR;
