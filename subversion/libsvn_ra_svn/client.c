@@ -632,8 +632,8 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   svn_ra_svn__parent_t *parent;
 
   parent = apr_pcalloc(pool, sizeof(*parent));
-  parent->url = svn_stringbuf_create(url, pool);
-  parent->server_base_url = svn_stringbuf_create(url, pool);
+  parent->client_url = svn_stringbuf_create(url, pool);
+  parent->server_url = svn_stringbuf_create(url, pool);
   parent->path = svn_stringbuf_create_empty(pool);
 
   sess = apr_palloc(pool, sizeof(*sess));
@@ -905,7 +905,7 @@ reparent_server(svn_ra_session_t *ra_session,
   if (! err)
     {
       SVN_ERR(svn_ra_svn__read_cmd_response(conn, scratch_pool, ""));
-      svn_stringbuf_set(parent->server_base_url, url);
+      svn_stringbuf_set(parent->server_url, url);
       return SVN_NO_ERROR;
     }
   else if (err->apr_err != SVN_ERR_RA_SVN_UNKNOWN_CMD)
@@ -948,11 +948,12 @@ ensure_exact_server_parent(svn_ra_session_t *ra_session,
   /* During e.g. a checkout operation, many requests will be sent for the
      same URL that was used to create the session.  So, both sides are
      often already in sync. */
-  if (svn_stringbuf_compare(parent->url, parent->server_base_url))
+  if (svn_stringbuf_compare(parent->client_url, parent->server_url))
     return SVN_NO_ERROR;
 
   /* Actually reparent the server to the session URL. */
-  SVN_ERR(reparent_server(ra_session, parent->url->data, scratch_pool));
+  SVN_ERR(reparent_server(ra_session, parent->client_url->data,
+                          scratch_pool));
   svn_stringbuf_setempty(parent->path);
 
   return SVN_NO_ERROR;
@@ -1033,7 +1034,7 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
 
   /* Eliminate reparent requests if they are to a sub-path of the
      server's current parent path. */
-  path = svn_uri_skip_ancestor(parent->server_base_url->data, url, pool);
+  path = svn_uri_skip_ancestor(parent->server_url->data, url, pool);
   if (!path)
     {
       /* Send the request to the server.
@@ -1053,7 +1054,7 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
 
   /* Update the local PARENT information.
      PARENT.SERVER_BASE_URL is already up-to-date. */
-  svn_stringbuf_set(parent->url, url);
+  svn_stringbuf_set(parent->client_url, url);
   if (path)
     svn_stringbuf_set(parent->path, path);
   else
@@ -1069,7 +1070,8 @@ static svn_error_t *ra_svn_get_session_url(svn_ra_session_t *session,
   svn_ra_svn__session_baton_t *sess = session->priv;
   svn_ra_svn__parent_t *parent = sess->parent;
 
-  *url = apr_pstrmemdup(pool, parent->url->data, parent->url->len);
+  *url = apr_pstrmemdup(pool, parent->client_url->data,
+                        parent->client_url->len);
 
   return SVN_NO_ERROR;
 }
@@ -2854,7 +2856,8 @@ static svn_error_t *ra_svn_get_locks(svn_ra_session_t *session,
   int i;
 
   /* Figure out the repository abspath from PATH. */
-  full_url = svn_path_url_add_component2(sess->parent->url->data, path, pool);
+  full_url = svn_path_url_add_component2(sess->parent->client_url->data,
+                                         path, pool);
   SVN_ERR(path_relative_to_root(session, &abs_path, full_url, pool));
   abs_path = svn_fspath__canonicalize(abs_path, pool);
 
