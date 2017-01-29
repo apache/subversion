@@ -2162,11 +2162,21 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
                     const char *path,
                     apr_pool_t *pool);
 
+/** Receives parsed @a mergeinfo for the file system path @a path.
+ *
+ * The user-provided @a baton is being passed through by the retrieval
+ * function and @a scratch_pool will be cleared between invocations.
+ */
+typedef svn_error_t *
+(*svn_fs_mergeinfo_receiver_t)(const char *path,
+                               svn_mergeinfo_t mergeinfo,
+                               void *baton,
+                               apr_pool_t *scratch_pool);
 
 /** Retrieve mergeinfo for multiple nodes.
  *
- * @a *catalog is a catalog for @a paths.  It will never be @c NULL,
- * but may be empty.
+ * For each node found with mergeinfo on it, invoke @a receiver with
+ * the provided @a baton.
  *
  * @a root is revision root to use when looking up paths.
  *
@@ -2196,8 +2206,27 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * Allocate @a *catalog in result_pool.  Do any necessary temporary
  * allocations in @a scratch_pool.
  *
- * @since New in 1.8.
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_fs_get_mergeinfo3(svn_fs_root_t *root,
+                      const apr_array_header_t *paths,
+                      svn_mergeinfo_inheritance_t inherit,
+                      svn_boolean_t include_descendants,
+                      svn_boolean_t adjust_inherited_mergeinfo,
+                      svn_fs_mergeinfo_receiver_t receiver,
+                      void *baton,
+                      apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_fs_get_mergeinfo3(), but all mergeinfo is being collected
+ * and returned in @a *catalog.  It will never be @c NULL, but may be empty.
+ *
+ * @since New in 1.8.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
                       svn_fs_root_t *root,

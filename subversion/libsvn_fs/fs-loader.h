@@ -419,13 +419,13 @@ typedef struct root_vtable_t
                         const char *ancestor_path,
                         apr_pool_t *pool);
   /* Mergeinfo. */
-  svn_error_t *(*get_mergeinfo)(svn_mergeinfo_catalog_t *catalog,
-                                svn_fs_root_t *root,
+  svn_error_t *(*get_mergeinfo)(svn_fs_root_t *root,
                                 const apr_array_header_t *paths,
                                 svn_mergeinfo_inheritance_t inherit,
                                 svn_boolean_t include_descendants,
                                 svn_boolean_t adjust_inherited_mergeinfo,
-                                apr_pool_t *result_pool,
+                                svn_fs_mergeinfo_receiver_t receiver,
+                                void *baton,
                                 apr_pool_t *scratch_pool);
 } root_vtable_t;
 

@@ -28,6 +28,7 @@
 
 #include <apr_md5.h>
 #include "svn_fs.h"
+#include "private/svn_subr_private.h"
 
 
 /*** From fs-loader.c ***/
@@ -128,6 +129,45 @@ svn_fs_node_history(svn_fs_history_t **history_p, svn_fs_root_t *root,
 {
   return svn_error_trace(svn_fs_node_history2(history_p, root, path,
                                               pool, pool));
+}
+
+static svn_error_t *
+mergeinfo_receiver(const char *path,
+                   svn_mergeinfo_t mergeinfo,
+                   void *baton,
+                   apr_pool_t *scratch_pool)
+{
+  svn_mergeinfo_catalog_t catalog = baton;
+  apr_pool_t *result_pool = apr_hash_pool_get(catalog);
+  apr_size_t len = strlen(path);
+
+  apr_hash_set(catalog,
+               apr_pstrmemdup(result_pool, path, len),
+               len,
+               svn_mergeinfo_dup(mergeinfo, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
+                      svn_fs_root_t *root,
+                      const apr_array_header_t *paths,
+                      svn_mergeinfo_inheritance_t inherit,
+                      svn_boolean_t include_descendants,
+                      svn_boolean_t adjust_inherited_mergeinfo,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  svn_mergeinfo_catalog_t result_catalog = svn_hash__make(result_pool);
+  SVN_ERR(svn_fs_get_mergeinfo3(root, paths, inherit,
+                                include_descendants,
+                                adjust_inherited_mergeinfo,
+                                mergeinfo_receiver, result_catalog,
+                                scratch_pool));
+  *catalog = result_catalog;
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
