@@ -901,25 +901,26 @@ svn_repos_fs_get_locks2(apr_hash_t **locks,
 
 
 svn_error_t *
-svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
-                           svn_repos_t *repos,
-                           const apr_array_header_t *paths,
-                           svn_revnum_t rev,
-                           svn_mergeinfo_inheritance_t inherit,
-                           svn_boolean_t include_descendants,
-                           svn_repos_authz_func_t authz_read_func,
-                           void *authz_read_baton,
-                           apr_pool_t *pool)
+svn_repos_fs_get_mergeinfo2(svn_repos_t *repos,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t rev,
+                            svn_mergeinfo_inheritance_t inherit,
+                            svn_boolean_t include_descendants,
+                            svn_repos_authz_func_t authz_read_func,
+                            void *authz_read_baton,
+                            svn_repos_mergeinfo_receiver_t receiver,
+                            void *receiver_baton,
+                            apr_pool_t *scratch_pool)
 {
   /* Here we cast away 'const', but won't try to write through this pointer
    * without first allocating a new array. */
   apr_array_header_t *readable_paths = (apr_array_header_t *) paths;
   svn_fs_root_t *root;
-  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
   if (!SVN_IS_VALID_REVNUM(rev))
-    SVN_ERR(svn_fs_youngest_rev(&rev, repos->fs, pool));
-  SVN_ERR(svn_fs_revision_root(&root, repos->fs, rev, pool));
+    SVN_ERR(svn_fs_youngest_rev(&rev, repos->fs, scratch_pool));
+  SVN_ERR(svn_fs_revision_root(&root, repos->fs, rev, scratch_pool));
 
   /* Filter out unreadable paths before divining merge tracking info. */
   if (authz_read_func)
@@ -940,7 +941,7 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
               /* Requested paths differ from readable paths.  Fork
                  list of readable paths from requested paths. */
               int j;
-              readable_paths = apr_array_make(pool, paths->nelts - 1,
+              readable_paths = apr_array_make(scratch_pool, paths->nelts - 1,
                                               sizeof(char *));
               for (j = 0; j < i; j++)
                 {
@@ -957,10 +958,10 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *mergeinfo,
      the change itself. */
   /* ### TODO(reint): ... but how about descendant merged-to paths? */
   if (readable_paths->nelts > 0)
-    SVN_ERR(svn_fs_get_mergeinfo2(mergeinfo, root, readable_paths, inherit,
-                                  include_descendants, TRUE, pool, pool));
-  else
-    *mergeinfo = apr_hash_make(pool);
+    SVN_ERR(svn_fs_get_mergeinfo3(root, readable_paths, inherit,
+                                  include_descendants, TRUE,
+                                  receiver, receiver_baton,
+                                  scratch_pool));
 
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
