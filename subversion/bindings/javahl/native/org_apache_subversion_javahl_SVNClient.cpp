@@ -313,8 +313,9 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_logMessages
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jranges, jboolean jstopOnCopy, jboolean jdisoverPaths,
- jboolean jincludeMergedRevisions, jobject jrevProps, jlong jlimit,
- jobject jlogMessageCallback)
+ jboolean jincludeMergedRevisions,
+ jobject jrevProps, jboolean jallRevProps,
+ jlong jlimit, jobject jlogMessageCallback)
 {
   JNIEntry(SVNClient, logMessages);
 
@@ -366,7 +367,8 @@ Java_org_apache_subversion_javahl_SVNClient_logMessages
   cl->logMessages(path, pegRevision, revisionRanges,
                   jstopOnCopy ? true: false, jdisoverPaths ? true : false,
                   jincludeMergedRevisions ? true : false,
-                  revProps, int(jlimit), &callback);
+                  revProps, jallRevProps ? true : false,
+                  int(jlimit), &callback);
 }
 
 JNIEXPORT jlong JNICALL

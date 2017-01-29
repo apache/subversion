@@ -265,7 +265,8 @@ rev_range_vector_to_apr_array(std::vector<RevisionRange> &revRanges,
 void SVNClient::logMessages(const char *path, Revision &pegRevision,
                             std::vector<RevisionRange> &logRanges,
                             bool stopOnCopy, bool discoverPaths,
-                            bool includeMergedRevisions, StringArray &revProps,
+                            bool includeMergedRevisions,
+                            StringArray &revProps, bool allRevProps,
                             int limit, LogMessageCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -285,10 +286,13 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     if (JNIUtil::isExceptionThrown())
         return;
 
+    const apr_array_header_t *revprops = NULL;
+    if (!allRevProps)
+      revprops = revProps.array(subPool);
+
     SVN_JNI_ERR(svn_client_log5(targets, pegRevision.revision(), ranges,
                                 limit, discoverPaths, stopOnCopy,
-                                includeMergedRevisions,
-                                revProps.array(subPool),
+                                includeMergedRevisions, revprops,
                                 LogMessageCallback::callback, callback, ctx,
                                 subPool.getPool()), );
 }

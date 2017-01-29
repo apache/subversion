@@ -4193,10 +4193,11 @@ public class BasicTests extends SVNTests
         Set<String> revProps = new HashSet<String>(2);
         revProps.add("kfogel");
         revProps.add("cmpilato");
+        // Testing variant with allRevProps = false
         client.logMessages(thisTest.getWCPath(), Revision.getInstance(2),
                 toRevisionRange(Revision.getInstance(2),
                                 Revision.getInstance(2)),
-                false, false, false, revProps, 0,
+                false, false, false, revProps, false, 0,
                 new LogMessageCallback () {
                     public void singleMessage(Set<ChangePath> changedPaths,
                                               long revision,
@@ -4671,13 +4672,10 @@ public class BasicTests extends SVNTests
         }
 
         MyLogMessageCallback callback = new MyLogMessageCallback();
-        Set<String> revProps = new HashSet<String>();
-        revProps.add("svn:log");
-        revProps.add("svn:date");
-        revProps.add("svn:author");
+        // Testing variant with allRevProps = true
         client.logMessages(path, pegRevision, revisionRanges, stopOnCopy,
-                           discoverPath, includeMergedRevisions, revProps,
-                           limit, callback);
+                           discoverPath, includeMergedRevisions, null,
+                           true, limit, callback);
         return callback.getMessages();
     }
 
