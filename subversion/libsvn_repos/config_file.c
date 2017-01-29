@@ -38,7 +38,7 @@
 
 
 
-typedef struct config_access_t
+struct config_access_t
 {
   /* The last repository that we found the requested URL in.  May be NULL. */
   svn_repos_t *repos;
@@ -47,7 +47,7 @@ typedef struct config_access_t
    * All objects with the lifetime of this access object will be allocated
    * from this pool. */
   apr_pool_t *pool;
-} config_access_t;
+};
 
 
 
