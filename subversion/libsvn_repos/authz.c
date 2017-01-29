@@ -126,8 +126,8 @@ combine_right_limits(limited_rights_t *target,
 /* All authz instances currently in use as well as all filtered authz
  * instances in use will be cached here.
  * Both caches will be instantiated at most once. */
-svn_object_pool__t *authz_pool = NULL;
-svn_object_pool__t *filtered_pool = NULL;
+static svn_object_pool__t *authz_pool = NULL;
+static svn_object_pool__t *filtered_pool = NULL;
 static svn_atomic_t authz_pool_initialized = FALSE;
 
 /* Implements svn_atomic__err_init_func_t. */
