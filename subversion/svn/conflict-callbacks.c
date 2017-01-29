@@ -731,7 +731,7 @@ build_text_conflict_options(apr_array_header_t **options,
 {
   const client_option_t *o;
   apr_array_header_t *builtin_options;
-  apr_size_t nopt;
+  int nopt;
   int i;
   apr_pool_t *iterpool;
 
@@ -1192,7 +1192,7 @@ build_prop_conflict_options(apr_array_header_t **options,
 {
   const client_option_t *o;
   apr_array_header_t *builtin_options;
-  apr_size_t nopt;
+  int nopt;
   int i;
   apr_pool_t *iterpool;
 
@@ -1444,7 +1444,7 @@ build_tree_conflict_options(
 {
   const client_option_t *o;
   apr_array_header_t *builtin_options;
-  apr_size_t nopt;
+  int nopt;
   int i;
   int next_unknown_option_code = 1;
   apr_pool_t *iterpool;
@@ -1638,7 +1638,8 @@ prompt_move_target_path(int *preferred_move_target_idx,
 
   svn_pool_destroy(iterpool);
 
-  *preferred_move_target_idx = (idx - 1);
+  SVN_ERR_ASSERT((idx - 1) == (int)(idx - 1));
+  *preferred_move_target_idx = (int)(idx - 1);
   return SVN_NO_ERROR;
 }
 
