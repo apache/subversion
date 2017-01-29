@@ -241,10 +241,11 @@ public class ExceptionTests extends SVNTests
         {
             List<RevisionRange> ranges = new ArrayList<RevisionRange>(1);
             ranges.add(new RevisionRange(null, null));
+            // Testing variant with allRevProps = false
             client.logMessages(thisTest.getWorkingCopy() + "/iota",
                                Revision.getInstance(1), ranges,
                                false, false, false,
-                               null, 2,
+                               null, false, 2,
                                new LogMessageCallback()
                                {
                                     public void singleMessage(

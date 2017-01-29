@@ -157,12 +157,24 @@ public class SVNClient implements ISVNClient
 
     public native void setTunnelAgent(TunnelAgent tunnelAgent);
 
+    @Deprecated
+    public void logMessages(String path, Revision pegRevision,
+                            List<RevisionRange> ranges, boolean stopOnCopy,
+                            boolean discoverPath, boolean includeMergedRevisions,
+                            Set<String> revProps, long limit,
+                            LogMessageCallback callback)
+            throws ClientException
+    {
+        logMessages(path, pegRevision, ranges, stopOnCopy, discoverPath,
+                    includeMergedRevisions, revProps, false, limit, callback);
+    }
+
     public native void logMessages(String path, Revision pegRevision,
                                    List<RevisionRange> revisionRanges,
                                    boolean stopOnCopy, boolean discoverPath,
                                    boolean includeMergedRevisions,
-                                   Set<String> revProps, long limit,
-                                   LogMessageCallback callback)
+                                   Set<String> revProps, boolean allRevProps,
+                                   long limit, LogMessageCallback callback)
             throws ClientException;
 
     public native long checkout(String moduleName, String destPath,

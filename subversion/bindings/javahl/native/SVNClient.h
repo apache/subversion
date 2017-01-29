@@ -172,7 +172,7 @@ class SVNClient :public SVNBase
   void logMessages(const char *path, Revision &pegRevision,
                    std::vector<RevisionRange> &ranges, bool stopOnCopy,
                    bool discoverPaths, bool includeMergedRevisions,
-                   StringArray &revProps,
+                   StringArray &revProps, bool allRevProps,
                    int limit, LogMessageCallback *callback);
   jobject getVersionExtended(bool verbose);
   jstring getAdminDirectoryName();

@@ -180,6 +180,21 @@ public interface ISVNClient
 
     /**
      * Retrieve the log messages for an item.
+     * <p>
+     * Behaves like the 1.10 version with <code>allRevProps = false</code>
+     * @deprecated
+     */
+    @Deprecated
+    void logMessages(String path, Revision pegRevision,
+                     List<RevisionRange> ranges, boolean stopOnCopy,
+                     boolean discoverPath, boolean includeMergedRevisions,
+                     Set<String> revProps, long limit,
+                     LogMessageCallback callback)
+            throws ClientException;
+
+
+    /**
+     * Retrieve the log messages for an item.
      * @param path          path or url to get the log message for.
      * @param pegRevision   revision to interpret path
      * @param ranges        an array of revision ranges to show
@@ -189,15 +204,19 @@ public interface ISVNClient
      * @param includeMergedRevisions include log messages for revisions which
      *                               were merged.
      * @param revProps      the revprops to retrieve
+     * @param allRevProps   if <code>true</code>, ignore the
+     *                      <code>revProps</code> parameter and retrieve all
+     *                      revision properties
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @param callback      the object to receive the log messages
+     * @since 1.10
      */
     void logMessages(String path, Revision pegRevision,
                      List<RevisionRange> ranges, boolean stopOnCopy,
                      boolean discoverPath, boolean includeMergedRevisions,
-                     Set<String> revProps, long limit,
-                     LogMessageCallback callback)
+                     Set<String> revProps, boolean allRevProps,
+                     long limit, LogMessageCallback callback)
             throws ClientException;
 
     /**
