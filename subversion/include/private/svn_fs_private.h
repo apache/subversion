@@ -183,7 +183,7 @@ svn_fs__editor_commit(svn_revnum_t *revision,
  *
  * If there is no mergeinfo, set @a *mergeinfo to NULL.
  *
- * See svn_fs_get_mergeinfo2() but for the meanings of @a inherit and
+ * See svn_fs_get_mergeinfo3() but for the meanings of @a inherit and
  * @a adjust_inheritable_mergeinfo and other details.
  */
 svn_error_t *

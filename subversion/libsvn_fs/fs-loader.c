@@ -1393,6 +1393,26 @@ svn_fs_get_mergeinfo3(svn_fs_root_t *root,
     receiver, baton, scratch_pool));
 }
 
+/* Baton type to be used with mergeinfo_receiver().  It provides some of
+ * the parameters passed to svn_fs__get_mergeinfo_for_path. */
+typedef struct mergeinfo_receiver_baton_t
+{
+  svn_mergeinfo_t *mergeinfo;
+  apr_pool_t *result_pool;
+} mergeinfo_receiver_baton_t;
+
+static svn_error_t *
+mergeinfo_receiver(const char *path,
+                   svn_mergeinfo_t mergeinfo,
+                   void *baton,
+                   apr_pool_t *scratch_pool)
+{
+  mergeinfo_receiver_baton_t *b = baton;
+  *b->mergeinfo = svn_mergeinfo_dup(mergeinfo, b->result_pool);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs__get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
                                svn_fs_root_t *root,
@@ -1404,15 +1424,19 @@ svn_fs__get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
 {
   apr_array_header_t *paths
     = apr_array_make(scratch_pool, 1, sizeof(const char *));
-  svn_mergeinfo_catalog_t catalog;
+
+  mergeinfo_receiver_baton_t baton;
+  baton.mergeinfo = mergeinfo;
+  baton.result_pool = result_pool;
 
   APR_ARRAY_PUSH(paths, const char *) = path;
 
-  SVN_ERR(svn_fs_get_mergeinfo2(&catalog, root, paths,
+  *mergeinfo = NULL;
+  SVN_ERR(svn_fs_get_mergeinfo3(root, paths,
                                 inherit, FALSE /*include_descendants*/,
                                 adjust_inherited_mergeinfo,
-                                result_pool, scratch_pool));
-  *mergeinfo = svn_hash_gets(catalog, path);
+                                mergeinfo_receiver, &baton,
+                                scratch_pool));
 
   return SVN_NO_ERROR;
 }
