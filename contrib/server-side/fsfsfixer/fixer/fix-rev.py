@@ -30,7 +30,7 @@ fixed_ids = {}
 fixed_checksums = {}
 
 # Youngest FSFS format we know how to handle.
-MAX_FSFS_FORMAT = 5
+MAX_FSFS_FORMAT = 6
 
 # ----------------------------------------------------------------------
 # Functions
