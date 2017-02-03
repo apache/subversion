@@ -97,7 +97,7 @@ SQLITE_VER	= 3160200
 LIBMAGIC_VER	= 5.28
 RUBY_VER	= 2.1.10
 BZ2_VER	= 1.0.6
-PYTHON_VER	= 2.7.8
+PYTHON_VER	= 2.7.13
 JUNIT_VER	= 4.10
 GETTEXT_VER	= 0.18.3.1
 
@@ -125,7 +125,7 @@ SHA256_${SQLITE_DIST} = 65cc0c3e9366f50c0679c5ccd31432cea894bc4a3e8947dabab88c86
 SHA256_${LIBMAGIC_DIST} = 0ecb5e146b8655d1fa84159a847ee619fc102575205a0ff9c6cc60fc5ee2e012
 SHA256_${RUBY_DIST} = fb2e454d7a5e5a39eb54db0ec666f53eeb6edc593d1d2b970ae4d150b831dd20
 SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
-SHA256_${PYTHON_DIST} = 74d70b914da4487aa1d97222b29e9554d042f825f26cb2b93abd20fdda56b557
+SHA256_${PYTHON_DIST} = a4f05a0720ce0fd92626f0278b6b433eee9a6173ddf2bced7957dfb599a5ece1
 SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
 SHA256_${GETTEXT_DIST} = 0d8f9a33531b77776b3dc473e7940019ca19bfca5b4c06db6e96065eeb07245d
 
@@ -1190,9 +1190,14 @@ python-clean:
 $(DISTDIR)/$(PYTHON_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(PYTHON_URL)
 
+# https://bugs.python.org/issue12560
+$(DISTDIR)/python-issue12560.patch:
+	cd $(DISTDIR) && $(FETCH_CMD) -O "$@" \
+		https://hg.python.org/cpython/raw-rev/32cc37a89b58
+	
 # retrieve python
 #
-$(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
+$(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST) $(DISTDIR)/python-issue12560.patch
 	$(call do_check_sha256,$(PYTHON_DIST))
 	[ -d $(PYTHON_OBJDIR) ] || mkdir -p $(PYTHON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(PYTHON_DIST)
@@ -1206,16 +1211,7 @@ $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
 		> $(PYTHON_SRCDIR)/setup.py.patched
 	mv $(PYTHON_SRCDIR)/setup.py.patched $(PYTHON_SRCDIR)/setup.py
 	chmod +x $(PYTHON_SRCDIR)/setup.py
-	# Fixes shared library linking on OpenBSD
-	# http://bugs.python.org/issue12560
-	# Also fix compilation error on OpenBSD 5.0 and later (undefined
-	# reference to 'lstat' -- already fixed in hg.python.org/cpython).
-	sed -e '4930s#NetBSD\*|#NetBSD*|OpenBSD*|#' \
-	 	-e 's#OpenBSD/4\.\[789\]#OpenBSD/*#' \
-		< $(PYTHON_SRCDIR)/configure \
-		> $(PYTHON_SRCDIR)/configure.patched
-	mv $(PYTHON_SRCDIR)/configure.patched $(PYTHON_SRCDIR)/configure
-	chmod +x $(PYTHON_SRCDIR)/configure
+	cd $(PYTHON_SRCDIR) && patch -p1 < $(DISTDIR)/python-issue12560.patch
 	touch $@
 
 # configure python
