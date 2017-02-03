@@ -821,7 +821,8 @@ serf-clean:
 $(SERF_OBJDIR)/.retrieved:
 	[ -d $(SERF_OBJDIR) ] || mkdir -p $(SERF_OBJDIR)
 	if [ ! -d $(SERF_SRCDIR) ]; then \
-		svn export $(SERF_URL) $(SERF_SRCDIR); \
+		svn co $(SERF_URL) $(SERF_SRCDIR); \
+		svn merge ^/serf/branches/1.3.x-sslbuild@1781542 $(SERF_SRCDIR); \
 	fi
 	touch $@
 
