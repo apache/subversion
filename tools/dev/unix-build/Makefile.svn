@@ -72,7 +72,7 @@ APR_VER		= 1.5.1
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.14
 APR_UTIL_VER	= 1.5.3
-HTTPD_VER	= 2.2.29
+HTTPD_VER	= 2.2.32
 NEON_VER	= 0.30.0
 SERF_VER	= 1.3.8
 SERF_OLD_VER	= 0.3.1
@@ -102,7 +102,7 @@ GETTEXT_DIST	= gettext-$(GETTEXT_VER).tar.gz
 SHA256_${BDB_DIST} = f14fd96dd38915a1d63dcb94a63fbb8092334ceba6b5060760427096f631263e
 SHA256_${APR_ICONV_DIST} = 19381959d50c4a5f3b9c84d594a5f9ffb3809786919b3058281f4c87e1f4b245
 SHA256_${GNU_ICONV_DIST} = 72b24ded17d687193c3366d0ebe7cde1e6b18f0df8c55438ac95be39e8a30613
-SHA256_${HTTPD_DIST} = cec2878884b758b0d159a1385b2667a2ae0ca21b0bc7bcc8a9a41b5cfa5452ff
+SHA256_${HTTPD_DIST} = b6e1528779f99c301d6438d89ae892a311619b43a39f16297f9eabd4a8d16cb8
 SHA256_${NEON_DIST} = 2962cfcb5d30f3272e3d2fa0e473434419770a3801afe3d46e5d1650787990c2
 SHA256_${CYRUS_SASL_DIST} = 418c16e6240a4f9b637cbe3d62937b9675627bad27c622191d47de8686fe24fe
 SHA256_${SQLITE_DIST} = 98c33abe4106e508e73fda648b2657ac9e969fe24695f543dcde68cc71f3091b
@@ -597,7 +597,8 @@ httpd-reset:
 httpd-clean:
 	-(cd $(HTTPD_OBJDIR) && env MAKEFLAGS= make clean)
 	-rm ${HTTPD_OBJDIR}/chil-engine.diff
-	-rm ${HTTPD_OBJDIR}/ssl3.diff
+	-rm ${HTTPD_OBJDIR}/ssl-set-state.diff
+	-rm ${HTTPD_OBJDIR}/acinclude.diff
 
 # fetch distfile for httpd
 $(DISTDIR)/$(HTTPD_DIST):
@@ -621,31 +622,46 @@ $(HTTPD_OBJDIR)/chil-engine.diff:
 	echo >>$@.tmp '             ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,'
 	mv -f $@.tmp $@
 
-$(HTTPD_OBJDIR)/ssl3.diff:
+$(HTTPD_OBJDIR)/ssl-set-state.diff:
 	mkdir -p $(dir $@)
-	echo >$@.tmp '--- support/ab.c.orig	Mon Sep 14 15:33:46 2015'
-	echo >>$@.tmp '+++ support/ab.c	Mon Sep 14 15:34:15 2015'
-	echo >>$@.tmp '@@ -2232,8 +2232,10 @@'
-	echo >>$@.tmp '                 } else if (strncasecmp(optarg, "SSL2", 4) == 0) {'
-	echo >>$@.tmp '                     meth = SSLv2_client_method();'
+	echo > $@.tmp '--- modules/ssl/ssl_toolkit_compat.h.orig	Fri Feb  3 10:47:33 2017'
+	echo >>$@.tmp '+++ modules/ssl/ssl_toolkit_compat.h	Fri Feb  3 10:52:17 2017'
+	echo >>$@.tmp '@@ -84,7 +84,9 @@'
+	echo >>$@.tmp ' #define SSL_get_state(ssl) SSL_state(ssl)'
 	echo >>$@.tmp ' #endif'
-	echo >>$@.tmp '+#ifndef OPENSSL_NO_SSL3'
-	echo >>$@.tmp '                 } else if (strncasecmp(optarg, "SSL3", 4) == 0) {'
-	echo >>$@.tmp '                     meth = SSLv3_client_method();'
+	echo >>$@.tmp ' '
+	echo >>$@.tmp '+#ifndef HAVE_SSL_SET_STATE'
+	echo >>$@.tmp ' #define SSL_set_state(ssl,val) (ssl)->state = val'
 	echo >>$@.tmp '+#endif'
-	echo >>$@.tmp ' #ifdef HAVE_TLSV1_X'
-	echo >>$@.tmp '                 } else if (strncasecmp(optarg, "TLS1.1", 6) == 0) {'
-	echo >>$@.tmp '                     meth = TLSv1_1_client_method();'
+	echo >>$@.tmp ' '
+	echo >>$@.tmp ' #define MODSSL_BIO_CB_ARG_TYPE const char'
+	echo >>$@.tmp ' #define MODSSL_CRYPTO_CB_ARG_TYPE const char'
+	mv -f $@.tmp $@
+
+$(HTTPD_OBJDIR)/acinclude.diff:
+	mkdir -p $(dir $@)
+	echo >$@.tmp '--- acinclude.m4.orig	Fri Feb  3 11:05:08 2017'
+	echo >>$@.tmp '+++ acinclude.m4	Fri Feb  3 11:05:15 2017'
+	echo >>$@.tmp '@@ -455,6 +455,7 @@'
+	echo >>$@.tmp '     AC_CHECK_HEADERS([openssl/engine.h])'
+	echo >>$@.tmp '     AC_CHECK_FUNCS([SSLeay_version SSL_CTX_new], [], [liberrors="yes"])'
+	echo >>$@.tmp '     AC_CHECK_FUNCS([ENGINE_init ENGINE_load_builtin_engines])'
+	echo >>$@.tmp '+    AC_CHECK_FUNCS(SSL_set_state)'
+	echo >>$@.tmp '   else'
+	echo >>$@.tmp '     AC_CHECK_FUNCS([SSLC_library_version SSL_CTX_new], [], [liberrors="yes"])'
+	echo >>$@.tmp '     AC_CHECK_FUNCS(SSL_set_state)'
 	mv -f $@.tmp $@
 
 # retrieve httpd
 $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
-	$(HTTPD_OBJDIR)/chil-engine.diff $(HTTPD_OBJDIR)/ssl3.diff
+	$(HTTPD_OBJDIR)/chil-engine.diff $(HTTPD_OBJDIR)/ssl-set-state.diff \
+	$(HTTPD_OBJDIR)/acinclude.diff
 	$(call do_check_sha256,$(HTTPD_DIST))
 	[ -d $(HTTPD_OBJDIR) ] || mkdir -p $(HTTPD_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(HTTPD_DIST)
 	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/chil-engine.diff
-	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/ssl3.diff
+	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/ssl-set-state.diff
+	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/acinclude.diff
 	cp $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h \
 		$(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h.orig
 	sed '/^#define HAVE_SSL_RAND_EGD/d' \
@@ -669,6 +685,7 @@ $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
 # configure httpd
 $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 	$(APR_UTIL_OBJDIR)/.installed
+	cd $(HTTPD_SRCDIR) && ./buildconf
 	cd $(HTTPD_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 		GREP="`which grep`" \
