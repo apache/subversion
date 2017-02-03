@@ -1270,7 +1270,7 @@ gettext-reset:
 		rm -f $(GETTEXT_OBJDIR)/$(f);)
 
 gettext-clean:
-	-(cd $(GETTEXT_OBJDIR) && env MAKEFLAGS= make clean)
+	-(cd $(GETTEXT_SRCDIR) && env MAKEFLAGS= make clean)
 
 # fetch distfile for gettext
 $(DISTDIR)/$(GETTEXT_DIST):
