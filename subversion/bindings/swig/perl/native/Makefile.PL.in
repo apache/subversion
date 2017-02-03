@@ -92,7 +92,7 @@ my %config = (
                   `$swig -perl -ldflags`)],
     LDFLAGS => join(' ', (map {"-L$_"} @ldpaths), '@LDFLAGS@ @SWIG_PL_LINK@'),
     LDDLFLAGS => join(' ', (map {"-L$_"} @ldpaths),
-                      '@LDFLAGS@ @SWIG_PL_LINK@ @LT_LDFLAGS@'),
+                      '@LDFLAGS@ @SWIG_PL_LINK@', $Config{lddlflags}),
     test => { TESTS => "$swig_srcdir/perl/native/t/*.t" }
 );
 
