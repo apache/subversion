@@ -68,6 +68,13 @@ Candidate changes:
     +1: rhuijben
     +1 (non-binding): luke1410
 
+ * r1781507
+   Fix a NULL deref in libsvn_repos which makes svndumpfilter crash.
+   Justification:
+     Should not crash. User complained.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
