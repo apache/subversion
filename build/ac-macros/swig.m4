@@ -172,6 +172,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       AC_MSG_RESULT([$PERL_VERSION])
       if test "$PERL_VERSION" -ge "5008000"; then
         SWIG_PL_INCLUDES="\$(SWIG_INCLUDES) `$PERL -MExtUtils::Embed -e ccopts`"
+        SWIG_PL_LINK="`$PERL -MExtUtils::Embed -e ldopts`"
       else
         AC_MSG_WARN([perl bindings require perl 5.8.0 or newer.])
       fi
@@ -299,6 +300,7 @@ int main()
   AC_SUBST(SWIG_PY_LINK)
   AC_SUBST(SWIG_PY_LIBS)
   AC_SUBST(SWIG_PL_INCLUDES)
+  AC_SUBST(SWIG_PL_LINK)
   AC_SUBST(SWIG_RB_LINK)
   AC_SUBST(SWIG_RB_LIBS)
   AC_SUBST(SWIG_RB_INCLUDES)

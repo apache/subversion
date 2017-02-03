@@ -90,6 +90,9 @@ my %config = (
                   (map {"-L$_"} @ldpaths),
                   @ldmodules, '-lsvn_swig_perl-1',
                   `$swig -perl -ldflags`)],
+    LDFLAGS => join(' ', (map {"-L$_"} @ldpaths), '@LDFLAGS@ @SWIG_PL_LINK@'),
+    LDDLFLAGS => join(' ', (map {"-L$_"} @ldpaths),
+                      '@LDFLAGS@ @SWIG_PL_LINK@ @LT_LDFLAGS@'),
     test => { TESTS => "$swig_srcdir/perl/native/t/*.t" }
 );
 
