@@ -909,6 +909,28 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
 }
 
 
+/* Implements svn_repos_mergeinfo_receiver_t.
+ * It add MERGEINFO for PATH to the svn_mergeinfo_catalog_t BATON.
+ */
+static svn_error_t *
+mergeinfo_receiver(const char *path,
+                   svn_mergeinfo_t mergeinfo,
+                   void *baton,
+                   apr_pool_t *scratch_pool)
+{
+  svn_mergeinfo_catalog_t catalog = baton;
+  apr_pool_t *result_pool = apr_hash_pool_get(catalog);
+  apr_size_t len = strlen(path);
+
+  apr_hash_set(catalog,
+               apr_pstrmemdup(result_pool, path, len),
+               len,
+               svn_mergeinfo_dup(mergeinfo, result_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 static svn_error_t *
 svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
                             svn_mergeinfo_catalog_t *catalog,
@@ -919,7 +941,7 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
                             apr_pool_t *pool)
 {
   svn_ra_local__session_baton_t *sess = session->priv;
-  svn_mergeinfo_catalog_t tmp_catalog;
+  svn_mergeinfo_catalog_t tmp_catalog = svn_hash__make(pool);
   int i;
   apr_array_header_t *abs_paths =
     apr_array_make(pool, 0, sizeof(const char *));
@@ -931,9 +953,11 @@ svn_ra_local__get_mergeinfo(svn_ra_session_t *session,
         svn_fspath__join(sess->fs_path->data, relative_path, pool);
     }
 
-  SVN_ERR(svn_repos_fs_get_mergeinfo(&tmp_catalog, sess->repos, abs_paths,
-                                     revision, inherit, include_descendants,
-                                     NULL, NULL, pool));
+  SVN_ERR(svn_repos_fs_get_mergeinfo2(sess->repos, abs_paths, revision,
+                                      inherit, include_descendants,
+                                      NULL, NULL,
+                                      mergeinfo_receiver, tmp_catalog,
+                                      pool));
   if (apr_hash_count(tmp_catalog) > 0)
     SVN_ERR(svn_mergeinfo__remove_prefix_from_catalog(catalog,
                                                       tmp_catalog,
