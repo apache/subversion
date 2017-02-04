@@ -9020,6 +9020,58 @@ follow_move_chains(apr_hash_t *wc_move_targets,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+describe_incoming_move_merge_conflict_option(
+  const char **description,
+  svn_client_conflict_t *conflict,
+  svn_client_ctx_t *ctx,
+  struct conflict_tree_incoming_delete_details *details,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *move_target_wc_abspaths;
+  svn_wc_operation_t operation;
+  const char *victim_abspath;
+  const char *moved_to_abspath;
+  const char *wcroot_abspath;
+
+  move_target_wc_abspaths =
+    svn_hash_gets(details->wc_move_targets,
+                  details->move_target_repos_relpath);
+  moved_to_abspath = APR_ARRAY_IDX(move_target_wc_abspaths,
+                                   details->wc_move_target_idx,
+                                   const char *);
+
+  victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+  SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
+                             victim_abspath, scratch_pool,
+                             scratch_pool));
+
+  operation = svn_client_conflict_get_operation(conflict);
+  if (operation == svn_wc_operation_merge)
+    *description =
+      apr_psprintf(
+        result_pool, _("move '%s' to '%s' and merge"),
+        svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                        victim_abspath),
+                               scratch_pool),
+        svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                        moved_to_abspath),
+                               scratch_pool));
+  else
+    *description =
+      apr_psprintf(
+        result_pool, _("move and merge local changes from '%s' into '%s'"),
+        svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                        victim_abspath),
+                               scratch_pool),
+        svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
+                                                        moved_to_abspath),
+                               scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Configure 'incoming move file merge' resolution option for
  * a tree conflict. */
 static svn_error_t *
@@ -9060,18 +9112,11 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
       incoming_new_kind == svn_node_none &&
       incoming_change == svn_wc_conflict_action_delete)
     {
-      const char *description;
-      const char *wcroot_abspath;
       const char *victim_abspath;
-      const char *moved_to_abspath;
       apr_array_header_t *move_target_repos_relpaths;
-      apr_array_header_t *move_target_wc_abspaths;
+      const char *description;
 
       victim_abspath = svn_client_conflict_get_local_abspath(conflict);
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
-                                 victim_abspath, scratch_pool,
-                                 scratch_pool));
-
       if (details->wc_move_targets == NULL)
         {
           int i;
@@ -9114,34 +9159,11 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
       if (apr_hash_count(details->wc_move_targets) == 0)
         return SVN_NO_ERROR;
 
-      move_target_wc_abspaths =
-        svn_hash_gets(details->wc_move_targets,
-                      details->move_target_repos_relpath);
-      moved_to_abspath = APR_ARRAY_IDX(move_target_wc_abspaths,
-                                       details->wc_move_target_idx,
-                                       const char *);
-
-      if (operation == svn_wc_operation_merge)
-        description =
-          apr_psprintf(
-            scratch_pool, _("move '%s' to '%s' and merge"),
-            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                            victim_abspath),
-                                   scratch_pool),
-            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                            moved_to_abspath),
-                                   scratch_pool));
-      else
-        description =
-          apr_psprintf(
-            scratch_pool, _("move and merge local changes from '%s' into '%s'"),
-            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                            victim_abspath),
-                                   scratch_pool),
-            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                            moved_to_abspath),
-                                   scratch_pool));
-
+      SVN_ERR(describe_incoming_move_merge_conflict_option(&description,
+                                                           conflict, ctx,
+                                                           details,
+                                                           scratch_pool,
+                                                           scratch_pool));
       add_resolution_option(
         options, conflict,
         svn_client_conflict_option_incoming_move_file_text_merge,
@@ -9195,9 +9217,7 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
       const char *description;
       const char *wcroot_abspath;
       const char *victim_abspath;
-      const char *moved_to_abspath;
       apr_array_header_t *move_target_repos_relpaths;
-      apr_array_header_t *move_target_wc_abspaths;
 
       victim_abspath = svn_client_conflict_get_local_abspath(conflict);
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
@@ -9246,34 +9266,11 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
       if (apr_hash_count(details->wc_move_targets) == 0)
         return SVN_NO_ERROR;
 
-      move_target_wc_abspaths =
-        svn_hash_gets(details->wc_move_targets,
-                      details->move_target_repos_relpath);
-      moved_to_abspath = APR_ARRAY_IDX(move_target_wc_abspaths,
-                                       details->wc_move_target_idx,
-                                       const char *);
-
-      if (operation == svn_wc_operation_merge)
-        description =
-          apr_psprintf(
-            scratch_pool, _("move '%s' to '%s' and merge"),
-            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                            victim_abspath),
-                                   scratch_pool),
-            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                            moved_to_abspath),
-                                   scratch_pool));
-      else
-        description =
-          apr_psprintf(
-            scratch_pool, _("move and merge local changes from '%s' into '%s'"),
-            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                            victim_abspath),
-                                   scratch_pool),
-            svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                            moved_to_abspath),
-                                   scratch_pool));
-
+      SVN_ERR(describe_incoming_move_merge_conflict_option(&description,
+                                                           conflict, ctx,
+                                                           details,
+                                                           scratch_pool,
+                                                           scratch_pool));
       add_resolution_option(options, conflict,
                             svn_client_conflict_option_incoming_move_dir_merge,
                             _("Move and merge"), description,
@@ -9556,8 +9553,6 @@ svn_client_conflict_option_set_moved_to_abspath(
   svn_client_conflict_t *conflict = option->conflict;
   struct conflict_tree_incoming_delete_details *details;
   const char *victim_abspath;
-  const char *moved_to_abspath;
-  const char *wcroot_abspath;
   apr_array_header_t *move_target_wc_abspaths;
 
   SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
@@ -9587,24 +9582,15 @@ svn_client_conflict_option_set_moved_to_abspath(
                             svn_dirent_local_style(victim_abspath,
                                                    scratch_pool));
 
-  /* Record the user's preference and update the option description. */
+  /* Record the user's preference. */
   details->wc_move_target_idx = preferred_move_target_idx;
 
-  SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
-                             victim_abspath, scratch_pool,
-                             scratch_pool));
-  moved_to_abspath = APR_ARRAY_IDX(move_target_wc_abspaths,
-                                   preferred_move_target_idx,
-                                   const char *);
-  option->description =
-    apr_psprintf(
-      option->pool, _("move '%s' to '%s' and merge'"),
-      svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                      victim_abspath),
-                             scratch_pool),
-      svn_dirent_local_style(svn_dirent_skip_ancestor(wcroot_abspath,
-                                                      moved_to_abspath),
-                             scratch_pool));
+  /* Update option description. */
+  SVN_ERR(describe_incoming_move_merge_conflict_option(&option->description,
+                                                       conflict, ctx,
+                                                       details,
+                                                       conflict->pool,
+                                                       scratch_pool));
   return SVN_NO_ERROR;
 }
 
