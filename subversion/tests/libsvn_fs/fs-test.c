@@ -40,6 +40,7 @@
 #include "svn_version.h"
 
 #include "svn_private_config.h"
+#include "private/svn_cache.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_fspath.h"
@@ -7187,6 +7188,74 @@ commit_with_locked_rep_cache(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+test_cache_clear_during_stream(const svn_test_opts_t *opts,
+                               apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t new_rev;
+  const char *fs_path;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_txdelta_window_handler_t consumer_func;
+  void *consumer_baton;
+  int i;
+  svn_stream_t *stream;
+  svn_stringbuf_t *buf;
+
+
+  fs_path = "test-repo-cache_clear_during_stream";
+  SVN_ERR(svn_test__create_fs(&fs, fs_path, opts, pool));
+
+  /* r1: Add a file. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "/foo", pool));
+
+  /* Make the file large enough to span multiple txdelta windows.
+   * Just to be sure, make it not too uniform to keep self-txdelta at bay. */
+  SVN_ERR(svn_fs_apply_textdelta(&consumer_func, &consumer_baton,
+                                 txn_root, "/foo", NULL, NULL, subpool));
+  stream = svn_txdelta_target_push(consumer_func, consumer_baton, 
+                                   svn_stream_empty(subpool), subpool);
+  for (i = 0; i < 10000; ++ i)
+    {
+      svn_string_t *text;
+
+      svn_pool_clear(iterpool);
+      text = svn_string_createf(iterpool, "some dummy text - %d\n", i);
+      SVN_ERR(svn_stream_write(stream, text->data, &text->len));
+    }
+
+  SVN_ERR(svn_stream_close(stream));
+  svn_pool_destroy(subpool);
+
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+  SVN_TEST_INT_ASSERT(new_rev, 1);
+
+  /* Read the file once to populate the fulltext cache. */
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, 1, pool));
+  SVN_ERR(svn_fs_file_contents(&stream, rev_root, "/foo", pool));
+  SVN_ERR(svn_test__stream_to_string(&buf, stream, pool));
+
+  /* Start reading it again from cache, clear the cache and continue.
+   * Make sure we read more than one txdelta window before clearing
+   * the cache.  That gives the FS backend a chance to skip windows
+   * when continuing the read from disk. */
+  SVN_ERR(svn_fs_file_contents(&stream, rev_root, "/foo", pool));
+  buf->len = 2 * SVN_STREAM_CHUNK_SIZE;
+  SVN_ERR(svn_stream_read_full(stream, buf->data, &buf->len));
+  SVN_ERR(svn_cache__membuffer_clear(svn_cache__get_global_membuffer_cache()));
+  SVN_ERR(svn_test__stream_to_string(&buf, stream, pool));
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -7325,6 +7394,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test reading a large changed paths list"),
     SVN_TEST_OPTS_PASS(commit_with_locked_rep_cache,
                        "test commit with locked rep-cache"),
+    SVN_TEST_OPTS_PASS(test_cache_clear_during_stream,
+                       "test clearing the cache while streaming a rep"),
     SVN_TEST_NULL
   };
 
