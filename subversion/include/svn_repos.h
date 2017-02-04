@@ -2240,7 +2240,7 @@ typedef svn_fs_mergeinfo_receiver_t svn_repos_mergeinfo_receiver_t;
  * For each node found with mergeinfo on it, invoke @a receiver with
  * the provided @a receiver_baton.
  *
- * The paths in @a paths, and the keys of @a catalog, start with '/'.
+ * The paths in @a paths start with '/'.
  *
  * @a inherit indicates whether explicit, explicit or inherited, or
  * only inherited mergeinfo for @a paths is fetched.
@@ -2252,7 +2252,7 @@ typedef svn_fs_mergeinfo_receiver_t svn_repos_mergeinfo_receiver_t;
  * the #SVN_PROP_MERGEINFO property explicitly set on it.  (Note
  * that inheritance is only taken into account for the elements in @a
  * paths; descendants of the elements in @a paths which get their
- * mergeinfo via inheritance are not included in @a *catalog.)
+ * mergeinfo via inheritance are not reported to @a receiver.)
  *
  * If optional @a authz_read_func is non-NULL, then use this function
  * (along with optional @a authz_read_baton) to check the readability

@@ -2188,7 +2188,7 @@ typedef svn_error_t *
  * explicit-or-inherited, or only inherited mergeinfo.
  *
  * If @a adjust_inherited_mergeinfo is @c TRUE, then any inherited
- * mergeinfo returned in @a *catalog is normalized to represent the
+ * mergeinfo reported to @a *receiver is normalized to represent the
  * inherited mergeinfo on the path which inherits it.  This adjusted
  * mergeinfo is keyed by the path which inherits it.  If
  * @a adjust_inherited_mergeinfo is @c FALSE, then any inherited
@@ -2203,10 +2203,9 @@ typedef svn_error_t *
  * the #SVN_PROP_MERGEINFO property explicitly set on it.  (Note
  * that inheritance is only taken into account for the elements in @a
  * paths; descendants of the elements in @a paths which get their
- * mergeinfo via inheritance are not included in @a *catalog.)
+ * mergeinfo via inheritance are not reported to @a receiver.)
  *
- * Allocate @a *catalog in result_pool.  Do any necessary temporary
- * allocations in @a scratch_pool.
+ * Do any necessary temporary allocations in @a scratch_pool.
  *
  * @since New in 1.10.
  */
