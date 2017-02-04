@@ -2678,13 +2678,17 @@ describe_incoming_deletion_upon_update(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved to "
-                               "'^/%s'."), description,
-                             move->moved_to_repos_relpath);
+                               "'^/%s'."), description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -2705,13 +2709,17 @@ describe_incoming_deletion_upon_update(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced file was moved to '^/%s'."),
-                             description,
-                             move->moved_to_repos_relpath);
+                             description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -2729,13 +2737,17 @@ describe_incoming_deletion_upon_update(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced item was moved to '^/%s'."),
-                             description,
-                             move->moved_to_repos_relpath);
+                             description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -2758,13 +2770,17 @@ describe_incoming_deletion_upon_update(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved to "
-                               "'^/%s'."), description,
-                             move->moved_to_repos_relpath);
+                               "'^/%s'."), description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -2784,13 +2800,17 @@ describe_incoming_deletion_upon_update(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced file was moved to '^/%s'."),
-                             description,
-                             move->moved_to_repos_relpath);
+                             description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -2808,13 +2828,17 @@ describe_incoming_deletion_upon_update(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced item was moved to '^/%s'."),
-                             description,
-                             move->moved_to_repos_relpath);
+                             description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -2831,14 +2855,18 @@ describe_incoming_deletion_upon_update(
             {
               const char *description;
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("Directory updated from r%ld to r%ld was "
                                "moved to '^/%s' by %s in r%ld."),
-                             old_rev, new_rev,
-                             move->moved_to_repos_relpath,
+                             old_rev, new_rev, moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
                                                        move->next,
@@ -2859,13 +2887,18 @@ describe_incoming_deletion_upon_update(
             {
               struct repos_move_info *move;
               const char *description;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("File updated from r%ld to r%ld was moved "
                                "to '^/%s' by %s in r%ld."), old_rev, new_rev,
-                             move->moved_to_repos_relpath,
+                             moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
                                                        move->next,
@@ -2884,13 +2917,18 @@ describe_incoming_deletion_upon_update(
             {
               const char *description;
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description = 
                 apr_psprintf(result_pool,
                              _("Item updated from r%ld to r%ld was moved "
                                "to '^/%s' by %s in r%ld."), old_rev, new_rev,
-                             move->moved_to_repos_relpath,
+                             moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
                                                        move->next,
@@ -3012,13 +3050,18 @@ describe_incoming_deletion_upon_switch(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved "
                                "to '^/%s'."), description,
-                             move->moved_to_repos_relpath);
+                             moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -3041,13 +3084,17 @@ describe_incoming_deletion_upon_switch(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced file was moved to '^/%s'."),
-                             description,
-                             move->moved_to_repos_relpath);
+                             description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -3068,13 +3115,17 @@ describe_incoming_deletion_upon_switch(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced item was moved to '^/%s'."),
-                             description,
-                             move->moved_to_repos_relpath);
+                             description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -3099,13 +3150,17 @@ describe_incoming_deletion_upon_switch(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved to "
-                               "'^/%s'."), description,
-                             move->moved_to_repos_relpath);
+                               "'^/%s'."), description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -3127,13 +3182,17 @@ describe_incoming_deletion_upon_switch(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced file was moved to '^/%s'."),
-                             description,
-                             move->moved_to_repos_relpath);
+                             description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -3154,13 +3213,17 @@ describe_incoming_deletion_upon_switch(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced item was moved to '^/%s'."),
-                             description,
-                             move->moved_to_repos_relpath);
+                             description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -3177,16 +3240,20 @@ describe_incoming_deletion_upon_switch(
             {
               struct repos_move_info *move;
               const char *description;
+              const char *moved_to_repos_relpath;
               
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("Directory switched from\n"
                                "'^/%s@%ld'\nto\n'^/%s@%ld'\n"
                                "was moved to '^/%s' by %s in r%ld."),
                              old_repos_relpath, old_rev,
-                             new_repos_relpath, new_rev,
-                             move->moved_to_repos_relpath,
+                             new_repos_relpath, new_rev, moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
                                                        move->next,
@@ -3209,8 +3276,13 @@ describe_incoming_deletion_upon_switch(
             {
               struct repos_move_info *move;
               const char *description;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("File switched from\n"
@@ -3218,7 +3290,7 @@ describe_incoming_deletion_upon_switch(
                                "moved to '^/%s' by %s in r%ld."),
                              old_repos_relpath, old_rev,
                              new_repos_relpath, new_rev,
-                             move->moved_to_repos_relpath,
+                             moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
                                                        move->next,
@@ -3240,8 +3312,13 @@ describe_incoming_deletion_upon_switch(
             {
               struct repos_move_info *move;
               const char *description;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("Item switched from\n"
@@ -3249,7 +3326,7 @@ describe_incoming_deletion_upon_switch(
                                "moved to '^/%s' by %s in r%ld."),
                              old_repos_relpath, old_rev,
                              new_repos_relpath, new_rev,
-                             move->moved_to_repos_relpath,
+                             moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
                                                        move->next,
@@ -3399,13 +3476,18 @@ describe_incoming_deletion_upon_merge(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved to "
                                "'^/%s'."), description,
-                             move->moved_to_repos_relpath);
+                             moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -3428,13 +3510,17 @@ describe_incoming_deletion_upon_merge(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced file was moved to '^/%s'."),
-                             description,
-                             move->moved_to_repos_relpath);
+                             description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -3467,13 +3553,17 @@ describe_incoming_deletion_upon_merge(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved to "
-                               "'^/%s'."), description,
-                             move->moved_to_repos_relpath);
+                               "'^/%s'."), description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -3495,13 +3585,17 @@ describe_incoming_deletion_upon_merge(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced file was moved to '^/%s'."),
-                             description,
-                             move->moved_to_repos_relpath);
+                             description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -3522,13 +3616,17 @@ describe_incoming_deletion_upon_merge(
           if (details->moves)
             {
               struct repos_move_info *move;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced item was moved to '^/%s'."),
-                             description,
-                             move->moved_to_repos_relpath);
+                             description, moved_to_repos_relpath);
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -3545,8 +3643,13 @@ describe_incoming_deletion_upon_merge(
             {
               struct repos_move_info *move;
               const char *description;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("Directory merged from\n"
@@ -3554,7 +3657,7 @@ describe_incoming_deletion_upon_merge(
                                "moved to '^/%s' by %s in r%ld."),
                              old_repos_relpath, old_rev,
                              new_repos_relpath, new_rev,
-                             move->moved_to_repos_relpath,
+                             moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
                                                        move->next,
@@ -3577,8 +3680,13 @@ describe_incoming_deletion_upon_merge(
             {
               struct repos_move_info *move;
               const char *description;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("File merged from\n"
@@ -3586,7 +3694,7 @@ describe_incoming_deletion_upon_merge(
                                "moved to '^/%s' by %s in r%ld."),
                              old_repos_relpath, old_rev,
                              new_repos_relpath, new_rev,
-                             move->moved_to_repos_relpath,
+                             moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
                                                        move->next,
@@ -3608,8 +3716,13 @@ describe_incoming_deletion_upon_merge(
             {
               struct repos_move_info *move;
               const char *description;
+              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+              if (details->move_target_repos_relpath)
+                moved_to_repos_relpath = details->move_target_repos_relpath;
+              else
+                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("Item merged from\n"
@@ -3617,7 +3730,7 @@ describe_incoming_deletion_upon_merge(
                                "moved to '^/%s' by %s in r%ld."),
                              old_repos_relpath, old_rev,
                              new_repos_relpath, new_rev,
-                             move->moved_to_repos_relpath,
+                             moved_to_repos_relpath,
                              details->rev_author, details->deleted_rev);
               return append_moved_to_chain_description(description,
                                                        move->next,
