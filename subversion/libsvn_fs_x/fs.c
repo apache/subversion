@@ -665,7 +665,7 @@ svn_fs_x__init(const svn_version_t *loader_version,
                              loader_version->major);
   SVN_ERR(svn_ver_check_list2(x_version(), checklist, svn_ver_equal));
 
-  SVN_ERR(svn_fs_x__batch_fsync_init());
+  SVN_ERR(svn_fs_x__batch_fsync_init(common_pool));
 
   *vtable = &library_vtable;
   return SVN_NO_ERROR;
