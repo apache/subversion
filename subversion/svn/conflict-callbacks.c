@@ -1760,6 +1760,14 @@ handle_tree_conflict(svn_boolean_t *resolved,
                         &possible_moved_to_abspaths,
                         NULL, conflict, ctx,
                         scratch_pool, scratch_pool));
+
+              /* Update conflict description. */
+              SVN_ERR(svn_client_conflict_tree_get_description(
+                       &incoming_change_description, &local_change_description,
+                       conflict, ctx, scratch_pool, scratch_pool));
+              conflict_description = apr_psprintf(scratch_pool, "%s\n%s",
+                                                  incoming_change_description,
+                                                  local_change_description);
             }
           continue;
         }
