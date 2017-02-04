@@ -4484,6 +4484,11 @@ svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
  * @a preferred_move_target_idx must be a valid index into the list returned
  * by svn_client_conflict_option_get_moved_to_repos_relpath_candidates().
  * 
+ * This function can be called multiple times.
+ * It affects the output of svn_client_conflict_tree_get_description() and
+ * svn_client_conflict_option_get_description(). Call these functions again
+ * to get updated descriptions containing the newly selected move target.
+ *
  * @since New in 1.10.
  */
 svn_error_t *
