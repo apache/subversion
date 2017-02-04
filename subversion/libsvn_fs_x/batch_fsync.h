@@ -44,13 +44,14 @@
  */
 typedef struct svn_fs_x__batch_fsync_t svn_fs_x__batch_fsync_t;
 
-/* Initialize the concurrent fsync infrastructure.
+/* Initialize the concurrent fsync infrastructure.  Clean it up when
+ * OWNING_POOL gets cleared.
  *
  * This function must be called before using any of the other functions in
  * in this module.  It should only be called once.
  */
 svn_error_t *
-svn_fs_x__batch_fsync_init(void);
+svn_fs_x__batch_fsync_init(apr_pool_t *owning_pool);
 
 /* Set *RESULT_P to a new batch fsync structure, allocated in RESULT_POOL.
  * If FLUSH_TO_DISK is not set, the resulting struct will not actually use

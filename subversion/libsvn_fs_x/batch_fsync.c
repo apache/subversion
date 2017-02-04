@@ -29,6 +29,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_private_config.h"
 
+#include "private/svn_atomic.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_mutex.h"
 #include "private/svn_subr_private.h"
@@ -228,6 +229,9 @@ struct svn_fs_x__batch_fsync_t
 /* Thread pool to execute the fsync tasks. */
 static apr_thread_pool_t *thread_pool = NULL;
 
+/* Keep track on whether we already created the THREAD_POOL . */
+static svn_atomic_t thread_pool_initialized = FALSE;
+
 #endif
 
 /* We open non-directory files with these flags. */
@@ -236,22 +240,29 @@ static apr_thread_pool_t *thread_pool = NULL;
 #if APR_HAS_THREADS
 
 /* Destructor function that implicitly cleans up any running threads
-   in the thread_pool given as DATA and releases their memory pools
-   before they get destroyed themselves.
+   in the TRHEAD_POOL *once*.
 
    Must be run as a pre-cleanup hook.
  */
 static apr_status_t
 thread_pool_pre_cleanup(void *data)
 {
-  apr_thread_pool_t *tp = data;
+  apr_thread_pool_t *tp = thread_pool;
+  if (!thread_pool)
+    return APR_SUCCESS;
+
+  thread_pool = NULL;
+  thread_pool_initialized = FALSE;
+
   return apr_thread_pool_destroy(tp);
 }
 
 #endif
 
-svn_error_t *
-svn_fs_x__batch_fsync_init(void)
+/* Core implementation of svn_fs_x__batch_fsync_init. */
+static svn_error_t *
+create_thread_pool(void *baton,
+                   apr_pool_t *owning_pool)
 {
 #if APR_HAS_THREADS
   /* The thread-pool must be allocated from a thread-safe pool.
@@ -266,7 +277,8 @@ svn_fs_x__batch_fsync_init(void)
   /* Work around an APR bug:  The cleanup must happen in the pre-cleanup
      hook instead of the normal cleanup hook.  Otherwise, the sub-pools
      containing the thread objects would already be invalid. */
-  apr_pool_pre_cleanup_register(pool, thread_pool, thread_pool_pre_cleanup);
+  apr_pool_pre_cleanup_register(pool, NULL, thread_pool_pre_cleanup);
+  apr_pool_pre_cleanup_register(owning_pool, NULL, thread_pool_pre_cleanup);
 
   /* let idle threads linger for a while in case more requests are
      coming in */
@@ -278,6 +290,15 @@ svn_fs_x__batch_fsync_init(void)
 #endif
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_x__batch_fsync_init(apr_pool_t *owning_pool)
+{
+  /* Protect against multiple calls. */
+  return svn_error_trace(svn_atomic__init_once(&thread_pool_initialized,
+                                               create_thread_pool,
+                                               NULL, owning_pool));
 }
 
 /* Destructor for svn_fs_x__batch_fsync_t.  Releases all global pool memory
@@ -509,6 +530,10 @@ svn_fs_x__batch_fsync_run(svn_fs_x__batch_fsync_t *batch,
           to_sync_t *to_sync = apr_hash_this_val(hi);
 
 #if APR_HAS_THREADS
+
+          /* Forgot to call _init() or cleaned up the owning pool too early?
+           */
+          SVN_ERR_ASSERT(thread_pool);
 
           /* If there are multiple fsyncs to perform, run them in parallel.
            * Otherwise, skip the thread-pool and synchronization overhead. */
