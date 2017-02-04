@@ -75,6 +75,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1781655
+   Improve error message upon failure to open rep-cache.
+   Justification:
+     The current message lacks sufficient detail to be useful when it appears
+     in server logs.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
