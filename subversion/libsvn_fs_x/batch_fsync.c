@@ -229,10 +229,10 @@ struct svn_fs_x__batch_fsync_t
 /* Thread pool to execute the fsync tasks. */
 static apr_thread_pool_t *thread_pool = NULL;
 
+#endif
+
 /* Keep track on whether we already created the THREAD_POOL . */
 static svn_atomic_t thread_pool_initialized = FALSE;
-
-#endif
 
 /* We open non-directory files with these flags. */
 #define FILE_FLAGS (APR_READ | APR_WRITE | APR_BUFFERED | APR_CREATE)
