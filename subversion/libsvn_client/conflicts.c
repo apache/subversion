@@ -9055,6 +9055,44 @@ follow_move_chains(apr_hash_t *wc_move_targets,
 }
 
 static svn_error_t *
+init_wc_move_targets(struct conflict_tree_incoming_delete_details *details,
+                     svn_client_conflict_t *conflict,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *scratch_pool)
+{
+  int i;
+  const char *victim_abspath;
+  svn_node_kind_t victim_node_kind;
+  svn_revnum_t incoming_new_pegrev;
+
+  victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+  victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            NULL, &incoming_new_pegrev, NULL, conflict,
+            scratch_pool, scratch_pool));
+  details->wc_move_targets = apr_hash_make(conflict->pool);
+  for (i = 0; i < details->moves->nelts; i++)
+    {
+      struct repos_move_info *move;
+
+      move = APR_ARRAY_IDX(details->moves, i, struct repos_move_info *);
+      SVN_ERR(follow_move_chains(details->wc_move_targets, move,
+                                 ctx, victim_abspath,
+                                 victim_node_kind,
+                                 incoming_new_pegrev,
+                                 conflict->pool, scratch_pool));
+    }
+
+  /* Initialize to the first possible move target. Hopefully,
+   * in most cases there will only be one candidate anyway. */
+  details->move_target_repos_relpath =
+    get_moved_to_repos_relpath(details, scratch_pool);
+  details->wc_move_target_idx = 0;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 describe_incoming_move_merge_conflict_option(
   const char **description,
   svn_client_conflict_t *conflict,
@@ -9146,33 +9184,10 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
       incoming_new_kind == svn_node_none &&
       incoming_change == svn_wc_conflict_action_delete)
     {
-      const char *victim_abspath;
       const char *description;
 
-      victim_abspath = svn_client_conflict_get_local_abspath(conflict);
       if (details->wc_move_targets == NULL)
-        {
-          int i;
-
-          details->wc_move_targets = apr_hash_make(conflict->pool);
-          for (i = 0; i < details->moves->nelts; i++)
-            {
-              struct repos_move_info *move;
-
-              move = APR_ARRAY_IDX(details->moves, i, struct repos_move_info *);
-              SVN_ERR(follow_move_chains(details->wc_move_targets, move,
-                                         ctx, victim_abspath,
-                                         victim_node_kind,
-                                         incoming_new_pegrev,
-                                         conflict->pool, scratch_pool));
-            }
-
-          /* Initialize to the first possible move target. Hopefully,
-           * in most cases there will only be one candidate anyway. */
-          details->move_target_repos_relpath =
-            get_moved_to_repos_relpath(details, scratch_pool);
-          details->wc_move_target_idx = 0;
-        }
+        SVN_ERR(init_wc_move_targets(details, conflict, ctx, scratch_pool));
 
       if (apr_hash_count(details->wc_move_targets) == 0)
         return SVN_NO_ERROR;
@@ -9233,37 +9248,9 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
       incoming_change == svn_wc_conflict_action_delete)
     {
       const char *description;
-      const char *wcroot_abspath;
-      const char *victim_abspath;
-
-      victim_abspath = svn_client_conflict_get_local_abspath(conflict);
-      SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
-                                 victim_abspath, scratch_pool,
-                                 scratch_pool));
 
       if (details->wc_move_targets == NULL)
-        {
-          int i;
-
-          details->wc_move_targets = apr_hash_make(conflict->pool);
-          for (i = 0; i < details->moves->nelts; i++)
-            {
-              struct repos_move_info *move;
-
-              move = APR_ARRAY_IDX(details->moves, i, struct repos_move_info *);
-              SVN_ERR(follow_move_chains(details->wc_move_targets, move,
-                                         ctx, victim_abspath,
-                                         victim_node_kind,
-                                         incoming_new_pegrev,
-                                         conflict->pool, scratch_pool));
-            }
-
-          /* Initialize to the first possible move target. Hopefully,
-           * in most cases there will only be one candidate anyway. */
-          details->move_target_repos_relpath =
-            get_moved_to_repos_relpath(details, scratch_pool);
-          details->wc_move_target_idx = 0;
-        }
+        SVN_ERR(init_wc_move_targets(details, conflict, ctx, scratch_pool));
 
       if (apr_hash_count(details->wc_move_targets) == 0)
         return SVN_NO_ERROR;
