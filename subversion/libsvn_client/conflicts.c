@@ -2670,25 +2670,6 @@ get_moved_to_repos_relpath(
   return move->moved_to_repos_relpath;
 }
 
-/* Return a default working copy move target path. */
-static const char *
-select_default_move_target_abspath(
-  struct conflict_tree_incoming_delete_details *details,
-  apr_pool_t *scratch_pool)
-{
-  apr_array_header_t *repos_relpaths;
-  svn_sort__item_t item;
-
-  if (apr_hash_count(details->wc_move_targets) == 0)
-    return NULL;
-
-  repos_relpaths = svn_sort__hash(details->wc_move_targets,
-                                  svn_sort_compare_items_as_paths,
-                                  scratch_pool);
-  item = APR_ARRAY_IDX(repos_relpaths, 0, svn_sort__item_t);
-  return (const char *)item.key;
-}
-
 static const char *
 describe_incoming_deletion_upon_update(
   struct conflict_tree_incoming_delete_details *details,
@@ -9136,6 +9117,7 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
       incoming_change == svn_wc_conflict_action_delete)
     {
       const char *victim_abspath;
+      apr_array_header_t *move_target_repos_relpaths;
       const char *description;
 
       victim_abspath = svn_client_conflict_get_local_abspath(conflict);
@@ -9155,12 +9137,27 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
                                          incoming_new_pegrev,
                                          conflict->pool, scratch_pool));
             }
+          if (apr_hash_count(details->wc_move_targets) > 0)
+            {
+              svn_sort__item_t item;
 
-          /* Initialize to the first possible move target. Hopefully,
-           * in most cases there will only be one candidate anyway. */
-          details->move_target_repos_relpath =
-            select_default_move_target_abspath(details, scratch_pool);
-          details->wc_move_target_idx = 0;
+              /* Initialize to the first possible move target. Hopefully,
+               * in most cases there will only be one candidate anyway. */
+              move_target_repos_relpaths = 
+                svn_sort__hash(details->wc_move_targets,
+                               svn_sort_compare_items_as_paths,
+                               scratch_pool);
+              item = APR_ARRAY_IDX(move_target_repos_relpaths, 0,
+                                   svn_sort__item_t);
+              details->move_target_repos_relpath = item.key;
+              details->wc_move_target_idx = 0;
+            }
+          else
+            {
+              details->move_target_repos_relpath = NULL;
+              details->wc_move_target_idx = 0;
+              return SVN_NO_ERROR;
+            }
         }
 
       if (apr_hash_count(details->wc_move_targets) == 0)
@@ -9224,6 +9221,7 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
       const char *description;
       const char *wcroot_abspath;
       const char *victim_abspath;
+      apr_array_header_t *move_target_repos_relpaths;
 
       victim_abspath = svn_client_conflict_get_local_abspath(conflict);
       SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
@@ -9246,12 +9244,27 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
                                          incoming_new_pegrev,
                                          conflict->pool, scratch_pool));
             }
+          if (apr_hash_count(details->wc_move_targets) > 0)
+            {
+              svn_sort__item_t item;
 
-          /* Initialize to the first possible move target. Hopefully,
-           * in most cases there will only be one candidate anyway. */
-          details->move_target_repos_relpath =
-            select_default_move_target_abspath(details, scratch_pool);
-          details->wc_move_target_idx = 0;
+              /* Initialize to the first possible move target. Hopefully,
+               * in most cases there will only be one candidate anyway. */
+              move_target_repos_relpaths = 
+                svn_sort__hash(details->wc_move_targets,
+                               svn_sort_compare_items_as_paths,
+                               scratch_pool);
+              item = APR_ARRAY_IDX(move_target_repos_relpaths, 0,
+                                   svn_sort__item_t);
+              details->move_target_repos_relpath = item.key;
+              details->wc_move_target_idx = 0;
+            }
+          else
+            {
+              details->move_target_repos_relpath = NULL;
+              details->wc_move_target_idx = 0;
+              return SVN_NO_ERROR;
+            }
         }
 
       if (apr_hash_count(details->wc_move_targets) == 0)
