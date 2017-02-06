@@ -2712,8 +2712,7 @@ describe_incoming_deletion_upon_update(
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved to "
                                "'^/%s'."), description,
-                               get_moved_to_repos_relpath(details,
-                                                          scratch_pool));
+                             get_moved_to_repos_relpath(details, scratch_pool));
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -2793,8 +2792,7 @@ describe_incoming_deletion_upon_update(
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved to "
                                "'^/%s'."), description,
-                               get_moved_to_repos_relpath(details,
-                                                          scratch_pool));
+                             get_moved_to_repos_relpath(details, scratch_pool));
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
@@ -3503,8 +3501,7 @@ describe_incoming_deletion_upon_merge(
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced directory was moved to "
                                "'^/%s'."), description,
-                               get_moved_to_repos_relpath(details,
-                                                          scratch_pool));
+                             get_moved_to_repos_relpath(details, scratch_pool));
               return append_moved_to_chain_description(description,
                                                        move->next,
                                                        result_pool,
