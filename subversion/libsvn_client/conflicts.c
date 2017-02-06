@@ -7567,7 +7567,8 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   SVN_ERR(svn_stream_close(ancestor_stream));
 
   possible_moved_to_abspaths =
-    svn_hash_gets(details->wc_move_targets, details->move_target_repos_relpath);
+    svn_hash_gets(details->wc_move_targets,
+                  get_moved_to_repos_relpath(details, scratch_pool));
   moved_to_abspath = APR_ARRAY_IDX(possible_moved_to_abspaths,
                                    details->wc_move_target_idx,
                                    const char *);
@@ -7848,7 +7849,8 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
 
   /* Get repository location of the moved-here node (incoming move). */
   possible_moved_to_abspaths =
-    svn_hash_gets(details->wc_move_targets, details->move_target_repos_relpath);
+    svn_hash_gets(details->wc_move_targets,
+                  get_moved_to_repos_relpath(details, scratch_pool));
   moved_to_abspath = APR_ARRAY_IDX(possible_moved_to_abspaths,
                                    details->wc_move_target_idx,
                                    const char *);
@@ -7950,7 +7952,8 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
 
       /* Merge YCA_URL@YCA_REV->MOVE_TARGET_URL@MERGE_RIGHT into move target. */
       move_target_url = apr_pstrcat(scratch_pool, repos_root_url, "/",
-                                    details->move_target_repos_relpath,
+                                    get_moved_to_repos_relpath(details,
+                                                               scratch_pool),
                                     SVN_VA_NULL);
       incoming_new_opt_rev.kind = svn_opt_revision_number;
       incoming_new_opt_rev.value.number = incoming_new_pegrev;
@@ -9068,7 +9071,7 @@ describe_incoming_move_merge_conflict_option(
 
   move_target_wc_abspaths =
     svn_hash_gets(details->wc_move_targets,
-                  details->move_target_repos_relpath);
+                  get_moved_to_repos_relpath(details, scratch_pool));
   moved_to_abspath = APR_ARRAY_IDX(move_target_wc_abspaths,
                                    details->wc_move_target_idx,
                                    const char *);
@@ -9523,7 +9526,8 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
                                                    scratch_pool));
 
   move_target_wc_abspaths =
-    svn_hash_gets(details->wc_move_targets, details->move_target_repos_relpath);
+    svn_hash_gets(details->wc_move_targets,
+                  get_moved_to_repos_relpath(details, scratch_pool));
 
   /* Return a copy of the option's move target candidate list. */
   *possible_moved_to_abspaths =
@@ -9570,7 +9574,8 @@ svn_client_conflict_option_set_moved_to_abspath(
                                                    scratch_pool));
 
   move_target_wc_abspaths =
-    svn_hash_gets(details->wc_move_targets, details->move_target_repos_relpath);
+    svn_hash_gets(details->wc_move_targets,
+                  get_moved_to_repos_relpath(details, scratch_pool));
 
   if (preferred_move_target_idx < 0 ||
       preferred_move_target_idx > move_target_wc_abspaths->nelts)
