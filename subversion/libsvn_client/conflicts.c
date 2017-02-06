@@ -2739,13 +2739,8 @@ describe_incoming_deletion_upon_update(
           if (details->moves)
             {
               struct repos_move_info *move;
-              const char *moved_to_repos_relpath;
 
               move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
-              if (details->move_target_repos_relpath)
-                moved_to_repos_relpath = details->move_target_repos_relpath;
-              else
-                moved_to_repos_relpath = move->moved_to_repos_relpath;
               description =
                 apr_psprintf(result_pool,
                              _("%s\nThe replaced file was moved to '^/%s'."),
