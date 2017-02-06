@@ -3989,6 +3989,13 @@ get_incoming_delete_details_for_reverse_addition(
   return SVN_NO_ERROR;
 }
 
+/* ### forward declaration */
+static svn_error_t *
+init_wc_move_targets(struct conflict_tree_incoming_delete_details *details,
+                     svn_client_conflict_t *conflict,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *scratch_pool);
+
 /* Implements tree_conflict_get_details_func_t.
  * Find the revision in which the victim was deleted in the repository. */
 static svn_error_t *
@@ -4148,6 +4155,9 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
     }
 
   conflict->tree_conflict_incoming_details = details;
+
+  if (details->moves)
+    SVN_ERR(init_wc_move_targets(details, conflict, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -9183,9 +9193,6 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
     {
       const char *description;
 
-      if (details->wc_move_targets == NULL)
-        SVN_ERR(init_wc_move_targets(details, conflict, ctx, scratch_pool));
-
       if (apr_hash_count(details->wc_move_targets) == 0)
         return SVN_NO_ERROR;
 
@@ -9245,9 +9252,6 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
       incoming_change == svn_wc_conflict_action_delete)
     {
       const char *description;
-
-      if (details->wc_move_targets == NULL)
-        SVN_ERR(init_wc_move_targets(details, conflict, ctx, scratch_pool));
 
       if (apr_hash_count(details->wc_move_targets) == 0)
         return SVN_NO_ERROR;
