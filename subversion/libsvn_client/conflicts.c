@@ -3989,12 +3989,99 @@ get_incoming_delete_details_for_reverse_addition(
   return SVN_NO_ERROR;
 }
 
-/* ### forward declaration */
+/* Follow each move chain starting a MOVE all the way to the end to find
+ * the possible working copy locations for VICTIM_ABSPATH at PEG_REVISION.
+ * Add each such location to the WC_MOVE_TARGETS hash table, keyed on the
+ * repos_relpath which is the corresponding move destination in the repository.
+ * This function is recursive. */
+static svn_error_t *
+follow_move_chains(apr_hash_t *wc_move_targets,
+                   struct repos_move_info *move,
+                   svn_client_ctx_t *ctx,
+                   const char *victim_abspath,
+                   svn_node_kind_t victim_node_kind,
+                   svn_revnum_t peg_revision,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  /* If this is the end of a move chain, look for matching paths in
+   * the working copy and add them to our collection if found. */
+  if (move->next == NULL)
+    {
+      apr_array_header_t *moved_to_abspaths;
+
+      /* Gather nodes which represent this moved_to_repos_relpath. */
+      SVN_ERR(svn_wc__guess_incoming_move_target_nodes(
+                &moved_to_abspaths, ctx->wc_ctx,
+                victim_abspath, victim_node_kind,
+                move->moved_to_repos_relpath,
+                peg_revision, result_pool, scratch_pool));
+      if (moved_to_abspaths->nelts > 0)
+        svn_hash_sets(wc_move_targets, move->moved_to_repos_relpath,
+                      moved_to_abspaths);
+    }
+  else
+    {
+      int i;
+      apr_pool_t *iterpool;
+
+      /* Recurse into each of the possible move chains. */
+      iterpool = svn_pool_create(scratch_pool);
+      for (i = 0; i < move->next->nelts; i++)
+        {
+          struct repos_move_info *next_move;
+
+          svn_pool_clear(iterpool);
+
+          next_move = APR_ARRAY_IDX(move->next, i, struct repos_move_info *);
+          SVN_ERR(follow_move_chains(wc_move_targets, next_move,
+                                     ctx, victim_abspath, victim_node_kind,
+                                     peg_revision, result_pool, iterpool));
+                                        
+        }
+      svn_pool_destroy(iterpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 init_wc_move_targets(struct conflict_tree_incoming_delete_details *details,
                      svn_client_conflict_t *conflict,
                      svn_client_ctx_t *ctx,
-                     apr_pool_t *scratch_pool);
+                     apr_pool_t *scratch_pool)
+{
+  int i;
+  const char *victim_abspath;
+  svn_node_kind_t victim_node_kind;
+  svn_revnum_t incoming_new_pegrev;
+
+  victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+  victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
+  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
+            NULL, &incoming_new_pegrev, NULL, conflict,
+            scratch_pool, scratch_pool));
+  details->wc_move_targets = apr_hash_make(conflict->pool);
+  for (i = 0; i < details->moves->nelts; i++)
+    {
+      struct repos_move_info *move;
+
+      move = APR_ARRAY_IDX(details->moves, i, struct repos_move_info *);
+      SVN_ERR(follow_move_chains(details->wc_move_targets, move,
+                                 ctx, victim_abspath,
+                                 victim_node_kind,
+                                 incoming_new_pegrev,
+                                 conflict->pool, scratch_pool));
+    }
+
+  /* Initialize to the first possible move target. Hopefully,
+   * in most cases there will only be one candidate anyway. */
+  details->move_target_repos_relpath =
+    get_moved_to_repos_relpath(details, scratch_pool);
+  details->wc_move_target_idx = 0;
+
+  return SVN_NO_ERROR;
+}
 
 /* Implements tree_conflict_get_details_func_t.
  * Find the revision in which the victim was deleted in the repository. */
@@ -9001,100 +9088,6 @@ configure_option_incoming_delete_accept(svn_client_conflict_t *conflict,
             resolve_incoming_delete_accept);
         }
     }
-
-  return SVN_NO_ERROR;
-}
-
-/* Follow each move chain starting a MOVE all the way to the end to find
- * the possible working copy locations for VICTIM_ABSPATH at PEG_REVISION.
- * Add each such location to the WC_MOVE_TARGETS hash table, keyed on the
- * repos_relpath which is the corresponding move destination in the repository.
- * This function is recursive. */
-static svn_error_t *
-follow_move_chains(apr_hash_t *wc_move_targets,
-                   struct repos_move_info *move,
-                   svn_client_ctx_t *ctx,
-                   const char *victim_abspath,
-                   svn_node_kind_t victim_node_kind,
-                   svn_revnum_t peg_revision,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
-{
-  /* If this is the end of a move chain, look for matching paths in
-   * the working copy and add them to our collection if found. */
-  if (move->next == NULL)
-    {
-      apr_array_header_t *moved_to_abspaths;
-
-      /* Gather nodes which represent this moved_to_repos_relpath. */
-      SVN_ERR(svn_wc__guess_incoming_move_target_nodes(
-                &moved_to_abspaths, ctx->wc_ctx,
-                victim_abspath, victim_node_kind,
-                move->moved_to_repos_relpath,
-                peg_revision, result_pool, scratch_pool));
-      if (moved_to_abspaths->nelts > 0)
-        svn_hash_sets(wc_move_targets, move->moved_to_repos_relpath,
-                      moved_to_abspaths);
-    }
-  else
-    {
-      int i;
-      apr_pool_t *iterpool;
-
-      /* Recurse into each of the possible move chains. */
-      iterpool = svn_pool_create(scratch_pool);
-      for (i = 0; i < move->next->nelts; i++)
-        {
-          struct repos_move_info *next_move;
-
-          svn_pool_clear(iterpool);
-
-          next_move = APR_ARRAY_IDX(move->next, i, struct repos_move_info *);
-          SVN_ERR(follow_move_chains(wc_move_targets, next_move,
-                                     ctx, victim_abspath, victim_node_kind,
-                                     peg_revision, result_pool, iterpool));
-                                        
-        }
-      svn_pool_destroy(iterpool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-init_wc_move_targets(struct conflict_tree_incoming_delete_details *details,
-                     svn_client_conflict_t *conflict,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *scratch_pool)
-{
-  int i;
-  const char *victim_abspath;
-  svn_node_kind_t victim_node_kind;
-  svn_revnum_t incoming_new_pegrev;
-
-  victim_abspath = svn_client_conflict_get_local_abspath(conflict);
-  victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
-  SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
-            NULL, &incoming_new_pegrev, NULL, conflict,
-            scratch_pool, scratch_pool));
-  details->wc_move_targets = apr_hash_make(conflict->pool);
-  for (i = 0; i < details->moves->nelts; i++)
-    {
-      struct repos_move_info *move;
-
-      move = APR_ARRAY_IDX(details->moves, i, struct repos_move_info *);
-      SVN_ERR(follow_move_chains(details->wc_move_targets, move,
-                                 ctx, victim_abspath,
-                                 victim_node_kind,
-                                 incoming_new_pegrev,
-                                 conflict->pool, scratch_pool));
-    }
-
-  /* Initialize to the first possible move target. Hopefully,
-   * in most cases there will only be one candidate anyway. */
-  details->move_target_repos_relpath =
-    get_moved_to_repos_relpath(details, scratch_pool);
-  details->wc_move_target_idx = 0;
 
   return SVN_NO_ERROR;
 }
