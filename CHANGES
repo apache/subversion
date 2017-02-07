@@ -5,16 +5,55 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.0
  User-visible changes:
   - General:
   - Major new features:
+    * improved interactive conflict resolution for tree conflicts 
+    * new and improved implementation of path-based authorization (r1776832)
   - Minor new features and improvements:
   - Client-side bugfixes:
+    * ra_serf: Fix segfault when running over HTTP v1 (r1766089)
+    * Raise a malfunction instead of segfaulting with corrupt wc.db (r1749887)
   - Server-side bugfixes:
+    * Fix checksum validation error due to data eviction from cache (r1781694)
+    * FSX: Fix an initialization / life time issue with batch-fsync (r1781657)
+    * FSFS pack: Use unbuffered file streams in a couple of places (r1759405)
+    * FSFS: Reduce excessive amount of read and seek syscalls (r1758979, -9399)
   - Client-side and server-side bugfixes:
   - Other tool improvements and bugfixes:
+    * Eliminate one client/server roundtrip from checkouts of HEAD (r1779620)
+    * Eliminate unnecessary URL reparenting over ra_svn (r1779611, -17)
+    * New svn-mergeinfo-normalizer tool (r1695992 et al)
+    * Allow configuring mailer.py to use SMTP SSL (r1777846)
+    * svnmucc can now delete directories with deleted children (issue #4666)
+    * Add '--search' option support to 'svnbench null-list' (r1767202)
+    * Use SHA-1 checksums to check if working copy files are modified (r1759233)
+    * Save a few cycles in svn_stringbuf_set() (r1759177)
+    * FSFS: Open transaction's proto revision in write-only mode (r1759135)
+    * FSFS: Avoid checksum calculations if logical addressing is used (r1756377)
+    * Use the Unicode Windows API (r1756193)
+    * Correctly check result from LoadLibrary() call on Windows (r1755983)
+    * FSFS/FSX: chunked read support for changed paths lists (r1746026, -4987)
+    * FSFS: do not read very long change lists in block read mode (r1746012)
 
  Developer-visible changes:
   - General:
+    * Fix .py scripts throughout the source tree for Python 3 (r1741723 et al)
+    * Unbreak the test suite on Python 3 (r1743034, -81, et al)
+    * Make the test suite work when checked out of a git repository (r1771118)
+    * Add INSTALL instructions for building with OpenSSL 1.1.0 (r1778313)
+    * The C test scheduler is more efficient in SMP environments (r1775555)
+    * The C tests convert paths from/to UTF-8 more efficienly (r1775642)
+    * Add basic tests for svn_xml_parser_t API (r1765214)
+    * Allow Apache HTTPD with mod_deflate in testsuite on Windows (r1758776)
+    * Make get-deps.sh download Googlemock and Googletest from GitHub (r1746303)
   - API changes:
+    * New svn_repos_fs_get_mergeinfo2() with streamy access (r1780810 et al)
+    * New svn_ra_list() API function (r1767190)
+    * New svn_repos_list() API function (r1765088)
+    * New svn_stream_contents_checksum() API function (r1755486, -6651)
+    * NEw svn_fs_paths_changed3() API function (r1745055)
   - Bindings:
+    * Configure the swig bindings only if swig has been enabled (r1751167)
+    * Perl: Fix build with libraries in non-standard LD_LIBRARY_PATH (r1781588)
+    * JavaHL can now get revision properties along with log messages (r1780819)
 
 Version 1.9.5
 (29 Nov 2016, from /branches/1.9.x)
