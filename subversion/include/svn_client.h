@@ -4495,6 +4495,7 @@ svn_error_t *
 svn_client_conflict_option_set_moved_to_repos_relpath(
   svn_client_conflict_option_t *option,
   int preferred_move_target_idx,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool);
 
 /**

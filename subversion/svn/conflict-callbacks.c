@@ -1751,7 +1751,8 @@ handle_tree_conflict(svn_boolean_t *resolved,
           if (conflict_option)
             {
               SVN_ERR(svn_client_conflict_option_set_moved_to_repos_relpath(
-                        conflict_option, preferred_move_target_idx, iterpool));
+                        conflict_option, preferred_move_target_idx,
+                        ctx, iterpool));
 
               /* Update option description. */
               SVN_ERR(build_tree_conflict_options(

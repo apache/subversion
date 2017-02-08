@@ -9414,6 +9414,7 @@ svn_error_t *
 svn_client_conflict_option_set_moved_to_repos_relpath(
   svn_client_conflict_option_t *option,
   int preferred_move_target_idx,
+  svn_client_ctx_t *ctx,
   apr_pool_t *scratch_pool)
 {
   svn_client_conflict_t *conflict = option->conflict;
@@ -9466,6 +9467,14 @@ svn_client_conflict_option_set_moved_to_repos_relpath(
       if (strcmp(move_target_repos_relpath, repos_relpath) == 0)
         {
           details->move_target_repos_relpath = repos_relpath;
+          /* Update option description. */
+          SVN_ERR(describe_incoming_move_merge_conflict_option(
+                    &option->description,
+                    conflict, ctx,
+                    details,
+                    conflict->pool,
+                    scratch_pool));
+
           return SVN_NO_ERROR;
         }
     }
