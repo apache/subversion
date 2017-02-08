@@ -13,7 +13,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.0
     * Raise a malfunction instead of segfaulting with corrupt wc.db (r1749887)
   - Server-side bugfixes:
     * Fix checksum validation error due to data eviction from cache (r1781694)
-    * FSX: Fix an initialization / life time issue with batch-fsync (r1781657)
     * FSFS pack: Use unbuffered file streams in a couple of places (r1759405)
     * FSFS: Reduce excessive amount of read and seek syscalls (r1758979, -9399)
   - Client-side and server-side bugfixes:
