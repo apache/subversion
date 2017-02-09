@@ -2,6 +2,9 @@ Version 1.10.0
 (?? ??? 2017, from /branches/1.10.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.10.0
 
+See the 1.10 release notes for a more verbose overview of the changes since
+the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
+
  User-visible changes:
   - Major new features:
     * better interactive conflict resolution for tree conflicts (r1687489 et al)
