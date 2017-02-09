@@ -5,9 +5,13 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.0
  User-visible changes:
   - General:
   - Major new features:
-    * improved interactive conflict resolution for tree conflicts 
+    * better interactive conflict resolution for tree conflicts (r1687489 et al)
     * new and improved implementation of path-based authorization (r1776832)
   - Minor new features and improvements:
+    * The 'svnbench' command is now installed by default (r1685085)
+    * New 'null-blame' subcommand for 'svnbench' (r1673785)
+    * New 'svnadmin load-revprops' subcommand (r1694191)
+    * New 'svnadmin dump-revprops' subcommand (r1694225)
     * Raise additional text merge conflicts in several corner cases (r1731699)
     * New '--no-flush-to-disk' option for 'svnadmin load' (r1736357, -7357)
     * New '--file' option for several svnadmin subcommands (r1738021)
@@ -16,14 +20,20 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.0
     * New -rN option for 'svnadmin lstxns' (r1703699)
     * Add '--search' option support to 'svnbench null-list' (r1767202)
     * New '-M' option for 'svnlook tree' (r1708222)
+    * New '--skip-unchanged' option for 'svnsync copy-revprops' (r1692655)
     * 'svn log --search' is now case-insensitive (r1731300)
     * 'svn log --search' now ignores diacriticals when matching words (r1735614)
     * Improved performance of server-side log processing (r1732768, r1731656)
     * Less processing time and memory usage in diff3 implementation (r1731659)
     * FSFS: optionally cache node properties without full-text cache (r1723715)
+    * FSFS/FSX: several improvements made to cache implementation (r1694489)
     * ra_serf: adjustments for serf versions with HTTP/2 support (r1716400)
     * ra_serf: Use svndiff1 for sending deltas during commit (r1704317, -613)
     * Make 'svn patch' parse binary diffs in git-style patches (r1703925)
+    * 'svnadmin info' now reports latest revision in the repository (r1697953)
+    * various performance-related tweaks were made in ra_svn (r1694490)
+    * optimize svndiff parser (r1685063)
+    * Stop showing uninteresting deletions in 'svn status' without -v (r1664533)
   - Client-side bugfixes:
     * ra_serf: Fix segfault when running over HTTP v1 (r1766089)
     * ra_serf: keep small svndiffs in memory during commit (r1724455)
@@ -49,9 +59,15 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.0
     * Make diff parser parse any properties following svn:mergeinfo (r1706825)
     * Fix potential unbounded memory usage in patch parser (r1705979)
     * Fix problems with --git diffs applied in reverse (r1704854, -88)
+    * Fix file permission modes in --git diffs to match git and hg (r1695384)
     * Fix a problem with relocating some externals (r1723385)
     * Fix 'svn diff URL@REV WC' wrongly looks up URL@HEAD (issue #4597)
     * Fix 'svn diff --no-diff-added' shows properties as added (issue #4596)
+    * Properly raise text merge conflicts with file externals (r1680245) 
+    * Fix 'svn diff ' with local directories marked incomplete (r1674413 et al)
+    * ra_svn/ra_serf: Make negative log limits work as documented (r1665530)
+    * Handle invalid revision numbers consistently across RA layers (r1665328)
+    * Handle commits to revs > HEAD consistently across RA layers (r1664698)
   - Server-side bugfixes:
     * Fix checksum validation error due to data eviction from cache (r1781694)
     * FSFS pack: Use unbuffered file streams in a couple of places (r1759405)
@@ -61,6 +77,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.0
     * FSFS: detect a very unlikely case of item index corruption (r1716973)
     * FSFS: make handling of revprop size information more resilient (r1716784)
     * FSFS: don't re-parse a directory which just got committed (r1706679)
+    * FSFS: Handle some known quirks in committed node revisions (r1673875)
     * mod_dav_svn: omit Cache-Control HTTP header for HEAD URLs (issue #4514)
     * mod_dav_svn: Reduced memory consumption for DAV merge responses (r1727790)
     * mod_dav_svn: Don't set a Last-Modified header in GET responses (r1724790)
@@ -68,9 +85,13 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.0
     * mod_dav_svn: do not insert newlines in base64 encoded responses (r1712223)
     * Fix insertion of very large items into the membuffer cache (r1717337, -8)
     * Fix capacity check of the membuffer cache's prefix pool (r1714356)
+    * Prevent paths containing newlines from being committed (r1662585)
   - Client-side and server-side bugfixes:
     * Fix integer overflow check with >= 1G mergeinfo ranges per path (r1714380)
     * Fix integer overflow cheks on WoW64 platforms (r1714372)
+    * Fix bug with canonicalizing Window-specific drive-relative URL (r1692262)
+    * In file:// URLs, allow '\' directly after Windows drive letter (r1692259)
+    * Fix segfault with recursive configuration value definitions (issue #4543)
   - Other tool improvements and bugfixes:
     * Eliminate one client/server roundtrip from checkouts of HEAD (r1779620)
     * Eliminate unnecessary URL reparenting over ra_svn (r1779611, -17)
@@ -86,7 +107,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.0
     * FSFS/FSX: chunked read support for changed paths lists (r1746026, -4987)
     * FSFS: do not read very long change lists in block read mode (r1746012)
     * FSFS: avoid double DAG lookup (r1711582)
-    * FSFS: avoid double cache lookup (r1710370)
+    * FSFS: avoid double cache lookups (r1681974, r1710370)
     * FSFS: increase default revprop pack size from 4k to 16k (r1709799)
     * FSFS: speed up revprop access (r1707986 et al)
     * FSFS: disable representation sharing for directories (r1706619)
@@ -94,6 +115,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.0
     * FSFS: tune format 7 pack ordering heuristics (r1706615)
     * FSFS: reduce I/O overhead during history traversal (r1703237)
     * FSFS: Use native Windows API to guarantee data is flushed (r1701053)
+    * FSFS: Warn if a possible rep-cache SHA1 collision is detected (r1674673)
     * FSX: add checksums to packed revprop manifests and files (r1713132, -9717)
     * FSX: significantly reduce size of packed revprop manifest data (r1713109)
     * FSX: improved on-disk representation of property lists (r1717427)
@@ -135,6 +157,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.0
 
  Developer-visible changes:
   - General:
+    * Updated INSTALL instructions (r1691712)
     * Fix .py scripts throughout the source tree for Python 3 (r1741723 et al)
     * Unbreak the test suite on Python 3 (r1743034, -81, et al)
     * Make the test suite work when checked out of a git repository (r1771118)
@@ -150,6 +173,11 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.0
     * Silence compile-time deprecation warnings with SASL on Mac OS X (r1739649)
     * New '--enable-apache-whitelist' configure script option (r1732294)
     * Allow tests to be run over HTTP/2 (r1710707)
+    * Compile libsvn_fs_* as DLLs on Windows (r1696758, -83)
+    * Don't require GNU-specific sed(1) extensions during the build (r1693159)
+    * Support modern utilities for finding free TCP ports for tests (r1684649)
+    * Support --enable-runtime-module-search configure option on OS X (r1677273)
+    * Support memcached on Windows with APR-util 1.3 or later (r1674626 et al)
   - API changes:
     * New svn_client_conflict_* API functions for the new conflict resolver.
     * New svn_repos_fs_get_mergeinfo2() with streamy access (r1780810 et al)
@@ -165,7 +193,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.0
     * New svn_io_write_atomic2() API function (r1703142)
     * New svn_stream_for_stdin2() API function (r1702983)
     * New svn_io_file_rename2() API function (r1701017)
+    * New svn_error_quick_wrapf() API function (r1662668)
     * svn_repos_parse_dumpstream3() now accepts NULL pointers (r1700180)
+    * Fix (svnserve|dav)autocheck when time is only a built-in (r1665652)
   - Bindings:
     * Configure the swig bindings only if swig has been enabled (r1751167)
     * Error if configure --with-swig is used and swig is not found (r1700844)
