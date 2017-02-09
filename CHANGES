@@ -92,7 +92,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * Raise a malfunction instead of segfaulting with corrupt wc.db (r1749887)
     * Fix check for unversioned obstructions blocking file externals (r1735932)
     * Fix behaviour of 'svn patch' if a reject file can't be created (r1725948)
-    * Describe adds and removes 'svn patch' reject file headers (r1707034)
+    * Describe adds and removes in 'svn patch' reject file headers (r1707034)
     * Make 'svn patch' detect recorded moves that are already applied (r1706893)
     * Make 'svn patch' detect already applied patches in edge cases (r1706687)
     * Fix handling of missing trailing context in 'svn patch' (issue #4609)
