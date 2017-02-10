@@ -8002,14 +8002,12 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
     {
       err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                               _("Cannot resolve tree conflict on '%s' "
-                                "(could not find common ancestor of '%s' "
-                                " and '%s')"),
+                                "(could not find common ancestor of '^/%s@%ld' "
+                                " and '^/%s@%ld')"),
                               svn_dirent_local_style(local_abspath,
                                                      scratch_pool),
-                              svn_dirent_local_style(victim_repos_relpath,
-                                                     scratch_pool),
-                              svn_dirent_local_style(moved_to_abspath,
-                                                     scratch_pool));
+                              victim_repos_relpath, victim_peg_rev,
+                              moved_to_repos_relpath, moved_to_peg_rev);
       goto unlock_wc;
     }
 
