@@ -883,6 +883,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
           svn_stream_t *right_stream;
           const char *repos_relpath1;
           const char *repos_relpath2;
+          const char *copyfrom_repos_relpath = NULL;
 
           SVN_ERR(make_repos_relpath(&repos_relpath1, diff_relpath,
                                       dwi->ddi.orig_path_1,
@@ -896,11 +897,18 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                       dwi->wc_ctx,
                                       dwi->ddi.anchor,
                                       scratch_pool, scratch_pool));
+          if (copyfrom_path)
+            SVN_ERR(make_repos_relpath(&copyfrom_repos_relpath, copyfrom_path,
+                                        dwi->ddi.orig_path_2,
+                                        dwi->ddi.session_relpath,
+                                        dwi->wc_ctx,
+                                        dwi->ddi.anchor,
+                                        scratch_pool, scratch_pool));
           SVN_ERR(print_git_diff_header(outstream, &label1, &label2,
                                         operation,
                                         repos_relpath1, repos_relpath2,
                                         rev1, rev2,
-                                        copyfrom_path,
+                                        copyfrom_repos_relpath,
                                         copyfrom_rev,
                                         left_props,
                                         right_props,
@@ -1048,6 +1056,8 @@ diff_content_changed(svn_boolean_t *wrote_header,
             {
               const char *repos_relpath1;
               const char *repos_relpath2;
+              const char *copyfrom_repos_relpath = NULL;
+
               SVN_ERR(make_repos_relpath(&repos_relpath1, diff_relpath,
                                          dwi->ddi.orig_path_1,
                                          dwi->ddi.session_relpath,
@@ -1060,11 +1070,19 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                          dwi->wc_ctx,
                                          dwi->ddi.anchor,
                                          scratch_pool, scratch_pool));
+              if (copyfrom_path)
+                SVN_ERR(make_repos_relpath(&copyfrom_repos_relpath,
+                                           copyfrom_path,
+                                           dwi->ddi.orig_path_2,
+                                           dwi->ddi.session_relpath,
+                                           dwi->wc_ctx,
+                                           dwi->ddi.anchor,
+                                           scratch_pool, scratch_pool));
               SVN_ERR(print_git_diff_header(outstream, &label1, &label2,
                                             operation,
                                             repos_relpath1, repos_relpath2,
                                             rev1, rev2,
-                                            copyfrom_path,
+                                            copyfrom_repos_relpath,
                                             copyfrom_rev,
                                             left_props,
                                             right_props,
