@@ -547,6 +547,7 @@ find_yca(svn_client__pathrev_t **yca_loc,
          svn_revnum_t peg_rev2,
          const char *repos_root_url,
          const char *repos_uuid,
+         svn_ra_session_t *ra_session,
          svn_client_ctx_t *ctx,
          apr_pool_t *result_pool,
          apr_pool_t *scratch_pool)
@@ -562,9 +563,9 @@ find_yca(svn_client__pathrev_t **yca_loc,
   loc2 = svn_client__pathrev_create_with_relpath(repos_root_url, repos_uuid,
                                                  peg_rev2, repos_relpath2,
                                                  scratch_pool);
-  SVN_ERR(svn_client__get_youngest_common_ancestor(yca_loc, loc1, loc2, NULL,
-                                                   ctx, result_pool,
-                                                   scratch_pool));
+  SVN_ERR(svn_client__get_youngest_common_ancestor(yca_loc, loc1, loc2,
+                                                   ra_session, ctx,
+                                                   result_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -807,7 +808,7 @@ find_deleted_rev(void *baton,
                              b->deleted_repos_relpath,
                              rev_below(log_entry->revision),
                              b->repos_root_url, b->repos_uuid,
-                             b->ctx, iterpool, iterpool);
+                             b->extra_ra_session, b->ctx, iterpool, iterpool);
               if (err)
                 {
                   /* ### Happens for moves within other moves and copies. */
@@ -7994,7 +7995,7 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
   err = find_yca(&yca_loc, victim_repos_relpath, victim_peg_rev,
                  moved_to_repos_relpath, moved_to_peg_rev,
                  repos_root_url, repos_uuid,
-                 ctx, scratch_pool, scratch_pool);
+                 NULL, ctx, scratch_pool, scratch_pool);
   if (err)
     goto unlock_wc;
 
