@@ -118,7 +118,7 @@ If the child was moved outside its parent instead of within its parent,
 the output might look like:
 
   Changed paths:
-     A /trunk/epsilon/delta (from /trunk/gamma/delta:2)
+     A /trunk/epsilon/delta-moved (from /trunk/gamma/delta:2)
      D /trunk/gamma
      A /trunk/gamma-moved (from /trunk/gamma:2)
      D /trunk/gamma-moved/delta
