@@ -1224,6 +1224,7 @@ $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
 		CPPFLAGS="-I$(PREFIX)/bz2/include" \
 		LDFLAGS="-Wl,-rpath=$(PREFIX)/python/lib -L$(PREFIX)/bz2/lib" \
+		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
 		$(PYTHON_SRCDIR)/configure \
 		--prefix=$(PREFIX)/python \
 		--enable-shared \
@@ -1234,12 +1235,18 @@ $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
 
 # compile python
 $(PYTHON_OBJDIR)/.compiled: $(PYTHON_OBJDIR)/.configured
-	(cd $(PYTHON_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(PYTHON_OBJDIR) && \
+		env MAKEFLAGS= \
+		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+		make)
 	touch $@
 
 # install python
 $(PYTHON_OBJDIR)/.installed: $(PYTHON_OBJDIR)/.compiled
-	(cd $(PYTHON_OBJDIR) && env MAKEFLAGS= make install)
+	(cd $(PYTHON_OBJDIR) && \
+		env MAKEFLAGS= \
+		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+		make install)
 	touch $@
 
 
