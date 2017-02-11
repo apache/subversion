@@ -135,8 +135,7 @@ static svn_error_t *
 synchronized_authz_initialize(void *baton, apr_pool_t *pool)
 {
 #if APR_HAS_THREADS
-  svn_boolean_t multi_threaded
-    = apr_allocator_mutex_get(apr_pool_allocator_get(pool)) != NULL;
+  svn_boolean_t multi_threaded = TRUE;
 #else
   svn_boolean_t multi_threaded = FALSE;
 #endif
