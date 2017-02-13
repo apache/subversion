@@ -444,8 +444,8 @@ insert_path(construction_context_t *ctx,
        */
       limited_rights_t rights;
       rights.access = *access;
-	  rights.max_rights = access->rights;
-	  rights.min_rights = access->rights;
+      rights.max_rights = access->rights;
+      rights.min_rights = access->rights;
       combine_access(&node->rights, &rights);
       return;
     }
