@@ -101,25 +101,11 @@ def write_authz_file_groups(sbox):
 
 def verify_get(test_area_url, path, user, pw,
                expected_status, expected_body, headers):
-  try:
-    # Python <3.0
-    import httplib
-    from urlparse import urlparse
-  except ImportError:
-    # Python >=3.0
-    import http.client as httplib
-    from urllib.parse import urlparse
-
   import base64
 
   req_url = test_area_url + path
 
-  loc = urlparse(req_url)
-
-  if loc.scheme == 'http':
-    h = httplib.HTTPConnection(loc.hostname, loc.port)
-  else:
-    h = httplib.HTTPSConnection(loc.hostname, loc.port)
+  h = svntest.main.create_http_connection(req_url)
 
   if headers is None:
     headers = {}
