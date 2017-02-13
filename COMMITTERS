@@ -60,6 +60,7 @@ Blanket commit access:
         kotkov   Evgeny Kotkov <evgeny.kotkov@visualsvn.com>
       astieger   Andreas Stieger <andreas.stieger@gmx.de>
       jamessan   James McCoy <jamessan@jamessan.com>
+      luke1410   Stefan Hett <luke1410@posteo.de>
 
 [[END ACTIVE FULL COMMITTERS.  LEAVE THIS LINE HERE; SCRIPTS LOOK FOR IT.]]
 
@@ -167,7 +168,6 @@ Commit access for specific areas:
       prabhugs   Prabhu Gnana Sundar <pprabhugs@gmail.com>   (verify-keep-going)
         schabi   Markus Schaber <schabi@apache.org>          (testsuite)
            gbg   Gabriela Gibson <gabriela.gibson@gmail.com> (gtest)
-      luke1410   Stefan Hett <luke1410@gmx.de>               (doc)
 
   Translation of message files:
 
