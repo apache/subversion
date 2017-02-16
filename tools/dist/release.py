@@ -89,6 +89,14 @@ tool_versions = {
             'swig'     : ['2.0.12',
             '65e13f22a60cecd7279c59882ff8ebe1ffe34078e85c602821a541817a4317f7'],
   },
+  '1.10' : {
+            'autoconf' : ['2.69',
+            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
+            'libtool'  : ['2.4.6',
+            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
+            'swig'     : ['2.0.12',
+            '65e13f22a60cecd7279c59882ff8ebe1ffe34078e85c602821a541817a4317f7'],
+  },
   '1.9' : {
             'autoconf' : ['2.69',
             '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
