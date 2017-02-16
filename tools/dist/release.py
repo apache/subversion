@@ -82,29 +82,44 @@ except AttributeError:
 # Our required / recommended release tool versions by release branch
 tool_versions = {
   'trunk' : {
-            'autoconf' : '2.69',
-            'libtool'  : '2.4.6',
-            'swig'     : '2.0.12',
+            'autoconf' : ['2.69',
+            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
+            'libtool'  : ['2.4.6',
+            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
+            'swig'     : ['2.0.12',
+            '65e13f22a60cecd7279c59882ff8ebe1ffe34078e85c602821a541817a4317f7'],
   },
   '1.9' : {
-            'autoconf' : '2.69',
-            'libtool'  : '2.4.6',
-            'swig'     : '2.0.12'
+            'autoconf' : ['2.69',
+            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
+            'libtool'  : ['2.4.6',
+            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
+            'swig'     : ['2.0.12',
+            '65e13f22a60cecd7279c59882ff8ebe1ffe34078e85c602821a541817a4317f7'],
   },
   '1.8' : {
-            'autoconf' : '2.69',
-            'libtool'  : '2.4.3',
-            'swig'     : '2.0.9',
+            'autoconf' : ['2.69',
+            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
+            'libtool'  : ['2.4.3',
+            '36b4881c1843d7585de9c66c4c3d9a067ed3a3f792bc670beba21f5a4960acdf'],
+            'swig'     : ['2.0.9',
+            '586954000d297fafd7e91d1ad31089cc7e249f658889d11a44605d3662569539'],
   },
   '1.7' : {
-            'autoconf' : '2.68',
-            'libtool'  : '2.4.3',
-            'swig'     : '2.0.4',
+            'autoconf' : ['2.68',
+            'eff70a2916f2e2b3ed7fe8a2d7e63d72cf3a23684b56456b319c3ebce0705d99'],
+            'libtool'  : ['2.4.3',
+            '36b4881c1843d7585de9c66c4c3d9a067ed3a3f792bc670beba21f5a4960acdf'],
+            'swig'     : ['2.0.4',
+            '763a117730d26f8e5ed67f5718c6c0761fbb8461680fc20269db8c0839e1ec8a'],
   },
   '1.6' : {
-            'autoconf' : '2.64',
-            'libtool'  : '1.5.26',
-            'swig'     : '1.3.36',
+            'autoconf' : ['2.64',
+            'a84471733f86ac2c1240a6d28b705b05a6b79c3cca8835c3712efbdf813c5eb6'],
+            'libtool'  : [ '1.5.26',
+            '1c35ae34fe85aa167bd7ab4bc9f477fe019138e1af62678d952fc43c0b7e2f09'],
+            'swig'     : [ '1.3.36',
+            '47439796e3332dd6f5f9e2a45a26c5dc2a6bc93461c2e009d7cb493d1816dc1f'],
   },
 }
 
@@ -112,7 +127,7 @@ tool_versions = {
 recommended_release = '1.8'
 
 # Some constants
-repos = 'http://svn.apache.org/repos/asf/subversion'
+repos = 'https://svn.apache.org/repos/asf/subversion'
 secure_repos = 'https://svn.apache.org/repos/asf/subversion'
 dist_repos = 'https://dist.apache.org/repos/dist'
 dist_dev_url = dist_repos + '/dev/subversion'
@@ -248,10 +263,19 @@ def run_script(verbose, script):
     for l in script.split('\n'):
         subprocess.check_call(l.split(), stdout=stdout, stderr=stderr)
 
-def download_file(url, target):
+def download_file(url, target, checksum):
     response = urllib2.urlopen(url)
-    target_file = open(target, 'w')
+    target_file = open(target, 'w+')
     target_file.write(response.read())
+    target_file.seek(0)
+    m = hashlib.sha256()
+    m.update(target_file.read())
+    target_file.close()
+    checksum2 = m.hexdigest()
+    if checksum != checksum2:
+        raise RuntimeError("Checksum mismatch for '%s': "\
+                           "downloaded: '%s'; expected: '%s'" % \
+                           (target, checksum, checksum2))
 
 #----------------------------------------------------------------------
 # Cleaning up the environment
@@ -298,7 +322,7 @@ class RollDep(object):
             logging.info('Using existing %s.tar.gz' % self._filebase)
         else:
             logging.info('Fetching %s' % self._filebase)
-            download_file(self._url, tarball)
+            download_file(self._url, tarball, self._checksum)
 
         # Extract tarball
         tarfile.open(tarball).extractall(tempdir)
@@ -315,12 +339,13 @@ class RollDep(object):
 
 
 class AutoconfDep(RollDep):
-    def __init__(self, base_dir, use_existing, verbose, autoconf_ver):
+    def __init__(self, base_dir, use_existing, verbose, autoconf_ver, checksum):
         RollDep.__init__(self, base_dir, use_existing, verbose)
         self.label = 'autoconf'
         self._filebase = 'autoconf-' + autoconf_ver
         self._autoconf_ver =  autoconf_ver
-        self._url = 'http://ftp.gnu.org/gnu/autoconf/%s.tar.gz' % self._filebase
+        self._url = 'https://ftp.gnu.org/gnu/autoconf/%s.tar.gz' % self._filebase
+        self._checksum = checksum
 
     def have_usable(self):
         output = self._test_version(['autoconf', '-V'])
@@ -335,12 +360,13 @@ class AutoconfDep(RollDep):
 
 
 class LibtoolDep(RollDep):
-    def __init__(self, base_dir, use_existing, verbose, libtool_ver):
+    def __init__(self, base_dir, use_existing, verbose, libtool_ver, checksum):
         RollDep.__init__(self, base_dir, use_existing, verbose)
         self.label = 'libtool'
         self._filebase = 'libtool-' + libtool_ver
         self._libtool_ver = libtool_ver
-        self._url = 'http://ftp.gnu.org/gnu/libtool/%s.tar.gz' % self._filebase
+        self._url = 'https://ftp.gnu.org/gnu/libtool/%s.tar.gz' % self._filebase
+        self._checksum = checksum
 
     def have_usable(self):
         output = self._test_version(['libtool', '--version'])
@@ -362,14 +388,16 @@ class LibtoolDep(RollDep):
 
 
 class SwigDep(RollDep):
-    def __init__(self, base_dir, use_existing, verbose, swig_ver, sf_mirror):
+    def __init__(self, base_dir, use_existing, verbose, swig_ver, checksum,
+        sf_mirror):
         RollDep.__init__(self, base_dir, use_existing, verbose)
         self.label = 'swig'
         self._filebase = 'swig-' + swig_ver
         self._swig_ver = swig_ver
-        self._url = 'http://sourceforge.net/projects/swig/files/swig/%(swig)s/%(swig)s.tar.gz/download?use_mirror=%(sf_mirror)s' % \
+        self._url = 'https://sourceforge.net/projects/swig/files/swig/%(swig)s/%(swig)s.tar.gz/download?use_mirror=%(sf_mirror)s' % \
             { 'swig' : self._filebase,
               'sf_mirror' : sf_mirror }
+        self._checksum = checksum
         self._extra_configure_flags = '--without-pcre'
 
     def have_usable(self):
@@ -396,11 +424,14 @@ def build_env(args):
             raise
 
     autoconf = AutoconfDep(args.base_dir, args.use_existing, args.verbose,
-                           tool_versions[args.version.branch]['autoconf'])
+                           tool_versions[args.version.branch]['autoconf'][0],
+                           tool_versions[args.version.branch]['autoconf'][1])
     libtool = LibtoolDep(args.base_dir, args.use_existing, args.verbose,
-                         tool_versions[args.version.branch]['libtool'])
+                         tool_versions[args.version.branch]['libtool'][0],
+                         tool_versions[args.version.branch]['libtool'][1])
     swig = SwigDep(args.base_dir, args.use_existing, args.verbose,
-                   tool_versions[args.version.branch]['swig'],
+                   tool_versions[args.version.branch]['swig'][0],
+                   tool_versions[args.version.branch]['swig'][1],
                    args.sf_mirror)
 
     # iterate over our rolling deps, and build them if needed
@@ -463,11 +494,14 @@ def roll_tarballs(args):
 
     # Ensure we've got the appropriate rolling dependencies available
     autoconf = AutoconfDep(args.base_dir, False, args.verbose,
-                         tool_versions[args.version.branch]['autoconf'])
+                         tool_versions[args.version.branch]['autoconf'][0],
+                         tool_versions[args.version.branch]['autoconf'][1])
     libtool = LibtoolDep(args.base_dir, False, args.verbose,
-                         tool_versions[args.version.branch]['libtool'])
+                         tool_versions[args.version.branch]['libtool'][0],
+                         tool_versions[args.version.branch]['libtool'][1])
     swig = SwigDep(args.base_dir, False, args.verbose,
-                   tool_versions[args.version.branch]['swig'], None)
+                   tool_versions[args.version.branch]['swig'][0],
+                   tool_versions[args.version.branch]['swig'][1], None)
 
     for dep in [autoconf, libtool, swig]:
         if not dep.have_usable():
@@ -663,7 +697,7 @@ def clean_dist(args):
 
     svnmucc_cmd = ['svnmucc', '-m', 'Remove old Subversion releases.\n' +
                    'They are still available at ' +
-                   'http://archive.apache.org/dist/subversion/']
+                   'https://archive.apache.org/dist/subversion/']
     if (args.username):
         svnmucc_cmd += ['--username', args.username]
     for k, g in itertools.groupby(sorted(versions),
