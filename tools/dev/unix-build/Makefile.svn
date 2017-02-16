@@ -1973,7 +1973,7 @@ endif
 	@echo "serf:       $(SERF_VER)"
 	@echo "cyrus-sasl: $(CYRUS_SASL_VER)"
 	@echo "sqlite:     $(SQLITE_VER)"
-	@echo "openssl:    `openssl version | cut -d' ' -f2`"
+	@echo "libssl:     `openssl version`"
 	@echo "swig:       `swig -version | grep Version | cut -d' ' -f3`"
 	@echo "python:     $(PYTHON_VER)"
 	@echo "perl:       `eval \`perl -V:version\`; echo $$version`"
