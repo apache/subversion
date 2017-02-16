@@ -105,22 +105,6 @@ tool_versions = {
             'swig'     : ['2.0.9',
             '586954000d297fafd7e91d1ad31089cc7e249f658889d11a44605d3662569539'],
   },
-  '1.7' : {
-            'autoconf' : ['2.68',
-            'eff70a2916f2e2b3ed7fe8a2d7e63d72cf3a23684b56456b319c3ebce0705d99'],
-            'libtool'  : ['2.4.3',
-            '36b4881c1843d7585de9c66c4c3d9a067ed3a3f792bc670beba21f5a4960acdf'],
-            'swig'     : ['2.0.4',
-            '763a117730d26f8e5ed67f5718c6c0761fbb8461680fc20269db8c0839e1ec8a'],
-  },
-  '1.6' : {
-            'autoconf' : ['2.64',
-            'a84471733f86ac2c1240a6d28b705b05a6b79c3cca8835c3712efbdf813c5eb6'],
-            'libtool'  : [ '1.5.26',
-            '1c35ae34fe85aa167bd7ab4bc9f477fe019138e1af62678d952fc43c0b7e2f09'],
-            'swig'     : [ '1.3.36',
-            '47439796e3332dd6f5f9e2a45a26c5dc2a6bc93461c2e009d7cb493d1816dc1f'],
-  },
 }
 
 # The version that is our current recommended release
