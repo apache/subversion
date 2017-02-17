@@ -51,7 +51,7 @@
  * a path rule (actually the rule set specified for a path).  I.e. there is
  * one instance of this per path rule.
  */
-typedef struct access_t
+typedef struct path_access_t
 {
   /* Sequence number of the path rule that this struct was derived from.
    * If multiple rules apply to the same path (only possible with wildcard
@@ -65,7 +65,7 @@ typedef struct access_t
 
   /* Access rights of the respective user as defined by the rule set. */
   authz_access_t rights;
-} access_t;
+} path_access_t;
 
 /* Use this to indicate that no sequence ID has been assigned.
  * It will automatically be inferior to (less than) any other sequence ID. */
@@ -79,7 +79,7 @@ typedef struct limited_rights_t
    * NO_SEQUENCE_NUMBER, there has been no specific path rule for this PATH
    * but only for some sub-path(s).  There is always a rule at the root node.
    */
-  access_t access;
+  path_access_t access;
 
   /* Minimal access rights that the user has on this or any other node in 
    * the sub-tree.  This does not take inherited rights into account. */
@@ -426,7 +426,7 @@ create_construction_context(apr_pool_t *result_pool)
 static void
 insert_path(construction_context_t *ctx,
             node_t *node,
-            access_t *path_access,
+            path_access_t *path_access,
             int segment_count,
             authz_rule_segment_t *segment,
             apr_pool_t *result_pool,
@@ -538,7 +538,7 @@ process_acl(construction_context_t *ctx,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
-  access_t path_access;
+  path_access_t path_access;
   int i;
   node_t *node;
 
