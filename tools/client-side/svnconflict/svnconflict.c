@@ -300,7 +300,7 @@ svnconflict_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                               FALSE, /* quiet */
                               FALSE, /* verbose */
                               version_footer->data,
-                              help_header,   /* already gettext()'d */
+                              _(help_header),
                               svnconflict_cmd_table,
                               svnconflict_options,
                               svnconflict_global_options,
