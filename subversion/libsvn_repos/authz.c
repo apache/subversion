@@ -421,12 +421,12 @@ create_construction_context(apr_pool_t *result_pool)
 /* Constructor utility:  Below NODE, recursively insert sub-nodes for the
  * path given as *SEGMENTS of length SEGMENT_COUNT. If matching nodes
  * already exist, use those instead of creating new ones.  Set the leave
- * node's access rights spec to ACCESS.  Update the context info in CTX.
+ * node's access rights spec to PATH_ACCESS.  Update the context info in CTX.
  */
 static void
 insert_path(construction_context_t *ctx,
             node_t *node,
-            access_t *access,
+            access_t *path_access,
             int segment_count,
             authz_rule_segment_t *segment,
             apr_pool_t *result_pool,
@@ -443,9 +443,9 @@ insert_path(construction_context_t *ctx,
        * ones.  Whichever gets defined last wins.
        */
       limited_rights_t rights;
-      rights.access = *access;
-      rights.max_rights = access->rights;
-      rights.min_rights = access->rights;
+      rights.access = *path_access;
+      rights.max_rights = path_access->rights;
+      rights.min_rights = path_access->rights;
       combine_access(&node->rights, &rights);
       return;
     }
@@ -518,7 +518,7 @@ insert_path(construction_context_t *ctx,
   node_segment->node = sub_node;
 
   /* Continue at the sub-node with the next segment. */
-  insert_path(ctx, sub_node, access, segment_count - 1, segment + 1,
+  insert_path(ctx, sub_node, path_access, segment_count - 1, segment + 1,
               result_pool, scratch_pool);
 }
 
@@ -538,17 +538,17 @@ process_acl(construction_context_t *ctx,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
-  access_t access;
+  access_t path_access;
   int i;
   node_t *node;
 
   /* Skip ACLs that don't say anything about the current user
      and/or repository. */
-  if (!svn_authz__get_acl_access(&access.rights, acl, user, repository))
+  if (!svn_authz__get_acl_access(&path_access.rights, acl, user, repository))
     return;
 
   /* Insert the rule into the filtered tree. */
-  access.sequence_number = acl->sequence_number;
+  path_access.sequence_number = acl->sequence_number;
 
   /* Try to reuse results from previous runs.
    * Basically, skip the common prefix. */
@@ -575,7 +575,7 @@ process_acl(construction_context_t *ctx,
     }
 
   /* Insert the path rule into the filtered tree. */
-  insert_path(ctx, node, &access,
+  insert_path(ctx, node, &path_access,
               acl->rule.len - i, acl->rule.path + i,
               result_pool, scratch_pool);
 }
@@ -1557,17 +1557,18 @@ authz_read(authz_full_t **authz_p,
   svn_checksum_t *rules_checksum = NULL;
   svn_checksum_t *groups_checksum = NULL;
 
-  config_access_t *access = svn_repos__create_config_access(repos_hint,
-                                                            scratch_pool);
+  config_access_t *config_access =
+    svn_repos__create_config_access(repos_hint, scratch_pool);
 
   /* Open the main authz file */
-  SVN_ERR(svn_repos__get_config(&rules_stream, &rules_checksum, access,
+  SVN_ERR(svn_repos__get_config(&rules_stream, &rules_checksum, config_access,
                                 path, must_exist, scratch_pool));
 
   /* Open the optional groups file */
   if (groups_path)
-    SVN_ERR(svn_repos__get_config(&groups_stream, &groups_checksum, access,
-                                  groups_path, must_exist, scratch_pool));
+    SVN_ERR(svn_repos__get_config(&groups_stream, &groups_checksum,
+                                  config_access, groups_path, must_exist,
+                                  scratch_pool));
 
   /* The authz cache is optional. */
   *authz_id = construct_authz_key(rules_checksum, groups_checksum,
@@ -1617,7 +1618,7 @@ authz_read(authz_full_t **authz_p,
                                   path);
     }
 
-  svn_repos__destroy_config_access(access);
+  svn_repos__destroy_config_access(config_access);
 
   return err;
 }
