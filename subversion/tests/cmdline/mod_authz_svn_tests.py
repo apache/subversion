@@ -105,7 +105,7 @@ def verify_get(test_area_url, path, user, pw,
 
   req_url = test_area_url + path
 
-  h = svntest.main.create_http_connection(req_url)
+  h = svntest.main.create_http_connection(req_url, 0)
 
   if headers is None:
     headers = {}
