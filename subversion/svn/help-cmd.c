@@ -182,7 +182,7 @@ svn_cl__help(apr_getopt_t *os,
                              opt_state ? opt_state->quiet : FALSE,
                              opt_state ? opt_state->verbose : FALSE,
                              version_footer->data,
-                             help_header,   /* already gettext()'d */
+                             _(help_header),
                              svn_cl__cmd_table,
                              svn_cl__options,
                              svn_cl__global_options,
