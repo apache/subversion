@@ -515,6 +515,7 @@ svnconflict_resolve_text(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_client_ctx_t *ctx = b->ctx;
   apr_array_header_t *args;
   const char *option_id_str;
+  int optid;
   svn_client_conflict_option_id_t option_id;
   const char *path;
   const char *local_abspath;
@@ -524,7 +525,8 @@ svnconflict_resolve_text(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_opt_parse_num_args(&args, os, 2, pool));
   option_id_str = APR_ARRAY_IDX(args, 0, const char *);
   path = APR_ARRAY_IDX(args, 1, const char *);
-  SVN_ERR(svn_cstring_atoi(&option_id, option_id_str));
+  SVN_ERR(svn_cstring_atoi(&optid, option_id_str));
+  option_id = (svn_client_conflict_option_id_t)optid;
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   SVN_ERR(get_conflicts(&text_conflicted, NULL, NULL,
@@ -549,6 +551,7 @@ svnconflict_resolve_prop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_client_ctx_t *ctx = b->ctx;
   apr_array_header_t *args;
   const char *option_id_str;
+  int optid;
   svn_client_conflict_option_id_t option_id;
   const char *path;
   const char *propname;
@@ -560,7 +563,8 @@ svnconflict_resolve_prop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   propname = APR_ARRAY_IDX(args, 0, const char *);
   option_id_str = APR_ARRAY_IDX(args, 1, const char *);
   path = APR_ARRAY_IDX(args, 2, const char *);
-  SVN_ERR(svn_cstring_atoi(&option_id, option_id_str));
+  SVN_ERR(svn_cstring_atoi(&optid, option_id_str));
+  option_id = (svn_client_conflict_option_id_t)optid;
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   SVN_ERR(get_conflicts(NULL, &props_conflicted, NULL,
@@ -585,6 +589,7 @@ svnconflict_resolve_tree(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_client_ctx_t *ctx = b->ctx;
   apr_array_header_t *args;
   const char *option_id_str;
+  int optid;
   svn_client_conflict_option_id_t option_id;
   const char *path;
   const char *local_abspath;
@@ -594,7 +599,8 @@ svnconflict_resolve_tree(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_opt_parse_num_args(&args, os, 2, pool));
   option_id_str = APR_ARRAY_IDX(args, 0, const char *);
   path = APR_ARRAY_IDX(args, 1, const char *);
-  SVN_ERR(svn_cstring_atoi(&option_id, option_id_str));
+  SVN_ERR(svn_cstring_atoi(&optid, option_id_str));
+  option_id = (svn_client_conflict_option_id_t)optid;
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
   SVN_ERR(get_conflicts(NULL, NULL, &tree_conflicted,
