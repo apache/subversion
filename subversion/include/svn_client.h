@@ -4788,6 +4788,27 @@ svn_client_conflict_option_get_description(svn_client_conflict_option_t *option,
                                            apr_pool_t *result_pool);
 
 /**
+ * Return the ID of the recommended resolution option. If no specific option
+ * is recommended, return @c svn_client_conflict_option_unspecified;
+ *
+ * Client implementations which aim to avoid excessive interactive prompting
+ * may wish to try a recommended resolution option before falling back to
+ * asking the user which option to use.
+ * 
+ * Conflict resolution with a recommended option is not guaranteed to succeed.
+ * Clients should check for errors when trying to resolve a conflict and fall
+ * back to other options and/or interactive prompting when the recommended
+ * option fails to resolve a conflict.
+ *
+ * If @a conflict is a tree conflict, svn_client_conflict_tree_get_details()
+ * should be called before this function to allow for useful recommendations.
+ *
+ * @since New in 1.10.
+ */
+svn_client_conflict_option_id_t
+svn_client_conflict_get_recommended_option_id(svn_client_conflict_t *conflict);
+
+/**
  * Return the absolute path to the conflicted working copy node described
  * by @a conflict.
  *
@@ -4908,7 +4929,8 @@ svn_client_conflict_tree_get_victim_node_kind(svn_client_conflict_t *conflict);
  * Resolve a tree @a conflict using resolution option @a option.
  *
  * May raise an error in case the tree conflict cannot be resolved yet, for
- * instance @c SVN_ERR_WC_OBSTRUCTED_UPDATE or @c SVN_ERR_WC_FOUND_CONFLICT.
+ * instance @c SVN_ERR_WC_OBSTRUCTED_UPDATE, @c SVN_ERR_WC_FOUND_CONFLICT,
+ * or @c SVN_ERR_WC_CONFLICT_RESOLVER_FAILUE.
  * This may happen when other tree conflicts, or unversioned obstructions,
  * block the resolution of this tree conflict. In such a case the other
  * conflicts should be resolved first and resolution of this conflict should
