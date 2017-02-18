@@ -1693,6 +1693,8 @@ handle_tree_conflict(svn_boolean_t *resolved,
   apr_array_header_t *possible_moved_to_abspaths;
   svn_boolean_t all_options_are_dumb;
   const struct client_option_t *recommended_option;
+  svn_boolean_t repos_move_target_chosen = FALSE;
+  svn_boolean_t wc_move_target_chosen = FALSE;
 
   option_id = svn_client_conflict_option_unspecified;
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
@@ -1756,13 +1758,25 @@ handle_tree_conflict(svn_boolean_t *resolved,
                                 _("\nSubversion is not smart enough to resolve "
                                   "this tree conflict automatically!\nSee 'svn "
                                   "help resolve' for more information.\n\n")));
-    
+
   iterpool = svn_pool_create(scratch_pool);
   while (1)
     {
       const client_option_t *opt;
 
       svn_pool_clear(iterpool);
+
+      if (!repos_move_target_chosen &&
+          possible_moved_to_repos_relpaths &&
+          possible_moved_to_repos_relpaths->nelts > 1)
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+                  _("Ambiguous move destinations exist in the repository; "
+                    "try the 'd' option\n")));
+      if (!wc_move_target_chosen && possible_moved_to_abspaths &&
+          possible_moved_to_abspaths->nelts > 1)
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+                  _("Ambiguous move destinations exist in the working copy; "
+                    "try the 'w' option\n")));
 
       SVN_ERR(prompt_user(&opt, tree_conflict_options, NULL,
                           conflict_description, pb, iterpool));
@@ -1809,6 +1823,8 @@ handle_tree_conflict(svn_boolean_t *resolved,
               SVN_ERR(svn_client_conflict_option_set_moved_to_repos_relpath(
                         conflict_option, preferred_move_target_idx,
                         ctx, iterpool));
+              repos_move_target_chosen = TRUE;
+              wc_move_target_chosen = FALSE;
 
               /* Update option description. */
               SVN_ERR(build_tree_conflict_options(
@@ -1858,7 +1874,9 @@ handle_tree_conflict(svn_boolean_t *resolved,
           if (conflict_option)
             {
               SVN_ERR(svn_client_conflict_option_set_moved_to_abspath(
-                        conflict_option, preferred_move_target_idx, ctx, iterpool));
+                        conflict_option, preferred_move_target_idx, ctx,
+                        iterpool));
+              wc_move_target_chosen = TRUE;
 
               /* Update option description. */
               SVN_ERR(build_tree_conflict_options(
