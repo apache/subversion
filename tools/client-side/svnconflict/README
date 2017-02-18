@@ -17,7 +17,7 @@ Resolve prop conflict PATH: svnconflict resolve-prop PROPNAME OPTION_ID PATH
 Resolve tree conflict PATH: svnconflict resolve-tree OPTION_ID PATH
 
 Note that some advanced operations which are offered by 'svn resolve' are not
-supported, such as selecting a move target path from set of ambiguous move
+supported, such as selecting a move target path from a set of ambiguous move
 target candidates. svnconflict will always use a default choice in such cases.
 
 svnconflict may contact the repository to obtain information about a conflict.
