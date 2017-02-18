@@ -387,6 +387,7 @@ typedef struct client_option_t
   svn_client_conflict_option_id_t choice;
                            /* or ..._undefined if not from libsvn_client */
   const char *accept_arg;  /* --accept option argument (NOT localized) */
+  svn_boolean_t is_recommended; /* if TRUE, try this option before prompting */
 } client_option_t;
 
 /* Resolver options for conflict options offered by libsvn_client.  */
@@ -533,11 +534,29 @@ find_option(const apr_array_header_t *options,
   return NULL;
 }
 
+/* Find the first recommended option in OPTIONS. */
+static const client_option_t *
+find_recommended_option(const apr_array_header_t *options)
+{
+  int i;
+
+  for (i = 0; i < options->nelts; i++)
+    {
+      const client_option_t *opt = APR_ARRAY_IDX(options, i, client_option_t *);
+
+      /* Ignore code "" (blank lines) which is not a valid answer. */
+      if (opt->code[0] && opt->is_recommended)
+        return opt;
+    }
+  return NULL;
+}
+
 /* Return a pointer to the client_option_t in OPTIONS matching the ID of
  * conflict option BUILTIN_OPTION. @a out will be set to NULL if the
  * option was not found. */
 static svn_error_t *
 find_option_by_builtin(client_option_t **out,
+                       svn_client_conflict_t *conflict,
                        const resolver_option_t *options,
                        svn_client_conflict_option_t *builtin_option,
                        apr_pool_t *result_pool,
@@ -545,8 +564,10 @@ find_option_by_builtin(client_option_t **out,
 {
   const resolver_option_t *opt;
   svn_client_conflict_option_id_t id;
+  svn_client_conflict_option_id_t recommended_id;
 
   id = svn_client_conflict_option_get_id(builtin_option);
+  recommended_id = svn_client_conflict_get_recommended_option_id(conflict);
 
   for (opt = options; opt->code; opt++)
     {
@@ -564,6 +585,9 @@ find_option_by_builtin(client_option_t **out,
                                     builtin_option,
                                     result_pool);
           client_opt->accept_arg = opt->accept_arg;
+          client_opt->is_recommended =
+            (recommended_id != svn_client_conflict_option_unspecified &&
+             id == recommended_id);
 
           *out = client_opt;
 
@@ -753,7 +777,7 @@ build_text_conflict_options(apr_array_header_t **options,
       svn_pool_clear(iterpool);
       builtin_option = APR_ARRAY_IDX(builtin_options, i,
                                      svn_client_conflict_option_t *);
-      SVN_ERR(find_option_by_builtin(&opt,
+      SVN_ERR(find_option_by_builtin(&opt, conflict,
                                      builtin_resolver_options,
                                      builtin_option,
                                      result_pool,
@@ -1213,7 +1237,7 @@ build_prop_conflict_options(apr_array_header_t **options,
       svn_pool_clear(iterpool);
       builtin_option = APR_ARRAY_IDX(builtin_options, i,
                                      svn_client_conflict_option_t *);
-      SVN_ERR(find_option_by_builtin(&opt,
+      SVN_ERR(find_option_by_builtin(&opt, conflict,
                                      builtin_resolver_options,
                                      builtin_option,
                                      result_pool,
@@ -1472,7 +1496,7 @@ build_tree_conflict_options(
       svn_pool_clear(iterpool);
       builtin_option = APR_ARRAY_IDX(builtin_options, i,
                                      svn_client_conflict_option_t *);
-      SVN_ERR(find_option_by_builtin(&opt,
+      SVN_ERR(find_option_by_builtin(&opt, conflict,
                                      builtin_resolver_options,
                                      builtin_option,
                                      result_pool,
@@ -1668,6 +1692,7 @@ handle_tree_conflict(svn_boolean_t *resolved,
   apr_array_header_t *possible_moved_to_repos_relpaths;
   apr_array_header_t *possible_moved_to_abspaths;
   svn_boolean_t all_options_are_dumb;
+  const struct client_option_t *recommended_option;
 
   option_id = svn_client_conflict_option_unspecified;
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
@@ -1694,6 +1719,37 @@ handle_tree_conflict(svn_boolean_t *resolved,
                                       &all_options_are_dumb,
                                       conflict, ctx,
                                       scratch_pool, scratch_pool));
+
+  /* Try a recommended resolution option before prompting. */
+  recommended_option = find_recommended_option(tree_conflict_options);
+  if (recommended_option)
+    {
+      svn_error_t *err;
+      apr_status_t root_cause;
+
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 _("Applying recommended resolution '%s':\n"),
+                                 recommended_option->label));
+
+      err = mark_conflict_resolved(conflict, recommended_option->choice,
+                                   FALSE, NULL, TRUE,
+                                   path_prefix, conflict_stats,
+                                   ctx, scratch_pool);
+      if (!err)
+        {
+          *resolved = TRUE;
+          return SVN_NO_ERROR;
+        }
+
+      root_cause = svn_error_root_cause(err)->apr_err;
+      if (root_cause != SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE &&
+          root_cause != SVN_ERR_WC_OBSTRUCTED_UPDATE &&
+          root_cause != SVN_ERR_WC_FOUND_CONFLICT)
+        return svn_error_trace(err);
+
+      /* Fall back to interactive prompting. */
+      svn_error_clear(err);
+    }
 
   if (all_options_are_dumb)
     SVN_ERR(svn_cmdline_fprintf(stderr, scratch_pool,

@@ -107,6 +107,9 @@ struct svn_client_conflict_t
   const svn_wc_conflict_description2_t *legacy_text_conflict;
   const char *legacy_prop_conflict_propname;
   const svn_wc_conflict_description2_t *legacy_tree_conflict;
+
+  /* The recommended resolution option's ID. */
+  svn_client_conflict_option_id_t recommended_option_id;
 };
 
 /* Resolves conflict to OPTION and sets CONFLICT->RESOLUTION accordingly.
@@ -4080,6 +4083,39 @@ init_wc_move_targets(struct conflict_tree_incoming_delete_details *details,
   details->move_target_repos_relpath =
     get_moved_to_repos_relpath(details, scratch_pool);
   details->wc_move_target_idx = 0;
+
+  /* If only one move target exists recommend a resolution option. */
+  if (apr_hash_count(details->wc_move_targets) == 1)
+    {
+      apr_array_header_t *wc_abspaths;
+
+      wc_abspaths = svn_hash_gets(details->wc_move_targets,
+                                  details->move_target_repos_relpath);
+      if (wc_abspaths->nelts == 1)
+        {
+          svn_client_conflict_option_id_t recommended[] =
+            {
+              /* Only one of these will be present for any given conflict. */
+              svn_client_conflict_option_incoming_move_file_text_merge,
+              svn_client_conflict_option_incoming_move_dir_merge,
+              svn_client_conflict_option_local_move_file_text_merge
+            };
+          apr_array_header_t *options;
+
+          SVN_ERR(svn_client_conflict_tree_get_resolution_options(
+                    &options, conflict, ctx, scratch_pool, scratch_pool));
+          for (i = 0; i < (sizeof(recommended) / sizeof(recommended[0])); i++)
+            {
+              svn_client_conflict_option_id_t option_id = recommended[i];
+
+              if (svn_client_conflict_option_find_by_id(options, option_id))
+                {
+                  conflict->recommended_option_id = option_id;
+                  break;
+                }
+            }
+        }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -9708,6 +9744,12 @@ svn_client_conflict_option_get_description(svn_client_conflict_option_t *option,
   return apr_pstrdup(result_pool, option->description);
 }
 
+svn_client_conflict_option_id_t
+svn_client_conflict_get_recommended_option_id(svn_client_conflict_t *conflict)
+{
+  return conflict->recommended_option_id;
+}
+                                    
 svn_error_t *
 svn_client_conflict_text_resolve(svn_client_conflict_t *conflict,
                                  svn_client_conflict_option_t *option,
@@ -10229,6 +10271,7 @@ svn_client_conflict_get(svn_client_conflict_t **conflict,
   (*conflict)->resolution_text = svn_client_conflict_option_unspecified;
   (*conflict)->resolution_tree = svn_client_conflict_option_unspecified;
   (*conflict)->resolved_props = apr_hash_make(result_pool);
+  (*conflict)->recommended_option_id = svn_client_conflict_option_unspecified;
   (*conflict)->pool = result_pool;
 
   /* Add all legacy conflict descriptors we can find. Eventually, this code
