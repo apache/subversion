@@ -707,6 +707,9 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       if os.path.exists(os.path.join(lib_path, 'zlibstatic.lib')):
         # CMake default: zlibstatic.lib (static) and zlib.lib (dll)
         lib_name = 'zlibstatic.lib'
+      elif os.path.exists(os.path.join(lib_path, 'zlibstat.lib')):
+        # Visual Studio project file default: zlibstat.lib (static) and zlibwapi.lib (dll)
+        lib_name = 'zlibstat.lib'
       else:
         # Standard makefile produces zlib.lib (static) and zdll.lib (dll)
         lib_name = 'zlib.lib'
