@@ -950,7 +950,10 @@ static const apr_getopt_option_t options_table[] =
     {"quiet",              svndumpfilter__quiet, 0,
      N_("Do not display filtering statistics.") },
     {"pattern",            svndumpfilter__glob, 0,
-     N_("Treat the path prefixes as file glob patterns.") },
+     N_("Treat the path prefixes as file glob patterns.\n"
+        "                             Glob special characters are '*' '?' '[]' and '\\'.\n"
+        "                             Character '/' is not treated specially, so\n"
+        "                             pattern /*/foo matches paths /a/foo and /a/b/foo.") },
     {"drop-empty-revs",    svndumpfilter__drop_empty_revs, 0,
      N_("Remove revisions emptied by filtering.")},
     {"drop-all-empty-revs",    svndumpfilter__drop_all_empty_revs, 0,
