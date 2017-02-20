@@ -164,6 +164,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * Support memcached on Windows with APR-util 1.3 or later (r1674626 et al)
     * Don't require GNU-specific sed(1) extensions during the build (r1693159)
     * Make get-deps.sh download Googlemock and Googletest from GitHub (r1746303)
+    * Add autodetection for 'zlibstat.lib' on Windows (r1783704)
     * Compile libsvn_fs_* as DLLs on Windows (r1696758, -83)
     * Silence compile-time deprecation warnings with SASL on Mac OS X (r1739649)
     * 'make check GLOBAL_SCHEDULER=1' will run many tests in parallel (r1716399)
