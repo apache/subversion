@@ -14,7 +14,6 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * svnbench: Show wall-clock time when done (r1703383)
     * svnbench: Show number of bytes transferred across the network (r1710586)
     * svnbench: Actually evaluate the '--with-no-revprops' option (r1709593)
-    * New 'null-blame' subcommand for 'svnbench' (r1673785)
     * New 'svnadmin load-revprops' subcommand (r1694191)
     * New 'svnadmin dump-revprops' subcommand (r1694225)
     * New '--no-flush-to-disk' option for 'svnadmin load' (r1736357, -7357)
