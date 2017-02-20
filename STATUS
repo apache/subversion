@@ -83,6 +83,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1783704
+   Add support to build with 'zlibstat.lib' in install-layout on Windows.
+   Justification:
+     Simplifies build process on Windows.
+   Votes:
+     +1: luke1410
+
 Veto-blocked changes:
 =====================
 
