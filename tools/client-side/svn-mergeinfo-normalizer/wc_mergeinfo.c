@@ -373,8 +373,8 @@ svn_min__sibling_ranges(apr_hash_t **sibling_ranges,
 
               if (common->nelts)
                 {
-                  svn_hash__sets(result, apr_pstrdup(result_pool, path),
-                                 common);
+                  svn_hash_sets(result, apr_pstrdup(result_pool, path),
+                                common);
                 }
             }
         }
