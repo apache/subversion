@@ -70,7 +70,6 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * mod_dav_svn: Advertise svndiff1 support to clients (r1704891)
     * mod_dav_svn: Remove disk I/O to TMPDIR during first commit (r1716240)
     * svnsync: Fix assertion failure with up-to-date repositories (r1727140)
-    * ra_svn: String unmarshalling more resilient with corrupt input (r1718267)
     * ra_serf: Parallel requests for text and property changes (r1716575)
     * svnserve: Remove disk I/O to TMPDIR during first commit (r1716240)
     * Optimize 'svn blame' a bit (r1711666)
