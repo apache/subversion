@@ -10,7 +10,6 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * Better interactive conflict resolution for tree conflicts (r1687489 et al)
     * New and improved implementation of path-based authorization (r1776832)
   - Minor new features and improvements:
-    * The 'svnbench' command is now installed by default (r1685085)
     * svnbench: Show wall-clock time when done (r1703383)
     * svnbench: Show number of bytes transferred across the network (r1710586)
     * svnbench: Actually evaluate the '--with-no-revprops' option (r1709593)
