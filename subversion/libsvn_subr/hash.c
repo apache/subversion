@@ -564,14 +564,14 @@ svn_hash_from_cstring_keys(apr_hash_t **hash_p,
 
 
 void *
-svn_hash__gets(apr_hash_t *ht, const char *key)
+svn_hash__gets_debug(apr_hash_t *ht, const char *key)
 {
   return apr_hash_get(ht, key, APR_HASH_KEY_STRING);
 }
 
 
 void
-svn_hash__sets(apr_hash_t *ht, const char *key, const void *val)
+svn_hash__sets_debug(apr_hash_t *ht, const char *key, const void *val)
 {
   apr_hash_set(ht, key, APR_HASH_KEY_STRING, val);
 }
