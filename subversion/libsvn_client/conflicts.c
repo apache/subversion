@@ -4059,9 +4059,11 @@ init_wc_move_targets(struct conflict_tree_incoming_delete_details *details,
   const char *victim_abspath;
   svn_node_kind_t victim_node_kind;
   svn_revnum_t incoming_new_pegrev;
+  svn_wc_operation_t operation;
 
   victim_abspath = svn_client_conflict_get_local_abspath(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
+  operation = svn_client_conflict_get_operation(conflict);
   SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
             NULL, &incoming_new_pegrev, NULL, conflict,
             scratch_pool, scratch_pool));
@@ -4084,8 +4086,11 @@ init_wc_move_targets(struct conflict_tree_incoming_delete_details *details,
     get_moved_to_repos_relpath(details, scratch_pool);
   details->wc_move_target_idx = 0;
 
-  /* If only one move target exists recommend a resolution option. */
-  if (apr_hash_count(details->wc_move_targets) == 1)
+  /* If only one move target exists after an update or switch,
+   * recommend a resolution option which follows the incoming move. */
+  if (apr_hash_count(details->wc_move_targets) == 1 &&
+      (operation == svn_wc_operation_update ||
+       operation == svn_wc_operation_switch))
     {
       apr_array_header_t *wc_abspaths;
 
