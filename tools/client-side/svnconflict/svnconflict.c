@@ -244,8 +244,6 @@ check_lib_versions(void)
       { "svn_client", svn_client_version },
       { "svn_wc",     svn_wc_version },
       { "svn_ra",     svn_ra_version },
-      { "svn_delta",  svn_delta_version },
-      { "svn_diff",   svn_diff_version },
       { NULL, NULL }
     };
   SVN_VERSION_DEFINE(my_version);
