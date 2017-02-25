@@ -32,7 +32,6 @@ SVNLOOK=/usr/bin/svnlook
 
 $SVNLOOK changed -t "$TXN" "$REPOS"
 if [ $? -ne 0 ]; then
-  echo $FILES >&2
   echo "svnlook failed, possible SHA-1 collision" >&2
   exit 2
 fi
