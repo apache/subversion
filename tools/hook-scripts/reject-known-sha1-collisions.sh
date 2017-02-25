@@ -29,6 +29,9 @@
 REPOS="$1"
 TXN="$2"
 SVNLOOK=/usr/bin/svnlook
+# GNU coreutils versions of these tools are required:
+SHA1SUM=/usr/bin/sha1sum
+HEAD=/usr/bin/head
 
 $SVNLOOK changed -t "$TXN" "$REPOS"
 if [ $? -ne 0 ]; then
@@ -36,9 +39,8 @@ if [ $? -ne 0 ]; then
   exit 2
 fi
 
-FILES=`$SVNLOOK changed -t "$TXN" "$REPOS" | /usr/bin/grep -Ev '^D ' | /usr/bin/awk '{print $2}'`
-for FILE in $FILES; do
-  PREFIX=`$SVNLOOK cat -t "$TXN" "$REPOS" "$FILE" | head -c320 | /usr/bin/sha1sum | cut -c-40`
+$SVNLOOK changed -t "$TXN" "$REPOS" | /usr/bin/grep -Ev '^D ' | /usr/bin/sed -e 's/.   //' | while read FILE; do
+  PREFIX=`$SVNLOOK cat -t "$TXN" "$REPOS" "$FILE" | $HEAD -c320 | $SHA1SUM | cut -c-40`
   if [ "$PREFIX" == 'f92d74e3874587aaf443d1db961d4e26dde13e9c' ]; then
         echo "known SHA-1 collision rejected" >&2
         exit 3
