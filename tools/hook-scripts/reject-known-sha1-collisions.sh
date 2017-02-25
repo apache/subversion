@@ -36,8 +36,7 @@ if [ $? -ne 0 ]; then
   exit 2
 fi
 
-FILES=`$SVNLOOK changed -t "$TXN" "$REPOS" | /usr/bin/grep -Ev '^D ' | /usr/bin/awk '{print $2}'`
-for FILE in $FILES; do
+$SVNLOOK changed -t "$TXN" "$REPOS" | /usr/bin/grep -Ev '^D ' | /usr/bin/cut -c3 | while read FILE; do
   PREFIX=`$SVNLOOK cat -t "$TXN" "$REPOS" "$FILE" | head -c320 | /usr/bin/sha1sum | cut -c-40`
   if [ "$PREFIX" == 'f92d74e3874587aaf443d1db961d4e26dde13e9c' ]; then
         echo "known SHA-1 collision rejected" >&2
