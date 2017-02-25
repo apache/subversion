@@ -20,8 +20,8 @@
 #
 # $Id$
 #
-# Prevents some SHA-1 collisions to be commited
-# Test fo the 320 byte prefix found on https://shattered.io/
+# Prevents some SHA-1 collisions to be committed
+# Test for the 320 byte prefix found on https://shattered.io/
 # If the files are committed in the same transaction, svnlook
 # will error out itself due to the apparent corruption in the
 # candidate revision
