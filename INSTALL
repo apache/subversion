@@ -975,7 +975,7 @@ II.   INSTALLATION
 
       Then build subversion:
 
-      C:>msbuild subversion_vcnet.sln /t:__ALL_TESTS__ /p:Configuration=Release
+      C:>msbuild subversion_vcnet.sln /t:__MORE__ /p:Configuration=Release
       C:>cd ..
 
       The binaries have now been built.
