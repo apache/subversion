@@ -86,7 +86,7 @@ typedef enum svnconflict_longopt_t {
 
 /* Option codes and descriptions.
  * The entire list must be terminated with an entry of nulls. */
-const apr_getopt_option_t svnconflict_options[] =
+static const apr_getopt_option_t svnconflict_options[] =
 {
   {"help",          'h', 0, N_("show help on a subcommand")},
   {NULL,            '?', 0, N_("show help on a subcommand")},
@@ -140,10 +140,10 @@ static svn_error_t * svnconflict_resolve_tree(apr_getopt_t *, void *,
  */
 
 /* Options that apply to all commands. */
-const int svnconflict_global_options[] =
+static const int svnconflict_global_options[] =
 { opt_auth_username, opt_auth_password, opt_config_dir, opt_config_options, 0 };
 
-const svn_opt_subcommand_desc2_t svnconflict_cmd_table[] =
+static const svn_opt_subcommand_desc2_t svnconflict_cmd_table[] =
 {
   /* This command is also invoked if we see option "--help", "-h" or "-?". */
   { "help", svnconflict_help, {"?", "h"}, N_
