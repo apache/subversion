@@ -43,7 +43,7 @@
 /* Prototypes for referencing before declaration */
 static svn_error_t *
 list_externals(apr_hash_t *externals,
-               apr_array_header_t *patterns,
+               const apr_array_header_t *patterns,
                svn_depth_t depth,
                apr_uint32_t dirent_fields,
                svn_boolean_t fetch_locks,
@@ -56,7 +56,7 @@ static svn_error_t *
 list_internal(const char *path_or_url,
               const svn_opt_revision_t *peg_revision,
               const svn_opt_revision_t *revision,
-              apr_array_header_t *patterns,
+              const apr_array_header_t *patterns,
               svn_depth_t depth,
               apr_uint32_t dirent_fields,
               svn_boolean_t fetch_locks,
@@ -72,7 +72,7 @@ list_internal(const char *path_or_url,
  * Note that any S will match if PATTERNS is empty. */
 static svn_boolean_t
 match_patterns(const char *s,
-               apr_array_header_t *patterns)
+               const apr_array_header_t *patterns)
 {
   int i;
   if (!patterns)
@@ -121,7 +121,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
                  svn_ra_session_t *ra_session,
                  apr_hash_t *locks,
                  const char *fs_path,
-                 apr_array_header_t *patterns,
+                 const apr_array_header_t *patterns,
                  svn_depth_t depth,
                  svn_client_ctx_t *ctx,
                  apr_hash_t *externals,
@@ -310,7 +310,7 @@ static svn_error_t *
 list_internal(const char *path_or_url,
               const svn_opt_revision_t *peg_revision,
               const svn_opt_revision_t *revision,
-              apr_array_header_t *patterns,
+              const apr_array_header_t *patterns,
               svn_depth_t depth,
               apr_uint32_t dirent_fields,
               svn_boolean_t fetch_locks,
@@ -451,7 +451,7 @@ wrap_list_error(const svn_client_ctx_t *ctx,
 static svn_error_t *
 list_external_items(apr_array_header_t *external_items,
                     const char *externals_parent_url,
-                    apr_array_header_t *patterns,
+                    const apr_array_header_t *patterns,
                     svn_depth_t depth,
                     apr_uint32_t dirent_fields,
                     svn_boolean_t fetch_locks,
@@ -515,7 +515,7 @@ list_external_items(apr_array_header_t *external_items,
    passed to svn_client_list(). */
 static svn_error_t *
 list_externals(apr_hash_t *externals,
-               apr_array_header_t *patterns,
+               const apr_array_header_t *patterns,
                svn_depth_t depth,
                apr_uint32_t dirent_fields,
                svn_boolean_t fetch_locks,
@@ -561,7 +561,7 @@ svn_error_t *
 svn_client_list4(const char *path_or_url,
                  const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *revision,
-                 apr_array_header_t *patterns,
+                 const apr_array_header_t *patterns,
                  svn_depth_t depth,
                  apr_uint32_t dirent_fields,
                  svn_boolean_t fetch_locks,

@@ -6464,7 +6464,7 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * its children.  If @a path_or_url is non-existent, return
  * #SVN_ERR_FS_NOT_FOUND.
  *
- * If the @a pattern array of <tt>const char *</tt> is not @c NULL, only
+ * If the @a patterns array of <tt>const char *</tt> is not @c NULL, only
  * report paths whose last segment matches one of the specified glob
  * patterns.  This does not affect the size of the tree nor the number of
  * externals being covered.
@@ -6497,7 +6497,7 @@ svn_error_t *
 svn_client_list4(const char *path_or_url,
                  const svn_opt_revision_t *peg_revision,
                  const svn_opt_revision_t *revision,
-                 apr_array_header_t *patterns,
+                 const apr_array_header_t *patterns,
                  svn_depth_t depth,
                  apr_uint32_t dirent_fields,
                  svn_boolean_t fetch_locks,

@@ -1759,7 +1759,7 @@ typedef svn_error_t *(* svn_repos_dirent_receiver_t)(const char *path,
 svn_error_t *
 svn_repos_list(svn_fs_root_t *root,
                const char *path,
-               apr_array_header_t *patterns,
+               const apr_array_header_t *patterns,
                svn_depth_t depth,
                svn_boolean_t path_info_only,
                svn_repos_authz_func_t authz_read_func,
