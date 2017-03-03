@@ -94,7 +94,7 @@ svn_repos_stat(svn_dirent_t **dirent,
  * Note that any DIRNAME will match if PATTERNS is empty. */
 static svn_boolean_t
 matches_any(const char *dirname,
-            apr_array_header_t *patterns)
+            const apr_array_header_t *patterns)
 {
   int i;
   if (!patterns)
@@ -170,7 +170,7 @@ compare_filtered_dirent(const void *lhs,
 static svn_error_t *
 do_list(svn_fs_root_t *root,
         const char *path,
-        apr_array_header_t *patterns,
+        const apr_array_header_t *patterns,
         svn_depth_t depth,
         svn_boolean_t path_info_only,
         svn_repos_authz_func_t authz_read_func,
@@ -269,7 +269,7 @@ do_list(svn_fs_root_t *root,
 svn_error_t *
 svn_repos_list(svn_fs_root_t *root,
                const char *path,
-               apr_array_header_t *patterns,
+               const apr_array_header_t *patterns,
                svn_depth_t depth,
                svn_boolean_t path_info_only,
                svn_repos_authz_func_t authz_read_func,

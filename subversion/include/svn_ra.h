@@ -1186,7 +1186,7 @@ svn_error_t *
 svn_ra_list(svn_ra_session_t *session,
             const char *path,
             svn_revnum_t revision,
-            apr_array_header_t *patterns,
+            const apr_array_header_t *patterns,
             svn_depth_t depth,
             apr_uint32_t dirent_fields,
             svn_ra_dirent_receiver_t receiver,
