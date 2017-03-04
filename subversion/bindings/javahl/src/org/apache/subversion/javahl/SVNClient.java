@@ -141,10 +141,38 @@ public class SVNClient implements ISVNClient
                ignoreExternals, false, changelists, callback);
     }
 
-    public native void list(String url, Revision revision,
-                            Revision pegRevision, Depth depth, int direntFields,
-                            boolean fetchLocks, ListCallback callback)
+    public native void list(String url, Revision revision, Revision pegRevision,
+                            List<String> patterns, Depth depth, int direntFields,
+                            boolean fetchLocks, boolean includeExternals,
+                            ListItemCallback callback)
             throws ClientException;
+
+    private final class ListCallbackWrapper implements ListItemCallback
+    {
+        private final ListCallback wrappedCallback;
+
+        ListCallbackWrapper(ListCallback wrappedCallback)
+        {
+            this.wrappedCallback = wrappedCallback;
+        }
+
+        public void doEntry(DirEntry dirent, Lock lock,
+                            String externalParentURL,
+                            String externalTarget)
+        {
+            wrappedCallback.doEntry(dirent, lock);
+        }
+    };
+
+    @Deprecated
+    public void list(String url, Revision revision,
+                     Revision pegRevision, Depth depth, int direntFields,
+                     boolean fetchLocks, ListCallback callback)
+            throws ClientException
+    {
+        list(url, revision, pegRevision, null, depth, direntFields,
+             fetchLocks, false, new ListCallbackWrapper(callback));
+    }
 
     public native void username(String username);
 

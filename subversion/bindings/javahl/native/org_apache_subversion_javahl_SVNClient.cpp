@@ -156,8 +156,8 @@ Java_org_apache_subversion_javahl_SVNClient_getLastPath
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_list
 (JNIEnv *env, jobject jthis, jstring jurl, jobject jrevision,
- jobject jpegRevision, jobject jdepth, jint jdirentFields,
- jboolean jfetchLocks, jobject jcallback)
+ jobject jpegRevision, jobject jpatterns, jobject jdepth, jint jdirentFields,
+ jboolean jfetchLocks, jboolean jincludeExternals, jobject jcallback)
 {
   JNIEntry(SVNClient, list);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -176,9 +176,16 @@ Java_org_apache_subversion_javahl_SVNClient_list
   if (JNIUtil::isExceptionThrown())
     return;
 
+  StringArray patterns(jpatterns);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   ListCallback callback(jcallback);
-  cl->list(url, revision, pegRevision, EnumMapper::toDepth(jdepth),
-           static_cast<int>(jdirentFields), jfetchLocks ? true : false,
+  cl->list(url, revision, pegRevision, patterns,
+           EnumMapper::toDepth(jdepth),
+           static_cast<int>(jdirentFields),
+           jfetchLocks ? true : false,
+           jincludeExternals ? true : false,
            &callback);
 }
 
