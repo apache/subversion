@@ -38,6 +38,9 @@ StringArray::~StringArray()
 
 const apr_array_header_t *StringArray::array(const SVN::Pool &pool)
 {
+  if (isNull())
+    return NULL;
+
   apr_array_header_t *strings
     = apr_array_make(pool.getPool(), static_cast<int>(m_strings.size()),
                      sizeof(char *));
@@ -77,11 +80,13 @@ StringArray::init(void)
 StringArray::StringArray(jobjectArray jstrings)
     : Array(jstrings), m_strings()
 {
-  init();
+  if (!isNull())
+    init();
 }
 
 StringArray::StringArray(jobject jstringCollection)
     : Array(jstringCollection), m_strings()
 {
-  init();
+  if (!isNull())
+    init();
 }
