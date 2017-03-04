@@ -123,11 +123,29 @@ public interface ISVNClient
      * @param url             the url to list
      * @param revision        the revision to list
      * @param pegRevision     the revision to interpret url
+     * @param patterns        optional glob patterns to filter the result
      * @param depth           the depth to recurse into subdirectories
      * @param direntFields    the fields to retrieve
      * @param fetchLocks      whether to fetch lock information
+     * @param includeExternals whether to list external items
      * @param callback        the callback to receive the directory entries
+     * @since 1.10
      */
+    void list(String url, Revision revision, Revision pegRevision,
+              List<String> patterns, Depth depth, int direntFields,
+              boolean fetchLocks, boolean includeExternals,
+              ListItemCallback callback)
+            throws ClientException;
+
+    /**
+     * Lists the directory entries of a url on the server.
+     * <p>
+     * Behaves like the 1.10 version with
+     *     <code>patterns = null</code> and
+     *     <code>includeExternals = false</code>
+     * @deprecated
+     */
+    @Deprecated
     void list(String url, Revision revision, Revision pegRevision,
               Depth depth, int direntFields, boolean fetchLocks,
               ListCallback callback)
