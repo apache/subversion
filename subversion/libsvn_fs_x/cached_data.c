@@ -1974,6 +1974,16 @@ skip_contents(rep_read_baton_t *baton,
           len -= to_read;
           buffer += to_read;
         }
+
+      /* Make the MD5 calculation catch up with the data delivered
+       * (we did not run MD5 on the data that we took from the cache). */
+      if (!err)
+        {
+          SVN_ERR(svn_checksum_update(baton->md5_checksum_ctx,
+                                      baton->current_fulltext->data,
+                                      baton->current_fulltext->len));
+          baton->off += baton->current_fulltext->len;
+        }
     }
   else if (len > 0)
     {
@@ -1989,6 +1999,15 @@ skip_contents(rep_read_baton_t *baton,
 
           err = get_contents_from_windows(baton, buffer, &to_read);
           len -= to_read;
+
+          /* Make the MD5 calculation catch up with the data delivered
+           * (we did not run MD5 on the data that we took from the cache). */
+          if (!err)
+            {
+              SVN_ERR(svn_checksum_update(baton->md5_checksum_ctx,
+                                          buffer, to_read));
+              baton->off += to_read;
+            }
         }
 
       svn_pool_destroy(subpool);
