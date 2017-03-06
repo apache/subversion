@@ -81,7 +81,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
                             svn_fs_t *fs,
                             apr_pool_t *scratch_pool);
 
-/* Set *CONTENTS to be a readable svn_stream_t that receives the text
+/* Set *CONTENTS_P to be a readable svn_stream_t that receives the text
    representation REP as seen in filesystem FS.  If CACHE_FULLTEXT is
    not set, bypass fulltext cache lookup for this rep and don't put the
    reconstructed fulltext into cache.
