@@ -2726,9 +2726,12 @@ write_container_rep(representation_t *rep,
   /* Store the results. */
   SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, scratch_pool));
 
+  /* Update size info. */
+  rep->expanded_size = whb->size;
+  rep->size = whb->size;
+
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  rep->expanded_size = whb->size;
   if (allow_rep_sharing)
     {
       representation_t *old_rep;
@@ -2768,9 +2771,6 @@ write_container_rep(representation_t *rep,
 
       SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
     }
-
-  /* update the representation */
-  rep->size = whb->size;
 
   return SVN_NO_ERROR;
 }
@@ -2877,9 +2877,13 @@ write_container_delta_rep(representation_t *rep,
   /* Store the results. */
   SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, scratch_pool));
 
+  /* Update size info. */
+  SVN_ERR(svn_io_file_get_offset(&rep_end, file, scratch_pool));
+  rep->size = rep_end - delta_start;
+  rep->expanded_size = whb->size;
+
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  rep->expanded_size = whb->size;
   if (allow_rep_sharing)
     {
       representation_t *old_rep;
@@ -2898,7 +2902,6 @@ write_container_delta_rep(representation_t *rep,
     }
 
   /* Write out our cosmetic end marker. */
-  SVN_ERR(svn_io_file_get_offset(&rep_end, file, scratch_pool));
   SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
 
   SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
@@ -2920,9 +2923,6 @@ write_container_delta_rep(representation_t *rep,
 
       SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
     }
-
-  /* update the representation */
-  rep->size = rep_end - delta_start;
 
   return SVN_NO_ERROR;
 }
