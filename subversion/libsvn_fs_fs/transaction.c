@@ -2267,6 +2267,10 @@ get_shared_rep(representation_t **old_rep,
   svn_error_t *err;
   fs_fs_data_t *ffd = fs->fsap_data;
 
+  svn_checksum_t checksum;
+  checksum.digest = rep->sha1_digest;
+  checksum.kind = svn_checksum_sha1;
+
   /* Return NULL, if rep sharing has been disabled. */
   *old_rep = NULL;
   if (!ffd->rep_sharing_allowed)
@@ -2287,9 +2291,6 @@ get_shared_rep(representation_t **old_rep,
   /* If we haven't found anything yet, try harder and consult our DB. */
   if (*old_rep == NULL)
     {
-      svn_checksum_t checksum;
-      checksum.digest = rep->sha1_digest;
-      checksum.kind = svn_checksum_sha1;
       err = svn_fs_fs__get_rep_reference(old_rep, fs, &checksum, result_pool);
       /* ### Other error codes that we shouldn't mask out? */
       if (err == SVN_NO_ERROR)
@@ -2355,10 +2356,6 @@ get_shared_rep(representation_t **old_rep,
          Because not sharing reps is always a safe option,
          terminating the request would be inappropriate.
        */
-      svn_checksum_t checksum;
-      checksum.digest = rep->sha1_digest;
-      checksum.kind = svn_checksum_sha1;
-
       err = svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                               "Rep size %s mismatches rep-cache.db value %s "
                               "for SHA1 %s.\n"
