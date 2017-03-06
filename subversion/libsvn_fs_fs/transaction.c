@@ -442,7 +442,7 @@ get_writable_proto_rev(apr_file_t **file,
   /* Now open the prototype revision file and seek to the end. */
   err = svn_io_file_open(file,
                          svn_fs_fs__path_txn_proto_rev(fs, txn_id, pool),
-                         APR_WRITE | APR_BUFFERED, APR_OS_DEFAULT,
+                         APR_READ | APR_WRITE | APR_BUFFERED, APR_OS_DEFAULT,
                          pool);
 
   /* You might expect that we could dispense with the following seek
@@ -2253,6 +2253,11 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
    there may be new duplicate representations within the same uncommitted
    revision, those can be passed in REPS_HASH (maps a sha1 digest onto
    representation_t*), otherwise pass in NULL for REPS_HASH.
+
+   The content of both representations will be compared, taking REP's content
+   from FILE at OFFSET.  Only if they actually match, will *OLD_REP not be
+   NULL.
+
    Use RESULT_POOL for *OLD_REP  allocations and SCRATCH_POOL for temporaries.
    The lifetime of *OLD_REP is limited by both, RESULT_POOL and REP lifetime.
  */
@@ -2260,6 +2265,8 @@ static svn_error_t *
 get_shared_rep(representation_t **old_rep,
                svn_fs_t *fs,
                representation_t *rep,
+               apr_file_t *file,
+               apr_off_t offset,
                apr_hash_t *reps_hash,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
@@ -2385,6 +2392,78 @@ get_shared_rep(representation_t **old_rep,
       (*old_rep)->uniquifier = rep->uniquifier;
     }
 
+  /* If we (very likely) found a matching representation, compare the actual
+   * contents such that we can be sure that no rep-cache.db corruption or
+   * hash collision produced a false positive. */
+  if (*old_rep)
+    {
+      apr_off_t old_position;
+      svn_stream_t *contents;
+      svn_stream_t *old_contents;
+      svn_boolean_t same;
+
+      /* The existing representation may itsel be part of the current
+       * transaction.  In that case, it may be in different stages of
+       * the commit finalization process.
+       *
+       * OLD_REP_NORM is the same as that OLD_REP but it is assigned
+       * explicitly to REP's transaction if OLD_REP does not point
+       * to an already committed revision.  This then prevents the
+       * revision lookup and the txn data will be accessed.
+       */
+      representation_t old_rep_norm = **old_rep;
+      if (   !SVN_IS_VALID_REVNUM(old_rep_norm.revision)
+          || old_rep_norm.revision > ffd->youngest_rev_cache)
+        old_rep_norm.txn_id = rep->txn_id;
+
+      /* Make sure we can later restore FILE's current position. */
+      SVN_ERR(svn_io_file_get_offset(&old_position, file, scratch_pool));
+
+      /* Compare the two representations.
+       * Note that the stream comparison might also produce MD5 checksum
+       * errors or other failures in case of SHA1 collisions. */
+      SVN_ERR(svn_fs_fs__get_contents_from_file(&contents, fs, rep, file,
+                                                offset, scratch_pool));
+      SVN_ERR(svn_fs_fs__get_contents(&old_contents, fs, &old_rep_norm,
+                                      FALSE, scratch_pool));
+      err = svn_stream_contents_same2(&same, contents, old_contents,
+                                      scratch_pool);
+
+      /* Restore FILE's read / write position. */
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &old_position, scratch_pool));
+
+      /* A mismatch should be extremely rare.
+       * If it does happen, log the event and don't share the rep. */
+      if (!same || err)
+        {
+          /* SHA1 collision or worse.
+             We can continue without rep-sharing, but warn.
+            */
+          svn_stringbuf_t *old_rep_str
+            = svn_fs_fs__unparse_representation(*old_rep,
+                                                ffd->format, FALSE,
+                                                scratch_pool,
+                                                scratch_pool);
+          svn_stringbuf_t *rep_str
+            = svn_fs_fs__unparse_representation(rep,
+                                                ffd->format, FALSE,
+                                                scratch_pool,
+                                                scratch_pool);
+          const char *checksum__str
+            = svn_checksum_to_cstring_display(&checksum, scratch_pool);
+
+          err = svn_error_createf(SVN_ERR_FS_AMBIUGOUS_CHECKSUM_REP,
+                                  err, "SHA1 of reps '%s' and '%s' "
+                                  "matches (%s) but contents differ",
+                                  old_rep_str->data, rep_str->data,
+                                  checksum__str);
+
+          (fs->warning)(fs->warning_baton, err);
+          svn_error_clear(err);
+          *old_rep = NULL;
+        }
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -2446,8 +2525,8 @@ rep_write_contents_close(void *baton)
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  SVN_ERR(get_shared_rep(&old_rep, b->fs, rep, NULL, b->result_pool,
-                         b->scratch_pool));
+  SVN_ERR(get_shared_rep(&old_rep, b->fs, rep, b->file, b->rep_offset, NULL,
+                         b->result_pool, b->scratch_pool));
 
   if (old_rep)
     {
@@ -2735,8 +2814,8 @@ write_container_rep(representation_t *rep,
   if (allow_rep_sharing)
     {
       representation_t *old_rep;
-      SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool,
-                             scratch_pool));
+      SVN_ERR(get_shared_rep(&old_rep, fs, rep, file, offset, reps_hash,
+                             scratch_pool, scratch_pool));
 
       if (old_rep)
         {
@@ -2887,8 +2966,8 @@ write_container_delta_rep(representation_t *rep,
   if (allow_rep_sharing)
     {
       representation_t *old_rep;
-      SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool,
-                             scratch_pool));
+      SVN_ERR(get_shared_rep(&old_rep, fs, rep, file, offset, reps_hash,
+                             scratch_pool, scratch_pool));
 
       if (old_rep)
         {

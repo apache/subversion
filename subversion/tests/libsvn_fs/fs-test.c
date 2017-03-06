@@ -7482,8 +7482,9 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test commit with locked rep-cache"),
     SVN_TEST_OPTS_PASS(test_cache_clear_during_stream,
                        "test clearing the cache while streaming a rep"),
-    SVN_TEST_OPTS_XFAIL(test_rep_sharing_strict_content_check,
-                       "test rep-sharing on content rather than SHA1"),
+    SVN_TEST_OPTS_XFAIL_OTOH(test_rep_sharing_strict_content_check,
+                             "test rep-sharing on content rather than SHA1",
+                             SVN_TEST_PASS_IF_FS_TYPE_IS(SVN_FS_TYPE_FSFS)),
     SVN_TEST_NULL
   };
 
