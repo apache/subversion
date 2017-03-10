@@ -69,7 +69,7 @@ block_read(void **result,
  * contents if not NULL.  Use SCRATCH_POOL for temporary allocations.
  */
 static svn_error_t *
-dgb__log_access(svn_fs_t *fs,
+dbg__log_access(svn_fs_t *fs,
                 const svn_fs_x__id_t *id,
                 void *item,
                 apr_uint32_t item_type,
@@ -379,7 +379,7 @@ svn_fs_x__get_node_revision(svn_fs_x__noderev_t **noderev_p,
                                id_string->data);
     }
 
-  SVN_ERR(dgb__log_access(fs, id, *noderev_p,
+  SVN_ERR(dbg__log_access(fs, id, *noderev_p,
                           SVN_FS_X__ITEM_TYPE_NODEREV, scratch_pool));
 
   return svn_error_trace(err);
@@ -708,7 +708,7 @@ create_rep_state_body(rep_state_t **rep_state,
     }
 
   /* finalize */
-  SVN_ERR(dgb__log_access(fs, &rs->rep_id, rh, SVN_FS_X__ITEM_TYPE_ANY_REP,
+  SVN_ERR(dbg__log_access(fs, &rs->rep_id, rh, SVN_FS_X__ITEM_TYPE_ANY_REP,
                           scratch_pool));
 
   rs->header_size = rh->header_size;
@@ -1292,7 +1292,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
 
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
 
-  SVN_ERR(dgb__log_access(rs->sfile->fs, &rs->rep_id, NULL,
+  SVN_ERR(dbg__log_access(rs->sfile->fs, &rs->rep_id, NULL,
                           SVN_FS_X__ITEM_TYPE_ANY_REP, scratch_pool));
 
   /* Read the next window.  But first, try to find it in the cache. */
@@ -2912,7 +2912,7 @@ svn_fs_x__get_changes(apr_array_header_t **changes,
 
   context->next += (*changes)->nelts;
 
-  SVN_ERR(dgb__log_access(context->fs, &id, *changes,
+  SVN_ERR(dbg__log_access(context->fs, &id, *changes,
                           SVN_FS_X__ITEM_TYPE_CHANGES, scratch_pool));
 
   return SVN_NO_ERROR;
