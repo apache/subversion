@@ -721,7 +721,8 @@ get_writable_proto_rev(apr_file_t **file,
   /* Now open the prototype revision file and seek to the end. */
   err = svn_io_file_open(file,
                          svn_fs_x__path_txn_proto_rev(fs, txn_id, pool),
-                         APR_WRITE | APR_BUFFERED, APR_OS_DEFAULT, pool);
+                         APR_READ | APR_WRITE | APR_BUFFERED, APR_OS_DEFAULT,
+                         pool);
 
   /* You might expect that we could dispense with the following seek
      and achieve the same thing by opening the file using APR_APPEND.
@@ -2329,19 +2330,31 @@ rep_write_get_baton(rep_write_baton_t **wb_p,
    there may be new duplicate representations within the same uncommitted
    revision, those can be passed in REPS_HASH (maps a sha1 digest onto
    svn_fs_x__representation_t*), otherwise pass in NULL for REPS_HASH.
+
+   The content of both representations will be compared, taking REP's content
+   from FILE at OFFSET.  Only if they actually match, will *OLD_REP not be
+   NULL.
+
    Use RESULT_POOL for *OLD_REP  allocations and SCRATCH_POOL for temporaries.
    The lifetime of *OLD_REP is limited by both, RESULT_POOL and REP lifetime.
  */
 static svn_error_t *
 get_shared_rep(svn_fs_x__representation_t **old_rep,
                svn_fs_t *fs,
+               svn_fs_x__txn_id_t txn_id,
                svn_fs_x__representation_t *rep,
+               apr_file_t *file,
+               apr_off_t offset,
                apr_hash_t *reps_hash,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   svn_fs_x__data_t *ffd = fs->fsap_data;
+
+  svn_checksum_t checksum;
+  checksum.digest = rep->sha1_digest;
+  checksum.kind = svn_checksum_sha1;
 
   /* Return NULL, if rep sharing has been disabled. */
   *old_rep = NULL;
@@ -2363,9 +2376,6 @@ get_shared_rep(svn_fs_x__representation_t **old_rep,
   /* If we haven't found anything yet, try harder and consult our DB. */
   if (*old_rep == NULL)
     {
-      svn_checksum_t checksum;
-      checksum.digest = rep->sha1_digest;
-      checksum.kind = svn_checksum_sha1;
       err = svn_fs_x__get_rep_reference(old_rep, fs, &checksum, result_pool,
                                         scratch_pool);
 
@@ -2435,10 +2445,6 @@ get_shared_rep(svn_fs_x__representation_t **old_rep,
          Because not sharing reps is always a safe option,
          terminating the request would be inappropriate.
        */
-      svn_checksum_t checksum;
-      checksum.digest = rep->sha1_digest;
-      checksum.kind = svn_checksum_sha1;
-
       err = svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                               "Rep size %s mismatches rep-cache.db value %s "
                               "for SHA1 %s.\n"
@@ -2465,6 +2471,87 @@ get_shared_rep(svn_fs_x__representation_t **old_rep,
       /* Add information that is missing in the cached data.
          Use the old rep for this content. */
       memcpy((*old_rep)->md5_digest, rep->md5_digest, sizeof(rep->md5_digest));
+    }
+
+  /* If we (very likely) found a matching representation, compare the actual
+   * contents such that we can be sure that no rep-cache.db corruption or
+   * hash collision produced a false positive. */
+  if (*old_rep)
+    {
+      apr_off_t old_position;
+      svn_stream_t *contents;
+      svn_stream_t *old_contents;
+      svn_boolean_t same;
+
+      /* Make sure we can later restore FILE's current position. */
+      SVN_ERR(svn_io_file_get_offset(&old_position, file, scratch_pool));
+
+      /* Compare the two representations.
+       * Note that the stream comparison might also produce MD5 checksum
+       * errors or other failures in case of SHA1 collisions. */
+      SVN_ERR(svn_fs_x__get_contents_from_file(&contents, fs, rep, file,
+                                               offset, scratch_pool));
+      if ((*old_rep)->id.change_set == rep->id.change_set)
+        {
+          /* Comparing with contents from the same transaction means
+           * reading the same prote-rev FILE.  In the commit stage,
+           * the file will already have been moved and the IDs already
+           * bumped to the final revision.  Hence, we must determine
+           * the OFFSET "manually". */
+          svn_fs_x__revision_file_t *rev_file;
+          apr_uint32_t sub_item = 0;
+          svn_fs_x__id_t id;
+          id.change_set = svn_fs_x__change_set_by_txn(txn_id);
+          id.number = (*old_rep)->id.number;
+
+          SVN_ERR(svn_fs_x__rev_file_wrap_temp(&rev_file, fs, file,
+                                               scratch_pool));
+          SVN_ERR(svn_fs_x__item_offset(&offset, &sub_item, fs, rev_file,
+                                        &id, scratch_pool));
+
+          SVN_ERR(svn_fs_x__get_contents_from_file(&old_contents, fs,
+                                                   *old_rep, file,
+                                                   offset, scratch_pool));
+        }
+      else
+        {
+          SVN_ERR(svn_fs_x__get_contents(&old_contents, fs, *old_rep,
+                                         FALSE, scratch_pool));
+        }
+      err = svn_stream_contents_same2(&same, contents, old_contents,
+                                      scratch_pool);
+
+      /* Restore FILE's read / write position. */
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &old_position, scratch_pool));
+
+      /* A mismatch should be extremely rare.
+       * If it does happen, log the event and don't share the rep. */
+      if (!same || err)
+        {
+          /* SHA1 collision or worse.
+             We can continue without rep-sharing, but warn.
+            */
+          svn_stringbuf_t *old_rep_str
+            = svn_fs_x__unparse_representation(*old_rep, FALSE,
+                                               scratch_pool,
+                                               scratch_pool);
+          svn_stringbuf_t *rep_str
+            = svn_fs_x__unparse_representation(rep, FALSE,
+                                               scratch_pool,
+                                               scratch_pool);
+          const char *checksum__str
+            = svn_checksum_to_cstring_display(&checksum, scratch_pool);
+
+          err = svn_error_createf(SVN_ERR_FS_AMBIUGOUS_CHECKSUM_REP,
+                                  err, "SHA1 of reps '%s' and '%s' "
+                                  "matches (%s) but contents differ",
+                                  old_rep_str->data, rep_str->data,
+                                  checksum__str);
+
+          (fs->warning)(fs->warning_baton, err);
+          svn_error_clear(err);
+          *old_rep = NULL;
+        }
     }
 
   return SVN_NO_ERROR;
@@ -2527,8 +2614,8 @@ rep_write_contents_close(void *baton)
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  SVN_ERR(get_shared_rep(&old_rep, b->fs, rep, NULL, b->result_pool,
-                         b->local_pool));
+  SVN_ERR(get_shared_rep(&old_rep, b->fs, txn_id, rep, b->file, b->rep_offset,
+                         NULL, b->result_pool, b->local_pool));
 
   if (old_rep)
     {
@@ -2856,13 +2943,17 @@ write_container_delta_rep(svn_fs_x__representation_t *rep,
 
   /* Store the results. */
   SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, scratch_pool));
+
+  /* Update size info. */
+  SVN_ERR(svn_io_file_get_offset(&rep_end, file, scratch_pool));
+  rep->size = rep_end - delta_start;
   rep->expanded_size = whb->size;
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
   if (allow_rep_sharing)
-    SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool,
-                           scratch_pool));
+    SVN_ERR(get_shared_rep(&old_rep, fs, txn_id, rep, file, offset, reps_hash,
+                           scratch_pool, scratch_pool));
 
   if (old_rep)
     {
@@ -2879,7 +2970,6 @@ write_container_delta_rep(svn_fs_x__representation_t *rep,
       svn_fs_x__id_t noderev_id;
 
       /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_io_file_get_offset(&rep_end, file, scratch_pool));
       SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
       SVN_ERR(svn_stream_close(file_stream));
 
@@ -3563,10 +3653,8 @@ get_writable_final_rev(apr_file_t **file,
   SVN_ERR(svn_io_file_seek(*file, APR_END, &end_offset, scratch_pool));
 
   /* We don't want unused sections (such as leftovers from failed delta
-     stream) in our file.  If we use log addressing, we would need an
-     index entry for the unused section and that section would need to
-     be all NUL by convention.  So, detect and fix those cases by truncating
-     the protorev file. */
+     stream) in our file.  Detect and fix those cases by truncating the
+     protorev file. */
   SVN_ERR(auto_truncate_proto_rev(fs, *file, end_offset, txn_id,
                                   scratch_pool));
 
