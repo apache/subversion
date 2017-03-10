@@ -2059,8 +2059,13 @@ rep_read_contents(void *baton,
       SVN_ERR(skip_contents(rb, rb->fulltext_delivered));
     }
 
-  /* Get the next block of data. */
-  SVN_ERR(get_contents_from_windows(rb, buf, len));
+  /* Get the next block of data.
+   * Keep in mind that the representation might be empty and leave us
+   * already positioned at the end of the rep. */
+  if (rb->off == rb->len)
+    *len = 0;
+  else
+    SVN_ERR(get_contents_from_windows(rb, buf, len));
 
   if (rb->current_fulltext)
     svn_stringbuf_appendbytes(rb->current_fulltext, buf, *len);
@@ -2155,6 +2160,86 @@ svn_fs_x__get_contents(svn_stream_t **contents_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_x__get_contents_from_file(svn_stream_t **contents_p,
+                                 svn_fs_t *fs,
+                                 svn_fs_x__representation_t *rep,
+                                 apr_file_t *file,
+                                 apr_off_t offset,
+                                 apr_pool_t *pool)
+{
+  rep_read_baton_t *rb;
+  svn_fs_x__pair_cache_key_t fulltext_cache_key = { SVN_INVALID_REVNUM, 0 };
+  rep_state_t *rs = apr_pcalloc(pool, sizeof(*rs));
+  svn_fs_x__rep_header_t *rh;
+  svn_stream_t *stream;
+
+  /* Initialize the reader baton.  Some members may added lazily
+   * while reading from the stream. */
+  SVN_ERR(rep_read_get_baton(&rb, fs, rep, fulltext_cache_key, pool));
+
+  /* Continue constructing RS. Leave caches as NULL. */
+  rs->size = rep->size;
+  rs->rep_id = rep->id;
+  rs->ver = -1;
+  rs->start = -1;
+
+  /* Provide just enough file access info to allow for a basic read from
+   * FILE but leave all index / footer info with empty values b/c FILE
+   * probably is not a complete revision file. */
+  rs->sfile = apr_pcalloc(pool, sizeof(*rs->sfile));
+  rs->sfile->revision = SVN_INVALID_REVNUM;
+  rs->sfile->pool = pool;
+  rs->sfile->fs = fs;
+  SVN_ERR(svn_fs_x__rev_file_wrap_temp(&rs->sfile->rfile, fs, file, pool));
+
+  /* Read the rep header. */
+  SVN_ERR(svn_fs_x__rev_file_seek(rs->sfile->rfile, NULL, offset));
+  SVN_ERR(svn_fs_x__rev_file_stream(&stream, rs->sfile->rfile));
+  SVN_ERR(svn_fs_x__read_rep_header(&rh, stream, pool, pool));
+  SVN_ERR(svn_fs_x__rev_file_offset(&rs->start, rs->sfile->rfile));
+  rs->header_size = rh->header_size;
+
+  /* Log the access. */
+  SVN_ERR(dbg__log_access(fs, &rep->id, rh,
+                          SVN_FS_X__ITEM_TYPE_ANY_REP, pool));
+
+  /* Build the representation list (delta chain). */
+  if (rh->type == svn_fs_x__rep_self_delta)
+    {
+      rb->rs_list = apr_array_make(pool, 1, sizeof(rep_state_t *));
+      APR_ARRAY_PUSH(rb->rs_list, rep_state_t *) = rs;
+      rb->src_state = NULL;
+    }
+  else
+    {
+      svn_fs_x__representation_t next_rep;
+
+      /* skip "SVNx" diff marker */
+      rs->current = 4;
+
+      /* REP's base rep is inside a proper revision.
+       * It can be reconstructed in the usual way.  */
+      next_rep.id.change_set = svn_fs_x__change_set_by_rev(rh->base_revision);
+      next_rep.id.number = rh->base_item_index;
+      next_rep.size = rh->base_length;
+
+      SVN_ERR(build_rep_list(&rb->rs_list, &rb->base_window,
+                             &rb->src_state, rb->fs, &next_rep,
+                             rb->filehandle_pool, rb->scratch_pool));
+
+      /* Insert the access to REP as the first element of the delta chain. */
+      svn_sort__array_insert(rb->rs_list, &rs, 0);
+    }
+
+  /* Now, the baton is complete and we can assemble the stream around it. */
+  *contents_p = svn_stream_create(rb, pool);
+  svn_stream_set_read2(*contents_p, NULL /* only full read support */,
+                       rep_read_contents);
+  svn_stream_set_close(*contents_p, rep_read_contents_close);
+
+  return SVN_NO_ERROR;
+}
 
 /* Baton for cache_access_wrapper. Wraps the original parameters of
  * svn_fs_x__try_process_file_content().
