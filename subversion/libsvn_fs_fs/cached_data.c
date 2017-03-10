@@ -2297,7 +2297,7 @@ svn_fs_fs__get_contents_from_file(svn_stream_t **contents_p,
     }
   else
     {
-      representation_t next_rep;
+      representation_t next_rep = { 0 };
 
       /* skip "SVNx" diff marker */
       rs->current = 4;
