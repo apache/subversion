@@ -1187,7 +1187,8 @@ build_rep_list(apr_array_header_t **list,
       /* for txn reps and containered reps, there won't be a cached
        * combined window */
       if (svn_fs_x__is_revision(rep.id.change_set)
-          && rep_header->type != svn_fs_x__rep_container)
+          && rep_header->type != svn_fs_x__rep_container
+          && rs->combined_cache)
         SVN_ERR(get_cached_combined_window(window_p, rs, &is_cached,
                                            result_pool));
 
@@ -1289,6 +1290,9 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   apr_pool_t *iterpool;
   svn_stream_t *stream;
   svn_fs_x__revision_file_t *file;
+  svn_boolean_t cacheable = rs->chunk_index == 0
+                         && svn_fs_x__is_revision(rs->rep_id.change_set)
+                         && rs->window_cache;
 
   SVN_ERR_ASSERT(rs->chunk_index <= this_chunk);
 
@@ -1296,10 +1300,13 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
                           SVN_FS_X__ITEM_TYPE_ANY_REP, scratch_pool));
 
   /* Read the next window.  But first, try to find it in the cache. */
-  SVN_ERR(get_cached_window(nwin, rs, this_chunk, &is_cached,
-                            result_pool, scratch_pool));
-  if (is_cached)
-    return SVN_NO_ERROR;
+  if (cacheable)
+    {
+      SVN_ERR(get_cached_window(nwin, rs, this_chunk, &is_cached,
+                                result_pool, scratch_pool));
+      if (is_cached)
+        return SVN_NO_ERROR;
+    }
 
   /* someone has to actually read the data from file.  Open it */
   SVN_ERR(auto_open_shared_file(rs->sfile));
@@ -1308,9 +1315,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
   /* invoke the 'block-read' feature for non-txn data.
      However, don't do that if we are in the middle of some representation,
      because the block is unlikely to contain other data. */
-  if (   rs->chunk_index == 0
-      && svn_fs_x__is_revision(rs->rep_id.change_set)
-      && rs->window_cache)
+  if (cacheable)
     {
       SVN_ERR(block_read(NULL, rs->sfile->fs, &rs->rep_id, file, NULL,
                          result_pool, scratch_pool));
@@ -1367,7 +1372,7 @@ read_delta_window(svn_txdelta_window_t **nwin, int this_chunk,
 
   /* the window has not been cached before, thus cache it now
    * (if caching is used for them at all) */
-  if (svn_fs_x__is_revision(rs->rep_id.change_set))
+  if (cacheable)
     SVN_ERR(set_cached_window(*nwin, rs, start_offset, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -1495,7 +1500,8 @@ get_combined_window(svn_stringbuf_t **result,
          single chunk.  Only then will no other chunk need a deeper RS
          list than the cached chunk. */
       if (   (rb->chunk_index == 0) && (rs->current == rs->size)
-          && svn_fs_x__is_revision(rs->rep_id.change_set))
+          && svn_fs_x__is_revision(rs->rep_id.change_set)
+          && rs->combined_cache)
         SVN_ERR(set_cached_combined_window(buf, rs, new_pool));
 
       rs->chunk_index++;
