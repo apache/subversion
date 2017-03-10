@@ -7283,7 +7283,7 @@ test_rep_sharing_strict_content_check(const svn_test_opts_t *opts,
   /* Bail (with success) on known-untestable scenarios */
   if (strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
-                            "this will not test BDB repositories");
+                            "BDB repositories don't support rep-sharing");
 
   /* Create 2 repos with same structure & size but different contents */
   fs_path = "test-rep-sharing-strict-content-check1";
