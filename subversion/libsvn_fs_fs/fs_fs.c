@@ -7914,20 +7914,28 @@ write_hash_handler(void *baton,
    the process, record position, the total size of the dump and MD5 as
    well as SHA1 in REP.   If rep sharing has been enabled and REPS_HASH
    is not NULL, it will be used in addition to the on-disk cache to find
-   earlier reps with the same content.  When such existing reps can be
-   found, we will truncate the one just written from the file and return
-   the existing rep.  Perform temporary allocations in POOL. */
+   earlier reps with the same content.
+
+   If ALLOW_REP_SHARING is FALSE, rep-sharing will not be used, regardless
+   of any other option and rep-sharing settings.  If rep sharing has been
+   enabled and REPS_HASH is not NULL, it will be used in addition to the
+   on-disk cache to find earlier reps with the same content.  If such
+   existing reps can be found, we will truncate the one just written from
+   the file and return the existing rep.
+
+   Perform temporary allocations in POOL. */
 static svn_error_t *
 write_hash_rep(representation_t *rep,
                apr_file_t *file,
                apr_hash_t *hash,
                svn_fs_t *fs,
                apr_hash_t *reps_hash,
+               svn_boolean_t allow_rep_sharing,
                apr_pool_t *pool)
 {
   svn_stream_t *stream;
   struct write_hash_baton *whb;
-  representation_t *old_rep;
+  representation_t *old_rep = NULL;
 
   SVN_ERR(get_file_offset(&rep->offset, file, pool));
 
@@ -7951,7 +7959,8 @@ write_hash_rep(representation_t *rep,
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, pool));
+  if (allow_rep_sharing)
+    SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, pool));
 
   if (old_rep)
     {
@@ -7978,9 +7987,16 @@ write_hash_rep(representation_t *rep,
    text representation to file FILE.  In the process, record the total size
    and the md5 digest in REP.  If rep sharing has been enabled and REPS_HASH
    is not NULL, it will be used in addition to the on-disk cache to find
-   earlier reps with the same content.  When such existing reps can be found,
-   we will truncate the one just written from the file and return the existing
-   rep.  If PROPS is set, assume that we want to a props representation as
+   earlier reps with the same content.
+
+   If PROPS is FALSE, rep-sharing will not be used, regardless
+   of any other option and rep-sharing settings.  If rep sharing has been
+   enabled and REPS_HASH is not NULL, it will be used in addition to the
+   on-disk cache to find earlier reps with the same content.  If such
+   existing reps can be found, we will truncate the one just written from
+   the file and return the existing rep.
+
+   If PROPS is set, assume that we want to a props representation as
    the base for our delta.  Perform temporary allocations in POOL. */
 static svn_error_t *
 write_hash_delta_rep(representation_t *rep,
@@ -7998,7 +8014,7 @@ write_hash_delta_rep(representation_t *rep,
   svn_stream_t *file_stream;
   svn_stream_t *stream;
   representation_t *base_rep;
-  representation_t *old_rep;
+  representation_t *old_rep = NULL;
   svn_stream_t *source;
   const char *header;
 
@@ -8060,7 +8076,8 @@ write_hash_delta_rep(representation_t *rep,
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, pool));
+  if (props)
+    SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, pool));
 
   if (old_rep)
     {
@@ -8248,7 +8265,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                          FALSE, pool));
           else
             SVN_ERR(write_hash_rep(noderev->data_rep, file, str_entries,
-                                   fs, NULL, pool));
+                                   fs, NULL, FALSE, pool));
         }
     }
   else
@@ -8287,7 +8304,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                                      TRUE, pool));
       else
         SVN_ERR(write_hash_rep(noderev->prop_rep, file, proplist,
-                               fs, reps_hash, pool));
+                               fs, reps_hash, TRUE, pool));
     }
 
 
