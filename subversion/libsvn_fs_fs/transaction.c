@@ -2402,7 +2402,7 @@ get_shared_rep(representation_t **old_rep,
       svn_stream_t *old_contents;
       svn_boolean_t same;
 
-      /* The existing representation may itsel be part of the current
+      /* The existing representation may itself be part of the current
        * transaction.  In that case, it may be in different stages of
        * the commit finalization process.
        *
