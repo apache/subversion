@@ -2521,9 +2521,6 @@ get_shared_rep(svn_fs_x__representation_t **old_rep,
       err = svn_stream_contents_same2(&same, contents, old_contents,
                                       scratch_pool);
 
-      /* Restore FILE's read / write position. */
-      SVN_ERR(svn_io_file_seek(file, APR_SET, &old_position, scratch_pool));
-
       /* A mismatch should be extremely rare.
        * If it does happen, log the event and don't share the rep. */
       if (!same || err)
@@ -2552,6 +2549,9 @@ get_shared_rep(svn_fs_x__representation_t **old_rep,
           svn_error_clear(err);
           *old_rep = NULL;
         }
+
+      /* Restore FILE's read / write position. */
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &old_position, scratch_pool));
     }
 
   return SVN_NO_ERROR;
