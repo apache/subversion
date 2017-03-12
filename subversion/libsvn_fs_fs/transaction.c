@@ -2142,6 +2142,10 @@ get_shared_rep(representation_t **old_rep,
   svn_error_t *err;
   fs_fs_data_t *ffd = fs->fsap_data;
 
+  svn_checksum_t checksum;
+  checksum.digest = rep->sha1_digest;
+  checksum.kind = svn_checksum_sha1;
+
   /* Return NULL, if rep sharing has been disabled. */
   *old_rep = NULL;
   if (!ffd->rep_sharing_allowed)
@@ -2158,9 +2162,6 @@ get_shared_rep(representation_t **old_rep,
   /* If we haven't found anything yet, try harder and consult our DB. */
   if (*old_rep == NULL)
     {
-      svn_checksum_t checksum;
-      checksum.digest = rep->sha1_digest;
-      checksum.kind = svn_checksum_sha1;
       err = svn_fs_fs__get_rep_reference(old_rep, fs, &checksum, result_pool);
       /* ### Other error codes that we shouldn't mask out? */
       if (err == SVN_NO_ERROR)
@@ -2562,6 +2563,10 @@ write_container_rep(representation_t *rep,
   /* Store the results. */
   SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, scratch_pool));
 
+  /* Update size info. */
+  rep->expanded_size = whb->size;
+  rep->size = whb->size;
+
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
   SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool,
@@ -2596,10 +2601,6 @@ write_container_rep(representation_t *rep,
                                       scratch_pool));
 
       SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
-
-      /* update the representation */
-      rep->size = whb->size;
-      rep->expanded_size = whb->size;
     }
 
   return SVN_NO_ERROR;
@@ -2701,6 +2702,11 @@ write_container_delta_rep(representation_t *rep,
   /* Store the results. */
   SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, scratch_pool));
 
+  /* Update size info. */
+  SVN_ERR(svn_fs_fs__get_file_offset(&rep_end, file, scratch_pool));
+  rep->size = rep_end - delta_start;
+  rep->expanded_size = whb->size;
+
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
   SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool,
@@ -2719,7 +2725,6 @@ write_container_delta_rep(representation_t *rep,
       svn_fs_fs__p2l_entry_t entry;
 
       /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_fs_fs__get_file_offset(&rep_end, file, scratch_pool));
       SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
 
       SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
@@ -2736,10 +2741,6 @@ write_container_delta_rep(representation_t *rep,
                                       scratch_pool));
 
       SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
-
-      /* update the representation */
-      rep->expanded_size = whb->size;
-      rep->size = rep_end - delta_start;
     }
 
   return SVN_NO_ERROR;
