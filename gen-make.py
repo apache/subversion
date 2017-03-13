@@ -206,7 +206,7 @@ def _usage_exit(err=None):
   print("           Use static openssl")
   print("")
   print("  --vsnet-version=VER")
-  print("           generate for VS.NET version VER (2005-2015 or 9.0-14.0)")
+  print("           generate for VS.NET version VER (2005-2017 or 9.0-15.0)")
   print("           [implies '-t vcproj']")
   print("")
   print(" -D NAME[=value]")
