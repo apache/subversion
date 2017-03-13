@@ -260,7 +260,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
           self.vcproj_version = '14.0'
           self.vcproj_extension = '.vcxproj'
         elif val == '2017' or val == '15':
-          self.vs_version = '2015'
+          self.vs_version = '2017'
           self.sln_version = '12.00'
           self.vcproj_version = '15.0'
           self.vcproj_extension = '.vcxproj'
