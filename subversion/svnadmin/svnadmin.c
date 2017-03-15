@@ -2729,8 +2729,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.help = TRUE;
         break;
       case 'M':
-        opt_state.memory_cache_size
-            = 0x100000 * apr_strtoi64(opt_arg, NULL, 0);
+        {
+          apr_uint64_t sz_val;
+          SVN_ERR(svn_cstring_atoui64(&sz_val, opt_arg));
+
+          opt_state.memory_cache_size = 0x100000 * sz_val;
+        }
         break;
       case 'F':
         SVN_ERR(svn_utf_cstring_to_utf8(&(opt_state.file), opt_arg, pool));
