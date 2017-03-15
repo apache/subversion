@@ -901,7 +901,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           break;
 
         case 'M':
-          params.memory_cache_size = 0x100000 * apr_strtoi64(arg, NULL, 0);
+          {
+            apr_uint64_t sz_val;
+            SVN_ERR(svn_cstring_atoui64(&sz_val, arg));
+
+            params.memory_cache_size = 0x100000 * sz_val;
+          }
           break;
 
         case SVNSERVE_OPT_CACHE_TXDELTAS:
