@@ -115,7 +115,7 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786447, r1786515
+ * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786515
    Make FSFS consistency no longer depend on hash algorithms.
    Justification:
      This eliminates any existing or future FSFS vulnerability due to
