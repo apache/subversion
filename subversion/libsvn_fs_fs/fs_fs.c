@@ -7569,6 +7569,10 @@ get_shared_rep(representation_t **old_rep,
   svn_error_t *err;
   fs_fs_data_t *ffd = fs->fsap_data;
 
+  svn_checksum_t checksum;
+  checksum.digest = rep->sha1_checksum->digest;
+  checksum.kind = svn_checksum_sha1;
+
   /* Return NULL, if rep sharing has been disabled. */
   *old_rep = NULL;
   if (!ffd->rep_sharing_allowed)
@@ -7949,6 +7953,10 @@ write_hash_rep(representation_t *rep,
   SVN_ERR(svn_checksum_final(&rep->md5_checksum, whb->md5_ctx, pool));
   SVN_ERR(svn_checksum_final(&rep->sha1_checksum, whb->sha1_ctx, pool));
 
+  /* Update size info. */
+  rep->expanded_size = whb->size;
+  rep->size = whb->size;
+
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
   SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, pool));
@@ -7965,10 +7973,6 @@ write_hash_rep(representation_t *rep,
     {
       /* Write out our cosmetic end marker. */
       SVN_ERR(svn_stream_puts(whb->stream, "ENDREP\n"));
-
-      /* update the representation */
-      rep->size = whb->size;
-      rep->expanded_size = whb->size;
     }
 
   return SVN_NO_ERROR;
@@ -8058,6 +8062,11 @@ write_hash_delta_rep(representation_t *rep,
   SVN_ERR(svn_checksum_final(&rep->md5_checksum, whb->md5_ctx, pool));
   SVN_ERR(svn_checksum_final(&rep->sha1_checksum, whb->sha1_ctx, pool));
 
+  /* Update size info. */
+  SVN_ERR(get_file_offset(&rep_end, file, pool));
+  rep->size = rep_end - delta_start;
+  rep->expanded_size = whb->size;
+
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
   SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, pool));
@@ -8073,12 +8082,7 @@ write_hash_delta_rep(representation_t *rep,
   else
     {
       /* Write out our cosmetic end marker. */
-      SVN_ERR(get_file_offset(&rep_end, file, pool));
       SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
-
-      /* update the representation */
-      rep->expanded_size = whb->size;
-      rep->size = rep_end - delta_start;
     }
 
   return SVN_NO_ERROR;
