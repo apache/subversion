@@ -5194,7 +5194,7 @@ struct svn_test_descriptor_t test_funcs[] =
                        "test svn_fs_delete_fs"),
     SVN_TEST_OPTS_PASS(filename_trailing_newline,
                        "filenames with trailing \\n might be rejected"),
-    SVN_TEST_OPTS_XFAIL(test_rep_sharing_strict_content_check,
+    SVN_TEST_OPTS_PASS(test_rep_sharing_strict_content_check,
                        "test rep-sharing on content rather than SHA1"),
     SVN_TEST_NULL
   };
