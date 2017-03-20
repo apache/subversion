@@ -60,7 +60,7 @@ Candidate changes:
      cache but would happily share any file or prop rep that happens to
      match the respective directory rep.
    Branch:
-     ^/subversion/branches/1.9.x-r1785053
+     ^/subversion/branches/1.8.x-r1785053
    Notes:
      Will create a text conflict with the strict-rep-sharing patches.
      Depending on which change gets merged first, the respective other
@@ -74,7 +74,7 @@ Candidate changes:
      This eliminates any existing or future FSFS vulnerability due to
      attacks on MD5 or SHA1.
    Branch:
-     ^/subversion/branches/1.9.x-strict-rep-sharing
+     ^/subversion/branches/1.8.x-strict-rep-sharing
    Notes:
      Depends on r1759116 for correctness with older APR.
      While the backport code is very close to the /trunk changes, it is
