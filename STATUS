@@ -51,7 +51,7 @@ Candidate changes:
      from being a bug in one of our public APIs, this will cause corruptions
      in FSFS when the strict-rep-sharing patches get backported.
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
  * r1785053
    Never attempt to share directory representations in FSFS.
@@ -66,7 +66,7 @@ Candidate changes:
      Depending on which change gets merged first, the respective other
      needs to be updated.
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
  * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786515
    Make FSFS consistency no longer depend on hash algorithms.
