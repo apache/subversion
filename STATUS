@@ -78,7 +78,7 @@ Candidate changes:
    Notes:
      Depends on r1759116 for correctness with older APR.
      While the backport code is very close to the /trunk changes, it is
-     easier to review them as r1787637, r1787638 and r1787652 on the branch.
+     easier to review them as r1786580, r1786581 and r1786619 on the branch.
      Will create a text conflict with the r1785053 backport.  Depending on
      which change gets merged first, the respective other must be updated.
    Votes:
