@@ -28,13 +28,6 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1774109
-   Document the purpose of 'svnadmin freeze' more clearly.
-   Justification:
-     Not very important, nice to have documentation fix. Trivial merge.
-   Votes:
-     +1: stsp, julianfoad
-
  * r1776742, r1776783, r1776788
    Issue #4667: Reduce memory usage during merge, by tighter pool usage.
    Justification:
@@ -55,7 +48,7 @@ Candidate changes:
      but there is a directory on disk.
      User complained.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
 * r1706432
   Fix tests on Windows when passing --bin to win_tests.py.
@@ -65,15 +58,14 @@ Candidate changes:
     Fixes a bad commandline argument encoding in the Windows test runner.
     Regression introduced in 1.9.2.
   Votes:
-    +1: rhuijben
-    +1 (non-binding): luke1410
+    +1: rhuijben, luke1410
 
  * r1781507
    Fix a NULL deref in libsvn_repos which makes svndumpfilter crash.
    Justification:
      Should not crash. User complained.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1781655
    Improve error message upon failure to open rep-cache.
@@ -81,14 +73,14 @@ Candidate changes:
      The current message lacks sufficient detail to be useful when it appears
      in server logs.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1783704
    Add support to build with 'zlibstat.lib' in install-layout on Windows.
    Justification:
      Simplifies build process on Windows.
    Votes:
-     +1: luke1410
+     +1: luke1410, rhuijben
 
  * r1759116
    Work around an APR bug in svn_io_file_trunc with buffered r/w files.
@@ -98,7 +90,7 @@ Candidate changes:
      from being a bug in one of our public APIs, this will cause corruptions
      in FSFS when the strict-rep-sharing patches get backported.
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
  * r1785053
    Never attempt to share directory representations in FSFS.
@@ -113,7 +105,7 @@ Candidate changes:
      Depending on which change gets merged first, the respective other
      needs to be updated.
    Votes:
-     +1: stefan2
+     +1: stefan2, rhuijben
 
  * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786515
    Make FSFS consistency no longer depend on hash algorithms.
@@ -152,3 +144,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1774109
+   Document the purpose of 'svnadmin freeze' more clearly.
+   Justification:
+     Not very important, nice to have documentation fix. Trivial merge.
+   Votes:
+     +1: stsp, julianfoad
+     +1: rhuijben (Doesn't need 3 votes. Documentation change only)
