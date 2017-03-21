@@ -144,11 +144,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1774109
-   Document the purpose of 'svnadmin freeze' more clearly.
-   Justification:
-     Not very important, nice to have documentation fix. Trivial merge.
-   Votes:
-     +1: stsp, julianfoad
-     +1: rhuijben (Doesn't need 3 votes. Documentation change only)
