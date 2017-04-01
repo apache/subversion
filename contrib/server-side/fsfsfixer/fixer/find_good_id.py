@@ -31,7 +31,8 @@ def parse_id(id):
      "NODEREV/OFFSET", and NODEREV is of the form "SOMETHING.rREV".
   """
   noderev, offset = id.split('/')
-  _, rev = noderev.split('.r')
+  tmp1, tmp2, tmprev = noderev.split('.')
+  _, rev = tmprev.split('r')
   return noderev, rev, offset
 
 def rev_file_path(repo_dir, rev):
