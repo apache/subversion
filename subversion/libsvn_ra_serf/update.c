@@ -797,17 +797,8 @@ headers_fetch(serf_bucket_t *headers,
     {
       serf_bucket_headers_setn(headers, SVN_DAV_DELTA_BASE_HEADER,
                                fetch_ctx->delta_base);
-      if (fetch_ctx->using_compression)
-        {
-          serf_bucket_headers_setn(headers, "Accept-Encoding",
-                                   "svndiff1;q=0.9,svndiff;q=0.8");
-        }
-      else
-        {
-          /* Do not advertise svndiff1 support if we're not interested in
-             compression. */
-          serf_bucket_headers_setn(headers, "Accept-Encoding", "svndiff");
-        }
+      svn_ra_serf__setup_svndiff_accept_encoding(headers,
+                                                 fetch_ctx->using_compression);
     }
   else if (fetch_ctx->using_compression)
     {
