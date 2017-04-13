@@ -166,6 +166,8 @@ typedef struct revision_report_t {
   svn_ra_serf__handler_t *propfind_handler;
   svn_ra_serf__handler_t *report_handler; /* For done handler */
 
+  svn_boolean_t using_compression;
+
 } revision_report_t;
 
 /* Conforms to svn_ra_serf__xml_opened_t */
@@ -630,6 +632,21 @@ replay_done(serf_request_t *request,
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_ra_serf__request_header_delegate_t */
+static svn_error_t *
+setup_headers(serf_bucket_t *headers,
+              void *baton,
+              apr_pool_t *request_pool,
+              apr_pool_t *scratch_pool)
+{
+  struct revision_report_t *ctx = baton;
+
+  svn_ra_serf__setup_svndiff_accept_encoding(headers,
+                                             ctx->using_compression);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
                           svn_revnum_t start_revision,
@@ -724,6 +741,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           rev_ctx->revision = rev;
           rev_ctx->low_water_mark = low_water_mark;
           rev_ctx->send_deltas = send_deltas;
+          rev_ctx->using_compression = session->using_compression;
 
           /* Request all properties of a certain revision. */
           rev_ctx->rev_props = apr_hash_make(rev_ctx->pool);
@@ -780,6 +798,10 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
 
           handler->done_delegate = replay_done;
           handler->done_delegate_baton = rev_ctx;
+
+          handler->custom_accept_encoding = TRUE;
+          handler->header_delegate = setup_headers;
+          handler->header_delegate_baton = rev_ctx;
 
           rev_ctx->report_handler = handler;
           svn_ra_serf__request_create(handler);

@@ -2178,17 +2178,8 @@ setup_update_report_headers(serf_bucket_t *headers,
 {
   report_context_t *report = baton;
 
-  if (report->sess->using_compression)
-    {
-      serf_bucket_headers_setn(headers, "Accept-Encoding",
-                               "gzip,svndiff1;q=0.9,svndiff;q=0.8");
-    }
-  else
-    {
-      /* Do not advertise svndiff1 support if we're not interested in
-         compression. */
-      serf_bucket_headers_setn(headers, "Accept-Encoding", "svndiff");
-    }
+  svn_ra_serf__setup_svndiff_accept_encoding(headers,
+                                             report->sess->using_compression);
 
   return SVN_NO_ERROR;
 }
