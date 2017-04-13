@@ -2023,3 +2023,22 @@ svn_ra_serf__uri_parse(apr_uri_t *uri,
 
   return SVN_NO_ERROR;
 }
+
+void
+svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
+                                           svn_boolean_t using_compression)
+{
+  if (using_compression)
+    {
+      serf_bucket_headers_setn(headers, "Accept-Encoding",
+                               "gzip,svndiff1;q=0.9,svndiff;q=0.8");
+    }
+  else
+    {
+      /* Do not advertise svndiff1 support if we're not interested in
+         compression. */
+      serf_bucket_headers_setn(headers, "Accept-Encoding", "svndiff");
+    }
+
+  return SVN_NO_ERROR;
+}

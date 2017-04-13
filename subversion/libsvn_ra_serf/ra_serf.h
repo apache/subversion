@@ -1568,6 +1568,11 @@ svn_ra_serf__uri_parse(apr_uri_t *uri,
                        const char *url_str,
                        apr_pool_t *result_pool);
 
+/* Setup the "Accept-Encoding" header value for requests that expect
+   svndiff-encoded deltas, depending on the USING_COMPRESSION value. */
+void
+svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
+                                           svn_boolean_t using_compression);
 
 /* Default limit for in-memory size of a request body. */
 #define SVN_RA_SERF__REQUEST_BODY_IN_MEM_SIZE 256 * 1024
