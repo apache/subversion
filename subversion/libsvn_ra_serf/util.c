@@ -2039,6 +2039,4 @@ svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
          compression. */
       serf_bucket_headers_setn(headers, "Accept-Encoding", "svndiff");
     }
-
-  return SVN_NO_ERROR;
 }
