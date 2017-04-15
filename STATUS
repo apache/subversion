@@ -133,7 +133,7 @@ Approved changes:
      The current message lacks sufficient detail to be useful when it appears
      in server logs.
    Votes:
-     +1: stsp, rhuijben
+     +1: stsp, rhuijben, stefan2
 
 * r1706432
   Fix tests on Windows when passing --bin to win_tests.py.
