@@ -41,15 +41,6 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1779948
-   Improve error message when copying/moving into unversioned dir.
-   Justification:
-     The current error message is misleading. It says "not a directory"
-     but there is a directory on disk.
-     User complained.
-   Votes:
-     +1: stsp, rhuijben
-
 * r1706432
   Fix tests on Windows when passing --bin to win_tests.py.
   Justification:
@@ -144,3 +135,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1779948
+   Improve error message when copying/moving into unversioned dir.
+   Justification:
+     The current error message is misleading. It says "not a directory"
+     but there is a directory on disk.
+     User complained.
+   Votes:
+     +1: stsp, rhuijben, stefan2
+
