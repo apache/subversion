@@ -51,14 +51,6 @@ Candidate changes:
   Votes:
     +1: rhuijben, luke1410
 
- * r1781655
-   Improve error message upon failure to open rep-cache.
-   Justification:
-     The current message lacks sufficient detail to be useful when it appears
-     in server logs.
-   Votes:
-     +1: stsp, rhuijben
-
  * r1783704
    Add support to build with 'zlibstat.lib' in install-layout on Windows.
    Justification:
@@ -144,4 +136,12 @@ Approved changes:
      Should not crash. User complained.
    Votes:
      +1: stsp, rhuijben, stefan2
+
+ * r1781655
+   Improve error message upon failure to open rep-cache.
+   Justification:
+     The current message lacks sufficient detail to be useful when it appears
+     in server logs.
+   Votes:
+     +1: stsp, rhuijben
 
