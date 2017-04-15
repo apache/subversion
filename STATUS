@@ -39,7 +39,7 @@ Candidate changes:
      nominated later. The issue #4667 need not be "closed" for this to be
      a useful backport.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, stefan2
 
  * r1783704
    Add support to build with 'zlibstat.lib' in install-layout on Windows.
