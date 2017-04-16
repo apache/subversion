@@ -2659,11 +2659,16 @@ rep_write_contents_close(void *baton)
       entry.items = &noderev_id;
       entry.fnv1_checksum = b->fnv1a_checksum;
 
-      SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->local_pool));
       SVN_ERR(store_p2l_index_entry(b->fs, txn_id, &entry, b->local_pool));
     }
 
   SVN_ERR(svn_io_file_close(b->file, b->local_pool));
+
+  /* Write the sha1->rep mapping *after* we successfully written node
+   * revision to disk. */
+  if (!old_rep)
+    SVN_ERR(store_sha1_rep_mapping(b->fs, b->noderev, b->local_pool));
+
   SVN_ERR(unlock_proto_rev(b->fs, txn_id, b->lockcookie, b->local_pool));
   svn_pool_destroy(b->local_pool);
 
