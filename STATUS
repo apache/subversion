@@ -111,15 +111,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1779948
-   Improve error message when copying/moving into unversioned dir.
-   Justification:
-     The current error message is misleading. It says "not a directory"
-     but there is a directory on disk.
-     User complained.
-   Votes:
-     +1: stsp, rhuijben, stefan2
-
  * r1781507
    Fix a NULL deref in libsvn_repos which makes svndumpfilter crash.
    Justification:
@@ -144,4 +135,3 @@ Approved changes:
     Regression introduced in 1.9.2.
   Votes:
     +1: rhuijben, luke1410, stefan2
-
