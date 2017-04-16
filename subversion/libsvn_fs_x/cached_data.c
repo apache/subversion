@@ -3082,8 +3082,8 @@ read_item(svn_stream_t **stream,
   return svn_checksum_mismatch_err(expected, actual, result_pool,
                  _("Low-level checksum mismatch while reading\n"
                    "%s bytes of meta data at offset %s "),
-                 apr_psprintf(result_pool, "%" APR_OFF_T_FMT, entry->size),
-                 apr_psprintf(result_pool, "%" APR_OFF_T_FMT, entry->offset));
+                 apr_off_t_toa(result_pool, entry->size),
+                 apr_off_t_toa(result_pool, entry->offset));
 }
 
 /* If not already cached or if MUST_READ is set, read the changed paths

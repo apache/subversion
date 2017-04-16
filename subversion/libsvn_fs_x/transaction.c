@@ -1539,7 +1539,7 @@ store_l2p_index_entry(svn_fs_t *fs,
 static svn_error_t *
 store_p2l_index_entry(svn_fs_t *fs,
                       svn_fs_x__txn_id_t txn_id,
-                      svn_fs_x__p2l_entry_t *entry,
+                      const svn_fs_x__p2l_entry_t *entry,
                       apr_pool_t *scratch_pool)
 {
   const char *path = svn_fs_x__path_p2l_proto_index(fs, txn_id, scratch_pool);
