@@ -110,13 +110,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
-* r1706432
-  Fix tests on Windows when passing --bin to win_tests.py.
-  Justification:
-    Tests should simply work.
-  Notes:
-    Fixes a bad commandline argument encoding in the Windows test runner.
-    Regression introduced in 1.9.2.
-  Votes:
-    +1: rhuijben, luke1410, stefan2
