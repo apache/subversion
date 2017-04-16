@@ -26,13 +26,19 @@
 #include "fs.h"
 
 /* Possibly pack the repository at PATH.  This just take full shards, and
-   combines all the revision files into a single one, with a manifest header.
+   combines all the revision files into a single one, with a manifest header
+   when required by the repository format.
+
+   MAX_MEM limits the size of in-memory data structures needed for reordering
+   items.  0 means use the built-in default.
+
    Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
    Use SCRATCH_POOL for temporary allocations.
 
    Existing filesystem references need not change.  */
 svn_error_t *
 svn_fs_x__pack(svn_fs_t *fs,
+               apr_size_t max_mem,
                svn_fs_pack_notify_t notify_func,
                void *notify_baton,
                svn_cancel_func_t cancel_func,

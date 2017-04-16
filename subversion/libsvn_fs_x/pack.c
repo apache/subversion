@@ -216,7 +216,7 @@ typedef struct pack_context_t
    * to NULL that we already processed. */
   apr_array_header_t *reps;
 
-  /* array of int, marking for each revision, the which offset their items
+  /* array of int, marking for each revision, at which offset their items
    * begin in REPS.  Will be filled in phase 2 and be cleared after
    * each revision range. */
   apr_array_header_t *rev_offsets;
@@ -344,6 +344,7 @@ reset_pack_context(pack_context_t *context,
   SVN_ERR(svn_io_file_trunc(context->reps_file, 0, scratch_pool));
 
   svn_pool_clear(context->info_pool);
+  context->paths = svn_prefix_tree__create(context->info_pool);
 
   return SVN_NO_ERROR;
 }
@@ -1839,15 +1840,17 @@ append_revision(pack_context_t *context,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_fs_x__revision_file_t *rev_file;
   apr_file_t *file;
-  svn_filesize_t revfile_size;
+  svn_filesize_t revdata_size;
 
-  /* Copy all the bits from the rev file to the end of the pack file. */
+  /* Copy all non-index contents the rev file to the end of the pack file. */
   SVN_ERR(svn_fs_x__rev_file_init(&rev_file, context->fs, context->start_rev,
                                   scratch_pool));
-  SVN_ERR(svn_fs_x__rev_file_get(&file, rev_file));
+  SVN_ERR(svn_fs_x__rev_file_data_size(&revdata_size, rev_file));
 
-  SVN_ERR(svn_io_file_size_get(&revfile_size, file, scratch_pool));
-  SVN_ERR(copy_file_data(context, context->pack_file, file, revfile_size,
+  SVN_ERR(svn_fs_x__rev_file_get(&file, rev_file));
+  SVN_ERR(svn_io_file_aligned_seek(file, ffd->block_size, NULL, 0,
+                                   iterpool));
+  SVN_ERR(copy_file_data(context, context->pack_file, file, revdata_size,
                          iterpool));
 
   /* mark the start of a new revision */
@@ -1856,7 +1859,7 @@ append_revision(pack_context_t *context,
 
   /* read the phys-to-log index file until we covered the whole rev file.
    * That index contains enough info to build both target indexes from it. */
-  while (offset < revfile_size)
+  while (offset < revdata_size)
     {
       /* read one cluster */
       int i;
@@ -1878,7 +1881,7 @@ append_revision(pack_context_t *context,
 
           /* process entry while inside the rev file */
           offset = entry->offset;
-          if (offset < revfile_size)
+          if (offset < revdata_size)
             {
               /* there should be true containers */
               SVN_ERR_ASSERT(entry->item_count == 1);
@@ -1897,7 +1900,7 @@ append_revision(pack_context_t *context,
     }
 
   svn_pool_destroy(iterpool);
-  context->pack_offset += revfile_size;
+  context->pack_offset += revdata_size;
 
   return SVN_NO_ERROR;
 }
@@ -1956,6 +1959,7 @@ pack_log_addressed(svn_fs_t *fs,
     if (   APR_ARRAY_IDX(max_ids, i, apr_uint64_t)
         <= (apr_uint64_t)max_items - item_count)
       {
+        item_count += APR_ARRAY_IDX(max_ids, i, apr_uint64_t);
         context.end_rev++;
       }
     else
@@ -2048,6 +2052,7 @@ pack_rev_shard(svn_fs_t *fs,
 /* In the file system at FS_PATH, pack the SHARD in DIR containing exactly
  * MAX_FILES_PER_DIR revisions, using SCRATCH_POOL temporary for allocations.
  * COMPRESSION_LEVEL and MAX_PACK_SIZE will be ignored in that case.
+ * An attempt will be made to keep memory usage below MAX_MEM.
  *
  * CANCEL_FUNC and CANCEL_BATON are what you think they are; similarly
  * NOTIFY_FUNC and NOTIFY_BATON.
@@ -2062,6 +2067,7 @@ pack_shard(const char *dir,
            int max_files_per_dir,
            apr_off_t max_pack_size,
            int compression_level,
+           apr_size_t max_mem,
            svn_fs_pack_notify_t notify_func,
            void *notify_baton,
            svn_cancel_func_t cancel_func,
@@ -2093,7 +2099,7 @@ pack_shard(const char *dir,
 
   /* pack the revision content */
   SVN_ERR(pack_rev_shard(fs, pack_file_dir, shard_path,
-                         shard, max_files_per_dir, DEFAULT_MAX_MEM, batch,
+                         shard, max_files_per_dir, max_mem, batch,
                          cancel_func, cancel_baton, scratch_pool));
 
   /* pack the revprops in an equivalent way */
@@ -2158,6 +2164,7 @@ get_pack_status(svn_boolean_t *fully_packed,
 typedef struct pack_baton_t
 {
   svn_fs_t *fs;
+  apr_size_t max_mem;
   svn_fs_pack_notify_t notify_func;
   void *notify_baton;
   svn_cancel_func_t cancel_func;
@@ -2223,6 +2230,7 @@ pack_body(void *baton,
                          ffd->compress_packed_revprops
                            ? SVN__COMPRESSION_ZLIB_DEFAULT
                            : SVN__COMPRESSION_NONE,
+                         pb->max_mem,
                          pb->notify_func, pb->notify_baton,
                          pb->cancel_func, pb->cancel_baton, iterpool));
     }
@@ -2233,6 +2241,7 @@ pack_body(void *baton,
 
 svn_error_t *
 svn_fs_x__pack(svn_fs_t *fs,
+               apr_size_t max_mem,
                svn_fs_pack_notify_t notify_func,
                void *notify_baton,
                svn_cancel_func_t cancel_func,
@@ -2262,5 +2271,7 @@ svn_fs_x__pack(svn_fs_t *fs,
   pb.notify_baton = notify_baton;
   pb.cancel_func = cancel_func;
   pb.cancel_baton = cancel_baton;
+  pb.max_mem = max_mem ? max_mem : DEFAULT_MAX_MEM;
+
   return svn_fs_x__with_pack_lock(fs, pack_body, &pb, scratch_pool);
 }
