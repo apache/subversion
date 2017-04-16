@@ -166,6 +166,12 @@ svn_error_t *
 svn_fs_x__rev_file_p2l_info(svn_fs_x__index_info_t *info,
                             svn_fs_x__revision_file_t *file);
 
+/* Set *SIZE to the length of the revision data in FILE.
+ */
+svn_error_t *
+svn_fs_x__rev_file_data_size(svn_filesize_t *size,
+                             svn_fs_x__revision_file_t *file);
+
 /* File manipulation. */
 
 /* Convenience wrapper around svn_io_file_aligned_seek. */
