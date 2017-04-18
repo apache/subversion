@@ -96,11 +96,8 @@ read_config(const char **cache_namespace,
                                                ""),
                          pool);
 
-  /* don't cache text deltas by default.
-   * Once we reconstructed the fulltexts from the deltas,
-   * these deltas are rarely re-used. Therefore, only tools
-   * like svnadmin will activate this to speed up operations
-   * dump and verify.
+  /* Cache text deltas by default.
+   * They tend to be smaller and have finer granularity than fulltexts.
    */
   *cache_txdeltas
     = svn_hash__get_bool(fs->config,
@@ -119,9 +116,9 @@ read_config(const char **cache_namespace,
                          SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS,
                          TRUE);
 
-  /* by default, cache nodeprops: this will match pre-1.10
-   * behavior where node properties caching was controlled
-   * by SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS configuration option.
+  /* by default, cache nodeprops.
+   * Pre-1.10, this was controlled by the SVN_FS_CONFIG_FSFS_CACHE_FULLTEXTS
+   * configuration option which defaulted to TRUE.
    */
   *cache_nodeprops
     = svn_hash__get_bool(fs->config,
@@ -386,7 +383,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
    *   (e.g. fulltexts etc.)
    * - Index data required to find any of the other data has high prio
    *   (e.g. noderevs, L2P and P2L index pages)
-   * - everthing else should use default prio
+   * - everything else should use default prio
    */
 
 #ifdef SVN_DEBUG_CACHE_DUMP_STATS
