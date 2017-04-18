@@ -1003,7 +1003,9 @@ dav_svn__get_fulltext_cache_flag(request_rec *r)
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->fulltext_cache == CONF_FLAG_ON;
+
+  /* fulltext caching is enabled by default. */
+  return get_conf_flag(conf->fulltext_cache, TRUE);
 }
 
 
@@ -1013,7 +1015,9 @@ dav_svn__get_revprop_cache_flag(request_rec *r)
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->revprop_cache == CONF_FLAG_ON;
+
+  /* revprop caching is enabled by default. */
+  return get_conf_flag(conf->revprop_cache, TRUE);
 }
 
 svn_boolean_t
@@ -1022,8 +1026,9 @@ dav_svn__get_nodeprop_cache_flag(request_rec *r)
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+
   /* node properties caching is enabled by default. */
-  return get_conf_flag(conf->nodeprop_cache, FALSE);
+  return get_conf_flag(conf->nodeprop_cache, TRUE);
 }
 
 svn_boolean_t
@@ -1032,7 +1037,9 @@ dav_svn__get_block_read_flag(request_rec *r)
   dir_conf_t *conf;
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->block_read == CONF_FLAG_ON;
+
+  /* the block-read feature is disabled by default. */
+  return get_conf_flag(conf->block_read, FALSE);
 }
 
 int
