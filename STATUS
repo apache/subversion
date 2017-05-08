@@ -89,6 +89,14 @@ Candidate changes:
    Votes:
      +1: stefan2, rhuijben
 
+ * r1794166
+   Find gpg-agent socket using gpgconf, if possible.
+   Justification:
+     Improves GPG socket detection when $GPG_AGENT_INFO is unset or when gpg
+     >= 2.1.13 is used
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
