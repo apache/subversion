@@ -28,13 +28,6 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1783704
-   Add support to build with 'zlibstat.lib' in install-layout on Windows.
-   Justification:
-     Simplifies build process on Windows.
-   Votes:
-     +1: luke1410, rhuijben
-
  * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786515, r1794530, r1794536, r1794611
    Make FSFS consistency no longer depend on hash algorithms.
    Justification:
@@ -84,4 +77,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1783704
+   Add support to build with 'zlibstat.lib' in install-layout on Windows.
+   Justification:
+     Simplifies build process on Windows.
+   Votes:
+     +1: luke1410, rhuijben
 
