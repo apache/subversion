@@ -7256,29 +7256,17 @@ test_cache_clear_during_stream(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_fs_warning_callback_t by setting the svn_boolean_t at
- * *BATON to TRUE, indicating a warning has been logged. */
-static void
-flag_fs_warnings(void *baton, svn_error_t *err)
-{
-  svn_boolean_t *flag = baton;
-  *flag = TRUE;
-
-  return;
-}
-
 static svn_error_t *
 test_rep_sharing_strict_content_check(const svn_test_opts_t *opts,
                                       apr_pool_t *pool)
 {
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root, *rev_root;
+  svn_fs_root_t *txn_root;
   svn_revnum_t new_rev;
   const char *fs_path, *fs_path2;
   apr_pool_t *subpool = svn_pool_create(pool);
-  svn_stringbuf_t *contents;
-  svn_boolean_t had_warning = FALSE;
+  svn_error_t *err;
 
   /* Bail (with success) on known-untestable scenarios */
   if (strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0)
@@ -7318,24 +7306,11 @@ test_rep_sharing_strict_content_check(const svn_test_opts_t *opts,
   /* Changing the file contents such that rep-sharing would kick in if
      the file contents was not properly compared. */
   SVN_ERR(svn_fs_open2(&fs, fs_path, NULL, subpool, subpool));
-  svn_fs_set_warning_func(fs, flag_fs_warnings, &had_warning);
 
   SVN_ERR(svn_fs_begin_txn2(&txn, fs, 1, 0, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
-  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", "very good", subpool));
-  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, subpool));
-  SVN_TEST_INT_ASSERT(new_rev, 2);
-
-  svn_pool_clear(subpool);
-
-  SVN_TEST_ASSERT(had_warning);
-
-  /* Reading the new contents must produce the new contents. */
-  SVN_ERR(svn_fs_open2(&fs, fs_path, NULL, subpool, subpool));
-  SVN_ERR(svn_fs_revision_root(&rev_root, fs, 2, pool));
-  SVN_ERR(svn_test__get_file_contents(rev_root, "foo", &contents, pool));
-
-  SVN_TEST_STRING_ASSERT(contents->data, "very good");
+  err = svn_test__set_file_contents(txn_root, "foo", "very good", subpool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_AMBIGUOUS_CHECKSUM_REP);
 
   svn_pool_destroy(subpool);
 
