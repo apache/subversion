@@ -43,7 +43,7 @@ Candidate changes:
      which change gets merged first, the respective other must be updated.
    Votes:
      +1: stsp
-     +1: stefan2, rhuijben (without r1794530, r1794536).
+     +1: stefan2, rhuijben (without r1794530, r1794536, r1794611).
 
  * r1794166
    Find gpg-agent socket using gpgconf, if possible.
