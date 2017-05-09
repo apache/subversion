@@ -1,0 +1,91 @@
+
+  Apache Subversion is unable to store SHA1 collisions
+
+Summary:
+========
+
+  Subversion repositories can be corrupted by committing two files
+  which have different content, yet produce the same SHA1 checksum.
+  
+Known affected:
+=================
+
+  Servers running Apache Subversion up and including to 1.9.5.
+
+Known fixed:
+============
+
+  Servers running Apache Subversion 1.9.6.
+  Clients do not need a patch for this issue.
+
+Details:
+========
+
+  In Febraury 2017 a group of researchers released two PDF files which have
+  different content but produce the same SHA1 checksum. This was the first
+  publicly known SHA1 collision ever produced.
+
+  If both of these files are committed to a Subversion repository, Subversion
+  de-duplicates content based on the SHA1 checksum and only the content of
+  one of the files ends up being stored in the repository. However, the meta
+  data stores the MD5 checksums of both files, and these MD5 checksums differ.
+  This causes problems when Subversion eventually uses the MD5 checksum of
+  the content which was not in fact stored. For example, updates and commits
+  may no longer be possible due to an apparent checksum error.
+
+Recommendations:
+================
+
+  We recommend all users update to Subversion 1.9.6 which will reject any
+  commit that would create a SHA1 collision.
+
+  Note that this fix only works if the "representation-sharing" feature is
+  enabled (it is enabled by default). If the file db/fsfs.conf inside the
+  repository contains 'enable-rep-sharing = false', this option must be
+  set to 'true' after upgrading to 1.9.6.
+
+  If rep-sharing is disabled, the fix is ineffective and a SHA1 collision
+  can be stored. This will not cause problems for the repository itself.
+  However, SVN clients which retrieve and store such content in a working
+  copy will run into similar problems: de-duplication of content stored
+  in the working copy also relies on SHA1, and for performance reasons
+  clients using the HTTP protocol will avoid fetching content with a SHA1
+  checksum which has been stored previously.
+
+  Therefore, storing content with SHA1 collisions it not a supported use case.
+  If such content needs to be versioned for any reason, consider packing the
+  files in a compressed archive and commit this archive instead.
+
+  If such content was accidentally committed while rep-sharing was disabled,
+  one the following remedies may be used:
+
+	One solution is just to delete the second file. This will resolve this
+  problem for normal SVN client usage, but it will not work for tools like
+  svnsync or git-svn which try to replay every revision in the repository.
+  This will run into an error on the revision where the content was committed
+  and the tool will not be able to proceed.
+
+  A second solution would be to remove the problematic revision with svnadmin.
+  svnadmin dump can be used to dump the repository up to the revision that
+  introduced the problem. This dump file can be loaded into a new repository.
+  If there were more commits after the problematic revision then dump and load
+  all of these subsequent revisions as well.
+
+  Another option is to create a Subversion permission rule (authz) that blocks
+  access to the one or both of the files. This will work with tools like
+  svnsync and git-svn as the server will not send the colliding content.
+
+References:
+===========
+
+  SVN issue 4673: https://issues.apache.org/jira/browse/SVN-4673
+  SHA1 collision: https://shattered.io/
+  First known occurrence: https://bugs.webkit.org/show_bug.cgi?id=168774#c29
+  CVE-2005-4900: https://nvd.nist.gov/vuln/detail/CVE-2005-4900
+
+Reported by:
+============
+
+  The WebKit Project, https://webkit.org/
+
+  Bryan Rosander filed issue SVN-4673
