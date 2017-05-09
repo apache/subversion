@@ -4072,7 +4072,7 @@ svn_io_file_trunc(apr_file_t *file, apr_off_t offset, apr_pool_t *pool)
 
      To prevent this, write 1 dummy byte just after the OFFSET at which we
      will trunc it.  That will force the APR file into write mode
-     internally and the flush() work-around below becomes affective. */
+     internally and the flush() work-around below becomes effective. */
   apr_off_t position = 0;
 
   /* A frequent usage is OFFSET==0, in which case we don't need to preserve
