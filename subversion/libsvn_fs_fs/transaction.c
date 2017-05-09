@@ -2599,11 +2599,16 @@ write_directory_to_stream(svn_stream_t *stream,
 /* Write out the COLLECTION as a text representation to file FILE using
    WRITER.  In the process, record position, the total size of the dump and
    MD5 as well as SHA1 in REP.   Add the representation of type ITEM_TYPE to
-   the indexes if necessary.  If rep sharing has been enabled and REPS_HASH
-   is not NULL, it will be used in addition to the on-disk cache to find
-   earlier reps with the same content.  When such existing reps can be
-   found, we will truncate the one just written from the file and return
-   the existing rep.  Perform temporary allocations in SCRATCH_POOL. */
+   the indexes if necessary.
+
+   If ALLOW_REP_SHARING is FALSE, rep-sharing will not be used, regardless
+   of any other option and rep-sharing settings.  If rep sharing has been
+   enabled and REPS_HASH is not NULL, it will be used in addition to the
+   on-disk cache to find earlier reps with the same content.  If such
+   existing reps can be found, we will truncate the one just written from
+   the file and return the existing rep.
+
+   Perform temporary allocations in SCRATCH_POOL. */
 static svn_error_t *
 write_container_rep(representation_t *rep,
                     apr_file_t *file,
@@ -2611,13 +2616,13 @@ write_container_rep(representation_t *rep,
                     collection_writer_t writer,
                     svn_fs_t *fs,
                     apr_hash_t *reps_hash,
+                    svn_boolean_t allow_rep_sharing,
                     apr_uint32_t item_type,
                     apr_pool_t *scratch_pool)
 {
   svn_stream_t *stream;
   struct write_container_baton *whb;
   svn_checksum_ctx_t *fnv1a_checksum_ctx;
-  representation_t *old_rep;
   apr_off_t offset = 0;
 
   SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
@@ -2648,16 +2653,20 @@ write_container_rep(representation_t *rep,
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  SVN_ERR(get_shared_rep(&old_rep, fs, rep, file, offset, reps_hash,
-                         scratch_pool, scratch_pool));
-
-  if (old_rep)
+  if (allow_rep_sharing)
     {
-      /* We need to erase from the protorev the data we just wrote. */
-      SVN_ERR(svn_io_file_trunc(file, offset, scratch_pool));
+      representation_t *old_rep;
+      SVN_ERR(get_shared_rep(&old_rep, fs, rep, file, offset, reps_hash,
+                             scratch_pool, scratch_pool));
 
-      /* Use the old rep for this content. */
-      memcpy(rep, old_rep, sizeof (*rep));
+      if (old_rep)
+        {
+          /* We need to erase from the protorev the data we just wrote. */
+          SVN_ERR(svn_io_file_trunc(file, offset, scratch_pool));
+
+          /* Use the old rep for this content. */
+          memcpy(rep, old_rep, sizeof (*rep));
+        }
     }
   else
     {
@@ -2688,11 +2697,14 @@ write_container_rep(representation_t *rep,
 /* Write out the COLLECTION pertaining to the NODEREV in FS as a deltified
    text representation to file FILE using WRITER.  In the process, record the
    total size and the md5 digest in REP and add the representation of type
-   ITEM_TYPE to the indexes if necessary.  If rep sharing has been enabled and
-   REPS_HASH is not NULL, it will be used in addition to the on-disk cache to
-   find earlier reps with the same content.  When such existing reps can be
-   found, we will truncate the one just written from the file and return the
-   existing rep.
+   ITEM_TYPE to the indexes if necessary.
+
+   If ALLOW_REP_SHARING is FALSE, rep-sharing will not be used, regardless
+   of any other option and rep-sharing settings.  If rep sharing has been
+   enabled and REPS_HASH is not NULL, it will be used in addition to the
+   on-disk cache to find earlier reps with the same content.  If such
+   existing reps can be found, we will truncate the one just written from
+   the file and return the existing rep.
 
    If ITEM_TYPE is IS_PROPS equals SVN_FS_FS__ITEM_TYPE_*_PROPS, assume
    that we want to a props representation as the base for our delta.
@@ -2706,6 +2718,7 @@ write_container_delta_rep(representation_t *rep,
                           svn_fs_t *fs,
                           node_revision_t *noderev,
                           apr_hash_t *reps_hash,
+                          svn_boolean_t allow_rep_sharing,
                           apr_uint32_t item_type,
                           apr_pool_t *scratch_pool)
 {
@@ -2715,7 +2728,6 @@ write_container_delta_rep(representation_t *rep,
   svn_stream_t *file_stream;
   svn_stream_t *stream;
   representation_t *base_rep;
-  representation_t *old_rep;
   svn_checksum_ctx_t *fnv1a_checksum_ctx;
   svn_stream_t *source;
   svn_fs_fs__rep_header_t header = { 0 };
@@ -2788,16 +2800,20 @@ write_container_delta_rep(representation_t *rep,
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  SVN_ERR(get_shared_rep(&old_rep, fs, rep, file, offset, reps_hash,
-                         scratch_pool, scratch_pool));
-
-  if (old_rep)
+  if (allow_rep_sharing)
     {
-      /* We need to erase from the protorev the data we just wrote. */
-      SVN_ERR(svn_io_file_trunc(file, offset, scratch_pool));
+      representation_t *old_rep;
+      SVN_ERR(get_shared_rep(&old_rep, fs, rep, file, offset, reps_hash,
+                             scratch_pool, scratch_pool));
 
-      /* Use the old rep for this content. */
-      memcpy(rep, old_rep, sizeof (*rep));
+      if (old_rep)
+        {
+          /* We need to erase from the protorev the data we just wrote. */
+          SVN_ERR(svn_io_file_trunc(file, offset, scratch_pool));
+
+          /* Use the old rep for this content. */
+          memcpy(rep, old_rep, sizeof (*rep));
+        }
     }
   else
     {
@@ -3000,13 +3016,14 @@ write_final_rev(const svn_fs_id_t **new_id_p,
             SVN_ERR(write_container_delta_rep(noderev->data_rep, file,
                                               entries,
                                               write_directory_to_stream,
-                                              fs, noderev, NULL,
+                                              fs, noderev, NULL, FALSE,
                                               SVN_FS_FS__ITEM_TYPE_DIR_REP,
                                               pool));
           else
             SVN_ERR(write_container_rep(noderev->data_rep, file, entries,
                                         write_directory_to_stream, fs, NULL,
-                                        SVN_FS_FS__ITEM_TYPE_DIR_REP, pool));
+                                        FALSE, SVN_FS_FS__ITEM_TYPE_DIR_REP,
+                                        pool));
 
           reset_txn_in_rep(noderev->data_rep);
         }
@@ -3051,11 +3068,11 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       if (ffd->deltify_properties)
         SVN_ERR(write_container_delta_rep(noderev->prop_rep, file, proplist,
                                           write_hash_to_stream, fs, noderev,
-                                          reps_hash, item_type, pool));
+                                          reps_hash, TRUE, item_type, pool));
       else
         SVN_ERR(write_container_rep(noderev->prop_rep, file, proplist,
                                     write_hash_to_stream, fs, reps_hash,
-                                    item_type, pool));
+                                    item_type, TRUE, pool));
 
       reset_txn_in_rep(noderev->prop_rep);
     }
