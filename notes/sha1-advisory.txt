@@ -27,8 +27,8 @@ Details:
 
   If both of these files are committed to a Subversion repository, Subversion
   de-duplicates content based on the SHA1 checksum and only the content of
-  one of the files ends up being stored in the repository. However, the meta
-  data stores the MD5 checksums of both files, and these MD5 checksums differ.
+  one of the files ends up being stored in the repository. However, meta data
+  stores the MD5 checksums of both files, and these MD5 checksums differ.
   This causes problems when Subversion eventually uses the MD5 checksum of
   the content which was not in fact stored. For example, updates and commits
   may no longer be possible due to an apparent checksum error.
