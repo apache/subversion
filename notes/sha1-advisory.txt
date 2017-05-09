@@ -59,7 +59,7 @@ Recommendations:
   If such content was accidentally committed while rep-sharing was disabled,
   one the following remedies may be used:
 
-	One solution is just to delete the second file. This will resolve this
+  One solution is just to delete the second file. This will resolve this
   problem for normal SVN client usage, but it will not work for tools like
   svnsync or git-svn which try to replay every revision in the repository.
   This will run into an error on the revision where the content was committed
