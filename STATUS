@@ -96,16 +96,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1759116
-   Work around an APR bug in svn_io_file_trunc with buffered r/w files.
-   Justification:
-     Without this patch, trunc() will leave buffered file objects with
-     alternating read and write accesses in an inconsistent state.  Apart
-     from being a bug in one of our public APIs, this will cause corruptions
-     in FSFS when the strict-rep-sharing patches get backported.
-   Votes:
-     +1: stefan2, rhuijben, stsp
-
  * r1785053
    Never attempt to share directory representations in FSFS.
    Justification:
