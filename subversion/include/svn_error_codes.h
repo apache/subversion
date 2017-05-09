@@ -879,7 +879,7 @@ SVN_ERROR_START
              "Property list is corrupt.")
 
   /** @since New in 1.10. */
-  SVN_ERRDEF(SVN_ERR_FS_AMBIUGOUS_CHECKSUM_REP,
+  SVN_ERRDEF(SVN_ERR_FS_AMBIGUOUS_CHECKSUM_REP,
              SVN_ERR_FS_CATEGORY_START + 67,
              "Content checksums supposedly match but content does not.")
 
