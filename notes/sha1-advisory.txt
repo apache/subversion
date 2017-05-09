@@ -10,7 +10,7 @@ Summary:
 Known affected:
 =================
 
-  Servers running Apache Subversion up and including to 1.9.5.
+  Servers running Apache Subversion up to and including 1.9.5.
 
 Known fixed:
 ============
