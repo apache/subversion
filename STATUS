@@ -28,13 +28,6 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1774109
-   Document the purpose of 'svnadmin freeze' more clearly.
-   Justification:
-     Not very important, nice to have documentation fix. Trivial merge.
-   Votes:
-     +1: stsp, julianfoad
-
  * r1776742, r1776783, r1776788
    Issue #4667: Reduce memory usage during merge, by tighter pool usage.
    Justification:
@@ -46,49 +39,40 @@ Candidate changes:
      nominated later. The issue #4667 need not be "closed" for this to be
      a useful backport.
    Votes:
-     +1: julianfoad
-
- * r1779948
-   Improve error message when copying/moving into unversioned dir.
-   Justification:
-     The current error message is misleading. It says "not a directory"
-     but there is a directory on disk.
-     User complained.
-   Votes:
-     +1: stsp
-
-* r1706432
-  Fix tests on Windows when passing --bin to win_tests.py.
-  Justification:
-    Tests should simply work.
-  Notes:
-    Fixes a bad commandline argument encoding in the Windows test runner.
-    Regression introduced in 1.9.2.
-  Votes:
-    +1: rhuijben
-    +1 (non-binding): luke1410
-
- * r1781507
-   Fix a NULL deref in libsvn_repos which makes svndumpfilter crash.
-   Justification:
-     Should not crash. User complained.
-   Votes:
-     +1: stsp
-
- * r1781655
-   Improve error message upon failure to open rep-cache.
-   Justification:
-     The current message lacks sufficient detail to be useful when it appears
-     in server logs.
-   Votes:
-     +1: stsp
+     +1: julianfoad, stefan2
 
  * r1783704
    Add support to build with 'zlibstat.lib' in install-layout on Windows.
    Justification:
      Simplifies build process on Windows.
    Votes:
-     +1: luke1410
+     +1: luke1410, rhuijben
+
+ * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786515
+   Make FSFS consistency no longer depend on hash algorithms.
+   Justification:
+     This eliminates any existing or future FSFS vulnerability due to
+     attacks on MD5 or SHA1.
+   Branch:
+     ^/subversion/branches/1.9.x-strict-rep-sharing
+   Notes:
+     Depends on r1759116 for correctness with older APR.
+     While the backport code is very close to the /trunk changes, it is
+     easier to review them as r1786580, r1786581 and r1786619 on the branch.
+     Will create a text conflict with the r1785053 backport.  Depending on
+     which change gets merged first, the respective other must be updated.
+   Votes:
+     +1: stefan2, rhuijben
+
+ * r1794166
+   Find gpg-agent socket using gpgconf, if possible.
+   Justification:
+     Improves GPG socket detection when $GPG_AGENT_INFO is unset or when gpg
+     >= 2.1.13 is used
+   Branch:
+     ^/subversion/branches/1.9.x-r1794166
+   Votes:
+     +1: jamessan
 
 Veto-blocked changes:
 =====================
@@ -111,3 +95,18 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1785053
+   Never attempt to share directory representations in FSFS.
+   Justification:
+     This fixes inconsistent behavior.  We never add dir reps to the rep-
+     cache but would happily share any file or prop rep that happens to
+     match the respective directory rep.
+   Branch:
+     ^/subversion/branches/1.9.x-r1785053
+   Notes:
+     Will create a text conflict with the strict-rep-sharing patches.
+     Depending on which change gets merged first, the respective other
+     needs to be updated.
+   Votes:
+     +1: stefan2, rhuijben, stsp
