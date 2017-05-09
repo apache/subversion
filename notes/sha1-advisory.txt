@@ -21,7 +21,7 @@ Known fixed:
 Details:
 ========
 
-  In Febraury 2017 a group of researchers released two PDF files which have
+  In February 2017 a group of researchers released two PDF files which have
   different content but produce the same SHA1 checksum. This was the first
   publicly known SHA1 collision ever produced.
 
@@ -87,5 +87,4 @@ Reported by:
 ============
 
   The WebKit Project, https://webkit.org/
-
   Bryan Rosander filed issue SVN-4673
