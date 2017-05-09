@@ -2430,12 +2430,10 @@ get_shared_rep(representation_t **old_rep,
                                       scratch_pool);
 
       /* A mismatch should be extremely rare.
-       * If it does happen, log the event and don't share the rep. */
+       * If it does happen, reject the commit. */
       if (!same || err)
         {
-          /* SHA1 collision or worse.
-             We can continue without rep-sharing, but warn.
-            */
+          /* SHA1 collision or worse. */
           svn_stringbuf_t *old_rep_str
             = svn_fs_fs__unparse_representation(*old_rep,
                                                 ffd->format, FALSE,
@@ -2449,15 +2447,11 @@ get_shared_rep(representation_t **old_rep,
           const char *checksum__str
             = svn_checksum_to_cstring_display(&checksum, scratch_pool);
 
-          err = svn_error_createf(SVN_ERR_FS_AMBIGUOUS_CHECKSUM_REP,
-                                  err, "SHA1 of reps '%s' and '%s' "
-                                  "matches (%s) but contents differ",
-                                  old_rep_str->data, rep_str->data,
-                                  checksum__str);
-
-          (fs->warning)(fs->warning_baton, err);
-          svn_error_clear(err);
-          *old_rep = NULL;
+          return svn_error_createf(SVN_ERR_FS_AMBIGUOUS_CHECKSUM_REP,
+                                   err, "SHA1 of reps '%s' and '%s' "
+                                   "matches (%s) but contents differ",
+                                   old_rep_str->data, rep_str->data,
+                                   checksum__str);
         }
 
       /* Restore FILE's read / write position. */
