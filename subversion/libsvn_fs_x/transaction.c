@@ -2539,7 +2539,7 @@ get_shared_rep(svn_fs_x__representation_t **old_rep,
           const char *checksum__str
             = svn_checksum_to_cstring_display(&checksum, scratch_pool);
 
-          err = svn_error_createf(SVN_ERR_FS_AMBIUGOUS_CHECKSUM_REP,
+          err = svn_error_createf(SVN_ERR_FS_AMBIGUOUS_CHECKSUM_REP,
                                   err, "SHA1 of reps '%s' and '%s' "
                                   "matches (%s) but contents differ",
                                   old_rep_str->data, rep_str->data,
