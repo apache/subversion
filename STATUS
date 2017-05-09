@@ -94,6 +94,8 @@ Candidate changes:
    Justification:
      Improves GPG socket detection when $GPG_AGENT_INFO is unset or when gpg
      >= 2.1.13 is used
+   Branch:
+     ^/subversion/branches/1.9.x-r1794166
    Votes:
      +1: jamessan
 
