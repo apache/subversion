@@ -50,7 +50,7 @@ Recommendations:
   copy will run into similar problems: de-duplication of content stored
   in the working copy also relies on SHA1, and for performance reasons
   clients using the HTTP protocol will avoid fetching content with a SHA1
-  checksum which has been stored previously.
+  checksum which has been fetched previously.
 
   Therefore, storing content with SHA1 collisions it not a supported use case.
   If such content needs to be versioned for any reason, consider packing the
