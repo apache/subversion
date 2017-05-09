@@ -49,7 +49,7 @@ Candidate changes:
      Will create a text conflict with the r1785053 backport.  Depending on
      which change gets merged first, the respective other must be updated.
    Votes:
-     +1: stsp
+     -0: stsp (should we reject commits of SHA1 collisions altogether?)
      +1: stefan2, rhuijben (without r1794530, r1794536).
 
  * r1794166
