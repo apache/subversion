@@ -48,7 +48,7 @@ Candidate changes:
    Votes:
      +1: luke1410, rhuijben
 
- * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786515
+ * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786515, r1794530, r1794536
    Make FSFS consistency no longer depend on hash algorithms.
    Justification:
      This eliminates any existing or future FSFS vulnerability due to
@@ -62,7 +62,8 @@ Candidate changes:
      Will create a text conflict with the r1785053 backport.  Depending on
      which change gets merged first, the respective other must be updated.
    Votes:
-     +1: stefan2, rhuijben
+     +1: stsp
+     +1: stefan2, rhuijben (without r1794530, r1794536).
 
  * r1794166
    Find gpg-agent socket using gpgconf, if possible.
