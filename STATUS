@@ -60,7 +60,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.9.x-r1794166
    Votes:
-     +1: jamessan, stsp
+     +1: jamessan
+     -0: stsp (see https://svn.haxx.se/dev/archive-2017-05/0047.shtml)
 
 Veto-blocked changes:
 =====================
