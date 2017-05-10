@@ -25,18 +25,18 @@ Details:
   different content but produce the same SHA1 checksum. This was the first
   publicly known SHA1 collision ever produced.
 
-  If both of these files are committed to a Subversion repository, Subversion
-  de-duplicates content based on the SHA1 checksum and only the content of
-  one of the files ends up being stored in the repository. However, meta data
+  If both of these files are committed to an FSFS or FSX repository, content
+  is de-duplicated based on the SHA1 checksum, and only the content of one
+  of the files ends up being stored in the repository. However, meta data
   stores the MD5 checksums of both files, and these MD5 checksums differ.
   This causes problems when Subversion eventually uses the MD5 checksum of
   the content which was not in fact stored. For example, updates and commits
-  may no longer be possible due to an apparent checksum error.
+  may fail with a checksum error. 
 
 Recommendations:
 ================
 
-  We recommend all users update to Subversion 1.9.6 which will reject any
+  We recommend all users upgrade to Subversion 1.9.6 which will reject any
   commit that would create a SHA1 collision.
 
   Note that this fix only works if the "representation-sharing" feature is
@@ -62,11 +62,11 @@ Recommendations:
   One solution is just to delete the second file. This will resolve this
   problem for normal SVN client usage, but it will not work for tools like
   svnsync or git-svn which try to replay every revision in the repository.
-  This will run into an error on the revision where the content was committed
-  and the tool will not be able to proceed.
+  The tool will run into an error on the revision where the content was
+  committed and the tool will not be able to proceed.
 
   A second solution would be to remove the problematic revision with svnadmin.
-  svnadmin dump can be used to dump the repository up to the revision that
+  'svnadmin dump' can be used to dump the repository up to the revision that
   introduced the problem. This dump file can be loaded into a new repository.
   If there were more commits after the problematic revision then dump and load
   all of these subsequent revisions as well.
@@ -74,6 +74,11 @@ Recommendations:
   Another option is to create a Subversion permission rule (authz) that blocks
   access to the one or both of the files. This will work with tools like
   svnsync and git-svn as the server will not send the colliding content.
+  For example, authz rules which block access to the files could look like:
+    [/trunk/tests/data/shattered-1.pdf]
+    * =
+    [/trunk/tests/data/shattered-2.pdf]
+    * =
 
 References:
 ===========
