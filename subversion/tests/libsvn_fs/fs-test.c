@@ -7317,6 +7317,58 @@ test_rep_sharing_strict_content_check(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+closest_copy_test_svn_4677(const svn_test_opts_t *opts,
+                           apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root, *croot;
+  svn_revnum_t after_rev;
+  const char *cpath;
+  apr_pool_t *spool = svn_pool_create(pool);
+
+  /* Prepare a filesystem. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-svn-4677",
+                              opts, pool));
+
+  /* In first txn, create file A/foo. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, spool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "A", spool));
+  SVN_ERR(svn_fs_make_file(txn_root, "A/foo", spool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+  svn_pool_clear(spool);
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
+
+  /* Move A to B, and commit. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, spool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
+  SVN_ERR(svn_fs_copy(rev_root, "A", txn_root, "B", spool));
+  SVN_ERR(svn_fs_delete(txn_root, "A", spool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+  svn_pool_clear(spool);
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
+
+  /* Replace file B/foo with directory B/foo, add B/foo/bar, and commit. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, spool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
+  SVN_ERR(svn_fs_delete(txn_root, "B/foo", spool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "B/foo", spool));
+  SVN_ERR(svn_fs_make_file(txn_root, "B/foo/bar", spool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+  svn_pool_clear(spool);
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
+
+  /* B/foo/bar has been copied.
+     Issue 4677 was caused by returning an error in this situation. */
+  SVN_ERR(svn_fs_closest_copy(&croot, &cpath, rev_root, "B/foo/bar", spool));
+  SVN_TEST_ASSERT(cpath == NULL);
+  SVN_TEST_ASSERT(croot == NULL);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -7459,6 +7511,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test clearing the cache while streaming a rep"),
     SVN_TEST_OPTS_PASS(test_rep_sharing_strict_content_check,
                        "test rep-sharing on content rather than SHA1"),
+    SVN_TEST_OPTS_PASS(closest_copy_test_svn_4677,
+                       "test issue SVN-4677 regression"),
     SVN_TEST_NULL
   };
 
