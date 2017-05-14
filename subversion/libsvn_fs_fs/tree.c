@@ -1144,6 +1144,8 @@ open_path(parent_path_t **parent_path_p,
       /* The path isn't finished yet; we'd better be in a directory.  */
       if (svn_fs_fs__dag_node_kind(child) != svn_node_dir)
         {
+          const char *msg;
+
           /* Since this is not a directory and we are looking for some
              sub-path, that sub-path will not exist.  That will be o.k.,
              if we are just here to check for the path's existence. */
@@ -1154,8 +1156,14 @@ open_path(parent_path_t **parent_path_p,
             }
 
           /* It's really a problem ... */
-          SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far->data),
-                    apr_psprintf(iterpool, _("Failure opening '%s'"), path));
+          msg = root->is_txn_root
+              ? apr_psprintf(iterpool,
+                             _("Failure opening '%s' in transaction '%s'"),
+                             path, root->txn)
+              : apr_psprintf(iterpool,
+                             _("Failure opening '%s' in revision %ld"),
+                             path, root->rev);
+          SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far->data), msg);
         }
 
       rest = next;
