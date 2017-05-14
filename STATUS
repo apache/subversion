@@ -42,8 +42,8 @@ Candidate changes:
      Will create a text conflict with the r1785053 backport.  Depending on
      which change gets merged first, the respective other must be updated.
    Votes:
-     +1: stsp
-     +1: stefan2, rhuijben (without r1794530, r1794536, r1794611).
+     +1: stsp, stefan2
+     +1: rhuijben (without r1794530, r1794536, r1794611).
 
  * r1794166, r1795087
    Search for gpg-agent sockets in (/var)/run.
