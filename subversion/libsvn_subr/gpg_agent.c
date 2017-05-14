@@ -64,9 +64,9 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
-#include <apr_file_io.h>
 #include <apr_pools.h>
 #include <apr_strings.h>
+#include <apr_user.h>
 #include "svn_auth.h"
 #include "svn_config.h"
 #include "svn_error.h"
@@ -228,63 +228,93 @@ bye_gpg_agent(int sd)
   close(sd);
 }
 
-/* Find gpg-agent socket location using gpgconf. Returns the path to socket, or
- * NULL if the socket path cannot be determined using gpgconf.
- */
+/* This implements a method of finding the socket which is a mix of the
+ * description from GPG 1.x's gpg-agent man page under the
+ * --use-standard-socket option and the logic from GPG 2.x's socket discovery
+ * code in common/homedir.c.
+ *
+ * The man page says the standard socket is "named 'S.gpg-agent' located
+ * in the home directory."  GPG's home directory is either the directory
+ * specified by $GNUPGHOME or ~/.gnupg.  GPG >= 2.1.13 will check for a
+ * socket under (/var)/run/UID/gnupg before ~/.gnupg if no environment
+ * variables are set.
+ *
+ * $GPG_AGENT_INFO takes precedence, if set, otherwise $GNUPGHOME will be
+ * used.  For GPG >= 2.1.13, $GNUPGHOME will be used directly only if it
+ * refers to the canonical home -- ~/.gnupg.  Otherwise, the path specified
+ * by $GNUPGHOME is hashed (SHA1 + z-base-32) and the socket is expected to
+ * be present under (/var)/run/UID/gnupg/d.HASH. This last mechanism is not
+ * yet supported here. */
 static const char *
-find_gpgconf_agent_socket(apr_pool_t *pool)
+find_gpg_agent_socket(apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  apr_proc_t proc;
-  svn_stringbuf_t *line;
-  svn_error_t *err;
-  svn_boolean_t eof;
-  const char* agent_socket;
-  const char* const gpgargv[] = { "gpgconf", "--list-dir", NULL };
+  char *gpg_agent_info = NULL;
+  char *gnupghome = NULL;
+  const char *socket_name = NULL;
 
-  /* execute "gpgconf --list-dir" */
-  err = svn_io_start_cmd3(&proc, NULL, "gpgconf", gpgargv,
-                          NULL /* env */, TRUE /* inherit */,
-                          FALSE /* infile_pipe */, NULL /* infile */,
-                          TRUE /* outfile_pipe */, NULL /* outfile */,
-                          FALSE /* errfile_pipe */, NULL /* errfile */,
-                          pool);
-  if (err != SVN_NO_ERROR)
+  if ((gpg_agent_info = getenv("GPG_AGENT_INFO")) != NULL)
     {
-      svn_error_clear(err);
-      return NULL;
+      apr_array_header_t *socket_details;
+
+      /* For reference GPG_AGENT_INFO consists of 3 : separated fields.
+       * The path to the socket, the pid of the gpg-agent process and
+       * finally the version of the protocol the agent talks. */
+      socket_details = svn_cstring_split(gpg_agent_info, ":", TRUE,
+                                         scratch_pool);
+      socket_name = APR_ARRAY_IDX(socket_details, 0, const char *);
     }
-
-  /* Parse the gpgconf output.
-   * The format of output is a list of directories/sockets with each
-   * directory/socket listed on a separate line in format "field:/some/path" */
-  eof = FALSE;
-  while (((err = svn_io_file_readline(proc.out, &line, NULL, &eof, APR_SIZE_MAX,
-                                      pool, pool)) == SVN_NO_ERROR)
-         && !eof)
+  else if ((gnupghome = getenv("GNUPGHOME")) != NULL)
     {
-      if (strncmp(line->data, "agent-socket:", strlen("agent-socket:")) == 0)
+      const char *homedir = svn_dirent_canonicalize(gnupghome, scratch_pool);
+      socket_name = svn_dirent_join(homedir, "S.gpg-agent", scratch_pool);
+    }
+  else
+    {
+      int i = 0;
+      const char *maybe_socket[] = {NULL, NULL, NULL, NULL};
+      const char *homedir;
+
+#ifdef APR_HAS_USER
+      apr_uid_t uid;
+      apr_gid_t gid;
+
+      if (apr_uid_current(&uid, &gid, scratch_pool) == APR_SUCCESS)
         {
-          apr_array_header_t *dir_details;
-          dir_details = svn_cstring_split(line->data, ":", TRUE, pool);
-          /* note: unescape_assuan modifies dir_details in place */
-          agent_socket = unescape_assuan(APR_ARRAY_IDX(dir_details, 1, char*));
-          break;
+          const char *uidbuf = apr_psprintf(scratch_pool, "%lu",
+                                            (unsigned long)uid);
+          maybe_socket[i++] = svn_dirent_join_many(scratch_pool, "/run/user",
+                                                   uidbuf, "gnupg",
+                                                   "S.gpg-agent",
+                                                   SVN_VA_NULL);
+          maybe_socket[i++] = svn_dirent_join_many(scratch_pool,
+                                                   "/var/run/user",
+                                                   uidbuf, "gnupg",
+                                                   "S.gpg-agent",
+                                                   SVN_VA_NULL);
+        }
+#endif
+
+      homedir = svn_user_get_homedir(scratch_pool);
+      if (homedir)
+        maybe_socket[i++] = svn_dirent_join_many(scratch_pool, homedir,
+                                                 ".gnupg", "S.gpg-agent",
+                                                 SVN_VA_NULL);
+
+      for (i = 0; !socket_name && maybe_socket[i]; i++)
+        {
+          apr_finfo_t finfo;
+          svn_error_t *err = svn_io_stat(&finfo, maybe_socket[i],
+                                         APR_FINFO_TYPE, scratch_pool);
+          if (!err && finfo.filetype == APR_SOCK)
+            socket_name = maybe_socket[i];
+          svn_error_clear(err);
         }
     }
-  if (err != SVN_NO_ERROR)
-    {
-      svn_error_clear(err);
-      return NULL;
-    }
-  apr_file_close(proc.out);
-  err = svn_io_wait_for_cmd(&proc, "gpgconf", NULL, NULL, pool);
-  if (err != SVN_NO_ERROR)
-    {
-      svn_error_clear(err);
-      return NULL;
-    }
 
-  return agent_socket;
+  if (socket_name)
+    socket_name = apr_pstrdup(result_pool, socket_name);
+
+  return socket_name;
 }
 
 /* Locate a running GPG Agent, and return an open file descriptor
@@ -294,54 +324,13 @@ static svn_error_t *
 find_running_gpg_agent(int *new_sd, apr_pool_t *pool)
 {
   char *buffer;
-  char *gpg_agent_info = NULL;
-  char *gnupghome = NULL;
-  const char *socket_name = NULL;
+  const char *socket_name = find_gpg_agent_socket(pool, pool);
   const char *request = NULL;
   const char *p = NULL;
   char *ep = NULL;
   int sd;
 
   *new_sd = -1;
-
-  /* Query socket location using gpgconf if possible */
-  socket_name = find_gpgconf_agent_socket(pool);
-
-  /* fallback to the old method used with Gnupg 1.x */
-  if (socket_name == NULL)
-    {
-      /* This implements the method of finding the socket as described in
-       * the gpg-agent man page under the --use-standard-socket option.
-       * The manage page says the standard socket is "named 'S.gpg-agent' located
-       * in the home directory."  GPG's home directory is either the directory
-       * specified by $GNUPGHOME or ~/.gnupg. */
-      if ((gpg_agent_info = getenv("GPG_AGENT_INFO")) != NULL)
-        {
-          apr_array_header_t *socket_details;
-
-          /* For reference GPG_AGENT_INFO consists of 3 : separated fields.
-           * The path to the socket, the pid of the gpg-agent process and
-           * finally the version of the protocol the agent talks. */
-          socket_details = svn_cstring_split(gpg_agent_info, ":", TRUE,
-                                             pool);
-          socket_name = APR_ARRAY_IDX(socket_details, 0, const char *);
-        }
-      else if ((gnupghome = getenv("GNUPGHOME")) != NULL)
-        {
-          const char *homedir = svn_dirent_canonicalize(gnupghome, pool);
-          socket_name = svn_dirent_join(homedir, "S.gpg-agent", pool);
-        }
-      else
-        {
-          const char *homedir = svn_user_get_homedir(pool);
-
-          if (!homedir)
-            return SVN_NO_ERROR;
-
-          socket_name = svn_dirent_join_many(pool, homedir, ".gnupg",
-                                             "S.gpg-agent", SVN_VA_NULL);
-        }
-    }
 
   if (socket_name != NULL)
     {
