@@ -56,6 +56,17 @@ Candidate changes:
      +1: jamessan
      -0: stsp (see https://svn.haxx.se/dev/archive-2017-05/0047.shtml) (without r1795087)
 
+ * r1795116
+   Fix 'svn up' after a directories replaced a file (issue #4677).
+   Justification:
+     User-reported error that is difficult to work around because more
+     "finding the last relevant copy" is broken.  That affects more than
+     just 'svn up'.
+   Branch:
+     ^/subversion/branches/1.9.x-r1795116
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
