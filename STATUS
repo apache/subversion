@@ -45,8 +45,8 @@ Candidate changes:
      +1: stsp
      +1: stefan2, rhuijben (without r1794530, r1794536, r1794611).
 
- * r1794166
-   Find gpg-agent socket using gpgconf, if possible.
+ * r1794166, r1795087
+   Search for gpg-agent sockets in (/var)/run.
    Justification:
      Improves GPG socket detection when $GPG_AGENT_INFO is unset or when gpg
      >= 2.1.13 is used
@@ -54,7 +54,7 @@ Candidate changes:
      ^/subversion/branches/1.9.x-r1794166
    Votes:
      +1: jamessan
-     -0: stsp (see https://svn.haxx.se/dev/archive-2017-05/0047.shtml)
+     -0: stsp (see https://svn.haxx.se/dev/archive-2017-05/0047.shtml) (without r1795087)
 
 Veto-blocked changes:
 =====================
