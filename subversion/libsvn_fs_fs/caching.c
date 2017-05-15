@@ -519,7 +519,7 @@ svn_fs_fs__initialize_caches(svn_fs_t *fs,
   SVN_ERR(create_cache(&(ffd->revprop_cache),
                        NULL,
                        membuffer,
-                       0, 0, /* Do not use inprocess cache */
+                       8, 20, /* ~400 bytes / entry, capa for ~2 packs */
                        svn_fs_fs__serialize_revprops,
                        svn_fs_fs__deserialize_revprops,
                        sizeof(pair_cache_key_t),
