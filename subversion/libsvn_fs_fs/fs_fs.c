@@ -816,6 +816,17 @@ read_config(fs_fs_data_t *ffd,
     {
       ffd->pack_after_commit = FALSE;
     }
+#ifdef SVN_DEBUG
+  SVN_ERR(svn_config_get_bool(config, &ffd->verify_before_commit,
+                              CONFIG_SECTION_DEBUG,
+                              CONFIG_OPTION_VERIFY_BEFORE_COMMIT,
+                              TRUE));
+#else
+  SVN_ERR(svn_config_get_bool(config, &ffd->verify_before_commit,
+                              CONFIG_SECTION_DEBUG,
+                              CONFIG_OPTION_VERIFY_BEFORE_COMMIT,
+                              FALSE));
+#endif
 
   /* memcached configuration */
   SVN_ERR(svn_cache__make_memcache_from_config(&ffd->memcache, config,
@@ -1020,6 +1031,13 @@ write_config(svn_fs_t *fs,
 "### Must be a power of 2."                                                  NL
 "### p2l-page-size is given in kBytes and with a default of 1024 kBytes."    NL
 "# " CONFIG_OPTION_P2L_PAGE_SIZE " = 1024"                                   NL
+""                                                                           NL
+"[" CONFIG_SECTION_DEBUG "]"                                                 NL
+"###"                                                                        NL
+"### Whether to verify each new revision immediately before finalizing"      NL
+"### the commit. The default is false in release-mode builds, and true"      NL
+"### in debug-mode builds."                                                  NL
+"# " CONFIG_OPTION_VERIFY_BEFORE_COMMIT " = false"                           NL
 ;
 #undef NL
   return svn_io_file_create(svn_dirent_join(fs->path, PATH_CONFIG, pool),

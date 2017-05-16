@@ -3421,11 +3421,10 @@ write_final_changed_path_info(apr_off_t *offset_p,
    Intended to be called as the very last step in a commit before 'current'
    is bumped.  This implies that we are holding the write lock. */
 static svn_error_t *
-verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
-                                            svn_revnum_t new_rev,
-                                            apr_pool_t *pool)
+verify_before_commit(svn_fs_t *fs,
+                     svn_revnum_t new_rev,
+                     apr_pool_t *pool)
 {
-#ifdef SVN_DEBUG
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_fs_t *ft; /* fs++ == ft */
   svn_fs_root_t *root;
@@ -3455,7 +3454,6 @@ verify_as_revision_before_current_plus_plus(svn_fs_t *fs,
   SVN_ERR_ASSERT(root->is_txn_root == FALSE && root->rev == new_rev);
   SVN_ERR_ASSERT(ft_ffd->youngest_rev_cache == new_rev);
   SVN_ERR(svn_fs_fs__verify_root(root, pool));
-#endif /* SVN_DEBUG */
 
   return SVN_NO_ERROR;
 }
@@ -3875,8 +3873,13 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(write_final_revprop(revprop_filename, old_rev_filename,
                               cb->txn, ffd->flush_to_disk, pool));
 
+  /* Run paranoia checks. */
+  if (ffd->verify_before_commit)
+    {
+      SVN_ERR(verify_before_commit(cb->fs, new_rev, pool));
+    }
+
   /* Update the 'current' file. */
-  SVN_ERR(verify_as_revision_before_current_plus_plus(cb->fs, new_rev, pool));
   SVN_ERR(write_final_current(cb->fs, txn_id, new_rev, start_node_id,
                               start_copy_id, pool));
 
