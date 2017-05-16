@@ -229,9 +229,12 @@ prepare_revprop_cache(svn_fs_t *fs,
 }
 
 /* Store the unparsed revprop hash CONTENT for REVISION in FS's revprop
- * cache.  Use SCRATCH_POOL for temporary allocations. */
+ * cache.  If CACHED is not NULL, set *CACHED if there already is such
+ * an entry and skip the cache write in that case.  Use SCRATCH_POOL for
+ * temporary allocations. */
 static svn_error_t *
-cache_revprops(svn_fs_t *fs,
+cache_revprops(svn_boolean_t *is_cached,
+               svn_fs_t *fs,
                svn_revnum_t revision,
                svn_string_t *content,
                apr_pool_t *scratch_pool)
@@ -243,6 +246,14 @@ cache_revprops(svn_fs_t *fs,
   SVN_ERR_ASSERT(ffd->revprop_prefix);
   key.revision = revision;
   key.second = ffd->revprop_prefix;
+
+  if (is_cached)
+    {
+      SVN_ERR(svn_cache__has_key(is_cached, ffd->revprop_cache, &key,
+                                 scratch_pool));
+      if (*is_cached)
+        return SVN_NO_ERROR;
+    }
 
   SVN_ERR(svn_cache__set(ffd->revprop_cache, &key, content, scratch_pool));
 
@@ -287,7 +298,7 @@ read_non_packed_revprop(apr_hash_t **properties,
       SVN_ERR(parse_revprop(properties, fs, rev, as_string, pool, iterpool));
 
       if (populate_cache)
-        SVN_ERR(cache_revprops(fs, rev, as_string, iterpool));
+        SVN_ERR(cache_revprops(NULL, fs, rev, as_string, iterpool));
     }
 
   svn_pool_clear(iterpool);
@@ -453,6 +464,9 @@ parse_packed_revprops(svn_fs_t *fs,
   const char *header_end;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
+  /* Initial value for the "Leaking bucket" pattern. */
+  int bucket = 4;
+
   /* decompress (even if the data is only "stored", there is still a
    * length header to remove) */
   svn_stringbuf_t *compressed = revprops->packed_revprops;
@@ -546,7 +560,30 @@ parse_packed_revprops(svn_fs_t *fs,
         }
 
       if (populate_cache)
-        SVN_ERR(cache_revprops(fs, revision, &serialized, iterpool));
+        {
+          /* Adding all those revprops is expensive, in particular in a
+           * multi-threaded environment.  There are situations where hit
+           * rates are low and revprops get evicted before re-using them.
+           *
+           * We try to detect thosse cases here.
+           * Only keep going while most (at least 2/3) aren't cached, yet. */
+          svn_boolean_t already_cached;
+          SVN_ERR(cache_revprops(&already_cached, fs, revision, &serialized,
+                                 iterpool));
+
+          /* Stop populating the cache once we encountered too many entries
+           * already present relative to the numbers being added. */
+          if (!already_cached)
+            {
+              ++bucket;
+            }
+          else
+            {
+              bucket -= 2;
+              if (bucket < 0)
+                populate_cache = FALSE;
+            }
+        }
 
       if (read_all)
         {
