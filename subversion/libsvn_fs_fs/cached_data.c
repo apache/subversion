@@ -866,7 +866,7 @@ create_rep_state_body(rep_state_t **rep_state,
   rs->size = rep->size;
   rs->revision = rep->revision;
   rs->item_index = rep->item_index;
-  rs->raw_window_cache = ffd->raw_window_cache;
+  rs->raw_window_cache = use_block_read(fs) ? ffd->raw_window_cache : NULL;
   rs->ver = -1;
   rs->start = -1;
 
@@ -1462,7 +1462,8 @@ build_rep_list(apr_array_header_t **list,
                                  &rep, fs, pool, iterpool));
 
       /* for txn reps, there won't be a cached combined window */
-      if (!svn_fs_fs__id_txn_used(&rep.txn_id))
+      if (   !svn_fs_fs__id_txn_used(&rep.txn_id)
+          && rep.expanded_size < SVN_DELTA_WINDOW_SIZE)
         SVN_ERR(get_cached_combined_window(window_p, rs, &is_cached, pool));
 
       if (is_cached)
