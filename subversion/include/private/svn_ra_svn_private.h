@@ -1019,7 +1019,7 @@ svn_ra_svn__write_dirent(svn_ra_svn_conn_t *conn,
                          apr_pool_t *pool,
                          const char *path,
                          svn_dirent_t *dirent,
-                         apr_uint64_t dirent_fields);
+                         apr_uint32_t dirent_fields);
 
 /**
  * @}
