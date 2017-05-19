@@ -1681,7 +1681,7 @@ get_file(svn_ra_svn_conn_t *conn,
 /* Translate all the words in DIRENT_FIELDS_LIST into the flags in
  * DIRENT_FIELDS_P.  If DIRENT_FIELDS_LIST is NULL, set all flags. */
 static svn_error_t *
-parse_dirent_fields(apr_uint64_t *dirent_fields_p,
+parse_dirent_fields(apr_uint32_t *dirent_fields_p,
                     svn_ra_svn__list_t *dirent_fields_list)
 {
   static const svn_string_t str_kind
@@ -1697,7 +1697,7 @@ parse_dirent_fields(apr_uint64_t *dirent_fields_p,
   static const svn_string_t str_last_author
     = SVN__STATIC_STRING(SVN_RA_SVN_DIRENT_LAST_AUTHOR);
 
-  apr_uint64_t dirent_fields;
+  apr_uint32_t dirent_fields;
 
   if (! dirent_fields_list)
     {
@@ -1752,7 +1752,7 @@ get_dir(svn_ra_svn_conn_t *conn,
   apr_pool_t *subpool;
   svn_boolean_t want_props, want_contents;
   apr_uint64_t wants_inherited_props;
-  apr_uint64_t dirent_fields;
+  apr_uint32_t dirent_fields;
   svn_ra_svn__list_t *dirent_fields_list = NULL;
   int i;
   authz_baton_t ab;
@@ -3591,7 +3591,7 @@ typedef struct list_receiver_baton_t
   svn_ra_svn_conn_t *conn;
 
   /* Send the field selected by these flags. */
-  apr_uint64_t dirent_fields;
+  apr_uint32_t dirent_fields;
 } list_receiver_baton_t;
 
 /* Implements svn_repos_dirent_receiver_t, sending DIRENT and PATH to the
