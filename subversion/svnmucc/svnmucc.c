@@ -531,6 +531,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* Check library versions */
   SVN_ERR(check_lib_versions());
 
+  /* Initialize the RA library. */
+  SVN_ERR(svn_ra_initialize(pool));
+
   config_options = apr_array_make(pool, 0,
                                   sizeof(svn_cmdline__config_argument_t*));
 
