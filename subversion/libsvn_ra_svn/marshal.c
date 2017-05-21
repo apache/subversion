@@ -1142,10 +1142,17 @@ static svn_error_t *vwrite_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         SVN_ERR(opt ? vwrite_tuple_string_opt(conn, pool, ap)
                     : vwrite_tuple_string(conn, pool, ap));
       else if (*fmt == '(' && !opt)
-        SVN_ERR(write_tuple_start_list(conn, pool));
+        {
+          /* Optional sub-tuples are not supported.
+           * If OPT was set, we would fall through to the malfunction call. */
+          vwrite_tuple_string_opt(conn, pool, ap);
+        }
       else if (*fmt == ')')
         {
           SVN_ERR(write_tuple_end_list(conn, pool));
+
+          /* OPT could not have been set when opening the list (see above),
+           * hence this is correct and handles nested tuples just fine. */
           opt = FALSE;
         }
       else if (*fmt == '?')
