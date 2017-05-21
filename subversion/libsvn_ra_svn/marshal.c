@@ -1145,7 +1145,7 @@ static svn_error_t *vwrite_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         {
           /* Optional sub-tuples are not supported.
            * If OPT was set, we would fall through to the malfunction call. */
-          vwrite_tuple_string_opt(conn, pool, ap);
+          SVN_ERR(write_tuple_start_list(conn, pool));
         }
       else if (*fmt == ')')
         {
