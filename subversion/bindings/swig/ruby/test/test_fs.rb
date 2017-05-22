@@ -358,7 +358,7 @@ class SvnFsTest < Test::Unit::TestCase
     src = "a\nb\nc\nd\ne\n"
     modified = "A\nb\nc\nd\nE\n"
     result = "a\n\n\n\ne\n"
-    expected = "<<<<<<< .mine\nA\nb\nc\nd\n||||||| .r1\na\nb\nc\nd\n=======\na\n\n\n\n>>>>>>> .r2\nE\n"
+    expected = "A\n\n\n\nE\n"
     path_in_repos = "/#{file}"
     path = File.join(@wc_path, file)
 
@@ -377,10 +377,6 @@ class SvnFsTest < Test::Unit::TestCase
       end
       ctx.up(@wc_path)
       assert_equal(expected, File.open(path){|f| f.read})
-
-      ctx.resolve(:path=>@wc_path,
-                  :conflict_choice=>Svn::Wc::CONFLICT_CHOOSE_THEIRS_CONFLICT)
-      expected = "a\n\n\n\nE\n"
 
       rev2 = ctx.ci(@wc_path).revision
       if use_deprecated_api
