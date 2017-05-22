@@ -472,19 +472,9 @@ EOS
     latest.close
 
     expected = <<-EOD
-<<<<<<< #{modified.path}
-a
- b
-
-||||||| #{original.path}
-a
- b
-c
-=======
 
   b
-c
->>>>>>> #{latest.path}
+
 d
  e
 EOD
