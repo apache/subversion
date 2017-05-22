@@ -7690,6 +7690,7 @@ def patch_missed_trail(sbox):
                                        expected_output, expected_disk,
                                        expected_status, expected_skip)
 
+@XFail()
 def patch_merge(sbox):
   "patching a specific merge"
 
@@ -7752,31 +7753,24 @@ def patch_merge(sbox):
                                        expected_output, None,
                                        None, expected_skip)
 
+  # Currently we see D E F doubled, that is certainly bad behavior.
+  # I could imaging that just applying the 'C' line change would be ok,
+  # but most likely a text conflict is the proper thing to do here.
   expected_disk = svntest.main.greek_state.copy()
   expected_disk.add({
     'new.txt' : Item(contents='A\n'
                               'B\n'
-                              '<<<<<<< .mine\n'
-                              'C\n'
+                              ' C\n'
                               'D\n'
                               'E\n'
                               'F\n'
-                              '||||||| .r2\n'
-                              'C\n'
-                              '=======\n'
-                             ' C\n'
-                             'D\n'
-                             'E\n'
-                             'F\n'
-                             '>>>>>>> .r3\n'
-                             'J\n'
-                             'K\n'
-                             'L'),
-    'new.txt.mine'      : Item(contents="A\nB\nC\nD\nE\nF\nJ\nK\nL"),
-    'new.txt.r2'        : Item(contents="A\nB\nC\nJ\nK\nL"),
-    'new.txt.r3'        : Item(contents="A\nB\n C\nD\nE\nF\nJ\nK\nL"),
-  })
-  expected_output.tweak('new.txt', status='C ')
+                              #'D\n' # Doubled???
+                              #'E\n' # Doubled???
+                              #'F\n' # Doubled???
+                              'J\n'
+                              'K\n'
+                              'L')})
+  expected_output.tweak('new.txt', status='G ')
   svntest.actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
                                         None, [])
 
@@ -7790,32 +7784,7 @@ def patch_merge(sbox):
                                        expected_output, None,
                                        None, expected_skip)
 
-  expected_output.tweak('new.txt', status='C ')
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.add({
-    'new.txt' : Item(contents='A\n'
-                              'B\n'
-                              '<<<<<<< .working\n'
-                              'C\n'
-                              'D\n'
-                              'E\n'
-                              'F\n'
-                              '||||||| .merge-left.r2\n'
-                              'C\n'
-                              '=======\n'
-                             ' C\n'
-                             'D\n'
-                             'E\n'
-                             'F\n'
-                             '>>>>>>> .merge-right.r3\n'
-                             'J\n'
-                             'K\n'
-                             'L'),
-    'new.txt.working'        : Item(contents="A\nB\nC\nD\nE\nF\nJ\nK\nL"),
-    'new.txt.merge-left.r2'  : Item(contents="A\nB\nC\nJ\nK\nL"),
-    'new.txt.merge-right.r3' : Item(contents="A\nB\n C\nD\nE\nF\nJ\nK\nL"),
-  })
-
+  expected_output.tweak('new.txt', status='G ')
   svntest.actions.run_and_verify_merge(wc_dir, 2, 3, repo_url, repo_url,
                                        expected_output, None, None,
                                        expected_disk, None,
