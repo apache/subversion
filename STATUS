@@ -28,23 +28,6 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786515, r1794530, r1794536, r1794611
-   Make FSFS consistency no longer depend on hash algorithms.
-   Justification:
-     This eliminates any existing or future FSFS vulnerability due to
-     attacks on MD5 or SHA1.
-   Branch:
-     ^/subversion/branches/1.9.x-strict-rep-sharing
-   Notes:
-     Depends on r1759116 for correctness with older APR.
-     While the backport code is very close to the /trunk changes, it is
-     easier to review them as r1786580, r1786581 and r1786619 on the branch.
-     Will create a text conflict with the r1785053 backport.  Depending on
-     which change gets merged first, the respective other must be updated.
-   Votes:
-     +1: stsp, stefan2
-     +1: rhuijben (without r1794530, r1794536, r1794611).
-
  * r1794166, r1795087
    Search for gpg-agent sockets in (/var)/run.
    Justification:
@@ -88,3 +71,19 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786515, r1794530, r1794536, r1794611
+   Make FSFS consistency no longer depend on hash algorithms.
+   Justification:
+     This eliminates any existing or future FSFS vulnerability due to
+     attacks on MD5 or SHA1.
+   Branch:
+     ^/subversion/branches/1.9.x-strict-rep-sharing
+   Notes:
+     Depends on r1759116 for correctness with older APR.
+     While the backport code is very close to the /trunk changes, it is
+     easier to review them as r1786580, r1786581 and r1786619 on the branch.
+     Will create a text conflict with the r1785053 backport.  Depending on
+     which change gets merged first, the respective other must be updated.
+   Votes:
+     +1: stsp, stefan2, rhuijben
