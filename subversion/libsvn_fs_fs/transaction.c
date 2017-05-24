@@ -2128,6 +2128,11 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
    there may be new duplicate representations within the same uncommitted
    revision, those can be passed in REPS_HASH (maps a sha1 digest onto
    representation_t*), otherwise pass in NULL for REPS_HASH.
+
+   The content of both representations will be compared, taking REP's content
+   from FILE at OFFSET.  Only if they actually match, will *OLD_REP not be
+   NULL.
+
    Use RESULT_POOL for *OLD_REP  allocations and SCRATCH_POOL for temporaries.
    The lifetime of *OLD_REP is limited by both, RESULT_POOL and REP lifetime.
  */
@@ -2135,12 +2140,18 @@ static svn_error_t *
 get_shared_rep(representation_t **old_rep,
                svn_fs_t *fs,
                representation_t *rep,
+               apr_file_t *file,
+               apr_off_t offset,
                apr_hash_t *reps_hash,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   fs_fs_data_t *ffd = fs->fsap_data;
+
+  svn_checksum_t checksum;
+  checksum.digest = rep->sha1_digest;
+  checksum.kind = svn_checksum_sha1;
 
   /* Return NULL, if rep sharing has been disabled. */
   *old_rep = NULL;
@@ -2158,9 +2169,6 @@ get_shared_rep(representation_t **old_rep,
   /* If we haven't found anything yet, try harder and consult our DB. */
   if (*old_rep == NULL)
     {
-      svn_checksum_t checksum;
-      checksum.digest = rep->sha1_digest;
-      checksum.kind = svn_checksum_sha1;
       err = svn_fs_fs__get_rep_reference(old_rep, fs, &checksum, result_pool);
       /* ### Other error codes that we shouldn't mask out? */
       if (err == SVN_NO_ERROR)
@@ -2235,6 +2243,72 @@ get_shared_rep(representation_t **old_rep,
       (*old_rep)->uniquifier = rep->uniquifier;
     }
 
+  /* If we (very likely) found a matching representation, compare the actual
+   * contents such that we can be sure that no rep-cache.db corruption or
+   * hash collision produced a false positive. */
+  if (*old_rep)
+    {
+      apr_off_t old_position;
+      svn_stream_t *contents;
+      svn_stream_t *old_contents;
+      svn_boolean_t same;
+
+      /* The existing representation may itself be part of the current
+       * transaction.  In that case, it may be in different stages of
+       * the commit finalization process.
+       *
+       * OLD_REP_NORM is the same as that OLD_REP but it is assigned
+       * explicitly to REP's transaction if OLD_REP does not point
+       * to an already committed revision.  This then prevents the
+       * revision lookup and the txn data will be accessed.
+       */
+      representation_t old_rep_norm = **old_rep;
+      if (   !SVN_IS_VALID_REVNUM(old_rep_norm.revision)
+          || old_rep_norm.revision > ffd->youngest_rev_cache)
+        old_rep_norm.txn_id = rep->txn_id;
+
+      /* Make sure we can later restore FILE's current position. */
+      SVN_ERR(svn_fs_fs__get_file_offset(&old_position, file, scratch_pool));
+
+      /* Compare the two representations.
+       * Note that the stream comparison might also produce MD5 checksum
+       * errors or other failures in case of SHA1 collisions. */
+      SVN_ERR(svn_fs_fs__get_contents_from_file(&contents, fs, rep, file,
+                                                offset, scratch_pool));
+      SVN_ERR(svn_fs_fs__get_contents(&old_contents, fs, &old_rep_norm,
+                                      FALSE, scratch_pool));
+      err = svn_stream_contents_same2(&same, contents, old_contents,
+                                      scratch_pool);
+
+      /* A mismatch should be extremely rare.
+       * If it does happen, reject the commit. */
+      if (!same || err)
+        {
+          /* SHA1 collision or worse. */
+          svn_stringbuf_t *old_rep_str
+            = svn_fs_fs__unparse_representation(*old_rep,
+                                                ffd->format, FALSE,
+                                                scratch_pool,
+                                                scratch_pool);
+          svn_stringbuf_t *rep_str
+            = svn_fs_fs__unparse_representation(rep,
+                                                ffd->format, FALSE,
+                                                scratch_pool,
+                                                scratch_pool);
+          const char *checksum__str
+            = svn_checksum_to_cstring_display(&checksum, scratch_pool);
+
+          return svn_error_createf(SVN_ERR_FS_GENERAL,
+                                   err, "SHA1 of reps '%s' and '%s' "
+                                   "matches (%s) but contents differ",
+                                   old_rep_str->data, rep_str->data,
+                                   checksum__str);
+        }
+
+      /* Restore FILE's read / write position. */
+      SVN_ERR(svn_io_file_seek(file, APR_SET, &old_position, scratch_pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -2293,8 +2367,8 @@ rep_write_contents_close(void *baton)
 
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
-  SVN_ERR(get_shared_rep(&old_rep, b->fs, rep, NULL, b->result_pool,
-                         b->scratch_pool));
+  SVN_ERR(get_shared_rep(&old_rep, b->fs, rep, b->file, b->rep_offset, NULL,
+                         b->result_pool, b->scratch_pool));
 
   if (old_rep)
     {
@@ -2543,7 +2617,6 @@ write_container_rep(representation_t *rep,
   svn_stream_t *stream;
   struct write_container_baton *whb;
   svn_checksum_ctx_t *fnv1a_checksum_ctx;
-  representation_t *old_rep = NULL;
   apr_off_t offset = 0;
 
   SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
@@ -2568,19 +2641,26 @@ write_container_rep(representation_t *rep,
   /* Store the results. */
   SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, scratch_pool));
 
+  /* Update size info. */
+  rep->expanded_size = whb->size;
+  rep->size = whb->size;
+
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
   if (allow_rep_sharing)
-    SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool,
-                           scratch_pool));
-
-  if (old_rep)
     {
-      /* We need to erase from the protorev the data we just wrote. */
-      SVN_ERR(svn_io_file_trunc(file, offset, scratch_pool));
+      representation_t *old_rep;
+      SVN_ERR(get_shared_rep(&old_rep, fs, rep, file, offset, reps_hash,
+                             scratch_pool, scratch_pool));
 
-      /* Use the old rep for this content. */
-      memcpy(rep, old_rep, sizeof (*rep));
+      if (old_rep)
+        {
+          /* We need to erase from the protorev the data we just wrote. */
+          SVN_ERR(svn_io_file_trunc(file, offset, scratch_pool));
+
+          /* Use the old rep for this content. */
+          memcpy(rep, old_rep, sizeof (*rep));
+        }
     }
   else
     {
@@ -2603,10 +2683,6 @@ write_container_rep(representation_t *rep,
                                       scratch_pool));
 
       SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
-
-      /* update the representation */
-      rep->size = whb->size;
-      rep->expanded_size = whb->size;
     }
 
   return SVN_NO_ERROR;
@@ -2646,7 +2722,6 @@ write_container_delta_rep(representation_t *rep,
   svn_stream_t *file_stream;
   svn_stream_t *stream;
   representation_t *base_rep;
-  representation_t *old_rep = NULL;
   svn_checksum_ctx_t *fnv1a_checksum_ctx;
   svn_stream_t *source;
   svn_fs_fs__rep_header_t header = { 0 };
@@ -2712,26 +2787,33 @@ write_container_delta_rep(representation_t *rep,
   /* Store the results. */
   SVN_ERR(digests_final(rep, whb->md5_ctx, whb->sha1_ctx, scratch_pool));
 
+  /* Update size info. */
+  SVN_ERR(svn_fs_fs__get_file_offset(&rep_end, file, scratch_pool));
+  rep->size = rep_end - delta_start;
+  rep->expanded_size = whb->size;
+
   /* Check and see if we already have a representation somewhere that's
      identical to the one we just wrote out. */
   if (allow_rep_sharing)
-    SVN_ERR(get_shared_rep(&old_rep, fs, rep, reps_hash, scratch_pool,
-                           scratch_pool));
-
-  if (old_rep)
     {
-      /* We need to erase from the protorev the data we just wrote. */
-      SVN_ERR(svn_io_file_trunc(file, offset, scratch_pool));
+      representation_t *old_rep;
+      SVN_ERR(get_shared_rep(&old_rep, fs, rep, file, offset, reps_hash,
+                             scratch_pool, scratch_pool));
 
-      /* Use the old rep for this content. */
-      memcpy(rep, old_rep, sizeof (*rep));
+      if (old_rep)
+        {
+          /* We need to erase from the protorev the data we just wrote. */
+          SVN_ERR(svn_io_file_trunc(file, offset, scratch_pool));
+
+          /* Use the old rep for this content. */
+          memcpy(rep, old_rep, sizeof (*rep));
+        }
     }
   else
     {
       svn_fs_fs__p2l_entry_t entry;
 
       /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_fs_fs__get_file_offset(&rep_end, file, scratch_pool));
       SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
 
       SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
@@ -2748,10 +2830,6 @@ write_container_delta_rep(representation_t *rep,
                                       scratch_pool));
 
       SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
-
-      /* update the representation */
-      rep->expanded_size = whb->size;
-      rep->size = rep_end - delta_start;
     }
 
   return SVN_NO_ERROR;

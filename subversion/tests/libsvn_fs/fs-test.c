@@ -7106,6 +7106,67 @@ commit_with_locked_rep_cache(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_rep_sharing_strict_content_check(const svn_test_opts_t *opts,
+                                      apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t new_rev;
+  const char *fs_path, *fs_path2;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_error_t *err;
+
+  /* Bail (with success) on known-untestable scenarios */
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "BDB repositories don't support rep-sharing");
+
+  /* Create 2 repos with same structure & size but different contents */
+  fs_path = "test-rep-sharing-strict-content-check1";
+  fs_path2 = "test-rep-sharing-strict-content-check2";
+
+  SVN_ERR(svn_test__create_fs(&fs, fs_path, opts, subpool));
+
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_make_file(txn_root, "/foo", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", "quite bad", subpool));
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, subpool));
+  SVN_TEST_INT_ASSERT(new_rev, 1);
+
+  SVN_ERR(svn_test__create_fs(&fs, fs_path2, opts, subpool));
+
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_make_file(txn_root, "foo", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", "very good", subpool));
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, subpool));
+  SVN_TEST_INT_ASSERT(new_rev, 1);
+
+  /* Close both repositories. */
+  svn_pool_clear(subpool);
+
+  /* Doctor the first repo such that it uses the wrong rep-cache. */
+  SVN_ERR(svn_io_copy_file(svn_relpath_join(fs_path2, "rep-cache.db", pool),
+                           svn_relpath_join(fs_path, "rep-cache.db", pool),
+                           FALSE, pool));
+
+  /* Changing the file contents such that rep-sharing would kick in if
+     the file contents was not properly compared. */
+  SVN_ERR(svn_fs_open2(&fs, fs_path, NULL, subpool, subpool));
+
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 1, 0, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  err = svn_test__set_file_contents(txn_root, "foo", "very good", subpool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_GENERAL);
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -7245,6 +7306,9 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "freeze and commit"),
     SVN_TEST_OPTS_PASS(commit_with_locked_rep_cache,
                        "test commit with locked rep-cache"),
+    SVN_TEST_OPTS_XFAIL_OTOH(test_rep_sharing_strict_content_check,
+                             "test rep-sharing on content rather than SHA1",
+                             SVN_TEST_PASS_IF_FS_TYPE_IS(SVN_FS_TYPE_FSFS)),
     SVN_TEST_NULL
   };
 
