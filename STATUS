@@ -51,6 +51,25 @@ Candidate changes:
      +1: stefan2
      +0: stsp (text conflict in subversion/tests/libsvn_fs/fs-test.c)
 
+ * r1796143 
+   Fix the FSFS breakage caused by the latest SHA-1-related merges.
+   Justification:
+     FSFS is basically broken (~400 tests failing).
+   Branch:
+     ^/subversion/branches/1.9.x-fix-fsfs
+   Votes:
+     +1: stefan2, stsp
+
+ * r1796158
+   Fix FSFS f7 metadata recording issue caused by the r1785053 backport.
+   Justification:
+     An obvious fix (one caller got the order of parameters mixed up).
+     The bug is benign as non-deltifying property representations get
+     marked as "file data reps".  This happens to be a valid state due
+     to potential rep sharing, but defeats that is just lucky.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
