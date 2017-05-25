@@ -3254,7 +3254,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
       else
         SVN_ERR(write_container_rep(noderev->prop_rep, file, proplist,
                                     write_hash_to_stream, fs, reps_hash,
-                                    item_type, TRUE, pool));
+                                    TRUE, item_type, pool));
 
       reset_txn_in_rep(noderev->prop_rep);
     }
