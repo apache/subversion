@@ -49,6 +49,7 @@ Candidate changes:
      ^/subversion/branches/1.9.x-r1795116
    Votes:
      +1: stefan2
+     +0: stsp (text conflict in subversion/tests/libsvn_fs/fs-test.c)
 
 Veto-blocked changes:
 =====================
