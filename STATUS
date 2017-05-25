@@ -28,23 +28,6 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786515, r1794530, r1794536, r1794611
-   Make FSFS consistency no longer depend on hash algorithms.
-   Justification:
-     This eliminates any existing or future FSFS vulnerability due to
-     attacks on MD5 or SHA1.
-   Branch:
-     ^/subversion/branches/1.9.x-strict-rep-sharing
-   Notes:
-     Depends on r1759116 for correctness with older APR.
-     While the backport code is very close to the /trunk changes, it is
-     easier to review them as r1786580, r1786581 and r1786619 on the branch.
-     Will create a text conflict with the r1785053 backport.  Depending on
-     which change gets merged first, the respective other must be updated.
-   Votes:
-     +1: stsp, stefan2
-     +1: rhuijben (without r1794530, r1794536, r1794611).
-
  * r1794166, r1795087
    Search for gpg-agent sockets in (/var)/run.
    Justification:
@@ -55,6 +38,37 @@ Candidate changes:
    Votes:
      +1: jamessan
      -0: stsp (see https://svn.haxx.se/dev/archive-2017-05/0047.shtml) (without r1795087)
+
+ * r1795116
+   Fix 'svn up' after a directories replaced a file (issue #4677).
+   Justification:
+     User-reported error that is difficult to work around because more
+     "finding the last relevant copy" is broken.  That affects more than
+     just 'svn up'.
+   Branch:
+     ^/subversion/branches/1.9.x-r1795116
+   Votes:
+     +1: stefan2
+     +0: stsp (text conflict in subversion/tests/libsvn_fs/fs-test.c)
+
+ * r1796143 
+   Fix the FSFS breakage caused by the latest SHA-1-related merges.
+   Justification:
+     FSFS is basically broken (~400 tests failing).
+   Branch:
+     ^/subversion/branches/1.9.x-fix-fsfs
+   Votes:
+     +1: stefan2, stsp
+
+ * r1796158
+   Fix FSFS f7 metadata recording issue caused by the r1785053 backport.
+   Justification:
+     An obvious fix (one caller got the order of parameters mixed up).
+     The bug is benign as non-deltifying property representations get
+     marked as "file data reps".  This happens to be a valid state due
+     to potential rep sharing, but defeats that is just lucky.
+   Votes:
+     +1: stefan2
 
 Veto-blocked changes:
 =====================
