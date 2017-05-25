@@ -39,7 +39,7 @@ Candidate changes:
      +1: jamessan
      -0: stsp (see https://svn.haxx.se/dev/archive-2017-05/0047.shtml) (without r1795087)
 
- * r1795116
+ * r1795116, r1796167 
    Fix 'svn up' after a directories replaced a file (issue #4677).
    Justification:
      User-reported error that is difficult to work around because more
@@ -49,7 +49,7 @@ Candidate changes:
      ^/subversion/branches/1.9.x-r1795116
    Votes:
      +1: stefan2
-     +0: stsp (text conflict in subversion/tests/libsvn_fs/fs-test.c)
+     +0: stsp (text conflict in subversion/tests/libsvn_fs/fs-test.c) (without r1796167)
 
  * r1796143 
    Fix the FSFS breakage caused by the latest SHA-1-related merges.
