@@ -33,11 +33,9 @@ Details:
 
   If both of these files are committed to an FSFS or FSX repository, content
   is de-duplicated based on the SHA1 checksum, and only the content of one
-  of the files ends up being stored in the repository. However, meta data
-  stores the MD5 checksums of both files, and these MD5 checksums differ.
-  This causes problems when Subversion eventually uses the MD5 checksum of
-  the content which was not in fact stored. For example, updates and commits
-  may fail with a checksum error. 
+  of the files ends up being stored in the repository.  The commit succeeds,
+  but subsequent updates and commits abort with a checksum error, since those
+  two files have different MD5 checksums.
 
   De-duplication only takes place when representation sharing is enabled.
   Representation sharing is enabled by default, but may have been disabled 
