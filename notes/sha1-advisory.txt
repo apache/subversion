@@ -4,11 +4,11 @@
 Summary:
 ========
 
-  Subversion repositories can be corrupted by committing two files
-  which have different content, yet produce the same SHA1 checksum.
+  Subversion repositories, in the default configuration, incorrectly store
+  a file that has the same SHA-1 checksum as another file.
   
 Known affected:
-=================
+===============
 
   Servers running Apache Subversion up to and including 1.9.5.
 
@@ -16,14 +16,20 @@ Known fixed:
 ============
 
   Servers running Apache Subversion 1.9.6.
+
   Clients do not need a patch for this issue.
+
+  BDB repositories are not affected.
+
+  Repositories that have `enable-rep-sharing` set to `false` in fsfs.conf are
+  not affected.
 
 Details:
 ========
 
   In February 2017 a group of researchers released two PDF files which have
   different content but produce the same SHA1 checksum. This was the first
-  publicly known SHA1 collision ever produced.
+  publicly known SHA1 collision.
 
   If both of these files are committed to an FSFS or FSX repository, content
   is de-duplicated based on the SHA1 checksum, and only the content of one
@@ -33,18 +39,27 @@ Details:
   the content which was not in fact stored. For example, updates and commits
   may fail with a checksum error. 
 
+  De-duplication only takes place when representation sharing is enabled.
+  Representation sharing is enabled by default, but may have been disabled 
+  in the fsfs.conf file.
+
 Recommendations:
 ================
 
-  We recommend all users upgrade to Subversion 1.9.6 which will reject any
-  commit that would create a SHA1 collision.
+  Subversion 1.9.6 which will reject any commit that would create a SHA1
+  collision.  We recommend all server installations to upgrade.
 
-  Note that this fix only works if the "representation-sharing" feature is
-  enabled (it is enabled by default). If the file db/fsfs.conf inside the
-  repository contains 'enable-rep-sharing = false', this option must be
-  set to 'true' after upgrading to 1.9.6.
+  Detecting collisions requires representation sharing to be enabled.  If you
+  have disabled representation sharing (by setting 'enable-rep-sharing = false' 
+  in the file db/fsfs.conf in the repository directory), we recommend that you
+  set that option to 'true' after upgrading to 1.9.6 (and not before).
 
-  If rep-sharing is disabled, the fix is ineffective and a SHA1 collision
+  As a stopgap measure for users unable to upgrade immediately, the following
+  hook scripts may be used (currently only Unix versions are available):
+    https://svn.apache.org/repos/asf/subversion/trunk/tools/hook-scripts/reject-detected-sha1-collisions.sh
+    https://svn.apache.org/repos/asf/subversion/trunk/tools/hook-scripts/reject-known-sha1-collisions.sh
+
+  If rep-sharing is disabled, the fix is ineffective and SHA1 collisions
   can be stored. This will not cause problems for the repository itself.
   However, SVN clients which retrieve and store such content in a working
   copy will run into similar problems: de-duplication of content stored
@@ -79,6 +94,12 @@ Recommendations:
     * =
     [/trunk/tests/data/shattered-2.pdf]
     * =
+  
+  With such an authz rule in place, 'svnsync' can be used to create a mirror
+  of the repository, without the collision.  Remember to change the mirror's
+  UUID with 'svnadmin setuuid' after populating it with history.  Another way
+  to create a mirror is with a dump/load cycle using 'svndumpfilter exclude'
+  to delete one or both files in the collision.
 
 References:
 ===========
@@ -91,5 +112,6 @@ References:
 Reported by:
 ============
 
+  Øyvind A. Holm
   The WebKit Project, https://webkit.org/
-  Bryan Rosander filed issue SVN-4673
+  Bryan Rosander
