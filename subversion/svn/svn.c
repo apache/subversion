@@ -807,7 +807,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: lock TARGET...\n"
      "\n"
      "  Use --force to steal the lock from another user or working copy.\n"),
-    { opt_targets, 'm', 'F', opt_force_log, opt_encoding, opt_force },
+    { opt_targets, 'm', 'F', opt_force_log, opt_encoding, opt_force, 'q' },
     {{'F', N_("read lock comment from file ARG")},
      {'m', N_("specify lock comment ARG")},
      {opt_force_log, N_("force validity of lock comment source")}} },
@@ -1780,7 +1780,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: unlock TARGET...\n"
      "\n"
      "  Use --force to break the lock.\n"),
-    { opt_targets, opt_force } },
+    { opt_targets, opt_force, 'q' } },
 
   { "update", svn_cl__update, {"up"},  N_
     ("Bring changes from the repository into the working copy.\n"
