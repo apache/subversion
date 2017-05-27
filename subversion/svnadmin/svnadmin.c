@@ -2492,7 +2492,7 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
       /* Now forcibly destroy the lock. */
       err = svn_fs_unlock(fs, lock_path_utf8,
-                          lock->token, 1 /* force */, subpool);
+                          NULL, 1 /* force */, subpool);
       if (err)
         goto move_on;
 
