@@ -48,6 +48,7 @@
 #include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_cmdline_private.h"
+#include "private/svn_fspath.h"
 
 #include "svn_private_config.h"
 
@@ -613,6 +614,20 @@ get_revnum(svn_revnum_t *revnum, const svn_opt_revision_t *revision,
        _("Revisions must not be greater than the youngest revision (%ld)"),
        youngest);
 
+  return SVN_NO_ERROR;
+}
+
+/* Set *DIRENT to an internal-style, UTF8-encoded, fspath. */
+static svn_error_t *
+target_arg_to_fspath(const char **fspath,
+                     const char *arg,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  /* ### Using a private API.  This really shouldn't be needed. */
+  const char *temp;
+  SVN_ERR(svn_utf_cstring_to_utf8(&temp, arg, scratch_pool));
+  *fspath = svn_fspath__canonicalize(temp, result_pool);
   return SVN_NO_ERROR;
 }
 
@@ -2321,7 +2336,7 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_stringbuf_from_file2(&file_contents, comment_file_name, pool));
 
-  SVN_ERR(svn_utf_cstring_to_utf8(&lock_path_utf8, lock_path, pool));
+  SVN_ERR(target_arg_to_fspath(&lock_path_utf8, lock_path, pool, pool));
 
   if (opt_state->bypass_hooks)
     SVN_ERR(svn_fs_lock(&lock, fs, lock_path_utf8,
@@ -2353,7 +2368,7 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnadmin_opt_state *opt_state = baton;
   apr_array_header_t *targets;
   svn_repos_t *repos;
-  const char *fs_path = "/";
+  const char *fs_path;
   apr_hash_t *locks;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
@@ -2367,6 +2382,9 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                             _("Too many arguments given"));
   if (targets->nelts)
     fs_path = APR_ARRAY_IDX(targets, 0, const char *);
+  else
+    fs_path = "/";
+  SVN_ERR(target_arg_to_fspath(&fs_path, fs_path, pool, pool));
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
 
@@ -2456,7 +2474,8 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       const char *lock_path_utf8;
       svn_lock_t *lock;
 
-      SVN_ERR(svn_utf_cstring_to_utf8(&lock_path_utf8, lock_path, subpool));
+      SVN_ERR(target_arg_to_fspath(&lock_path_utf8, lock_path,
+                                   subpool, subpool));
 
       /* Fetch the path's svn_lock_t. */
       err = svn_fs_get_lock(&lock, fs, lock_path_utf8, subpool);
@@ -2524,7 +2543,7 @@ subcommand_unlock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_create_access(&access, username, pool));
   SVN_ERR(svn_fs_set_access(fs, access));
 
-  SVN_ERR(svn_utf_cstring_to_utf8(&lock_path_utf8, lock_path, pool));
+  SVN_ERR(target_arg_to_fspath(&lock_path_utf8, lock_path, pool, pool));
   if (opt_state->bypass_hooks)
     SVN_ERR(svn_fs_unlock(fs, lock_path_utf8, lock_token,
                           FALSE, pool));
