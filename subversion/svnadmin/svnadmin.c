@@ -299,7 +299,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
 
   {"delrevprop", subcommand_delrevprop, {0}, N_
    ("usage: 1. svnadmin delrevprop REPOS_PATH -r REVISION NAME\n"
-    "                   2. svnadmin delrevprop REPO_PATH -t TXN NAME\n\n"
+    "                   2. svnadmin delrevprop REPOS_PATH -t TXN NAME\n\n"
     "1. Delete the property NAME on revision REVISION.\n\n"
     "Use --use-pre-revprop-change-hook/--use-post-revprop-change-hook to\n"
     "trigger the revision property-related hooks (for example, if you want\n"
