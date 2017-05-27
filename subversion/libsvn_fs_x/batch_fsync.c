@@ -228,6 +228,7 @@ struct svn_fs_x__batch_fsync_t
 
 /* Thread pool to execute the fsync tasks. */
 static apr_thread_pool_t *thread_pool = NULL;
+static apr_pool_t *threadsafe_pool = NULL;
 
 #endif
 
@@ -247,14 +248,18 @@ static svn_atomic_t thread_pool_initialized = FALSE;
 static apr_status_t
 thread_pool_pre_cleanup(void *data)
 {
+  apr_status_t result;
   apr_thread_pool_t *tp = thread_pool;
   if (!thread_pool)
     return APR_SUCCESS;
 
   thread_pool = NULL;
+  threadsafe_pool = NULL;
   thread_pool_initialized = FALSE;
 
-  return apr_thread_pool_destroy(tp);
+  result = apr_thread_pool_destroy(tp);
+  apr_sleep(1000);
+  return result;
 }
 
 #endif
@@ -267,7 +272,11 @@ create_thread_pool(void *baton,
 #if APR_HAS_THREADS
   /* The thread-pool must be allocated from a thread-safe pool.
      GLOBAL_POOL may be single-threaded, though. */
-  apr_pool_t *pool = svn_pool_create(NULL);
+  apr_allocator_t *allocator = apr_pool_allocator_get(owning_pool);
+  apr_pool_t *pool = apr_allocator_mutex_get(allocator)
+                   ? owning_pool
+                   : svn_pool_create(NULL);
+  pool = owning_pool;
 
   /* This thread pool will get cleaned up automatically when GLOBAL_POOL
      gets cleared.  No additional cleanup callback is needed. */
@@ -277,8 +286,9 @@ create_thread_pool(void *baton,
   /* Work around an APR bug:  The cleanup must happen in the pre-cleanup
      hook instead of the normal cleanup hook.  Otherwise, the sub-pools
      containing the thread objects would already be invalid. */
-  apr_pool_pre_cleanup_register(pool, NULL, thread_pool_pre_cleanup);
   apr_pool_pre_cleanup_register(owning_pool, NULL, thread_pool_pre_cleanup);
+  if (pool != owning_pool)
+    apr_pool_pre_cleanup_register(pool, NULL, thread_pool_pre_cleanup);
 
   /* let idle threads linger for a while in case more requests are
      coming in */

@@ -136,7 +136,7 @@ svn_pool_create_allocator(svn_boolean_t thread_safe)
    * if we want thread-safety for that mutex. */
 
 #if APR_HAS_THREADS
-  if (thread_safe)
+  if (1)
     {
       apr_thread_mutex_t *mutex;
       apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT, pool);
