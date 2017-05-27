@@ -61,6 +61,13 @@ Candidate changes:
    Votes:
      +1: stefan2, danielsh
 
+ * r1796420
+   svnadmin: Canonicalize LOCK_PATH arguments.
+   Justification:
+     API violation; errors on valid input.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
