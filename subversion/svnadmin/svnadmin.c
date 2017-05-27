@@ -2992,7 +2992,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     svn_cache_config_t settings = *svn_cache_config_get();
 
     settings.cache_size = opt_state.memory_cache_size;
-    settings.single_threaded = FALSE;
+    settings.single_threaded = TRUE;
 
     svn_cache_config_set(&settings);
   }

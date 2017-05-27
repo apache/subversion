@@ -20,9 +20,8 @@
  * ====================================================================
  */
 
+
 #include <stdarg.h>
-#include <apr_thread_pool.h>
-#include <apr_time.h>
 
 #include "svn_private_config.h"
 #include "svn_pools.h"
@@ -45,7 +44,6 @@
 #include "private/svn_sorts_private.h"
 #include "private/svn_utf_private.h"
 #include "private/svn_cache.h"
-#include "private/svn_subr_private.h"
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
@@ -2393,202 +2391,6 @@ report_error(svn_revnum_t revision,
     }
 }
 
-typedef struct verification_job_t
-{
-  svn_fs_t *fs;
-  svn_revnum_t first_rev;
-  svn_revnum_t last_rev;
-  svn_revnum_t start_rev;
-  svn_boolean_t check_normalization;
-  svn_repos_notify_func_t notify_func;
-  void *notify_baton;
-  svn_cancel_func_t cancel_func;
-  void *cancel_baton;
-  svn_root_pools__t *pools;
-  svn_error_t *result;
-  svn_mutex__t *mutex;
-  apr_array_header_t *fs_instances;
-} verification_job_t;
-
-typedef struct fs_instance_t
-{
-  svn_fs_t *fs;
-  apr_pool_t *pool;
-} fs_instance_t;
-
-/* Thread-pool task Flush the to_sync_t instance given by DATA. */
-static void * APR_THREAD_FUNC
-verify_task(apr_thread_t *tid,
-            void *data)
-{
-  verification_job_t *baton = data;
-  fs_instance_t *instance;
-  svn_error_t *err = SVN_NO_ERROR;
-
-  SVN_ERR(svn_mutex__lock(baton->mutex));
-  if (baton->fs_instances->nelts)
-    {
-      instance = *(fs_instance_t **)apr_array_pop(baton->fs_instances);
-    }
-  else
-    {
-      apr_pool_t *pool = svn_root_pools__acquire_pool(baton->pools);
-      instance = apr_pcalloc(pool, sizeof(*instance));
-      instance->pool = pool;
-
-      SVN_ERR(svn_fs_open2(&instance->fs,
-                           svn_fs_path(baton->fs, pool),
-                           svn_fs_config(baton->fs, pool),
-                           pool, pool));
-    }
-  SVN_ERR(svn_mutex__unlock(baton->mutex, SVN_NO_ERROR));
-
-  if (!err)
-    {
-      svn_revnum_t rev;
-      apr_pool_t *iterpool = svn_pool_create(instance->pool);
-      for (rev = baton->first_rev; rev < baton->last_rev; ++rev)
-        {
-          svn_pool_clear(iterpool);
-          err = svn_error_trace(verify_one_revision(instance->fs,
-                                                    rev,
-                                                    baton->notify_func,
-                                                    baton->notify_baton,
-                                                    baton->start_rev,
-                                                    baton->check_normalization,
-                                                    baton->cancel_func,
-                                                    baton->cancel_baton,
-                                                    iterpool));
-        }
-      svn_pool_destroy(iterpool);
-    }
-  baton->result = err;
-
-  SVN_ERR(svn_mutex__lock(baton->mutex));
-  APR_ARRAY_PUSH(baton->fs_instances, fs_instance_t *) = instance;
-  SVN_ERR(svn_mutex__unlock(baton->mutex, SVN_NO_ERROR));
-
-  return NULL;
-}
-
-#define WRAP_APR_ERR(x,msg)                     \
-  {                                             \
-    apr_status_t status_ = (x);                 \
-    if (status_)                                \
-      return svn_error_wrap_apr(status_, msg);  \
-  }
-
-static svn_error_t *
-verify_mt(svn_fs_t *fs,
-          svn_revnum_t start_rev,
-          svn_revnum_t end_rev,
-          svn_boolean_t check_normalization,
-          svn_repos_notify_t *notify,
-          svn_repos_notify_func_t notify_func,
-          void *notify_baton,
-          svn_repos_verify_callback_t verify_callback,
-          void *verify_baton,
-          svn_cancel_func_t cancel_func,
-          void *cancel_baton,
-          apr_pool_t *scratch_pool)
-{
-  svn_revnum_t rev;
-  svn_root_pools__t *root_pools;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  svn_error_t *err = SVN_NO_ERROR;
-  apr_array_header_t *jobs = apr_array_make(scratch_pool,
-                                            end_rev - start_rev + 1,
-                                            sizeof(verification_job_t));
-
-  /* Number of tasks sent to the thread pool. */
-  int tasks = 0;
-  int i;
-
-#if APR_HAS_THREADS
-  apr_thread_pool_t *thread_pool = NULL;
-  enum { MAX_THREADS = 24, STRIDE = 5 };
-
-  /* The thread-pool must be allocated from a thread-safe pool.
-     GLOBAL_POOL may be single-threaded, though. */
-  apr_pool_t *pool = svn_pool_create(NULL);
-
-  svn_mutex__t * mutex;
-  apr_array_header_t *fs_instances = apr_array_make(pool, MAX_THREADS,
-                                                    sizeof(fs_instance_t *));
-
-  SVN_ERR(svn_mutex__init(&mutex, TRUE, pool));
-
-  /* This thread pool will get cleaned up automatically when GLOBAL_POOL
-     gets cleared.  No additional cleanup callback is needed. */
-  WRAP_APR_ERR(apr_thread_pool_create(&thread_pool, 0, MAX_THREADS, pool),
-               _("Can't create verification thread pool"));
-
-#endif
-
-  SVN_ERR(svn_root_pools__create(&root_pools));
-
-  for (rev = start_rev; rev <= end_rev && err == SVN_NO_ERROR; rev += STRIDE)
-    {
-      apr_status_t status = APR_SUCCESS;
-      verification_job_t *job = apr_array_push(jobs);
-
-      job->fs = fs;
-      job->first_rev = rev;
-      job->last_rev = MIN(rev + STRIDE, end_rev + 1);
-      job->start_rev = start_rev;
-      job->check_normalization = check_normalization;
-      job->notify_func = notify_func;
-      job->notify_baton = notify_baton;
-      job->cancel_func = cancel_func;
-      job->cancel_baton = cancel_baton;
-      job->pools = root_pools;
-      job->result = SVN_NO_ERROR;
-      job->mutex = mutex;
-      job->fs_instances = fs_instances;
-
-      status = apr_thread_pool_push(thread_pool, verify_task, job, 0, NULL);
-      if (status)
-        job->result = svn_error_wrap_apr(status, _("Can't push task"));
-      else
-        tasks++;
-    }
-
-  while (apr_thread_pool_tasks_run_count(thread_pool) < tasks)
-    apr_sleep(10000);
-
-  for (i = 0; i < tasks; i++)
-    {
-      verification_job_t *job = &APR_ARRAY_IDX(jobs, i, verification_job_t);
-      err = job->result;
-      rev = job->first_rev;
-      svn_pool_clear(iterpool);
-
-      if (err && err->apr_err == SVN_ERR_CANCELLED)
-        {
-          ;
-        }
-      else if (err)
-        {
-          err = report_error(rev, err, verify_callback, verify_baton,
-                             iterpool);
-        }
-      else if (notify_func)
-        {
-          /* Tell the caller that we're done with this revision. */
-          notify->revision = rev;
-          notify_func(notify_baton, notify, iterpool);
-        }
-
-      svn_error_clear(err);
-    }
-
-  WRAP_APR_ERR(apr_thread_pool_destroy(thread_pool),
-               _("Can't destroy verification thread pool"));
-  svn_pool_destroy(pool);
-
-  return svn_error_trace(err);
-}
-
 svn_error_t *
 svn_repos_verify_fs3(svn_repos_t *repos,
                      svn_revnum_t start_rev,
@@ -2668,44 +2470,32 @@ svn_repos_verify_fs3(svn_repos_t *repos,
     }
 
   if (!metadata_only)
-    {
-#if APR_HAS_THREADS
-      if (start_rev < end_rev)
-        {
-          SVN_ERR(verify_mt(fs, start_rev, end_rev, check_normalization,
-                            notify, notify_func, notify_baton,
-                            verify_callback, verify_baton,
-                            cancel_func, cancel_baton, iterpool));
-        }
-      else
-#endif
-      for (rev = start_rev; rev <= end_rev; rev++)
-        {
-          svn_pool_clear(iterpool);
+    for (rev = start_rev; rev <= end_rev; rev++)
+      {
+        svn_pool_clear(iterpool);
 
-          /* Wrapper function to catch the possible errors. */
-          err = verify_one_revision(fs, rev, notify_func, notify_baton,
-                                    start_rev, check_normalization,
-                                    cancel_func, cancel_baton,
-                                    iterpool);
+        /* Wrapper function to catch the possible errors. */
+        err = verify_one_revision(fs, rev, notify_func, notify_baton,
+                                  start_rev, check_normalization,
+                                  cancel_func, cancel_baton,
+                                  iterpool);
 
-          if (err && err->apr_err == SVN_ERR_CANCELLED)
-            {
-              return svn_error_trace(err);
-            }
-          else if (err)
-            {
-              SVN_ERR(report_error(rev, err, verify_callback, verify_baton,
-                                  iterpool));
-            }
-          else if (notify_func)
-            {
-              /* Tell the caller that we're done with this revision. */
-              notify->revision = rev;
-              notify_func(notify_baton, notify, iterpool);
-            }
-        }
-    }
+        if (err && err->apr_err == SVN_ERR_CANCELLED)
+          {
+            return svn_error_trace(err);
+          }
+        else if (err)
+          {
+            SVN_ERR(report_error(rev, err, verify_callback, verify_baton,
+                                 iterpool));
+          }
+        else if (notify_func)
+          {
+            /* Tell the caller that we're done with this revision. */
+            notify->revision = rev;
+            notify_func(notify_baton, notify, iterpool);
+          }
+      }
 
   /* We're done. */
   if (notify_func)

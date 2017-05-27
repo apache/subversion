@@ -56,10 +56,7 @@
 #include "private/svn_ra_private.h"
 #include "svn_private_config.h"
 
-#ifdef SVN_LIBSVN_RA_LINKS_RA_LOCAL
-/* for svn_fs_initialize(). */
-#include "svn_fs.h"
-#endif
+
 
 
 /* These are the URI schemes that the respective libraries *may* support.
@@ -239,20 +236,6 @@ svn_error_t *svn_ra_initialize(apr_pool_t *pool)
   /* Ensure that DSO subsystem is initialized early as possible if
      we're going to use it. */
   SVN_ERR(svn_dso_initialize2());
-#endif
-
-#ifdef SVN_LIBSVN_RA_LINKS_RA_LOCAL
-  /* Make sure we initialize the FS layer with an appropriate base pool.
-   * POOL will live long enough but can be cleaned up explicitly by the
-   * using application.  That prevents cleanup / threading races during
-   * the termination phase.  See also http://www.luke1410.de/blog/?p=95
-   *
-   * The client does not know that the FS layer needs to be initialized
-   * when it wants to use RA local.  Due to missing interface guarantees,
-   * we cannot pass an appropriate pool to ra_local's initialization
-   * routine.  Hence the explicit call here.
-   */
-  SVN_ERR(svn_fs_initialize(pool));
 #endif
   return SVN_NO_ERROR;
 }
