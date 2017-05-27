@@ -415,7 +415,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "Lock PATH by USERNAME setting comments from COMMENT-FILE.\n"
     "If provided, use TOKEN as lock token.  Use --bypass-hooks to avoid\n"
     "triggering the pre-lock and post-lock hook scripts.\n"),
-  {svnadmin__bypass_hooks} },
+  {svnadmin__bypass_hooks, 'q'} },
 
   {"lslocks", subcommand_lslocks, {0}, N_
    ("usage: svnadmin lslocks REPOS_PATH [PATH-IN-REPOS]\n\n"
@@ -449,7 +449,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {"rmlocks", subcommand_rmlocks, {0}, N_
    ("usage: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n\n"
     "Unconditionally remove lock from each LOCKED_PATH.\n"),
-   {0} },
+   {'q'} },
 
   {"rmtxns", subcommand_rmtxns, {0}, N_
    ("usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n\n"
@@ -493,7 +493,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "Unlock LOCKED_PATH (as USERNAME) after verifying that the token\n"
     "associated with the lock matches TOKEN.  Use --bypass-hooks to avoid\n"
     "triggering the pre-unlock and post-unlock hook scripts.\n"),
-   {svnadmin__bypass_hooks} },
+   {svnadmin__bypass_hooks, 'q'} },
 
   {"upgrade", subcommand_upgrade, {0}, N_
    ("usage: svnadmin upgrade REPOS_PATH\n\n"
@@ -2340,8 +2340,10 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                               SVN_INVALID_REVNUM,
                               FALSE, pool));
 
-  SVN_ERR(svn_cmdline_printf(pool, _("'%s' locked by user '%s'.\n"),
-                             lock_path, username));
+  if (! opt_state->quiet)
+    SVN_ERR(svn_cmdline_printf(pool, _("'%s' locked by user '%s'.\n"),
+                               lock_path, username));
+
   return SVN_NO_ERROR;
 }
 
@@ -2462,9 +2464,10 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
         goto move_on;
       if (! lock)
         {
-          SVN_ERR(svn_cmdline_printf(subpool,
-                                     _("Path '%s' isn't locked.\n"),
-                                     lock_path));
+          if (! opt_state->quiet)
+            SVN_ERR(svn_cmdline_printf(subpool,
+                                       _("Path '%s' isn't locked.\n"),
+                                       lock_path));
           continue;
         }
 
@@ -2474,8 +2477,9 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       if (err)
         goto move_on;
 
-      SVN_ERR(svn_cmdline_printf(subpool,
-                                 _("Removed lock on '%s'.\n"), lock->path));
+      if (! opt_state->quiet)
+        SVN_ERR(svn_cmdline_printf(subpool,
+                                   _("Removed lock on '%s'.\n"), lock->path));
 
     move_on:
       if (err)
@@ -2528,8 +2532,10 @@ subcommand_unlock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     SVN_ERR(svn_repos_fs_unlock(repos, lock_path_utf8, lock_token,
                                 FALSE, pool));
 
-  SVN_ERR(svn_cmdline_printf(pool, _("'%s' unlocked by user '%s'.\n"),
-                             lock_path, username));
+  if (! opt_state->quiet)
+    SVN_ERR(svn_cmdline_printf(pool, _("'%s' unlocked by user '%s'.\n"),
+                               lock_path, username));
+
   return SVN_NO_ERROR;
 }
 
