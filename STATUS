@@ -89,13 +89,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1796143 
-   Fix the FSFS breakage caused by the latest SHA-1-related merges.
-   Justification:
-     FSFS is basically broken (~400 tests failing).
-   Branch:
-     ^/subversion/branches/1.9.x-fix-fsfs
-   Votes:
-     +1: stefan2, stsp, danielsh
-

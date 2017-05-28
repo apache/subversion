@@ -2618,6 +2618,7 @@ write_container_rep(representation_t *rep,
   struct write_container_baton *whb;
   svn_checksum_ctx_t *fnv1a_checksum_ctx;
   apr_off_t offset = 0;
+  svn_fs_fs__p2l_entry_t entry;
 
   SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
 
@@ -2660,30 +2661,27 @@ write_container_rep(representation_t *rep,
 
           /* Use the old rep for this content. */
           memcpy(rep, old_rep, sizeof (*rep));
+          return SVN_NO_ERROR;
         }
     }
-  else
-    {
-      svn_fs_fs__p2l_entry_t entry;
 
-      /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_stream_puts(whb->stream, "ENDREP\n"));
+  /* Write out our cosmetic end marker. */
+  SVN_ERR(svn_stream_puts(whb->stream, "ENDREP\n"));
 
-      SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
-                                  offset, scratch_pool));
+  SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
+                              offset, scratch_pool));
 
-      entry.offset = offset;
-      SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
-      entry.size = offset - entry.offset;
-      entry.type = item_type;
-      entry.item.revision = SVN_INVALID_REVNUM;
-      entry.item.number = rep->item_index;
-      SVN_ERR(fnv1a_checksum_finalize(&entry.fnv1_checksum,
-                                      fnv1a_checksum_ctx,
-                                      scratch_pool));
+  entry.offset = offset;
+  SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
+  entry.size = offset - entry.offset;
+  entry.type = item_type;
+  entry.item.revision = SVN_INVALID_REVNUM;
+  entry.item.number = rep->item_index;
+  SVN_ERR(fnv1a_checksum_finalize(&entry.fnv1_checksum,
+                                  fnv1a_checksum_ctx,
+                                  scratch_pool));
 
-      SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
-    }
+  SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2725,6 +2723,7 @@ write_container_delta_rep(representation_t *rep,
   svn_checksum_ctx_t *fnv1a_checksum_ctx;
   svn_stream_t *source;
   svn_fs_fs__rep_header_t header = { 0 };
+  svn_fs_fs__p2l_entry_t entry;
 
   apr_off_t rep_end = 0;
   apr_off_t delta_start = 0;
@@ -2807,30 +2806,27 @@ write_container_delta_rep(representation_t *rep,
 
           /* Use the old rep for this content. */
           memcpy(rep, old_rep, sizeof (*rep));
+          return SVN_NO_ERROR;
         }
     }
-  else
-    {
-      svn_fs_fs__p2l_entry_t entry;
 
-      /* Write out our cosmetic end marker. */
-      SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
+  /* Write out our cosmetic end marker. */
+  SVN_ERR(svn_stream_puts(file_stream, "ENDREP\n"));
 
-      SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
-                                  offset, scratch_pool));
+  SVN_ERR(allocate_item_index(&rep->item_index, fs, &rep->txn_id,
+                              offset, scratch_pool));
 
-      entry.offset = offset;
-      SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
-      entry.size = offset - entry.offset;
-      entry.type = item_type;
-      entry.item.revision = SVN_INVALID_REVNUM;
-      entry.item.number = rep->item_index;
-      SVN_ERR(fnv1a_checksum_finalize(&entry.fnv1_checksum,
-                                      fnv1a_checksum_ctx,
-                                      scratch_pool));
+  entry.offset = offset;
+  SVN_ERR(svn_fs_fs__get_file_offset(&offset, file, scratch_pool));
+  entry.size = offset - entry.offset;
+  entry.type = item_type;
+  entry.item.revision = SVN_INVALID_REVNUM;
+  entry.item.number = rep->item_index;
+  SVN_ERR(fnv1a_checksum_finalize(&entry.fnv1_checksum,
+                                  fnv1a_checksum_ctx,
+                                  scratch_pool));
 
-      SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
-    }
+  SVN_ERR(store_p2l_index_entry(fs, &rep->txn_id, &entry, scratch_pool));
 
   return SVN_NO_ERROR;
 }
