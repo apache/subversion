@@ -214,8 +214,9 @@ RemoteSession::RemoteSession(int retryAttempts,
           cycle_detected = true;
           break;
         }
-      /* ### Shouldn't url be updated for the next attempt?
-         ### There is no real cycle if we just do the same thing twice? */
+
+      url = corrected_url;
+      corrected_url = NULL;
     }
 
   if (cycle_detected)
