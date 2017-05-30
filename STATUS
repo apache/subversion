@@ -87,13 +87,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1796158
-   Fix FSFS f7 metadata recording issue caused by the r1785053 backport.
-   Justification:
-     An obvious fix (one caller got the order of parameters mixed up).
-     The bug is benign as non-deltifying property representations get
-     marked as "file data reps".  This happens to be a valid state due
-     to potential rep sharing, but defeats that is just lucky.
-   Votes:
-     +1: stefan2, danielsh, rhuijben
