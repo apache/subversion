@@ -58,7 +58,7 @@ Candidate changes:
    Votes:
      +1: danielsh, rhuijben
 
- * r166773, r1796720
+ * r1667738, r1796720
    Properly follow redirects in JavaHL's RA connection.
    Justification:
      Makes JavaHL API conform to documented behaviour. See:
