@@ -1958,7 +1958,7 @@ def locking(sbox):
 
   # Test unlocking the path again, but this time provide the correct
   # lock token.
-  expected_output = "'/A/D/G/rho' unlocked."
+  expected_output = "'/A/D/G/rho' unlocked by user 'jrandom'."
   svntest.actions.run_and_verify_svnadmin(expected_output,
                                           None, "unlock",
                                           sbox.repo_dir,
@@ -2004,7 +2004,7 @@ def locking(sbox):
 
   # Finally, use --bypass-hooks to unlock the path (again using the
   # correct lock token).
-  expected_output = "'/iota' unlocked."
+  expected_output = "'/iota' unlocked by user 'jrandom'."
   svntest.actions.run_and_verify_svnadmin(expected_output,
                                           None, "unlock",
                                           "--bypass-hooks",
