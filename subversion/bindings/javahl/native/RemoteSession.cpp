@@ -214,6 +214,9 @@ RemoteSession::RemoteSession(int retryAttempts,
           cycle_detected = true;
           break;
         }
+
+      url = corrected_url;
+      corrected_url = NULL;
     }
 
   if (cycle_detected)
