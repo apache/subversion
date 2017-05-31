@@ -109,6 +109,8 @@ class ExpectedOutput(object):
   def __init__(self, expected, match_all=True):
     """Initialize the expected output to EXPECTED which is a string, or
        a list of strings.
+
+       See also: svntest.verify.createExpectedOutput().
     """
     assert expected is not None
     self.expected = expected
