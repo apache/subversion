@@ -2357,7 +2357,7 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   if (! opt_state->quiet)
     SVN_ERR(svn_cmdline_printf(pool, _("'%s' locked by user '%s'.\n"),
-                               lock_path, username));
+                               lock_path_utf8, username));
 
   return SVN_NO_ERROR;
 }
@@ -2486,9 +2486,10 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           if (! opt_state->quiet)
             SVN_ERR(svn_cmdline_printf(subpool,
                                        _("Path '%s' isn't locked.\n"),
-                                       lock_path));
+                                       lock_path_utf8));
           continue;
         }
+      lock = NULL; /* Don't access LOCK after this point. */
 
       /* Now forcibly destroy the lock. */
       err = svn_fs_unlock(fs, lock_path_utf8,
@@ -2498,7 +2499,8 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
       if (! opt_state->quiet)
         SVN_ERR(svn_cmdline_printf(subpool,
-                                   _("Removed lock on '%s'.\n"), lock->path));
+                                   _("Removed lock on '%s'.\n"),
+                                   lock_path_utf8));
 
     move_on:
       if (err)
@@ -2553,7 +2555,7 @@ subcommand_unlock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   if (! opt_state->quiet)
     SVN_ERR(svn_cmdline_printf(pool, _("'%s' unlocked by user '%s'.\n"),
-                               lock_path, username));
+                               lock_path_utf8, username));
 
   return SVN_NO_ERROR;
 }
