@@ -1901,7 +1901,7 @@ def locking(sbox):
                                           invalid_comment_path)
 
   # Test locking path with --bypass-hooks
-  expected_output = "'iota' locked by user 'jrandom'."
+  expected_output = "'/iota' locked by user 'jrandom'."
   svntest.actions.run_and_verify_svnadmin(expected_output,
                                           None, "lock",
                                           sbox.repo_dir,
@@ -1915,7 +1915,7 @@ def locking(sbox):
                                           sbox.repo_dir, "iota")
 
   # Test locking path without --bypass-hooks
-  expected_output = "'iota' locked by user 'jrandom'."
+  expected_output = "'/iota' locked by user 'jrandom'."
   svntest.actions.run_and_verify_svnadmin(expected_output,
                                           None, "lock",
                                           sbox.repo_dir,
@@ -1939,7 +1939,7 @@ def locking(sbox):
                                           comment_path)
 
   # Test locking a path while specifying a lock token.
-  expected_output = "'A/D/G/rho' locked by user 'jrandom'."
+  expected_output = "'/A/D/G/rho' locked by user 'jrandom'."
   lock_token = "opaquelocktoken:01234567-89ab-cdef-89ab-cdef01234567"
   svntest.actions.run_and_verify_svnadmin(expected_output,
                                           None, "lock",
@@ -1958,7 +1958,7 @@ def locking(sbox):
 
   # Test unlocking the path again, but this time provide the correct
   # lock token.
-  expected_output = "'A/D/G/rho' unlocked."
+  expected_output = "'/A/D/G/rho' unlocked."
   svntest.actions.run_and_verify_svnadmin(expected_output,
                                           None, "unlock",
                                           sbox.repo_dir,
@@ -2004,7 +2004,7 @@ def locking(sbox):
 
   # Finally, use --bypass-hooks to unlock the path (again using the
   # correct lock token).
-  expected_output = "'iota' unlocked."
+  expected_output = "'/iota' unlocked."
   svntest.actions.run_and_verify_svnadmin(expected_output,
                                           None, "unlock",
                                           "--bypass-hooks",
