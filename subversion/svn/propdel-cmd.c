@@ -86,7 +86,7 @@ svn_cl__propdel(apr_getopt_t *os,
     {
       return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                _("Cannot specify revision for deleting versioned property '%s'"),
-               pname);
+               pname_utf8);
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {

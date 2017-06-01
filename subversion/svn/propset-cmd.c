@@ -130,7 +130,7 @@ svn_cl__propset(apr_getopt_t *os,
       return svn_error_createf
         (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
          _("Cannot specify revision for setting versioned property '%s'"),
-         pname);
+         pname_utf8);
     }
   else  /* operate on a normal, versioned property (not a revprop) */
     {
