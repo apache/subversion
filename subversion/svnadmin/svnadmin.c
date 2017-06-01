@@ -1817,7 +1817,7 @@ subcommand_rmtxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       else if (! opt_state->quiet)
         {
           SVN_ERR(svn_cmdline_printf(subpool, _("Transaction '%s' removed.\n"),
-                                     txn_name));
+                                     txn_name_utf8));
         }
     }
 
