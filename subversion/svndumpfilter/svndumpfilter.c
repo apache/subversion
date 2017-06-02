@@ -1371,7 +1371,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           opt_state.skip_missing_merge_sources = TRUE;
           break;
         case svndumpfilter__targets:
-          opt_state.targets_file = opt_arg;
+          SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.targets_file,
+                                          opt_arg, pool));
           break;
         default:
           {
@@ -1428,18 +1429,17 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         }
       else
         {
-          const char *first_arg = os->argv[os->ind++];
+          const char *first_arg;
+
+          SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
+                                          pool));
           subcommand = svn_opt_get_canonical_subcommand2(cmd_table, first_arg);
           if (subcommand == NULL)
             {
-              const char* first_arg_utf8;
-              SVN_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg,
-                                              pool));
-
               svn_error_clear(
                 svn_cmdline_fprintf(stderr, pool,
                                     _("Unknown subcommand: '%s'\n"),
-                                    first_arg_utf8));
+                                    first_arg));
               SVN_ERR(subcommand_help(NULL, NULL, pool));
               *exit_code = EXIT_FAILURE;
               return SVN_NO_ERROR;
@@ -1472,18 +1472,13 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (opt_state.targets_file)
         {
           svn_stringbuf_t *buffer, *buffer_utf8;
-          const char *utf8_targets_file;
           apr_array_header_t *targets = apr_array_make(pool, 0,
                                                        sizeof(const char *));
 
           /* We need to convert to UTF-8 now, even before we divide
              the targets into an array, because otherwise we wouldn't
              know what delimiter to use for svn_cstring_split().  */
-
-          SVN_ERR(svn_utf_cstring_to_utf8(&utf8_targets_file,
-                                          opt_state.targets_file, pool));
-
-          SVN_ERR(svn_stringbuf_from_file2(&buffer, utf8_targets_file,
+          SVN_ERR(svn_stringbuf_from_file2(&buffer, opt_state.targets_file,
                                            pool));
           SVN_ERR(svn_utf_stringbuf_to_utf8(&buffer_utf8, buffer, pool));
 

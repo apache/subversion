@@ -1729,12 +1729,12 @@ list_dblogs(apr_getopt_t *os, void *baton, svn_boolean_t only_unused,
      style before printing. */
   for (i = 0; i < logfiles->nelts; i++)
     {
-      const char *log_utf8;
-      log_utf8 = svn_dirent_join(opt_state->repository_path,
+      const char *log_path;
+      log_path = svn_dirent_join(opt_state->repository_path,
                                  APR_ARRAY_IDX(logfiles, i, const char *),
                                  pool);
-      log_utf8 = svn_dirent_local_style(log_utf8, pool);
-      SVN_ERR(svn_cmdline_printf(pool, "%s\n", log_utf8));
+      log_path = svn_dirent_local_style(log_path, pool);
+      SVN_ERR(svn_cmdline_printf(pool, "%s\n", log_path));
     }
 
   return SVN_NO_ERROR;
@@ -2305,7 +2305,6 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   const char *lock_path;
   const char *comment_file_name;
   svn_stringbuf_t *file_contents;
-  const char *lock_path_utf8;
   svn_lock_t *lock;
   const char *lock_token = NULL;
 
@@ -2332,10 +2331,10 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_stringbuf_from_file2(&file_contents, comment_file_name, pool));
 
-  SVN_ERR(target_arg_to_fspath(&lock_path_utf8, lock_path, pool, pool));
+  SVN_ERR(target_arg_to_fspath(&lock_path, lock_path, pool, pool));
 
   if (opt_state->bypass_hooks)
-    SVN_ERR(svn_fs_lock(&lock, fs, lock_path_utf8,
+    SVN_ERR(svn_fs_lock(&lock, fs, lock_path,
                         lock_token,
                         file_contents->data, /* comment */
                         0,                   /* is_dav_comment */
@@ -2343,7 +2342,7 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                         SVN_INVALID_REVNUM,
                         FALSE, pool));
   else
-    SVN_ERR(svn_repos_fs_lock(&lock, repos, lock_path_utf8,
+    SVN_ERR(svn_repos_fs_lock(&lock, repos, lock_path,
                               lock_token,
                               file_contents->data, /* comment */
                               0,                   /* is_dav_comment */
@@ -2353,7 +2352,7 @@ subcommand_lock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   if (! opt_state->quiet)
     SVN_ERR(svn_cmdline_printf(pool, _("'%s' locked by user '%s'.\n"),
-                               lock_path_utf8, username));
+                               lock_path, username));
 
   return SVN_NO_ERROR;
 }
@@ -2523,7 +2522,6 @@ subcommand_unlock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   apr_array_header_t *args;
   const char *username;
   const char *lock_path;
-  const char *lock_path_utf8;
   const char *lock_token = NULL;
 
   /* Expect three more arguments: PATH USERNAME TOKEN */
@@ -2539,17 +2537,17 @@ subcommand_unlock(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_create_access(&access, username, pool));
   SVN_ERR(svn_fs_set_access(fs, access));
 
-  SVN_ERR(target_arg_to_fspath(&lock_path_utf8, lock_path, pool, pool));
+  SVN_ERR(target_arg_to_fspath(&lock_path, lock_path, pool, pool));
   if (opt_state->bypass_hooks)
-    SVN_ERR(svn_fs_unlock(fs, lock_path_utf8, lock_token,
+    SVN_ERR(svn_fs_unlock(fs, lock_path, lock_token,
                           FALSE, pool));
   else
-    SVN_ERR(svn_repos_fs_unlock(repos, lock_path_utf8, lock_token,
+    SVN_ERR(svn_repos_fs_unlock(repos, lock_path, lock_token,
                                 FALSE, pool));
 
   if (! opt_state->quiet)
     SVN_ERR(svn_cmdline_printf(pool, _("'%s' unlocked by user '%s'.\n"),
-                               lock_path_utf8, username));
+                               lock_path, username));
 
   return SVN_NO_ERROR;
 }
@@ -2930,17 +2928,17 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         }
       else
         {
-          const char *first_arg = os->argv[os->ind++];
+          const char *first_arg;
+
+          SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
+                                          pool));
           subcommand = svn_opt_get_canonical_subcommand2(cmd_table, first_arg);
           if (subcommand == NULL)
             {
-              const char *first_arg_utf8;
-              SVN_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
-                                                  first_arg, pool));
               svn_error_clear(
                 svn_cmdline_fprintf(stderr, pool,
                                     _("Unknown subcommand: '%s'\n"),
-                                    first_arg_utf8));
+                                    first_arg));
               SVN_ERR(subcommand_help(NULL, NULL, pool));
               *exit_code = EXIT_FAILURE;
               return SVN_NO_ERROR;

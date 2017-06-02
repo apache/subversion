@@ -1770,12 +1770,12 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
      the source URL.  */
   if (os->argc - os->ind == 2)
     {
-      const char *arg_str = os->argv[os->argc - 1];
-      const char *utf_arg_str;
+      const char *arg_str;
 
-      SVN_ERR(svn_utf_cstring_to_utf8(&utf_arg_str, arg_str, pool));
+      SVN_ERR(svn_utf_cstring_to_utf8(&arg_str, os->argv[os->argc - 1],
+                                      pool));
 
-      if (! svn_path_is_url(utf_arg_str))
+      if (! svn_path_is_url(arg_str))
         {
           /* This is the old "... TO_URL REV[:REV2]" syntax.
              Revisions come only from this argument.  (We effectively
@@ -2081,11 +2081,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
           case svnsync_opt_config_dir:
             {
-              const char *path_utf8;
-              opt_err = svn_utf_cstring_to_utf8(&path_utf8, opt_arg, pool);
+              const char *path;
+              opt_err = svn_utf_cstring_to_utf8(&path, opt_arg, pool);
 
               if (!opt_err)
-                opt_baton.config_dir = svn_dirent_internal_style(path_utf8, pool);
+                opt_baton.config_dir = svn_dirent_internal_style(path, pool);
             }
             break;
           case svnsync_opt_config_options:
@@ -2286,7 +2286,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         }
       else
         {
-          const char *first_arg = os->argv[os->ind++];
+          const char *first_arg;
+
+          SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
+                                          pool));
           subcommand = svn_opt_get_canonical_subcommand2(svnsync_cmd_table,
                                                          first_arg);
           if (subcommand == NULL)

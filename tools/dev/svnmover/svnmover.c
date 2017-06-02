@@ -4460,7 +4460,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           SVN_ERR(svn_opt_parse_revprop(&revprops, arg, pool));
           break;
         case 'X':
-          extra_args_file = apr_pstrdup(pool, arg);
+          SVN_ERR(svn_utf_cstring_to_utf8(&extra_args_file, arg, pool));
           break;
         case non_interactive_opt:
           non_interactive = TRUE;
@@ -4633,12 +4633,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   action_args = apr_array_make(pool, opts->argc, sizeof(const char *));
   if (extra_args_file)
     {
-      const char *extra_args_file_utf8;
       svn_stringbuf_t *contents, *contents_utf8;
 
-      SVN_ERR(svn_utf_cstring_to_utf8(&extra_args_file_utf8,
-                                      extra_args_file, pool));
-      SVN_ERR(svn_stringbuf_from_file2(&contents, extra_args_file_utf8, pool));
+      SVN_ERR(svn_stringbuf_from_file2(&contents, extra_args_file, pool));
       SVN_ERR(svn_utf_stringbuf_to_utf8(&contents_utf8, contents, pool));
       svn_cstring_split_append(action_args, contents_utf8->data, "\n\r",
                                FALSE, pool);
