@@ -4419,9 +4419,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           break;
         case 'F':
           {
-            const char *arg_utf8;
-            SVN_ERR(svn_utf_cstring_to_utf8(&arg_utf8, arg, pool));
-            SVN_ERR(svn_stringbuf_from_file2(&filedata, arg, pool));
+            const char *filename;
+            SVN_ERR(svn_utf_cstring_to_utf8(&filename, arg, pool));
+            SVN_ERR(svn_stringbuf_from_file2(&filedata, filename, pool));
           }
           break;
         case 'u':
