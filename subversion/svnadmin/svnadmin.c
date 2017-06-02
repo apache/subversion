@@ -617,7 +617,7 @@ get_revnum(svn_revnum_t *revnum, const svn_opt_revision_t *revision,
   return SVN_NO_ERROR;
 }
 
-/* Set *DIRENT to an internal-style, UTF8-encoded, fspath. */
+/* Set *FSPATH to an internal-style fspath parsed from ARG. */
 static svn_error_t *
 target_arg_to_fspath(const char **fspath,
                      const char *arg,
@@ -625,22 +625,17 @@ target_arg_to_fspath(const char **fspath,
                      apr_pool_t *scratch_pool)
 {
   /* ### Using a private API.  This really shouldn't be needed. */
-  const char *temp;
-  SVN_ERR(svn_utf_cstring_to_utf8(&temp, arg, scratch_pool));
-  *fspath = svn_fspath__canonicalize(temp, result_pool);
+  *fspath = svn_fspath__canonicalize(arg, result_pool);
   return SVN_NO_ERROR;
 }
 
-/* Set *PATH to an internal-style, UTF8-encoded, local dirent path
-   allocated from POOL and parsed from raw command-line argument ARG. */
+/* Set *DIRENT to an internal-style, local dirent path
+   allocated from POOL and parsed from PATH. */
 static svn_error_t *
 target_arg_to_dirent(const char **dirent,
-                     const char *arg,
+                     const char *path,
                      apr_pool_t *pool)
 {
-  const char *path;
-
-  SVN_ERR(svn_utf_cstring_to_utf8(&path, arg, pool));
   if (svn_path_is_url(path))
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("Path '%s' is not a local path"), path);
@@ -682,8 +677,12 @@ parse_args(apr_array_header_t **args,
 
       if (num_args)
         while (os->ind < os->argc)
-          APR_ARRAY_PUSH(*args, const char *) =
-            apr_pstrdup(pool, os->argv[os->ind++]);
+          {
+            const char *arg;
+
+            SVN_ERR(svn_utf_cstring_to_utf8(&arg, os->argv[os->ind++], pool));
+            APR_ARRAY_PUSH(*args, const char *) = arg;
+          }
     }
 
   return SVN_NO_ERROR;
@@ -1375,7 +1374,7 @@ subcommand_freeze(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   int i;
   struct freeze_baton_t b;
 
-  SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
+  SVN_ERR(parse_args(&args, os, -1, -1, pool));
 
   if (!args->nelts)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
@@ -1775,7 +1774,7 @@ subcommand_rmtxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   int i;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
+  SVN_ERR(parse_args(&args, os, -1, -1, pool));
 
   SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
   fs = svn_repos_fs(repos);
@@ -1784,15 +1783,12 @@ subcommand_rmtxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   for (i = 0; i < args->nelts; i++)
     {
       const char *txn_name = APR_ARRAY_IDX(args, i, const char *);
-      const char *txn_name_utf8;
       svn_error_t *err;
 
       svn_pool_clear(subpool);
 
-      SVN_ERR(svn_utf_cstring_to_utf8(&txn_name_utf8, txn_name, subpool));
-
       /* Try to open the txn.  If that succeeds, try to abort it. */
-      err = svn_fs_open_txn(&txn, fs, txn_name_utf8, subpool);
+      err = svn_fs_open_txn(&txn, fs, txn_name, subpool);
       if (! err)
         err = svn_fs_abort_txn(txn, subpool);
 
@@ -1803,7 +1799,7 @@ subcommand_rmtxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       if (err && (err->apr_err == SVN_ERR_FS_TRANSACTION_DEAD))
         {
           svn_error_clear(err);
-          err = svn_fs_purge_txn(fs, txn_name_utf8, subpool);
+          err = svn_fs_purge_txn(fs, txn_name, subpool);
         }
 
       /* If we had a real from the txn open, abort, or purge, we clear
@@ -1817,7 +1813,7 @@ subcommand_rmtxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       else if (! opt_state->quiet)
         {
           SVN_ERR(svn_cmdline_printf(subpool, _("Transaction '%s' removed.\n"),
-                                     txn_name_utf8));
+                                     txn_name));
         }
     }
 
@@ -2460,7 +2456,7 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_set_access(fs, access));
 
   /* Parse out any options. */
-  SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
+  SVN_ERR(parse_args(&args, os, -1, -1, pool));
 
   /* Our usage requires at least one FS path. */
   if (args->nelts == 0)
@@ -2471,14 +2467,12 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   for (i = 0; i < args->nelts; i++)
     {
       const char *lock_path = APR_ARRAY_IDX(args, i, const char *);
-      const char *lock_path_utf8;
       svn_lock_t *lock;
 
-      SVN_ERR(target_arg_to_fspath(&lock_path_utf8, lock_path,
-                                   subpool, subpool));
+      SVN_ERR(target_arg_to_fspath(&lock_path, lock_path, subpool, subpool));
 
       /* Fetch the path's svn_lock_t. */
-      err = svn_fs_get_lock(&lock, fs, lock_path_utf8, subpool);
+      err = svn_fs_get_lock(&lock, fs, lock_path, subpool);
       if (err)
         goto move_on;
       if (! lock)
@@ -2486,13 +2480,13 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
           if (! opt_state->quiet)
             SVN_ERR(svn_cmdline_printf(subpool,
                                        _("Path '%s' isn't locked.\n"),
-                                       lock_path_utf8));
+                                       lock_path));
           continue;
         }
       lock = NULL; /* Don't access LOCK after this point. */
 
       /* Now forcibly destroy the lock. */
-      err = svn_fs_unlock(fs, lock_path_utf8,
+      err = svn_fs_unlock(fs, lock_path,
                           NULL, 1 /* force */, subpool);
       if (err)
         goto move_on;
@@ -2500,7 +2494,7 @@ subcommand_rmlocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       if (! opt_state->quiet)
         SVN_ERR(svn_cmdline_printf(subpool,
                                    _("Removed lock on '%s'.\n"),
-                                   lock_path_utf8));
+                                   lock_path));
 
     move_on:
       if (err)
