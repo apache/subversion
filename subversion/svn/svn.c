@@ -2576,22 +2576,22 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         }
       else
         {
-          const char *first_arg = os->argv[os->ind++];
+          const char *first_arg;
+
+          SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
+                                          pool));
           subcommand = svn_opt_get_canonical_subcommand2(svn_cl__cmd_table,
                                                          first_arg);
           if (subcommand == NULL)
             {
-              const char *first_arg_utf8;
-              SVN_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8,
-                                              first_arg, pool));
               svn_error_clear
                 (svn_cmdline_fprintf(stderr, pool,
                                      _("Unknown subcommand: '%s'\n"),
-                                     first_arg_utf8));
+                                     first_arg));
               svn_error_clear(svn_cl__help(NULL, NULL, pool));
 
               /* Be kind to people who try 'svn undo'. */
-              if (strcmp(first_arg_utf8, "undo") == 0)
+              if (strcmp(first_arg, "undo") == 0)
                 {
                   svn_error_clear
                     (svn_cmdline_fprintf(stderr, pool,
@@ -2881,9 +2881,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         {
           svn_node_kind_t kind;
           const char *local_abspath;
-          const char *fname_utf8 = svn_dirent_internal_style(dash_F_arg, pool);
+          const char *fname = svn_dirent_internal_style(dash_F_arg, pool);
 
-          err = svn_dirent_get_absolute(&local_abspath, fname_utf8, pool);
+          err = svn_dirent_get_absolute(&local_abspath, fname, pool);
 
           if (!err)
             {

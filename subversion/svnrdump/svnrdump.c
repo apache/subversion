@@ -770,7 +770,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t force_interactive = FALSE;
   apr_array_header_t *config_options = NULL;
   apr_getopt_t *os;
-  const char *first_arg;
   apr_array_header_t *received_opts;
   int i;
 
@@ -932,19 +931,19 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         }
       else
         {
-          first_arg = os->argv[os->ind++];
+          const char *first_arg;
+
+          SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
+                                          pool));
           subcommand = svn_opt_get_canonical_subcommand2(svnrdump__cmd_table,
                                                          first_arg);
 
           if (subcommand == NULL)
             {
-              const char *first_arg_utf8;
-              SVN_ERR(svn_utf_cstring_to_utf8(&first_arg_utf8, first_arg,
-                                              pool));
               svn_error_clear(
                 svn_cmdline_fprintf(stderr, pool,
                                     _("Unknown subcommand: '%s'\n"),
-                                    first_arg_utf8));
+                                    first_arg));
               SVN_ERR(help_cmd(NULL, NULL, pool));
               *exit_code = EXIT_FAILURE;
               return SVN_NO_ERROR;
