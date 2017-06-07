@@ -147,7 +147,7 @@ AC_DEFUN(SVN_SERF_PKG_CONFIG,
         dnl we want to make sure that we get the library in the prefix
         dnl the user specifies and we want to allow the prefix path to
         dnl point at the path for the pc file is in (if it's in some
-        dnl other path than $serf_prefx/lib/pkgconfig).
+        dnl other path than $serf_prefix/lib/pkgconfig).
         if test -e "$serf_prefix/$serf_major.pc" ; then
           serf_pc_arg="$serf_prefix/$serf_major.pc"
         elif test -e "$serf_prefix/lib/pkgconfig/$serf_major.pc" ; then
