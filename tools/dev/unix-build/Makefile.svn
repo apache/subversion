@@ -710,6 +710,7 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 		--enable-maintainer-mode \
 		--enable-ssl \
 		--enable-dav \
+		--enable-proxy \
 		--with-mpm=prefork \
 		--with-apr="$(PREFIX)/apr" \
 		--with-apr-util="$(PREFIX)/apr"
@@ -1519,9 +1520,11 @@ $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
 
 # run svn regression tests
 HTTPD_CHECK_CONF=$(PREFIX)/httpd/conf/httpd-svn-check-$(WC).conf
+HTTPD_PROXY_CONF=$(PREFIX)/httpd/conf/httpd-svn-proxy-$(WC).conf
 HTTPD_CHECK_USERS=$(PREFIX)/httpd/conf/httpd-svn-check-users
 HTTPD_CHECK_GROUPS=$(PREFIX)/httpd/conf/httpd-svn-check-groups
 HTTPD_CHECK_PORT=8081
+HTTPD_PROXY_PORT=8082
 MOD_DONTDOTHAT_CONF=$(PREFIX)/httpd/conf/dontdothat
 
 $(MOD_DONTDOTHAT_CONF):
@@ -1788,6 +1791,40 @@ endif
 	echo >> $@.tmp '#SVNCacheRevProps Off'
 	mv -f $@.tmp $@
 
+$(HTTPD_PROXY_CONF): $(HTTPD_CHECK_CONF)
+	mkdir -p $(dir $@)
+	echo > $@.tmp '# httpd config for a write-through proxy'
+	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
+	echo >>$@.tmp 'Listen localhost:$(HTTPD_PROXY_PORT)'
+	echo >>$@.tmp 'LoadModule dav_svn_module $(MOD_DAV_SVN)'
+	echo >>$@.tmp 'LoadModule authz_svn_module $(MOD_AUTHZ_SVN)'
+	echo >>$@.tmp 'LoadModule dontdothat_module $(MOD_DONTDOTHAT)'
+	echo >>$@.tmp 'DocumentRoot "$(PREFIX)/httpd/htdocs"'
+	echo >>$@.tmp '# This Location lets you access repositories dropped in /tmp/svn-$(BRANCH)-proxy'
+	echo >>$@.tmp '<Location /svn>'
+	echo >>$@.tmp '    DAV svn'
+	echo >>$@.tmp '    SVNParentPath /tmp/svn-$(BRANCH)-proxy'
+	echo >>$@.tmp '    SVNMasterURI http://localhost:$(HTTPD_CHECK_PORT)/svn/'
+	echo >>$@.tmp '    Allow from all'
+	echo >>$@.tmp '    #AuthType Basic'
+	echo >>$@.tmp '    #AuthName "Subversion Repository"'
+	echo >>$@.tmp '    #AuthUserFile $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '    #Require valid-user'
+ifeq ($(USE_HTTPV1),yes)
+	echo >> $@.tmp '   SVNAdvertiseV2Protocol off'
+endif
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >> $@.tmp '   SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '# This Location allows repositories to be synced'
+	echo >>$@.tmp '<Location /svn-proxy-sync>'
+	echo >>$@.tmp 'DAV svn'
+	echo >>$@.tmp 'SVNParentPath /tmp/svn-$(BRANCH)-proxy'
+	echo >>$@.tmp 'Allow from all'
+	echo >>$@.tmp '</Location>'
+	mv -f $@.tmp $@
+
 .PHONY: libpath
 libpath:
 	@echo export LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
@@ -1803,10 +1840,11 @@ endif
 .PHONY: start-svnserve stop-svnserve start-httpd stop-httpd
 
 HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
-		$(PREFIX)/httpd/bin/apachectl -f $(HTTPD_CHECK_CONF)
-HTTPD_START_CMD = $(HTTPD_CMD) -k start
+		$(PREFIX)/httpd/bin/apachectl
+HTTPD_START_CMD = $(HTTPD_CMD) -f $(HTTPD_CHECK_CONF) -k start
+HTTPD_START_CMD_PROXY = $(HTTPD_CMD) -f $(HTTPD_PROXY_CONF)
 HTTPD_START_CMD_DEBUG = $(HTTPD_START_CMD) -X
-HTTPD_STOP_CMD = $(HTTPD_CMD) -k stop; sleep 3
+HTTPD_STOP_CMD = $(HTTPD_CMD) -f $(HTTPD_CHECK_CONF) -k stop; sleep 3
 
 SVNSERVE_START_CMD = (test -e $(PWD)/svnserve-*.pid && \
 			ls $(PWD)/svnserve-*.pid | while read pidfile; do \
@@ -1837,8 +1875,16 @@ start-httpd-debug: $(HTTPD_CHECK_CONF)
 	@sleep 1
 	gdb $(PREFIX)/httpd/bin/httpd `cat $(PREFIX)/httpd/logs/httpd.pid`
 
+start-httpd-proxy: $(HTTPD_PROXY_CONF)
+	$(HTTPD_START_CMD_PROXY)
+	@echo "The URL http://localhost:$(HTTPD_PROXY_PORT)/svn/"
+	@echo "lets you access repositories dropped into /tmp/svn-$(BRANCH)-proxy"
+
 stop-httpd: $(HTTPD_CHECK_CONF)
 	$(HTTPD_STOP_CMD)
+
+stop-httpd-proxy: $(HTTPD_PROXY_CONF)
+	pkill -f '$(PREFIX)/httpd/bin/httpd -f $(HTTPD_PROXY_CONF)'
 
 start-svnserve: $(SVN_OBJDIR)/.compiled
 	$(SVNSERVE_START_CMD)
