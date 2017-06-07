@@ -3612,7 +3612,6 @@ create_wc_with_file_add_vs_file_add_update_conflict(svn_test__sandbox_t *b)
 {
   static const char *new_file_path;
   svn_client_ctx_t *ctx;
-  static const char *trunk_url;
   svn_opt_revision_t opt_rev;
   svn_client_status_t *status;
   struct status_baton sb;
@@ -3647,7 +3646,6 @@ create_wc_with_file_add_vs_file_add_update_conflict(svn_test__sandbox_t *b)
 
   opt_rev.kind = svn_opt_revision_head;
   opt_rev.value.number = SVN_INVALID_REVNUM;
-  trunk_url = apr_pstrcat(b->pool, b->repos_url, "/", trunk_path, SVN_VA_NULL);
 
   /* Ensure that the file has the expected status. */
   sb.result_pool = b->pool;
