@@ -34,6 +34,8 @@
 #include "svn_error.h"
 #include "svn_io.h"
 
+#include "svn_private_config.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -57,6 +59,7 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
                             apr_pool_t *pool);
 
 
+#if SVN_HAVE_GNOME_KEYRING
 /** An implementation of @c svn_auth_gnome_keyring_unlock_prompt_func_t that
  * prompts the user for default GNOME Keyring password.
  *
@@ -70,6 +73,7 @@ svn_cmdline__auth_gnome_keyring_unlock_prompt(char **keyring_password,
                                               const char *keyring_name,
                                               void *baton,
                                               apr_pool_t *pool);
+#endif
 
 /** Container for config options parsed with svn_cmdline__parse_config_option
  *
