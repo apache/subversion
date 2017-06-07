@@ -922,7 +922,6 @@ svn_cmdline_prompt_user2(const char **result,
                 (svn_cmdline_prompt_baton2_t *)baton, pool);
 }
 
-#if SVN_HAVE_GNOME_KEYRING
 /* This implements 'svn_auth_gnome_keyring_unlock_prompt_func_t'. */
 svn_error_t *
 svn_cmdline__auth_gnome_keyring_unlock_prompt(char **keyring_password,
@@ -940,4 +939,3 @@ svn_cmdline__auth_gnome_keyring_unlock_prompt(char **keyring_password,
   *keyring_password = apr_pstrdup(pool, password);
   return SVN_NO_ERROR;
 }
-#endif
