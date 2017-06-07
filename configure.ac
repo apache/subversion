@@ -555,22 +555,22 @@ AC_SUBST(SVN_HAVE_GPG_AGENT)
 
 dnl GNOME Keyring -------------------
 
-AC_ARG_WITH(gnome_keyring,
-  AS_HELP_STRING([--with-gnome-keyring], 
-                 [Enable use of GNOME Keyring for auth credentials (enabled by default if found)]),
-                 [with_gnome_keyring="$withval"],
-                 [with_gnome_keyring=auto])
+AC_ARG_WITH(old_gnome_keyring,
+  AS_HELP_STRING([--with-old-gnome-keyring], 
+                 [Enable old GNOME Keyring for auth credentials (prefer --with-gnome-keyring)]),
+                 [with_old_gnome_keyring="$withval"],
+                 [with_old_gnome_keyring=no])
 
-found_gnome_keyring=no
-AC_MSG_CHECKING([whether to look for GNOME Keyring])
-if test "$with_gnome_keyring" != "no"; then
+found_old_gnome_keyring=no
+AC_MSG_CHECKING([whether to look for old GNOME Keyring])
+if test "$with_old_gnome_keyring" != "no"; then
   AC_MSG_RESULT([yes])
   case "$host" in
   *-*-darwin*)
-    if test "$with_gnome_keyring" = "yes"; then
-      AC_MSG_ERROR([--with-gnome-keyring is not supported on Mac OS X.])
+    if test "$with_old_gnome_keyring" = "yes"; then
+      AC_MSG_ERROR([--with-old-gnome-keyring is not supported on Mac OS X.])
     else
-      with_gnome_keyring=no
+      with_old_gnome_keyring=no
     fi
     ;;
   *)
@@ -583,9 +583,9 @@ if test "$with_gnome_keyring" != "no"; then
             old_CPPFLAGS="$CPPFLAGS"
             SVN_GNOME_KEYRING_INCLUDES="`$PKG_CONFIG --cflags glib-2.0 gnome-keyring-1`"
             CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
-            AC_CHECK_HEADER(gnome-keyring.h, found_gnome_keyring=yes, found_gnome_keyring=no)
+            AC_CHECK_HEADER(gnome-keyring.h, found_old_gnome_keyring=yes, found_old_gnome_keyring=no)
             AC_MSG_CHECKING([for GNOME Keyring])
-            if test "$found_gnome_keyring" = "yes"; then
+            if test "$found_old_gnome_keyring" = "yes"; then
               AC_MSG_RESULT([yes])
               AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
                         [Is GNOME Keyring support enabled?])
@@ -593,37 +593,37 @@ if test "$with_gnome_keyring" != "no"; then
               SVN_GNOME_KEYRING_LIBS="`$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
             else
               AC_MSG_RESULT([no])
-              if test "$with_gnome_keyring" = "yes"; then
+              if test "$with_old_gnome_keyring" = "yes"; then
                 AC_MSG_ERROR([cannot find GNOME Keyring])
               fi
             fi
           else
             AC_MSG_RESULT([no])
-            if test "$with_gnome_keyring" = "yes"; then
+            if test "$with_old_gnome_keyring" = "yes"; then
               AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files.])
             else
-              with_gnome_keyring=no
+              with_old_gnome_keyring=no
             fi
           fi
         else
-          if test "$with_gnome_keyring" = "yes"; then
+          if test "$with_old_gnome_keyring" = "yes"; then
             AC_MSG_ERROR([cannot find pkg-config. GNOME Keyring requires this.])
           else
-            with_gnome_keyring=no
+            with_old_gnome_keyring=no
           fi
         fi
       else
-        if test "$with_gnome_keyring" = "yes"; then
+        if test "$with_old_gnome_keyring" = "yes"; then
           AC_MSG_ERROR([APR does not have support for DSOs. GNOME Keyring requires this.])
         else
-          with_gnome_keyring=no
+          with_old_gnome_keyring=no
         fi
       fi
     else
-      if test "$with_gnome_keyring" = "yes"; then
-        AC_MSG_ERROR([--with-gnome-keyring conflicts with --disable-shared])
+      if test "$with_old_gnome_keyring" = "yes"; then
+        AC_MSG_ERROR([--with-old-gnome-keyring conflicts with --disable-shared])
       else
-        with_gnome_keyring=no
+        with_old_gnome_keyring=no
       fi
     fi
     ;;
@@ -633,6 +633,9 @@ else
 fi
 AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
+
+dnl LibSecret -------------------
+SVN_LIB_SECRET
 
 dnl Googlemock -----------------
 AC_ARG_ENABLE([googlemock],
@@ -901,7 +904,7 @@ if test "$svn_lib_kwallet" = "yes"; then
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-kwallet-lib"
 fi
 
-if test "$found_gnome_keyring" = "yes"; then
+if test "$found_old_gnome_keyring" = "yes" || test "$found_gnome_keyring" = "yes"; then
   BUILD_RULES="$BUILD_RULES gnome-keyring-lib"
   INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-lib/install-lib install-gnome-keyring-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-gnome-keyring-lib"

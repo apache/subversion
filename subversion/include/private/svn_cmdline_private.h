@@ -63,6 +63,7 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
  * Expects a @c svn_cmdline_prompt_baton2_t to be passed as @a baton.
  *
  * @since New in 1.6.
+ * @deprecated Only used by old libgome-keyring implementation.
  */
 svn_error_t *
 svn_cmdline__auth_gnome_keyring_unlock_prompt(char **keyring_password,

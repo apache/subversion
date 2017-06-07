@@ -45,6 +45,7 @@ sinclude(build/ac-macros/sqlite.m4)
 sinclude(build/ac-macros/swig.m4)
 sinclude(build/ac-macros/zlib.m4)
 sinclude(build/ac-macros/kwallet.m4)
+sinclude(build/ac-macros/libsecret.m4)
 sinclude(build/ac-macros/macosx.m4)
 
 # Include the libtool macros
