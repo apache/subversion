@@ -798,21 +798,46 @@ test_x509_parse_cert(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-#if 0
-static struct x509_test broken_cert_tests[] = {
+struct x509_broken {
+  const char *base64_cert;
+  apr_status_t apr_err;
+};
+static struct x509_broken broken_cert_tests[] = {
+  /* Invalid zero-length name that caused a SEGV, found using AFL. */
+  {
+    "MIIDDTCCAfUCAQEwDQYJKoZIhvcNAQEFBQAwRTEAMAkGA1UEBhMCQVUxEzARBgNV"
+    "BAgTClNvbWUtU3RhdGUxITAfBgNVBAoTGEludGVybmV0IFdpZGdpdHMgUHR5IEx0"
+    "ZDAeFw0xNTAxMTkyMjEyNDhaFw0xNjAxMTkyMjEyNDhaMFQxCzAJBgNVBAYTAlVT"
+    "MRMwEQYDVQQIEwpXYXNoaW5ndG9uMRMwEQYDVQQHEwpOb3J0aCBCZW5kMRswGQYD"
+    "VQQDExJ4NTA5djEuZXhhbXBsZS5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAw"
+    "ggEKAoIBAQDniW3DmGGtA0MoYqE9H55/RmjtTJD2WVmM/STEsw+RW74UGsZ62qfi"
+    "ADedl4ukZYKlk3TwJrGEwDBKOMWHuzCYVxhclyHkHwX7QqamvZRgaOonEu82KHuE"
+    "dZo4FhOWDC9D0yS4RFbfqvSu/JG19FYsnRQn1RPFYji6jG9TRwavplVBiMhR68kc"
+    "8HTW1Wu7uJ5SV0UtTicFes8MGek3+zWceGt+Egwd2UlIYXwTPzB5m7UPuufEdvFL"
+    "ED3pusVatohFzjCbYsuJIR5ppYd49uTxPWGvRidJ2C8GbDf9PCgDduS0Gz91Txnw"
+    "h+WiVYCQ6SxAJWp/xeZWE71k88N0vJEzAgMBAAEwDQYJKoZIhvcNAQEFBQADggEB"
+    "ABoBaObsHnIrkd3RvvGb5q7fnEfiT1DXsufS3ypf4Z8IST/z+NeaUaiRN1oLcvDz"
+    "qC7ygTYZ2BZoEw3ReCGqQWT4iYET+lH8DM+U5val3gVlSWqx1jj/wiV1OAxQsakM"
+    "BnmNs/MDshiv54irvSlqnxEp2o/BU/vMrN656C5DJkZpYoMpIWxdFnd+bzNzuN1k"
+    "pJfTjzWlGckKfdblNPOfdtccTqtQ5d4mWtYNJ8DfL5rRRwCuzXvZtbVHKxqkXaXr"
+    "CYUfFUobapgPfvvMc1QcDY+2nvhC2ij+HAPIHgZPuzJsjZRC1zwg074cfgjZbgbm"
+    "R0HVF486p3vS8HFv4lndRZA=",
+    SVN_ERR_X509_CERT_INVALID_NAME,
+  },
  { NULL }
 };
 
 static svn_error_t *
 test_x509_parse_cert_broken(apr_pool_t *pool)
 {
-  struct x509_test *xt;
+  struct x509_broken *xt;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   for (xt = broken_cert_tests; xt->base64_cert; xt++)
     {
       const svn_string_t *der_cert;
       svn_x509_certinfo_t *certinfo;
+      svn_error_t *err;
 
       svn_pool_clear(iterpool);
 
@@ -821,15 +846,21 @@ test_x509_parse_cert_broken(apr_pool_t *pool)
                                                             pool),
                                           iterpool);
 
-      SVN_ERR(svn_x509_parse_cert(&certinfo, der_cert->data, der_cert->len,
-                                  iterpool, iterpool));
-
-      SVN_ERR(compare_results(xt, certinfo, iterpool));
+      err = svn_x509_parse_cert(&certinfo, der_cert->data, der_cert->len,
+                                iterpool, iterpool);
+      if (!err)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Expected parse error E%d got SUCCESS",
+                                 xt->apr_err);
+      if (err && err->apr_err != xt->apr_err)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                                 "Expected parse error E%d got E%d",
+                                 xt->apr_err, err->apr_err);
+      svn_error_clear(err);
     }
 
   return SVN_NO_ERROR;
 }
-#endif
 
 /* The test table.  */
 
@@ -840,8 +871,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_x509_parse_cert,
                    "test svn_x509_parse_cert"),
-/*    SVN_TEST_XFAIL2(test_x509_parse_cert_broken,
-                    "test broken certs"), */
+    SVN_TEST_PASS2(test_x509_parse_cert_broken,
+                   "test broken certs"),
     SVN_TEST_NULL
   };
 

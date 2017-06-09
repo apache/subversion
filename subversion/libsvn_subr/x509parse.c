@@ -362,7 +362,7 @@ x509_get_name(const unsigned char **p, const unsigned char *name_end,
   x509_name *cur = NULL;
 
   err = asn1_get_tag(p, name_end, &len, ASN1_CONSTRUCTED | ASN1_SET);
-  if (err)
+  if (err || len < 1)
     return svn_error_create(SVN_ERR_X509_CERT_INVALID_NAME, err, NULL);
 
   set_end = *p + len;
