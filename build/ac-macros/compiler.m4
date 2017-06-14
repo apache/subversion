@@ -126,3 +126,18 @@ AC_DEFUN([SVN_CXX_MODE_SETUP],
     SVN_CXXFLAGS_ADD_IFELSE([-Werror=unknown-warning-option])
   fi
 ])
+
+dnl The KWallet provider needs to use C++11 mode when using KDE 5
+AC_DEFUN([SVN_CXX_MODE_SETUP11],
+[
+  CXXFLAGS_KEEP="$CXXFLAGS"
+  CXXFLAGS=""
+
+  if test "$GXX" = "yes"; then
+    SVN_CXXFLAGS_ADD_IFELSE([-std=c++11])
+  fi
+
+  CXXMODEFLAGS="$CXXFLAGS"
+  CXXFLAGS="$CXXFLAGS_KEEP"
+  AC_SUBST(CXXMODEFLAGS)
+])
