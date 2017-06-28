@@ -21,7 +21,7 @@
 #
 
 # USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH
-#                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|pre PRE_NUM]
+#                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|-pre PRE_NUM]
 #                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL]
 #                  [-apri PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
 #                  [-serf PATH-TO-SERF] [-zlib PATH-TO-ZLIB]
