@@ -95,7 +95,7 @@ class BackportTest(object):
     # .wraps() propagates the wrappee's docstring to the wrapper.
     @functools.wraps(test_func)
     def wrapped_test_func(sbox):
-      expected_dump_file = './%s.dump' % (test_func.func_name,)
+      expected_dump_file = './backport_tests_data/%s.dump' % (test_func.func_name,)
 
       sbox.build()
 
