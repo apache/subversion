@@ -840,7 +840,7 @@ def get_siginfo(args, quiet=False):
             os.unlink(fn)
 
             if verified.valid:
-                good_sigs[verified.key_id[-8:]] = True
+                good_sigs[verified.fingerprint] = True
             else:
                 sys.stderr.write("BAD SIGNATURE for %s\n" % filename)
                 if verified.key_id:
@@ -848,7 +848,10 @@ def get_siginfo(args, quiet=False):
                 sys.exit(1)
 
     for id in good_sigs.keys():
-        gpg = subprocess.Popen(['gpg', '--fingerprint', id],
+        # Most potential signers have public short keyid (32-bit) collisions in
+        # the https://evil32.com/ set, which has been uploaded to the
+        # keyservers, so generate the long keyid.
+        gpg = subprocess.Popen(['gpg', '--keyid-format', 'long', '--fingerprint', id],
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         rc = gpg.wait()
         gpg_output = gpg.stdout.read()
