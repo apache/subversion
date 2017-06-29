@@ -929,7 +929,7 @@ def main():
     subparser.set_defaults(func=roll_tarballs)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('revnum', type=int,
+    subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
     subparser.add_argument('--branch',
                     help='''The branch to base the release on.''')
@@ -963,7 +963,7 @@ def main():
     subparser.set_defaults(func=create_tag)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('revnum', type=int,
+    subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
     subparser.add_argument('--branch',
                     help='''The branch to base the release on.''')
