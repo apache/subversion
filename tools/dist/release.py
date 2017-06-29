@@ -472,10 +472,10 @@ def check_copyright_year(repos, branch, revision):
 def roll_tarballs(args):
     'Create the release artifacts.'
 
-    if args.branch:
-        branch = args.branch
-    else:
-        branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
+    if not args.branch:
+        args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
+
+    branch = args.branch # shorthand
 
     logging.info('Rolling release %s from branch %s@%d' % (args.version,
                                                            branch, args.revnum))
@@ -598,12 +598,10 @@ def create_tag(args):
 
     logging.info('Creating tag for %s' % str(args.version))
 
-    if args.branch:
-        branch = secure_repos + '/' + args.branch
-    else:
-        branch = secure_repos + '/branches/%d.%d.x' % (args.version.major,
-                                                       args.version.minor)
-    target = get_target(args)
+    if not args.branch:
+        args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
+
+    branch = secure_repos + '/' + args.branch
 
     tag = secure_repos + '/tags/' + str(args.version)
 
