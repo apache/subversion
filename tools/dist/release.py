@@ -61,6 +61,7 @@ except ImportError:
     sys.path.append(ezt_path)
 
     import ezt
+    sys.path.remove(ezt_path)
 
 
 # Our required / recommended release tool versions by release branch
