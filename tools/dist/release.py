@@ -101,7 +101,8 @@ tool_versions = {
 }
 
 # The version that is our current recommended release
-recommended_release = '1.8'
+# ### TODO: derive this from svn_version.h; see ../../build/getversion.py
+recommended_release = '1.9'
 
 # Some constants
 repos = 'https://svn.apache.org/repos/asf/subversion'
