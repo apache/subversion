@@ -165,6 +165,18 @@ class Version(object):
             else:
                 return 'supported-releases'
 
+    def __serialize(self):
+        return (self.major, self.minor, self.patch, self.pre, self.pre_num)
+
+    def __eq__(self, that):
+        return self.__serialize() == that.__serialize()
+
+    def __ne__(self, that):
+        return self.__serialize() != that.__serialize()
+
+    def __hash__(self):
+        return hash(self.__serialize())
+
     def __lt__(self, that):
         if self.major < that.major: return True
         if self.major > that.major: return False
@@ -665,31 +677,33 @@ def clean_dist(args):
 
     stdout = subprocess.check_output(['svn', 'list', dist_release_url])
 
-    filenames = stdout.split('\n')
-    tar_gz_archives = []
-    for entry in filenames:
-      if fnmatch.fnmatch(entry, 'subversion-*.tar.gz'):
-        tar_gz_archives.append(entry)
+    def minor(version):
+        """Return the minor release line of the parameter, which must be
+        a Version object."""
+        return (version.major, version.minor)
 
-    versions = []
-    for archive in tar_gz_archives:
-        versions.append(Version(archive))
+    filenames = stdout.split('\n')
+    filenames = filter(lambda x: x.startswith('subversion-'), filenames)
+    versions = set(map(Version, filenames))
+    minor_lines = set(map(minor, versions))
+    to_keep = set()
+    for recent_line in sorted(minor_lines, reverse=True)[:2]:
+        to_keep.add(max(
+            x for x in versions
+            if minor(x) == recent_line
+        ))
+    for i in sorted(to_keep):
+        logging.info("Saving release '%s'", i)
 
     svnmucc_cmd = ['svnmucc', '-m', 'Remove old Subversion releases.\n' +
                    'They are still available at ' +
                    'https://archive.apache.org/dist/subversion/']
     if (args.username):
         svnmucc_cmd += ['--username', args.username]
-    for k, g in itertools.groupby(sorted(versions),
-                                  lambda x: (x.major, x.minor)):
-        releases = list(g)
-        logging.info("Saving release '%s'", releases[-1])
-
-        for r in releases[:-1]:
-            for filename in filenames:
-              if fnmatch.fnmatch(filename, 'subversion-%s.*' % r):
-                logging.info("Removing '%s'" % filename)
-                svnmucc_cmd += ['rm', dist_release_url + '/' + filename]
+    for filename in filenames:
+        if Version(filename) not in to_keep:
+            logging.info("Removing %r", filename)
+            svnmucc_cmd += ['rm', dist_release_url + '/' + filename]
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
     subprocess.check_call(svnmucc_cmd)
