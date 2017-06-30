@@ -222,6 +222,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.6
     * fsfs: improve error message upon failure to open rep-cache (r1781655)
     * fsfs: never attempt to share directory representations (r1785053)
     * fsfs: make consistency independent of hash algorithms (r1785737 et al)
+	This change makes Subversion resilient to collision attacks, including
+	SHA-1 collision attacks such as <http://shattered.io/>.  See also our
+	documentation at <https://subversion.apache.org/faq#shattered-sha1> and
+	<https://subversion.apache.org/docs/release-notes/1.9#shattered-sha1>.
 
   - Client-side and server-side bugfixes:
     * work around an APR bug related to file truncation (r1759116)
