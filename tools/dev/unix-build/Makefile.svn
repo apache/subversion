@@ -117,7 +117,6 @@ GNU_ICONV_URL	= http://ftp.gnu.org/pub/gnu/libiconv/$(GNU_ICONV_DIST)
 APR_UTIL_URL	= http://svn.apache.org/repos/asf/apr/apr-util
 HTTPD_URL	= http://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
-#SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
 SERF_URL	= http://serf.googlecode.com/svn/tags/$(SERF_VER)
 SERF_OLD_URL	= http://serf.googlecode.com/svn/tags/$(SERF_OLD_VER)
 SQLITE_URL	= http://www.sqlite.org/2013/$(SQLITE_DIST)
