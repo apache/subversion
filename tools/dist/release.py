@@ -596,6 +596,8 @@ def post_candidates(args):
 def create_tag(args):
     'Create tag in the repository'
 
+    target = get_target(args)
+
     logging.info('Creating tag for %s' % str(args.version))
 
     if not args.branch:
