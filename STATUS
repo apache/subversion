@@ -72,7 +72,9 @@ Candidate changes:
      Will create a text conflict with the r1785053 backport.  Depending on
      which change gets merged first, the respective other must be updated.
    Votes:
-     +1: stefan2, rhuijben
+     +1: stefan2
+     -1: rhuijben (Until some additional fix like on 1.9 is applied. After that +1
+                   on the current changes)
 
 Veto-blocked changes:
 =====================
