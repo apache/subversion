@@ -29,19 +29,23 @@ Candidate changes:
      +1: stefan2, breser
      -0: julianfoad (test is missing from branch -- how do we know it works?)
 
- * r1745515, r1746364
-   Update serf download URIs to ASF.
+ * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786515, r1794611
+   Make FSFS consistency no longer depend on hash algorithms.
    Justification:
-     Resolves build script issues since the old google code URI is 404 now.
+     This eliminates any existing or future FSFS vulnerability due to
+     attacks on MD5 or SHA1.
+   Branch:
+     ^/subversion/branches/1.8.x-strict-rep-sharing
    Notes:
-     Merge with --accept=working due to absence of
-     tools/dev/build-svn-deps-win.pl on the 1.8 branch.
+     Depends on r1759116 for correctness with older APR.
+     While the backport code is very close to the /trunk changes, it is
+     easier to review them as r1787637, r1787638 and r1787652 on the branch.
+     Will create a text conflict with the r1785053 backport.  Depending on
+     which change gets merged first, the respective other must be updated.
    Votes:
-     +1: stsp (without r1746364)
      +1: stefan2
-     -0: rhuijben (Makefile.svn is patched but not fixed)
-     -0 (non-binding): luke1410 (r1700130 is missing - will have to create a
-                       backport branch)
+     -1: rhuijben (Until some additional fix like on 1.9 is applied. After that +1
+                   on the current changes)
 
 Veto-blocked changes:
 =====================
