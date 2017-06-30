@@ -29,7 +29,7 @@ Candidate changes:
      +1: stefan2, breser
      -0: julianfoad (test is missing from branch -- how do we know it works?)
 
- * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786515, r1794611
+ * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786515, r1794611, r1800387
    Make FSFS consistency no longer depend on hash algorithms.
    Justification:
      This eliminates any existing or future FSFS vulnerability due to
@@ -40,8 +40,9 @@ Candidate changes:
      Depends on r1759116 for correctness with older APR.
      While the backport code is very close to the /trunk changes, it is
      easier to review them as r1787637, r1787638 and r1787652 on the branch.
-     Will create a text conflict with the r1785053 backport.  Depending on
-     which change gets merged first, the respective other must be updated.
+     [Will create a text conflict with the r1785053 backport.  Depending on
+     which change gets merged first, the respective other must be updated.]
+     r1800387 did the above merge and resolved the text conflicts.
    Votes:
      +1: stefan2, stsp
      -1: rhuijben (Until some additional fix like on 1.9 is applied. After that +1
