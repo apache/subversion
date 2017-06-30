@@ -82,18 +82,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1785053
-   Never attempt to share directory representations in FSFS.
-   Justification:
-     This fixes inconsistent behavior.  We never add dir reps to the rep-
-     cache but would happily share any file or prop rep that happens to
-     match the respective directory rep.
-   Branch:
-     ^/subversion/branches/1.8.x-r1785053
-   Notes:
-     Will create a text conflict with the strict-rep-sharing patches.
-     Depending on which change gets merged first, the respective other
-     needs to be updated.
-   Votes:
-     +1: stefan2, rhuijben, stsp
