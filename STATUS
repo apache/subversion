@@ -43,21 +43,6 @@ Candidate changes:
      -0 (non-binding): luke1410 (r1700130 is missing - will have to create a
                        backport branch)
 
- * r1785053
-   Never attempt to share directory representations in FSFS.
-   Justification:
-     This fixes inconsistent behavior.  We never add dir reps to the rep-
-     cache but would happily share any file or prop rep that happens to
-     match the respective directory rep.
-   Branch:
-     ^/subversion/branches/1.8.x-r1785053
-   Notes:
-     Will create a text conflict with the strict-rep-sharing patches.
-     Depending on which change gets merged first, the respective other
-     needs to be updated.
-   Votes:
-     +1: stefan2, rhuijben
-
  * r1785737, r1785738, r1785734, r1786447, r1785754, r1786445, r1786446, r1786515, r1794611
    Make FSFS consistency no longer depend on hash algorithms.
    Justification:
@@ -97,3 +82,18 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1785053
+   Never attempt to share directory representations in FSFS.
+   Justification:
+     This fixes inconsistent behavior.  We never add dir reps to the rep-
+     cache but would happily share any file or prop rep that happens to
+     match the respective directory rep.
+   Branch:
+     ^/subversion/branches/1.8.x-r1785053
+   Notes:
+     Will create a text conflict with the strict-rep-sharing patches.
+     Depending on which change gets merged first, the respective other
+     needs to be updated.
+   Votes:
+     +1: stefan2, rhuijben, stsp
