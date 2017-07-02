@@ -875,8 +875,14 @@ def get_siginfo(args, quiet=False):
             stderr=subprocess.STDOUT,
         )
 
-        gpg_output = "\n".join([ l for l in gpg_output.splitlines()
-                                                     if l[0:7] != 'Warning' ])
+        # This code was added in r934990, but there was no comment (nor log
+        # message text) explaining its purpose.  I've commented it out since
+        # ignoring arbitrary warnings in a verification codepath is Bad.  If
+        # you run into warnings on your machine, feel free to uncomment it,
+        # but when you do so please make it match specific warnings only.
+        #
+        #gpg_output = "\n".join([ l for l in gpg_output.splitlines()
+        #                                             if l[0:7] != 'Warning' ])
 
         match = fp_pattern.match(gpg_output)
         format_expandos = dict(
