@@ -824,7 +824,19 @@ def write_downloads(args):
 # Validate the signatures for a release
 
 key_start = '-----BEGIN PGP SIGNATURE-----'
-fp_pattern = re.compile(r'^pub\s+(?P<length_and_type>\w+\/\w+)[^\n]*\n\s+Key\sfingerprint\s=(?P<fingerprint>(\s+[0-9A-F]{4}){10})\nuid\s+(?P<name_and_comment>[^<\(]+)\s')
+
+PUBLIC_KEY_ALGORITHMS = {
+    # These values are taken from the RFC's registry at:
+    # https://www.iana.org/assignments/pgp-parameters/pgp-parameters.xhtml#pgp-parameters-12
+    #
+    # The values are callables that produce gpg1-like key length and type
+    # indications, e.g., "4096R" for a 4096-bit RSA key.
+    1: (lambda keylen: str(keylen) + 'R'), # RSA
+}
+
+def _make_human_readable_fingerprint(fingerprint):
+    return re.compile(r'(....)' * 10).sub(r'\1 \2 \3 \4 \5  \6 \7 \8 \9 \10',
+                                          fingerprint)
 
 def get_siginfo(args, quiet=False):
     'Returns a list of signatures for the release.'
@@ -866,14 +878,14 @@ def get_siginfo(args, quiet=False):
     for id in good_sigs.keys():
         # Most potential signers have public short keyid (32-bit) collisions in
         # the https://evil32.com/ set, which has been uploaded to the
-        # keyservers, so generate the long keyid.
+        # keyservers, so generate the long keyid (see use of LONG_KEY_ID below).
         #
-        # NOTE: The following code assumes that 'gpg' is a gpg1 binary.  gpg2
-        # produces different output.
+        # TODO: in the future it'd be nice to use the 'gnupg' module here.
         gpg_output = subprocess.check_output(
-            ['gpg', '--keyid-format', 'long', '--fingerprint', id],
+            ['gpg', '--fixed-list-mode', '--with-colons', '--fingerprint', id],
             stderr=subprocess.STDOUT,
         )
+        gpg_output = gpg_output.splitlines()
 
         # This code was added in r934990, but there was no comment (nor log
         # message text) explaining its purpose.  I've commented it out since
@@ -884,16 +896,46 @@ def get_siginfo(args, quiet=False):
         #gpg_output = "\n".join([ l for l in gpg_output.splitlines()
         #                                             if l[0:7] != 'Warning' ])
 
-        match = fp_pattern.match(gpg_output)
+        # Parse gpg's output.  This happens to work for both gpg1 and gpg2,
+        # even though their outputs are slightly different.
+        #
+        # See http://git.gnupg.org/cgi-bin/gitweb.cgi?p=gnupg.git;a=blob_plain;f=doc/DETAILS
+        for line in gpg_output:
+            parts = line.split(':')
+            if parts[0] == 'pub':
+                keylen = int(parts[2])
+                keytype = int(parts[3])
+                formatter = PUBLIC_KEY_ALGORITHMS[keytype]
+                long_key_id = parts[4]
+                length_and_type = formatter(keylen) + '/' + long_key_id
+                del keylen, keytype, formatter, long_key_id
+                break
+        else:
+            raise RuntimeError("Failed to determine LONG_KEY_ID")
+        for line in gpg_output:
+            parts = line.split(':')
+            if parts[0] == 'fpr':
+                fingerprint = parts[9]
+                break
+        else:
+            raise RuntimeError("Failed to determine FINGERPRINT")
+        for line in gpg_output:
+            parts = line.split(':')
+            if parts[0] == 'uid':
+                name = parts[9].split(' <')[0]
+                break
+        else:
+            raise RuntimeError("Failed to determine NAME")
+
         format_expandos = dict(
-            name=match.group('name_and_comment'),
-            length_and_type=match.group('length_and_type'),
-            fingerprint=match.group('fingerprint'),
+            name=name,
+            length_and_type=length_and_type,
+            fingerprint=_make_human_readable_fingerprint(fingerprint),
         )
-        # The {fingerprint} match group starts with a single whitespace.
+        del name, length_and_type, fingerprint
         line = "   {name} [{length_and_type}] with fingerprint:"
         output.append( line.format(**format_expandos) )
-        line = "   {fingerprint}"
+        line = "    {fingerprint}"
         output.append( line.format(**format_expandos) )
 
     return output
