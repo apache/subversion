@@ -871,7 +871,7 @@ def get_siginfo(args, quiet=False):
         # NOTE: The following code assumes that 'gpg' is a gpg1 binary.  gpg2
         # produces different output.
         gpg_output = subprocess.check_output(
-            ['gpg1', '--keyid-format', 'long', '--fingerprint', id],
+            ['gpg', '--keyid-format', 'long', '--fingerprint', id],
             stderr=subprocess.STDOUT,
         )
 
