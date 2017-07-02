@@ -824,7 +824,7 @@ def write_downloads(args):
 # Validate the signatures for a release
 
 key_start = '-----BEGIN PGP SIGNATURE-----'
-fp_pattern = re.compile(r'^pub\s+(\w+\/\w+)[^\n]*\n\s+Key\sfingerprint\s=((\s+[0-9A-F]{4}){10})\nuid\s+([^<\(]+)\s')
+fp_pattern = re.compile(r'^pub\s+(?P<length_and_type>\w+\/\w+)[^\n]*\n\s+Key\sfingerprint\s=(?P<fingerprint>(\s+[0-9A-F]{4}){10})\nuid\s+(?P<name_and_comment>[^<\(]+)\s')
 
 def get_siginfo(args, quiet=False):
     'Returns a list of signatures for the release.'
@@ -867,6 +867,9 @@ def get_siginfo(args, quiet=False):
         # Most potential signers have public short keyid (32-bit) collisions in
         # the https://evil32.com/ set, which has been uploaded to the
         # keyservers, so generate the long keyid.
+        #
+        # NOTE: The following code assumes that 'gpg' is a gpg1 binary.  gpg2
+        # produces different output.
         gpg = subprocess.Popen(['gpg', '--keyid-format', 'long', '--fingerprint', id],
                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         rc = gpg.wait()
@@ -879,13 +882,17 @@ def get_siginfo(args, quiet=False):
         gpg_output = "\n".join([ l for l in gpg_output.splitlines()
                                                      if l[0:7] != 'Warning' ])
 
-        fp = fp_pattern.match(gpg_output).groups()
-        fingerprints["%s [%s] %s" % (fp[3], fp[0], fp[1])] = fp
-
-    for entry in sorted(fingerprints.keys()):
-        fp = fingerprints[entry]
-        output.append("   %s [%s] with fingerprint:" % (fp[3], fp[0]))
-        output.append("   %s" % fp[1])
+        match = fp_pattern.match(gpg_output)
+        format_expandos = dict(
+            name=match.group('name_and_comment'),
+            length_and_type=match.group('length_and_type'),
+            fingerprint=match.group('fingerprint'),
+        )
+        # The {fingerprint} match group starts with a single whitespace.
+        line = "   {name} [{length_and_type}] with fingerprint:"
+        output.append( line.format(**format_expandos) )
+        line = "   {fingerprint}"
+        output.append( line.format(**format_expandos) )
 
     return output
 
