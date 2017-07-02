@@ -204,8 +204,8 @@ export TZ
 
 echo "Exporting $REPOS_PATH r$REVISION into sandbox..."
 (cd "$DIST_SANDBOX" && \
- ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
-     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH" \
+ ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS \
+     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH"@"$REVISION" \
      "$DISTNAME" --username none --password none)
 
 rm -f "$DISTPATH/STATUS"
