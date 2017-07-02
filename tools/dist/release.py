@@ -870,14 +870,10 @@ def get_siginfo(args, quiet=False):
         #
         # NOTE: The following code assumes that 'gpg' is a gpg1 binary.  gpg2
         # produces different output.
-        gpg = subprocess.Popen(['gpg', '--keyid-format', 'long', '--fingerprint', id],
-                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        rc = gpg.wait()
-        gpg_output = gpg.stdout.read()
-        if rc:
-            print(gpg_output)
-            sys.stderr.write("UNABLE TO GET FINGERPRINT FOR %s" % id)
-            sys.exit(1)
+        gpg_output = subprocess.check_output(
+            ['gpg1', '--keyid-format', 'long', '--fingerprint', id],
+            stderr=subprocess.STDOUT,
+        )
 
         gpg_output = "\n".join([ l for l in gpg_output.splitlines()
                                                      if l[0:7] != 'Warning' ])
