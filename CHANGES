@@ -1179,6 +1179,27 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: allow compiling with a C++11 compiler (r1684412)
 
 
+Version 1.8.18
+(10 Jul 2017, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.18
+
+ User-visible changes:
+  - Server-side bugfixes:
+    * fsfs: never attempt to share directory representations (r1785053)
+    * fsfs: make consistency independent of hash algorithms (r1785737 et al)
+	This change makes Subversion resilient to collision attacks, including
+	SHA-1 collision attacks such as <http://shattered.io/>.  See also our
+	documentation at <https://subversion.apache.org/faq#shattered-sha1> and
+	<https://subversion.apache.org/docs/release-notes/1.8#shattered-sha1>.
+
+  - Client-side and server-side bugfixes:
+    * work around an APR bug related to file truncation (r1759116)
+
+ Developer-visible changes:
+  - General:
+    * update serf download URI in build scripts (r1700130 et al)
+
+
 Version 1.8.17
 (29 Nov 2016, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.17
