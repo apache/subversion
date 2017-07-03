@@ -15,14 +15,23 @@ Known affected:
 Known fixed:
 ============
 
-  Servers running Apache Subversion 1.9.6.
+  Servers running Apache Subversion 1.9.6, with rep-sharing enabled.
+  Servers running Apache Subversion 1.8.18, with rep-sharing enabled.
 
-  Clients do not need a patch for this issue.
+  After upgrading the server to 1.9.6 or 1.8.18, rep-sharing should
+  be enabled in the file db/fsfs.conf for all FSFS repositories.
+  Because rep-sharing is enabled by default, there is no need to edit
+  db/fsfs.conf unless the enable-rep-sharing option in db/fsfs.conf
+  has been explicitly set to 'false'.
 
-  BDB repositories are not affected.
+  If rep-sharing is disabled in a repository then the server (in any
+  version) will store SHA1 collisions. However, standard SVN clients
+  will not be able to handle them, so the recommended setup runs with
+  rep-sharing enabled.
 
-  Repositories that have `enable-rep-sharing` set to `false` in fsfs.conf are
-  not affected.
+  Clients will not receive a patch for this issue.
+
+  BDB repositories are not affected (but the BDB format is deprecated).
 
 Details:
 ========
