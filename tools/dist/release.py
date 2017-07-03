@@ -516,7 +516,7 @@ def roll_tarballs(args):
         else:
             extra_args = '-%s %d' % (args.version.pre, args.version.pre_num)
     # Build Unix last to leave Unix-style svn_version.h for tagging
-    logging.info('Buildling Windows tarballs')
+    logging.info('Building Windows tarballs')
     run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d -zip %s'
                      % (sys.path[0], args.version.base, branch, args.revnum,
                         extra_args) )
