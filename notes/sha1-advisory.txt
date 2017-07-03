@@ -53,9 +53,9 @@ Details:
 Recommendations:
 ================
 
-  Subversion 1.9.6 which will reject any commit that would create a SHA1
-  collision.  We recommend all server installations to upgrade.
-
+  We recommend all server installations to upgrade and enable rep-sharing.
+  
+  Subversion 1.9.6 and 1.8.18 reject commits which create a SHA1 collision.
   Detecting collisions requires representation sharing to be enabled.  If you
   have disabled representation sharing (by setting 'enable-rep-sharing = false' 
   in the file db/fsfs.conf in the repository directory), we recommend that you
