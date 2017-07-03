@@ -1085,6 +1085,9 @@ def main():
                     help='''Output to stdout template text for the download
                             table for subversion.apache.org''')
     subparser.set_defaults(func=write_downloads)
+    subparser.add_argument('--target',
+                    help='''The full path to the directory containing
+                            release artifacts.''')
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
