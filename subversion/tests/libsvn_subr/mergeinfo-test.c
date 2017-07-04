@@ -1673,9 +1673,11 @@ test_remove_prefix_from_catalog(apr_pool_t *pool)
 static svn_error_t *
 test_rangelist_merge_overlap(apr_pool_t *pool)
 {
+  svn_rangelist_t * changes;
   /* 15014-19472,19473-19612*,19613-19614,19615-19630*,19631-19634,19635-20055* */
   svn_rangelist_t * rangelist = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
   svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
+
   mrange->start = 15013;
   mrange->end = 19472;
   mrange->inheritable = TRUE;
@@ -1712,7 +1714,7 @@ test_rangelist_merge_overlap(apr_pool_t *pool)
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
 
   // 15014-20515*
-  svn_rangelist_t * changes = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+  changes = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
   mrange = apr_pcalloc(pool, sizeof(*mrange));
   mrange->start = 15013;
   mrange->end = 20515;
@@ -1721,11 +1723,13 @@ test_rangelist_merge_overlap(apr_pool_t *pool)
 #if 0
   {
     svn_string_t * tmpString;
+
     svn_rangelist_to_string(&tmpString, rangelist, pool);
     printf("rangelist %s\n", tmpString->data);
   }
   {
     svn_string_t * tmpString;
+
     svn_rangelist_to_string(&tmpString, changes, pool);
     printf("changes %s\n", tmpString->data);
   }
@@ -1736,6 +1740,7 @@ test_rangelist_merge_overlap(apr_pool_t *pool)
 #if 0
   {
     svn_string_t * tmpString;
+
     svn_rangelist_to_string(&tmpString, rangelist, pool);
     printf("result %s\n", tmpString->data);
   }
