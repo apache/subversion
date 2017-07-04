@@ -89,7 +89,7 @@ struct fs_type_defn {
   const char *fs_type;
   const char *fsap_name;
   fs_init_func_t initfunc;
-  fs_library_vtable_t *vtable;
+  void * volatile vtable; /* fs_library_vtable_t */
   struct fs_type_defn *next;
 };
 
@@ -190,7 +190,7 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
   const svn_version_t *fs_version;
 
   /* most times, we get lucky */
-  *vtable = apr_atomic_casptr((volatile void **)&fst->vtable, NULL, NULL);
+  *vtable = svn_atomic_casptr(&fst->vtable, NULL, NULL);
   if (*vtable)
     return SVN_NO_ERROR;
 
@@ -233,7 +233,7 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
                              fs_version->patch, fs_version->tag);
 
   /* the vtable will not change.  Remember it */
-  apr_atomic_casptr((volatile void **)&fst->vtable, *vtable, NULL);
+  svn_atomic_casptr(&fst->vtable, *vtable, NULL);
 
   return SVN_NO_ERROR;
 }
