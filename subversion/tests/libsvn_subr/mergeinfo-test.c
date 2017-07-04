@@ -1713,7 +1713,7 @@ test_rangelist_merge_overlap(apr_pool_t *pool)
   mrange->inheritable = FALSE;
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
 
-  // 15014-20515*
+  /* 15014-20515* */
   changes = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
   mrange = apr_pcalloc(pool, sizeof(*mrange));
   mrange->start = 15013;
