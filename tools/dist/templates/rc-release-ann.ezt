@@ -11,6 +11,12 @@ The SHA1 checksums are:
 
 [for sha1info]    [sha1info.sha1] [sha1info.filename]
 [end]
+SHA-512 checksums are available at:
+
+    https://www.apache.org/dist/subversion/subversion-[version].tar.bz2.sha512
+    https://www.apache.org/dist/subversion/subversion-[version].tar.gz.sha512
+    https://www.apache.org/dist/subversion/subversion-[version].zip.sha512
+
 PGP Signatures are available at:
 
     http://www.apache.org/dist/subversion/subversion-[version].tar.bz2.asc
