@@ -42,7 +42,10 @@ RevisionRangeList::RevisionRangeList(jobject jrangelist, SVN::Pool &pool)
   m_rangelist = apr_array_make(pool.getPool(), 0, sizeof(svn_merge_range_t*));
   while (iter.hasNext())
     {
-      svn_merge_range_t* range = RevisionRange(iter.next()).toMergeRange(pool);
+      jobject next = iter.next();
+      if (JNIUtil::isExceptionThrown())
+        return;
+      svn_merge_range_t* range = RevisionRange(next).toMergeRange(pool);
       if (JNIUtil::isExceptionThrown())
         return;
       APR_ARRAY_PUSH(m_rangelist, svn_merge_range_t*) = range;

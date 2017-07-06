@@ -643,6 +643,8 @@ OperationContext::closeTunnel(void *tunnel_context, void *)
     return;
 
   JNIEnv *env = JNIUtil::getEnv();
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
 
   static jmethodID mid = 0;
   if (0 == mid)

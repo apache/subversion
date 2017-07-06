@@ -1420,6 +1420,8 @@ jobject CreateJ::Mergeinfo(svn_mergeinfo_t mergeinfo, apr_pool_t* scratch_pool)
         RevisionRangeList(static_cast<svn_rangelist_t*>(val)).toList();
 
       env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
 
       env->DeleteLocalRef(jranges);
       env->DeleteLocalRef(jpath);
