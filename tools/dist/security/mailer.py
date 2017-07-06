@@ -232,6 +232,9 @@ class Mailer(object):
             server.login(username, password)
 
         def send(message):
+            # XXX: The from,to arguments should be bare addresses with no "foo:"
+            #      prefix.  It works this way in practice, but that appears to
+            #      be an accident of implementation of smtplib.
             server.sendmail("From: " + message['From'],
                             "To: " + message['To'],
                             message.as_string())
