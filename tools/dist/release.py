@@ -707,7 +707,10 @@ def clean_dist(args):
             svnmucc_cmd += ['rm', dist_release_url + '/' + filename]
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
-    subprocess.check_call(svnmucc_cmd)
+    if 'rm' in svnmucc_cmd:
+        subprocess.check_call(svnmucc_cmd)
+    else:
+        logging.info("Nothing to remove")
 
 #----------------------------------------------------------------------
 # Move to dist
