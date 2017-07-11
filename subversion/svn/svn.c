@@ -143,7 +143,8 @@ typedef enum svn_cl__longopt_t {
   opt_show_passwords,
   opt_pin_externals,
   opt_show_item,
-  opt_adds_as_modification
+  opt_adds_as_modification,
+  opt_list
 } svn_cl__longopt_t;
 
 
@@ -458,6 +459,12 @@ const apr_getopt_option_t svn_cl__options[] =
                        "option is not recommended! Use 'svn resolve' to\n"
                        "                             "
                        "resolve tree conflicts instead.")},
+
+  {"list", opt_list, 0, N_("list shelved patches")},
+
+  /* ### should have new option codes, and not be aliases */
+  {"keep", opt_keep_local, 0, N_("do not delete the shelved patch")},
+  {"delete", opt_remove, 0, N_("just delete the shelved patch")},
 
   /* Long-opt Aliases
    *
@@ -1631,6 +1638,28 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  the output of 'svn help merge' for 'undo'.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
 
+  { "shelve", svn_cl__shelve, {0}, N_
+    ("Shelve changes.\n"
+     "usage: 1. shelve NAME PATH...\n"
+     "       2. shelve --delete NAME\n"
+     "       3. shelve --list\n"
+     "\n"
+     "  1. Shelve as NAME the local changes in the given PATHs.\n"
+     "  2. Delete the shelved patch NAME.\n"
+     "  3. List shelved patches.\n"),
+    {'q', opt_remove, opt_list, opt_dry_run,
+     'N', opt_depth, opt_targets, opt_changelist} },
+
+  { "unshelve", svn_cl__unshelve, {0}, N_
+    ("Unshelve changes.\n"
+     "usage: unshelve [--keep] NAME\n"),
+    {'q', opt_keep_local, opt_dry_run} },
+
+  { "shelves", svn_cl__shelves, {0}, N_
+    ("List shelved patches.\n"
+     "usage: shelves\n"),
+    {} },
+
   { "status", svn_cl__status, {"stat", "st"}, N_
     ("Print the status of working copy files and directories.\n"
      "usage: status [PATH...]\n"
@@ -2176,6 +2205,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_dry_run:
         opt_state.dry_run = TRUE;
+        break;
+      case opt_list:
+        opt_state.list = TRUE;
         break;
       case opt_revprop:
         opt_state.revprop = TRUE;

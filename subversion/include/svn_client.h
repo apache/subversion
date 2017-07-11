@@ -6716,6 +6716,61 @@ svn_client_cat(svn_stream_t *out,
 
 
 
+/** Shelving commands
+ *
+ * @defgroup svn_client_shelve_funcs Client Shelving Functions
+ * @{
+ */
+
+/**
+ *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_shelve(const char *shelf_name,
+                  const apr_array_header_t *paths,
+                  svn_depth_t depth,
+                  const apr_array_header_t *changelists,
+                  svn_boolean_t dry_run,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+/**
+ *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_unshelve(const char *shelf_name,
+                    const char *local_abspath,
+                    svn_boolean_t keep,
+                    svn_boolean_t dry_run,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+/**
+ *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_shelves_delete(const char *shelf_name,
+                          const char *local_abspath,
+                          svn_boolean_t dry_run,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *pool);
+
+/**
+ *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_shelves_list(apr_hash_t **dirents,
+                        const char *local_abspath,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/** @} */
+
 /** Changelist commands
  *
  * @defgroup svn_client_changelist_funcs Client Changelist Functions
