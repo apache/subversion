@@ -250,6 +250,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t pin_externals;     /* pin externals to last-changed revisions */
   const char *show_item;           /* print only the given item */
   svn_boolean_t adds_as_modification; /* update 'add vs add' no tree conflict */
+  svn_boolean_t list;
 } svn_cl__opt_state_t;
 
 /* Conflict stats for operations such as update and merge. */
@@ -297,6 +298,9 @@ svn_opt_subcommand_t
   svn_cl__revert,
   svn_cl__resolve,
   svn_cl__resolved,
+  svn_cl__shelve,
+  svn_cl__unshelve,
+  svn_cl__shelves,
   svn_cl__status,
   svn_cl__switch,
   svn_cl__unlock,

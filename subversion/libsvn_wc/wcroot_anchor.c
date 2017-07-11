@@ -183,6 +183,26 @@ svn_wc__get_wcroot(const char **wcroot_abspath,
 
 
 svn_error_t *
+svn_wc__get_shelves_dir(char **dir,
+                        svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
+{
+  const char *wc_adm_dir;
+
+  SVN_ERR(svn_wc__get_wcroot(&wc_adm_dir, wc_ctx, local_abspath,
+                             scratch_pool, scratch_pool));
+  *dir = svn_dirent_join(wc_adm_dir, ".svn/shelves", result_pool);
+  
+  /* Ensure the directory exists. (Other versions of svn don't create it.) */
+  SVN_ERR(svn_io_make_dir_recursively(*dir, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
 svn_wc_get_actual_target2(const char **anchor,
                           const char **target,
                           svn_wc_context_t *wc_ctx,

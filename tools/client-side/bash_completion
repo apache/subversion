@@ -248,6 +248,7 @@ _svn()
 	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
 	cmds="$cmds plist propset pset relocate resolve resolved revert status"
 	cmds="$cmds switch unlock update upgrade"
+	cmds="$cmds shelve shelves unshelve"
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'
@@ -264,6 +265,7 @@ _svn()
 	optsParam="$optsParam|--depth|--set-depth|--with-revprop"
 	optsParam="$optsParam|--cl|--changelist|--accept|--show-revs"
 	optsParam="$optsParam|--show-item"
+	optsParam="$optsParam|--name"
 
 	# svn:* and other (env SVN_BASH_*_PROPS) properties
 	local svnProps revProps allProps psCmds propCmds
@@ -1017,6 +1019,15 @@ _svn()
 		;;
 	upgrade)
 		cmdOpts="$qOpts $pOpts"
+		;;
+	shelve)
+		cmdOpts="$qOpts --delete --list --dry-run $nOpts --targets $cOpts"
+		;;
+	unshelve)
+		cmdOpts="$qOpts --keep --dry-run"
+		;;
+	shelves)
+		cmdOpts="$qOpts"
 		;;
 	*)
 		;;
