@@ -1678,6 +1678,7 @@ test_rangelist_merge_overlap(apr_pool_t *pool)
   svn_rangelist_t * rangelist = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
   svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
 
+  /* This range is optional for reproducing issue #4686 */
   mrange->start = 15013;
   mrange->end = 19472;
   mrange->inheritable = TRUE;
@@ -1689,6 +1690,7 @@ test_rangelist_merge_overlap(apr_pool_t *pool)
   mrange->inheritable = FALSE;
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
 
+  /* This range is optional for reproducing issue #4686 */
   mrange = apr_pcalloc(pool, sizeof(*mrange));
   mrange->start = 19612;
   mrange->end = 19614;
@@ -1707,6 +1709,7 @@ test_rangelist_merge_overlap(apr_pool_t *pool)
   mrange->inheritable = TRUE;
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
 
+  /* This range is optional for reproducing issue #4686 */
   mrange = apr_pcalloc(pool, sizeof(*mrange));
   mrange->start = 19634;
   mrange->end = 20055;
@@ -1751,14 +1754,12 @@ test_rangelist_merge_overlap(apr_pool_t *pool)
   */
 
   {
-     svn_stringbuf_t *info = svn_stringbuf_create("/A:", pool);
-     svn_mergeinfo_t mi;
-     svn_string_t * tmpString;
+     svn_string_t * tmp_string;
+     svn_rangelist_t *range_list;
 
-     svn_rangelist_to_string(&tmpString, rangelist, pool);
-     svn_stringbuf_appendbytes(info, tmpString->data, tmpString->len);
+     svn_rangelist_to_string(&tmp_string, rangelist, pool);
 
-     SVN_ERR(svn_mergeinfo_parse(&mi, info->data, pool));
+     SVN_ERR(svn_rangelist__parse(&range_list, tmp_string->data, pool));
   }
   
   return SVN_NO_ERROR;
