@@ -608,48 +608,47 @@ svn_rangelist__parse(svn_rangelist_t **rangelist,
   return SVN_NO_ERROR;
 }
 
-/* Return TRUE, if all ranges in RANGELIST are in ascending order and do
- * not overlap and are not adjacent.
- *
- * ### Can yield false negatives: ranges of differing inheritance are
- * allowed to be adjacent.
- *
- * If this returns FALSE, you probaly want to qsort() the
- * ranges and then call svn_rangelist__combine_adjacent_ranges().
- */
-static svn_boolean_t
-is_rangelist_normalized(svn_rangelist_t *rangelist)
+svn_boolean_t
+svn_rangelist__is_canonical(const svn_rangelist_t *rangelist)
 {
   int i;
   svn_merge_range_t **ranges = (svn_merge_range_t **)rangelist->elts;
 
-  for (i = 0; i < rangelist->nelts-1; ++i)
-    if (ranges[i]->end >= ranges[i+1]->start)
-      return FALSE;
+  /* Check for reversed and empty ranges */
+  for (i = 0; i < rangelist->nelts; ++i)
+    {
+      if (ranges[i]->start >= ranges[i]->end)
+        return FALSE;
+    }
+
+  /* Check for overlapping ranges */
+  for (i = 0; i < rangelist->nelts - 1; ++i)
+    {
+      if (ranges[i]->end > ranges[i + 1]->start)
+        return FALSE; /* Overlapping range */
+      else if (ranges[i]->end == ranges[i+1]->start
+               && ranges[i]->inheritable == ranges[i + 1]->inheritable)
+        {
+          return FALSE; /* Ranges should have been combined */
+        }
+    }
 
   return TRUE;
 }
 
+/* In-place combines adjacent ranges in a rangelist.
+   SCRATCH_POOL is just used for providing error messages. */
 svn_error_t *
 svn_rangelist__canonicalize(svn_rangelist_t *rangelist,
                             apr_pool_t *scratch_pool)
 {
-  if (! is_rangelist_normalized(rangelist))
-    {
-      svn_sort__array(rangelist, svn_sort_compare_ranges);
-
-      SVN_ERR(svn_rangelist__combine_adjacent_ranges(rangelist, scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_rangelist__combine_adjacent_ranges(svn_rangelist_t *rangelist,
-                                       apr_pool_t *scratch_pool)
-{
   int i;
   svn_merge_range_t *range, *lastrange;
+
+  if (svn_rangelist__is_canonical(rangelist))
+    return SVN_NO_ERROR; /* Nothing to do */
+
+  svn_sort__array(rangelist, svn_sort_compare_ranges);
 
   lastrange = APR_ARRAY_IDX(rangelist, 0, svn_merge_range_t *);
 
@@ -964,6 +963,12 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
   int i = 0;
   int j = 0;
 
+#ifdef SVN_DEBUG
+  svn_boolean_t was_normalized =
+                    (svn_rangelist__is_canonical(rangelist)
+                     && svn_rangelist__is_canonical(changes));
+#endif
+
   /* We may modify CHANGES, so make a copy in SCRATCH_POOL. */
   changes = svn_rangelist_dup(changes, scratch_pool);
 
@@ -1188,6 +1193,10 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
                                                            result_pool);
       svn_sort__array_insert(rangelist, &change_copy, rangelist->nelts);
     }
+
+#ifdef SVN_DEBUG
+  SVN_ERR_ASSERT(!was_normalized || svn_rangelist__is_canonical(rangelist));
+#endif
 
   return SVN_NO_ERROR;
 }
