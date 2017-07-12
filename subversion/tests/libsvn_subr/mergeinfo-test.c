@@ -1738,7 +1738,12 @@ test_rangelist_merge_overlap(apr_pool_t *pool)
   }
 #endif
 
-  svn_rangelist_merge2(rangelist, changes, pool, pool);
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(rangelist));
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(changes));
+
+  SVN_ERR(svn_rangelist_merge2(rangelist, changes, pool, pool));
+
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(rangelist));
 
 #if 0
   {
