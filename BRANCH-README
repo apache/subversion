@@ -1,0 +1,12 @@
+This branch is for development of Shelving and Checkpointing.
+
+Branch type: dev branch off trunk; updated by full merges from trunk.
+
+Initially this is prototyping, to explore the general shape of the design and
+user interface. As such, it does not take care over details of APIs and error
+handling and so on.
+
+References:
+   [0] dev@ thread "[RFC] Shelving and Checkpointing", J Foad, 2017-07-10.
+   [1] Shelving-Checkpointing Dev doc. (J Foad)
+https://docs.google.com/document/d/1PVgw0BdPF7v67oxIK7B_Yjmr3p28ojabP5N1PfZTsHk/
