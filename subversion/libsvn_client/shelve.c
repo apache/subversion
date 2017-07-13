@@ -82,6 +82,7 @@ write_patch(const char *patch_abspath,
             svn_client_ctx_t *ctx,
             apr_pool_t *scratch_pool)
 {
+  apr_file_t *outfile;
   svn_stream_t *outstream;
   svn_stream_t *errstream;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -91,8 +92,13 @@ write_patch(const char *patch_abspath,
   svn_opt_revision_t end_revision = {svn_opt_revision_working, {0}};
 
   /* Get streams for the output and any error output of the diff. */
-  SVN_ERR(svn_stream_open_writable(&outstream, patch_abspath,
-                                   scratch_pool, scratch_pool));
+  /* ### svn_stream_open_writable() doesn't work here: the buffering
+         goes wrong so that diff headers appear after their hunks.
+         For now, fix by opening the file without APR_BUFFERED. */
+  SVN_ERR(svn_io_file_open(&outfile, patch_abspath,
+                           APR_WRITE | APR_CREATE | APR_EXCL,
+                           APR_OS_DEFAULT, scratch_pool));
+  outstream = svn_stream_from_aprfile2(outfile, FALSE /*disown*/, scratch_pool);
   SVN_ERR(svn_stream_for_stderr(&errstream, scratch_pool));
 
   for (i = 0; i < paths->nelts; i++)
