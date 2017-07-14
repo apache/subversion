@@ -1467,6 +1467,16 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 44,
              "SQLite transaction rollback failed")
 
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_LZ4_COMPRESSION_FAILED,
+             SVN_ERR_MISC_CATEGORY_START + 45,
+             "LZ4 compression failed")
+
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_LZ4_DECOMPRESSION_FAILED,
+             SVN_ERR_MISC_CATEGORY_START + 46,
+             "LZ4 decompression failed")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,

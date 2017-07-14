@@ -2159,6 +2159,38 @@ rep_write_cleanup(void *data)
   return APR_SUCCESS;
 }
 
+static void
+txdelta_to_svndiff(svn_txdelta_window_handler_t *handler,
+                   void **handler_baton,
+                   svn_stream_t *output,
+                   svn_fs_t *fs,
+                   apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  int svndiff_version;
+  int svndiff_compression_level;
+
+  if (ffd->delta_compression_level == 1 &&
+      ffd->format >= SVN_FS_FS__MIN_SVNDIFF2_FORMAT)
+    {
+      svndiff_version = 2;
+      svndiff_compression_level = 0;
+    }
+  else if (ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT)
+    {
+      svndiff_version = 1;
+      svndiff_compression_level = ffd->delta_compression_level;
+    }
+  else
+    {
+      svndiff_version = 0;
+      svndiff_compression_level = 0;
+    }
+
+  svn_txdelta_to_svndiff3(handler, handler_baton, output, svndiff_version,
+                          svndiff_compression_level, pool);
+}
+
 /* Get a rep_write_baton and store it in *WB_P for the representation
    indicated by NODEREV in filesystem FS.  Perform allocations in
    POOL.  Only appropriate for file contents, not for props or
@@ -2175,8 +2207,6 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   svn_stream_t *source;
   svn_txdelta_window_handler_t wh;
   void *whb;
-  fs_fs_data_t *ffd = fs->fsap_data;
-  int diff_version = ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT ? 1 : 0;
   svn_fs_fs__rep_header_t header = { 0 };
 
   b = apr_pcalloc(pool, sizeof(*b));
@@ -2232,12 +2262,7 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
                             apr_pool_cleanup_null);
 
   /* Prepare to write the svndiff data. */
-  svn_txdelta_to_svndiff3(&wh,
-                          &whb,
-                          b->rep_stream,
-                          diff_version,
-                          ffd->delta_compression_level,
-                          pool);
+  txdelta_to_svndiff(&wh, &whb, b->rep_stream, fs, pool);
 
   b->delta_stream = svn_txdelta_target_push(wh, whb, source,
                                             b->scratch_pool);
@@ -2891,8 +2916,6 @@ write_container_delta_rep(representation_t *rep,
   apr_off_t offset = 0;
 
   struct write_container_baton *whb;
-  fs_fs_data_t *ffd = fs->fsap_data;
-  int diff_version = ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT ? 1 : 0;
   svn_boolean_t is_props = (item_type == SVN_FS_FS__ITEM_TYPE_FILE_PROPS)
                         || (item_type == SVN_FS_FS__ITEM_TYPE_DIR_PROPS);
 
@@ -2925,12 +2948,7 @@ write_container_delta_rep(representation_t *rep,
   SVN_ERR(svn_io_file_get_offset(&delta_start, file, scratch_pool));
 
   /* Prepare to write the svndiff data. */
-  svn_txdelta_to_svndiff3(&diff_wh,
-                          &diff_whb,
-                          file_stream,
-                          diff_version,
-                          ffd->delta_compression_level,
-                          scratch_pool);
+  txdelta_to_svndiff(&diff_wh, &diff_whb, file_stream, fs, scratch_pool);
 
   whb = apr_pcalloc(scratch_pool, sizeof(*whb));
   whb->stream = svn_txdelta_target_push(diff_wh, diff_whb, source,
