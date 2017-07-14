@@ -611,6 +611,31 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  reporting the action taken.\n"),
     {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals} },
 
+  { "checkpoint", svn_cl__checkpoint, {0}, N_
+    ("Checkpoint the local changes.\n"
+     "usage: 1. checkpoint save\n"
+     "       2. checkpoint revert\n"
+     "       3. checkpoint rollback NUMBER\n"
+     "       4. checkpoint list|--list\n"
+     "\n"
+     "  1. Save the working state as a new checkpoint.\n"
+     "  2. Revert the working state to the current checkpoint.\n"
+     "  3. Roll back the working state to checkpoint NUMBER.\n"
+     "  4. List all checkpoints. A synonym for 'svn checkpoints'.\n"),
+    {'q',
+     /*'-N', opt_depth, opt_targets, opt_changelist,*/
+     /*SVN_CL__LOG_MSG_OPTIONS,*/
+     opt_list},
+    { {opt_list, N_("list all checkpoints")} }
+    },
+
+  { "checkpoints", svn_cl__checkpoints, {0}, N_
+    ("List all checkpoints.\n"
+     "usage: checkpoints\n"
+     "\n"
+     "  A synonym for 'svn checkpoint list'.\n"),
+    {} },
+
   { "cleanup", svn_cl__cleanup, {0}, N_
     ("Recursively clean up the working copy, removing write locks, resuming\n"
      "unfinished operations, etc.\n"

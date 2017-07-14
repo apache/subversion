@@ -248,6 +248,7 @@ _svn()
 	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
 	cmds="$cmds plist propset pset relocate resolve resolved revert status"
 	cmds="$cmds switch unlock update upgrade"
+	cmds="$cmds checkpoint checkpoints"
 	cmds="$cmds shelve shelves unshelve"
 
 	# help options have a strange command status...
@@ -1019,6 +1020,12 @@ _svn()
 		;;
 	upgrade)
 		cmdOpts="$qOpts $pOpts"
+		;;
+	checkpoint)
+		cmdOpts="$qOpts save revert rollback list --list"
+		;;
+	checkpoints)
+		cmdOpts="$qOpts"
 		;;
 	shelve)
 		cmdOpts="$qOpts --delete --list --dry-run $nOpts --targets $cOpts"
