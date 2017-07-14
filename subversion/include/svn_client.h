@@ -6769,6 +6769,46 @@ svn_client_shelves_list(apr_hash_t **dirents,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+/** Write local changes to a patch file at @a shelf_name.
+ *
+ * @a wc_root_abspath: The WC root dir.
+ * @a overwrite_existing: If a file at @a patch_abspath exists, overwrite it.
+ * @a paths, @a depth, @a changelists: The selection of local paths to diff.
+ */
+svn_error_t *
+svn_client_shelf_write_patch(const char *shelf_name,
+                             const char *wc_root_abspath,
+                             svn_boolean_t overwrite_existing,
+                             const apr_array_header_t *paths,
+                             svn_depth_t depth,
+                             const apr_array_header_t *changelists,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool);
+
+/** Apply the patch file at @a shelf_name to the WC.
+ *
+ * @a wc_root_abspath: The WC root dir.
+ * @a reverse: Apply the patch in reverse.
+ * @a dry_run: Don't really apply the changes, just notify what would be done.
+ */
+svn_error_t *
+svn_client_shelf_apply_patch(const char *shelf_name,
+                             const char *wc_root_abspath,
+                             svn_boolean_t reverse,
+                             svn_boolean_t dry_run,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool);
+
+/** Delete the patch file at @a shelf_name.
+ *
+ * @a wc_root_abspath: The WC root dir.
+ */
+svn_error_t *
+svn_client_shelf_delete_patch(const char *shelf_name,
+                              const char *wc_root_abspath,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *scratch_pool);
+
 /** @} */
 
 /** Changelist commands
