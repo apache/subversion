@@ -36,6 +36,7 @@
 /*  */
 static svn_error_t *
 checkpoint_list(const char *local_abspath,
+                svn_boolean_t diffstat,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *scratch_pool)
 {
@@ -57,9 +58,22 @@ checkpoint_list(const char *local_abspath,
     {
       svn_sort__item_t *item = &APR_ARRAY_IDX(checkpoints, i, svn_sort__item_t);
       const char *name = item->key;
+      svn_io_dirent2_t *dirent = item->value;
       char marker = ((strcmp(name, current_checkpoint_name) == 0) ? '*' : ' ');
+      int age = (apr_time_now() - dirent->mtime) / 1000000 / 60;
 
-      printf("%c %s\n", marker, name);
+      printf("%c %s %6d mins old %10ld bytes\n",
+             marker, name, age, (long)dirent->filesize);
+
+      if (diffstat)
+        {
+          char *path = svn_path_join_many(scratch_pool,
+                                          local_abspath, ".svn/shelves", name,
+                                          SVN_VA_NULL);
+
+          system(apr_psprintf(scratch_pool, "diffstat %s 2> /dev/null", path));
+          printf("\n");
+        }
     }
 
   return SVN_NO_ERROR;
@@ -179,7 +193,9 @@ svn_cl__checkpoint(apr_getopt_t *os,
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Too many arguments"));
 
-      SVN_ERR(checkpoint_list(local_abspath, ctx, pool));
+      SVN_ERR(checkpoint_list(local_abspath,
+                              ! opt_state->quiet /*diffstat*/,
+                              ctx, pool));
     }
   else if (strcmp(subsubcommand, "save") == 0)
     {
@@ -258,6 +274,6 @@ svn_cl__checkpoints(apr_getopt_t *os,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
 
-  SVN_ERR(checkpoint_list(local_abspath, ctx, pool));
+  SVN_ERR(checkpoint_list(local_abspath, TRUE/*diffstat*/, ctx, pool));
   return SVN_NO_ERROR;
 }

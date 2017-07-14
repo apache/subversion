@@ -258,7 +258,7 @@ svn_client_checkpoint_list(apr_array_header_t **checkpoints,
   SVN_ERR(svn_wc__get_shelves_dir(&checkpoints_dir, ctx->wc_ctx, local_abspath,
                                   scratch_pool, scratch_pool));
   SVN_ERR(svn_io_get_dirents3(&dirents, checkpoints_dir,
-                              TRUE /*only_check_type*/,
+                              FALSE /*only_check_type*/,
                               scratch_pool, scratch_pool));
 
   /* Remove non-checkpoint entries */
