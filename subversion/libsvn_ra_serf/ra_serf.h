@@ -261,6 +261,9 @@ struct svn_ra_serf__session_t {
 
   /* Indicates whether the server can understand svndiff version 1. */
   svn_boolean_t supports_svndiff1;
+
+  /* Indicates whether the server can understand svndiff version 2. */
+  svn_boolean_t supports_svndiff2;
 };
 
 #define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)

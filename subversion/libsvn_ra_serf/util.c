@@ -2030,8 +2030,11 @@ svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
 {
   if (using_compression)
     {
-      serf_bucket_headers_setn(headers, "Accept-Encoding",
-                               "gzip,svndiff1;q=0.9,svndiff;q=0.8");
+      /* We are equally interested in svndiff2 and svndiff1, let the
+         server choose the wire format. */
+      serf_bucket_headers_setn(
+        headers, "Accept-Encoding",
+        "gzip,svndiff2;q=0.9,svndiff1;q=0.9,svndiff;q=0.8");
     }
   else
     {
