@@ -1010,10 +1010,11 @@ def file_substitute(path, contents, new_contents):
   fcontent = open(path, 'r').read().replace(contents, new_contents)
   open(path, 'w').write(fcontent)
 
-# For setting up authz and hooks in existing repos
+# For setting up authz, hooks and making other tweaks to created repos
 def _post_create_repos(path, minor_version = None):
-  """Set default access right configurations for svnserve and mod_dav
-  as well as hooks etc. in the SVN repository at PATH."""
+  """Set default access right configurations for svnserve and mod_dav,
+  install hooks and perform other various tweaks according to the test
+  options in the SVN repository at PATH."""
 
   # Require authentication to write to the repos, for ra_svn testing.
   file_write(get_svnserve_conf_file_path(path),
@@ -1036,16 +1037,26 @@ def _post_create_repos(path, minor_version = None):
 
   if options.fs_type is None or options.fs_type == 'fsfs':
     # fsfs.conf file
-    if options.config_file is not None and \
-       (not minor_version or minor_version >= 6):
-      config_file = open(options.config_file, 'r')
-      fsfsconf = open(get_fsfs_conf_file_path(path), 'w')
-      for line in config_file.readlines():
-        fsfsconf.write(line)
-        if options.memcached_server and line == '[memcached-servers]\n':
-            fsfsconf.write('key = %s\n' % options.memcached_server)
-      config_file.close()
-      fsfsconf.close()
+    if (minor_version is None or minor_version >= 6):
+      confpath = get_fsfs_conf_file_path(path)
+      if options.config_file is not None:
+        shutil.copy(options.config_file, confpath)
+
+      if options.memcached_server is not None or \
+         options.fsfs_compression_level is not None and \
+         os.path.exists(confpath):
+        with open(confpath, 'r') as conffile:
+          newlines = []
+          for line in conffile.readlines():
+            if line.startswith('# compression-level ') and \
+               options.fsfs_compression_level is not None:
+              line = 'compression-level = %d\n' % options.fsfs_compression_level
+            newlines += line
+            if options.memcached_server is not None and \
+               line == '[memcached-servers]\n':
+              newlines += ('key = %s\n' % options.memcached_server)
+        with open(confpath, 'w') as conffile:
+          conffile.writelines(newlines)
 
     # format file
     if options.fsfs_sharding is not None:
@@ -1726,6 +1737,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--fsfs-version=' + str(options.fsfs_version))
     if options.dump_load_cross_check:
       args.append('--dump-load-cross-check')
+    if options.fsfs_compression_level:
+      args.append('--fsfs-compression=' + str(options.fsfs_compression_level))
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -2138,6 +2151,9 @@ def _create_parser(usage=None):
                     help='Use sqlite exclusive locking for working copies')
   parser.add_option('--memcached-server', action='store',
                     help='Use memcached server at specified URL (FSFS only)')
+  parser.add_option('--fsfs-compression', action='store', type='int',
+                    dest="fsfs_compression_level",
+                    help='Set compression level (for fsfs)')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -2186,6 +2202,10 @@ def parse_options(arglist=sys.argv[1:], usage=None):
   # Some sanity checking
   if options.fsfs_packing and not options.fsfs_sharding:
     parser.error("--fsfs-packing requires --fsfs-sharding")
+
+  if options.fsfs_compression_level is not None and\
+     options.fsfs_compression_level not in range(0, 10):
+    parser.error("--fsfs-compression must be between 0 and 9")
 
   if options.server_minor_version not in range(3, SVN_VER_MINOR+1):
     parser.error("test harness only supports server minor versions 3-%d"
