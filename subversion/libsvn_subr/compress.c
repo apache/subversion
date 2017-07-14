@@ -307,7 +307,7 @@ svn__compress_lz4(const void *data, apr_size_t len,
   if (!compressed_data_len)
     return svn_error_create(SVN_ERR_LZ4_COMPRESSION_FAILED, NULL, NULL);
 
-  if (compressed_data_len >= len)
+  if (compressed_data_len >= (int)len)
     {
       /* Compression didn't help :(, just append the original text */
       svn_stringbuf_appendbytes(out, data, len);
