@@ -58,6 +58,14 @@ Candidate changes:
    Votes:
      +1: danielsh, rhuijben
 
+ * r1802032
+   Install 'fsfs-stats' as a wrapper to 'svnfsfs', to which it was renamed in
+   r1618848.
+   Justification:
+     Backwards compatibility with 1.8.x tools/.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
