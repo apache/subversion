@@ -999,4 +999,11 @@ INSTALL_EXTRA_TOOLS=\
   if test "$(DESTDIR)$(bindir)" != "$(DESTDIR)$(toolsdir)"; then \
     ln -sf $(bindir)/svnmucc$(EXEEXT) $(DESTDIR)$(toolsdir)/svnmucc$(EXEEXT); \
     ln -sf $(bindir)/svnbench$(EXEEXT) $(DESTDIR)$(toolsdir)/svn-bench$(EXEEXT); \
-  fi
+  fi; \
+  printf '\043\041/bin/sh\n%s\n' \
+    'exec $(bindir)/svnfsfs stats $${2:+"-M"} $$2 $$1' \
+    > $(DESTDIR)$(toolsdir)/fsfs-stats$(EXEEXT) && \
+  chmod +x $(DESTDIR)$(toolsdir)/fsfs-stats$(EXEEXT)
+# \043\041 is a "#!".  It's written this way because gmake and bmake disagree on
+# how to include a literal '#' in a command, and because '!' is special to some
+# shells.
