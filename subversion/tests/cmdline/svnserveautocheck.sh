@@ -67,12 +67,19 @@ fail() {
 }
 
 if [ -x subversion/svn/svn ]; then
+  # cwd is build tree root
   ABS_BUILDDIR=$(pwd)
 elif [ -x $SCRIPTDIR/../../svn/svn ]; then
+  # cwd is subversion/tests/cmdline/ in the build tree
   cd $SCRIPTDIR/../../../
   ABS_BUILDDIR=$(pwd)
   cd - >/dev/null
 else
+  fail "Run this script from the root of Subversion's build tree!"
+fi
+# Cater for out-of-tree builds
+ABS_SRCDIR=`<$ABS_BUILDDIR/Makefile sed -ne 's/^srcdir = //p'`
+if [ ! -e $ABS_SRCDIR/subversion/include/svn_version.h ]; then
   fail "Run this script from the root of Subversion's build tree!"
 fi
 
@@ -130,7 +137,7 @@ else
   cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
   TEST="$1"
   shift
-  TIME_CMD "./${TEST}_tests.py" "--url=$BASE_URL" $*
+  TIME_CMD "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" $*
   r=$?
   cd - > /dev/null
 fi
