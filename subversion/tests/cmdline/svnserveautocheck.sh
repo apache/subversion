@@ -66,6 +66,7 @@ fail() {
   exit 1
 }
 
+# Compute ABS_BUILDDIR and ABS_SRCDIR.
 if [ -x subversion/svn/svn ]; then
   # cwd is build tree root
   ABS_BUILDDIR=$(pwd)
