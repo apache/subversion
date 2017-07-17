@@ -923,11 +923,12 @@ _svn()
 		;;
 	list|ls)
 		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
-                         --incremental --xml --depth --include-externals"
+		         --incremental --search --xml --depth \
+		         --include-externals"
 		;;
 	lock)
 		cmdOpts="-m --message -F --file --encoding --force-log \
-                         --targets --force $pOpts"
+                         $qOpts --targets --force $pOpts"
 		;;
 	log)
 		cmdOpts="$rOpts -v --verbose --targets $pOpts --stop-on-copy \
@@ -1008,12 +1009,13 @@ _svn()
 		         --ignore-ancestry"
 		;;
 	unlock)
-		cmdOpts="--targets --force $pOpts"
+		cmdOpts="$qOpts --targets --force $pOpts"
 		;;
 	update|up)
 		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd \
                          --ignore-externals --force --accept $cOpts \
-                         --parents --editor-cmd --set-depth"
+                         --parents --editor-cmd --set-depth \
+		         --adds-as-modification"
 		;;
 	upgrade)
 		cmdOpts="$qOpts $pOpts"
