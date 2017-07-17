@@ -1235,7 +1235,7 @@ typedef struct interesting_merge_baton_t
  */
 static svn_error_t *
 interesting_merge(void *baton,
-                  svn_fs_path_change3_t *change,
+                  svn_repos_path_change_t *change,
                   apr_pool_t *scratch_pool)
 {
   interesting_merge_baton_t *b = baton;
