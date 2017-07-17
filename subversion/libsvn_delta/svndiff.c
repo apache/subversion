@@ -38,13 +38,16 @@
 
 static const char SVNDIFF_V0[] = { 'S', 'V', 'N', 0 };
 static const char SVNDIFF_V1[] = { 'S', 'V', 'N', 1 };
+static const char SVNDIFF_V2[] = { 'S', 'V', 'N', 2 };
 
 #define SVNDIFF_HEADER_SIZE (sizeof(SVNDIFF_V0))
 
 static const char *
 get_svndiff_header(int version)
 {
-  if (version == 1)
+  if (version == 2)
+    return SVNDIFF_V2;
+  else if (version == 1)
     return SVNDIFF_V1;
   else
     return SVNDIFF_V0;
@@ -148,7 +151,7 @@ send_simple_insertion_window(svn_txdelta_window_t *window,
 }
 
 /* Encodes delta window WINDOW to svndiff-format.
-   The svndiff version is VERSION. COMPRESSION_LEVEL is the zlib
+   The svndiff version is VERSION. COMPRESSION_LEVEL is the
    compression level to use.
    Returned values will be allocated in POOL or refer to *WINDOW
    fields. */
@@ -195,21 +198,39 @@ encode_window(svn_stringbuf_t **instructions_p,
   append_encoded_int(header, window->sview_offset);
   append_encoded_int(header, window->sview_len);
   append_encoded_int(header, window->tview_len);
-  if (version == 1)
+  if (version == 2)
     {
       svn_stringbuf_t *compressed_instructions;
       compressed_instructions = svn_stringbuf_create_empty(pool);
-      SVN_ERR(svn__compress(instructions->data, instructions->len,
-                            compressed_instructions, compression_level));
+      SVN_ERR(svn__compress_lz4(instructions->data, instructions->len,
+                                compressed_instructions));
+      instructions = compressed_instructions;
+    }
+  else if (version == 1)
+    {
+      svn_stringbuf_t *compressed_instructions;
+      compressed_instructions = svn_stringbuf_create_empty(pool);
+      SVN_ERR(svn__compress_zlib(instructions->data, instructions->len,
+                                 compressed_instructions, compression_level));
       instructions = compressed_instructions;
     }
   append_encoded_int(header, instructions->len);
-  if (version == 1)
+
+  /* Encode the data. */
+  if (version == 2)
     {
       svn_stringbuf_t *compressed = svn_stringbuf_create_empty(pool);
 
-      SVN_ERR(svn__compress(window->new_data->data, window->new_data->len,
-                            compressed, compression_level));
+      SVN_ERR(svn__compress_lz4(window->new_data->data, window->new_data->len,
+                                compressed));
+      newdata = svn_stringbuf__morph_into_string(compressed);
+    }
+  else if (version == 1)
+    {
+      svn_stringbuf_t *compressed = svn_stringbuf_create_empty(pool);
+
+      SVN_ERR(svn__compress_zlib(window->new_data->data, window->new_data->len,
+                                 compressed, compression_level));
       newdata = svn_stringbuf__morph_into_string(compressed);
     }
   else
@@ -542,15 +563,31 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
 
   insend = data + inslen;
 
-  if (version == 1)
+  if (version == 2)
     {
       svn_stringbuf_t *instout = svn_stringbuf_create_empty(pool);
       svn_stringbuf_t *ndout = svn_stringbuf_create_empty(pool);
 
-      SVN_ERR(svn__decompress(insend, newlen, ndout,
-                              SVN_DELTA_WINDOW_SIZE));
-      SVN_ERR(svn__decompress(data, insend - data, instout,
-                              MAX_INSTRUCTION_SECTION_LEN));
+      SVN_ERR(svn__decompress_lz4(insend, newlen, ndout,
+                                  SVN_DELTA_WINDOW_SIZE));
+      SVN_ERR(svn__decompress_lz4(data, insend - data, instout,
+                                  MAX_INSTRUCTION_SECTION_LEN));
+
+      newlen = ndout->len;
+      data = (unsigned char *)instout->data;
+      insend = (unsigned char *)instout->data + instout->len;
+
+      new_data = svn_stringbuf__morph_into_string(ndout);
+    }
+  else if (version == 1)
+    {
+      svn_stringbuf_t *instout = svn_stringbuf_create_empty(pool);
+      svn_stringbuf_t *ndout = svn_stringbuf_create_empty(pool);
+
+      SVN_ERR(svn__decompress_zlib(insend, newlen, ndout,
+                                   SVN_DELTA_WINDOW_SIZE));
+      SVN_ERR(svn__decompress_zlib(data, insend - data, instout,
+                                   MAX_INSTRUCTION_SECTION_LEN));
 
       newlen = ndout->len;
       data = (unsigned char *)instout->data;
@@ -612,6 +649,8 @@ write_handler(void *baton,
         db->version = 0;
       else if (memcmp(buffer, SVNDIFF_V1 + db->header_bytes, nheader) == 0)
         db->version = 1;
+      else if (memcmp(buffer, SVNDIFF_V2 + db->header_bytes, nheader) == 0)
+        db->version = 2;
       else
         return svn_error_create(SVN_ERR_SVNDIFF_INVALID_HEADER, NULL,
                                 _("Svndiff has invalid header"));

@@ -150,12 +150,14 @@ The formats are:
   Format 5, understood by Subversion 1.7-dev, never released
   Format 6, understood by Subversion 1.8
   Format 7, understood by Subversion 1.9
+  Format 8, understood by Subversion 1.10
 
 The differences between the formats are:
 
 Delta representation in revision files
-  Format 1: svndiff0 only
-  Formats 2+: svndiff0 or svndiff1
+  Format 1:    svndiff0 only
+  Formats 2-7: svndiff0 or svndiff1
+  Formats 8:   svndiff0, svndiff1 or svndiff2
 
 Format options
   Formats 1-2: none permitted
