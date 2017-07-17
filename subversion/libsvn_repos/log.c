@@ -58,6 +58,57 @@ typedef struct log_callbacks_t
   void *authz_read_baton;
 } log_callbacks_t;
 
+
+svn_repos_path_change_t *
+svn_repos_path_change_create(apr_pool_t *result_pool)
+{
+  svn_repos_path_change_t *change = apr_pcalloc(result_pool, sizeof(*change));
+
+  change->path.data = "";
+  change->change_kind = svn_fs_path_change_reset;
+  change->mergeinfo_mod = svn_tristate_unknown;
+  change->copyfrom_rev = SVN_INVALID_REVNUM;
+
+  return change;
+}
+
+svn_repos_path_change_t *
+svn_repos_path_change_dup(svn_repos_path_change_t *change,
+                          apr_pool_t *result_pool)
+{
+  svn_repos_path_change_t *new_change = apr_pmemdup(result_pool, change,
+                                                    sizeof(*new_change));
+
+  new_change->path.data = apr_pstrmemdup(result_pool, change->path.data,
+                                         change->path.len);
+  if (change->copyfrom_path)
+    new_change->copyfrom_path = apr_pstrdup(result_pool,
+                                            change->copyfrom_path);
+
+  return new_change;
+}
+
+svn_repos_log_entry_t *
+svn_repos_log_entry_create(apr_pool_t *result_pool)
+{
+  svn_repos_log_entry_t *log_entry = apr_pcalloc(result_pool,
+                                                 sizeof(*log_entry));
+
+  return log_entry;
+}
+
+svn_repos_log_entry_t *
+svn_repos_log_entry_dup(const svn_repos_log_entry_t *log_entry,
+                        apr_pool_t *result_pool)
+{
+  svn_repos_log_entry_t *new_entry = apr_pmemdup(result_pool, log_entry,
+                                                sizeof(*new_entry));
+
+  if (log_entry->revprops)
+    new_entry->revprops = svn_prop_hash_dup(log_entry->revprops, result_pool);
+
+  return new_entry;
+}
 
 svn_error_t *
 svn_repos_check_revision_access(svn_repos_revision_access_level_t *access_level,
