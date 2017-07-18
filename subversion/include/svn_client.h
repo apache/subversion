@@ -6251,8 +6251,7 @@ svn_client_revprop_list(apr_hash_t **props,
  * #svn_opt_revision_unspecified, then it defaults to #svn_opt_revision_head
  * for URLs or #svn_opt_revision_working for WC targets.
  *
- * @a revision is the revision that should be exported, which is only used
- * when exporting from a repository.
+ * @a revision is the revision that should be exported.
  *
  * @a peg_revision and @a revision must not be @c NULL.
  *
