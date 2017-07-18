@@ -1070,6 +1070,38 @@ def export_file_externals2(sbox):
                                         expected_output,
                                         expected_disk)
 
+@XFail()
+def export_revision_with_root_relative_external(sbox):
+  "export a revision with root-relative external"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Set 'svn:externals' property in 'A/C' to 'A/B/E/alpha'(file external),
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  externals_prop = "^/A/B/E/alpha exfile_alpha"
+
+  tmp_f = sbox.get_tempname('prop')
+  svntest.main.file_append(tmp_f, externals_prop)
+  svntest.main.run_svn(None, 'ps', '-F', tmp_f, 'svn:externals', C_path)
+  svntest.main.run_svn(None,'ci', '-m', 'log msg', '--quiet', C_path)
+
+  # Update the working copy to receive file external
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # Export revision 2 from URL
+  export_target = sbox.add_wc_path('export_url')
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'export', sbox.repo_url, export_target,
+                                     '-r', 2)
+
+  # Export revision 2 from WC
+  # Fails (canonicalize: Assertion `*src != '/'' failed)
+  export_target = sbox.add_wc_path('export_wc')
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'export', sbox.wc_dir, export_target,
+                                     '-r', 2)
+
 
 ########################################################################
 # Run the tests
@@ -1107,6 +1139,7 @@ test_list = [ None,
               export_custom_keywords,
               export_file_external,
               export_file_externals2,
+              export_revision_with_root_relative_external,
              ]
 
 if __name__ == '__main__':

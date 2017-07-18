@@ -1,4 +1,4 @@
-This file describes the svndiff version 0 and 1 format used by the
+This file describes the svndiff version 0, 1 and 2 formats used by the
 Subversion code.  Its design borrows many ideas from the vdelta and
 vcdiff encoding formats from AT&T Research Labs, but it is much
 simpler and thus a little less compact.
@@ -33,13 +33,14 @@ A window is the concatenation of the following:
 	[original length of the new data section in bytes (version 1)]
 	The window's new data section
 
-In svndiff version 1, the instructions and new data
-sections may be compressed by zlib.  In svndiff1, in order to determine the
-original size, an integer is appended to the beginning of each of the
-sections.  If the original size matches the encoded size (minus the
+In svndiff version 1 and 2, the instructions and new data sections may
+be compressed.  Version 1 uses zlib for compression.  Version 2 uses LZ4
+for compression.  In order to determine the original size in these
+compressed formats, an integer is appended to the beginning of each of
+the sections.  If the original size matches the encoded size (minus the
 length of the original size integer) from the header, the data is not
 compressed.  If the original size is different than the encoded size
-from the header, the remaining data in the section is compressed with zlib.
+from the header, the remaining data in the section is compressed.
 
 Integers (including the offset and all of the lengths) are encoded using a
 variable-length format.  The high bit of each byte is used as a

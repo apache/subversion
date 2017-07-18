@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-#
+# python: coding=utf-8
 #
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -71,16 +71,16 @@ tool_versions = {
             '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
             'libtool'  : ['2.4.6',
             'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
-            'swig'     : ['2.0.12',
-            '65e13f22a60cecd7279c59882ff8ebe1ffe34078e85c602821a541817a4317f7'],
+            'swig'     : ['3.0.10',
+            '2939aae39dec06095462f1b95ce1c958ac80d07b926e48871046d17c0094f44c'],
   },
   '1.10' : {
             'autoconf' : ['2.69',
             '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
             'libtool'  : ['2.4.6',
             'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
-            'swig'     : ['2.0.12',
-            '65e13f22a60cecd7279c59882ff8ebe1ffe34078e85c602821a541817a4317f7'],
+            'swig'     : ['3.0.10',
+            '2939aae39dec06095462f1b95ce1c958ac80d07b926e48871046d17c0094f44c'],
   },
   '1.9' : {
             'autoconf' : ['2.69',
@@ -266,6 +266,20 @@ def download_file(url, target, checksum):
         raise RuntimeError("Checksum mismatch for '%s': "\
                            "downloaded: '%s'; expected: '%s'" % \
                            (target, checksum, checksum2))
+
+#----------------------------------------------------------------------
+# ezt helpers
+
+# In ezt, «[if-any foo]» is true when «data['foo'] == False»,
+# hence, provide this constant for readability.
+ezt_False = ""
+
+# And this constant for symmetry.
+ezt_True = True
+
+# And this for convenience.
+def ezt_bool(boolean_value):
+    return ezt_True if boolean_value else ezt_False
 
 #----------------------------------------------------------------------
 # Cleaning up the environment
@@ -803,7 +817,18 @@ def write_announcement(args):
     if args.version.is_prerelease():
         template_filename = 'rc-release-ann.ezt'
     else:
+        data['dot-zero'] = ezt_bool(args.version.patch == 0)
+        # TODO: instead of requiring the RM to remember to pass --security,
+        #   read the private repository where CVE announcements are staged,
+        #   parse the json file that identifies which versions are affected,
+        #   and accordingly automagically set data['security'].
+        data['security'] = ezt_bool(args.security)
         template_filename = 'stable-release-ann.ezt'
+
+        # The template text assumes these two are mutually exclusive.
+        # If you ever find a reason to make a x.y.0 release with a security
+        # bug, just comment this out and update the template before sending.
+        assert not (data['dot-zero'] and data['security'])
 
     template = ezt.Template(compress_whitespace = False)
     template.parse(get_tmplfile(template_filename).read())
@@ -1077,6 +1102,9 @@ def main():
                     help='''Output to stdout template text for the emailed
                             release announcement.''')
     subparser.set_defaults(func=write_announcement)
+    subparser.add_argument('--security', action='store_true', default=False,
+                    help='''The release being announced includes security
+                            fixes.''')
     subparser.add_argument('--target',
                     help='''The full path to the directory containing
                             release artifacts.''')
