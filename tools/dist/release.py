@@ -1027,7 +1027,8 @@ def main():
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
     subparser.add_argument('--branch',
-                    help='''The branch to base the release on.''')
+                    help='''The branch to base the release on,
+                            relative to ^/subversion/.''')
 
     # Setup the parser for the sign-candidates subcommand
     subparser = subparsers.add_parser('sign-candidates',
@@ -1061,7 +1062,8 @@ def main():
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
     subparser.add_argument('--branch',
-                    help='''The branch to base the release on.''')
+                    help='''The branch to base the release on,
+                            relative to ^/subversion/.''')
     subparser.add_argument('--username',
                     help='''Username for ''' + secure_repos + '''.''')
     subparser.add_argument('--target',
