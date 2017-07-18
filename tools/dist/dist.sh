@@ -369,9 +369,10 @@ sign_file()
   fi
 }
 
-# allow md5sum and sha1sum tool names to be overridden
+# allow md5sum, sha1sum, and sha512sum tool names to be overridden
 [ -n "$MD5SUM" ] || MD5SUM=md5sum
 [ -n "$SHA1SUM" ] || SHA1SUM=sha1sum
+[ -n "$SHA512SUM" ] || SHA512SUM=sha512sum
 
 echo ""
 echo "Done:"
@@ -387,6 +388,12 @@ if [ -z "$ZIP" ]; then
     echo "sha1sums:"
     $SHA1SUM "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
   fi
+  type $SHA512SUM > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ""
+    echo "sha512sums:"
+    $SHA512SUM "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
+  fi
 else
   ls -l "$DISTNAME.zip"
   sign_file $DISTNAME.zip
@@ -398,5 +405,11 @@ else
     echo ""
     echo "sha1sum:"
     $SHA1SUM "$DISTNAME.zip"
+  fi
+  type $SHA512SUM > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ""
+    echo "sha512sum:"
+    $SHA512SUM "$DISTNAME.zip"
   fi
 fi

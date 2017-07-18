@@ -554,6 +554,9 @@ def roll_tarballs(args):
         m = hashlib.sha1()
         m.update(open(filename, 'r').read())
         open(filename + '.sha1', 'w').write(m.hexdigest())
+        m = hashlib.sha512()
+        m.update(open(filename, 'r').read())
+        open(filename + '.sha512', 'w').write(m.hexdigest())
 
     shutil.move('svn_version.h.dist',
                 get_deploydir(args.base_dir) + '/' + 'svn_version.h.dist'

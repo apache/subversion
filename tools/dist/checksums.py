@@ -19,12 +19,14 @@
 # under the License.
 #
 #
-# Check MD5 and SHA1 signatures of files, using md5sums and/or
-# sha1sums as manifests.  Replaces the 'md5sum' and 'sha1sum' commands
+# Check MD5 and SHA-1 and SHA-2 signatures of files, using 
+# md5sums, sha1sums, and/or sha512sums as manifests
+# Replaces the 'md5sum', 'sha1sum', and 'sha512sums' commands
 # on systems that do not have them, such as Mac OS X or Windows.
 #
 # Usage: checksums.py [manifest]
-#   where "os.path.basename(manifest)" is either "md5sums" or "sha1sums"
+#   where "os.path.basename(manifest)" is either "md5sums", "sha1sums",
+#   "sha512sums"
 #
 # Tested with the following Python versions:
 #        2.4   2.5   2.6   2.7   3.2
@@ -37,6 +39,7 @@ import sys
 try:
     from hashlib import md5
     from hashlib import sha1
+    from hashlib import sha512
 except ImportError:
     from md5 import md5
     from sha import sha as sha1
@@ -67,9 +70,11 @@ def main(manipath):
         sink = Digester(md5)
     elif manifest == 'sha1sums':
         sink = Digester(sha1)
+    elif manifest == 'sha512sums':
+        sink = Digester(sha512)
     else:
         raise ValueError('The name of the digest manifest must be '
-                         "'md5sums' or 'sha1sums', not '%s'" % manifest)
+                         "'md5sums', 'sha1sums', or 'sha512sums', not '%s'" % manifest)
 
     # No 'with' statement in Python 2.4 ...
     stream = None
