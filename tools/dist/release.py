@@ -490,6 +490,7 @@ def roll_tarballs(args):
         args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
 
     branch = args.branch # shorthand
+    branch = branch.rstrip('/') # canonicalize for later comparisons
 
     logging.info('Rolling release %s from branch %s@%d' % (args.version,
                                                            branch, args.revnum))
@@ -617,7 +618,7 @@ def create_tag(args):
     if not args.branch:
         args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
 
-    branch = secure_repos + '/' + args.branch
+    branch = secure_repos + '/' + args.branch.rstrip('/')
 
     tag = secure_repos + '/tags/' + str(args.version)
 
@@ -631,7 +632,12 @@ def create_tag(args):
                     tag + '/subversion/include/svn_version.h']
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
-    subprocess.check_call(svnmucc_cmd)
+    try:
+        subprocess.check_call(svnmucc_cmd)
+    except subprocess.CalledProcessError:
+        if args.version.is_prerelease():
+            logging.error("Do you need to pass --branch=trunk?")
+        raise
 
     if not args.version.is_prerelease():
         logging.info('Bumping revisions on the branch')
