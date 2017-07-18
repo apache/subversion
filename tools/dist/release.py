@@ -593,9 +593,7 @@ def post_candidates(args):
     target = get_target(args)
 
     logging.info('Importing tarballs to %s' % dist_dev_url)
-    ver = args.version.base
-    if args.version.pre:
-        ver = "%s-%s%d" % (ver, args.version.pre, args.version.pre_num)
+    ver = str(args.version)
     svn_cmd = ['svn', 'import', '-m',
                'Add Subversion %s candidate release artifacts' % ver,
                '--auto-props', '--config-option',
