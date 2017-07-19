@@ -66,6 +66,15 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1802080, r1802316
+   Fix SEGV for 'svn export -rN WC' with relative externals.
+   Justification:
+     Client SEGV.
+   Branch:
+     ^/subversion/branches/1.9.x-r1802316
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
