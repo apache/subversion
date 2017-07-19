@@ -56,6 +56,8 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * FSFS: Reduce I/O overhead during history traversal (r1703237)
     * FSFS: Use native Windows API to guarantee data is flushed (r1701053)
     * FSFS: Warn if a possible rep-cache SHA1 collision is detected (r1674673)
+    * FSFS: Optimize revprop cache filling strategy under high load (r1795324)
+    * FSFS: New "verify-before-commit" fsfs.conf option (r1795351)
     * FSFS/FSX: Chunked read support for changed paths lists (r1746026, -4987)
     * FSFS/FSX: Several improvements made to cache implementation (r1694489)
     * FSX: Add checksums to packed revprop manifests and files (r1713132, -9717)
@@ -66,7 +68,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * FSX: Reduce number of fsync operations (r1711354 et al)
     * mod_dav_svn: Improve performance and memory usage of PROPFIND (r1721732)
     * mod_dav_svn: Show process-id on Windows in /svn-status page (r1718567)
-    * mod_dav_svn: Advertise svndiff1 support to clients (r1704891)
+    * mod_dav_svn: Advertise svndiff1 support to clients (r1704891, r1791285)
     * mod_dav_svn: Remove disk I/O to TMPDIR during first commit (r1716240)
     * svnsync: Fix assertion failure with up-to-date repositories (r1727140)
     * ra_serf: Parallel requests for text and property changes (r1716575)
@@ -81,6 +83,11 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * Make 'svn patch' handle zero-byte files vs deleted files (r1705856)
     * Evaluate 'old mode' and 'new mode' lines from git-syle diffs (r1705391)
     * Enable buffered stdin for svnrdump and svndumpfilter (r1703074)
+    * ra_serf: Receive svndiff1 and gzip compressed deltas (r1781282, -3, -4)
+    * 'svn lock', 'svn unlock': Take the -q option (r1796288)
+    * svnadmin: 'lock', 'unlock', 'rmlocks': Take the -q option (r1796406)
+    * New svndiff2 binary delta format using lz4 compression (r1801938, et al)
+    * gpg-agent: Support gpg ≥2.1.13 and unset GPG_AGENT_INFO (r1795087)
   - Client-side bugfixes:
     * ra_serf: Fix segfault when running over HTTP v1 (r1766089)
     * ra_serf: Keep small svndiffs in memory during commit (r1724455)
@@ -132,6 +139,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * FSFS: Make handling of revprop size information more resilient (r1716784)
     * FSFS: Don't re-parse a directory which just got committed (r1706679)
     * FSFS: Handle some known quirks in committed node revisions (r1673875)
+    * FSFS format 7: Verify item types more thoroughly (r1796160)
     * mod_dav_svn: Omit Cache-Control HTTP header for HEAD URLs (issue #4514)
     * mod_dav_svn: Reduced memory consumption for DAV merge responses (r1727790)
     * mod_dav_svn: Don't set a Last-Modified header in GET responses (r1724790)
@@ -140,12 +148,22 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * Fix insertion of very large items into the membuffer cache (r1717337, -8)
     * Fix capacity check of the membuffer cache's prefix pool (r1714356)
     * Prevent paths containing newlines from being committed (r1662585)
+    * 'svnfsfs stats': Fix false positive checksum errors reading old revisions
+      (r1785904)
+    * svnadmin, svnfsfs: Detect invalid arguments to -M (r1787023, r1787045)
+    * svnlook, svnserve: Detect invalid arguments to -M (r1787023, r1787045)
+    * svnadmin: Output locked paths in canonical form (r1796420)
+    * svnadmin: Output locked paths correctly encoded (r1797122)
+    * svn: propdel, propset: Transcode property names on output (r1797186)
   - Client-side and server-side bugfixes:
     * Fix integer overflow check with >= 1G mergeinfo ranges per path (r1714380)
     * Fix integer overflow checks on WoW64 platforms (r1714372)
     * Fix bug with canonicalizing Window-specific drive-relative URL (r1692262)
     * In file:// URLs, allow '\' directly after Windows drive letter (r1692259)
     * Fix segfault with recursive configuration value definitions (issue #4543)
+    * FSFS: Improve error messages when DAG lookup fails (r1795120)
+    * Transcode command-line arguments to UTF-8 (r1797190, r1797362, et al)
+    * Fix segfault on x509 certificate with empty name (r1798157)
   - Other tool improvements and bugfixes:
     * New svn-mergeinfo-normalizer tool (r1695992 et al)
     * Allow configuring mailer.py to use SMTP SSL (r1777846)
@@ -153,10 +171,13 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * svn-vendor.py: Minor enhancements, mostly in treating symlinks (r1732669)
     * bash_completion: Implement much better URL completion (r1701494)
     * bash_completion: Complete arguments to 'svn info --show-item' (r1698276)
+    * bash_completion: Add 1.10 options (r1802196)
+    * fsfs-stats: Following rename to svnfsfs in r1594860, install a wrapper
+      for compatibility (r1802032)
 
  Developer-visible changes:
   - General:
-    * Removed support for building with Visual Studio 6.0 (r1703419)
+    * windows: Removed support for building with Visual Studio 6.0 (r1703419)
     * Fix .py scripts throughout the source tree for Python 3 (r1741723 et al)
     * Support memcached on Windows with APR-util 1.3 or later (r1674626 et al)
     * Don't require GNU-specific sed(1) extensions during the build (r1693159)
@@ -178,11 +199,22 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * Add INSTALL instructions for building with OpenSSL 1.1.0 (r1778313)
     * Improved INSTALL instructions for Windows (r1703470, -2, -3, -4, et al)
     * Updated INSTALL instructions (r1691712)
+    * windows: Support Visual Studio 2017 (r1786653, r1786669)
+    * gnome-keyring: Support libsecret in preference to libgnome-keyring
+      (r1798004)
+    * kwallet: Support KDE 5 in preference to KDE 4 (r1798731)
+    * Rename cxxhl bindings 'make tests' to avoid confusion with 'make test'
+      (r1800849)
+    * 'make check': Allow testing with FSFS compression (r1801936)
+    * svnserveautocheck.sh: Support out-of-tree builds when running a single
+      test file (r1802081)
+    * Distribution artifacts now prepared with swig 3.0.10 (r1802135)
   - API changes:
     * New svn_client_conflict_* API functions for the new conflict resolver.
     * New svn_repos_fs_get_mergeinfo2() with streamy access (r1780810 et al)
     * New streamy svn_repos_get_logs5() API function (r1730389, -1163)
     * New streamy svn_fs_paths_changed3() API function (r1727822, r1745055)
+    * New svn_client_list4() API function (r1767186)
     * New svn_ra_list() API function (r1767190)
     * New svn_repos_list() API function (r1765088)
     * New svn_stream_contents_checksum() API function (r1755486, -6651)
@@ -194,8 +226,10 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * New svn_stream_for_stdin2() API function (r1702983)
     * New svn_io_file_rename2() API function (r1701017)
     * New svn_error_quick_wrapf() API function (r1662668)
+    * New svn_repos_path_change_t type (r1802114)
+    * New svn_repos_log_entry_t type (r1802114)
     * svn_repos_parse_dumpstream3() now accepts NULL pointers (r1700180)
-    * Fix (svnserve|dav)autocheck when time is only a built-in (r1665652)
+    * Fix svnserveautocheck&davautocheck when time is only a built-in (r1665652)
   - Bindings:
     * Configure the swig bindings only if swig has been enabled (r1751167)
     * Error if 'configure --with-swig' is used and swig is not found (r1700844)
@@ -205,6 +239,8 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * JavaHL: Correct some JNIEntry method names (r1706738)
     * Allow swig bindings scripts to configure the FSFS cache (r1709922)
     * Disable some swig wrappers that aren't working (r1700966)
+    * JavaHL: Make StringArray nullable (r1785429)
+    * JavaHL: Add missing exception checks (r1801108)
 
 
 Version 1.9.6
