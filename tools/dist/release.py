@@ -771,6 +771,7 @@ def write_news(args):
              'version' : str(args.version),
              'version_base' : args.version.base,
              'anchor': args.version.get_download_anchor(),
+             'is_recommended': ezt_bool(args.version.is_recommended()),
            }
 
     if args.version.is_prerelease():
