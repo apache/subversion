@@ -46,7 +46,10 @@ AC_DEFUN(SVN_LIB_KWALLET,
               if $PKG_CONFIG --exists Qt5Core Qt5DBus Qt5Gui; then
                 AC_MSG_RESULT([yes, Qt5])
                 qt_pkg_config_names="Qt5Core Qt5DBus Qt5Gui"
-                kde_config_name="kf5-config"
+                dnl On some systems kf5-config is an approximate replacement
+                dnl for kde4-config but its own man page deprecates it and
+                dnl recommends using qtpaths.
+                kde_config_name="qtpaths"
                 kde_inc_names="KF5/KWallet KF5/KCoreAddons KF5/KI18n"
                 kde_lib_names="-lKF5Wallet -lKF5I18n -lKF5CoreAddons -lQt5Gui -lQt5DBus -lQt5Core"
               elif $PKG_CONFIG --exists QtCore QtDBus QtGui; then
@@ -59,24 +62,39 @@ AC_DEFUN(SVN_LIB_KWALLET,
               if test -n "$qt_pkg_config_names"; then
                 if test "$svn_lib_kwallet" != "yes"; then
                   AC_MSG_CHECKING([for $kde_config_name])
+                  dnl Some systems put kde4-config, and perhaps qtpaths, here
                   KDE_CONFIG="$svn_lib_kwallet/bin/$kde_config_name"
                   if test -f "$KDE_CONFIG" && test -x "$KDE_CONFIG"; then
                     AC_MSG_RESULT([yes])
-                  else
-                    KDE_CONFIG=""
-                    AC_MSG_RESULT([no])
+                  else 
+                    dnl Some systems put qtpaths here
+                    KDE_CONFIG="$svn_lib_kwallet/lib/qt5/bin/$kde_config_name"
+                    if test -f "$KDE_CONFIG" && test -x "$KDE_CONFIG"; then
+                      AC_MSG_RESULT([yes])
+                    else
+                      KDE_CONFIG=""
+                      AC_MSG_RESULT([no])
+                    fi
                   fi
                 else
+                  dnl Some systems put kde4-config and qtpaths in PATH
                   AC_PATH_PROG(KDE_CONFIG, $kde_config_name)
                 fi
                 if test -n "$KDE_CONFIG"; then
-                  if test $kde_config_name = "kf5-config"; then
+                  if test $kde_config_name = "qtpaths"; then
+                    kde_incdir="`$KDE_CONFIG --install-prefix`/include"
+                    kde_libdir="`$KDE_CONFIG --install-prefix`/lib"
                     dnl KF5 does not compile with -std=c++98
                     SVN_CXX_MODE_SETUP11
+                  else
+                    kde_incdir="`$KDE_CONFIG --install include`"
+                    kde_libdir="`$KDE_CONFIG --install lib`"
                   fi
                   old_CXXFLAGS="$CXXFLAGS"
                   old_LDFLAGS="$LDFLAGS"
                   old_LIBS="$LIBS"
+                  dnl --std=c+=11 may be required
+                  CXXFLAGS="$CXXFLAGS $CXXMODEFLAGS"
                   AC_MSG_CHECKING([for KWallet])
                   for d in [`$PKG_CONFIG --cflags $qt_pkg_config_names`]; do
                     if test -n ["`echo "$d" | $EGREP -- '^-D[^[:space:]]*'`"]; then
@@ -84,7 +102,6 @@ AC_DEFUN(SVN_LIB_KWALLET,
                     fi
                   done
                   qt_include_dirs="`$PKG_CONFIG --cflags-only-I $qt_pkg_config_names`"
-                  kde_incdir="`$KDE_CONFIG --install include`"
                   for kde_inc_name in $kde_inc_names; do
                     kde_kwallet_includes="$kde_kwallet_includes -I$kde_incdir/$kde_inc_name"
                   done
@@ -94,7 +111,6 @@ AC_DEFUN(SVN_LIB_KWALLET,
                   CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES -fPIC"
                   LIBS="$LIBS $SVN_KWALLET_LIBS"
                   qt_lib_dirs="`$PKG_CONFIG --libs-only-L $qt_pkg_config_names`"
-                  kde_libdir="`$KDE_CONFIG --install lib`"
                   LDFLAGS="$old_LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS($qt_lib_dirs -L$kde_libdir)`"
                   AC_LANG(C++)
                   AC_LINK_IFELSE([AC_LANG_SOURCE([[
@@ -106,7 +122,7 @@ int main()
                     AC_MSG_RESULT([yes])
                     CXXFLAGS="$old_CXXFLAGS"
                     LIBS="$old_LIBS"
-                    if test "$kde_config_name" = "kf5-config"; then
+                    if test "$kde_config_name" = "qtpaths"; then
                       AC_DEFINE([SVN_HAVE_KF5], [1], [Defined if KF5 available])
                     fi
                   else
