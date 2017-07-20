@@ -160,7 +160,6 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * svnadmin: Output locked paths in canonical form (r1796420)
     * svnadmin: Output locked paths correctly encoded (r1797122)
     * svn: propdel, propset: Transcode property names on output (r1797186)
-    * FS: Fix race / undefined behaviour during FS backend loading (r1800836)
   - Client-side and server-side bugfixes:
     * Fix integer overflow check with >= 1G mergeinfo ranges per path (r1714380)
     * Fix integer overflow checks on WoW64 platforms (r1714372)
