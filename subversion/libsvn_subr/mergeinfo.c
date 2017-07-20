@@ -1014,7 +1014,9 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
           svn_sort__array_insert(rangelist, &chg_copy, i++);
           continue;
         }
-      else if (change->start > range->end)
+      else if ((change->start > range->end)
+               || (change->start == range->end
+                   && change->inheritable != range->inheritable))
         {
           /* No overlap, nor adjoin. Check next range item against change */
           i++;
@@ -1082,9 +1084,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
                   /* RANGE and CHANGE adjoin, but have different
                      inheritability.  Since RANGE is older, just
                      move on to the next RANGE. */
-                  i++;
-                  j--;
-                  continue;
+                  SVN_ERR_MALFUNCTION();
                 }
             }
           else
