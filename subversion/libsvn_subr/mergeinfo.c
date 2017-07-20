@@ -1,4 +1,4 @@
-﻿/*
+/*
  * mergeinfo.c:  Mergeinfo parsing and handling
  *
  * ====================================================================
@@ -40,6 +40,14 @@
 #include "svn_private_config.h"
 #include "svn_hash.h"
 #include "private/svn_dep_compat.h"
+
+/* Return TRUE iff the forward revision range FIRST wholly contains the
+ * forward revision range SECOND and (if CONSIDER_INHERITANCE is TRUE) has
+ * the same inheritability. */
+static svn_boolean_t
+range_contains(const svn_merge_range_t *first, const svn_merge_range_t *second,
+               svn_boolean_t consider_inheritance);
+
 
 /* Attempt to combine two ranges, IN1 and IN2. If they are adjacent or
    overlapping, and their inheritability allows them to be combined, put
@@ -954,6 +962,23 @@ adjust_remaining_ranges(svn_rangelist_t *rangelist,
     svn_sort__array_delete(rangelist, starting_index, elements_to_delete);
 }
 
+#if 0 /* Temporary debug helper code */
+static svn_error_t *
+dual_dump(const char *prefix,
+  const svn_rangelist_t *rangelist,
+  const svn_rangelist_t *changes,
+  apr_pool_t *scratch_pool)
+{
+  svn_string_t *rls, *chg;
+
+  SVN_ERR(svn_rangelist_to_string(&rls, rangelist, scratch_pool));
+  SVN_ERR(svn_rangelist_to_string(&chg, changes, scratch_pool));
+
+  SVN_DBG(("%s: %s / %s", prefix, rls->data, chg->data));
+  return SVN_NO_ERROR;
+}
+#endif
+
 svn_error_t *
 svn_rangelist_merge2(svn_rangelist_t *rangelist,
                      const svn_rangelist_t *chg,
@@ -996,6 +1021,36 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
           j--;
           continue;
         }
+
+      if (change->start < range->start
+          && range->inheritable != change->inheritable
+          && ! (change->inheritable && range_contains(change, range, FALSE))
+          && ! (range->inheritable && range_contains(range, change, FALSE)))
+        {
+          /* Can't fold change into existing range.
+             Insert new range before range */
+
+          svn_merge_range_t *chg_copy = svn_merge_range_dup(change,
+                                                            result_pool);
+
+          chg_copy->start = MIN(change->start, range->start);
+          if (! change->inheritable)
+            chg_copy->end = range->start;
+          else
+            range->start = change->end;
+
+          svn_sort__array_insert(rangelist, &chg_copy, i++);
+
+          change->start = chg_copy->end;
+          if (change->start >= change->end)
+            continue; /* No overlap with range left */
+        }
+      else
+        {
+          range->start = MIN(range->start, change->start);
+        }
+
+      SVN_ERR_ASSERT(change->start >= range->start);
 
       res = svn_sort_compare_ranges(&range, &change);
 
@@ -1094,10 +1149,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
                 {
                   /* RANGE and CHANGE have different inheritability so insert
                      a copy of CHANGE into RANGELIST. */
-                  svn_merge_range_t *change_copy =
-                    svn_merge_range_dup(change, result_pool);
-                  svn_sort__array_insert(rangelist, &change_copy, i);
-                  continue;
+                  SVN_ERR_MALFUNCTION(); /* Already handled */
                 }
             }
           else
@@ -1124,13 +1176,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
                       /* RANGE is inheritable so absorbs any part of CHANGE
                          it overlaps.  CHANGE is truncated and the remainder
                          inserted into RANGELIST. */
-                      svn_merge_range_t *change_copy =
-                        svn_merge_range_dup(change, result_pool);
-                      change_copy->end = range->start;
-                      change->start = range->start;
-                      svn_sort__array_insert(rangelist, &change_copy, i++);
-                      j--;
-                      continue;
+                      SVN_ERR_MALFUNCTION(); /* Already handled */
                     }
                   else
                     {
