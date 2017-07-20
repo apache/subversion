@@ -977,11 +977,26 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
         APR_ARRAY_IDX(changes, j, svn_merge_range_t *);
       int res;
 
-      /* ### TODO: Remove as part of refactoring */
-      if (i >= rangelist->nelts)
-        break;
+      range = (i < rangelist->nelts)
+              ? APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *)
+              : NULL;
 
-      range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+      if (!range || change->end < range->start)
+        {
+          /* No overlap, nor adjoin, copy change to result range */
+          svn_merge_range_t *chg_copy = svn_merge_range_dup(change,
+                                                            result_pool);
+          svn_sort__array_insert(rangelist, &chg_copy, i++);
+          continue;
+        }
+      else if (change->start > range->end)
+        {
+          /* No overlap, nor adjoin. Check next range item against change */
+          i++;
+          j--;
+          continue;
+        }
+
       res = svn_sort_compare_ranges(&range, &change);
 
       if (res == 0)
@@ -996,15 +1011,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
         }
       else if (res < 0) /* CHANGE is younger than RANGE */
         {
-          if (range->end < change->start)
-            {
-              /* RANGE is older than CHANGE and the two do not
-                 adjoin or overlap */
-              i++;
-              j--;
-              continue;
-            }
-          else if (range->end == change->start)
+          if (range->end == change->start)
             {
               /* RANGE and CHANGE adjoin */
               if (range->inheritable == change->inheritable)
@@ -1073,17 +1080,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
         }
       else /* res > 0, CHANGE is older than RANGE */
         {
-          if (change->end < range->start)
-            {
-              /* CHANGE is older than RANGE and the two do not
-                 adjoin or overlap, so insert a copy of CHANGE
-                 into RANGELIST. */
-              svn_merge_range_t *change_copy =
-                svn_merge_range_dup(change, result_pool);
-              svn_sort__array_insert(rangelist, &change_copy, i++);
-              continue;
-            }
-          else if (change->end == range->start)
+          if (change->end == range->start)
             {
               /* RANGE and CHANGE adjoin */
               if (range->inheritable == change->inheritable)
@@ -1203,16 +1200,6 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
             }
         }
       SVN_ERR_MALFUNCTION(); /* Unreachable */
-    }
-
-  /* Copy any remaining elements in CHANGES into RANGELIST. */
-  for (; j < (changes)->nelts; j++)
-    {
-      svn_merge_range_t *change =
-        APR_ARRAY_IDX(changes, j, svn_merge_range_t *);
-      svn_merge_range_t *change_copy = svn_merge_range_dup(change,
-                                                           result_pool);
-      svn_sort__array_insert(rangelist, &change_copy, rangelist->nelts);
     }
 
 #ifdef SVN_DEBUG
