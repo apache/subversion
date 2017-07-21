@@ -508,7 +508,9 @@ svn_txdelta_apply(svn_stream_t *source,
  * version is @a svndiff_version. @a compression_level is the zlib
  * compression level from 0 (no compression) and 9 (maximum compression).
  *
- * @since New in 1.7.
+ * @since New in 1.7.  Since 1.10, @a svndiff_version can be 2 for the
+ * svndiff2 format.  @a compression_level is currently ignored if
+ * @a svndiff_version is set to 2.
  */
 void
 svn_txdelta_to_svndiff3(svn_txdelta_window_handler_t *handler,

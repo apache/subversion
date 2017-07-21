@@ -585,6 +585,9 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(MEMCACHED_SERVER)" != ""; then                          \
 	    flags="--memcached-server $(MEMCACHED_SERVER) $$flags";          \
 	  fi;                                                                \
+	  if test "$(FSFS_COMPRESSION)" != ""; then                          \
+	    flags="--fsfs-compression $(FSFS_COMPRESSION) $$flags";          \
+	  fi;                                                                \
 	  LD_LIBRARY_PATH='$(auth_plugin_dirs):$(LD_LIBRARY_PATH)'           \
 	  $(PYTHON) $(top_srcdir)/build/run_tests.py                         \
 	            --config-file $(top_srcdir)/subversion/tests/tests.conf  \
@@ -996,4 +999,11 @@ INSTALL_EXTRA_TOOLS=\
   if test "$(DESTDIR)$(bindir)" != "$(DESTDIR)$(toolsdir)"; then \
     ln -sf $(bindir)/svnmucc$(EXEEXT) $(DESTDIR)$(toolsdir)/svnmucc$(EXEEXT); \
     ln -sf $(bindir)/svnbench$(EXEEXT) $(DESTDIR)$(toolsdir)/svn-bench$(EXEEXT); \
-  fi
+  fi; \
+  printf '\043\041/bin/sh\n%s\n' \
+    'exec $(bindir)/svnfsfs stats $${2:+"-M"} $$2 $$1' \
+    > $(DESTDIR)$(toolsdir)/fsfs-stats$(EXEEXT) && \
+  chmod +x $(DESTDIR)$(toolsdir)/fsfs-stats$(EXEEXT)
+# \043\041 is a "#!".  It's written this way because gmake and bmake disagree on
+# how to include a literal '#' in a command, and because '!' is special to some
+# shells.

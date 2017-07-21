@@ -41,7 +41,7 @@
 #include "delta-window-test.h"
 
 
-#define DEFAULT_ITERATIONS 30
+#define DEFAULT_ITERATIONS 60
 #define DEFAULT_MAXLEN (100 * 1024)
 #define DEFAULT_DUMP_FILES 0
 #define DEFAULT_PRINT_WINDOWS 0
@@ -329,9 +329,9 @@ do_random_test(apr_pool_t *pool,
                                          delta_pool);
 
       /* Make stage 2: encode the text delta in svndiff format using
-                       varying compression levels. */
-      svn_txdelta_to_svndiff3(&handler, &handler_baton, stream, 1, i % 10,
-                              delta_pool);
+                       varying svndiff versions and compression levels. */
+      svn_txdelta_to_svndiff3(&handler, &handler_baton, stream, i % 3,
+                              i % 10, delta_pool);
 
       /* Make stage 1: create the text delta.  */
       svn_txdelta2(&txdelta_stream,
@@ -425,9 +425,9 @@ do_random_combine_test(apr_pool_t *pool,
                                          delta_pool);
 
       /* Make stage 2: encode the text delta in svndiff format using
-                       varying compression levels. */
-      svn_txdelta_to_svndiff3(&handler, &handler_baton, stream, 1, i % 10,
-                              delta_pool);
+                       varying svndiff versions and compression levels. */
+      svn_txdelta_to_svndiff3(&handler, &handler_baton, stream, i % 3,
+                              i % 10, delta_pool);
 
       /* Make stage 1: create the text deltas.  */
 

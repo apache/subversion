@@ -560,18 +560,36 @@ svn__decode_int(apr_int64_t *val,
  * SVN__COMPRESSION_NONE is valid for COMPRESSION_METHOD.
  */
 svn_error_t *
-svn__compress(const void *data, apr_size_t len,
-              svn_stringbuf_t *out,
-              int compression_method);
+svn__compress_zlib(const void *data, apr_size_t len,
+                   svn_stringbuf_t *out,
+                   int compression_method);
 
 /* Decompress the compressed data from DATA with length LEN and write the
  * result to OUT.  Return an error if the decompressed size is larger than
  * LIMIT.
  */
 svn_error_t *
-svn__decompress(const void *data, apr_size_t len,
-                svn_stringbuf_t *out,
-                apr_size_t limit);
+svn__decompress_zlib(const void *data, apr_size_t len,
+                     svn_stringbuf_t *out,
+                     apr_size_t limit);
+
+/* Same as svn__compress_zlib(), but use LZ4 compression.  Note that
+ * while the declaration of this function uses apr_size_t, it expects
+ * blocks of size not exceeding LZ4_MAX_INPUT_SIZE.  The caller should
+ * ensure that the proper size is passed to this function.
+ */
+svn_error_t *
+svn__compress_lz4(const void *data, apr_size_t len,
+                  svn_stringbuf_t *out);
+
+/* Same as svn__decompress_zlib(), but use LZ4 compression.  The caller
+ * should ensure that the size and limit passed to this function do not
+ * exceed INT_MAX.
+ */
+svn_error_t *
+svn__decompress_lz4(const void *data, apr_size_t len,
+                    svn_stringbuf_t *out,
+                    apr_size_t limit);
 
 /** @} */
 

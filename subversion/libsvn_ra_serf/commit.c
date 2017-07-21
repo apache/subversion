@@ -1896,17 +1896,32 @@ apply_textdelta(void *file_baton,
   if (ctx->commit_ctx->session->supports_svndiff1 &&
       ctx->commit_ctx->session->using_compression)
     {
-      /* Use compressed svndiff1 format, if possible. */
+      /* Prefer svndiff1 when using http compression, as svndiff2 is not a
+       * substitute for svndiff1 with default compression level.  (It gives
+       * better speed and compression ratio comparable to svndiff1 with
+       * compression level 1, but not 5).
+       *
+       * It might make sense to tweak the current format negotiation scheme
+       * so that the server would say which versions of svndiff it accepts,
+       * _including_ the preferred order.  This would allow us to dynamically
+       * pick svndiff2 if that's what the server thinks is appropriate.
+       */
       svndiff_version = 1;
       compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
     }
+  else if (ctx->commit_ctx->session->supports_svndiff2 &&
+           ctx->commit_ctx->session->using_compression)
+    {
+      svndiff_version = 2;
+      compression_level = SVN_DELTA_COMPRESSION_LEVEL_NONE;
+    }
   else
     {
-      /* Difference between svndiff formats 0 and 1 that format 1 allows
+      /* Difference between svndiff formats 0 and 1/2 that format 1/2 allows
        * compression.  Uncompressed svndiff0 should also be slightly more
        * effective if the compression is not required at all.
        *
-       * If the server cannot handle svndiff1, or compression is disabled
+       * If the server cannot handle svndiff1/2, or compression is disabled
        * with the 'http-compression = no' client configuration option, fall
        * back to uncompressed svndiff0 format.  As a bonus, users can force
        * the usage of the uncompressed format by setting the corresponding

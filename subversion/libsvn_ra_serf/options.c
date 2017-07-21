@@ -232,6 +232,11 @@ capabilities_headers_iterator_callback(void *baton,
              advertise this capability (Subversion 1.10 and greater). */
           session->supports_svndiff1 = TRUE;
         }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_SVNDIFF2, vals))
+        {
+          /* Same for svndiff2. */
+          session->supports_svndiff2 = TRUE;
+        }
     }
 
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */
