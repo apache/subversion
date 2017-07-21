@@ -51,21 +51,36 @@ get_shelf_name(const char **shelf_name,
 /* Display a list of shelves */
 static svn_error_t *
 shelves_list(const char *local_abspath,
+             svn_boolean_t diffstat,
              svn_client_ctx_t *ctx,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_client_shelves_list(&dirents, local_abspath, ctx, pool, pool));
+  SVN_ERR(svn_client_shelves_list(&dirents, local_abspath,
+                                  ctx, scratch_pool, scratch_pool));
 
-  for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
     {
       const char *name = apr_hash_this_key(hi);
+      svn_io_dirent2_t *dirent = apr_hash_this_val(hi);
+      int age = (apr_time_now() - dirent->mtime) / 1000000 / 60;
 
-      if (strstr(name, ".patch"))
+      if (! strstr(name, ".patch"))
+        continue;
+
+      printf("%-30s %6d mins old %10ld bytes\n",
+             name, age, (long)dirent->filesize);
+
+      if (diffstat)
         {
-          printf("%s\n", name);
+          char *path = svn_path_join_many(scratch_pool,
+                                          local_abspath, ".svn/shelves", name,
+                                          SVN_VA_NULL);
+
+          system(apr_psprintf(scratch_pool, "diffstat %s 2> /dev/null", path));
+          printf("\n");
         }
     }
 
@@ -94,7 +109,9 @@ svn_cl__shelve(apr_getopt_t *os,
       if (os->ind < os->argc)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-      SVN_ERR(shelves_list(local_abspath, ctx, pool));
+      SVN_ERR(shelves_list(local_abspath,
+                           ! opt_state->quiet /*diffstat*/,
+                           ctx, pool));
       return SVN_NO_ERROR;
     }
 
@@ -192,7 +209,7 @@ svn_cl__shelves(apr_getopt_t *os,
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
-  SVN_ERR(shelves_list(local_abspath, ctx, pool));
+  SVN_ERR(shelves_list(local_abspath, TRUE /*diffstat*/, ctx, pool));
 
   return SVN_NO_ERROR;
 }
