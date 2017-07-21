@@ -1,5 +1,8 @@
 This branch is for development of Shelving and Checkpointing.
 
+Specifically, this branch is for Checkpointing backed by a local repository
+embedded within the WC, referred to as design "option 3" in [1].
+
 Branch type: dev branch off trunk; updated by full merges from trunk.
 
 Initially this is prototyping, to explore the general shape of the design and
