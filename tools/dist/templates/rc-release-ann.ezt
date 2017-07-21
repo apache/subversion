@@ -26,9 +26,10 @@ PGP Signatures are available at:
 For this release, the following people have provided PGP signatures:
 
 [siginfo]
-This is a pre-release for what will eventually become Apache Subversion
-[major-minor-patch].  It may contain known issues, a complete list of
-[major-minor-patch]-blocking issues can be found here:
+This is a pre-release for what will eventually become version [major-minor-patch] of the
+Apache Subversion open source version control system.  It may contain known
+issues, a complete list of [major-minor-patch]-blocking issues can be found
+here:
 
     http://subversion.tigris.org/issues/buglist.cgi?component=subversion&issue_status=NEW&issue_status=STARTED&issue_status=REOPENED&target_milestone=[major-minor-patch]
 

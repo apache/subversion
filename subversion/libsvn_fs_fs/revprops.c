@@ -471,8 +471,8 @@ parse_packed_revprops(svn_fs_t *fs,
    * length header to remove) */
   svn_stringbuf_t *compressed = revprops->packed_revprops;
   svn_stringbuf_t *uncompressed = svn_stringbuf_create_empty(result_pool);
-  SVN_ERR(svn__decompress(compressed->data, compressed->len,
-                          uncompressed, APR_SIZE_MAX));
+  SVN_ERR(svn__decompress_zlib(compressed->data, compressed->len,
+                               uncompressed, APR_SIZE_MAX));
 
   /* read first revision number and number of revisions in the pack */
   stream = svn_stream_from_stringbuf(uncompressed, scratch_pool);
@@ -937,11 +937,11 @@ repack_revprops(svn_fs_t *fs,
   SVN_ERR(svn_stream_close(stream));
 
   /* compress / store the data */
-  SVN_ERR(svn__compress(uncompressed->data, uncompressed->len,
-                        compressed,
-                        ffd->compress_packed_revprops
-                          ? SVN_DELTA_COMPRESSION_LEVEL_DEFAULT
-                          : SVN_DELTA_COMPRESSION_LEVEL_NONE));
+  SVN_ERR(svn__compress_zlib(uncompressed->data, uncompressed->len,
+                             compressed,
+                             ffd->compress_packed_revprops
+                               ? SVN_DELTA_COMPRESSION_LEVEL_DEFAULT
+                               : SVN_DELTA_COMPRESSION_LEVEL_NONE));
 
   /* finally, write the content to the target file, flush and close it */
   SVN_ERR(svn_io_file_write_full(file, compressed->data, compressed->len,
@@ -1345,8 +1345,8 @@ svn_fs_fs__copy_revprops(const char *pack_file_dir,
   SVN_ERR(svn_stream_close(pack_stream));
 
   /* compress the content (or just store it for COMPRESSION_LEVEL 0) */
-  SVN_ERR(svn__compress(uncompressed->data, uncompressed->len,
-                        compressed, compression_level));
+  SVN_ERR(svn__compress_zlib(uncompressed->data, uncompressed->len,
+                             compressed, compression_level));
 
   /* write the pack file content to disk */
   SVN_ERR(svn_io_file_write_full(pack_file, compressed->data, compressed->len,

@@ -126,7 +126,7 @@ extern "C" {
    Note: If you bump this, please update the switch statement in
          svn_fs_fs__create() as well.
  */
-#define SVN_FS_FS__FORMAT_NUMBER   7
+#define SVN_FS_FS__FORMAT_NUMBER   8
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -180,6 +180,9 @@ extern "C" {
 
 /* Minimum format number that supports per-instance filesystem IDs. */
 #define SVN_FS_FS__MIN_INSTANCE_ID_FORMAT 7
+
+/* The minimum format number that supports svndiff version 2. */
+#define SVN_FS_FS__MIN_SVNDIFF2_FORMAT 8
 
 /* The minimum format number that supports a configuration file (fsfs.conf) */
 #define SVN_FS_FS__MIN_CONFIG_FILE 4

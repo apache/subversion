@@ -1938,11 +1938,36 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  *       known, i.e. @a node_kind is never #svn_node_unknown and
  *       @a copyfrom_known is always @c TRUE.
  *
+ * @note To allow for extending this structure in future releases,
+ * always use svn_repos_path_change_create() to allocate the stucture.
+ *
  * @see svn_fs_path_change3_t
  *
  * @since New in 1.10.
  */
 typedef svn_fs_path_change3_t svn_repos_path_change_t;
+
+/**
+ * Return an #svn_repos_path_change_t structure, allocated in @a result_pool,
+ * with all fields initialized to their respective null/none/empty/invalid
+ * values.
+ *
+ * @note To allow for extending the #svn_repos_path_change_t structure in
+ * future releases, this function should always be used to allocate it.
+ *
+ * @since New in 1.10.
+ */
+svn_repos_path_change_t *
+svn_repos_path_change_create(apr_pool_t *result_pool);
+
+/**
+ * Return a deep copy of @a change, allocated in @a result_pool.
+ *
+ * @since New in 1.10.
+ */
+svn_repos_path_change_t *
+svn_repos_path_change_dup(svn_repos_path_change_t *change,
+                          apr_pool_t *result_pool);
 
 /** The callback invoked by log message loopers, such as
  * svn_repos_get_logs5().
@@ -1969,6 +1994,9 @@ typedef svn_error_t *(*svn_repos_path_change_receiver_t)(
 
 /**
  * A structure to represent all the information about a particular log entry.
+ *
+ * @note To allow for extending this structure in future releases,
+ * always use svn_repos_log_entry_create() to allocate the stucture.
  *
  * @since New in 1.10.
  */
@@ -2015,6 +2043,27 @@ typedef struct svn_repos_log_entry_t
 
   /* NOTE: Add new fields at the end to preserve binary compatibility. */
 } svn_repos_log_entry_t;
+
+/**
+ * Return an #svn_repos_log_entry_t, allocated in @a result_pool,
+ * with all fields initialized to their respective null/none/empty/invalid
+ * values.
+ *
+ * @note To allow for extending the #svn_repos_log_entry_t structure in
+ * future releases, this function should always be used to allocate it.
+ *
+ * @since New in 1.10.
+ */
+svn_repos_log_entry_t *
+svn_repos_log_entry_create(apr_pool_t *result_pool);
+
+/** Return a deep copy of @a log_entry, allocated in @a result_pool.
+ *
+ * @since New in 1.10.
+ */
+svn_repos_log_entry_t *
+svn_repos_log_entry_dup(const svn_repos_log_entry_t *log_entry,
+                        apr_pool_t *result_pool);
 
 
 /** The callback invoked by log message loopers, such as

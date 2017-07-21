@@ -1,17 +1,23 @@
 From: ...@apache.org
 To: announce@subversion.apache.org, users@subversion.apache.org, dev@subversion.apache.org, announce@apache.org
-Subject: [[]ANNOUNCE] Apache Subversion [version] released
-
-From: ...@apache.org
-To: announce@subversion.apache.org, users@subversion.apache.org, dev@subversion.apache.org, announce@apache.org
-Cc: security@apache.org
-Subject: [[]SECURITY][[]ANNOUNCE] Apache Subversion [version] released
-
+[if-any security]Cc: security@apache.org
+[end][if-any security]Subject: [[]SECURITY][[]ANNOUNCE] Apache Subversion [version] released
+[else]Subject: [[]ANNOUNCE] Apache Subversion [version] released
+[end]
 I'm happy to announce the release of Apache Subversion [version].
 Please choose the mirror closest to you by visiting:
 
     http://subversion.apache.org/download.cgi#[anchor]
-
+[if-any dot-zero]
+This is a stable feature release of the Apache Subversion open source
+version control system.
+[else][if-any security]
+This is a stable bugfix and security release of the Apache Subversion
+open source version control system.
+[else]
+This is a stable bugfix release of the Apache Subversion open source
+version control system.
+[end][end]
 The SHA1 checksums are:
 
 [for sha1info]    [sha1info.sha1] [sha1info.filename]

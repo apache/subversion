@@ -946,21 +946,22 @@ write_config(svn_fs_t *fs,
 "### For 1.8, the default value is 16; earlier versions use 1."              NL
 "# " CONFIG_OPTION_MAX_LINEAR_DELTIFICATION " = 16"                          NL
 "###"                                                                        NL
-"### After deltification, we compress the data through zlib to minimize on-" NL
-"### disk size.  That can be an expensive and ineffective process.  This"    NL
-"### setting controls the usage of zlib in future revisions."                NL
+"### After deltification, we compress the data to minimize on-disk size."    NL
+"### This settings control the compression level for this process."          NL
 "### Revisions with highly compressible data in them may shrink in size"     NL
-"### if the setting is increased but may take much longer to commit.  The"   NL
-"### time taken to uncompress that data again is widely independent of the"  NL
-"### compression level."                                                     NL
-"### Compression will be ineffective if the incoming content is already"     NL
-"### highly compressed.  In that case, disabling the compression entirely"   NL
-"### will speed up commits as well as reading the data.  Repositories with"  NL
-"### many small compressible files (source code) but also a high percentage" NL
-"### of large incompressible ones (artwork) may benefit from compression"    NL
-"### levels lowered to e.g. 1."                                              NL
-"### Valid values are 0 to 9 with 9 providing the highest compression ratio" NL
-"### and 0 disabling it altogether."                                         NL
+"### if the setting is increased but may take much longer to commit."        NL
+"### The time taken to uncompress that data again is widely independent"     NL
+"### of the compression level.  Compression will be ineffective if the"      NL
+"### incoming content is already highly compressed.  In that case,"          NL
+"### disabling the compression entirely or using the special value 1"        NL
+"### (see below) will speed up commits as well as reading the data."         NL
+"### Repositories with many small compressible files (source code) but"      NL
+"### also a high percentage of large incompressible ones (artwork) may"      NL
+"### benefit from compression levels lowered."                               NL
+"### Valid values are 0 to 9 with 9 providing the highest compression"       NL
+"### ratio and 0 disabling it altogether.  Using 1 as the level enables"     NL
+"### LZ4 compression that provides a decent compression ratio, but"          NL
+"### performs better with large or incompressible files."                    NL
 "### The default value is 5."                                                NL
 "# " CONFIG_OPTION_COMPRESSION_LEVEL " = 5"                                  NL
 ""                                                                           NL
@@ -1829,6 +1830,8 @@ svn_fs_fs__create(svn_fs_t *fs,
 
           case 8: format = 6;
                   break;
+          case 9: format = 7;
+                  break;
 
           default:format = SVN_FS_FS__FORMAT_NUMBER;
         }
@@ -2198,8 +2201,11 @@ svn_fs_fs__info_format(int *fs_format,
     case 7:
       (*supports_version)->minor = 9;
       break;
+    case 8:
+      (*supports_version)->minor = 10;
+      break;
 #ifdef SVN_DEBUG
-# if SVN_FS_FS__FORMAT_NUMBER != 7
+# if SVN_FS_FS__FORMAT_NUMBER != 8
 #  error "Need to add a 'case' statement here"
 # endif
 #endif

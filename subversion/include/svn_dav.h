@@ -395,6 +395,14 @@ extern "C" {
 #define SVN_DAV_NS_DAV_SVN_SVNDIFF1\
             SVN_DAV_PROP_NS_DAV "svn/svndiff1"
 
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) knows how to handle
+ * svndiff2 format encoding.
+ *
+ * @since New in 1.10.
+ */
+#define SVN_DAV_NS_DAV_SVN_SVNDIFF2\
+            SVN_DAV_PROP_NS_DAV "svn/svndiff2"
 
 /** @} */
 

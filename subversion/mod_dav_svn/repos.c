@@ -1752,6 +1752,9 @@ negotiate_encoding_prefs(request_rec *r, int *svndiff_version)
      necessary ones in this file. */
   int i;
   apr_array_header_t *encoding_prefs;
+  svn_boolean_t accepts_svndiff1 = FALSE;
+  svn_boolean_t accepts_svndiff2 = FALSE;
+
   encoding_prefs = do_header_line(r->pool,
                                   apr_table_get(r->headers_in,
                                                 "Accept-Encoding"));
@@ -1762,22 +1765,37 @@ negotiate_encoding_prefs(request_rec *r, int *svndiff_version)
       return;
     }
 
-  *svndiff_version = 0;
   svn_sort__array(encoding_prefs, sort_encoding_pref);
   for (i = 0; i < encoding_prefs->nelts; i++)
     {
       struct accept_rec rec = APR_ARRAY_IDX(encoding_prefs, i,
                                             struct accept_rec);
-      if (strcmp(rec.name, "svndiff1") == 0)
+      if (strcmp(rec.name, "svndiff2") == 0)
         {
-          *svndiff_version = 1;
-          break;
+          accepts_svndiff2 = TRUE;
         }
-      else if (strcmp(rec.name, "svndiff") == 0)
+      else if (strcmp(rec.name, "svndiff1") == 0)
         {
-          *svndiff_version = 0;
-          break;
+          accepts_svndiff1 = TRUE;
         }
+    }
+
+  /* Enable svndiff2 if the client can read it, and if the server-side
+   * compression level is set to 1.  Svndiff2 offers better speed and
+   * compression ratio comparable to svndiff1 with compression level 1,
+   * but with for other compression levels.
+   */
+  if (accepts_svndiff2 && dav_svn__get_compression_level(r) == 1)
+    {
+      *svndiff_version = 2;
+    }
+  else if (accepts_svndiff1)
+    {
+      *svndiff_version = 1;
+    }
+  else
+    {
+      *svndiff_version = 0;
     }
 }
 

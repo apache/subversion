@@ -113,6 +113,7 @@ def _usage_exit():
   print("  --config-file          : Configuration file for tests")
   print("  --fsfs-sharding        : Specify shard size (for fsfs)")
   print("  --fsfs-packing         : Run 'svnadmin pack' automatically")
+  print("  --fsfs-compression=VAL : Set compression level to VAL (for fsfs)")
   print("  -q, --quiet            : Deprecated; this is the default.")
   print("                           Use --set-log-level instead.")
 
@@ -144,6 +145,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'log-to-stdout', 'mode-filter=', 'milestone-filter=',
                         'ssl-cert=', 'exclusive-wc-locks', 'memcached-server=',
                         'skip-c-tests', 'dump-load-cross-check', 'memcached-dir=',
+                        'fsfs-compression=',
                         ])
 if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
@@ -189,6 +191,7 @@ memcached_server = None
 memcached_dir = None
 skip_c_tests = None
 dump_load_cross_check = None
+fsfs_compression_level = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -283,6 +286,8 @@ for opt, val in opts:
   elif opt == '--memcached-dir':
     memcached_dir = val
     run_memcached = 1
+  elif opt == '--fsfs-compression':
+    fsfs_compression_level = int(val)
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -1107,6 +1112,7 @@ if not test_javahl and not test_swig:
   opts.memcached_server = memcached_server
   opts.skip_c_tests = skip_c_tests
   opts.dump_load_cross_check = dump_load_cross_check
+  opts.fsfs_compression_level = fsfs_compression_level
   th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                              log_file, fail_log_file, opts)
   old_cwd = os.getcwd()
