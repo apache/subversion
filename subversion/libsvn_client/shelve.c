@@ -314,7 +314,7 @@ svn_client_shelves_list(apr_hash_t **dirents,
 
   SVN_ERR(svn_wc__get_shelves_dir(&shelves_dir, ctx->wc_ctx, local_abspath,
                                   scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_get_dirents3(dirents, shelves_dir, TRUE /*only_check_type*/,
+  SVN_ERR(svn_io_get_dirents3(dirents, shelves_dir, FALSE /*only_check_type*/,
                               result_pool, scratch_pool));
 
   /* Remove non-shelves */
