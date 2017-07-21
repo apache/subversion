@@ -719,6 +719,22 @@ class TargetApacheMod(TargetLib):
     self.compile_cmd = '$(COMPILE_APACHE_MOD)'
     self.link_cmd = '$(LINK_APACHE_MOD)'
 
+class TargetSharedOnlyLib(TargetLib):
+
+  def __init__(self, name, options, gen_obj):
+    TargetLib.__init__(self, name, options, gen_obj)
+
+    self.compile_cmd = '$(COMPILE_SHARED_ONLY_LIB)'
+    self.link_cmd = '$(LINK_SHARED_ONLY_LIB)'
+
+class TargetSharedOnlyCxxLib(TargetLib):
+
+  def __init__(self, name, options, gen_obj):
+    TargetLib.__init__(self, name, options, gen_obj)
+
+    self.compile_cmd = '$(COMPILE_SHARED_ONLY_CXX_LIB)'
+    self.link_cmd = '$(LINK_SHARED_ONLY_CXX_LIB)'
+
 class TargetRaModule(TargetLib):
   pass
 
@@ -1031,6 +1047,8 @@ _build_types = {
   'ra-module': TargetRaModule,
   'fs-module': TargetFsModule,
   'apache-mod': TargetApacheMod,
+  'shared-only-lib': TargetSharedOnlyLib,
+  'shared-only-cxx-lib': TargetSharedOnlyCxxLib,
   'javah' : TargetJavaHeaders,
   'java' : TargetJavaClasses,
   'i18n' : TargetI18N,

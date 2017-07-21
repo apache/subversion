@@ -1005,6 +1005,7 @@ if test "$enable_disallowing_of_undefined_references" != "no"; then
     for library_dir in "$abs_srcdir/subversion/libsvn_"*; do
       eval "`basename $library_dir`_LDFLAGS=-Wl,--no-undefined"
     done
+    shared_only_LDFLAGS="-Wl,--no-undefined"
   else
     AC_MSG_RESULT([no])
     if test "$enable_disallowing_of_undefined_references" = "yes"; then
@@ -1012,8 +1013,6 @@ if test "$enable_disallowing_of_undefined_references" != "no"; then
     fi
   fi
 fi
-AC_SUBST([libsvn_auth_gnome_keyring_LDFLAGS])
-AC_SUBST([libsvn_auth_kwallet_LDFLAGS])
 AC_SUBST([libsvn_client_LDFLAGS])
 AC_SUBST([libsvn_delta_LDFLAGS])
 AC_SUBST([libsvn_diff_LDFLAGS])
@@ -1028,6 +1027,7 @@ AC_SUBST([libsvn_ra_svn_LDFLAGS])
 AC_SUBST([libsvn_repos_LDFLAGS])
 AC_SUBST([libsvn_subr_LDFLAGS])
 AC_SUBST([libsvn_wc_LDFLAGS])
+AC_SUBST([shared_only_LDFLAGS])
 
 
 AC_ARG_ENABLE(maintainer-mode,

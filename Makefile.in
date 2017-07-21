@@ -200,7 +200,9 @@ LT_COMPILE_CXX_NOWARN = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX_NO
 LT_EXECUTE = $(LIBTOOL) $(LTFLAGS) --mode=execute `for f in $(abs_builddir)/subversion/*/*.la; do echo -dlopen $$f; done`
 
 # special compilation for files destined for mod_dav_svn
-COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CMODEFLAGS) $(CPPFLAGS) $(CFLAGS) $(CMAINTAINERFLAGS) $(LT_CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c
+COMPILE_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=compile $(CC) $(CMODEFLAGS) $(CPPFLAGS) $(CFLAGS) $(CMAINTAINERFLAGS) $(LT_CFLAGS) $(APACHE_INCLUDES) $(INCLUDES) -o $@ -c -shared
+COMPILE_SHARED_ONLY_LIB = $(LT_COMPILE) -o $@ -c -shared
+COMPILE_SHARED_ONLY_CXX_LIB = $(LT_COMPILE_CXX) -o $@ -c -shared
 
 # special compilation for files destined for libsvn_swig_* (e.g. swigutil_*.c)
 COMPILE_SWIG_PY = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) $(LT_CFLAGS) -DSWIGPYTHON $(SWIG_PY_INCLUDES) $(INCLUDES) -o $@ -c
@@ -262,11 +264,9 @@ LINK_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CXXFLAGS)
 LINK_CXX_LIB = $(LINK_CXX) $(LT_SO_VERSION)
 
 # special link rule for mod_dav_svn
-LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module $(APACHE_LDFLAGS)
+LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module $(APACHE_LDFLAGS) -shared
 
 # Special LDFLAGS for some libraries
-libsvn_auth_gnome_keyring_LDFLAGS = @libsvn_auth_gnome_keyring_LDFLAGS@
-libsvn_auth_kwallet_LDFLAGS = @libsvn_auth_kwallet_LDFLAGS@
 libsvn_client_LDFLAGS = @libsvn_client_LDFLAGS@
 libsvn_delta_LDFLAGS = @libsvn_delta_LDFLAGS@
 libsvn_diff_LDFLAGS = @libsvn_diff_LDFLAGS@
@@ -281,6 +281,10 @@ libsvn_ra_svn_LDFLAGS = @libsvn_ra_svn_LDFLAGS@
 libsvn_repos_LDFLAGS = @libsvn_repos_LDFLAGS@
 libsvn_subr_LDFLAGS = @libsvn_subr_LDFLAGS@
 libsvn_wc_LDFLAGS = @libsvn_wc_LDFLAGS@
+shared_only_LDFLAGS = @shared_only_LDFLAGS@
+
+LINK_SHARED_ONLY_LIB = $(LINK_LIB) $(shared_only_LDFLAGS) -shared
+LINK_SHARED_ONLY_CXX_LIB = $(LINK_CXX_LIB) $(shared_only_LDFLAGS) -shared
 
 # Compilation of SWIG-generated C source code
 COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(LT_CFLAGS) $(CPPFLAGS) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
