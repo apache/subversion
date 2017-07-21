@@ -25,8 +25,10 @@ dnl
 AC_DEFUN(SVN_LIB_KWALLET,
 [
   AC_ARG_WITH(kwallet,
-    [AS_HELP_STRING([[--with-kwallet[=PATH]]],
-                    [Enable use of KWallet (KDE 5 or 4) for auth credentials])],
+    [AS_HELP_STRING([[--with-kwallet[=PATH|INCDIR:LIBDIR]]],
+                    [Enable use of KWallet (KDE 5 or 4) for auth credentials.
+                     PATH is the KDE install path, alternatively INCDIR:LIBDIR
+                     are the header and library install paths. ])],
                     [svn_lib_kwallet="$withval"],
                     [svn_lib_kwallet=no])
 
@@ -63,11 +65,22 @@ AC_DEFUN(SVN_LIB_KWALLET,
                   if test -f "$KDE_CONFIG" && test -x "$KDE_CONFIG"; then
                     AC_MSG_RESULT([yes])
                   else
-                    KDE_CONFIG=""
-                    AC_MSG_RESULT([no])
+                    if echo "$svn_lib_kwallet" | $EGREP ":" > /dev/null; then
+                      AC_MSG_RESULT([unneeded])
+                      KDE_CONFIG="unneeded"
+                      kde_incdir=["`echo "$svn_lib_kwallet" | $SED -e "s/:.*//"`"]
+                      kde_libdir=["`echo "$svn_lib_kwallet" | $SED -e "s/.*://"`"]
+                    else
+                      AC_MSG_RESULT([no])
+                      KDE_CONFIG=""
+                    fi
                   fi
                 else
                   AC_PATH_PROG(KDE_CONFIG, $kde_config_name)
+                  if test -n "$KDE_CONFIG"; then
+                    kde_incdir="`$KDE_CONFIG --install include`"
+                    kde_libdir="`$KDE_CONFIG --install lib`"
+                  fi
                 fi
                 if test -n "$KDE_CONFIG"; then
                   if test $kde_config_name = "kf5-config"; then
@@ -86,7 +99,6 @@ AC_DEFUN(SVN_LIB_KWALLET,
                     fi
                   done
                   qt_include_dirs="`$PKG_CONFIG --cflags-only-I $qt_pkg_config_names`"
-                  kde_incdir="`$KDE_CONFIG --install include`"
                   for kde_inc_name in $kde_inc_names; do
                     kde_kwallet_includes="$kde_kwallet_includes -I$kde_incdir/$kde_inc_name"
                   done
@@ -96,7 +108,6 @@ AC_DEFUN(SVN_LIB_KWALLET,
                   CXXFLAGS="$CXXFLAGS $SVN_KWALLET_INCLUDES -fPIC"
                   LIBS="$LIBS $SVN_KWALLET_LIBS"
                   qt_lib_dirs="`$PKG_CONFIG --libs-only-L $qt_pkg_config_names`"
-                  kde_libdir="`$KDE_CONFIG --install lib`"
                   LDFLAGS="$old_LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS($qt_lib_dirs -L$kde_libdir)`"
                   AC_LANG(C++)
                   AC_LINK_IFELSE([AC_LANG_SOURCE([[
