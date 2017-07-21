@@ -77,6 +77,8 @@ AC_DEFUN(SVN_LIB_KWALLET,
                   old_CXXFLAGS="$CXXFLAGS"
                   old_LDFLAGS="$LDFLAGS"
                   old_LIBS="$LIBS"
+                  dnl --std=c++11 may be required
+                  CXXFLAGS="$CXXFLAGS $CXXMODEFLAGS"
                   AC_MSG_CHECKING([for KWallet])
                   for d in [`$PKG_CONFIG --cflags $qt_pkg_config_names`]; do
                     if test -n ["`echo "$d" | $EGREP -- '^-D[^[:space:]]*'`"]; then
