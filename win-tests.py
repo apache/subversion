@@ -1017,6 +1017,7 @@ create_target_dir(CMDLINE_TEST_SCRIPT_NATIVE_PATH)
 # Ensure the tests directory is correctly cased
 abs_builddir = fix_case(abs_builddir)
 
+failed = None
 daemon = None
 memcached = None
 # Run the tests
@@ -1329,6 +1330,10 @@ elif test_swig == 'ruby':
     if (r != 0):
       print('[Test runner reported failure]')
       failed = True
+
+elif test_swig:
+  print('Unknown Swig binding type: ' + str(test_swig))
+  failed = True
 
 # Stop service daemon, if any
 if daemon:
