@@ -84,8 +84,8 @@ addremove_status_func(void *baton, const char *local_abspath,
           break;
         }
 
-        default:
-          break;
+      default:
+        break;
     }
 
   return SVN_NO_ERROR;
@@ -158,20 +158,23 @@ addremove(const char *local_abspath, svn_depth_t depth,
                     ctx, iterpool, iterpool));
         }
     }
-  svn_pool_destroy(iterpool);
 
   for (hi = apr_hash_first(scratch_pool, b.missing); hi;
        hi = apr_hash_next(hi))
     {
       const char *missing_abspath = apr_hash_this_key(hi);
 
+      svn_pool_clear(iterpool);
+
       SVN_ERR(svn_wc_delete4(ctx->wc_ctx, missing_abspath,
                              FALSE, /* keep_local */
                              FALSE, /* delete_unversioned_target */
                              ctx->cancel_func, ctx->cancel_baton,
                              ctx->notify_func2, ctx->notify_baton2,
-                             scratch_pool));
+                             iterpool));
     }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
