@@ -513,6 +513,23 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      opt_no_autoprops, opt_parents },
      {{opt_parents, N_("add intermediate parents")}} },
 
+  { "addremove", svn_cl__addremove, {0}, N_
+    ("Put unversioned and missing items under version control.\n"
+     "usage: addremove PATH...\n"
+     "\n"
+     "  Recursively walk the specified paths in the working copy, putting\n"
+     "  unversioned files and directories under version control, and removing\n"
+     "  missing files and directories from version control.\n"
+     "\n"
+     "  The specified PATHs must be versioned directories.\n"
+     "\n"
+     "  Additions and deletions will be scheduled for the next commit and\n"
+     "  will not take effect in the repository unless they are committed.\n"
+     "\n"
+     "  The --depth option controls recursion (default: infinity).\n"
+     "  Use 'svn revert' to undo any undesirable additions and deletions.\n"),
+    {opt_targets, opt_depth }, },
+
   { "auth", svn_cl__auth, {0}, N_
    ("Manage cached authentication credentials.\n"
     "usage: 1. svn auth [PATTERN ...]\n"

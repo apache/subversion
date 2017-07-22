@@ -1267,6 +1267,59 @@ svn_client__merge_locked(svn_client__conflict_report_t **conflict_report,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Internal helper for svn_client_add() and svn_client_addremove().
+ * Only call this if the on-disk node kind is a file. */
+svn_error_t *
+svn_client__add_file(const char *local_abspath,
+                     svn_magic__cookie_t *magic_cookie,
+                     apr_hash_t *autoprops,
+                     svn_boolean_t no_autoprops,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
+
+/* Schedule directory DIR_ABSPATH, and some of the tree under it, for
+ * addition.  DEPTH is the depth at this point in the descent (it may
+ * be changed for recursive calls).
+ *
+ * If DIR_ABSPATH (or any item below DIR_ABSPATH) is already scheduled for
+ * addition, add will fail and return an error unless FORCE is TRUE.
+ *
+ * Use MAGIC_COOKIE (which may be NULL) to detect the mime-type of files
+ * if necessary.
+ *
+ * If not NULL, CONFIG_AUTOPROPS is a hash representing the config file and
+ * svn:auto-props autoprops which apply to DIR_ABSPATH.  It maps
+ * const char * file patterns to another hash which maps const char *
+ * property names to const char *property values.  If CONFIG_AUTOPROPS is
+ * NULL and the config file and svn:auto-props autoprops are required by this
+ * function, then such will be obtained.
+ *
+ * If IGNORES is not NULL, then it is an array of const char * ignore patterns
+ * that apply to any children of DIR_ABSPATH.  If REFRESH_IGNORES is TRUE, then
+ * the passed in value of IGNORES (if any) is itself ignored and this function
+ * will gather all ignore patterns applicable to DIR_ABSPATH itself (allocated in
+ * RESULT_POOL).  Any recursive calls to this function get the refreshed ignore
+ * patterns.  If IGNORES is NULL and REFRESH_IGNORES is FALSE, then all children of DIR_ABSPATH
+ * are unconditionally added.
+ *
+ * If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to allow
+ * the user to cancel the operation.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+svn_client__add_dir_recursive(const char *dir_abspath,
+                              svn_depth_t depth,
+                              svn_boolean_t force,
+                              svn_boolean_t no_autoprops,
+                              svn_magic__cookie_t *magic_cookie,
+                              apr_hash_t *config_autoprops,
+                              svn_boolean_t refresh_ignores,
+                              apr_array_header_t *ignores,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

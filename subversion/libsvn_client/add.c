@@ -265,14 +265,13 @@ svn_client__get_paths_auto_props(apr_hash_t **properties,
   return SVN_NO_ERROR;
 }
 
-/* Only call this if the on-disk node kind is a file. */
-static svn_error_t *
-add_file(const char *local_abspath,
-         svn_magic__cookie_t *magic_cookie,
-         apr_hash_t *autoprops,
-         svn_boolean_t no_autoprops,
-         svn_client_ctx_t *ctx,
-         apr_pool_t *pool)
+svn_error_t *
+svn_client__add_file(const char *local_abspath,
+                     svn_magic__cookie_t *magic_cookie,
+                     apr_hash_t *autoprops,
+                     svn_boolean_t no_autoprops,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
 {
   apr_hash_t *properties;
   const char *mimetype;
@@ -324,48 +323,18 @@ add_file(const char *local_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Schedule directory DIR_ABSPATH, and some of the tree under it, for
- * addition.  DEPTH is the depth at this point in the descent (it may
- * be changed for recursive calls).
- *
- * If DIR_ABSPATH (or any item below DIR_ABSPATH) is already scheduled for
- * addition, add will fail and return an error unless FORCE is TRUE.
- *
- * Use MAGIC_COOKIE (which may be NULL) to detect the mime-type of files
- * if necessary.
- *
- * If not NULL, CONFIG_AUTOPROPS is a hash representing the config file and
- * svn:auto-props autoprops which apply to DIR_ABSPATH.  It maps
- * const char * file patterns to another hash which maps const char *
- * property names to const char *property values.  If CONFIG_AUTOPROPS is
- * NULL and the config file and svn:auto-props autoprops are required by this
- * function, then such will be obtained.
- *
- * If IGNORES is not NULL, then it is an array of const char * ignore patterns
- * that apply to any children of DIR_ABSPATH.  If REFRESH_IGNORES is TRUE, then
- * the passed in value of IGNORES (if any) is itself ignored and this function
- * will gather all ignore patterns applicable to DIR_ABSPATH itself (allocated in
- * RESULT_POOL).  Any recursive calls to this function get the refreshed ignore
- * patterns.  If IGNORES is NULL and REFRESH_IGNORES is FALSE, then all children of DIR_ABSPATH
- * are unconditionally added.
- *
- * If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to allow
- * the user to cancel the operation.
- *
- * Use SCRATCH_POOL for temporary allocations.
- */
-static svn_error_t *
-add_dir_recursive(const char *dir_abspath,
-                  svn_depth_t depth,
-                  svn_boolean_t force,
-                  svn_boolean_t no_autoprops,
-                  svn_magic__cookie_t *magic_cookie,
-                  apr_hash_t *config_autoprops,
-                  svn_boolean_t refresh_ignores,
-                  apr_array_header_t *ignores,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
+svn_error_t *
+svn_client__add_dir_recursive(const char *dir_abspath,
+                              svn_depth_t depth,
+                              svn_boolean_t force,
+                              svn_boolean_t no_autoprops,
+                              svn_magic__cookie_t *magic_cookie,
+                              apr_hash_t *config_autoprops,
+                              svn_boolean_t refresh_ignores,
+                              apr_array_header_t *ignores,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
   apr_pool_t *iterpool;
@@ -412,8 +381,8 @@ add_dir_recursive(const char *dir_abspath,
 
      Since this set of autoprops applies to all unversioned children of
      DIR_ABSPATH, we will pass these along to any recursive calls to
-     add_dir_recursive() and calls to add_file() below.  Thus sparing
-     these callees from looking up the same information. */
+     svn_client__add_dir_recursive() and calls to svn_client__add_file() below.
+     Thus sparing these callees from looking up the same information. */
   if (!entry_exists && config_autoprops == NULL)
     {
       SVN_ERR(svn_client__get_all_auto_props(&config_autoprops, dir_abspath,
@@ -463,17 +432,17 @@ add_dir_recursive(const char *dir_abspath,
           if (refresh_ignores && !entry_exists)
             refresh_ignores = FALSE;
 
-          SVN_ERR(add_dir_recursive(abspath, depth_below_here,
-                                    force, no_autoprops,
-                                    magic_cookie, config_autoprops,
-                                    refresh_ignores, ignores, ctx,
-                                    result_pool, iterpool));
+          SVN_ERR(svn_client__add_dir_recursive(abspath, depth_below_here,
+                                                force, no_autoprops,
+                                                magic_cookie, config_autoprops,
+                                                refresh_ignores, ignores, ctx,
+                                                result_pool, iterpool));
         }
       else if ((dirent->kind == svn_node_file || dirent->special)
                && depth >= svn_depth_files)
         {
-          err = add_file(abspath, magic_cookie, config_autoprops,
-                         no_autoprops, ctx, iterpool);
+          err = svn_client__add_file(abspath, magic_cookie, config_autoprops,
+                                     no_autoprops, ctx, iterpool);
           if (err && err->apr_err == SVN_ERR_ENTRY_EXISTS && force)
             svn_error_clear(err);
           else
@@ -835,17 +804,17 @@ add(const char *local_abspath,
   SVN_ERR(svn_io_check_path(local_abspath, &kind, scratch_pool));
   if (kind == svn_node_dir)
     {
-      /* We use add_dir_recursive for all directory targets
+      /* We use svn_client__add_dir_recursive for all directory targets
          and pass depth along no matter what it is, so that the
          target's depth will be set correctly. */
-      err = add_dir_recursive(local_abspath, depth, force,
-                              no_autoprops, magic_cookie, NULL,
-                              !no_ignore, ignores, ctx,
-                              scratch_pool, scratch_pool);
+      err = svn_client__add_dir_recursive(local_abspath, depth, force,
+                                          no_autoprops, magic_cookie, NULL,
+                                          !no_ignore, ignores, ctx,
+                                          scratch_pool, scratch_pool);
     }
   else if (kind == svn_node_file)
-    err = add_file(local_abspath, magic_cookie, NULL,
-                   no_autoprops, ctx, scratch_pool);
+    err = svn_client__add_file(local_abspath, magic_cookie, NULL,
+                               no_autoprops, ctx, scratch_pool);
   else if (kind == svn_node_none)
     {
       svn_boolean_t tree_conflicted;

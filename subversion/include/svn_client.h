@@ -1674,6 +1674,20 @@ svn_client_add(const char *path,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool);
 
+/**
+ * Recurse into the versioned directory @a local_path, and put any unversioned
+ * nodes found into added status, and put any missing nodes found into deleted
+ * status.
+ *
+ * The level of recursion is specified by @a depth.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_addremove(const char *path,
+                     svn_depth_t depth,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *scratch_pool);
 /** @} */
 
 /**

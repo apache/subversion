@@ -266,6 +266,7 @@ typedef struct svn_cl__cmd_baton_t
 /* Declare all the command procedures */
 svn_opt_subcommand_t
   svn_cl__add,
+  svn_cl__addremove,
   svn_cl__auth,
   svn_cl__blame,
   svn_cl__cat,
