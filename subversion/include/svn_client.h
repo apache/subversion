@@ -1975,7 +1975,7 @@ typedef svn_error_t *(*svn_client_import_filter_func_t)(
  * on @a url if @a url is already under versioned control, or the nearest parents
  * of @a path which are already under version control if not.
  *
- * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
+ * If @a ignore_unknown_node_types is @c TRUE, ignore files of which the
  * node type is unknown, such as device files and pipes.
  *
  * If @a filter_callback is non-NULL, call it for each node that isn't ignored
