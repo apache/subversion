@@ -577,26 +577,26 @@ import_dir(const svn_delta_editor_t *editor,
 }
 
 
-/* Recursively import PATH to a repository using EDITOR and
- * EDIT_BATON.  PATH can be a file or directory.
+/* Recursively import LOCAL_ABSPATH to a repository using EDITOR and
+ * EDIT_BATON.  LOCAL_ABSPATH can be a file or directory.
  *
  * Sets *UPDATED_REPOSITORY to TRUE when the repository was modified by
  * a successfull commit, otherwise to FALSE.
  *
- * DEPTH is the depth at which to import PATH; it behaves as for
- * svn_client_import4().
+ * DEPTH is the depth at which to import LOCAL_ABSPATH; it behaves as for
+ * svn_client_import5().
  *
  * BASE_REV is the revision to use for the root of the commit. We
  * checked the preconditions against this revision.
  *
  * NEW_ENTRIES is an ordered array of path components that must be
  * created in the repository (where the ordering direction is
- * parent-to-child).  If PATH is a directory, NEW_ENTRIES may be empty
+ * parent-to-child).  If LOCAL_ABSPATH is a directory, NEW_ENTRIES may be empty
  * -- the result is an import which creates as many new entries in the
  * top repository target directory as there are importable entries in
- * the top of PATH; but if NEW_ENTRIES is not empty, its last item is
+ * the top of LOCAL_ABSPATH; but if NEW_ENTRIES is not empty, its last item is
  * the name of a new subdirectory in the repository to hold the
- * import.  If PATH is a file, NEW_ENTRIES may not be empty, and its
+ * import.  If LOCAL_ABSPATH is a file, NEW_ENTRIES may not be empty, and its
  * last item is the name used for the file in the repository.  If
  * NEW_ENTRIES contains more than one item, all but the last item are
  * the names of intermediate directories that are created before the
@@ -623,6 +623,8 @@ import_dir(const svn_delta_editor_t *editor,
  *
  * If CTX->NOTIFY_FUNC is non-null, invoke it with CTX->NOTIFY_BATON for
  * each imported path, passing actions svn_wc_notify_commit_added.
+ *
+ * URL is used only in the 'commit_finalizing' notification.
  *
  * Use POOL for any temporary allocation.
  *
