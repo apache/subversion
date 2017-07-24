@@ -105,7 +105,7 @@ svn_cl__cleanup(apr_getopt_t *os,
                                                  TRUE /* break_locks */,
                                                  TRUE /* fix_timestamps */,
                                                  TRUE /* clear_dav_cache */,
-                                                 TRUE /* vacuum_pristines */,
+                                                 FALSE /* vacuum_pristines */,
                                                  opt_state->include_externals,
                                                  ctx, iterpool);
 
