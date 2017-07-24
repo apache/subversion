@@ -143,7 +143,8 @@ typedef enum svn_cl__longopt_t {
   opt_show_passwords,
   opt_pin_externals,
   opt_show_item,
-  opt_adds_as_modification
+  opt_adds_as_modification,
+  opt_vacuum_pristines,
 } svn_cl__longopt_t;
 
 
@@ -459,6 +460,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "resolve tree conflicts instead.")},
 
+  {"vacuum-pristines", opt_vacuum_pristines, 0,
+                       N_("remove unreferenced pristines from .svn directory")},
+
   /* Long-opt Aliases
    *
    * These have NULL desriptions, but an option code that matches some
@@ -625,9 +629,16 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  items can only be removed if the working copy is not already locked\n"
      "  for writing by another Subversion client.\n"
      "  Note that the 'svn status' command shows unversioned items as '?',\n"
-     "  and ignored items as 'I' if the --no-ignore option is given to it.\n"),
+     "  and ignored items as 'I' if the --no-ignore option is given to it.\n"
+     "\n"
+     "  The --vacuum-pristines option provides a safe way to remove pristine\n"
+     "  copies of files which are stored inside the .svn directory and which\n"
+     "  are no longer referenced by any file in the working copy.\n"
+     "  To prevent accidental working copy corruption, this operation will\n"
+     "  only succeed if the working copy is not already locked for writing by\n"
+     "  another Subversion client.\n"),
     {opt_merge_cmd, opt_remove_unversioned, opt_remove_ignored,
-     opt_include_externals, 'q'} },
+     opt_include_externals, 'q', opt_vacuum_pristines} },
 
   { "commit", svn_cl__commit, {"ci"},
     N_("Send changes from your working copy to the repository.\n"
