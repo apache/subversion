@@ -521,8 +521,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  unversioned files and directories under version control, and removing\n"
      "  missing files and directories from version control.\n"
      "\n"
-     "  The specified PATHs must be versioned directories.\n"
-     "\n"
      "  Additions and deletions will be scheduled for the next commit and\n"
      "  will not take effect in the repository unless they are committed.\n"
      "\n"

@@ -96,21 +96,8 @@ addremove(const char *local_abspath, svn_depth_t depth,
           svn_client_ctx_t *ctx, apr_pool_t *scratch_pool)
 {
   struct addremove_status_baton b;
-  struct svn_wc_status3_t *status;
-  svn_node_kind_t kind_on_disk;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
-
-  /* Our target must be a versioned directory. */
-  SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, local_abspath,
-                         scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_check_path(local_abspath, &kind_on_disk, scratch_pool));
-  if (status->kind != svn_node_dir || kind_on_disk != svn_node_dir ||
-      !status->versioned)
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' is not a versioned directory"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
 
   b.missing = apr_hash_make(scratch_pool);
   b.unversioned = apr_hash_make(scratch_pool);
@@ -126,6 +113,7 @@ addremove(const char *local_abspath, svn_depth_t depth,
        hi = apr_hash_next(hi))
     {
       const char *unversioned_abspath = apr_hash_this_key(hi);
+      svn_node_kind_t kind_on_disk;
 
       svn_pool_clear(iterpool);
 
