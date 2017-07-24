@@ -2516,6 +2516,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_adds_as_modification:
         opt_state.adds_as_modification = TRUE;
         break;
+      case opt_vacuum_pristines:
+        opt_state.vacuum_pristines = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
