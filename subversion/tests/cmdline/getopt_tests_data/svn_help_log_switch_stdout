@@ -209,7 +209,6 @@ Valid options:
                              'empty', 'files', 'immediates', or 'infinity')
   -q [--quiet]             : print nothing, or only summary information
   --diff3-cmd ARG          : use ARG as merge command
-  --relocate               : relocate via URL-rewriting
   --ignore-externals       : ignore externals definitions
   --ignore-ancestry        : allow switching to a node with no common ancestor
   --force                  : handle unversioned obstructions as changes
@@ -218,6 +217,7 @@ Valid options:
                              'theirs-conflict', 'mine-full', 'theirs-full',
                              'edit', 'launch')
                              (shorthand: 'p', 'mc', 'tc', 'mf', 'tf', 'e', 'l')
+  --relocate               : deprecated; use 'svn relocate'
 
 Global options:
   --username ARG           : specify a username ARG

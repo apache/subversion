@@ -1329,11 +1329,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Furthermore, WC -> WC moves will refuse to move a mixed-revision subtree.\n"
      "  To avoid unnecessary conflicts, it is recommended to run 'svn update'\n"
      "  to update the subtree to a single revision before moving it.\n"
-     "  The --allow-mixed-revisions option is provided for backward compatibility.\n"
-     "\n"
-     "  The --revision option has no use and is deprecated.\n"),
-    {'r', 'q', opt_force, opt_parents, opt_allow_mixed_revisions,
-     SVN_CL__LOG_MSG_OPTIONS} },
+     "  The --allow-mixed-revisions option is provided for backward compatibility.\n"),
+    {'q', opt_force, opt_parents, opt_allow_mixed_revisions,
+     SVN_CL__LOG_MSG_OPTIONS, 'r'},
+    {{'r', "deprecated and ignored"}} },
 
   { "patch", svn_cl__patch, {0}, N_
     ("Apply a patch to a working copy.\n"
@@ -1781,12 +1780,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn switch --relocate http:// svn://\n"
      "    svn switch --relocate http://www.example.com/repo/project \\\n"
      "                          svn://svn.example.com/repo/project\n"),
-    { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_relocate,
-      opt_ignore_externals, opt_ignore_ancestry, opt_force, opt_accept},
+    { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd,
+      opt_ignore_externals, opt_ignore_ancestry, opt_force, opt_accept,
+      opt_relocate },
     {{opt_ignore_ancestry,
      N_("allow switching to a node with no common ancestor")},
      {opt_force,
-      N_("handle unversioned obstructions as changes")}}
+      N_("handle unversioned obstructions as changes")},
+     {opt_relocate,N_("deprecated; use 'svn relocate'")}}
   },
 
   { "unlock", svn_cl__unlock, {0}, N_
