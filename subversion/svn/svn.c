@@ -638,9 +638,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  To prevent accidental working copy corruption, this operation will\n"
      "  only succeed if the working copy is not already locked for writing by\n"
      "  another Subversion client.\n"),
-    {opt_merge_cmd, opt_remove_unversioned, opt_remove_ignored,
-     opt_include_externals, 'q', opt_vacuum_pristines} },
-
+    { opt_remove_unversioned, opt_remove_ignored, opt_vacuum_pristines,
+      opt_include_externals, 'q', opt_merge_cmd }, 
+    { { opt_merge_cmd, N_("deprecated and ignored") } } },
+      
   { "commit", svn_cl__commit, {"ci"},
     N_("Send changes from your working copy to the repository.\n"
        "usage: commit [PATH...]\n"
