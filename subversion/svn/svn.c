@@ -610,8 +610,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "cleanup", svn_cl__cleanup, {0}, N_
     ("Recursively clean up the working copy, removing write locks, resuming\n"
-     "unfinished operations, etc.\n"
-     "usage: cleanup [WCPATH...]\n"
+     "unfinished operations, removing unversioned or ignored items, etc.\n"
+     "usage: 1. cleanup [WCPATH...]\n"
+     "usage: 2. cleanup OPTIONS [WCPATH...]\n"
      "\n"
      "  By default, finish any unfinished business in the working copy at WCPATH,\n"
      "  and remove write locks (shown as 'L' by the 'svn status' command) from\n"
@@ -620,8 +621,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  WARNING: There is no mechanism that will protect write locks still\n"
      "           being used by other Subversion clients. Running this command\n"
-     "           while another client is using the working copy can corrupt\n"
-     "           the working copy beyond repair!\n"
+     "           without any options while another client is using the working\n"
+     "           copy can corrupt the working copy beyond repair!\n"
      "\n"
      "  If the --remove-unversioned option or the --remove-ignored option\n"
      "  is given, remove any unversioned or ignored items within WCPATH.\n"
