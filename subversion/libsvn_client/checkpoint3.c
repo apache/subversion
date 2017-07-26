@@ -62,9 +62,9 @@ static char *
 checkpoints_repo_dir(const char *wc_root_abspath,
                      apr_pool_t *result_pool)
 {
-  return svn_path_join_many(result_pool,
-                            wc_root_abspath, ".svn", "checkpoints",
-                            SVN_VA_NULL);
+  return svn_dirent_join_many(result_pool,
+                              wc_root_abspath, ".svn", "checkpoints",
+                              SVN_VA_NULL);
 }
 
 /* ### temp: we should not be accessing the repo via URL but directly */
@@ -72,9 +72,9 @@ static const char *
 checkpoints_repo_url(const char *wc_root_abspath,
                      apr_pool_t *result_pool)
 {
-  char *path = svn_path_join_many(result_pool,
-                                  wc_root_abspath,".svn", "checkpoints",
-                                  SVN_VA_NULL);
+  char *path = svn_dirent_join_many(result_pool,
+                                    wc_root_abspath,".svn", "checkpoints",
+                                    SVN_VA_NULL);
   const char *url;
 
   svn_error_clear(svn_uri_get_file_url_from_dirent(&url, path, result_pool));
@@ -86,8 +86,8 @@ static const char *
 original_repos_url(const char *wc_root_abspath,
                    apr_pool_t *result_pool)
 {
-  char *path = svn_path_join_many(result_pool,
-                                  wc_root_abspath, "..", "repo", SVN_VA_NULL);
+  char *path = svn_dirent_join_many(result_pool,
+                                    wc_root_abspath, "..", "repo", SVN_VA_NULL);
   const char *url;
 
   svn_error_clear(svn_uri_get_file_url_from_dirent(&url, path, result_pool));
