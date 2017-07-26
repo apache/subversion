@@ -60,30 +60,38 @@
  */
 static char *
 checkpoints_repo_dir(const char *wc_root_abspath,
-                     apr_pool_t *scratch_pool)
+                     apr_pool_t *result_pool)
 {
-  return svn_path_join_many(scratch_pool,
+  return svn_path_join_many(result_pool,
                             wc_root_abspath, ".svn", "checkpoints",
                             SVN_VA_NULL);
 }
 
 /* ### temp: we should not be accessing the repo via URL but directly */
-static char *
+static const char *
 checkpoints_repo_url(const char *wc_root_abspath,
-                     apr_pool_t *scratch_pool)
+                     apr_pool_t *result_pool)
 {
-  return apr_pstrcat(scratch_pool,
-                     "file://", wc_root_abspath, "/.svn/checkpoints",
-                     SVN_VA_NULL);
+  char *path = svn_path_join_many(result_pool,
+                                  wc_root_abspath,".svn", "checkpoints",
+                                  SVN_VA_NULL);
+  const char *url;
+
+  svn_error_clear(svn_uri_get_file_url_from_dirent(&url, path, result_pool));
+  return url;
 }
 
-static char *
+/* ### URL of presumed-for-testing repo at "../repo" */
+static const char *
 original_repos_url(const char *wc_root_abspath,
-                   apr_pool_t *scratch_pool)
+                   apr_pool_t *result_pool)
 {
-  return apr_pstrcat(scratch_pool,
-                     "file://", wc_root_abspath, "/../repo",
-                     SVN_VA_NULL);
+  char *path = svn_path_join_many(result_pool,
+                                  wc_root_abspath, "..", "repo", SVN_VA_NULL);
+  const char *url;
+
+  svn_error_clear(svn_uri_get_file_url_from_dirent(&url, path, result_pool));
+  return url;
 }
 
 /* Create the repo if it is not already present.
