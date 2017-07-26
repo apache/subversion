@@ -52,6 +52,8 @@
 #include "svn_private_config.h"
 
 
+#define SVN_ERR_CHECKPOINT SVN_ERR_ILLEGAL_TARGET
+
 /* -------------------- checkpoint repo -------------------- */
 
 /* Return the abspatch to the checkpoints repo.
@@ -195,6 +197,18 @@ checkpoints_repo_prune(const char *repo_dir,
   SVN_ERR(svn_io_remove_file2(rep_cache_db_path, TRUE /*ignore_enoent*/,
                               scratch_pool));
   return SVN_NO_ERROR;
+}
+
+/*  */
+static svn_boolean_t
+checkpoints_initialized(const char *wc_root_abspath,
+                        apr_pool_t *scratch_pool)
+{
+  const char *repo_dir = checkpoints_repo_dir(wc_root_abspath, scratch_pool);
+  svn_node_kind_t kind;
+
+  svn_error_clear(svn_io_check_path(repo_dir, &kind, scratch_pool));
+  return (kind == svn_node_dir);
 }
 
 /* -------------------- transfers -------------------- */
@@ -557,6 +571,12 @@ svn_client_checkpoint_init(const char *local_abspath,
 
   SVN_ERR(svn_client_get_wc_root(&wc_root_abspath, local_abspath,
                                  ctx, scratch_pool, scratch_pool));
+  if (checkpoints_initialized(wc_root_abspath, scratch_pool))
+    {
+      return svn_error_create(SVN_ERR_CHECKPOINT, NULL,
+                              "Checkpoints already initialized");
+    }
+
   SVN_ERR(checkpoints_init(wc_root_abspath, ctx, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -570,6 +590,12 @@ svn_client_checkpoint_squash(const char *local_abspath,
 
   SVN_ERR(svn_client_get_wc_root(&wc_root_abspath, local_abspath,
                                  ctx, scratch_pool, scratch_pool));
+
+  if (! checkpoints_initialized(wc_root_abspath, scratch_pool))
+    {
+      return svn_error_create(SVN_ERR_CHECKPOINT, NULL,
+                              "Checkpoints not initialized");
+    }
 
   printf("-- checkpointing any uncheckpointed modifications\n");
   SVN_ERR(checkpoint_save(NULL /*checkpoint_number*/,
@@ -594,10 +620,16 @@ svn_client_checkpoint_uninit(const char *local_abspath,
 {
   const char *wc_root_abspath;
 
-  SVN_ERR(svn_client_checkpoint_squash(local_abspath, ctx, scratch_pool));
-
   SVN_ERR(svn_client_get_wc_root(&wc_root_abspath, local_abspath,
                                  ctx, scratch_pool, scratch_pool));
+
+  if (! checkpoints_initialized(wc_root_abspath, scratch_pool))
+    {
+      return svn_error_create(SVN_ERR_CHECKPOINT, NULL,
+                              "Checkpoints not initialized");
+    }
+
+  SVN_ERR(svn_client_checkpoint_squash(local_abspath, ctx, scratch_pool));
 
   SVN_ERR(checkpoints_uninit(wc_root_abspath, ctx, scratch_pool));
   return SVN_NO_ERROR;
@@ -614,6 +646,12 @@ svn_client_checkpoint_get_current(int *checkpoint_number_p,
   SVN_ERR(svn_client_get_wc_root(&wc_root_abspath, local_abspath,
                                  ctx, scratch_pool, scratch_pool));
 
+  if (! checkpoints_initialized(wc_root_abspath, scratch_pool))
+    {
+      return svn_error_create(SVN_ERR_CHECKPOINT, NULL,
+                              "Checkpoints not initialized");
+    }
+
   SVN_ERR(read_current(checkpoint_number_p, wc_root_abspath, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -629,6 +667,12 @@ svn_client_checkpoint_save(int *checkpoint_number,
 
   SVN_ERR(svn_client_get_wc_root(&wc_root_abspath, local_abspath,
                                  ctx, scratch_pool, scratch_pool));
+
+  if (! checkpoints_initialized(wc_root_abspath, scratch_pool))
+    {
+      return svn_error_create(SVN_ERR_CHECKPOINT, NULL,
+                              "Checkpoints not initialized");
+    }
 
   SVN_ERR(checkpoint_save(checkpoint_number,
                           wc_root_abspath, ctx, scratch_pool));
@@ -647,6 +691,12 @@ svn_client_checkpoint_revert(int checkpoint_number,
 
   SVN_ERR(svn_client_get_wc_root(&wc_root_abspath, local_abspath,
                                  ctx, scratch_pool, scratch_pool));
+
+  if (! checkpoints_initialized(wc_root_abspath, scratch_pool))
+    {
+      return svn_error_create(SVN_ERR_CHECKPOINT, NULL,
+                              "Checkpoints not initialized");
+    }
 
   /* ### TODO: Save the current state (of whole WC) */
 
@@ -717,6 +767,12 @@ svn_client_checkpoint_list(apr_array_header_t **checkpoints,
   log_entry_baton_t lb;
   apr_pool_t *repos_pool = svn_pool_create(scratch_pool);
   svn_repos_t *repos;
+
+  if (! checkpoints_initialized(wc_root_abspath, scratch_pool))
+    {
+      return svn_error_create(SVN_ERR_CHECKPOINT, NULL,
+                              "Checkpoints not initialized");
+    }
 
   SVN_ERR(checkpoints_repo_open(&repos, wc_root_abspath,
                                 repos_pool, scratch_pool));
