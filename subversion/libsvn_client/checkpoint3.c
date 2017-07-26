@@ -181,7 +181,7 @@ checkpoints_repo_prune(const char *repo_dir,
       char *revprop_file_path
         = apr_psprintf(scratch_pool, "%s/db/revprops/0/%d", repo_dir, r);
 
-      printf("pruning checkpoint %d\n", r - 1);
+      printf("  (pruning checkpoint %d (r%d))\n", r - 1, r);
       SVN_ERR(svn_io_remove_file2(rev_file_path, FALSE /*ignore_enoent*/,
                                   scratch_pool));
       SVN_ERR(svn_io_remove_file2(revprop_file_path, FALSE /*ignore_enoent*/,
@@ -382,13 +382,14 @@ checkpoints_init(const char *wc_root_abspath,
   SVN_ERR(svn_client_uuid_from_path2(&uuid, wc_root_abspath,
                                      ctx, scratch_pool, scratch_pool));
 
-  printf("creating repo\n");
+  printf("-- creating local repo at '.svn/checkpoints'\n");
   SVN_ERR(checkpoints_repo_create(&repos, wc_root_abspath, uuid, repos_pool));
 
-  printf("copying base\n");
+  printf("-- copying WC base into local repo r1\n");
+  printf("  (cheating: just importing from disk: disregards properties etc.)\n");
   SVN_ERR(copy_base(wc_root_abspath, repos, ctx, scratch_pool));
 
-  printf("switching base\n");
+  printf("-- switching/relocating WC base to point at local repo r1\n");
   SVN_ERR(switch_base(wc_root_abspath, repos, ctx, scratch_pool));
 
   /* Close the repo */
@@ -415,13 +416,13 @@ checkpoints_uninit(const char *wc_root_abspath,
   SVN_ERR(checkpoints_repo_open(&repos, wc_root_abspath,
                                 repos_pool, scratch_pool));
 
-  printf("switching back to original base\n");
+  printf("-- switching/relocating WC back to original base URL & rev\n");
   SVN_ERR(switch_to_original_base(wc_root_abspath, repos, ctx, scratch_pool));
 
   /* Close the repo */
   svn_pool_destroy(repos_pool);
 
-  printf("destroying the checkpoints repo\n");
+  printf("-- destroying the checkpoints repo\n");
   SVN_ERR(checkpoints_repo_destroy(wc_root_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -520,6 +521,7 @@ checkpoint_revert(int checkpoint_number,
   APR_ARRAY_PUSH(paths, const char *) = wc_root_abspath;
 
   /* Revert the WC local mods */
+  printf("-- reverting any uncheckpointed modifications\n");
   SVN_ERR(svn_client_revert3(paths,
                              svn_depth_infinity,
                              NULL /*changelists*/,
@@ -527,10 +529,13 @@ checkpoint_revert(int checkpoint_number,
                              FALSE /*metadata_only*/,
                              ctx, scratch_pool));
 
+  printf("-- performing an 'update' to revert to checkpoint %d (r%d)\n",
+         checkpoint_number, checkpoint_number+1);
   SVN_ERR(checkpoint_update(checkpoint_number, wc_root_abspath,
                             ctx, scratch_pool));
 
   /* Prune later revisions from the repo */
+  printf("-- pruning any later checkpoint revisions from the repository\n");
   SVN_ERR(checkpoints_repo_prune(
             checkpoints_repo_dir(wc_root_abspath, scratch_pool),
             checkpoint_number + 1, scratch_pool));
@@ -563,11 +568,11 @@ svn_client_checkpoint_squash(const char *local_abspath,
   SVN_ERR(svn_client_get_wc_root(&wc_root_abspath, local_abspath,
                                  ctx, scratch_pool, scratch_pool));
 
-  printf("checkpointing any outstanding changes\n");
+  printf("-- checkpointing any uncheckpointed modifications\n");
   SVN_ERR(checkpoint_save(NULL /*checkpoint_number*/,
                           wc_root_abspath, ctx, scratch_pool));
 
-  printf("squashing checkpoints to a working state\n");
+  printf("-- squashing checkpoints to a working state\n");
   SVN_ERR(squash_to_working_state(wc_root_abspath,
                                   ctx, scratch_pool));
 
