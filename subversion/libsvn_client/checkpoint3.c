@@ -154,7 +154,10 @@ static svn_error_t *
 checkpoints_repo_destroy(const char *wc_root_abspath,
                          apr_pool_t *scratch_pool)
 {
-  printf("  (destroying the repo is not implemented yet)\n");
+  const char *repo_dir
+    = checkpoints_repo_dir(wc_root_abspath, scratch_pool);
+
+  SVN_ERR(svn_io_remove_dir(repo_dir, scratch_pool));
   return SVN_NO_ERROR;
 }
 
