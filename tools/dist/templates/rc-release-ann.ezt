@@ -31,7 +31,7 @@ Apache Subversion open source version control system.  It may contain known
 issues, a complete list of [major-minor-patch]-blocking issues can be found
 here:
 
-    http://subversion.tigris.org/issues/buglist.cgi?component=subversion&issue_status=NEW&issue_status=STARTED&issue_status=REOPENED&target_milestone=[major-minor-patch]
+    https://issues.apache.org/jira/browse/SVN-4629?jql=project%20%3D%20SVN%20AND%20resolution%20%3D%20Unresolved%20AND%20fixVersion%20%3D%20[major-minor-patch]%20ORDER%20BY%20priority%20DESC%2C%20updated%20DESC
 
 A pre-release means the Subversion developers feel that this release
 is ready for widespread testing by the community.  There are known issues
