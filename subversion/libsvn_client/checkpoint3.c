@@ -81,17 +81,37 @@ checkpoints_repo_url(const char *wc_root_abspath,
   return url;
 }
 
-/* ### URL of presumed-for-testing repo at "../repo" */
-static const char *
-original_repos_url(const char *wc_root_abspath,
-                   apr_pool_t *result_pool)
+/* Store the original repos URL in a file the checkpoints repo dir. */
+static svn_error_t *
+write_original_repos_url(const char *url,
+                         const char *wc_root_abspath,
+                         apr_pool_t *scratch_pool)
 {
-  char *path = svn_dirent_join_many(result_pool,
-                                    wc_root_abspath, "..", "repo", SVN_VA_NULL);
-  const char *url;
+  const char *filename = svn_dirent_join_many(scratch_pool,
+                                              wc_root_abspath,
+                                              ".svn", "checkpoints", "orig-url",
+                                              SVN_VA_NULL);
 
-  svn_error_clear(svn_uri_get_file_url_from_dirent(&url, path, result_pool));
-  return url;
+  svn_error_clear(svn_io_write_atomic2(filename, url, strlen(url),
+                                       NULL /*copy_perms_path*/,
+                                       FALSE /*flush*/,
+                                       scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Retrieve the original repos URL from its file in the checkpoints repo dir. */
+static const char *
+read_original_repos_url(const char *wc_root_abspath,
+                        apr_pool_t *result_pool)
+{
+  const char *filename = svn_dirent_join_many(result_pool,
+                                              wc_root_abspath,
+                                              ".svn", "checkpoints", "orig-url",
+                                              SVN_VA_NULL);
+  svn_stringbuf_t *url;
+
+  svn_error_clear(svn_stringbuf_from_file2(&url, filename, result_pool));
+  return url->data;
 }
 
 /* Create the repo if it is not already present.
@@ -268,6 +288,8 @@ switch_base(const char *wc_root_abspath,
                                orig_repos_root_url, repos_url,
                                TRUE /*ignore_externals*/,
                                ctx, scratch_pool));
+  SVN_ERR(write_original_repos_url(orig_repos_root_url,
+                                   wc_root_abspath, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -279,7 +301,7 @@ switch_to_original_base(const char *wc_root_abspath,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *scratch_pool)
 {
-  const char *orig_repos_url = original_repos_url(wc_root_abspath, scratch_pool);
+  const char *orig_repos_url = read_original_repos_url(wc_root_abspath, scratch_pool);
   const char *repos_url = checkpoints_repo_url(wc_root_abspath, scratch_pool);
 
   SVN_ERR(svn_client_relocate2(wc_root_abspath,
