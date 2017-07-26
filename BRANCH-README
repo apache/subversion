@@ -1,13 +1,12 @@
-This branch is for development of Shelving and Checkpointing.
-
-Specifically, this branch is for Checkpointing backed by a local repository
+This branch is for prototyping Checkpointing backed by a local repository
 embedded within the WC, referred to as design "option 3" in [1].
 
-Branch type: dev branch off trunk; updated by full merges from trunk.
+Branch type: dev branch off 'shelve' branch; updated by full merges from
+there; not intended to be merged to trunk.
 
-Initially this is prototyping, to explore the general shape of the design and
-user interface. As such, it does not take care over details of APIs and error
-handling and so on.
+Initially this is prototyping, to explore the general shape of the design
+and user interface. As such, the coding style is hacky and does not comply
+with Subversion coding requirements.
 
 References:
    [0] dev@ thread "[RFC] Shelving and Checkpointing", J Foad, 2017-07-10.

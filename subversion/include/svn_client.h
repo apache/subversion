@@ -6716,6 +6716,90 @@ svn_client_cat(svn_stream_t *out,
 
 
 
+/** Checkpointing commands
+ *
+ * @defgroup svn_client_checkpoint_funcs Client Checkpointing Functions
+ * @{
+ */
+
+/**
+ *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_checkpoint_init(const char *local_abspath,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *scratch_pool);
+
+/**
+ *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_checkpoint_uninit(const char *local_abspath,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool);
+
+/**
+ *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_checkpoint_squash(const char *local_abspath,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool);
+
+/**
+ *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_checkpoint_get_current(int *checkpoint_number_p,
+                                  const char *local_abspath,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *scratch_pool);
+
+/**
+ * Set *checkpoint_number to the new checkpoint revision number,
+ * or to -1 if no change was saved.
+ *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_checkpoint_save(int *checkpoint_number,
+                           const char *local_abspath,
+                           /*const apr_array_header_t *paths,
+                           svn_depth_t depth,
+                           const apr_array_header_t *changelists,*/
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *scratch_pool);
+
+/**
+ *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_checkpoint_revert(int checkpoint_number,
+                             const char *local_abspath,
+                             svn_boolean_t dry_run,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool);
+
+/**
+ *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_checkpoint_list(apr_array_header_t **checkpoints,
+                           const char *wc_root_abspath,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/** @} */
+
+
+
 /** Shelving commands
  *
  * @defgroup svn_client_shelve_funcs Client Shelving Functions

@@ -249,6 +249,7 @@ _svn()
 	cmds="$cmds plist propset pset relocate resolve resolved revert status"
 	cmds="$cmds switch unlock update upgrade"
 	cmds="$cmds shelve shelves unshelve"
+	cmds="$cmds checkpoint"
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'
@@ -1027,6 +1028,9 @@ _svn()
 		cmdOpts="$qOpts --keep --dry-run"
 		;;
 	shelves)
+		cmdOpts="$qOpts"
+		;;
+	checkpoint)
 		cmdOpts="$qOpts"
 		;;
 	*)

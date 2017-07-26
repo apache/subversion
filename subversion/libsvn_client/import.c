@@ -631,8 +631,8 @@ import_dir(const svn_delta_editor_t *editor,
  * called, it returns a directory baton for that directory, which is
  * not necessarily the root.)
  */
-static svn_error_t *
-import(svn_boolean_t *updated_repository,
+svn_error_t *
+svn_client__import_internal(svn_boolean_t *updated_repository,
        const char *local_abspath,
        const char *url,
        const apr_array_header_t *new_entries,
@@ -989,7 +989,7 @@ svn_client_import5(const char *path,
     }
 
   /* If an error occurred during the commit, properly abort the edit.  */
-  err = svn_error_trace(import(&updated_repository,
+  err = svn_error_trace(svn_client__import_internal(&updated_repository,
                                local_abspath, url, new_entries, editor,
                                edit_baton, depth, base_rev, excludes,
                                autoprops, local_ignores_arr, global_ignores,

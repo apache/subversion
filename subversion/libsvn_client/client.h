@@ -1267,6 +1267,28 @@ svn_client__merge_locked(svn_client__conflict_report_t **conflict_report,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* */
+svn_error_t *
+svn_client__import_internal(svn_boolean_t *updated_repository,
+       const char *local_abspath,
+       const char *url,
+       const apr_array_header_t *new_entries,
+       const svn_delta_editor_t *editor,
+       void *edit_baton,
+       svn_depth_t depth,
+       svn_revnum_t base_rev,
+       apr_hash_t *excludes,
+       apr_hash_t *autoprops,
+       apr_array_header_t *local_ignores,
+       apr_array_header_t *global_ignores,
+       svn_boolean_t no_ignore,
+       svn_boolean_t no_autoprops,
+       svn_boolean_t ignore_unknown_node_types,
+       svn_client_import_filter_func_t filter_callback,
+       void *filter_baton,
+       svn_client_ctx_t *ctx,
+       apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
