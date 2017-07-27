@@ -1,5 +1,5 @@
 /*
- * compress.c:  various data compression routines
+ * compress_zlib.c:  zlib data compression routines
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -22,20 +22,12 @@
  */
 
 
-#include <string.h>
-#include <assert.h>
 #include <zlib.h>
 
 #include "private/svn_subr_private.h"
 #include "private/svn_error_private.h"
 
 #include "svn_private_config.h"
-
-#if SVN_INTERNAL_LZ4
-#include "lz4/lz4internal.h"
-#else
-#include <lz4.h>
-#endif
 
 const char *
 svn_zlib__compiled_version(void)
@@ -62,87 +54,6 @@ svn_zlib__runtime_version(void)
 /* For svndiff1, address/instruction/new data under this size will not
    be compressed using zlib as a secondary compressor.  */
 #define MIN_COMPRESS_SIZE 512
-
-unsigned char *
-svn__encode_uint(unsigned char *p, apr_uint64_t val)
-{
-  int n;
-  apr_uint64_t v;
-
-  /* Figure out how many bytes we'll need.  */
-  v = val >> 7;
-  n = 1;
-  while (v > 0)
-    {
-      v = v >> 7;
-      n++;
-    }
-
-  /* Encode the remaining bytes; n is always the number of bytes
-     coming after the one we're encoding.  */
-  while (--n >= 1)
-    *p++ = (unsigned char)(((val >> (n * 7)) | 0x80) & 0xff);
-
-  *p++ = (unsigned char)(val & 0x7f);
-
-  return p;
-}
-
-unsigned char *
-svn__encode_int(unsigned char *p, apr_int64_t val)
-{
-  apr_uint64_t value = val;
-  value = value & APR_UINT64_C(0x8000000000000000)
-        ? APR_UINT64_MAX - (2 * value)
-        : 2 * value;
-
-  return svn__encode_uint(p, value);
-}
-
-const unsigned char *
-svn__decode_uint(apr_uint64_t *val,
-                 const unsigned char *p,
-                 const unsigned char *end)
-{
-  apr_uint64_t temp = 0;
-
-  if (end - p > SVN__MAX_ENCODED_UINT_LEN)
-    end = p + SVN__MAX_ENCODED_UINT_LEN;
-
-  /* Decode bytes until we're done. */
-  while (SVN__PREDICT_TRUE(p < end))
-    {
-      unsigned int c = *p++;
-
-      if (c < 0x80)
-        {
-          *val = (temp << 7) | c;
-          return p;
-        }
-      else
-        {
-          temp = (temp << 7) | (c & 0x7f);
-        }
-    }
-
-  return NULL;
-}
-
-const unsigned char *
-svn__decode_int(apr_int64_t *val,
-                const unsigned char *p,
-                const unsigned char *end)
-{
-  apr_uint64_t value;
-  const unsigned char *result = svn__decode_uint(&value, p, end);
-
-  value = value & 1
-        ? (APR_UINT64_MAX - value / 2)
-        : value / 2;
-  *val = (apr_int64_t)value;
-
-  return result;
-}
 
 /* If IN is a string that is >= MIN_COMPRESS_SIZE and the COMPRESSION_LEVEL
    is not SVN_DELTA_COMPRESSION_LEVEL_NONE, zlib compress it and places the
@@ -287,98 +198,4 @@ svn__decompress_zlib(const void *data, apr_size_t len,
                      apr_size_t limit)
 {
   return zlib_decode(data, len, out, limit);
-}
-
-svn_error_t *
-svn__compress_lz4(const void *data, apr_size_t len,
-                  svn_stringbuf_t *out)
-{
-  apr_size_t hdrlen;
-  unsigned char buf[SVN__MAX_ENCODED_UINT_LEN];
-  unsigned char *p;
-  int compressed_data_len;
-  int max_compressed_data_len;
-
-  assert(len <= LZ4_MAX_INPUT_SIZE);
-
-  p = svn__encode_uint(buf, (apr_uint64_t)len);
-  hdrlen = p - buf;
-  max_compressed_data_len = LZ4_compressBound((int)len);
-  svn_stringbuf_setempty(out);
-  svn_stringbuf_ensure(out, max_compressed_data_len + hdrlen);
-  svn_stringbuf_appendbytes(out, (const char *)buf, hdrlen);
-  compressed_data_len = LZ4_compress_default(data, out->data + out->len,
-                                             (int)len, max_compressed_data_len);
-  if (!compressed_data_len)
-    return svn_error_create(SVN_ERR_LZ4_COMPRESSION_FAILED, NULL, NULL);
-
-  if (compressed_data_len >= (int)len)
-    {
-      /* Compression didn't help :(, just append the original text */
-      svn_stringbuf_appendbytes(out, data, len);
-    }
-  else
-    {
-      out->len += compressed_data_len;
-      out->data[out->len] = 0;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn__decompress_lz4(const void *data, apr_size_t len,
-                    svn_stringbuf_t *out,
-                    apr_size_t limit)
-{
-  apr_size_t hdrlen;
-  int compressed_data_len;
-  int decompressed_data_len;
-  apr_uint64_t u64;
-  const unsigned char *p = data;
-  int rv;
-
-  assert(len <= INT_MAX);
-  assert(limit <= INT_MAX);
-
-  /* First thing in the string is the original length.  */
-  p = svn__decode_uint(&u64, p, p + len);
-  if (p == NULL)
-    return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA, NULL,
-                            _("Decompression of compressed data failed: "
-                              "no size"));
-  if (u64 > limit)
-    return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA, NULL,
-                            _("Decompression of compressed data failed: "
-                              "size too large"));
-  decompressed_data_len = (int)u64;
-  hdrlen = p - (const unsigned char *)data;
-  compressed_data_len = (int)(len - hdrlen);
-
-  svn_stringbuf_setempty(out);
-  svn_stringbuf_ensure(out, decompressed_data_len);
-
-  if (compressed_data_len == decompressed_data_len)
-    {
-      /* Data is in the original, uncompressed form. */
-      memcpy(out->data, p, decompressed_data_len);
-    }
-  else
-    {
-      rv = LZ4_decompress_safe((const char *)p, out->data, compressed_data_len,
-                               decompressed_data_len);
-      if (rv < 0)
-        return svn_error_create(SVN_ERR_LZ4_DECOMPRESSION_FAILED, NULL, NULL);
-
-      if (rv != decompressed_data_len)
-        return svn_error_create(SVN_ERR_SVNDIFF_INVALID_COMPRESSED_DATA,
-                                NULL,
-                                _("Size of uncompressed data "
-                                  "does not match stored original length"));
-    }
-
-  out->data[decompressed_data_len] = 0;
-  out->len = decompressed_data_len;
-
-  return SVN_NO_ERROR;
 }
