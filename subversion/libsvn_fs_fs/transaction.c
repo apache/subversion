@@ -2184,7 +2184,7 @@ txdelta_to_svndiff(svn_txdelta_window_handler_t *handler,
   else
     {
       svndiff_version = 0;
-      svndiff_compression_level = 0;
+      svndiff_compression_level = SVN_DELTA_COMPRESSION_LEVEL_NONE;
     }
 
   svn_txdelta_to_svndiff3(handler, handler_baton, output, svndiff_version,
