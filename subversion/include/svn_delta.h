@@ -546,6 +546,20 @@ svn_txdelta_to_svndiff(svn_stream_t *output,
                        svn_txdelta_window_handler_t *handler,
                        void **handler_baton);
 
+/** Return a readable generic stream which will produce svndiff-encoded
+ * text delta from the delta stream @a txstream.  @a svndiff_version and
+ * @a compression_level are same as in svn_txdelta_to_svndiff3().
+ *
+ * Allocate the stream in @a pool.
+ *
+ * @since New in 1.10.
+ */
+svn_stream_t *
+svn_txdelta_to_svndiff_stream(svn_txdelta_stream_t *txstream,
+                              int svndiff_version,
+                              int compression_level,
+                              apr_pool_t *pool);
+
 /** Return a writable generic stream which will parse svndiff-format
  * data into a text delta, invoking @a handler with @a handler_baton
  * whenever a new window is ready.
