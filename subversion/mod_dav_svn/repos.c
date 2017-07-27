@@ -1783,7 +1783,7 @@ negotiate_encoding_prefs(request_rec *r, int *svndiff_version)
   /* Enable svndiff2 if the client can read it, and if the server-side
    * compression level is set to 1.  Svndiff2 offers better speed and
    * compression ratio comparable to svndiff1 with compression level 1,
-   * but with for other compression levels.
+   * but not with other compression levels.
    */
   if (accepts_svndiff2 && dav_svn__get_compression_level(r) == 1)
     {
