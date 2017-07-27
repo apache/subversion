@@ -1218,6 +1218,8 @@ SVN_LIB_Z
 
 SVN_LZ4
 
+SVN_UTF8PROC
+
 MOD_ACTIVATION=""
 AC_ARG_ENABLE(mod-activation,
 AS_HELP_STRING([--enable-mod-activation],
