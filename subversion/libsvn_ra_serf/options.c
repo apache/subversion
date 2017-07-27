@@ -237,6 +237,10 @@ capabilities_headers_iterator_callback(void *baton,
           /* Same for svndiff2. */
           session->supports_svndiff2 = TRUE;
         }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_PUT_RESULT_CHECKSUM, vals))
+        {
+          session->supports_put_result_checksum = TRUE;
+        }
     }
 
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */

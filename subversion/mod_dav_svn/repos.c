@@ -2987,6 +2987,26 @@ close_stream(dav_stream *stream, int commit)
            pool);
     }
 
+  if (stream->wstream != NULL || stream->delta_handler != NULL)
+    {
+      request_rec *r = stream->res->info->r;
+      svn_checksum_t *checksum;
+
+      serr = svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                  stream->res->info->root.root,
+                                  stream->res->info->repos_path,
+                                  FALSE, pool);
+      if (serr)
+        return dav_svn__convert_err
+          (serr, HTTP_INTERNAL_SERVER_ERROR,
+            "mod_dav_svn close_stream: error getting file checksum",
+            pool);
+
+      if (checksum)
+        apr_table_set(r->headers_out, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER,
+                      svn_checksum_to_cstring(checksum, pool));
+    }
+
   return NULL;
 }
 
