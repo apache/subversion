@@ -993,3 +993,95 @@ svn_txdelta__read_raw_window_len(apr_size_t *window_len,
   return SVN_NO_ERROR;
 }
 
+typedef struct svndiff_stream_baton_t
+{
+  apr_pool_t *scratch_pool;
+  svn_txdelta_stream_t *txstream;
+  svn_txdelta_window_handler_t handler;
+  void *handler_baton;
+  svn_stringbuf_t *window_buffer;
+  apr_size_t read_pos;
+  svn_boolean_t hit_eof;
+} svndiff_stream_baton_t;
+
+static svn_error_t *
+svndiff_stream_write_fn(void *baton, const char *data, apr_size_t *len)
+{
+  svndiff_stream_baton_t *b = baton;
+
+  svn_stringbuf_appendbytes(b->window_buffer, data, *len);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svndiff_stream_read_fn(void *baton, char *buffer, apr_size_t *len)
+{
+  svndiff_stream_baton_t *b = baton;
+  apr_size_t left = *len;
+  apr_size_t read = 0;
+
+  while (left && !b->hit_eof)
+    {
+      apr_size_t chunk_size;
+
+      if (b->read_pos == b->window_buffer->len)
+        {
+          svn_txdelta_window_t *window;
+
+          svn_pool_clear(b->scratch_pool);
+          svn_stringbuf_setempty(b->window_buffer);
+          SVN_ERR(svn_txdelta_next_window(&window, b->txstream,
+                                          b->scratch_pool));
+          SVN_ERR(b->handler(window, b->handler_baton));
+          b->read_pos = 0;
+
+          if (!window)
+            b->hit_eof = TRUE;
+        }
+
+      if (left > b->window_buffer->len - b->read_pos)
+        chunk_size = b->window_buffer->len - b->read_pos;
+      else
+        chunk_size = left;
+
+      memcpy(buffer, b->window_buffer->data + b->read_pos, chunk_size);
+      b->read_pos += chunk_size;
+      buffer += chunk_size;
+      read += chunk_size;
+      left -= chunk_size;
+    }
+
+  *len = read;
+  return SVN_NO_ERROR;
+}
+
+svn_stream_t *
+svn_txdelta_to_svndiff_stream(svn_txdelta_stream_t *txstream,
+                              int svndiff_version,
+                              int compression_level,
+                              apr_pool_t *pool)
+{
+  svndiff_stream_baton_t *baton;
+  svn_stream_t *push_stream;
+  svn_stream_t *pull_stream;
+
+  baton = apr_pcalloc(pool, sizeof(*baton));
+  baton->scratch_pool = svn_pool_create(pool);
+  baton->txstream = txstream;
+  baton->window_buffer = svn_stringbuf_create_empty(pool);
+  baton->hit_eof = FALSE;
+  baton->read_pos = 0;
+
+  push_stream = svn_stream_create(baton, pool);
+  svn_stream_set_write(push_stream, svndiff_stream_write_fn);
+
+  svn_txdelta_to_svndiff3(&baton->handler, &baton->handler_baton,
+                          push_stream, svndiff_version,
+                          compression_level, pool);
+
+  pull_stream = svn_stream_create(baton, pool);
+  svn_stream_set_read2(pull_stream, NULL, svndiff_stream_read_fn);
+
+  return pull_stream;
+}
