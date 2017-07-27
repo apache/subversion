@@ -100,6 +100,7 @@ BZ2_VER	= 1.0.6
 PYTHON_VER	= 2.7.13
 JUNIT_VER	= 4.10
 GETTEXT_VER	= 0.19.8.1
+LZ4_VER		= 1.7.5
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
@@ -114,6 +115,7 @@ BZ2_DIST	= bzip2-$(BZ2_VER).tar.gz
 PYTHON_DIST	= Python-$(PYTHON_VER).tgz
 JUNIT_DIST	= junit-${JUNIT_VER}.jar
 GETTEXT_DIST	= gettext-$(GETTEXT_VER).tar.gz
+LZ4_DIST	= lz4-$(LZ4_VER).tar.gz
 
 SHA256_${BDB_DIST} = f14fd96dd38915a1d63dcb94a63fbb8092334ceba6b5060760427096f631263e
 SHA256_${APR_ICONV_DIST} = 19381959d50c4a5f3b9c84d594a5f9ffb3809786919b3058281f4c87e1f4b245
@@ -128,6 +130,7 @@ SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc6
 SHA256_${PYTHON_DIST} = a4f05a0720ce0fd92626f0278b6b433eee9a6173ddf2bced7957dfb599a5ece1
 SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
 SHA256_${GETTEXT_DIST} = ff942af0e438ced4a8b0ea4b0b6e0d6d657157c5e2364de57baa279c1c125c43
+SHA256_${LZ4_DIST} = 0190cacd63022ccb86f44fa5041dc6c3804407ad61550ca21c382827319e7e7e
 
 define do_check_sha256
 if [ -x /bin/sha256 ]; then \
@@ -176,6 +179,7 @@ BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
 PYTHON_URL	= https://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
 JUNIT_URL	= https://downloads.sourceforge.net/project/junit/junit/$(JUNIT_VER)/$(JUNIT_DIST)
 GETTEXT_URL	= https://ftp.gnu.org/pub/gnu/gettext/$(GETTEXT_DIST)
+LZ4_URL		= https://github.com/lz4/lz4/archive/v$(LZ4_VER).tar.gz
 
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
@@ -194,6 +198,7 @@ RUBY_SRCDIR	= $(SRCDIR)/ruby-$(RUBY_VER)
 BZ2_SRCDIR	= $(SRCDIR)/bzip2-$(BZ2_VER)
 PYTHON_SRCDIR	= $(SRCDIR)/Python-$(PYTHON_VER)
 GETTEXT_SRCDIR	= $(SRCDIR)/gettext-$(GETTEXT_VER)
+LZ4_SRCDIR	= ${SRCDIR}/lz4-$(LZ4_VER)
 SVN_SRCDIR	= $(SVN_WC)
 
 BDB_OBJDIR	= $(OBJDIR)/db-$(BDB_VER)
@@ -212,6 +217,7 @@ RUBY_OBJDIR	= $(OBJDIR)/ruby-$(RUBY_VER)
 BZ2_OBJDIR	= $(OBJDIR)/bzip2-$(BZ2_VER)
 PYTHON_OBJDIR	= $(OBJDIR)/python-$(PYTHON_VER)
 GETTEXT_OBJDIR	= $(OBJDIR)/gettext-$(GETTEXT_VER)
+LZ4_OBJDIR	= ${OBJDIR}/lz4-$(LZ4_VER)
 SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
 
 # Tweak this for out-of-tree builds. Note that running individual
@@ -236,18 +242,19 @@ all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	httpd-install neon-install serf-install serf-old-install \
 	sqlite-install cyrus-sasl-install libmagic-install \
 	ruby-install bz2-install python-install gettext-install \
-	svn-install svn-bindings-install
+	lz4-install svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 	httpd-reset neon-reset serf-reset serf-old-reset sqlite-reset \
 	cyrus-sasl-reset libmagic-reset ruby-reset python-reset \
-	bz2-reset gettext-reset svn-reset
+	bz2-reset gettext-reset lz4-reset svn-reset
 
 # Use to save disk space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
 	neon-clean serf-clean serf-old-clean sqlite-clean cyrus-sasl-clean \
-	libmagic-clean ruby-clean bz2-clean python-clean gettext-clean svn-clean
+	libmagic-clean ruby-clean bz2-clean python-clean gettext-clean \
+	lz4-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
@@ -1319,6 +1326,49 @@ $(GETTEXT_OBJDIR)/.installed: $(GETTEXT_OBJDIR)/.compiled
 	touch $@
 
 #######################################################################
+# lz4
+#######################################################################
+
+lz4-retrieve:	$(LZ4_OBJDIR)/.retrieved
+lz4-configure:	$(LZ4_OBJDIR)/.configured
+lz4-compile:	$(LZ4_OBJDIR)/.compiled
+lz4-install:	$(LZ4_OBJDIR)/.installed
+lz4-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(LZ4_OBJDIR)/$(f);)
+
+lz4-clean:
+	-(cd $(LZ4_SRCDIR) && env MAKEFLAGS= $(MAKE) clean)
+
+# fetch distfile for lz4
+$(DISTDIR)/$(LZ4_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) -O $(LZ4_DIST) $(LZ4_URL)
+
+# retrieve lz4
+$(LZ4_OBJDIR)/.retrieved: $(DISTDIR)/$(LZ4_DIST)
+	$(call do_check_sha256,$(LZ4_DIST))
+	[ -d $(LZ4_OBJDIR) ] || mkdir -p $(LZ4_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(LZ4_DIST)
+	touch $@
+
+# configure lz4
+$(LZ4_OBJDIR)/.configured: $(LZ4_OBJDIR)/.retrieved
+	touch $@
+
+# compile lz4
+$(LZ4_OBJDIR)/.compiled: $(LZ4_OBJDIR)/.configured
+	(cd $(LZ4_SRCDIR)/lib && \
+		env MAKEFLAGS= $(MAKE) PREFIX=$(PREFIX)/lz4)
+	touch $@
+
+# install lz4
+$(LZ4_OBJDIR)/.installed: $(LZ4_OBJDIR)/.compiled
+	mkdir -p $(PREFIX)/lz4/lib
+	(cd $(LZ4_SRCDIR)/lib && \
+		env MAKEFLAGS= $(MAKE) PREFIX=$(PREFIX)/lz4 install)
+	touch $@
+
+#######################################################################
 # svn
 #######################################################################
 
@@ -1393,7 +1443,7 @@ DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
 JAVAHL_CHECK_TARGET=check-javahl
-else # 1.8
+else ifeq ($(BRANCH_MAJOR), $(filter $(BRANCH_MAJOR), 1.8 1.9))
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
 # serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
@@ -1404,6 +1454,18 @@ MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 JAVAHL_CHECK_TARGET=check-all-javahl
+else # 1.10
+BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
+SERF_FLAG=--with-serf="$(PREFIX)/serf"
+# serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
+# so we have to do that ourselves :(
+SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
+MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
+MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
+LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
+JAVAHL_CHECK_TARGET=check-all-javahl
+LZ4_FLAG=--with-lz4=$(PREFIX)/lz4
 endif
 
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
@@ -1454,6 +1516,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 			--disable-mod-activation \
 			$(JAVAHL_FLAG) \
 			$(LIBMAGIC_FLAG) \
+			$(LZ4_FLAG) \
 			$(SVN_STATIC_FLAG) \
 			$(DISABLE_NEON_VERSION_CHECK)
 	touch $@
@@ -2019,6 +2082,9 @@ endif
 	@echo "serf:       $(SERF_VER)"
 	@echo "cyrus-sasl: $(CYRUS_SASL_VER)"
 	@echo "sqlite:     $(SQLITE_VER)"
+ifdef LZ4_FLAG
+	@echo "lz4:        $(LZ4_VER)"
+endif
 	@echo "libssl:     `openssl version`"
 	@echo "swig:       `swig -version | grep Version | cut -d' ' -f3`"
 	@echo "python:     $(PYTHON_VER)"
