@@ -690,9 +690,6 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * @{
  */
 
-/* Forward declarations. */
-typedef struct svn_delta_editor_t svn_delta_editor_t;
-
 /** A structure full of callback functions the delta source will invoke
  * as it produces the delta.
  *
@@ -874,7 +871,7 @@ typedef struct svn_delta_editor_t svn_delta_editor_t;
  * dead; the only further operation which may be called on the editor
  * is @c abort_edit.
  */
-struct svn_delta_editor_t
+typedef struct svn_delta_editor_t
 {
   /** Set the target revision for this edit to @a target_revision.  This
    * call, if used, should precede all other editor calls.
@@ -1168,7 +1165,7 @@ struct svn_delta_editor_t
    * Any temporary allocations may be performed in @a scratch_pool.
    */
   svn_error_t *(*apply_textdelta_stream)(
-    const svn_delta_editor_t *editor,
+    const struct svn_delta_editor_t *editor,
     void *file_baton,
     const char *base_checksum,
     svn_txdelta_stream_open_func_t open_func,
@@ -1177,7 +1174,7 @@ struct svn_delta_editor_t
 
   /* Be sure to update svn_delta_get_cancellation_editor() and
    * svn_delta_default_editor() if you add a new callback here. */
-};
+} svn_delta_editor_t;
 
 
 /** Return a default delta editor template, allocated in @a pool.
