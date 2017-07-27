@@ -629,8 +629,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  3. Roll back the working state to checkpoint NUMBER.\n"
      "  4. List all checkpoints.\n"
      "  5. Squash all checkpoints to just a base and working state.\n"
-     "  6. Return to a plain WC based on the original repository.\n"
-     "     ### doesn't yet delete the checkpoint repo\n"),
+     "  6. Return to a plain WC based on the original repository.\n"),
     {'q',
      /*'-N', opt_depth, opt_targets, opt_changelist,*/
      /*SVN_CL__LOG_MSG_OPTIONS*/} },
