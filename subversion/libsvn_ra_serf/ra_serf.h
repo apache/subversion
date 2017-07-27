@@ -1609,6 +1609,19 @@ svn_error_t *
 svn_ra_serf__request_body_cleanup(svn_ra_serf__request_body_t *body,
                                   apr_pool_t *scratch_pool);
 
+/* Callback used in svn_ra_serf__create_stream_bucket().  ERR will be
+   will be cleared and becomes invalid after the callback returns,
+   use svn_error_dup() to preserve it. */
+typedef void
+(*svn_ra_serf__stream_bucket_errfunc_t)(void *baton, svn_error_t *err);
+
+/* Create a bucket that wraps a generic readable STREAM.  This function
+   takes ownership of the passed-in stream, and will close it. */
+serf_bucket_t *
+svn_ra_serf__create_stream_bucket(svn_stream_t *stream,
+                                  serf_bucket_alloc_t *allocator,
+                                  svn_ra_serf__stream_bucket_errfunc_t errfunc,
+                                  void *errfunc_baton);
 
 #if defined(SVN_DEBUG)
 /* Wrapper macros to collect file and line information */

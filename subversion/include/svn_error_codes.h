@@ -1667,6 +1667,11 @@ SVN_ERROR_START
              SVN_ERR_RA_SERF_CATEGORY_START + 3,
              "While handling serf response:")
 
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_RA_SERF_STREAM_BUCKET_READ_ERROR,
+             SVN_ERR_RA_SERF_CATEGORY_START + 4,
+             "Can't read from stream")
+
   /* malfunctions such as assertion failures */
 
   SVN_ERRDEF(SVN_ERR_ASSERTION_FAIL,
