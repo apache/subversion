@@ -3804,6 +3804,7 @@ find_repos(const char *url,
 {
   const char *path, *full_path, *fs_path, *hooks_env;
   svn_stringbuf_t *url_buf;
+  svn_boolean_t sasl_requested;
 
   /* Skip past the scheme and authority part. */
   path = skip_scheme_part(url);
@@ -3877,14 +3878,16 @@ find_repos(const char *url,
   SVN_ERR(load_authz_config(repository, repository->repos_root, cfg,
                             result_pool));
 
-#ifdef SVN_HAVE_SASL
+  /* Should we use Cyrus SASL? */
+  SVN_ERR(svn_config_get_bool(cfg, &sasl_requested,
+                              SVN_CONFIG_SECTION_SASL,
+                              SVN_CONFIG_OPTION_USE_SASL, FALSE));
+  if (sasl_requested)
     {
+#ifdef SVN_HAVE_SASL
       const char *val;
 
-      /* Should we use Cyrus SASL? */
-      SVN_ERR(svn_config_get_bool(cfg, &repository->use_sasl,
-                                  SVN_CONFIG_SECTION_SASL,
-                                  SVN_CONFIG_OPTION_USE_SASL, FALSE));
+      repository->use_sasl = sasl_requested;
 
       svn_config_get(cfg, &val, SVN_CONFIG_SECTION_SASL,
                     SVN_CONFIG_OPTION_MIN_SSF, "0");
@@ -3893,8 +3896,18 @@ find_repos(const char *url,
       svn_config_get(cfg, &val, SVN_CONFIG_SECTION_SASL,
                     SVN_CONFIG_OPTION_MAX_SSF, "256");
       SVN_ERR(svn_cstring_atoui(&repository->max_ssf, val));
+#else /* !SVN_HAVE_SASL */
+      return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                               _("SASL requested but not compiled in; "
+                                 "set '%s' to 'false' or recompile "
+                                 "svnserve with SASL support"),
+                               SVN_CONFIG_OPTION_USE_SASL);
+#endif /* SVN_HAVE_SASL */
     }
-#endif
+  else
+    {
+      repository->use_sasl = FALSE;
+    }
 
   /* Use the repository UUID as the default realm. */
   SVN_ERR(svn_fs_get_uuid(repository->fs, &repository->realm, scratch_pool));
