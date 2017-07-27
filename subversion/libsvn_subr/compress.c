@@ -25,12 +25,17 @@
 #include <string.h>
 #include <assert.h>
 #include <zlib.h>
-#include "lz4/lz4.h"
 
 #include "private/svn_subr_private.h"
 #include "private/svn_error_private.h"
 
 #include "svn_private_config.h"
+
+#if SVN_INTERNAL_LZ4
+#include "lz4/lz4internal.h"
+#else
+#include <lz4.h>
+#endif
 
 const char *
 svn_zlib__compiled_version(void)

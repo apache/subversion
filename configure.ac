@@ -1216,6 +1216,8 @@ AS_HELP_STRING([--with-editor=PATH],
 
 SVN_LIB_Z
 
+SVN_LZ4
+
 MOD_ACTIVATION=""
 AC_ARG_ENABLE(mod-activation,
 AS_HELP_STRING([--enable-mod-activation],
