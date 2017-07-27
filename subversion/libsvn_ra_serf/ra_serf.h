@@ -264,6 +264,10 @@ struct svn_ra_serf__session_t {
 
   /* Indicates whether the server can understand svndiff version 2. */
   svn_boolean_t supports_svndiff2;
+
+  /* Indicates whether the server sends the result checksum in the response
+   * to a successful PUT request. */
+  svn_boolean_t supports_put_result_checksum;
 };
 
 #define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)
