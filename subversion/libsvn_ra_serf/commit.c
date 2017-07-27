@@ -1888,7 +1888,7 @@ negotiate_put_encoding(int *svndiff_version,
   else if (session->supports_svndiff2 && session->using_compression)
     {
       *svndiff_version = 2;
-      *svndiff_compression_level = SVN_DELTA_COMPRESSION_LEVEL_NONE;
+      *svndiff_compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
     }
   else
     {

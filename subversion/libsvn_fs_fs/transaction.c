@@ -2174,7 +2174,7 @@ txdelta_to_svndiff(svn_txdelta_window_handler_t *handler,
       ffd->format >= SVN_FS_FS__MIN_SVNDIFF2_FORMAT)
     {
       svndiff_version = 2;
-      svndiff_compression_level = 0;
+      svndiff_compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
     }
   else if (ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT)
     {
