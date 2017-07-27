@@ -1,3 +1,5 @@
+#include "svn_private_config.h"
+#if SVN_INTERNAL_UTF8PROC
 /*
  *  Copyright (c) 2009 Public Software Group e. V., Berlin, Germany
  *
@@ -39,7 +41,7 @@
  */
 
 
-#include "utf8proc.h"
+#include "utf8proc_internal.h"
 #include "utf8proc_data.c"
 
 
@@ -609,3 +611,4 @@ uint8_t *utf8proc_NFKC(const uint8_t *str) {
   return retval;
 }
 
+#endif /* SVN_INTERNAL_UTF8PROC */

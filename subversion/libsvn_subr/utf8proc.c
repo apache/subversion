@@ -29,12 +29,16 @@
 #include "private/svn_utf_private.h"
 #include "svn_private_config.h"
 
+#if SVN_INTERNAL_UTF8PROC
 #define UTF8PROC_INLINE
 /* Somehow utf8proc thinks it is nice to use strlen as an argument name,
    while this function is already defined via apr.h */
 #define strlen svn__strlen_var
 #include "utf8proc/utf8proc.c"
 #undef strlen
+#else
+#include <utf8proc.h>
+#endif
 
 
 

@@ -47,6 +47,7 @@ sinclude(build/ac-macros/zlib.m4)
 sinclude(build/ac-macros/lz4.m4)
 sinclude(build/ac-macros/kwallet.m4)
 sinclude(build/ac-macros/libsecret.m4)
+sinclude(build/ac-macros/utf8proc.m4)
 sinclude(build/ac-macros/macosx.m4)
 
 # Include the libtool macros
