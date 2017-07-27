@@ -144,8 +144,9 @@ The repos-path@rev is for the conflict victim is also available, as it
 appeared in the working copy at the time the conflict was flagged.
 
 To determine whether path@old-rev was moved to another path-moved@new-rev,
-SVN must find path-moved@new-rev, and it must find a chain of moves which
-starts at path@old-rev and ends at path-moved@new-rev.
+SVN must look for a chain of moves which starts at path@old-rev and ends at
+new-rev. If a single such chain is found, then the final path-moved@new-rev
+is known.
 
 To do this, SVN scans all revisions between old-rev and new-rev and
 detects any moves within them. Moves of the same node are linked together
