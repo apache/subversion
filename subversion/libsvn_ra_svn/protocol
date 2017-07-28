@@ -188,6 +188,10 @@ capability and C indicates a client capability):
 [CS] svndiff1          If both the client and server support svndiff version
                        1, this will be used as the on-the-wire format for 
                        svndiff instead of svndiff version 0.
+[CS] accepts-svndiff2  This capability advertises support for accepting
+                       svndiff2 deltas.  The sender of a delta (= the editor
+                       driver) may send it in any svndiff version the receiver
+                       has announced it can accept.
 [CS] absent-entries    If the remote end announces support for this capability,
                        it will accept the absent-dir and absent-file editor
                        commands.
