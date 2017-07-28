@@ -2823,6 +2823,8 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
 
       /* If the connection does not support SVNDIFF1 or if we don't want to use
        * compression, use the non-compressing "version 0" implementation */
+      /* ### TODO: Check SVN_RA_SVN_CAP_SVNDIFF2_ACCEPTED and decide between
+       * ###       svndiff1[at compression_level] and svndiff2 */
       if (   svn_ra_svn_compression_level(frb->conn) > 0
           && svn_ra_svn_has_capability(frb->conn, SVN_RA_SVN_CAP_SVNDIFF1))
         svn_txdelta_to_svndiff3(d_handler, d_baton, stream, 1,
@@ -4135,10 +4137,11 @@ construct_server_baton(server_baton_t **baton,
    * send an empty mechlist. */
   if (params->compression_level > 0)
     SVN_ERR(svn_ra_svn__write_cmd_response(conn, scratch_pool,
-                                           "nn()(wwwwwwwwwwww)",
+                                           "nn()(wwwwwwwwwwwww)",
                                            (apr_uint64_t) 2, (apr_uint64_t) 2,
                                            SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                            SVN_RA_SVN_CAP_SVNDIFF1,
+                                           SVN_RA_SVN_CAP_SVNDIFF2_ACCEPTED,
                                            SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                            SVN_RA_SVN_CAP_COMMIT_REVPROPS,
                                            SVN_RA_SVN_CAP_DEPTH,

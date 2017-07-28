@@ -746,10 +746,11 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
    * capability list, and the URL, and subsequently there is an auth
    * request. */
   /* Client-side capabilities list: */
-  SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "n(wwwwww)cc(?c)",
+  SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "n(wwwwwww)cc(?c)",
                                   (apr_uint64_t) 2,
                                   SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                   SVN_RA_SVN_CAP_SVNDIFF1,
+                                  SVN_RA_SVN_CAP_SVNDIFF2_ACCEPTED,
                                   SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                   SVN_RA_SVN_CAP_DEPTH,
                                   SVN_RA_SVN_CAP_MERGEINFO,
