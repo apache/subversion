@@ -1471,7 +1471,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     lz4_version = '%d.%d.%s' % (major, minor, rel)
     self._libraries['lz4'] = SVNCommonLibrary('lz4', None, None, None,
-                                              lz4_version, internal=True)
+                                              lz4_version, internal=True,
+                                              defines=['SVN_INTERNAL_LZ4'])
 
   def _find_utf8proc(self):
     "Find the Utf8proc library"
@@ -1496,7 +1497,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     utf8proc_version = '%d.%d.%d' % (major, minor, patch)
     self._libraries['utf8proc'] = SVNCommonLibrary('utf8proc', None, None,
                                                    None, utf8proc_version,
-                                                   internal=True)
+                                                   internal=True,
+                                        defines=['SVN_INTERNAL_UTF8PROC'])
 
 # ============================================================================
 # This is a cut-down and modified version of code from:
