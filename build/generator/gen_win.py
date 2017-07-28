@@ -79,11 +79,15 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     # Print list of identified libraries
     printed = []
-    for lib in sorted(self._libraries.values(), key = lambda s: s.name):
+    for lib in sorted(self._libraries.values(),
+                      key = lambda s: (s.internal, s.name)):
       if lib.name in printed:
         continue
       printed.append(lib.name)
-      print('Found %s %s' % (lib.name, lib.version))
+      if lib.internal:
+        print('Using bundled %s %s' % (lib.name, lib.version))
+      else:
+        print('Found %s %s' % (lib.name, lib.version))
 
     #Make some files for the installer so that we don't need to
     #require sed or some other command to do it

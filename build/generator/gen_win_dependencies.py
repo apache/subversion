@@ -51,7 +51,7 @@ class SVNCommonLibrary:
   def __init__(self, name, include_dirs, lib_dir, lib_name, version=None,
                debug_lib_dir=None, debug_lib_name=None, dll_dir=None,
                dll_name=None, debug_dll_dir=None, debug_dll_name=None,
-               defines=[], forced_includes=[], extra_bin=[]):
+               defines=[], forced_includes=[], extra_bin=[], internal=False):
     self.name = name
     if include_dirs:
       self.include_dirs = include_dirs if isinstance(include_dirs, list) \
@@ -90,6 +90,7 @@ class SVNCommonLibrary:
       self.debug_dll_name = dll_name
 
     self.extra_bin = extra_bin
+    self.internal = internal
 
 class GenDependenciesBase(gen_base.GeneratorBase):
   """This intermediate base class exists to be instantiated by win-tests.py,
@@ -305,6 +306,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self._find_apr_util_etc()
     self._find_zlib()
     self._find_sqlite(show_warnings)
+    self._find_lz4()
+    self._find_utf8proc()
 
     # Optional dependencies
     self._find_httpd(show_warnings)
@@ -1445,6 +1448,55 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                  dll_dir=dll_dir,
                                                  dll_name=dll_name,
                                                  defines=defines)
+
+  def _find_lz4(self):
+    "Find the LZ4 library"
+
+    # For now, we always use the internal (bundled) library.
+    version_file_path = os.path.join('subversion', 'libsvn_subr',
+                                     'lz4', 'lz4internal.h')
+    txt = open(version_file_path).read()
+
+    vermatch = re.search(r'^\s*#define\s+LZ4_VERSION_MAJOR\s+(\d+)',
+                         txt, re.M)
+    major = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+LZ4_VERSION_MINOR\s+(\d+)',
+                         txt, re.M)
+    minor = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+LZ4_VERSION_RELEASE\s+(\d+)',
+                         txt, re.M)
+    rel = vermatch.group(1)
+
+    lz4_version = '%d.%d.%s' % (major, minor, rel)
+    self._libraries['lz4'] = SVNCommonLibrary('lz4', None, None, None,
+                                              lz4_version, internal=True)
+
+  def _find_utf8proc(self):
+    "Find the Utf8proc library"
+
+    # For now, we always use the internal (bundled) library.
+    version_file_path = os.path.join('subversion', 'libsvn_subr',
+                                     'utf8proc', 'utf8proc_internal.h')
+    txt = open(version_file_path).read()
+
+    vermatch = re.search(r'^\s*#define\s+UTF8PROC_VERSION_MAJOR\s+(\d+)',
+                         txt, re.M)
+    major = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+UTF8PROC_VERSION_MINOR\s+(\d+)',
+                         txt, re.M)
+    minor = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+UTF8PROC_VERSION_PATCH\s+(\d+)',
+                         txt, re.M)
+    patch = int(vermatch.group(1))
+
+    utf8proc_version = '%d.%d.%d' % (major, minor, patch)
+    self._libraries['utf8proc'] = SVNCommonLibrary('utf8proc', None, None,
+                                                   None, utf8proc_version,
+                                                   internal=True)
 
 # ============================================================================
 # This is a cut-down and modified version of code from:
