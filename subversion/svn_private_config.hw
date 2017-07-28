@@ -77,12 +77,6 @@
 /* The default HTTP library to use */
 #define DEFAULT_HTTP_LIBRARY "serf"
 
-/* Use the internal LZ4 code */
-#define SVN_INTERNAL_LZ4 1
-
-/* Use the internal utf8proc code */
-#define SVN_INTERNAL_UTF8PROC 1
-
 /* Define to the Python/C API format character suitable for apr_int64_t */
 #if defined(_WIN64)
 #define SVN_APR_INT64_T_PYCFMT "l"
