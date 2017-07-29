@@ -888,6 +888,13 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     { "http://server:1",       "http://server:1" },
     { "http://server:443",     "http://server:443" },
     { "http://server:81/",     "http://server:81" },
+#if 0
+    /* These pass svn_uri_canonicalize() but fail svn_uri_is_canonical() */
+    { "http://server:81:81/",  "http://server:81:81" },
+    { "http://server:81foo/",  "http://server:81foo" },
+    { "http://server::/",      "http://server::" },
+    { "http://server:-/",      "http://server:-" },
+#endif
     { "http://SERVER:3690/",   "http://server:3690" },
     { "https://server:3690",   "https://server:3690" },
     { "https://SERVER:80/",    "https://server:80" },
@@ -1237,6 +1244,12 @@ test_uri_is_canonical(apr_pool_t *pool)
                                  "\"%s\"; canonical form is \"%s\"",
                                  t->path,
                                  canonical ? "TRUE" : "FALSE",
+                                 t->result);
+
+      if (t->result && !svn_uri_is_canonical(t->result, pool))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_is_canonical(\"%s\") returned "
+                                 "FALSE on canonical form",
                                  t->result);
     }
 
