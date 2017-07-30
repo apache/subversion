@@ -15,6 +15,18 @@ Status of 1.8.19:
 Candidate changes:
 ==================
 
+ * r1803435
+   'svnadmin load' fails with bogus SHA1 collision error.
+   Justification:
+     This is a user-reported issue and will prevent users from loading
+     certain dump files.  It might also result in silent data corruption
+     due to inconsistent cache contents (no reproduction available ATM).
+     The fix itself is low-risk as it conditionally disables caches.
+   Branch:
+     ^/subversion/branches/1.8.x-fsfs-txn-access
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
