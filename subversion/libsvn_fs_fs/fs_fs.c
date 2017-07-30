@@ -4524,9 +4524,10 @@ create_rep_state_body(struct rep_state **rep_state,
   if (rev_hint)
     *rev_hint = rep->revision;
 
-  /* continue constructing RS and RA */
-  rs->window_cache = ffd->txdelta_window_cache;
-  rs->combined_cache = ffd->combined_window_cache;
+  /* Continue constructing RS and RA.
+   * Note that we must disable caching for in-txn data. */
+  rs->window_cache = rep->txn_id ? NULL : ffd->txdelta_window_cache;
+  rs->combined_cache = rep->txn_id ? NULL : ffd->combined_window_cache;
 
   SVN_ERR(read_rep_line(&ra, rs->file, pool));
   SVN_ERR(get_file_offset(&rs->start, rs->file, pool));
