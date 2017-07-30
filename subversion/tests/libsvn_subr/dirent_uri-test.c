@@ -888,13 +888,6 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     { "http://server:1",       "http://server:1" },
     { "http://server:443",     "http://server:443" },
     { "http://server:81/",     "http://server:81" },
-#if 0
-    /* These pass svn_uri_canonicalize() but fail svn_uri_is_canonical() */
-    { "http://server:81:81/",  "http://server:81:81" },
-    { "http://server:81foo/",  "http://server:81foo" },
-    { "http://server::/",      "http://server::" },
-    { "http://server:-/",      "http://server:-" },
-#endif
     { "http://SERVER:3690/",   "http://server:3690" },
     { "https://server:3690",   "https://server:3690" },
     { "https://SERVER:80/",    "https://server:80" },
@@ -945,6 +938,13 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     /* Hostnames that look like non-canonical paths */
     { "file://./foo",             "file://./foo" },
     { "http://./foo",             "http://./foo" },
+    /* Some invalid URLs, these still have a canonical form */
+    { "http://server:81:81/",  "http://server:81:81" },
+    { "http://server:81foo/",  "http://server:81foo" },
+    { "http://server::/",      "http://server::" },
+    { "http://server:-/",      "http://server:-" },
+    { "http://hst:1.2.3.4.5/", "http://hst:1.2.3.4.5"},
+    { "http://hst:1.2.999.4/", "http://hst:1.2.999.4"},
   /* svn_uri_is_canonical() was a private function in the 1.6 API, and
      has since taken a MAJOR change of direction, namely that only
      absolute URLs are considered canonical uris now. */
