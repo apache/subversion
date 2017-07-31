@@ -74,6 +74,7 @@ svn_cl__addremove(apr_getopt_t *os,
       SVN_ERR(svn_cl__try
               (svn_client_addremove(target, opt_state->depth,
                                     opt_state->no_autoprops,
+                                    opt_state->no_ignore,
                                     ctx, iterpool),
                errors, opt_state->quiet,
                SVN_ERR_ENTRY_EXISTS,

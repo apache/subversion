@@ -94,7 +94,7 @@ addremove_status_func(void *baton, const char *local_abspath,
 
 static svn_error_t *
 addremove(const char *local_abspath, svn_depth_t depth,
-          svn_boolean_t no_autoprops,
+          svn_boolean_t no_autoprops, svn_boolean_t no_ignore,
           svn_client_ctx_t *ctx, apr_pool_t *scratch_pool)
 {
   svn_magic__cookie_t *magic_cookie;
@@ -146,8 +146,8 @@ addremove(const char *local_abspath, svn_depth_t depth,
                     no_autoprops,
                     magic_cookie,
                     NULL,
-                    FALSE, /* TODO: refresh_ignores */
-                    NULL, /* TODO: ignores */
+                    !no_ignore,
+                    NULL,
                     ctx, iterpool, iterpool));
         }
     }
@@ -176,6 +176,7 @@ svn_error_t *
 svn_client_addremove(const char *local_path,
                      svn_depth_t depth,
                      svn_boolean_t no_autoprops,
+                     svn_boolean_t no_ignore,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool)
 {
@@ -184,7 +185,7 @@ svn_client_addremove(const char *local_path,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, local_path, scratch_pool));
 
   SVN_WC__CALL_WITH_WRITE_LOCK(
-    addremove(local_abspath, depth, no_autoprops, ctx, scratch_pool),
+    addremove(local_abspath, depth, no_autoprops, no_ignore, ctx, scratch_pool),
     ctx->wc_ctx, local_abspath, TRUE, scratch_pool);
 
   return SVN_NO_ERROR;

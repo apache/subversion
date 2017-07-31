@@ -1687,6 +1687,7 @@ svn_error_t *
 svn_client_addremove(const char *path,
                      svn_depth_t depth,
                      svn_boolean_t no_autoprops,
+                     svn_boolean_t no_ignore,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool);
 /** @} */

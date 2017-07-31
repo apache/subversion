@@ -526,7 +526,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  The --depth option controls recursion (default: infinity).\n"
      "  Use 'svn revert' to undo any undesirable additions and deletions.\n"),
-    {opt_targets, opt_depth, opt_no_autoprops }, },
+    {opt_targets, opt_depth, opt_no_autoprops, opt_no_ignore }, },
 
   { "auth", svn_cl__auth, {0}, N_
    ("Manage cached authentication credentials.\n"
