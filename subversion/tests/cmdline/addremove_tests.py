@@ -83,12 +83,28 @@ def basic_addremove(sbox):
 
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
+def addremove_ignore(sbox):
+  "addremove ignores files matching global-ignores"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Add an unversioned file which matches the global ignores list.
+  newfile_path = sbox.ospath('A/newfile.o')
+  svntest.main.file_append(newfile_path, 'This is an ignored file\n')
+
+  svntest.actions.run_and_verify_svn(None, [], 'addremove', wc_dir)
+
+  expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_status(wc_dir, expected_output)
+
 ########################################################################
 # Run the tests
 
 # list all tests here, starting with None:
 test_list = [ None,
               basic_addremove,
+              addremove_ignore,
 ]
 
 if __name__ == '__main__':
