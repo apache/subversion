@@ -72,7 +72,9 @@ svn_cl__addremove(apr_getopt_t *os,
       svn_pool_clear(iterpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
       SVN_ERR(svn_cl__try
-              (svn_client_addremove(target, opt_state->depth, ctx, iterpool),
+              (svn_client_addremove(target, opt_state->depth,
+                                    opt_state->no_autoprops,
+                                    ctx, iterpool),
                errors, opt_state->quiet,
                SVN_ERR_ENTRY_EXISTS,
                SVN_ERR_WC_PATH_NOT_FOUND,

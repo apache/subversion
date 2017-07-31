@@ -94,6 +94,7 @@ addremove_status_func(void *baton, const char *local_abspath,
 
 static svn_error_t *
 addremove(const char *local_abspath, svn_depth_t depth,
+          svn_boolean_t no_autoprops,
           svn_client_ctx_t *ctx, apr_pool_t *scratch_pool)
 {
   svn_magic__cookie_t *magic_cookie;
@@ -128,8 +129,8 @@ addremove(const char *local_abspath, svn_depth_t depth,
         {
           SVN_ERR(svn_client__add_file(unversioned_abspath,
                                        magic_cookie,
-                                       NULL, /* TODO: autoprops */
-                                       TRUE, /* TODO: !no_autoprops */
+                                       NULL,
+                                       no_autoprops,
                                        ctx, iterpool));
         }
       else if (kind_on_disk == svn_node_dir && depth >= svn_depth_immediates)
@@ -142,9 +143,9 @@ addremove(const char *local_abspath, svn_depth_t depth,
           SVN_ERR(svn_client__add_dir_recursive(
                     unversioned_abspath, depth_below_here,
                     FALSE, /* force */
-                    TRUE, /* TODO: !no_autoprops */
+                    no_autoprops,
                     magic_cookie,
-                    NULL, /* TODO: autoprops */
+                    NULL,
                     FALSE, /* TODO: refresh_ignores */
                     NULL, /* TODO: ignores */
                     ctx, iterpool, iterpool));
@@ -174,6 +175,7 @@ addremove(const char *local_abspath, svn_depth_t depth,
 svn_error_t *
 svn_client_addremove(const char *local_path,
                      svn_depth_t depth,
+                     svn_boolean_t no_autoprops,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool)
 {
@@ -182,7 +184,7 @@ svn_client_addremove(const char *local_path,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, local_path, scratch_pool));
 
   SVN_WC__CALL_WITH_WRITE_LOCK(
-    addremove(local_abspath, depth, ctx, scratch_pool),
+    addremove(local_abspath, depth, no_autoprops, ctx, scratch_pool),
     ctx->wc_ctx, local_abspath, TRUE, scratch_pool);
 
   return SVN_NO_ERROR;
