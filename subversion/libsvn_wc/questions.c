@@ -38,6 +38,7 @@
 #include "svn_time.h"
 #include "svn_io.h"
 #include "svn_props.h"
+#include "svn_hash.h"
 
 #include "wc.h"
 #include "conflicts.h"
@@ -742,5 +743,32 @@ svn_wc__has_local_mods(svn_boolean_t *is_modified,
                                       scratch_pool));
 
   *is_modified = modified;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__find_similar_files(apr_array_header_t **similar_abspaths,
+                           svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  svn_checksum_t *checksum;
+  apr_hash_t *nodes;
+
+  *similar_abspaths = apr_array_make(result_pool, 0, sizeof(const char *));
+
+  /* Identify files with the same SHA1 checksum in the pristine store. */
+  /* ### Detranslate the file? */
+  SVN_ERR(svn_io_file_checksum2(&checksum, local_abspath, svn_checksum_sha1,
+                                scratch_pool));
+  SVN_ERR(svn_wc__db_base_get_nodes_by_checksum(&nodes, wc_ctx->db,
+                                                checksum, local_abspath,
+                                                result_pool, scratch_pool));
+  /* ### discards additional base info returned by wc_db code */
+  SVN_ERR(svn_hash_keys(similar_abspaths, nodes, result_pool));
+
   return SVN_NO_ERROR;
 }

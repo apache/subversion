@@ -85,6 +85,11 @@ LEFT OUTER JOIN lock ON nodes.repos_id = lock.repos_id
   AND nodes.repos_path = lock.repos_relpath
 WHERE wc_id = ?1 AND parent_relpath = ?2 AND op_depth = 0
 
+-- STMT_SELECT_BASE_NODES_BY_CHECKSUM
+SELECT local_relpath, nodes.repos_id, nodes.repos_path, presence, kind,
+  revision, depth, file_external
+FROM nodes
+WHERE wc_id = ?1 AND checksum = ?2 AND op_depth = 0
 
 -- STMT_SELECT_WORKING_NODE
 SELECT op_depth, presence, kind, checksum, translated_size,

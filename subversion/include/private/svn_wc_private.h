@@ -2062,6 +2062,19 @@ svn_wc__read_conflict_descriptions2_t(const apr_array_header_t **conflicts,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
+/**
+ * Return a list of absolute paths of files which are similar to the file
+ * at LOCAL_ABSPATH, which may be an unversioned file.
+ */
+svn_error_t *
+svn_wc__find_similar_files(apr_array_header_t **similar_abspaths,
+                           svn_wc_context_t *wc_ctx,
+                           const char *local_abspath,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

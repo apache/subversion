@@ -93,12 +93,65 @@ addremove_status_func(void *baton, const char *local_abspath,
 }
 
 static svn_error_t *
+suggest_moves(apr_hash_t **moves,
+              apr_hash_t *unversioned,
+              apr_hash_t *missing,
+              svn_client_ctx_t *ctx,
+              apr_pool_t *result_pool,
+              apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
+
+  *moves = apr_hash_make(result_pool);
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, unversioned); hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *unversioned_abspath = apr_hash_this_key(hi);
+      const svn_wc_status3_t *status = apr_hash_this_val(hi);
+      apr_array_header_t *similar_abspaths;
+      int i;
+
+      if (status->actual_kind != svn_node_file)
+        continue;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc__find_similar_files(&similar_abspaths, ctx->wc_ctx,
+                                         unversioned_abspath,
+                                         ctx->cancel_func, ctx->cancel_baton,
+                                         result_pool, iterpool));
+
+      for (i = 0; i < similar_abspaths->nelts; i++)
+        {
+          const char *similar_abspath = APR_ARRAY_IDX(similar_abspaths, i,
+                                                      const char *);
+
+          if (svn_hash_gets(missing, similar_abspath) == NULL)
+            continue; /* ### TODO treat as a copy? */
+
+          /* ### TODO deal with ambiguous moves */
+          svn_hash_sets(*moves,
+                        similar_abspath,
+                        apr_pstrdup(result_pool, unversioned_abspath));
+        }
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 addremove(const char *local_abspath, svn_depth_t depth,
           svn_boolean_t no_autoprops, svn_boolean_t no_ignore,
           svn_client_ctx_t *ctx, apr_pool_t *scratch_pool)
 {
   svn_magic__cookie_t *magic_cookie;
   struct addremove_status_baton b;
+  apr_hash_t *moves;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
 
@@ -113,7 +166,12 @@ addremove(const char *local_abspath, svn_depth_t depth,
                              ctx->cancel_func, ctx->cancel_baton,
                              scratch_pool));
 
+
+  SVN_ERR(suggest_moves(&moves, b.unversioned, b.missing,
+                        ctx, scratch_pool, scratch_pool));
+
   iterpool = svn_pool_create(scratch_pool);
+
   for (hi = apr_hash_first(scratch_pool, b.unversioned); hi;
        hi = apr_hash_next(hi))
     {
@@ -150,6 +208,24 @@ addremove(const char *local_abspath, svn_depth_t depth,
                     NULL,
                     ctx, iterpool, iterpool));
         }
+    }
+
+  for (hi = apr_hash_first(scratch_pool, moves); hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *src_abspath = apr_hash_this_key(hi);
+      const char *dst_abspath = apr_hash_this_val(hi);
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc__move2(ctx->wc_ctx, src_abspath, dst_abspath,
+                            TRUE, /* metadata_only */
+                            FALSE, /* allow_mixed_revisions */
+                            ctx->cancel_func, ctx->cancel_baton,
+                            ctx->notify_func2, ctx->notify_baton2,
+                            iterpool));
+
+      svn_hash_sets(b.missing, src_abspath, NULL);
     }
 
   for (hi = apr_hash_first(scratch_pool, b.missing); hi;

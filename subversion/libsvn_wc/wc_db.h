@@ -814,6 +814,15 @@ svn_wc__db_base_get_children_info(apr_hash_t **nodes,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
+/* Return in *NODES a hash mapping local_abspath->struct svn_wc__db_base_info_t
+ * for all files at op_depth 0 with the specified CHECKSUM. */
+svn_error_t *
+svn_wc__db_base_get_nodes_by_checksum(apr_hash_t **nodes,
+                                      svn_wc__db_t *db,
+                                      svn_checksum_t *checksum,
+                                      const char *wri_abspath,
+                                      apr_pool_t *result_pool,
+                                      apr_pool_t *scratch_pool);
 
 /* Set *PROPS to the properties of the node LOCAL_ABSPATH in the BASE tree.
 
