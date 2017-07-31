@@ -98,6 +98,26 @@ def addremove_ignore(sbox):
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
+def addremove_unversioned_move_file(sbox):
+  "addremove detects unversioned file moves"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Manually move a versioned file
+  oldfile_path = sbox.ospath('A/mu')
+  newfile_path = sbox.ospath('A/mu-moved')
+  os.rename(oldfile_path, newfile_path)
+
+  svntest.actions.run_and_verify_svn(None, [], 'addremove', wc_dir)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='D ', moved_to='A/mu-moved')
+  expected_status.add({
+    'A/mu-moved' : Item(status='A ', wc_rev='-', moved_from='A/mu', copied='+'),
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -105,6 +125,7 @@ def addremove_ignore(sbox):
 test_list = [ None,
               basic_addremove,
               addremove_ignore,
+              addremove_unversioned_move_file,
 ]
 
 if __name__ == '__main__':
