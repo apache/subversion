@@ -38,6 +38,7 @@
 
 #include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_magic.h"
 
 #include "svn_private_config.h"
 
@@ -95,9 +96,12 @@ static svn_error_t *
 addremove(const char *local_abspath, svn_depth_t depth,
           svn_client_ctx_t *ctx, apr_pool_t *scratch_pool)
 {
+  svn_magic__cookie_t *magic_cookie;
   struct addremove_status_baton b;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
+
+  SVN_ERR(svn_magic__init(&magic_cookie, ctx->config, scratch_pool));
 
   b.missing = apr_hash_make(scratch_pool);
   b.unversioned = apr_hash_make(scratch_pool);
@@ -123,7 +127,7 @@ addremove(const char *local_abspath, svn_depth_t depth,
       if (kind_on_disk == svn_node_file)
         {
           SVN_ERR(svn_client__add_file(unversioned_abspath,
-                                       NULL, /* TODO: magic cookie */
+                                       magic_cookie,
                                        NULL, /* TODO: autoprops */
                                        TRUE, /* TODO: !no_autoprops */
                                        ctx, iterpool));
@@ -139,7 +143,7 @@ addremove(const char *local_abspath, svn_depth_t depth,
                     unversioned_abspath, depth_below_here,
                     FALSE, /* force */
                     TRUE, /* TODO: !no_autoprops */
-                    NULL, /* TODO: magic cookie */
+                    magic_cookie,
                     NULL, /* TODO: autoprops */
                     FALSE, /* TODO: refresh_ignores */
                     NULL, /* TODO: ignores */
