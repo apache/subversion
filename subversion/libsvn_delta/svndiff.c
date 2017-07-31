@@ -245,6 +245,8 @@ encode_window(svn_stringbuf_t **instructions_p,
   return SVN_NO_ERROR;
 }
 
+/* Note: When changing things here, check the related comment in
+   the svn_txdelta_to_svndiff_stream() function.  */
 static svn_error_t *
 window_handler(svn_txdelta_window_t *window, void *baton)
 {
@@ -1009,6 +1011,9 @@ svndiff_stream_write_fn(void *baton, const char *data, apr_size_t *len)
 {
   svndiff_stream_baton_t *b = baton;
 
+  /* The memory usage here is limited, as this buffer doesn't grow
+     beyond the (header size + max window size in svndiff format).
+     See the comment in svn_txdelta_to_svndiff_stream().  */
   svn_stringbuf_appendbytes(b->window_buffer, data, *len);
 
   return SVN_NO_ERROR;
@@ -1076,6 +1081,12 @@ svn_txdelta_to_svndiff_stream(svn_txdelta_stream_t *txstream,
   push_stream = svn_stream_create(baton, pool);
   svn_stream_set_write(push_stream, svndiff_stream_write_fn);
 
+  /* We rely on the implementation detail of the svn_txdelta_to_svndiff3()
+     function, namely, on how the window_handler() function behaves.
+     As long as it writes one svndiff window at a time to the target
+     stream, the memory usage of this function (in other words, how
+     much data can be accumulated in the internal 'window_buffer')
+     is limited.  */
   svn_txdelta_to_svndiff3(&baton->handler, &baton->handler_baton,
                           push_stream, svndiff_version,
                           compression_level, pool);
