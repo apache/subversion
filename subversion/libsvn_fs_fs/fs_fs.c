@@ -683,6 +683,60 @@ verify_block_size(apr_int64_t block_size,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+parse_compression_option(compression_type_t *compression_type_p,
+                         int *compression_level_p,
+                         const char *value)
+{
+  compression_type_t type;
+  int level;
+  svn_boolean_t is_valid = TRUE;
+
+  /* compression = none | lz4 | zlib | zlib-1 ... zlib-9 */
+  if (strcmp(value, "none") == 0)
+    {
+      type = compression_type_none;
+      level = SVN_DELTA_COMPRESSION_LEVEL_NONE;
+    }
+  else if (strcmp(value, "lz4") == 0)
+    {
+      type = compression_type_lz4;
+      level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
+    }
+  else if (strncmp(value, "zlib", 4) == 0)
+    {
+      const char *p = value + 4;
+
+      type = compression_type_zlib;
+      if (*p == 0)
+        {
+          level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
+        }
+      else if (*p == '-')
+        {
+          p++;
+          SVN_ERR(svn_cstring_atoi(&level, p));
+          if (level < 1 || level > 9)
+            is_valid = FALSE;
+        }
+      else
+        is_valid = FALSE;
+    }
+  else
+    {
+      is_valid = FALSE;
+    }
+
+  if (!is_valid)
+    return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                           _("Invalid 'compression' value '%s' in the config"),
+                             value);
+
+  *compression_type_p = type;
+  *compression_level_p = level;
+  return SVN_NO_ERROR;
+}
+
 /* Read the configuration information of the file system at FS_PATH
  * and set the respective values in FFD.  Use pools as usual.
  */
@@ -709,8 +763,6 @@ read_config(fs_fs_data_t *ffd,
   /* Initialize deltification settings in ffd. */
   if (ffd->format >= SVN_FS_FS__MIN_DELTIFICATION_FORMAT)
     {
-      apr_int64_t compression_level;
-
       SVN_ERR(svn_config_get_bool(config, &ffd->deltify_directories,
                                   CONFIG_SECTION_DELTIFICATION,
                                   CONFIG_OPTION_ENABLE_DIR_DELTIFICATION,
@@ -727,14 +779,6 @@ read_config(fs_fs_data_t *ffd,
                                    CONFIG_SECTION_DELTIFICATION,
                                    CONFIG_OPTION_MAX_LINEAR_DELTIFICATION,
                                    SVN_FS_FS_MAX_LINEAR_DELTIFICATION));
-
-      SVN_ERR(svn_config_get_int64(config, &compression_level,
-                                   CONFIG_SECTION_DELTIFICATION,
-                                   CONFIG_OPTION_COMPRESSION_LEVEL,
-                                   SVN_DELTA_COMPRESSION_LEVEL_DEFAULT));
-      ffd->delta_compression_level
-        = (int)MIN(MAX(SVN_DELTA_COMPRESSION_LEVEL_NONE, compression_level),
-                   SVN_DELTA_COMPRESSION_LEVEL_MAX);
     }
   else
     {
@@ -742,7 +786,6 @@ read_config(fs_fs_data_t *ffd,
       ffd->deltify_properties = FALSE;
       ffd->max_deltification_walk = SVN_FS_FS_MAX_DELTIFICATION_WALK;
       ffd->max_linear_deltification = SVN_FS_FS_MAX_LINEAR_DELTIFICATION;
-      ffd->delta_compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
     }
 
   /* Initialize revprop packing settings in ffd. */
@@ -816,6 +859,68 @@ read_config(fs_fs_data_t *ffd,
     {
       ffd->pack_after_commit = FALSE;
     }
+
+  /* Initialize compression settings in ffd. */
+  if (ffd->format >= SVN_FS_FS__MIN_SVNDIFF2_FORMAT)
+    {
+      const char *compression_val;
+      const char *compression_level_val;
+
+      svn_config_get(config, &compression_val,
+                     CONFIG_SECTION_DELTIFICATION,
+                     CONFIG_OPTION_COMPRESSION, NULL);
+      svn_config_get(config, &compression_level_val,
+                     CONFIG_SECTION_DELTIFICATION,
+                     CONFIG_OPTION_COMPRESSION_LEVEL, NULL);
+      if (compression_val)
+        {
+          /* 'compression' option overrides deprecated 'compression-level'. */
+          SVN_ERR(parse_compression_option(&ffd->delta_compression_type,
+                                           &ffd->delta_compression_level,
+                                           compression_val));
+        }
+      else if (compression_level_val)
+        {
+          /* Handle the deprecated 'compression-level' option. */
+          ffd->delta_compression_type = compression_type_zlib;
+          SVN_ERR(svn_cstring_atoi(&ffd->delta_compression_level,
+                                   compression_level_val));
+          ffd->delta_compression_level =
+            MIN(MAX(SVN_DELTA_COMPRESSION_LEVEL_NONE,
+                    ffd->delta_compression_level),
+                SVN_DELTA_COMPRESSION_LEVEL_MAX);
+        }
+      else
+        {
+          /* Nothing specified explicitly, use default settings. */
+          ffd->delta_compression_type = compression_type_zlib;
+          ffd->delta_compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
+        }
+    }
+  else if (ffd->format >= SVN_FS_FS__MIN_DELTIFICATION_FORMAT)
+    {
+      apr_int64_t compression_level;
+
+      SVN_ERR(svn_config_get_int64(config, &compression_level,
+                                   CONFIG_SECTION_DELTIFICATION,
+                                   CONFIG_OPTION_COMPRESSION_LEVEL,
+                                   SVN_DELTA_COMPRESSION_LEVEL_DEFAULT));
+      ffd->delta_compression_type = compression_type_zlib;
+      ffd->delta_compression_level =
+        (int)MIN(MAX(SVN_DELTA_COMPRESSION_LEVEL_NONE, compression_level),
+                 SVN_DELTA_COMPRESSION_LEVEL_MAX);
+    }
+  else if (ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT)
+    {
+      ffd->delta_compression_type = compression_type_zlib;
+      ffd->delta_compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
+    }
+  else
+    {
+      ffd->delta_compression_type = compression_type_none;
+      ffd->delta_compression_level = SVN_DELTA_COMPRESSION_LEVEL_NONE;
+    }
+
 #ifdef SVN_DEBUG
   SVN_ERR(svn_config_get_bool(config, &ffd->verify_before_commit,
                               CONFIG_SECTION_DEBUG,
@@ -947,23 +1052,25 @@ write_config(svn_fs_t *fs,
 "# " CONFIG_OPTION_MAX_LINEAR_DELTIFICATION " = 16"                          NL
 "###"                                                                        NL
 "### After deltification, we compress the data to minimize on-disk size."    NL
-"### This settings control the compression level for this process."          NL
-"### Revisions with highly compressible data in them may shrink in size"     NL
-"### if the setting is increased but may take much longer to commit."        NL
-"### The time taken to uncompress that data again is widely independent"     NL
-"### of the compression level.  Compression will be ineffective if the"      NL
-"### incoming content is already highly compressed.  In that case,"          NL
-"### disabling the compression entirely or using the special value 1"        NL
-"### (see below) will speed up commits as well as reading the data."         NL
-"### Repositories with many small compressible files (source code) but"      NL
-"### also a high percentage of large incompressible ones (artwork) may"      NL
-"### benefit from compression levels lowered."                               NL
-"### Valid values are 0 to 9 with 9 providing the highest compression"       NL
-"### ratio and 0 disabling it altogether.  Using 1 as the level enables"     NL
-"### LZ4 compression that provides a decent compression ratio, but"          NL
-"### performs better with large or incompressible files."                    NL
-"### The default value is 5."                                                NL
-"# " CONFIG_OPTION_COMPRESSION_LEVEL " = 5"                                  NL
+"### This setting controls the compression algorithm, which will be used in" NL
+"### future revisions.  It can be used to either disable compression or to"  NL
+"### select between available algorithms (zlib, lz4).  zlib is a general-"   NL
+"### purpose compression algorithm.  lz4 is a fast compression algorithm"    NL
+"### which should be preferred for repositories with large and, possibly,"   NL
+"### incompressible files.  Note that the compression ratio of lz4 is"       NL
+"### usually lower than the one provided by zlib, but using it can"          NL
+"### significantly speed up commits as well as reading the data."            NL
+"### The syntax of this option is:"                                          NL
+"###   " CONFIG_OPTION_COMPRESSION " = none | lz4 | zlib | zlib-1 ... zlib-9" NL
+"### The default value is 'zlib', which is currently equivalent to 'zlib-5'." NL
+"# " CONFIG_OPTION_COMPRESSION " = zlib"                                     NL
+"###"                                                                        NL
+"### DEPRECATED: The new '" CONFIG_OPTION_COMPRESSION "' option deprecates previously used" NL
+"### '" CONFIG_OPTION_COMPRESSION_LEVEL "' option, which was used to configure zlib compression." NL
+"### For compatibility with previous versions of Subversion, this option can"NL
+"### still be used (and it will result in zlib compression with the"         NL
+"### corresponding compression level)."                                      NL
+"###   " CONFIG_OPTION_COMPRESSION_LEVEL " = 0 ... 9 (default is 5)"         NL
 ""                                                                           NL
 "[" CONFIG_SECTION_PACKED_REVPROPS "]"                                       NL
 "### This parameter controls the size (in kBytes) of packed revprop files."  NL

@@ -2168,27 +2168,24 @@ txdelta_to_svndiff(svn_txdelta_window_handler_t *handler,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
   int svndiff_version;
-  int svndiff_compression_level;
 
-  if (ffd->delta_compression_level == 1 &&
-      ffd->format >= SVN_FS_FS__MIN_SVNDIFF2_FORMAT)
+  if (ffd->delta_compression_type == compression_type_lz4)
     {
+      SVN_ERR_ASSERT_NO_RETURN(ffd->format >= SVN_FS_FS__MIN_SVNDIFF2_FORMAT);
       svndiff_version = 2;
-      svndiff_compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
     }
-  else if (ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT)
+  else if (ffd->delta_compression_type == compression_type_zlib)
     {
+      SVN_ERR_ASSERT_NO_RETURN(ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT);
       svndiff_version = 1;
-      svndiff_compression_level = ffd->delta_compression_level;
     }
   else
     {
       svndiff_version = 0;
-      svndiff_compression_level = SVN_DELTA_COMPRESSION_LEVEL_NONE;
     }
 
   svn_txdelta_to_svndiff3(handler, handler_baton, output, svndiff_version,
-                          svndiff_compression_level, pool);
+                          ffd->delta_compression_level, pool);
 }
 
 /* Get a rep_write_baton and store it in *WB_P for the representation
