@@ -118,6 +118,7 @@ extern "C" {
 #define CONFIG_SECTION_DEBUG             "debug"
 #define CONFIG_OPTION_PACK_AFTER_COMMIT  "pack-after-commit"
 #define CONFIG_OPTION_VERIFY_BEFORE_COMMIT "verify-before-commit"
+#define CONFIG_OPTION_COMPRESSION        "compression"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
@@ -298,6 +299,13 @@ typedef struct window_cache_key_t
   apr_uint64_t item_index;
 } window_cache_key_t;
 
+typedef enum compression_type_t
+{
+  compression_type_none,
+  compression_type_zlib,
+  compression_type_lz4
+} compression_type_t;
+
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
 typedef struct fs_fs_data_t
@@ -473,7 +481,10 @@ typedef struct fs_fs_data_t
    * deltification history after which skip deltas will be used. */
   apr_int64_t max_linear_deltification;
 
-  /* Compression level to use with txdelta storage format in new revs. */
+  /* Compression type to use with txdelta storage format in new revs. */
+  compression_type_t delta_compression_type;
+
+  /* Compression level (currently, only used with compression_type_zlib). */
   int delta_compression_level;
 
   /* Pack after every commit. */

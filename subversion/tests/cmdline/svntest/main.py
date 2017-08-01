@@ -1043,14 +1043,14 @@ def _post_create_repos(path, minor_version = None):
         shutil.copy(options.config_file, confpath)
 
       if options.memcached_server is not None or \
-         options.fsfs_compression_level is not None and \
+         options.fsfs_compression is not None and \
          os.path.exists(confpath):
         with open(confpath, 'r') as conffile:
           newlines = []
           for line in conffile.readlines():
-            if line.startswith('# compression-level ') and \
-               options.fsfs_compression_level is not None:
-              line = 'compression-level = %d\n' % options.fsfs_compression_level
+            if line.startswith('# compression ') and \
+               options.fsfs_compression is not None:
+              line = 'compression = %s\n' % options.fsfs_compression
             newlines += line
             if options.memcached_server is not None and \
                line == '[memcached-servers]\n':
@@ -1737,8 +1737,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--fsfs-version=' + str(options.fsfs_version))
     if options.dump_load_cross_check:
       args.append('--dump-load-cross-check')
-    if options.fsfs_compression_level:
-      args.append('--fsfs-compression=' + str(options.fsfs_compression_level))
+    if options.fsfs_compression:
+      args.append('--fsfs-compression=' + options.fsfs_compression)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -2151,9 +2151,8 @@ def _create_parser(usage=None):
                     help='Use sqlite exclusive locking for working copies')
   parser.add_option('--memcached-server', action='store',
                     help='Use memcached server at specified URL (FSFS only)')
-  parser.add_option('--fsfs-compression', action='store', type='int',
-                    dest="fsfs_compression_level",
-                    help='Set compression level (for fsfs)')
+  parser.add_option('--fsfs-compression', action='store', type='str',
+                    help='Set compression type (for fsfs)')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -2203,9 +2202,9 @@ def parse_options(arglist=sys.argv[1:], usage=None):
   if options.fsfs_packing and not options.fsfs_sharding:
     parser.error("--fsfs-packing requires --fsfs-sharding")
 
-  if options.fsfs_compression_level is not None and\
-     options.fsfs_compression_level not in range(0, 10):
-    parser.error("--fsfs-compression must be between 0 and 9")
+  if options.fsfs_compression is not None and \
+     options.server_minor_version < 10:
+    parser.error("--fsfs-compression requires --server-minor-version=10")
 
   if options.server_minor_version not in range(3, SVN_VER_MINOR+1):
     parser.error("test harness only supports server minor versions 3-%d"
