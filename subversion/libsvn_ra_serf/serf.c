@@ -180,9 +180,10 @@ load_config(svn_ra_serf__session_t *session,
       config_client = NULL;
     }
 
-  SVN_ERR(svn_config_get_bool(config, &session->using_compression,
-                              SVN_CONFIG_SECTION_GLOBAL,
-                              SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
+  SVN_ERR(svn_config_get_tristate(config, &session->using_compression,
+                                  SVN_CONFIG_SECTION_GLOBAL,
+                                  SVN_CONFIG_OPTION_HTTP_COMPRESSION,
+                                  "auto", svn_tristate_unknown));
   svn_config_get(config, &timeout_str, SVN_CONFIG_SECTION_GLOBAL,
                  SVN_CONFIG_OPTION_HTTP_TIMEOUT, NULL);
 
@@ -266,10 +267,10 @@ load_config(svn_ra_serf__session_t *session,
 
   if (server_group)
     {
-      SVN_ERR(svn_config_get_bool(config, &session->using_compression,
-                                  server_group,
-                                  SVN_CONFIG_OPTION_HTTP_COMPRESSION,
-                                  session->using_compression));
+      SVN_ERR(svn_config_get_tristate(config, &session->using_compression,
+                                      server_group,
+                                      SVN_CONFIG_OPTION_HTTP_COMPRESSION,
+                                      "auto", session->using_compression));
       svn_config_get(config, &timeout_str, server_group,
                      SVN_CONFIG_OPTION_HTTP_TIMEOUT, timeout_str);
 
@@ -593,6 +594,10 @@ svn_ra_serf__open(svn_ra_session_t *session,
                  && apr_pool_is_ancestor(serf_sess->pool, scratch_pool));
 #endif
 
+  /* The actual latency will be determined as a part of the initial
+     OPTIONS request. */
+  serf_sess->conn_latency = -1;
+
   err = svn_ra_serf__exchange_capabilities(serf_sess, corrected_url,
                                            result_pool, scratch_pool);
 
@@ -754,6 +759,7 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
   /* supports_svndiff1 */
   /* supports_svndiff2 */
   /* supports_put_result_checksum */
+  /* conn_latency */
 
   new_sess->context = serf_context_create(result_pool);
 

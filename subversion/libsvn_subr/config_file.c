@@ -1148,6 +1148,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###   http-timeout               Timeout for HTTP requests in seconds"
                                                                              NL
         "###   http-compression           Whether to compress HTTP requests" NL
+        "###                              (yes/no/auto)."                    NL
         "###   http-max-connections       Maximum number of parallel server" NL
         "###                              connections to use for any given"  NL
         "###                              HTTP operation."                   NL
@@ -1307,7 +1308,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "# http-proxy-port = 7000"                                           NL
         "# http-proxy-username = defaultusername"                            NL
         "# http-proxy-password = defaultpassword"                            NL
-        "# http-compression = no"                                            NL
+        "# http-compression = auto"                                          NL
         "# No http-timeout, so just use the builtin default."                NL
         "# ssl-authority-files = /path/to/CAcert.pem;/path/to/CAcert2.pem"   NL
         "#"                                                                  NL

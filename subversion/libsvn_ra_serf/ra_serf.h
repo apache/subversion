@@ -113,8 +113,12 @@ struct svn_ra_serf__session_t {
   /* Are we using ssl */
   svn_boolean_t using_ssl;
 
-  /* Should we use compression for network transmissions? */
-  svn_boolean_t using_compression;
+  /* Tristate flag that indicates if we should use compression for
+     network transmissions.  If svn_tristate_true or svn_tristate_false,
+     the compression should be enabled and disabled, respectively.
+     If svn_tristate_unknown, determine this automatically based
+     on network parameters. */
+  svn_tristate_t using_compression;
 
   /* The user agent string */
   const char *useragent;
@@ -268,6 +272,8 @@ struct svn_ra_serf__session_t {
   /* Indicates whether the server sends the result checksum in the response
    * to a successful PUT request. */
   svn_boolean_t supports_put_result_checksum;
+
+  apr_interval_time_t conn_latency;
 };
 
 #define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)
@@ -1576,10 +1582,13 @@ svn_ra_serf__uri_parse(apr_uri_t *uri,
                        apr_pool_t *result_pool);
 
 /* Setup the "Accept-Encoding" header value for requests that expect
-   svndiff-encoded deltas, depending on the USING_COMPRESSION value. */
+   svndiff-encoded deltas, depending on the SESSION state. */
 void
 svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
-                                           svn_boolean_t using_compression);
+                                           svn_ra_serf__session_t *session);
+
+svn_boolean_t
+svn_ra_serf__is_local_network(svn_ra_serf__session_t *session);
 
 /* Default limit for in-memory size of a request body. */
 #define SVN_RA_SERF__REQUEST_BODY_IN_MEM_SIZE 256 * 1024

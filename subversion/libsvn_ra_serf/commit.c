@@ -1866,29 +1866,47 @@ open_file(const char *path,
 }
 
 static void
-negotiate_put_encoding(int *svndiff_version,
-                       int *svndiff_compression_level,
+negotiate_put_encoding(int *svndiff_version_p,
+                       int *svndiff_compression_level_p,
                        svn_ra_serf__session_t *session)
 {
-  if (session->supports_svndiff1 && session->using_compression)
+  int svndiff_version;
+  int compression_level;
+
+  if (session->using_compression == svn_tristate_unknown)
     {
-      /* Prefer svndiff1 when using http compression, as svndiff2 is not a
+      /* With http-compression=auto, prefer svndiff2 over svndiff1 when
+       * working over a local network, as it is faster and in this case,
+       * we don't care about worse compression ratio.
+       *
+       * Note: For future compatibility, we also handle a theoretically
+       * possible case where the server has advertised only svndiff2 support.
+       */
+      if (session->supports_svndiff2 && svn_ra_serf__is_local_network(session))
+        svndiff_version = 2;
+      else if (session->supports_svndiff1)
+        svndiff_version = 1;
+      else if (session->supports_svndiff2)
+        svndiff_version = 2;
+      else
+        svndiff_version = 0;
+    }
+  else if (session->using_compression == svn_tristate_true)
+    {
+      /* Otherwise, prefer svndiff1, as svndiff2 is not a reasonable
        * substitute for svndiff1 with default compression level.  (It gives
        * better speed and compression ratio comparable to svndiff1 with
        * compression level 1, but not 5).
        *
-       * It might make sense to tweak the current format negotiation scheme
-       * so that the server would say which versions of svndiff it accepts,
-       * _including_ the preferred order.  This would allow us to dynamically
-       * pick svndiff2 if that's what the server thinks is appropriate.
+       * Note: For future compatibility, we also handle a theoretically
+       * possible case where the server has advertised only svndiff2 support.
        */
-      *svndiff_version = 1;
-      *svndiff_compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
-    }
-  else if (session->supports_svndiff2 && session->using_compression)
-    {
-      *svndiff_version = 2;
-      *svndiff_compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
+      if (session->supports_svndiff1)
+        svndiff_version = 1;
+      else if (session->supports_svndiff2)
+        svndiff_version = 2;
+      else
+        svndiff_version = 0;
     }
   else
     {
@@ -1902,9 +1920,16 @@ negotiate_put_encoding(int *svndiff_version,
        * the usage of the uncompressed format by setting the corresponding
        * client configuration option, if they want to.
        */
-      *svndiff_version = 0;
-      *svndiff_compression_level = SVN_DELTA_COMPRESSION_LEVEL_NONE;
+      svndiff_version = 0;
     }
+
+  if (svndiff_version == 0)
+    compression_level = SVN_DELTA_COMPRESSION_LEVEL_NONE;
+  else
+    compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
+
+  *svndiff_version_p = svndiff_version;
+  *svndiff_compression_level_p = compression_level;
 }
 
 static svn_error_t *
