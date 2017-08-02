@@ -48,15 +48,8 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.9.x-r1795116
    Votes:
-     +1: stefan2
+     +1: stefan2, jamessan
      +0: stsp (text conflict in subversion/tests/libsvn_fs/fs-test.c) (without r1796167)
-
- * r1796420
-   svnadmin: Canonicalize LOCK_PATH arguments.
-   Justification:
-     API violation; errors on valid input.
-   Votes:
-     +1: danielsh, rhuijben
 
  * r1802032
    Install 'fsfs-stats' as a wrapper to 'svnfsfs', to which it was renamed in
@@ -65,15 +58,7 @@ Candidate changes:
      Backwards compatibility with 1.8.x tools/.
    Votes:
      +1: danielsh
-
- * r1802080, r1802316
-   Fix SEGV for 'svn export -rN WC' with relative externals.
-   Justification:
-     Client SEGV.
-   Branch:
-     ^/subversion/branches/1.9.x-r1802316
-   Votes:
-     +1: philip, danielsh
+     -0: jamessan ($(bindir) and $$1 should be quoted in case they contain shell metacharacters)
 
 Veto-blocked changes:
 =====================
@@ -96,3 +81,20 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1796420
+   svnadmin: Canonicalize LOCK_PATH arguments.
+   Justification:
+     API violation; errors on valid input.
+   Votes:
+     +1: danielsh, rhuijben, jamessan
+
+ * r1802080, r1802316
+   Fix SEGV for 'svn export -rN WC' with relative externals.
+   Justification:
+     Client SEGV.
+   Branch:
+     ^/subversion/branches/1.9.x-r1802316
+   Votes:
+     +1: philip, danielsh, jamessan
+
