@@ -51,7 +51,7 @@ Candidate changes:
      +1: stefan2, jamessan
      +0: stsp (text conflict in subversion/tests/libsvn_fs/fs-test.c) (without r1796167)
 
- * r1802032
+ * r1802032, r1803825
    Install 'fsfs-stats' as a wrapper to 'svnfsfs', to which it was renamed in
    r1618848.
    Justification:
@@ -59,6 +59,7 @@ Candidate changes:
    Votes:
      +1: danielsh
      -0: jamessan ($(bindir) and $$1 should be quoted in case they contain shell metacharacters)
+         (without r1803825)
 
 Veto-blocked changes:
 =====================
