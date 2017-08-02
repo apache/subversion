@@ -365,6 +365,7 @@ options_response_handler(serf_request_t *request,
     {
       svn_ra_serf__session_t *session = opt_ctx->session;
       serf_bucket_t *hdrs = serf_bucket_response_get_headers(response);
+      serf_connection_t *conn;
 
       /* Start out assuming all capabilities are unsupported. */
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
@@ -393,6 +394,10 @@ options_response_handler(serf_request_t *request,
       if (!svn_hash_gets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO))
         svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                       capability_no);
+
+      /* Remember our latency. */
+      conn = serf_request_get_conn(request);
+      session->conn_latency = serf_connection_get_latency(conn);
 
       opt_ctx->headers_processed = TRUE;
     }
