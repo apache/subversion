@@ -2036,11 +2036,12 @@ svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
         headers, "Accept-Encoding", "svndiff");
     }
   else if (session->using_compression == svn_tristate_unknown &&
-           svn_ra_serf__is_local_network(session))
+           svn_ra_serf__is_low_latency_connection(session))
     {
       /* With http-compression=auto, advertise that we prefer svndiff2
-         over svndiff1 when working over a local network, as it is faster
-         and in this case, we don't care about worse compression ratio. */
+         to svndiff1 with a low latency connection (assuming the underlying
+         network has high bandwidth), as it is faster and in this case, we
+         don't care about worse compression ratio. */
       serf_bucket_headers_setn(
         headers, "Accept-Encoding",
         "gzip,svndiff2;q=0.9,svndiff1;q=0.8,svndiff;q=0.7");
@@ -2050,8 +2051,8 @@ svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
       /* Otherwise, advertise that we prefer svndiff1 over svndiff2.
          svndiff2 is not a reasonable substitute for svndiff1 with default
          compression level, because, while it is faster, it also gives worse
-         compression ratio.  While we can use svndiff2 when working over
-         local networks (see above), we can't do this generally. */
+         compression ratio.  While we can use svndiff2 in some cases (see
+         above), we can't do this generally. */
       serf_bucket_headers_setn(
         headers, "Accept-Encoding",
         "gzip,svndiff1;q=0.9,svndiff2;q=0.8,svndiff;q=0.7");
@@ -2059,7 +2060,7 @@ svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
 }
 
 svn_boolean_t
-svn_ra_serf__is_local_network(svn_ra_serf__session_t *session)
+svn_ra_serf__is_low_latency_connection(svn_ra_serf__session_t *session)
 {
   return session->conn_latency >= 0 &&
          session->conn_latency < apr_time_from_msec(5);
