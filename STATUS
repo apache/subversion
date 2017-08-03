@@ -61,6 +61,14 @@ Candidate changes:
      -0: jamessan ($(bindir) and $$1 should be quoted in case they contain shell metacharacters)
          (without r1803825)
 
+ * r1804013
+   'svnadmin upgrade' of BDB: Error out on too-new formats.
+   Justification:
+     Prevents random corruptions when the arguments are invalid in a
+     particular way.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
