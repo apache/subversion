@@ -1875,14 +1875,16 @@ negotiate_put_encoding(int *svndiff_version_p,
 
   if (session->using_compression == svn_tristate_unknown)
     {
-      /* With http-compression=auto, prefer svndiff2 over svndiff1 when
-       * working over a local network, as it is faster and in this case,
-       * we don't care about worse compression ratio.
+      /* With http-compression=auto, prefer svndiff2 to svndiff1 with a
+       * low latency connection (assuming the underlying network has high
+       * bandwidth), as it is faster and in this case, we don't care about
+       * worse compression ratio.
        *
        * Note: For future compatibility, we also handle a theoretically
        * possible case where the server has advertised only svndiff2 support.
        */
-      if (session->supports_svndiff2 && svn_ra_serf__is_local_network(session))
+      if (session->supports_svndiff2 &&
+          svn_ra_serf__is_low_latency_connection(session))
         svndiff_version = 2;
       else if (session->supports_svndiff1)
         svndiff_version = 1;

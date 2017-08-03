@@ -1588,7 +1588,7 @@ svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
                                            svn_ra_serf__session_t *session);
 
 svn_boolean_t
-svn_ra_serf__is_local_network(svn_ra_serf__session_t *session);
+svn_ra_serf__is_low_latency_connection(svn_ra_serf__session_t *session);
 
 /* Default limit for in-memory size of a request body. */
 #define SVN_RA_SERF__REQUEST_BODY_IN_MEM_SIZE 256 * 1024
