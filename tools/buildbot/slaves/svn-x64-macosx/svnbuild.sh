@@ -73,6 +73,7 @@ fi
 
 if [ ${svnminor} -ge 10 ]; then
   lz4config='--with-lz4=internal'
+  utf8proconfig='--with-utf8proc=internal'
 fi
 
 #
@@ -93,6 +94,7 @@ ${abssrc}/configure \
     --enable-javahl \
     --without-jikes \
     ${lz4config} \
+    ${utf8proconfig} \
     --with-junit="${SVNBB_JUNIT}"
 
 test -f config.log && mv config.log "${abssrc}/.test-logs/config.log"
