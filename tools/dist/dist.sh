@@ -57,6 +57,7 @@
 #   To build a Windows zip file package, additionally pass -zip and the
 #   path to apr-iconv with -apri.
 
+set -e
 
 USAGE="USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH \
 [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|-pre PRE_NUM] \
