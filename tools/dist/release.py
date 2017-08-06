@@ -784,7 +784,7 @@ def write_news(args):
     template.generate(sys.stdout, data)
 
 
-def get_sha1info(args, replace=False):
+def get_sha1info(args):
     'Return a list of sha1 info for the release'
 
     target = get_target(args)
@@ -798,12 +798,7 @@ def get_sha1info(args, replace=False):
     for s in sha1s:
         i = info()
         # strip ".sha1"
-        fname = os.path.basename(s)[:-5]
-        if replace:
-            # replace the version number with the [version] reference
-            i.filename = Version.regex.sub('[version]', fname)
-        else:
-            i.filename = fname
+        i.filename = os.path.basename(s)[:-5]
         i.sha1 = open(s, 'r').read()
         sha1info.append(i)
 
@@ -846,7 +841,7 @@ def write_announcement(args):
 
 def write_downloads(args):
     'Output the download section of the website.'
-    sha1info = get_sha1info(args, replace=True)
+    sha1info = get_sha1info(args)
 
     data = { 'version'              : str(args.version),
              'fileinfo'             : sha1info,
