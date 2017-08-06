@@ -246,13 +246,11 @@ def get_nullfile():
 def run_script(verbose, script):
     if verbose:
         stdout = None
-        stderr = None
     else:
         stdout = get_nullfile()
-        stderr = subprocess.STDOUT
 
     for l in script.split('\n'):
-        subprocess.check_call(l.split(), stdout=stdout, stderr=stderr)
+        subprocess.check_call(l.split(), stdout=stdout)
 
 def download_file(url, target, checksum):
     response = urllib2.urlopen(url)
