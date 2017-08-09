@@ -1329,6 +1329,9 @@ def main():
     os.environ['PATH'] = os.path.join(get_prefix(args.base_dir), 'bin') + ':' \
                                                             + os.environ['PATH']
 
+    # Make timestamps in tarballs independent of local timezone
+    os.environ['TZ'] = 'UTC'
+
     # finally, run the subcommand, and give it the parsed arguments
     args.func(args)
 
