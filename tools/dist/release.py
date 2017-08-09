@@ -166,6 +166,27 @@ class Version(object):
             else:
                 return 'supported-releases'
 
+    def get_ver_tags(self, revnum):
+        # These get substituted into svn_version.h
+        ver_tag = ''
+        ver_numtag = ''
+        if self.pre == 'alpha':
+            ver_tag = '" (Alpha %d)"' % self.pre_num
+            ver_numtag = '"-alpha%d"' % self.pre_num
+        elif self.pre == 'beta':
+            ver_tag = '" (Beta %d)"' % args.version.pre_num
+            ver_numtag = '"-beta%d"' % self.pre_num
+        elif self.pre == 'rc':
+            ver_tag = '" (Release Candidate %d)"' % self.pre_num
+            ver_numtag = '"-rc%d"' % self.pre_num
+        elif self.pre == 'nightly':
+            ver_tag = '" (Nightly Build r%d)"' % revnum
+            ver_numtag = '"-nightly-r%d"' % revnum
+        else:
+            ver_tag = '" (r%d)"' % revnum 
+            ver_numtag = '""'
+        return (ver_tag, ver_numtag)
+
     def __serialize(self):
         return (self.major, self.minor, self.patch, self.pre, self.pre_num)
 
@@ -220,6 +241,18 @@ def get_prefix(base_dir):
 def get_tempdir(base_dir):
     return os.path.join(base_dir, 'tempdir')
 
+def get_workdir(base_dir):
+    return os.path.join(get_tempdir(base_dir), 'working')
+
+# The name of this directory is also used to name the tarball and for
+# the root of paths within the tarball, e.g. subversion-1.9.5 or
+# subversion-nightly-r1800000
+def get_exportdir(base_dir, version, revnum):
+    if version.pre != 'nightly':
+        return os.path.join(get_tempdir(base_dir), 'subversion-'+str(version))
+    return os.path.join(get_tempdir(base_dir),
+                        'subversion-%s-r%d' % (version, revnum))
+
 def get_deploydir(base_dir):
     return os.path.join(base_dir, 'deploy')
 
@@ -243,14 +276,17 @@ def get_tmplfile(filename):
 def get_nullfile():
     return open(os.path.devnull, 'w')
 
-def run_script(verbose, script):
+def run_script(verbose, script, hide_stderr=False):
+    stderr = None
     if verbose:
         stdout = None
     else:
         stdout = get_nullfile()
+        if hide_stderr:
+            stderr = get_nullfile()
 
     for l in script.split('\n'):
-        subprocess.check_call(l.split(), stdout=stdout)
+        subprocess.check_call(l.split(), stdout=stdout, stderr=stderr)
 
 def download_file(url, target, checksum):
     response = urllib2.urlopen(url)
@@ -482,6 +518,16 @@ def check_copyright_year(repos, branch, revision):
     check_file('NOTICE')
     check_file('subversion/libsvn_subr/version.c')
 
+def replace_lines(path, actions):
+    with open(path, 'r') as old_content:
+        lines = old_content.readlines()
+    with open(path, 'w') as new_content:
+        for line in lines:
+            for start, pattern, repl in actions:
+                if line.startswith(start):
+                    line = re.sub(pattern, repl, line)
+            new_content.write(line)
+
 def roll_tarballs(args):
     'Create the release artifacts.'
 
@@ -522,43 +568,158 @@ def roll_tarballs(args):
 
     os.mkdir(get_deploydir(args.base_dir))
 
-    # For now, just delegate to dist.sh to create the actual artifacts
-    extra_args = ''
-    if args.version.is_prerelease():
-        if args.version.pre == 'nightly':
-            extra_args = '-nightly'
+    logging.info('Preparing working copy source')
+    shutil.rmtree(get_workdir(args.base_dir), True)
+    run_script(args.verbose, 'svn checkout %s %s'
+               % (repos + '/' + branch + '@' + str(args.revnum),
+                  get_workdir(args.base_dir)))
+
+    # Exclude stuff we don't want in the tarball, it will not be present
+    # in the exported tree.
+    exclude = ['contrib', 'notes']
+    if branch != 'trunk':
+        exclude += ['STATUS']
+        if args.version.minor < 7:
+            exclude += ['packages', 'www']
+    cwd = os.getcwd()
+    os.chdir(get_workdir(args.base_dir))
+    run_script(args.verbose,
+               'svn update --set-depth exclude %s' % " ".join(exclude))
+    os.chdir(cwd)
+
+    if args.patches:
+        # Assume patches are independent and can be applied in any
+        # order, no need to sort.
+        majmin = '%d.%d' % (args.version.major, args.version.minor)
+        for name in os.listdir(args.patches):
+            if name.find(majmin) != -1 and name.endswith('patch'):
+                logging.info('Applying patch %s' % name)
+                run_script(args.verbose,
+                           '''svn patch %s %s'''
+                           % (os.path.join(args.patches, name),
+                              get_workdir(args.base_dir)))
+
+    # Massage the new version number into svn_version.h.
+    ver_tag, ver_numtag = args.version.get_ver_tags(args.revnum)
+    replacements = [('#define SVN_VER_TAG',
+                     '".*"', ver_tag),
+                    ('#define SVN_VER_NUMTAG',
+                     '".*"', ver_numtag),
+                    ('#define SVN_VER_REVISION',
+                     '[0-9][0-9]*', str(args.revnum))]
+    if args.version.pre != 'nightly':
+        # dist.sh does this but when would the numbers ever change?
+        replacements += [('#define SVN_VER_MAJOR',
+                          '[0-9][0-9]*', str(args.version.major)),
+                         ('#define SVN_VER_MINOR',
+                          '[0-9][0-9]*', str(args.version.minor)),
+                         ('#define SVN_VER_PATCH',
+                          '[0-9][0-9]*', str(args.version.patch))]
+    replace_lines(os.path.join(get_workdir(args.base_dir),
+                               'subversion', 'include', 'svn_version.h'),
+                  replacements)
+
+    # Basename for export and tarballs, e.g. subversion-1.9.5 or
+    # subversion-nightly-r1800000
+    exportdir = get_exportdir(args.base_dir, args.version, args.revnum)
+    basename = os.path.basename(exportdir)
+
+    def export(windows):
+        shutil.rmtree(exportdir, True)
+        if windows:
+            eol_style = "--native-eol CRLF"
         else:
-            extra_args = '-%s %d' % (args.version.pre, args.version.pre_num)
-    # Build Unix last to leave Unix-style svn_version.h for tagging
+            eol_style = "--native-eol LF"
+        run_script(args.verbose, "svn export %s %s %s"
+                   % (eol_style, get_workdir(args.base_dir), exportdir))
+
+    def transform_sql():
+        for root, dirs, files in os.walk(exportdir):
+            for fname in files:
+                if fname.endswith('.sql'):
+                    run_script(args.verbose,
+                               'python build/transform_sql.py %s/%s %s/%s'
+                               % (root, fname, root, fname[:-4] + '.h'))
+
+    def clean_autom4te():
+        for root, dirs, files in os.walk(get_workdir(args.base_dir)):
+            for dname in dirs:
+                if dname.startswith('autom4te') and dname.endswith('.cache'):
+                    shutil.rmtree(os.path.join(root, dname))
+
     logging.info('Building Windows tarballs')
-    run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d -zip %s'
-                     % (sys.path[0], args.version.base, branch, args.revnum,
-                        extra_args) )
-    logging.info('Building UNIX tarballs')
-    run_script(args.verbose, '%s/dist.sh -v %s -pr %s -r %d %s'
-                     % (sys.path[0], args.version.base, branch, args.revnum,
-                        extra_args) )
+    export(windows=True)
+    os.chdir(exportdir)
+    transform_sql()
+    # Can't use the po-update.sh in the Windows export since it has CRLF
+    # line endings and won't run, so use the one in the working copy.
+    run_script(args.verbose,
+               '%s/tools/po/po-update.sh pot' % get_workdir(args.base_dir))
+    os.chdir(cwd)
+    clean_autom4te() # dist.sh does it but pointless on Windows?
+    os.chdir(get_tempdir(args.base_dir))
+    run_script(args.verbose,
+               'zip -q -r %s %s' % (basename + '.zip', basename))
+    os.chdir(cwd)
+
+    logging.info('Building Unix tarballs')
+    export(windows=False)
+    os.chdir(exportdir)
+    transform_sql()
+    run_script(args.verbose,
+               '''tools/po/po-update.sh pot
+                  ./autogen.sh --release''',
+               hide_stderr=True) # SWIG is noisy
+    os.chdir(cwd)
+    clean_autom4te() # dist.sh does it but probably pointless
+
+    # Do not use tar, it's probably GNU tar which produces tar files
+    # that are not compliant with POSIX.1 when including filenames
+    # longer than 100 chars.  Platforms without a tar that understands
+    # the GNU tar extension will not be able to extract the resulting
+    # tar file.  Use pax to produce POSIX.1 tar files.
+    #
+    # Use the gzip -n flag - this prevents it from storing the
+    # original name of the .tar file, and far more importantly, the
+    # mtime of the .tar file, in the produced .tar.gz file. This is
+    # important, because it makes the gzip encoding reproducable by
+    # anyone else who has an similar version of gzip, and also uses
+    # "gzip -9n". This means that committers who want to GPG-sign both
+    # the .tar.gz and the .tar.bz2 can download the .tar.bz2 (which is
+    # smaller), and locally generate an exact duplicate of the
+    # official .tar.gz file. This metadata is data on the temporary
+    # uncompressed tarball itself, not any of its contents, so there
+    # will be no effect on end-users.
+    os.chdir(get_tempdir(args.base_dir))
+    run_script(args.verbose,
+               '''pax -x ustar -w -f %s %s
+                  bzip2 -9fk %s
+                  gzip -9nf %s'''
+               % (basename + '.tar', basename,
+                  basename + '.tar',
+                  basename + '.tar'))
+    os.chdir(cwd)
 
     # Move the results to the deploy directory
     logging.info('Moving artifacts and calculating checksums')
     for e in extns:
-        if args.version.pre == 'nightly':
-            filename = 'subversion-nightly.%s' % e
-        else:
-            filename = 'subversion-%s.%s' % (args.version, e)
-
-        shutil.move(filename, get_deploydir(args.base_dir))
-        filename = os.path.join(get_deploydir(args.base_dir), filename)
+        filename = basename + '.' + e
+        filepath = os.path.join(get_tempdir(args.base_dir), filename)
+        shutil.move(filepath, get_deploydir(args.base_dir))
+        filepath = os.path.join(get_deploydir(args.base_dir), filename)
         m = hashlib.sha1()
-        m.update(open(filename, 'r').read())
-        open(filename + '.sha1', 'w').write(m.hexdigest())
+        m.update(open(filepath, 'r').read())
+        open(filepath + '.sha1', 'w').write(m.hexdigest())
         m = hashlib.sha512()
-        m.update(open(filename, 'r').read())
-        open(filename + '.sha512', 'w').write(m.hexdigest())
+        m.update(open(filepath, 'r').read())
+        open(filepath + '.sha512', 'w').write(m.hexdigest())
 
-    shutil.move('svn_version.h.dist',
-                get_deploydir(args.base_dir) + '/' + 'svn_version.h.dist'
-                + '-' + str(args.version))
+    # Nightlies do not get tagged so do not need the header
+    if args.version.pre != 'nightly':
+        shutil.copy(os.path.join(get_workdir(args.base_dir),
+                                 'subversion', 'include', 'svn_version.h'),
+                    os.path.join(get_deploydir(args.base_dir),
+                                 'svn_version.h.dist-%s' % str(args.version)))
 
     # And we're done!
 
@@ -1031,6 +1192,8 @@ def main():
     subparser.add_argument('--branch',
                     help='''The branch to base the release on,
                             relative to ^/subversion/.''')
+    subparser.add_argument('--patches',
+                    help='''The path to the directory containing patches.''')
 
     # Setup the parser for the sign-candidates subcommand
     subparser = subparsers.add_parser('sign-candidates',
