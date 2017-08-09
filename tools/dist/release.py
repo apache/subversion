@@ -220,7 +220,7 @@ class Version(object):
             return self.pre_num < that.pre_num
 
     def __str__(self):
-        "Return an SVN_VER_NUMBER-formattes string, or 'nightly'."
+        "Return an SVN_VER_NUMBER-formatted string, or 'nightly'."
         if self.pre:
             if self.pre == 'nightly':
                 return 'nightly'
