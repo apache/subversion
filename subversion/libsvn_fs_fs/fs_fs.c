@@ -886,7 +886,7 @@ read_config(fs_fs_data_t *ffd,
           if (ffd->delta_compression_type == compression_type_lz4 &&
               ffd->format < SVN_FS_FS__MIN_SVNDIFF2_FORMAT)
             {
-              return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+              return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
                                       _("Compression type 'lz4' requires "
                                         "filesystem format 8 or higher"));
             }
