@@ -14,6 +14,7 @@ Status of 1.7.23:
 
 Candidate changes:
 ==================
+
  * r1438879
    Make 'show-diff' at the interactive conflict prompt show nicer diffs.
    Justification:
@@ -122,6 +123,14 @@ Candidate changes:
      ^/subversion/branches/1.7.x-sqlite-3.12
    Votes:
      +1 (non-binding): luke1410
+
+ * CVE-2017-9800
+   Merge the CVE-2017-9800 patch from 1.8.19: see r1804723 (which is a merge
+   of r1804691 from trunk to 1.8.x) and r1804692.
+   Justification:
+     Vulnerability.
+   Votes:
+     +0: danielsh (I'm +1 on the same patch for 1.8 and 1.9)
 
 Veto-blocked changes:
 =====================
