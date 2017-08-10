@@ -124,7 +124,7 @@ Candidate changes:
    Votes:
      +1 (non-binding): luke1410
 
- * CVE-2017-9800
+ * r1804691
    Merge the CVE-2017-9800 patch from 1.8.19: see r1804723 (which is a merge
    of r1804691 from trunk to 1.8.x) and r1804692.
    Justification:
