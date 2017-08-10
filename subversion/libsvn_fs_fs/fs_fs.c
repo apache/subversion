@@ -872,9 +872,14 @@ read_config(fs_fs_data_t *ffd,
       svn_config_get(config, &compression_level_val,
                      CONFIG_SECTION_DELTIFICATION,
                      CONFIG_OPTION_COMPRESSION_LEVEL, NULL);
-      if (compression_val)
+      if (compression_val && compression_level_val)
         {
-          /* 'compression' option overrides deprecated 'compression-level'. */
+          return svn_error_create(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                                  _("The 'compression' and 'compression-level' "
+                                    "config options are mutually exclusive"));
+        }
+      else if (compression_val)
+        {
           SVN_ERR(parse_compression_option(&ffd->delta_compression_type,
                                            &ffd->delta_compression_level,
                                            compression_val));
