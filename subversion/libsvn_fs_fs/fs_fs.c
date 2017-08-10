@@ -887,7 +887,7 @@ read_config(fs_fs_data_t *ffd,
               ffd->format < SVN_FS_FS__MIN_SVNDIFF2_FORMAT)
             {
               return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                      _("Ñompression type 'lz4' requires "
+                                      _("Compression type 'lz4' requires "
                                         "filesystem format 8 or higher"));
             }
         }
