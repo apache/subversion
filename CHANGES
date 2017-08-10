@@ -1,3 +1,27 @@
+Version 1.8.19
+(10 Aug 2017, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.19
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * Fix arbitrary code execution vulnerability CVE-2017-9800
+        See <https://subversion.apache.org/security/CVE-2017-9800-advisory.txt>
+        for details.
+
+  - Server-side bugfixes:
+    (none)
+
+  - Bindings bugfixes:
+    (none)
+
+ Developer-visible changes:
+  - General:
+    (none)
+
+  - API changes:
+    (none)
+
+
 Version 1.8.18
 (10 Jul 2017, from /branches/1.8.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.8.18
