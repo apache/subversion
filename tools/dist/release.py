@@ -608,7 +608,10 @@ def roll_tarballs(args):
                     ('#define SVN_VER_REVISION',
                      '[0-9][0-9]*', str(args.revnum))]
     if args.version.pre != 'nightly':
-        # dist.sh does this but when would the numbers ever change?
+        # SVN_VER_PATCH might change for security releases, e.g., when
+        # releasing 1.9.7 from the magic revision of 1.9.6.
+        #
+        # ### Would SVN_VER_MAJOR / SVN_VER_MINOR ever change?
         replacements += [('#define SVN_VER_MAJOR',
                           '[0-9][0-9]*', str(args.version.major)),
                          ('#define SVN_VER_MINOR',
