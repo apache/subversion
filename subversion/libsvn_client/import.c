@@ -80,19 +80,21 @@ typedef struct txdelta_stream_baton_t
 } txdelta_stream_baton_t;
 
 static svn_error_t *
-txdelta_next_window(svn_txdelta_window_t **window,
+txdelta_next_window(svn_txdelta_window_t **window_p,
                     void *baton,
                     apr_pool_t *pool)
 {
   struct txdelta_stream_baton_t *b = baton;
+  svn_txdelta_window_t *window;
 
-  SVN_ERR(svn_txdelta_next_window(window, b->txstream, pool));
-  if (!*window)
+  SVN_ERR(svn_txdelta_next_window(&window, b->txstream, pool));
+  if (!window)
     {
       memcpy(b->digest_buffer, svn_txdelta_md5_digest(b->txstream),
              APR_MD5_DIGESTSIZE);
     }
 
+  *window_p = window;
   return SVN_NO_ERROR;
 }
 
