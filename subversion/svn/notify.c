@@ -480,7 +480,11 @@ notify_body(struct notify_baton *nb,
       break;
 
     case svn_wc_notify_tree_conflict_details_progress:
-      SVN_ERR(svn_cmdline_printf(pool, _("\rChecking r%ld..."), n->revision));
+      /* First printf is to obliterate any previous progress printf,
+         assuming no more than 10 digit revisions.  Avoid i18n so the
+         text length is known. */
+      SVN_ERR(svn_cmdline_printf(pool, "\rChecking r             "));
+      SVN_ERR(svn_cmdline_printf(pool, "\rChecking r%ld...", n->revision));
       break;
 
     case svn_wc_notify_end_search_tree_conflict_details:
