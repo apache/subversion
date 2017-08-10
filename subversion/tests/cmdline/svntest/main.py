@@ -2202,10 +2202,6 @@ def parse_options(arglist=sys.argv[1:], usage=None):
   if options.fsfs_packing and not options.fsfs_sharding:
     parser.error("--fsfs-packing requires --fsfs-sharding")
 
-  if options.fsfs_compression is not None and \
-     options.server_minor_version < 10:
-    parser.error("--fsfs-compression requires --server-minor-version=10")
-
   if options.server_minor_version not in range(3, SVN_VER_MINOR+1):
     parser.error("test harness only supports server minor versions 3-%d"
                  % SVN_VER_MINOR)
