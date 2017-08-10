@@ -288,15 +288,21 @@ class GeneratorBase:
             '  { %d, "%s" },' % (num, val),
           ])
 
-       # Remove ',' for c89 compatibility
-      lines[-1] = lines[-1][0:-1]
+      # Remove ',' for c89 compatibility
+      if len(codes): 
+        lines[-1] = lines[-1][0:-1]
 
       lines.extend([
           '};',
           '',
         ])
 
-    write_struct('svn__errno', errno.errorcode.items())
+    # errno names can vary depending on the Python, and possibly the
+    # OS, version and they are not even used by normal release builds
+    # so omit them from the tarball. We always want the struct itself
+    # so that SVN_DEBUG builds still compile.
+    write_struct('svn__errno',
+                 [] if self.release_mode else errno.errorcode.items())
 
     # Fetch and write apr_errno.h codes.
     aprerr = []
