@@ -612,6 +612,8 @@ def roll_tarballs(args):
         # releasing 1.9.7 from the magic revision of 1.9.6.
         #
         # ### Would SVN_VER_MAJOR / SVN_VER_MINOR ever change?
+        # ### Note that SVN_VER_MINOR is duplicated in some places, see
+        # ### <https://subversion.apache.org/docs/community-guide/releasing.html#release-branches>
         replacements += [('#define SVN_VER_MAJOR',
                           '[0-9][0-9]*', str(args.version.major)),
                          ('#define SVN_VER_MINOR',
