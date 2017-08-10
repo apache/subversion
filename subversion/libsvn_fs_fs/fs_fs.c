@@ -861,7 +861,7 @@ read_config(fs_fs_data_t *ffd,
     }
 
   /* Initialize compression settings in ffd. */
-  if (ffd->format >= SVN_FS_FS__MIN_SVNDIFF2_FORMAT)
+  if (ffd->format >= SVN_FS_FS__MIN_DELTIFICATION_FORMAT)
     {
       const char *compression_val;
       const char *compression_level_val;
@@ -878,6 +878,13 @@ read_config(fs_fs_data_t *ffd,
           SVN_ERR(parse_compression_option(&ffd->delta_compression_type,
                                            &ffd->delta_compression_level,
                                            compression_val));
+          if (ffd->delta_compression_type == compression_type_lz4 &&
+              ffd->format < SVN_FS_FS__MIN_SVNDIFF2_FORMAT)
+            {
+              return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                      _("Ñompression type 'lz4' requires "
+                                        "filesystem format 8 or higher"));
+            }
         }
       else if (compression_level_val)
         {
@@ -896,19 +903,6 @@ read_config(fs_fs_data_t *ffd,
           ffd->delta_compression_type = compression_type_zlib;
           ffd->delta_compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
         }
-    }
-  else if (ffd->format >= SVN_FS_FS__MIN_DELTIFICATION_FORMAT)
-    {
-      apr_int64_t compression_level;
-
-      SVN_ERR(svn_config_get_int64(config, &compression_level,
-                                   CONFIG_SECTION_DELTIFICATION,
-                                   CONFIG_OPTION_COMPRESSION_LEVEL,
-                                   SVN_DELTA_COMPRESSION_LEVEL_DEFAULT));
-      ffd->delta_compression_type = compression_type_zlib;
-      ffd->delta_compression_level =
-        (int)MIN(MAX(SVN_DELTA_COMPRESSION_LEVEL_NONE, compression_level),
-                 SVN_DELTA_COMPRESSION_LEVEL_MAX);
     }
   else if (ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT)
     {
@@ -1062,6 +1056,7 @@ write_config(svn_fs_t *fs,
 "### significantly speed up commits as well as reading the data."            NL
 "### The syntax of this option is:"                                          NL
 "###   " CONFIG_OPTION_COMPRESSION " = none | lz4 | zlib | zlib-1 ... zlib-9" NL
+"### Versions prior to Subversion 1.10 will ignore this option."             NL
 "### The default value is 'zlib', which is currently equivalent to 'zlib-5'." NL
 "# " CONFIG_OPTION_COMPRESSION " = zlib"                                     NL
 "###"                                                                        NL
