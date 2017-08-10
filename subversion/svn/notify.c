@@ -54,6 +54,7 @@ struct notify_baton
   svn_boolean_t is_wc_to_repos_copy;
   svn_boolean_t sent_first_txdelta;
   int in_external;
+  svn_revnum_t progress_revision;
   svn_boolean_t had_print_error; /* Used to not keep printing error messages
                                     when we've already had one print error. */
 
@@ -477,18 +478,27 @@ notify_body(struct notify_baton *nb,
                                  _("Searching tree conflict details for '%s' "
                                    "in repository:\n"),
                                  path_local));
+      nb->progress_revision = 0;
       break;
 
     case svn_wc_notify_tree_conflict_details_progress:
       /* First printf is to obliterate any previous progress printf,
          assuming no more than 10 digit revisions.  Avoid i18n so the
-         text length is known. */
-      SVN_ERR(svn_cmdline_printf(pool, "\rChecking r             "));
+         text length is known.  We only need to do this if the new
+         revision is 4 digits less than the previous revision but that
+         requires counting digits.  Dividing by 1000 works well
+         enough: it triggers when needed, it sometimes triggers when
+         not needed, but in typical cases it doesn't trigger as the
+         revisions don't vary much. */
+      if (n->revision < nb->progress_revision / 1000)
+        SVN_ERR(svn_cmdline_printf(pool, "\rChecking r             "));
       SVN_ERR(svn_cmdline_printf(pool, "\rChecking r%ld...", n->revision));
+      nb->progress_revision = n->revision;
       break;
 
     case svn_wc_notify_end_search_tree_conflict_details:
       SVN_ERR(svn_cmdline_printf(pool, _(" done\n")));
+      nb->progress_revision = 0;
       break;
 
     case svn_wc_notify_add:
@@ -1239,6 +1249,7 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
   nb->is_export = FALSE;
   nb->is_wc_to_repos_copy = FALSE;
   nb->in_external = 0;
+  nb->progress_revision = 0;
   nb->had_print_error = FALSE;
   nb->conflict_stats = conflict_stats;
   SVN_ERR(svn_dirent_get_absolute(&nb->path_prefix, "", pool));
