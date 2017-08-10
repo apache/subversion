@@ -272,30 +272,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.7
     (none)
 
 
-Version 1.8.19
-(10 Aug 2017, from /branches/1.8.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.8.19
-
- User-visible changes:
-  - Client-side bugfixes:
-    * Fix arbitrary code execution vulnerability CVE-2017-9800
-        See <https://subversion.apache.org/security/CVE-2017-9800-advisory.txt>
-        for details.
-
-  - Server-side bugfixes:
-    (none)
-
-  - Bindings bugfixes:
-    (none)
-
- Developer-visible changes:
-  - General:
-    (none)
-
-  - API changes:
-    (none)
-
-
 Version 1.9.6
 (5 Jul 2017, from /branches/1.9.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.9.6
@@ -1266,6 +1242,30 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * javahl: requires Java 1.6 (r1677003)
     * javahl: on OS X use /usr/libexec/java_home to find the JDK (r1675774)
     * javahl: allow compiling with a C++11 compiler (r1684412)
+
+
+Version 1.8.19
+(10 Aug 2017, from /branches/1.8.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.8.19
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * Fix arbitrary code execution vulnerability CVE-2017-9800
+        See <https://subversion.apache.org/security/CVE-2017-9800-advisory.txt>
+        for details.
+
+  - Server-side bugfixes:
+    (none)
+
+  - Bindings bugfixes:
+    (none)
+
+ Developer-visible changes:
+  - General:
+    (none)
+
+  - API changes:
+    (none)
 
 
 Version 1.8.18
