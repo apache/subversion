@@ -80,6 +80,15 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1804691
+   Fix CVE-2017-9800.
+   Justification:
+     Arbitrary commands on client.
+   Branch:
+     ^/subversion/branches/1.6.x-CVE-2017-9800
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
