@@ -87,7 +87,7 @@ txdelta_next_window(svn_txdelta_window_t **window,
   struct txdelta_stream_baton_t *b = baton;
 
   SVN_ERR(svn_txdelta_next_window(window, b->txstream, pool));
-  if (!window)
+  if (!*window)
     {
       memcpy(b->digest_buffer, svn_txdelta_md5_digest(b->txstream),
              APR_MD5_DIGESTSIZE);
