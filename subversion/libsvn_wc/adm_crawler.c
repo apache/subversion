@@ -997,7 +997,7 @@ read_and_checksum_pristine_text(svn_stream_t **stream,
 
 
 svn_error_t *
-svn_wc__internal_transmit_text_deltas(const char **tempfile,
+svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
                                       const svn_checksum_t **new_text_base_md5_checksum,
                                       const svn_checksum_t **new_text_base_sha1_checksum,
                                       svn_wc__db_t *db,
@@ -1027,22 +1027,13 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
                                              scratch_pool, scratch_pool));
 
   /* If the caller wants a copy of the working file translated to
-   * repository-normal form, make the copy by tee-ing the stream and set
-   * *TEMPFILE to the path to it.  This is only needed for the 1.6 API,
-   * 1.7 doesn't set TEMPFILE.  Even when using the 1.6 API this file
-   * is not used by the functions that would have used it when using
-   * the 1.6 code.  It's possible that 3rd party users (if there are any)
-   * might expect this file to be a text-base. */
-  if (tempfile)
+   * repository-normal form, make the copy by tee-ing the TEMPSTREAM.
+   * This is only needed for the 1.6 API.  Even when using the 1.6 API
+   * this temporary file is not used by the functions that would have used
+   * it when using the 1.6 code.  It's possible that 3rd party users (if
+   * there are any) might expect this file to be a text-base. */
+  if (tempstream)
     {
-      svn_stream_t *tempstream;
-
-      /* It can't be the same location as in 1.6 because the admin directory
-         no longer exists. */
-      SVN_ERR(svn_stream_open_unique(&tempstream, tempfile,
-                                     NULL, svn_io_file_del_none,
-                                     result_pool, scratch_pool));
-
       /* Wrap the translated stream with a new stream that writes the
          translated contents into the new text base file as we read from it.
          Note that the new text base file will be closed when the new stream
@@ -1140,11 +1131,6 @@ svn_wc__internal_transmit_text_deltas(const char **tempfile,
          bases are getting corrupted, so they can
          investigate.  Other commands could be affected,
          too, such as `svn diff'.  */
-
-      if (tempfile)
-        err = svn_error_compose_create(
-                      err,
-                      svn_io_remove_file2(*tempfile, TRUE, scratch_pool));
 
       err = svn_error_compose_create(
               svn_checksum_mismatch_err(expected_md5_checksum, verify_checksum,
