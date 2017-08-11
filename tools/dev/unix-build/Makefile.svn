@@ -1466,6 +1466,7 @@ MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 JAVAHL_CHECK_TARGET=check-all-javahl
 LZ4_FLAG=--with-lz4=$(PREFIX)/lz4
+UTF8PROC_FLAG=--with-utf8proc=internal
 endif
 
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
@@ -1517,6 +1518,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 			$(JAVAHL_FLAG) \
 			$(LIBMAGIC_FLAG) \
 			$(LZ4_FLAG) \
+			$(UTF8PROC_FLAG) \
 			$(SVN_STATIC_FLAG) \
 			$(DISABLE_NEON_VERSION_CHECK)
 	touch $@
