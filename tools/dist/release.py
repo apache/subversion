@@ -874,7 +874,9 @@ def clean_dist(args):
     versions = set(map(Version, filenames))
     minor_lines = set(map(minor, versions))
     to_keep = set()
-    for recent_line in sorted(minor_lines, reverse=True)[:2]:
+    # Keep 3 minor lines: 1.10.0-alpha3, 1.9.7, 1.8.19.
+    # TODO: When we release 1.A.0 GA we'll have to manually remove 1.(A-2).* artifacts.
+    for recent_line in sorted(minor_lines, reverse=True)[:3]:
         to_keep.add(max(
             x for x in versions
             if minor(x) == recent_line
