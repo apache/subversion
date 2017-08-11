@@ -127,6 +127,13 @@ svn_stream__install_get_info(apr_finfo_t *finfo,
                              apr_int32_t wanted,
                              apr_pool_t *scratch_pool);
 
+/* Internal version of svn_stream_from_aprfile2() supporting the
+   additional TRUNCATE_ON_SEEK argument. */
+svn_stream_t *
+svn_stream__from_aprfile(apr_file_t *file,
+                         svn_boolean_t disown,
+                         svn_boolean_t truncate_on_seek,
+                         apr_pool_t *pool);
 
 #if defined(WIN32)
 

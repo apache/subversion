@@ -39,6 +39,7 @@
 
 #include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_io_private.h"
 
 #include "wc.h"
 #include "entries.h"
@@ -487,11 +488,14 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                                          pool));
   if (tempfile)
     {
+      apr_file_t *f;
+
       /* The temporary file can't be the same location as in 1.6 because the
        * admin directory no longer exists. */
-      SVN_ERR(svn_stream_open_unique(&tempstream, tempfile,
-                                     NULL, svn_io_file_del_none,
-                                     pool, pool));
+      SVN_ERR(svn_io_open_unique_file3(&f, tempfile, NULL,
+                                       svn_io_file_del_none,
+                                       pool, pool));
+      tempstream = svn_stream__from_aprfile(f, FALSE, TRUE, pool);
     }
   else
     {
