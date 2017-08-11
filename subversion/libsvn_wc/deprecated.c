@@ -478,20 +478,46 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   const char *local_abspath;
   svn_wc_context_t *wc_ctx;
   const svn_checksum_t *new_text_base_md5_checksum;
+  svn_stream_t *tempstream;
+  svn_error_t *err;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL /* config */,
                                          svn_wc__adm_get_db(adm_access),
                                          pool));
+  if (tempfile)
+    {
+      /* The temporary file can't be the same location as in 1.6 because the
+       * admin directory no longer exists. */
+      SVN_ERR(svn_stream_open_unique(&tempstream, tempfile,
+                                     NULL, svn_io_file_del_none,
+                                     pool, pool));
+    }
+  else
+    {
+      tempstream = NULL;
+    }
 
-  SVN_ERR(svn_wc__internal_transmit_text_deltas(tempfile,
-                                                (digest
-                                                 ? &new_text_base_md5_checksum
-                                                 : NULL),
-                                                NULL, wc_ctx->db,
-                                                local_abspath, fulltext,
-                                                editor, file_baton,
-                                                pool, pool));
+  err = svn_wc__internal_transmit_text_deltas(svn_stream_disown(tempstream, pool),
+                                              (digest
+                                               ? &new_text_base_md5_checksum
+                                               : NULL),
+                                              NULL, wc_ctx->db,
+                                              local_abspath, fulltext,
+                                              editor, file_baton,
+                                              pool, pool);
+  if (tempfile)
+    {
+      err = svn_error_compose_create(err, svn_stream_close(tempstream));
+
+      if (err)
+        {
+          err = svn_error_compose_create(
+                  err, svn_io_remove_file2(*tempfile, TRUE, pool));
+        }
+    }
+
+  SVN_ERR(err);
 
   if (digest)
     memcpy(digest, new_text_base_md5_checksum->digest, APR_MD5_DIGESTSIZE);
