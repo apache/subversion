@@ -1248,7 +1248,8 @@ svn_stream_compressed(svn_stream_t *stream,
  * The @a stream passed into this function is closed when the created
  * stream is closed.
  *
- * @since New in 1.6.
+ * @since New in 1.6.  Since 1.10, the resulting stream supports reset
+ * via stream_stream_reset().
  */
 svn_stream_t *
 svn_stream_checksummed2(svn_stream_t *stream,
@@ -1383,6 +1384,14 @@ svn_stream_reset(svn_stream_t *stream);
  */
 svn_boolean_t
 svn_stream_supports_mark(svn_stream_t *stream);
+
+/** Returns @c TRUE if the generic @a stream supports svn_stream_reset().
+ *
+ * @see svn_stream_reset()
+ * @since New in 1.10.
+ */
+svn_boolean_t
+svn_stream_supports_reset(svn_stream_t *stream);
 
 /** Set a @a mark at the current position of a generic @a stream,
  * which can later be sought back to using svn_stream_seek().

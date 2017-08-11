@@ -235,6 +235,12 @@ svn_stream_supports_mark(svn_stream_t *stream)
   return stream->mark_fn != NULL;
 }
 
+svn_boolean_t
+svn_stream_supports_reset(svn_stream_t *stream)
+{
+  return stream->seek_fn != NULL;
+}
+
 svn_error_t *
 svn_stream_mark(svn_stream_t *stream, svn_stream_mark_t **mark,
                 apr_pool_t *pool)
@@ -1427,6 +1433,31 @@ close_handler_checksum(void *baton)
   return svn_error_trace(svn_stream_close(btn->proxy));
 }
 
+static svn_error_t *
+seek_handler_checksum(void *baton, const svn_stream_mark_t *mark)
+{
+  struct checksum_stream_baton *btn = baton;
+
+  /* Only reset support. */
+  if (mark)
+    {
+      return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED,
+                              NULL, NULL);
+    }
+  else
+    {
+      if (btn->read_ctx)
+        svn_checksum_ctx_reset(btn->read_ctx);
+
+      if (btn->write_ctx)
+        svn_checksum_ctx_reset(btn->write_ctx);
+
+      SVN_ERR(svn_stream_reset(btn->proxy));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_stream_t *
 svn_stream_checksummed2(svn_stream_t *stream,
@@ -1464,6 +1495,8 @@ svn_stream_checksummed2(svn_stream_t *stream,
   svn_stream_set_write(s, write_handler_checksum);
   svn_stream_set_data_available(s, data_available_handler_checksum);
   svn_stream_set_close(s, close_handler_checksum);
+  if (svn_stream_supports_reset(stream))
+    svn_stream_set_seek(s, seek_handler_checksum);
   return s;
 }
 
