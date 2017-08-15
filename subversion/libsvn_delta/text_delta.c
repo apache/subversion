@@ -102,7 +102,7 @@ struct apply_baton {
   char *tbuf;                   /* Target buffer */
   apr_size_t tbuf_size;         /* Allocated target buffer space */
 
-  apr_md5_ctx_t md5_context;    /* Leads to result_digest below. */
+  svn_checksum_ctx_t *md5_context; /* Leads to result_digest below. */
   unsigned char *result_digest; /* MD5 digest of resultant fulltext;
                                    must point to at least APR_MD5_DIGESTSIZE
                                    bytes of storage. */
@@ -720,15 +720,22 @@ apply_window(svn_txdelta_window_t *window, void *baton)
 {
   struct apply_baton *ab = (struct apply_baton *) baton;
   apr_size_t len;
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
 
   if (window == NULL)
     {
       /* We're done; just clean up.  */
       if (ab->result_digest)
-        apr_md5_final(ab->result_digest, &(ab->md5_context));
+        {
+          svn_checksum_t *md5_checksum;
 
-      err = svn_stream_close(ab->target);
+          err = svn_checksum_final(&md5_checksum, ab->md5_context, ab->pool);
+          if (!err)
+            memcpy(ab->result_digest, md5_checksum->digest,
+                   svn_checksum_size(md5_checksum));
+        }
+
+      err = svn_error_compose_create(err, svn_stream_close(ab->target));
       svn_pool_destroy(ab->pool);
 
       return err;
@@ -791,7 +798,7 @@ apply_window(svn_txdelta_window_t *window, void *baton)
 
   /* Just update the context here. */
   if (ab->result_digest)
-    apr_md5_update(&(ab->md5_context), ab->tbuf, len);
+    SVN_ERR(svn_checksum_update(ab->md5_context, ab->tbuf, len));
 
   return svn_stream_write(ab->target, ab->tbuf, &len);
 }
@@ -822,7 +829,7 @@ svn_txdelta_apply(svn_stream_t *source,
   ab->result_digest = result_digest;
 
   if (result_digest)
-    apr_md5_init(&(ab->md5_context));
+    ab->md5_context = svn_checksum_ctx_create(svn_checksum_md5, subpool);
 
   if (error_info)
     ab->error_info = apr_pstrdup(subpool, error_info);
