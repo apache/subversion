@@ -5917,58 +5917,6 @@ filter_props(apr_hash_t *props, apr_pool_t *scratch_pool)
     }
 }
 
-/* Get KEYWORDS for LOCAL_ABSPATH.
- * WC_CTX is a context for the working copy the patch is applied to.
- * Use RESULT_POOL for allocations of fields in TARGET.
- * Use SCRATCH_POOL for all other allocations. */
-static svn_error_t *
-get_keywords(apr_hash_t **keywords,
-             svn_wc_context_t *wc_ctx,
-             const char *local_abspath,
-             apr_pool_t *result_pool,
-             apr_pool_t *scratch_pool)
-{
-  apr_hash_t *props;
-  svn_string_t *keywords_val;
-
-  *keywords = NULL;
-  SVN_ERR(svn_wc_prop_list2(&props, wc_ctx, local_abspath,
-                            scratch_pool, scratch_pool));
-  keywords_val = svn_hash_gets(props, SVN_PROP_KEYWORDS);
-  if (keywords_val)
-    {
-      svn_revnum_t changed_rev;
-      apr_time_t changed_date;
-      const char *rev_str;
-      const char *author;
-      const char *url;
-      const char *repos_root_url;
-      const char *repos_relpath;
-
-      SVN_ERR(svn_wc__node_get_changed_info(&changed_rev,
-                                            &changed_date,
-                                            &author, wc_ctx,
-                                            local_abspath,
-                                            scratch_pool,
-                                            scratch_pool));
-      rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
-      SVN_ERR(svn_wc__node_get_repos_info(NULL, &repos_relpath, &repos_root_url,
-                                          NULL,
-                                          wc_ctx, local_abspath,
-                                          scratch_pool, scratch_pool));
-      url = svn_path_url_add_component2(repos_root_url, repos_relpath,
-                                        scratch_pool);
-
-      SVN_ERR(svn_subst_build_keywords3(keywords,
-                                        keywords_val->data,
-                                        rev_str, url, repos_root_url,
-                                        changed_date,
-                                        author, result_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Implements conflict_option_resolve_func_t. */
 static svn_error_t *
 resolve_merge_incoming_added_file_text_update(
@@ -5986,11 +5934,9 @@ resolve_merge_incoming_added_file_text_update(
   const char *working_file_tmp_abspath;
   svn_stream_t *working_file_stream;
   svn_stream_t *working_file_tmp_stream;
-  svn_stream_t *normalized_stream;
   apr_hash_t *working_props;
   apr_array_header_t *propdiffs;
   svn_error_t *err;
-  apr_hash_t *keywords;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
 
@@ -6003,16 +5949,12 @@ resolve_merge_incoming_added_file_text_update(
                                  svn_io_file_del_none,
                                  scratch_pool, scratch_pool));
 
-  /* Copy the working file to temporary storage. */
-  SVN_ERR(svn_stream_open_readonly(&working_file_stream, local_abspath,
-                                   scratch_pool, scratch_pool));
-  SVN_ERR(get_keywords(&keywords, ctx->wc_ctx, local_abspath,
-                       scratch_pool, scratch_pool));
-  normalized_stream = svn_subst_stream_translated(working_file_stream,
-                                                  "\n", TRUE,
-                                                  keywords, FALSE,
-                                                  scratch_pool);
-  SVN_ERR(svn_stream_copy3(normalized_stream, working_file_tmp_stream,
+  /* Copy the detranslated working file to temporary storage. */
+  SVN_ERR(svn_wc__translated_stream(&working_file_stream, ctx->wc_ctx,
+                                    local_abspath, local_abspath,
+                                    SVN_WC_TRANSLATE_TO_NF,
+                                    scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(working_file_stream, working_file_tmp_stream,
                            ctx->cancel_func, ctx->cancel_baton,
                            scratch_pool));
 
@@ -6254,10 +6196,8 @@ resolve_merge_incoming_added_file_replace_and_merge(
   const char *wc_tmpdir;
   svn_stream_t *working_file_tmp_stream;
   const char *working_file_tmp_abspath;
-  svn_stream_t *normalized_stream;
   svn_stream_t *working_file_stream;
   apr_hash_t *working_props;
-  apr_hash_t *keywords;
   svn_error_t *err;
   svn_wc_merge_outcome_t merge_content_outcome;
   svn_wc_notify_state_t merge_props_outcome;
@@ -6275,16 +6215,12 @@ resolve_merge_incoming_added_file_replace_and_merge(
                                  svn_io_file_del_on_pool_cleanup,
                                  scratch_pool, scratch_pool));
 
-  /* Copy the working file to temporary storage. */
-  SVN_ERR(svn_stream_open_readonly(&working_file_stream, local_abspath,
-                                   scratch_pool, scratch_pool));
-  SVN_ERR(get_keywords(&keywords, ctx->wc_ctx, local_abspath,
-                       scratch_pool, scratch_pool));
-  normalized_stream = svn_subst_stream_translated(working_file_stream,
-                                                  "\n", TRUE,
-                                                  keywords, FALSE,
-                                                  scratch_pool);
-  SVN_ERR(svn_stream_copy3(normalized_stream, working_file_tmp_stream,
+  /* Copy the detranslated working file to temporary storage. */
+  SVN_ERR(svn_wc__translated_stream(&working_file_stream, ctx->wc_ctx,
+                                    local_abspath, local_abspath,
+                                    SVN_WC_TRANSLATE_TO_NF,
+                                    scratch_pool, scratch_pool));
+  SVN_ERR(svn_stream_copy3(working_file_stream, working_file_tmp_stream,
                            ctx->cancel_func, ctx->cancel_baton,
                            scratch_pool));
 
@@ -7746,8 +7682,6 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
     {
       svn_stream_t *working_stream;
       svn_stream_t *incoming_stream;
-      svn_stream_t *normalized_stream;
-      apr_hash_t *keywords;
 
       /* Create a temporary copy of the working file in repository-normal form.
        * Set up this temporary file to be automatically removed. */
@@ -7758,21 +7692,14 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
       if (err)
         goto unlock_wc;
 
-      err = svn_stream_open_readonly(&working_stream, local_abspath,
-                                     scratch_pool, scratch_pool);
+      err = svn_wc__translated_stream(&working_stream, ctx->wc_ctx,
+                                      local_abspath, local_abspath,
+                                      SVN_WC_TRANSLATE_TO_NF,
+                                      scratch_pool, scratch_pool);
       if (err)
         goto unlock_wc;
 
-      err = get_keywords(&keywords, ctx->wc_ctx, local_abspath,
-                         scratch_pool, scratch_pool);
-      if (err)
-        goto unlock_wc;
-
-      normalized_stream = svn_subst_stream_translated(working_stream,
-                                                      "\n", TRUE,
-                                                      keywords, FALSE,
-                                                      scratch_pool);
-      err = svn_stream_copy3(normalized_stream, incoming_stream,
+      err = svn_stream_copy3(working_stream, incoming_stream,
                              NULL, NULL, /* no cancellation */
                              scratch_pool);
       if (err)
@@ -7782,8 +7709,6 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
     {
       svn_stream_t *incoming_stream;
       svn_stream_t *move_target_stream;
-      svn_stream_t *normalized_stream;
-      apr_hash_t *keywords;
 
       /* Set aside the current move target file. This is required to apply
        * the move, and only then perform a three-way text merge between
@@ -7798,21 +7723,14 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
       if (err)
         goto unlock_wc;
 
-      err = svn_stream_open_readonly(&move_target_stream, moved_to_abspath,
-                                     scratch_pool, scratch_pool);
+      err = svn_wc__translated_stream(&move_target_stream, ctx->wc_ctx,
+                                      moved_to_abspath, moved_to_abspath,
+                                      SVN_WC_TRANSLATE_TO_NF,
+                                      scratch_pool, scratch_pool);
       if (err)
         goto unlock_wc;
 
-      err = get_keywords(&keywords, ctx->wc_ctx, moved_to_abspath,
-                         scratch_pool, scratch_pool);
-      if (err)
-        goto unlock_wc;
-
-      normalized_stream = svn_subst_stream_translated(move_target_stream,
-                                                      "\n", TRUE,
-                                                      keywords, FALSE,
-                                                      scratch_pool);
-      err = svn_stream_copy3(normalized_stream, incoming_stream,
+      err = svn_stream_copy3(move_target_stream, incoming_stream,
                              NULL, NULL, /* no cancellation */
                              scratch_pool);
       if (err)
