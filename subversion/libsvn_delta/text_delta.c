@@ -720,10 +720,11 @@ apply_window(svn_txdelta_window_t *window, void *baton)
 {
   struct apply_baton *ab = (struct apply_baton *) baton;
   apr_size_t len;
-  svn_error_t *err = SVN_NO_ERROR;
 
   if (window == NULL)
     {
+      svn_error_t *err = SVN_NO_ERROR;
+
       /* We're done; just clean up.  */
       if (ab->result_digest)
         {
@@ -779,12 +780,10 @@ apply_window(svn_txdelta_window_t *window, void *baton)
   if (ab->sbuf_len < window->sview_len)
     {
       len = window->sview_len - ab->sbuf_len;
-      err = svn_stream_read_full(ab->source, ab->sbuf + ab->sbuf_len, &len);
-      if (err == SVN_NO_ERROR && len != window->sview_len - ab->sbuf_len)
-        err = svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
-                               "Delta source ended unexpectedly");
-      if (err != SVN_NO_ERROR)
-        return err;
+      SVN_ERR(svn_stream_read_full(ab->source, ab->sbuf + ab->sbuf_len, &len));
+      if (len != window->sview_len - ab->sbuf_len)
+        return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
+                                "Delta source ended unexpectedly");
       ab->sbuf_len = window->sview_len;
     }
 
