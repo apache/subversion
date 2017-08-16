@@ -2062,6 +2062,17 @@ svn_wc__read_conflict_descriptions2_t(const apr_array_header_t **conflicts,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
 
+/* Internal version of svn_wc_translated_stream(), accepting a working
+   copy context. */
+svn_error_t *
+svn_wc__translated_stream(svn_stream_t **stream,
+                          svn_wc_context_t *wc_ctx,
+                          const char *local_abspath,
+                          const char *versioned_abspath,
+                          apr_uint32_t flags,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
