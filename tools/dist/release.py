@@ -1022,6 +1022,7 @@ def write_downloads(args):
 # Validate the signatures for a release
 
 key_start = '-----BEGIN PGP SIGNATURE-----'
+key_end = '-----END PGP SIGNATURE-----'
 
 PUBLIC_KEY_ALGORITHMS = {
     # These values are taken from the RFC's registry at:
@@ -1056,9 +1057,27 @@ def get_siginfo(args, quiet=False):
         text = open(filename).read()
         keys = text.split(key_start)
 
+        # Check the keys file syntax. We've been bitten in the past
+        # with syntax errors in the key delimiters that GPG didn't
+        # catch for us, but the ASF key checker tool did.
+        if keys[0]:
+            sys.stderr.write("SYNTAX ERROR: %s does not start with '%s'\n"
+                             % (filename, key_start))
+            sys.exit(1)
+        keys = keys[1:]
+
         if not quiet:
-            logging.info("Checking %d sig(s) in %s" % (len(keys[1:]), filename))
-        for key in keys[1:]:
+            logging.info("Checking %d sig(s) in %s" % (len(keys), filename))
+
+        n = 0
+        for key in keys:
+            n += 1
+            if not key.rstrip().endswith(key_end):
+                sys.stderr.write("SYNTAX ERROR: Key %d in %s"
+                                 " does not end with '%s'\n"
+                                 % (n, filename, key_end))
+                sys.exit(1)
+
             fd, fn = tempfile.mkstemp()
             os.write(fd, key_start + key)
             os.close(fd)
@@ -1068,7 +1087,8 @@ def get_siginfo(args, quiet=False):
             if verified.valid:
                 good_sigs[verified.fingerprint] = True
             else:
-                sys.stderr.write("BAD SIGNATURE for %s\n" % filename)
+                sys.stderr.write("BAD SIGNATURE: Key %d in %s\n"
+                                 % (n, filename))
                 if verified.key_id:
                     sys.stderr.write("  key id: %s\n" % verified.key_id)
                 sys.exit(1)
