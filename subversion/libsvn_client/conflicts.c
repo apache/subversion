@@ -4158,6 +4158,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
       if (old_rev < new_rev)
         {
           const char *parent_repos_relpath;
+          svn_revnum_t parent_peg_rev;
           svn_revnum_t deleted_rev;
           const char *deleted_rev_author;
           svn_node_kind_t replacing_node_kind;
@@ -4166,7 +4167,8 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           svn_revnum_t related_peg_rev;
 
           /* The update operation went forward in history. */
-          SVN_ERR(svn_wc__node_get_repos_info(NULL, &parent_repos_relpath,
+          SVN_ERR(svn_wc__node_get_repos_info(&parent_peg_rev,
+                                              &parent_repos_relpath,
                                               NULL, NULL,
                                               ctx->wc_ctx,
                                               svn_dirent_dirname(
@@ -4194,8 +4196,8 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
                     &deleted_rev, &deleted_rev_author, &replacing_node_kind,
                     &moves, conflict,
                     svn_dirent_basename(conflict->local_abspath, scratch_pool),
-                    parent_repos_relpath,
-                    new_rev, new_kind == svn_node_none ? 0 : old_rev,
+                    parent_repos_relpath, parent_peg_rev,
+                    new_kind == svn_node_none ? 0 : old_rev,
                     related_repos_relpath, related_peg_rev,
                     ctx, conflict->pool, scratch_pool));
           if (deleted_rev == SVN_INVALID_REVNUM)
