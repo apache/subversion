@@ -2072,6 +2072,7 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
   const char *old_repos_relpath;
   const char *new_repos_relpath;
   const char *parent_repos_relpath;
+  svn_revnum_t parent_peg_rev;
   svn_revnum_t old_rev;
   svn_revnum_t new_rev;
   svn_revnum_t deleted_rev;
@@ -2094,7 +2095,7 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
    * deleted the node. */
   deleted_basename = svn_dirent_basename(conflict->local_abspath,
                                          scratch_pool);
-  SVN_ERR(svn_wc__node_get_repos_info(NULL, &parent_repos_relpath,
+  SVN_ERR(svn_wc__node_get_repos_info(&parent_peg_rev, &parent_repos_relpath,
                                       NULL, NULL,
                                       ctx->wc_ctx,
                                       svn_dirent_dirname(
@@ -2122,8 +2123,7 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
   SVN_ERR(find_revision_for_suspected_deletion(
             &deleted_rev, &deleted_rev_author, &replacing_node_kind, &moves,
             conflict, deleted_basename, parent_repos_relpath,
-            old_rev < new_rev ? new_rev : old_rev, 0,
-            related_repos_relpath, related_peg_rev,
+            parent_peg_rev, 0, related_repos_relpath, related_peg_rev,
             ctx, conflict->pool, scratch_pool));
 
   if (deleted_rev == SVN_INVALID_REVNUM)
