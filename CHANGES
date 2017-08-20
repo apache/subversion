@@ -115,6 +115,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
       + Parse any properties following svn:mergeinfo (r1706825)
       + Fix potential unbounded memory usage in parser (r1705979)
       + Fix problems with --git diffs applied in reverse (r1704854, -88)
+      + Fix removal of EOL if final patch context line has no EOL (#4315)
     * 'svn diff --git': Fix file permission modes to match git and hg (r1695384)
     * Fix a problem with relocating some externals (r1723385)
     * Fix 'svn diff URL@REV WC' wrongly looks up URL@HEAD (issue #4597)
