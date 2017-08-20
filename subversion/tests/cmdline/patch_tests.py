@@ -4696,6 +4696,7 @@ def patch_apply_no_fuz(sbox):
                                        expected_status, expected_skip,
                                        [], True, True)
 
+@Issue(4315)
 def patch_lacking_trailing_eol_on_context(sbox):
   "patch file lacking trailing eol on context"
 
