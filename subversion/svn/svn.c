@@ -329,9 +329,9 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "'theirs-conflict', 'mine-full', 'theirs-full',\n"
                        "                             "
-                       "'edit', 'launch')\n"
+                       "'edit', 'launch', 'recommended') (shorthand:\n"
                        "                             "
-                       "(shorthand: 'p', 'mc', 'tc', 'mf', 'tf', 'e', 'l')"
+                       "'p', 'mc', 'tc', 'mf', 'tf', 'e', 'l', 'r')"
                        )},
   {"show-revs",     opt_show_revs, 1,
                     N_("specify which collection of revisions to display\n"

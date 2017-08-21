@@ -215,8 +215,8 @@ Valid options:
   --accept ARG             : specify automatic conflict resolution action
                              ('postpone', 'working', 'base', 'mine-conflict',
                              'theirs-conflict', 'mine-full', 'theirs-full',
-                             'edit', 'launch')
-                             (shorthand: 'p', 'mc', 'tc', 'mf', 'tf', 'e', 'l')
+                             'edit', 'launch', 'recommended') (shorthand:
+                             'p', 'mc', 'tc', 'mf', 'tf', 'e', 'l', 'r')
   --relocate               : deprecated; use 'svn relocate'
 
 Global options:
