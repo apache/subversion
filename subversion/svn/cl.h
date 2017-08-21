@@ -83,7 +83,10 @@ typedef enum svn_cl__accept_t
   svn_cl__accept_edit,
 
   /* Launch user's resolver and resolve conflict with edited file. */
-  svn_cl__accept_launch
+  svn_cl__accept_launch,
+
+  /* Use recommended resolution if available, else leave the conflict alone. */
+  svn_cl__accept_recommended
 
 } svn_cl__accept_t;
 

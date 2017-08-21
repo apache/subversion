@@ -3068,10 +3068,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                    SVN_CL__ACCEPT_LAUNCH);
         }
 
-      /* The default action when we're non-interactive is to postpone
-       * conflict resolution. */
+      /* The default action when we're non-interactive is to use the
+       * recommended conflict resolution (this will postpone conflicts
+       * for which no recommended resolution is available). */
       if (opt_state.accept_which == svn_cl__accept_unspecified)
-        opt_state.accept_which = svn_cl__accept_postpone;
+        opt_state.accept_which = svn_cl__accept_recommended;
     }
 
   /* Check whether interactive conflict resolution is disabled by
