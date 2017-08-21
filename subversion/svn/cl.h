@@ -100,6 +100,7 @@ typedef enum svn_cl__accept_t
 #define SVN_CL__ACCEPT_THEIRS_FULL "theirs-full"
 #define SVN_CL__ACCEPT_EDIT "edit"
 #define SVN_CL__ACCEPT_LAUNCH "launch"
+#define SVN_CL__ACCEPT_RECOMMENDED "recommended"
 
 /* Return the svn_cl__accept_t value corresponding to WORD, using exact
  * case-sensitive string comparison. Return svn_cl__accept_invalid if WORD
