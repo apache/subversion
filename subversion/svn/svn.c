@@ -144,6 +144,8 @@ typedef enum svn_cl__longopt_t {
   opt_pin_externals,
   opt_show_item,
   opt_adds_as_modification,
+  opt_delete,
+  opt_keep_shelved,
   opt_list
 } svn_cl__longopt_t;
 
@@ -461,10 +463,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        "resolve tree conflicts instead.")},
 
   {"list", opt_list, 0, N_("list shelved patches")},
-
-  /* ### should have new option codes, and not be aliases */
-  {"keep", opt_keep_local, 0, N_("do not delete the shelved patch")},
-  {"delete", opt_remove, 0, N_("just delete the shelved patch")},
+  {"keep-shelved", opt_keep_shelved, 0, N_("do not delete the shelved patch")},
+  {"delete", opt_delete, 0, N_("delete the shelved patch")},
 
   /* Long-opt Aliases
    *
@@ -1647,13 +1647,16 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  1. Shelve as NAME the local changes in the given PATHs.\n"
      "  2. Delete the shelved patch NAME.\n"
      "  3. List shelved patches.\n"),
-    {'q', opt_remove, opt_list, opt_dry_run,
+    {opt_delete, opt_list, 'q', opt_dry_run,
      'N', opt_depth, opt_targets, opt_changelist} },
 
   { "unshelve", svn_cl__unshelve, {0}, N_
     ("Unshelve changes.\n"
-     "usage: unshelve [--keep] NAME\n"),
-    {'q', opt_keep_local, opt_dry_run} },
+     "usage: unshelve [--keep-shelved] NAME\n"
+     "\n"
+     "  Apply the shelved patch NAME to the working copy.\n"
+     "  Delete the patch unless the '--keep-shelved' option is given.\n"),
+    {opt_keep_shelved, 'q', opt_dry_run} },
 
   { "shelves", svn_cl__shelves, {0}, N_
     ("List shelved patches.\n"
@@ -2389,6 +2392,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.diff.summarize = TRUE;
         break;
       case opt_remove:
+      case opt_delete:
         opt_state.remove = TRUE;
         break;
       case opt_changelist:
@@ -2404,6 +2408,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.keep_changelists = TRUE;
         break;
       case opt_keep_local:
+      case opt_keep_shelved:
         opt_state.keep_local = TRUE;
         break;
       case opt_with_all_revprops:
