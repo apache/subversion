@@ -463,7 +463,7 @@ def ensure_tree_conflict(sbox, operation,
       if operation == 'update':
         logger.debug("--- Updating")
         run_and_verify_svn(expected_stdout, [],
-                           'update', target_path)
+                           'update', target_path, '--accept=postpone')
       elif operation == 'switch':
         logger.debug("--- Switching")
         run_and_verify_svn(expected_stdout, [],
