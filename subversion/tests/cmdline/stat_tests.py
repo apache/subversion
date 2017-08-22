@@ -2224,7 +2224,8 @@ def status_missing_conflicts(sbox):
 
   sbox.simple_rm('A/B/E')
 
-  sbox.simple_update('A/B/E', revision=1)
+  svntest.main.run_svn(False, 'update', sbox.ospath('A/B/E'), '-r', '1',
+    '--accept=postpone')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E', status='D ', treeconflict='C', wc_rev=1)
@@ -2277,7 +2278,8 @@ def status_missing_conflicts(sbox):
   sbox.simple_move('A/B/E/beta', 'beta')
 
   sbox.simple_rm('A/B/E')
-  sbox.simple_update('A/B/E', revision=1)
+  svntest.main.run_svn(False, 'update', sbox.ospath('A/B/E'), '-r', '1',
+    '--accept=postpone')
   svntest.actions.run_and_verify_svn(None, [],
                                      'resolve', '--accept=mine-conflict',
                                      '--depth=empty', sbox.ospath('A/B/E'))

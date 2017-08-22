@@ -1,3 +1,5 @@
+#include "svn_private_config.h"
+#if SVN_INTERNAL_LZ4
 /*
    LZ4 - Fast LZ compression algorithm
    Copyright (C) 2011-2016, Yann Collet.
@@ -89,7 +91,7 @@
 /*-************************************
 *  Dependency
 **************************************/
-#include "lz4.h"
+#include "lz4internal.h"
 /* see also "memory routines" below */
 
 
@@ -1463,3 +1465,4 @@ int LZ4_decompress_fast_withPrefix64k(const char* source, char* dest, int origin
 }
 
 #endif   /* LZ4_COMMONDEFS_ONLY */
+#endif /* SVN_INTERNAL_LZ4 */

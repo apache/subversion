@@ -404,6 +404,15 @@ extern "C" {
 #define SVN_DAV_NS_DAV_SVN_SVNDIFF2\
             SVN_DAV_PROP_NS_DAV "svn/svndiff2"
 
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) sends the result
+ * checksum in the response to a successful PUT request.
+ *
+ * @since New in 1.10.
+ */
+#define SVN_DAV_NS_DAV_SVN_PUT_RESULT_CHECKSUM\
+            SVN_DAV_PROP_NS_DAV "svn/put-result-checksum"
+
 /** @} */
 
 /** @} */

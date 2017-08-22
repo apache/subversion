@@ -570,6 +570,36 @@ svn_checksum_ctx_create(svn_checksum_kind_t kind,
 }
 
 svn_error_t *
+svn_checksum_ctx_reset(svn_checksum_ctx_t *ctx)
+{
+  switch (ctx->kind)
+    {
+      case svn_checksum_md5:
+        memset(ctx->apr_ctx, 0, sizeof(apr_md5_ctx_t));
+        apr_md5_init(ctx->apr_ctx);
+        break;
+
+      case svn_checksum_sha1:
+        memset(ctx->apr_ctx, 0, sizeof(apr_sha1_ctx_t));
+        apr_sha1_init(ctx->apr_ctx);
+        break;
+
+      case svn_checksum_fnv1a_32:
+        svn_fnv1a_32__context_reset(ctx->apr_ctx);
+        break;
+
+      case svn_checksum_fnv1a_32x4:
+        svn_fnv1a_32x4__context_reset(ctx->apr_ctx);
+        break;
+
+      default:
+        SVN_ERR_MALFUNCTION();
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_checksum_update(svn_checksum_ctx_t *ctx,
                     const void *data,
                     apr_size_t len)

@@ -515,6 +515,96 @@ random_combine_test(apr_pool_t *pool)
 }
 
 
+/* (Note: *LAST_SEED is an output parameter.) */
+static svn_error_t *
+do_random_txdelta_to_svndiff_stream_test(apr_pool_t *pool,
+                                         apr_uint32_t *last_seed)
+{
+  apr_uint32_t seed;
+  apr_uint32_t maxlen;
+  apr_size_t bytes_range;
+  int i;
+  int iterations;
+  int dump_files;
+  int print_windows;
+  const char *random_bytes;
+  apr_pool_t *iterpool;
+
+  /* Initialize parameters and print out the seed in case we dump core
+     or something. */
+  init_params(&seed, &maxlen, &iterations, &dump_files, &print_windows,
+              &random_bytes, &bytes_range, pool);
+
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < iterations; i++)
+    {
+      apr_uint32_t subseed_base;
+      apr_file_t *source;
+      apr_file_t *target;
+      apr_file_t *source_copy;
+      apr_file_t *new_target;
+      svn_txdelta_stream_t *txstream;
+      svn_stream_t *delta_stream;
+      svn_txdelta_window_handler_t handler;
+      void *handler_baton;
+      svn_stream_t *push_stream;
+
+      svn_pool_clear(iterpool);
+
+      /* Generate source and target for the delta and its application. */
+      *last_seed = seed;
+      subseed_base = svn_test_rand(&seed);
+      source = generate_random_file(maxlen, subseed_base, &seed,
+                                    random_bytes, bytes_range,
+                                    dump_files, iterpool);
+      target = generate_random_file(maxlen, subseed_base, &seed,
+                                    random_bytes, bytes_range,
+                                    dump_files, iterpool);
+      source_copy = copy_tempfile(source, iterpool);
+      new_target = open_tempfile(NULL, iterpool);
+
+      /* Create a txdelta stream that turns the source into target;
+         turn it into a generic readable svn_stream_t. */
+      svn_txdelta2(&txstream,
+                   svn_stream_from_aprfile2(source, TRUE, iterpool),
+                   svn_stream_from_aprfile2(target, TRUE, iterpool),
+                   FALSE, iterpool);
+      delta_stream = svn_txdelta_to_svndiff_stream(txstream, i % 3, i % 10,
+                                                   iterpool);
+
+      /* Apply it to a copy of the source file to see if we get the
+         same target back. */
+      svn_txdelta_apply(svn_stream_from_aprfile2(source_copy, TRUE, iterpool),
+                        svn_stream_from_aprfile2(new_target, TRUE, iterpool),
+                        NULL, NULL, iterpool, &handler, &handler_baton);
+      push_stream = svn_txdelta_parse_svndiff(handler, handler_baton, TRUE,
+                                              iterpool);
+      SVN_ERR(svn_stream_copy3(delta_stream, push_stream, NULL, NULL,
+                               iterpool));
+
+      SVN_ERR(compare_files(target, new_target, dump_files));
+
+      apr_file_close(source);
+      apr_file_close(target);
+      apr_file_close(source_copy);
+      apr_file_close(new_target);
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_test_driver_t. */
+static svn_error_t *
+random_txdelta_to_svndiff_stream_test(apr_pool_t *pool)
+{
+  apr_uint32_t seed;
+  svn_error_t *err = do_random_txdelta_to_svndiff_stream_test(pool, &seed);
+  if (err)
+    fprintf(stderr, "SEED: %lu\n", (unsigned long)seed);
+  return err;
+}
+
 /* Change to 1 to enable the unit test for the delta combiner's range index: */
 #if 0
 #include "range-index-test.h"
@@ -533,6 +623,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "random delta test"),
     SVN_TEST_PASS2(random_combine_test,
                    "random combine delta test"),
+    SVN_TEST_PASS2(random_txdelta_to_svndiff_stream_test,
+                   "random txdelta to svndiff stream test"),
 #ifdef SVN_RANGE_INDEX_TEST_H
     SVN_TEST_PASS2(random_range_index_test,
                    "random range index test"),
