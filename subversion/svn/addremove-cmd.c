@@ -39,6 +39,29 @@
 
 /*** Code. ***/
 
+static svn_error_t *
+wrap_illegal_target_error(apr_array_header_t *errors)
+{
+  svn_error_t *err;
+  int i;
+
+  err = svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL, NULL);
+  for (i = 0; i < errors->nelts; i++)
+    {
+      apr_status_t status = APR_ARRAY_IDX(errors, i, apr_status_t);
+      if (status == SVN_ERR_WC_PATH_NOT_FOUND)
+        err = svn_error_quick_wrap(err,
+                                   _("Could not add all targets because "
+                                     "some targets don't exist"));
+      else if (status == SVN_ERR_ENTRY_EXISTS)
+        err = svn_error_quick_wrap(err,
+                                   _("Could not add all targets because "
+                                     "some targets are already versioned"));
+    }
+
+  return err;
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__addremove(apr_getopt_t *os,
@@ -82,27 +105,33 @@ svn_cl__addremove(apr_getopt_t *os,
                0));
     }
 
+  if (errors->nelts > 0)
+    {
+      svn_error_t *err = wrap_illegal_target_error(errors);
+      svn_handle_warning2(stderr, err, "svn: ");
+    }
+
+  /* Now ask for magic to be performed which will detect moves. */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
+      SVN_ERR(svn_cl__try(svn_client_match_up_local_deletes_and_adds(
+                            target, opt_state->depth,
+                            ctx, iterpool),
+               errors, opt_state->quiet,
+               SVN_ERR_ENTRY_EXISTS,
+               SVN_ERR_WC_PATH_NOT_FOUND,
+               0));
+    }
   svn_pool_destroy(iterpool);
 
   if (errors->nelts > 0)
     {
-      svn_error_t *err;
-
-      err = svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL, NULL);
-      for (i = 0; i < errors->nelts; i++)
-        {
-          apr_status_t status = APR_ARRAY_IDX(errors, i, apr_status_t);
-          if (status == SVN_ERR_WC_PATH_NOT_FOUND)
-            err = svn_error_quick_wrap(err,
-                                       _("Could not add all targets because "
-                                         "some targets don't exist"));
-          else if (status == SVN_ERR_ENTRY_EXISTS)
-            err = svn_error_quick_wrap(err,
-                                       _("Could not add all targets because "
-                                         "some targets are already versioned"));
-        }
-
-      return svn_error_trace(err);
+      svn_error_t *err = wrap_illegal_target_error(errors);
+      svn_handle_warning2(stderr, err, "svn: ");
     }
 
   return SVN_NO_ERROR;

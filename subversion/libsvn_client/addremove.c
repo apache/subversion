@@ -52,6 +52,12 @@ struct addremove_status_baton {
 
   /* Status info for unversioned paths. */
   apr_hash_t *unversioned;
+
+  /* Status info for added paths. */
+  apr_hash_t *added;
+
+  /* Status info for deleted paths. */
+  apr_hash_t *deleted;
 };
 
 /* Implements svn_wc_status_func4_t. */
@@ -61,32 +67,36 @@ addremove_status_func(void *baton, const char *local_abspath,
                       apr_pool_t *scratch_pool)
 {
   struct addremove_status_baton *b = baton;
+  apr_hash_t *hash = NULL;
 
   switch (status->node_status)
     {
       case svn_wc_status_unversioned:
-        {
-          apr_hash_t *hash = b->unversioned;
-          apr_pool_t *result_pool = apr_hash_pool_get(hash);
-
-          svn_hash_sets(hash, apr_pstrdup(result_pool, local_abspath),
-                        svn_wc_dup_status3(status, result_pool));
-          break;
-        }
+        hash = b->unversioned;
+        break;
 
       case svn_wc_status_missing:
-        {
+        hash = b->missing;
+        break;
 
-          apr_hash_t *hash = b->missing;
-          apr_pool_t *result_pool = apr_hash_pool_get(hash);
+      case svn_wc_status_added:
+        hash = b->added;
+        break;
 
-          svn_hash_sets(hash, apr_pstrdup(result_pool, local_abspath),
-                        svn_wc_dup_status3(status, result_pool));
-          break;
-        }
+      case svn_wc_status_deleted:
+        hash = b->deleted;
+        break;
 
       default:
         break;
+    }
+
+  if (hash)
+    {
+      apr_pool_t *result_pool = apr_hash_pool_get(hash);
+
+      svn_hash_sets(hash, apr_pstrdup(result_pool, local_abspath),
+                    svn_wc_dup_status3(status, result_pool));
     }
 
   return SVN_NO_ERROR;
@@ -94,8 +104,8 @@ addremove_status_func(void *baton, const char *local_abspath,
 
 static svn_error_t *
 suggest_moves(apr_hash_t **moves,
-              apr_hash_t *unversioned,
-              apr_hash_t *missing,
+              apr_hash_t *deleted,
+              apr_hash_t *added,
               svn_client_ctx_t *ctx,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
@@ -106,10 +116,10 @@ suggest_moves(apr_hash_t **moves,
   *moves = apr_hash_make(result_pool);
 
   iterpool = svn_pool_create(scratch_pool);
-  for (hi = apr_hash_first(scratch_pool, unversioned); hi;
+  for (hi = apr_hash_first(scratch_pool, added); hi;
        hi = apr_hash_next(hi))
     {
-      const char *unversioned_abspath = apr_hash_this_key(hi);
+      const char *added_abspath = apr_hash_this_key(hi);
       const svn_wc_status3_t *status = apr_hash_this_val(hi);
       apr_array_header_t *similar_abspaths;
       int i;
@@ -120,7 +130,7 @@ suggest_moves(apr_hash_t **moves,
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_wc__find_similar_files(&similar_abspaths, ctx->wc_ctx,
-                                         unversioned_abspath,
+                                         added_abspath,
                                          ctx->cancel_func, ctx->cancel_baton,
                                          result_pool, iterpool));
 
@@ -129,13 +139,13 @@ suggest_moves(apr_hash_t **moves,
           const char *similar_abspath = APR_ARRAY_IDX(similar_abspaths, i,
                                                       const char *);
 
-          if (svn_hash_gets(missing, similar_abspath) == NULL)
+          if (svn_hash_gets(deleted, similar_abspath) == NULL)
             continue; /* ### TODO treat as a copy? */
 
           /* ### TODO deal with ambiguous moves */
           svn_hash_sets(*moves,
                         similar_abspath,
-                        apr_pstrdup(result_pool, unversioned_abspath));
+                        apr_pstrdup(result_pool, added_abspath));
         }
     }
 
@@ -151,7 +161,6 @@ addremove(const char *local_abspath, svn_depth_t depth,
 {
   svn_magic__cookie_t *magic_cookie;
   struct addremove_status_baton b;
-  apr_hash_t *moves;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
 
@@ -159,6 +168,8 @@ addremove(const char *local_abspath, svn_depth_t depth,
 
   b.missing = apr_hash_make(scratch_pool);
   b.unversioned = apr_hash_make(scratch_pool);
+  b.added = NULL;
+  b.deleted = NULL;
 
   SVN_ERR(svn_wc_walk_status(ctx->wc_ctx, local_abspath, depth,
                              TRUE, FALSE, FALSE, NULL,
@@ -166,12 +177,7 @@ addremove(const char *local_abspath, svn_depth_t depth,
                              ctx->cancel_func, ctx->cancel_baton,
                              scratch_pool));
 
-
-  SVN_ERR(suggest_moves(&moves, b.unversioned, b.missing,
-                        ctx, scratch_pool, scratch_pool));
-
   iterpool = svn_pool_create(scratch_pool);
-
   for (hi = apr_hash_first(scratch_pool, b.unversioned); hi;
        hi = apr_hash_next(hi))
     {
@@ -210,24 +216,6 @@ addremove(const char *local_abspath, svn_depth_t depth,
         }
     }
 
-  for (hi = apr_hash_first(scratch_pool, moves); hi;
-       hi = apr_hash_next(hi))
-    {
-      const char *src_abspath = apr_hash_this_key(hi);
-      const char *dst_abspath = apr_hash_this_val(hi);
-
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_wc__move2(ctx->wc_ctx, src_abspath, dst_abspath,
-                            TRUE, /* metadata_only */
-                            FALSE, /* allow_mixed_revisions */
-                            ctx->cancel_func, ctx->cancel_baton,
-                            ctx->notify_func2, ctx->notify_baton2,
-                            iterpool));
-
-      svn_hash_sets(b.missing, src_abspath, NULL);
-    }
-
   for (hi = apr_hash_first(scratch_pool, b.missing); hi;
        hi = apr_hash_next(hi))
     {
@@ -242,7 +230,6 @@ addremove(const char *local_abspath, svn_depth_t depth,
                              ctx->notify_func2, ctx->notify_baton2,
                              iterpool));
     }
-
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
@@ -266,3 +253,65 @@ svn_client_addremove(const char *local_path,
 
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+match_up_local_deletes_and_adds(const char *local_abspath,
+                                svn_depth_t depth,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *scratch_pool)
+{
+  struct addremove_status_baton b;
+  apr_hash_t *moves;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
+
+  b.missing = NULL;
+  b.unversioned = NULL;
+  b.added = apr_hash_make(scratch_pool);
+  b.deleted = apr_hash_make(scratch_pool);
+
+  SVN_ERR(svn_wc_walk_status(ctx->wc_ctx, local_abspath, depth,
+                             TRUE, FALSE, FALSE, NULL,
+                             addremove_status_func, &b,
+                             ctx->cancel_func, ctx->cancel_baton,
+                             scratch_pool));
+
+  SVN_ERR(suggest_moves(&moves, b.deleted, b.added,
+                        ctx, scratch_pool, scratch_pool));
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, moves); hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *src_abspath = apr_hash_this_key(hi);
+      const char *dst_abspath = apr_hash_this_val(hi);
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_wc__move_fixup(ctx->wc_ctx, src_abspath, dst_abspath,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 ctx->notify_func2, ctx->notify_baton2,
+                                 iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_match_up_local_deletes_and_adds(const char *local_path,
+                                           svn_depth_t depth,
+                                           svn_client_ctx_t *ctx,
+                                           apr_pool_t *scratch_pool)
+{
+  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, local_path, scratch_pool));
+
+  SVN_WC__CALL_WITH_WRITE_LOCK(
+    match_up_local_deletes_and_adds(local_abspath, depth, ctx, scratch_pool),
+    ctx->wc_ctx, local_abspath, TRUE, scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+

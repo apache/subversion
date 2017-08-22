@@ -4329,6 +4329,58 @@ svn_wc__db_scan_deletion(const char **base_del_abspath,
   return SVN_NO_ERROR;
 }
 
+/* Similar to svn_wc__internal_get_origin() but for deletion op-roots only. */
+static svn_error_t *
+get_origin_of_delete_op_root(const char **repos_relpath,
+                             svn_revnum_t *revision,
+                             apr_int64_t *repos_id,
+                             const char *local_relpath,
+                             svn_wc__db_wcroot_t *wcroot,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  const char *base_del_relpath, *work_del_relpath;
+
+  SVN_ERR(scan_deletion(&base_del_relpath, NULL,
+                        &work_del_relpath,
+                        NULL, wcroot, local_relpath,
+                        scratch_pool, scratch_pool));
+  if (work_del_relpath)
+    {
+      const char *op_root_relpath;
+      const char *parent_del_relpath = svn_relpath_dirname(work_del_relpath,
+                                                           scratch_pool);
+
+      /* Similar to, but not the same as, the _scan_addition and
+         _join in get_info_for_copy().  Can we use get_copyfrom here? */
+      SVN_ERR(scan_addition(NULL, &op_root_relpath,
+                            NULL, NULL, /* repos_* */
+                            repos_relpath, repos_id, revision,
+                            NULL, NULL, NULL,
+                            wcroot, parent_del_relpath,
+                            scratch_pool, scratch_pool));
+      *repos_relpath
+        = svn_relpath_join(*repos_relpath,
+                           svn_relpath_skip_ancestor(op_root_relpath,
+                                                     local_relpath),
+                           result_pool);
+    }
+  else if (base_del_relpath)
+    {
+      SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, revision,
+                                                repos_relpath,
+                                                repos_id, NULL, NULL,
+                                                NULL, NULL, NULL, NULL,
+                                                NULL, NULL, NULL, NULL,
+                                                wcroot, local_relpath,
+                                                result_pool,
+                                                scratch_pool));
+    }
+  else
+    SVN_ERR_MALFUNCTION();
+
+  return SVN_NO_ERROR;
+}
 
 /* Set *COPYFROM_ID, *COPYFROM_RELPATH, *COPYFROM_REV to the values
    appropriate for the copy. Also return *STATUS, *KIND and *HAVE_WORK, *OP_ROOT
@@ -4389,45 +4441,10 @@ get_info_for_copy(apr_int64_t *copyfrom_id,
     }
   else if (node_status == svn_wc__db_status_deleted && is_op_root)
     {
-      const char *base_del_relpath, *work_del_relpath;
-
-      SVN_ERR(scan_deletion(&base_del_relpath, NULL,
-                            &work_del_relpath,
-                            NULL, src_wcroot, local_relpath,
-                            scratch_pool, scratch_pool));
-      if (work_del_relpath)
-        {
-          const char *op_root_relpath;
-          const char *parent_del_relpath = svn_relpath_dirname(work_del_relpath,
-                                                               scratch_pool);
-
-          /* Similar to, but not the same as, the _scan_addition and
-             _join above.  Can we use get_copyfrom here? */
-          SVN_ERR(scan_addition(NULL, &op_root_relpath,
-                                NULL, NULL, /* repos_* */
-                                copyfrom_relpath, copyfrom_id, copyfrom_rev,
-                                NULL, NULL, NULL,
-                                src_wcroot, parent_del_relpath,
-                                scratch_pool, scratch_pool));
-          *copyfrom_relpath
-            = svn_relpath_join(*copyfrom_relpath,
-                               svn_relpath_skip_ancestor(op_root_relpath,
-                                                         local_relpath),
-                               result_pool);
-        }
-      else if (base_del_relpath)
-        {
-          SVN_ERR(svn_wc__db_base_get_info_internal(NULL, NULL, copyfrom_rev,
-                                                    copyfrom_relpath,
-                                                    copyfrom_id, NULL, NULL,
-                                                    NULL, NULL, NULL, NULL,
-                                                    NULL, NULL, NULL, NULL,
-                                                    src_wcroot, local_relpath,
-                                                    result_pool,
-                                                    scratch_pool));
-        }
-      else
-        SVN_ERR_MALFUNCTION();
+      SVN_ERR(get_origin_of_delete_op_root(copyfrom_relpath, copyfrom_rev,
+                                           copyfrom_id, local_relpath,
+                                           src_wcroot, result_pool,
+                                           scratch_pool)); 
     }
   else if (node_status == svn_wc__db_status_deleted)
     {
@@ -16713,3 +16730,194 @@ svn_wc__find_repos_node_in_wc(apr_array_header_t **local_abspath_list,
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
+static svn_error_t *
+set_moved_here_recursive(svn_wc__db_wcroot_t *wcroot,
+                         const char *local_relpath,
+                         apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_SET_MOVED_HERE_RECURSIVE));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isd", wcroot->wc_id, local_relpath,
+                            relpath_depth(local_relpath)));
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+update_origin(svn_wc__db_wcroot_t *wcroot,
+              const char *local_relpath,
+              const char *new_repos_relpath,
+              svn_revnum_t new_revision, 
+              apr_int64_t repos_id,
+              apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_COMMIT_UPDATE_ORIGIN));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isdisr", wcroot->wc_id,
+                                            local_relpath,
+                                            relpath_depth(local_relpath),
+                                            repos_id,
+                                            new_repos_relpath,
+                                            new_revision));
+  SVN_ERR(svn_sqlite__update(NULL, stmt));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+move_fixup(svn_wc__db_wcroot_t *wcroot,
+           const char *src_relpath,
+           const char *dst_relpath,
+           apr_pool_t *scratch_pool)
+{
+  svn_wc__db_status_t src_status;
+  svn_wc__db_status_t dst_status;
+  svn_node_kind_t src_kind;
+  svn_node_kind_t dst_kind;
+  const char *src_repos_relpath;
+  const char *dst_repos_relpath;
+  svn_revnum_t src_revision;
+  apr_int64_t src_repos_id;
+  apr_int64_t dst_repos_id;
+  svn_boolean_t src_is_op_root;
+  svn_boolean_t dst_is_op_root;
+  const char *moved_to_relpath;
+  const char *moved_from_relpath;
+
+  SVN_ERR(read_info(&src_status, &src_kind, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, &src_is_op_root,
+                    NULL, NULL, NULL, NULL, NULL,
+                    wcroot, src_relpath, scratch_pool, scratch_pool));
+  SVN_ERR(read_info(&dst_status, &dst_kind, NULL, &dst_repos_relpath,
+                    &dst_repos_id, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                    NULL, NULL, NULL, NULL, NULL, NULL, NULL, &dst_is_op_root,
+                    NULL, NULL, NULL, NULL, NULL,
+                    wcroot, dst_relpath, scratch_pool, scratch_pool));
+
+  /* Destination must be the op-root of a deletion. */
+  if (src_status != svn_wc__db_status_deleted || !src_is_op_root)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s'  is not the root of a deletion"),
+                             path_for_error_message(wcroot, src_relpath,
+                                                    scratch_pool));
+  /* Source must not already be part of a move. */
+  SVN_ERR(scan_deletion(NULL, &moved_to_relpath, NULL, NULL,
+                        wcroot, src_relpath, scratch_pool, scratch_pool));
+  if (moved_to_relpath != NULL)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s'  is already moved to '%s'"),
+                             path_for_error_message(wcroot, src_relpath,
+                                                    scratch_pool),
+                             path_for_error_message(wcroot, moved_to_relpath,
+                                                    scratch_pool));
+
+  SVN_ERR(get_origin_of_delete_op_root(&src_repos_relpath, &src_revision,
+                                       &src_repos_id, src_relpath, wcroot,
+                                       scratch_pool, scratch_pool)); 
+
+  /* Destination must be the op-root of an addition. */
+  if (dst_status != svn_wc__db_status_added || !dst_is_op_root)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s'  is not the root of an addition"),
+                             path_for_error_message(wcroot, dst_relpath,
+                                                    scratch_pool));
+
+  /* Destination must not already be part of a move. */
+  SVN_ERR(scan_addition(NULL, NULL, NULL, &dst_repos_id, NULL, NULL, NULL,
+                        &moved_from_relpath, NULL, NULL,
+                        wcroot, dst_relpath, scratch_pool, scratch_pool));
+  if (moved_from_relpath != NULL)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("'%s'  was already moved here from '%s'"),
+                             path_for_error_message(wcroot, dst_relpath,
+                                                    scratch_pool),
+                             path_for_error_message(wcroot, moved_from_relpath,
+                                                    scratch_pool));
+
+  /* Source and destination must be from the same repository. */
+  if (src_repos_id != dst_repos_id)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("Source '%s' and destination '%s' are not "
+                               "from the same repository"),
+                             path_for_error_message(wcroot, src_relpath,
+                                                    scratch_pool),
+                             path_for_error_message(wcroot, dst_relpath,
+                                                    scratch_pool));
+
+  /* Set the moved-here flag on the destination and children, if any. */
+  SVN_ERR(set_moved_here_recursive(wcroot, dst_relpath, scratch_pool));
+
+  /* Rewrite copyfrom on the destination. The repository location of the
+   * source will become the destination's new copyfrom url@revision. */
+  SVN_ERR(update_origin(wcroot, dst_relpath, src_repos_relpath, src_revision,
+                        src_repos_id, scratch_pool));
+  if (dst_kind == svn_node_dir)
+    {
+      apr_hash_t *moves = NULL;
+
+      /* Rewrite copyfrom on children as well, if any.
+       * ### Re-uses code which was originally written for commit processing. */
+      SVN_ERR(moved_descendant_collect(&moves, wcroot, dst_relpath,
+                                       relpath_depth(dst_relpath),
+                                       scratch_pool, scratch_pool));
+      SVN_ERR(moved_descendant_commit(wcroot, dst_relpath, src_repos_id,
+                                      src_repos_relpath, src_revision,
+                                      moves, scratch_pool));
+    }
+
+  /* Rewrite the moved-to path on the source. */
+  SVN_ERR(delete_update_movedto(wcroot,
+                                src_relpath, relpath_depth(src_relpath),
+                                dst_relpath, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_move_fixup(svn_wc__db_t *db,
+                      const char *src_abspath,
+                      const char *dst_abspath,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
+                      apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *src_wcroot;
+  svn_wc__db_wcroot_t *dst_wcroot;
+  const char *src_relpath;
+  const char *dst_relpath;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(src_abspath));
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&src_wcroot, &src_relpath, db,
+                                                src_abspath, scratch_pool,
+                                                scratch_pool));
+  VERIFY_USABLE_WCROOT(src_wcroot);
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&dst_wcroot, &dst_relpath, db,
+                                                dst_abspath, scratch_pool,
+                                                scratch_pool));
+  VERIFY_USABLE_WCROOT(dst_wcroot);
+
+  if (strcmp(src_wcroot->abspath, dst_wcroot->abspath) != 0)
+    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                             _("Source '%s' and destination '%s' are not "
+                               "in the same working copy"),
+                             path_for_error_message(src_wcroot, src_relpath,
+                                                    scratch_pool),
+                             path_for_error_message(dst_wcroot, dst_relpath,
+                                                    scratch_pool));
+
+  SVN_WC__DB_WITH_TXN(
+            move_fixup(src_wcroot, src_relpath, dst_relpath, scratch_pool),
+            src_wcroot);
+
+  return SVN_NO_ERROR;
+}

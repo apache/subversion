@@ -1684,12 +1684,27 @@ svn_client_add(const char *path,
  * @since New in 1.10.
  */
 svn_error_t *
-svn_client_addremove(const char *path,
+svn_client_addremove(const char *local_path,
                      svn_depth_t depth,
                      svn_boolean_t no_autoprops,
                      svn_boolean_t no_ignore,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool);
+
+/**
+ * Recurse into the versioned directory @a local_path, and attempt to match
+ * up versioned deleted nodes with versioned added (or copied) nodes.
+ * Any matches found will be transformed into a move.
+ *
+ * The level of recursion is specified by @a depth.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_client_match_up_local_deletes_and_adds(const char *local_path,
+                                           svn_depth_t depth,
+                                           svn_client_ctx_t *ctx,
+                                           apr_pool_t *scratch_pool);
 /** @} */
 
 /**

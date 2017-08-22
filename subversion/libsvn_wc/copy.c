@@ -1157,3 +1157,79 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__move_fixup(svn_wc_context_t *wc_ctx,
+                   const char *src_abspath,
+                   const char *dst_abspath,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   svn_wc_notify_func2_t notify_func,
+                   void *notify_baton,
+                   apr_pool_t *scratch_pool)
+{
+  svn_wc__db_t *db = wc_ctx->db;
+  svn_node_kind_t src_kind;
+  svn_node_kind_t dst_kind;
+  svn_boolean_t conflicted;
+  svn_wc__db_status_t src_status;
+  svn_wc__db_status_t dst_status;
+
+  /* Verify that we have the required write locks. */
+  SVN_ERR(svn_wc__write_check(wc_ctx->db,
+                              svn_dirent_dirname(src_abspath, scratch_pool),
+                              scratch_pool));
+  SVN_ERR(svn_wc__write_check(wc_ctx->db,
+                              svn_dirent_dirname(dst_abspath, scratch_pool),
+                              scratch_pool));
+
+  /* Validate source and destination. */
+  SVN_ERR(svn_wc__db_read_info(&src_status, &src_kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &conflicted, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
+                               db, src_abspath,
+                               scratch_pool, scratch_pool));
+  if (src_status != svn_wc__db_status_deleted)
+      return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                               _("Source '%s' is not a deleted path"),
+                               svn_dirent_local_style(src_abspath,
+                                                      scratch_pool));
+  if (conflicted)
+      return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                               _("Source '%s' is in conflicted status"),
+                               svn_dirent_local_style(src_abspath,
+                                                      scratch_pool));
+  SVN_ERR(svn_wc__db_read_info(&dst_status, &dst_kind, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL,
+                               &conflicted, NULL, NULL, NULL,
+                               NULL, NULL, NULL,
+                               db, dst_abspath,
+                               scratch_pool, scratch_pool));
+  if (dst_status != svn_wc__db_status_added)
+      return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                               _("Destination '%s' is not an added path"),
+                               svn_dirent_local_style(dst_abspath,
+                                                      scratch_pool));
+  if (conflicted)
+      return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                               _("Destination '%s' is in conflicted status"),
+                               svn_dirent_local_style(dst_abspath,
+                                                      scratch_pool));
+  if (src_kind != dst_kind)
+      return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                               _("Source '%s' and destination '%s' do not "
+                                 "have the same node kind"),
+                               svn_dirent_local_style(src_abspath,
+                                                      scratch_pool),
+                               svn_dirent_local_style(dst_abspath,
+                                                      scratch_pool));
+
+  SVN_ERR(svn_wc__db_move_fixup(wc_ctx->db, src_abspath, dst_abspath,
+                                cancel_func, cancel_baton,
+                                notify_func, notify_baton,
+                                scratch_pool));
+  return SVN_NO_ERROR;
+}

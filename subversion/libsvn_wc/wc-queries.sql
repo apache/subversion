@@ -1615,6 +1615,12 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 UPDATE nodes SET moved_to = NULL
 WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
 
+-- STMT_SET_MOVED_HERE_RECURSIVE
+UPDATE nodes SET moved_here = 1
+WHERE wc_id = ?1
+ AND (local_relpath = ?2 OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
+ AND op_depth = ?3
+
 -- STMT_CLEAR_MOVED_HERE_RECURSIVE
 UPDATE nodes SET moved_here = NULL
 WHERE wc_id = ?1

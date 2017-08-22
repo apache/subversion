@@ -1998,6 +1998,40 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
               apr_pool_t *scratch_pool);
 
 
+/**
+ * Move @a src_abspath to @a dst_abspath in working copy meta data.
+ * This is a database-only operation and the working directories and files
+ * are not changed.
+ *
+ * @a src_abspath must be a deleted file or directory under version control;
+ * the parent of @a dst_abspath must be a directory under version control
+ * in the same working copy; @a dst_abspath must already exist as an added
+ * or copied item of the same node kind as the source. Note that when
+ * @a src points to a deleted file, the working file is not assumed to exist,
+ * so its text-base is used instead.
+ *
+ * If @a cancel_func is non-NULL, call it with @a cancel_baton at
+ * various points during the operation.  If it returns an error
+ * (typically #SVN_ERR_CANCELLED), return that error immediately.
+ *
+ * If @a notify_func is non-NULL, call it with @a notify_baton and the path
+ * of the root node (only) of the destination.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_wc__move_fixup(svn_wc_context_t *wc_ctx,
+                   const char *src_abspath,
+                   const char *dst_abspath,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   svn_wc_notify_func2_t notify_func,
+                   void *notify_baton,
+                   apr_pool_t *scratch_pool);
+
+
 /* During merge when we encounter added directories, we add them using
    svn_wc_add4(), recording its original location, etc. But at that time
    we don't have its original properties. This function allows updating the
