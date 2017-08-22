@@ -169,12 +169,24 @@ svn_cl__unshelve(apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
+  const char *local_abspath;
   const char *shelf_name;
   apr_array_header_t *targets;
-  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
+
+  if (opt_state->list)
+    {
+      if (os->ind < os->argc)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+
+      SVN_ERR(shelves_list(local_abspath,
+                           ! opt_state->quiet /*diffstat*/,
+                           ctx, pool));
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(get_shelf_name(&shelf_name, os, pool, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
 
   /* There should be no remaining arguments. */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
