@@ -1652,11 +1652,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "unshelve", svn_cl__unshelve, {0}, N_
     ("Unshelve changes.\n"
-     "usage: unshelve [--keep-shelved] NAME\n"
+     "usage: 1. unshelve [--keep-shelved] NAME\n"
+     "       2. unshelve --list\n"
      "\n"
-     "  Apply the shelved patch NAME to the working copy.\n"
-     "  Delete the patch unless the '--keep-shelved' option is given.\n"),
-    {opt_keep_shelved, 'q', opt_dry_run} },
+     "  1. Apply the shelved patch NAME to the working copy.\n"
+     "     Delete the patch unless the '--keep-shelved' option is given.\n"
+     "  2. List shelved patches.\n"),
+    {opt_keep_shelved, opt_list, 'q', opt_dry_run} },
 
   { "shelves", svn_cl__shelves, {0}, N_
     ("List shelved patches.\n"
