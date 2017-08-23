@@ -16770,10 +16770,11 @@ update_origin(svn_wc__db_wcroot_t *wcroot,
 }
 
 static svn_error_t *
-move_fixup(svn_wc__db_wcroot_t *wcroot,
-           const char *src_relpath,
-           const char *dst_relpath,
-           apr_pool_t *scratch_pool)
+fixup_copyfrom(svn_wc__db_wcroot_t *wcroot,
+               const char *src_relpath,
+               const char *dst_relpath,
+               svn_boolean_t is_move,
+               apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t src_status;
   svn_wc__db_status_t dst_status;
@@ -16786,7 +16787,6 @@ move_fixup(svn_wc__db_wcroot_t *wcroot,
   apr_int64_t dst_repos_id;
   svn_boolean_t src_is_op_root;
   svn_boolean_t dst_is_op_root;
-  const char *moved_to_relpath;
   const char *moved_from_relpath;
 
   SVN_ERR(read_info(&src_status, &src_kind, NULL, NULL, NULL,
@@ -16806,16 +16806,22 @@ move_fixup(svn_wc__db_wcroot_t *wcroot,
                              _("'%s'  is not the root of a deletion"),
                              path_for_error_message(wcroot, src_relpath,
                                                     scratch_pool));
-  /* Source must not already be part of a move. */
-  SVN_ERR(scan_deletion(NULL, &moved_to_relpath, NULL, NULL,
-                        wcroot, src_relpath, scratch_pool, scratch_pool));
-  if (moved_to_relpath != NULL)
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s'  is already moved to '%s'"),
-                             path_for_error_message(wcroot, src_relpath,
-                                                    scratch_pool),
-                             path_for_error_message(wcroot, moved_to_relpath,
-                                                    scratch_pool));
+  if (is_move)
+   {
+      const char *moved_to_relpath;
+
+      /* Source must not already be part of a move. */
+      SVN_ERR(scan_deletion(NULL, &moved_to_relpath, NULL, NULL,
+                            wcroot, src_relpath, scratch_pool, scratch_pool));
+      if (moved_to_relpath != NULL)
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("'%s'  is already moved to '%s'"),
+                                 path_for_error_message(wcroot, src_relpath,
+                                                        scratch_pool),
+                                 path_for_error_message(wcroot,
+                                                        moved_to_relpath,
+                                                        scratch_pool));
+    }
 
   SVN_ERR(get_origin_of_delete_op_root(&src_repos_relpath, &src_revision,
                                        &src_repos_id, src_relpath, wcroot,
@@ -16828,17 +16834,21 @@ move_fixup(svn_wc__db_wcroot_t *wcroot,
                              path_for_error_message(wcroot, dst_relpath,
                                                     scratch_pool));
 
-  /* Destination must not already be part of a move. */
   SVN_ERR(scan_addition(NULL, NULL, NULL, &dst_repos_id, NULL, NULL, NULL,
                         &moved_from_relpath, NULL, NULL,
                         wcroot, dst_relpath, scratch_pool, scratch_pool));
-  if (moved_from_relpath != NULL)
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s'  was already moved here from '%s'"),
-                             path_for_error_message(wcroot, dst_relpath,
-                                                    scratch_pool),
-                             path_for_error_message(wcroot, moved_from_relpath,
-                                                    scratch_pool));
+  if (is_move)
+    {
+      /* Destination must not already be part of a move. */
+      if (moved_from_relpath != NULL)
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("'%s'  was already moved here from '%s'"),
+                                 path_for_error_message(wcroot, dst_relpath,
+                                                        scratch_pool),
+                                 path_for_error_message(wcroot,
+                                                        moved_from_relpath,
+                                                        scratch_pool));
+    }
 
   /* Source and destination must be from the same repository. */
   if (src_repos_id != dst_repos_id)
@@ -16850,8 +16860,11 @@ move_fixup(svn_wc__db_wcroot_t *wcroot,
                              path_for_error_message(wcroot, dst_relpath,
                                                     scratch_pool));
 
-  /* Set the moved-here flag on the destination and children, if any. */
-  SVN_ERR(set_moved_here_recursive(wcroot, dst_relpath, scratch_pool));
+  if (is_move)
+    {
+      /* Set the moved-here flag on the destination and children, if any. */
+      SVN_ERR(set_moved_here_recursive(wcroot, dst_relpath, scratch_pool));
+    }
 
   /* Rewrite copyfrom on the destination. The repository location of the
    * source will become the destination's new copyfrom url@revision. */
@@ -16871,23 +16884,27 @@ move_fixup(svn_wc__db_wcroot_t *wcroot,
                                       moves, scratch_pool));
     }
 
-  /* Rewrite the moved-to path on the source. */
-  SVN_ERR(delete_update_movedto(wcroot,
-                                src_relpath, relpath_depth(src_relpath),
-                                dst_relpath, scratch_pool));
+  if (is_move)
+    {
+      /* Rewrite the moved-to path on the source. */
+      SVN_ERR(delete_update_movedto(wcroot,
+                                    src_relpath, relpath_depth(src_relpath),
+                                    dst_relpath, scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_wc__db_move_fixup(svn_wc__db_t *db,
-                      const char *src_abspath,
-                      const char *dst_abspath,
-                      svn_cancel_func_t cancel_func,
-                      void *cancel_baton,
-                      svn_wc_notify_func2_t notify_func,
-                      void *notify_baton,
-                      apr_pool_t *scratch_pool)
+svn_wc__db_fixup_copyfrom(svn_wc__db_t *db,
+                          const char *src_abspath,
+                          const char *dst_abspath,
+                          svn_boolean_t is_move,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *src_wcroot;
   svn_wc__db_wcroot_t *dst_wcroot;
@@ -16916,7 +16933,8 @@ svn_wc__db_move_fixup(svn_wc__db_t *db,
                                                     scratch_pool));
 
   SVN_WC__DB_WITH_TXN(
-            move_fixup(src_wcroot, src_relpath, dst_relpath, scratch_pool),
+            fixup_copyfrom(src_wcroot, src_relpath, dst_relpath, is_move,
+                           scratch_pool),
             src_wcroot);
 
   return SVN_NO_ERROR;

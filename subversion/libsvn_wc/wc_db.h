@@ -3537,16 +3537,17 @@ svn_wc__db_verify_db_full(svn_wc__db_t *db,
                           void *baton,
                           apr_pool_t *scratch_pool);
 
-/* Internal implementation of svn_wc__move_fixup(). */
+/* Internal implementation of svn_wc__fixup_copyfrom(). */
 svn_error_t *
-svn_wc__db_move_fixup(svn_wc__db_t *db,
-                      const char *src_abspath,
-                      const char *dst_abspath,
-                      svn_cancel_func_t cancel_func,
-                      void *cancel_baton,
-                      svn_wc_notify_func2_t notify_func,
-                      void *notify_baton,
-                      apr_pool_t *scratch_pool);
+svn_wc__db_fixup_copyfrom(svn_wc__db_t *db,
+                          const char *src_abspath,
+                          const char *dst_abspath,
+                          svn_boolean_t is_move,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

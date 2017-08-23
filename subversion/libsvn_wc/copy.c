@@ -1159,14 +1159,15 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
 }
 
 svn_error_t *
-svn_wc__move_fixup(svn_wc_context_t *wc_ctx,
-                   const char *src_abspath,
-                   const char *dst_abspath,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
-                   svn_wc_notify_func2_t notify_func,
-                   void *notify_baton,
-                   apr_pool_t *scratch_pool)
+svn_wc__fixup_copyfrom(svn_wc_context_t *wc_ctx,
+                       const char *src_abspath,
+                       const char *dst_abspath,
+                       svn_boolean_t is_move,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       svn_wc_notify_func2_t notify_func,
+                       void *notify_baton,
+                       apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
   svn_node_kind_t src_kind;
@@ -1227,9 +1228,9 @@ svn_wc__move_fixup(svn_wc_context_t *wc_ctx,
                                svn_dirent_local_style(dst_abspath,
                                                       scratch_pool));
 
-  SVN_ERR(svn_wc__db_move_fixup(wc_ctx->db, src_abspath, dst_abspath,
-                                cancel_func, cancel_baton,
-                                notify_func, notify_baton,
-                                scratch_pool));
+  SVN_ERR(svn_wc__db_fixup_copyfrom(wc_ctx->db, src_abspath, dst_abspath,
+                                    is_move, cancel_func, cancel_baton,
+                                    notify_func, notify_baton,
+                                    scratch_pool));
   return SVN_NO_ERROR;
 }

@@ -1999,7 +1999,8 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
 
 
 /**
- * Move @a src_abspath to @a dst_abspath in working copy meta data.
+ * Make @a dst_abspath a copy of @a src_abspath in working copy meta data.
+ * If @a is_move is @c TRUE, mark source and destination as a local move.
  * This is a database-only operation and the working directories and files
  * are not changed.
  *
@@ -2022,14 +2023,15 @@ svn_wc__move2(svn_wc_context_t *wc_ctx,
  * @since New in 1.10.
  */
 svn_error_t *
-svn_wc__move_fixup(svn_wc_context_t *wc_ctx,
-                   const char *src_abspath,
-                   const char *dst_abspath,
-                   svn_cancel_func_t cancel_func,
-                   void *cancel_baton,
-                   svn_wc_notify_func2_t notify_func,
-                   void *notify_baton,
-                   apr_pool_t *scratch_pool);
+svn_wc__fixup_copyfrom(svn_wc_context_t *wc_ctx,
+                       const char *src_abspath,
+                       const char *dst_abspath,
+                       svn_boolean_t is_move,
+                       svn_cancel_func_t cancel_func,
+                       void *cancel_baton,
+                       svn_wc_notify_func2_t notify_func,
+                       void *notify_baton,
+                       apr_pool_t *scratch_pool);
 
 
 /* During merge when we encounter added directories, we add them using

@@ -288,10 +288,11 @@ match_up_local_deletes_and_adds(const char *local_abspath,
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__move_fixup(ctx->wc_ctx, src_abspath, dst_abspath,
-                                 ctx->cancel_func, ctx->cancel_baton,
-                                 ctx->notify_func2, ctx->notify_baton2,
-                                 iterpool));
+      SVN_ERR(svn_wc__fixup_copyfrom(ctx->wc_ctx, src_abspath, dst_abspath,
+                                     TRUE, /* is_move */
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     ctx->notify_func2, ctx->notify_baton2,
+                                     iterpool));
     }
   svn_pool_destroy(iterpool);
 
