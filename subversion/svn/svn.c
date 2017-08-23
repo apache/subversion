@@ -529,7 +529,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     "  or more patterns. With the --remove option, remove cached authentication\n"
     "  credentials matching one or more patterns.\n"
     "\n"
-    "  If more than one pattern is specified credentials are considered only they\n"
+    "  If more than one pattern is specified credentials are considered only if they\n"
     "  match all specified patterns. Patterns are matched case-sensitively and may\n"
     "  contain glob wildcards:\n"
     "    ?      matches any single character\n"
