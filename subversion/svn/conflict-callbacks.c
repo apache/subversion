@@ -79,7 +79,7 @@ svn_cl__accept_from_word(const char *word)
       || strcmp(word, "l") == 0 || strcmp(word, ":-l") == 0)
     return svn_cl__accept_launch;
   if (strcmp(word, SVN_CL__ACCEPT_RECOMMENDED) == 0
-      || strcmp(word, "r"))
+      || strcmp(word, "r") == 0)
     return svn_cl__accept_recommended;
   /* word is an invalid action. */
   return svn_cl__accept_invalid;
