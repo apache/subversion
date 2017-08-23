@@ -1648,7 +1648,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Delete the shelved patch NAME.\n"
      "  3. List shelved patches.\n"),
     {opt_delete, opt_list, 'q', opt_dry_run,
-     'N', opt_depth, opt_targets, opt_changelist} },
+     'N', opt_depth, opt_targets, opt_changelist,
+     SVN_CL__LOG_MSG_OPTIONS} },
 
   { "unshelve", svn_cl__unshelve, {0}, N_
     ("Unshelve changes.\n"
@@ -2912,7 +2913,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           || subcommand->cmd_func == svn_cl__mkdir
           || subcommand->cmd_func == svn_cl__move
           || subcommand->cmd_func == svn_cl__lock
-          || subcommand->cmd_func == svn_cl__propedit))
+          || subcommand->cmd_func == svn_cl__propedit
+          || subcommand->cmd_func == svn_cl__shelve))
     {
       /* If the -F argument is a file that's under revision control,
          that's probably not what the user intended. */
