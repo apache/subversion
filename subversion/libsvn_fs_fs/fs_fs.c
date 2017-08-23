@@ -904,8 +904,13 @@ read_config(fs_fs_data_t *ffd,
         }
       else
         {
-          /* Nothing specified explicitly, use default settings. */
-          ffd->delta_compression_type = compression_type_zlib;
+          /* Nothing specified explicitly, use the default settings:
+           * LZ4 compression for formats supporting it and zlib otherwise. */
+          if (ffd->format >= SVN_FS_FS__MIN_SVNDIFF2_FORMAT)
+            ffd->delta_compression_type = compression_type_lz4;
+          else
+            ffd->delta_compression_type = compression_type_zlib;
+
           ffd->delta_compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
         }
     }
@@ -1059,11 +1064,14 @@ write_config(svn_fs_t *fs,
 "### incompressible files.  Note that the compression ratio of lz4 is"       NL
 "### usually lower than the one provided by zlib, but using it can"          NL
 "### significantly speed up commits as well as reading the data."            NL
+"### lz4 compression algorithm is supported, starting from format 8"         NL
+"### repositories, available in Subversion 1.10 and higher."                 NL
 "### The syntax of this option is:"                                          NL
 "###   " CONFIG_OPTION_COMPRESSION " = none | lz4 | zlib | zlib-1 ... zlib-9" NL
 "### Versions prior to Subversion 1.10 will ignore this option."             NL
-"### The default value is 'zlib', which is currently equivalent to 'zlib-5'." NL
-"# " CONFIG_OPTION_COMPRESSION " = zlib"                                     NL
+"### The default value is 'lz4' if supported by the repository format and"   NL
+"### 'zlib' otherwise.  'zlib' is currently equivalent to 'zlib-5'."         NL
+"# " CONFIG_OPTION_COMPRESSION " = lz4"                                      NL
 "###"                                                                        NL
 "### DEPRECATED: The new '" CONFIG_OPTION_COMPRESSION "' option deprecates previously used" NL
 "### '" CONFIG_OPTION_COMPRESSION_LEVEL "' option, which was used to configure zlib compression." NL
