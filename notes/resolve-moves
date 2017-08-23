@@ -163,7 +163,17 @@ The repository location of the conflict victim is unkown if the victim
 cannot be found in the working copy ("local missing").
 
 To find such missing nodes, SVN must first find all moves in the entire
-history of the parent directory of the conflict victim.
+history of the parent directory of the conflict victim. Additionally,
+in the case of a merge operation, SVN must also find all moves in the
+history of the parent directory of path@old-rev, all the way up to the
+common ancestor of the root of the merge operation. This is because such
+moves might not have been applied to the target branch (working copy),
+for instance when cherry-picking a file modification, after the file has
+been moved on the source branch (see example at the end of this section).
+
+### jcorvel: Maybe this additional search for moves on the source branch
+             (in case of a merge operation) can be optional? Only do it if
+             the moves found in the first search don't suffice?
 
 For each such move it checks whether the moved node is related to the known
 node at path@old-rev, or, if that does not exist, path@new-rev, by tracing
@@ -184,6 +194,34 @@ a path-wise closest node to the conflict victim is the preferred suggestion.
 
 If no such node can be found, SVN assumes that the conflict victim was
 deleted instead of moved.
+
+=== Missing conflict victim due to skipped move in merge source history ===
+
+This can typically happen when cherry-picking a revision with a file
+modification, where this file has been moved on the source branch of the
+merge (and this move was not applied to the target branch):
+
+In r1, create directory A with file mu:
+  Changed paths:
+     A /A
+     A /A/mu
+
+In r2, directory A is copied to A1 (branched):
+  Changed paths:
+     A /A1 (from /A:1)
+
+In r3, A/mu is moved:
+  Changed paths:
+     D /A/mu
+     A /A/mu-moved (from /A/mu:2)
+
+In r4, A/mu-moved is edited:
+  Changed paths:
+     M /A/mu-moved
+
+If we now want to cherry-pick r4 from /A to a working copy of /A1, we get a
+tree conflict because mu-moved is missing. The relevant move we need to
+resolve this happened on /A, in r3.
 
 == Determining which, if any, moves apply ==
 
