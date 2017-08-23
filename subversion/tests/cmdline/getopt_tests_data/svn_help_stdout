@@ -11,6 +11,7 @@ command, it recurses on the current directory (inclusive) by default.
 
 Available subcommands:
    add
+   addremove
    auth
    blame (praise, annotate, ann)
    cat
