@@ -85,8 +85,10 @@ verify_representation_stats(const svn_fs_fs__representation_stats_t *stats,
   SVN_TEST_ASSERT(stats->total.count == expected_count);
   SVN_TEST_ASSERT(   stats->total.packed_size >= 10 * expected_count
                   && stats->total.packed_size <= 1000 * expected_count);
-  SVN_TEST_ASSERT(   stats->total.packed_size >= stats->total.expanded_size
-                  && stats->total.packed_size <= 2 * stats->total.expanded_size);
+  /* Expect the packed size to be sane, keeping in mind that it might
+   * be less or more than the expanded size due differences in the
+   * compression algorithms or options such as directory deltification. */
+  SVN_TEST_ASSERT(stats->total.packed_size <= 2 * stats->total.expanded_size);
   SVN_TEST_ASSERT(   stats->total.overhead_size >= 5 * expected_count
                   && stats->total.overhead_size <= 100 * expected_count);
 
