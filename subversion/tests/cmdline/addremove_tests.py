@@ -118,6 +118,33 @@ def addremove_unversioned_move_file(sbox):
   })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+def addremove_ambiguous_move_file(sbox):
+  "addremove handles ambiguous file moves"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  oldfile_path = sbox.ospath('A/mu')
+  newfile_path = sbox.ospath('A/mu-moved')
+  newfile2_path = sbox.ospath('A/mu-moved2')
+  o = open(oldfile_path, 'r')
+  n = open(newfile_path, 'w')
+  n.write(o.read())
+  o.close()
+  n.close()
+  os.rename(oldfile_path, newfile2_path)
+
+  svntest.actions.run_and_verify_svn(None, [], 'addremove', wc_dir)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', status='D ')
+  expected_status.add({
+    'A/mu-moved' : Item(status='A ', wc_rev='-', copied='+'),
+    'A/mu-moved2' : Item(status='A ', wc_rev='-', copied='+'),
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -126,6 +153,7 @@ test_list = [ None,
               basic_addremove,
               addremove_ignore,
               addremove_unversioned_move_file,
+              addremove_ambiguous_move_file,
 ]
 
 if __name__ == '__main__':

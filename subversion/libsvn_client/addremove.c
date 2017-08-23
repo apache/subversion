@@ -136,16 +136,23 @@ suggest_moves(apr_hash_t **moves,
 
       for (i = 0; i < similar_abspaths->nelts; i++)
         {
+          apr_array_header_t *move_targets;
           const char *similar_abspath = APR_ARRAY_IDX(similar_abspaths, i,
                                                       const char *);
 
           if (svn_hash_gets(deleted, similar_abspath) == NULL)
             continue; /* ### TODO treat as a copy? */
 
-          /* ### TODO deal with ambiguous moves */
-          svn_hash_sets(*moves,
-                        similar_abspath,
-                        apr_pstrdup(result_pool, added_abspath));
+          move_targets = svn_hash_gets(*moves, similar_abspath);
+          if (move_targets == NULL)
+            {
+              move_targets = apr_array_make(result_pool, 1,
+                                            sizeof (const char *));
+              svn_hash_sets(*moves, similar_abspath, move_targets);
+            }
+
+          APR_ARRAY_PUSH(move_targets, const char *) = 
+            apr_pstrdup(result_pool, added_abspath);
         }
     }
 
@@ -284,15 +291,22 @@ match_up_local_deletes_and_adds(const char *local_abspath,
        hi = apr_hash_next(hi))
     {
       const char *src_abspath = apr_hash_this_key(hi);
-      const char *dst_abspath = apr_hash_this_val(hi);
+      apr_array_header_t *move_targets = apr_hash_this_val(hi);
+      svn_boolean_t is_ambiguous_move = (move_targets->nelts > 1);
+      int i;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__fixup_copyfrom(ctx->wc_ctx, src_abspath, dst_abspath,
-                                     TRUE, /* is_move */
-                                     ctx->cancel_func, ctx->cancel_baton,
-                                     ctx->notify_func2, ctx->notify_baton2,
-                                     iterpool));
+      for (i = 0; i < move_targets->nelts; i++) 
+        {
+          const char *dst_abspath = APR_ARRAY_IDX(move_targets, i,
+                                                  const char *);
+          SVN_ERR(svn_wc__fixup_copyfrom(ctx->wc_ctx, src_abspath, dst_abspath,
+                                         !is_ambiguous_move, /* is_move */
+                                         ctx->cancel_func, ctx->cancel_baton,
+                                         ctx->notify_func2, ctx->notify_baton2,
+                                         iterpool));
+        }
     }
   svn_pool_destroy(iterpool);
 
