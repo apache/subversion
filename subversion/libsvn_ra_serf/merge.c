@@ -79,6 +79,7 @@ typedef struct merge_context_t
 
   apr_hash_t *lock_tokens;
   svn_boolean_t keep_locks;
+  svn_boolean_t disable_merge_response;
 
   const char *merge_resource_url; /* URL of resource to be merged. */
   const char *merge_url; /* URL at which the MERGE request is aimed. */
@@ -282,11 +283,7 @@ setup_merge_headers(serf_bucket_t *headers,
       svn_stringbuf_appendcstr(val, SVN_DAV_OPTION_RELEASE_LOCKS);
     }
 
-  /* We don't need the full merge response when working over HTTPv2.
-   * Over HTTPv1, this response is only required with a non-null
-   * svn_ra_push_wc_prop_func_t callback. */
-  if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->session) ||
-      ctx->session->wc_callbacks->push_wc_prop == NULL)
+  if (ctx->disable_merge_response)
     {
       if (val->len > 0)
         svn_stringbuf_appendcstr(val, " ");
@@ -424,6 +421,13 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
 
   merge_ctx->lock_tokens = lock_tokens;
   merge_ctx->keep_locks = keep_locks;
+
+  /* We don't need the full merge response when working over HTTPv2.
+   * Over HTTPv1, this response is only required with a non-null
+   * svn_ra_push_wc_prop_func_t callback. */
+  merge_ctx->disable_merge_response =
+    SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session) ||
+    session->wc_callbacks->push_wc_prop == NULL;
 
   merge_ctx->commit_info = svn_create_commit_info(result_pool);
 
