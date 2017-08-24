@@ -282,6 +282,16 @@ setup_merge_headers(serf_bucket_t *headers,
                               SVN_DAV_OPTION_RELEASE_LOCKS);
     }
 
+  /* We don't need the full merge response when working over HTTPv2.
+   * Over HTTPv1, this response is only required with a non-null
+   * svn_ra_push_wc_prop_func_t callback. */
+  if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->session) ||
+      ctx->session->wc_callbacks->push_wc_prop == NULL)
+    {
+      serf_bucket_headers_set(headers, SVN_DAV_OPTIONS_HEADER,
+                              SVN_DAV_OPTION_NO_MERGE_RESPONSE);
+    }
+
   return SVN_NO_ERROR;
 }
 
