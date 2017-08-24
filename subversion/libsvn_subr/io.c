@@ -3940,21 +3940,20 @@ svn_io_file_write_full(apr_file_t *file, const void *buf,
                        apr_size_t nbytes, apr_size_t *bytes_written,
                        apr_pool_t *pool)
 {
-  /* We cannot simply call apr_file_write_full on Win32 as it may fail
-     for larger values of NBYTES. In that case, we have to emulate the
-     "_full" part here. Thus, always call apr_file_write directly on
-     Win32 as this minimizes overhead for small data buffers. */
 #ifdef WIN32
 #define MAXBUFSIZE 30*1024
   apr_size_t bw = nbytes;
   apr_size_t to_write = nbytes;
+  apr_status_t rv;
 
-  /* try a simple "write everything at once" first */
-  apr_status_t rv = apr_file_write(file, buf, &bw);
+  rv = apr_file_write_full(file, buf, nbytes, &bw);
   buf = (char *)buf + bw;
   to_write -= bw;
 
-  /* if the OS cannot handle that, use smaller chunks */
+  /* Issue #1789: On Windows, writing may fail for large values of NBYTES.
+     If that is the case, keep track of how many bytes have been written
+     by the apr_file_write_full() call, and attempt to write the remaining
+     part in smaller chunks. */
   if (rv == APR_FROM_OS_ERROR(ERROR_NOT_ENOUGH_MEMORY)
       && nbytes > MAXBUFSIZE)
     {
