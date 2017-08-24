@@ -365,7 +365,7 @@ typedef struct fetch_ctx_t {
   /* The handler representing this particular fetch.  */
   svn_ra_serf__handler_t *handler;
 
-  svn_boolean_t using_compression;
+  svn_ra_serf__session_t *session;
 
   /* Stores the information for the file we want to fetch. */
   file_baton_t *file;
@@ -797,10 +797,9 @@ headers_fetch(serf_bucket_t *headers,
     {
       serf_bucket_headers_setn(headers, SVN_DAV_DELTA_BASE_HEADER,
                                fetch_ctx->delta_base);
-      svn_ra_serf__setup_svndiff_accept_encoding(headers,
-                                                 fetch_ctx->using_compression);
+      svn_ra_serf__setup_svndiff_accept_encoding(headers, fetch_ctx->session);
     }
-  else if (fetch_ctx->using_compression)
+  else if (fetch_ctx->session->using_compression != svn_tristate_false)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
@@ -1278,7 +1277,7 @@ fetch_for_file(file_baton_t *file,
 
           fetch_ctx = apr_pcalloc(file->pool, sizeof(*fetch_ctx));
           fetch_ctx->file = file;
-          fetch_ctx->using_compression = ctx->sess->using_compression;
+          fetch_ctx->session = ctx->sess;
 
           /* Can we somehow get away with just obtaining a DIFF? */
           if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->sess))
@@ -2169,8 +2168,7 @@ setup_update_report_headers(serf_bucket_t *headers,
 {
   report_context_t *report = baton;
 
-  svn_ra_serf__setup_svndiff_accept_encoding(headers,
-                                             report->sess->using_compression);
+  svn_ra_serf__setup_svndiff_accept_encoding(headers, report->sess);
 
   return SVN_NO_ERROR;
 }

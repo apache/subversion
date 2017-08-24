@@ -288,7 +288,7 @@ class GeneratorBase:
             '  { %d, "%s" },' % (num, val),
           ])
 
-       # Remove ',' for c89 compatibility
+      # Remove ',' for c89 compatibility
       lines[-1] = lines[-1][0:-1]
 
       lines.extend([
@@ -296,7 +296,14 @@ class GeneratorBase:
           '',
         ])
 
-    write_struct('svn__errno', errno.errorcode.items())
+    # errno names can vary depending on the Python, and possibly the
+    # OS, version and they are not even used by normal release builds
+    # so omit them from the tarball. We always want the struct itself
+    # so that SVN_DEBUG builds still compile and it needs a dummy
+    # entry to avoid a zero-sized array.
+    write_struct('svn__errno',
+                 [(0, "success")] if self.release_mode
+                                  else errno.errorcode.items())
 
     # Fetch and write apr_errno.h codes.
     aprerr = []
@@ -719,6 +726,22 @@ class TargetApacheMod(TargetLib):
     self.compile_cmd = '$(COMPILE_APACHE_MOD)'
     self.link_cmd = '$(LINK_APACHE_MOD)'
 
+class TargetSharedOnlyLib(TargetLib):
+
+  def __init__(self, name, options, gen_obj):
+    TargetLib.__init__(self, name, options, gen_obj)
+
+    self.compile_cmd = '$(COMPILE_SHARED_ONLY_LIB)'
+    self.link_cmd = '$(LINK_SHARED_ONLY_LIB)'
+
+class TargetSharedOnlyCxxLib(TargetLib):
+
+  def __init__(self, name, options, gen_obj):
+    TargetLib.__init__(self, name, options, gen_obj)
+
+    self.compile_cmd = '$(COMPILE_SHARED_ONLY_CXX_LIB)'
+    self.link_cmd = '$(LINK_SHARED_ONLY_CXX_LIB)'
+
 class TargetRaModule(TargetLib):
   pass
 
@@ -1031,6 +1054,8 @@ _build_types = {
   'ra-module': TargetRaModule,
   'fs-module': TargetFsModule,
   'apache-mod': TargetApacheMod,
+  'shared-only-lib': TargetSharedOnlyLib,
+  'shared-only-cxx-lib': TargetSharedOnlyCxxLib,
   'javah' : TargetJavaHeaders,
   'java' : TargetJavaClasses,
   'i18n' : TargetI18N,

@@ -938,6 +938,13 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     /* Hostnames that look like non-canonical paths */
     { "file://./foo",             "file://./foo" },
     { "http://./foo",             "http://./foo" },
+    /* Some invalid URLs, these still have a canonical form */
+    { "http://server:81:81/",  "http://server:81:81" },
+    { "http://server:81foo/",  "http://server:81foo" },
+    { "http://server::/",      "http://server::" },
+    { "http://server:-/",      "http://server:-" },
+    { "http://hst:1.2.3.4.5/", "http://hst:1.2.3.4.5"},
+    { "http://hst:1.2.999.4/", "http://hst:1.2.999.4"},
   /* svn_uri_is_canonical() was a private function in the 1.6 API, and
      has since taken a MAJOR change of direction, namely that only
      absolute URLs are considered canonical uris now. */
@@ -1237,6 +1244,12 @@ test_uri_is_canonical(apr_pool_t *pool)
                                  "\"%s\"; canonical form is \"%s\"",
                                  t->path,
                                  canonical ? "TRUE" : "FALSE",
+                                 t->result);
+
+      if (t->result && !svn_uri_is_canonical(t->result, pool))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_is_canonical(\"%s\") returned "
+                                 "FALSE on canonical form",
                                  t->result);
     }
 

@@ -166,7 +166,7 @@ typedef struct revision_report_t {
   svn_ra_serf__handler_t *propfind_handler;
   svn_ra_serf__handler_t *report_handler; /* For done handler */
 
-  svn_boolean_t using_compression;
+  svn_ra_serf__session_t *session;
 
 } revision_report_t;
 
@@ -641,8 +641,7 @@ setup_headers(serf_bucket_t *headers,
 {
   struct revision_report_t *ctx = baton;
 
-  svn_ra_serf__setup_svndiff_accept_encoding(headers,
-                                             ctx->using_compression);
+  svn_ra_serf__setup_svndiff_accept_encoding(headers, ctx->session);
 
   return SVN_NO_ERROR;
 }
@@ -741,7 +740,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
           rev_ctx->revision = rev;
           rev_ctx->low_water_mark = low_water_mark;
           rev_ctx->send_deltas = send_deltas;
-          rev_ctx->using_compression = session->using_compression;
+          rev_ctx->session = session;
 
           /* Request all properties of a certain revision. */
           rev_ctx->rev_props = apr_hash_make(rev_ctx->pool);

@@ -2240,13 +2240,9 @@ merge_file_added(const char *relpath,
          Otherwise, we'll use a pure add. */
       if (merge_b->same_repos)
         {
-          const char *child =
-            svn_dirent_skip_ancestor(merge_b->target->abspath,
-                                     local_abspath);
-          SVN_ERR_ASSERT(child != NULL);
           copyfrom_url = svn_path_url_add_component2(
                                        merge_b->merge_source.loc2->url,
-                                       child, scratch_pool);
+                                       relpath, scratch_pool);
           copyfrom_rev = right_source->revision;
           SVN_ERR(check_repos_match(merge_b->target, local_abspath,
                                     copyfrom_url, scratch_pool));

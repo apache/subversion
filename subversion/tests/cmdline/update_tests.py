@@ -6792,7 +6792,9 @@ def missing_tmp_update(sbox):
   svntest.actions.run_and_verify_svn(None, '.*Unable to create.*',
                                      'up', wc_dir, '--set-depth', 'infinity')
 
-  svntest.actions.run_and_verify_svn(None, [], 'cleanup', wc_dir)
+  # This re-creates .svn/tmp as a side-effect.
+  svntest.actions.run_and_verify_svn(None, [], 'cleanup',
+                                     '--vacuum-pristines', wc_dir)
 
   svntest.actions.run_and_verify_update(wc_dir, None, None, None, [], False,
                                         wc_dir, '--set-depth', 'infinity')

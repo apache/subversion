@@ -1070,7 +1070,6 @@ def export_file_externals2(sbox):
                                         expected_output,
                                         expected_disk)
 
-@XFail()
 def export_revision_with_root_relative_external(sbox):
   "export a revision with root-relative external"
   sbox.build()
@@ -1089,18 +1088,37 @@ def export_revision_with_root_relative_external(sbox):
   # Update the working copy to receive file external
   svntest.main.run_svn(None, 'up', wc_dir)
 
+  # Update the expected disk tree to include the external.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'A/C/exfile_alpha'  : Item("This is the file 'alpha'.\n"),
+      })
+
+  # Update the expected output to include the external.
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.add({
+      'A/C/exfile_alpha'  : Item("This is the file 'alpha'.\r"),
+      })
+  expected_output.desc[''] = Item()
+  expected_output.tweak(contents=None, status='A ')
+
   # Export revision 2 from URL
   export_target = sbox.add_wc_path('export_url')
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'export', sbox.repo_url, export_target,
-                                     '-r', 2)
+  expected_output.wc_dir = export_target
+  svntest.actions.run_and_verify_export(sbox.repo_url,
+                                        export_target,
+                                        expected_output,
+                                        expected_disk,
+                                        '-r', 2)
 
   # Export revision 2 from WC
-  # Fails (canonicalize: Assertion `*src != '/'' failed)
   export_target = sbox.add_wc_path('export_wc')
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'export', sbox.wc_dir, export_target,
-                                     '-r', 2)
+  expected_output.wc_dir = export_target
+  svntest.actions.run_and_verify_export(sbox.wc_dir,
+                                        export_target,
+                                        expected_output,
+                                        expected_disk,
+                                        '-r', 2)
 
 
 ########################################################################

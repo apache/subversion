@@ -1695,7 +1695,7 @@ def merge_replace_causes_tree_conflict(sbox):
   ], target=A, two_url=True, tree_conflicts=4)
 
   actions.run_and_verify_svn2(expected_stdout, [], 0, 'merge',
-    url_A, url_branch, A)
+    url_A, url_branch, A, '--accept=postpone')
 
   # svn st
   expected_status.tweak('A', status=' M')
@@ -1781,7 +1781,7 @@ def merge_replace_causes_tree_conflict2(sbox):
   ], target=A, two_url=True, tree_conflicts=1)
 
   actions.run_and_verify_svn2(expected_stdout, [], 0, 'merge',
-    url_A, url_branch, A, '--depth=files')
+    url_A, url_branch, A, '--depth=files', '--accept=postpone')
   # New mergeinfo describing the merge.
   expected_status.tweak('A', status=' M')
   # Currently this fails because the local status is 'D'eleted rather than
@@ -1801,7 +1801,7 @@ def merge_replace_causes_tree_conflict2(sbox):
   ], target=A_B, two_url=True, tree_conflicts=1)
 
   actions.run_and_verify_svn2(expected_stdout, [], 0, 'merge',
-    url_A_B, url_branch_B, A_B)
+    url_A_B, url_branch_B, A_B, '--accept=postpone')
   # New mergeinfo describing the merge.
   expected_status.tweak('A/B', status=' M')
   # Currently this fails because the local status shows a property mod (and
@@ -1821,7 +1821,7 @@ def merge_replace_causes_tree_conflict2(sbox):
   ], target=A_D, two_url=True, tree_conflicts=1)
 
   actions.run_and_verify_svn2(expected_stdout, [], 0, 'merge',
-    '--depth=immediates', url_A_D, url_branch_D, A_D)
+    '--depth=immediates', url_A_D, url_branch_D, A_D, '--accept=postpone')
   # New mergeinfo describing the merge.
   expected_status.tweak('A/D', 'A/D/G', status=' M')
   # Currently this fails because the local status is 'D'eleted rather than
@@ -1841,7 +1841,7 @@ def merge_replace_causes_tree_conflict2(sbox):
   ], target=A_D_G, two_url=True, tree_conflicts=1)
 
   actions.run_and_verify_svn2(expected_stdout, [], 0, 'merge',
-    url_A_D_G, url_branch_D_G, A_D_G)
+    url_A_D_G, url_branch_D_G, A_D_G, '--accept=postpone')
   # New mergeinfo describing the merge.
   expected_status.tweak('A/D/G', status=' M')
   # Currently this fails because the local status shows a property mod (and
@@ -1932,7 +1932,7 @@ def merge_replace_on_del_fails(sbox):
   #     cmdline\svn-test-work\working_copies\merge_tree_conflict_tests-24\
   #     branch\C' was not found.
   actions.run_and_verify_svn2(expected_stdout, [], 0, 'merge',
-    sbox.repo_url + '/A', branch_path)
+    sbox.repo_url + '/A', branch_path, '--accept=postpone')
 
 def merge_conflict_details(sbox):
   "merge conflict details"

@@ -15,7 +15,7 @@ not work with password authentication.  These tricks also assume that
 the client's key-pair is used only for access to svnserve; if you want
 to retain general shell access to the host, create a second, dedicated
 key-pair for Subversion access and (assuming a Unix client) set the
-environment variable SVN_SSH to "ssh -i /path/to/private/key/file".
+environment variable SVN_SSH to "ssh -i /path/to/private/key/file --".
 
 The basic idea
 --------------

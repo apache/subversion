@@ -1,6 +1,6 @@
 From: ...@apache.org
 To: announce@subversion.apache.org, users@subversion.apache.org, dev@subversion.apache.org, announce@apache.org
-[if-any security]Cc: security@apache.org
+[if-any security]Cc: security@apache.org, oss-security@lists.openwall.com, bugtraq@securityfocus.com
 [end][if-any security]Subject: [[]SECURITY][[]ANNOUNCE] Apache Subversion [version] released
 [else]Subject: [[]ANNOUNCE] Apache Subversion [version] released
 [end]
