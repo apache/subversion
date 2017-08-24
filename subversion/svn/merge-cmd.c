@@ -182,6 +182,7 @@ conflict_func_merge_cmd(svn_wc_conflict_result_t **result,
     case svn_cl__accept_postpone:
     case svn_cl__accept_invalid:
     case svn_cl__accept_unspecified:
+    case svn_cl__accept_recommended:
       /* Postpone or no valid --accept option, postpone the conflict. */
       choice = svn_wc_conflict_choose_postpone;
       break;

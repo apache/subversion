@@ -313,6 +313,9 @@ if [ ${APACHE_MPM:+set} ]; then
     LOAD_MOD_MPM=$(get_loadmodule_config mod_mpm_$APACHE_MPM) \
       || fail "MPM module not found"
 fi
+if [ x"$APACHE_MPM" = x"event" ] && [ x"$FS_TYPE" = x"bdb" ]; then
+  fail "FS_TYPE=bdb and APACHE_MPM=event are mutually exclusive (see SVN-4157)"
+fi
 if [ ${USE_SSL:+set} ]; then
     LOAD_MOD_SSL=$(get_loadmodule_config mod_ssl) \
       || fail "SSL module not found"

@@ -330,6 +330,18 @@ typedef svn_error_t *
 typedef const unsigned char *
 (*svn_txdelta_md5_digest_fn_t)(void *baton);
 
+/** A typedef for a function that opens an #svn_txdelta_stream_t object,
+ * allocated in @a result_pool.  @a baton is provided by the caller.
+ * Any temporary allocations may be performed in @a scratch_pool.
+ *
+ * @since New in 1.10.
+ */
+typedef svn_error_t *
+(*svn_txdelta_stream_open_func_t)(svn_txdelta_stream_t **txdelta_stream,
+                                  void *baton,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
 /** Create and return a generic text delta stream with @a baton, @a
  * next_window and @a md5_digest.  Allocate the new stream in @a
  * pool.
@@ -545,6 +557,20 @@ svn_txdelta_to_svndiff(svn_stream_t *output,
                        apr_pool_t *pool,
                        svn_txdelta_window_handler_t *handler,
                        void **handler_baton);
+
+/** Return a readable generic stream which will produce svndiff-encoded
+ * text delta from the delta stream @a txstream.  @a svndiff_version and
+ * @a compression_level are same as in svn_txdelta_to_svndiff3().
+ *
+ * Allocate the stream in @a pool.
+ *
+ * @since New in 1.10.
+ */
+svn_stream_t *
+svn_txdelta_to_svndiff_stream(svn_txdelta_stream_t *txstream,
+                              int svndiff_version,
+                              int compression_level,
+                              apr_pool_t *pool);
 
 /** Return a writable generic stream which will parse svndiff-format
  * data into a text delta, invoking @a handler with @a handler_baton
@@ -1116,6 +1142,35 @@ typedef struct svn_delta_editor_t
    */
   svn_error_t *(*abort_edit)(void *edit_baton,
                              apr_pool_t *scratch_pool);
+
+  /** Apply a text delta stream, yielding the new revision of a file.
+   *
+   * @a file_baton indicates the file we're creating or updating, and the
+   * ancestor file on which it is based; it is the baton set by some
+   * prior @c add_file or @c open_file callback.
+   *
+   * @a open_func is a function that opens a #svn_txdelta_stream_t object.
+   * @a open_baton is provided by the caller.
+   *
+   * @a base_checksum is the hex MD5 digest for the base text against
+   * which the delta is being applied; it is ignored if NULL, and may
+   * be ignored even if not NULL.  If it is not ignored, it must match
+   * the checksum of the base text against which svndiff data is being
+   * applied; if it does not, @c apply_textdelta_stream call which detects
+   * the mismatch will return the error SVN_ERR_CHECKSUM_MISMATCH
+   * (if there is no base text, there may still be an error if
+   * @a base_checksum is neither NULL nor the hex MD5 checksum of the
+   * empty string).
+   *
+   * Any temporary allocations may be performed in @a scratch_pool.
+   */
+  svn_error_t *(*apply_textdelta_stream)(
+    const struct svn_delta_editor_t *editor,
+    void *file_baton,
+    const char *base_checksum,
+    svn_txdelta_stream_open_func_t open_func,
+    void *open_baton,
+    apr_pool_t *scratch_pool);
 
   /* Be sure to update svn_delta_get_cancellation_editor() and
    * svn_delta_default_editor() if you add a new callback here. */

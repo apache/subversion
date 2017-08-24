@@ -17395,7 +17395,8 @@ def merge_target_selection(sbox):
     ' U   .\n',
   ] + svntest.main.summary_of_conflicts(tree_conflicts=1)
   svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'merge', '^/dir/binary-file', '-c', '4', '.')
+                                     'merge', '^/dir/binary-file',
+                                     '-c', '4', '.', '--accept', 'postpone')
 
   svntest.main.run_svn(None, 'revert', '-R', '.')
 
@@ -17407,7 +17408,8 @@ def merge_target_selection(sbox):
     ' U   binary-file\n',
   ] + svntest.main.summary_of_conflicts(tree_conflicts=1)
   svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'merge', '^/dir', '-c', '4', 'binary-file')
+                                     'merge', '^/dir', '-c', '4', 'binary-file',
+                                     '--accept', 'postpone')
 
 @SkipUnless(server_has_mergeinfo)
 @Issue(3405) # seems to be the wrong issue number

@@ -223,6 +223,15 @@ svn_checksum_ctx_create(svn_checksum_kind_t kind,
                         apr_pool_t *pool);
 
 /**
+ * Reset an existing checksum @a ctx to initial state.
+ * @see svn_checksum_ctx_create()
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_checksum_ctx_reset(svn_checksum_ctx_t *ctx);
+
+/**
  * Update the checksum represented by @a ctx, with @a len bytes starting at
  * @a data.
  *

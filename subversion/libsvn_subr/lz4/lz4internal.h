@@ -1,3 +1,5 @@
+#include "svn_private_config.h"
+#if SVN_INTERNAL_LZ4
 /*
  *  LZ4 - Fast LZ compression algorithm
  *  Header File
@@ -461,3 +463,4 @@ LZ4_DEPRECATED("use LZ4_decompress_fast_usingDict() instead") int LZ4_decompress
 #endif
 
 #endif /* LZ4_H_2983827168210 */
+#endif /* SVN_INTERNAL_LZ4 */
