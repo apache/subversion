@@ -284,8 +284,9 @@ setup_merge_headers(serf_bucket_t *headers,
   if (ctx->disable_merge_response)
     APR_ARRAY_PUSH(vals, const char *) = SVN_DAV_OPTION_NO_MERGE_RESPONSE;
 
-  serf_bucket_headers_set(headers, SVN_DAV_OPTIONS_HEADER,
-                          svn_cstring_join2(vals, " ", FALSE, scratch_pool));
+  if (vals->nelts > 0)
+    serf_bucket_headers_set(headers, SVN_DAV_OPTIONS_HEADER,
+                            svn_cstring_join2(vals, " ", FALSE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
