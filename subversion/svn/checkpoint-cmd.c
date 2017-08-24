@@ -33,6 +33,28 @@
 #include "private/svn_sorts_private.h"
 
 
+/* ### Currently just reads the first line.
+ */
+static svn_error_t *
+read_logmsg_from_patch(const char **logmsg,
+                       const char *patch_abspath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  apr_file_t *file;
+  svn_stream_t *stream;
+  svn_boolean_t eof;
+  svn_stringbuf_t *line;
+
+  SVN_ERR(svn_io_file_open(&file, patch_abspath,
+                           APR_FOPEN_READ, APR_FPROT_OS_DEFAULT, scratch_pool));
+  stream = svn_stream_from_aprfile2(file, FALSE /*disown*/, scratch_pool);
+  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
+  SVN_ERR(svn_stream_close(stream));
+  *logmsg = line->data;
+  return SVN_NO_ERROR;
+}
+
 /*  */
 static svn_error_t *
 checkpoint_list(const char *local_abspath,
@@ -59,11 +81,20 @@ checkpoint_list(const char *local_abspath,
       svn_sort__item_t *item = &APR_ARRAY_IDX(checkpoints, i, svn_sort__item_t);
       const char *name = item->key;
       svn_io_dirent2_t *dirent = item->value;
+      const char *patch_abspath, *logmsg;
       char marker = ((strcmp(name, current_checkpoint_name) == 0) ? '*' : ' ');
       int age = (apr_time_now() - dirent->mtime) / 1000000 / 60;
 
+      patch_abspath = svn_dirent_join_many(scratch_pool,
+                                           local_abspath, ".svn", "shelves", name,
+                                           SVN_VA_NULL);
+      SVN_ERR(read_logmsg_from_patch(&logmsg, patch_abspath,
+                                     scratch_pool, scratch_pool));
+
       printf("%c %s %6d mins old %10ld bytes\n",
              marker, name, age, (long)dirent->filesize);
+      printf(" %.50s\n",
+             logmsg);
 
       if (diffstat)
         {
@@ -199,6 +230,8 @@ svn_cl__checkpoint(apr_getopt_t *os,
     }
   else if (strcmp(subsubcommand, "save") == 0)
     {
+      svn_error_t *err;
+
       if (targets->nelts)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Too many arguments"));
@@ -217,8 +250,17 @@ svn_cl__checkpoint(apr_getopt_t *os,
       SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
       */
 
-      SVN_ERR(checkpoint_save(/*targets, depth, opt_state->changelists,*/
-                              opt_state->quiet, local_abspath, ctx, pool));
+      if (ctx->log_msg_func3)
+        SVN_ERR(svn_cl__make_log_msg_baton(&ctx->log_msg_baton3,
+                                           opt_state, NULL, ctx->config,
+                                           pool));
+      err = checkpoint_save(/*targets, depth, opt_state->changelists,*/
+                            opt_state->quiet, local_abspath, ctx, pool);
+      if (ctx->log_msg_func3)
+        SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
+                                        err, pool));
+      else
+        SVN_ERR(err);
     }
   else if (strcmp(subsubcommand, "revert") == 0)
     {

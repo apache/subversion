@@ -628,7 +628,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  4. List all checkpoints. A synonym for 'svn checkpoints'.\n"),
     {'q',
      /*'-N', opt_depth, opt_targets, opt_changelist,*/
-     /*SVN_CL__LOG_MSG_OPTIONS,*/
+     SVN_CL__LOG_MSG_OPTIONS,
      opt_list},
     { {opt_list, N_("list all checkpoints")} }
     },
@@ -2956,6 +2956,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           || subcommand->cmd_func == svn_cl__move
           || subcommand->cmd_func == svn_cl__lock
           || subcommand->cmd_func == svn_cl__propedit
+          || subcommand->cmd_func == svn_cl__checkpoint
           || subcommand->cmd_func == svn_cl__shelve))
     {
       /* If the -F argument is a file that's under revision control,

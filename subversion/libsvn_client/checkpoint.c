@@ -104,6 +104,7 @@ format_checkpoint_name(int checkpoint_number,
 /* Write a checkpoint patch of the whole WC. */
 static svn_error_t *
 write_checkpoint(int checkpoint_number,
+                 const char *message,
                  /*const apr_array_header_t *paths,
                    svn_depth_t depth,
                    const apr_array_header_t *changelists,*/
@@ -120,7 +121,7 @@ write_checkpoint(int checkpoint_number,
                                  ctx, scratch_pool, scratch_pool));
   APR_ARRAY_PUSH(paths, const char *) = wc_root_abspath;
   SVN_ERR(svn_client_shelf_write_patch(
-            shelf_name, "" /*message*/, wc_root_abspath,
+            shelf_name, message, wc_root_abspath,
             TRUE /*overwrite_existing*/,
             paths, svn_depth_infinity, NULL /*changelists*/,
             ctx, scratch_pool));
@@ -177,11 +178,25 @@ svn_client_checkpoint_save(int *checkpoint_number,
                            apr_pool_t *scratch_pool)
 {
   int current;
+  const char *message = "";
 
   SVN_ERR(read_current(&current, local_abspath, ctx, scratch_pool));
   current++;
 
-  SVN_ERR(write_checkpoint(current, local_abspath, ctx, scratch_pool));
+  /* Fetch the log message */
+  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
+    {
+      const char *tmp_file;
+      apr_array_header_t *commit_items
+        = apr_array_make(scratch_pool, 1, sizeof(void *));
+
+      SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
+                                      ctx, scratch_pool));
+      if (! message)
+        return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(write_checkpoint(current, message, local_abspath, ctx, scratch_pool));
   SVN_ERR(write_current(current, local_abspath, ctx, scratch_pool));
 
   *checkpoint_number = current;
@@ -204,7 +219,8 @@ svn_client_checkpoint_restore(int checkpoint_number,
   /* (Even with dry_run, we write and use and delete a temp checkpoint) */
   {
     /* Write a temp checkpoint */
-    SVN_ERR(write_checkpoint(-1, local_abspath, ctx, scratch_pool));
+    SVN_ERR(write_checkpoint(-1, "" /*message*/, local_abspath,
+                             ctx, scratch_pool));
 
     /* Revert it */
     SVN_ERR(apply_checkpoint(-1, wc_root_abspath,
