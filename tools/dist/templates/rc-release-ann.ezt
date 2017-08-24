@@ -37,7 +37,7 @@ A pre-release means the Subversion developers feel that this release
 is ready for widespread testing by the community.  There are known issues
 (and unknown ones!), so please use it at your own risk, though we do
 encourage people to test this release thoroughly.  Of particular note, please
-remember than persistent data, such as the working copy or repository
+remember that persistent data, such as the working copy or repository
 formats may change before the final release, and there may not be an
 upgrade path from the pre-releases to the final.
 
