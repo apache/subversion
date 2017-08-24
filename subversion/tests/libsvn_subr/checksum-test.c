@@ -296,6 +296,74 @@ test_checksum_parse_all_zero(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_checksummed_stream_read(apr_pool_t *pool)
+{
+  const svn_string_t *str = svn_string_create("abcde", pool);
+  svn_checksum_kind_t kind;
+
+  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+    {
+      svn_stream_t *stream;
+      svn_checksum_t *expected_checksum;
+      svn_checksum_t *actual_checksum;
+      char buf[64];
+      apr_size_t len;
+
+      stream = svn_stream_from_string(str, pool);
+      stream = svn_stream_checksummed2(stream, &actual_checksum, NULL,
+                                       kind, TRUE, pool);
+      len = str->len;
+      SVN_ERR(svn_stream_read_full(stream, buf, &len));
+      SVN_TEST_INT_ASSERT((int) len, str->len);
+
+      SVN_ERR(svn_stream_close(stream));
+
+      SVN_ERR(svn_checksum(&expected_checksum, kind,
+                           str->data, str->len, pool));
+      SVN_TEST_ASSERT(svn_checksum_match(expected_checksum, actual_checksum));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_checksummed_stream_reset(apr_pool_t *pool)
+{
+  const svn_string_t *str = svn_string_create("abcde", pool);
+  svn_checksum_kind_t kind;
+
+  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+    {
+      svn_stream_t *stream;
+      svn_checksum_t *expected_checksum;
+      svn_checksum_t *actual_checksum;
+      char buf[64];
+      apr_size_t len;
+
+      stream = svn_stream_from_string(str, pool);
+      stream = svn_stream_checksummed2(stream, &actual_checksum, NULL,
+                                       kind, TRUE, pool);
+      len = str->len;
+      SVN_ERR(svn_stream_read_full(stream, buf, &len));
+      SVN_TEST_INT_ASSERT((int) len, str->len);
+
+      SVN_ERR(svn_stream_reset(stream));
+
+      len = str->len;
+      SVN_ERR(svn_stream_read_full(stream, buf, &len));
+      SVN_TEST_INT_ASSERT((int) len, str->len);
+
+      SVN_ERR(svn_stream_close(stream));
+
+      SVN_ERR(svn_checksum(&expected_checksum, kind,
+                           str->data, str->len, pool));
+      SVN_TEST_ASSERT(svn_checksum_match(expected_checksum, actual_checksum));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* An array of all test functions */
 
 static int max_threads = 1;
@@ -317,6 +385,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "checksum (de-)serialization"),
     SVN_TEST_PASS2(test_checksum_parse_all_zero,
                    "checksum parse all zero"),
+    SVN_TEST_PASS2(test_checksummed_stream_read,
+                   "read from checksummed stream"),
+    SVN_TEST_PASS2(test_checksummed_stream_reset,
+                   "reset checksummed stream"),
     SVN_TEST_NULL
   };
 

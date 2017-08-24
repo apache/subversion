@@ -2823,6 +2823,8 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
 
       /* If the connection does not support SVNDIFF1 or if we don't want to use
        * compression, use the non-compressing "version 0" implementation */
+      /* ### TODO: Check SVN_RA_SVN_CAP_SVNDIFF2_ACCEPTED and decide between
+       * ###       svndiff1[at compression_level] and svndiff2 */
       if (   svn_ra_svn_compression_level(frb->conn) > 0
           && svn_ra_svn_has_capability(frb->conn, SVN_RA_SVN_CAP_SVNDIFF1))
         svn_txdelta_to_svndiff3(d_handler, d_baton, stream, 1,
@@ -3804,6 +3806,7 @@ find_repos(const char *url,
 {
   const char *path, *full_path, *fs_path, *hooks_env;
   svn_stringbuf_t *url_buf;
+  svn_boolean_t sasl_requested;
 
   /* Skip past the scheme and authority part. */
   path = skip_scheme_part(url);
@@ -3877,14 +3880,16 @@ find_repos(const char *url,
   SVN_ERR(load_authz_config(repository, repository->repos_root, cfg,
                             result_pool));
 
-#ifdef SVN_HAVE_SASL
+  /* Should we use Cyrus SASL? */
+  SVN_ERR(svn_config_get_bool(cfg, &sasl_requested,
+                              SVN_CONFIG_SECTION_SASL,
+                              SVN_CONFIG_OPTION_USE_SASL, FALSE));
+  if (sasl_requested)
     {
+#ifdef SVN_HAVE_SASL
       const char *val;
 
-      /* Should we use Cyrus SASL? */
-      SVN_ERR(svn_config_get_bool(cfg, &repository->use_sasl,
-                                  SVN_CONFIG_SECTION_SASL,
-                                  SVN_CONFIG_OPTION_USE_SASL, FALSE));
+      repository->use_sasl = sasl_requested;
 
       svn_config_get(cfg, &val, SVN_CONFIG_SECTION_SASL,
                     SVN_CONFIG_OPTION_MIN_SSF, "0");
@@ -3893,8 +3898,18 @@ find_repos(const char *url,
       svn_config_get(cfg, &val, SVN_CONFIG_SECTION_SASL,
                     SVN_CONFIG_OPTION_MAX_SSF, "256");
       SVN_ERR(svn_cstring_atoui(&repository->max_ssf, val));
+#else /* !SVN_HAVE_SASL */
+      return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                               _("SASL requested but not compiled in; "
+                                 "set '%s' to 'false' or recompile "
+                                 "svnserve with SASL support"),
+                               SVN_CONFIG_OPTION_USE_SASL);
+#endif /* SVN_HAVE_SASL */
     }
-#endif
+  else
+    {
+      repository->use_sasl = FALSE;
+    }
 
   /* Use the repository UUID as the default realm. */
   SVN_ERR(svn_fs_get_uuid(repository->fs, &repository->realm, scratch_pool));
@@ -4122,10 +4137,11 @@ construct_server_baton(server_baton_t **baton,
    * send an empty mechlist. */
   if (params->compression_level > 0)
     SVN_ERR(svn_ra_svn__write_cmd_response(conn, scratch_pool,
-                                           "nn()(wwwwwwwwwwww)",
+                                           "nn()(wwwwwwwwwwwww)",
                                            (apr_uint64_t) 2, (apr_uint64_t) 2,
                                            SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                            SVN_RA_SVN_CAP_SVNDIFF1,
+                                           SVN_RA_SVN_CAP_SVNDIFF2_ACCEPTED,
                                            SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                            SVN_RA_SVN_CAP_COMMIT_REVPROPS,
                                            SVN_RA_SVN_CAP_DEPTH,

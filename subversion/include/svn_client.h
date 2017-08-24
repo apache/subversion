@@ -1975,7 +1975,7 @@ typedef svn_error_t *(*svn_client_import_filter_func_t)(
  * on @a url if @a url is already under versioned control, or the nearest parents
  * of @a path which are already under version control if not.
  *
- * If @a ignore_unknown_node_types is @c FALSE, ignore files of which the
+ * If @a ignore_unknown_node_types is @c TRUE, ignore files of which the
  * node type is unknown, such as device files and pipes.
  *
  * If @a filter_callback is non-NULL, call it for each node that isn't ignored
@@ -6251,8 +6251,7 @@ svn_client_revprop_list(apr_hash_t **props,
  * #svn_opt_revision_unspecified, then it defaults to #svn_opt_revision_head
  * for URLs or #svn_opt_revision_working for WC targets.
  *
- * @a revision is the revision that should be exported, which is only used
- * when exporting from a repository.
+ * @a revision is the revision that should be exported.
  *
  * @a peg_revision and @a revision must not be @c NULL.
  *

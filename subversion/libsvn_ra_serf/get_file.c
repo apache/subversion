@@ -60,7 +60,7 @@ typedef struct stream_ctx_t {
   /* Have we read our response headers yet? */
   svn_boolean_t read_headers;
 
-  svn_boolean_t using_compression;
+  svn_ra_serf__session_t *session;
 
   /* This flag is set when our response is aborted before we reach the
    * end and we decide to requeue this request.
@@ -88,7 +88,7 @@ headers_fetch(serf_bucket_t *headers,
 {
   stream_ctx_t *fetch_ctx = baton;
 
-  if (fetch_ctx->using_compression)
+  if (fetch_ctx->session->using_compression != svn_tristate_false)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
@@ -396,7 +396,7 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
           /* Create the fetch context. */
           stream_ctx = apr_pcalloc(scratch_pool, sizeof(*stream_ctx));
           stream_ctx->result_stream = stream;
-          stream_ctx->using_compression = session->using_compression;
+          stream_ctx->session = session;
 
           handler = svn_ra_serf__create_handler(session, scratch_pool);
 

@@ -113,7 +113,7 @@ def _usage_exit():
   print("  --config-file          : Configuration file for tests")
   print("  --fsfs-sharding        : Specify shard size (for fsfs)")
   print("  --fsfs-packing         : Run 'svnadmin pack' automatically")
-  print("  --fsfs-compression=VAL : Set compression level to VAL (for fsfs)")
+  print("  --fsfs-compression=VAL : Set compression type to VAL (for fsfs)")
   print("  -q, --quiet            : Deprecated; this is the default.")
   print("                           Use --set-log-level instead.")
 
@@ -191,7 +191,7 @@ memcached_server = None
 memcached_dir = None
 skip_c_tests = None
 dump_load_cross_check = None
-fsfs_compression_level = None
+fsfs_compression = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -287,7 +287,7 @@ for opt, val in opts:
     memcached_dir = val
     run_memcached = 1
   elif opt == '--fsfs-compression':
-    fsfs_compression_level = int(val)
+    fsfs_compression = val
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -1017,6 +1017,7 @@ create_target_dir(CMDLINE_TEST_SCRIPT_NATIVE_PATH)
 # Ensure the tests directory is correctly cased
 abs_builddir = fix_case(abs_builddir)
 
+failed = None
 daemon = None
 memcached = None
 # Run the tests
@@ -1112,7 +1113,7 @@ if not test_javahl and not test_swig:
   opts.memcached_server = memcached_server
   opts.skip_c_tests = skip_c_tests
   opts.dump_load_cross_check = dump_load_cross_check
-  opts.fsfs_compression_level = fsfs_compression_level
+  opts.fsfs_compression = fsfs_compression
   th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                              log_file, fail_log_file, opts)
   old_cwd = os.getcwd()
@@ -1329,6 +1330,10 @@ elif test_swig == 'ruby':
     if (r != 0):
       print('[Test runner reported failure]')
       failed = True
+
+elif test_swig:
+  print('Unknown Swig binding type: ' + str(test_swig))
+  failed = True
 
 # Stop service daemon, if any
 if daemon:

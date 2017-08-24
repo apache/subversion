@@ -81,7 +81,7 @@ typedef struct blame_context_t {
 
   svn_stream_t *stream;
 
-  svn_boolean_t using_compression;
+  svn_ra_serf__session_t *session;
 
 } blame_context_t;
 
@@ -329,8 +329,7 @@ setup_headers(serf_bucket_t *headers,
 {
   blame_context_t *blame_ctx = baton;
 
-  svn_ra_serf__setup_svndiff_accept_encoding(headers,
-                                             blame_ctx->using_compression);
+  svn_ra_serf__setup_svndiff_accept_encoding(headers, blame_ctx->session);
 
   return SVN_NO_ERROR;
 }
@@ -360,7 +359,7 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *ra_session,
   blame_ctx->start = start;
   blame_ctx->end = end;
   blame_ctx->include_merged_revisions = include_merged_revisions;
-  blame_ctx->using_compression = session->using_compression;
+  blame_ctx->session = session;
 
   /* Since Subversion 1.8 we allow retrieving blames backwards. So we can't
      just unconditionally use end_rev as the peg revision as before */

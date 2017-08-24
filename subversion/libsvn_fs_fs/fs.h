@@ -118,6 +118,7 @@ extern "C" {
 #define CONFIG_SECTION_DEBUG             "debug"
 #define CONFIG_OPTION_PACK_AFTER_COMMIT  "pack-after-commit"
 #define CONFIG_OPTION_VERIFY_BEFORE_COMMIT "verify-before-commit"
+#define CONFIG_OPTION_COMPRESSION        "compression"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
@@ -162,6 +163,9 @@ extern "C" {
  * issues with very old servers, restrict those options to the 1.6+ format*/
 #define SVN_FS_FS__MIN_DELTIFICATION_FORMAT 4
 
+/* The minimum format number that supports a configuration file (fsfs.conf) */
+#define SVN_FS_FS__MIN_CONFIG_FILE 4
+
 /* The 1.7-dev format, never released, that packed revprops into SQLite
    revprops.db . */
 #define SVN_FS_FS__PACKED_REVPROP_SQLITE_DEV_FORMAT 5
@@ -183,9 +187,6 @@ extern "C" {
 
 /* The minimum format number that supports svndiff version 2. */
 #define SVN_FS_FS__MIN_SVNDIFF2_FORMAT 8
-
-/* The minimum format number that supports a configuration file (fsfs.conf) */
-#define SVN_FS_FS__MIN_CONFIG_FILE 4
 
 /* On most operating systems apr implements file locks per process, not
    per file.  On Windows apr implements the locking as per file handle
@@ -297,6 +298,13 @@ typedef struct window_cache_key_t
   /* Item index of the representation */
   apr_uint64_t item_index;
 } window_cache_key_t;
+
+typedef enum compression_type_t
+{
+  compression_type_none,
+  compression_type_zlib,
+  compression_type_lz4
+} compression_type_t;
 
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
@@ -473,7 +481,10 @@ typedef struct fs_fs_data_t
    * deltification history after which skip deltas will be used. */
   apr_int64_t max_linear_deltification;
 
-  /* Compression level to use with txdelta storage format in new revs. */
+  /* Compression type to use with txdelta storage format in new revs. */
+  compression_type_t delta_compression_type;
+
+  /* Compression level (currently, only used with compression_type_zlib). */
   int delta_compression_level;
 
   /* Pack after every commit. */

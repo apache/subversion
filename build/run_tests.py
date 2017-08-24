@@ -33,7 +33,7 @@
             [--httpd-version=<version>] [--httpd-whitelist=<version>]
             [--config-file=<file>] [--ssl-cert=<file>]
             [--exclusive-wc-locks] [--memcached-server=<url:port>]
-            [--fsfs-compression=<n>]
+            [--fsfs-compression=<type>]
             <abs_srcdir> <abs_builddir>
             <prog ...>
 
@@ -276,8 +276,8 @@ class TestHarness:
       cmdline.append('--exclusive-wc-locks')
     if self.opts.memcached_server is not None:
       cmdline.append('--memcached-server=%s' % self.opts.memcached_server)
-    if self.opts.fsfs_compression_level is not None:
-      cmdline.append('--fsfs-compression=%d' % self.opts.fsfs_compression_level)
+    if self.opts.fsfs_compression is not None:
+      cmdline.append('--fsfs-compression=%s' % self.opts.fsfs_compression)
 
     self.py_test_cmdline = cmdline
 
@@ -1026,9 +1026,8 @@ def create_parser():
                     help='Use sqlite exclusive locking for working copies')
   parser.add_option('--memcached-server', action='store',
                     help='Use memcached server at specified URL (FSFS only)')
-  parser.add_option('--fsfs-compression', action='store', type='int',
-                    dest="fsfs_compression_level",
-                    help='Set compression level (for fsfs)')
+  parser.add_option('--fsfs-compression', action='store', type='str',
+                    help='Set compression type (for fsfs)')
 
   parser.set_defaults(set_log_level=None)
   return parser
