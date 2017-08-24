@@ -1655,12 +1655,22 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "       2. shelve --delete NAME\n"
      "       3. shelve --list\n"
      "\n"
-     "  1. Shelve as NAME the local changes in the given PATHs.\n"
+     "  1. Save the local changes in the given PATHs to a patch file, and\n"
+     "     revert those changes from the WC. If a log message is given with\n"
+     "     '-m' or '-F', include it at the beginning of the patch file.\n"
+     "\n"
      "  2. Delete the shelved patch NAME.\n"
-     "  3. List shelved patches.\n"),
+     "\n"
+     "  3. List shelved patches. Include the first line of any log message\n"
+     "     and some details about the contents of the patch, unless '-q' is\n"
+     "     given.\n"
+     "\n"
+     "  Patch files are named .svn/shelves/NAME.patch\n"),
     {opt_delete, opt_list, 'q', opt_dry_run,
      'N', opt_depth, opt_targets, opt_changelist,
-     SVN_CL__LOG_MSG_OPTIONS} },
+     /* almost SVN_CL__LOG_MSG_OPTIONS but not currently opt_with_revprop: */
+     'm', 'F', opt_force_log, opt_editor_cmd, opt_encoding,
+    } },
 
   { "unshelve", svn_cl__unshelve, {0}, N_
     ("Unshelve changes.\n"
@@ -1669,7 +1679,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  1. Apply the shelved patch NAME to the working copy.\n"
      "     Delete the patch unless the '--keep-shelved' option is given.\n"
-     "  2. List shelved patches.\n"),
+     "\n"
+     "  2. List shelved patches. Include the first line of any log message\n"
+     "     and some details about the contents of the patch, unless '-q' is\n"
+     "     given.\n"),
     {opt_keep_shelved, opt_list, 'q', opt_dry_run} },
 
   { "shelves", svn_cl__shelves, {0}, N_
