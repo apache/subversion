@@ -6861,6 +6861,7 @@ svn_client_shelves_list(apr_hash_t **dirents,
  */
 svn_error_t *
 svn_client_shelf_write_patch(const char *shelf_name,
+                             const char *message,
                              const char *wc_root_abspath,
                              svn_boolean_t overwrite_existing,
                              const apr_array_header_t *paths,
