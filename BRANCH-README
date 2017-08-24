@@ -1,8 +1,23 @@
-This branch is for prototyping Checkpointing backed by a local repository
+This branch is for development of Checkpointing [0,1].
+
+Specifically, this branch is for Checkpointing backed by a local repository
 embedded within the WC, referred to as design "option 3" in [1].
 
 Branch type: dev branch off 'shelve' branch; updated by full merges from
 there; not intended to be merged to trunk.
+
+The following branching hierarching shows the intended propogation of changes,
+although the actual copy history of the branches is not as shown here.
+
+    trunk          ------------------------    .  catch-up
+                       \                       |   merges
+    branches/shelve     +------------------    V   .   .
+                            \ \                    |   |
+    branches/checkpoint      \ +-----------        V   |
+                              \                        |
+    branches/checkpoint3       +-----------            V
+
+Both of the Checkpointing branches therefore include Shelving functionality.
 
 Initially this is prototyping, to explore the general shape of the design
 and user interface. As such, the coding style is hacky and does not comply
