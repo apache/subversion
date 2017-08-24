@@ -276,21 +276,16 @@ setup_merge_headers(serf_bucket_t *headers,
                     apr_pool_t *scratch_pool)
 {
   merge_context_t *ctx = baton;
-  svn_stringbuf_t *val = svn_stringbuf_create_empty(scratch_pool);
+  apr_array_header_t *vals = apr_array_make(scratch_pool, 2,
+                                            sizeof(const char *));
 
   if (!ctx->keep_locks)
-    {
-      svn_stringbuf_appendcstr(val, SVN_DAV_OPTION_RELEASE_LOCKS);
-    }
-
+    APR_ARRAY_PUSH(vals, const char *) = SVN_DAV_OPTION_RELEASE_LOCKS;
   if (ctx->disable_merge_response)
-    {
-      if (val->len > 0)
-        svn_stringbuf_appendcstr(val, " ");
-      svn_stringbuf_appendcstr(val, SVN_DAV_OPTION_NO_MERGE_RESPONSE);
-    }
+    APR_ARRAY_PUSH(vals, const char *) = SVN_DAV_OPTION_NO_MERGE_RESPONSE;
 
-  serf_bucket_headers_set(headers, SVN_DAV_OPTIONS_HEADER, val->data);
+  serf_bucket_headers_set(headers, SVN_DAV_OPTIONS_HEADER,
+                          svn_cstring_join2(vals, " ", FALSE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
