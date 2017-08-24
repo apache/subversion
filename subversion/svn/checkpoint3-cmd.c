@@ -294,12 +294,14 @@ svn_cl__checkpoint(apr_getopt_t *os,
                                 _("Too many arguments"));
 
       SVN_ERR(svn_client_checkpoint_uninit(local_abspath, ctx, pool));
+      SVN_ERR(svn_cmdline_printf(pool,
+                "your WC is now based on the original repository, with "
+                "all your changes as local modifications\n"));
     }
   else
     {
       return svn_error_createf(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                               _("checkpoint: Unknown checkpoint command '%s'; "
-                                 "try 'svn help checkpoint'"),
+                               _("checkpoint: Unknown checkpoint command '%s'"),
                                subsubcommand);
     }
 
