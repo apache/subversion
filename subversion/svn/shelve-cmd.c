@@ -48,6 +48,28 @@ get_shelf_name(const char **shelf_name,
   return SVN_NO_ERROR;
 }
 
+/* ### Currently just reads the first line.
+ */
+static svn_error_t *
+read_logmsg_from_patch(const char **logmsg,
+                       const char *patch_abspath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  apr_file_t *file;
+  svn_stream_t *stream;
+  svn_boolean_t eof;
+  svn_stringbuf_t *line;
+
+  SVN_ERR(svn_io_file_open(&file, patch_abspath,
+                           APR_FOPEN_READ, APR_FPROT_OS_DEFAULT, scratch_pool));
+  stream = svn_stream_from_aprfile2(file, FALSE /*disown*/, scratch_pool);
+  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
+  SVN_ERR(svn_stream_close(stream));
+  *logmsg = line->data;
+  return SVN_NO_ERROR;
+}
+
 /* Display a list of shelves */
 static svn_error_t *
 shelves_list(const char *local_abspath,
@@ -66,12 +88,21 @@ shelves_list(const char *local_abspath,
       const char *name = apr_hash_this_key(hi);
       svn_io_dirent2_t *dirent = apr_hash_this_val(hi);
       int age = (apr_time_now() - dirent->mtime) / 1000000 / 60;
+      const char *patch_abspath;
+      const char *logmsg;
 
       if (! strstr(name, ".patch"))
         continue;
 
+      patch_abspath = svn_dirent_join_many(scratch_pool,
+                                           local_abspath, ".svn", "shelves", name,
+                                           SVN_VA_NULL);
+      SVN_ERR(read_logmsg_from_patch(&logmsg, patch_abspath,
+                                     scratch_pool, scratch_pool));
       printf("%-30s %6d mins old %10ld bytes\n",
              name, age, (long)dirent->filesize);
+      printf(" %.50s\n",
+             logmsg);
 
       if (diffstat)
         {
@@ -137,6 +168,7 @@ svn_cl__shelve(apr_getopt_t *os,
 
   {
       svn_depth_t depth = opt_state->depth;
+      svn_error_t *err;
 
       /* shelve has no implicit dot-target `.', so don't you put that
          code here! */
@@ -150,10 +182,20 @@ svn_cl__shelve(apr_getopt_t *os,
 
       SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
-      SVN_ERR(svn_client_shelve(shelf_name,
-                                targets, depth, opt_state->changelists,
-                                opt_state->dry_run,
-                                ctx, pool));
+      if (ctx->log_msg_func3)
+        SVN_ERR(svn_cl__make_log_msg_baton(&ctx->log_msg_baton3,
+                                           opt_state, NULL, ctx->config,
+                                           pool));
+      err = svn_client_shelve(shelf_name,
+                              targets, depth, opt_state->changelists,
+                              opt_state->dry_run,
+                              ctx, pool);
+      if (ctx->log_msg_func3)
+        SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
+                                        err, pool));
+      else
+        SVN_ERR(err);
+
       if (! opt_state->quiet)
         SVN_ERR(svn_cmdline_printf(pool, "shelved '%s'\n", shelf_name));
   }
@@ -169,12 +211,24 @@ svn_cl__unshelve(apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
+  const char *local_abspath;
   const char *shelf_name;
   apr_array_header_t *targets;
-  const char *local_abspath;
+
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
+
+  if (opt_state->list)
+    {
+      if (os->ind < os->argc)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+
+      SVN_ERR(shelves_list(local_abspath,
+                           ! opt_state->quiet /*diffstat*/,
+                           ctx, pool));
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(get_shelf_name(&shelf_name, os, pool, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
 
   /* There should be no remaining arguments. */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,

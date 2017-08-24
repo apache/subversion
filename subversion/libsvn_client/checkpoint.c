@@ -120,7 +120,7 @@ write_checkpoint(int checkpoint_number,
                                  ctx, scratch_pool, scratch_pool));
   APR_ARRAY_PUSH(paths, const char *) = wc_root_abspath;
   SVN_ERR(svn_client_shelf_write_patch(
-            shelf_name, wc_root_abspath,
+            shelf_name, "" /*message*/, wc_root_abspath,
             TRUE /*overwrite_existing*/,
             paths, svn_depth_infinity, NULL /*changelists*/,
             ctx, scratch_pool));
