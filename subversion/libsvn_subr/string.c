@@ -1021,9 +1021,10 @@ int svn_cstring_count_newlines(const char *msg)
 }
 
 char *
-svn_cstring_join(const apr_array_header_t *strings,
-                 const char *separator,
-                 apr_pool_t *pool)
+svn_cstring_join2(const apr_array_header_t *strings,
+                  const char *separator,
+                  svn_boolean_t trailing_separator,
+                  apr_pool_t *pool)
 {
   svn_stringbuf_t *new_str = svn_stringbuf_create_empty(pool);
   size_t sep_len = strlen(separator);
@@ -1032,9 +1033,14 @@ svn_cstring_join(const apr_array_header_t *strings,
   for (i = 0; i < strings->nelts; i++)
     {
       const char *string = APR_ARRAY_IDX(strings, i, const char *);
+      if (i > 0)
+        svn_stringbuf_appendbytes(new_str, separator, sep_len);
       svn_stringbuf_appendbytes(new_str, string, strlen(string));
-      svn_stringbuf_appendbytes(new_str, separator, sep_len);
     }
+
+  if (strings->nelts > 0 && trailing_separator)
+    svn_stringbuf_appendbytes(new_str, separator, sep_len);
+
   return new_str->data;
 }
 

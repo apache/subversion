@@ -1013,6 +1013,60 @@ test_stringbuf_set(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_cstring_join(apr_pool_t *pool)
+{
+  apr_array_header_t *arr;
+
+  {
+    arr = apr_array_make(pool, 0, sizeof(const char *));
+
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", FALSE, pool), "");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", TRUE, pool), "");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", FALSE, pool), "");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", TRUE, pool), "");
+  }
+
+  {
+    arr = apr_array_make(pool, 0, sizeof(const char *));
+    APR_ARRAY_PUSH(arr, const char *) = "";
+
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", FALSE, pool), "");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", TRUE, pool), "");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", FALSE, pool), "");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", TRUE, pool), ";");
+  }
+
+  {
+    arr = apr_array_make(pool, 0, sizeof(const char *));
+    APR_ARRAY_PUSH(arr, const char *) = "ab";
+    APR_ARRAY_PUSH(arr, const char *) = "cd";
+
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", FALSE, pool), "abcd");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", TRUE, pool), "abcd");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", FALSE, pool), "ab;cd");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", TRUE, pool), "ab;cd;");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "//", FALSE, pool), "ab//cd");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "//", TRUE, pool), "ab//cd//");
+  }
+
+  {
+    arr = apr_array_make(pool, 0, sizeof(const char *));
+    APR_ARRAY_PUSH(arr, const char *) = "";
+    APR_ARRAY_PUSH(arr, const char *) = "ab";
+    APR_ARRAY_PUSH(arr, const char *) = "";
+
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", FALSE, pool), "ab");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", TRUE, pool), "ab");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", FALSE, pool), ";ab;");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", TRUE, pool), ";ab;;");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "//", FALSE, pool), "//ab//");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "//", TRUE, pool), "//ab////");
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /*
    ====================================================================
    If you add a new test to this file, update this array.
@@ -1095,6 +1149,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_stringbuf_leftchop"),
     SVN_TEST_PASS2(test_stringbuf_set,
                    "test svn_stringbuf_set()"),
+    SVN_TEST_PASS2(test_cstring_join,
+                   "test svn_cstring_join2()"),
     SVN_TEST_NULL
   };
 

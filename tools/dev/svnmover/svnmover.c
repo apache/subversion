@@ -3921,7 +3921,8 @@ execute(svnmover_wc_t *wc,
           wc->list_of_commands
             = apr_psprintf(pool, "%s%s\n",
                            wc->list_of_commands ? wc->list_of_commands : "",
-                           svn_cstring_join(action->action_args, " ", pool));
+                           svn_cstring_join2(action->action_args, " ",
+                                             TRUE, pool));
         }
     }
   svn_pool_destroy(iterpool);
