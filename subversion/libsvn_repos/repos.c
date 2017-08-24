@@ -882,7 +882,7 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "[sasl]"                                                                     NL
 "### This option specifies whether you want to use the Cyrus SASL"           NL
 "### library for authentication. Default is false."                          NL
-"### This section will be ignored if svnserve is not built with Cyrus"       NL
+"### Enabling this option requires svnserve to have been built with Cyrus"   NL
 "### SASL support; to check, run 'svnserve --version' and look for a line"   NL
 "### reading 'Cyrus SASL authentication is available.'"                      NL
 "# use-sasl = true"                                                          NL

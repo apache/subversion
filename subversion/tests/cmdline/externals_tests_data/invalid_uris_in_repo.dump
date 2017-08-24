@@ -1,0 +1,142 @@
+SVN-fs-dump-format-version: 2
+
+UUID: 9402b9d1-cda2-4b37-b4d4-cbe5373b6650
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2017-07-30T21:45:44.035017Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 97
+Content-length: 97
+
+K 10
+svn:author
+V 2
+pm
+K 8
+svn:date
+V 27
+2017-07-30T21:45:44.071811Z
+K 7
+svn:log
+V 1
+m
+PROPS-END
+
+Node-path: 
+Node-kind: dir
+Node-action: change
+Prop-content-length: 56
+Content-length: 56
+
+K 13
+svn:externals
+V 21
+foo:://host:-/path X
+
+PROPS-END
+
+
+Revision-number: 2
+Prop-content-length: 97
+Content-length: 97
+
+K 10
+svn:author
+V 2
+pm
+K 8
+svn:date
+V 27
+2017-07-30T21:45:44.117957Z
+K 7
+svn:log
+V 1
+m
+PROPS-END
+
+Node-path: 
+Node-kind: dir
+Node-action: change
+Prop-content-length: 55
+Content-length: 55
+
+K 13
+svn:externals
+V 20
+foo://host::/path X
+
+PROPS-END
+
+
+Revision-number: 3
+Prop-content-length: 97
+Content-length: 97
+
+K 10
+svn:author
+V 2
+pm
+K 8
+svn:date
+V 27
+2017-07-30T21:45:44.157176Z
+K 7
+svn:log
+V 1
+m
+PROPS-END
+
+Node-path: 
+Node-kind: dir
+Node-action: change
+Prop-content-length: 59
+Content-length: 59
+
+K 13
+svn:externals
+V 24
+foo://host:123xx/path X
+
+PROPS-END
+
+
+Revision-number: 4
+Prop-content-length: 97
+Content-length: 97
+
+K 10
+svn:author
+V 2
+pm
+K 8
+svn:date
+V 27
+2017-07-30T21:45:44.199565Z
+K 7
+svn:log
+V 1
+m
+PROPS-END
+
+Node-path: 
+Node-kind: dir
+Node-action: change
+Prop-content-length: 61
+Content-length: 61
+
+K 13
+svn:externals
+V 26
+foo://host:123:123/path X
+
+PROPS-END
+
+

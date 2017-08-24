@@ -4365,6 +4365,39 @@ def external_externally_removed(sbox):
   sbox.simple_propdel('svn:externals', '')
   sbox.simple_update() # Should succeed
 
+def invalid_uris_in_repo(sbox):
+  "invalid URIs in repo"
+
+  sbox.build(empty=True),
+
+  # Using a dump file because the client may not allow adding invalid URIs.
+  svntest.actions.load_repo(sbox,
+                            os.path.join(os.path.dirname(sys.argv[0]),
+                                         'externals_tests_data',
+                                         'invalid_uris_in_repo.dump'),
+                            create_wc=False)
+
+  # 'foo://host:-/D X'
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    '' : Item(status=' U')
+    })
+  expected_disk =  svntest.wc.State('', {
+    })
+  expected_error = ".*warning: W205011: Error handling externals definition.*"
+
+  # A repository might have invalid URIs and the client used to SEGV.
+  # r1 has 'foo://host:-/D X'
+  # r2 has 'foo://host::/D X'
+  # r3 has 'foo://host:123xx/D X'
+  # r4 has 'foo://host:123:123/D X'
+  for revision in range(1,4):
+    svntest.actions.run_and_verify_checkout(sbox.repo_url, sbox.wc_dir,
+                                            expected_output,
+                                            expected_disk,
+                                            expected_error,
+                                            "-r", revision)
+    svntest.main.safe_rmtree(sbox.wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -4440,6 +4473,7 @@ test_list = [ None,
               file_external_to_normal_file,
               file_external_recorded_info,
               external_externally_removed,
+              invalid_uris_in_repo,
              ]
 
 if __name__ == '__main__':

@@ -1862,11 +1862,8 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *scratch_pool)
           ptr++;
         }
 
-      if (ptr == schema_data)
+      if (ptr == schema_data && (*ptr == '/' || *ptr == '\0'))
         return FALSE; /* Fail on "http://host:" */
-
-      if (*ptr && *ptr != '/')
-        return FALSE; /* Not a port number */
 
       if (port == 80 && strncmp(uri, "http:", 5) == 0)
         return FALSE;
@@ -1874,6 +1871,9 @@ svn_uri_is_canonical(const char *uri, apr_pool_t *scratch_pool)
         return FALSE;
       else if (port == 3690 && strncmp(uri, "svn:", 4) == 0)
         return FALSE;
+
+      while (*ptr && *ptr != '/')
+        ++ptr; /* Allow "http://host:stuff" */
     }
 
   schema_data = ptr;

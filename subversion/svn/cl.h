@@ -83,7 +83,10 @@ typedef enum svn_cl__accept_t
   svn_cl__accept_edit,
 
   /* Launch user's resolver and resolve conflict with edited file. */
-  svn_cl__accept_launch
+  svn_cl__accept_launch,
+
+  /* Use recommended resolution if available, else leave the conflict alone. */
+  svn_cl__accept_recommended
 
 } svn_cl__accept_t;
 
@@ -97,6 +100,7 @@ typedef enum svn_cl__accept_t
 #define SVN_CL__ACCEPT_THEIRS_FULL "theirs-full"
 #define SVN_CL__ACCEPT_EDIT "edit"
 #define SVN_CL__ACCEPT_LAUNCH "launch"
+#define SVN_CL__ACCEPT_RECOMMENDED "recommended"
 
 /* Return the svn_cl__accept_t value corresponding to WORD, using exact
  * case-sensitive string comparison. Return svn_cl__accept_invalid if WORD
@@ -250,6 +254,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t pin_externals;     /* pin externals to last-changed revisions */
   const char *show_item;           /* print only the given item */
   svn_boolean_t adds_as_modification; /* update 'add vs add' no tree conflict */
+  svn_boolean_t vacuum_pristines; /* remove unreferenced pristines */
   svn_boolean_t list;
 } svn_cl__opt_state_t;
 

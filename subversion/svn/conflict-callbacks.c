@@ -78,6 +78,9 @@ svn_cl__accept_from_word(const char *word)
   if (strcmp(word, SVN_CL__ACCEPT_LAUNCH) == 0
       || strcmp(word, "l") == 0 || strcmp(word, ":-l") == 0)
     return svn_cl__accept_launch;
+  if (strcmp(word, SVN_CL__ACCEPT_RECOMMENDED) == 0
+      || strcmp(word, "r") == 0)
+    return svn_cl__accept_recommended;
   /* word is an invalid action. */
   return svn_cl__accept_invalid;
 }
@@ -2173,6 +2176,19 @@ svn_cl__resolve_conflict(svn_boolean_t *quit,
                 option_id = svn_client_conflict_option_merged_text;
             }
         }
+    }
+  else if (accept_which == svn_cl__accept_recommended)
+    {
+      svn_client_conflict_option_id_t recommended_id;
+
+      if (tree_conflicted)
+        SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx,
+                                                     scratch_pool));
+      recommended_id = svn_client_conflict_get_recommended_option_id(conflict);
+      if (recommended_id != svn_client_conflict_option_unspecified)
+        option_id = recommended_id;
+      else
+        option_id = svn_client_conflict_option_postpone;
     }
   else
     SVN_ERR_MALFUNCTION();

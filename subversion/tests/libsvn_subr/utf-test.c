@@ -664,9 +664,16 @@ test_utf_fuzzy_escape(apr_pool_t *pool)
   SVN_TEST_ASSERT(0 == strcmp(fuzzy, "Subversi{U+03BF}n"));
 
   fuzzy = svn_utf__fuzzy_escape(invalid, sizeof(invalid) - 1, pool);
-  /*fprintf(stderr, "%s\n", fuzzy);*/
+
+  /* utf8proc 1.1.15 produces {U?FDD1} while 2.x produces {U+FDD1} */
   SVN_TEST_ASSERT(0 == strcmp(fuzzy,
                               "Not Unicode: {U?FDD1};"
+                              "Out of range: ?\\F4?\\90?\\80?\\81;"
+                              "Not UTF-8: ?\\E6;"
+                              "Null byte: \\0;")
+                  ||
+                  0 == strcmp(fuzzy,
+                              "Not Unicode: {U+FDD1};"
                               "Out of range: ?\\F4?\\90?\\80?\\81;"
                               "Not UTF-8: ?\\E6;"
                               "Null byte: \\0;"));
