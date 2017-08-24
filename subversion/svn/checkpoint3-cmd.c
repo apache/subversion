@@ -73,9 +73,12 @@ checkpoint_list(const char *local_abspath,
       const char *name = apr_psprintf(scratch_pool, "%d", number);
       char marker = (first ? '*' : ' ');
       svn_string_t *date = svn_hash_gets(log_entry->revprops, "svn:date");
+      svn_string_t *log_str = svn_hash_gets(log_entry->revprops, "svn:log");
+      const char *logmsg = log_str ? log_str->data : "";
 
       printf("%c %s %.16s\n",
              marker, name, date ? date->data : "");
+      printf(" %s\n", logmsg);
 
       if (diffstat)
         {
@@ -234,6 +237,8 @@ svn_cl__checkpoint(apr_getopt_t *os,
     }
   else if (strcmp(subsubcommand, "save") == 0)
     {
+      svn_error_t *err;
+
       if (targets->nelts)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Too many arguments"));
@@ -252,8 +257,17 @@ svn_cl__checkpoint(apr_getopt_t *os,
       SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
       */
 
-      SVN_ERR(checkpoint_save(/*targets, depth, opt_state->changelists,*/
-                              opt_state->quiet, local_abspath, ctx, pool));
+      if (ctx->log_msg_func3)
+        SVN_ERR(svn_cl__make_log_msg_baton(&ctx->log_msg_baton3,
+                                           opt_state, NULL, ctx->config,
+                                           pool));
+      err = checkpoint_save(/*targets, depth, opt_state->changelists,*/
+                            opt_state->quiet, local_abspath, ctx, pool);
+      if (ctx->log_msg_func3)
+        SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
+                                        err, pool));
+      else
+        SVN_ERR(err);
     }
   else if (strcmp(subsubcommand, "squash") == 0)
     {

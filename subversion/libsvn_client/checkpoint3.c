@@ -502,9 +502,6 @@ checkpoint_save(int *checkpoint_number,
 
   /* ### TODO: if not at latest checkpoint, first prune later checkpoints */
 
-  ctx->log_msg_func3 = NULL;
-  ctx->log_msg_func2 = NULL;
-  ctx->log_msg_func = NULL;
   SVN_ERR(svn_client_commit6(
             paths,
             svn_depth_infinity /*depth*/,
