@@ -275,11 +275,11 @@ setup_merge_headers(serf_bucket_t *headers,
                     apr_pool_t *scratch_pool)
 {
   merge_context_t *ctx = baton;
+  svn_stringbuf_t *val = svn_stringbuf_create_empty(scratch_pool);
 
   if (!ctx->keep_locks)
     {
-      serf_bucket_headers_set(headers, SVN_DAV_OPTIONS_HEADER,
-                              SVN_DAV_OPTION_RELEASE_LOCKS);
+      svn_stringbuf_appendcstr(val, SVN_DAV_OPTION_RELEASE_LOCKS);
     }
 
   /* We don't need the full merge response when working over HTTPv2.
@@ -288,9 +288,12 @@ setup_merge_headers(serf_bucket_t *headers,
   if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->session) ||
       ctx->session->wc_callbacks->push_wc_prop == NULL)
     {
-      serf_bucket_headers_set(headers, SVN_DAV_OPTIONS_HEADER,
-                              SVN_DAV_OPTION_NO_MERGE_RESPONSE);
+      if (val->len > 0)
+        svn_stringbuf_appendcstr(val, " ");
+      svn_stringbuf_appendcstr(val, SVN_DAV_OPTION_NO_MERGE_RESPONSE);
     }
+
+  serf_bucket_headers_set(headers, SVN_DAV_OPTIONS_HEADER, val->data);
 
   return SVN_NO_ERROR;
 }
