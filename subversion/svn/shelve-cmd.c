@@ -188,7 +188,7 @@ svn_cl__shelve(apr_getopt_t *os,
                                            pool));
       err = svn_client_shelve(shelf_name,
                               targets, depth, opt_state->changelists,
-                              opt_state->dry_run,
+                              opt_state->keep_local, opt_state->dry_run,
                               ctx, pool);
       if (ctx->log_msg_func3)
         SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,

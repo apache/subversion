@@ -6730,6 +6730,7 @@ svn_client_shelve(const char *shelf_name,
                   const apr_array_header_t *paths,
                   svn_depth_t depth,
                   const apr_array_header_t *changelists,
+                  svn_boolean_t keep_local,
                   svn_boolean_t dry_run,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
