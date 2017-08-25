@@ -1651,13 +1651,14 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "shelve", svn_cl__shelve, {0}, N_
     ("Shelve changes.\n"
-     "usage: 1. shelve NAME PATH...\n"
+     "usage: 1. shelve [--keep-local] NAME PATH...\n"
      "       2. shelve --delete NAME\n"
      "       3. shelve --list\n"
      "\n"
      "  1. Save the local changes in the given PATHs to a patch file, and\n"
-     "     revert those changes from the WC. If a log message is given with\n"
-     "     '-m' or '-F', include it at the beginning of the patch file.\n"
+     "     revert those changes from the WC unless '--keep-local' is given.\n"
+     "     If a log message is given with '-m' or '-F', include it at the\n"
+     "     beginning of the patch file.\n"
      "\n"
      "  2. Delete the shelved patch NAME.\n"
      "\n"
@@ -1666,7 +1667,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     given.\n"
      "\n"
      "  Patch files are named .svn/shelves/NAME.patch\n"),
-    {opt_delete, opt_list, 'q', opt_dry_run,
+    {opt_delete, opt_list, 'q', opt_dry_run, opt_keep_local,
      'N', opt_depth, opt_targets, opt_changelist,
      /* almost SVN_CL__LOG_MSG_OPTIONS but not currently opt_with_revprop: */
      'm', 'F', opt_force_log, opt_editor_cmd, opt_encoding,

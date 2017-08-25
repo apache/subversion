@@ -197,6 +197,7 @@ svn_client_shelve(const char *shelf_name,
                   const apr_array_header_t *paths,
                   svn_depth_t depth,
                   const apr_array_header_t *changelists,
+                  svn_boolean_t keep_local,
                   svn_boolean_t dry_run,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
@@ -239,11 +240,14 @@ svn_client_shelve(const char *shelf_name,
   else
     SVN_ERR(err);
 
-  /* Reverse-apply the patch. This should be a safer way to remove those
-     changes from the WC than running a 'revert' operation. */
-  SVN_ERR(svn_client_shelf_apply_patch(shelf_name, wc_root_abspath,
-                                       TRUE /*reverse*/, dry_run,
-                                       ctx, pool));
+  if (!keep_local)
+    {
+      /* Reverse-apply the patch. This should be a safer way to remove those
+         changes from the WC than running a 'revert' operation. */
+      SVN_ERR(svn_client_shelf_apply_patch(shelf_name, wc_root_abspath,
+                                           TRUE /*reverse*/, dry_run,
+                                           ctx, pool));
+    }
 
   if (dry_run)
     {
