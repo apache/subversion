@@ -4578,89 +4578,6 @@ test_update_incoming_added_dir_merge2(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-test_cherry_pick_post_move_edit(const svn_test_opts_t *opts,
-                                apr_pool_t *pool)
-{
-  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
-  const char *trunk_url;
-  svn_opt_revision_t peg_rev;
-  apr_array_header_t *ranges_to_merge;
-  svn_opt_revision_range_t merge_range;
-  svn_client_ctx_t *ctx;
-  svn_client_conflict_t *conflict;
-  svn_boolean_t tree_conflicted;
-
-  SVN_ERR(svn_test__sandbox_create(b,
-                                   "test_cherry_pick_post_move_edit",
-                                   opts, pool));
-
-  SVN_ERR(sbox_add_and_commit_greek_tree(b)); /* r1 */
-  /* Create a copy of node "A". */
-  SVN_ERR(sbox_wc_copy(b, "A", "A1"));
-  SVN_ERR(sbox_wc_commit(b, "")); /* r2 */
-  /* On "trunk", move the file mu. */
-  SVN_ERR(sbox_wc_move(b, "A/mu", "A/mu-moved"));
-  SVN_ERR(sbox_wc_commit(b, "")); /* r3 */
-  /* On "trunk", edit mu-moved. This will be r4, which we'll cherry-pick. */
-  SVN_ERR(sbox_file_write(b, "A/mu-moved", "Modified content.\n"));
-  SVN_ERR(sbox_wc_commit(b, "")); /* r4 */
-  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
-
-  /* Perform a cherry-pick merge of r4 from A to A1. */
-  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
-  trunk_url = apr_pstrcat(b->pool, b->repos_url, "/A", SVN_VA_NULL);
-  peg_rev.kind = svn_opt_revision_number;
-  peg_rev.value.number = 4;
-  merge_range.start.kind = svn_opt_revision_number;
-  merge_range.start.value.number = 3;
-  merge_range.end.kind = svn_opt_revision_number;
-  merge_range.end.value.number = 4;
-  ranges_to_merge = apr_array_make(b->pool, 1,
-                                   sizeof(svn_opt_revision_range_t *));
-  APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = &merge_range;
-  /* This should raise a "local delete or move vs incoming edit" conflict. */
-  SVN_ERR(svn_client_merge_peg5(trunk_url, ranges_to_merge, &peg_rev,
-                                sbox_wc_path(b, "A1"), svn_depth_infinity,
-                                FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
-                                NULL, ctx, b->pool));
-
-  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A1/mu-moved"),
-                                  ctx, b->pool, b->pool));
-  SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
-                                             conflict, b->pool, b->pool));
-  SVN_TEST_ASSERT(tree_conflicted);
-  {
-    svn_client_conflict_option_id_t expected_opts[] = {
-      svn_client_conflict_option_postpone,
-      svn_client_conflict_option_accept_current_wc_state,
-      -1 /* end of list */
-    };
-    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
-                                         b->pool));
-  }
-
-  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
-  {
-    svn_client_conflict_option_id_t expected_opts[] = {
-      svn_client_conflict_option_postpone,
-      svn_client_conflict_option_accept_current_wc_state,
-      svn_client_conflict_option_local_move_file_text_merge,
-      -1 /* end of list */
-    };
-    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
-                                         b->pool));
-  }
-
-  /* Try to resolve the conflict. */
-  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
-            conflict,
-            svn_client_conflict_option_local_move_file_text_merge,
-            ctx, b->pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* Regression test for chrash fixed in r1780259. */
 static svn_error_t *
 test_cherry_pick_moved_file_with_propdel(const svn_test_opts_t *opts,
@@ -4972,6 +4889,89 @@ test_merge_incoming_move_file_text_merge_native_eol(const svn_test_opts_t *opts,
   SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A1/mu-moved"),
                                    pool));
   SVN_TEST_STRING_ASSERT(buf->data, "Modified content." APR_EOL_STR);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_cherry_pick_post_move_edit(const svn_test_opts_t *opts,
+                                apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  const char *trunk_url;
+  svn_opt_revision_t peg_rev;
+  apr_array_header_t *ranges_to_merge;
+  svn_opt_revision_range_t merge_range;
+  svn_client_ctx_t *ctx;
+  svn_client_conflict_t *conflict;
+  svn_boolean_t tree_conflicted;
+
+  SVN_ERR(svn_test__sandbox_create(b,
+                                   "test_cherry_pick_post_move_edit",
+                                   opts, pool));
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(b)); /* r1 */
+  /* Create a copy of node "A". */
+  SVN_ERR(sbox_wc_copy(b, "A", "A1"));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r2 */
+  /* On "trunk", move the file mu. */
+  SVN_ERR(sbox_wc_move(b, "A/mu", "A/mu-moved"));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r3 */
+  /* On "trunk", edit mu-moved. This will be r4, which we'll cherry-pick. */
+  SVN_ERR(sbox_file_write(b, "A/mu-moved", "Modified content.\n"));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r4 */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+
+  /* Perform a cherry-pick merge of r4 from A to A1. */
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  trunk_url = apr_pstrcat(b->pool, b->repos_url, "/A", SVN_VA_NULL);
+  peg_rev.kind = svn_opt_revision_number;
+  peg_rev.value.number = 4;
+  merge_range.start.kind = svn_opt_revision_number;
+  merge_range.start.value.number = 3;
+  merge_range.end.kind = svn_opt_revision_number;
+  merge_range.end.value.number = 4;
+  ranges_to_merge = apr_array_make(b->pool, 1,
+                                   sizeof(svn_opt_revision_range_t *));
+  APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = &merge_range;
+  /* This should raise a "local delete or move vs incoming edit" conflict. */
+  SVN_ERR(svn_client_merge_peg5(trunk_url, ranges_to_merge, &peg_rev,
+                                sbox_wc_path(b, "A1"), svn_depth_infinity,
+                                FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+                                NULL, ctx, b->pool));
+
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A1/mu-moved"),
+                                  ctx, b->pool, b->pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
+                                             conflict, b->pool, b->pool));
+  SVN_TEST_ASSERT(tree_conflicted);
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_local_move_file_text_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  /* Try to resolve the conflict. */
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict,
+            svn_client_conflict_option_local_move_file_text_merge,
+            ctx, b->pool));
 
   return SVN_NO_ERROR;
 }
