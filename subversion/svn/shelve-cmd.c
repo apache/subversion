@@ -30,6 +30,7 @@
 #include "cl.h"
 
 #include "svn_private_config.h"
+#include "private/svn_sorts_private.h"
 
 
 /* First argument should be the name of a shelved change. */
@@ -70,6 +71,18 @@ read_logmsg_from_patch(const char **logmsg,
   return SVN_NO_ERROR;
 }
 
+/*  */
+static int
+compare_dirents_by_mtime(const svn_sort__item_t *a,
+                         const svn_sort__item_t *b)
+{
+  svn_io_dirent2_t *a_val = a->value;
+  svn_io_dirent2_t *b_val = b->value;
+
+  return (a_val->mtime < b_val->mtime)
+           ? -1 : (a_val->mtime > b_val->mtime) ? 1 : 0;
+}
+
 /* Display a list of shelves */
 static svn_error_t *
 shelves_list(const char *local_abspath,
@@ -78,15 +91,18 @@ shelves_list(const char *local_abspath,
              apr_pool_t *scratch_pool)
 {
   apr_hash_t *dirents;
-  apr_hash_index_t *hi;
+  apr_array_header_t *list;
+  int i;
 
   SVN_ERR(svn_client_shelves_list(&dirents, local_abspath,
                                   ctx, scratch_pool, scratch_pool));
+  list = svn_sort__hash(dirents, compare_dirents_by_mtime, scratch_pool);
 
-  for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
+  for (i = 0; i < list->nelts; i++)
     {
-      const char *name = apr_hash_this_key(hi);
-      svn_io_dirent2_t *dirent = apr_hash_this_val(hi);
+      const svn_sort__item_t *item = &APR_ARRAY_IDX(list, i, svn_sort__item_t);
+      const char *name = item->key;
+      svn_io_dirent2_t *dirent = item->value;
       int age = (apr_time_now() - dirent->mtime) / 1000000 / 60;
       const char *patch_abspath;
       const char *logmsg;
