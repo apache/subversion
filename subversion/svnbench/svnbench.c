@@ -69,7 +69,7 @@ typedef enum svn_cl__longopt_t {
   opt_trust_server_cert,
   opt_trust_server_cert_failures,
   opt_changelist,
-  opt_search
+  opt_pattern
 } svn_cl__longopt_t;
 
 
@@ -166,8 +166,10 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("use/display additional information from merge\n"
                        "                             "
                        "history")},
-  {"search", opt_search, 1,
-                       N_("use ARG as search pattern (glob syntax)")},
+  {"pattern", opt_pattern, 1,
+                       N_("use ARG as search pattern (glob syntax,\n"
+                          "                             "
+                          "case-sensitive)")},
 
   /* Long-opt Aliases
    *
@@ -260,7 +262,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"),
-    {'r', 'v', 'q', 'R', opt_depth, opt_search} },
+    {'r', 'v', 'q', 'R', opt_depth, opt_pattern} },
 
   { "null-log", svn_cl__null_log, {0}, N_
     ("Fetch the log messages for a set of revision(s) and/or path(s).\n"
@@ -682,13 +684,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case 'g':
         opt_state.use_merge_history = TRUE;
         break;
-      case opt_search:
+      case opt_pattern:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        SVN_ERR(svn_utf__xfrm(&utf8_opt_arg, utf8_opt_arg,
-                              strlen(utf8_opt_arg), TRUE, TRUE, &buf));
-        add_search_pattern_group(&opt_state,
-                                 apr_pstrdup(pool, utf8_opt_arg),
-                                 pool);
+        add_search_pattern_group(&opt_state, utf8_opt_arg, pool);
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
