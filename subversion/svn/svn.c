@@ -1651,7 +1651,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "shelve", svn_cl__shelve, {0}, N_
     ("Put a local change aside, as if putting it on a shelf.\n"
-     "usage: 1. shelve [--keep-local] NAME PATH...\n"
+     "usage: 1. shelve [--keep-local] NAME [PATH...]\n"
      "       2. shelve --delete NAME\n"
      "       3. shelve --list\n"
      "\n"
