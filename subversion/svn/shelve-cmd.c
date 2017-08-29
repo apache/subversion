@@ -83,6 +83,23 @@ compare_dirents_by_mtime(const svn_sort__item_t *a,
            ? -1 : (a_val->mtime > b_val->mtime) ? 1 : 0;
 }
 
+/* Return a list of shelves sorted by patch file mtime, oldest first.
+ */
+static svn_error_t *
+list_sorted_by_date(apr_array_header_t **list,
+                    const char *local_abspath,
+                    svn_boolean_t diffstat,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *scratch_pool)
+{
+  apr_hash_t *dirents;
+
+  SVN_ERR(svn_client_shelves_list(&dirents, local_abspath,
+                                  ctx, scratch_pool, scratch_pool));
+  *list = svn_sort__hash(dirents, compare_dirents_by_mtime, scratch_pool);
+  return SVN_NO_ERROR;
+}
+
 /* Display a list of shelves */
 static svn_error_t *
 shelves_list(const char *local_abspath,
@@ -90,13 +107,11 @@ shelves_list(const char *local_abspath,
              svn_client_ctx_t *ctx,
              apr_pool_t *scratch_pool)
 {
-  apr_hash_t *dirents;
   apr_array_header_t *list;
   int i;
 
-  SVN_ERR(svn_client_shelves_list(&dirents, local_abspath,
-                                  ctx, scratch_pool, scratch_pool));
-  list = svn_sort__hash(dirents, compare_dirents_by_mtime, scratch_pool);
+  SVN_ERR(list_sorted_by_date(&list,
+                              local_abspath, diffstat, ctx, scratch_pool));
 
   for (i = 0; i < list->nelts; i++)
     {
@@ -131,6 +146,32 @@ shelves_list(const char *local_abspath,
         }
     }
 
+  return SVN_NO_ERROR;
+}
+
+/* Find the name of the youngest shelved change.
+ */
+static svn_error_t *
+name_of_youngest(const char **name_p,
+                 const char *local_abspath,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  apr_hash_t *dirents;
+  apr_array_header_t *list;
+  const svn_sort__item_t *youngest_item;
+
+  SVN_ERR(svn_client_shelves_list(&dirents, local_abspath,
+                                  ctx, scratch_pool, scratch_pool));
+  if (apr_hash_count(dirents) == 0)
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
+                            _("No shelved changes found"));
+
+  list = svn_sort__hash(dirents, compare_dirents_by_mtime, scratch_pool);
+  youngest_item = &APR_ARRAY_IDX(list, list->nelts - 1, svn_sort__item_t);
+  *name_p = apr_pstrndup(result_pool, youngest_item->key,
+                         strlen(youngest_item->key) - 6 /* remove '.patch' */);
   return SVN_NO_ERROR;
 }
 
@@ -245,7 +286,15 @@ svn_cl__unshelve(apr_getopt_t *os,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(get_name(&name, os, pool, pool));
+  if (os->ind < os->argc)
+    {
+      SVN_ERR(get_name(&name, os, pool, pool));
+    }
+  else
+    {
+      SVN_ERR(name_of_youngest(&name, local_abspath, ctx, pool, pool));
+      printf("unshelving the youngest change, '%s'\n", name);
+    }
 
   /* There should be no remaining arguments. */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
