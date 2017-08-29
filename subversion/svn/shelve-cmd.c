@@ -32,17 +32,17 @@
 #include "svn_private_config.h"
 
 
-/* First argument should be the name of a shelve. */
+/* First argument should be the name of a shelved change. */
 static svn_error_t *
-get_shelf_name(const char **shelf_name,
-               apr_getopt_t *os,
-               apr_pool_t *result_pool,
-               apr_pool_t *scratch_pool)
+get_name(const char **name,
+         apr_getopt_t *os,
+         apr_pool_t *result_pool,
+         apr_pool_t *scratch_pool)
 {
   apr_array_header_t *args;
 
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, scratch_pool));
-  SVN_ERR(svn_utf_cstring_to_utf8(shelf_name,
+  SVN_ERR(svn_utf_cstring_to_utf8(name,
                                   APR_ARRAY_IDX(args, 0, const char *),
                                   result_pool));
   return SVN_NO_ERROR;
@@ -127,7 +127,7 @@ svn_cl__shelve(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *local_abspath;
-  const char *shelf_name;
+  const char *name;
   apr_array_header_t *targets;
 
   if (opt_state->quiet)
@@ -146,18 +146,18 @@ svn_cl__shelve(apr_getopt_t *os,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(get_shelf_name(&shelf_name, os, pool, pool));
+  SVN_ERR(get_name(&name, os, pool, pool));
 
   if (opt_state->remove)
     {
       if (os->ind < os->argc)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-      SVN_ERR(svn_client_shelves_delete(shelf_name, local_abspath,
+      SVN_ERR(svn_client_shelves_delete(name, local_abspath,
                                         opt_state->dry_run,
                                         ctx, pool));
       if (! opt_state->quiet)
-        SVN_ERR(svn_cmdline_printf(pool, "deleted '%s'\n", shelf_name));
+        SVN_ERR(svn_cmdline_printf(pool, "deleted '%s'\n", name));
       return SVN_NO_ERROR;
     }
 
@@ -187,7 +187,7 @@ svn_cl__shelve(apr_getopt_t *os,
         SVN_ERR(svn_cl__make_log_msg_baton(&ctx->log_msg_baton3,
                                            opt_state, NULL, ctx->config,
                                            pool));
-      err = svn_client_shelve(shelf_name,
+      err = svn_client_shelve(name,
                               targets, depth, opt_state->changelists,
                               opt_state->keep_local, opt_state->dry_run,
                               ctx, pool);
@@ -198,7 +198,7 @@ svn_cl__shelve(apr_getopt_t *os,
         SVN_ERR(err);
 
       if (! opt_state->quiet)
-        SVN_ERR(svn_cmdline_printf(pool, "shelved '%s'\n", shelf_name));
+        SVN_ERR(svn_cmdline_printf(pool, "shelved '%s'\n", name));
   }
 
   return SVN_NO_ERROR;
@@ -213,7 +213,7 @@ svn_cl__unshelve(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *local_abspath;
-  const char *shelf_name;
+  const char *name;
   apr_array_header_t *targets;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
@@ -229,7 +229,7 @@ svn_cl__unshelve(apr_getopt_t *os,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(get_shelf_name(&shelf_name, os, pool, pool));
+  SVN_ERR(get_name(&name, os, pool, pool));
 
   /* There should be no remaining arguments. */
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
@@ -241,11 +241,11 @@ svn_cl__unshelve(apr_getopt_t *os,
   if (opt_state->quiet)
     ctx->notify_func2 = NULL; /* Easy out: avoid unneeded work */
 
-  SVN_ERR(svn_client_unshelve(shelf_name, local_abspath,
+  SVN_ERR(svn_client_unshelve(name, local_abspath,
                               opt_state->keep_local, opt_state->dry_run,
                               ctx, pool));
   if (! opt_state->quiet)
-    SVN_ERR(svn_cmdline_printf(pool, "unshelved '%s'\n", shelf_name));
+    SVN_ERR(svn_cmdline_printf(pool, "unshelved '%s'\n", name));
 
   return SVN_NO_ERROR;
 }
