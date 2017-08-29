@@ -165,6 +165,7 @@ svn_cl__shelve(apr_getopt_t *os,
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
                                                       ctx, FALSE, pool));
+  svn_opt_push_implicit_dot_target(targets, pool);
 
   {
       svn_depth_t depth = opt_state->depth;
