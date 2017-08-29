@@ -183,11 +183,18 @@ svn_client_shelf_delete_patch(const char *shelf_name,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool)
 {
-  char *patch_abspath;
+  char *patch_abspath, *to_abspath;
 
   SVN_ERR(get_patch_abspath(&patch_abspath, shelf_name, wc_root_abspath,
                             ctx, scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_remove_file2(patch_abspath, FALSE /*ignore_enoent*/,
+  to_abspath = apr_pstrcat(scratch_pool, patch_abspath, ".bak", SVN_VA_NULL);
+
+  /* remove any previous backup */
+  SVN_ERR(svn_io_remove_file2(to_abspath, TRUE /*ignore_enoent*/,
+                              scratch_pool));
+
+  /* move the patch to a backup file */
+  SVN_ERR(svn_io_file_rename2(patch_abspath, to_abspath, FALSE /*flush_to_disk*/,
                               scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -350,8 +357,9 @@ svn_client_shelves_list(apr_hash_t **dirents,
   for (hi = apr_hash_first(scratch_pool, *dirents); hi; hi = apr_hash_next(hi))
     {
       const char *name = apr_hash_this_key(hi);
+      int len = strlen(name);
 
-      if (! strstr(name, ".patch"))
+      if (len < 6 || strcmp(name + len - 6, ".patch") != 0)
         {
           svn_hash_sets(*dirents, name, NULL);
         }
