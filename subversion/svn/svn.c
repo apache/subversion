@@ -1650,23 +1650,31 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
 
   { "shelve", svn_cl__shelve, {0}, N_
-    ("Shelve changes.\n"
+    ("Put a local change aside, as if putting it on a shelf.\n"
      "usage: 1. shelve [--keep-local] NAME PATH...\n"
      "       2. shelve --delete NAME\n"
      "       3. shelve --list\n"
      "\n"
-     "  1. Save the local changes in the given PATHs to a patch file, and\n"
-     "     revert those changes from the WC unless '--keep-local' is given.\n"
+     "  1. Save the local change in the given PATHs to a patch file, and\n"
+     "     revert that change from the WC unless '--keep-local' is given.\n"
      "     If a log message is given with '-m' or '-F', include it at the\n"
      "     beginning of the patch file.\n"
      "\n"
-     "  2. Delete the shelved patch NAME.\n"
+     "  2. Delete the shelved change NAME.\n"
      "\n"
-     "  3. List shelved patches. Include the first line of any log message\n"
-     "     and some details about the contents of the patch, unless '-q' is\n"
+     "  3. List shelved changes. Include the first line of any log message\n"
+     "     and some details about the contents of the change, unless '-q' is\n"
      "     given.\n"
      "\n"
-     "  Patch files are named .svn/shelves/NAME.patch\n"),
+     "  The kinds of change you can shelve are those supported by 'svn diff'\n"
+     "  and 'svn patch'. The following are currently NOT supported:\n"
+     "     mergeinfo changes, copies, moves, mkdir, rmdir,\n"
+     "     'binary' content, uncommittable states\n"
+     "\n"
+     "  To bring back a shelved change, use 'svn unshelve NAME'.\n"
+     "\n"
+     "  A shelved change is stored as a patch file, .svn/shelves/NAME.patch\n"
+    ),
     {opt_delete, opt_list, 'q', opt_dry_run, opt_keep_local,
      'N', opt_depth, opt_targets, opt_changelist,
      /* almost SVN_CL__LOG_MSG_OPTIONS but not currently opt_with_revprop: */
@@ -1674,20 +1682,25 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     } },
 
   { "unshelve", svn_cl__unshelve, {0}, N_
-    ("Unshelve changes.\n"
+    ("Bring a shelved change back to a local change in the WC.\n"
      "usage: 1. unshelve [--keep-shelved] NAME\n"
      "       2. unshelve --list\n"
      "\n"
-     "  1. Apply the shelved patch NAME to the working copy.\n"
+     "  1. Apply the shelved change NAME to the working copy.\n"
      "     Delete the patch unless the '--keep-shelved' option is given.\n"
      "\n"
-     "  2. List shelved patches. Include the first line of any log message\n"
-     "     and some details about the contents of the patch, unless '-q' is\n"
-     "     given.\n"),
+     "  2. List shelved changes. Include the first line of any log message\n"
+     "     and some details about the contents of the change, unless '-q' is\n"
+     "     given.\n"
+     "\n"
+     "  Any conflict between the change being unshelved and a change\n"
+     "  already in the WC is handled the same way as by 'svn patch',\n"
+     "  creating a 'reject' file.\n"
+    ),
     {opt_keep_shelved, opt_list, 'q', opt_dry_run} },
 
   { "shelves", svn_cl__shelves, {0}, N_
-    ("List shelved patches.\n"
+    ("List shelved changes.\n"
      "usage: shelves\n"),
     {} },
 
