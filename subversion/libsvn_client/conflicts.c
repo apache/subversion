@@ -520,7 +520,7 @@ struct find_deleted_rev_baton
    * svn_ra_get_log2(). */
   const char *deleted_repos_relpath;
   const char *related_repos_relpath;
-  svn_revnum_t related_repos_peg_rev;
+  svn_revnum_t related_peg_rev;
   const char *repos_root_url;
   const char *repos_uuid;
   svn_client_ctx_t *ctx;
@@ -796,7 +796,7 @@ find_deleted_rev(void *baton,
           deleted_node_found = TRUE;
 
           if (b->related_repos_relpath != NULL &&
-              b->related_repos_peg_rev != SVN_INVALID_REVNUM)
+              b->related_peg_rev != SVN_INVALID_REVNUM)
             {
               svn_client__pathrev_t *yca_loc;
               svn_error_t *err;
@@ -807,7 +807,7 @@ find_deleted_rev(void *baton,
                * "related node" specified in our baton. */
               err = find_yca(&yca_loc,
                              b->related_repos_relpath,
-                             b->related_repos_peg_rev,
+                             b->related_peg_rev,
                              b->deleted_repos_relpath,
                              rev_below(log_entry->revision),
                              b->repos_root_url, b->repos_uuid,
@@ -1887,7 +1887,7 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
   b.deleted_repos_relpath = svn_relpath_join(parent_repos_relpath,
                                              deleted_basename, scratch_pool);
   b.related_repos_relpath = related_repos_relpath;
-  b.related_repos_peg_rev = related_peg_rev;
+  b.related_peg_rev = related_peg_rev;
   b.deleted_rev = SVN_INVALID_REVNUM;
   b.replacing_node_kind = svn_node_unknown;
   b.repos_root_url = repos_root_url;
