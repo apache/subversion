@@ -1684,12 +1684,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "unshelve", svn_cl__unshelve, {0}, N_
     ("Bring a shelved change back to a local change in the WC.\n"
-     "usage: 1. unshelve [--keep-shelved] NAME\n"
+     "usage: 1. unshelve [--keep-shelved] [NAME]\n"
      "       2. unshelve --list\n"
      "\n"
      "  1. Apply the shelved change NAME to the working copy.\n"
      "     Delete the patch unless the '--keep-shelved' option is given.\n"
      "     (A backup is kept, named with a '.bak' extension.)\n"
+     "     NAME defaults to the most recent shelved change.\n"
      "\n"
      "  2. List shelved changes. Include the first line of any log message\n"
      "     and some details about the contents of the change, unless '-q' is\n"
