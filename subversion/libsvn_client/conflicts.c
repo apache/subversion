@@ -1925,7 +1925,7 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
           *deleted_rev_author = move->rev_author;
           *replacing_node_kind = b.replacing_node_kind;
           SVN_ERR(find_operative_moves(moves, moves_table,
-                                       move->moved_from_repos_relpath,
+                                       b.deleted_repos_relpath,
                                        move->rev,
                                        ra_session, repos_root_url,
                                        result_pool, scratch_pool));
