@@ -112,12 +112,12 @@ svn_spillbuf__get_size(const svn_spillbuf_t *buf);
 svn_filesize_t
 svn_spillbuf__get_memory_size(const svn_spillbuf_t *buf);
 
-/* Retrieve the name of the spill file. The returned value can be NULL
-   if the file has not been created yet. */
+/* Retrieve the name of the spill file. The returned value will be
+   NULL if the file has not been created yet. */
 const char *
 svn_spillbuf__get_filename(const svn_spillbuf_t *buf);
 
-/* Retrieve the handle of the spill file. The returned value can be
+/* Retrieve the handle of the spill file. The returned value will be
    NULL if the file has not been created yet. */
 apr_file_t *
 svn_spillbuf__get_file(const svn_spillbuf_t *buf);
@@ -133,8 +133,8 @@ svn_spillbuf__write(svn_spillbuf_t *buf,
 /* Read a block of memory from the spill buffer. @a *data will be set to
    NULL if no content remains. Otherwise, @a data and @a len will point to
    data that must be fully-consumed by the caller. This data will remain
-   valid until another call to svn_spillbuf_write(), svn_spillbuf_read(),
-   or svn_spillbuf_process(), or if the spill buffer's pool is cleared.  */
+   valid until another call to svn_spillbuf__write(), svn_spillbuf__read(),
+   or svn_spillbuf__process(), or if the spill buffer's pool is cleared.  */
 svn_error_t *
 svn_spillbuf__read(const char **data,
                    apr_size_t *len,
@@ -143,7 +143,7 @@ svn_spillbuf__read(const char **data,
 
 
 /* Callback for reading content out of the spill buffer. Set @a stop if
-   you want to stop the processing (and will call svn_spillbuf_process
+   you want to stop the processing (and will call svn_spillbuf__process
    again, at a later time).  */
 typedef svn_error_t * (*svn_spillbuf_read_t)(svn_boolean_t *stop,
                                              void *baton,
