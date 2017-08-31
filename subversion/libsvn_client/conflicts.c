@@ -1503,7 +1503,9 @@ find_moves(void *baton, svn_log_entry_t *log_entry, apr_pool_t *scratch_pool)
 static svn_error_t *
 find_moves_in_revision_range(struct apr_hash_t **moves_table,
                              const char *repos_relpath,
-                             svn_client_conflict_t *conflict,
+                             const char *repos_root_url,
+                             const char *repos_uuid,
+                             const char *victim_abspath,
                              svn_revnum_t start_rev,
                              svn_revnum_t end_rev,
                              svn_client_ctx_t *ctx,
@@ -1515,15 +1517,10 @@ find_moves_in_revision_range(struct apr_hash_t **moves_table,
   const char *corrected_url;
   apr_array_header_t *paths;
   apr_array_header_t *revprops;
-  const char *repos_root_url;
-  const char *repos_uuid;
   struct find_moves_baton b = { 0 };
 
   SVN_ERR_ASSERT(start_rev > end_rev);
 
-  SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
-                                             conflict, scratch_pool,
-                                             scratch_pool));
   url = svn_path_url_add_component2(repos_root_url, repos_relpath,
                                     scratch_pool);
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
@@ -1540,7 +1537,7 @@ find_moves_in_revision_range(struct apr_hash_t **moves_table,
   b.repos_root_url = repos_root_url;
   b.repos_uuid = repos_uuid;
   b.ctx = ctx;
-  b.victim_abspath = conflict->local_abspath;
+  b.victim_abspath = victim_abspath;
   b.moves_table = apr_hash_make(result_pool);
   b.moved_paths = apr_hash_make(scratch_pool);
   b.result_pool = result_pool;
@@ -1858,13 +1855,16 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
 
   SVN_ERR_ASSERT(start_rev > end_rev);
 
-  SVN_ERR(find_moves_in_revision_range(&moves_table, parent_repos_relpath,
-                                       conflict, start_rev, end_rev,
-                                       ctx, result_pool, scratch_pool));
-
   SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, &repos_uuid,
                                              conflict, scratch_pool,
                                              scratch_pool));
+  victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+
+  SVN_ERR(find_moves_in_revision_range(&moves_table, parent_repos_relpath,
+                                       repos_root_url, repos_uuid,
+                                       victim_abspath, start_rev, end_rev,
+                                       ctx, result_pool, scratch_pool));
+
   url = svn_path_url_add_component2(repos_root_url, parent_repos_relpath,
                                     scratch_pool);
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, &corrected_url,
@@ -1878,7 +1878,6 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
   revprops = apr_array_make(scratch_pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(revprops, const char *) = SVN_PROP_REVISION_AUTHOR;
 
-  victim_abspath = svn_client_conflict_get_local_abspath(conflict);
   b.victim_abspath = victim_abspath;
   b.deleted_repos_relpath = svn_relpath_join(parent_repos_relpath,
                                              deleted_basename, scratch_pool);
@@ -1950,7 +1949,6 @@ find_revision_for_suspected_deletion(svn_revnum_t *deleted_rev,
                                    b.deleted_repos_relpath, b.deleted_rev,
                                    ra_session, repos_root_url,
                                    result_pool, scratch_pool));
-
     }
 
   return SVN_NO_ERROR;
