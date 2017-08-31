@@ -726,6 +726,33 @@ find_nested_moves(apr_array_header_t *moves,
   return SVN_NO_ERROR;
 }
 
+/* Make a shallow copy of the copied LOG_ITEM in COPIES. */
+static void
+cache_copied_item(apr_hash_t *copies, const char *changed_path,
+                  svn_log_changed_path2_t *log_item)
+{
+  apr_pool_t *result_pool = apr_hash_pool_get(copies);
+  struct copy_info *copy = apr_palloc(result_pool, sizeof(*copy));
+  apr_array_header_t *copies_with_same_source_path;
+
+  copy->copyfrom_path = log_item->copyfrom_path;
+  if (log_item->copyfrom_path[0] == '/')
+    copy->copyfrom_path++;
+  copy->copyto_path = changed_path;
+  copy->copyfrom_rev = log_item->copyfrom_rev;
+
+  copies_with_same_source_path = apr_hash_get(copies, copy->copyfrom_path,
+                                              APR_HASH_KEY_STRING);
+  if (copies_with_same_source_path == NULL)
+    {
+      copies_with_same_source_path = apr_array_make(result_pool, 1,
+                                                    sizeof(struct copy_info *));
+      apr_hash_set(copies, copy->copyfrom_path, APR_HASH_KEY_STRING,
+                   copies_with_same_source_path);
+    }
+  APR_ARRAY_PUSH(copies_with_same_source_path, struct copy_info *) = copy;
+}
+
 /* Implements svn_log_entry_receiver_t.
  *
  * Find the revision in which a node, optionally ancestrally related to the
@@ -1438,31 +1465,7 @@ find_moves(void *baton, svn_log_entry_t *log_entry, apr_pool_t *scratch_pool)
 
       /* For move detection, scan for copied nodes in this revision. */
       if (log_item->action == 'A' && log_item->copyfrom_path)
-        {
-          struct copy_info *copy;
-          apr_array_header_t *copies_with_same_source_path;
-
-          if (log_item->copyfrom_path[0] == '/')
-            log_item->copyfrom_path++;
-
-          copy = apr_palloc(scratch_pool, sizeof(*copy));
-          copy->copyto_path = changed_path;
-          copy->copyfrom_path = log_item->copyfrom_path;
-          copy->copyfrom_rev = log_item->copyfrom_rev;
-          copies_with_same_source_path = apr_hash_get(copies,
-                                                      log_item->copyfrom_path,
-                                                      APR_HASH_KEY_STRING);
-          if (copies_with_same_source_path == NULL)
-            {
-              copies_with_same_source_path = apr_array_make(
-                                               scratch_pool, 1,
-                                               sizeof(struct copy_info *));
-              apr_hash_set(copies, copy->copyfrom_path, APR_HASH_KEY_STRING,
-                           copies_with_same_source_path);
-            }
-          APR_ARRAY_PUSH(copies_with_same_source_path,
-                         struct copy_info *) = copy;
-        }
+        cache_copied_item(copies, changed_path, log_item);
 
       /* For move detection, store all deleted_paths. */
       if (log_item->action == 'D' || log_item->action == 'R')
