@@ -1788,13 +1788,9 @@ find_operative_moves(apr_array_header_t **moves,
       move = APR_ARRAY_IDX(moves_in_deleted_rev, i, struct repos_move_info *);
       relpath = svn_relpath_skip_ancestor(move->moved_from_repos_relpath,
                                           deleted_repos_relpath);
-      if (relpath)
-        {
-          struct repos_move_info *new_move;
-
-          new_move = new_path_adjusted_move(move, relpath, result_pool);
-          APR_ARRAY_PUSH(*moves, struct repos_move_info *) = new_move;
-        }
+      if (relpath && relpath[0] != '\0')
+        move = new_path_adjusted_move(move, relpath, result_pool);
+      APR_ARRAY_PUSH(*moves, struct repos_move_info *) = move;
     }
 
   /* If we didn't find any applicable moves, return NULL. */
