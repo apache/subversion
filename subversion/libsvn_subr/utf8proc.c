@@ -240,6 +240,38 @@ svn_utf__xfrm(const char **result,
   return SVN_NO_ERROR;
 }
 
+svn_boolean_t
+svn_utf__fuzzy_glob_match(const char *str,
+                          const apr_array_header_t *patterns,
+                          svn_membuf_t *buf)
+{
+  const char *normalized;
+  svn_error_t *err;
+  int i;
+
+  /* Try to normalize case and accents in STR.
+   *
+   * If that should fail for some reason, continue with the original STR.
+   * There is still a fair chance that it matches "*.ext" pattern despite
+   * being "broken" UTF8. */
+  err = svn_utf__xfrm(&normalized, str, strlen(str), TRUE, TRUE, buf);
+  if (err)
+    {
+      svn_error_clear(err);
+      normalized = str;
+    }
+
+  /* Now see whether it matches any/all of the patterns. */
+  for (i = 0; i < patterns->nelts; ++i)
+    {
+      const char *pattern = APR_ARRAY_IDX(patterns, i, const char *);
+      if (apr_fnmatch(pattern, normalized, 0) == APR_SUCCESS)
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
 /* Decode a single UCS-4 code point to UTF-8, appending the result to BUFFER.
  * Assume BUFFER is already filled to *LENGTH and return the new size there.
  * This function does *not* nul-terminate the stringbuf!
