@@ -145,7 +145,6 @@ typedef enum svn_cl__longopt_t {
   opt_show_item,
   opt_adds_as_modification,
   opt_vacuum_pristines,
-  opt_pattern,
 } svn_cl__longopt_t;
 
 
@@ -463,11 +462,6 @@ const apr_getopt_option_t svn_cl__options[] =
 
   {"vacuum-pristines", opt_vacuum_pristines, 0,
                        N_("remove unreferenced pristines from .svn directory")},
-
-  {"pattern", opt_pattern, 1,
-                       N_("use ARG as search pattern (glob syntax,\n"
-                          "                             "
-                          "case-sensitive)")},
 
   /* Long-opt Aliases
    *
@@ -816,7 +810,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"),
     {'r', 'v', 'R', opt_depth, opt_incremental, opt_xml,
-     opt_include_externals, opt_pattern}, },
+     opt_include_externals, opt_search}, },
 
   { "lock", svn_cl__lock, {0}, N_
     ("Lock working copy paths or URLs in the repository, so that\n"
@@ -2525,10 +2519,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_vacuum_pristines:
         opt_state.vacuum_pristines = TRUE;
-        break;
-      case opt_pattern:
-        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        add_search_pattern_group(&opt_state, utf8_opt_arg, pool);
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
