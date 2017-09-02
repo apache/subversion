@@ -3126,7 +3126,19 @@ def filtered_ls(sbox):
                "gamma\n" ]
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, [], 'ls', path, '--depth=infinity', '--search=*a')
+    expected, [], 'ls', path, '--depth=infinity', '--search=*a')
+
+  # check case-insensitivity
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    expected, [], 'ls', path, '--depth=infinity', '--search=*A')
+
+  expected = [ "H/\n" ]
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    expected, [], 'ls', path, '--depth=infinity', '--search=h')
+
+  # we don't match full paths
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    [], [], 'ls', path, '--depth=infinity', '--search=*/*')
 
 ########################################################################
 # Run the tests
