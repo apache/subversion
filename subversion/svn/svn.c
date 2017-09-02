@@ -402,7 +402,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"show-inherited-props", opt_show_inherited_props, 0,
                        N_("retrieve properties set on parents of the target")},
   {"search", opt_search, 1,
-                       N_("use ARG as search pattern (glob syntax)")},
+                       N_("use ARG as search pattern (glob syntax, case-\n"
+                       "                             "
+                       "and accent-insensitive)")},
   {"search-and", opt_search_and, 1,
                        N_("combine ARG with the previous search pattern")},
   {"log", opt_mergeinfo_log, 0,
@@ -801,6 +803,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  The default TARGET is '.', meaning the repository URL of the current\n"
      "  working directory.\n"
+     "\n"
+     "  Multiple --search patterns may be specified and the output will be\n"
+     "  reduced to those paths whose last segment - i.e. the file or directory\n"
+     "  name - matches at least one of these patterns.\n"
      "\n"
      "  With --verbose, the following fields will be shown for each item:\n"
      "\n"
