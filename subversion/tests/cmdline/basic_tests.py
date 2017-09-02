@@ -3126,7 +3126,7 @@ def filtered_ls(sbox):
                "gamma\n" ]
 
   exit_code, output, error = svntest.actions.run_and_verify_svn(
-    None, [], 'ls', path, '--depth=infinity', '--pattern=*a')
+    None, [], 'ls', path, '--depth=infinity', '--search=*a')
 
 ########################################################################
 # Run the tests
