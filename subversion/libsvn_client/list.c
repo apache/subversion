@@ -37,6 +37,7 @@
 #include "private/svn_fspath.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_sorts_private.h"
+#include "private/svn_utf_private.h"
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
@@ -69,23 +70,16 @@ list_internal(const char *path_or_url,
               apr_pool_t *pool);
 
 /* Return TRUE if S matches any of the const char * in PATTERNS.
- * Note that any S will match if PATTERNS is empty. */
+ * Note that any S will match if PATTERNS is empty.
+ * Use SCRATCH_BUFFER for temporary string contents. */
 static svn_boolean_t
 match_patterns(const char *s,
-               const apr_array_header_t *patterns)
+               const apr_array_header_t *patterns,
+               svn_membuf_t *scratch_buffer)
 {
-  int i;
-  if (!patterns)
-    return TRUE;
-
-  for (i = 0; i < patterns->nelts; ++i)
-    {
-      const char *pattern = APR_ARRAY_IDX(patterns, i, const char *);
-      if (apr_fnmatch(pattern, s, APR_FNM_PERIOD) == APR_SUCCESS)
-        return TRUE;
-    }
-
-  return FALSE;
+  return patterns
+       ? svn_utf__fuzzy_glob_match(s, patterns, scratch_buffer)
+       : TRUE;
 }
 
 /* Get the directory entries of DIR at REV (relative to the root of
@@ -113,6 +107,8 @@ match_patterns(const char *s,
 
    EXTERNAL_PARENT_URL and EXTERNAL_TARGET are set when external items
    are listed, otherwise both are set to NULL by the caller.
+
+   Use SCRATCH_BUFFER for temporary string contents.
 */
 static svn_error_t *
 get_dir_contents(apr_uint32_t dirent_fields,
@@ -129,6 +125,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
                  const char *external_target,
                  svn_client_list_func2_t list_func,
                  void *baton,
+                 svn_membuf_t *scratch_buffer,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
@@ -203,7 +200,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
       if (the_ent->kind == svn_node_file
           || depth == svn_depth_immediates
           || depth == svn_depth_infinity)
-        if (match_patterns(item->key, patterns))
+        if (match_patterns(item->key, patterns, scratch_buffer))
           SVN_ERR(list_func(baton, path, the_ent, lock, fs_path,
                             external_parent_url, external_target, iterpool));
 
@@ -214,7 +211,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
                                  locks, fs_path, patterns, depth, ctx,
                                  externals, external_parent_url,
                                  external_target, list_func, baton,
-                                 result_pool, iterpool));
+                                 scratch_buffer, result_pool, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -329,6 +326,7 @@ list_internal(const char *path_or_url,
   svn_error_t *err;
   apr_hash_t *locks;
   apr_hash_t *externals;
+  svn_membuf_t scratch_buffer;
 
   if (include_externals)
     externals = apr_hash_make(pool);
@@ -391,8 +389,13 @@ list_internal(const char *path_or_url,
                              _("URL '%s' non-existent in revision %ld"),
                              loc->url, loc->rev);
 
+  /* We need a scratch buffer for temporary string data.
+   * Create one with a reasonable initial size. */
+  svn_membuf__create(&scratch_buffer, 256, pool);
+
   /* Report the dirent for the target. */
-  if (match_patterns(svn_dirent_dirname(fs_path, pool), patterns))
+  if (match_patterns(svn_dirent_dirname(fs_path, pool), patterns,
+                     &scratch_buffer))
     SVN_ERR(list_func(baton, "", dirent, locks
                       ? (svn_hash_gets(locks, fs_path))
                       : NULL, fs_path, external_parent_url,
@@ -405,7 +408,7 @@ list_internal(const char *path_or_url,
     SVN_ERR(get_dir_contents(dirent_fields, "", loc->rev, ra_session, locks,
                              fs_path, patterns, depth, ctx, externals,
                              external_parent_url, external_target, list_func,
-                             baton, pool, pool));
+                             baton, &scratch_buffer, pool, pool));
 
   /* We handle externals after listing entries under path_or_url, so that
      handling external items (and any errors therefrom) doesn't delay

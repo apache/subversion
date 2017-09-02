@@ -172,6 +172,18 @@ svn_utf__xfrm(const char **result,
               svn_boolean_t accent_insensitive,
               svn_membuf_t *buf);
 
+/* Return TRUE if S matches any of the const char * glob patterns in
+ * PATTERNS.
+ *
+ * S will internally be normalized to lower-case and accents removed
+ * using svn_utf__xfrm.  To get a match, the PATTERNS must have been
+ * normalized accordingly before calling this function.
+ */
+svn_boolean_t
+svn_utf__fuzzy_glob_match(const char *str,
+                          const apr_array_header_t *patterns,
+                          svn_membuf_t *buf);
+
 /* Check if STRING is a valid, NFC-normalized UTF-8 string.  Note that
  * a FALSE return value may indicate that STRING is not valid UTF-8 at
  * all.
