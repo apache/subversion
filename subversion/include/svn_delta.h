@@ -1160,7 +1160,7 @@ typedef struct svn_delta_editor_t
    * be ignored even if not NULL.  If it is not ignored, it must match
    * the checksum of the base text against which svndiff data is being
    * applied; if it does not, @c apply_textdelta_stream call which detects
-   * the mismatch will return the error SVN_ERR_CHECKSUM_MISMATCH
+   * the mismatch will return the error #SVN_ERR_CHECKSUM_MISMATCH
    * (if there is no base text, there may still be an error if
    * @a base_checksum is neither NULL nor the hex MD5 checksum of the
    * empty string).
