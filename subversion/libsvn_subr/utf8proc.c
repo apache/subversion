@@ -251,14 +251,12 @@ svn_utf__fuzzy_glob_match(const char *str,
 
   /* Try to normalize case and accents in STR.
    *
-   * If that should fail for some reason, continue with the original STR.
-   * There is still a fair chance that it matches "*.ext" pattern despite
-   * being "broken" UTF8. */
+   * If that should fail for some reason, consider STR a mismatch. */
   err = svn_utf__xfrm(&normalized, str, strlen(str), TRUE, TRUE, buf);
   if (err)
     {
       svn_error_clear(err);
-      normalized = str;
+      return FALSE;
     }
 
   /* Now see whether it matches any/all of the patterns. */
