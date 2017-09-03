@@ -9713,6 +9713,21 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
   return SVN_NO_ERROR;
 }
 
+/* Swallow authz failures and return SVN_NO_ERROR in that case.
+ * Otherwise, return ERR unchanged. */
+static svn_error_t *
+ignore_authz_failures(svn_error_t *err)
+{
+  if (err && (   (err->apr_err == SVN_ERR_AUTHZ_UNREADABLE)
+              || (err->apr_err == SVN_ERR_RA_NOT_AUTHORIZED)))
+    {
+      svn_error_clear(err);
+      err = SVN_NO_ERROR;
+    }
+
+  return err;
+}
+
 svn_error_t *
 svn_client_conflict_tree_get_details(svn_client_conflict_t *conflict,
                                      svn_client_ctx_t *ctx,
@@ -9732,13 +9747,18 @@ svn_client_conflict_tree_get_details(svn_client_conflict_t *conflict,
                                   scratch_pool);
     }
 
+  /* Collecting conflict details may fail due to insufficient access rights.
+   * This is not a failure but simply restricts our future options. */
   if (conflict->tree_conflict_get_incoming_details_func)
-    SVN_ERR(conflict->tree_conflict_get_incoming_details_func(conflict, ctx,
-                                                              scratch_pool));
+    SVN_ERR(ignore_authz_failures(
+      conflict->tree_conflict_get_incoming_details_func(conflict, ctx,
+                                                        scratch_pool)));
+
 
   if (conflict->tree_conflict_get_local_details_func)
-    SVN_ERR(conflict->tree_conflict_get_local_details_func(conflict, ctx,
-                                                           scratch_pool));
+    SVN_ERR(ignore_authz_failures(
+      conflict->tree_conflict_get_local_details_func(conflict, ctx,
+                                                    scratch_pool)));
 
   if (ctx->notify_func2)
     {
