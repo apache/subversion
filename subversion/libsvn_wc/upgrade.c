@@ -28,6 +28,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
+#include "svn_version.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -1857,6 +1858,15 @@ bump_to_31(void *baton,
 }
 
 static svn_error_t *
+bump_to_32(void *baton,
+           svn_sqlite__db_t *sdb,
+           apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_32));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
                         const char *dir_relpath,
                         apr_int64_t wc_id,
@@ -2055,21 +2065,22 @@ svn_wc__version_string_from_format(int wc_format)
       case 9: return "1.5";
       case 10: return "1.6";
       case SVN_WC__WC_NG_VERSION: return "1.7";
+      case 29: return "1.7";
+      case 31: return "1.8";
+      case 32: return "1.10";
     }
   return _("(unreleased development version)");
 }
+
 
 svn_error_t *
 svn_wc__upgrade_sdb(int *result_format,
                     const char *wcroot_abspath,
                     svn_sqlite__db_t *sdb,
                     int start_format,
+                    int target_format,
                     apr_pool_t *scratch_pool)
 {
-  struct bump_baton bb;
-
-  bb.wcroot_abspath = wcroot_abspath;
-
   if (start_format < SVN_WC__WC_NG_VERSION /* 12 */)
     return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
                              _("Working copy '%s' is too old (format %d, "
@@ -2091,100 +2102,42 @@ svn_wc__upgrade_sdb(int *result_format,
                                                     scratch_pool),
                              start_format);
 
-  /* ### need lock-out. only one upgrade at a time. note that other code
-     ### cannot use this un-upgraded database until we finish the upgrade.  */
+  if (start_format > target_format)
+    return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+                             _("Working copy '%s' is already at version %s "
+                               "(format %d) and cannot be downgraded to "
+                               "version %s (format %d)"),
+                             svn_dirent_local_style(wcroot_abspath,
+                                                    scratch_pool),
+                             svn_wc__version_string_from_format(start_format),
+                             start_format,
+                             svn_wc__version_string_from_format(target_format),
+                             target_format);
 
-  /* Note: none of these have "break" statements; the fall-through is
-     intentional. */
-  switch (start_format)
-    {
-      case 19:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_20, &bb,
-                                             scratch_pool));
-        *result_format = 20;
-        /* FALLTHROUGH  */
+  if (target_format < SVN_WC__SUPPORTED_VERSION)
+    return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+                             _("Working copy version %s (format %d) "
+                               "is not supported by client version %s."),
+                             svn_wc__version_string_from_format(target_format),
+                             target_format, SVN_VER_NUM);
 
-      case 20:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_21, &bb,
-                                             scratch_pool));
-        *result_format = 21;
-        /* FALLTHROUGH  */
+  if (target_format > SVN_WC__VERSION)
+    return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+                             _("Working copy with format %d "
+                               "can't be created by client version %s."),
+                             target_format, SVN_VER_NUM);
 
-      case 21:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_22, &bb,
-                                             scratch_pool));
-        *result_format = 22;
-        /* FALLTHROUGH  */
+  /* FIXME:
+     ### need lock-out. only one upgrade at a time. note that other code
+     ### _can_ use this un-upgraded database before we finish the upgrade. */
+  /* Update the schema */
+  SVN_ERR(svn_wc__update_schema(result_format, wcroot_abspath, sdb,
+                                start_format, target_format, scratch_pool));
 
-      case 22:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_23, &bb,
-                                             scratch_pool));
-        *result_format = 23;
-        /* FALLTHROUGH  */
-
-      case 23:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_24, &bb,
-                                             scratch_pool));
-        *result_format = 24;
-        /* FALLTHROUGH  */
-
-      case 24:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_25, &bb,
-                                             scratch_pool));
-        *result_format = 25;
-        /* FALLTHROUGH  */
-
-      case 25:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_26, &bb,
-                                             scratch_pool));
-        *result_format = 26;
-        /* FALLTHROUGH  */
-
-      case 26:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_27, &bb,
-                                             scratch_pool));
-        *result_format = 27;
-        /* FALLTHROUGH  */
-
-      case 27:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_28, &bb,
-                                             scratch_pool));
-        *result_format = 28;
-        /* FALLTHROUGH  */
-
-      case 28:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_29, &bb,
-                                             scratch_pool));
-        *result_format = 29;
-        /* FALLTHROUGH  */
-
-      case 29:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_30, &bb,
-                                             scratch_pool));
-        *result_format = 30;
-
-      case 30:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_31, &bb,
-                                             scratch_pool));
-        *result_format = 31;
-        /* FALLTHROUGH  */
-      /* ### future bumps go here.  */
-#if 0
-      case XXX-1:
-        /* Revamp the recording of tree conflicts.  */
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_XXX, &bb,
-                                             scratch_pool));
-        *result_format = XXX;
-        /* FALLTHROUGH  */
-#endif
-      case SVN_WC__VERSION:
-        /* already upgraded */
-        *result_format = SVN_WC__VERSION;
-
-        SVN_SQLITE__WITH_LOCK(
-            svn_wc__db_install_schema_statistics(sdb, scratch_pool),
-            sdb);
-    }
+  /* Make sure that the stats1 table is populated. */
+  SVN_SQLITE__WITH_TXN(
+      svn_wc__db_install_schema_statistics(sdb, scratch_pool),
+      sdb);
 
 #ifdef SVN_DEBUG
   if (*result_format != start_format)
@@ -2199,6 +2152,102 @@ svn_wc__upgrade_sdb(int *result_format,
 
   /* Zap anything that might be remaining or escaped our notice.  */
   wipe_obsolete_files(wcroot_abspath, scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__update_schema(int *result_format,
+                      const char *wcroot_abspath,
+                      svn_sqlite__db_t *sdb,
+                      int start_format,
+                      int target_format,
+                      apr_pool_t *scratch_pool)
+{
+  struct bump_baton bb;
+  bb.wcroot_abspath = wcroot_abspath;
+
+  /* Repeatedly upgrade until the target format version is reached. */
+  for (*result_format = start_format;
+       *result_format < target_format;)
+    {
+      switch (*result_format)
+        {
+          case 19:
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_20, &bb, scratch_pool));
+            *result_format = 20;
+            break;
+
+          case 20:
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_21, &bb, scratch_pool));
+            *result_format = 21;
+            break;
+
+          case 21:
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_22, &bb, scratch_pool));
+            *result_format = 22;
+            break;
+
+          case 22:
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_23, &bb, scratch_pool));
+            *result_format = 23;
+            break;
+
+          case 23:
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_24, &bb, scratch_pool));
+            *result_format = 24;
+            break;
+
+          case 24:
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_25, &bb, scratch_pool));
+            *result_format = 25;
+            break;
+
+          case 25:
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_26, &bb, scratch_pool));
+            *result_format = 26;
+            break;
+
+          case 26:
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_27, &bb, scratch_pool));
+            *result_format = 27;
+            break;
+
+          case 27:
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_28, &bb, scratch_pool));
+            *result_format = 28;
+            break;
+
+          case 28:
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_29, &bb, scratch_pool));
+            *result_format = 29;
+            break;
+
+          case 29:
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_30, &bb, scratch_pool));
+            *result_format = 30;
+            break;
+
+          case 30:
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_31, &bb, scratch_pool));
+            *result_format = 31;
+            break;
+
+          case 31:
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_32, &bb, scratch_pool));
+            *result_format = SVN_WC__VERSION;
+            break;
+
+          /* ### future bumps go here.  */
+#if 0
+          case XXX-1:
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_XXX, &bb, scratch_pool));
+            *result_format = XXX;
+            break;
+#endif
+        }
+    }
 
   return SVN_NO_ERROR;
 }

@@ -228,9 +228,11 @@ CREATE TABLE WC_LOCK (
   PRIMARY KEY (wc_id, local_dir_relpath)
  );
 
-
+/* When we're creating a new working copy, the default schema creates
+   the earliest supported format.  The normal WC upgrade code is used
+   to bring the format up to SVN_WC__VERSION. */
 PRAGMA user_version =
--- define: SVN_WC__VERSION
+-- define: SVN_WC__SUPPORTED_VERSION
 ;
 
 
@@ -920,6 +922,8 @@ CREATE UNIQUE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath,
 DROP INDEX I_ACTUAL_PARENT;
 CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath,
                                                     local_relpath);
+
+PRAGMA user_version = 32;
 
 /* ------------------------------------------------------------------------- */
 

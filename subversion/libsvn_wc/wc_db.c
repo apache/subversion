@@ -1365,15 +1365,22 @@ init_db(/* output values */
         const char *root_node_repos_relpath,
         svn_revnum_t root_node_revision,
         svn_depth_t root_node_depth,
+        const char *wcroot_abspath,
         apr_pool_t *scratch_pool)
 {
   svn_sqlite__stmt_t *stmt;
+  int result_format;
 
   /* Create the database's schema.  */
   SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_SCHEMA));
   SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_NODES));
   SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_NODES_TRIGGERS));
   SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_EXTERNALS));
+
+  /* TODO: Parametrize the target format here. */
+  SVN_ERR(svn_wc__update_schema(&result_format, wcroot_abspath, db,
+                                SVN_WC__SUPPORTED_VERSION, SVN_WC__VERSION,
+                                scratch_pool));
 
   SVN_ERR(svn_wc__db_install_schema_statistics(db, scratch_pool));
 
@@ -1447,7 +1454,7 @@ create_db(svn_sqlite__db_t **sdb,
   SVN_SQLITE__WITH_LOCK(init_db(repos_id, wc_id,
                                 *sdb, repos_root_url, repos_uuid,
                                 root_node_repos_relpath, root_node_revision,
-                                root_node_depth, scratch_pool),
+                                root_node_depth, dir_abspath, scratch_pool),
                         *sdb);
 
   return SVN_NO_ERROR;
@@ -16046,8 +16053,9 @@ svn_wc__db_bump_format(int *result_format,
     }
 
   SVN_ERR(svn_sqlite__read_schema_version(&format, sdb, scratch_pool));
+  /* TODO: Parametrize the target format here. */
   err = svn_wc__upgrade_sdb(result_format, wcroot_abspath,
-                            sdb, format, scratch_pool);
+                            sdb, format, SVN_WC__VERSION, scratch_pool);
 
   if (err == SVN_NO_ERROR && bumped_format)
     *bumped_format = (*result_format > format);

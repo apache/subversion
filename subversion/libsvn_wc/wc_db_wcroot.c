@@ -337,7 +337,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
   /* Verify that no work items exists. If they do, then our integrity is
      suspect and, thus, we cannot upgrade this database.  */
   if (format >= SVN_WC__HAS_WORK_QUEUE &&
-      format < SVN_WC__VERSION && verify_format)
+      format < SVN_WC__SUPPORTED_VERSION && verify_format)
     {
       svn_error_t *err = svn_wc__db_verify_no_work(sdb);
       if (err)
@@ -345,7 +345,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
           /* Special message for attempts to upgrade a 1.7-dev wc with
              outstanding workqueue items. */
           if (err->apr_err == SVN_ERR_WC_CLEANUP_REQUIRED
-              && format < SVN_WC__VERSION && verify_format)
+              && format < SVN_WC__SUPPORTED_VERSION && verify_format)
             err = svn_error_quick_wrap(err, _("Cleanup with an older 1.7 "
                                               "client before upgrading with "
                                               "this client"));
@@ -354,16 +354,27 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
     }
 
   /* Auto-upgrade the SDB if possible.  */
-  if (format < SVN_WC__VERSION && verify_format)
+  if (format < SVN_WC__SUPPORTED_VERSION && verify_format)
     {
-      return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
-                               _("The working copy at '%s'\nis too old "
-                                 "(format %d) to work with client version "
-                                 "'%s' (expects format %d). You need to "
-                                 "upgrade the working copy first.\n"),
-                               svn_dirent_local_style(wcroot_abspath,
-                                                      scratch_pool),
-                               format, SVN_VERSION, SVN_WC__VERSION);
+      if (SVN_WC__SUPPORTED_VERSION == SVN_WC__VERSION)
+        return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                                 _("The working copy at '%s'\nis too old "
+                                   "(format %d) to work with client version "
+                                   "'%s' (expects format %d). You need "
+                                   "to upgrade the working copy first.\n"),
+                                 svn_dirent_local_style(wcroot_abspath,
+                                                        scratch_pool),
+                                 format, SVN_VERSION, SVN_WC__VERSION);
+      else
+        return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                                 _("The working copy at '%s'\nis too old "
+                                   "(format %d) to work with client version "
+                                   "'%s' (expects format %d to %d). You need "
+                                   "to upgrade the working copy first.\n"),
+                                 svn_dirent_local_style(wcroot_abspath,
+                                                        scratch_pool),
+                                 format, SVN_VERSION,
+                                 SVN_WC__SUPPORTED_VERSION, SVN_WC__VERSION);
     }
 
   *wcroot = apr_palloc(result_pool, sizeof(**wcroot));

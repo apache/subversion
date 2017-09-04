@@ -160,11 +160,17 @@ extern "C" {
  * == 1.8.x shipped with format 31
  * == 1.9.x shipped with format 31
  *
+ * The bump to 32 added support for compressed pristines and pristine storage
+ * within the working copy database.
+ *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 31
+/* The default WC version created by the client. */
+#define SVN_WC__VERSION 32
 
+/* The minimum WC version supported by the client. */
+#define SVN_WC__SUPPORTED_VERSION 31
 
 /* Formats <= this have no concept of "revert text-base/props".  */
 #define SVN_WC__NO_REVERT_FILES 4
@@ -194,6 +200,10 @@ extern "C" {
 /* While we still have this DB version we should verify if there is
    sqlite_stat1 table on opening */
 #define SVN_WC__ENSURE_STAT1_TABLE 31
+
+/* In this version, we added support for compressed and in-database
+   pristine storage. */
+#define SVN_WC__COMPRESSED_PRISTINES 32
 
 /* Return a string indicating the released version (or versions) of
  * Subversion that used WC format number WC_FORMAT, or some other
@@ -583,7 +593,8 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                             apr_pool_t *scratch_pool);
 
 /* Upgrade the wc sqlite database given in SDB for the wc located at
-   WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.
+   WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT,
+   and the intended format is given by TARGET_FORMAT.
    After the upgrade is complete (to as far as the automatic upgrade will
    perform), the resulting format is RESULT_FORMAT. All allocations are
    performed in SCRATCH_POOL.  */
@@ -592,7 +603,17 @@ svn_wc__upgrade_sdb(int *result_format,
                     const char *wcroot_abspath,
                     svn_sqlite__db_t *sdb,
                     int start_format,
+                    int target_format,
                     apr_pool_t *scratch_pool);
+
+/* The schema-update part of svn_wc__upgrade_sdb. */
+svn_error_t *
+svn_wc__update_schema(int *result_format,
+                      const char *wcroot_abspath,
+                      svn_sqlite__db_t *sdb,
+                      int start_format,
+                      int target_format,
+                      apr_pool_t *scratch_pool);
 
 /* Create a conflict skel from the old separated data */
 svn_error_t *
