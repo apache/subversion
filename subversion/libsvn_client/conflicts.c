@@ -9718,9 +9718,9 @@ svn_client_conflict_tree_get_resolution_options(apr_array_header_t **options,
 static svn_error_t *
 ignore_authz_failures(svn_error_t *err)
 {
-  if (err && (   (err->apr_err == SVN_ERR_AUTHZ_UNREADABLE)
-              || (err->apr_err == SVN_ERR_RA_NOT_AUTHORIZED)
-              || (err->apr_err == SVN_ERR_RA_DAV_FORBIDDEN)))
+  if (err && (   svn_error_find_cause(err, SVN_ERR_AUTHZ_UNREADABLE)
+              || svn_error_find_cause(err, SVN_ERR_RA_NOT_AUTHORIZED)
+              || svn_error_find_cause(err, SVN_ERR_RA_DAV_FORBIDDEN)))
     {
       svn_error_clear(err);
       err = SVN_NO_ERROR;
