@@ -2135,7 +2135,7 @@ svn_wc__upgrade_sdb(int *result_format,
                                 start_format, target_format, scratch_pool));
 
   /* Make sure that the stats1 table is populated. */
-  SVN_SQLITE__WITH_TXN(
+  SVN_SQLITE__WITH_LOCK(
       svn_wc__db_install_schema_statistics(sdb, scratch_pool),
       sdb);
 
