@@ -3107,3 +3107,11 @@ svn_client_cleanup(const char *path,
                                              FALSE /* include_externals */,
                                              ctx, scratch_pool));
 }
+
+svn_error_t *
+svn_client_upgrade(const char *path,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool)
+{
+  return svn_client_upgrade2(path, NULL, ctx, scratch_pool);
+}

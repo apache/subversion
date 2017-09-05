@@ -2955,7 +2955,7 @@ svn_wc__db_upgrade_insert_external(svn_wc__db_t *db,
                                    apr_pool_t *scratch_pool);
 
 /* Upgrade the metadata concerning the WC at WCROOT_ABSPATH, in DB,
- * to the SVN_WC__VERSION format.
+ * to the TARGET_FORMAT metadata format version.
  *
  * This function is used for upgrading wc-ng working copies to a newer
  * wc-ng format. If a pre-1.7 working copy is found, this function
@@ -2973,6 +2973,7 @@ svn_wc__db_bump_format(int *result_format,
                        svn_boolean_t *bumped_format,
                        svn_wc__db_t *db,
                        const char *wcroot_abspath,
+                       int target_format,
                        apr_pool_t *scratch_pool);
 
 /* @} */

@@ -70,7 +70,7 @@ svn_cl__upgrade(apr_getopt_t *os,
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-      SVN_ERR(svn_client_upgrade(target, ctx, scratch_pool));
+      SVN_ERR(svn_client_upgrade2(target, /* TODO: */NULL, ctx, scratch_pool));
     }
   svn_pool_destroy(iterpool);
 

@@ -16010,6 +16010,7 @@ svn_wc__db_bump_format(int *result_format,
                        svn_boolean_t *bumped_format,
                        svn_wc__db_t *db,
                        const char *wcroot_abspath,
+                       int target_format,
                        apr_pool_t *scratch_pool)
 {
   svn_sqlite__db_t *sdb;
@@ -16053,9 +16054,8 @@ svn_wc__db_bump_format(int *result_format,
     }
 
   SVN_ERR(svn_sqlite__read_schema_version(&format, sdb, scratch_pool));
-  /* TODO: Parametrize the target format here. */
   err = svn_wc__upgrade_sdb(result_format, wcroot_abspath,
-                            sdb, format, SVN_WC__VERSION, scratch_pool);
+                            sdb, format, target_format, scratch_pool);
 
   if (err == SVN_NO_ERROR && bumped_format)
     *bumped_format = (*result_format > format);

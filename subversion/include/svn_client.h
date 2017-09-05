@@ -4201,13 +4201,34 @@ svn_client_cleanup(const char *dir,
  * @{
  */
 
-/** Recursively upgrade a working copy from any older format to the current
- * WC metadata storage format.  @a wcroot_dir is the path to the WC root.
+/**
+ * Recursively upgrade a working copy from any older format to the
+ * given WC metadata storage format.  @a wcroot_dir is the path to the
+ * WC root.
+ *
+ * @a wc_format_version is version number of the Subversion client
+ * that supports a given WC metadata format; @c NULL means the newest
+ * supported format. Any other value must be a string representing a
+ * version number, e.g., "1.8" or "1.9.3". The earliest supported
+ * version is defined by #SVN_VERSION_SUPPORTED_WC_FORMAT.
  *
  * Use @a scratch_pool for any temporary allocations.
  *
- * @since New in 1.7.
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_client_upgrade2(const char *wcroot_dir,
+                    const char* wc_format_version,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_client_upgrade2(), but always upgrades to the newest
+ * supported format.
+ *
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_upgrade(const char *wcroot_dir,
                    svn_client_ctx_t *ctx,

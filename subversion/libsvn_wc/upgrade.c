@@ -2072,6 +2072,15 @@ svn_wc__version_string_from_format(int wc_format)
   return _("(unreleased development version)");
 }
 
+svn_error_t *
+svn_wc__format_from_version_string(int *format,
+                                   const char *version_string,
+                                   apr_pool_t *scratch_pool)
+{
+  /* TODO: Parse VERSION_STRING to get *FORMAT */
+  *format = SVN_WC__VERSION;
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_wc__upgrade_sdb(int *result_format,
@@ -2416,15 +2425,16 @@ is_old_wcroot(const char *local_abspath,
 }
 
 svn_error_t *
-svn_wc_upgrade(svn_wc_context_t *wc_ctx,
-               const char *local_abspath,
-               svn_wc_upgrade_get_repos_info_t repos_info_func,
-               void *repos_info_baton,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               svn_wc_notify_func2_t notify_func,
-               void *notify_baton,
-               apr_pool_t *scratch_pool)
+svn_wc__upgrade(svn_wc_context_t *wc_ctx,
+                const char *local_abspath,
+                int target_format,
+                svn_wc_upgrade_get_repos_info_t repos_info_func,
+                void *repos_info_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                svn_wc_notify_func2_t notify_func,
+                void *notify_baton,
+                apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db;
   struct upgrade_data_t data = { NULL };
@@ -2444,7 +2454,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
 
 
   err = svn_wc__db_bump_format(&result_format, &bumped_format,
-                               db, local_abspath,
+                               db, local_abspath, target_format,
                                scratch_pool);
   if (err)
     {

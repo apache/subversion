@@ -2073,6 +2073,52 @@ svn_wc__translated_stream(svn_stream_t **stream,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
+
+/**
+ * Convert @a version, a string representation of a version number, to
+ * that version's characteristic working copy format, returned in @a
+ * format.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_wc__format_from_version_string(int *format, const char* version,
+                                   apr_pool_t *scratch_pool);
+
+/**
+ * Upgrade the working copy at @a local_abspath to the metadata
+ * storage format indicated by @a target_format.  @a local_abspath
+ * should be an absolute path to the root of the working copy.
+ *
+ * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at
+ * various points during the operation.  If it returns an error
+ * (typically #SVN_ERR_CANCELLED), return that error immediately.
+ *
+ * For each directory converted, @a notify_func will be called with
+ * in @a notify_baton action #svn_wc_notify_upgraded_path and as path
+ * the path of the upgraded directory. @a notify_func may be @c NULL
+ * if this notification is not needed.
+ *
+ * If the old working copy doesn't contain a repository root and/or
+ * repository uuid, @a repos_info_func (if non-NULL) will be called
+ * with @a repos_info_baton to provide the missing information.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_wc__upgrade(svn_wc_context_t *wc_ctx,
+                const char *local_abspath,
+                int target_format,
+                svn_wc_upgrade_get_repos_info_t repos_info_func,
+                void *repos_info_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                svn_wc_notify_func2_t notify_func,
+                void *notify_baton,
+                apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
