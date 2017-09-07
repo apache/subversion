@@ -61,3 +61,13 @@ directly in the WC-DB as blobs in the PRISTINES table, and also for
 compressing pristines with LZ4.
 
 The current WC format 31 will remain fully supported.
+
+The 'svn cleanup' command will grow a new option:
+
+    svn cleanup --compress-pristines
+
+that will, if compressed pristines are supported by the working copy
+format, compress any uncompressed pristine files, possibly removing
+them and storing their contents in the working copy database.
+
+Upgdading to format 32 will _not_ automatically compress pristines.
