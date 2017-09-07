@@ -7447,7 +7447,8 @@ typedef svn_error_t * (*svn_wc_upgrade_get_repos_info_t)(
  * repository uuid, @a repos_info_func (if non-NULL) will be called
  * with @a repos_info_baton to provide the missing information.
  *
- * @deprecated Provided for backward compatibility with the 1.7 API.
+ * @since New in 1.7
+ * @deprecated Provided for backward compatibility with the 1.9 API.
  */
 SVN_DEPRECATED
 svn_error_t *

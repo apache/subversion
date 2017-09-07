@@ -193,7 +193,16 @@ svn_client_upgrade2(const char *path,
   SVN_ERR(svn_wc__format_from_version_string(&wc_format,
                                              wc_format_version,
                                              scratch_pool));
-  return upgrade_internal(path, wc_format, ctx, scratch_pool);
+  SVN_ERR(upgrade_internal(path, wc_format, ctx, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+const char *
+svn_client_supported_wc_version(void)
+{
+  /* NOTE: For consistency, always return the version of the client
+     that first introduced the earliest supported format. */
+  return "1.8";
 }
 
 /* Helper for upgrade_externals_from_properties: upgrades one external ITEM

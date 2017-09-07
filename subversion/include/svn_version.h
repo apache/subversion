@@ -133,13 +133,6 @@ extern "C" {
 /** Complete version string */
 #define SVN_VERSION        SVN_VER_NUMBER SVN_VER_TAG
 
-
-/**
- * Earliest supported working copy version.
- * @since New in 1.10.
- */
-#define SVN_VERSION_SUPPORTED_WC_FORMAT "1.8.0"
-
 
 /* Version queries and compatibility checks */
 

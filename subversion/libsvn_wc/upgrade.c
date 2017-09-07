@@ -2181,83 +2181,37 @@ svn_wc__update_schema(int *result_format,
   for (*result_format = start_format;
        *result_format < target_format;)
     {
+#define UPDATE_TO_FORMAT(X) \
+          case ((X) - 1):   \
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_##X, &bb, scratch_pool)); \
+            *result_format = (X); \
+            break;
+
       switch (*result_format)
         {
-          case 19:
-            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_20, &bb, scratch_pool));
-            *result_format = 20;
-            break;
-
-          case 20:
-            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_21, &bb, scratch_pool));
-            *result_format = 21;
-            break;
-
-          case 21:
-            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_22, &bb, scratch_pool));
-            *result_format = 22;
-            break;
-
-          case 22:
-            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_23, &bb, scratch_pool));
-            *result_format = 23;
-            break;
-
-          case 23:
-            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_24, &bb, scratch_pool));
-            *result_format = 24;
-            break;
-
-          case 24:
-            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_25, &bb, scratch_pool));
-            *result_format = 25;
-            break;
-
-          case 25:
-            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_26, &bb, scratch_pool));
-            *result_format = 26;
-            break;
-
-          case 26:
-            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_27, &bb, scratch_pool));
-            *result_format = 27;
-            break;
-
-          case 27:
-            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_28, &bb, scratch_pool));
-            *result_format = 28;
-            break;
-
-          case 28:
-            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_29, &bb, scratch_pool));
-            *result_format = 29;
-            break;
-
-          case 29:
-            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_30, &bb, scratch_pool));
-            *result_format = 30;
-            break;
-
-          case 30:
-            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_31, &bb, scratch_pool));
-            *result_format = 31;
-            break;
-
-          case 31:
-            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_32, &bb, scratch_pool));
-            *result_format = SVN_WC__VERSION;
-            break;
+          UPDATE_TO_FORMAT(20);
+          UPDATE_TO_FORMAT(21);
+          UPDATE_TO_FORMAT(22);
+          UPDATE_TO_FORMAT(23);
+          UPDATE_TO_FORMAT(24);
+          UPDATE_TO_FORMAT(25);
+          UPDATE_TO_FORMAT(26);
+          UPDATE_TO_FORMAT(27);
+          UPDATE_TO_FORMAT(28);
+          UPDATE_TO_FORMAT(29);
+          UPDATE_TO_FORMAT(30);
+          UPDATE_TO_FORMAT(31);
+          UPDATE_TO_FORMAT(32);
 
           /* ### future bumps go here.  */
 #if 0
-          case XXX-1:
-            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_XXX, &bb, scratch_pool));
-            *result_format = XXX;
-            break;
+          UPDATE_TO_FORMAT(XXX);
 #endif
         }
+#undef UPDATE_TO_FORMAT
     }
 
+  SVN_ERR_ASSERT(*result_format == target_format);
   return SVN_NO_ERROR;
 }
 
