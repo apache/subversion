@@ -972,27 +972,6 @@ def tree_replace2(sbox):
     })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
-def upgrade_from_format_28(sbox):
-  """upgrade from format 28: rename pristines"""
-
-  # Start with a format-28 WC that is a clean checkout of the Greek tree.
-  replace_sbox_with_tarfile(sbox, 'format_28.tar.bz2')
-
-  # Get the old and new pristine file paths for file 'iota'.
-  checksum = '2c0aa9014a0cd07f01795a333d82485ef6d083e2'
-  old_pristine_path = os.path.join(sbox.wc_dir, svntest.main.get_admin_name(),
-                                   'pristine', checksum[0:2], checksum)
-  new_pristine_path = old_pristine_path + '.svn-base'
-
-  assert os.path.exists(old_pristine_path)
-  assert not os.path.exists(new_pristine_path)
-
-  # Upgrade the WC
-  svntest.actions.run_and_verify_svn(None, [], 'upgrade', sbox.wc_dir)
-
-  assert not os.path.exists(old_pristine_path)
-  assert os.path.exists(new_pristine_path)
-
 @Issue(3901)
 def depth_exclude(sbox):
   "upgrade 1.6.x wc that has depth=exclude"
@@ -1612,7 +1591,6 @@ test_list = [ None,
               upgrade_with_scheduled_change,
               tree_replace1,
               tree_replace2,
-              upgrade_from_format_28,
               depth_exclude,
               depth_exclude_2,
               add_add_del_del_tc,
