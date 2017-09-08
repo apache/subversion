@@ -1616,14 +1616,34 @@ text
   sbox.build(empty=True)
 
   # Try to load the dumpstream, expecting a failure (because of mixed EOLs).
-  load_and_verify_dumpstream(sbox, [], svntest.verify.AnyOutput,
-                             dumpfile_revisions, False, dump_str,
-                             '--ignore-uuid')
+  exp_err = svntest.verify.RegexListOutput(['svnadmin: E125005',
+                                            'svnadmin: E125005',
+                                            'svnadmin: E125017'],
+                                           match_all=False)
+  load_and_verify_dumpstream(sbox, [], exp_err, dumpfile_revisions,
+                             False, dump_str, '--ignore-uuid')
 
   # Now try it again bypassing prop validation.  (This interface takes
   # care of the removal and recreation of the original repository.)
   svntest.actions.load_repo(sbox, dump_str=dump_str,
                             bypass_prop_validation=True)
+  # Getting the property should fail.
+  svntest.actions.run_and_verify_svn(None, 'svn: E135000: ',
+                                     'pg', 'svn:log', '--revprop', '-r1',
+                                     sbox.repo_url)
+
+  # Now try it again with prop normalization.
+  svntest.actions.load_repo(sbox, dump_str=dump_str,
+                            bypass_prop_validation=False,
+                            normalize_props=True)
+  # We should get the expected property value.
+  exit_code, output, _ = svntest.main.run_svn(None, 'pg', 'svn:log',
+                                              '--revprop', '-r1',
+                                              '--no-newline',
+                                              sbox.repo_url)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
+  if output != ['\n', '\n']:
+    raise svntest.Failure("Unexpected property value %s" % output)
 
 # This test intentionally corrupts a revision and assumes an FSFS
 # repository. If you can make it work with BDB please do so.

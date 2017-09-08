@@ -120,13 +120,14 @@ test_load_bad_props(svn_stringbuf_t *dump_data,
   svn_revnum_t youngest_rev;
   svn_string_t *loaded_prop_val;
 
-  SVN_ERR(svn_repos_load_fs5(repos, stream,
+  SVN_ERR(svn_repos_load_fs6(repos, stream,
                              SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
                              svn_repos_load_uuid_default,
                              parent_fspath,
                              FALSE, FALSE, /*use_*_commit_hook*/
                              validate_props,
                              FALSE /*ignore_dates*/,
+                             FALSE /*normalize_props*/,
                              notify_func, notify_baton,
                              NULL, NULL, /*cancellation*/
                              pool));

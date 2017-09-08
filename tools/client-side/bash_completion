@@ -1153,7 +1153,7 @@ _svnadmin ()
 		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet \
 		         --use-pre-commit-hook --use-post-commit-hook \
 		         --bypass-prop-validation -M --memory-cache-size \
-		         --no-flush-to-disk -F --file"
+		         --no-flush-to-disk --normalize-props -F --file"
 		;;
 	lstxns)
         	cmdOpts="-r --revision"
