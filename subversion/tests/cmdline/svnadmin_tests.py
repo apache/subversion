@@ -276,7 +276,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
     'load', '--quiet', sbox.repo_dir, *varargs)
 
   if expected_stdout:
-    if expected_stdout == svntest.verify.AnyOutput:
+    if expected_stdout is svntest.verify.AnyOutput:
       if len(output) == 0:
         raise SVNExpectedStdout
     else:
@@ -284,7 +284,7 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
         "Standard output", "STDOUT:", expected_stdout, output)
 
   if expected_stderr:
-    if expected_stderr == svntest.verify.AnyOutput:
+    if expected_stderr is svntest.verify.AnyOutput:
       if len(errput) == 0:
         raise SVNExpectedStderr
     else:
