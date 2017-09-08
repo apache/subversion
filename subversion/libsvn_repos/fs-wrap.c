@@ -33,6 +33,7 @@
 #include "svn_repos.h"
 #include "svn_time.h"
 #include "svn_sorts.h"
+#include "svn_subst.h"
 #include "repos.h"
 #include "svn_private_config.h"
 #include "private/svn_repos_private.h"
@@ -256,6 +257,34 @@ svn_repos__validate_prop(const char *name,
             return svn_error_create(SVN_ERR_BAD_PROPERTY_VALUE,
                                     err, NULL);
         }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos__normalize_prop(const svn_string_t **result_p,
+                          svn_boolean_t *normalized_p,
+                          const char *name,
+                          const svn_string_t *value,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  if (svn_prop_needs_translation(name) && value)
+    {
+      svn_string_t *new_value;
+
+      SVN_ERR(svn_subst_translate_string2(&new_value, NULL, normalized_p,
+                                          value, "UTF-8", TRUE,
+                                          result_pool, scratch_pool));
+      *result_p = new_value;
+    }
+  else
+    {
+      *result_p = svn_string_dup(value, result_pool);
+      if (normalized_p)
+        *normalized_p = FALSE;
     }
 
   return SVN_NO_ERROR;

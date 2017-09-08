@@ -901,6 +901,31 @@ svn_repos_verify_fs(svn_repos_t *repos,
 /*** From load.c ***/
 
 svn_error_t *
+svn_repos_load_fs5(svn_repos_t *repos,
+                   svn_stream_t *dumpstream,
+                   svn_revnum_t start_rev,
+                   svn_revnum_t end_rev,
+                   enum svn_repos_load_uuid uuid_action,
+                   const char *parent_dir,
+                   svn_boolean_t use_pre_commit_hook,
+                   svn_boolean_t use_post_commit_hook,
+                   svn_boolean_t validate_props,
+                   svn_boolean_t ignore_dates,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  return svn_repos_load_fs6(repos, dumpstream, start_rev, end_rev,
+                            uuid_action, parent_dir,
+                            use_post_commit_hook, use_post_commit_hook,
+                            validate_props, ignore_dates, FALSE,
+                            notify_func, notify_baton,
+                            cancel_func, cancel_baton, pool);
+}
+
+svn_error_t *
 svn_repos_load_fs4(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
                    svn_revnum_t start_rev,
@@ -1089,6 +1114,40 @@ svn_repos_load_fs(svn_repos_t *repos,
   return svn_repos_load_fs2(repos, dumpstream, feedback_stream,
                             uuid_action, parent_dir, FALSE, FALSE,
                             cancel_func, cancel_baton, pool);
+}
+
+svn_error_t *
+svn_repos_get_fs_build_parser5(const svn_repos_parse_fns3_t **parser,
+                               void **parse_baton,
+                               svn_repos_t *repos,
+                               svn_revnum_t start_rev,
+                               svn_revnum_t end_rev,
+                               svn_boolean_t use_history,
+                               svn_boolean_t validate_props,
+                               enum svn_repos_load_uuid uuid_action,
+                               const char *parent_dir,
+                               svn_boolean_t use_pre_commit_hook,
+                               svn_boolean_t use_post_commit_hook,
+                               svn_boolean_t ignore_dates,
+                               svn_repos_notify_func_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *pool)
+{
+  SVN_ERR(svn_repos_get_fs_build_parser6(parser, parse_baton,
+                                         repos,
+                                         start_rev, end_rev,
+                                         use_history,
+                                         validate_props,
+                                         uuid_action,
+                                         parent_dir,
+                                         use_pre_commit_hook,
+                                         use_post_commit_hook,
+                                         ignore_dates,
+                                         FALSE /* normalize_props */,
+                                         notify_func,
+                                         notify_baton,
+                                         pool));
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

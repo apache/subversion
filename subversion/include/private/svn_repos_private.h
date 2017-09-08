@@ -75,6 +75,30 @@ svn_repos__validate_prop(const char *name,
                          const svn_string_t *value,
                          apr_pool_t *pool);
 
+/* Attempt to normalize a Subversion property if it "needs translation"
+ * (according to svn_prop_needs_translation(), currently all svn:* props).
+ *
+ * At this time, the only performed normalization is translation of
+ * the line endings of the property value so that it would only contain
+ * LF (\n) characters. "\r" characters found mid-line are replaced with "\n".
+ * "\r\n" sequences are replaced with "\n".
+ *
+ * NAME is used to check that VALUE should be normalized, and if this
+ * is the case, VALUE is then normalized, allocated from RESULT_POOL.
+ * If no normalization is required, VALUE will be copied to RESULT_POOL
+ * unchanged.  If NORMALIZED_P is not NULL, and the normalization
+ * happened, set *NORMALIZED_P to non-zero.  If the property is returned
+ * unchanged and NORMALIZED_P is not NULL, then *NORMALIZED_P will be
+ * set to zero.  SCRATCH_POOL will be used for temporary allocations.
+ */
+svn_error_t *
+svn_repos__normalize_prop(const svn_string_t **result_p,
+                          svn_boolean_t *normalized_p,
+                          const char *name,
+                          const svn_string_t *value,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
 /**
  * Given the error @a err from svn_repos_fs_commit_txn(), return an
  * string containing either or both of the svn_fs_commit_txn() error
