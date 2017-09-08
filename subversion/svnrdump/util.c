@@ -31,21 +31,27 @@
 
 
 svn_error_t *
-svn_rdump__normalize_prop(const char *name,
-                          const svn_string_t **value,
+svn_rdump__normalize_prop(const svn_string_t **result_p,
+                          const char *name,
+                          const svn_string_t *value,
                           apr_pool_t *result_pool)
 {
-  if (svn_prop_needs_translation(name) && *value)
+  if (svn_prop_needs_translation(name) && value)
     {
       const char *cstring;
 
-      SVN_ERR(svn_subst_translate_cstring2((*value)->data, &cstring,
+      SVN_ERR(svn_subst_translate_cstring2(value->data, &cstring,
                                            "\n", TRUE,
                                            NULL, FALSE,
                                            result_pool));
 
-      *value = svn_string_create(cstring, result_pool);
+      *result_p = svn_string_create(cstring, result_pool);
     }
+  else
+    {
+      *result_p = svn_string_dup(value, result_pool);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -64,8 +70,7 @@ svn_rdump__normalize_props(apr_hash_t **normal_props,
       const char *key = apr_hash_this_key(hi);
       const svn_string_t *value = apr_hash_this_val(hi);
 
-      SVN_ERR(svn_rdump__normalize_prop(key, &value,
-                                        result_pool));
+      SVN_ERR(svn_rdump__normalize_prop(&value, key, value, result_pool));
 
       svn_hash_sets(*normal_props, key, value);
     }
