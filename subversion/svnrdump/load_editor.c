@@ -713,7 +713,7 @@ set_revision_property(void *baton,
 {
   struct revision_baton *rb = baton;
 
-  SVN_ERR(svn_rdump__normalize_prop(name, &value, rb->pool));
+  SVN_ERR(svn_rdump__normalize_prop(&value, name, value, rb->pool));
 
   SVN_ERR(svn_repos__validate_prop(name, value, rb->pool));
 
@@ -721,8 +721,7 @@ set_revision_property(void *baton,
     {
       if (! svn_hash_gets(rb->pb->skip_revprops, name))
         svn_hash_sets(rb->revprop_table,
-                      apr_pstrdup(rb->pool, name),
-                      svn_string_dup(value, rb->pool));
+                      apr_pstrdup(rb->pool, name), value);
     }
   else if (rb->rev_offset == -1
            && ! svn_hash_gets(rb->pb->skip_revprops, name))
@@ -737,9 +736,9 @@ set_revision_property(void *baton,
   /* Remember any datestamp/ author that passes through (see comment
      in close_revision). */
   if (!strcmp(name, SVN_PROP_REVISION_DATE))
-    rb->datestamp = svn_string_dup(value, rb->pool);
+    rb->datestamp = value;
   if (!strcmp(name, SVN_PROP_REVISION_AUTHOR))
-    rb->author = svn_string_dup(value, rb->pool);
+    rb->author = value;
 
   return SVN_NO_ERROR;
 }
@@ -776,13 +775,13 @@ set_node_property(void *baton,
       value = new_value;
     }
 
-  SVN_ERR(svn_rdump__normalize_prop(name, &value, pool));
+  SVN_ERR(svn_rdump__normalize_prop(&value, name, value, pool));
 
   SVN_ERR(svn_repos__validate_prop(name, value, pool));
 
   prop = apr_palloc(nb->rb->pool, sizeof (*prop));
   prop->name = apr_pstrdup(pool, name);
-  prop->value = svn_string_dup(value, pool);
+  prop->value = value;
   svn_hash_sets(nb->prop_changes, prop->name, prop);
 
   return SVN_NO_ERROR;
