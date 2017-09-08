@@ -235,10 +235,13 @@ svn_repos__validate_prop(const char *name,
            * carriage return characters ('\r'). */
           if (strchr(value->data, '\r') != NULL)
             {
-              return svn_error_createf
-                (SVN_ERR_BAD_PROPERTY_VALUE, NULL,
+              svn_error_t *err = svn_error_createf
+                (SVN_ERR_BAD_PROPERTY_VALUE_EOL, NULL,
                  _("Cannot accept non-LF line endings in '%s' property"),
                    name);
+
+              return svn_error_create(SVN_ERR_BAD_PROPERTY_VALUE, err,
+                                      _("Invalid property value"));
             }
         }
 
