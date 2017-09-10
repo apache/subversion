@@ -1371,9 +1371,6 @@ init_db(/* output values */
 
   /* Create the database's schema.  */
   SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_SCHEMA));
-  SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_NODES));
-  SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_NODES_TRIGGERS));
-  SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_EXTERNALS));
 
   SVN_ERR(svn_wc__db_install_schema_statistics(db, scratch_pool));
 
