@@ -151,7 +151,8 @@ enum svnadmin__cmdline_options_t
     svnadmin__compatible_version,
     svnadmin__check_normalization,
     svnadmin__metadata_only,
-    svnadmin__no_flush_to_disk
+    svnadmin__no_flush_to_disk,
+    svnadmin__normalize_props
   };
 
 /* Option codes and descriptions.
@@ -273,6 +274,10 @@ static const apr_getopt_option_t options_table[] =
     {"no-flush-to-disk", svnadmin__no_flush_to_disk, 0,
      N_("disable flushing to disk during the operation\n"
         "                             (faster, but unsafe on power off)")},
+
+    {"normalize-props", svnadmin__normalize_props, 0,
+     N_("normalize property values found in the dumpstream\n"
+        "                             (currently, only translates non-LF line endings)")},
 
     {NULL}
   };
@@ -396,7 +401,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {'q', 'r', svnadmin__ignore_uuid, svnadmin__force_uuid,
     svnadmin__ignore_dates,
     svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
-    svnadmin__parent_dir, svnadmin__bypass_prop_validation, 'M',
+    svnadmin__parent_dir, svnadmin__normalize_props,
+    svnadmin__bypass_prop_validation, 'M',
     svnadmin__no_flush_to_disk, 'F'},
    {{'F', N_("read from file ARG instead of stdin")}} },
 
@@ -407,8 +413,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "repository will cause an error.  Progress feedback is sent to stdout.\n"
     "If --revision is specified, limit the loaded revisions to only those\n"
     "in the dump stream whose revision numbers match the specified range.\n"),
-   {'q', 'r', svnadmin__force_uuid, svnadmin__bypass_prop_validation,
-    svnadmin__no_flush_to_disk, 'F'},
+   {'q', 'r', svnadmin__force_uuid, svnadmin__normalize_props,
+    svnadmin__bypass_prop_validation, svnadmin__no_flush_to_disk, 'F'},
    {{'F', N_("read from file ARG instead of stdin")}} },
 
   {"lock", subcommand_lock, {0}, N_
@@ -547,6 +553,7 @@ struct svnadmin_opt_state
   svn_boolean_t bypass_prop_validation;             /* --bypass-prop-validation */
   svn_boolean_t ignore_dates;                       /* --ignore-dates */
   svn_boolean_t no_flush_to_disk;                   /* --no-flush-to-disk */
+  svn_boolean_t normalize_props;                    /* --normalize_props */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
   apr_uint64_t memory_cache_size;                   /* --memory-cache-size M */
@@ -1534,20 +1541,32 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     feedback_stream = recode_stream_create(stdout, pool);
 
-  err = svn_repos_load_fs5(repos, in_stream, lower, upper,
+  err = svn_repos_load_fs6(repos, in_stream, lower, upper,
                            opt_state->uuid_action, opt_state->parent_dir,
                            opt_state->use_pre_commit_hook,
                            opt_state->use_post_commit_hook,
                            !opt_state->bypass_prop_validation,
+                           opt_state->normalize_props,
                            opt_state->ignore_dates,
                            opt_state->quiet ? NULL : repos_notify_handler,
                            feedback_stream, check_cancel, NULL, pool);
-  if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)
-    return svn_error_quick_wrap(err,
-                                _("Invalid property value found in "
-                                  "dumpstream; consider repairing the source "
-                                  "or using --bypass-prop-validation while "
-                                  "loading."));
+
+  if (svn_error_find_cause(err, SVN_ERR_BAD_PROPERTY_VALUE_EOL))
+    {
+      return svn_error_quick_wrap(err,
+                                  _("A property with invalid line ending "
+                                    "found in dumpstream; consider using "
+                                    "--normalize-props while loading."));
+    }
+  else if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)
+    {
+      return svn_error_quick_wrap(err,
+                                  _("Invalid property value found in "
+                                    "dumpstream; consider repairing the "
+                                    "source or using --bypass-prop-validation "
+                                    "while loading."));
+    }
+
   return err;
 }
 
@@ -1584,16 +1603,28 @@ subcommand_load_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   err = svn_repos_load_fs_revprops(repos, in_stream, lower, upper,
                                    !opt_state->bypass_prop_validation,
+                                   opt_state->normalize_props,
                                    opt_state->ignore_dates,
                                    opt_state->quiet ? NULL
                                                     : repos_notify_handler,
                                    feedback_stream, check_cancel, NULL, pool);
-  if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)
-    return svn_error_quick_wrap(err,
-                                _("Invalid property value found in "
-                                  "dumpstream; consider repairing the source "
-                                  "or using --bypass-prop-validation while "
-                                  "loading."));
+
+  if (svn_error_find_cause(err, SVN_ERR_BAD_PROPERTY_VALUE_EOL))
+    {
+      return svn_error_quick_wrap(err,
+                                  _("A property with invalid line ending "
+                                    "found in dumpstream; consider using "
+                                    "--normalize-props while loading."));
+    }
+  else if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)
+    {
+      return svn_error_quick_wrap(err,
+                                  _("Invalid property value found in "
+                                    "dumpstream; consider repairing the "
+                                    "source or using --bypass-prop-validation "
+                                    "while loading."));
+    }
+
   return err;
 }
 
@@ -2883,6 +2914,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case svnadmin__no_flush_to_disk:
         opt_state.no_flush_to_disk = TRUE;
+        break;
+      case svnadmin__normalize_props:
+        opt_state.normalize_props = TRUE;
         break;
       default:
         {

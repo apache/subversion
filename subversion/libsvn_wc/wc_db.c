@@ -1373,9 +1373,6 @@ init_db(/* output values */
 
   /* Create the database's schema.  */
   SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_SCHEMA));
-  SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_NODES));
-  SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_NODES_TRIGGERS));
-  SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_EXTERNALS));
 
   /* TODO: Parametrize the target format here. */
   SVN_ERR(svn_wc__update_schema(&result_format, wcroot_abspath, db,
