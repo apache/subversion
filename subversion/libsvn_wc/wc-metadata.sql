@@ -229,11 +229,6 @@ CREATE TABLE WC_LOCK (
  );
 
 
-PRAGMA user_version =
--- define: SVN_WC__VERSION
-;
-
-
 /* ------------------------------------------------------------------------- */
 
 /* The NODES table describes the way WORKING nodes are layered on top of
@@ -279,7 +274,6 @@ PRAGMA user_version =
    An 'svn revert foo/bar' would remove the NODES of (2).
 
  */
--- STMT_CREATE_NODES
 CREATE TABLE NODES (
   /* Working copy location related fields */
 
@@ -503,8 +497,6 @@ CREATE VIEW NODES_BASE AS
   SELECT * FROM nodes
   WHERE op_depth = 0;
 
--- STMT_CREATE_NODES_TRIGGERS
-
 CREATE TRIGGER nodes_insert_trigger
 AFTER INSERT ON nodes
 WHEN NEW.checksum IS NOT NULL
@@ -531,8 +523,6 @@ BEGIN
   UPDATE pristine SET refcount = refcount - 1
   WHERE checksum = OLD.checksum;
 END;
-
--- STMT_CREATE_EXTERNALS
 
 CREATE TABLE EXTERNALS (
   /* Working copy location related fields (like NODES)*/
@@ -571,6 +561,12 @@ CREATE TABLE EXTERNALS (
 CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
                                                       def_local_relpath,
                                                       local_relpath);
+
+
+PRAGMA user_version =
+-- define: SVN_WC__VERSION
+;
+
 
 /* ------------------------------------------------------------------------- */
 /* This statement provides SQLite with the necessary information about our
@@ -668,9 +664,9 @@ WHERE wc_id = ?1 and local_relpath = ?2
 /* Format 31 adds the inherited_props column to the NODES table. C code then
    initializes the update/switch roots to make sure future updates fetch the
    inherited properties */
--- STMT_UPGRADE_TO_31_ALTER_TABLE
+-- STMT_UPGRADE_TO_31
 ALTER TABLE NODES ADD COLUMN inherited_props BLOB;
--- STMT_UPGRADE_TO_31_FINALIZE
+
 DROP INDEX IF EXISTS I_ACTUAL_CHANGELIST;
 DROP INDEX IF EXISTS I_EXTERNALS_PARENT;
 
@@ -704,25 +700,8 @@ WHERE l.op_depth = 0
 
 /* ------------------------------------------------------------------------- */
 /* Format 32 ....  */
--- STMT_UPGRADE_TO_32
-
-/* Drop old index. ### Remove this part from the upgrade to 31 once bumped */
-DROP INDEX IF EXISTS I_ACTUAL_CHANGELIST;
-DROP INDEX IF EXISTS I_EXTERNALS_PARENT;
-CREATE INDEX I_EXTERNALS_PARENT ON EXTERNALS (wc_id, parent_relpath);
-
-DROP INDEX I_NODES_PARENT;
-CREATE UNIQUE INDEX I_NODES_PARENT ON NODES (wc_id, parent_relpath,
-                                             local_relpath, op_depth);
-
-DROP INDEX I_ACTUAL_PARENT;
-CREATE UNIQUE INDEX I_ACTUAL_PARENT ON ACTUAL_NODE (wc_id, parent_relpath,
-                                                    local_relpath);
-
-/* ------------------------------------------------------------------------- */
-
-/* Format YYY introduces new handling for conflict information.  */
--- format: YYY
+/* -- STMT_UPGRADE_TO_32
+PRAGMA user_version = 32; */
 
 
 /* ------------------------------------------------------------------------- */
