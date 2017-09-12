@@ -1642,11 +1642,11 @@ svn_wc__version_string_from_format(int wc_format)
 }
 
 svn_error_t *
-svn_wc__format_from_version_string(int *format,
-                                   const char *version_string,
-                                   apr_pool_t *scratch_pool)
+svn_wc__format_from_version(int *format,
+                            const svn_version_t* version,
+                            apr_pool_t *scratch_pool)
 {
-  /* TODO: Parse VERSION_STRING to get *FORMAT */
+  /* TODO: Convert VERSION to *FORMAT */
   *format = SVN_WC__VERSION;
   return SVN_NO_ERROR;
 }

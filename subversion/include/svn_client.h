@@ -4218,7 +4218,7 @@ svn_client_cleanup(const char *dir,
  */
 svn_error_t *
 svn_client_upgrade2(const char *wcroot_dir,
-                    const char* wc_format_version,
+                    const svn_version_t *wc_format_version,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool);
 
@@ -4239,7 +4239,7 @@ svn_client_upgrade(const char *wcroot_dir,
  * Returns the version string related to the earliest supported
  * working copy metadata format.
  */
-const char *
+const svn_version_t *
 svn_client_supported_wc_version(void);
 
 /** @} */

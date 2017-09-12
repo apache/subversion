@@ -1939,21 +1939,18 @@ parse_compatible_version(svn_cl__opt_state_t* opt_state,
                          apr_pool_t *result_pool)
 {
   const char *utf8_opt_arg;
-  svn_version_t *supported;
   svn_version_t *target;
 
-  /* Compute the the latest supported version from the current
-     libsvn_client version. WC formats are always defined by a
-     X.Y.0 release. */
+  /* Get the the latest and oldest supported version from the current
+     libsvn_client versions. WC formats are always defined by a X.Y.0
+     release, and svn_client_supported_wc_version() should return such
+     a value. */
+  const svn_version_t *supported = svn_client_supported_wc_version();
   const svn_version_t *current = svn_client_version();
   const svn_version_t latest = {current->major, current->minor, 0, NULL};
 
-  /* Parse the earliest supported version.
-     Double check that the numbers ars sane. */
-  SVN_ERR(svn_version__parse_version_string(
-              &supported,
-              svn_client_supported_wc_version(),
-              result_pool));
+  /* Double check that the oldest supported version is sane. */
+  SVN_ERR_ASSERT(supported->patch == 0);
   SVN_ERR_ASSERT(svn_version__at_least(&latest,
                                        supported->major,
                                        supported->minor,

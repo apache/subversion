@@ -2075,17 +2075,17 @@ svn_wc__translated_stream(svn_stream_t **stream,
 
 
 /**
- * Convert @a version, a string representation of a version number, to
- * that version's characteristic working copy format, returned in @a
- * format.
+ * Convert @a version to that version's characteristic working copy
+ * format, returned in @a format.
  *
  * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.10.
  */
 svn_error_t *
-svn_wc__format_from_version_string(int *format, const char* version,
-                                   apr_pool_t *scratch_pool);
+svn_wc__format_from_version(int *format,
+                            const svn_version_t* version,
+                            apr_pool_t *scratch_pool);
 
 /**
  * Upgrade the working copy at @a local_abspath to the metadata

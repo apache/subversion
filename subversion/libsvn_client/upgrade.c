@@ -34,8 +34,10 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
-#include "client.h"
 #include "svn_props.h"
+#include "svn_version.h"
+
+#include "client.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -184,25 +186,26 @@ upgrade_internal(const char *path,
 
 svn_error_t *
 svn_client_upgrade2(const char *path,
-                    const char *wc_format_version,
+                    const svn_version_t *wc_format_version,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool)
 {
   int wc_format;
 
-  SVN_ERR(svn_wc__format_from_version_string(&wc_format,
-                                             wc_format_version,
-                                             scratch_pool));
+  SVN_ERR(svn_wc__format_from_version(&wc_format,
+                                      wc_format_version,
+                                      scratch_pool));
   SVN_ERR(upgrade_internal(path, wc_format, ctx, scratch_pool));
   return SVN_NO_ERROR;
 }
 
-const char *
+const svn_version_t *
 svn_client_supported_wc_version(void)
 {
   /* NOTE: For consistency, always return the version of the client
      that first introduced the earliest supported format. */
-  return "1.8";
+  static const svn_version_t version = { 1, 8, 0, NULL };
+  return &version;
 }
 
 /* Helper for upgrade_externals_from_properties: upgrades one external ITEM
