@@ -4906,6 +4906,7 @@ test_cherry_pick_post_move_edit(const svn_test_opts_t *opts,
   svn_client_ctx_t *ctx;
   svn_client_conflict_t *conflict;
   svn_boolean_t tree_conflicted;
+  svn_stringbuf_t *buf;
 
   SVN_ERR(svn_test__sandbox_create(b,
                                    "test_cherry_pick_post_move_edit",
@@ -4919,7 +4920,7 @@ test_cherry_pick_post_move_edit(const svn_test_opts_t *opts,
   SVN_ERR(sbox_wc_move(b, "A/mu", "A/mu-moved"));
   SVN_ERR(sbox_wc_commit(b, "")); /* r3 */
   /* On "trunk", edit mu-moved. This will be r4, which we'll cherry-pick. */
-  SVN_ERR(sbox_file_write(b, "A/mu-moved", "Modified content.\n"));
+  SVN_ERR(sbox_file_write(b, "A/mu-moved", "Modified content." APR_EOL_STR));
   SVN_ERR(sbox_wc_commit(b, "")); /* r4 */
   SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
 
@@ -4973,6 +4974,16 @@ test_cherry_pick_post_move_edit(const svn_test_opts_t *opts,
             conflict,
             svn_client_conflict_option_local_move_file_text_merge,
             ctx, b->pool));
+
+  /* The node "A1/mu-moved" should no longer exist. */
+  SVN_TEST_ASSERT_ERROR(svn_client_conflict_get(&conflict,
+                                                sbox_wc_path(b, "A1/mu-moved"),
+                                                ctx, pool, pool),
+                        SVN_ERR_WC_PATH_NOT_FOUND);
+
+  /* And "A1/mu" should have expected contents. */
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A1/mu"), pool));
+  SVN_TEST_STRING_ASSERT(buf->data, "Modified content." APR_EOL_STR);
 
   return SVN_NO_ERROR;
 }
