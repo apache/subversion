@@ -2173,6 +2173,112 @@ find_related_node(const char **related_repos_relpath,
   return SVN_NO_ERROR;
 }
 
+/* Determine if REPOS_RELPATH@PEG_REV was moved at some point in its history.
+ * History's range of interest ends at END_REV which must be older than PEG_REV.
+ *
+ * VICTIM_ABSPATH is the abspath of a conflict victim in the working copy and
+ * will be used in notifications.
+ *
+ * Return any applicable move chain heads in *MOVES.
+ * If no moves can be found, set *MOVES to NULL. */
+static svn_error_t *
+find_moves_in_natural_history(apr_array_header_t **moves,
+                              const char *repos_relpath,
+                              svn_revnum_t peg_rev,
+                              svn_revnum_t end_rev,
+                              const char *victim_abspath,
+                              const char *repos_root_url,
+                              const char *repos_uuid,
+                              svn_ra_session_t *ra_session,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  apr_hash_t *moves_table;
+  apr_array_header_t *revs;
+  int i;
+  apr_pool_t *iterpool;
+
+  *moves = NULL;
+
+  SVN_ERR(find_moves_in_revision_range(&moves_table, repos_relpath,
+                                       repos_root_url, repos_uuid,
+                                       victim_abspath, peg_rev, end_rev,
+                                       ctx, scratch_pool, scratch_pool));
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  /* Scan the moves table for applicable moves. */
+  revs = svn_sort__hash(moves_table, compare_items_as_revs, scratch_pool);
+  for (i = revs->nelts - 1; i >= 0; i--)
+    {
+      svn_sort__item_t item = APR_ARRAY_IDX(revs, i, svn_sort__item_t);
+      apr_array_header_t *moves_in_rev = apr_hash_get(moves_table, item.key,
+                                                      sizeof(svn_revnum_t));
+      int j;
+
+      svn_pool_clear(iterpool);
+
+      /* Was repos relpath moved to its location in this revision? */
+      for (j = 0; j < moves_in_rev->nelts; j++)
+        {
+          struct repos_move_info *move;
+          const char *relpath;
+
+          move = APR_ARRAY_IDX(moves_in_rev, j, struct repos_move_info *);
+          relpath = svn_relpath_skip_ancestor(move->moved_to_repos_relpath,
+                                              repos_relpath);
+          if (relpath)
+            {
+              /* If the move did not happen in our peg revision, make
+               * sure this move happened on the same line of history. */
+              if (move->rev != peg_rev)
+                {
+                  svn_client__pathrev_t *yca_loc;
+                  svn_error_t *err;
+
+                  err = find_yca(&yca_loc, repos_relpath, peg_rev,
+                                 repos_relpath, move->rev,
+                                 repos_root_url, repos_uuid,
+                                 NULL, ctx, scratch_pool, scratch_pool);
+                  if (err)
+                    {
+                      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+                        {
+                          svn_error_clear(err);
+                          yca_loc = NULL;
+                        }
+                      else
+                        return svn_error_trace(err);
+                    }
+
+                  if (yca_loc == NULL || yca_loc->rev != move->rev)
+                    continue;
+                }
+
+              if (*moves == NULL)
+                *moves = apr_array_make(result_pool, 1,
+                                        sizeof(struct repos_move_info *));
+
+              /* Copy the move to result pool (even if relpath is ""). */
+              move = new_path_adjusted_move(move, relpath, result_pool);
+              APR_ARRAY_PUSH(*moves, struct repos_move_info *) = move;
+            }
+        }
+
+      /* If we found one move, or several ambiguous moves, we're done. */
+      if (*moves)
+        break;
+    }
+
+  /* ## TODO Figure out what happened to these moves in prior revisions
+   * and build move chains. */
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements tree_conflict_get_details_func_t. */
 static svn_error_t *
 conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
@@ -2193,6 +2299,8 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
   apr_array_header_t *moves;
   const char *related_repos_relpath;
   svn_revnum_t related_peg_rev;
+  const char *repos_root_url;
+  const char *repos_uuid;
 
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
             &old_repos_relpath, &old_rev, NULL, conflict,
@@ -2206,7 +2314,7 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
   deleted_basename = svn_dirent_basename(conflict->local_abspath,
                                          scratch_pool);
   SVN_ERR(svn_wc__node_get_repos_info(&parent_peg_rev, &parent_repos_relpath,
-                                      NULL, NULL,
+                                      &repos_root_url, &repos_uuid,
                                       ctx->wc_ctx,
                                       svn_dirent_dirname(
                                         conflict->local_abspath,
@@ -2236,8 +2344,49 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
             parent_peg_rev, 0, related_repos_relpath, related_peg_rev,
             ctx, conflict->pool, scratch_pool));
 
+  /* If the victim was not deleted then check if the related path was moved. */
   if (deleted_rev == SVN_INVALID_REVNUM)
-    return SVN_NO_ERROR;
+    {
+      const char *victim_abspath;
+      struct repos_move_info *move;
+      svn_ra_session_t *ra_session;
+      const char *url, *corrected_url;
+      svn_revnum_t end_rev = old_rev < new_rev ? old_rev : new_rev;
+
+      /* END_REV must be older than PEG_REV. */
+      if (end_rev >= related_peg_rev)
+        end_rev = related_peg_rev > 0 ? related_peg_rev - 1 : 0;
+
+      victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+      url = svn_path_url_add_component2(repos_root_url, related_repos_relpath,
+                                        scratch_pool);
+      SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
+                                                   &corrected_url,
+                                                   url, NULL, NULL,
+                                                   FALSE,
+                                                   FALSE,
+                                                   ctx,
+                                                   scratch_pool,
+                                                   scratch_pool));
+      SVN_ERR(find_moves_in_natural_history(&moves, related_repos_relpath,
+                                            related_peg_rev, end_rev,
+                                            victim_abspath,
+                                            repos_root_url, repos_uuid,
+                                            ra_session, ctx,
+                                            conflict->pool, scratch_pool));
+
+      if (moves == NULL)
+        return SVN_NO_ERROR;
+
+      /* Fill in related path's details from the first possible move chain. */
+      move = APR_ARRAY_IDX(moves, 0, struct repos_move_info *);
+      deleted_rev = move->rev;
+      deleted_rev_author = move->rev_author;
+      parent_repos_relpath = svn_relpath_dirname(move->moved_from_repos_relpath,
+                                                 scratch_pool);
+      deleted_basename = svn_relpath_basename(move->moved_from_repos_relpath,
+                                              scratch_pool);
+    }
 
   details = apr_pcalloc(conflict->pool, sizeof(*details));
   details->deleted_rev = deleted_rev;
@@ -2406,7 +2555,8 @@ conflict_tree_get_description_local_missing(const char **description,
                        result_pool,
                        _("No such file or directory was found in the "
                          "merge target working copy.\nThe item was "
-                         "moved away to '^/%s' in r%ld by %s."),
+                         "moved from '^/%s' to '^/%s' in r%ld by %s."),
+                       move->moved_from_repos_relpath,
                        move->moved_to_repos_relpath,
                        move->rev, move->rev_author);
       *description = append_moved_to_chain_description(*description,
