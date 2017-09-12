@@ -145,6 +145,7 @@ typedef enum svn_cl__longopt_t {
   opt_show_item,
   opt_adds_as_modification,
   opt_vacuum_pristines,
+  opt_compatible_version,
 } svn_cl__longopt_t;
 
 
@@ -465,6 +466,11 @@ const apr_getopt_option_t svn_cl__options[] =
   {"vacuum-pristines", opt_vacuum_pristines, 0,
                        N_("remove unreferenced pristines from .svn directory")},
 
+  {"compatible-version", opt_compatible_version, 1,
+                       N_("use working copy format compatible with Subversion\n"
+                       "                             "
+                       "version ARG (\"1.8\", \"1.9.5\", etc.)")},
+
   /* Long-opt Aliases
    *
    * These have NULL desriptions, but an option code that matches some
@@ -608,7 +614,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  See also 'svn help update' for a list of possible characters\n"
      "  reporting the action taken.\n"),
-    {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals} },
+    {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals,
+     opt_compatible_version} },
 
   { "cleanup", svn_cl__cleanup, {0}, N_
     ("Either recover from an interrupted operation that left the working copy locked,\n"
@@ -1859,7 +1866,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: upgrade [WCPATH...]\n"
      "\n"
      "  Local modifications are preserved.\n"),
-    { 'q' } },
+    { 'q', opt_compatible_version } },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -1924,6 +1931,87 @@ add_search_pattern_to_latest_group(svn_cl__opt_state_t *opt_state,
                         opt_state->search_patterns->nelts - 1,
                         apr_array_header_t *);
   APR_ARRAY_PUSH(group, const char *) = pattern;
+}
+
+static svn_error_t *
+parse_compatible_version(svn_cl__opt_state_t* opt_state,
+                         const char *opt_arg,
+                         apr_pool_t *result_pool)
+{
+  const char *utf8_opt_arg;
+  svn_version_t *supported;
+  svn_version_t *target;
+
+  /* Compute the the latest supported version from the current
+     libsvn_client version. WC formats are always defined by a
+     X.Y.0 release. */
+  const svn_version_t *current = svn_client_version();
+  const svn_version_t latest = {current->major, current->minor, 0, NULL};
+
+  /* Parse the earliest supported version.
+     Double check that the numbers ars sane. */
+  SVN_ERR(svn_version__parse_version_string(
+              &supported,
+              svn_client_supported_wc_version(),
+              result_pool));
+  SVN_ERR_ASSERT(svn_version__at_least(&latest,
+                                       supported->major,
+                                       supported->minor,
+                                       supported->patch));
+
+  /* Parse the requested version. */
+  SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, result_pool));
+  SVN_ERR(svn_version__parse_version_string(&target, utf8_opt_arg,
+                                            result_pool));
+
+  /* Check the earliest supported version. */
+  if (!svn_version__at_least(target,
+                             supported->major,
+                             supported->minor,
+                             supported->patch))
+    {
+      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                               _("Cannot create working copies older "
+                                 "than version %d.%d.%d"),
+                               supported->major,
+                               supported->minor,
+                               supported->patch);
+    }
+
+  /* Check the latest supported version. */
+  /* FIXME: ### Should we return an error here instead? It seems
+            ### more friendly to issue a warning and continue with
+            ### the latest supported format. */
+  if (svn_version__at_least(target,
+                            latest.major,
+                            latest.minor,
+                            latest.patch)
+      && (target->major != latest.major
+          || target->minor != latest.minor
+          || target->patch != latest.patch))
+    {
+      svn_error_t *w1 = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                          _("Cannot create working copies "
+                                            "for version %s"),
+                                          opt_arg);
+      svn_error_t *w2 = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                          _("Creating working copy version "
+                                            "%d.%d instead"),
+                                          latest.major,
+                                          latest.minor);
+
+      svn_handle_warning2(stderr, w1, "svn: ");
+      svn_handle_warning2(stderr, w2, "svn: ");
+      svn_error_clear(w1);
+      svn_error_clear(w2);
+
+      target->major = latest.major;
+      target->minor = latest.minor;
+      target->patch = latest.patch;
+    }
+
+  opt_state->compatible_version = target;
+  return SVN_NO_ERROR;
 }
 
 
@@ -2525,6 +2613,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_vacuum_pristines:
         opt_state.vacuum_pristines = TRUE;
+        break;
+      case opt_compatible_version:
+        SVN_ERR(parse_compatible_version(&opt_state, opt_arg, pool));
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
