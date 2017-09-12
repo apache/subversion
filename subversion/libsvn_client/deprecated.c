@@ -2531,6 +2531,24 @@ svn_client_cat(svn_stream_t *out,
 
 /*** From checkout.c ***/
 svn_error_t *
+svn_client_checkout3(svn_revnum_t *result_rev,
+                     const char *URL,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_depth_t depth,
+                     svn_boolean_t ignore_externals,
+                     svn_boolean_t allow_unver_obstructions,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  return svn_error_trace(svn_client_checkout4(
+                             result_rev, URL, path,
+                             peg_revision, revision, depth,
+                             ignore_externals, FALSE, NULL, ctx, pool));
+}
+
+svn_error_t *
 svn_client_checkout2(svn_revnum_t *result_rev,
                      const char *URL,
                      const char *path,
@@ -3108,10 +3126,11 @@ svn_client_cleanup(const char *path,
                                              ctx, scratch_pool));
 }
 
+/*** From upgrade.c ***/
 svn_error_t *
 svn_client_upgrade(const char *path,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *scratch_pool)
 {
-  return svn_client_upgrade2(path, NULL, ctx, scratch_pool);
+  return svn_error_trace(svn_client_upgrade2(path, NULL, ctx, scratch_pool));
 }

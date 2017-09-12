@@ -1202,6 +1202,11 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
  *              set equal to the base properties. <br>
  *              If @c FALSE, then abort if there are any unversioned
  *              obstructing items.
+ * @param[in] wc_format_version is the version number of the Subversion
+ *              client that supports the metadata format of the
+ *              created working copy; @c NULL means the newest
+ *              supported format. The earliest supported version is
+ *              returned by svn_client_supported_wc_version().
  * @param[in] ctx   The standard client context, used for authentication and
  *              notification.
  * @param[in] pool  Used for any temporary allocation.
@@ -1216,11 +1221,32 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
  *         #svn_opt_revision_date. <br>
  *         If no error occurred, return #SVN_NO_ERROR.
  *
- * @since New in 1.5.
+ * @since New in 1.10.
  *
  * @see #svn_depth_t <br> #svn_client_ctx_t <br> @ref clnt_revisions for
  *      a discussion of operative and peg revisions.
  */
+svn_error_t *
+svn_client_checkout4(svn_revnum_t *result_rev,
+                     const char *URL,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_depth_t depth,
+                     svn_boolean_t ignore_externals,
+                     svn_boolean_t allow_unver_obstructions,
+                     const svn_version_t *wc_format_version,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_checkout4() but always creates the newest
+ * supported working copy format.
+ *
+ * @since New in 1.5
+ * @deprecated Provided for backward compatibility with the 1.9 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_checkout3(svn_revnum_t *result_rev,
                      const char *URL,
@@ -1232,7 +1258,6 @@ svn_client_checkout3(svn_revnum_t *result_rev,
                      svn_boolean_t allow_unver_obstructions,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
-
 
 /**
  * Similar to svn_client_checkout3() but with @a allow_unver_obstructions
@@ -4206,11 +4231,10 @@ svn_client_cleanup(const char *dir,
  * copies from any older format to the given WC metadata storage
  * format.  @a wcroot_dir is the path to the WC root.
  *
- * @a wc_format_version is version number of the Subversion client
+ * @a wc_format_version is the version number of the Subversion client
  * that supports a given WC metadata format; @c NULL means the newest
- * supported format. Any other value must be a string representing a
- * version number, e.g., "1.8" or "1.9.3". The earliest supported
- * version is returned by svn_client_supported_wc_version().
+ * supported format. The earliest supported version is returned by
+ * svn_client_supported_wc_version().
  *
  * Use @a scratch_pool for any temporary allocations.
  *

@@ -103,10 +103,11 @@ create_repos_and_wc(const char **repos_url,
 
     SVN_ERR(svn_test__create_client_ctx(&ctx, NULL, subpool));
     SVN_ERR(svn_dirent_get_absolute(wc_abspath, wc_path, pool));
-    SVN_ERR(svn_client_checkout3(NULL, *repos_url, *wc_abspath,
+    SVN_ERR(svn_client_checkout4(NULL, *repos_url, *wc_abspath,
                                  &head_rev, &head_rev, svn_depth_infinity,
                                  FALSE /* ignore_externals */,
                                  FALSE /* allow_unver_obstructions */,
+                                 /* TODO: */NULL /* wc_format_verison */,
                                  ctx, subpool));
     svn_pool_destroy(subpool);
   }

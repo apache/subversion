@@ -198,7 +198,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
 }
 
 svn_error_t *
-svn_client_checkout3(svn_revnum_t *result_rev,
+svn_client_checkout4(svn_revnum_t *result_rev,
                      const char *URL,
                      const char *path,
                      const svn_opt_revision_t *peg_revision,
@@ -206,6 +206,7 @@ svn_client_checkout3(svn_revnum_t *result_rev,
                      svn_depth_t depth,
                      svn_boolean_t ignore_externals,
                      svn_boolean_t allow_unver_obstructions,
+                     const svn_version_t *wc_format_version,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
