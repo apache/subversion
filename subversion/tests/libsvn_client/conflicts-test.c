@@ -4919,20 +4919,24 @@ test_cherry_pick_post_move_edit(const svn_test_opts_t *opts,
   /* On "trunk", move the file mu. */
   SVN_ERR(sbox_wc_move(b, "A/mu", "A/mu-moved"));
   SVN_ERR(sbox_wc_commit(b, "")); /* r3 */
-  /* On "trunk", edit mu-moved. This will be r4, which we'll cherry-pick. */
+  /* On "trunk", edit mu-moved. This will be r4. */
   SVN_ERR(sbox_file_write(b, "A/mu-moved", "Modified content." APR_EOL_STR));
   SVN_ERR(sbox_wc_commit(b, "")); /* r4 */
+  /* On "trunk", edit mu-moved. This will be r5, which we'll cherry-pick. */
+  SVN_ERR(sbox_file_write(b, "A/mu-moved",
+                          "More modified content." APR_EOL_STR));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r5 */
   SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
 
-  /* Perform a cherry-pick merge of r4 from A to A1. */
+  /* Perform a cherry-pick merge of r5 from A to A1. */
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
   trunk_url = apr_pstrcat(b->pool, b->repos_url, "/A", SVN_VA_NULL);
   peg_rev.kind = svn_opt_revision_number;
-  peg_rev.value.number = 4;
+  peg_rev.value.number = 5;
   merge_range.start.kind = svn_opt_revision_number;
-  merge_range.start.value.number = 3;
+  merge_range.start.value.number = 4;
   merge_range.end.kind = svn_opt_revision_number;
-  merge_range.end.value.number = 4;
+  merge_range.end.value.number = 5;
   ranges_to_merge = apr_array_make(b->pool, 1,
                                    sizeof(svn_opt_revision_range_t *));
   APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = &merge_range;
@@ -4983,7 +4987,7 @@ test_cherry_pick_post_move_edit(const svn_test_opts_t *opts,
 
   /* And "A1/mu" should have expected contents. */
   SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A1/mu"), pool));
-  SVN_TEST_STRING_ASSERT(buf->data, "Modified content." APR_EOL_STR);
+  SVN_TEST_STRING_ASSERT(buf->data, "More modified content." APR_EOL_STR);
 
   return SVN_NO_ERROR;
 }
