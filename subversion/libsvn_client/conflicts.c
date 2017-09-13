@@ -482,6 +482,80 @@ find_yca(svn_client__pathrev_t **yca_loc,
   return SVN_NO_ERROR;
 }
 
+/* Like find_yca, expect that a YCA could also be found via a brute-force
+ * search of parents of REPOS_RELPATH1 and REPOS_RELPATH2, if no "direct"
+ * YCA exists. An implicit assumption is that some parent of REPOS_RELPATH1
+ * is a branch of some parent of REPOS_RELPATH2.
+ *
+ * This function can guess a "good enough" YCA for 'missing nodes' which do
+ * not exist in the working copy, e.g. when a file edit is merged to a path
+ * which does not exist in the working copy.
+ */
+static svn_error_t *
+find_nearest_yca(svn_client__pathrev_t **yca_locp,
+                 const char *repos_relpath1,
+                 svn_revnum_t peg_rev1,
+                 const char *repos_relpath2,
+                 svn_revnum_t peg_rev2,
+                 const char *repos_root_url,
+                 const char *repos_uuid,
+                 svn_ra_session_t *ra_session,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  svn_client__pathrev_t *yca_loc;
+  svn_error_t *err;
+  apr_pool_t *iterpool;
+  const char *p1, *p2;
+  int c1, c2;
+
+  *yca_locp = NULL;
+
+  iterpool = svn_pool_create(scratch_pool);
+
+  p1 = repos_relpath1;
+  c1 = svn_path_component_count(repos_relpath1);
+  while (c1--)
+    {
+      svn_pool_clear(iterpool);
+
+      p2 = repos_relpath2;
+      c2 = svn_path_component_count(repos_relpath2);
+      while (c2--)
+        {
+          err = find_yca(&yca_loc, p1, peg_rev1, p2, peg_rev2,
+                         repos_root_url, repos_uuid, ra_session, ctx,
+                         result_pool, iterpool);
+          if (err)
+            {
+              if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+                {
+                  svn_error_clear(err);
+                  yca_loc = NULL;
+                }
+              else
+                return svn_error_trace(err);
+            }
+
+          if (yca_loc)
+            {
+              *yca_locp = yca_loc;
+              svn_pool_destroy(iterpool);
+              return SVN_NO_ERROR;
+            }
+
+          p2 = svn_relpath_dirname(p2, scratch_pool); 
+        }
+
+      p1 = svn_relpath_dirname(p1, scratch_pool); 
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Check if the copied node described by COPY and the DELETED_PATH@DELETED_REV
  * share a common ancestor. If so, return new repos_move_info in *MOVE which
  * describes a move from the deleted path to that copy's destination. */
@@ -2351,11 +2425,11 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
       struct repos_move_info *move;
       svn_ra_session_t *ra_session;
       const char *url, *corrected_url;
-      svn_revnum_t end_rev = old_rev < new_rev ? old_rev : new_rev;
+      svn_client__pathrev_t *yca_loc;
+      svn_revnum_t end_rev;
 
-      /* END_REV must be older than PEG_REV. */
-      if (end_rev >= related_peg_rev)
-        end_rev = related_peg_rev > 0 ? related_peg_rev - 1 : 0;
+      /* ### The following describes all moves in terms of forward-merges,
+       * should do we something else for reverse-merges? */
 
       victim_abspath = svn_client_conflict_get_local_abspath(conflict);
       url = svn_path_url_add_component2(repos_root_url, related_repos_relpath,
@@ -2368,6 +2442,21 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
                                                    ctx,
                                                    scratch_pool,
                                                    scratch_pool));
+
+      /* Set END_REV to our best guess of the nearest YCA revision. */
+      SVN_ERR(find_nearest_yca(&yca_loc, related_repos_relpath, related_peg_rev,
+                               parent_repos_relpath, parent_peg_rev,
+                               repos_root_url, repos_uuid, ra_session, ctx,
+                               scratch_pool, scratch_pool));
+      if (yca_loc == NULL)
+        return SVN_NO_ERROR;
+      end_rev = yca_loc->rev;
+
+      /* END_REV must be smaller than RELATED_PEG_REV, else the call
+         to find_moves_in_natural_history() below will error out. */
+      if (end_rev >= related_peg_rev)
+        end_rev = related_peg_rev > 0 ? related_peg_rev - 1 : 0;
+
       SVN_ERR(find_moves_in_natural_history(&moves, related_repos_relpath,
                                             related_peg_rev, end_rev,
                                             victim_abspath,
