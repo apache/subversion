@@ -2309,10 +2309,19 @@ struct conflict_tree_local_missing_details
   /* The path which was deleted relative to the repository root. */
   const char *deleted_repos_relpath;
 
-  /* Move information. If not NULL, this is an array of repos_move_info *
-   * elements. Each element is the head of a move chain which starts in
-   * DELETED_REV. */
+  /* Move information about the conflict victim. If not NULL, this is an
+   * array of repos_move_info elements. Each element is the head of a
+   * move chain which starts in DELETED_REV. */
   apr_array_header_t *moves;
+
+  /* Move information about siblings. Siblings are nodes which share
+   * a youngest common ancestor with the conflict victim. E.g. in case
+   * of a merge operation they are part of the merge source branch.
+   * If not NULL, this is an array of repos_move_info elements.
+   * Each element is the head of a move chain, which starts at some
+   * point in history after siblings and conflict victim forked off
+   * their common ancestor. */
+  apr_array_header_t *sibling_moves;
 
   /* If not NULL, this is the move target abspath. */
   const char *moved_to_abspath;
@@ -2549,7 +2558,8 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
   svn_node_kind_t replacing_node_kind;
   const char *deleted_basename;
   struct conflict_tree_local_missing_details *details;
-  apr_array_header_t *moves;
+  apr_array_header_t *moves = NULL;
+  apr_array_header_t *sibling_moves = NULL;
   const char *related_repos_relpath;
   svn_revnum_t related_peg_rev;
   const char *repos_root_url;
@@ -2601,7 +2611,6 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
   if (deleted_rev == SVN_INVALID_REVNUM)
     {
       const char *victim_abspath;
-      struct repos_move_info *move;
       svn_ra_session_t *ra_session;
       const char *url, *corrected_url;
       svn_client__pathrev_t *yca_loc;
@@ -2636,33 +2645,29 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
       if (end_rev >= related_peg_rev)
         end_rev = related_peg_rev > 0 ? related_peg_rev - 1 : 0;
 
-      SVN_ERR(find_moves_in_natural_history(&moves, related_repos_relpath,
+      SVN_ERR(find_moves_in_natural_history(&sibling_moves,
+                                            related_repos_relpath,
                                             related_peg_rev, end_rev,
                                             victim_abspath,
                                             repos_root_url, repos_uuid,
                                             ra_session, ctx,
                                             conflict->pool, scratch_pool));
 
-      if (moves == NULL)
+      if (sibling_moves == NULL)
         return SVN_NO_ERROR;
 
-      /* Fill in related path's details from the first possible move chain. */
-      move = APR_ARRAY_IDX(moves, 0, struct repos_move_info *);
-      deleted_rev = move->rev;
-      deleted_rev_author = move->rev_author;
-      parent_repos_relpath = svn_relpath_dirname(move->moved_from_repos_relpath,
-                                                 scratch_pool);
-      deleted_basename = svn_relpath_basename(move->moved_from_repos_relpath,
-                                              scratch_pool);
+      /* ## TODO: Find the missing node in the WC. */
     }
 
   details = apr_pcalloc(conflict->pool, sizeof(*details));
   details->deleted_rev = deleted_rev;
   details->deleted_rev_author = deleted_rev_author;
-  details->deleted_repos_relpath = svn_relpath_join(parent_repos_relpath,
-                                                    deleted_basename,
-                                                    conflict->pool); 
+  if (deleted_rev != SVN_INVALID_REVNUM)
+    details->deleted_repos_relpath = svn_relpath_join(parent_repos_relpath,
+                                                      deleted_basename,
+                                                      conflict->pool); 
   details->moves = moves;
+  details->sibling_moves = sibling_moves;
                                          
   conflict->tree_conflict_local_details = details;
 
@@ -2814,23 +2819,43 @@ conflict_tree_get_description_local_missing(const char **description,
                              description, conflict, ctx,
                              result_pool, scratch_pool));
 
-  if (details->moves)
+  if (details->moves || details->sibling_moves)
     {
       struct repos_move_info *move;
+      
+      *description = _("No such file or directory was found in the "
+                       "merge target working copy.\n");
 
-      move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
-      *description = apr_psprintf(
-                       result_pool,
-                       _("No such file or directory was found in the "
-                         "merge target working copy.\nThe item was "
-                         "moved from '^/%s' to '^/%s' in r%ld by %s."),
-                       move->moved_from_repos_relpath,
-                       move->moved_to_repos_relpath,
-                       move->rev, move->rev_author);
-      *description = append_moved_to_chain_description(*description,
-                                                       move->next,
-                                                       result_pool,
-                                                       scratch_pool);
+      if (details->moves)
+        {
+          move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
+          *description = apr_psprintf(
+                           result_pool,
+                           _("%sThe item was moved to '^/%s' in r%ld by %s."),
+                           *description, move->moved_to_repos_relpath,
+                           move->rev, move->rev_author);
+          *description = append_moved_to_chain_description(*description,
+                                                           move->next,
+                                                           result_pool,
+                                                           scratch_pool);
+        }
+
+      if (details->sibling_moves)
+        {
+          move = APR_ARRAY_IDX(details->sibling_moves, 0,
+                               struct repos_move_info *);
+          *description = apr_psprintf(
+                           result_pool,
+                           _("%sThe item '^/%s' was moved to '^/%s' "
+                             "in r%ld by %s."),
+                           *description, move->moved_from_repos_relpath,
+                           move->moved_to_repos_relpath,
+                           move->rev, move->rev_author);
+          *description = append_moved_to_chain_description(*description,
+                                                           move->next,
+                                                           result_pool,
+                                                           scratch_pool);
+        }
     }
   else
     *description = apr_psprintf(
