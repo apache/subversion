@@ -267,6 +267,9 @@ struct repos_move_info {
   /* The copyfrom revision of the moved-to path. */
   svn_revnum_t copyfrom_rev;
 
+  /* The node kind of the item being moved. */
+  svn_node_kind_t node_kind;
+
   /* Prev pointer. NULL if no prior move exists in the chain. */
   struct repos_move_info *prev;
 
@@ -366,6 +369,7 @@ struct copy_info {
   const char *copyto_path;
   const char *copyfrom_path;
   svn_revnum_t copyfrom_rev;
+  svn_node_kind_t node_kind;
 };
 
 /* Allocate and return a NEW_MOVE, and update MOVED_PATHS with this new move. */
@@ -374,6 +378,7 @@ add_new_move(struct repos_move_info **new_move,
              const char *deleted_repos_relpath,
              const char *copyto_path,
              svn_revnum_t copyfrom_rev,
+             svn_node_kind_t node_kind,
              svn_revnum_t revision,
              const char *author,
              apr_hash_t *moved_paths,
@@ -392,6 +397,7 @@ add_new_move(struct repos_move_info **new_move,
   move->rev = revision;
   move->rev_author = apr_pstrdup(result_pool, author);
   move->copyfrom_rev = copyfrom_rev;
+  move->node_kind = node_kind;
 
   /* Link together multiple moves of the same node.
    * Note that we're traversing history backwards, so moves already
@@ -595,7 +601,7 @@ find_related_move(struct repos_move_info **move,
   if (yca_loc)
     SVN_ERR(add_new_move(move, deleted_repos_relpath,
                          copy->copyto_path, copy->copyfrom_rev,
-                         deleted_rev, author,
+                         copy->node_kind, deleted_rev, author,
                          moved_paths, ra_session, repos_root_url,
                          result_pool, scratch_pool));
 
@@ -659,7 +665,7 @@ match_copies_to_deletion(const char *deleted_repos_relpath,
               /* Remember details of this move. */
               SVN_ERR(add_new_move(&move, deleted_repos_relpath,
                                    copy->copyto_path, copy->copyfrom_rev,
-                                   deleted_rev, author,
+                                   copy->node_kind, deleted_rev, author,
                                    moved_paths, ra_session, repos_root_url,
                                    result_pool, iterpool));
               push_move(move, moves_table, result_pool);
@@ -895,6 +901,7 @@ find_nested_moves(apr_array_header_t *moves,
               /* Remember details of this move. */
               SVN_ERR(add_new_move(&nested_move, moved_along_repos_relpath,
                                    copy->copyto_path, copy->copyfrom_rev,
+                                   copy->node_kind,
                                    revision, author, moved_paths,
                                    ra_session, repos_root_url,
                                    result_pool, iterpool));
@@ -927,6 +934,7 @@ cache_copied_item(apr_hash_t *copies, const char *changed_path,
     copy->copyfrom_path++;
   copy->copyto_path = changed_path;
   copy->copyfrom_rev = log_item->copyfrom_rev;
+  copy->node_kind = log_item->node_kind;
 
   copies_with_same_source_path = apr_hash_get(copies, copy->copyfrom_path,
                                               APR_HASH_KEY_STRING);
@@ -1749,12 +1757,14 @@ find_moves_in_revision_range(struct apr_hash_t **moves_table,
 }
 
 /* Return new move information for a moved-along child MOVED_ALONG_RELPATH.
+ * Set MOVE->NODE_KIND to MOVED_ALONG_NODE_KIND.
  * Do not copy MOVE->NEXT and MOVE-PREV.
  * If MOVED_ALONG_RELPATH is empty, this effectively copies MOVE to
  * RESULT_POOL with NEXT and PREV pointers cleared. */
 static struct repos_move_info *
 new_path_adjusted_move(struct repos_move_info *move,
                        const char *moved_along_relpath,
+                       svn_node_kind_t moved_along_node_kind,
                        apr_pool_t *result_pool)
 {
   struct repos_move_info *new_move;
@@ -1769,6 +1779,7 @@ new_path_adjusted_move(struct repos_move_info *move,
   new_move->rev = move->rev;
   new_move->rev_author = apr_pstrdup(result_pool, move->rev_author);
   new_move->copyfrom_rev = move->copyfrom_rev;
+  new_move->node_kind = moved_along_node_kind;
   /* Ignore prev and next pointers. Caller will set them if needed. */
 
   return new_move;
@@ -1831,7 +1842,8 @@ find_next_moves_in_revision(apr_array_header_t **next_moves,
           struct repos_move_info *new_move;
 
           /* We have a winner. */
-          new_move = new_path_adjusted_move(move, relpath, result_pool);
+          new_move = new_path_adjusted_move(move, relpath, prev_move->node_kind,
+                                            result_pool);
           if (*next_moves == NULL)
             *next_moves = apr_array_make(result_pool, 1,
                                          sizeof(struct repos_move_info *));
@@ -1988,7 +2000,9 @@ find_prev_move_in_revision(struct repos_move_info **prev_move,
       if (related)
         {
           /* We have a winner. */
-          *prev_move = new_path_adjusted_move(move, relpath, result_pool);
+          *prev_move = new_path_adjusted_move(move, relpath,
+                                              next_move->node_kind,
+                                              result_pool);
           break;
         }
     }
@@ -2083,6 +2097,33 @@ trace_moved_node_backwards(apr_hash_t *moves_table,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+reparent_session_and_fetch_node_kind(svn_node_kind_t *node_kind,
+                                     svn_ra_session_t *ra_session,
+                                     const char *url,
+                                     svn_revnum_t peg_rev,
+                                     apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+
+  err = svn_ra_reparent(ra_session, url, scratch_pool);
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
+        {
+          svn_error_clear(err);
+          *node_kind = svn_node_unknown;
+          return SVN_NO_ERROR;
+        }
+    
+      return svn_error_trace(err);
+    }
+
+  SVN_ERR(svn_ra_check_path(ra_session, "", peg_rev, node_kind, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Scan MOVES_TABLE for moves which affect a particular deleted node, and
  * build a set of new move information for this node.
  * Return heads of all possible move chains in *MOVES.
@@ -2106,6 +2147,7 @@ find_operative_moves(apr_array_header_t **moves,
   apr_array_header_t *moves_in_deleted_rev;
   int i;
   apr_pool_t *iterpool;
+  const char *session_url, *url = NULL;
 
   moves_in_deleted_rev = apr_hash_get(moves_table, &deleted_rev,
                                       sizeof(deleted_rev));
@@ -2114,6 +2156,8 @@ find_operative_moves(apr_array_header_t **moves,
       *moves = NULL;
       return SVN_NO_ERROR;
     }
+
+  SVN_ERR(svn_ra_get_session_url(ra_session, &session_url, scratch_pool));
 
   /* Look for operative moves in the revision where the node was deleted. */
   *moves = apr_array_make(scratch_pool, 0, sizeof(struct repos_move_info *));
@@ -2129,9 +2173,23 @@ find_operative_moves(apr_array_header_t **moves,
       relpath = svn_relpath_skip_ancestor(move->moved_from_repos_relpath,
                                           deleted_repos_relpath);
       if (relpath && relpath[0] != '\0')
-        move = new_path_adjusted_move(move, relpath, result_pool);
+        {
+          svn_node_kind_t node_kind;
+
+          url = svn_path_url_add_component2(repos_root_url,
+                                            deleted_repos_relpath,
+                                            iterpool);
+          SVN_ERR(reparent_session_and_fetch_node_kind(&node_kind,
+                                                       ra_session, url,
+                                                       rev_below(deleted_rev),
+                                                       iterpool));
+          move = new_path_adjusted_move(move, relpath, node_kind, result_pool);
+        }
       APR_ARRAY_PUSH(*moves, struct repos_move_info *) = move;
     }
+
+  if (url != NULL)
+    SVN_ERR(svn_ra_reparent(ra_session, session_url, scratch_pool));
 
   /* If we didn't find any applicable moves, return NULL. */
   if ((*moves)->nelts == 0)
@@ -2421,6 +2479,7 @@ static svn_error_t *
 find_moves_in_natural_history(apr_array_header_t **moves,
                               const char *repos_relpath,
                               svn_revnum_t peg_rev,
+                              svn_node_kind_t node_kind,
                               svn_revnum_t end_rev,
                               const char *victim_abspath,
                               const char *repos_root_url,
@@ -2499,7 +2558,8 @@ find_moves_in_natural_history(apr_array_header_t **moves,
                                  sizeof(struct repos_move_info *));
 
               /* Copy the move to result pool (even if relpath is ""). */
-              move = new_path_adjusted_move(move, relpath, result_pool);
+              move = new_path_adjusted_move(move, relpath, node_kind,
+                                            result_pool);
               APR_ARRAY_PUSH(most_recent_moves,
                              struct repos_move_info *) = move;
             }
@@ -2615,6 +2675,7 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
       const char *url, *corrected_url;
       svn_client__pathrev_t *yca_loc;
       svn_revnum_t end_rev;
+      svn_node_kind_t related_node_kind;
 
       /* ### The following describes all moves in terms of forward-merges,
        * should do we something else for reverse-merges? */
@@ -2645,9 +2706,13 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
       if (end_rev >= related_peg_rev)
         end_rev = related_peg_rev > 0 ? related_peg_rev - 1 : 0;
 
+      SVN_ERR(svn_ra_check_path(ra_session, "", related_peg_rev,
+                                &related_node_kind, scratch_pool));
       SVN_ERR(find_moves_in_natural_history(&sibling_moves,
                                             related_repos_relpath,
-                                            related_peg_rev, end_rev,
+                                            related_peg_rev,
+                                            related_node_kind,
+                                            end_rev,
                                             victim_abspath,
                                             repos_root_url, repos_uuid,
                                             ra_session, ctx,
@@ -2829,11 +2894,25 @@ conflict_tree_get_description_local_missing(const char **description,
       if (details->moves)
         {
           move = APR_ARRAY_IDX(details->moves, 0, struct repos_move_info *);
-          *description = apr_psprintf(
-                           result_pool,
-                           _("%sThe item was moved to '^/%s' in r%ld by %s."),
-                           *description, move->moved_to_repos_relpath,
-                           move->rev, move->rev_author);
+          if (move->node_kind == svn_node_file)
+            *description = apr_psprintf(
+                             result_pool,
+                             _("%sThe file was moved to '^/%s' in r%ld by %s."),
+                             *description, move->moved_to_repos_relpath,
+                             move->rev, move->rev_author);
+          else if (move->node_kind == svn_node_dir)
+            *description = apr_psprintf(
+                             result_pool,
+                             _("%sThe directory was moved to '^/%s' in "
+                               "r%ld by %s."),
+                             *description, move->moved_to_repos_relpath,
+                             move->rev, move->rev_author);
+          else
+            *description = apr_psprintf(
+                             result_pool,
+                             _("%sThe item was moved to '^/%s' in r%ld by %s."),
+                             *description, move->moved_to_repos_relpath,
+                             move->rev, move->rev_author);
           *description = append_moved_to_chain_description(*description,
                                                            move->next,
                                                            result_pool,
@@ -2844,13 +2923,30 @@ conflict_tree_get_description_local_missing(const char **description,
         {
           move = APR_ARRAY_IDX(details->sibling_moves, 0,
                                struct repos_move_info *);
-          *description = apr_psprintf(
-                           result_pool,
-                           _("%sThe item '^/%s' was moved to '^/%s' "
-                             "in r%ld by %s."),
-                           *description, move->moved_from_repos_relpath,
-                           move->moved_to_repos_relpath,
-                           move->rev, move->rev_author);
+          if (move->node_kind == svn_node_file)
+            *description = apr_psprintf(
+                             result_pool,
+                             _("%sThe file '^/%s' was moved to '^/%s' "
+                               "in r%ld by %s."),
+                             *description, move->moved_from_repos_relpath,
+                             move->moved_to_repos_relpath,
+                             move->rev, move->rev_author);
+          else if (move->node_kind == svn_node_dir)
+            *description = apr_psprintf(
+                             result_pool,
+                             _("%sThe directory '^/%s' was moved to '^/%s' "
+                               "in r%ld by %s."),
+                             *description, move->moved_from_repos_relpath,
+                             move->moved_to_repos_relpath,
+                             move->rev, move->rev_author);
+          else
+            *description = apr_psprintf(
+                             result_pool,
+                             _("%sThe item '^/%s' was moved to '^/%s' "
+                               "in r%ld by %s."),
+                             *description, move->moved_from_repos_relpath,
+                             move->moved_to_repos_relpath,
+                             move->rev, move->rev_author);
           *description = append_moved_to_chain_description(*description,
                                                            move->next,
                                                            result_pool,
