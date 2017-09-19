@@ -787,14 +787,22 @@ else
     || fail "Subversion client couldn't find and/or load ra_dav library '$HTTP_LIBRARY'"
 fi
 
+# Our configure script extracts the HTTPD version from
+# headers. However, that may not be the same as the runtime version;
+# an example of this discrepancy occurs on OSX 1.9.5, where the
+# headers report 2.2.26 but the server reports 2.2.29. Since our tests
+# use the version to interpret test case results, use the actual
+# runtime version here to avoid spurious test failures.
+HTTPD_VERSION="$($APXS -q HTTPD_VERSION)"
+
 if [ $# = 0 ]; then
-  $TIME_CMD "$MAKE" check "BASE_URL=$BASE_URL" $SSL_MAKE_VAR
+  $TIME_CMD "$MAKE" check "BASE_URL=$BASE_URL" "HTTPD_VERSION=$HTTPD_VERSION" $SSL_MAKE_VAR
   r=$?
 else
   (cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
   TEST="$1"
   shift
-  $TIME_CMD "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" $SSL_TEST_ARG "$@")
+  $TIME_CMD "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" "--httpd-version=$HTTPD_VERSION" $SSL_TEST_ARG "$@")
   r=$?
 fi
 
