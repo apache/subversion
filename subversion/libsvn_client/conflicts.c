@@ -514,7 +514,7 @@ find_nearest_yca(svn_client__pathrev_t **yca_locp,
   svn_error_t *err;
   apr_pool_t *iterpool;
   const char *p1, *p2;
-  int c1, c2;
+  apr_size_t c1, c2;
 
   *yca_locp = NULL;
 
@@ -551,10 +551,10 @@ find_nearest_yca(svn_client__pathrev_t **yca_locp,
               return SVN_NO_ERROR;
             }
 
-          p2 = svn_relpath_dirname(p2, scratch_pool); 
+          p2 = svn_relpath_dirname(p2, scratch_pool);
         }
 
-      p1 = svn_relpath_dirname(p1, scratch_pool); 
+      p1 = svn_relpath_dirname(p1, scratch_pool);
     }
 
   svn_pool_destroy(iterpool);
