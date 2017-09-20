@@ -56,6 +56,12 @@ const char *
 svn_utf__utf8proc_runtime_version(void)
 {
   /* Unused static function warning removal hack. */
+  SVN_UNUSED(utf8proc_grapheme_break);
+  SVN_UNUSED(utf8proc_tolower);
+  SVN_UNUSED(utf8proc_toupper);
+  SVN_UNUSED(utf8proc_totitle);
+  SVN_UNUSED(utf8proc_charwidth);
+  SVN_UNUSED(utf8proc_category_string);
   SVN_UNUSED(utf8proc_NFD);
   SVN_UNUSED(utf8proc_NFC);
   SVN_UNUSED(utf8proc_NFKD);
