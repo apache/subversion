@@ -83,7 +83,7 @@ svn_utf__utf8proc_runtime_version(void)
  * that STRING contains invalid UTF-8 or was so long that an overflow
  * occurred.
  */
-static utf8proc_ssize_t
+static apr_ssize_t
 unicode_decomposition(int transform_flags,
                       const char *string, apr_size_t length,
                       svn_membuf_t *buffer)
@@ -94,8 +94,8 @@ unicode_decomposition(int transform_flags,
   for (;;)
     {
       apr_int32_t *const ucs4buf = buffer->data;
-      const utf8proc_ssize_t ucs4len = buffer->size / sizeof(*ucs4buf);
-      const utf8proc_ssize_t result =
+      const apr_ssize_t ucs4len = buffer->size / sizeof(*ucs4buf);
+      const apr_ssize_t result =
         utf8proc_decompose((const void*) string, length, ucs4buf, ucs4len,
                            UTF8PROC_DECOMPOSE | UTF8PROC_STABLE
                            | transform_flags | nullterm);
@@ -122,7 +122,7 @@ decompose_normalized(apr_size_t *result_length,
                      const char *string, apr_size_t length,
                      svn_membuf_t *buffer)
 {
-  utf8proc_ssize_t result = unicode_decomposition(0, string, length, buffer);
+  apr_ssize_t result = unicode_decomposition(0, string, length, buffer);
   if (result < 0)
     return svn_error_create(SVN_ERR_UTF8PROC_ERROR, NULL,
                             gettext(utf8proc_errmsg(result)));
@@ -151,7 +151,7 @@ normalize_cstring(apr_size_t *result_length,
                   svn_membuf_t *buffer)
 {
   int flags = 0;
-  utf8proc_ssize_t result;
+  apr_ssize_t result;
 
   if (casefold)
     flags |= UTF8PROC_CASEFOLD;
@@ -290,7 +290,7 @@ encode_ucs4(svn_membuf_t *buffer, apr_int32_t ucs4chr, apr_size_t *length)
   if (buffer->size - *length < 4)
     svn_membuf__resize(buffer, buffer->size + 4);
 
-  utf8len = utf8proc_encode_char(ucs4chr, ((uint8_t*)buffer->data + *length));
+  utf8len = utf8proc_encode_char(ucs4chr, ((apr_byte_t*)buffer->data + *length));
   if (!utf8len)
     return svn_error_createf(SVN_ERR_UTF8PROC_ERROR, NULL,
                              _("Invalid Unicode character U+%04lX"),
@@ -353,7 +353,7 @@ svn_utf__glob(svn_boolean_t *match,
         {
           const int nullterm = (escape_len == SVN_UTF__UNKNOWN_LENGTH
                                 ? UTF8PROC_NULLTERM : 0);
-          utf8proc_ssize_t result =
+          apr_ssize_t result =
             utf8proc_decompose((const void*) escape, escape_len, &ucs4esc, 1,
                                UTF8PROC_DECOMPOSE | UTF8PROC_STABLE | nullterm);
           if (result < 0)
@@ -451,8 +451,8 @@ svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool)
 
   svn_stringbuf_t *result;
   svn_membuf_t buffer;
-  utf8proc_ssize_t decomp_length;
-  utf8proc_ssize_t len;
+  apr_ssize_t decomp_length;
+  apr_ssize_t len;
 
   /* Decompose to a non-reversible compatibility format. */
   svn_membuf__create(&buffer, length * sizeof(apr_int32_t), pool);
@@ -481,7 +481,7 @@ svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool)
 
           while (done < length)
             {
-              len = utf8proc_iterate((uint8_t*)src + done, length - done, &uc);
+              len = utf8proc_iterate((apr_byte_t*)src + done, length - done, &uc);
               if (len < 0)
                 break;
               done += len;
@@ -509,7 +509,7 @@ svn_utf__fuzzy_escape(const char *src, apr_size_t length, apr_pool_t *pool)
 
               /* Determine the length of the UTF-8 sequence */
               const char *const p = src + done;
-              len = utf8proc_utf8class[(uint8_t)*p];
+              len = utf8proc_utf8class[(apr_byte_t)*p];
 
               /* Check if the multi-byte sequence is valid UTF-8. */
               if (len > 1 && len <= (apr_ssize_t)(length - done))
