@@ -81,15 +81,13 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <apr.h>
-
-#if defined(_MSC_VER) && _MSC_VER < 1800
-// MSVC prior to 2013 lacked stdbool.h and inttypes.h
 typedef char utf8proc_int8_t;
 typedef unsigned char utf8proc_uint8_t;
 typedef apr_int16_t utf8proc_int16_t;
 typedef apr_uint16_t utf8proc_uint16_t;
 typedef apr_int32_t utf8proc_int32_t;
 typedef apr_uint32_t utf8proc_uint32_t;
+#ifdef _MSC_VER
 #  ifdef _WIN64
 typedef apr_int64_t utf8proc_ssize_t;
 typedef apr_uint64_t utf8proc_size_t;
@@ -97,37 +95,23 @@ typedef apr_uint64_t utf8proc_size_t;
 typedef apr_int32_t utf8proc_ssize_t;
 typedef apr_uint32_t utf8proc_size_t;
 #  endif
-#  ifndef __cplusplus
-// emulate C99 bool
-typedef apr_uint8_t utf8proc_bool;
-#    ifndef __bool_true_false_are_defined
-#      define false 0
-#      define true 1
-#      define __bool_true_false_are_defined 1
-#    endif
-#  else
-typedef bool utf8proc_bool;
-#  endif
 #else
-typedef char utf8proc_int8_t;
-typedef unsigned char utf8proc_uint8_t;
-typedef apr_int16_t utf8proc_int16_t;
-typedef apr_uint16_t utf8proc_uint16_t;
-typedef apr_int32_t utf8proc_int32_t;
-typedef apr_uint32_t utf8proc_uint32_t;
 typedef apr_size_t utf8proc_size_t;
 typedef apr_ssize_t utf8proc_ssize_t;
-#  ifdef HAVE_STDBOOL_H
-#    include <stdbool.h>
+#endif
+#ifdef __cplusplus
 typedef bool utf8proc_bool;
-#  else
-#    ifndef __bool_true_false_are_defined
-#      define false 0
-#      define true 1
-#      define __bool_true_false_are_defined 1
-#    endif
-typedef apr_uint8_t utf8proc_bool;
+#elif defined HAVE_STDBOOL_H
+#  include <stdbool.h>
+typedef bool utf8proc_bool;
+#else
+// emulate C99 bool
+#  ifndef __bool_true_false_are_defined
+#    define false 0
+#    define true 1
+#    define __bool_true_false_are_defined 1
 #  endif
+typedef apr_byte_t utf8proc_bool;
 #endif
 #include <limits.h>
 
