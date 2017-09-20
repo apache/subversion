@@ -123,24 +123,21 @@ typedef apr_byte_t utf8proc_bool;
  */
 #ifdef UTF8PROC_INLINE
 #  define UTF8PROC_DATA static
+#  undef  UTF8PROC_DATA_EXPORT
 #  define UTF8PROC_DLLEXPORT static
-#  define UTF8PROC_DLLEXPORT_DATA static
 #else
 #  define UTF8PROC_DATA
+#  define UTF8PROC_DATA_EXPORT
 #  ifdef _WIN32
 #    ifdef UTF8PROC_EXPORTS
 #      define UTF8PROC_DLLEXPORT __declspec(dllexport)
-#      define UTF8PROC_DLLEXPORT_DATA __declspec(dllexport) extern
 #    else
 #      define UTF8PROC_DLLEXPORT __declspec(dllimport)
-#      define UTF8PROC_DLLEXPORT_DATA __declspec(dllimport) extern
 #    endif
 #  elif __GNUC__ >= 4
 #    define UTF8PROC_DLLEXPORT __attribute__ ((visibility("default")))
-#    define UTF8PROC_DLLEXPORT_DATA __attribute__ ((visibility("default"))) extern
 #  else
 #    define UTF8PROC_DLLEXPORT
-#    define UTF8PROC_DLLEXPORT_DATA extern
 #  endif
 #endif
 
@@ -399,11 +396,13 @@ typedef enum {
  */
 typedef utf8proc_int32_t (*utf8proc_custom_func)(utf8proc_int32_t codepoint, void *data);
 
+#if defined(DOXYGEN) || defined(UTF8PROC_DATA_EXPORT)
 /**
  * Array containing the byte lengths of a UTF-8 encoded codepoint based
  * on the first byte.
  */
-UTF8PROC_DLLEXPORT_DATA const utf8proc_int8_t utf8proc_utf8class[256];
+UTF8PROC_DLLEXPORT extern const utf8proc_int8_t utf8proc_utf8class[256];
+#endif
 
 /**
  * Returns the utf8proc API version as a string MAJOR.MINOR.PATCH
