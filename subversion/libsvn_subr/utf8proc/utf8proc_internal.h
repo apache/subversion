@@ -103,7 +103,7 @@ typedef bool utf8proc_bool;
 #  include <stdbool.h>
 typedef bool utf8proc_bool;
 #else
-// emulate C99 bool
+/* emulate C99 bool */
 #  ifndef __bool_true_false_are_defined
 #    define false 0
 #    define true 1
