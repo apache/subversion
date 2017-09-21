@@ -36,7 +36,7 @@
    restored and C++/C99-style comments might creep into the rest of
    this file; but that's still better than having to replace all the
    comments in utf8proc/utf8proc.c. */
-#    pragma clang diagnostic push
+#    pragma GCC diagnostic push
 #  endif
 #  if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2) || __clang__
 #    pragma GCC diagnostic ignored "-Wcomment"
