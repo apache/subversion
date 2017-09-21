@@ -77,7 +77,7 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1809090, r1809091, r1809096, r1809100, r1809103, r1809134
+ * r1809090, r1809091, r1809096, r1809100, r1809103, r1809134, r1809189, r1809195, r1809200
    Upgrade to utf8proc 2.1.0.
    Justification:
      Fixes some bugs, supports Unicode 9.0, improves preformance,
