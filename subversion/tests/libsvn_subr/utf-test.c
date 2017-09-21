@@ -666,7 +666,7 @@ test_utf_fuzzy_escape(apr_pool_t *pool)
   fuzzy = svn_utf__fuzzy_escape(invalid, sizeof(invalid) - 1, pool);
   /*fprintf(stderr, "%s\n", fuzzy);*/
   SVN_TEST_ASSERT(0 == strcmp(fuzzy,
-                              "Not Unicode: {U?FDD1};"
+                              "Not Unicode: {U+FDD1};"
                               "Out of range: ?\\F4?\\90?\\80?\\81;"
                               "Not UTF-8: ?\\E6;"
                               "Null byte: \\0;"));
