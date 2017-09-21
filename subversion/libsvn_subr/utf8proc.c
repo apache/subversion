@@ -30,14 +30,27 @@
 #include "svn_private_config.h"
 
 #if SVN_INTERNAL_UTF8PROC
-#define UTF8PROC_INLINE
+#  define UTF8PROC_INLINE
+#  if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6) || __clang__
+/* With older versions of GCC, the ignored -Wcomment will not be
+   restored and C++/C99-style comments might creep into the rest of
+   this file; but that's still better than having to replace all the
+   comments in utf8proc/utf8proc.c. */
+#    pragma clang diagnostic push
+#  endif
+#  if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2) || __clang__
+#    pragma GCC diagnostic ignored "-Wcomment"
+#  endif
 /* Somehow utf8proc thinks it is nice to use strlen as an argument name,
    while this function is already defined via apr.h */
-#define strlen svn__strlen_var
-#include "utf8proc/utf8proc.c"
-#undef strlen
+#  define strlen svn__strlen_var
+#  include "utf8proc/utf8proc.c"
+#  undef strlen
+#  if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6) || __clang__
+#    pragma GCC diagnostic pop
+#  endif
 #else
-#include <utf8proc.h>
+#  include <utf8proc.h>
 #endif
 
 
