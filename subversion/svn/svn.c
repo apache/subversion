@@ -1705,7 +1705,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
   { "shelves", svn_cl__shelves, {0}, N_
     ("List shelved changes.\n"
      "usage: shelves\n"),
-    {} },
+    },
 
   { "status", svn_cl__status, {"stat", "st"}, N_
     ("Print the status of working copy files and directories.\n"
