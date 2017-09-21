@@ -1,5 +1,3 @@
-#include "svn_private_config.h"
-#if SVN_INTERNAL_UTF8PROC
 /*
  * Copyright (c) 2015 Steven G. Johnson, Jiahao Chen, Peter Colberg, Tony Kelman, Scott P. Jones, and other contributors.
  * Copyright (c) 2009 Public Software Group e. V., Berlin, Germany
@@ -708,4 +706,3 @@ UTF8PROC_DLLEXPORT utf8proc_uint8_t *utf8proc_NFKC(const utf8proc_uint8_t *str);
 #endif
 
 #endif
-#endif /* SVN_INTERNAL_UTF8PROC */

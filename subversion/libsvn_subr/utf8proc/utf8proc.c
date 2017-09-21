@@ -1,5 +1,3 @@
-#include "svn_private_config.h"
-#if SVN_INTERNAL_UTF8PROC
 /* -*- mode: c; c-basic-offset: 2; tab-width: 2; indent-tabs-mode: nil -*- */
 /*
  *  Copyright (c) 2015 Steven G. Johnson, Jiahao Chen, Peter Colberg, Tony Kelman, Scott P. Jones, and other contributors.
@@ -764,4 +762,3 @@ UTF8PROC_DLLEXPORT utf8proc_uint8_t *utf8proc_NFKC(const utf8proc_uint8_t *str) 
 #ifdef __GNUC__
 #  pragma GCC diagnostic pop
 #endif
-#endif /* SVN_INTERNAL_UTF8PROC */
