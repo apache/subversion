@@ -40,10 +40,6 @@
  *  Implementation of libutf8proc.
  */
 
-#ifdef __GNUC__
-#  pragma GCC diagnostic push
-#  pragma GCC diagnostic ignored "-Wcomment"
-#endif
 
 #include "utf8proc_internal.h"
 #include "utf8proc_data.c"
@@ -758,7 +754,3 @@ UTF8PROC_DLLEXPORT utf8proc_uint8_t *utf8proc_NFKC(const utf8proc_uint8_t *str) 
     UTF8PROC_COMPOSE | UTF8PROC_COMPAT);
   return retval;
 }
-
-#ifdef __GNUC__
-#  pragma GCC diagnostic pop
-#endif
