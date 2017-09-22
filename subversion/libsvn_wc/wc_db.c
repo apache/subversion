@@ -16582,7 +16582,6 @@ svn_wc__find_repos_node_in_wc(apr_array_header_t **local_abspath_list,
                               svn_wc__db_t *db,
                               const char *wri_abspath,
                               const char *repos_relpath,
-                              svn_revnum_t rev,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
@@ -16600,7 +16599,7 @@ svn_wc__find_repos_node_in_wc(apr_array_header_t **local_abspath_list,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_FIND_REPOS_PATH_IN_WC));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isr", wcroot->wc_id, repos_relpath, rev));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, repos_relpath));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   *local_abspath_list = apr_array_make(result_pool, have_row ? 1 : 0,
