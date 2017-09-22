@@ -3844,7 +3844,6 @@ svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
                                          const char *victim_abspath,
                                          svn_node_kind_t victim_node_kind,
                                          const char *moved_to_repos_relpath,
-                                         svn_revnum_t rev,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool)
 {
@@ -3855,7 +3854,7 @@ svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
 
   *possible_targets = apr_array_make(result_pool, 1, sizeof(const char *));
   SVN_ERR(svn_wc__find_repos_node_in_wc(&candidates, wc_ctx->db, victim_abspath,
-                                        moved_to_repos_relpath, rev,
+                                        moved_to_repos_relpath,
                                         scratch_pool, scratch_pool));
 
   /* Find a "useful move target" node in our set of candidates.
