@@ -2536,7 +2536,7 @@ find_moves_in_natural_history(apr_array_header_t **moves,
                   err = find_yca(&yca_loc, repos_relpath, peg_rev,
                                  repos_relpath, move->rev,
                                  repos_root_url, repos_uuid,
-                                 NULL, ctx, scratch_pool, scratch_pool);
+                                 NULL, ctx, iterpool, iterpool);
                   if (err)
                     {
                       if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -4718,7 +4718,7 @@ follow_move_chains(apr_hash_t *wc_move_targets,
                                  candidate_repos_relpath,
                                  candidate_revision,
                                  repos_root_url, repos_uuid,
-                                 NULL, ctx, scratch_pool, scratch_pool);
+                                 NULL, ctx, iterpool, iterpool);
                   if (err)
                     {
                       if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
