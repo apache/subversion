@@ -724,7 +724,7 @@ fi
 ' >$STOPSCRIPT "$HTTPD_ROOT" "$START" "$HTTPD_PID" "$HTTPD_PID"
 chmod +x $STOPSCRIPT
 
-$START -t \
+$START -t > /dev/null \
   || fail "Configuration file didn't pass the check, most likely modules couldn't be loaded"
 
 # need to pause for some time to let HTTPD start
