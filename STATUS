@@ -76,6 +76,8 @@ Candidate changes:
      ^/subversion/branches/1.9.x-r1808955
    Votes:
      +1: brane
+     +0: danielsh (this works on OS X and Linux but nevertheless I wonder
+          about its portability)
 
  * r1809090, r1809091, r1809096, r1809100, r1809103, r1809134, r1809189, r1809195, r1809200
    Upgrade to utf8proc 2.1.0.
