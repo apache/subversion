@@ -67,7 +67,7 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1808955, r1808956, r1809558
+ * r1808955, r1808956, r1809558, r1809564
    Transmit the run-time HTTPD version to the DAV test driver.
    Justification:
      Prevents spurious test failures where compile-time and run-time
