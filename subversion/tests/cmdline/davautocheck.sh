@@ -699,6 +699,15 @@ RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)\$ /svn-t
 RedirectMatch           ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)\$ /svn-test-work/repositories/\$1
 __EOF__
 
+
+# Our configure script extracts the HTTPD version from
+# headers. However, that may not be the same as the runtime version;
+# an example of this discrepancy occurs on OSX 1.9.5, where the
+# headers report 2.2.26 but the server reports 2.2.29. Since our tests
+# use the version to interpret test case results, use the actual
+# runtime version here to avoid spurious test failures.
+HTTPD_VERSION=$("$HTTPD" -V | grep '^Server version:' | sed 's|^.*/\([0-9]*\.[0-9]*\.[0-9]*\).*$|\1|')
+
 START="$HTTPD -f $HTTPD_CFG"
 printf \
 '#!/bin/sh
@@ -722,7 +731,7 @@ $START -t \
 $START &
 sleep 2
 
-say "HTTPD started and listening on '$BASE_URL'..."
+say "HTTPD $HTTPD_VERSION started and listening on '$BASE_URL'..."
 #query "Ready" "y"
 
 # Perform a trivial validation of our httpd configuration by
@@ -777,14 +786,6 @@ else
   "$CLIENT_CMD" --version | egrep "^[*] ra_$HTTP_LIBRARY" >/dev/null \
     || fail "Subversion client couldn't find and/or load ra_dav library '$HTTP_LIBRARY'"
 fi
-
-# Our configure script extracts the HTTPD version from
-# headers. However, that may not be the same as the runtime version;
-# an example of this discrepancy occurs on OSX 1.9.5, where the
-# headers report 2.2.26 but the server reports 2.2.29. Since our tests
-# use the version to interpret test case results, use the actual
-# runtime version here to avoid spurious test failures.
-HTTPD_VERSION="$($APXS -q HTTPD_VERSION)"
 
 if [ $# = 0 ]; then
   TIME_CMD "$MAKE" check "BASE_URL=$BASE_URL" "HTTPD_VERSION=$HTTPD_VERSION" $SSL_MAKE_VAR
