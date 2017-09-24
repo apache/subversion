@@ -706,7 +706,7 @@ __EOF__
 # headers report 2.2.26 but the server reports 2.2.29. Since our tests
 # use the version to interpret test case results, use the actual
 # runtime version here to avoid spurious test failures.
-HTTPD_VERSION=$("$HTTPD" -V | grep '^Server version:' | sed 's|^.*/\([0-9]*\.[0-9]*\.[0-9]*\).*$|\1|')
+HTTPD_VERSION=$("$HTTPD" -V -f $HTTPD_CFG | grep '^Server version:' | sed 's|^.*/\([0-9]*\.[0-9]*\.[0-9]*\).*$|\1|')
 
 START="$HTTPD -f $HTTPD_CFG"
 printf \
