@@ -679,7 +679,7 @@ class SvnReposTest < Test::Unit::TestCase
       dest_path = File.join(@tmp_path, "dest")
       Svn::Repos.create(dest_path) do |repos|
         assert_raises(NoMethodError) do
-          repos.load_fs(nil)
+          repos.load_fs(Object.new)
         end
       end
 

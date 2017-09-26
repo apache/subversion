@@ -71,6 +71,14 @@
                   ,
                   svn_swig_rb_fs_get_locks_callback)
 #endif
+
+#ifdef SWIGPYTHON
+%callback_typemap(svn_fs_lock_callback_t lock_callback, void *lock_baton,
+                  svn_swig_py_fs_lock_callback,
+                  ,
+                  )
+#endif
+
 /* -----------------------------------------------------------------------
    svn_fs_get_merge_info
 */

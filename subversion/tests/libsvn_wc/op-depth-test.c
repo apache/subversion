@@ -310,15 +310,16 @@ check_db_rows(svn_test__sandbox_t *b,
       row->repo_revnum = svn_sqlite__column_revnum(stmt, 3);
       row->repo_relpath = svn_sqlite__column_text(stmt, 4, b->pool);
       row->file_external = !svn_sqlite__column_is_null(stmt, 5);
-      if (row->file_external && svn_sqlite__column_is_null(stmt, 6))
-        comparison_baton.errors
-          = svn_error_createf(SVN_ERR_TEST_FAILED, comparison_baton.errors,
-                              "incomplete {%s}", print_row(row, b->pool));
       row->moved_to = svn_sqlite__column_text(stmt, 7, b->pool);
       row->moved_here = svn_sqlite__column_boolean(stmt, 8);
       SVN_ERR(svn_sqlite__column_properties(&props_hash, stmt, 9,
                                             b->pool, b->pool));
       row->props = props_hash_to_text(props_hash, b->pool);
+
+      if (row->file_external && svn_sqlite__column_is_null(stmt, 6))
+        comparison_baton.errors
+          = svn_error_createf(SVN_ERR_TEST_FAILED, comparison_baton.errors,
+                              "incomplete {%s}", print_row(row, b->pool));
 
       key = apr_psprintf(b->pool, "%d %s", row->op_depth, row->local_relpath);
       apr_hash_set(found_hash, key, APR_HASH_KEY_STRING, row);
@@ -514,7 +515,7 @@ check_db_conflicts(svn_test__sandbox_t *b,
       local_abspath = svn_dirent_join(b->wc_abspath, info->local_relpath,
                                       iterpool);
 
-      SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL,
+      SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, NULL,
                                        b->wc_ctx->db, local_abspath,
                                        iterpool, iterpool));
 
@@ -3582,11 +3583,13 @@ revert_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_update(&b, "", 1));
   {
     nodes_row_t rows[] = {
-      { 0, "",    "normal", 1, "" },
-      { 0, "f",   "normal", 1, "f" },
-      { 1, "A",   "normal", NO_COPY_FROM },
-      { 0, "h",   "normal", 1, "f", TRUE },
-      { 0, "A/g", "normal", 1, "f", TRUE },
+      { 0, "",    "normal",      1, "" },
+      { 0, "f",   "normal",      1, "f" },
+      { 1, "A",   "normal",      NO_COPY_FROM },
+      { 0, "h",   "normal",      1, "f", TRUE },
+      { 0, "A/g", "normal",      1, "f", TRUE },
+
+      { 0, "g",   "not-present", 0, "g"},
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "", rows));
@@ -3595,10 +3598,12 @@ revert_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_revert(&b, "", svn_depth_infinity));
   {
     nodes_row_t rows[] = {
-      { 0, "",    "normal", 1, "" },
-      { 0, "f",   "normal", 1, "f" },
-      { 0, "h",   "normal", 1, "f", TRUE },
-      { 0, "A/g", "normal", 1, "f", TRUE },
+      { 0, "",    "normal",      1, "" },
+      { 0, "f",   "normal",      1, "f" },
+      { 0, "h",   "normal",      1, "f", TRUE },
+      { 0, "A/g", "normal",      1, "f", TRUE },
+
+      { 0, "g",   "not-present", 0, "g"},
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "", rows));
@@ -3607,9 +3612,22 @@ revert_file_externals(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(sbox_wc_update(&b, "", 1));
   {
     nodes_row_t rows[] = {
-      { 0, "",    "normal", 1, "" },
-      { 0, "f",   "normal", 1, "f" },
-      { 0, "g",   "normal", 1, "f", TRUE },
+      { 0, "",    "normal",      1, "" },
+      { 0, "f",   "normal",      1, "f" },
+      { 0, "g",   "normal",      1, "f", TRUE },
+
+      { 0, "h",   "not-present", 0, "h"},
+      { 0 }
+    };
+    SVN_ERR(check_db_rows(&b, "", rows));
+  }
+
+  SVN_ERR(sbox_wc_update(&b, "", 1));
+  {
+    nodes_row_t rows[] = {
+      { 0, "",    "normal",      1, "" },
+      { 0, "f",   "normal",      1, "f" },
+      { 0, "g",   "normal",      1, "f", TRUE },
       { 0 }
     };
     SVN_ERR(check_db_rows(&b, "", rows));
@@ -5974,8 +5992,8 @@ check_tree_conflict_repos_path(svn_test__sandbox_t *b,
   const apr_array_header_t *locations;
   svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
 
-  SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, b->wc_ctx->db,
-                                   sbox_wc_path(b, wc_path),
+  SVN_ERR(svn_wc__db_read_conflict(&conflict, NULL, NULL,
+                                   b->wc_ctx->db, sbox_wc_path(b, wc_path),
                                    b->pool, b->pool));
 
   SVN_TEST_ASSERT(conflict != NULL);
@@ -11766,6 +11784,103 @@ test_global_commit(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_global_commit_switched(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "global_commit_switched", opts, pool));
+  {
+    nodes_row_t before[] = {
+      { 0, "",          "normal",       2, "" },
+      { 0, "A",         "normal",       2, "A" },
+      /* A/B is switched... The libsvn_client layer tries to prevent this,
+                             because it has such an unexpected behavior. */
+      { 0, "A/B",       "normal",       2, "N/B" },
+      { 0, "A/B/C",     "normal",       2, "N/B/C" },
+      { 0, "A/B/C/D",   "normal",       2, "N/B/C/D" },
+      { 0, "A/B/C/E",   "normal",       2, "N/B/C/E" },
+      { 2, "A/B",       "normal",       3, "Z/B" },
+      { 2, "A/B/C",     "normal",       3, "Z/B/C" },
+      { 2, "A/B/C/D",   "normal",       3, "Z/B/C/D" },
+      { 2, "A/B/C/E",   "base-deleted", NO_COPY_FROM },
+      /* not-present nodes have an 'uninteresting path',
+         which doesn't have to be as implied by ancestor at same depth */
+      { 2, "A/B/C/F",   "not-present",  3, "ZZ-Z-Z_ZZ_Z_Z" },
+      { 2, "A/B/C/G",   "normal",       3, "Z/B/C/G" },
+      { 2, "A/B/C/G/H", "normal",       3, "Z/B/C/G/H" },
+
+      { 3, "A/B/C",     "normal",       4, "Q/C" },
+      { 3, "A/B/C/D",   "base-deleted", NO_COPY_FROM },
+      { 3, "A/B/C/G",   "normal",       4, "Q/C/G" },
+      { 3, "A/B/C/G/H", "base-deleted", NO_COPY_FROM },
+
+      { 4, "A/B/C/F",   "normal",       NO_COPY_FROM },
+      { 5, "A/B/C/G/H", "normal",       NO_COPY_FROM },
+      { 0 }
+    };
+    SVN_ERR(insert_dirs(&b, before));
+    SVN_ERR(verify_db(&b));
+  }
+
+  SVN_ERR(svn_wc__db_global_commit(b.wc_ctx->db,
+                                   sbox_wc_path(&b, "A/B"),
+                                   7, 7, 12, "me", NULL, NULL,
+                                   FALSE, FALSE, NULL, pool));
+
+  {
+    nodes_row_t after[] = {
+      { 0, "",          "normal",       2, "" },
+      { 0, "A",         "normal",       2, "A" },
+      /* The commit is applied as A/B, because the path is calculated from A,
+         and not the shadowed node at A/B. (Fixed in r1663991) */
+      { 0, "A/B",       "normal",       7, "A/B" },
+      { 0, "A/B/C",     "normal",       7, "A/B/C" },
+      { 0, "A/B/C/D",   "normal",       7, "A/B/C/D" },
+      /* Even calculated path of not-present is fixed */
+      { 0, "A/B/C/F",   "not-present",  7, "A/B/C/F" },
+      { 0, "A/B/C/G",   "normal",       7, "A/B/C/G" },
+      { 0, "A/B/C/G/H", "normal",       7, "A/B/C/G/H" },
+
+      /* The higher layers are unaffected */
+      { 3, "A/B/C",     "normal",       4, "Q/C" },
+      { 3, "A/B/C/D",   "base-deleted", NO_COPY_FROM },
+      { 3, "A/B/C/G",   "normal",       4, "Q/C/G" },
+      { 3, "A/B/C/G/H", "base-deleted", NO_COPY_FROM },
+
+      { 4, "A/B/C/F",   "normal",       NO_COPY_FROM },
+      { 5, "A/B/C/G/H", "normal",       NO_COPY_FROM },
+      { 0 }
+    };
+    SVN_ERR(verify_db(&b));
+    SVN_ERR(check_db_rows(&b, "", after));
+  }
+
+  SVN_ERR(svn_wc__db_global_commit(b.wc_ctx->db,
+                                   sbox_wc_path(&b, "A/B/C"),
+                                   8, 8, 12, "me", NULL, NULL,
+                                   FALSE, FALSE, NULL, pool));
+
+  {
+    nodes_row_t after[] = {
+      { 0, "",          "normal",       2, "" },
+      { 0, "A",         "normal",       2, "A" },
+      { 0, "A/B",       "normal",       7, "A/B" },
+      /* Base deleted and not-present are now gone */
+      { 0, "A/B/C",     "normal",       8, "A/B/C" },
+      { 0, "A/B/C/G",   "normal",       8, "A/B/C/G" },
+
+      { 4, "A/B/C/F",   "normal",       NO_COPY_FROM },
+      { 5, "A/B/C/G/H", "normal",       NO_COPY_FROM },
+      { 0 }
+    };
+    SVN_ERR(verify_db(&b));
+    SVN_ERR(check_db_rows(&b, "", after));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -11917,7 +12032,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "move depth expansion"),
     SVN_TEST_OPTS_XFAIL(move_retract,
                        "move retract (issue 4336)"),
-    SVN_TEST_OPTS_PASS(move_delete_file_externals,
+    SVN_TEST_OPTS_XFAIL(move_delete_file_externals,
                        "move/delete file externals (issue 4293)"),
     SVN_TEST_OPTS_PASS(update_with_tree_conflict,
                        "update with tree conflict (issue 4347)"),
@@ -11981,6 +12096,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "make a copy of a mixed revision tree and del"),
     SVN_TEST_OPTS_PASS(test_global_commit,
                        "test global commit"),
+    SVN_TEST_OPTS_PASS(test_global_commit_switched,
+                       "test global commit switched"),
     SVN_TEST_NULL
   };
 

@@ -66,13 +66,21 @@ fail() {
   exit 1
 }
 
+# Compute ABS_BUILDDIR and ABS_SRCDIR.
 if [ -x subversion/svn/svn ]; then
+  # cwd is build tree root
   ABS_BUILDDIR=$(pwd)
 elif [ -x $SCRIPTDIR/../../svn/svn ]; then
+  # cwd is subversion/tests/cmdline/ in the build tree
   cd $SCRIPTDIR/../../../
   ABS_BUILDDIR=$(pwd)
   cd - >/dev/null
 else
+  fail "Run this script from the root of Subversion's build tree!"
+fi
+# Cater for out-of-tree builds
+ABS_SRCDIR=`<$ABS_BUILDDIR/Makefile sed -ne 's/^srcdir = //p'`
+if [ ! -e $ABS_SRCDIR/subversion/include/svn_version.h ]; then
   fail "Run this script from the root of Subversion's build tree!"
 fi
 
@@ -92,16 +100,19 @@ random_port() {
   fi
 }
 
-if type time > /dev/null; then
-  TIME_CMD=time
-else
-  TIME_CMD=""
-fi
+if type time > /dev/null ; then TIME_CMD() { time "$@"; } ; else TIME_CMD() { "$@"; } ; fi
 
 MAKE=${MAKE:-make}
+PATH="$PATH:/usr/sbin/:/usr/local/sbin/"
+
+ss > /dev/null 2>&1 || netstat > /dev/null 2>&1 || fail "unable to find ss or netstat required to find a free port"
 
 SVNSERVE_PORT=$(random_port)
-while netstat -an | grep $SVNSERVE_PORT | grep 'LISTEN'; do
+while \
+  (ss -ltn sport = :$SVNSERVE_PORT 2>&1 | grep :$SVNSERVE_PORT > /dev/null ) \
+  || \
+  (netstat -an 2>&1 | grep $SVNSERVE_PORT | grep 'LISTEN' > /dev/null ) \
+  do
   SVNSERVE_PORT=$(random_port)
 done
 
@@ -121,13 +132,13 @@ fi
 
 BASE_URL=svn://127.0.0.1:$SVNSERVE_PORT
 if [ $# = 0 ]; then
-  $TIME_CMD "$MAKE" check "BASE_URL=$BASE_URL"
+  TIME_CMD "$MAKE" check "BASE_URL=$BASE_URL"
   r=$?
 else
   cd "$ABS_BUILDDIR/subversion/tests/cmdline/"
   TEST="$1"
   shift
-  $TIME_CMD "./${TEST}_tests.py" "--url=$BASE_URL" $*
+  TIME_CMD "$ABS_SRCDIR/subversion/tests/cmdline/${TEST}_tests.py" "--url=$BASE_URL" $*
   r=$?
   cd - > /dev/null
 fi

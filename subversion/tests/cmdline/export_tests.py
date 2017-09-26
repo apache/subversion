@@ -254,10 +254,11 @@ def export_eol_translation(sbox):
   expected_output.desc[''] = Item()
   expected_output.tweak(contents=None, status='A ')
 
-  svntest.actions.run_and_verify_export(sbox.repo_url,
-                                        export_target,
-                                        expected_output,
-                                        expected_disk)
+  svntest.actions.run_and_verify_export2(sbox.repo_url,
+                                         export_target,
+                                         expected_output,
+                                         expected_disk,
+                                         keep_eol_style=True)
 
 def export_working_copy_with_keyword_translation(sbox):
   "export working copy with keyword translation"
@@ -348,10 +349,11 @@ def export_working_copy_with_property_mods(sbox):
     'iota'              : Item(status='A '),
   })
 
-  svntest.actions.run_and_verify_export(wc_dir,
-                                        export_target,
-                                        expected_output,
-                                        expected_disk)
+  svntest.actions.run_and_verify_export2(wc_dir,
+                                         export_target,
+                                         expected_output,
+                                         expected_disk,
+                                         keep_eol_style=True)
 
 @XFail()
 @Issue(3798)
@@ -452,11 +454,12 @@ def export_native_eol_option(sbox):
   expected_output.desc[''] = Item()
   expected_output.tweak(contents=None, status='A ')
 
-  svntest.actions.run_and_verify_export(sbox.repo_url,
-                                        export_target,
-                                        expected_output,
-                                        expected_disk,
-                                        '--native-eol','CR')
+  svntest.actions.run_and_verify_export2(sbox.repo_url,
+                                         export_target,
+                                         expected_output,
+                                         expected_disk,
+                                         True,
+                                         '--native-eol','CR')
 
 def export_nonexistent_file(sbox):
   "export nonexistent file"
@@ -500,8 +503,7 @@ def export_with_state_deleted(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E/alpha')
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   export_target = sbox.add_wc_path('export')
   expected_output = svntest.wc.State(export_target, {
@@ -847,11 +849,12 @@ def export_externals_with_native_eol(sbox):
   expected_output.wc_dir = export_target
   expected_output.desc[''] = Item()
   expected_output.tweak(contents=None, status='A ')
-  svntest.actions.run_and_verify_export(sbox.repo_url,
-                                        export_target,
-                                        expected_output,
-                                        expected_disk,
-                                        '--native-eol', 'CR')
+  svntest.actions.run_and_verify_export2(sbox.repo_url,
+                                         export_target,
+                                         expected_output,
+                                         expected_disk,
+                                         True,
+                                         '--native-eol', 'CR')
 
 @Issue(3727)
 def export_to_current_dir(sbox):
@@ -1067,6 +1070,56 @@ def export_file_externals2(sbox):
                                         expected_output,
                                         expected_disk)
 
+def export_revision_with_root_relative_external(sbox):
+  "export a revision with root-relative external"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  # Set 'svn:externals' property in 'A/C' to 'A/B/E/alpha'(file external),
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  externals_prop = "^/A/B/E/alpha exfile_alpha"
+
+  tmp_f = sbox.get_tempname('prop')
+  svntest.main.file_append(tmp_f, externals_prop)
+  svntest.main.run_svn(None, 'ps', '-F', tmp_f, 'svn:externals', C_path)
+  svntest.main.run_svn(None,'ci', '-m', 'log msg', '--quiet', C_path)
+
+  # Update the working copy to receive file external
+  svntest.main.run_svn(None, 'up', wc_dir)
+
+  # Update the expected disk tree to include the external.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+      'A/C/exfile_alpha'  : Item("This is the file 'alpha'.\n"),
+      })
+
+  # Update the expected output to include the external.
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.add({
+      'A/C/exfile_alpha'  : Item("This is the file 'alpha'.\r"),
+      })
+  expected_output.desc[''] = Item()
+  expected_output.tweak(contents=None, status='A ')
+
+  # Export revision 2 from URL
+  export_target = sbox.add_wc_path('export_url')
+  expected_output.wc_dir = export_target
+  svntest.actions.run_and_verify_export(sbox.repo_url,
+                                        export_target,
+                                        expected_output,
+                                        expected_disk,
+                                        '-r', 2)
+
+  # Export revision 2 from WC
+  export_target = sbox.add_wc_path('export_wc')
+  expected_output.wc_dir = export_target
+  svntest.actions.run_and_verify_export(sbox.wc_dir,
+                                        export_target,
+                                        expected_output,
+                                        expected_disk,
+                                        '-r', 2)
+
 
 ########################################################################
 # Run the tests
@@ -1103,7 +1156,8 @@ test_list = [ None,
               export_file_overwrite_with_force,
               export_custom_keywords,
               export_file_external,
-              export_file_externals2
+              export_file_externals2,
+              export_revision_with_root_relative_external,
              ]
 
 if __name__ == '__main__':

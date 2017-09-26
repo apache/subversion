@@ -434,6 +434,65 @@ test_legacy_commit2(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_internal_file_modified(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_boolean_t modified;
+  const char *iota_path;
+  apr_time_t time;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "internal_file_modified_p",
+                                   opts, pool));
+  SVN_ERR(sbox_add_and_commit_greek_tree(&b));
+
+  iota_path = sbox_wc_path(&b, "iota");
+
+  /* No modification, timestamps match.*/
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Change timestamp on 'iota' and check. */
+  SVN_ERR(svn_io_file_affected_time(&time, iota_path, pool));
+  SVN_ERR(svn_io_set_file_affected_time(time + apr_time_from_sec(1),
+                                        iota_path, pool));
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Modify 'iota' to be different size. */
+  SVN_ERR(sbox_file_write(&b, iota_path, "new iota"));
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  /* Working copy is smart and able to detect changes in files of different
+   * size even if timestamp didn't change. */
+  SVN_ERR(svn_io_set_file_affected_time(time, iota_path, pool));
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -454,6 +513,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test legacy commit1"),
     SVN_TEST_OPTS_PASS(test_legacy_commit2,
                        "test legacy commit2"),
+    SVN_TEST_OPTS_PASS(test_internal_file_modified,
+                       "test internal_file_modified"),
     SVN_TEST_NULL
   };
 

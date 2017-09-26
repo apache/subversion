@@ -80,7 +80,7 @@ class SubversionCoreTestCase(unittest.TestCase):
       # It must remain unchanged through the process.
       try:
         svn.client.info2(*args)
-      except svn.core.SubversionException, exc:
+      except svn.core.SubversionException as exc:
         # find the original exception
         while exc.file != rec.e.file: exc = exc.child
 

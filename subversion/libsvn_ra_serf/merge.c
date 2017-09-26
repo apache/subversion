@@ -79,6 +79,7 @@ typedef struct merge_context_t
 
   apr_hash_t *lock_tokens;
   svn_boolean_t keep_locks;
+  svn_boolean_t disable_merge_response;
 
   const char *merge_resource_url; /* URL of resource to be merged. */
   const char *merge_url; /* URL at which the MERGE request is aimed. */
@@ -275,22 +276,27 @@ setup_merge_headers(serf_bucket_t *headers,
                     apr_pool_t *scratch_pool)
 {
   merge_context_t *ctx = baton;
+  apr_array_header_t *vals = apr_array_make(scratch_pool, 2,
+                                            sizeof(const char *));
 
   if (!ctx->keep_locks)
-    {
-      serf_bucket_headers_set(headers, SVN_DAV_OPTIONS_HEADER,
-                              SVN_DAV_OPTION_RELEASE_LOCKS);
-    }
+    APR_ARRAY_PUSH(vals, const char *) = SVN_DAV_OPTION_RELEASE_LOCKS;
+  if (ctx->disable_merge_response)
+    APR_ARRAY_PUSH(vals, const char *) = SVN_DAV_OPTION_NO_MERGE_RESPONSE;
+
+  if (vals->nelts > 0)
+    serf_bucket_headers_set(headers, SVN_DAV_OPTIONS_HEADER,
+                            svn_cstring_join2(vals, " ", FALSE, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
-static void
-merge_lock_token_list(apr_hash_t *lock_tokens,
-                      const char *parent,
-                      serf_bucket_t *body,
-                      serf_bucket_alloc_t *alloc,
-                      apr_pool_t *pool)
+void
+svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
+                                   const char *parent,
+                                   serf_bucket_t *body,
+                                   serf_bucket_alloc_t *alloc,
+                                   apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
 
@@ -378,7 +384,8 @@ create_merge_body(serf_bucket_t **bkt,
                                      "D:creator-displayname", SVN_VA_NULL);
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:prop");
 
-  merge_lock_token_list(ctx->lock_tokens, NULL, body_bkt, alloc, pool);
+  svn_ra_serf__merge_lock_token_list(ctx->lock_tokens, NULL, body_bkt,
+                                     alloc, pool);
 
   svn_ra_serf__add_close_tag_buckets(body_bkt, alloc, "D:merge");
 
@@ -411,6 +418,13 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
   merge_ctx->lock_tokens = lock_tokens;
   merge_ctx->keep_locks = keep_locks;
 
+  /* We don't need the full merge response when working over HTTPv2.
+   * Over HTTPv1, this response is only required with a non-null
+   * svn_ra_push_wc_prop_func_t callback. */
+  merge_ctx->disable_merge_response =
+    SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(session) ||
+    session->wc_callbacks->push_wc_prop == NULL;
+
   merge_ctx->commit_info = svn_create_commit_info(result_pool);
 
   merge_ctx->merge_url = session->session_url.path;
@@ -426,6 +440,7 @@ svn_ra_serf__run_merge(const svn_commit_info_t **commit_info,
   handler->path = merge_ctx->merge_url;
   handler->body_delegate = create_merge_body;
   handler->body_delegate_baton = merge_ctx;
+  handler->body_type = "text/xml";
 
   handler->header_delegate = setup_merge_headers;
   handler->header_delegate_baton = merge_ctx;

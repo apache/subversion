@@ -85,8 +85,10 @@ verify_representation_stats(const svn_fs_fs__representation_stats_t *stats,
   SVN_TEST_ASSERT(stats->total.count == expected_count);
   SVN_TEST_ASSERT(   stats->total.packed_size >= 10 * expected_count
                   && stats->total.packed_size <= 1000 * expected_count);
-  SVN_TEST_ASSERT(   stats->total.packed_size >= stats->total.expanded_size
-                  && stats->total.packed_size <= 2 * stats->total.expanded_size);
+  /* Expect the packed size to be sane, keeping in mind that it might
+   * be less or more than the expanded size due differences in the
+   * compression algorithms or options such as directory deltification. */
+  SVN_TEST_ASSERT(stats->total.packed_size <= 2 * stats->total.expanded_size);
   SVN_TEST_ASSERT(   stats->total.overhead_size >= 5 * expected_count
                   && stats->total.overhead_size <= 100 * expected_count);
 
@@ -104,6 +106,10 @@ verify_representation_stats(const svn_fs_fs__representation_stats_t *stats,
   /* No rep sharing. */
   SVN_TEST_ASSERT(stats->references == stats->total.count);
   SVN_TEST_ASSERT(stats->expanded_size == stats->total.expanded_size);
+
+  /* Reasonable delta chain lengths */
+  SVN_TEST_ASSERT(   stats->chain_len >= stats->total.count
+                  && stats->chain_len <= 5 * stats->total.count);
 
   return SVN_NO_ERROR;
 }
@@ -349,8 +355,6 @@ dump_index(const svn_test_opts_t *opts,
 
 /* ------------------------------------------------------------------------ */
 
-#define REPO_NAME "test-repo-load-index-test"
-
 static svn_error_t *
 receive_index(const svn_fs_fs__p2l_entry_t *entry,
               void *baton,
@@ -363,9 +367,10 @@ receive_index(const svn_fs_fs__p2l_entry_t *entry,
   return SVN_NO_ERROR;
 }
 
+#define REPO_NAME "test-repo-load-index-test"
+
 static svn_error_t *
-load_index(const svn_test_opts_t *opts,
-           apr_pool_t *pool)
+load_index(const svn_test_opts_t *opts, apr_pool_t *pool)
 {
   svn_repos_t *repos;
   svn_revnum_t rev;
@@ -389,30 +394,32 @@ load_index(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_fs__dump_index(svn_repos_fs(repos), rev, receive_index,
                                 entries, NULL, NULL, pool));
 
-  /* Replace it with an empty index.
-   * Note that the API requires at least one entry. Give it a dummy. */
+  /* Replace it with an index that declares the whole revision contents as
+   * "unused". */
+  entry = *APR_ARRAY_IDX(entries, entries->nelts-1, svn_fs_fs__p2l_entry_t *);
+  entry.size += entry.offset;
   entry.offset = 0;
-  entry.size = 0;
   entry.type = SVN_FS_FS__ITEM_TYPE_UNUSED;
   entry.item.number = SVN_FS_FS__ITEM_INDEX_UNUSED;
   entry.item.revision = SVN_INVALID_REVNUM;
   APR_ARRAY_PUSH(alt_entries, svn_fs_fs__p2l_entry_t *) = &entry;
 
   SVN_ERR(svn_fs_fs__load_index(svn_repos_fs(repos), rev, alt_entries, pool));
-  SVN_TEST_ASSERT_ERROR(svn_repos_verify_fs3(repos, rev, rev,
-                                             FALSE, FALSE, FALSE,
-                                             NULL, NULL, NULL, NULL, pool),
-                        SVN_ERR_REPOS_CORRUPTED);
+  SVN_TEST_ASSERT_ERROR(svn_repos_verify_fs3(repos, rev, rev, FALSE, FALSE,
+                                             NULL, NULL, NULL, NULL, NULL,
+                                             NULL, pool),
+                        SVN_ERR_FS_INDEX_CORRUPTION);
 
   /* Restore the original index. */
   SVN_ERR(svn_fs_fs__load_index(svn_repos_fs(repos), rev, entries, pool));
-  SVN_ERR(svn_repos_verify_fs3(repos, rev, rev, FALSE, FALSE, FALSE,
+  SVN_ERR(svn_repos_verify_fs3(repos, rev, rev, FALSE, FALSE, NULL, NULL,
                                NULL, NULL, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
 
 #undef REPO_NAME
+
 
 
 /* The test table.  */

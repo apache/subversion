@@ -300,10 +300,12 @@ make_external_description(const char **new_external_description,
   return SVN_NO_ERROR;
 }
 
-/* Pin all externals listed in EXTERNALS_PROP_VAL to their last-changed
- * revision. Return a new property value in *PINNED_EXTERNALS allocated
- * in RESULT_POOL. LOCAL_ABSPATH_OR_URL is the path or URL defining the
- * svn:externals property. Use SCRATCH_POOL for temporary allocations.
+/* Pin all externals listed in EXTERNALS_PROP_VAL to their
+ * last-changed revision. Set *PINNED_EXTERNALS to a new property
+ * value allocated in RESULT_POOL, or to NULL if none of the externals
+ * in EXTERNALS_PROP_VAL were changed. LOCAL_ABSPATH_OR_URL is the
+ * path or URL defining the svn:externals property. Use SCRATCH_POOL
+ * for temporary allocations.
  */
 static svn_error_t *
 pin_externals_prop(svn_string_t **pinned_externals,
@@ -319,6 +321,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
   apr_array_header_t *external_items;
   apr_array_header_t *parser_infos;
   apr_array_header_t *items_to_pin;
+  int pinned_items;
   int i;
   apr_pool_t *iterpool;
 
@@ -330,13 +333,22 @@ pin_externals_prop(svn_string_t **pinned_externals,
                                               scratch_pool));
 
   if (externals_to_pin)
-    items_to_pin = svn_hash_gets((apr_hash_t *)externals_to_pin,
-                                 local_abspath_or_url);
+    {
+      items_to_pin = svn_hash_gets((apr_hash_t *)externals_to_pin,
+                                   local_abspath_or_url);
+      if (!items_to_pin)
+        {
+          /* No pinning at all for this path. */
+          *pinned_externals = NULL;
+          return SVN_NO_ERROR;
+        }
+    }
   else
     items_to_pin = NULL;
 
   buf = svn_stringbuf_create_empty(scratch_pool);
   iterpool = svn_pool_create(scratch_pool);
+  pinned_items = 0;
   for (i = 0; i < external_items->nelts; i++)
     {
       svn_wc_external_item2_t *item;
@@ -386,11 +398,13 @@ pin_externals_prop(svn_string_t **pinned_externals,
 
       if (item->peg_revision.kind == svn_opt_revision_date)
         {
+          /* Already pinned ... copy the peg date. */
           external_pegrev.kind = svn_opt_revision_date;
           external_pegrev.value.date = item->peg_revision.value.date;
         }
       else if (item->peg_revision.kind == svn_opt_revision_number)
         {
+          /* Already pinned ... copy the peg revision number. */
           external_pegrev.kind = svn_opt_revision_number;
           external_pegrev.value.number = item->peg_revision.value.number;
         }
@@ -399,6 +413,9 @@ pin_externals_prop(svn_string_t **pinned_externals,
           SVN_ERR_ASSERT(
             item->peg_revision.kind == svn_opt_revision_head ||
             item->peg_revision.kind == svn_opt_revision_unspecified);
+
+          /* We're actually going to change the peg revision. */
+          ++pinned_items;
 
           if (svn_path_is_url(local_abspath_or_url))
             {
@@ -539,14 +556,19 @@ pin_externals_prop(svn_string_t **pinned_externals,
     }
   svn_pool_destroy(iterpool);
 
-  *pinned_externals = svn_string_create_from_buf(buf, result_pool);
+  if (pinned_items > 0)
+    *pinned_externals = svn_string_create_from_buf(buf, result_pool);
+  else
+    *pinned_externals = NULL;
 
   return SVN_NO_ERROR;
 }
 
-/* Return, in *NEW_EXTERNALS, a new hash of externals definitions, some or
- * which all of which are pinned. If EXTERNALS_TO_PIN is NULL, pin all
- * externals, else pin the externals mentioned in EXTERNALS_TO_PIN.
+/* Return, in *PINNED_EXTERNALS, a new hash mapping URLs or local abspaths
+ * to svn:externals property values (as const char *), where some or all
+ * external references have been pinned.
+ * If EXTERNALS_TO_PIN is NULL, pin all externals, else pin the externals
+ * mentioned in EXTERNALS_TO_PIN.
  * The pinning operation takes place as part of the copy operation for
  * the source/destination pair PAIR. Use RA_SESSION and REPOS_ROOT_URL
  * to contact the repository containing the externals definition, if neccesary.
@@ -554,7 +576,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
  * neccessary. Allocate *NEW_EXTERNALS in RESULT_POOL.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-resolve_pinned_externals(apr_hash_t **new_externals,
+resolve_pinned_externals(apr_hash_t **pinned_externals,
                          const apr_hash_t *externals_to_pin,
                          svn_client__copy_pair_t *pair,
                          svn_ra_session_t *ra_session,
@@ -568,7 +590,7 @@ resolve_pinned_externals(apr_hash_t **new_externals,
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
 
-  *new_externals = apr_hash_make(result_pool);
+  *pinned_externals = apr_hash_make(result_pool);
 
   if (svn_path_is_url(pair->src_abspath_or_url))
     {
@@ -630,15 +652,19 @@ resolve_pinned_externals(apr_hash_t **new_externals,
                                  externals_to_pin,
                                  repos_root_url, local_abspath_or_url, ctx,
                                  result_pool, iterpool));
-      if (svn_path_is_url(pair->src_abspath_or_url))
-        relpath = svn_uri_skip_ancestor(pair->src_abspath_or_url,
-                                        local_abspath_or_url,
-                                        result_pool);
-      else
-        relpath = svn_dirent_skip_ancestor(pair->src_abspath_or_url,
-                                           local_abspath_or_url);
-      SVN_ERR_ASSERT(relpath);
-      svn_hash_sets(*new_externals, relpath, new_propval);
+      if (new_propval)
+        {
+          if (svn_path_is_url(pair->src_abspath_or_url))
+            relpath = svn_uri_skip_ancestor(pair->src_abspath_or_url,
+                                            local_abspath_or_url,
+                                            result_pool);
+          else
+            relpath = svn_dirent_skip_ancestor(pair->src_abspath_or_url,
+                                               local_abspath_or_url);
+          SVN_ERR_ASSERT(relpath);
+
+          svn_hash_sets(*pinned_externals, relpath, new_propval);
+        }
     }
   svn_pool_destroy(iterpool);
 
@@ -1031,10 +1057,24 @@ verify_wc_dsts(const apr_array_header_t *copy_pairs,
                                 ctx->wc_ctx, pair->dst_parent_abspath,
                                 FALSE, TRUE,
                                 iterpool));
-      if (make_parents && dst_parent_kind == svn_node_none)
+      if (dst_parent_kind == svn_node_none)
         {
-          SVN_ERR(svn_client__make_local_parents(pair->dst_parent_abspath,
-                                                 TRUE, ctx, iterpool));
+          if (make_parents)
+            SVN_ERR(svn_client__make_local_parents(pair->dst_parent_abspath,
+                                                   TRUE, ctx, iterpool));
+          else
+            {
+              SVN_ERR(svn_io_check_path(pair->dst_parent_abspath,
+                                        &dst_parent_kind, scratch_pool));
+              return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                       (dst_parent_kind == svn_node_dir)
+                                         ? _("Directory '%s' is not under "
+                                             "version control")
+                                         : _("Path '%s' is not a directory"),
+                                       svn_dirent_local_style(
+                                         pair->dst_parent_abspath,
+                                         scratch_pool));
+            }
         }
       else if (dst_parent_kind != svn_node_dir)
         {
@@ -1616,7 +1656,10 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
           && (relpath != NULL && *relpath != '\0'))
         {
           info->resurrection = TRUE;
-          top_url = svn_uri_dirname(top_url, pool);
+          top_url = svn_uri_get_longest_ancestor(
+                            top_url,
+                            svn_uri_dirname(pair->dst_abspath_or_url, pool),
+                            pool);
           SVN_ERR(svn_ra_reparent(ra_session, top_url, pool));
         }
     }
@@ -1668,13 +1711,9 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
       SVN_ERR(svn_ra_check_path(ra_session, dst_rel, SVN_INVALID_REVNUM,
                                 &dst_kind, pool));
       if (dst_kind != svn_node_none)
-        {
-          const char *path = svn_uri_skip_ancestor(repos_root,
-                                                   pair->dst_abspath_or_url,
-                                                   pool);
-          return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                   _("Path '/%s' already exists"), path);
-        }
+        return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                                 _("Path '%s' already exists"),
+                                 pair->dst_abspath_or_url);
 
       /* More info for our INFO structure.  */
       info->src_path = src_rel; /* May be NULL, if outside RA session scope */
@@ -1920,6 +1959,9 @@ queue_prop_change_commit_items(const char *local_abspath,
       item->url = commit_url;
       item->kind = svn_node_dir;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+
+      item->incoming_prop_changes = apr_array_make(result_pool, 1,
+                                                   sizeof(svn_prop_t *));
       APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
     }
   else
@@ -2387,10 +2429,10 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
 
           *timestamp_sleep = TRUE;
 
-      /* Schedule dst_path for addition in parent, with copy history.
-         Don't send any notification here.
-         Then remove the temporary checkout's .svn dir in preparation for
-         moving the rest of it into the final destination. */
+          /* Schedule dst_path for addition in parent, with copy history.
+             Don't send any notification here.
+             Then remove the temporary checkout's .svn dir in preparation for
+             moving the rest of it into the final destination. */
           SVN_ERR(svn_wc_copy3(ctx->wc_ctx, tmp_abspath, dst_abspath,
                                TRUE /* metadata_only */,
                                ctx->cancel_func, ctx->cancel_baton,
@@ -2405,7 +2447,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                                                        pool));
 
           /* Move the temporary disk tree into place. */
-          SVN_ERR(svn_io_file_rename(tmp_abspath, dst_abspath, pool));
+          SVN_ERR(svn_io_file_rename2(tmp_abspath, dst_abspath, FALSE, pool));
         }
       else
         {
@@ -2534,7 +2576,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
 static svn_error_t *
 repos_to_wc_copy_locked(svn_boolean_t *timestamp_sleep,
                         const apr_array_header_t *copy_pairs,
-                        const char *top_dst_path,
+                        const char *top_dst_abspath,
                         svn_boolean_t ignore_externals,
                         svn_boolean_t pin_externals,
                         const apr_hash_t *externals_to_pin,
@@ -2554,39 +2596,25 @@ repos_to_wc_copy_locked(svn_boolean_t *timestamp_sleep,
 
   /* Decide whether the two repositories are the same or not. */
   {
-    svn_error_t *src_err, *dst_err;
-    const char *parent;
     const char *parent_abspath;
     const char *src_uuid, *dst_uuid;
 
     /* Get the repository uuid of SRC_URL */
-    src_err = svn_ra_get_uuid2(ra_session, &src_uuid, iterpool);
-    if (src_err && src_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
-      return svn_error_trace(src_err);
+    SVN_ERR(svn_ra_get_uuid2(ra_session, &src_uuid, iterpool));
 
     /* Get repository uuid of dst's parent directory, since dst may
        not exist.  ### TODO:  we should probably walk up the wc here,
        in case the parent dir has an imaginary URL.  */
     if (copy_pairs->nelts == 1)
-      parent = svn_dirent_dirname(top_dst_path, scratch_pool);
+      parent_abspath = svn_dirent_dirname(top_dst_abspath, scratch_pool);
     else
-      parent = top_dst_path;
+      parent_abspath = top_dst_abspath;
 
-    SVN_ERR(svn_dirent_get_absolute(&parent_abspath, parent, scratch_pool));
-    dst_err = svn_client_get_repos_root(NULL /* root_url */, &dst_uuid,
-                                        parent_abspath, ctx,
-                                        iterpool, iterpool);
-    if (dst_err && dst_err->apr_err != SVN_ERR_RA_NO_REPOS_UUID)
-      return dst_err;
-
-    /* If either of the UUIDs are nonexistent, then at least one of
-       the repositories must be very old.  Rather than punish the
-       user, just assume the repositories are different, so no
-       copy-history is attempted. */
-    if (src_err || dst_err || (! src_uuid) || (! dst_uuid))
-      same_repositories = FALSE;
-    else
-      same_repositories = (strcmp(src_uuid, dst_uuid) == 0);
+    SVN_ERR(svn_client_get_repos_root(NULL /* root_url */, &dst_uuid,
+                                      parent_abspath, ctx,
+                                      iterpool, iterpool));
+    /* ### Also check repos_root_url? */
+    same_repositories = (strcmp(src_uuid, dst_uuid) == 0);
   }
 
   /* Perform the move for each of the copy_pairs. */
@@ -2622,7 +2650,7 @@ repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
                  apr_pool_t *pool)
 {
   svn_ra_session_t *ra_session;
-  const char *top_src_url, *top_dst_path;
+  const char *top_src_url, *top_dst_abspath;
   apr_pool_t *iterpool = svn_pool_create(pool);
   const char *lock_abspath;
   int i;
@@ -2647,13 +2675,13 @@ repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
       pair->src_abspath_or_url = apr_pstrdup(pool, src);
     }
 
-  SVN_ERR(get_copy_pair_ancestors(copy_pairs, &top_src_url, &top_dst_path,
+  SVN_ERR(get_copy_pair_ancestors(copy_pairs, &top_src_url, &top_dst_abspath,
                                   NULL, pool));
-  lock_abspath = top_dst_path;
+  lock_abspath = top_dst_abspath;
   if (copy_pairs->nelts == 1)
     {
       top_src_url = svn_uri_dirname(top_src_url, pool);
-      lock_abspath = svn_dirent_dirname(top_dst_path, pool);
+      lock_abspath = svn_dirent_dirname(top_dst_abspath, pool);
     }
 
   /* Open a repository session to the longest common src ancestor.  We do not
@@ -2725,7 +2753,7 @@ repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
 
   SVN_WC__CALL_WITH_WRITE_LOCK(
     repos_to_wc_copy_locked(timestamp_sleep,
-                            copy_pairs, top_dst_path, ignore_externals,
+                            copy_pairs, top_dst_abspath, ignore_externals,
                             pin_externals, externals_to_pin,
                             ra_session, ctx, pool),
     ctx->wc_ctx, lock_abspath, FALSE, pool);

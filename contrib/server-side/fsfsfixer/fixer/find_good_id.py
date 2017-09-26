@@ -101,11 +101,11 @@ if __name__ == '__main__':
     repo_dir = sys.argv[1]
     rev = sys.argv[2]
     size = sys.argv[3]
-    print "Good offset:", find_good_rep_header(repo_dir, rev, size)
+    print("Good offset:", find_good_rep_header(repo_dir, rev, size))
     sys.exit(0)
 
   if len(sys.argv) != 3:
-    print >>sys.stderr, usage
+    sys.stderr.write(usage + "\n")
     sys.exit(1)
 
   repo_dir = sys.argv[1]
@@ -117,7 +117,7 @@ if __name__ == '__main__':
   # reconstruct the file so as to preserve all offsets.
   # ### TODO: This check should be in the caller rather than here.
   if len(good_id) != len(bad_id):
-    print >>sys.stderr, "warning: the good ID has a different length: " + \
-                        "bad id '" + bad_id + "', good id '" + good_id + "'"
+    sys.stderr.write("warning: the good ID has a different length: " + \
+                     "bad id '" + bad_id + "', good id '" + good_id + "'\n")
 
-  print good_id
+  print(good_id)

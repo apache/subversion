@@ -139,9 +139,10 @@ public class BasicTests extends SVNTests
      */
     public void testVersionExtendedQuiet() throws Throwable
     {
+        VersionExtended vx = null;
         try
         {
-            VersionExtended vx = client.getVersionExtended(false);
+            vx = client.getVersionExtended(false);
             String result = vx.getBuildDate();
             if (result == null || result.trim().length() == 0)
                 throw new Exception("Build date empty");
@@ -160,6 +161,11 @@ public class BasicTests extends SVNTests
             fail("VersionExtended should always be available unless the " +
                  "native libraries failed to initialize: " + e);
         }
+        finally
+        {
+            if (vx != null)
+                vx.dispose();
+        }
     }
 
     /**
@@ -168,9 +174,10 @@ public class BasicTests extends SVNTests
      */
     public void testVersionExtendedVerbose() throws Throwable
     {
+        VersionExtended vx = null;
         try
         {
-            VersionExtended vx = client.getVersionExtended(true);
+            vx = client.getVersionExtended(true);
             String result = vx.getRuntimeHost();
             if (result == null || result.trim().length() == 0)
                 throw new Exception("Runtime host empty");
@@ -215,6 +222,11 @@ public class BasicTests extends SVNTests
         {
             fail("VersionExtended should always be available unless the " +
                  "native libraries failed to initialize: " + e);
+        }
+        finally
+        {
+            if (vx != null)
+                vx.dispose();
         }
     }
 
@@ -1091,6 +1103,7 @@ public class BasicTests extends SVNTests
     private void setupPinExternalsTest(OneTest thisTest) throws Throwable
     {
         byte[] extref = ("^/A/D/H ADHext\n" +
+                         "^/A/D/H ADHext2\n" +
                          "^/A/D/H@1 peggedADHext\n" +
                          "-r1 ^/A/D/H revvedADHext\n").getBytes();
         Set<String> paths = new HashSet<String>();
@@ -1130,6 +1143,7 @@ public class BasicTests extends SVNTests
 
         // Verification
         String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@2 ADHext2\n" +
                            "^/A/D/H@1 peggedADHext\n" +
                            "-r1 ^/A/D/H@2 revvedADHext\n");
         String actual =
@@ -1158,6 +1172,7 @@ public class BasicTests extends SVNTests
 
         // Verification
         String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@2 ADHext2\n" +
                            "^/A/D/H@1 peggedADHext\n" +
                            "-r1 ^/A/D/H@2 revvedADHext\n");
         String actual =
@@ -1186,6 +1201,7 @@ public class BasicTests extends SVNTests
 
         // Verification
         String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@2 ADHext2\n" +
                            "^/A/D/H@1 peggedADHext\n" +
                            "-r1 ^/A/D/H@2 revvedADHext\n");
         String actual =
@@ -1214,6 +1230,7 @@ public class BasicTests extends SVNTests
 
         // Verification
         String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H@2 ADHext2\n" +
                            "^/A/D/H@1 peggedADHext\n" +
                            "-r1 ^/A/D/H@2 revvedADHext\n");
         String actual =
@@ -1249,6 +1266,44 @@ public class BasicTests extends SVNTests
 
         // Verification
         String expected = ("^/A/D/H@2 ADHext\n" +
+                           "^/A/D/H ADHext2\n" +
+                           "^/A/D/H@1 peggedADHext\n" +
+                           "-r1 ^/A/D/H revvedADHext\n");
+        String actual =
+            new String(client.propertyGet(target, "svn:externals", null, null));
+
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Test REPO-to-REPO copy with explicit pinned externals that
+     * don't correspond to actual externals
+     * @throws Throwable
+     */
+    public void testCopyPinExternals_repo2repo_corkscrew() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        setupPinExternalsTest(thisTest);
+
+        String sourceUrl = thisTest.getUrl() + "/A/B";
+        Map<String, List<ExternalItem>> externalsToPin =
+            new HashMap<String, List<ExternalItem>>();
+        List<ExternalItem> items = new ArrayList<ExternalItem>(1);
+        items.add(new ExternalItem("ADHext", "^/A/D/H", null, null));
+        externalsToPin.put(sourceUrl + "/A", items);
+
+        List<CopySource> sources = new ArrayList<CopySource>(1);
+        sources.add(new CopySource(sourceUrl, null, null));
+        String target = thisTest.getUrl() + "/A/Bcopy";
+        client.copy(sources, target, true, false, false, false,
+                    true,       // pinExternals
+                    externalsToPin,
+                    null, new ConstMsg("Copy WC to REPO"), null);
+
+        // Verification
+        String expected = ("^/A/D/H ADHext\n" +
+                           "^/A/D/H ADHext2\n" +
                            "^/A/D/H@1 peggedADHext\n" +
                            "-r1 ^/A/D/H revvedADHext\n");
         String actual =
@@ -4138,10 +4193,11 @@ public class BasicTests extends SVNTests
         Set<String> revProps = new HashSet<String>(2);
         revProps.add("kfogel");
         revProps.add("cmpilato");
+        // Testing variant with allRevProps = false
         client.logMessages(thisTest.getWCPath(), Revision.getInstance(2),
                 toRevisionRange(Revision.getInstance(2),
                                 Revision.getInstance(2)),
-                false, false, false, revProps, 0,
+                false, false, false, revProps, false, 0,
                 new LogMessageCallback () {
                     public void singleMessage(Set<ChangePath> changedPaths,
                                               long revision,
@@ -4616,13 +4672,10 @@ public class BasicTests extends SVNTests
         }
 
         MyLogMessageCallback callback = new MyLogMessageCallback();
-        Set<String> revProps = new HashSet<String>();
-        revProps.add("svn:log");
-        revProps.add("svn:date");
-        revProps.add("svn:author");
+        // Testing variant with allRevProps = true
         client.logMessages(path, pegRevision, revisionRanges, stopOnCopy,
-                           discoverPath, includeMergedRevisions, revProps,
-                           limit, callback);
+                           discoverPath, includeMergedRevisions, null,
+                           true, limit, callback);
         return callback.getMessages();
     }
 

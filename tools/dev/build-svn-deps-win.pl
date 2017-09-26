@@ -177,7 +177,7 @@ sub set_defaults {
   set_default(\$PCRE_URL, "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-$PCRE_VER.zip");
   set_default(\$BDB_URL, "http://download.oracle.com/berkeley-db/db-5.3.21.zip");
   set_default(\$SQLITE_URL, "http://www.sqlite.org/2013/sqlite-amalgamation-$SQLITE_VER.zip");
-  set_default(\$SERF_URL, "http://serf.googlecode.com/svn/src_releases/serf-$SERF_VER.zip");
+  set_default(\$SERF_URL, "https://archive.apache.org/dist/serf/serf-$SERF_VER.zip");
   set_default(\$NEON_URL, "http://www.webdav.org/neon/neon-$NEON_VER.tar.gz");
   set_default(\$INSTDIR, $TOPDIR);
   set_default(\$BLDDIR, "$TOPDIR\\build");

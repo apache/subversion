@@ -28,7 +28,7 @@ C<$data-E<gt>field($new_value)>.
 Once you understand the convention of subversion functions in perl
 bindings, you could look at the subversion api and write them in perl.
 The API is available in the source header files or online at
-http://svn.collab.net/svn-doxygen/.
+L<https://subversion.apache.org/docs/api/latest/>.
 
 =head1 INTERNALS
 

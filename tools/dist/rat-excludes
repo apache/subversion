@@ -32,7 +32,7 @@ subversion/bindings/ctypes-python/csvn/ext/__init__.py
 subversion/tests/cmdline/svntest/err.py
 tools/buildbot/master/public_html/buildbot.css
 tools/dist/rat-excludes
-tools/dist/_gnupg.py
+tools/dist/security/_gnupg.py
 tools/dist/templates/*.ezt
 tools/dev/iz/defect.dem
 tools/dev/iz/ff2csv.command

@@ -85,6 +85,13 @@ struct svn_fs_x__id_context_t
      is not.*/
   const char *fs_path;
 
+  /* If FS is NULL, this points to svn_fs_open() as passed to the library. */
+  svn_error_t *(*svn_fs_open_)(svn_fs_t **,
+      const char *,
+      apr_hash_t *,
+      apr_pool_t *,
+      apr_pool_t *);
+
   /* Pool that this context struct got allocated in. */
   apr_pool_t *owner;
 
@@ -118,10 +125,13 @@ static apr_status_t
 fs_cleanup(void *baton)
 {
   svn_fs_x__id_context_t *context = baton;
+  svn_fs_x__data_t *ffd = context->fs->fsap_data;
 
   /* Remember the FS_PATH to potentially reopen and mark the FS as n/a. */
   context->fs_path = apr_pstrdup(context->owner, context->fs->path);
+  context->svn_fs_open_ = ffd->svn_fs_open_;
   context->fs = NULL;
+
 
   /* No need for further notifications because from now on, everything is
      allocated in OWNER. */
@@ -137,8 +147,12 @@ get_fs(svn_fs_x__id_context_t *context)
 {
   if (!context->fs)
     {
-      svn_error_t *err = svn_fs_open2(&context->fs, context->fs_path, NULL,
-                                      context->owner, context->owner);
+      svn_error_t *err;
+
+      SVN_ERR_ASSERT_NO_RETURN(context->svn_fs_open_);
+
+      err = context->svn_fs_open_(&context->fs, context->fs_path, NULL,
+                                  context->owner, context->owner);
       if (err)
         {
           svn_error_clear(err);
@@ -217,13 +231,7 @@ id_compare(const svn_fs_id_t *a,
 
   /* Quick check: same IDs? */
   if (svn_fs_x__id_eq(&id_a->noderev_id, &id_b->noderev_id))
-    return svn_fs_node_same;
-
-  /* Items from different txns are unrelated. */
-  if (   svn_fs_x__is_txn(id_a->noderev_id.change_set)
-      && svn_fs_x__is_txn(id_b->noderev_id.change_set)
-      && id_a->noderev_id.change_set != id_b->noderev_id.change_set)
-    return svn_fs_node_unrelated;
+    return svn_fs_node_unchanged;
 
   /* Fetch the nodesrevs, compare the IDs of the nodes they belong to and
      clean up any temporaries.  If we can't find one of the noderevs, don't

@@ -363,9 +363,9 @@ svn_relpath_dirname(const char *relpath,
  * @since New in 1.9.
  */
 const char *
-svn_relpath_limit(const char *relpath,
-                  int max_components,
-                  apr_pool_t *result_pool);
+svn_relpath_prefix(const char *relpath,
+                   int max_components,
+                   apr_pool_t *result_pool);
 
 
 /** Divide the canonicalized @a uri into a uri @a *dirpath and a

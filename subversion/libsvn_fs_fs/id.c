@@ -82,9 +82,11 @@ locale_independent_strtol(long *result_p,
 
       next = result * 10 + c;
 
-      /* Overflow check.  In case of an overflow, NEXT is 0..9.
-       * In the non-overflow case, RESULT is either >= 10 or RESULT and NEXT
-       * are both 0. */
+      /* Overflow check.  In case of an overflow, NEXT is 0..9 and RESULT
+       * is much larger than 10.  We will then return FALSE.
+       *
+       * In the non-overflow case, NEXT is >= 10 * RESULT but never smaller.
+       * We will continue the loop in that case. */
       if (next < result)
         return FALSE;
 
@@ -365,14 +367,21 @@ svn_fs_fs__id_check_related(const svn_fs_id_t *a,
   if (a == b)
     return TRUE;
 
-  /* If both node_ids start with _ and they have differing transaction
-     IDs, then it is impossible for them to be related. */
-  if (id_a->private_id.node_id.revision == SVN_INVALID_REVNUM)
+  /* If both node_ids have been created within _different_ transactions
+     (and are still uncommitted), then it is impossible for them to be
+     related.
+
+     Due to our txn-local temporary IDs, however, they might have been
+     given the same temporary node ID.  We need to detect that case.
+   */
+  if (   id_a->private_id.node_id.revision == SVN_INVALID_REVNUM
+      && id_b->private_id.node_id.revision == SVN_INVALID_REVNUM)
     {
-      if (   !svn_fs_fs__id_part_eq(&id_a->private_id.txn_id,
-                                    &id_b->private_id.txn_id)
-          || !svn_fs_fs__id_txn_used(&id_a->private_id.txn_id))
+      if (!svn_fs_fs__id_part_eq(&id_a->private_id.txn_id,
+                                 &id_b->private_id.txn_id))
         return FALSE;
+
+      /* At this point, matching node_ids implies relatedness. */
     }
 
   return svn_fs_fs__id_part_eq(&id_a->private_id.node_id,
@@ -385,7 +394,7 @@ svn_fs_fs__id_compare(const svn_fs_id_t *a,
                       const svn_fs_id_t *b)
 {
   if (svn_fs_fs__id_eq(a, b))
-    return svn_fs_node_same;
+    return svn_fs_node_unchanged;
   return (svn_fs_fs__id_check_related(a, b) ? svn_fs_node_common_ancestor
                                             : svn_fs_node_unrelated);
 }
@@ -603,7 +612,9 @@ svn_fs_fs__id_serialize(svn_temp_serializer__context_t *context,
   if (id == NULL)
     return;
 
-  /* serialize the id data struct itself */
+  /* Serialize the id data struct itself.
+   * Note that the structure behind IN is actually larger than a mere
+   * svn_fs_id_t . */
   svn_temp_serializer__add_leaf(context,
                                 (const void * const *)in,
                                 sizeof(fs_fs__id_t));

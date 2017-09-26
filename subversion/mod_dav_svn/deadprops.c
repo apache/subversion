@@ -110,7 +110,12 @@ get_value(dav_db *db, const dav_prop_name *name, svn_string_t **pvalue)
       return NULL;
     }
 
-  /* ### if db->props exists, then try in there first */
+  /* If db->props exists, then use it to obtain property value. */
+  if (db->props)
+    {
+      *pvalue = svn_hash_gets(db->props, propname);
+      return NULL;
+    }
 
   /* We've got three different types of properties (node, txn, and
      revision), and we've got two different protocol versions to deal
@@ -163,6 +168,23 @@ get_value(dav_db *db, const dav_prop_name *name, svn_string_t **pvalue)
 }
 
 
+static svn_error_t *
+change_txn_prop(svn_fs_txn_t *txn,
+                const char *propname,
+                const svn_string_t *value,
+                apr_pool_t *scratch_pool)
+{
+  if (strcmp(propname, SVN_PROP_REVISION_AUTHOR) == 0)
+    return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                            "Attempted to modify 'svn:author' property "
+                            "on a transaction");
+
+  SVN_ERR(svn_repos_fs_change_txn_prop(txn, propname, value, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 static dav_error *
 save_value(dav_db *db, const dav_prop_name *name,
            const svn_string_t *const *old_value_p,
@@ -182,7 +204,7 @@ save_value(dav_db *db, const dav_prop_name *name,
         /* ignore the unknown namespace of the incoming prop. */
         propname = name->name;
       else
-        return dav_svn__new_error(db->p, HTTP_CONFLICT, 0,
+        return dav_svn__new_error(db->p, HTTP_CONFLICT, 0, 0,
                                   "Properties may only be defined in the "
                                   SVN_DAV_PROP_NS_SVN " and "
                                   SVN_DAV_PROP_NS_CUSTOM " namespaces.");
@@ -213,9 +235,8 @@ save_value(dav_db *db, const dav_prop_name *name,
     {
       if (resource->working)
         {
-          serr = svn_repos_fs_change_txn_prop(resource->info->root.txn,
-                                              propname, value,
-                                              subpool);
+          serr = change_txn_prop(resource->info->root.txn, propname,
+                                 value, subpool);
         }
       else
         {
@@ -254,8 +275,8 @@ save_value(dav_db *db, const dav_prop_name *name,
     }
   else if (resource->info->restype == DAV_SVN_RESTYPE_TXN_COLLECTION)
     {
-      serr = svn_repos_fs_change_txn_prop(resource->info->root.txn,
-                                          propname, value, subpool);
+      serr = change_txn_prop(resource->info->root.txn, propname,
+                             value, subpool);
     }
   else
     {
@@ -312,7 +333,7 @@ db_open(apr_pool_t *p,
          changing unversioned rev props.  Remove this someday: see IZ #916. */
       if (! (resource->baselined
              && resource->type == DAV_RESOURCE_TYPE_VERSION))
-        return dav_svn__new_error(p, HTTP_CONFLICT, 0,
+        return dav_svn__new_error(p, HTTP_CONFLICT, 0, 0,
                                   "Properties may only be changed on working "
                                   "resources.");
     }
@@ -463,7 +484,7 @@ decode_property_value(const svn_string_t **out_propval_p,
             *out_propval_p = svn_base64_decode_string(maybe_encoded_propval,
                                                       pool);
           else
-            return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+            return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0, 0,
                                       "Unknown property encoding");
           break;
         }
@@ -510,7 +531,7 @@ db_store(dav_db *db,
 
   if (absent && ! elem->first_child)
     /* ### better error check */
-    return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+    return dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0, 0,
                               apr_psprintf(pool,
                                            "'%s' cannot be specified on the "
                                            "value without specifying an "
@@ -560,8 +581,8 @@ db_remove(dav_db *db, const dav_prop_name *name)
   /* Working Baseline or Working (Version) Resource */
   if (db->resource->baselined)
     if (db->resource->working)
-      serr = svn_repos_fs_change_txn_prop(db->resource->info->root.txn,
-                                          propname, NULL, subpool);
+      serr = change_txn_prop(db->resource->info->root.txn, propname,
+                             NULL, subpool);
     else
       /* ### VIOLATING deltaV: you can't proppatch a baseline, it's
          not a working resource!  But this is how we currently
@@ -689,19 +710,14 @@ db_first_name(dav_db *db, dav_prop_name *pname)
         }
       else
         {
-          svn_node_kind_t kind;
           serr = svn_fs_node_proplist(&db->props,
                                       db->resource->info->root.root,
                                       get_repos_path(db->resource->info),
                                       db->p);
-          if (! serr)
-            serr = svn_fs_check_path(&kind, db->resource->info->root.root,
-                                     get_repos_path(db->resource->info),
-                                     db->p);
 
           if (! serr)
             {
-              if (kind == svn_node_dir)
+              if (db->resource->collection)
                 action = svn_log__get_dir(db->resource->info->repos_path,
                                           db->resource->info->root.rev,
                                           FALSE, TRUE, 0, db->resource->pool);

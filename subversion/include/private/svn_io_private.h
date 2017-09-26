@@ -85,32 +85,6 @@ svn_io__file_lock_autocreate(const char *lock_file,
                              apr_pool_t *pool);
 
 
-/** Buffer test handler function for a generic stream. @see svn_stream_t
- * and svn_stream__is_buffered().
- *
- * @since New in 1.7.
- */
-typedef svn_boolean_t (*svn_stream__is_buffered_fn_t)(void *baton);
-
-/** Set @a stream's buffer test function to @a is_buffered_fn
- *
- * @since New in 1.7.
- */
-void
-svn_stream__set_is_buffered(svn_stream_t *stream,
-                            svn_stream__is_buffered_fn_t is_buffered_fn);
-
-/** Return whether this generic @a stream uses internal buffering.
- * This may be used to work around subtle differences between buffered
- * and non-buffered APR files.  A lazy-open stream cannot report the
- * true buffering state until after the lazy open: a stream that
- * initially reports as non-buffered may report as buffered later.
- *
- * @since New in 1.7.
- */
-svn_boolean_t
-svn_stream__is_buffered(svn_stream_t *stream);
-
 /** Return the underlying file, if any, associated with the stream, or
  * NULL if not available.  Accessing the file bypasses the stream.
  */
@@ -153,6 +127,13 @@ svn_stream__install_get_info(apr_finfo_t *finfo,
                              apr_int32_t wanted,
                              apr_pool_t *scratch_pool);
 
+/* Internal version of svn_stream_from_aprfile2() supporting the
+   additional TRUNCATE_ON_SEEK argument. */
+svn_stream_t *
+svn_stream__from_aprfile(apr_file_t *file,
+                         svn_boolean_t disown,
+                         svn_boolean_t truncate_on_seek,
+                         apr_pool_t *pool);
 
 #if defined(WIN32)
 
@@ -171,6 +152,26 @@ svn_error_t*
 svn_io__utf8_to_unicode_longpath(const WCHAR **result,
                                  const char *source,
                                  apr_pool_t *result_pool);
+
+/* This Windows-specific function marks the file to be deleted on close using
+   an existing file handle. It can be used to avoid having to reopen the file
+   as part of the delete handling. Return SVN_ERR_UNSUPPORTED_FEATURE if
+   delete on close operation is not supported by OS. */
+svn_error_t *
+svn_io__win_delete_file_on_close(apr_file_t *file,
+                                 const char *path,
+                                 apr_pool_t *pool);
+
+/* This Windows-specific function renames the file using an existing file
+   handle. It can be used to avoid having to reopen the file as part of the
+   rename operation. Return SVN_ERR_UNSUPPORTED_FEATURE if renaming open
+   file is not supported by OS.*/
+svn_error_t *
+svn_io__win_rename_open_file(apr_file_t *file,
+                             const char *from_path,
+                             const char *to_path,
+                             apr_pool_t *pool);
+
 #endif /* WIN32 */
 
 #ifdef __cplusplus

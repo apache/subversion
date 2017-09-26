@@ -44,10 +44,11 @@
 
 typedef struct edit_baton_t {
   apr_bucket_brigade *bb;
-  ap_filter_t *output;
+  dav_svn__output *output;
   svn_boolean_t started;
   svn_boolean_t sending_textdelta;
   int compression_level;
+  int svndiff_version;
 } edit_baton_t;
 
 
@@ -326,7 +327,7 @@ apply_textdelta(void *file_baton,
                           dav_svn__make_base64_output_stream(eb->bb,
                                                              eb->output,
                                                              pool),
-                          0,
+                          eb->svndiff_version,
                           eb->compression_level,
                           pool);
 
@@ -367,8 +368,9 @@ static void
 make_editor(const svn_delta_editor_t **editor,
             void **edit_baton,
             apr_bucket_brigade *bb,
-            ap_filter_t *output,
+            dav_svn__output *output,
             int compression_level,
+            int svndiff_version,
             apr_pool_t *pool)
 {
   edit_baton_t *eb = apr_pcalloc(pool, sizeof(*eb));
@@ -379,6 +381,7 @@ make_editor(const svn_delta_editor_t **editor,
   eb->started = FALSE;
   eb->sending_textdelta = FALSE;
   eb->compression_level = compression_level;
+  eb->svndiff_version = svndiff_version;
 
   e->set_target_revision = set_target_revision;
   e->open_root = open_root;
@@ -401,7 +404,7 @@ make_editor(const svn_delta_editor_t **editor,
 static dav_error *
 malformed_element_error(const char *tagname, apr_pool_t *pool)
 {
-  return dav_svn__new_error_svn(pool, HTTP_BAD_REQUEST, 0,
+  return dav_svn__new_error_svn(pool, HTTP_BAD_REQUEST, 0, 0,
                                 apr_pstrcat(pool,
                                             "The request's '", tagname,
                                             "' element is malformed; there "
@@ -413,7 +416,7 @@ malformed_element_error(const char *tagname, apr_pool_t *pool)
 dav_error *
 dav_svn__replay_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
-                       ap_filter_t *output)
+                       dav_svn__output *output)
 {
   dav_error *derr = NULL;
   svn_revnum_t low_water_mark = SVN_INVALID_REVNUM;
@@ -455,7 +458,7 @@ dav_svn__replay_report(const dav_resource *resource,
 
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
-    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                   "The request does not contain the 'svn:' "
                                   "namespace, so it is not going to have an "
                                   "svn:revision element. That element is "
@@ -519,18 +522,19 @@ dav_svn__replay_report(const dav_resource *resource,
 
   if (! SVN_IS_VALID_REVNUM(rev))
     return dav_svn__new_error_svn
-             (resource->pool, HTTP_BAD_REQUEST, 0,
+             (resource->pool, HTTP_BAD_REQUEST, 0, 0,
               "Request was missing the revision argument");
 
   if (! SVN_IS_VALID_REVNUM(low_water_mark))
     return dav_svn__new_error_svn
-             (resource->pool, HTTP_BAD_REQUEST, 0,
+             (resource->pool, HTTP_BAD_REQUEST, 0, 0,
               "Request was missing the low-water-mark argument");
 
   if (! base_dir)
     base_dir = "";
 
-  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  bb = apr_brigade_create(resource->pool,
+                          dav_svn__output_get_bucket_alloc(output));
 
   if ((err = svn_fs_revision_root(&root, resource->info->repos->fs, rev,
                                   resource->pool)))
@@ -543,6 +547,7 @@ dav_svn__replay_report(const dav_resource *resource,
 
   make_editor(&editor, &edit_baton, bb, output,
               dav_svn__get_compression_level(resource->info->r),
+              resource->info->svndiff_version,
               resource->pool);
 
   if ((err = svn_repos_replay2(root, base_dir, low_water_mark,

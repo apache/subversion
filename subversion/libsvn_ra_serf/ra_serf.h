@@ -26,7 +26,6 @@
 
 
 #include <serf.h>
-#include <expat.h>  /* for XML_Parser  */
 #include <apr_uri.h>
 
 #include "svn_types.h"
@@ -114,8 +113,12 @@ struct svn_ra_serf__session_t {
   /* Are we using ssl */
   svn_boolean_t using_ssl;
 
-  /* Should we ask for compressed responses? */
-  svn_boolean_t using_compression;
+  /* Tristate flag that indicates if we should use compression for
+     network transmissions.  If svn_tristate_true or svn_tristate_false,
+     the compression should be enabled and disabled, respectively.
+     If svn_tristate_unknown, determine this automatically based
+     on network parameters. */
+  svn_tristate_t using_compression;
 
   /* The user agent string */
   const char *useragent;
@@ -137,6 +140,10 @@ struct svn_ra_serf__session_t {
      HTTP/1.0. Thus, we cannot send chunked requests.  */
   svn_boolean_t http10;
 
+  /* We are talking to the server via http/2. Responses of scheduled
+     requests may come in any order */
+  svn_boolean_t http20;
+
   /* Should we use Transfer-Encoding: chunked for HTTP/1.1 servers. */
   svn_boolean_t using_chunked_requests;
 
@@ -154,6 +161,7 @@ struct svn_ra_serf__session_t {
   /* Callback functions to get info from WC */
   const svn_ra_callbacks2_t *wc_callbacks;
   void *wc_callback_baton;
+  svn_auth_baton_t *auth_baton;
 
   /* Callback function to send progress info to the client */
   svn_ra_progress_notify_func_t progress_func;
@@ -254,6 +262,18 @@ struct svn_ra_serf__session_t {
   /* Indicates whether the server supports issuing replay REPORTs
      against rev resources (children of `rev_stub', elsestruct). */
   svn_boolean_t supports_rev_rsrc_replay;
+
+  /* Indicates whether the server can understand svndiff version 1. */
+  svn_boolean_t supports_svndiff1;
+
+  /* Indicates whether the server can understand svndiff version 2. */
+  svn_boolean_t supports_svndiff2;
+
+  /* Indicates whether the server sends the result checksum in the response
+   * to a successful PUT request. */
+  svn_boolean_t supports_put_result_checksum;
+
+  apr_interval_time_t conn_latency;
 };
 
 #define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)
@@ -1021,6 +1041,13 @@ svn_ra_serf__svnname_from_wirename(const char *ns,
 
 /** MERGE-related functions **/
 
+void
+svn_ra_serf__merge_lock_token_list(apr_hash_t *lock_tokens,
+                                   const char *parent,
+                                   serf_bucket_t *body,
+                                   serf_bucket_alloc_t *alloc,
+                                   apr_pool_t *pool);
+
 /* Create an MERGE request aimed at the SESSION url, requesting the
    merge of the resource identified by MERGE_RESOURCE_URL.
    LOCK_TOKENS is a hash mapping paths to lock tokens owned by the
@@ -1507,6 +1534,11 @@ svn_ra_serf__error_on_status(serf_status_line sline,
 svn_error_t *
 svn_ra_serf__unexpected_status(svn_ra_serf__handler_t *handler);
 
+/* Make sure handler is no longer scheduled on its connection. Resetting
+   the connection if necessary */
+void
+svn_ra_serf__unschedule_handler(svn_ra_serf__handler_t *handler);
+
 
 /* ###? */
 svn_error_t *
@@ -1537,7 +1569,72 @@ svn_ra_serf__create_bucket_with_eagain(const char *data,
                                        apr_size_t len,
                                        serf_bucket_alloc_t *allocator);
 
+/* Parse a given URL_STR, fill in all supplied fields of URI
+ * structure.
+ *
+ * This function is a compatibility wrapper around apr_uri_parse().
+ * Different apr-util versions set apr_uri_t.path to either NULL or ""
+ * for root paths, and serf expects to see "/". This function always
+ * sets URI.path to "/" for these paths. */
+svn_error_t *
+svn_ra_serf__uri_parse(apr_uri_t *uri,
+                       const char *url_str,
+                       apr_pool_t *result_pool);
 
+/* Setup the "Accept-Encoding" header value for requests that expect
+   svndiff-encoded deltas, depending on the SESSION state. */
+void
+svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
+                                           svn_ra_serf__session_t *session);
+
+svn_boolean_t
+svn_ra_serf__is_low_latency_connection(svn_ra_serf__session_t *session);
+
+/* Default limit for in-memory size of a request body. */
+#define SVN_RA_SERF__REQUEST_BODY_IN_MEM_SIZE 256 * 1024
+
+/* An opaque structure used to prepare a request body. */
+typedef struct svn_ra_serf__request_body_t svn_ra_serf__request_body_t;
+
+/* Constructor for svn_ra_serf__request_body_t.  Creates a new writable
+   buffer for the request body.  Request bodies under IN_MEMORY_SIZE
+   bytes will be held in memory, otherwise, the body content will be
+   spilled to a temporary file. */
+svn_ra_serf__request_body_t *
+svn_ra_serf__request_body_create(apr_size_t in_memory_size,
+                                 apr_pool_t *result_pool);
+
+/* Get the writable stream associated with BODY. */
+svn_stream_t *
+svn_ra_serf__request_body_get_stream(svn_ra_serf__request_body_t *body);
+
+/* Get a svn_ra_serf__request_body_delegate_t and baton for BODY. */
+void
+svn_ra_serf__request_body_get_delegate(svn_ra_serf__request_body_delegate_t *del,
+                                       void **baton,
+                                       svn_ra_serf__request_body_t *body);
+
+/* Release intermediate resources associated with BODY.  These resources
+   (such as open file handles) will be automatically released when the
+   pool used to construct BODY is cleared or destroyed, but this optional
+   function allows doing that explicitly. */
+svn_error_t *
+svn_ra_serf__request_body_cleanup(svn_ra_serf__request_body_t *body,
+                                  apr_pool_t *scratch_pool);
+
+/* Callback used in svn_ra_serf__create_stream_bucket().  ERR will be
+   will be cleared and becomes invalid after the callback returns,
+   use svn_error_dup() to preserve it. */
+typedef void
+(*svn_ra_serf__stream_bucket_errfunc_t)(void *baton, svn_error_t *err);
+
+/* Create a bucket that wraps a generic readable STREAM.  This function
+   takes ownership of the passed-in stream, and will close it. */
+serf_bucket_t *
+svn_ra_serf__create_stream_bucket(svn_stream_t *stream,
+                                  serf_bucket_alloc_t *allocator,
+                                  svn_ra_serf__stream_bucket_errfunc_t errfunc,
+                                  void *errfunc_baton);
 
 #if defined(SVN_DEBUG)
 /* Wrapper macros to collect file and line information */

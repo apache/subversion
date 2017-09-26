@@ -27,6 +27,6 @@ export MALLOC_OPTIONS=S
 (cd .. && gmake BRANCH="$branch" THREADING="no" svn-check-bindings)
 grep -q "^Result: PASS$" tests.log.bindings.pl || exit 1
 grep -q "^OK$" tests.log.bindings.py || exit 1
-tail -n 1 tests.log.bindings.rb | grep -q ", 0 failures, 0 errors" || exit 1
+grep -q ", 0 failures, 0 errors" tests.log.bindings.rb || exit 1
 #TODO javahl
 exit 0

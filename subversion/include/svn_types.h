@@ -150,17 +150,22 @@ typedef int svn_boolean_t;
 
 
 
-/** Declaration of the null pointer constant type.
+/* Declaration of a unique type, never defined, for the SVN_VA_NULL macro.
  *
- * @since New in 1.9.
+ * NOTE: Private. Not for direct use by third-party code.
  */
-struct svn_null_pointer_constant_stdarg_sentinel_t;
+struct svn__null_pointer_constant_stdarg_sentinel_t;
 
 /** Null pointer constant used as a sentinel in variable argument lists.
  *
+ * Use of this macro ensures that the argument is of the correct size when a
+ * pointer is expected. (The macro @c NULL is not defined as a pointer on
+ * all systems, and the arguments to variadic functions are not converted
+ * automatically to the expected type.)
+ *
  * @since New in 1.9.
  */
-#define SVN_VA_NULL ((struct svn_null_pointer_constant_stdarg_sentinel_t*)0)
+#define SVN_VA_NULL ((struct svn__null_pointer_constant_stdarg_sentinel_t*)0)
 /* See? (char*)NULL -- They have the same length, but the cast looks ugly. */
 
 
@@ -411,7 +416,7 @@ svn_tristate__from_word(const char * word);
  *  2. Creating a new textual name similar to
  *     SVN_SUBST__SPECIAL_LINK_STR in libsvn_subr/subst.c.
  *  3. Handling the translation/detranslation case for the new type in
- *     create_special_file and detranslate_special_file, using the
+ *     create_special_file_from_stream and detranslate_special_file, using the
  *     routines from 1.
  */
 
@@ -1072,6 +1077,11 @@ typedef svn_error_t *(*svn_log_message_receiver_t)(
  * When a commit succeeds, an instance of this is invoked with the
  * @a commit_info, along with the @a baton closure.
  * @a pool can be used for temporary allocations.
+ *
+ * @note Implementers of this callback that pass this callback to
+ * svn_ra_get_commit_editor3() should be careful with returning errors
+ * as these might be returned as commit errors. See the documentation
+ * of svn_ra_get_commit_editor3() for more details.
  *
  * @since New in 1.4.
  */

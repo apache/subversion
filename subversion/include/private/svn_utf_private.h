@@ -150,6 +150,40 @@ svn_utf__normalize(const char **result,
                    const char *str, apr_size_t len,
                    svn_membuf_t *buf);
 
+/* Transform the UTF-8 string to a shape suitable for comparison with
+ * strcmp(). The tranformation is defined by CASE_INSENSITIVE and
+ * ACCENT_INSENSITIVE arguments. If CASE_INSENSITIVE is non-zero,
+ * remove case distinctions from the string. If ACCENT_INSENSITIVE
+ * is non-zero, remove diacritical marks from the string.
+ *
+ * Use BUF as a temporary storage. If LEN is SVN_UTF__UNKNOWN_LENGTH,
+ * assume STR is null-terminated; otherwise, consider the string only
+ * up to the given length. Place the tranformed string in *RESULT, which
+ * shares storage with BUF and is valid only until the next time BUF is
+ * modified.
+ *
+ * A returned error may indicate that STRING contains invalid UTF-8 or
+ * invalid Unicode codepoints.
+ */
+svn_error_t *
+svn_utf__xfrm(const char **result,
+              const char *str, apr_size_t len,
+              svn_boolean_t case_insensitive,
+              svn_boolean_t accent_insensitive,
+              svn_membuf_t *buf);
+
+/* Return TRUE if S matches any of the const char * glob patterns in
+ * PATTERNS.
+ *
+ * S will internally be normalized to lower-case and accents removed
+ * using svn_utf__xfrm.  To get a match, the PATTERNS must have been
+ * normalized accordingly before calling this function.
+ */
+svn_boolean_t
+svn_utf__fuzzy_glob_match(const char *str,
+                          const apr_array_header_t *patterns,
+                          svn_membuf_t *buf);
+
 /* Check if STRING is a valid, NFC-normalized UTF-8 string.  Note that
  * a FALSE return value may indicate that STRING is not valid UTF-8 at
  * all.
@@ -176,7 +210,7 @@ svn_utf__encode_ucs4_string(svn_membuf_t *buffer,
                             apr_size_t length,
                             apr_size_t *result_length);
 
-/* Pattern matching similar to the the SQLite LIKE and GLOB
+/* Pattern matching similar to the SQLite LIKE and GLOB
  * operators. PATTERN, KEY and ESCAPE must all point to UTF-8
  * strings. Furthermore, ESCAPE, if provided, must be a character from
  * the ASCII subset.
@@ -204,9 +238,13 @@ svn_utf__glob(svn_boolean_t *match,
               svn_membuf_t *string_buf,
               svn_membuf_t *temp_buf);
 
-/* Return the version of the wrapped utf8proc library. */
+/* Return the compiled version of the wrapped utf8proc library. */
 const char *
-svn_utf__utf8proc_version(void);
+svn_utf__utf8proc_compiled_version(void);
+
+/* Return the runtime version of the wrapped utf8proc library. */
+const char *
+svn_utf__utf8proc_runtime_version(void);
 
 /* Convert an UTF-16 (or UCS-2) string to UTF-8, returning the pointer
  * in RESULT. If BIG_ENDIAN is set, then UTF16STR is big-endian;

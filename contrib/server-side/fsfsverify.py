@@ -93,7 +93,7 @@ def log(type, indent, format, *args):
     indentStr = ' ' * indent
     str = format % args
     str = '\n'.join([indentStr + x for x in str.split('\n')])
-    print str
+    print(str)
 
 
 class ByteStream(object):
@@ -344,7 +344,7 @@ class Window(object):
           self.instrByteStream = ZlibByteStream(self.origInstrStream,
                                                 self.compressedInstrLength)
           self.isInstrCompressed = True
-      except Exception, e:
+      except Exception as e:
         new_e = InvalidCompressedStream(
           "Invalid compressed instr stream at offset %d (%s)" % (offset,
                                                                  str(e)),
@@ -359,7 +359,7 @@ class Window(object):
           self.dataByteStream = ZlibByteStream(self.origDataStream,
                                                self.compressedDataLength)
           self.isDataCompressed = True
-      except Exception, e:
+      except Exception as e:
         new_e = InvalidCompressedStream(
           "Invalid compressed data stream at offset %d (%s, %s)\n" % (
               offset, str(e), repr(self)),
@@ -388,7 +388,7 @@ class Window(object):
     while computedInstrLength < expectedInstrLength:
       try:
         instr = SvndiffInstruction(self.instrByteStream)
-      except PotentiallyFixableException, e:
+      except PotentiallyFixableException as e:
         e.window = self
         e.windowOffset = self.windowOffset
         raise
@@ -492,7 +492,7 @@ class Svndiff(object):
         log(LOG_WINDOWS, 3, repr(w))
         w.verify()
         remaining -= w.windowLength
-    except PotentiallyFixableException, e:
+    except PotentiallyFixableException as e:
       e.svndiffStart = self.startingOffset
       raise
 
@@ -561,7 +561,7 @@ class Rep(object):
       raise e
 
     if self.rev != currentRev:
-      print >>sys.stderr, "Skipping text rep since it isn't present in the current rev"
+      sys.stderr.write("Skipping text rep since it isn't present in the current rev\n")
       return
 
     f.seek(self.offset)
@@ -580,7 +580,7 @@ class Rep(object):
       try:
         svndiff = Svndiff(f, self.length)
         svndiff.verify()
-      except Exception, e:
+      except Exception as e:
         e.rep = self
         e.noderev = self.noderev
         raise
@@ -765,7 +765,7 @@ class NodeRev(object):
 
               if nodeId.rev != self.id.rev:
                   if not os.path.exists(str(nodeId.rev)):
-                      print "Can't check %s" % repr(nodeId)
+                      print("Can't check %s" % repr(nodeId))
                       continue
                   tmp = open(str(nodeId.rev),'rb')
                   tmp.seek(nodeId.offset)
@@ -785,8 +785,8 @@ class NodeRev(object):
           f.seek(offset)
         else:
           # The directory entries are stored in another file.
-          print "Warning: dir entries are stored in rev %d for noderev %s" % (
-            self.text.rev, repr(self.id))
+          print("Warning: dir entries are stored in rev %d for noderev %s" % (
+            self.text.rev, repr(self.id)))
 
   def __repr__(self):
     str = 'NodeRev Id: %s\n type: %s\n' % (repr(self.id), repr(self.type))
@@ -858,18 +858,18 @@ def getRootAndChangedPaths(revFile):
 
 
 def dumpChangedPaths(changedPaths):
-  print "Changed Path Information:"
+  print("Changed Path Information:")
   for (path,
        (id, action, textMod, propMod,
         copyfromRev, copyfromPath)) in changedPaths:
-    print " %s:" % path
-    print "  id: %s" % id
-    print "  action: %s" % action
-    print "  text mod: %s" % textMod
-    print "  prop mod: %s" % propMod
+    print(" %s:" % path)
+    print("  id: %s" % id)
+    print("  action: %s" % action)
+    print("  text mod: %s" % textMod)
+    print("  prop mod: %s" % propMod)
     if copyfromRev != -1:
-      print "  copyfrom path: %s" % copyfromPath
-      print "  copyfrom rev: %s" % copyfromRev
+      print("  copyfrom path: %s" % copyfromPath)
+      print("  copyfrom rev: %s" % copyfromRev)
     print
 
 
@@ -926,7 +926,7 @@ class RegexpStrategy(WalkStrategy):
 
 
 def verify(noderev, revFile, dumpInstructions, dumpWindows):
-  print noderev
+  print(noderev)
 
   if noderev.text:
     noderev.text.verify(revFile,
@@ -944,7 +944,7 @@ def verify(noderev, revFile, dumpInstructions, dumpWindows):
 def truncate(noderev, revFile):
   txnId = noderev.id
 
-  print "Truncating node %s (%s)" % (txnId, noderev.cpath)
+  print("Truncating node %s (%s)" % (txnId, noderev.cpath))
 
   # Grab the text rep
   textRep = noderev.text
@@ -980,7 +980,7 @@ def truncate(noderev, revFile):
   newTextRep = ' '.join(fields) + '\x0a'
   assert(len(newTextRep) == overallLength)
   revFile.write(newTextRep)
-  print "Done."
+  print("Done.")
   sys.exit(0)
 
 
@@ -1003,7 +1003,7 @@ def fixHeader(e, revFile):
         headerLen = len(line)
     offset = offset + len(line)
 
-  print "Original text rep located at", originalOffset
+  print("Original text rep located at", originalOffset)
 
   # Okay, now we have the original offset of the text rep that was
   # in the process of being written out.  The header portion of the
@@ -1014,14 +1014,14 @@ def fixHeader(e, revFile):
 
   revFile.seek(originalOffset)
   block = revFile.read(copyLen)
-  print "Copy %d bytes from offset %d" % (copyLen, originalOffset)
+  print("Copy %d bytes from offset %d" % (copyLen, originalOffset))
 
-  print "Write %d bytes at offset %d" % (copyLen, e.offset)
+  print("Write %d bytes at offset %d" % (copyLen, e.offset))
   revFile.seek(e.offset)
   revFile.write(block)
   revFile.flush()
 
-  print "Fixed? :-)  Re-run fsfsverify without the -f option"
+  print("Fixed? :-)  Re-run fsfsverify without the -f option")
 
 
 def fixStream(e, revFile):
@@ -1050,8 +1050,8 @@ def fixStream(e, revFile):
   srcOffset = errorOffset
   destOffset = repeatedBlockOffset
 
-  print "Copy %d bytes from offset %d" % (srcLength, srcOffset)
-  print "Write %d bytes at offset %d" % (srcLength, destOffset)
+  print("Copy %d bytes from offset %d" % (srcLength, srcOffset))
+  print("Write %d bytes at offset %d" % (srcLength, destOffset))
 
   while srcOffset < finalOffset:
     blen = 64*1024
@@ -1068,7 +1068,7 @@ def fixStream(e, revFile):
   revFile.flush()
   revFile.close()
 
-  print "Fixed? :-)  Re-run fsfsverify without the -f option"
+  print("Fixed? :-)  Re-run fsfsverify without the -f option")
 
 
 def checkOptions(options):
@@ -1078,16 +1078,16 @@ def checkOptions(options):
       count = count + 1
 
   if count > 1:
-    print >>sys.stderr, "Please use only one of -c, -f, and -t."
+    sys.stderr.write("Please use only one of -c, -f, and -t.\n")
     sys.exit(1)
 
   if options.dumpChanged and (options.dumpWindows or options.dumpInstructions):
-    print >>sys.stderr, \
-      "-c is incompatible with -w and -i.  Dropping -w and/or -i."
+    sys.stderr.write(\
+      "-c is incompatible with -w and -i.  Dropping -w and/or -i.\n")
 
   if options.noVerify and (options.dumpWindows or options.dumpInstructions):
-    print >>sys.stderr, \
-      "--no-verify is incompatible with -w and -i.  Dropping -w and/or -i."
+    sys.stderr.write(\
+      "--no-verify is incompatible with -w and -i.  Dropping -w and/or -i.\n")
 
 
 def handleError(error, withTraceback=False):
@@ -1096,8 +1096,8 @@ def handleError(error, withTraceback=False):
     import traceback
     traceback.print_exc()
 
-  print >>sys.stderr,"Error %s: %s" % (error.__class__.__name__, str(e))
-  print >>sys.stderr,"Try running with -f to fix the revision"
+  sys.stderr.write("Error %s: %s\n" % (error.__class__.__name__, str(e)))
+  sys.stderr.write("Try running with -f to fix the revision\n")
   sys.exit(1)
 
 
@@ -1136,7 +1136,7 @@ if __name__ == '__main__':
   (options, args) = parser.parse_args()
 
   if len(args) != 1:
-    print >>sys.stderr, "Please specify exactly one rev file."
+    sys.stderr.write("Please specify exactly one rev file.\n")
     parser.print_help()
     sys.exit(1)
 
@@ -1192,7 +1192,7 @@ if __name__ == '__main__':
             truncate(noderev, revFile)
 
         else:
-          print noderev
+          print(noderev)
 
           if not options.noVerify:
             if noderev.text:
@@ -1209,13 +1209,13 @@ if __name__ == '__main__':
       except:
         sys.stdout.flush()
         raise
-  except InvalidRepHeader, e:
+  except InvalidRepHeader as e:
     if not options.fixRlle:
       handleError(e, options.showTraceback)
 
     fixHeader(e, revFile)
 
-  except PotentiallyFixableException, e:
+  except PotentiallyFixableException as e:
     if not options.fixRlle:
       handleError(e, options.showTraceback)
 

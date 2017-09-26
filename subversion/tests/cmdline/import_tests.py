@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import re, os.path, sys
+import re, os.path, sys, stat
 
 # Our testing module
 import svntest
@@ -70,11 +70,11 @@ def import_executable(sbox):
     svntest.main.file_append(path, "some text")
 
   # set executable bits
-  os.chmod(all_path, 0777)
-  os.chmod(none_path, 0666)
-  os.chmod(user_path, 0766)
-  os.chmod(group_path, 0676)
-  os.chmod(other_path, 0667)
+  os.chmod(all_path, svntest.main.S_ALL_RWX)
+  os.chmod(none_path, svntest.main.S_ALL_RW)
+  os.chmod(user_path, svntest.main.S_ALL_RW | stat.S_IXUSR)
+  os.chmod(group_path, svntest.main.S_ALL_RW | stat.S_IXGRP)
+  os.chmod(other_path, svntest.main.S_ALL_RW | stat.S_IXOTH)
 
   # import new files into repository
   url = sbox.repo_url
@@ -126,8 +126,7 @@ def import_executable(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1)
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 def import_ignores(sbox):
@@ -150,7 +149,7 @@ def import_ignores(sbox):
   foo_c_path = os.path.join(dir_path, 'foo.c')
   foo_o_path = os.path.join(dir_path, 'foo.o')
 
-  os.mkdir(dir_path, 0755)
+  os.mkdir(dir_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
   open(foo_c_path, 'w')
   open(foo_o_path, 'w')
 
@@ -197,8 +196,7 @@ def import_ignores(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1)
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 def import_no_ignores(sbox):
@@ -215,7 +213,7 @@ def import_no_ignores(sbox):
   foo_lo_path = os.path.join(dir_path, 'foo.lo')
   foo_rej_path = os.path.join(dir_path, 'foo.rej')
 
-  os.mkdir(dir_path, 0755)
+  os.mkdir(dir_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
   open(foo_c_path, 'w')
   open(foo_o_path, 'w')
   open(foo_lo_path, 'w')
@@ -272,8 +270,7 @@ def import_no_ignores(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1)
+                                        check_props=True)
 #----------------------------------------------------------------------
 def import_avoid_empty_revision(sbox):
   "avoid creating empty revisions with import"
@@ -319,9 +316,7 @@ enable-auto-props = yes
 *.dsp = svn:eol-style=CRLF
 *.txt = svn:eol-style=native
 '''
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
-  config_dir = os.path.join(tmp_dir, 'autoprops_config')
-  svntest.main.create_config_dir(config_dir, config_contents)
+  config_dir = sbox.create_config_dir(config_contents)
 
   # create a new file and import it
   file_name = "test.dsp"
@@ -329,7 +324,7 @@ enable-auto-props = yes
   imp_dir_path = 'dir'
   imp_file_path = os.path.join(imp_dir_path, file_name)
 
-  os.mkdir(imp_dir_path, 0755)
+  os.mkdir(imp_dir_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
   svntest.main.file_write(imp_file_path, "This is file test.dsp.\n")
 
   svntest.actions.run_and_verify_svn(None, [], 'import',
@@ -381,7 +376,7 @@ enable-auto-props = yes
   imp_dir_path = 'dir2'
   imp_file_path = os.path.join(imp_dir_path, file_name)
 
-  os.mkdir(imp_dir_path, 0755)
+  os.mkdir(imp_dir_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
   svntest.main.file_append_binary(imp_file_path,
                                   "This is file test.txt.\n" + \
                                   "The second line.\r\n" + \
@@ -421,9 +416,7 @@ def import_inherited_ignores(sbox):
   #
   #   [miscellany]
   #   global-ignores = *.boo *.goo
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
-  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
-  create_inherited_ignores_config(config_dir)
+  config_dir = create_inherited_ignores_config(sbox)
 
   # Set some ignore properties.
   sbox.simple_propset(SVN_PROP_INHERITABLE_IGNORES, '*.voo *.noo *.loo', '.')
@@ -449,8 +442,8 @@ def import_inherited_ignores(sbox):
   #   DIR7
   #     file7.foo
   #     DIR8.noo
-  import_tree_dir = os.path.join(os.path.dirname(sys.argv[0]),
-                                 'import_tests_data', 'import_tree')
+  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  import_tree_dir = os.path.join(tmp_dir, 'import_tree_' + sbox.name)
 
   # Relative WC paths of the imported tree.
   dir1_path  = os.path.join('DIR1.noo')
@@ -468,6 +461,33 @@ def import_inherited_ignores(sbox):
   dir7_path  = os.path.join('DIR6', 'DIR7')
   file7_path = os.path.join('DIR6', 'DIR7', 'file7.foo')
   dir8_path  = os.path.join('DIR6', 'DIR7', 'DIR8.noo')
+
+  import_dirs = [
+    dir1_path,
+    dir2_path,
+    dir3_path,
+    dir4_path,
+    dir5_path,
+    dir6_path,
+    dir7_path,
+    dir8_path,
+    ]
+  import_files = [
+    file1_path,
+    file2_path,
+    file3_path,
+    file4_path,
+    file5_path,
+    file6_path,
+    file7_path,
+    ]
+
+  # Create the (unversioned) tree to be imported.
+  os.mkdir(import_tree_dir)
+  for p in import_dirs:
+    os.mkdir(os.path.join(import_tree_dir, p))
+  for p in import_files:
+    svntest.main.file_write(os.path.join(import_tree_dir, p), 'A file')
 
   # Import the tree to ^/A/B/E.
   # We should not see any *.noo paths because those are blocked at the

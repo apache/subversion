@@ -11331,6 +11331,11 @@ msgstr "Mise à jour de '%s'\n"
 msgid "Redirecting to URL '%s':\n"
 msgstr "Redirection vers l'URL '%s' :\n"
 
+#: ../svn/notify.c:1066
+#, c-format
+msgid "Committing transaction...\n"
+msgstr "Transaction de propagation...\n"
+
 #: ../svn/propdel-cmd.c:88
 #, c-format
 msgid "Cannot specify revision for deleting versioned property '%s'"
@@ -11543,10 +11548,8 @@ msgstr "'%s' actualisé à la révision %ld.\n"
 #: ../svn/util.c:76
 #, c-format
 msgid ""
-"\n"
 "Committed revision %ld%s.\n"
 msgstr ""
-"\n"
 "Révision %ld%s propagée.\n"
 
 #: ../svn/util.c:80

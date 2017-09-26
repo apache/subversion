@@ -24,6 +24,8 @@
 #ifndef SVN_JAVAHL_JNIWRAPPER_GLOBALREF_HPP
 #define SVN_JAVAHL_JNIWRAPPER_GLOBALREF_HPP
 
+#include <memory>
+
 #include <jni.h>
 
 #include "jni_env.hpp"
@@ -43,11 +45,19 @@ public:
     : m_obj(obj ? env.NewGlobalRef(obj) : NULL)
     {}
 
-  ~GlobalObject();
+  ~GlobalObject() throw()
+    {
+      if (m_obj)
+        Env().DeleteGlobalRef(m_obj);
+    }
 
-  GlobalObject& operator=(jobject that);
+  GlobalObject& operator=(jobject that)
+    {
+      this->~GlobalObject();
+      return *new(this) GlobalObject(Env(), that);
+    }
 
-  jobject get() const
+  jobject get() const throw()
     {
       return m_obj;
     }
@@ -73,9 +83,13 @@ public:
     : GlobalObject(env, cls)
     {}
 
-  GlobalClass& operator=(jclass that);
+  GlobalClass& operator=(jclass that)
+    {
+      GlobalObject::operator=(that);
+      return *this;
+    }
 
-  jclass get() const
+  jclass get() const throw()
     {
       return jclass(GlobalObject::get());
     }

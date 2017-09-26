@@ -95,22 +95,20 @@ def test_misc(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # give the repo a new UUID
-  uuid = "01234567-89ab-cdef-89ab-cdef01234567"
+  uuid = b"01234567-89ab-cdef-89ab-cdef01234567"
   svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0, True,
-                           ["SVN-fs-dump-format-version: 2\n",
-                            "\n",
-                            "UUID: ", uuid, "\n",
+                           [b"SVN-fs-dump-format-version: 2\n",
+                            b"\n",
+                            b"UUID: ", uuid, b"\n",
                            ],
                            'load', '--force-uuid', repo_dir)
 
   expect('youngest', [ '2\n' ], run_svnlook('youngest', repo_dir))
 
-  expect('uuid', [ uuid + '\n' ], run_svnlook('uuid', repo_dir))
+  expect('uuid', [ uuid.decode() + '\n' ], run_svnlook('uuid', repo_dir))
 
   # it would be nice to test the author too, but the current test framework
   # does not pull a username when testing over ra_neon or ra_svn,
@@ -234,9 +232,7 @@ def delete_file_in_moved_dir(sbox):
   ### in order to get this commit working again.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   exit_code, output, errput = svntest.main.run_svnlook("dirs-changed",
                                                        repo_dir)
@@ -305,7 +301,7 @@ def test_print_property_diffs(sbox):
 def info_bad_newlines(sbox):
   "svnlook info must allow inconsistent newlines"
 
-  dump_str = """SVN-fs-dump-format-version: 2
+  dump_str = b"""SVN-fs-dump-format-version: 2
 
 UUID: dc40867b-38f6-0310-9f5f-f81aa277e06e
 
@@ -383,9 +379,7 @@ def changed_copy_info(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   exit_code, output, errput = svntest.main.run_svnlook("changed", repo_dir)
   if errput:
@@ -481,9 +475,7 @@ def diff_ignore_whitespace(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Check the output of 'svnlook diff -x --ignore-space-change' on mu.
   # It should not print anything.
@@ -536,9 +528,7 @@ def diff_ignore_eolstyle(sbox):
 
     svntest.actions.run_and_verify_commit(wc_dir,
                                           expected_output,
-                                          expected_status,
-                                          None,
-                                          wc_dir)
+                                          expected_status)
 
     # Grab the diff
     exit_code, expected_output, err = svntest.actions.run_and_verify_svn(
@@ -705,7 +695,6 @@ fp.close()"""
                     "Properties on '/A':\n",
                     '  bogus_prop\n',
                     '  svn:log\n', '  svn:author\n',
-                    '  svn:check-locks\n', # internal prop, not really expected
                     '  bogus_rev_prop\n',
                     '  svn:date\n',
                     '  svn:txn-client-compat-version\n',

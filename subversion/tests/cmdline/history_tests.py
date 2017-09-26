@@ -70,9 +70,7 @@ def cat_traces_renames(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # rename pi to rho.  commit r3.
   svntest.main.run_svn(None, 'mv', pi_path, rho_path)
@@ -93,9 +91,7 @@ def cat_traces_renames(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # update whole wc to HEAD
   expected_output = svntest.wc.State(wc_dir, { }) # no output

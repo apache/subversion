@@ -73,52 +73,6 @@ typedef struct svn_client__private_ctx_t
 svn_client__private_ctx_t *
 svn_client__get_private_ctx(svn_client_ctx_t *ctx);
 
-
-/* Set *REVNUM to the revision number identified by REVISION.
-
-   If REVISION->kind is svn_opt_revision_number, just use
-   REVISION->value.number, ignoring LOCAL_ABSPATH and RA_SESSION.
-
-   Else if REVISION->kind is svn_opt_revision_committed,
-   svn_opt_revision_previous, or svn_opt_revision_base, or
-   svn_opt_revision_working, then the revision can be identified
-   purely based on the working copy's administrative information for
-   LOCAL_ABSPATH, so RA_SESSION is ignored.  If LOCAL_ABSPATH is not
-   under revision control, return SVN_ERR_UNVERSIONED_RESOURCE, or if
-   LOCAL_ABSPATH is null, return SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED.
-
-   Else if REVISION->kind is svn_opt_revision_date or
-   svn_opt_revision_head, then RA_SESSION is used to retrieve the
-   revision from the repository (using REVISION->value.date in the
-   former case), and LOCAL_ABSPATH is ignored.  If RA_SESSION is null,
-   return SVN_ERR_CLIENT_RA_ACCESS_REQUIRED.
-
-   Else if REVISION->kind is svn_opt_revision_unspecified, set
-   *REVNUM to SVN_INVALID_REVNUM.
-
-   If YOUNGEST_REV is non-NULL, it is an in/out parameter.  If
-   *YOUNGEST_REV is valid, use it as the youngest revision in the
-   repository (regardless of reality) -- don't bother to lookup the
-   true value for HEAD, and don't return any value in *REVNUM greater
-   than *YOUNGEST_REV.  If *YOUNGEST_REV is not valid, and a HEAD
-   lookup is required to populate *REVNUM, then also populate
-   *YOUNGEST_REV with the result.  This is useful for making multiple
-   serialized calls to this function with a basically static view of
-   the repository, avoiding race conditions which could occur between
-   multiple invocations with HEAD lookup requests.
-
-   Else return SVN_ERR_CLIENT_BAD_REVISION.
-
-   Use SCRATCH_POOL for any temporary allocation.  */
-svn_error_t *
-svn_client__get_revision_number(svn_revnum_t *revnum,
-                                svn_revnum_t *youngest_rev,
-                                svn_wc_context_t *wc_ctx,
-                                const char *local_abspath,
-                                svn_ra_session_t *ra_session,
-                                const svn_opt_revision_t *revision,
-                                apr_pool_t *scratch_pool);
-
 /* Set *ORIGINAL_REPOS_RELPATH and *ORIGINAL_REVISION to the original location
    that served as the source of the copy from which PATH_OR_URL at REVISION was
    created, or NULL and SVN_INVALID_REVNUM (respectively) if PATH_OR_URL at
@@ -1118,9 +1072,13 @@ svn_client__ensure_revprop_table(apr_hash_t **revprop_table_out,
    EXPAND_KEYWORDS operates as per the EXPAND argument to
    svn_subst_stream_translated, which see.  If NORMALIZE_EOLS is TRUE and
    LOCAL_ABSPATH requires translation, then normalize the line endings in
-   *NORMAL_STREAM.
+   *NORMAL_STREAM to "\n" if the stream has svn:eol-style set.
 
-   Uses SCRATCH_POOL for temporary allocations. */
+   Note that this IS NOT the repository normal form of the stream as that
+   would use "\r\n" if set to CRLF and "\r" if set to CR.
+
+   The stream is allocated in RESULT_POOL and temporary SCRATCH_POOL is
+   used for temporary allocations. */
 svn_error_t *
 svn_client__get_normalized_stream(svn_stream_t **normal_stream,
                                   svn_wc_context_t *wc_ctx,
@@ -1226,6 +1184,88 @@ svn_client__remote_propget(apr_hash_t *props,
                            svn_depth_t depth,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
+
+/* */
+typedef struct merge_source_t
+{
+  /* "left" side URL and revision (inclusive iff youngest) */
+  const svn_client__pathrev_t *loc1;
+
+  /* "right" side URL and revision (inclusive iff youngest) */
+  const svn_client__pathrev_t *loc2;
+
+  /* True iff LOC1 is an ancestor of LOC2 or vice-versa (history-wise). */
+  svn_boolean_t ancestral;
+} merge_source_t;
+
+/* Description of the merge target root node (a WC working node) */
+typedef struct merge_target_t
+{
+  /* Absolute path to the WC node */
+  const char *abspath;
+
+  /* The repository location of the base node of the target WC.  If the node
+   * is locally added, then URL & REV are NULL & SVN_INVALID_REVNUM.
+   * REPOS_ROOT_URL and REPOS_UUID are always valid. */
+  svn_client__pathrev_t loc;
+
+} merge_target_t;
+
+/*
+ * Similar API to svn_client_merge_peg5().
+ */
+svn_error_t *
+svn_client__merge_elements(svn_boolean_t *use_sleep,
+                           apr_array_header_t *merge_sources,
+                           merge_target_t *target,
+                           svn_ra_session_t *ra_session,
+                           svn_boolean_t diff_ignore_ancestry,
+                           svn_boolean_t force_delete,
+                           svn_boolean_t dry_run,
+                           const apr_array_header_t *merge_options,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/* Data for reporting when a merge aborted because of raising conflicts.
+ *
+ * ### TODO: More info, including the ranges (or other parameters) the user
+ *     needs to complete the merge.
+ */
+typedef struct svn_client__conflict_report_t
+{
+  const char *target_abspath;
+  /* The revision range during which conflicts were raised */
+  const merge_source_t *conflicted_range;
+  /* Was the conflicted range the last range in the whole requested merge? */
+  svn_boolean_t was_last_range;
+} svn_client__conflict_report_t;
+
+/* Create and return an error structure appropriate for the unmerged
+   revisions range(s). */
+svn_error_t *
+svn_client__make_merge_conflict_error(svn_client__conflict_report_t *report,
+                                      apr_pool_t *scratch_pool);
+
+/* The body of svn_client_merge5(), which see for details. */
+svn_error_t *
+svn_client__merge_locked(svn_client__conflict_report_t **conflict_report,
+                         const char *source1,
+                         const svn_opt_revision_t *revision1,
+                         const char *source2,
+                         const svn_opt_revision_t *revision2,
+                         const char *target_abspath,
+                         svn_depth_t depth,
+                         svn_boolean_t ignore_mergeinfo,
+                         svn_boolean_t diff_ignore_ancestry,
+                         svn_boolean_t force_delete,
+                         svn_boolean_t record_only,
+                         svn_boolean_t dry_run,
+                         svn_boolean_t allow_mixed_rev,
+                         const apr_array_header_t *merge_options,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

@@ -114,6 +114,8 @@ svn_cl__similarity_check(const char *key,
     {
       svn_cl__simcheck_t *const token = tokens[i];
       token->context = NULL;
+      /* If you update this factor, consider updating
+       * ../libsvn_subr/cmdline.c:most_similar(). */
       if (token->score >= (2 * SVN_STRING__SIM_RANGE_MAX + 1) / 3)
         ++result;
     }

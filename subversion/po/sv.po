@@ -13145,10 +13145,8 @@ msgstr "  Uppdaterade \"%s\" till r%ld.\n"
 #: ../svn/util.c:79
 #, c-format
 msgid ""
-"\n"
 "Committed revision %ld%s.\n"
 msgstr ""
-"\n"
 "Arkiverade revision %ld%s.\n"
 
 #: ../svn/util.c:83

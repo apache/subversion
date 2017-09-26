@@ -444,7 +444,7 @@ def ensure_tree_conflict(sbox, operation,
       # For switch/merge, there is no such precondition.
       if operation == 'update':
         logger.debug("--- Trying to commit (expecting 'out-of-date' error)")
-        run_and_verify_commit(".", None, None, "Commit failed",
+        run_and_verify_commit(".", None, None, ".*Commit failed.*",
                               target_path)
 
       if modaction.startswith('f'):
@@ -463,7 +463,7 @@ def ensure_tree_conflict(sbox, operation,
       if operation == 'update':
         logger.debug("--- Updating")
         run_and_verify_svn(expected_stdout, [],
-                           'update', target_path)
+                           'update', target_path, '--accept=postpone')
       elif operation == 'switch':
         logger.debug("--- Switching")
         run_and_verify_svn(expected_stdout, [],
@@ -802,8 +802,7 @@ def force_del_tc_inside(sbox):
     })
   run_and_verify_update(wc_dir,
                         expected_output, expected_disk, expected_status,
-                        None, None, None, None, None, 1,
-                        wc_dir)
+                        check_props=True)
 
   # Delete A/C with --force, in effect disarming the tree-conflicts.
   run_and_verify_svn(verify.UnorderedOutput(['D         ' + C + '\n',
@@ -824,8 +823,7 @@ def force_del_tc_inside(sbox):
   expected_status.remove('A/C')
 
   run_and_verify_commit(wc_dir,
-                        expected_output, expected_status, None,
-                        wc_dir)
+                        expected_output, expected_status)
 
 #----------------------------------------------------------------------
 
@@ -887,8 +885,7 @@ def force_del_tc_is_target(sbox):
     })
   run_and_verify_update(wc_dir,
                         expected_output, expected_disk, expected_status,
-                        None, None, None, None, None, 1,
-                        wc_dir)
+                        check_props=True)
 
   # Delete nodes with --force, in effect disarming the tree-conflicts.
   run_and_verify_svn(['D         ' + dir + '\n',
@@ -904,8 +901,7 @@ def force_del_tc_is_target(sbox):
   expected_output = wc.State(wc_dir, {})
 
   run_and_verify_commit(wc_dir,
-                        expected_output, expected_status, None,
-                        wc_dir)
+                        expected_output, expected_status)
 
 #----------------------------------------------------------------------
 
@@ -956,8 +952,7 @@ def query_absent_tree_conflicted_dir(sbox):
                                       treeconflict='C')})
   run_and_verify_update(wc_dir,
                         expected_output, expected_disk, expected_status,
-                        None, None, None, None, None, 1,
-                        wc_dir)
+                        check_props=True)
 
   # Delete A/C with --keep-local.
   run_and_verify_svn(verify.UnorderedOutput(['D         ' + C_C_path + '\n',
@@ -1030,8 +1025,7 @@ def up_add_onto_add_revert(sbox):
 
   run_and_verify_update(wc2_dir,
                         None, expected_disk, expected_status,
-                        None, None, None, None, None, 1,
-                        wc2_dir)
+                        check_props=True)
 
   # Currently (r927086), this removes dir2 and file2 in a way that
   # they don't reappear after update.
@@ -1048,8 +1042,7 @@ def up_add_onto_add_revert(sbox):
   # the repository
   run_and_verify_update(wc2_dir,
                         None, expected_disk, expected_status,
-                        None, None, None, None, None, 1,
-                        wc2_dir)
+                        check_props=True)
 
 
 #----------------------------------------------------------------------
@@ -1086,8 +1079,7 @@ def lock_update_only(sbox):
   expected_status.tweak('iota', status='D ', writelocked='K')
   run_and_verify_update(wc_dir,
                         None, expected_disk, expected_status,
-                        None, None, None, None, None, 1,
-                        wc_dir)
+                        check_props=True)
 
 
 #----------------------------------------------------------------------
@@ -1347,7 +1339,7 @@ def actual_only_node_behaviour(sbox):
                      "relocate", A_copy_url + "/foo", foo_path)
 
   # resolve
-  expected_stdout = "Resolved conflicted state of.*foo.*"
+  expected_stdout = "Tree conflict at.*foo.*marked as resolved"
   expected_stderr = []
   run_and_verify_svn(expected_stdout, expected_stderr,
                      "resolve", "--accept", "working", foo_path)
@@ -1489,8 +1481,7 @@ def update_delete_mixed_rev(sbox):
   expected_status.tweak('A/B/E', status='A ', entry_status='  ')
   run_and_verify_update(wc_dir,
                         expected_output, expected_disk, expected_status,
-                        None, None, None, None, None, 1,
-                        wc_dir)
+                        check_props=True)
 
   # Resolving to working state should give a mixed-revision copy that
   # gets committed as multiple copies
@@ -1504,8 +1495,7 @@ def update_delete_mixed_rev(sbox):
                         'A/B/E/beta', 'A/B/lambda',
                         status='  ', wc_rev=4, copied=None, treeconflict=None)
   run_and_verify_commit(wc_dir,
-                        expected_output, expected_status, None,
-                        wc_dir)
+                        expected_output, expected_status)
 
   expected_info = {
     'Name': 'alpha2',

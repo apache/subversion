@@ -133,9 +133,7 @@ def commit_props(sbox):
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
 
 
@@ -169,16 +167,14 @@ def update_props(sbox):
 
   # Commit property mods
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Add more properties
   sbox.simple_propset('blue2', 'azul2', 'A/mu')
   sbox.simple_propset('red2', 'rojo2', 'A/D/H')
   expected_status.tweak('A/mu', 'A/D/H', wc_rev=3, status='  ')
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
@@ -201,7 +197,7 @@ def update_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1,
+                                        [], 1,
                                         '-r', '2', wc_backup)
 
   # This adds properties to nodes that have properties
@@ -214,7 +210,7 @@ def update_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1,
+                                        [], 1,
                                         '-r', '3', wc_backup)
 
 
@@ -243,8 +239,7 @@ def downdate_props(sbox):
 
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Make some mod (something to commit)
   svntest.main.file_append(mu_path, "some mod")
@@ -261,8 +256,7 @@ def downdate_props(sbox):
 
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update.
   expected_output = svntest.wc.State(wc_dir, {
@@ -281,7 +275,7 @@ def downdate_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1,
+                                        [], 1,
                                         '-r', '1', wc_dir)
 
 #----------------------------------------------------------------------
@@ -313,8 +307,7 @@ def remove_props(sbox):
 
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 
@@ -362,14 +355,8 @@ def update_conflict_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files,
-                                        None, None, 1)
-
-  if len(extra_files) != 0:
-    logger.warn("didn't get expected conflict files")
-    raise svntest.verify.SVNUnexpectedOutput
+                                        check_props=True,
+                                        extra_files=extra_files)
 
   # Resolve the conflicts
   svntest.actions.run_and_verify_resolved([mu_path, A_path])
@@ -404,8 +391,7 @@ def commit_conflict_dirprops(sbox):
   sbox.simple_propset('foo', 'eek', '')
 
   svntest.actions.run_and_verify_commit(wc_dir, None, None,
-                                        "[oO]ut[- ]of[- ]date",
-                                        wc_dir)
+                                        ".*[oO]ut[- ]of[- ]date.*")
 
 #----------------------------------------------------------------------
 
@@ -464,8 +450,7 @@ def commit_replacement_props(sbox):
   expected_status.tweak('A/B/lambda', wc_rev=3, status='  ')
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 
@@ -529,8 +514,7 @@ def revert_replacement_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        1)
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 @Issues(920,2065)
@@ -766,7 +750,7 @@ def copy_inherits_special_props(sbox):
   # copied file.
   if os.name == 'posix':
     sbox.simple_propset('svn:executable', 'on', 'new_file1.bin')
-    os.chmod(new_path1, 0644)
+    os.chmod(new_path1, svntest.main.S_ALL_READ | stat.S_IWUSR)
 
   # Commit the file
   sbox.simple_commit()
@@ -910,41 +894,42 @@ def prop_value_conversions(sbox):
   # part of the prop value and it doesn't get converted in the pipe.
 
   # Check svn:mime-type
-  svntest.actions.check_prop('svn:mime-type', iota_path, ['text/html'])
-  svntest.actions.check_prop('svn:mime-type', mu_path, ['text/html'])
+  svntest.actions.check_prop('svn:mime-type', iota_path, [b'text/html'])
+  svntest.actions.check_prop('svn:mime-type', mu_path, [b'text/html'])
 
   # Check svn:eol-style
-  svntest.actions.check_prop('svn:eol-style', iota_path, ['native'])
-  svntest.actions.check_prop('svn:eol-style', mu_path, ['native'])
+  svntest.actions.check_prop('svn:eol-style', iota_path, [b'native'])
+  svntest.actions.check_prop('svn:eol-style', mu_path, [b'native'])
 
   # Check svn:ignore
+  linesep = os.linesep.encode()
   svntest.actions.check_prop('svn:ignore', A_path,
-                             ['*.o'+os.linesep, 'foo.c'+os.linesep])
+                             [b'*.o'+linesep, b'foo.c'+linesep])
   svntest.actions.check_prop('svn:ignore', B_path,
-                             ['*.o'+os.linesep, 'foo.c'+os.linesep])
+                             [b'*.o'+linesep, b'foo.c'+linesep])
 
   # Check svn:externals
   svntest.actions.check_prop('svn:externals', A_path,
-                             ['foo http://foo.com/repos'+os.linesep])
+                             [b'foo http://foo.com/repos'+linesep])
   svntest.actions.check_prop('svn:externals', B_path,
-                             ['foo http://foo.com/repos'+os.linesep])
+                             [b'foo http://foo.com/repos'+linesep])
 
   # Check svn:keywords
-  svntest.actions.check_prop('svn:keywords', iota_path, ['Rev Date'])
-  svntest.actions.check_prop('svn:keywords', mu_path, ['Rev  Date'])
+  svntest.actions.check_prop('svn:keywords', iota_path, [b'Rev Date'])
+  svntest.actions.check_prop('svn:keywords', mu_path, [b'Rev  Date'])
 
   # Check svn:executable
-  svntest.actions.check_prop('svn:executable', iota_path, ['*'])
-  svntest.actions.check_prop('svn:executable', lambda_path, ['*'])
-  svntest.actions.check_prop('svn:executable', mu_path, ['*'])
+  svntest.actions.check_prop('svn:executable', iota_path, [b'*'])
+  svntest.actions.check_prop('svn:executable', lambda_path, [b'*'])
+  svntest.actions.check_prop('svn:executable', mu_path, [b'*'])
 
   # Check other props
-  svntest.actions.check_prop('svn:some-prop', lambda_path, ['bar'])
-  svntest.actions.check_prop('svn:some-prop', mu_path, [' bar baz'])
-  svntest.actions.check_prop('svn:some-prop', iota_path, ['bar'+os.linesep])
-  svntest.actions.check_prop('some-prop', lambda_path, ['bar'])
-  svntest.actions.check_prop('some-prop', mu_path,[' bar baz'])
-  svntest.actions.check_prop('some-prop', iota_path, ['bar\n'])
+  svntest.actions.check_prop('svn:some-prop', lambda_path, [b'bar'])
+  svntest.actions.check_prop('svn:some-prop', mu_path, [b' bar baz'])
+  svntest.actions.check_prop('svn:some-prop', iota_path, [b'bar'+linesep])
+  svntest.actions.check_prop('some-prop', lambda_path, [b'bar'])
+  svntest.actions.check_prop('some-prop', mu_path,[b' bar baz'])
+  svntest.actions.check_prop('some-prop', iota_path, [b'bar\n'])
 
 
 #----------------------------------------------------------------------
@@ -974,10 +959,10 @@ def binary_props(sbox):
   mu_path_bak = sbox.ospath('A/mu', wc_dir=wc_backup)
 
   # Property value convenience vars.
-  prop_zb   = "This property has a zer\000 byte."
-  prop_ff   = "This property has a form\014feed."
-  prop_xml  = "This property has an <xml> tag."
-  prop_binx = "This property has an <xml> tag and a zer\000 byte."
+  prop_zb   = b"This property has a zer\000 byte."
+  prop_ff   = b"This property has a form\014feed."
+  prop_xml  = b"This property has an <xml> tag."
+  prop_binx = b"This property has an <xml> tag and a zer\000 byte."
 
   # Set some binary properties.
   svntest.actions.set_prop('prop_zb', prop_zb, B_path, )
@@ -1001,9 +986,7 @@ def binary_props(sbox):
   # Commit the propsets.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Create expected output, disk, and status trees for an update of
   # the wc_backup.
@@ -1021,8 +1004,7 @@ def binary_props(sbox):
   svntest.actions.run_and_verify_update(wc_backup,
                                         expected_output,
                                         expected_disk,
-                                        expected_status,
-                                        None, None, None, None, None, 0)
+                                        expected_status)
 
   # Now, check those properties.
   svntest.actions.check_prop('prop_zb', B_path_bak, [prop_zb])
@@ -1268,8 +1250,7 @@ def update_props_on_wc_root(sbox):
 
   # Commit the working copy
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
  # Create expected output tree for an update of the wc_backup.
   expected_output = svntest.wc.State(wc_backup, {
@@ -1289,7 +1270,7 @@ def update_props_on_wc_root(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1)
+                                        check_props=True)
 
 # test for issue 2743
 @Issue(2743)
@@ -1527,8 +1508,7 @@ def remove_custom_ns_props(sbox):
 
   # Commit the one file.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Create expected trees for the update.
   expected_output = svntest.wc.State(wc_backup, {
@@ -1543,7 +1523,7 @@ def remove_custom_ns_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1)
+                                        check_props=True)
 
 def props_over_time(sbox):
   "property retrieval with peg and operative revs"
@@ -1694,11 +1674,11 @@ def added_moved_file(sbox):
   svntest.main.run_svn(None, 'mv', foo_path, foo2_path)
 
   # should still have the property
-  svntest.actions.check_prop('someprop', foo2_path, ['someval'])
+  svntest.actions.check_prop('someprop', foo2_path, [b'someval'])
 
   # the property should get committed, too
   sbox.simple_commit()
-  svntest.actions.check_prop('someprop', foo2_url, ['someval'])
+  svntest.actions.check_prop('someprop', foo2_url, [b'someval'])
 
 
 # Issue 2220, deleting a non-existent property should error
@@ -2108,7 +2088,7 @@ def atomic_over_ra(sbox):
   PASSES_WITHOUT_BPV(None, s1)
 
   # Value of "flower" is 's1'.
-  svntest.actions.check_prop('flower', repo_url, [s1], 0)
+  svntest.actions.check_prop('flower', repo_url, [s1.encode()], 0)
 
 # Test for issue #3721 'redirection of svn propget output corrupted with
 # large property values'
@@ -2316,7 +2296,7 @@ def file_matching_dir_prop_reject(sbox):
     'A/dir_conflicts' : Item(status='  ', wc_rev=2),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Modify/commit property change
   sbox.simple_propset('prop', 'val2', 'A/dir_conflicts')
@@ -2327,7 +2307,7 @@ def file_matching_dir_prop_reject(sbox):
       })
   expected_status.tweak('A', 'A/dir_conflicts', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Local property mod
   sbox.simple_propset('prop', 'val3', 'A/dir_conflicts')
@@ -2352,13 +2332,9 @@ def file_matching_dir_prop_reject(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files,
-                                        None, None, True, '-r', '2', wc_dir)
-  if len(extra_files) != 0:
-    logger.warn("didn't get expected conflict files")
-    raise svntest.verify.SVNUnexpectedOutput
+                                        [], True,
+                                        '-r', '2', wc_dir,
+                                        extra_files=extra_files)
 
   # Revert and update to check that conflict files are removed
   svntest.actions.run_and_verify_svn(None, [], 'revert', '-R', wc_dir)
@@ -2375,7 +2351,7 @@ def file_matching_dir_prop_reject(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, True)
+                                        check_props=True)
 
 def pristine_props_listed(sbox):
   "check if pristine properties are visible"
@@ -2398,7 +2374,7 @@ def pristine_props_listed(sbox):
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'proplist', '-R', wc_dir, '-r', 'BASE')
 
-def create_inherited_ignores_config(config_dir):
+def create_inherited_ignores_config(sbox):
   "create config stuffs for inherited ignores tests"
 
   # contents of the file 'config'
@@ -2407,7 +2383,7 @@ def create_inherited_ignores_config(config_dir):
 global-ignores = *.boo *.goo
 '''
 
-  svntest.main.create_config_dir(config_dir, config_contents)
+  return sbox.create_config_dir(config_contents)
 
 def inheritable_ignores(sbox):
   "inheritable ignores with svn:ignores and config"
@@ -2415,9 +2391,7 @@ def inheritable_ignores(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
-  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
-  create_inherited_ignores_config(config_dir)
+  config_dir = create_inherited_ignores_config(sbox)
 
   sbox.simple_propset(SVN_PROP_INHERITABLE_IGNORES, '*.doo', 'A/B')
   sbox.simple_propset(SVN_PROP_INHERITABLE_IGNORES, '*.moo', 'A/D')
@@ -2597,7 +2571,7 @@ def almost_known_prop_names(sbox):
   svntest.actions.set_prop('svn:foobar', 'x', iota_path,
                            "svn: E195011: 'svn:foobar'"
                            " is not a valid svn: property name;"
-                           " re-run with '--force' to set it")
+                           " use '--force' to set it")
 
 @Issue(3231)
 def peg_rev_base_working(sbox):
@@ -2691,13 +2665,37 @@ def xml_unsafe_author2(sbox):
   else:
     expected_author = 'foo\bbar'
 
-  expected_output = svntest.verify.UnorderedOutput([
-    '      1 %-8s              Jan 01  2000 ./\n' % expected_author,
-    '      1 %-8s              Jan 01  2000 A/\n' % expected_author,
-    '      1 %-8s           25 Jan 01  2000 iota\n' % expected_author
-  ])
+  # Use svn ls in --xml mode to test locale independent output.
+  expected_output = [
+    '<?xml version="1.0" encoding="UTF-8"?>\n',
+    '<lists>\n',
+    '<list\n',
+    '   path="%s">\n' % sbox.repo_url,
+    '<entry\n',
+    '   kind="dir">\n',
+    '<name>A</name>\n',
+    '<commit\n',
+    '   revision="1">\n',
+    '<author>%s</author>\n' % expected_author,
+    '<date>2000-01-01T12:00:00.000000Z</date>\n',
+    '</commit>\n',
+    '</entry>\n',
+    '<entry\n',
+    '   kind="file">\n',
+    '<name>iota</name>\n',
+    '<size>25</size>\n',
+    '<commit\n',
+    '   revision="1">\n',
+    '<author>%s</author>\n' % expected_author,
+    '<date>2000-01-01T12:00:00.000000Z</date>\n',
+    '</commit>\n',
+    '</entry>\n',
+    '</list>\n',
+    '</lists>\n'
+    ]
+
   svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'ls', '-v', repo_url)
+                                     'ls', '--xml', repo_url)
 
   expected_info = [{
       'Repository Root' : sbox.repo_url,
@@ -2728,8 +2726,7 @@ def dir_prop_conflict_details(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         None,
                                         None,
-                                        '.*[Oo]ut of date.*',
-                                        wc_dir)
+                                        '.*[Oo]ut of date.*')
 
   expected_output = svntest.wc.State(wc_dir, {
     'A'                 : Item(status=' C'),
@@ -2741,13 +2738,9 @@ def dir_prop_conflict_details(sbox):
                                         expected_output,
                                         None,
                                         expected_status,
-                                        None, None, None, None, None, 1,
-                                        wc_dir)
-
-  # The conflict properties file line was shown for previous versions, but the
-  # conflict source urls are new since 1.8.
+                                        check_props=True)
   expected_info = {
-    'Conflict Properties File' : re.escape(sbox.ospath('A/dir_conflicts.prej')),
+    'Conflicted Properties' : 'my-prop',
     'Conflict Details': re.escape('incoming dir edit upon update'
                                            + ' Source  left: (dir) ^/A@1'
                                            + ' Source right: (dir) ^/A@2')
@@ -2810,6 +2803,31 @@ def wc_propop_on_url(sbox):
                                      'pg', 'my:Q', '-r', 'PREV',
                                      sbox.repo_url)
 
+def prop_conflict_root(sbox):
+  """property conflict on wc root"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('propname', 'propval1', '')
+  sbox.simple_commit()
+  sbox.simple_propset('propname', 'propval2', '')
+  sbox.simple_commit()
+  sbox.simple_update(revision=2)
+  sbox.simple_propset('propname', 'propvalconflict', '')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    '' : Item(status=' C'),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.tweak('', status=' C')
+  extra_files = ['dir_conflicts.prej']
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        extra_files=extra_files)
 
 ########################################################################
 # Run the tests
@@ -2861,6 +2879,7 @@ test_list = [ None,
               dir_prop_conflict_details,
               iprops_list_abspath,
               wc_propop_on_url,
+              prop_conflict_root,
              ]
 
 if __name__ == '__main__':

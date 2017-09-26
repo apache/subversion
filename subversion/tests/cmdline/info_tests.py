@@ -516,7 +516,7 @@ def binary_tree_conflict(sbox):
   })
   svntest.actions.run_and_verify_update(iota,
                                         expected_output, None, expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         iota, '-r', '2')
 
   expected_info = [{
@@ -641,7 +641,7 @@ def info_item_simple(sbox):
 
   sbox.build(read_only=True)
   svntest.actions.run_and_verify_svn(
-    '1', [],
+    ['1'], [],
     'info', '--show-item=revision', '--no-newline',
     sbox.ospath(''))
 
@@ -658,7 +658,7 @@ def info_item_simple_multiple(sbox):
 
   svntest.actions.run_and_verify_svn(
     r'^1\s+\S+(/|\\)info_tests-\d+(/|\\)[^/\\]+$', [],
-    'info', '--show-item=last-changed-rev',
+    'info', '--show-item=last-changed-revision',
     sbox.ospath('A'), sbox.ospath('iota'))
 
 
@@ -669,13 +669,13 @@ def info_item_url(sbox):
 
   svntest.actions.run_and_verify_svn(
     '1', [],
-    'info', '--show-item=last-changed-rev',
+    'info', '--show-item=last-changed-revision',
     sbox.repo_url)
 
 
   svntest.actions.run_and_verify_svn(
     r'^1\s+[^/:]+://.+/repos/[^/]+$', [],
-    'info', '--show-item=last-changed-rev',
+    'info', '--show-item=last-changed-revision',
     sbox.repo_url + '/A', sbox.repo_url + '/iota')
 
 
@@ -697,7 +697,7 @@ def info_item_uncommmitted(sbox):
 
   svntest.actions.run_and_verify_svn(
     '', [],
-    'info', '--show-item=last-changed-rev',
+    'info', '--show-item=last-changed-revision',
     sbox.ospath('newfile'))
 
   svntest.actions.run_and_verify_svn(

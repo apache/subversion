@@ -37,6 +37,7 @@
 #include "svn_error.h"
 #include "svn_config.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_config_private.h"
 
 #include "../svn_test.h"
 
@@ -367,6 +368,93 @@ test_expand(const svn_test_opts_t *opts,
      of "c" was not created in a temporary pool when expanding "g". */
   SVN_TEST_STRING_ASSERT(val, "bar");
 
+  /* Get expanded "j" and "k" which have cyclic definitions.
+   * They must return empty values. */
+  svn_config_get(cfg, &val, "section1", "j", NULL);
+  SVN_TEST_STRING_ASSERT(val, "");
+  svn_config_get(cfg, &val, "section1", "k", NULL);
+  SVN_TEST_STRING_ASSERT(val, "");
+
+  /* Get expanded "l" which depends on a cyclic definition.
+   * So, it also considered "undefined" and will be normalized to "". */
+  svn_config_get(cfg, &val, "section1", "l", NULL);
+  SVN_TEST_STRING_ASSERT(val, "");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_invalid_bom(apr_pool_t *pool)
+{
+  svn_config_t *cfg;
+  svn_error_t *err;
+  svn_string_t *cfg_string;
+  svn_stream_t *stream;
+
+  cfg_string = svn_string_create("\xEF", pool);
+  stream = svn_stream_from_string(cfg_string, pool);
+  err = svn_config_parse(&cfg, stream, TRUE, TRUE, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_MALFORMED_FILE);
+
+  cfg_string = svn_string_create("\xEF\xBB", pool);
+  stream = svn_stream_from_string(cfg_string, pool);
+  err = svn_config_parse(&cfg, stream, TRUE, TRUE, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_MALFORMED_FILE);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_serialization(apr_pool_t *pool)
+{
+  svn_stringbuf_t *original_content;
+  svn_stringbuf_t *written_content;
+  svn_config_t *cfg;
+
+  const struct
+    {
+      const char *section;
+      const char *option;
+      const char *value;
+    } test_data[] =
+    {
+      { "my section", "value1", "some" },
+      { "my section", "value2", "something" },
+      { "another Section", "value1", "one" },
+      { "another Section", "value2", "two" },
+      { "another Section", "value 3", "more" },
+    };
+  int i;
+
+  /* Format the original with the same formatting that the writer will use. */
+  original_content = svn_stringbuf_create("\n[my section]\n"
+                                          "value1=some\n"
+                                          "value2=%(value1)sthing\n"
+                                          "\n[another Section]\n"
+                                          "value1=one\n"
+                                          "value2=two\n"
+                                          "value 3=more\n",
+                                          pool);
+  written_content = svn_stringbuf_create_empty(pool);
+
+  SVN_ERR(svn_config_parse(&cfg,
+                           svn_stream_from_stringbuf(original_content, pool),
+                           TRUE, TRUE, pool));
+  SVN_ERR(svn_config__write(svn_stream_from_stringbuf(written_content, pool),
+                            cfg, pool));
+  SVN_ERR(svn_config_parse(&cfg,
+                           svn_stream_from_stringbuf(written_content, pool),
+                           TRUE, TRUE, pool));
+
+  /* The serialized and re-parsed config must have the expected contents. */
+  for (i = 0; i < sizeof(test_data) / sizeof(test_data[0]); ++i)
+    {
+      const char *val;
+      svn_config_get(cfg, &val, test_data[i].section, test_data[i].option,
+                     NULL);
+      SVN_TEST_STRING_ASSERT(val, test_data[i].value);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -402,6 +490,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test r/o mode"),
     SVN_TEST_OPTS_PASS(test_expand,
                        "test variable expansion"),
+    SVN_TEST_PASS2(test_invalid_bom,
+                   "test parsing config file with invalid BOM"),
+    SVN_TEST_PASS2(test_serialization,
+                   "test writing a config"),
     SVN_TEST_NULL
   };
 

@@ -24,7 +24,6 @@
 import os
 import shutil
 import copy
-import urllib
 import logging
 import re
 
@@ -114,7 +113,8 @@ class Sandbox:
     if empty or not read_only:  # use a local repo
       self.repo_dir = os.path.join(svntest.main.general_repo_dir, self.name)
       self.repo_url = (svntest.main.options.test_area_url + '/'
-                       + urllib.pathname2url(self.repo_dir))
+                       + svntest.wc.svn_uri_quote(
+                                self.repo_dir.replace(os.path.sep, '/')))
       self.add_test_path(self.repo_dir)
     else:
       self.repo_dir = svntest.main.pristine_greek_repos_dir
@@ -195,7 +195,8 @@ class Sandbox:
     path = (os.path.join(svntest.main.general_repo_dir, self.name)
             + '.' + suffix)
     url = svntest.main.options.test_area_url + \
-                                        '/' + urllib.pathname2url(path)
+                                        '/' + svntest.wc.svn_uri_quote(
+                                                path.replace(os.path.sep, '/'))
     self.add_test_path(path, remove)
     return path, url
 
@@ -224,6 +225,20 @@ class Sandbox:
     self.tempname_offs = self.tempname_offs + 1
 
     return os.path.join(self.tmp_dir, '%s-%s' % (prefix, self.tempname_offs))
+
+  def create_config_dir(self, config_contents=None, server_contents=None,
+                        ssl_cert=None, ssl_url=None, http_proxy=None,
+                        exclusive_wc_locks=None):
+    """Create a config directory with specified or default files.
+       Return its path.
+    """
+
+    tmp_dir = os.path.abspath(svntest.main.temp_dir)
+    config_dir = os.path.join(tmp_dir, 'config_' + self.name)
+    svntest.main.create_config_dir(config_dir, config_contents, server_contents,
+                                   ssl_cert, ssl_url, http_proxy,
+                                   exclusive_wc_locks)
+    return config_dir
 
   def cleanup_test_paths(self):
     "Clean up detritus from this sandbox, and any dependents."
@@ -275,6 +290,12 @@ class Sandbox:
     return '%s/REDIRECT-%s-%s' % (parts[0],
                                   temporary and 'TEMP' or 'PERM',
                                   parts[1])
+
+  def file_protocol_repo_url(self):
+    """get a file:// url pointing to the repository"""
+    return svntest.main.file_scheme_prefix + \
+           svntest.wc.svn_uri_quote(
+                os.path.abspath(self.repo_dir).replace(os.path.sep, '/'))
 
   def simple_update(self, target=None, revision='HEAD'):
     """Update the WC or TARGET.
@@ -427,7 +448,8 @@ class Sandbox:
   def simple_append(self, dest, contents, truncate=False):
     """Append CONTENTS to file DEST, optionally truncating it first.
        DEST is a relpath relative to the WC."""
-    open(self.ospath(dest), truncate and 'wb' or 'ab').write(contents)
+    svntest.main.file_write(self.ospath(dest), contents,
+                            truncate and 'wb' or 'ab')
 
   def simple_lock(self, *targets):
     """Lock TARGETS in the WC.

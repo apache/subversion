@@ -19,7 +19,6 @@
 ## variables:
 ##
 ##     PATH                     The search path
-##     SVNBB_OPENSSL            OpenSSL installation prefix
 ##     SVNBB_BDB                Berkeley DB installation prefix
 ##     SVNBB_SWIG               Swig installation prefix
 ##     SVNBB_SERF               Serf installation prefix
@@ -30,13 +29,13 @@
 ##     SVNBB_APR_20_DEV         Path of APR-2.0
 ##     SVNBB_JUNIT              The path of the junit.jar
 ##     SVNBB_PARALLEL           Optional: parallelization; defaults to 2
-##     LIBTOOL_CONFIG           Optional: libtool configuration path
+##     SVNBB_PYTHON3ENV         Optional: Python 3 virtual environment
 ##
 ## The invoking script will set local variable named ${scripts} that
 ## is the absolute path the parent of this file.
 
 # Modify this to suit your deployment
-environment=$(cd "${scripts}/.." && pwd)/environment.sh
+environment=$(cd "${scripts}/../.." && pwd)/environment.sh
 
 eval $(${environment})
 SVNBB_PARALLEL="${SVNBB_PARALLEL-2}"
@@ -50,7 +49,7 @@ export SVNBB_APR_15
 export SVNBB_APR_20_DEV
 export SVNBB_JUNIT
 export SVNBB_PARALLEL
-export LIBTOOL_CONFIG
+export SVNBB_PYTHON3ENV
 
 
 # Set the absolute source path

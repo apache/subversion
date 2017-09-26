@@ -43,16 +43,14 @@ StateReporter::StateReporter()
 {}
 
 StateReporter::~StateReporter()
-{
-  delete m_editor;
-}
+{}
 
 StateReporter*
 StateReporter::getCppObject(jobject jthis)
 {
   static jfieldID fid = 0;
   jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
-      JAVA_PACKAGE"/remote/StateReporter");
+      JAVAHL_CLASS("/remote/StateReporter"));
   return (cppAddr == 0 ? NULL : reinterpret_cast<StateReporter*>(cppAddr));
 }
 
@@ -65,7 +63,7 @@ StateReporter::dispose(jobject jthis)
     abortReport();
 
   static jfieldID fid = 0;
-  SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/remote/StateReporter");
+  SVNBase::dispose(jthis, &fid, JAVAHL_CLASS("/remote/StateReporter"));
 }
 
 namespace {
@@ -179,8 +177,8 @@ StateReporter::abortReport()
 
 void
 StateReporter::set_reporter_data(const svn_ra_reporter3_t* raw_reporter,
-                                   void* report_baton,
-                                   EditorProxy* editor)
+                                 void* report_baton,
+                                 EditorProxy::UniquePtr editor)
 {
   //DEBUG:fprintf(stderr, "  (n) StateReporter::set_reporter_data()\n");
 

@@ -107,7 +107,7 @@ def status_update_with_nested_adds(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Now we go to the backup working copy, still at revision 1.
   # We will run 'svn st -u', and make sure that newdir/newfile is reported
@@ -702,8 +702,6 @@ def timestamp_behaviour(sbox):
   text_time_behaviour(wc_dir, iota_path, 'iota', expected_status, 'cleanup')
 
   # Create a config to enable use-commit-times
-  config_dir = os.path.join(os.path.abspath(svntest.main.temp_dir),
-                            'use_commit_config')
   config_contents = '''\
 [auth]
 password-stores =
@@ -711,7 +709,7 @@ password-stores =
 [miscellany]
 use-commit-times = yes
 '''
-  svntest.main.create_config_dir(config_dir, config_contents)
+  config_dir = sbox.create_config_dir(config_contents)
 
   other_wc = sbox.add_wc_path('other')
   svntest.actions.run_and_verify_svn(None, [],
@@ -735,7 +733,7 @@ use-commit-times = yes
   expected_status = svntest.actions.get_virginal_state(other_wc, 1)
   svntest.actions.run_and_verify_update(other_wc, expected_output,
                                         expected_disk, expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         other_wc, '--config-dir', config_dir)
   iota_text_timestamp = get_text_timestamp(other_iota_path)
   if (iota_text_timestamp[17] != ':' or
@@ -1111,7 +1109,7 @@ def inconsistent_eol(sbox):
   expected_status.tweak('iota', wc_rev=2)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Make the eol style inconsistent and verify that status says nothing.
   svntest.main.file_write(iota_path, "line 1\nline 2\r\n", "wb")
@@ -1144,8 +1142,7 @@ def status_update_with_incoming_props(sbox):
 
   # Commit the working copy
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Create expected trees for an update to revision 1.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1160,7 +1157,7 @@ def status_update_with_incoming_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1,
+                                        [], True,
                                         '-r', '1', wc_dir)
 
   # Can't use run_and_verify_status here because the out-of-date
@@ -1248,8 +1245,7 @@ def status_update_verbose_with_incoming_props(sbox):
 
   # Commit the working copy
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Create expected trees for an update to revision 1.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1265,7 +1261,7 @@ def status_update_verbose_with_incoming_props(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1,
+                                        [], True,
                                         '-r', '1', wc_dir)
 
   # Can't use run_and_verify_status here because the out-of-date
@@ -1326,8 +1322,7 @@ def status_nonrecursive_update(sbox):
   expected_status.tweak('A/D/gamma', wc_rev=2, status='  ')
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Create expected trees for an update to revision 1.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1342,7 +1337,7 @@ def status_nonrecursive_update(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 0,
+                                        [], False,
                                         '-r', '1', wc_dir)
 
   # Check the remote status of folder A (non-recursively)
@@ -1382,8 +1377,7 @@ def change_files_and_commit(wc_dir, files, baserev=1):
     expected_status.tweak(file, wc_rev=commitrev, status='  ')
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
 def status_depth_local(sbox):
   "run 'status --depth=X' with local changes"
@@ -1602,42 +1596,79 @@ def status_dash_u_deleted_directories(sbox):
 
   # check status -u of B
   expected = svntest.verify.UnorderedOutput(
-         ["D                1   %s\n" % "B",
-          "D                1   %s\n" % os.path.join("B", "lambda"),
-          "D                1   %s\n" % os.path.join("B", "E"),
-          "D                1   %s\n" % os.path.join("B", "E", "alpha"),
-          "D                1   %s\n" % os.path.join("B", "E", "beta"),
-          "D                1   %s\n" % os.path.join("B", "F"),
+         ["D                1        1 jrandom      %s\n" % \
+                                        "B",
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("B", "lambda"),
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("B", "E"),
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("B", "E", "alpha"),
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("B", "E", "beta"),
+          "D                1        1 jrandom      %s\n" % 
+          os.path.join("B", "F"),
           "Status against revision:      1\n" ])
   svntest.actions.run_and_verify_svn(expected,
                                      [],
+                                     "status", "-u", "-v", "B")
+
+  expected = \
+         ["D                1   %s\n" % "B",
+          "Status against revision:      1\n" ]
+  svntest.actions.run_and_verify_svn(expected,
+                                     [],
                                      "status", "-u", "B")
+
 
   # again, but now from inside B, should give the same output
   if not os.path.exists('B'):
     os.mkdir('B')
   os.chdir("B")
   expected = svntest.verify.UnorderedOutput(
-         ["D                1   %s\n" % ".",
-          "D                1   %s\n" % "lambda",
-          "D                1   %s\n" % "E",
-          "D                1   %s\n" % os.path.join("E", "alpha"),
-          "D                1   %s\n" % os.path.join("E", "beta"),
-          "D                1   %s\n" % "F",
+         ["D                1        1 jrandom      %s\n" % \
+                                        ".",
+          "D                1        1 jrandom      %s\n" % \
+                                        "lambda",
+          "D                1        1 jrandom      %s\n" % \
+                                        "E",
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("E", "alpha"),
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("E", "beta"),
+          "D                1        1 jrandom      %s\n" % \
+                                        "F",
           "Status against revision:      1\n" ])
+  svntest.actions.run_and_verify_svn(expected,
+                                     [],
+                                     "status", "-u", "-v", ".")
+
+  expected = \
+         ["D                1   %s\n" % ".",
+          "Status against revision:      1\n" ]
   svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u", ".")
 
   # check status -u of B/E
   expected = svntest.verify.UnorderedOutput(
-         ["D                1   %s\n" % os.path.join("B", "E"),
-          "D                1   %s\n" % os.path.join("B", "E", "alpha"),
-          "D                1   %s\n" % os.path.join("B", "E", "beta"),
+         ["D                1        1 jrandom      %s\n" % \
+                                        os.path.join("B", "E"),
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("B", "E", "alpha"),
+          "D                1        1 jrandom      %s\n" % \
+                                        os.path.join("B", "E", "beta"),
           "Status against revision:      1\n" ])
 
   os.chdir(was_cwd)
   os.chdir(A_path)
+  svntest.actions.run_and_verify_svn(expected,
+                                     [],
+                                     "status", "-u", "-v",
+                                     os.path.join("B", "E"))
+
+
+  expected = [ "Status against revision:      1\n" ]
   svntest.actions.run_and_verify_svn(expected,
                                      [],
                                      "status", "-u",
@@ -2193,7 +2224,8 @@ def status_missing_conflicts(sbox):
 
   sbox.simple_rm('A/B/E')
 
-  sbox.simple_update('A/B/E', revision=1)
+  svntest.main.run_svn(False, 'update', sbox.ospath('A/B/E'), '-r', '1',
+    '--accept=postpone')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E', status='D ', treeconflict='C', wc_rev=1)
@@ -2246,7 +2278,8 @@ def status_missing_conflicts(sbox):
   sbox.simple_move('A/B/E/beta', 'beta')
 
   sbox.simple_rm('A/B/E')
-  sbox.simple_update('A/B/E', revision=1)
+  svntest.main.run_svn(False, 'update', sbox.ospath('A/B/E'), '-r', '1',
+    '--accept=postpone')
   svntest.actions.run_and_verify_svn(None, [],
                                      'resolve', '--accept=mine-conflict',
                                      '--depth=empty', sbox.ospath('A/B/E'))

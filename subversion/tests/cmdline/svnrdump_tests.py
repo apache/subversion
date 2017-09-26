@@ -53,8 +53,8 @@ Item = svntest.wc.StateItem
 # the logic for differentiating between these two cases.
 
 mismatched_headers_re = re.compile(
-    "Prop-delta: .*|Text-content-sha1: .*|Text-copy-source-md5: .*|"
-    "Text-copy-source-sha1: .*|Text-delta-base-sha1: .*"
+    b"Prop-delta: .*|Text-content-sha1: .*|Text-copy-source-md5: .*|" +
+    b"Text-copy-source-sha1: .*|Text-delta-base-sha1: .*"
 )
 
 ######################################################################
@@ -124,9 +124,9 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
     # Compare the output from stdout
     if ignore_base_checksums:
       expected_dumpfile = [l for l in expected_dumpfile
-                                    if not l.startswith('Text-delta-base-md5')]
+                                    if not l.startswith(b'Text-delta-base-md5')]
       svnrdump_dumpfile = [l for l in svnrdump_dumpfile
-                                    if not l.startswith('Text-delta-base-md5')]
+                                    if not l.startswith(b'Text-delta-base-md5')]
     expected_dumpfile = [l for l in expected_dumpfile
                                   if not mismatched_headers_re.match(l)]
     svnrdump_dumpfile = [l for l in svnrdump_dumpfile
@@ -165,7 +165,7 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
 
   # Set the UUID of the sbox repository to the UUID specified in the
   # dumpfile ### RA layer doesn't have a set_uuid functionality
-  uuid = original_dumpfile[2].split(' ')[1][:-1]
+  uuid = original_dumpfile[2].split(b' ')[1][:-1].decode()
   svntest.actions.run_and_verify_svnadmin2(None, None, 0,
                                            'setuuid', sbox.repo_dir,
                                            uuid)
@@ -203,7 +203,7 @@ def basic_dump(sbox):
                                               [], 0, '-q', 'dump',
                                               sbox.repo_url)
 
-  if not out[0].startswith('SVN-fs-dump-format-version:'):
+  if not out[0].startswith(b'SVN-fs-dump-format-version:'):
     raise svntest.Failure('No valid output')
 
 def revision_0_dump(sbox):
@@ -541,7 +541,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # PART 2: Load a series of incremental dumps to an empty repository.
   #
   # Incrementally dump the repository into three dump files:
-  dump_file_r1_10 = svntest.main.temp_dir + "-r1-10.dump"
+  dump_file_r1_10 = sbox.get_tempname("r1-10-dump")
   output = svntest.actions.run_and_verify_svnrdump(None,
                                                    svntest.verify.AnyOutput,
                                                    [], 0, '-q', 'dump', '-r1:10',
@@ -550,7 +550,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   dump_fp.writelines(output)
   dump_fp.close()
 
-  dump_file_r11_13 = svntest.main.temp_dir + "-r11-13.dump"
+  dump_file_r11_13 = sbox.get_tempname("r11-13-dump")
   output = svntest.actions.run_and_verify_svnrdump(None,
                                                    svntest.verify.AnyOutput,
                                                    [], 0, '-q', 'dump',
@@ -560,7 +560,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   dump_fp.writelines(output)
   dump_fp.close()
 
-  dump_file_r14_15 = svntest.main.temp_dir + "-r14-15.dump"
+  dump_file_r14_15 = sbox.get_tempname("r14-15-dump")
   output = svntest.actions.run_and_verify_svnrdump(None,
                                                    svntest.verify.AnyOutput,
                                                    [], 0, '-q', 'dump',
@@ -571,6 +571,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   dump_fp.close()
 
   # Blow away the current repos and create an empty one in its place.
+  svntest.main.safe_rmtree(sbox.repo_dir, True) # Fix race with bdb in svnserve
   sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
@@ -606,6 +607,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # PART 3: Load a full dump to an non-empty repository.
   #
   # Reset our sandbox.
+  svntest.main.safe_rmtree(sbox.repo_dir, True) # Fix race with bdb in svnserve
   sbox.build(empty=True)
 
   # Create the revprop-change hook for this test
@@ -667,6 +669,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   # PART 4: Load a a series of incremental dumps to an non-empty repository.
   #
   # Reset our sandbox.
+  svntest.main.safe_rmtree(sbox.repo_dir, True) # Fix race with bdb in svnserve
   sbox.build(empty=True)
 
   # Create the revprop-change hook for this test

@@ -48,6 +48,22 @@ RAMDISK ?= /ramdisk
 
 PWD		= $(shell pwd)
 UNAME		= $(shell uname)
+RUBY		= $(shell which ruby 2>/dev/null)
+ifeq ($(RUBY),)
+RUBY		= $(shell which ruby22 2>/dev/null)
+ifeq ($(RUBY),)
+RUBY		= $(shell which ruby21 2>/dev/null)
+ifeq ($(RUBY),)
+RUBY		= $(shell which ruby20 2>/dev/null)
+ifeq ($(RUBY),)
+RUBY		= $(shell which ruby19 2>/dev/null)
+ifeq ($(RUBY),)
+RUBY		= $(shell which ruby18)
+endif # 1.8
+endif # 1.9
+endif # 2.0
+endif # 2.1
+endif # 2.2
 
 TAG		?= none
 ifeq ($(TAG),none)
@@ -68,22 +84,23 @@ OBJDIR		= $(PWD)/objdir
 
 BDB_MAJOR_VER	= 4.7
 BDB_VER		= $(BDB_MAJOR_VER).25
-APR_VER		= 1.5.1
+APR_VER		= 1.5.2
 APR_ICONV_VER	= 1.2.1
-GNU_ICONV_VER	= 1.14
-APR_UTIL_VER	= 1.5.3
-HTTPD_VER	= 2.2.29
-NEON_VER	= 0.30.0
-SERF_VER	= 1.3.8
+GNU_ICONV_VER	= 1.15
+APR_UTIL_VER	= 1.5.4
+HTTPD_VER	= 2.2.32
+NEON_VER	= 0.30.2
+SERF_VER	= 1.3.9
 SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.25
-SQLITE_VER	= 3080500
-LIBMAGIC_VER	= 5.19
-RUBY_VER	= 1.8.7-p358
+SQLITE_VER	= 3160200
+LIBMAGIC_VER	= 5.30
+RUBY_VER	= 2.1.10
 BZ2_VER	= 1.0.6
-PYTHON_VER	= 2.7.8
+PYTHON_VER	= 2.7.13
 JUNIT_VER	= 4.10
-GETTEXT_VER	= 0.18.3.1
+GETTEXT_VER	= 0.19.8.1
+LZ4_VER		= 1.7.5
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
@@ -98,20 +115,22 @@ BZ2_DIST	= bzip2-$(BZ2_VER).tar.gz
 PYTHON_DIST	= Python-$(PYTHON_VER).tgz
 JUNIT_DIST	= junit-${JUNIT_VER}.jar
 GETTEXT_DIST	= gettext-$(GETTEXT_VER).tar.gz
+LZ4_DIST	= lz4-$(LZ4_VER).tar.gz
 
 SHA256_${BDB_DIST} = f14fd96dd38915a1d63dcb94a63fbb8092334ceba6b5060760427096f631263e
 SHA256_${APR_ICONV_DIST} = 19381959d50c4a5f3b9c84d594a5f9ffb3809786919b3058281f4c87e1f4b245
-SHA256_${GNU_ICONV_DIST} = 72b24ded17d687193c3366d0ebe7cde1e6b18f0df8c55438ac95be39e8a30613
-SHA256_${HTTPD_DIST} = cec2878884b758b0d159a1385b2667a2ae0ca21b0bc7bcc8a9a41b5cfa5452ff
-SHA256_${NEON_DIST} = 2962cfcb5d30f3272e3d2fa0e473434419770a3801afe3d46e5d1650787990c2
+SHA256_${GNU_ICONV_DIST} = ccf536620a45458d26ba83887a983b96827001e92a13847b45e4925cc8913178
+SHA256_${HTTPD_DIST} = b6e1528779f99c301d6438d89ae892a311619b43a39f16297f9eabd4a8d16cb8
+SHA256_${NEON_DIST} = db0bd8cdec329b48f53a6f00199c92d5ba40b0f015b153718d1b15d3d967fbca
 SHA256_${CYRUS_SASL_DIST} = 418c16e6240a4f9b637cbe3d62937b9675627bad27c622191d47de8686fe24fe
-SHA256_${SQLITE_DIST} = 98c33abe4106e508e73fda648b2657ac9e969fe24695f543dcde68cc71f3091b
-SHA256_${LIBMAGIC_DIST} = 9484b3bbda1acc7b13a4f71031a85ce10c77bd0ffec7226741a219ef587e3a7c
-SHA256_${RUBY_DIST} = 9e0856d58830e08f1e38233947d859898ae09d4780cb1a502108e41308de33cb
+SHA256_${SQLITE_DIST} = 65cc0c3e9366f50c0679c5ccd31432cea894bc4a3e8947dabab88c8693263615
+SHA256_${LIBMAGIC_DIST} = 694c2432e5240187524c9e7cf1ec6acc77b47a0e19554d34c14773e43dbbf214
+SHA256_${RUBY_DIST} = fb2e454d7a5e5a39eb54db0ec666f53eeb6edc593d1d2b970ae4d150b831dd20
 SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
-SHA256_${PYTHON_DIST} = 74d70b914da4487aa1d97222b29e9554d042f825f26cb2b93abd20fdda56b557
+SHA256_${PYTHON_DIST} = a4f05a0720ce0fd92626f0278b6b433eee9a6173ddf2bced7957dfb599a5ece1
 SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
-SHA256_${GETTEXT_DIST} = 0d8f9a33531b77776b3dc473e7940019ca19bfca5b4c06db6e96065eeb07245d
+SHA256_${GETTEXT_DIST} = ff942af0e438ced4a8b0ea4b0b6e0d6d657157c5e2364de57baa279c1c125c43
+SHA256_${LZ4_DIST} = 0190cacd63022ccb86f44fa5041dc6c3804407ad61550ca21c382827319e7e7e
 
 define do_check_sha256
 if [ -x /bin/sha256 ]; then \
@@ -150,17 +169,17 @@ GNU_ICONV_URL	= https://ftp.gnu.org/pub/gnu/libiconv/$(GNU_ICONV_DIST)
 APR_UTIL_URL	= https://svn.apache.org/repos/asf/apr/apr-util
 HTTPD_URL	= https://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
-#SERF_URL	= http://serf.googlecode.com/files/$(SERF_DIST)
-SERF_URL	= https://serf.googlecode.com/svn/tags/$(SERF_VER)
-SERF_OLD_URL	= https://serf.googlecode.com/svn/tags/$(SERF_OLD_VER)
-SQLITE_URL	= https://www.sqlite.org/2014/$(SQLITE_DIST)
+SERF_URL	= https://svn.apache.org/repos/asf/serf/tags/$(SERF_VER)
+SERF_OLD_URL	= https://svn.apache.org/repos/asf/serf/tags/$(SERF_OLD_VER)
+SQLITE_URL	= https://www.sqlite.org/2017/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
-RUBY_URL	= http://ftp.ruby-lang.org/pub/ruby/1.8/$(RUBY_DIST)
+RUBY_URL	= https://cache.ruby-lang.org/pub/ruby/2.1/$(RUBY_DIST)
 BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
 PYTHON_URL	= https://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
 JUNIT_URL	= https://downloads.sourceforge.net/project/junit/junit/$(JUNIT_VER)/$(JUNIT_DIST)
 GETTEXT_URL	= https://ftp.gnu.org/pub/gnu/gettext/$(GETTEXT_DIST)
+LZ4_URL		= https://github.com/lz4/lz4/archive/v$(LZ4_VER).tar.gz
 
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
@@ -179,6 +198,7 @@ RUBY_SRCDIR	= $(SRCDIR)/ruby-$(RUBY_VER)
 BZ2_SRCDIR	= $(SRCDIR)/bzip2-$(BZ2_VER)
 PYTHON_SRCDIR	= $(SRCDIR)/Python-$(PYTHON_VER)
 GETTEXT_SRCDIR	= $(SRCDIR)/gettext-$(GETTEXT_VER)
+LZ4_SRCDIR	= ${SRCDIR}/lz4-$(LZ4_VER)
 SVN_SRCDIR	= $(SVN_WC)
 
 BDB_OBJDIR	= $(OBJDIR)/db-$(BDB_VER)
@@ -197,6 +217,7 @@ RUBY_OBJDIR	= $(OBJDIR)/ruby-$(RUBY_VER)
 BZ2_OBJDIR	= $(OBJDIR)/bzip2-$(BZ2_VER)
 PYTHON_OBJDIR	= $(OBJDIR)/python-$(PYTHON_VER)
 GETTEXT_OBJDIR	= $(OBJDIR)/gettext-$(GETTEXT_VER)
+LZ4_OBJDIR	= ${OBJDIR}/lz4-$(LZ4_VER)
 SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
 
 # Tweak this for out-of-tree builds. Note that running individual
@@ -221,18 +242,19 @@ all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	httpd-install neon-install serf-install serf-old-install \
 	sqlite-install cyrus-sasl-install libmagic-install \
 	ruby-install bz2-install python-install gettext-install \
-	svn-install svn-bindings-install
+	lz4-install svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 	httpd-reset neon-reset serf-reset serf-old-reset sqlite-reset \
 	cyrus-sasl-reset libmagic-reset ruby-reset python-reset \
-	bz2-reset gettext-reset svn-reset
+	bz2-reset gettext-reset lz4-reset svn-reset
 
 # Use to save disk space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
 	neon-clean serf-clean serf-old-clean sqlite-clean cyrus-sasl-clean \
-	libmagic-clean ruby-clean bz2-clean python-clean gettext-clean svn-clean
+	libmagic-clean ruby-clean bz2-clean python-clean gettext-clean \
+	lz4-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
@@ -597,6 +619,9 @@ httpd-reset:
 
 httpd-clean:
 	-(cd $(HTTPD_OBJDIR) && env MAKEFLAGS= make clean)
+	-rm ${HTTPD_OBJDIR}/chil-engine.diff
+	-rm ${HTTPD_OBJDIR}/ssl-set-state.diff
+	-rm ${HTTPD_OBJDIR}/acinclude.diff
 
 # fetch distfile for httpd
 $(DISTDIR)/$(HTTPD_DIST):
@@ -620,14 +645,46 @@ $(HTTPD_OBJDIR)/chil-engine.diff:
 	echo >>$@.tmp '             ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,'
 	mv -f $@.tmp $@
 
+$(HTTPD_OBJDIR)/ssl-set-state.diff:
+	mkdir -p $(dir $@)
+	echo > $@.tmp '--- modules/ssl/ssl_toolkit_compat.h.orig	Fri Feb  3 10:47:33 2017'
+	echo >>$@.tmp '+++ modules/ssl/ssl_toolkit_compat.h	Fri Feb  3 10:52:17 2017'
+	echo >>$@.tmp '@@ -84,7 +84,9 @@'
+	echo >>$@.tmp ' #define SSL_get_state(ssl) SSL_state(ssl)'
+	echo >>$@.tmp ' #endif'
+	echo >>$@.tmp ' '
+	echo >>$@.tmp '+#ifndef HAVE_SSL_SET_STATE'
+	echo >>$@.tmp ' #define SSL_set_state(ssl,val) (ssl)->state = val'
+	echo >>$@.tmp '+#endif'
+	echo >>$@.tmp ' '
+	echo >>$@.tmp ' #define MODSSL_BIO_CB_ARG_TYPE const char'
+	echo >>$@.tmp ' #define MODSSL_CRYPTO_CB_ARG_TYPE const char'
+	mv -f $@.tmp $@
+
+$(HTTPD_OBJDIR)/acinclude.diff:
+	mkdir -p $(dir $@)
+	echo >$@.tmp '--- acinclude.m4.orig	Fri Feb  3 11:05:08 2017'
+	echo >>$@.tmp '+++ acinclude.m4	Fri Feb  3 11:05:15 2017'
+	echo >>$@.tmp '@@ -455,6 +455,7 @@'
+	echo >>$@.tmp '     AC_CHECK_HEADERS([openssl/engine.h])'
+	echo >>$@.tmp '     AC_CHECK_FUNCS([SSLeay_version SSL_CTX_new], [], [liberrors="yes"])'
+	echo >>$@.tmp '     AC_CHECK_FUNCS([ENGINE_init ENGINE_load_builtin_engines])'
+	echo >>$@.tmp '+    AC_CHECK_FUNCS(SSL_set_state)'
+	echo >>$@.tmp '   else'
+	echo >>$@.tmp '     AC_CHECK_FUNCS([SSLC_library_version SSL_CTX_new], [], [liberrors="yes"])'
+	echo >>$@.tmp '     AC_CHECK_FUNCS(SSL_set_state)'
+	mv -f $@.tmp $@
 
 # retrieve httpd
 $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
-	$(HTTPD_OBJDIR)/chil-engine.diff
+	$(HTTPD_OBJDIR)/chil-engine.diff $(HTTPD_OBJDIR)/ssl-set-state.diff \
+	$(HTTPD_OBJDIR)/acinclude.diff
 	$(call do_check_sha256,$(HTTPD_DIST))
 	[ -d $(HTTPD_OBJDIR) ] || mkdir -p $(HTTPD_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(HTTPD_DIST)
 	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/chil-engine.diff
+	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/ssl-set-state.diff
+	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/acinclude.diff
 	cp $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h \
 		$(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h.orig
 	sed '/^#define HAVE_SSL_RAND_EGD/d' \
@@ -651,6 +708,7 @@ $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
 # configure httpd
 $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 	$(APR_UTIL_OBJDIR)/.installed
+	cd $(HTTPD_SRCDIR) && ./buildconf
 	cd $(HTTPD_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 		GREP="`which grep`" \
@@ -659,6 +717,7 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 		--enable-maintainer-mode \
 		--enable-ssl \
 		--enable-dav \
+		--enable-proxy \
 		--with-mpm=prefork \
 		--with-apr="$(PREFIX)/apr" \
 		--with-apr-util="$(PREFIX)/apr"
@@ -780,15 +839,14 @@ serf-clean:
 #$(SERF_OBJDIR)/.retrieved: $(DISTDIR)/$(SERF_DIST)
 #	[ -d $(SERF_OBJDIR) ] || mkdir -p $(SERF_OBJDIR)
 #	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SERF_DIST)
-#	cd $(SRCDIR)/serf-$(SERF_VER) && \
-#		svn diff -c1394 http://serf.googlecode.com/svn | patch -p2
 #	touch $@
 
 # retrieve serf if not present yet
 $(SERF_OBJDIR)/.retrieved:
 	[ -d $(SERF_OBJDIR) ] || mkdir -p $(SERF_OBJDIR)
 	if [ ! -d $(SERF_SRCDIR) ]; then \
-		svn export $(SERF_URL) $(SERF_SRCDIR); \
+		svn co $(SERF_URL) $(SERF_SRCDIR); \
+		svn merge ^/serf/branches/1.3.x-sslbuild@1781542 $(SERF_SRCDIR); \
 	fi
 	touch $@
 
@@ -1068,7 +1126,11 @@ $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 		$(RUBY_SRCDIR)/configure \
 		--prefix=$(PREFIX)/ruby \
 		--enable-shared \
-		$(THREADSAFE_FLAG)
+		--with-baseruby="$(RUBY)" \
+		$(THREADSAFE_FLAG) \
+		--disable-install-doc \
+		--without-valgrind \
+		--without-gmp
 	touch $@
 
 # compile ruby
@@ -1136,9 +1198,14 @@ python-clean:
 $(DISTDIR)/$(PYTHON_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(PYTHON_URL)
 
+# https://bugs.python.org/issue12560
+$(DISTDIR)/python-issue12560.patch:
+	cd $(DISTDIR) && $(FETCH_CMD) -O "$@" \
+		https://hg.python.org/cpython/raw-rev/32cc37a89b58
+	
 # retrieve python
 #
-$(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
+$(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST) $(DISTDIR)/python-issue12560.patch
 	$(call do_check_sha256,$(PYTHON_DIST))
 	[ -d $(PYTHON_OBJDIR) ] || mkdir -p $(PYTHON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(PYTHON_DIST)
@@ -1152,16 +1219,7 @@ $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
 		> $(PYTHON_SRCDIR)/setup.py.patched
 	mv $(PYTHON_SRCDIR)/setup.py.patched $(PYTHON_SRCDIR)/setup.py
 	chmod +x $(PYTHON_SRCDIR)/setup.py
-	# Fixes shared library linking on OpenBSD
-	# http://bugs.python.org/issue12560
-	# Also fix compilation error on OpenBSD 5.0 and later (undefined
-	# reference to 'lstat' -- already fixed in hg.python.org/cpython).
-	sed -e '4930s#NetBSD\*|#NetBSD*|OpenBSD*|#' \
-	 	-e 's#OpenBSD/4\.\[789\]#OpenBSD/*#' \
-		< $(PYTHON_SRCDIR)/configure \
-		> $(PYTHON_SRCDIR)/configure.patched
-	mv $(PYTHON_SRCDIR)/configure.patched $(PYTHON_SRCDIR)/configure
-	chmod +x $(PYTHON_SRCDIR)/configure
+	cd $(PYTHON_SRCDIR) && patch -p1 < $(DISTDIR)/python-issue12560.patch
 	touch $@
 
 # configure python
@@ -1174,6 +1232,7 @@ $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
 		CPPFLAGS="-I$(PREFIX)/bz2/include" \
 		LDFLAGS="-Wl,-rpath=$(PREFIX)/python/lib -L$(PREFIX)/bz2/lib" \
+		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
 		$(PYTHON_SRCDIR)/configure \
 		--prefix=$(PREFIX)/python \
 		--enable-shared \
@@ -1184,12 +1243,18 @@ $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
 
 # compile python
 $(PYTHON_OBJDIR)/.compiled: $(PYTHON_OBJDIR)/.configured
-	(cd $(PYTHON_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(PYTHON_OBJDIR) && \
+		env MAKEFLAGS= \
+		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+		make)
 	touch $@
 
 # install python
 $(PYTHON_OBJDIR)/.installed: $(PYTHON_OBJDIR)/.compiled
-	(cd $(PYTHON_OBJDIR) && env MAKEFLAGS= make install)
+	(cd $(PYTHON_OBJDIR) && \
+		env MAKEFLAGS= \
+		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+		make install)
 	touch $@
 
 
@@ -1216,7 +1281,7 @@ gettext-reset:
 		rm -f $(GETTEXT_OBJDIR)/$(f);)
 
 gettext-clean:
-	-(cd $(GETTEXT_OBJDIR) && env MAKEFLAGS= make clean)
+	-(cd $(GETTEXT_SRCDIR) && env MAKEFLAGS= make clean)
 
 # fetch distfile for gettext
 $(DISTDIR)/$(GETTEXT_DIST):
@@ -1261,6 +1326,49 @@ $(GETTEXT_OBJDIR)/.installed: $(GETTEXT_OBJDIR)/.compiled
 	touch $@
 
 #######################################################################
+# lz4
+#######################################################################
+
+lz4-retrieve:	$(LZ4_OBJDIR)/.retrieved
+lz4-configure:	$(LZ4_OBJDIR)/.configured
+lz4-compile:	$(LZ4_OBJDIR)/.compiled
+lz4-install:	$(LZ4_OBJDIR)/.installed
+lz4-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(LZ4_OBJDIR)/$(f);)
+
+lz4-clean:
+	-(cd $(LZ4_SRCDIR) && env MAKEFLAGS= $(MAKE) clean)
+
+# fetch distfile for lz4
+$(DISTDIR)/$(LZ4_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) -O $(LZ4_DIST) $(LZ4_URL)
+
+# retrieve lz4
+$(LZ4_OBJDIR)/.retrieved: $(DISTDIR)/$(LZ4_DIST)
+	$(call do_check_sha256,$(LZ4_DIST))
+	[ -d $(LZ4_OBJDIR) ] || mkdir -p $(LZ4_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(LZ4_DIST)
+	touch $@
+
+# configure lz4
+$(LZ4_OBJDIR)/.configured: $(LZ4_OBJDIR)/.retrieved
+	touch $@
+
+# compile lz4
+$(LZ4_OBJDIR)/.compiled: $(LZ4_OBJDIR)/.configured
+	(cd $(LZ4_SRCDIR)/lib && \
+		env MAKEFLAGS= $(MAKE) PREFIX=$(PREFIX)/lz4)
+	touch $@
+
+# install lz4
+$(LZ4_OBJDIR)/.installed: $(LZ4_OBJDIR)/.compiled
+	mkdir -p $(PREFIX)/lz4/lib
+	(cd $(LZ4_SRCDIR)/lib && \
+		env MAKEFLAGS= $(MAKE) PREFIX=$(PREFIX)/lz4 install)
+	touch $@
+
+#######################################################################
 # svn
 #######################################################################
 
@@ -1269,6 +1377,7 @@ $(GETTEXT_OBJDIR)/.installed: $(GETTEXT_OBJDIR)/.compiled
 
 svn-install-all: svn-install svn-bindings-install
 
+svn-retrieve:	$(SVN_OBJDIR)/.retrieved
 svn-configure:	$(SVN_OBJDIR)/.configured
 svn-compile:	$(SVN_OBJDIR)/.compiled
 svn-bindings-compile:	$(SVN_OBJDIR)/.bindings-compiled
@@ -1334,7 +1443,7 @@ DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
 JAVAHL_CHECK_TARGET=check-javahl
-else # 1.8
+else ifeq ($(BRANCH_MAJOR), $(filter $(BRANCH_MAJOR), 1.8 1.9))
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
 # serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
@@ -1345,6 +1454,19 @@ MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 JAVAHL_CHECK_TARGET=check-all-javahl
+else # 1.10
+BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
+SERF_FLAG=--with-serf="$(PREFIX)/serf"
+# serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
+# so we have to do that ourselves :(
+SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
+MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
+MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
+LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
+JAVAHL_CHECK_TARGET=check-all-javahl
+LZ4_FLAG=--with-lz4=$(PREFIX)/lz4
+UTF8PROC_FLAG=--with-utf8proc=internal
 endif
 
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
@@ -1380,7 +1502,6 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 			PATH=$(PREFIX)/ruby/bin:$(PREFIX)/python/bin:$(PREFIX)/gettext/bin:$$PATH \
 			$(SVN_SRCDIR)/configure \
 			--enable-maintainer-mode \
-			--with-ssl \
 			--prefix="$(SVN_PREFIX)" \
 			--with-apr="$(PREFIX)/apr" \
 			--with-apr-util="$(PREFIX)/apr" \
@@ -1389,11 +1510,15 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 			$(SVN_WITH_SASL) \
 			$(SERF_FLAG) \
 			--with-sqlite="$(PREFIX)/sqlite" \
+			--with-zlib="/usr" \
+			--without-gnome-keyring \
 			--with-berkeley-db="$(BDB_FLAG)" \
 			--with-ruby-sitedir="$(SVN_PREFIX)/lib/ruby/site_ruby" \
 			--disable-mod-activation \
 			$(JAVAHL_FLAG) \
 			$(LIBMAGIC_FLAG) \
+			$(LZ4_FLAG) \
+			$(UTF8PROC_FLAG) \
 			$(SVN_STATIC_FLAG) \
 			$(DISABLE_NEON_VERSION_CHECK)
 	touch $@
@@ -1460,8 +1585,11 @@ $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
 
 # run svn regression tests
 HTTPD_CHECK_CONF=$(PREFIX)/httpd/conf/httpd-svn-check-$(WC).conf
+HTTPD_PROXY_CONF=$(PREFIX)/httpd/conf/httpd-svn-proxy-$(WC).conf
 HTTPD_CHECK_USERS=$(PREFIX)/httpd/conf/httpd-svn-check-users
+HTTPD_CHECK_GROUPS=$(PREFIX)/httpd/conf/httpd-svn-check-groups
 HTTPD_CHECK_PORT=8081
+HTTPD_PROXY_PORT=8082
 MOD_DONTDOTHAT_CONF=$(PREFIX)/httpd/conf/dontdothat
 
 $(MOD_DONTDOTHAT_CONF):
@@ -1470,13 +1598,18 @@ $(MOD_DONTDOTHAT_CONF):
 	echo >>$@.tmp '/ = deny'
 	mv -f $@.tmp $@
 
-$(HTTPD_CHECK_USERS):
+$(HTTPD_CHECK_GROUPS):
 	mkdir -p $(dir $@)
-	echo > $@.tmp 'jrandom:xCGl35kV9oWCY'
-	echo >>$@.tmp 'jconstant:xCGl35kV9oWCY'
-	mv -f $@.tmp $@
+	printf "random: jrandom\nconstant: jconstant\n" > $@
 
-$(HTTPD_CHECK_CONF): $(HTTPD_CHECK_USERS) $(MOD_DONTDOTHAT_CONF)
+$(HTTPD_CHECK_CONF): $(MOD_DONTDOTHAT_CONF) $(HTTPD_CHECK_GROUPS)
+	mkdir -p $(dir $@)
+	$(PREFIX)/httpd/bin/htpasswd -bc $(HTTPD_CHECK_USERS).tmp jrandom rayjandom
+	$(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp jconstant rayjandom
+	$(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp __dumpster__ __loadster__
+	$(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp JRANDOM rayjandom
+	$(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp JCONSTANT rayjandom
+	mv -f $(HTTPD_CHECK_USERS).tmp $(HTTPD_CHECK_USERS)
 	echo > $@.tmp '# httpd config for make check'
 	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
 	echo >>$@.tmp 'Listen localhost:$(HTTPD_CHECK_PORT)'
@@ -1540,8 +1673,8 @@ endif
 	echo >>$@.tmp '# Location for tests using mod_dontdothat'
 	echo >>$@.tmp '<Location /ddt-test-work/repositories>'
 	echo >> $@.tmp 'DAV               svn'
-	echo >> $@.tmp 'SVNParentPath     "$(SVN_WC)/subversion/tests/cmdline/svn-test-work/repositories"'
-	echo >> $@.tmp 'AuthzSVNAccessFile "$(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz"'
+	echo >> $@.tmp 'SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/repositories'
+	echo >> $@.tmp 'AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
 	echo >> $@.tmp 'AuthType          Basic'
 	echo >> $@.tmp 'AuthName          "Subversion Repository"'
 	echo >> $@.tmp 'AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
@@ -1552,12 +1685,209 @@ ifeq ($(USE_HTTPV1),yes)
 endif
 	echo >> $@.tmp 'DontDoThatConfigFile "$(MOD_DONTDOTHAT_CONF)"'
 	echo >> $@.tmp '</Location>'
+
+	echo >>$@.tmp '# Several locations for mod_authz_svn test follow'
+	echo >>$@.tmp '<Location /authz-test-work/anon>'
+	echo >>$@.tmp '  DAV               svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+       echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '  SVNListParentPath On'
+	echo >>$@.tmp '  <IfModule mod_authz_core.c>'
+	echo >>$@.tmp '    Require all granted'
+	echo >>$@.tmp '  </IfModule>'
+	echo >>$@.tmp '  <IfModule !mod_authz_core.c>'
+	echo >>$@.tmp '    Allow from all'
+	echo >>$@.tmp '  </IfModule>'
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /authz-test-work/mixed>'
+	echo >>$@.tmp '  DAV               svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '  SVNListParentPath On'
+	echo >>$@.tmp '  AuthType          Basic'
+	echo >>$@.tmp '  AuthName          "Subversion Repository"'
+	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '  Require           valid-user'
+	echo >>$@.tmp '  Satisfy Any'
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /authz-test-work/mixed-noauthwhenanon>'
+	echo >>$@.tmp '  DAV               svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '  SVNListParentPath On'
+	echo >>$@.tmp '  AuthType          Basic'
+	echo >>$@.tmp '  AuthName          "Subversion Repository"'
+	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '  Require           valid-user'
+	echo >>$@.tmp '  AuthzSVNNoAuthWhenAnonymousAllowed On'
+	echo >>$@.tmp '  SVNPathAuthz On'
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /authz-test-work/authn>'
+	echo >>$@.tmp '  DAV               svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '  SVNListParentPath On'
+	echo >>$@.tmp '  AuthType          Basic'
+	echo >>$@.tmp '  AuthName          "Subversion Repository"'
+	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '  Require           valid-user'
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /authz-test-work/authn-anonoff>'
+	echo >>$@.tmp '  DAV               svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '  SVNListParentPath On'
+	echo >>$@.tmp '  AuthType          Basic'
+	echo >>$@.tmp '  AuthName          "Subversion Repository"'
+	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '  Require           valid-user'
+	echo >>$@.tmp '  AuthzSVNAnonymous Off'
+	echo >>$@.tmp '  SVNPathAuthz On'
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /authz-test-work/authn-lcuser>'
+	echo >>$@.tmp '  DAV               svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '  SVNListParentPath On'
+	echo >>$@.tmp '  AuthType          Basic'
+	echo >>$@.tmp '  AuthName          "Subversion Repository"'
+	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '  Require           valid-user'
+	echo >>$@.tmp '  AuthzForceUsernameCase Lower'
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /authz-test-work/authn-group>'
+	echo >>$@.tmp '  DAV               svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '  SVNListParentPath On'
+	echo >>$@.tmp '  AuthType          Basic'
+	echo >>$@.tmp '  AuthName          "Subversion Repository"'
+	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '  AuthGroupFile     $(HTTPD_CHECK_GROUPS)'
+	echo >>$@.tmp '  Require           group random'
+	echo >>$@.tmp '  AuthzSVNAuthoritative Off'
+	echo >>$@.tmp '  SVNPathAuthz On'
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<IfModule mod_authz_core.c>'
+	echo >>$@.tmp '  <Location /authz-test-work/sallrany>'
+	echo >>$@.tmp '    DAV               svn'
+	echo >>$@.tmp '    SVNParentPath     $($SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '    AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '    SVNListParentPath On'
+	echo >>$@.tmp '    AuthType          Basic'
+	echo >>$@.tmp '    AuthName          "Subversion Repository"'
+	echo >>$@.tmp '    AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '    AuthzSendForbiddenOnFailure On'
+	echo >>$@.tmp '    Satisfy All'
+	echo >>$@.tmp '    <RequireAny>'
+	echo >>$@.tmp '      Require valid-user'
+	echo >>$@.tmp '      Require expr req("ALLOW") == "1"'
+	echo >>$@.tmp '    </RequireAny>'
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '  </Location>'
+	echo >>$@.tmp '  <Location /authz-test-work/sallrall>'
+	echo >>$@.tmp '    DAV               svn'
+	echo >>$@.tmp '    SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '    AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+	echo >>$@.tmp '    SVNListParentPath On'
+	echo >>$@.tmp '    AuthType          Basic'
+	echo >>$@.tmp '    AuthName          "Subversion Repository"'
+	echo >>$@.tmp '    AuthUserFile      $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '    AuthzSendForbiddenOnFailure On'
+	echo >>$@.tmp '    Satisfy All'
+	echo >>$@.tmp '    <RequireAll>'
+	echo >>$@.tmp '      Require valid-user'
+	echo >>$@.tmp '      Require expr req("ALLOW") == "1"'
+	echo >>$@.tmp '    </RequireAll>'
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '  </Location>'
+	echo >>$@.tmp '</IfModule>'
 	echo >>$@.tmp 'RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)$$ /svn-test-work/repositories/$$1'
 	echo >>$@.tmp 'RedirectMatch ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)$$ /svn-test-work/repositories/$$1'
 	echo >>$@.tmp 'Include "conf/$(SVN_REL_WC)*-custom.conf"'
 	echo >> $@.tmp '#SVNInMemoryCacheSize 0'
 	echo >> $@.tmp '#SVNCacheTextDeltas Off'
 	echo >> $@.tmp '#SVNCacheRevProps Off'
+	mv -f $@.tmp $@
+
+$(HTTPD_PROXY_CONF): $(HTTPD_CHECK_CONF)
+	mkdir -p $(dir $@)
+	echo > $@.tmp '# httpd config for a write-through proxy'
+	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
+	echo >>$@.tmp 'Listen localhost:$(HTTPD_PROXY_PORT)'
+	echo >>$@.tmp 'LoadModule dav_svn_module $(MOD_DAV_SVN)'
+	echo >>$@.tmp 'LoadModule authz_svn_module $(MOD_AUTHZ_SVN)'
+	echo >>$@.tmp 'LoadModule dontdothat_module $(MOD_DONTDOTHAT)'
+	echo >>$@.tmp 'DocumentRoot "$(PREFIX)/httpd/htdocs"'
+	echo >>$@.tmp '# This Location lets you access repositories dropped in /tmp/svn-$(BRANCH)-proxy'
+	echo >>$@.tmp '<Location /svn>'
+	echo >>$@.tmp '    DAV svn'
+	echo >>$@.tmp '    SVNParentPath /tmp/svn-$(BRANCH)-proxy'
+	echo >>$@.tmp '    SVNMasterURI http://localhost:$(HTTPD_CHECK_PORT)/svn/'
+	echo >>$@.tmp '    Allow from all'
+	echo >>$@.tmp '    #AuthType Basic'
+	echo >>$@.tmp '    #AuthName "Subversion Repository"'
+	echo >>$@.tmp '    #AuthUserFile $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '    #Require valid-user'
+ifeq ($(USE_HTTPV1),yes)
+	echo >> $@.tmp '   SVNAdvertiseV2Protocol off'
+endif
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >> $@.tmp '   SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '# This Location allows repositories to be synced'
+	echo >>$@.tmp '<Location /svn-proxy-sync>'
+	echo >>$@.tmp 'DAV svn'
+	echo >>$@.tmp 'SVNParentPath /tmp/svn-$(BRANCH)-proxy'
+	echo >>$@.tmp 'Allow from all'
+	echo >>$@.tmp '</Location>'
 	mv -f $@.tmp $@
 
 .PHONY: libpath
@@ -1575,10 +1905,11 @@ endif
 .PHONY: start-svnserve stop-svnserve start-httpd stop-httpd
 
 HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
-		$(PREFIX)/httpd/bin/apachectl -f $(HTTPD_CHECK_CONF)
-HTTPD_START_CMD = $(HTTPD_CMD) -k start
+		$(PREFIX)/httpd/bin/apachectl
+HTTPD_START_CMD = $(HTTPD_CMD) -f $(HTTPD_CHECK_CONF) -k start
+HTTPD_START_CMD_PROXY = $(HTTPD_CMD) -f $(HTTPD_PROXY_CONF)
 HTTPD_START_CMD_DEBUG = $(HTTPD_START_CMD) -X
-HTTPD_STOP_CMD = $(HTTPD_CMD) -k stop; sleep 3
+HTTPD_STOP_CMD = $(HTTPD_CMD) -f $(HTTPD_CHECK_CONF) -k stop; sleep 3
 
 SVNSERVE_START_CMD = (test -e $(PWD)/svnserve-*.pid && \
 			ls $(PWD)/svnserve-*.pid | while read pidfile; do \
@@ -1609,8 +1940,16 @@ start-httpd-debug: $(HTTPD_CHECK_CONF)
 	@sleep 1
 	gdb $(PREFIX)/httpd/bin/httpd `cat $(PREFIX)/httpd/logs/httpd.pid`
 
+start-httpd-proxy: $(HTTPD_PROXY_CONF)
+	$(HTTPD_START_CMD_PROXY)
+	@echo "The URL http://localhost:$(HTTPD_PROXY_PORT)/svn/"
+	@echo "lets you access repositories dropped into /tmp/svn-$(BRANCH)-proxy"
+
 stop-httpd: $(HTTPD_CHECK_CONF)
 	$(HTTPD_STOP_CMD)
+
+stop-httpd-proxy: $(HTTPD_PROXY_CONF)
+	pkill -f '$(PREFIX)/httpd/bin/httpd -f $(HTTPD_PROXY_CONF)'
 
 start-svnserve: $(SVN_OBJDIR)/.compiled
 	$(SVNSERVE_START_CMD)
@@ -1745,7 +2084,10 @@ endif
 	@echo "serf:       $(SERF_VER)"
 	@echo "cyrus-sasl: $(CYRUS_SASL_VER)"
 	@echo "sqlite:     $(SQLITE_VER)"
-	@echo "openssl:    `openssl version | cut -d' ' -f2`"
+ifdef LZ4_FLAG
+	@echo "lz4:        $(LZ4_VER)"
+endif
+	@echo "libssl:     `openssl version`"
 	@echo "swig:       `swig -version | grep Version | cut -d' ' -f3`"
 	@echo "python:     $(PYTHON_VER)"
 	@echo "perl:       `eval \`perl -V:version\`; echo $$version`"

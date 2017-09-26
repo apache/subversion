@@ -285,16 +285,7 @@ class SVNTreeNode:
     if self.props:
       if comma:
         line += ", "
-      line += "props={"
-      comma = False
-
-      for name in self.props:
-        if comma:
-          line += ", "
-        line += "'%s':'%s'" % (name, self.props[name])
-        comma = True
-
-      line += "}"
+      line += ("props=%s" % self.props)
       comma = True
 
     for name in self.atts:
@@ -508,6 +499,7 @@ def create_from_path(path, contents=None, props={}, atts={}):
 
 
 eol_re = re.compile(r'(\r\n|\r)')
+eol_re_binary = re.compile(br'(\r\n|\r)')
 
 # helper for build_tree_from_wc()
 def get_props(paths):
@@ -553,7 +545,10 @@ def get_props(paths):
       # contains a CR character XML-encoded as '&#13;'.  The XML
       # parser converts it back into a CR character.  So again convert
       # all end-of-line variants into a single LF:
-      value = eol_re.sub('\n', value)
+      if isinstance(value, str):
+        value = eol_re.sub('\n', value)
+      else:
+        value = eol_re_binary.sub(b'\n', value)
       file_props[name] = value
     files[filename] = file_props
 
@@ -609,6 +604,11 @@ def detect_conflict_files(node, extra_files):
     logger.warn(msg)
     logger.warn(str(node))
     raise SVNTreeUnequal(msg)
+
+def detect_conflict_files_done(extra_files):
+   """Done handler for detect_conflict_files"""
+   if len(extra_files):
+    raise SVNTreeError("Not all extra reject files have been accounted for")
 
 ###########################################################################
 ###########################################################################
@@ -719,7 +719,7 @@ def _dump_tree(n,indent="",stream=sys.stdout):
   the SVNTreeNode N. Prefix each line with the string INDENT."""
 
   # Code partially stolen from Dave Beazley
-  tmp_children = sorted(n.children or [])
+  tmp_children = sorted(n.children or [], key=SVNTreeNode.get_printable_path)
 
   if n.name == root_node_name:
     stream.write("%s%s\n" % (indent, "ROOT"))
@@ -866,10 +866,16 @@ def build_tree_from_diff_summarize(lines):
 #   process for every file and dir in the working copy!
 
 
-def build_tree_from_wc(wc_path, load_props=0, ignore_svn=1):
+def build_tree_from_wc(wc_path, load_props=0, ignore_svn=1, keep_eol_style=False):
     """Takes WC_PATH as the path to a working copy.  Walks the tree below
     that path, and creates the tree based on the actual found
     files.  If IGNORE_SVN is true, then exclude SVN admin dirs from the tree.
-    If LOAD_PROPS is true, the props will be added to the tree."""
+    If LOAD_PROPS is true, the props will be added to the tree.
 
-    return svntest.wc.State.from_wc(wc_path, load_props, ignore_svn).old_tree()
+    If KEEP_EOL_STYLE is set, don't let Python normalize the EOL when
+    reading working copy contents as text files.  It has no effect on
+    binary files.
+    """
+
+    return svntest.wc.State.from_wc(wc_path, load_props, ignore_svn,
+                                    keep_eol_style).old_tree()

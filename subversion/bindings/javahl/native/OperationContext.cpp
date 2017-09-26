@@ -358,6 +358,9 @@ OperationContext::checkCancel(void *cancelBaton)
   OperationContext *that = static_cast<OperationContext *>(cancelBaton);
   if (that->isCancelledOperation())
     return svn_error_create(SVN_ERR_CANCELLED, NULL, _("Operation cancelled"));
+  else if (JNIUtil::isJavaExceptionThrown())
+    return svn_error_create(SVN_ERR_CANCELLED, JNIUtil::wrapJavaException(),
+                            _("Operation cancelled"));
   else
     return SVN_NO_ERROR;
 }
@@ -385,13 +388,13 @@ OperationContext::progress(apr_off_t progressVal, apr_off_t total, void *baton,
         POP_AND_RETURN_NOTHING();
 
       mid = env->GetMethodID(clazz, "onProgress",
-          "(L"JAVA_PACKAGE"/ProgressEvent;)V");
+                             "(" JAVAHL_ARG("/ProgressEvent;") ")V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN_NOTHING();
     }
 
   static jmethodID midCT = 0;
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/ProgressEvent");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/ProgressEvent"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NOTHING();
 
@@ -440,16 +443,16 @@ OperationContext::notifyConfigLoad()
   static jmethodID onload_mid = 0;
   if (0 == onload_mid)
     {
-      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/ConfigEvent");
+      jclass cls = env->FindClass(JAVAHL_CLASS("/callback/ConfigEvent"));
       if (JNIUtil::isJavaExceptionThrown())
         return;
       onload_mid = env->GetMethodID(cls, "onLoad",
-                                    "(L"JAVA_PACKAGE"/ISVNConfig;)V");
+                                    "(" JAVAHL_ARG("/ISVNConfig;") ")V");
       if (JNIUtil::isJavaExceptionThrown())
         return;
     }
 
-  jclass cfg_cls = env->FindClass(JAVA_PACKAGE"/util/ConfigImpl");
+  jclass cfg_cls = env->FindClass(JAVAHL_CLASS("/util/ConfigImpl"));
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -525,11 +528,11 @@ jobject create_Channel(const char *class_name, JNIEnv *env, apr_file_t *fd)
 
 jobject create_RequestChannel(JNIEnv *env, apr_file_t *fd)
 {
-  return create_Channel(JAVA_PACKAGE"/util/RequestChannel", env, fd);
+  return create_Channel(JAVAHL_CLASS("/util/RequestChannel"), env, fd);
 }
 jobject create_ResponseChannel(JNIEnv *env, apr_file_t *fd)
 {
-  return create_Channel(JAVA_PACKAGE"/util/ResponseChannel", env, fd);
+  return create_Channel(JAVAHL_CLASS("/util/ResponseChannel"), env, fd);
 }
 } // anonymous namespace
 
@@ -545,7 +548,7 @@ OperationContext::checkTunnel(void *tunnel_baton, const char *tunnel_name)
   static jmethodID mid = 0;
   if (0 == mid)
     {
-      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/TunnelAgent");
+      jclass cls = env->FindClass(JAVAHL_CLASS("/callback/TunnelAgent"));
       if (JNIUtil::isJavaExceptionThrown())
         return false;
       mid = env->GetMethodID(cls, "checkTunnel",
@@ -605,7 +608,7 @@ OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
   static jmethodID mid = 0;
   if (0 == mid)
     {
-      jclass cls = env->FindClass(JAVA_PACKAGE"/callback/TunnelAgent");
+      jclass cls = env->FindClass(JAVAHL_CLASS("/callback/TunnelAgent"));
       SVN_JNI_CATCH(, SVN_ERR_BASE);
       SVN_JNI_CATCH(
           mid = env->GetMethodID(
@@ -615,7 +618,7 @@ OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
               "Ljava/lang/String;"
               "Ljava/lang/String;"
               "Ljava/lang/String;I)"
-              "L"JAVA_PACKAGE"/callback/TunnelAgent$CloseTunnelCallback;"),
+              JAVAHL_ARG("/callback/TunnelAgent$CloseTunnelCallback;")),
           SVN_ERR_BASE);
     }
 
@@ -640,6 +643,8 @@ OperationContext::closeTunnel(void *tunnel_context, void *)
     return;
 
   JNIEnv *env = JNIUtil::getEnv();
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
 
   static jmethodID mid = 0;
   if (0 == mid)
@@ -647,7 +652,7 @@ OperationContext::closeTunnel(void *tunnel_context, void *)
       jclass cls;
       SVN_JNI_CATCH_VOID(
           cls= env->FindClass(
-              JAVA_PACKAGE"/callback/TunnelAgent$CloseTunnelCallback"));
+              JAVAHL_CLASS("/callback/TunnelAgent$CloseTunnelCallback")));
       SVN_JNI_CATCH_VOID(mid = env->GetMethodID(cls, "closeTunnel", "()V"));
     }
   SVN_JNI_CATCH_VOID(env->CallVoidMethod(jclosecb, mid));

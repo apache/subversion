@@ -28,7 +28,7 @@
 import sys, os
 
 # Test suite-specific modules
-import re, urllib
+import re
 
 # Our testing module
 import svntest
@@ -131,16 +131,14 @@ def setup_and_sync(sbox, dump_file_contents, subdir=None,
   repo_url = sbox.repo_url
   cwd = os.getcwd()
   if is_src_ra_local:
-    repo_url = svntest.main.file_scheme_prefix + \
-                        urllib.pathname2url(os.path.join(cwd, sbox.repo_dir))
+    repo_url = sbox.file_protocol_repo_url()
 
   if subdir:
     repo_url = repo_url + subdir
 
   dest_repo_url = dest_sbox.repo_url
   if is_dest_ra_local:
-    dest_repo_url = svntest.main.file_scheme_prefix + \
-                    urllib.pathname2url(os.path.join(cwd, dest_sbox.repo_dir))
+    dest_repo_url = dest_sbox.file_protocol_repo_url()
   run_init(dest_repo_url, repo_url, source_prop_encoding)
 
   run_sync(dest_repo_url, repo_url,
@@ -529,7 +527,7 @@ PROPS-END
 """
     content = content_tmpl % (len(mi), mi)
     headers = headers_tmpl % (node_name, len(content), len(content))
-    record = headers + '\n' + content + '\n\n'
+    record = (headers + '\n' + content + '\n\n').encode()
     return record.splitlines(True)
 
   # The test case mergeinfo (before, after) syncing, separated here with
@@ -574,6 +572,21 @@ PROPS-END
   # Compare the dump produced by the mirror repository with expected
   verify_mirror(dest_sbox, dump_out)
 
+def up_to_date_sync(sbox):
+  """sync that does nothing"""
+
+  # An up-to-date mirror.
+  sbox.build(create_wc=False)
+  dest_sbox = sbox.clone_dependent()
+  dest_sbox.build(create_wc=False, empty=True)
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
+  run_init(dest_sbox.repo_url, sbox.repo_url)
+  run_sync(dest_sbox.repo_url)
+
+  # Another sync should be a no-op
+  svntest.actions.run_and_verify_svnsync([], [],
+                                         "synchronize", dest_sbox.repo_url)
+
 
 ########################################################################
 # Run the tests
@@ -611,6 +624,7 @@ test_list = [ None,
               delete_revprops,
               fd_leak_sync_from_serf_to_local, # calls setrlimit
               mergeinfo_contains_r0,
+              up_to_date_sync,
              ]
 
 if __name__ == '__main__':

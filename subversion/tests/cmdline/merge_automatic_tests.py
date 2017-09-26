@@ -213,7 +213,7 @@ def get_3ways_from_output(output):
 
   merges = []
   for line in output:
-    print "## " + line,
+    sys.stdout.write("## " + line + " ")
     # Extract "A1" from a line like "DBG: merge.c:11336: base  svn://.../A@1"
     match = re.search(r'merge\.c:.* base .* /(\w+)@([0-9-]+)', line)
     if match:
@@ -980,8 +980,8 @@ def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0, A_COPY_path)
+                                       [], True, False,
+                                       A_COPY_path)
 
 #----------------------------------------------------------------------
 # Automatic merges should notice ancestory for replaced files
@@ -1073,8 +1073,8 @@ def merge_replacement(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0, A_path)
+                                       [], True, False,
+                                       A_path)
 
 @SkipUnless(server_has_mergeinfo)
 @Issue(4313)
@@ -1327,6 +1327,78 @@ def reintegrate_subtree_not_updated(sbox):
   sbox.simple_commit()
   sbox.simple_update()
 
+def merge_to_copy_and_add(sbox):
+  "merge peg to a copy and add"
+
+  sbox.build()
+
+  sbox.simple_copy('A', 'AA')
+  sbox.simple_append('A/mu', 'A/mu')
+  sbox.simple_commit('A')
+
+  # This is the scenario the code is supposed to support; a copy
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'merge', '^/A', sbox.ospath('AA'))
+
+  sbox.simple_mkdir('A3')
+  # And this case currently segfaults, because merge doesn't check
+  # if the path has a repository location
+  expected_err = ".*svn: E195012: Can't perform .*A3'.*added.*"
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'merge', '^/A', sbox.ospath('A3'))
+  # Try the same merge with --reintegrate, for completeness' sake.
+  expected_err = ".*svn: E195012: Can't reintegrate into .*A3'.*added.*"
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'merge', '--reintegrate', '^/A',
+                                     sbox.ospath('A3'))
+
+def merge_delete_crlf_file(sbox):
+  "merge the deletion of a strict CRLF file"
+
+  sbox.build()
+
+  sbox.simple_copy('A', 'AA')
+
+  # Let commit fix the eols
+  sbox.simple_add_text('with\rCRLF\rhere!', 'A/crlf')
+  sbox.simple_add_text('with\rnative\r\eol', 'A/native')
+  sbox.simple_add_text('with\rCR\r\eol', 'A/cr')
+  sbox.simple_add_text('with\rLF\r\eol', 'A/lf')
+
+  # And apply the magic property
+  sbox.simple_propset('svn:eol-style', 'CRLF',   'A/crlf')
+  sbox.simple_propset('svn:eol-style', 'native', 'A/native')
+  sbox.simple_propset('svn:eol-style', 'CR',     'A/cr')
+  sbox.simple_propset('svn:eol-style', 'LF',     'A/lf')
+
+  sbox.simple_commit('A') # r2
+
+  # Merge the addition of the files
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'merge', '^/A', sbox.ospath('AA'))
+  sbox.simple_commit('AA') # r3
+
+  sbox.simple_rm('A/D', 'A/mu', 'A/crlf', 'A/native', 'A/cr', 'A/lf')
+  sbox.simple_commit('A') # r4
+
+  sbox.simple_update('') # Make single revision r4
+
+  # And now merge the deletes
+  expected_output = svntest.verify.UnorderedOutput([
+    '--- Merging r3 through r4 into \'%s\':\n' % sbox.ospath('AA'),
+    'D    %s\n' % sbox.ospath('AA/cr'),
+    'D    %s\n' % sbox.ospath('AA/crlf'),
+    'D    %s\n' % sbox.ospath('AA/lf'),
+    'D    %s\n' % sbox.ospath('AA/native'),
+    'D    %s\n' % sbox.ospath('AA/mu'),
+    'D    %s\n' % sbox.ospath('AA/D'),
+    '--- Recording mergeinfo for merge of r3 through r4 into \'%s\':\n'
+                % sbox.ospath('AA'),
+    ' U   %s\n' % sbox.ospath('AA')
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'merge', '^/A', sbox.ospath('AA'))
+
 ########################################################################
 # Run the tests
 
@@ -1356,6 +1428,8 @@ test_list = [ None,
               auto_merge_handles_replacements_in_merge_source,
               effective_sync_results_in_reintegrate,
               reintegrate_subtree_not_updated,
+              merge_to_copy_and_add,
+              merge_delete_crlf_file,
              ]
 
 if __name__ == '__main__':

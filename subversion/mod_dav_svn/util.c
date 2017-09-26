@@ -40,11 +40,13 @@
 
 #include "dav_svn.h"
 #include "private/svn_fspath.h"
+#include "private/svn_string_private.h"
 
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
                    int status,
                    int error_id,
+                   apr_status_t aprerr,
                    const char *desc)
 {
   if (error_id == 0)
@@ -58,10 +60,10 @@ dav_svn__new_error(apr_pool_t *pool,
  * > 2.2 below perpetuates this.
  */
 #if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
-  return dav_new_error(pool, status, error_id, 0, desc);
+  return dav_new_error(pool, status, error_id, aprerr, desc);
 #else
 
-  errno = 0; /* For the same reason as in dav_svn__new_error_svn */
+  errno = aprerr; /* For the same reason as in dav_svn__new_error_svn */
 
   return dav_new_error(pool, status, error_id, desc);
 #endif
@@ -71,20 +73,22 @@ dav_error *
 dav_svn__new_error_svn(apr_pool_t *pool,
                        int status,
                        int error_id,
+                       apr_status_t aprerr,
                        const char *desc)
 {
   if (error_id == 0)
     error_id = SVN_ERR_RA_DAV_REQUEST_FAILED;
 
 #if AP_MODULE_MAGIC_AT_LEAST(20091119,0)
-  return dav_new_error_tag(pool, status, error_id, 0,
+  return dav_new_error_tag(pool, status, error_id, aprerr,
                            desc, SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
 #else
-  /* dav_new_error_tag will record errno but Subversion makes no attempt
-     to ensure that it is valid.  We reset it to avoid putting incorrect
-     information into the error log, at the expense of possibly removing
-     valid information. */
-  errno = 0;
+  /* dav_new_error_tag will record errno so we use it to pass aprerr.
+     This overrwites any existing errno value but since Subversion
+     makes no attempt to avoid system calls after a failed system call
+     there is no guarantee that any existing errno represents a
+     relevant error. */
+  errno = aprerr;
 
   return dav_new_error_tag(pool, status, error_id, desc,
                            SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
@@ -100,7 +104,7 @@ build_error_chain(apr_pool_t *pool, svn_error_t *err, int status)
   char buffer[128];
   const char *msg = svn_err_best_message(err, buffer, sizeof(buffer));
 
-  dav_error *derr = dav_svn__new_error_svn(pool, status, err->apr_err,
+  dav_error *derr = dav_svn__new_error_svn(pool, status, err->apr_err, 0,
                                            apr_pstrdup(pool, msg));
 
   if (err->child)
@@ -135,6 +139,7 @@ dav_svn__convert_err(svn_error_t *serr,
   switch (purged_serr->apr_err)
     {
     case SVN_ERR_FS_NOT_FOUND:
+    case SVN_ERR_FS_NO_SUCH_REVISION:
       status = HTTP_NOT_FOUND;
       break;
     case SVN_ERR_UNSUPPORTED_FEATURE:
@@ -216,7 +221,7 @@ dav_svn__get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
       return revision;
     }
 
-  if (node_relation == svn_fs_node_same)
+  if (node_relation == svn_fs_node_unchanged)
     return history_rev;  /* the history rev is safe!  the same node
                             exists at the same path in both revisions. */
 
@@ -460,6 +465,48 @@ dav_svn__find_ns(const apr_array_header_t *namespaces, const char *uri)
   return -1;
 }
 
+
+/*** Output helpers ***/
+
+
+struct dav_svn__output
+{
+  request_rec *r;
+};
+
+dav_svn__output *
+dav_svn__output_create(request_rec *r,
+                       apr_pool_t *pool)
+{
+  dav_svn__output *output = apr_pcalloc(pool, sizeof(*output));
+  output->r = r;
+  return output;
+}
+
+apr_bucket_alloc_t *
+dav_svn__output_get_bucket_alloc(dav_svn__output *output)
+{
+  return output->r->connection->bucket_alloc;
+}
+
+svn_error_t *
+dav_svn__output_pass_brigade(dav_svn__output *output,
+                             apr_bucket_brigade *bb)
+{
+  apr_status_t status;
+
+  status = ap_pass_brigade(output->r->output_filters, bb);
+  /* Empty the brigade here, as required by ap_pass_brigade(). */
+  apr_brigade_cleanup(bb);
+  if (status)
+    return svn_error_create(status, NULL, "Could not write data to filter");
+
+  /* Check for an aborted connection, since the brigade functions don't
+     appear to return useful errors when the connection is dropped. */
+  if (output->r->connection->aborted)
+    return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, NULL, NULL);
+  return SVN_NO_ERROR;
+}
 
 
 /*** Brigade I/O wrappers ***/
@@ -467,17 +514,18 @@ dav_svn__find_ns(const apr_array_header_t *namespaces, const char *uri)
 
 svn_error_t *
 dav_svn__brigade_write(apr_bucket_brigade *bb,
-                       ap_filter_t *output,
+                       dav_svn__output *output,
                        const char *data,
                        apr_size_t len)
 {
   apr_status_t apr_err;
-  apr_err = apr_brigade_write(bb, ap_filter_flush, output, data, len);
+  apr_err = apr_brigade_write(bb, ap_filter_flush,
+                              output->r->output_filters, data, len);
   if (apr_err)
     return svn_error_create(apr_err, 0, NULL);
   /* Check for an aborted connection, since the brigade functions don't
      appear to be return useful errors when the connection is dropped. */
-  if (output->c->aborted)
+  if (output->r->connection->aborted)
     return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
   return SVN_NO_ERROR;
 }
@@ -485,16 +533,17 @@ dav_svn__brigade_write(apr_bucket_brigade *bb,
 
 svn_error_t *
 dav_svn__brigade_puts(apr_bucket_brigade *bb,
-                      ap_filter_t *output,
+                      dav_svn__output *output,
                       const char *str)
 {
   apr_status_t apr_err;
-  apr_err = apr_brigade_puts(bb, ap_filter_flush, output, str);
+  apr_err = apr_brigade_puts(bb, ap_filter_flush,
+                             output->r->output_filters, str);
   if (apr_err)
     return svn_error_create(apr_err, 0, NULL);
   /* Check for an aborted connection, since the brigade functions don't
      appear to be return useful errors when the connection is dropped. */
-  if (output->c->aborted)
+  if (output->r->connection->aborted)
     return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
   return SVN_NO_ERROR;
 }
@@ -502,7 +551,7 @@ dav_svn__brigade_puts(apr_bucket_brigade *bb,
 
 svn_error_t *
 dav_svn__brigade_printf(apr_bucket_brigade *bb,
-                        ap_filter_t *output,
+                        dav_svn__output *output,
                         const char *fmt,
                         ...)
 {
@@ -510,14 +559,37 @@ dav_svn__brigade_printf(apr_bucket_brigade *bb,
   va_list ap;
 
   va_start(ap, fmt);
-  apr_err = apr_brigade_vprintf(bb, ap_filter_flush, output, fmt, ap);
+  apr_err = apr_brigade_vprintf(bb, ap_filter_flush,
+                                output->r->output_filters, fmt, ap);
   va_end(ap);
   if (apr_err)
     return svn_error_create(apr_err, 0, NULL);
   /* Check for an aborted connection, since the brigade functions don't
      appear to be return useful errors when the connection is dropped. */
-  if (output->c->aborted)
+  if (output->r->connection->aborted)
     return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+dav_svn__brigade_putstrs(apr_bucket_brigade *bb,
+                         dav_svn__output *output,
+                         ...)
+{
+  apr_status_t apr_err;
+  va_list ap;
+
+  va_start(ap, output);
+  apr_err = apr_brigade_vputstrs(bb, ap_filter_flush,
+                                 output->r->output_filters, ap);
+  va_end(ap);
+  if (apr_err)
+    return svn_error_create(apr_err, NULL, NULL);
+  /* Check for an aborted connection, since the brigade functions don't
+     appear to return useful errors when the connection is dropped. */
+  if (output->r->connection->aborted)
+    return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, NULL, NULL);
   return SVN_NO_ERROR;
 }
 
@@ -538,7 +610,7 @@ dav_svn__test_canonical(const char *path, apr_pool_t *pool)
 
   /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */
   return dav_svn__new_error_svn(
-     pool, HTTP_BAD_REQUEST, 0,
+     pool, HTTP_BAD_REQUEST, 0, 0,
      apr_psprintf(pool,
                   "Path '%s' is not canonicalized; "
                   "there is a problem with the client.", path));
@@ -583,7 +655,7 @@ dav_svn__sanitize_error(svn_error_t *serr,
 struct brigade_write_baton
 {
   apr_bucket_brigade *bb;
-  ap_filter_t *output;
+  dav_svn__output *output;
 };
 
 
@@ -594,7 +666,8 @@ brigade_write_fn(void *baton, const char *data, apr_size_t *len)
   struct brigade_write_baton *wb = baton;
   apr_status_t apr_err;
 
-  apr_err = apr_brigade_write(wb->bb, ap_filter_flush, wb->output, data, *len);
+  apr_err = apr_brigade_write(wb->bb, ap_filter_flush,
+                              wb->output->r->output_filters, data, *len);
 
   if (apr_err != APR_SUCCESS)
     return svn_error_wrap_apr(apr_err, "Error writing base64 data");
@@ -605,7 +678,7 @@ brigade_write_fn(void *baton, const char *data, apr_size_t *len)
 
 svn_stream_t *
 dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
-                                   ap_filter_t *output,
+                                   dav_svn__output *output,
                                    apr_pool_t *pool)
 {
   struct brigade_write_baton *wb = apr_palloc(pool, sizeof(*wb));
@@ -615,7 +688,7 @@ dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
   wb->output = output;
   svn_stream_set_write(stream, brigade_write_fn);
 
-  return svn_base64_encode(stream, pool);
+  return svn_base64_encode2(stream, FALSE, pool);
 }
 
 void
@@ -632,7 +705,7 @@ dav_svn__operational_log(struct dav_resource_private *info, const char *line)
 dav_error *
 dav_svn__final_flush_or_error(request_rec *r,
                               apr_bucket_brigade *bb,
-                              ap_filter_t *output,
+                              dav_svn__output *output,
                               dav_error *preferred_err,
                               apr_pool_t *pool)
 {
@@ -654,9 +727,9 @@ dav_svn__final_flush_or_error(request_rec *r,
      provided a more-important DERR, though. */
   if (do_flush)
     {
-      apr_status_t apr_err = ap_fflush(output, bb);
+      apr_status_t apr_err = ap_fflush(output->r->output_filters, bb);
       if (apr_err && (! derr))
-        derr = dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+        derr = dav_svn__new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0, apr_err,
                                   "Error flushing brigade.");
     }
   return derr;
@@ -741,7 +814,7 @@ request_body_to_string(svn_string_t **request_str,
   int seen_eos;
   apr_status_t status;
   apr_off_t total_read = 0;
-  apr_off_t limit_req_body = ap_get_limit_req_body(r);
+  apr_off_t limit_req_body = ap_get_limit_xml_body(r);
   int result = HTTP_BAD_REQUEST;
   const char *content_length_str;
   char *endp;
@@ -774,7 +847,12 @@ request_body_to_string(svn_string_t **request_str,
 
   if (content_length)
     {
-      buf = svn_stringbuf_create_ensure(content_length, pool);
+      /* Do not allocate more than 1 MB until we receive request body. */
+      apr_size_t alloc_len = 1 * 1024 *1024;
+      if (content_length < alloc_len)
+        alloc_len = (apr_size_t) content_length;
+
+      buf = svn_stringbuf_create_ensure(alloc_len, pool);
     }
   else
     {
@@ -819,7 +897,7 @@ request_body_to_string(svn_string_t **request_str,
             {
               ap_log_rerror(APLOG_MARK, APLOG_ERR, 0, r,
                             "Request body is larger than the configured "
-                            "limit of %lu", (unsigned long)limit_req_body);
+                            "limit of %" APR_OFF_T_FMT, limit_req_body);
               result = HTTP_REQUEST_ENTITY_TOO_LARGE;
               goto cleanup;
             }
@@ -834,9 +912,7 @@ request_body_to_string(svn_string_t **request_str,
   apr_brigade_destroy(brigade);
 
   /* Make an svn_string_t from our svn_stringbuf_t. */
-  *request_str = svn_string_create_empty(pool);
-  (*request_str)->data = buf->data;
-  (*request_str)->len = buf->len;
+  *request_str = svn_stringbuf__morph_into_string(buf);
   return OK;
 
  cleanup:
@@ -861,4 +937,20 @@ dav_svn__parse_request_skel(svn_skel_t **skel,
 
   *skel = svn_skel__parse(skel_str->data, skel_str->len, pool);
   return OK;
+}
+
+svn_error_t *
+dav_svn__get_youngest_rev(svn_revnum_t *youngest_p,
+                          dav_svn_repos *repos,
+                          apr_pool_t *scratch_pool)
+{
+  if (repos->youngest_rev == SVN_INVALID_REVNUM)
+    {
+      svn_revnum_t revnum;
+      SVN_ERR(svn_fs_youngest_rev(&revnum, repos->fs, scratch_pool));
+      repos->youngest_rev = revnum;
+    }
+
+   *youngest_p = repos->youngest_rev;
+   return SVN_NO_ERROR;
 }

@@ -186,10 +186,16 @@ II.   Configuration
          The "Require" statement in the previous example is not strictly
          needed, but has been included for clarity.
 
-      H. Example 8: Separate authz and groups files.
+      H. Example 8: Separating groups and authorization rules
 
-         This configuration allows storing the groups separately from the
-         main authz file with the authorization rules.
+         It may be convenient to maintain group definitions separately from
+         the authorization rules.  This configuration allows splitting them
+         into two separate files.
+
+         The file specified by the AuthzSVNGroupsFile directive uses the
+         same format as the ordinary authz file and should contain a single
+         section with the group definitions.  See section II.2.B for more
+         details.
 
          <Location /svn>
            DAV svn
@@ -205,78 +211,106 @@ II.   Configuration
            Require valid-user
          </Location>
 
+         Configurations with per-repository access files may also use a
+         single file containing the group definitions.  This configuration
+         avoids the need to duplicate the group definitions across multiple
+         per-repository access files.
+
+           AuthzSVNReposRelativeAccessFile filename
+           AuthzSVNGroupsFile /path/to/groups/file
+
+         NOTE: When the AuthzSVNGroupsFile directive is enabled, the
+         file specified with the AuthzSVNReposRelativeAccessFile or
+         AuthzSVNAccessFile directive cannot contain any group definitions.
+
    2. Specifying permissions
 
-      The file format of the access file looks like this:
+      A. File format of the access file
 
-        [groups]
-        <groupname> = <user>[,<user>...]
-        ...
+         The file format of the access file looks like this:
 
-        [<path in repository>]
-        @<group> = [rw|r]
-        <user> = [rw|r]
-        * = [rw|r]
+           [groups]
+           <groupname> = <user>[,<user>...]
+           ...
 
-        [<repository name>:<path in repository>]
-        @<group> = [rw|r]
-        <user> = [rw|r]
-        * = [rw|r]
+           [<path in repository>]
+           @<group> = [rw|r]
+           <user> = [rw|r]
+           * = [rw|r]
 
-      An example (line continued lines are supposed to be on one line):
+           [<repository name>:<path in repository>]
+           @<group> = [rw|r]
+           <user> = [rw|r]
+           * = [rw|r]
 
-        [groups]
-        subversion = jimb,sussman,kfogel,gstein,brane,joe,ghudson,fitz, \
-                     daniel,cmpilato,kevin,philip,jerenkrantz,rooneg, \
-                     bcollins,blair,striker,naked,dwhedon,dlr,kraai,mbk, \
-                     epg,bdenny,jaa
-        subversion-doc = nsd,zbrown,fmatias,dimentiy,patrick
-        subversion-bindings = xela,yoshiki,morten,jespersm,knacke
-        subversion-rm = mprice
-        ...and so on and so on...
+         An example (line continued lines are supposed to be on one line):
 
-        [/]
-        # Allow everyone read on the entire repository
-        * = r
-        # Allow devs with blanket commit to write to the entire repository
-        @subversion = rw
+           [groups]
+           subversion = jimb,sussman,kfogel,gstein,brane,joe,ghudson,fitz, \
+                        daniel,cmpilato,kevin,philip,jerenkrantz,rooneg, \
+                        bcollins,blair,striker,naked,dwhedon,dlr,kraai,mbk, \
+                        epg,bdenny,jaa
+           subversion-doc = nsd,zbrown,fmatias,dimentiy,patrick
+           subversion-bindings = xela,yoshiki,morten,jespersm,knacke
+           subversion-rm = mprice
+           ...and so on and so on...
 
-        [/trunk/doc]
-        @subversion-doc = rw
+           [/]
+           # Allow everyone read on the entire repository
+           * = r
+           # Allow devs with blanket commit to write to the entire repository
+           @subversion = rw
 
-        [/trunk/subversion/bindings]
-        @subversion-bindings = rw
+           [/trunk/doc]
+           @subversion-doc = rw
 
-        [/branches]
-        @subversion-rm = rw
+           [/trunk/subversion/bindings]
+           @subversion-bindings = rw
 
-        [/tags]
-        @subversion-rm = rw
+           [/branches]
+           @subversion-rm = rw
 
-        [/branches/issue-650-ssl-certs]
-        mass = rw
+           [/tags]
+           @subversion-rm = rw
 
-        [/branches/pluggable-db]
-        gthompson = rw
+           [/branches/issue-650-ssl-certs]
+           mass = rw
 
-        ...
+           [/branches/pluggable-db]
+           gthompson = rw
 
-        [/secrets]
-        # Just for demonstration
-        * =
-        @subversion = rw
+           ...
 
-        # In case of SVNParentPath we can specify which repository we are
-        # referring to.  If no matching repository qualified section is found,
-        # the general unqualified section is tried.
-        #
-        # NOTE: This will work in the case of using SVNPath as well, only the
-        # repository name (the last element of the url) will always be the
-        # same.
-        [dark:/]
-        * =
-        @dark = rw
+           [/secrets]
+           # Just for demonstration
+           * =
+           @subversion = rw
 
-        [light:/]
-        @light = rw
+           # In case of SVNParentPath we can specify which repository we are
+           # referring to.  If no matching repository qualified section is
+           # found, the general unqualified section is tried.
+           #
+           # NOTE: This will work in the case of using SVNPath as well, only
+           # the repository name (the last element of the url) will always be
+           # the same.
+           [dark:/]
+           * =
+           @dark = rw
+
+           [light:/]
+           @light = rw
+
+      B. File format of the groups file
+
+         The file format of the groups file looks like this:
+
+           [groups]
+           <groupname> = <user>[,<user>...]
+           ...
+
+         An example:
+
+           [groups]
+           developers = harry,sally,john
+           managers = jim,joe
 

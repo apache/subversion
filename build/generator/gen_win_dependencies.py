@@ -51,7 +51,7 @@ class SVNCommonLibrary:
   def __init__(self, name, include_dirs, lib_dir, lib_name, version=None,
                debug_lib_dir=None, debug_lib_name=None, dll_dir=None,
                dll_name=None, debug_dll_dir=None, debug_dll_name=None,
-               defines=[], forced_includes=[], extra_bin=[]):
+               defines=[], forced_includes=[], extra_bin=[], internal=False):
     self.name = name
     if include_dirs:
       self.include_dirs = include_dirs if isinstance(include_dirs, list) \
@@ -90,6 +90,7 @@ class SVNCommonLibrary:
       self.debug_dll_name = dll_name
 
     self.extra_bin = extra_bin
+    self.internal = internal
 
 class GenDependenciesBase(gen_base.GeneratorBase):
   """This intermediate base class exists to be instantiated by win-tests.py,
@@ -118,9 +119,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         'python',
         'ruby',
         'java_sdk',
+        'openssl',
+        'apr_memcache',
 
         # So optional, we don't even have any code to detect them on Windows
-        'apr_memcache',
         'magic',
   ]
 
@@ -136,7 +138,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self.apr_util_path = 'apr-util'
     self.apr_iconv_path = 'apr-iconv'
     self.serf_path = None
-    self.bdb_path = 'db4-win32'
+    self.bdb_path = None
     self.httpd_path = None
     self.libintl_path = None
     self.zlib_path = 'zlib'
@@ -253,6 +255,23 @@ class GenDependenciesBase(gen_base.GeneratorBase):
           self.sln_version = '12.00'
           self.vcproj_version = '12.0'
           self.vcproj_extension = '.vcxproj'
+        elif val == '2015' or val == '14':
+          self.vs_version = '2015'
+          self.sln_version = '12.00'
+          self.vcproj_version = '14.0'
+          self.vcproj_extension = '.vcxproj'
+        elif val == '2017' or val == '15':
+          self.vs_version = '2017'
+          self.sln_version = '12.00'
+          self.vcproj_version = '15.0'
+          self.vcproj_extension = '.vcxproj'
+        elif re.match('^20\d+$', val):
+          print('WARNING: Unknown VS.NET version "%s",'
+                ' assuming VS2012. Your VS can probably upgrade')
+          self.vs_version = '2012'
+          self.sln_version = '12.00'
+          self.vcproj_version = '11.0'
+          self.vcproj_extension = '.vcxproj'
         elif re.match('^1\d+$', val):
           self.vs_version = val
           self.sln_version = '12.00'
@@ -284,9 +303,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     # Required dependencies
     self._find_apr()
-    self._find_apr_util_and_expat()
+    self._find_apr_util_etc()
     self._find_zlib()
     self._find_sqlite(show_warnings)
+    self._find_lz4()
+    self._find_utf8proc()
 
     # Optional dependencies
     self._find_httpd(show_warnings)
@@ -412,7 +433,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                               defines=defines,
                                               extra_bin=extra_bin)
 
-  def _find_apr_util_and_expat(self):
+  def _find_apr_util_etc(self):
     "Find the APR-util library and version"
 
     minimal_aprutil_version = (1, 3, 0)
@@ -514,6 +535,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                    defines=defines,
                                                    extra_bin=extra_bin)
 
+    # Perhaps apr-util can also provide memcached support
+    if version >= (1, 3, 0) :
+      self._libraries['apr_memcache'] = SVNCommonLibrary(
+                                          'apr_memcache', inc_path, lib_dir,
+                                          None, aprutil_version,
+                                          defines=['SVN_HAVE_MEMCACHE'])
+
     # And now find expat
     # If we have apr-util as a source location, it is in a subdir.
     # If we have an install package it is in the lib subdir
@@ -561,7 +589,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
   def _find_httpd(self, show_warnings):
     "Find Apache HTTPD and version"
 
-    minimal_httpd_version = (2, 0, 0)
+    minimal_httpd_version = (2, 2, 0)
     if not self.httpd_path:
       return
 
@@ -687,6 +715,9 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       if os.path.exists(os.path.join(lib_path, 'zlibstatic.lib')):
         # CMake default: zlibstatic.lib (static) and zlib.lib (dll)
         lib_name = 'zlibstatic.lib'
+      elif os.path.exists(os.path.join(lib_path, 'zlibstat.lib')):
+        # Visual Studio project file default: zlibstat.lib (static) and zlibwapi.lib (dll)
+        lib_name = 'zlibstat.lib'
       else:
         # Standard makefile produces zlib.lib (static) and zdll.lib (dll)
         lib_name = 'zlib.lib'
@@ -726,13 +757,17 @@ class GenDependenciesBase(gen_base.GeneratorBase):
   def _find_bdb(self, show_warnings):
     "Find the Berkeley DB library and version"
 
-    # Default to not found
-    self.bdb_lib = None
+    # try default path to detect BDB support, unless different path is
+    # specified so to keep pre 1.10-behavior for BDB detection on Windows
+    bdb_path = 'db4-win32'
 
-    inc_path = os.path.join(self.bdb_path, 'include')
+    if self.bdb_path:
+      bdb_path = self.bdb_path
+    
+    inc_path = os.path.join(bdb_path, 'include')
     db_h_path = os.path.join(inc_path, 'db.h')
 
-    if not self.bdb_path or not os.path.isfile(db_h_path):
+    if not os.path.isfile(db_h_path):
       if show_warnings and self.bdb_path:
         print('WARNING: \'%s\' not found' % (db_h_path,))
         print("Use '--with-berkeley-db' to configure BDB location.");
@@ -762,7 +797,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
        ):
       return
 
-    lib_dir = os.path.join(self.bdb_path, 'lib')
+    lib_dir = os.path.join(bdb_path, 'lib')
     lib_name = 'libdb%s.lib' % (versuffix,)
 
     if not os.path.exists(os.path.join(lib_dir, lib_name)):
@@ -773,7 +808,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if not os.path.isfile(os.path.join(lib_dir, debug_lib_name)):
       debug_lib_name = None
 
-    dll_dir = os.path.join(self.bdb_path, 'bin')
+    dll_dir = os.path.join(bdb_path, 'bin')
 
     # Are there binaries we should copy for testing?
     dll_name = os.path.splitext(lib_name)[0] + '.dll'
@@ -798,9 +833,6 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                               dll_name=dll_name,
                                               debug_dll_name=debug_dll_name,
                                               defines=defines)
-
-    # For compatibility with old code
-    self.bdb_lib = self._libraries['db'].lib_name
 
   def _find_openssl(self, show_warnings):
     "Find openssl"
@@ -906,11 +938,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     # Pass -W0 to stifle the "-e:1: Use RbConfig instead of obsolete
     # and deprecated Config." warning if we are using Ruby 1.9.
     fp = os.popen('ruby -rrbconfig -W0 -e ' + escape_shell_arg(
-                  "puts Config::CONFIG['ruby_version'];"
-                  "puts Config::CONFIG['LIBRUBY'];"
-                  "puts Config::CONFIG['libdir'];"
-                  "puts Config::CONFIG['rubyhdrdir'];"
-                  "puts Config::CONFIG['arch'];"), 'r')
+                  "puts RbConfig::CONFIG['ruby_version'];"
+                  "puts RbConfig::CONFIG['LIBRUBY'];"
+                  "puts RbConfig::CONFIG['libdir'];"
+                  "puts RbConfig::CONFIG['rubyhdrdir'];"
+                  "puts RbConfig::CONFIG['arch'];"), 'r')
     try:
       line = fp.readline()
       if line:
@@ -939,9 +971,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     if not lib_dir:
       return
 
-    # Visual C++ doesn't have a standard compliant snprintf yet
-    # (Will probably be added in VS2013 + 1)
-    defines = ['snprintf=_snprintf']
+    # Visual C++ prior to VS2015 doesn't have a standard compliant snprintf
+    if self.vs_version < '2015':
+      defines = ['snprintf=_snprintf']
+    else:
+      defines = []
 
     ver = ruby_version.split('.')
     ver = tuple(map(int, ver))
@@ -1215,7 +1249,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     else:
       lib_name = 'serf.lib'
 
-    defines = ['SVN_HAVE_SERF', 'SVN_LIBSVN_CLIENT_LINKS_RA_SERF']
+    defines = ['SVN_HAVE_SERF', 'SVN_LIBSVN_RA_LINKS_RA_SERF']
 
     self._libraries['serf'] = SVNCommonLibrary('serf', inc_dir, lib_dir,
                                                 lib_name, serf_version,
@@ -1414,6 +1448,57 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                                  dll_dir=dll_dir,
                                                  dll_name=dll_name,
                                                  defines=defines)
+
+  def _find_lz4(self):
+    "Find the LZ4 library"
+
+    # For now, we always use the internal (bundled) library.
+    version_file_path = os.path.join('subversion', 'libsvn_subr',
+                                     'lz4', 'lz4internal.h')
+    txt = open(version_file_path).read()
+
+    vermatch = re.search(r'^\s*#define\s+LZ4_VERSION_MAJOR\s+(\d+)',
+                         txt, re.M)
+    major = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+LZ4_VERSION_MINOR\s+(\d+)',
+                         txt, re.M)
+    minor = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+LZ4_VERSION_RELEASE\s+(\d+)',
+                         txt, re.M)
+    rel = vermatch.group(1)
+
+    lz4_version = '%d.%d.%s' % (major, minor, rel)
+    self._libraries['lz4'] = SVNCommonLibrary('lz4', None, None, None,
+                                              lz4_version, internal=True,
+                                              defines=['SVN_INTERNAL_LZ4'])
+
+  def _find_utf8proc(self):
+    "Find the Utf8proc library"
+
+    # For now, we always use the internal (bundled) library.
+    version_file_path = os.path.join('subversion', 'libsvn_subr',
+                                     'utf8proc', 'utf8proc_internal.h')
+    txt = open(version_file_path).read()
+
+    vermatch = re.search(r'^\s*#define\s+UTF8PROC_VERSION_MAJOR\s+(\d+)',
+                         txt, re.M)
+    major = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+UTF8PROC_VERSION_MINOR\s+(\d+)',
+                         txt, re.M)
+    minor = int(vermatch.group(1))
+
+    vermatch = re.search(r'^\s*#define\s+UTF8PROC_VERSION_PATCH\s+(\d+)',
+                         txt, re.M)
+    patch = int(vermatch.group(1))
+
+    utf8proc_version = '%d.%d.%d' % (major, minor, patch)
+    self._libraries['utf8proc'] = SVNCommonLibrary('utf8proc', None, None,
+                                                   None, utf8proc_version,
+                                                   internal=True,
+                                        defines=['SVN_INTERNAL_UTF8PROC'])
 
 # ============================================================================
 # This is a cut-down and modified version of code from:

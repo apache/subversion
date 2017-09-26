@@ -80,6 +80,17 @@ class SVNTests extends TestCase
     protected static int testCounter;
 
     /**
+     * Set to true if tests should clean up after themselves.
+     */
+    protected boolean cleanupAfterTests = false;
+
+    /**
+     * this list contains the names of all repository and working copy
+     * directories created by one test case.
+     */
+    protected static List<File> testDirs;
+
+    /**
      * the file in which the sample repository has been dumped.
      */
     protected File greekDump;
@@ -173,6 +184,10 @@ class SVNTests extends TestCase
 
     private void init()
     {
+        String cleanupProp = System.getProperty("test.cleanup");
+        if (cleanupProp != null)
+            cleanupAfterTests = (0 < cleanupProp.trim().length());
+
         String disableCredStore = System.getProperty("test.disablecredstore");
         if (disableCredStore != null)
         {
@@ -510,6 +525,16 @@ class SVNTests extends TestCase
         client.dispose();
         // remove the temporary directory
         removeDirOrFile(localTmp);
+
+        // optionally remove the test directories
+        List<File> td = testDirs;
+        testDirs = null;
+        if (cleanupAfterTests && td != null)
+        {
+            for(File f: td)
+                removeDirOrFile(f);
+        }
+
         super.tearDown();
     }
 
@@ -788,6 +813,13 @@ class SVNTests extends TestCase
             return wc;
         }
 
+        private void trackDir(File dir)
+        {
+            if (testDirs == null)
+                testDirs = new ArrayList<File>();
+            testDirs.add(dir);
+        }
+
         /**
          * Create the repository for the beginning of the test.
          * Assumes that {@link #testName} has been set.
@@ -804,6 +836,7 @@ class SVNTests extends TestCase
             // build a clean repository directory
             File repos = new File(repositories, this.testName);
             removeDirOrFile(repos);
+            trackDir(repos);
             // create and load the repository from the default repository dump
             admin.create(repos, true, false, conf, fsType);
             if (loadGreek)
@@ -829,6 +862,7 @@ class SVNTests extends TestCase
             URI uri = makeReposUrl(repos);
             workingCopy = new File(workingCopies, this.testName);
             removeDirOrFile(workingCopy);
+            trackDir(workingCopy);
             // checkout the repository
             client.checkout(uri.toString(), workingCopy.getAbsolutePath(),
                    null, null, Depth.infinity, false, false);

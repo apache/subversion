@@ -55,18 +55,6 @@ class Generator(gen_win.WinGeneratorBase):
 
       target.proj_name = target.name
 
-  def get_external_project(self, target, proj_ext):
-    "Link project files: prefer vcproj's, but if don't exist, try dsp's."
-    vcproj = gen_win.WinGeneratorBase.get_external_project(self, target,
-                                                           proj_ext)
-    if vcproj and not os.path.exists(vcproj):
-      dspproj = gen_win.WinGeneratorBase.get_external_project(self, target,
-                                                              'dsp')
-      if os.path.exists(dspproj):
-        return dspproj
-
-    return vcproj
-
   def write_project(self, target, fname, depends):
     "Write a Project (.vcproj/.vcxproj)"
 
@@ -209,14 +197,23 @@ class Generator(gen_win.WinGeneratorBase):
 
       deplist = [ ]
       for i in range(len(depends)):
-        if depends[i].fname.startswith(self.projfilesdir):
-          path = depends[i].fname[len(self.projfilesdir) + 1:]
+        dp = depends[i]
+        if dp.fname.startswith(self.projfilesdir):
+          path = dp.fname[len(self.projfilesdir) + 1:]
         else:
           path = os.path.join(os.path.relpath('.', self.projfilesdir),
-                              depends[i].fname)
+                              dp.fname)
+
+        if isinstance(dp, gen_base.TargetLib) and dp.msvc_delayload \
+           and isinstance(target, gen_base.TargetLinked) \
+           and not self.disable_shared:
+          delayload = self.get_output_name(dp)
+        else:
+          delayload = None
         deplist.append(gen_win.ProjectItem(guid=guids[depends[i].name],
                                            index=i,
                                            path=path,
+                                           delayload=delayload
                                            ))
 
       fname = self.get_external_project(target, self.vcproj_extension[1:])
@@ -285,7 +282,4 @@ class Generator(gen_win.WinGeneratorBase):
       'guids' : guidvals,
       }
 
-    if self.vs_version == '2002' or self.vs_version == '2003':
-      self.write_with_template('subversion_vcnet.sln', 'templates/vcnet_vc7_sln.ezt', data)
-    else:
-      self.write_with_template('subversion_vcnet.sln', 'templates/vcnet_sln.ezt', data)
+    self.write_with_template('subversion_vcnet.sln', 'templates/vcnet_sln.ezt', data)

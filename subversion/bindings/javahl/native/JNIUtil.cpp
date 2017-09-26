@@ -77,6 +77,11 @@ bool JNIUtil::g_initException;
 int JNIUtil::g_logLevel = JNIUtil::noLog;
 std::ofstream JNIUtil::g_logStream;
 
+/* The error code we will use to signal a Java exception */
+static const apr_status_t
+SVN_ERR_JAVAHL_WRAPPED = SVN_ERR_MALFUNC_CATEGORY_START
+                         + SVN_ERR_CATEGORY_SIZE - 10;
+
 /**
  * Return the JNI environment to use
  * @return the JNI environment
@@ -446,7 +451,8 @@ ErrorMessageStack assemble_error_message(
     {
       /* When we're recursing, don't repeat the top-level message if its
        * the same as before. */
-      if (depth == 0 || err->apr_err != parent_apr_err)
+      if ((depth == 0 || err->apr_err != parent_apr_err)
+          && err->apr_err != SVN_ERR_JAVAHL_WRAPPED)
         {
           const char *message;
           /* Is this a Subversion-specific error code? */
@@ -511,7 +517,7 @@ jobject construct_Jmessage_stack(const ErrorMessageStack& message_stack)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/ClientException$ErrorMessage");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/ClientException$ErrorMessage"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
   mid = env->GetMethodID(clazz, "<init>",
@@ -564,13 +570,13 @@ std::string JNIUtil::makeSVNErrorMessage(svn_error_t *err,
   return buffer;
 }
 
-void JNIUtil::wrappedHandleSVNError(svn_error_t *err, jthrowable jcause)
+jthrowable JNIUtil::wrappedCreateClientException(svn_error_t *err, jthrowable jcause)
 {
   jstring jmessage;
   jobject jstack;
   std::string msg = makeSVNErrorMessage(err, &jmessage, &jstack);
   if (JNIUtil::isJavaExceptionThrown())
-    return;
+    return NULL;
 
   const char *source = NULL;
 #ifdef SVN_DEBUG
@@ -586,6 +592,9 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err, jthrowable jcause)
 #endif
 #endif
 
+  if (!jcause)
+    jcause = JNIUtil::unwrapJavaException(err);
+
   // Much of the following is stolen from throwNativeException().  As much as
   // we'd like to call that function, we need to do some manual stack
   // unrolling, so it isn't feasible.
@@ -595,11 +604,11 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err, jthrowable jcause)
   // Create a local frame for our references
   env->PushLocalFrame(LOCAL_FRAME_SIZE);
   if (JNIUtil::isJavaExceptionThrown())
-    return;
+    return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/ClientException");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/ClientException"));
   if (isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
+    POP_AND_RETURN_NULL;
 
   if (getLogLevel() >= exceptionLog)
     {
@@ -613,11 +622,11 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err, jthrowable jcause)
       g_logStream << std::endl;
     }
   if (isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
+    POP_AND_RETURN_NULL;
 
   jstring jsource = makeJString(source);
   if (isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
+    POP_AND_RETURN_NULL;
 
   jmethodID mid = env->GetMethodID(clazz, "<init>",
                                    "(Ljava/lang/String;"
@@ -625,12 +634,12 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err, jthrowable jcause)
                                    "Ljava/lang/String;I"
                                    "Ljava/util/List;)V");
   if (isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
+    POP_AND_RETURN_NULL;
   jobject nativeException = env->NewObject(clazz, mid, jmessage, jcause,
                                            jsource, jint(err->apr_err),
                                            jstack);
   if (isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
+    POP_AND_RETURN_NULL;
 
 #ifdef SVN_ERR__TRACING
   // Add all the C error stack trace information to the Java Exception
@@ -642,7 +651,7 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err, jthrowable jcause)
       mid_gst = env->GetMethodID(clazz, "getStackTrace",
                                  "()[Ljava/lang/StackTraceElement;");
       if (isJavaExceptionThrown())
-        POP_AND_RETURN_NOTHING();
+        POP_AND_RETURN_NULL;
     }
   Array stackTraceArray((jobjectArray) env->CallObjectMethod(nativeException,
                                                              mid_gst));
@@ -661,18 +670,18 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err, jthrowable jcause)
 
   jclass stClazz = env->FindClass("java/lang/StackTraceElement");
   if (isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
+    POP_AND_RETURN_NULL;
 
   const jsize stSize = static_cast<jsize>(newStackTrace.size());
   if (stSize < 0 || stSize != newStackTrace.size())
     {
       env->ThrowNew(env->FindClass("java.lang.ArithmeticException"),
                     "Overflow converting C size_t to JNI jsize");
-      POP_AND_RETURN_NOTHING();
+      POP_AND_RETURN_NULL;
     }
   jobjectArray jStackTrace = env->NewObjectArray(stSize, stClazz, NULL);
   if (isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
+    POP_AND_RETURN_NULL;
 
   int i = 0;
   for (std::vector<jobject>::const_iterator it = newStackTrace.begin();
@@ -689,25 +698,34 @@ void JNIUtil::wrappedHandleSVNError(svn_error_t *err, jthrowable jcause)
       mid_sst = env->GetMethodID(clazz, "setStackTrace",
                                  "([Ljava/lang/StackTraceElement;)V");
       if (isJavaExceptionThrown())
-        POP_AND_RETURN_NOTHING();
+        POP_AND_RETURN_NULL;
     }
   env->CallVoidMethod(nativeException, mid_sst, jStackTrace);
   if (isJavaExceptionThrown())
-    POP_AND_RETURN_NOTHING();
+    POP_AND_RETURN_NULL;
 #endif
 
-  env->Throw(static_cast<jthrowable>(env->PopLocalFrame(nativeException)));
+  return static_cast<jthrowable>(env->PopLocalFrame(nativeException));
 }
 
-void JNIUtil::handleSVNError(svn_error_t *err, jthrowable jcause)
+jthrowable JNIUtil::createClientException(svn_error_t *err, jthrowable jcause)
 {
+  jthrowable jexc = NULL;
   try {
-    wrappedHandleSVNError(err, jcause);
+    jexc = wrappedCreateClientException(err, jcause);
   } catch (...) {
     svn_error_clear(err);
     throw;
   }
   svn_error_clear(err);
+  return jexc;
+}
+
+void JNIUtil::handleSVNError(svn_error_t *err, jthrowable jcause)
+{
+  jthrowable jexc = createClientException(err, jcause);
+  if (jexc)
+    getEnv()->Throw(jexc);
 }
 
 void JNIUtil::putFinalizedClient(SVNBase *object)
@@ -804,6 +822,25 @@ JNIUtil::checkJavaException(apr_status_t errorcode)
     err->message = apr_psprintf(err->pool, _("Java exception: %s"), msg);
   else
     err->message = _("Java exception");
+
+  
+  /* ### TODO: Use apr_pool_userdata_set() on the pool we just created
+               for the error chain to keep track of the actual Java
+               exception while the error is inside Subversion.
+
+               Once the error chain re-enters JavaHL we can check
+               if there is a true exception that we can add to the chain.
+
+               If the error is cleared in Subversion (which may happen
+               during composing error chains, etc.) the cleanup handler
+               handles properly releasing the exception.
+
+    apr_status_t
+    apr_pool_userdata_set(const void *data,
+                          const char *key,
+                          apr_status_t (*cleanup)(void *),
+                          apr_pool_t *pool)
+   */
   return err;
 }
 
@@ -1042,4 +1079,92 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t *pool)
     }
 
   return NULL;
+}
+
+/* Tag to use on the apr_pool_t to store a WrappedException reference */
+static const char *WrapExceptionTag = "org.apache.subversion.JavaHL.svnerror";
+
+class WrappedException
+{
+  JNIEnv *m_env;
+  jthrowable m_exception;
+#ifdef SVN_DEBUG
+  bool m_fetched;
+#endif
+public:
+  WrappedException(JNIEnv *env)
+  {
+    m_env = env;
+
+    // Fetch exception inside local frame
+    jthrowable exceptionObj = env->ExceptionOccurred();
+
+    // Now clear exception status
+    env->ExceptionClear();
+
+    // As adding a reference in exception state fails
+    m_exception = static_cast<jthrowable>(env->NewGlobalRef(exceptionObj));
+
+#ifdef SVN_DEBUG
+    m_fetched = false;
+#endif
+  }
+
+  static jthrowable get_exception(apr_pool_t *pool)
+  {
+      void *data;
+      if (! apr_pool_userdata_get(&data, WrapExceptionTag, pool))
+      {
+          WrappedException *we = reinterpret_cast<WrappedException *>(data);
+
+          if (we)
+          {
+#ifdef SVN_DEBUG
+              we->m_fetched = TRUE;
+#endif
+              // Create reference in local frame, as the pool will be cleared
+              return static_cast<jthrowable>(
+                            we->m_env->NewLocalRef(we->m_exception));
+          }
+      }
+      return NULL;
+  }
+
+private:
+  ~WrappedException()
+  {
+#ifdef SVN_DEBUG
+      if (!m_fetched)
+          SVN_DBG(("Cleared svn_error_t * before Java exception was fetched"));
+#endif
+      m_env->DeleteGlobalRef(m_exception);
+  }
+public:
+  static apr_status_t cleanup(void *data)
+  {
+    WrappedException *we = reinterpret_cast<WrappedException *>(data);
+
+    delete we;
+    return APR_SUCCESS;
+  }
+};
+
+svn_error_t* JNIUtil::wrapJavaException()
+{
+  if (!isExceptionThrown())
+    return SVN_NO_ERROR;
+
+  svn_error_t *err = svn_error_create(SVN_ERR_JAVAHL_WRAPPED, NULL,
+                                      "Wrapped Java Exception");
+  apr_pool_userdata_set(new WrappedException(getEnv()), WrapExceptionTag,
+                        WrappedException::cleanup, err->pool);
+  return err;
+}
+
+jthrowable JNIUtil::unwrapJavaException(const svn_error_t *err)
+{
+    if (!err)
+        return NULL;
+    return
+        WrappedException::get_exception(err->pool);
 }

@@ -24,6 +24,7 @@
 
 #include "svn_private_config.h"
 
+#include "cached_data.h"
 #include "fs_fs.h"
 #include "fs.h"
 #include "rep-cache.h"
@@ -99,12 +100,15 @@ open_rep_cache(void *baton,
                            0, NULL, 0,
                            fs->pool, pool));
 
-  SVN_ERR(svn_sqlite__read_schema_version(&version, sdb, pool));
+  SVN_SQLITE__ERR_CLOSE(svn_sqlite__read_schema_version(&version, sdb, pool),
+                        sdb);
   if (version < REP_CACHE_SCHEMA_FORMAT)
     {
       /* Must be 0 -- an uninitialized (no schema) database. Create
          the schema. Results in schema version of 1.  */
-      SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_CREATE_SCHEMA));
+      SVN_SQLITE__ERR_CLOSE(svn_sqlite__exec_statements(sdb,
+                                                        STMT_CREATE_SCHEMA),
+                            sdb);
     }
 
   /* This is used as a flag that the database is available so don't
@@ -121,7 +125,25 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_error_t *err = svn_atomic__init_once(&ffd->rep_cache_db_opened,
                                            open_rep_cache, fs, pool);
-  return svn_error_quick_wrap(err, _("Couldn't open rep-cache database"));
+  return svn_error_quick_wrapf(err,
+                               _("Couldn't open rep-cache database '%s'"),
+                               svn_dirent_local_style(
+                                 path_rep_cache_db(fs->path, pool), pool));
+}
+
+svn_error_t *
+svn_fs_fs__close_rep_cache(svn_fs_t *fs)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  if (ffd->rep_cache_db)
+    {
+      SVN_ERR(svn_sqlite__close(ffd->rep_cache_db));
+      ffd->rep_cache_db = NULL;
+      ffd->rep_cache_db_opened = 0;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -238,7 +260,7 @@ svn_fs_fs__walk_rep_reference(svn_fs_t *fs,
    If you extend this function, check the callsite to see if you have
    to make it not-ignore additional error codes.  */
 svn_error_t *
-svn_fs_fs__get_rep_reference(representation_t **rep,
+svn_fs_fs__get_rep_reference(representation_t **rep_p,
                              svn_fs_t *fs,
                              svn_checksum_t *checksum,
                              apr_pool_t *pool)
@@ -246,6 +268,7 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
+  representation_t *rep;
 
   SVN_ERR_ASSERT(ffd->rep_sharing_allowed);
   if (! ffd->rep_cache_db)
@@ -264,26 +287,28 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
   if (have_row)
     {
-      *rep = apr_pcalloc(pool, sizeof(**rep));
-      svn_fs_fs__id_txn_reset(&(*rep)->txn_id);
-      memcpy((*rep)->sha1_digest, checksum->digest,
-             sizeof((*rep)->sha1_digest));
-      (*rep)->has_sha1 = TRUE;
-      (*rep)->revision = svn_sqlite__column_revnum(stmt, 0);
-      (*rep)->item_index = svn_sqlite__column_int64(stmt, 1);
-      (*rep)->size = svn_sqlite__column_int64(stmt, 2);
-      (*rep)->expanded_size = svn_sqlite__column_int64(stmt, 3);
+      rep = apr_pcalloc(pool, sizeof(*rep));
+      svn_fs_fs__id_txn_reset(&(rep->txn_id));
+      memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
+      rep->has_sha1 = TRUE;
+      rep->revision = svn_sqlite__column_revnum(stmt, 0);
+      rep->item_index = svn_sqlite__column_int64(stmt, 1);
+      rep->size = svn_sqlite__column_int64(stmt, 2);
+      rep->expanded_size = svn_sqlite__column_int64(stmt, 3);
     }
   else
-    *rep = NULL;
+    rep = NULL;
 
   SVN_ERR(svn_sqlite__reset(stmt));
 
-  if (*rep)
+  if (rep)
     {
+      svn_error_t *err;
+
+      SVN_ERR(svn_fs_fs__fixup_expanded_size(fs, rep, pool));
+
       /* Check that REP refers to a revision that exists in FS. */
-      svn_error_t *err = svn_fs_fs__ensure_revision_exists((*rep)->revision,
-                                                           fs, pool);
+      err = svn_fs_fs__ensure_revision_exists(rep->revision, fs, pool);
       if (err)
         return svn_error_createf(SVN_ERR_FS_CORRUPT, err,
                                  "Checksum '%s' in rep-cache is beyond HEAD",
@@ -291,6 +316,7 @@ svn_fs_fs__get_rep_reference(representation_t **rep,
                                                                  pool));
     }
 
+  *rep_p = rep;
   return SVN_NO_ERROR;
 }
 
@@ -371,9 +397,13 @@ svn_fs_fs__del_rep_reference(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_fs_fs__lock_rep_cache(svn_fs_t *fs,
-                          apr_pool_t *pool)
+/* Start a transaction to take an SQLite reserved lock that prevents
+   other writes.
+
+   See unlock_rep_cache(). */
+static svn_error_t *
+lock_rep_cache(svn_fs_t *fs,
+               apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
@@ -383,4 +413,32 @@ svn_fs_fs__lock_rep_cache(svn_fs_t *fs,
   SVN_ERR(svn_sqlite__exec_statements(ffd->rep_cache_db, STMT_LOCK_REP));
 
   return SVN_NO_ERROR;
+}
+
+/* End the transaction started by lock_rep_cache(). */
+static svn_error_t *
+unlock_rep_cache(svn_fs_t *fs,
+                 apr_pool_t *pool)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+
+  SVN_ERR_ASSERT(ffd->rep_cache_db); /* was opened by lock_rep_cache() */
+
+  SVN_ERR(svn_sqlite__exec_statements(ffd->rep_cache_db, STMT_UNLOCK_REP));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__with_rep_cache_lock(svn_fs_t *fs,
+                               svn_error_t *(*body)(void *,
+                                                    apr_pool_t *),
+                               void *baton,
+                               apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  SVN_ERR(lock_rep_cache(fs, pool));
+  err = body(baton, pool);
+  return svn_error_compose_create(err, unlock_rep_cache(fs, pool));
 }

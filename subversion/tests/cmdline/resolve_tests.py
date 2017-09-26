@@ -303,9 +303,7 @@ def resolved_on_wc_root(sbox):
 
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc)
+                                        expected_status)
 
   # Go back to rev 1
   expected_output = svntest.wc.State(wc, {
@@ -319,7 +317,7 @@ def resolved_on_wc_root(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         '-r1', wc)
 
   # Deletions so that the item becomes unversioned and
@@ -351,7 +349,7 @@ def resolved_on_wc_root(sbox):
                                         expected_output,
                                         expected_disk,
                                         None,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         wc)
   svntest.actions.run_and_verify_unquiet_status(wc, expected_status)
 
@@ -450,7 +448,7 @@ def resolved_on_deleted_item(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         wc)
 
   # Create some conflicts...
@@ -469,9 +467,7 @@ def resolved_on_deleted_item(sbox):
 
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc)
+                                        expected_status)
 
   # Delete the paths in the second directory.
   svntest.actions.run_and_verify_svn(None, [],
@@ -490,7 +486,7 @@ def resolved_on_deleted_item(sbox):
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         A2)
 
   # Now merge A to A2, creating conflicts...
@@ -543,7 +539,7 @@ def resolved_on_deleted_item(sbox):
                                        expected_mergeinfo_output,
                                        expected_elision_output,
                                        expected_disk, None, expected_skip,
-                                       None, dry_run = False)
+                                       [], dry_run = False)
   svntest.actions.run_and_verify_unquiet_status(A2, expected_status)
 
   # Now resolve by recursing on the working copy root.
@@ -602,6 +598,75 @@ def multi_range_merge_with_accept(sbox):
   svntest.main.run_svn(None, 'merge', '-c4,3', '^/iota', 'iota',
                        '--accept=theirs-conflict')
 
+#----------------------------------------------------------------------
+
+# Test for issue #4647 'auto resolution mine-full fails on binary file'
+@Issue(4647)
+def automatic_binary_conflict_resolution(sbox):
+  "resolve -R --accept [base | mf | tf] binary file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  A_COPY_path = os.path.join(wc_dir, "A_COPY")
+
+  # Add a binary file to the project in revision 2.
+  theta_contents = open(os.path.join(sys.path[0], "theta.bin"), 'rb').read()
+  theta_path = sbox.ospath('A/theta')
+  svntest.main.file_write(theta_path, theta_contents, 'wb')
+  svntest.main.run_svn(None, 'add', theta_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'log msg', wc_dir)
+
+  # Branch A to A_COPY in revision 3.
+  svntest.main.run_svn(None, 'copy',  wc_dir + "/A",  A_COPY_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'log msg', wc_dir)
+
+  # Modify the binary file on trunk and in the branch, so that both versions
+  # differ.
+  theta_branch_path = sbox.ospath('A_COPY/theta')
+  svntest.main.file_append_binary(theta_path, theta_contents)
+  svntest.main.run_svn(None, 'commit', '-m', 'log msg', wc_dir)
+  svntest.main.file_append_binary(theta_branch_path, theta_contents)
+  svntest.main.file_append_binary(theta_branch_path, theta_contents)
+  svntest.main.run_svn(None, 'commit', '-m', 'log msg', wc_dir)
+
+  # Run an svn update now to prevent mixed-revision working copy [1:4] error.
+  svntest.main.run_svn(None, 'update', wc_dir)
+
+
+  def do_binary_conflicting_merge():
+    svntest.actions.run_and_verify_svn(None, [],
+                                       'revert', '--recursive', A_COPY_path)
+    svntest.main.run_svn(None, 'merge', sbox.repo_url + "/A/theta",
+                          wc_dir + "/A_COPY/theta")
+
+  # Test 'svn resolve -R --accept base'
+  # Regression until r1758160
+  do_binary_conflicting_merge()
+  svntest.actions.run_and_verify_resolve([theta_branch_path],
+                                         '-R', '--accept', 'base',
+                                         A_COPY_path)
+
+  # Test 'svn resolve -R --accept theirs-full'
+  do_binary_conflicting_merge()
+  svntest.actions.run_and_verify_resolve([theta_branch_path],
+                                         '-R', '--accept', 'tf',
+                                         A_COPY_path)
+
+  # Test 'svn resolve -R --accept working'
+  # Equivalent to 'svn resolved'
+  do_binary_conflicting_merge()
+  svntest.actions.run_and_verify_resolve([theta_branch_path],
+                                         '-R', '--accept', 'working',
+                                         A_COPY_path)
+
+  # Test 'svn resolve -R --accept mine-full'
+  # There is no '.mine' for binary file conflicts. Same handling as 'working'
+  do_binary_conflicting_merge()
+  svntest.actions.run_and_verify_resolve([theta_branch_path],
+                                         '-R', '--accept', 'mine-full',
+                                         A_COPY_path)
 
 ########################################################################
 # Run the tests
@@ -615,6 +680,7 @@ test_list = [ None,
               resolved_on_deleted_item,
               theirs_conflict_in_subdir,
               multi_range_merge_with_accept,
+              automatic_binary_conflict_resolution,
              ]
 
 if __name__ == '__main__':

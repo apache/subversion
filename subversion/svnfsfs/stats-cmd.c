@@ -20,6 +20,8 @@
  * ====================================================================
  */
 
+#include <assert.h>
+
 #include "svn_fs.h"
 #include "svn_pools.h"
 #include "svn_sorts.h"
@@ -47,10 +49,10 @@ print_two_power(int i,
    */
   const char *si_prefixes = " kMGTPEZY";
 
-  int number = (1 << (i % 10));
-  int thousands = i / 10;
+  int number = (i >= 0) ? (1 << (i % 10)) : 0;
+  int thousands = (i >= 0) ? (i / 10) : 0;
 
-  char si_prefix = ((thousands >= 0) && (thousands < strlen(si_prefixes)))
+  char si_prefix = (thousands < strlen(si_prefixes))
                  ? si_prefixes[thousands]
                  : '?';
 
@@ -72,7 +74,8 @@ print_rep_stats(svn_fs_fs__representation_stats_t *stats,
            "%20s bytes expanded size\n"
            "%20s bytes expanded shared size\n"
            "%20s bytes with rep-sharing off\n"
-           "%20s shared references\n"),
+           "%20s shared references\n"
+           "%20.3f average delta chain length\n"),
          svn__ui64toa_sep(stats->total.packed_size, ',', pool),
          svn__ui64toa_sep(stats->total.count, ',', pool),
          svn__ui64toa_sep(stats->shared.packed_size, ',', pool),
@@ -80,7 +83,8 @@ print_rep_stats(svn_fs_fs__representation_stats_t *stats,
          svn__ui64toa_sep(stats->total.expanded_size, ',', pool),
          svn__ui64toa_sep(stats->shared.expanded_size, ',', pool),
          svn__ui64toa_sep(stats->expanded_size, ',', pool),
-         svn__ui64toa_sep(stats->references - stats->total.count, ',', pool));
+         svn__ui64toa_sep(stats->references - stats->total.count, ',', pool),
+         stats->chain_len / MAX(1.0, (double)stats->total.count));
 }
 
 /* Print the (used) contents of CHANGES.  Use POOL for allocations.
@@ -235,6 +239,10 @@ print_extensions_by_changes(svn_fs_fs__stats_t *stats,
     {
       svn_fs_fs__extension_info_t *info
         = APR_ARRAY_IDX(data, i, svn_fs_fs__extension_info_t *);
+
+      /* If there are elements, then their count cannot be 0. */
+      assert(stats->file_histogram.total.count);
+
       sum += info->node_histogram.total.count;
       printf(_("%11s %20s (%2d%%) representations\n"),
              info->extension,
@@ -243,11 +251,28 @@ print_extensions_by_changes(svn_fs_fs__stats_t *stats,
                    stats->file_histogram.total.count));
     }
 
-  printf(_("%11s %20s (%2d%%) representations\n"),
-         "(others)",
-         svn__ui64toa_sep(stats->file_histogram.total.count - sum, ',', pool),
-         (int)((stats->file_histogram.total.count - sum) * 100 /
-               stats->file_histogram.total.count));
+  if (stats->file_histogram.total.count)
+    {
+      printf(_("%11s %20s (%2d%%) representations\n"),
+             "(others)",
+             svn__ui64toa_sep(stats->file_histogram.total.count - sum, ',',
+                              pool),
+             (int)((stats->file_histogram.total.count - sum) * 100 /
+                   stats->file_histogram.total.count));
+    }
+}
+
+/* Calculate a percentage, handling edge cases. */
+static int
+get_percentage(apr_uint64_t part,
+               apr_uint64_t total)
+{
+  /* This include total == 0. */
+  if (part >= total)
+    return 100;
+
+  /* Standard case. */
+  return (int)(part * 100.0 / total);
 }
 
 /* Print the (up to) 16 extensions in STATS with the largest total size of
@@ -269,15 +294,20 @@ print_extensions_by_nodes(svn_fs_fs__stats_t *stats,
       printf(_("%11s %20s (%2d%%) bytes\n"),
              info->extension,
              svn__ui64toa_sep(info->node_histogram.total.sum, ',', pool),
-             (int)(info->node_histogram.total.sum * 100 /
-                   stats->file_histogram.total.sum));
+             get_percentage(info->node_histogram.total.sum,
+                            stats->file_histogram.total.sum));
     }
 
-  printf(_("%11s %20s (%2d%%) bytes\n"),
-         "(others)",
-         svn__ui64toa_sep(stats->file_histogram.total.sum - sum, ',', pool),
-         (int)((stats->file_histogram.total.sum - sum) * 100 /
-               stats->file_histogram.total.sum));
+  if (stats->file_histogram.total.sum > sum)
+    {
+      /* Total sum can't be zero here. */
+      printf(_("%11s %20s (%2d%%) bytes\n"),
+             "(others)",
+             svn__ui64toa_sep(stats->file_histogram.total.sum - sum, ',',
+                              pool),
+             get_percentage(stats->file_histogram.total.sum - sum,
+                            stats->file_histogram.total.sum));
+    }
 }
 
 /* Print the (up to) 16 extensions in STATS with the largest total size of
@@ -299,16 +329,20 @@ print_extensions_by_reps(svn_fs_fs__stats_t *stats,
       printf(_("%11s %20s (%2d%%) bytes\n"),
              info->extension,
              svn__ui64toa_sep(info->rep_histogram.total.sum, ',', pool),
-             (int)(info->rep_histogram.total.sum * 100 /
-                   stats->rep_size_histogram.total.sum));
+             get_percentage(info->rep_histogram.total.sum,
+                            stats->rep_size_histogram.total.sum));
     }
 
-  printf(_("%11s %20s (%2d%%) bytes\n"),
-         "(others)",
-         svn__ui64toa_sep(stats->rep_size_histogram.total.sum - sum, ',',
-                          pool),
-         (int)((stats->rep_size_histogram.total.sum - sum) * 100 /
-               stats->rep_size_histogram.total.sum));
+  if (stats->rep_size_histogram.total.sum > sum)
+    {
+      /* Total sum can't be zero here. */
+      printf(_("%11s %20s (%2d%%) bytes\n"),
+             "(others)",
+             svn__ui64toa_sep(stats->rep_size_histogram.total.sum - sum, ',',
+                              pool),
+             get_percentage(stats->rep_size_histogram.total.sum - sum,
+                            stats->rep_size_histogram.total.sum));
+    }
 }
 
 /* Print per-extension histograms for the most frequent extensions in STATS.
@@ -343,7 +377,7 @@ print_stats(svn_fs_fs__stats_t *stats,
             apr_pool_t *pool)
 {
   /* print results */
-  printf("\nGlobal statistics:\n");
+  printf("\n\nGlobal statistics:\n");
   printf(_("%20s bytes in %12s revisions\n"
            "%20s bytes in %12s changes\n"
            "%20s bytes in %12s node revision records\n"
@@ -381,6 +415,7 @@ print_stats(svn_fs_fs__stats_t *stats,
            "%20s bytes in %12s representations of added file nodes\n"
            "%20s bytes in %12s directory property representations\n"
            "%20s bytes in %12s file property representations\n"
+           "                         with %12.3f average delta chain length\n"
            "%20s bytes in header & footer overhead\n"),
          svn__ui64toa_sep(stats->total_rep_stats.total.packed_size, ',',
                          pool),
@@ -401,8 +436,10 @@ print_stats(svn_fs_fs__stats_t *stats,
          svn__ui64toa_sep(stats->file_prop_rep_stats.total.packed_size, ',',
                          pool),
          svn__ui64toa_sep(stats->file_prop_rep_stats.total.count, ',', pool),
+         stats->total_rep_stats.chain_len
+            / (double)stats->total_rep_stats.total.count,
          svn__ui64toa_sep(stats->total_rep_stats.total.overhead_size, ',',
-                        pool));
+                         pool));
 
   printf("\nDirectory representation statistics:\n");
   print_rep_stats(&stats->dir_rep_stats, pool);

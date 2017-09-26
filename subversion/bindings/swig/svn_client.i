@@ -293,8 +293,9 @@ Callback: svn_client_diff_summarize_func_t
  */
 #ifdef SWIGPERL
 %typemap(in) apr_hash_t *config {
-  $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
-                                         svn_swig_pl_make_pool ((SV *)NULL));
+  apr_pool_t *pool = svn_swig_pl_make_pool ((SV *)NULL);
+  SPAGAIN;
+  $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *", pool);
 }
 
 %typemap(out) apr_hash_t *config {
@@ -441,13 +442,13 @@ Callback: svn_client_diff_summarize_func_t
     self = apr_palloc(pool, sizeof(*self));
     self->path = path ? apr_pstrdup(pool, path) : NULL;
 
-    revision = apr_palloc(pool, sizeof(revision));
+    revision = apr_palloc(pool, sizeof(*revision));
     revision->kind = rev->kind;
     revision->value.number = rev->value.number;
     revision->value.date = rev->value.date;
     self->revision = revision;
 
-    peg_revision = apr_palloc(pool, sizeof(peg_revision));
+    peg_revision = apr_palloc(pool, sizeof(*peg_revision));
     peg_revision->kind = peg_rev->kind;
     peg_revision->value.number = peg_rev->value.number;
     peg_revision->value.date = peg_rev->value.date;

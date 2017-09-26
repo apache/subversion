@@ -66,6 +66,8 @@ static const char *git_unidiff =
   "Index: A/C/gamma"                                                    NL
   "===================================================================" NL
   "diff --git a/A/C/gamma b/A/C/gamma"                                  NL
+  "old mode 100644"                                                     NL
+  "new mode 100755"                                                     NL
   "--- a/A/C/gamma\t(revision 2)"                                       NL
   "+++ b/A/C/gamma\t(working copy)"                                     NL
   "@@ -1 +1,2 @@"                                                       NL
@@ -86,6 +88,8 @@ static const char *git_tree_and_text_unidiff =
   "Index: iota.copied"                                                  NL
   "===================================================================" NL
   "diff --git a/iota b/iota.copied"                                     NL
+  "old mode 100644"                                                     NL
+  "new mode 100755"                                                     NL
   "copy from iota"                                                      NL
   "copy to iota.copied"                                                 NL
   "--- a/iota\t(revision 2)"                                            NL
@@ -96,6 +100,8 @@ static const char *git_tree_and_text_unidiff =
   "Index: A/mu.moved"                                                   NL
   "===================================================================" NL
   "diff --git a/A/mu b/A/mu.moved"                                      NL
+  "old mode 100644"                                                     NL
+  "new mode 100755"                                                     NL
   "rename from A/mu"                                                    NL
   "rename to A/mu.moved"                                                NL
   "--- a/A/mu\t(revision 2)"                                            NL
@@ -114,7 +120,7 @@ static const char *git_tree_and_text_unidiff =
   "Index: A/B/lambda"                                                   NL
   "===================================================================" NL
   "diff --git a/A/B/lambda b/A/B/lambda"                                NL
-  "deleted file mode 100644"                                            NL
+  "deleted file mode 100755"                                            NL
   "--- a/A/B/lambda\t(revision 2)"                                      NL
   "+++ /dev/null\t(working copy)"                                       NL
   "@@ -1 +0,0 @@"                                                       NL
@@ -303,6 +309,24 @@ create_patch_file(svn_patch_file_t **patch_file,
   return SVN_NO_ERROR;
 }
 
+/* svn_stream_readline() with hunk reader semantics */
+static svn_error_t *
+stream_readline_diff(svn_stream_t *stream,
+                     svn_stringbuf_t **buf,
+                     const char *eol,
+                     svn_boolean_t *eof,
+                     apr_pool_t *result_pool)
+{
+  SVN_ERR(svn_stream_readline(stream, buf, eol, eof, result_pool));
+
+  /* Hunks are only at EOF after they are completely read, even if
+     they don't have a final EOL in the text */
+  if (*eof && (*buf)->len)
+    *eof = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
 /* Check that reading a line from HUNK equals what's inside EXPECTED.
  * If ORIGINAL is TRUE, read the original hunk text; else, read the
  * modified hunk text. */
@@ -321,7 +345,7 @@ check_content(svn_diff_hunk_t *hunk, svn_boolean_t original,
 
   while (TRUE)
   {
-    SVN_ERR(svn_stream_readline(exp, &exp_buf, NL, &exp_eof, pool));
+    SVN_ERR(stream_readline_diff(exp, &exp_buf, NL, &exp_eof, pool));
     if (original)
       SVN_ERR(svn_diff_hunk_readline_original_text(hunk, &hunk_buf, NULL,
                                                    &hunk_eof, pool, pool));
@@ -447,6 +471,10 @@ test_parse_git_diff(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(patch->new_filename, "A/C/gamma");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_modified);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
+  SVN_TEST_ASSERT(patch->old_executable_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_executable_bit == svn_tristate_true);
+  SVN_TEST_ASSERT(patch->old_symlink_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_symlink_bit == svn_tristate_false);
 
   hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
 
@@ -482,6 +510,10 @@ test_parse_git_diff(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(patch->new_filename, "new");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
+  SVN_TEST_ASSERT(patch->old_executable_bit == svn_tristate_unknown);
+  SVN_TEST_ASSERT(patch->new_executable_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->old_symlink_bit == svn_tristate_unknown);
+  SVN_TEST_ASSERT(patch->new_symlink_bit == svn_tristate_false);
 
   SVN_ERR(svn_diff_close_patch_file(patch_file, pool));
 
@@ -507,6 +539,10 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch);
   SVN_TEST_STRING_ASSERT(patch->old_filename, "iota");
   SVN_TEST_STRING_ASSERT(patch->new_filename, "iota.copied");
+  SVN_TEST_ASSERT(patch->old_executable_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_executable_bit == svn_tristate_true);
+  SVN_TEST_ASSERT(patch->old_symlink_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_symlink_bit == svn_tristate_false);
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_copied);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
@@ -529,6 +565,10 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch);
   SVN_TEST_STRING_ASSERT(patch->old_filename, "A/mu");
   SVN_TEST_STRING_ASSERT(patch->new_filename, "A/mu.moved");
+  SVN_TEST_ASSERT(patch->old_executable_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_executable_bit == svn_tristate_true);
+  SVN_TEST_ASSERT(patch->old_symlink_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_symlink_bit == svn_tristate_false);
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_moved);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
@@ -572,6 +612,10 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(patch->new_filename, "/dev/null");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_deleted);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
+  SVN_TEST_ASSERT(patch->old_executable_bit == svn_tristate_true);
+  SVN_TEST_ASSERT(patch->new_executable_bit == svn_tristate_unknown);
+  SVN_TEST_ASSERT(patch->old_symlink_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_symlink_bit == svn_tristate_unknown);
 
   hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
 

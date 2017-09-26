@@ -532,8 +532,10 @@
         $1 = NULL;
     }
     else if (SvPOK($input)) {
-        if (_global_pool == NULL)
+        if (_global_pool == NULL) {
             _global_pool = svn_swig_pl_make_pool((SV *)NULL);
+            SPAGAIN;
+        }
         $1 = apr_pstrdup(_global_pool, SvPV_nolen($input));
     }
     else {
@@ -836,6 +838,7 @@ core_set_current_pool (apr_pool_t *pool)
 %include svn_mergeinfo_h.swg
 %include svn_io_h.swg
 %include svn_checksum_h.swg
+%include svn_cache_config_h.swg
 
 
 

@@ -34,7 +34,7 @@
 dav_error *
 dav_svn__post_create_txn(const dav_resource *resource,
                          svn_skel_t *request_skel,
-                         ap_filter_t *output)
+                         dav_svn__output *output)
 {
   const char *txn_name;
   const char *vtxn_name;
@@ -75,7 +75,7 @@ dav_svn__post_create_txn(const dav_resource *resource,
 dav_error *
 dav_svn__post_create_txn_with_props(const dav_resource *resource,
                                     svn_skel_t *request_skel,
-                                    ap_filter_t *output)
+                                    dav_svn__output *output)
 {
   const char *txn_name;
   const char *vtxn_name;

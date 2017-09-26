@@ -37,7 +37,7 @@ else:
 import svntest
 from svntest import main, verify, tree, wc, sandbox
 from svntest import Failure
-from actions import *
+from svntest.actions import *
 
 logger = logging.getLogger()
 
@@ -498,8 +498,13 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
         x_status.copy()
         x_status.wc_dir = base
 
+      if test_case.error_re_string == None:
+        expected_stderr = []
+      else:
+        expected_stderr = test_case.error_re_string
+
       run_and_verify_update(base, x_out, x_disk, None,
-                            error_re_string = test_case.error_re_string)
+                            expected_stderr = expected_stderr)
       if x_status:
         run_and_verify_unquiet_status(base, x_status)
 
@@ -525,8 +530,7 @@ def deep_trees_run_tests_scheme_for_update(sbox, greater_scheme):
         x_status.wc_dir = base
 
       run_and_verify_commit(base, None, x_status,
-                            test_case.commit_block_string,
-                            base)
+                            test_case.commit_block_string)
     except:
       logger.warn("ERROR IN: Tests scheme for update: "
           + "while checking commit-blocking in '%s'", test_case.name)
@@ -586,8 +590,13 @@ def deep_trees_skipping_on_update(sbox, test_case, skip_paths,
     # Account for nodes that were updated by further_action
     x_status.tweak('', 'D', 'F', 'DD', 'DF', 'DDD', 'DDF', wc_rev=4)
 
+  if test_case.error_re_string == None:
+    expected_stderr = []
+  else:
+    expected_stderr = test_case.error_re_string
+
   run_and_verify_update(base, x_out, x_disk, None,
-                        error_re_string = test_case.error_re_string)
+                        expected_stderr = expected_stderr)
 
   run_and_verify_unquiet_status(base, x_status)
 
@@ -745,9 +754,14 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
         x_status.copy()
         x_status.wc_dir = local
 
+      if test_case.error_re_string == None:
+        expected_stderr = []
+      else:
+        expected_stderr = test_case.error_re_string
+
       run_and_verify_switch(local, local, incoming, x_out, x_disk, None,
-                            test_case.error_re_string, None, None, None,
-                            None, False, '--ignore-ancestry')
+                            expected_stderr, False,
+                            '--ignore-ancestry')
       run_and_verify_unquiet_status(local, x_status)
 
       x_info = test_case.expected_info or {}
@@ -771,8 +785,7 @@ def deep_trees_run_tests_scheme_for_switch(sbox, greater_scheme):
         x_status.wc_dir = local
 
       run_and_verify_commit(local, None, x_status,
-                            test_case.commit_block_string,
-                            local)
+                            test_case.commit_block_string)
     except:
       logger.warn("ERROR IN: Tests scheme for switch: "
           + "while checking commit-blocking in '%s'", test_case.name)
@@ -959,10 +972,14 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
       if ignore_ancestry:
         varargs = varargs + ('--ignore-ancestry',)
 
+      if test_case.error_re_string == None:
+        expected_stderr = []
+      else:
+        expected_stderr = test_case.error_re_string
+
       run_and_verify_merge(local, '0', 'HEAD', incoming, None,
                            x_out, None, None, x_disk, None, x_skip,
-                           test_case.error_re_string,
-                           None, None, None, None,
+                           expected_stderr,
                            False, False, *varargs)
       run_and_verify_unquiet_status(local, x_status)
     except:
@@ -984,8 +1001,7 @@ def deep_trees_run_tests_scheme_for_merge(sbox, greater_scheme,
           x_status.wc_dir = local
 
         run_and_verify_commit(local, None, x_status,
-                              test_case.commit_block_string,
-                              local)
+                              test_case.commit_block_string)
       except:
         logger.warn("ERROR IN: Tests scheme for merge: "
             + "while checking commit-blocking in '%s'", test_case.name)
@@ -1080,7 +1096,7 @@ def do_routine_switching(wc_dir, repo_url, verify):
                                           expected_output,
                                           expected_disk,
                                           expected_status,
-                                          None, None, None, None, None,
+                                          [],
                                           False, '--ignore-ancestry')
   else:
     svntest.main.run_svn(None, 'switch', '--ignore-ancestry',
@@ -1116,7 +1132,7 @@ def do_routine_switching(wc_dir, repo_url, verify):
                                           expected_output,
                                           expected_disk,
                                           expected_status,
-                                          None, None, None, None, None,
+                                          [],
                                           False, '--ignore-ancestry')
   else:
     svntest.main.run_svn(None, 'switch', '--ignore-ancestry',
@@ -1147,8 +1163,7 @@ def commit_routine_switching(wc_dir, verify):
   # same URL.  We don't allow this.
   svntest.actions.run_and_verify_commit(
     wc_dir, None, None,
-    "svn: E195003: Cannot commit both .* as they refer to the same URL$",
-    wc_dir)
+    "svn: E195003: Cannot commit both .* as they refer to the same URL$")
 
   # Okay, that all taken care of, let's revert the A/D/G/pi path and
   # move along.  Afterward, we should be okay to commit.  (Sorry,
@@ -1176,8 +1191,7 @@ def commit_routine_switching(wc_dir, verify):
   if verify:
     svntest.actions.run_and_verify_commit(wc_dir,
                                           expected_output,
-                                          expected_status,
-                                          None, wc_dir)
+                                          expected_status)
   else:
     svntest.main.run_svn(None,
                          'ci', '-m', 'log msg', wc_dir)

@@ -71,6 +71,11 @@ if [ ${svnminor} -gt 8 ]; then
   optimizeconfig=' --enable-optimize'
 fi
 
+if [ ${svnminor} -ge 10 ]; then
+  lz4config='--with-lz4=internal'
+  utf8proconfig='--with-utf8proc=internal'
+fi
+
 #
 # Step 3: Configure
 #
@@ -80,7 +85,7 @@ cd ${absbld}
 env CC=clang CXX=clang++ \
 ${abssrc}/configure \
     --prefix="${absbld}/.install-prefix" \
-    --disable-debug${optimizeconfig} \
+    --enable-debug${optimizeconfig} \
     --disable-nls \
     --disable-mod-activation \
     ${aprconfig}${serfconfig} \
@@ -88,6 +93,8 @@ ${abssrc}/configure \
     --with-berkeley-db=db.h:"${SVNBB_BDB}/include":${SVNBB_BDB}/lib:db \
     --enable-javahl \
     --without-jikes \
+    ${lz4config} \
+    ${utf8proconfig} \
     --with-junit="${SVNBB_JUNIT}"
 
 test -f config.log && mv config.log "${abssrc}/.test-logs/config.log"

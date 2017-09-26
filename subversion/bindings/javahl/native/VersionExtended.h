@@ -33,7 +33,7 @@
 class VersionExtended : public SVNBase
 {
 public:
-  static const VersionExtended *getCppObject(jobject jthis);
+  static VersionExtended *getCppObject(jobject jthis);
   static const VersionExtended *getCppObjectFromLinkedLib(jobject jthat);
   static const VersionExtended *getCppObjectFromLoadedLib(jobject jthat);
   static const VersionExtended *getCppObjectFromLinkedLibIterator(jobject jthat);

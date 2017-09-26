@@ -95,6 +95,7 @@ public class RunTests
                 suite.addTestSuite(UtilTests.class);
                 suite.addTestSuite(SVNRemoteTests.class);
                 suite.addTestSuite(SVNReposTests.class);
+                suite.addTestSuite(ExceptionTests.class);
             }
             else
             {

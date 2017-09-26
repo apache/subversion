@@ -27,7 +27,6 @@
 
 #include "svn_error.h"
 #include "svn_io.h"
-#include "private/svn_pseudo_md5.h"
 
 #include "../svn_test.h"
 
@@ -88,38 +87,6 @@ test_checksum_empty(apr_pool_t *pool)
       SVN_ERR(svn_checksum(&checksum, kind, &data, 0, pool));
       SVN_TEST_ASSERT(svn_checksum_is_empty_checksum(checksum));
     }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-test_pseudo_md5(apr_pool_t *pool)
-{
-  apr_uint32_t input[16] = { 0 };
-  apr_uint32_t digest_15[4] = { 0 };
-  apr_uint32_t digest_31[4] = { 0 };
-  apr_uint32_t digest_63[4] = { 0 };
-  svn_checksum_t *checksum;
-
-  /* input is all 0s but the hash shall be different
-     (due to different input sizes)*/
-  svn__pseudo_md5_15(digest_15, input);
-  svn__pseudo_md5_31(digest_31, input);
-  svn__pseudo_md5_63(digest_63, input);
-
-  SVN_TEST_ASSERT(memcmp(digest_15, digest_31, sizeof(digest_15)));
-  SVN_TEST_ASSERT(memcmp(digest_15, digest_63, sizeof(digest_15)));
-  SVN_TEST_ASSERT(memcmp(digest_31, digest_63, sizeof(digest_15)));
-
-  /* the checksums shall also be different from "proper" MD5 */
-  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, input, 15, pool));
-  SVN_TEST_ASSERT(memcmp(digest_15, checksum->digest, sizeof(digest_15)));
-
-  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, input, 31, pool));
-  SVN_TEST_ASSERT(memcmp(digest_31, checksum->digest, sizeof(digest_15)));
-
-  SVN_ERR(svn_checksum(&checksum, svn_checksum_md5, input, 63, pool));
-  SVN_TEST_ASSERT(memcmp(digest_63, checksum->digest, sizeof(digest_15)));
 
   return SVN_NO_ERROR;
 }
@@ -287,6 +254,116 @@ zlib_expansion_test(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_serialization(apr_pool_t *pool)
+{
+  svn_checksum_kind_t kind;
+  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+    {
+      const svn_checksum_t *parsed_checksum;
+      svn_checksum_t *checksum = svn_checksum_empty_checksum(kind, pool);
+      const char *serialized = svn_checksum_serialize(checksum, pool, pool);
+
+      SVN_ERR(svn_checksum_deserialize(&parsed_checksum, serialized, pool,
+                                       pool));
+
+      SVN_TEST_ASSERT(parsed_checksum->kind == kind);
+      SVN_TEST_ASSERT(svn_checksum_match(checksum, parsed_checksum));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_checksum_parse_all_zero(apr_pool_t *pool)
+{
+  svn_checksum_kind_t kind;
+  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+    {
+      svn_checksum_t *checksum;
+      const char *hex;
+
+      checksum = svn_checksum_create(kind, pool);
+
+      hex = svn_checksum_to_cstring_display(checksum, pool);
+      SVN_ERR(svn_checksum_parse_hex(&checksum, kind, hex, pool));
+
+      /* All zeroes checksum is NULL by definition. See
+         svn_checksum_parse_hex().*/
+      SVN_TEST_ASSERT(checksum == NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_checksummed_stream_read(apr_pool_t *pool)
+{
+  const svn_string_t *str = svn_string_create("abcde", pool);
+  svn_checksum_kind_t kind;
+
+  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+    {
+      svn_stream_t *stream;
+      svn_checksum_t *expected_checksum;
+      svn_checksum_t *actual_checksum;
+      char buf[64];
+      apr_size_t len;
+
+      stream = svn_stream_from_string(str, pool);
+      stream = svn_stream_checksummed2(stream, &actual_checksum, NULL,
+                                       kind, TRUE, pool);
+      len = str->len;
+      SVN_ERR(svn_stream_read_full(stream, buf, &len));
+      SVN_TEST_INT_ASSERT((int) len, str->len);
+
+      SVN_ERR(svn_stream_close(stream));
+
+      SVN_ERR(svn_checksum(&expected_checksum, kind,
+                           str->data, str->len, pool));
+      SVN_TEST_ASSERT(svn_checksum_match(expected_checksum, actual_checksum));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_checksummed_stream_reset(apr_pool_t *pool)
+{
+  const svn_string_t *str = svn_string_create("abcde", pool);
+  svn_checksum_kind_t kind;
+
+  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+    {
+      svn_stream_t *stream;
+      svn_checksum_t *expected_checksum;
+      svn_checksum_t *actual_checksum;
+      char buf[64];
+      apr_size_t len;
+
+      stream = svn_stream_from_string(str, pool);
+      stream = svn_stream_checksummed2(stream, &actual_checksum, NULL,
+                                       kind, TRUE, pool);
+      len = str->len;
+      SVN_ERR(svn_stream_read_full(stream, buf, &len));
+      SVN_TEST_INT_ASSERT((int) len, str->len);
+
+      SVN_ERR(svn_stream_reset(stream));
+
+      len = str->len;
+      SVN_ERR(svn_stream_read_full(stream, buf, &len));
+      SVN_TEST_INT_ASSERT((int) len, str->len);
+
+      SVN_ERR(svn_stream_close(stream));
+
+      SVN_ERR(svn_checksum(&expected_checksum, kind,
+                           str->data, str->len, pool));
+      SVN_TEST_ASSERT(svn_checksum_match(expected_checksum, actual_checksum));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* An array of all test functions */
 
 static int max_threads = 1;
@@ -298,14 +375,20 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "checksum parse"),
     SVN_TEST_PASS2(test_checksum_empty,
                    "checksum emptiness"),
-    SVN_TEST_PASS2(test_pseudo_md5,
-                   "pseudo-md5 compatibility"),
     SVN_TEST_PASS2(zero_match,
                    "zero checksum matching"),
     SVN_TEST_OPTS_PASS(zlib_expansion_test,
                        "zlib expansion test (zlib regression)"),
     SVN_TEST_PASS2(zero_cross_match,
                    "zero checksum cross-type matching"),
+    SVN_TEST_PASS2(test_serialization,
+                   "checksum (de-)serialization"),
+    SVN_TEST_PASS2(test_checksum_parse_all_zero,
+                   "checksum parse all zero"),
+    SVN_TEST_PASS2(test_checksummed_stream_read,
+                   "read from checksummed stream"),
+    SVN_TEST_PASS2(test_checksummed_stream_reset,
+                   "reset checksummed stream"),
     SVN_TEST_NULL
   };
 

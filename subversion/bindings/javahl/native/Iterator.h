@@ -20,7 +20,7 @@
  * ====================================================================
  * @endcopyright
  *
- * @file Iterator.cpp
+ * @file Iterator.h
  * @brief Interface of the class Iterator
  */
 

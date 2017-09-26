@@ -23,11 +23,11 @@
 __all__ = [ ]
 
 import sys
-if sys.hexversion < 0x2050000:
-  sys.stderr.write('[SKIPPED] at least Python 2.5 is required\n')
+if sys.hexversion < 0x2070000:
+  sys.stderr.write('[SKIPPED] at least Python 2.7 is required\n')
 
   # note: exiting is a bit harsh for a library module, but we really do
-  # require Python 2.5. this package isn't going to work otherwise.
+  # require Python 2.7. this package isn't going to work otherwise.
 
   # we're skipping this test, not failing, so exit with 0
   sys.exit(0)
@@ -53,11 +53,11 @@ class Skip(Exception):
   pass
 
 # import in a specific order: things with the fewest circular imports first.
-import testcase
-import wc
-import verify
-import tree
-import sandbox
-import main
-import actions
-import factory
+from . import testcase
+from . import wc
+from . import verify
+from . import tree
+from . import sandbox
+from . import main
+from . import actions
+from . import factory

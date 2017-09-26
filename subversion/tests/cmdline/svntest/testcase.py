@@ -141,9 +141,9 @@ class FunctionTestCase(TestCase):
     # docstring on it.
     assert isinstance(func, types.FunctionType)
 
-    name = func.func_name
+    name = func.__name__
 
-    assert func.func_code.co_argcount == 1, \
+    assert func.__code__.co_argcount == 1, \
         '%s must take an sbox argument' % name
 
     doc = func.__doc__.strip()
@@ -165,13 +165,13 @@ class FunctionTestCase(TestCase):
     self.skip_cross_check = skip_cross_check
 
   def get_function_name(self):
-    return self.func.func_name
+    return self.func.__name__
 
   def get_sandbox_name(self):
     """Base the sandbox's name on the name of the file in which the
     function was defined."""
 
-    filename = self.func.func_code.co_filename
+    filename = self.func.__code__.co_filename
     return os.path.splitext(os.path.basename(filename))[0]
 
   def run(self, sandbox):

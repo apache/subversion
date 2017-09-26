@@ -84,7 +84,7 @@ assert (svn.core.SVN_VER_MAJOR, svn.core.SVN_VER_MINOR) >= (1, 2), \
        + str(svn.core.SVN_VER_MAJOR) + "." + str(svn.core.SVN_VER_MINOR)
 
 def usage_and_exit():
-  print >> sys.stderr, __doc__
+  sys.stderr.write(__doc__ + "\n")
   sys.exit(1)
 
 class RepositoryZombieLockRemover:
@@ -112,7 +112,7 @@ class RepositoryZombieLockRemover:
     """check if the file still exists in HEAD, removing the lock if not"""
     if svn.fs.svn_fs_check_path(self.rev_root, lock.path, callback_pool) \
            == svn.core.svn_node_none:
-      print lock.path
+      print(lock.path)
       svn.repos.svn_repos_fs_unlock(self.repos_ptr, lock.path, lock.token,
                                     True, callback_pool)
 
@@ -120,8 +120,8 @@ class RepositoryZombieLockRemover:
     """iterate over every locked file in repo_path/repo_subpath,
        calling unlock_nonexistent_files for each"""
 
-    print "Removing all zombie locks from repository at %s\n" \
-          "This may take several minutes..." % self.repos_path
+    print("Removing all zombie locks from repository at %s\n" \
+          "This may take several minutes..." % self.repos_path)
 
     # Try to use svn_fs_get_locks2() if it's present, as it's believed
     # to be problem-free.
@@ -151,7 +151,7 @@ class RepositoryZombieLockRemover:
       else:
         svn.fs.svn_fs_get_locks(self.fs_ptr, self.repos_subpath,
                                 self.unlock_nonexistent_files, self.pool)
-    print "Done."
+    print("Done.")
 
 
 class RevisionZombieLockRemover:

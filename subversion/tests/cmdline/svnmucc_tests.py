@@ -48,7 +48,7 @@ def reject_bogus_mergeinfo(sbox):
                                          '-m', 'log msg',
                                          sbox.repo_url + '/A')
 
-_svnmucc_re = re.compile('^(r[0-9]+) committed by jrandom at (.*)$')
+_svnmucc_re = re.compile(b'^(r[0-9]+) committed by jrandom at (.*)$')
 _log_re = re.compile('^   ([ADRM] /[^\(]+($| \(from .*:[0-9]+\)$))')
 _err_re = re.compile('^svnmucc: (.*)$')
 
@@ -106,7 +106,9 @@ def basic_svnmucc(sbox):
 
   sbox.build()
   empty_file = sbox.ospath('empty')
+  file = sbox.ospath('file')
   svntest.main.file_append(empty_file, '')
+  svntest.main.file_append(file, 'file')
 
   # revision 2
   test_svnmucc(sbox.repo_url,
@@ -301,6 +303,14 @@ def basic_svnmucc(sbox):
                'propsetf', 'testprop', empty_file, 'foo/z.c',
                'propsetf', 'testprop', empty_file, 'foo/foo')
 
+  # revision 21
+  test_svnmucc(sbox.repo_url,
+               ['M /foo/z.c',
+                ], #---------
+               '-m', 'log msg',
+               'propset', 'testprop', 'false', 'foo/z.c',
+               'put', file, 'foo/z.c')
+
   # Expected missing revision error
   xtest_svnmucc(sbox.repo_url,
                 ["svnmucc: E200004: 'a' is not a revision"
@@ -435,7 +445,7 @@ rm A/B/C/Y
                            """.split()))
 
   # ### TODO: need a smarter run_and_verify_log() that verifies copyfrom
-  expected_output = svntest.verify.UnorderedRegexListOutput(map(re.escape, [
+  excaped = svntest.main.ensure_list(map(re.escape, [
     '   R /A (from /X/Y/Z:2)',
     '   A /A/B (from /A/B:2)',
     '   R /A/B/C (from /X:2)',
@@ -446,11 +456,137 @@ rm A/B/C/Y
     '   A /X/Y (from /X/Y:2)',
     '   R /X/Y/Z (from /M:2)',
     '   D /A/B/C/Y',
-  ]) + [
-    '^-', '^r3', '^-', '^Changed paths:',
-  ])
+  ]))
+  expected_output = svntest.verify.UnorderedRegexListOutput(excaped
+                    + ['^-', '^r3', '^-', '^Changed paths:',])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-qvr3', repo_url)
+
+
+def prohibited_deletes_and_moves(sbox):
+  "test prohibited delete and move operations"
+
+  # These action sequences were allowed in 1.8.13, but are prohibited in 1.9.x
+  # and later.  Most of them probably indicate an inadvertent user mistake.
+  # See dev@, 2015-05-11, "Re: Issue 4579 / svnmucc fails to process certain
+  # deletes", <http://svn.haxx.se/dev/archive-2015-05/0038.shtml>
+
+  sbox.build(read_only = True)
+  svntest.main.file_write(sbox.ospath('file'), "New contents")
+
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E200009: Can't delete node at 'iota'",
+                 ], #---------
+                '-m', 'r2: modify and delete /iota',
+                'put', sbox.ospath('file'), 'iota',
+                'rm', 'iota')
+
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E200009: Can't delete node at 'iota'",
+                 ], #---------
+                '-m', 'r2: propset and delete /iota',
+                'propset', 'prop', 'val', 'iota',
+                'rm', 'iota')
+
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E160013: Can't delete node at 'iota' as it does "
+                 "not exist",
+                 ], #---------
+                '-m', 'r2: delete and delete /iota',
+                'rm', 'iota',
+                'rm', 'iota')
+
+  # Subversion 1.8.13 used to move /iota without applying the text change.
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E200009: Can't delete node at 'iota'",
+                 ], #---------
+                '-m', 'r2: modify and move /iota',
+                'put', sbox.ospath('file'), 'iota',
+                'mv', 'iota', 'iota2')
+
+  # Subversion 1.8.13 used to move /A without applying the inner remove.
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E200009: Can't delete node at 'A'",
+                 ], #---------
+                '-m', 'r2: delete /A/B and move /A',
+                'rm', 'A/B',
+                'mv', 'A', 'A1')
+
+def svnmucc_type_errors(sbox):
+  "test type errors"
+
+  sbox.build(read_only=True)
+
+  sbox.simple_append('file', 'New contents')
+
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E160016: Can't operate on 'B' "
+                "because 'A' is not a directory"],
+                '-m', '',
+                'put', sbox.ospath('file'), 'A',
+                'mkdir', 'A/B',
+                'propset', 'iota', 'iota', 'iota')
+
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E200009: Can't delete node at 'A'"],
+                '-m', '',
+                'mkdir', 'A/Z',
+                'put', sbox.ospath('file'), 'A')
+
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E160020: Path 'Z' already exists"],
+                '-m', '',
+                'mkdir', 'A/Z',
+                'put', sbox.ospath('file'), 'A/Z')
+
+def svnmucc_propset_and_put(sbox):
+  "propset and put"
+
+  sbox.build()
+
+  sbox.simple_append('file', 'New contents')
+
+  # First in the sane order: put, then propset
+  xtest_svnmucc(sbox.repo_url,
+                [],
+                '-m', '',
+                'put', sbox.ospath('file'), 't1',
+                'propset', 't1', 't1', 't1')
+
+  # And now in an impossible order: propset, then put
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E200009: Can't set properties at not existing 't2'"],
+                '-m', '',
+                'propset', 't2', 't2', 't2',
+                'put', sbox.ospath('file'), 't2')
+
+  # And if the target already exists (dir)
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E200009: Can't delete node at 'A'"],
+                '-m', '',
+                'propset', 'A', 'A', 'A',
+                'put', sbox.ospath('file'), 'A')
+
+  # And if the target already exists (file) # fixed in r1702467
+  xtest_svnmucc(sbox.repo_url,
+                [],
+                '-m', '',
+                'propset', 'iota', 'iota', 'iota',
+                'put', sbox.ospath('file'), 'iota')
+
+  # Put same file twice (non existing)
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E160020: Path 't3' already exists"],
+                '-m', '',
+                'put', sbox.ospath('file'), 't3',
+                'put', sbox.ospath('file'), 't3')
+
+  # Put same file twice (existing)
+  xtest_svnmucc(sbox.repo_url,
+                ["svnmucc: E200009: Can't update file at 't1'"],
+                '-m', '',
+                'put', sbox.ospath('file'), 't1',
+                'put', sbox.ospath('file'), 't1')
 
 
 ######################################################################
@@ -462,6 +598,9 @@ test_list = [ None,
               too_many_log_messages,
               no_log_msg_non_interactive,
               nested_replaces,
+              prohibited_deletes_and_moves,
+              svnmucc_type_errors,
+              svnmucc_propset_and_put,
             ]
 
 if __name__ == '__main__':

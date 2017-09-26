@@ -634,7 +634,15 @@ test_stringbuf_remove(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(a->data, "stell");
 
   svn_stringbuf_remove(a, 1200, 393);
-  return expect_stringbuf_equal(a, "stell", pool);
+  SVN_ERR(expect_stringbuf_equal(a, "stell", pool));
+
+  svn_stringbuf_remove(a, APR_SIZE_MAX, 2);
+  SVN_ERR(expect_stringbuf_equal(a, "stell", pool));
+
+  svn_stringbuf_remove(a, 1, APR_SIZE_MAX);
+  SVN_ERR(expect_stringbuf_equal(a, "s", pool));
+
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -671,6 +679,12 @@ test_stringbuf_replace(apr_pool_t *pool)
   SVN_TEST_ASSERT(svn_stringbuf_compare(a,
                     svn_stringbuf_ncreate("test hello\0-\0world!\0-\0!",
                                           23, pool)));
+
+  svn_stringbuf_replace(a, 1, APR_SIZE_MAX, "x", 1);
+  SVN_ERR(expect_stringbuf_equal(a, "tx", pool));
+
+  svn_stringbuf_replace(a, APR_SIZE_MAX, APR_SIZE_MAX, "y", 1);
+  SVN_ERR(expect_stringbuf_equal(a, "txy", pool));
 
   return SVN_NO_ERROR;
 }
@@ -859,7 +873,7 @@ test_string_matching(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_string_skip_prefix(apr_pool_t *pool)
+test_cstring_skip_prefix(apr_pool_t *pool)
 {
   SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("12345", "12345"),
                          "");
@@ -875,6 +889,180 @@ test_string_skip_prefix(apr_pool_t *pool)
                          "");
   SVN_TEST_STRING_ASSERT(svn_cstring_skip_prefix("", "12"),
                          NULL);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stringbuf_replace_all(apr_pool_t *pool)
+{
+  svn_stringbuf_t *s = svn_stringbuf_create("abccabcdabc", pool);
+
+  /* no replacement */
+  SVN_TEST_ASSERT(0 == svn_stringbuf_replace_all(s, "xyz", "k"));
+  SVN_TEST_STRING_ASSERT(s->data, "abccabcdabc");
+  SVN_TEST_ASSERT(s->len == 11);
+
+  /* replace at string head: grow */
+  SVN_TEST_ASSERT(1 == svn_stringbuf_replace_all(s, "abcc", "xyabcz"));
+  SVN_TEST_STRING_ASSERT(s->data, "xyabczabcdabc");
+  SVN_TEST_ASSERT(s->len == 13);
+
+  /* replace at string head: shrink */
+  SVN_TEST_ASSERT(1 == svn_stringbuf_replace_all(s, "xyabcz", "abcc"));
+  SVN_TEST_STRING_ASSERT(s->data, "abccabcdabc");
+  SVN_TEST_ASSERT(s->len == 11);
+
+  /* replace at string tail: grow */
+  SVN_TEST_ASSERT(1 == svn_stringbuf_replace_all(s, "dabc", "xyabcz"));
+  SVN_TEST_STRING_ASSERT(s->data, "abccabcxyabcz");
+  SVN_TEST_ASSERT(s->len == 13);
+
+  /* replace at string tail: shrink */
+  SVN_TEST_ASSERT(1 == svn_stringbuf_replace_all(s, "xyabcz", "dabc"));
+  SVN_TEST_STRING_ASSERT(s->data, "abccabcdabc");
+  SVN_TEST_ASSERT(s->len == 11);
+
+  /* replace at multiple locations: grow */
+  SVN_TEST_ASSERT(3 == svn_stringbuf_replace_all(s, "ab", "xyabz"));
+  SVN_TEST_STRING_ASSERT(s->data, "xyabzccxyabzcdxyabzc");
+  SVN_TEST_ASSERT(s->len == 20);
+
+  /* replace at multiple locations: shrink */
+  SVN_TEST_ASSERT(3 == svn_stringbuf_replace_all(s, "xyabz", "ab"));
+  SVN_TEST_STRING_ASSERT(s->data, "abccabcdabc");
+  SVN_TEST_ASSERT(s->len == 11);
+
+  /* replace at multiple locations: same length */
+  SVN_TEST_ASSERT(3 == svn_stringbuf_replace_all(s, "abc", "xyz"));
+  SVN_TEST_STRING_ASSERT(s->data, "xyzcxyzdxyz");
+  SVN_TEST_ASSERT(s->len == 11);
+
+  /* replace at multiple locations: overlapping */
+  s = svn_stringbuf_create("aaaaaaaaaaa", pool);
+  SVN_TEST_ASSERT(5 == svn_stringbuf_replace_all(s, "aa", "aaa"));
+  SVN_TEST_STRING_ASSERT(s->data, "aaaaaaaaaaaaaaaa");
+  SVN_TEST_ASSERT(s->len == 16);
+
+  SVN_TEST_ASSERT(5 == svn_stringbuf_replace_all(s, "aaa", "aa"));
+  SVN_TEST_STRING_ASSERT(s->data, "aaaaaaaaaaa");
+  SVN_TEST_ASSERT(s->len == 11);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stringbuf_leftchop(apr_pool_t *pool)
+{
+  svn_stringbuf_t *s;
+
+  s = svn_stringbuf_create("abcd", pool);
+  svn_stringbuf_leftchop(s, 0);
+  SVN_TEST_ASSERT(s->len == 4);
+  SVN_TEST_STRING_ASSERT(s->data, "abcd");
+
+  svn_stringbuf_leftchop(s, 2);
+  SVN_TEST_ASSERT(s->len == 2);
+  SVN_TEST_STRING_ASSERT(s->data, "cd");
+
+  svn_stringbuf_leftchop(s, 4);
+  SVN_TEST_ASSERT(s->len == 0);
+  SVN_TEST_STRING_ASSERT(s->data, "");
+
+  s = svn_stringbuf_create("abcd", pool);
+  svn_stringbuf_leftchop(s, 4);
+  SVN_TEST_ASSERT(s->len == 0);
+  SVN_TEST_STRING_ASSERT(s->data, "");
+
+  s = svn_stringbuf_create_empty(pool);
+  svn_stringbuf_leftchop(s, 0);
+  SVN_TEST_ASSERT(s->len == 0);
+  SVN_TEST_STRING_ASSERT(s->data, "");
+
+  svn_stringbuf_leftchop(s, 2);
+  SVN_TEST_ASSERT(s->len == 0);
+  SVN_TEST_STRING_ASSERT(s->data, "");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stringbuf_set(apr_pool_t *pool)
+{
+  svn_stringbuf_t *str = svn_stringbuf_create_empty(pool);
+
+  SVN_TEST_STRING_ASSERT(str->data, "");
+  SVN_TEST_INT_ASSERT(str->len, 0);
+
+  svn_stringbuf_set(str, "0123456789");
+  SVN_TEST_STRING_ASSERT(str->data, "0123456789");
+  SVN_TEST_INT_ASSERT(str->len, 10);
+
+  svn_stringbuf_set(str, "");
+  SVN_TEST_STRING_ASSERT(str->data, "");
+  SVN_TEST_INT_ASSERT(str->len, 0);
+
+  svn_stringbuf_set(str, "0123456789abcdef");
+  SVN_TEST_STRING_ASSERT(str->data, "0123456789abcdef");
+  SVN_TEST_INT_ASSERT(str->len, 16);
+
+  svn_stringbuf_set(str, "t");
+  SVN_TEST_STRING_ASSERT(str->data, "t");
+  SVN_TEST_INT_ASSERT(str->len, 1);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_cstring_join(apr_pool_t *pool)
+{
+  apr_array_header_t *arr;
+
+  {
+    arr = apr_array_make(pool, 0, sizeof(const char *));
+
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", FALSE, pool), "");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", TRUE, pool), "");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", FALSE, pool), "");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", TRUE, pool), "");
+  }
+
+  {
+    arr = apr_array_make(pool, 0, sizeof(const char *));
+    APR_ARRAY_PUSH(arr, const char *) = "";
+
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", FALSE, pool), "");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", TRUE, pool), "");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", FALSE, pool), "");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", TRUE, pool), ";");
+  }
+
+  {
+    arr = apr_array_make(pool, 0, sizeof(const char *));
+    APR_ARRAY_PUSH(arr, const char *) = "ab";
+    APR_ARRAY_PUSH(arr, const char *) = "cd";
+
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", FALSE, pool), "abcd");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", TRUE, pool), "abcd");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", FALSE, pool), "ab;cd");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", TRUE, pool), "ab;cd;");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "//", FALSE, pool), "ab//cd");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "//", TRUE, pool), "ab//cd//");
+  }
+
+  {
+    arr = apr_array_make(pool, 0, sizeof(const char *));
+    APR_ARRAY_PUSH(arr, const char *) = "";
+    APR_ARRAY_PUSH(arr, const char *) = "ab";
+    APR_ARRAY_PUSH(arr, const char *) = "";
+
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", FALSE, pool), "ab");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "", TRUE, pool), "ab");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", FALSE, pool), ";ab;");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, ";", TRUE, pool), ";ab;;");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "//", FALSE, pool), "//ab//");
+    SVN_TEST_STRING_ASSERT(svn_cstring_join2(arr, "//", TRUE, pool), "//ab////");
+  }
 
   return SVN_NO_ERROR;
 }
@@ -953,8 +1141,16 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test string similarity scores"),
     SVN_TEST_PASS2(test_string_matching,
                    "test string matching"),
-    SVN_TEST_PASS2(test_string_skip_prefix,
+    SVN_TEST_PASS2(test_cstring_skip_prefix,
                    "test svn_cstring_skip_prefix()"),
+    SVN_TEST_PASS2(test_stringbuf_replace_all,
+                   "test svn_stringbuf_replace_all"),
+    SVN_TEST_PASS2(test_stringbuf_leftchop,
+                   "test svn_stringbuf_leftchop"),
+    SVN_TEST_PASS2(test_stringbuf_set,
+                   "test svn_stringbuf_set()"),
+    SVN_TEST_PASS2(test_cstring_join,
+                   "test svn_cstring_join2()"),
     SVN_TEST_NULL
   };
 

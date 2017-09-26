@@ -294,6 +294,14 @@ svn_stringbuf_isempty(const svn_stringbuf_t *str);
 void
 svn_stringbuf_chop(svn_stringbuf_t *str, apr_size_t nbytes);
 
+/**
+ * Chop @a nbytes bytes off the start of @a str, but not more than @a str->len.
+ *
+ * @since New in 1.10.
+ */
+void
+svn_stringbuf_leftchop(svn_stringbuf_t *str, apr_size_t nbytes);
+
 /** Fill @a str with character @a c. */
 void
 svn_stringbuf_fillchar(svn_stringbuf_t *str, unsigned char c);
@@ -305,7 +313,7 @@ svn_stringbuf_fillchar(svn_stringbuf_t *str, unsigned char c);
  * The advantages extend beyond the actual call because the reduced
  * register pressure allows for more optimization within the caller.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  * @since New in 1.7.
  */
 void
@@ -314,7 +322,7 @@ svn_stringbuf_appendbyte(svn_stringbuf_t *targetstr,
 
 /** Append the array of bytes @a bytes of length @a count onto @a targetstr.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  *
  * @since 1.9 @a bytes can be NULL if @a count is zero.
  */
@@ -325,7 +333,7 @@ svn_stringbuf_appendbytes(svn_stringbuf_t *targetstr,
 
 /** Append @a byte @a count times onto @a targetstr.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  * @since New in 1.9.
  */
 void
@@ -335,7 +343,7 @@ svn_stringbuf_appendfill(svn_stringbuf_t *targetstr,
 
 /** Append the stringbuf @c appendstr onto @a targetstr.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  */
 void
 svn_stringbuf_appendstr(svn_stringbuf_t *targetstr,
@@ -343,7 +351,7 @@ svn_stringbuf_appendstr(svn_stringbuf_t *targetstr,
 
 /** Append the C string @a cstr onto @a targetstr.
  *
- * reallocs if necessary. @a targetstr is affected, nothing else is.
+ * Reallocs if necessary. @a targetstr is affected, nothing else is.
  */
 void
 svn_stringbuf_appendcstr(svn_stringbuf_t *targetstr,
@@ -403,6 +411,16 @@ svn_stringbuf_replace(svn_stringbuf_t *str,
                       apr_size_t old_count,
                       const char *bytes,
                       apr_size_t new_count);
+
+/** Replace all occurrences of @a to_find in @a str with @a replacement.
+ * Return the number of replacements made.
+ *
+ * @since New in 1.10.
+ */
+apr_size_t
+svn_stringbuf_replace_all(svn_stringbuf_t *str,
+                          const char *to_find,
+                          const char *replacement);
 
 /** Return a duplicate of @a original_string. */
 svn_stringbuf_t *
@@ -515,9 +533,25 @@ svn_cstring_count_newlines(const char *msg);
  * of char *) each followed by @a separator (that is, @a separator
  * will also end the resulting string).  Allocate the result in @a pool.
  * If @a strings is empty, then return the empty string.
+ * If @a trailing_separator is non-zero, also append the separator
+ * after the last joined element.
+ *
+ * @since New in 1.10.
+ */
+char *
+svn_cstring_join2(const apr_array_header_t *strings,
+                  const char *separator,
+                  svn_boolean_t trailing_separator,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_cstring_join2(), but always includes the trailing
+ * separator.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backwards compatibility with the 1.9 API.
  */
+SVN_DEPRECATED
 char *
 svn_cstring_join(const apr_array_header_t *strings,
                  const char *separator,
@@ -541,7 +575,17 @@ svn_cstring_casecmp(const char *str1, const char *str2);
  * Assume that the number is represented in base @a base.
  * Raise an error if conversion fails (e.g. due to overflow), or if the
  * converted number is smaller than @a minval or larger than @a maxval.
+ *
  * Leading whitespace in @a str is skipped in a locale-dependent way.
+ * After that, the string may contain an optional '+' (positive, default)
+ * or '-' (negative) character, followed by an optional '0x' prefix if
+ * @a base is 0 or 16, followed by numeric digits appropriate for the base.
+ * If there are any more characters after the numeric digits, an error is
+ * returned.
+ *
+ * If @a base is zero, then a leading '0x' or '0X' prefix means hexadecimal,
+ * else a leading '0' means octal (implemented, though not documented, in
+ * apr_strtoi64() in APR 0.9.0 through 1.5.0), else use base ten.
  *
  * @since New in 1.7.
  */
@@ -554,7 +598,8 @@ svn_cstring_strtoi64(apr_int64_t *n, const char *str,
  * Parse the C string @a str into a 64 bit number, and return it in @a *n.
  * Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
- * Leading whitespace in @a str is skipped in a locale-dependent way.
+ *
+ * The behaviour otherwise is as described for svn_cstring_strtoi64().
  *
  * @since New in 1.7.
  */
@@ -565,7 +610,8 @@ svn_cstring_atoi64(apr_int64_t *n, const char *str);
  * Parse the C string @a str into a 32 bit number, and return it in @a *n.
  * Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
- * Leading whitespace in @a str is skipped in a locale-dependent way.
+ *
+ * The behaviour otherwise is as described for svn_cstring_strtoi64().
  *
  * @since New in 1.7.
  */
@@ -577,7 +623,21 @@ svn_cstring_atoi(int *n, const char *str);
  * it in @a *n. Assume that the number is represented in base @a base.
  * Raise an error if conversion fails (e.g. due to overflow), or if the
  * converted number is smaller than @a minval or larger than @a maxval.
+ *
  * Leading whitespace in @a str is skipped in a locale-dependent way.
+ * After that, the string may contain an optional '+' (positive, default)
+ * or '-' (negative) character, followed by an optional '0x' prefix if
+ * @a base is 0 or 16, followed by numeric digits appropriate for the base.
+ * If there are any more characters after the numeric digits, an error is
+ * returned.
+ *
+ * If @a base is zero, then a leading '0x' or '0X' prefix means hexadecimal,
+ * else a leading '0' means octal (implemented, though not documented, in
+ * apr_strtoi64() in APR 0.9.0 through 1.5.0), else use base ten.
+ *
+ * @warning The implementation used since version 1.7 returns an error
+ * if the parsed number is greater than APR_INT64_MAX, even if it is not
+ * greater than @a maxval.
  *
  * @since New in 1.7.
  */
@@ -590,7 +650,9 @@ svn_cstring_strtoui64(apr_uint64_t *n, const char *str,
  * Parse the C string @a str into an unsigned 64 bit number, and return
  * it in @a *n. Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
- * Leading whitespace in @a str is skipped in a locale-dependent way.
+ *
+ * The behaviour otherwise is as described for svn_cstring_strtoui64(),
+ * including the upper limit of APR_INT64_MAX.
  *
  * @since New in 1.7.
  */
@@ -601,7 +663,9 @@ svn_cstring_atoui64(apr_uint64_t *n, const char *str);
  * Parse the C string @a str into an unsigned 32 bit number, and return
  * it in @a *n. Assume that the number is represented in base 10.
  * Raise an error if conversion fails (e.g. due to overflow).
- * Leading whitespace in @a str is skipped in a locale-dependent way.
+ *
+ * The behaviour otherwise is as described for svn_cstring_strtoui64(),
+ * including the upper limit of APR_INT64_MAX.
  *
  * @since New in 1.7.
  */

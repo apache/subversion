@@ -315,7 +315,7 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
           svn_ra_serf__xml_note(xes, MS_RESPONSE, "errcode", errcode);
         break;
       case MS_RESPONSE:
-        if ((status = svn_hash_gets(attrs, "status")) != NULL)
+        if ((status = svn_hash__get_cstring(attrs, "status", NULL)) != NULL)
           {
             error_item_t *item;
 
@@ -369,7 +369,7 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
         break;
 
       case MS_PROPSTAT:
-        if ((status = svn_hash_gets(attrs, "status")) != NULL)
+        if ((status = svn_hash__get_cstring(attrs, "status", NULL)) != NULL)
           {
             apr_hash_t *response_attrs;
             error_item_t *item;
@@ -428,7 +428,8 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
           item->http_status = server_error->handler->sline.code;
 
           /* Do we have a mod_dav specific message? */
-          item->message = svn_hash_gets(attrs, "human-readable");
+          item->message = svn_hash__get_cstring(attrs, "human-readable",
+                                                NULL);
 
           if (item->message)
             {
@@ -442,9 +443,6 @@ multistatus_closed(svn_ra_serf__xml_estate_t *xes,
 
               item->message = apr_pstrdup(server_error->pool, item->message);
             }
-          else
-            item->message = apr_pstrdup(server_error->pool,
-                                        svn_hash_gets(attrs, "description"));
 
 
           APR_ARRAY_PUSH(server_error->items, error_item_t *) = item;
@@ -709,7 +707,16 @@ svn_ra_serf__handle_server_error(svn_ra_serf__server_error_t *server_error,
      clear the error and return - allowing serf to wait for more data.
      */
   if (!err || SERF_BUCKET_READ_ERROR(err->apr_err))
-    return svn_error_trace(err);
+    {
+      /* Perhaps we already parsed some server generated message. Let's pass
+         all information we can get.*/
+      if (err)
+        err = svn_error_compose_create(
+          svn_ra_serf__server_error_create(handler, scratch_pool),
+          err);
+
+      return svn_error_trace(err);
+    }
 
   if (!APR_STATUS_IS_EOF(err->apr_err))
     {

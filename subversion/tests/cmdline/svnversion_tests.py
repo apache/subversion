@@ -72,8 +72,7 @@ def svnversion_test(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   if svntest.actions.run_and_verify_commit(wc_dir,
-                                           expected_output, expected_status,
-                                           None, wc_dir):
+                                           expected_output, expected_status):
     raise svntest.Failure
 
   # Unmodified, mixed
@@ -103,7 +102,7 @@ def svnversion_test(sbox):
                                            expected_output,
                                            expected_disk,
                                            expected_status,
-                                           None, None, None, None, None,
+                                           [],
                                            False, '--ignore-ancestry'):
     raise svntest.Failure
 
@@ -152,8 +151,7 @@ def svnversion_test(sbox):
     })
   svntest.actions.run_and_verify_checkout(repo_url + "/A", A_A_path,
                                           expected_output, expected_disk,
-                                          None, None, None, None,
-                                          "--depth=files")
+                                          [], "--depth=files")
 
   # Partial (sparse) checkout
   svntest.actions.run_and_verify_svnversion(A_A_path,
@@ -189,8 +187,7 @@ ext-file -r 1 %s/A/D/H/omega
   expected_status.tweak('A/C', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Update to get it on disk
   svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)

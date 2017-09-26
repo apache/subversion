@@ -96,21 +96,21 @@ SVNClient *SVNClient::getCppObject(jobject jthis)
 {
     static jfieldID fid = 0;
     jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
-                                                   JAVA_PACKAGE"/SVNClient");
+                                                   JAVAHL_CLASS("/SVNClient"));
     return (cppAddr == 0 ? NULL : reinterpret_cast<SVNClient *>(cppAddr));
 }
 
 void SVNClient::dispose(jobject jthis)
 {
     static jfieldID fid = 0;
-    SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/SVNClient");
+    SVNBase::dispose(jthis, &fid, JAVAHL_CLASS("/SVNClient"));
 }
 
 jobject SVNClient::getVersionExtended(bool verbose)
 {
     JNIEnv *const env = JNIUtil::getEnv();
 
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/types/VersionExtended");
+    jclass clazz = env->FindClass(JAVAHL_CLASS("/types/VersionExtended"));
     if (JNIUtil::isJavaExceptionThrown())
         return NULL;
 
@@ -167,8 +167,9 @@ const char *SVNClient::getLastPath()
  * List directory entries of a URL.
  */
 void SVNClient::list(const char *url, Revision &revision,
-                     Revision &pegRevision, svn_depth_t depth,
-                     int direntFields, bool fetchLocks,
+                     Revision &pegRevision, StringArray &patterns,
+                     svn_depth_t depth, int direntFields,
+                     bool fetchLocks, bool includeExternals,
                      ListCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -181,13 +182,14 @@ void SVNClient::list(const char *url, Revision &revision,
     Path urlPath(url, subPool);
     SVN_JNI_ERR(urlPath.error_occurred(), );
 
-    SVN_JNI_ERR(svn_client_list3(urlPath.c_str(),
+    SVN_JNI_ERR(svn_client_list4(urlPath.c_str(),
                                  pegRevision.revision(),
                                  revision.revision(),
+                                 patterns.array(subPool),
                                  depth,
                                  direntFields,
                                  fetchLocks,
-                                 FALSE, // include_externals
+                                 includeExternals,
                                  ListCallback::callback,
                                  callback,
                                  ctx, subPool.getPool()), );
@@ -265,7 +267,8 @@ rev_range_vector_to_apr_array(std::vector<RevisionRange> &revRanges,
 void SVNClient::logMessages(const char *path, Revision &pegRevision,
                             std::vector<RevisionRange> &logRanges,
                             bool stopOnCopy, bool discoverPaths,
-                            bool includeMergedRevisions, StringArray &revProps,
+                            bool includeMergedRevisions,
+                            StringArray &revProps, bool allRevProps,
                             int limit, LogMessageCallback *callback)
 {
     SVN::Pool subPool(pool);
@@ -285,10 +288,13 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
     if (JNIUtil::isExceptionThrown())
         return;
 
+    const apr_array_header_t *revprops = NULL;
+    if (!allRevProps)
+      revprops = revProps.array(subPool);
+
     SVN_JNI_ERR(svn_client_log5(targets, pegRevision.revision(), ranges,
                                 limit, discoverPaths, stopOnCopy,
-                                includeMergedRevisions,
-                                revProps.array(subPool),
+                                includeMergedRevisions, revprops,
                                 LogMessageCallback::callback, callback, ctx,
                                 subPool.getPool()), );
 }
@@ -1564,7 +1570,10 @@ void SVNClient::vacuum(const char *path,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_vacuum(path,
+    Path checkedPath(path, subPool);
+    SVN_JNI_ERR(checkedPath.error_occurred(),);
+
+    SVN_JNI_ERR(svn_client_vacuum(checkedPath.c_str(),
                                   remove_unversioned_items,
                                   remove_ignored_items,
                                   fix_recorded_timestamps,

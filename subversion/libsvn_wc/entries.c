@@ -483,9 +483,10 @@ read_one_entry(const svn_wc_entry_t **new_entry,
           child_abspath = svn_dirent_join(dir_abspath, child_name,
                                           scratch_pool);
 
-          SVN_ERR(svn_wc__read_conflicts(&child_conflicts,
+          SVN_ERR(svn_wc__read_conflicts(&child_conflicts, NULL,
                                          db, child_abspath,
                                          FALSE /* create tempfiles */,
+                                         TRUE /* tree_conflicts_only */,
                                          scratch_pool, scratch_pool));
 
           for (j = 0; j < child_conflicts->nelts; j++)
@@ -938,7 +939,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
       svn_skel_t *conflict;
       svn_boolean_t text_conflicted;
       svn_boolean_t prop_conflicted;
-      SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, NULL,
+      SVN_ERR(svn_wc__db_read_conflict_internal(&conflict, NULL, NULL,
                                                 wcroot, entry_relpath,
                                                 scratch_pool, scratch_pool));
 
@@ -1799,7 +1800,7 @@ write_entry(struct write_baton **entry_node,
      normal         replace+copied        base       base+work
      add+copied     replace+copied        work       work+work
 
-     although obviously the node is a directory rather then a file.
+     although obviously the node is a directory rather than a file.
      There are then more conversion states where the parent is
      replaced.
 
@@ -2003,7 +2004,7 @@ write_entry(struct write_baton **entry_node,
   if (entry_node && entry->tree_conflict_data)
     {
       /* Issues #3840/#3916: 1.6 stores multiple tree conflicts on the
-         parent node, 1.7 stores them directly on the conflited nodes.
+         parent node, 1.7 stores them directly on the conflicted nodes.
          So "((skel1) (skel2))" becomes "(skel1)" and "(skel2)" */
       svn_skel_t *skel;
 

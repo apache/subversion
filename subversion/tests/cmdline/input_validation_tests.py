@@ -266,14 +266,14 @@ def delete_repos_root(sbox):
   svntest.actions.run_and_verify_switch(sbox.wc_dir, sbox.ospath('A/D/G'),
                                         repo_url,
                                         None, None, expected_status,
-                                        None, None, None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'empty', '--ignore-ancestry')
 
   expected_status.tweak('A/B/F', switched='S')
   svntest.actions.run_and_verify_switch(sbox.wc_dir, sbox.ospath('A/B/F'),
                                         repo_url,
                                         None, None, expected_status,
-                                        None, None, None, None, None, None,
+                                        [], False,
                                         '--depth', 'empty', '--ignore-ancestry')
 
   # Delete the wcroot (which happens to be the repository root)

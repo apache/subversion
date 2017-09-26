@@ -80,29 +80,6 @@ if "%SVN_BRANCH%" GTR "1.9." (
         echo Done.
     )
 
-) ELSE IF "%SVN_BRANCH%" GTR "1.8." (
-
-    mkdir "%TESTDIR%\swig\pl-debug\SVN"
-    mkdir "%TESTDIR%\swig\pl-debug\auto\SVN"
-    xcopy subversion\bindings\swig\perl\native\*.pm "%TESTDIR%\swig\pl-debug\SVN" > nul:
-    pushd debug\subversion\bindings\swig\perl\native
-    for %%i in (*.dll) do (
-        set name=%%i
-        mkdir "%TESTDIR%\swig\pl-debug\auto\SVN\!name:~0,-4!"
-        xcopy "!name:~0,-4!.*" "%TESTDIR%\swig\pl-debug\auto\SVN\!name:~0,-4!" > nul:
-        xcopy /y "_Core.dll" "%TESTDIR%\swig\pl-debug\auto\SVN\!name:~0,-4!" > nul:
-    )
-    popd
-
-
-    SET PERL5LIB=%PERL5LIB%;%TESTDIR%\swig\pl-debug;
-    pushd subversion\bindings\swig\perl\native
-    perl -MExtUtils::Command::MM -e "test_harness()" t\*.t
-    IF ERRORLEVEL 1 (
-        echo [Test runner reported error !ERRORLEVEL!]
-        REM SET result=1
-    )
-    popd
 )
 
 if "%SVN_BRANCH%" GTR "1.9." (

@@ -3,9 +3,22 @@ API ERRATA -- $Id$
 Root Cause of Errata: implementation/docstring mismatch
  Library(s) Affected: libsvn_fs_fs, libsvn_fs_base
 Function(s) Affected: svn_fs_props_changed, svn_fs_contents_changed
-     New Behavior in: 1.9
-      Related Issues: n/a
+     New Behavior in: 1.9.0-1.9.2 (only, see note below)
+      Related Issues: 4598
 
+[ Note: This only applies to Subversion 1.9.0-1.9.2; later versions
+        restore the original behavior of svn_fs_props_changed and
+        svn_fs_contents_changed.  The new svn_fs_props_different
+        svn_fs_contents_different functions are available for the
+        API users as well.
+
+        References:
+
+        https://issues.apache.org/jira/browse/SVN-4598
+        https://mail-archives.apache.org/mod_mbox/subversion-dev/201509.mbox/%3CCAB84uBVe8QnEpbPVAb__yQjiDDoYjFn2+M9mPcdBXZCwMCpOLw@mail.gmail.com%3E
+        ("No-op changes no longer dumped by 'svnadmin dump' in 1.9")
+        https://mail-archives.apache.org/mod_mbox/subversion-dev/201302.mbox/%3C510B6AE9.9070106@collab.net%3E
+        ("Re: Reintegrate-like merges and diff_ignore_ancestry") ]
 
 == Details ==
 

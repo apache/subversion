@@ -97,7 +97,7 @@ public interface ISVNClient
      * @since 1.9
      */
     void status(String path, Depth depth,
-                boolean onServer, boolean ignoreLocal,
+                boolean onServer, boolean onDisk,
                 boolean getAll, boolean noIgnore,
                 boolean ignoreExternals, boolean depthAsSticky,
                 Collection<String> changelists, StatusCallback callback)
@@ -123,11 +123,29 @@ public interface ISVNClient
      * @param url             the url to list
      * @param revision        the revision to list
      * @param pegRevision     the revision to interpret url
+     * @param patterns        optional glob patterns to filter the result
      * @param depth           the depth to recurse into subdirectories
      * @param direntFields    the fields to retrieve
      * @param fetchLocks      whether to fetch lock information
+     * @param includeExternals whether to list external items
      * @param callback        the callback to receive the directory entries
+     * @since 1.10
      */
+    void list(String url, Revision revision, Revision pegRevision,
+              List<String> patterns, Depth depth, int direntFields,
+              boolean fetchLocks, boolean includeExternals,
+              ListItemCallback callback)
+            throws ClientException;
+
+    /**
+     * Lists the directory entries of a url on the server.
+     * <p>
+     * Behaves like the 1.10 version with
+     *     <code>patterns = null</code> and
+     *     <code>includeExternals = false</code>
+     * @deprecated
+     */
+    @Deprecated
     void list(String url, Revision revision, Revision pegRevision,
               Depth depth, int direntFields, boolean fetchLocks,
               ListCallback callback)
@@ -180,6 +198,21 @@ public interface ISVNClient
 
     /**
      * Retrieve the log messages for an item.
+     * <p>
+     * Behaves like the 1.10 version with <code>allRevProps = false</code>
+     * @deprecated
+     */
+    @Deprecated
+    void logMessages(String path, Revision pegRevision,
+                     List<RevisionRange> ranges, boolean stopOnCopy,
+                     boolean discoverPath, boolean includeMergedRevisions,
+                     Set<String> revProps, long limit,
+                     LogMessageCallback callback)
+            throws ClientException;
+
+
+    /**
+     * Retrieve the log messages for an item.
      * @param path          path or url to get the log message for.
      * @param pegRevision   revision to interpret path
      * @param ranges        an array of revision ranges to show
@@ -189,15 +222,19 @@ public interface ISVNClient
      * @param includeMergedRevisions include log messages for revisions which
      *                               were merged.
      * @param revProps      the revprops to retrieve
+     * @param allRevProps   if <code>true</code>, ignore the
+     *                      <code>revProps</code> parameter and retrieve all
+     *                      revision properties
      * @param limit         limit the number of log messages (if 0 or less no
      *                      limit)
      * @param callback      the object to receive the log messages
+     * @since 1.10
      */
     void logMessages(String path, Revision pegRevision,
                      List<RevisionRange> ranges, boolean stopOnCopy,
                      boolean discoverPath, boolean includeMergedRevisions,
-                     Set<String> revProps, long limit,
-                     LogMessageCallback callback)
+                     Set<String> revProps, boolean allRevProps,
+                     long limit, LogMessageCallback callback)
             throws ClientException;
 
     /**
@@ -502,9 +539,9 @@ public interface ISVNClient
      * Recursively cleans up a local directory, finishing any
      * incomplete operations, removing lockfiles, etc.
      * <p>
-     * Behaves like the 1.9 version with <code>breakLocks</code> and
-     * <code>includeExternals</code> set to <code>false<code>, and the
-     * other flags to <code>true</code>.
+     * Behaves like the 1.9 version with <code>includeExternals</code>
+     * set to <code>false<code>, and the other flags to
+     * <code>true</code>.
      * @param path a local directory.
      * @throws ClientException
      */

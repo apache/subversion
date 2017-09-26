@@ -34,7 +34,7 @@ typedef struct file_stats_t
   /* file name as found in the open() call */
   const char *name;
 
-  /* file size as determined during the this tool run.  Will be 0 for
+  /* file size as determined during the tool run.  Will be 0 for
    * files that no longer exist.  However, there may still be entries
    * in the read_map. */
   apr_int64_t size;
@@ -198,9 +198,9 @@ open_file(const char *name, int handle)
       /* determine first revision of rev / packed rev files */
       if (strstr(name, "/db/revs/") != NULL && strstr(name, "manifest") == NULL)
         if (strstr(name, ".pack/pack") != NULL)
-          file->rev_num = atoi(strstr(name, "/db/revs/") + 9);
+          file->rev_num = SVN_STR_TO_REV(strstr(name, "/db/revs/") + 9);
         else
-          file->rev_num = atoi(strrchr(name, '/') + 1);
+          file->rev_num = SVN_STR_TO_REV(strrchr(name, '/') + 1);
       else
         file->rev_num = -1;
 
@@ -225,7 +225,7 @@ open_file(const char *name, int handle)
       *key = handle;
 
       handle_info = apr_pcalloc(pool, sizeof(*handle_info));
-      apr_hash_set(handles, key, sizeof(handle), handle_info);
+      apr_hash_set(handles, key, sizeof(*key), handle_info);
     }
 
   /* link handle to file */

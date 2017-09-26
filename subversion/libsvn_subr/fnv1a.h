@@ -41,6 +41,11 @@ typedef struct svn_fnv1a_32__context_t svn_fnv1a_32__context_t;
 svn_fnv1a_32__context_t *
 svn_fnv1a_32__context_create(apr_pool_t *pool);
 
+/* Reset the FNV-1a checksum CONTEXT to initial state.
+ */
+void
+svn_fnv1a_32__context_reset(svn_fnv1a_32__context_t *context);
+
 /* Feed LEN bytes from DATA into the FNV-1a checksum creation CONTEXT.
  */
 void
@@ -63,6 +68,11 @@ typedef struct svn_fnv1a_32x4__context_t svn_fnv1a_32x4__context_t;
 svn_fnv1a_32x4__context_t *
 svn_fnv1a_32x4__context_create(apr_pool_t *pool);
 
+/* Reset the modified FNV-1a checksum CONTEXT to initial state.
+ */
+void
+svn_fnv1a_32x4__context_reset(svn_fnv1a_32x4__context_t *context);
+
 /* Feed LEN bytes from DATA into the modified FNV-1a checksum creation
  * CONTEXT.
  */
@@ -75,6 +85,14 @@ svn_fnv1a_32x4__update(svn_fnv1a_32x4__context_t *context,
  */
 apr_uint32_t
 svn_fnv1a_32x4__finalize(svn_fnv1a_32x4__context_t *context);
+
+/* Set HASHES to the 4 partial hash sums produced by the modified FVN-1a
+ * over INPUT of LEN bytes.
+ */
+void
+svn__fnv1a_32x4_raw(apr_uint32_t hashes[4],
+                    const void *input,
+                    apr_size_t len);
 
 #ifdef __cplusplus
 }

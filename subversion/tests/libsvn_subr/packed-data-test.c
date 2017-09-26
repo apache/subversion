@@ -222,6 +222,7 @@ test_byte_stream(apr_pool_t *pool)
 
   /* the stream shall contain exactly the items we put into it */
   SVN_TEST_ASSERT(svn_packed__byte_count(stream) == 20);
+  SVN_TEST_ASSERT(svn_packed__byte_block_count(stream) == COUNT);
   for (i = 0; i < COUNT; ++i)
     {
       svn_string_t string;

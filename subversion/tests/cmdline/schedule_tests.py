@@ -26,7 +26,7 @@
 ######################################################################
 
 # General modules
-import os, logging
+import os, logging, stat
 
 logger = logging.getLogger()
 
@@ -198,11 +198,11 @@ def add_executable(sbox):
                                        'propget', "svn:executable", file_ospath)
 
   test_cases = [
-    ("all_exe",   0777, 1),
-    ("none_exe",  0666, 0),
-    ("user_exe",  0766, 1),
-    ("group_exe", 0676, 0),
-    ("other_exe", 0667, 0),
+    ("all_exe",   svntest.main.S_ALL_RWX, 1),
+    ("none_exe",  svntest.main.S_ALL_RW, 0),
+    ("user_exe",  svntest.main.S_ALL_RW | stat.S_IXUSR, 1),
+    ("group_exe", svntest.main.S_ALL_RW | stat.S_IXGRP, 0),
+    ("other_exe", svntest.main.S_ALL_RW | stat.S_IXOTH, 0),
     ]
   for test_case in test_cases:
     runTest(sbox.wc_dir, *test_case)
@@ -495,8 +495,7 @@ def delete_missing(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 # Regression test for issue #854:
@@ -721,8 +720,7 @@ def replace_dir_delete_child(sbox):
 
   svntest.actions.run_and_verify_commit(sbox.wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, sbox.wc_dir)
+                                        expected_status)
 
 
 ########################################################################

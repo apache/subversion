@@ -904,20 +904,47 @@ static const testcase_canonicalize_t uri_canonical_tests[] =
     { "https://[::1]:443",     "https://[::1]" },
     { "http://[FACE:B00C::]/s","http://[face:b00c::]/s" },
     { "svn+ssh://b@[1:2::3]/s","svn+ssh://b@[1:2::3]/s" },
+    { "file:///A%2f%2Fb%2fc",  "file:///A/b/c"},
+    { "file:///A%2fb%2f%2Fc",  "file:///A/b/c"},
 #ifdef SVN_USE_DOS_PATHS
     { "file:///c:/temp/repos", "file:///C:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///c:/",           "file:///C:" },
+    { "file:///c:%2ftemp",     "file:///C:/temp"},
+    { "file:///C:hi",          "file:///C:hi" },
+    { "file:///c:hi",          "file:///C:hi" },
+    { "file:///C:hi/Q",        "file:///C:hi/Q" },
+    { "file:///c:hi/q",        "file:///C:hi/q" },
+    { "file:///c:hi%2fD",      "file:///C:hi/D" },
+    { "file:///c:hi%25/A",     "file:///C:hi%25/A"},
+    { "file:///c:hi%2E/A",     "file:///C:hi./A"},
+    { "file:///c:hi%/A",       "file:///C:hi%25/A"},
 #else /* !SVN_USE_DOS_PATHS */
     { "file:///c:/temp/repos", "file:///c:/temp/repos" },
     { "file:///c:/temp/REPOS", "file:///c:/temp/REPOS" },
     { "file:///C:/temp/REPOS", "file:///C:/temp/REPOS" },
     { "file:///c:/",           "file:///c:" },
+    { "file:///c:%2ftemp",     "file:///c:/temp"},
+    { "file:///C:hi",          "file:///C:hi" },
+    { "file:///c:hi",          "file:///c:hi" },
+    { "file:///C:hi/Q",        "file:///C:hi/Q" },
+    { "file:///c:hi/q",        "file:///c:hi/q" },
+    { "file:///c:hi%2fD",      "file:///c:hi/D" },
+    { "file:///c:hi%25/A",     "file:///c:hi%25/A" },
+    { "file:///c:hi%2E/A",     "file:///c:hi./A"},
+    { "file:///c:hi%/A",       "file:///c:hi%25/A"},
 #endif /* SVN_USE_DOS_PATHS */
     /* Hostnames that look like non-canonical paths */
     { "file://./foo",             "file://./foo" },
     { "http://./foo",             "http://./foo" },
+    /* Some invalid URLs, these still have a canonical form */
+    { "http://server:81:81/",  "http://server:81:81" },
+    { "http://server:81foo/",  "http://server:81foo" },
+    { "http://server::/",      "http://server::" },
+    { "http://server:-/",      "http://server:-" },
+    { "http://hst:1.2.3.4.5/", "http://hst:1.2.3.4.5"},
+    { "http://hst:1.2.999.4/", "http://hst:1.2.999.4"},
   /* svn_uri_is_canonical() was a private function in the 1.6 API, and
      has since taken a MAJOR change of direction, namely that only
      absolute URLs are considered canonical uris now. */
@@ -1217,6 +1244,12 @@ test_uri_is_canonical(apr_pool_t *pool)
                                  "\"%s\"; canonical form is \"%s\"",
                                  t->path,
                                  canonical ? "TRUE" : "FALSE",
+                                 t->result);
+
+      if (t->result && !svn_uri_is_canonical(t->result, pool))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_uri_is_canonical(\"%s\") returned "
+                                 "FALSE on canonical form",
                                  t->result);
     }
 
@@ -2332,6 +2365,25 @@ test_dirent_from_file_url(apr_pool_t *pool)
     { "file:///A%7C",              "A:/" },
     { "file:///A%7C/dir",          "A:/dir" },
     { "file:///A%7Cdir",           "A:dir" },
+    { "file:///A%7C%5Cdir",        "A:/dir" },
+    { "file:///A%7C%5Cdir%5Cfile", "A:/dir\\file" },
+    { "file:///A:%5Cdir",          "A:/dir" },
+    { "file:///A:%5Cdir%5Cfile",   "A:/dir\\file" },
+    { "file://localhost/A:%5Cfile","A:/file"},
+    { "file://localhost/A:file",   "A:file"}
+#else
+    { "file:///A:",                "/A:" },
+    { "file:///A:/dir",            "/A:/dir" },
+    { "file:///A:dir",             "/A:dir" },
+    { "file:///A%7C",              "/A|" },
+    { "file:///A%7C/dir",          "/A|/dir" },
+    { "file:///A%7Cdir",           "/A|dir" },
+    { "file:///A%7C%5Cdir",        "/A|\\dir" },
+    { "file:///A%7C%5Cdir%5Cfile", "/A|\\dir\\file" },
+    { "file:///A:%5Cdir",          "/A:\\dir" },
+    { "file:///A:%5Cdir%5Cfile",   "/A:\\dir\\file" },
+    { "file://localhost/A:%5Cfile","/A:\\file" },
+    { "file://localhost/A:file",   "/A:file" }
 #endif
   };
   int i;
@@ -2347,6 +2399,11 @@ test_dirent_from_file_url(apr_pool_t *pool)
                                  "svn_uri_get_dirent_from_file_url(\"%s\") "
                                  "returned \"%s\" expected \"%s\"",
                                  tests[i].url, result, tests[i].result);
+      if (!svn_dirent_is_canonical(result, pool))
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+          "svn_uri_get_dirent_from_file_url(\"%s\") "
+          "returned \"%s\", which is not canonical.",
+          tests[i].url, result);
     }
 
   return SVN_NO_ERROR;

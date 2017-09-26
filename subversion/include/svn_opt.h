@@ -24,8 +24,8 @@
  * @brief Option and argument parsing for Subversion command lines
  */
 
-#ifndef SVN_OPTS_H
-#define SVN_OPTS_H
+#ifndef SVN_OPT_H
+#define SVN_OPT_H
 
 #include <apr.h>
 #include <apr_pools.h>
@@ -780,4 +780,4 @@ svn_opt_print_help(apr_getopt_t *os,
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_OPTS_H */
+#endif /* SVN_OPT_H */

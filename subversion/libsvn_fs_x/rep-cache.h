@@ -40,6 +40,10 @@ svn_error_t *
 svn_fs_x__open_rep_cache(svn_fs_t *fs,
                          apr_pool_t *scratch_pool);
 
+/* Close the rep cache database associated with FS. */
+svn_error_t *
+svn_fs_x__close_rep_cache(svn_fs_t *fs);
+
 /* Set *EXISTS to TRUE iff the rep-cache DB file exists. */
 svn_error_t *
 svn_fs_x__exists_rep_cache(svn_boolean_t *exists,
@@ -61,11 +65,12 @@ svn_fs_x__walk_rep_reference(svn_fs_t *fs,
                              apr_pool_t *scratch_pool);
 
 /* Return the representation REP in FS which has fulltext CHECKSUM.
-   REP is allocated in RESULT_POOL.  If the rep cache database has not been
-   opened, just set *REP to NULL.  Returns SVN_ERR_FS_CORRUPT if a reference
-   beyond HEAD is detected.  Uses SCRATCH_POOL for temporary allocations. */
+   *REP_P is allocated in RESULT_POOL.  If the rep cache database has not
+   been opened, just set *REP_P to NULL.  Returns SVN_ERR_FS_CORRUPT if
+   a reference beyond HEAD is detected.  Uses SCRATCH_POOL for temporary
+   allocations.*/
 svn_error_t *
-svn_fs_x__get_rep_reference(svn_fs_x__representation_t **rep,
+svn_fs_x__get_rep_reference(svn_fs_x__representation_t **rep_p,
                             svn_fs_t *fs,
                             svn_checksum_t *checksum,
                             apr_pool_t *result_pool,
@@ -88,12 +93,16 @@ svn_fs_x__del_rep_reference(svn_fs_t *fs,
                             svn_revnum_t youngest,
                             apr_pool_t *scratch_pool);
 
-/* Start a transaction to take an SQLite reserved lock that prevents
-   other writes. */
-svn_error_t *
-svn_fs_x__lock_rep_cache(svn_fs_t *fs,
-                         apr_pool_t *scratch_pool);
 
+/* Start a transaction to take an SQLite reserved lock that prevents
+   other writes, call BODY, end the transaction, and return what BODY returned.
+ */
+svn_error_t *
+svn_fs_x__with_rep_cache_lock(svn_fs_t *fs,
+                              svn_error_t *(*body)(void *baton,
+                                                   apr_pool_t *pool),
+                              void *baton,
+                              apr_pool_t *pool);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

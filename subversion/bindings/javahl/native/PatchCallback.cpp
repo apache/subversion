@@ -80,7 +80,7 @@ PatchCallback::singlePatch(svn_boolean_t *filtered,
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/PatchCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/PatchCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 
@@ -106,7 +106,7 @@ PatchCallback::singlePatch(svn_boolean_t *filtered,
   jboolean jfiltered = env->CallBooleanMethod(m_callback, mid, jcanonPath,
                                               jpatchAbsPath, jrejectAbsPath);
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
+    POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 
   *filtered = (jfiltered ? TRUE : FALSE);
 

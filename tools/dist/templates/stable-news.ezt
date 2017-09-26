@@ -5,15 +5,18 @@
 </h3> 
  
 <p>We are pleased to announce the release of Apache Subversion [version].
-   This is the most complete Subversion release to date, and we encourage
-   users of Subversion to upgrade as soon as reasonable.  Please see the
+[if-any is_recommended]   This is the most complete Subversion release to date, and we encourage
+   users of Subversion to upgrade as soon as reasonable.
+[else]   This is the most complete release of the [major-minor].x line to date,
+   and we encourage all users to upgrade as soon as reasonable.
+[end]   Please see the
    <a href=""
    >release announcement</a> and the
    <a href="http://svn.apache.org/repos/asf/subversion/tags/[version]/CHANGES"
    >change log</a> for more information about this release.</p> 
  
 <p>To get this release from the nearest mirror, please visit our
-   <a href="/download/#[anchor]">download page</a>.</p> 
+   <a href="/download.cgi#[anchor]">download page</a>.</p> 
  
 </div> <!-- #news-[date] --> 
 

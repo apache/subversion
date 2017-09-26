@@ -1812,6 +1812,7 @@ delete_entry(const char *path,
     {
       if (eb->conflict_func)
         SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, local_abspath,
+                                                 kind,
                                                  tree_conflict,
                                                  NULL /* merge_options */,
                                                  eb->conflict_func,
@@ -1862,12 +1863,13 @@ add_directory(const char *path,
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
   SVN_ERR(make_dir_baton(&db, path, eb, pb, TRUE, pool));
-  SVN_ERR(calculate_repos_relpath(&db->new_repos_relpath, db->local_abspath,
-                                  NULL, eb, pb, db->pool, scratch_pool));
   *child_baton = db;
 
   if (db->skip_this)
     return SVN_NO_ERROR;
+
+  SVN_ERR(calculate_repos_relpath(&db->new_repos_relpath, db->local_abspath,
+                                  NULL, eb, pb, db->pool, scratch_pool));
 
   SVN_ERR(mark_directory_edited(db, pool));
 
@@ -1935,9 +1937,15 @@ add_directory(const char *path,
       SVN_ERR_ASSERT(conflicted);
       versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
     }
-  else if (status == svn_wc__db_status_normal)
+  else if (status == svn_wc__db_status_normal
+           || status == svn_wc__db_status_incomplete)
     {
-      if (wc_kind == svn_node_dir)
+      svn_boolean_t root;
+
+      SVN_ERR(svn_wc__db_is_wcroot(&root, eb->db, db->local_abspath,
+                                   scratch_pool));
+
+      if (root)
         {
           /* !! We found the root of a working copy obstructing the wc !!
 
@@ -1949,8 +1957,15 @@ add_directory(const char *path,
              resolved.  Note that svn_wc__db_base_add_not_present_node()
              explicitly adds the node into the parent's node database. */
 
-          svn_hash_sets(pb->not_present_nodes, apr_pstrdup(pb->pool, db->name),
+          svn_hash_sets(pb->not_present_nodes,
+                        apr_pstrdup(pb->pool, db->name),
                         svn_node_kind_to_word(svn_node_dir));
+        }
+      else if (wc_kind == svn_node_dir)
+        {
+          /* We have an editor violation. Github sometimes does this
+             in its subversion compatibility code, when changing the
+             depth of a working copy, or on updates from incomplete */
         }
       else
         {
@@ -2740,7 +2755,8 @@ close_directory(void *dir_baton,
                                     db->old_revision,
                                     db->new_repos_relpath,
                                     svn_node_dir, svn_node_dir,
-                                    db->parent_baton->deletion_conflicts
+                                    (db->parent_baton
+                                     && db->parent_baton->deletion_conflicts)
                                       ? svn_hash_gets(
                                             db->parent_baton->deletion_conflicts,
                                             db->name)
@@ -2801,6 +2817,7 @@ close_directory(void *dir_baton,
 
   if (conflict_skel && eb->conflict_func)
     SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, db->local_abspath,
+                                             svn_node_dir,
                                              conflict_skel,
                                              NULL /* merge_options */,
                                              eb->conflict_func,
@@ -2866,10 +2883,7 @@ absent_node(const char *path,
   if (pb->skip_this)
     return SVN_NO_ERROR;
 
-  SVN_ERR(mark_directory_edited(pb, scratch_pool));
-
   local_abspath = svn_dirent_join(pb->local_abspath, name, scratch_pool);
-
   /* If an item by this name is scheduled for addition that's a
      genuine tree-conflict.  */
   err = svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
@@ -2888,6 +2902,10 @@ absent_node(const char *path,
       status = svn_wc__db_status_not_present;
       kind = svn_node_unknown;
     }
+
+  if (status != svn_wc__db_status_server_excluded)
+    SVN_ERR(mark_directory_edited(pb, scratch_pool));
+  /* Else fall through as we should update the revision anyway */
 
   if (status == svn_wc__db_status_normal)
     {
@@ -2912,31 +2930,53 @@ absent_node(const char *path,
         }
       else
         {
-          /* The server asks us to replace a file external
-             (Existing BASE node; not reported by the working copy crawler or
-              there would have been a delete_entry() call.
+          svn_boolean_t file_external;
+          svn_revnum_t revnum;
 
-             There is no way we can store this state in the working copy as
-             the BASE layer is already filled.
+          SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, &revnum, NULL, NULL,
+                                           NULL, NULL, NULL, NULL, NULL, NULL,
+                                           NULL, NULL, NULL, NULL,
+                                           &file_external,
+                                           eb->db, local_abspath,
+                                           scratch_pool, scratch_pool));
 
-             We could error out, but that is not helping anybody; the user is not
-             even seeing with what the file external would be replaced, so let's
-             report a skip and continue the update.
-           */
-
-          if (eb->notify_func)
+          if (file_external)
             {
-              svn_wc_notify_t *notify;
-              notify = svn_wc_create_notify(
+              /* The server asks us to replace a file external
+                 (Existing BASE node; not reported by the working copy crawler
+                  or there would have been a delete_entry() call.
+
+                 There is no way we can store this state in the working copy as
+                 the BASE layer is already filled.
+                 We could error out, but that is not helping anybody; the user is not
+                 even seeing with what the file external would be replaced, so let's
+                 report a skip and continue the update.
+               */
+
+              if (eb->notify_func)
+                {
+                  svn_wc_notify_t *notify;
+                  notify = svn_wc_create_notify(
                                     local_abspath,
                                     svn_wc_notify_update_skip_obstruction,
                                     scratch_pool);
 
-              eb->notify_func(eb->notify_baton, notify, scratch_pool);
-            }
+                  eb->notify_func(eb->notify_baton, notify, scratch_pool);
+                }
 
-          svn_pool_destroy(scratch_pool);
-          return SVN_NO_ERROR;
+              svn_pool_destroy(scratch_pool);
+              return SVN_NO_ERROR;
+            }
+          else
+            {
+              /* We have a normal local node that will now be hidden for the
+                 user. Let's try to delete what is there. This may introduce
+                 tree conflicts if there are local changes */
+              SVN_ERR(delete_entry(path, revnum, pb, scratch_pool));
+
+              /* delete_entry() promises that BASE is empty after the operation,
+                 so we can just fall through now */
+            }
         }
     }
   else if (status == svn_wc__db_status_not_present
@@ -2986,6 +3026,7 @@ absent_node(const char *path,
       {
         if (eb->conflict_func)
           SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, local_abspath,
+                                                   kind,
                                                    tree_conflict,
                                                    NULL /* merge_options */,
                                                    eb->conflict_func,
@@ -3049,13 +3090,13 @@ add_file(const char *path,
   SVN_ERR_ASSERT(! (copyfrom_path || SVN_IS_VALID_REVNUM(copyfrom_rev)));
 
   SVN_ERR(make_file_baton(&fb, pb, path, TRUE, pool));
-  SVN_ERR(calculate_repos_relpath(&fb->new_repos_relpath, fb->local_abspath,
-                                  NULL, eb, pb, fb->pool, pool));
   *file_baton = fb;
 
   if (fb->skip_this)
     return SVN_NO_ERROR;
 
+  SVN_ERR(calculate_repos_relpath(&fb->new_repos_relpath, fb->local_abspath,
+                                  NULL, eb, pb, fb->pool, pool));
   SVN_ERR(mark_file_edited(fb, pool));
 
   /* The file_pool can stick around for a *long* time, so we want to
@@ -3106,20 +3147,35 @@ add_file(const char *path,
       SVN_ERR_ASSERT(conflicted);
       versioned_locally_and_present = FALSE; /* Tree conflict ACTUAL-only node */
     }
-  else if (status == svn_wc__db_status_normal)
+  else if (status == svn_wc__db_status_normal
+           || status == svn_wc__db_status_incomplete)
     {
-      if (wc_kind == svn_node_dir)
+      svn_boolean_t root;
+
+      SVN_ERR(svn_wc__db_is_wcroot(&root, eb->db, fb->local_abspath,
+                                   scratch_pool));
+
+      if (root)
         {
           /* !! We found the root of a working copy obstructing the wc !!
 
              If the directory would be part of our own working copy then
-             we wouldn't have been called as an add_file().
+             we wouldn't have been called as an add_directory().
 
              The only thing we can do is add a not-present node, to allow
              a future update to bring in the new files when the problem is
-             resolved. */
-          svn_hash_sets(pb->not_present_nodes, apr_pstrdup(pb->pool, fb->name),
-                        svn_node_kind_to_word(svn_node_file));
+             resolved.  Note that svn_wc__db_base_add_not_present_node()
+             explicitly adds the node into the parent's node database. */
+
+          svn_hash_sets(pb->not_present_nodes,
+                        apr_pstrdup(pb->pool, fb->name),
+                        svn_node_kind_to_word(svn_node_dir));
+        }
+      else if (wc_kind == svn_node_dir)
+        {
+          /* We have an editor violation. Github sometimes does this
+             in its subversion compatibility code, when changing the
+             depth of a working copy, or on updates from incomplete */
         }
       else
         {
@@ -3519,14 +3575,22 @@ lazy_open_target(svn_stream_t **stream,
                  apr_pool_t *scratch_pool)
 {
   struct handler_baton *hb = baton;
+  svn_wc__db_install_data_t *install_data;
 
+  /* By convention return value is undefined on error, but we rely
+     on HB->INSTALL_DATA value in window_handler() and abort
+     INSTALL_STREAM if is not NULL on error.
+     So we store INSTALL_DATA to local variable first, to leave
+     HB->INSTALL_DATA unchanged on error. */
   SVN_ERR(svn_wc__db_pristine_prepare_install(stream,
-                                              &hb->install_data,
+                                              &install_data,
                                               &hb->new_text_base_sha1_checksum,
                                               NULL,
                                               hb->fb->edit_baton->db,
                                               hb->fb->dir_baton->local_abspath,
                                               result_pool, scratch_pool));
+
+  hb->install_data = install_data;
 
   return SVN_NO_ERROR;
 }
@@ -4510,6 +4574,7 @@ close_file(void *file_baton,
 
   if (conflict_skel && eb->conflict_func)
     SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, fb->local_abspath,
+                                             svn_node_file,
                                              conflict_skel,
                                              NULL /* merge_options */,
                                              eb->conflict_func,

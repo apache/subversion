@@ -1670,10 +1670,196 @@ test_remove_prefix_from_catalog(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_rangelist_merge_overlap(apr_pool_t *pool)
+{
+  svn_rangelist_t * changes;
+  /* 15014-19472,19473-19612*,19613-19614,19615-19630*,19631-19634,19635-20055* */
+  svn_rangelist_t * rangelist = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+  svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
+
+  /* This range is optional for reproducing issue #4686 */
+  mrange->start = 15013;
+  mrange->end = 19472;
+  mrange->inheritable = TRUE;
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
+
+  mrange = apr_pcalloc(pool, sizeof(*mrange));
+  mrange->start = 19472;
+  mrange->end = 19612;
+  mrange->inheritable = FALSE;
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
+
+  /* This range is optional for reproducing issue #4686 */
+  mrange = apr_pcalloc(pool, sizeof(*mrange));
+  mrange->start = 19612;
+  mrange->end = 19614;
+  mrange->inheritable = TRUE;
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
+
+  mrange = apr_pcalloc(pool, sizeof(*mrange));
+  mrange->start = 19614;
+  mrange->end = 19630;
+  mrange->inheritable = FALSE;
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
+
+  mrange = apr_pcalloc(pool, sizeof(*mrange));
+  mrange->start = 19630;
+  mrange->end = 19634;
+  mrange->inheritable = TRUE;
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
+
+  /* This range is optional for reproducing issue #4686 */
+  mrange = apr_pcalloc(pool, sizeof(*mrange));
+  mrange->start = 19634;
+  mrange->end = 20055;
+  mrange->inheritable = FALSE;
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
+
+  /* 15014-20515* */
+  changes = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
+  mrange = apr_pcalloc(pool, sizeof(*mrange));
+  mrange->start = 15013;
+  mrange->end = 20515;
+  mrange->inheritable = FALSE;
+  APR_ARRAY_PUSH(changes, svn_merge_range_t *) = mrange;
+#if 0
+  {
+    svn_string_t * tmpString;
+
+    svn_rangelist_to_string(&tmpString, rangelist, pool);
+    printf("rangelist %s\n", tmpString->data);
+  }
+  {
+    svn_string_t * tmpString;
+
+    svn_rangelist_to_string(&tmpString, changes, pool);
+    printf("changes %s\n", tmpString->data);
+  }
+#endif
+
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(rangelist));
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(changes));
+
+  SVN_ERR(svn_rangelist_merge2(rangelist, changes, pool, pool));
+
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(rangelist));
+
+#if 0
+  {
+    svn_string_t * tmpString;
+
+    svn_rangelist_to_string(&tmpString, rangelist, pool);
+    printf("result %s\n", tmpString->data);
+  }
+#endif
+
+  /* wrong result
+    result 15014-19472,19473-19612*,19613-19614,19615-19630*,19634-19631*,19631-19634,19635-20515*
+  */
+
+  {
+     svn_string_t * tmp_string;
+     svn_rangelist_t *range_list;
+
+     svn_rangelist_to_string(&tmp_string, rangelist, pool);
+
+     SVN_ERR(svn_rangelist__parse(&range_list, tmp_string->data, pool));
+  }
+  
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_rangelist_loop(apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int x, y;
+
+  for (x = 0; x < 62; x++)
+    for (y = x + 1; y < 63; y++)
+      {
+        svn_rangelist_t *base_list;
+        svn_rangelist_t *change_list;
+        svn_merge_range_t *mrange;
+        svn_pool_clear(iterpool);
+
+        SVN_ERR(svn_rangelist__parse(&base_list,
+                                     "2,4,7-9,12-15,18-20,"
+                                     "22*,25*,28-30*,33-35*,"
+                                     "38-40,43-45*,48-50,52-54,56-59*",
+                                     iterpool));
+
+        change_list = apr_array_make(iterpool, 1, sizeof(mrange));
+
+        mrange = apr_pcalloc(pool, sizeof(*mrange));
+        mrange->start = x;
+        mrange->end = y;
+        APR_ARRAY_PUSH(change_list, svn_merge_range_t *) = mrange;
+
+        {
+          svn_rangelist_t *bl = svn_rangelist_dup(base_list, iterpool);
+          svn_rangelist_t *cl = svn_rangelist_dup(change_list, iterpool);
+
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(bl));
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(cl));
+
+          SVN_ERR(svn_rangelist_merge2(bl, cl, iterpool, iterpool));
+
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(bl));
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(cl));
+
+          /* TODO: Verify result */
+        }
+
+        {
+          svn_rangelist_t *bl = svn_rangelist_dup(base_list, iterpool);
+          svn_rangelist_t *cl = svn_rangelist_dup(change_list, iterpool);
+
+          SVN_ERR(svn_rangelist_merge2(cl, bl, iterpool, iterpool));
+
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(bl));
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(cl));
+
+          /* TODO: Verify result */
+        }
+
+        mrange->inheritable = TRUE;
+
+        {
+          svn_rangelist_t *bl = svn_rangelist_dup(base_list, iterpool);
+          svn_rangelist_t *cl = svn_rangelist_dup(change_list, iterpool);
+
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(bl));
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(cl));
+
+          SVN_ERR(svn_rangelist_merge2(bl, cl, iterpool, iterpool));
+
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(bl));
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(cl));
+
+          /* TODO: Verify result */
+        }
+
+        {
+          svn_rangelist_t *bl = svn_rangelist_dup(base_list, iterpool);
+          svn_rangelist_t *cl = svn_rangelist_dup(change_list, iterpool);
+
+          SVN_ERR(svn_rangelist_merge2(cl, bl, iterpool, iterpool));
+
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(bl));
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(cl));
+
+          /* TODO: Verify result */
+        }
+      }
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
-static int max_threads = 1;
+static int max_threads = 4;
 
 static struct svn_test_descriptor_t test_funcs[] =
   {
@@ -1714,6 +1900,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "diff of rangelists"),
     SVN_TEST_PASS2(test_remove_prefix_from_catalog,
                    "removal of prefix paths from catalog keys"),
+    SVN_TEST_XFAIL2(test_rangelist_merge_overlap,
+                   "merge of rangelists with overlaps (issue 4686)"),
+    SVN_TEST_XFAIL2(test_rangelist_loop,
+                    "test rangelist edgecases via loop"),
     SVN_TEST_NULL
   };
 

@@ -45,6 +45,8 @@
 #include "svn_version.h"
 
 #include "private/svn_sqlite.h"
+#include "private/svn_subr_private.h"
+#include "private/svn_utf_private.h"
 
 #include "sysinfo.h"
 #include "svn_private_config.h"
@@ -125,7 +127,7 @@ const apr_array_header_t *
 svn_sysinfo__linked_libs(apr_pool_t *pool)
 {
   svn_version_ext_linked_lib_t *lib;
-  apr_array_header_t *array = apr_array_make(pool, 3, sizeof(*lib));
+  apr_array_header_t *array = apr_array_make(pool, 6, sizeof(*lib));
 
   lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
   lib->name = "APR";
@@ -142,6 +144,11 @@ svn_sysinfo__linked_libs(apr_pool_t *pool)
 #endif
 
   lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
+  lib->name = "Expat";
+  lib->compiled_version = apr_pstrdup(pool, svn_xml__compiled_version());
+  lib->runtime_version = apr_pstrdup(pool, svn_xml__runtime_version());
+
+  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
   lib->name = "SQLite";
   lib->compiled_version = apr_pstrdup(pool, svn_sqlite__compiled_version());
 #ifdef SVN_SQLITE_INLINE
@@ -149,6 +156,16 @@ svn_sysinfo__linked_libs(apr_pool_t *pool)
 #else
   lib->runtime_version = apr_pstrdup(pool, svn_sqlite__runtime_version());
 #endif
+
+  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
+  lib->name = "Utf8proc";
+  lib->compiled_version = apr_pstrdup(pool, svn_utf__utf8proc_compiled_version());
+  lib->runtime_version = apr_pstrdup(pool, svn_utf__utf8proc_runtime_version());
+
+  lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
+  lib->name = "ZLib";
+  lib->compiled_version = apr_pstrdup(pool, svn_zlib__compiled_version());
+  lib->runtime_version = apr_pstrdup(pool, svn_zlib__runtime_version());
 
   return array;
 }
@@ -649,7 +666,7 @@ system_info(SYSTEM_INFO *sysinfo,
             SYSTEM_INFO *local_sysinfo)
 {
   FNGETNATIVESYSTEMINFO GetNativeSystemInfo_ = (FNGETNATIVESYSTEMINFO)
-    GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetNativeSystemInfo");
+    GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "GetNativeSystemInfo");
 
   memset(sysinfo, 0, sizeof *sysinfo);
   if (local_sysinfo)
@@ -858,12 +875,12 @@ enum_loaded_modules(apr_pool_t *pool)
   DWORD size;
   FNENUMPROCESSMODULES EnumProcessModules_;
 
-  psapi_dll = GetModuleHandleA("psapi.dll");
+  psapi_dll = GetModuleHandleW(L"psapi.dll");
 
   if (!psapi_dll)
     {
       /* Load and never unload, just like static linking */
-      psapi_dll = LoadLibraryA("psapi.dll");
+      psapi_dll = LoadLibraryW(L"psapi.dll");
     }
 
   if (!psapi_dll)
@@ -1126,6 +1143,8 @@ release_name_from_version(const char *osver)
     case  8: return "Mountain Lion";
     case  9: return "Mavericks";
     case 10: return "Yosemite";
+    case 11: return "El Capitan";
+    case 12: return "Sierra";
     }
 
   return NULL;

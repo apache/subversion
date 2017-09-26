@@ -1,0 +1,2322 @@
+#LyX 2.1 created this file. For more info see http://www.lyx.org/
+\lyxformat 474
+\begin_document
+\begin_header
+\textclass article
+\use_default_options true
+\begin_modules
+fixltx2e
+\end_modules
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman lmodern
+\font_sans lmss
+\font_typewriter lmtt
+\font_math auto
+\font_default_family sfdefault
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref true
+\pdf_keywords "Subversion svn move-tracking"
+\pdf_bookmarks true
+\pdf_bookmarksnumbered false
+\pdf_bookmarksopen false
+\pdf_bookmarksopenlevel 1
+\pdf_breaklinks true
+\pdf_pdfborder true
+\pdf_colorlinks true
+\pdf_backref false
+\pdf_pdfusetitle true
+\pdf_quoted_options "linkcolor=black, citecolor=black, urlcolor=blue, filecolor=blue"
+\papersize a4paper
+\use_geometry true
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 2cm
+\topmargin 2cm
+\rightmargin 2cm
+\bottommargin 2cm
+\secnumdepth 3
+\tocdepth 1
+\paragraph_separation skip
+\defskip medskip
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 2
+\html_css_as_file 0
+\html_be_strict false
+\html_math_img_scale 1.5
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Element Model
+\end_layout
+
+\begin_layout Author
+Julian Foad
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset toc
+LatexCommand tableofcontents
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Part
+Overview
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+Imagine a user who:
+\end_layout
+
+\begin_layout Itemize
+is familiar with version control concepts 
+\end_layout
+
+\begin_layout Itemize
+is not familiar with Subversion specifics 
+\end_layout
+
+\begin_layout Itemize
+expects directories to be versioned (not just files) 
+\end_layout
+
+\begin_layout Itemize
+expects move tracking (as opposed to move 'detection')
+\end_layout
+
+\begin_layout Standard
+The design aims to satisfy such a user.
+ 
+\end_layout
+
+\begin_layout Standard
+Move tracking is intimately related to merging.
+ The original goal was to make merging work well in the presence of moves.
+ A move tracking model is required in order to support merging.
+\end_layout
+
+\begin_layout Standard
+The purpose for this design is to explore how Subversion could support move
+ tracking, so that we can evaluate its advantages and disadvantages and
+ decide whether we want to implement something based on this idea or to
+ go in a different direction.
+\end_layout
+
+\begin_layout Standard
+The presentation here pretends that we have free rein to redesign Subversion
+ from the ground up.
+ As such it is best to read this with the idea in mind of implementing a
+ new prototype and seeing how it works, and not to think in terms of adapting
+ the existing Subversion.
+\end_layout
+
+\begin_layout Standard
+The 'svnmover' prototype on the 'move-tracking-2' branch already implements
+ much of this model.
+\end_layout
+
+\begin_layout Subsection
+Key Features
+\end_layout
+
+\begin_layout Itemize
+Simple and powerful model of moves
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+easy to understand (for users and developers)
+\end_layout
+
+\begin_layout Itemize
+moves are atomic and never 'broken' into two halves
+\end_layout
+
+\begin_layout Itemize
+deterministic result for arbitrary combinations of moving and other operations
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+Symmetry between the 'revisions' dimension and the 'branches' dimension
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+a diff between two branches has the same form and capabilities as a diff
+ between two revisions of a branch
+\end_layout
+
+\begin_layout Itemize
+unlike historical Subversion
+\end_layout
+
+\begin_layout Itemize
+enables uniform definition of 3-way merge given any 3 points in a merge
+ DAG
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+Flexible nested branching
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+branching at arbitrary paths
+\end_layout
+
+\begin_layout Itemize
+flexible subbranching, inside and/or outside the parent branch
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+e.g.
+ /trunk/foo-branch1, /trunk/foo-branch2, /branches/foo-branch3
+\end_layout
+
+\end_deeper
+\end_deeper
+\begin_layout Itemize
+Simpler tree conflicts
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+the possible kinds of tree conflicts are easily enumerated
+\end_layout
+
+\end_deeper
+\begin_layout Subsection
+Other Potential Benefits
+\end_layout
+
+\begin_layout Itemize
+Repository entropy reduction
+\end_layout
+
+\begin_layout Itemize
+Orthogonal branching namespace at the root path level
+\end_layout
+
+\begin_layout Itemize
+Cross-repository branching and merging
+\end_layout
+
+\begin_layout Subsubsection
+Repository Entropy Reduction
+\end_layout
+
+\begin_layout Standard
+Often a Subversion repository contains metadata that conveys no intentional
+ information but only accidental information.
+ Examples:
+\end_layout
+
+\begin_layout Itemize
+move with a copy-from revision older than (new rev - 1)
+\end_layout
+
+\begin_layout Itemize
+move with the delete half and the copy half committed in separate revisions
+\end_layout
+
+\begin_layout Itemize
+copy/branch from revision (new rev - N) where there is no change between
+ that and (new rev - 1)
+\end_layout
+
+\begin_layout Itemize
+copy/branch with a subtree replaced with a different revision of itself,
+ e.g.
+ r122645 in ASF repo
+\end_layout
+
+\begin_layout Itemize
+no-op roll-back: replace with self copied from (new rev - 1)
+\end_layout
+
+\begin_layout Standard
+In the new model, many such cases can be reduced to a true no-op.
+\end_layout
+
+\begin_layout Itemize
+move is atomic
+\end_layout
+
+\begin_layout Itemize
+branching from R < (new rev - 1)
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+### TBD whether and how it will store copy-from revision
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+copy from R < (new rev - 1)
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+### TBD how it will store copy-from revision
+\end_layout
+
+\begin_layout Itemize
+if wanted, the new design could encourage updating the copy-from on update
+ and on commit
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+no-op roll-back can be a true no-op if the UI encourages 'resurrect' or
+ 'roll-back' command semantics rather than plain 'copy'
+\end_layout
+
+\begin_layout Subsubsection
+Orthogonal Branching
+\end_layout
+
+\begin_layout Standard
+While it is designed for path-addressed branches, this model itself does
+ not require that each branch is attached to a unique path.
+ With little or no change to the basic model, we could support branching
+ at the root path level within a repository, where branches are addressed
+ in a name-space orthogonal to the path namespace, as used in popular DVCSs.
+\end_layout
+
+\begin_layout Standard
+More or less the only addition that would be required is a method for addressing
+ the branches: an extension to the branch id scheme, and extensions to the
+ APIs for converting to and from path-space.
+\end_layout
+
+\begin_layout Standard
+This could be useful both on its own and for greater compatibility with
+ DVCSs.
+\end_layout
+
+\begin_layout Subsubsection
+Cross-Repository Branching
+\end_layout
+
+\begin_layout Standard
+The model supports, in principle, cross-repository branching and merging.
+ Element identifiers would need to be extended to include a repository identifie
+r.
+\end_layout
+
+\begin_layout Subsection
+Potential Cons
+\end_layout
+
+\begin_layout Itemize
+No built-in way to retrospectively convert separately created subtrees to
+ related branches.
+\end_layout
+
+\begin_layout Itemize
+The mental model will be unfamiliar to users, at first.
+\end_layout
+
+\begin_layout Subsection
+Unfinished Design
+\end_layout
+
+\begin_layout Standard
+Branching -- how to track the 'from' branch and revision.
+\end_layout
+
+\begin_layout Standard
+3-way merge -- how to deal with a subtree root node.
+\end_layout
+
+\begin_layout Standard
+Merge history.
+\end_layout
+
+\begin_layout Subsection
+TODO (in the document)
+\end_layout
+
+\begin_layout Itemize
+rename 'subbranch-root' to something less like 'branch root': perhaps 'branch-po
+int' or 'subbranch-element'?
+\end_layout
+
+\begin_layout Section
+Glossary
+\end_layout
+
+\begin_layout Description
+branch a set of elements arranged in a tree, with a branch-root element
+ at the root of the tree; a leaf node of the tree can be a file node element
+ or a subbranch-root element; a subbranch-root element is part of this branch
+ but the subbranch it links to is not
+\end_layout
+
+\begin_layout Description
+branch-root the root element of a branch; carries its own payload, but its
+ location is determined solely by the corresponding (linked) subbranch-root
+ element of the outer branch; see also subbranch-root
+\end_layout
+
+\begin_layout Description
+eid element identifier, uniquely identifying an element within a branch
+ and matching the equivalent element in another branch; an arbitrary token
+ that supports comparison for equality and being used as an index key
+\end_layout
+
+\begin_layout Description
+element a file or directory or subbranch-root; the smallest unit of merging;
+ versioned content is (depending on context) its parent element id and name,
+ and/or its payload;
+\end_layout
+
+\begin_layout Description
+location the tree-structure part of the versioned content of an element:
+ that is, the element's parent-eid and name
+\end_layout
+
+\begin_layout Description
+payload the non-tree-structure part of the versioned content of an element:
+ that is, the element's properties (for a file or directory) and text (for
+ a file)
+\end_layout
+
+\begin_layout Description
+subbranch-root the kind of element that links a subbranch to an outer branch;
+ has a versioned parent-eid and name
+\end_layout
+
+\begin_layout Description
+target may refer to the target of a merge; or to the target path of a symlink,
+ if symlinks are supported
+\end_layout
+
+\begin_layout Part
+The Model
+\end_layout
+
+\begin_layout Section
+Layers
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Layers of modelling
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Tabular
+<lyxtabular version="3" rows="6" columns="2">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+(client/UI)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Branch Management
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+possible future addition
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Merge History
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+TBD; to be described here
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Element Model
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+described here
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Repository Storage
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+TBD; to be described elsewhere
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+(server/fs)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Element Model
+\end_layout
+
+\begin_layout Subsection
+Introduction
+\end_layout
+
+\begin_layout Standard
+Subversion fundamentally tracks versions of a tree of the user's primary
+ data, or of multiple trees if the repository is used to version multiple
+ projects.
+ A versioned tree consists of:
+\end_layout
+
+\begin_layout Itemize
+nodes (files, directories) with their user properties and other user content
+\end_layout
+
+\begin_layout Itemize
+the tree structure
+\end_layout
+
+\begin_layout Standard
+Subversion also tracks metadata describing the versions of and changes to
+ the versioned tree, including:
+\end_layout
+
+\begin_layout Itemize
+branches
+\end_layout
+
+\begin_layout Itemize
+merge history
+\end_layout
+
+\begin_layout Standard
+Historically, Subversion tracked the branches by using part of the pathname
+ within the repository.
+ In the element model, we must think of the user's versioned content as
+ being clearly distinct from the branch identification prefix of the in-reposito
+ry path.
+\end_layout
+
+\begin_layout Standard
+The structure and content of a versioned tree can be precisely defined as
+ comprising the following attributes on each node:
+\end_layout
+
+\begin_layout Itemize
+payload:
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+kind (file or directory), properties, text
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+location within versioned tree (except for the root of the versioned tree):
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+parent node identifier
+\end_layout
+
+\begin_layout Itemize
+name
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+We no longer think of a directory as holding a list of its children; instead,
+ each child holds a single reference that identifies its parent.
+ In this way, the high level conceptual idea of a 
+\begin_inset Quotes eld
+\end_inset
+
+move
+\begin_inset Quotes erd
+\end_inset
+
+ is modeled by a change to exactly one element.
+\end_layout
+
+\begin_layout Standard
+The root node of a versioned tree must be treated specially.
+ When merging changes from one branch of this versioned tree to another,
+ only the payload of this root node must be merged; its parent and name
+ are part of the external structure of the repository, the branching metadata,
+ not part of this versioned tree.
+\end_layout
+
+\begin_layout Standard
+Each branch root is modeled by a linked pair of elements: a subbranch-root
+ element which belongs to the outer branch (and has a location but no payload),
+ linked to a node element which is the root element of the inner branch
+ (and has only a payload).
+\end_layout
+
+\begin_layout Standard
+The root path of the repository is defined as being a root node of a branch.
+ In typical Subversion work flows this would not be thought of as a branch.
+ Any normal branch in a typical Subversion work flow would be modeled as
+ a subbranch of the root branch.
+ For example, we might create a subbranch-root element at the path 'trunk',
+ linked to a branch root node of the kind 'directory' and having a (possibly
+ empty) set of properties.
+\end_layout
+
+\begin_layout Standard
+A subbranch-root element acts like a container that contains a nested subbranch.
+ When merging such an element, the whole nested subbranch is treated as
+ a unit and handled by a recursive application of the merge algorithm.
+\end_layout
+
+\begin_layout Standard
+The term 'elements' refers collectively to nodes and to subbranch-root elements.
+\end_layout
+
+\begin_layout Subsection
+Elements, Nodes, Paths, Payloads
+\end_layout
+
+\begin_layout Standard
+An element is either a node element or a subbranch-root element.
+\end_layout
+
+\begin_layout Standard
+A node element represents a file or a directory, or maybe in future a symlink.
+ Each node element has versioned content called its payload.
+ The payload for a file is its text and properties; the payload for a symlink
+ is its target and properties.
+ The payload for a directory is its properties only.
+\end_layout
+
+\begin_layout Standard
+The children of a directory do not belong to the directory in this model.
+ Instead, the child-parent relationships are modeled by each element having
+ a 
+\begin_inset Quotes eld
+\end_inset
+
+parent element
+\begin_inset Quotes erd
+\end_inset
+
+ attribute and a 
+\begin_inset Quotes eld
+\end_inset
+
+name
+\begin_inset Quotes erd
+\end_inset
+
+ attribute.
+\end_layout
+
+\begin_layout Standard
+The (parent, name, payload) of an element is its versioned content.
+ The basic unit of change tracking (including merge tracking) is the change
+ to the content of one element in one revision.
+\end_layout
+
+\begin_layout Standard
+A subbranch-root element carries a location but no explicit payload.
+ Instead, it represents the connection of a subbranch with its outer branch.
+ The subbranch-root element's fixed attribute 
+\begin_inset Quotes eld
+\end_inset
+
+subbranch-root-eid
+\begin_inset Quotes erd
+\end_inset
+
+ specifies the element id acting as root of the subbranch.
+\end_layout
+
+\begin_layout Subsubsection
+attributes of an element 
+\end_layout
+
+\begin_layout Standard
+fixed attributes:
+\end_layout
+
+\begin_layout Itemize
+eid
+\end_layout
+
+\begin_layout Itemize
+kind: 'node' | 'subbranch-root'
+\end_layout
+
+\begin_layout Itemize
+node-kind: 'file' | 'dir' # iff kind=node
+\end_layout
+
+\begin_layout Itemize
+subbranch-root-eid # iff kind=subbranch-root
+\end_layout
+
+\begin_layout Standard
+versioned attributes:
+\end_layout
+
+\begin_layout Itemize
+location: (parent-eid, name) # or <nil> when acting as a branch root
+\end_layout
+
+\begin_layout Itemize
+payload: (props, [text | target]) # iff kind=node
+\end_layout
+
+\begin_layout Subsubsection
+Repository Root
+\end_layout
+
+\begin_layout Standard
+An new repository in Subversion is given a single directory node as its
+ root element.
+\end_layout
+
+\begin_layout Itemize
+(eid=0, kind='node', node-kind='dir')
+\end_layout
+
+\begin_layout Standard
+As a branch root element, the repository root element has no parent-eid
+ or name and no outer branch, and so it cannot be moved away from the repository
+ root path.
+ However, it can be branched to another path, although in typical work flows
+ that would not be done.
+\end_layout
+
+\begin_layout Subsubsection
+Paths
+\end_layout
+
+\begin_layout Standard
+At each path there is exactly one node element (if there is anything at
+ all).
+ This carries the payload at that path, and in most cases carries the location
+ information (parent and name) of that path as well.
+\end_layout
+
+\begin_layout Standard
+At a branch boundary path there are two elements involved.
+ The root element of the inner branch is a node and carries the payload
+ only.
+ A subbranch-root element belonging to the outer branch carries the location
+ information (parent and name).
+\end_layout
+
+\begin_layout Standard
+### 
+\begin_inset Quotes eld
+\end_inset
+
+Within a revision, elements map to paths as follows:
+\begin_inset Quotes erd
+\end_inset
+
+ [table showing an example] ?
+\end_layout
+
+\begin_layout Subsection
+Branch
+\end_layout
+
+\begin_layout Standard
+A branch is addressed by the sequence of subbranch-root elements that must
+ be followed, starting from the repository root, to reach it.
+ The repository root branch is addressed by a zero-length sequence.
+\end_layout
+
+\begin_layout Standard
+For example, with integer EIDs, the repository root branch address is '',
+ while each first-level subbranch within it is addressed by a length-one
+ sequence of EIDs such as '53' or '12001', and a second-level subbranch
+ is '53.14141' or '12001.12345'.
+\end_layout
+
+\begin_layout Standard
+### Example as a table of paths and their branch ids?
+\end_layout
+
+\begin_layout Standard
+The branching model supports whole-repository branching, as used in many
+ DVCSs.
+ While it has been assumed in the descriptions above that each branch root
+ is mapped to a different path in a single repository-wide path-space, we
+ could also provide a way to map branches to a new branching name-space
+ orthogonal to paths.
+\end_layout
+
+\begin_layout Section
+3-way Merging
+\end_layout
+
+\begin_layout Standard
+Here we cover the rules for calculating the result of a 3-way merge.
+\end_layout
+
+\begin_layout Standard
+We assume the base state (usually a youngest common ancestor) and the other
+ two states (variously called 'source' and 'target', or 'side 1' and 'side
+ 2') are already known.
+ The section on Merge History covers the higher layer of merging: deciding
+ what changes need to be merged and what three-way merges (with which bases)
+ will be used to accomplish it.
+\end_layout
+
+\begin_layout Standard
+It is characteristic of this model that elements are uniquely paired across
+ branches by their element id; there is no ambiguity about which element
+ in one branch or state should be merged with which element in another.
+\end_layout
+
+\begin_layout Standard
+The aspect of 3-way merging most relevant to the element branching model
+ is how the tree shapes are merged.
+ The payload of each element (such as its properties and text) can be merged
+ with a traditional 3-way text merge.
+ The merging of payload is not described here because it need not differ
+ from traditional practice.
+\end_layout
+
+\begin_layout Subsection
+Stages of Tree Shape Merge
+\end_layout
+
+\begin_layout Standard
+Calculation of a 3-way merge is largely per element in this model.
+ For each element, we specify how to merge any two changes to that element.
+ In the second stage we specify how to combine the per-element merges into
+ a whole tree merge.
+ In both stages we specify which combinations should be regarded as conflicting.
+\end_layout
+
+\begin_layout Standard
+The two main stages:
+\end_layout
+
+\begin_layout Itemize
+Per element, 3-way merge the element's content (parent-eid, name, payload).
+ Identify in-element conflicts.
+\end_layout
+
+\begin_layout Itemize
+Check the result for multi-element conflicts (clashes, cycles and orphans).
+\end_layout
+
+\begin_layout Standard
+It may be useful to (partially) order the merging of elements, so as to
+ build up the result tree in parent-to-child order.
+ This would ensure we don't cause the user to spend effort in resolving
+ conflicts in a subtree when a tree conflict occurring higher up the hierarchy
+ might make them decide to throw away the whole subtree.
+ However, it is impossible to determine a complete top-down ordering of
+ the result tree in advance, in general, when the result will depend on
+ conflict resolution choices.
+\end_layout
+
+\begin_layout Subsection
+Per element, 3-way merge
+\end_layout
+
+\begin_layout Standard
+For each element that appears in any of the three sides of the merge, we
+ merge the two changes to the element's (parent-eid, name) pair according
+ to 
+\begin_inset CommandInset ref
+LatexCommand formatted
+reference "tab:3-way-mg-single"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+In this table, each row represents an element, and a letter (O, R, X, Y)
+ represents a particular value of the element's (parent-eid, name) pair:
+ different letters mean the parent-eid differs and/or the name differs.
+ The semantics are symmetric with respect to Side 1 and Side 2; only one
+ row of a symmetric pair is shown.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\noindent
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="10" columns="6">
+<features rotate="0" tabularvalignment="middle">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<column alignment="center" valignment="top">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Base
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Side 1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Side 2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Permissive Result
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Strict Result
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Notes
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+R
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+R
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+R
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+only add [1]
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+O
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+O
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+R
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+R
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+R
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+only mv [1]
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+O
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+O
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+only del [2]
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+R
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+R
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+R
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+conflict
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+duplicate add [1]
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+O
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+R
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+R
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+R
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+conflict
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+duplicate mv [1]
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+O
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+conflict
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+duplicate del
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+X
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Y
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+conflict
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+conflict
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+add vs.
+ add
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+O
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+X
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Y
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+conflict
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+conflict
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+mv vs.
+ mv
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+O
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+X
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+conflict
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+conflict
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+mv vs.
+ del
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+3-way merge of a single element
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:3-way-mg-single"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Notes:
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes eld
+\end_inset
+
+add
+\begin_inset Quotes erd
+\end_inset
+
+ -- includes a copy, for these purposes.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Quotes eld
+\end_inset
+
+conflict
+\begin_inset Quotes erd
+\end_inset
+
+ -- consider this a conflict, unless the user preconfigured what to do with
+ it.
+\end_layout
+
+\begin_layout Itemize
+[1] -- conflict if we detect a clash
+\end_layout
+
+\begin_layout Itemize
+[2] -- conflict if we detect an orphaned subtree
+\end_layout
+
+\begin_layout Subsection
+Merging Parent and Name Separately
+\end_layout
+
+\begin_layout Standard
+Table 2 suggests that an element's location (parent-eid and name) should
+ be treated as a unit.
+ If a conflict occurs, the conflict relates to the parent-eid and name together.
+ An alternative is to merge the two parts separately.
+ This implies allowing a conflict to be raised and resolved for either or
+ both parts independently.
+\end_layout
+
+\begin_layout Standard
+Each part independently:
+\end_layout
+
+\begin_layout Itemize
+merge ('foo' renamed to 'bar') with ('foo' moved to 'D/foo'): result is
+ 'D/bar'.
+\end_layout
+
+\begin_layout Standard
+Both parts together:
+\end_layout
+
+\begin_layout Itemize
+merge ('foo' renamed to 'bar') with ('foo' moved to 'D/foo'): conflict.
+\end_layout
+
+\begin_layout Standard
+The choice of whether a conflict should apply to both parts together or
+ each part separately is one of user preference and the best choice would
+ depend on the scenario.
+ In essence it is a user interface issue.
+ If the merge logic is to be provided in a library, this should be designed
+ to handle the two parts separately so that the UI layer has the choice
+ to treat them either together or separately.
+\end_layout
+
+\begin_layout Standard
+The idea is exactly the same as allowing text and property conflicts on
+ the same element to be handled separately.
+\end_layout
+
+\begin_layout Standard
+It is logical to generalize the idea to treating any or all of the component
+ parts of an element's content (parent-eid, name, properties, text, ...) together
+ or separately for the purposes of conflict handling.
+\end_layout
+
+\begin_layout Subsection
+Conflict Policies
+\end_layout
+
+\begin_layout Standard
+Conflict detection is fundamentally subjective: any two changes could conflict
+ semantically.
+ The job of a good merge tool is to help the user by flagging combinations
+ of changes that are likely to need human intervention, while quietly resolving
+ the rest in a way that is likely to be satisfactory.
+ Because the needs of users and the degree of semantic coupling depend on
+ the use case, the tool therefore should not be configurable in what cases
+ are reported as a conflict.
+\end_layout
+
+\begin_layout Standard
+Configurability is provided by a merge policy.
+ The policy is a statement of what combinations should be flagged as a conflict
+ and what should be resolved automatically.
+ As a starting point, one 'strict' policy and one 'permissive' policy are
+ suggested.
+ The policies suggested here differ only in their treatment of duplicate
+ changes -- cases where both sides of the merge are making the same change.
+ In some merge scenarios it is known and intentional that many of the same
+ changes are being made on both sides, and in those scenarios the permissive
+ policy may be more helpful.
+ In scenarios where a duplicate change is not expected and may indicate
+ an error has been made, then the strict policy may be more helpful.
+\end_layout
+
+\begin_layout Standard
+It is also helpful to have a different policy for user-initiated merges
+ than for rebase-on-commit merges.
+ The latter has historically been implemented in Subversion with a fairly
+ strict policy.
+ (Note also that due to the architecture of the commit process there is
+ no option to store conflicts and have the user resolve them.
+ Any conflict results in immediate failure of the commit.)
+\end_layout
+
+\begin_layout Standard
+A merge policy can also specify which parts of an element's content are
+ merged together, as discussed in the section 'Merging Parent and Name Separatel
+y' above.
+\end_layout
+
+\begin_layout Subsection
+Per-Element Conflicts
+\end_layout
+
+\begin_layout Standard
+As seen in Table 2 above.
+\end_layout
+
+\begin_layout Itemize
+Duplicate add: the same element is added on both sides, at the same location/par
+ent-eid/name.
+\end_layout
+
+\begin_layout Itemize
+Duplicate mv: the same element is moved on both sides, to the same location/pare
+nt-eid/name.
+\end_layout
+
+\begin_layout Itemize
+Duplicate del: the same element is deleted on both sides.
+\end_layout
+
+\begin_layout Itemize
+Add vs.
+ add: the same element is added on both sides, at different locations/parent-eid
+s/names.
+\end_layout
+
+\begin_layout Itemize
+Move vs.
+ move: the same element is moved on both sides, to different locations/parent-ei
+ds/names.
+\end_layout
+
+\begin_layout Itemize
+Move vs.
+ delete: the same element is moved on one side and deleted on the other
+ side.
+\end_layout
+
+\begin_layout Subsection
+Multi-Element Conflicts
+\end_layout
+
+\begin_layout Standard
+After or during the per-element merge, it is necessary to check for the
+ following kinds of conflict that affect more than one element.
+\end_layout
+
+\begin_layout Subsubsection
+Clashes
+\end_layout
+
+\begin_layout Standard
+There is a clash if two or more elements have the same parent-eid and the
+ same name.
+\end_layout
+
+\begin_layout Standard
+This is always a conflict.
+\end_layout
+
+\begin_layout Subsubsection
+Orphans
+\end_layout
+
+\begin_layout Standard
+An element is an orphan if its parent is not present (is deleted or is not
+ added) in the merge result.
+\end_layout
+
+\begin_layout Standard
+When this applies to an element that is modified as a result of the merge,
+ that is a conflict.
+\end_layout
+
+\begin_layout Standard
+When this applies to an element that is not modified as a result of the
+ merge, the element is silently deleted.
+ This means that deleting a parent directory causes all its children in
+ the target to be deleted, not only the children that it had in the source.
+\end_layout
+
+\begin_layout Standard
+A merge policy option could enable a stricter option here.
+\end_layout
+
+\begin_layout Subsubsection
+Cycles
+\end_layout
+
+\begin_layout Standard
+There is a cycle if following the parent-eid chain from an element leads,
+ sooner or later, back to itself rather than to the branch root.
+\end_layout
+
+\begin_layout Standard
+This is always a conflict.
+\end_layout
+
+\begin_layout Subsection
+Subtree Merge
+\end_layout
+
+\begin_layout Standard
+When merging a 'subtree' it is necessary to decide what exactly is meant
+ by a 'subtree'.
+ Historically a subtree was defined by specifying a subtree root element.
+ Now that moves are supported, a given element can be inside the given subtree
+ root element on one 'side' of the merge and outside it on another side
+ of the merge.
+\end_layout
+
+\begin_layout Standard
+Suggestions:
+\end_layout
+
+\begin_layout Itemize
+merge changes to whole elements: never merge 'half' of a move
+\end_layout
+
+\begin_layout Itemize
+take the union of the elements in the subtrees at each side of the merge
+\end_layout
+
+\begin_layout Itemize
+if the merged result for any element 'moves' the element outside the target,
+ in other words to a parent that does not exist in the target, that is a
+ conflict
+\end_layout
+
+\begin_layout Standard
+The 'location' attributes of the subtree root element must be ignored when
+ merging.
+\end_layout
+
+\begin_layout Itemize
+### That's inconsistent.
+\end_layout
+
+\begin_layout Standard
+Note that a given element may be the root of one branch and a subtree in
+ another branch.
+\end_layout
+
+\begin_layout Section
+Merge History
+\end_layout
+
+\begin_layout Standard
+Merge history is required to track which changes are present in which branches.
+\end_layout
+
+\begin_layout Subsection
+Requirements
+\end_layout
+
+\begin_layout Standard
+Merge history should:
+\end_layout
+
+\begin_layout Itemize
+track 
+\emph on
+original 
+\emph default
+changes separately from merges
+\end_layout
+
+\begin_layout Itemize
+track changes that originated in 
+\emph on
+this branch
+\emph default
+ as well as in other branches
+\end_layout
+
+\begin_layout Itemize
+track changes at the granularity of 
+\emph on
+branch-element-revs
+\end_layout
+
+\begin_layout Standard
+The system should enable merge history to be treated as a DAG in cases where
+ 'complete' merging is being performed.
+ In other words, after a complete merge, it should be clear from the merge
+ history that there is a point that can be treated as a youngest common
+ ancestor.
+\end_layout
+
+\begin_layout Standard
+Merge history also provides the metadata necessary to answer 
+\begin_inset Quotes eld
+\end_inset
+
+from which branch and revision was this branch branched?
+\begin_inset Quotes erd
+\end_inset
+
+ -- see the section on Copying.
+\end_layout
+
+\begin_layout Subsection
+Subtree Merge History
+\end_layout
+
+\begin_layout Standard
+Merge history shall indicate that a change is logically present in the branch.
+ This means the effect of the change is in the branch, even if no longer
+ in the same form as the original change.
+ Therefore mergeinfo does not inherently belong at the element level, but
+ at the whole branch level.
+\end_layout
+
+\begin_layout Standard
+### Is mergeinfo attached to a 
+\begin_inset Quotes eld
+\end_inset
+
+subtree
+\begin_inset Quotes erd
+\end_inset
+
+ or rather a subset of elements, in order to track subtree merges?
+\end_layout
+
+\begin_layout Standard
+The smallest unit of tracked changes shall be the change to the versioned
+ content of one element (parent-eid, name, payload) in one revision.
+\end_layout
+
+\begin_layout Itemize
+### How to deal with merging only the payload of the subtree root element
+ in a subtree merge, separately from merging the location change of the
+ same element in an outer merge? Perhaps complain if both the payload and
+ the location of that node changed, as it's an unlikely scenario in many
+ use cases.
+ But that's not rigorous.
+\end_layout
+
+\begin_layout Standard
+### ...
+\end_layout
+
+\begin_layout Subsection
+Design
+\end_layout
+
+\begin_layout Standard
+### TBD
+\end_layout
+
+\begin_layout Section
+Copying
+\end_layout
+
+\begin_layout Standard
+In old svn, copying inserted metadata that said 
+\begin_inset Quotes eld
+\end_inset
+
+node-rev foo@100 was copied from /bar@95
+\begin_inset Quotes erd
+\end_inset
+
+.
+ Apart from being visible in 
+\begin_inset Quotes eld
+\end_inset
+
+log -v
+\begin_inset Quotes erd
+\end_inset
+
+ and 
+\begin_inset Quotes eld
+\end_inset
+
+info
+\begin_inset Quotes erd
+\end_inset
+
+, the only way this affected behaviour was that commands such as 
+\begin_inset Quotes eld
+\end_inset
+
+log
+\begin_inset Quotes erd
+\end_inset
+
+ or 
+\begin_inset Quotes eld
+\end_inset
+
+merge
+\begin_inset Quotes erd
+\end_inset
+
+ with this node as the target would follow copies backwards.
+ This could be useful for simulating moves, to a degree.
+ But a copy was not recognized as an operation that could be merged to another
+ branch.
+ Instead, merge treated a copy the same as a simple add; in both cases,
+ the result was a copy from the source branch.
+\end_layout
+
+\begin_layout Standard
+Copying as a separate concept is no longer much needed, as the model natively
+ supports the following cases where a 'copy' was previously used:
+\end_layout
+
+\begin_layout Itemize
+moving
+\end_layout
+
+\begin_layout Itemize
+branching
+\end_layout
+
+\begin_layout Itemize
+merging a node creation into another branch
+\end_layout
+
+\begin_layout Itemize
+resurrecting (the latest version or an older version, including roll-back
+ by resurrecting an older version to replace the current version)
+\end_layout
+
+\begin_layout Standard
+The only remaining case for copying is:
+\end_layout
+
+\begin_layout Itemize
+making a new node or subtree 
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+that starts off identical to an existing (past or present) one
+\end_layout
+
+\begin_layout Itemize
+and that records a historical link to it
+\end_layout
+
+\end_deeper
+\begin_layout Standard
+There is no need for this kind of 'plain' copying to be modeled explicitly
+ at this level.
+\end_layout
+
+\begin_layout Standard
+Recommendation:
+\end_layout
+
+\begin_layout Itemize
+the copy-from for a plain copy is recorded as revision-property metadata,
+ or at a higher layer of model
+\end_layout
+
+\begin_layout Subsection
+How New Features Replace Copying
+\end_layout
+
+\begin_layout Standard
+The copy-from metadata is replaced in the following way in the new model,
+ for each case that was previously represented by a copy:
+\end_layout
+
+\begin_layout Standard
+### DIAGRAMS
+\end_layout
+
+\begin_layout Itemize
+moving
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+normal (in-branch) -- history is perfectly represented
+\end_layout
+
+\begin_layout Itemize
+cross-branch -- use merge history to represent from-branch
+\end_layout
+
+\begin_layout Itemize
+copy from older version -- treat as move plus roll-back (use merge history
+ to represent from-revision)
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+branching -- use merge history to represent from-branch; copying from non-head:
+ treat as roll-back?
+\end_layout
+
+\begin_layout Itemize
+merging a creation -- use merge history to represent from-branch; from-revision
+ is meaningless
+\end_layout
+
+\begin_layout Itemize
+ressurecting
+\end_layout
+
+\begin_deeper
+\begin_layout Itemize
+normal (in branch) -- use merge history to represent any roll-back
+\end_layout
+
+\begin_layout Itemize
+cross-branch -- similar to merging a creation
+\end_layout
+
+\end_deeper
+\begin_layout Itemize
+making a new node or subtree -- use merge history?
+\end_layout
+
+\begin_layout Subsection
+Merge History as Copy-From Metadata
+\end_layout
+
+\begin_layout Standard
+Merge history can replace much of the semantics of copy-from metadata.
+\end_layout
+
+\begin_layout Standard
+### basically:
+\end_layout
+
+\begin_layout Itemize
+on copying, set the history to 'COPYFROMPATH : all revs up to COPYFROMREV'
+\end_layout
+
+\begin_layout Itemize
+on reading, if the history looks like this (ignoring further merges) then
+ report the history as 'copied from ...', else don't
+\end_layout
+
+\begin_layout Subsection
+Translating from new model back to 'copy-from' metadata
+\end_layout
+
+\begin_layout Standard
+###
+\end_layout
+
+\begin_layout Section
+Branch Management
+\end_layout
+
+\begin_layout Standard
+The 'elements' model deliberately does not address branch management.
+ By branch management I mean things such as
+\end_layout
+
+\begin_layout Itemize
+whether each project contains its own branches, or each branch contains
+ multiple projects;
+\end_layout
+
+\begin_layout Itemize
+branch promotion models, governing which kinds of merge are allowed between
+ which branches;
+\end_layout
+
+\begin_layout Itemize
+designating branches as 'dev' or 'release' or 'mainline';
+\end_layout
+
+\begin_layout Itemize
+where/when/whether subbranching is allowed.
+\end_layout
+
+\begin_layout Standard
+Branch management should be modelled and implemented at a higher layer.
+\end_layout
+
+\begin_layout Section
+The Working Copy
+\end_layout
+
+\begin_layout Standard
+The fundamental purpose of the working copy (WC) is to hold a base state
+ and local changes against that state, in order to build (offline) a new
+ commit.
+ A single commit, in Subversion so far.
+\end_layout
+
+\begin_layout Standard
+As such, the design of the WC must match the design of the repository.
+ A move-tracking WC will work with the element model.
+ The WC represents a base state and a working state, each comprising a set
+ of elements.
+ It may be stored as a complete base state and a difference.
+\end_layout
+
+\begin_layout Standard
+Special considerations:
+\end_layout
+
+\begin_layout Itemize
+mixed-rev: each element at its own rev; each element appears only once (no
+ 'appears at two paths' confusion)
+\end_layout
+
+\begin_layout Itemize
+...
+\end_layout
+
+\begin_layout Subsection
+Checkout, Update, Switch, Commit
+\end_layout
+
+\begin_layout Standard
+Basic WC state operations including Checkout, Update, Switch, Commit, Diff
+ and Merge shall all make use of basic element-mode diff or edit APIs.
+ For most of these operations a contextual diff is required in order to
+ provide a good merge.
+\end_layout
+
+\begin_layout Standard
+(Commit requires less context because its rebase merge is more restricted:
+ for example, it does not merge text or properties so no context is required
+ for them.
+ Update and Switch perhaps do not need context in areas where there are
+ no local changes.
+ Checkout probably does not require any context.)
+\end_layout
+
+\begin_layout Subsection
+Mixed-Rev WC Operation
+\end_layout
+
+\begin_layout Standard
+Each element in the WC has its own base revision.
+ A commit will update only the elements for which it commits a change, resulting
+ in a mixed-rev WC.
+ Any element of set of elements can be updated separately, resulting in
+ a mixed-rev WC.
+\end_layout
+
+\begin_layout Standard
+An update shall convey a set of per-element changes.
+ These can include moving elements.
+ When an update attempts to transform the base state into a non-tree configurati
+on (such as with a cycle or a name clash or a deleted parent) the update
+ shall be rejected and the WC unchanged.
+ An update shall only succeed if it results in a tree configuration for
+ the new base state.
+\end_layout
+
+\begin_layout Standard
+A successful update to the base state shall be merged with the working state
+ to produce the new working state.
+ Any resulting tree conflicts shall be recorded in the WC to be resolved
+ by the user, like in old Subversion except the kinds of conflicts are different.
+\end_layout
+
+\begin_layout Standard
+Consequences:
+\end_layout
+
+\begin_layout Itemize
+elements may be at different base revisions without ambiguity in the semantics
+\end_layout
+
+\begin_layout Itemize
+there is no such thing as a broken/split/half move
+\end_layout
+
+\end_body
+\end_document

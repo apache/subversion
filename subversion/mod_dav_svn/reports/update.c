@@ -68,7 +68,7 @@ typedef struct update_ctx_t {
   apr_bucket_brigade *bb;
 
   /* where to deliver the output */
-  ap_filter_t *output;
+  dav_svn__output *output;
 
   /* where do these editor paths *really* point to? */
   apr_hash_t *pathmap;
@@ -904,7 +904,7 @@ malformed_element_error(const char *tagname, apr_pool_t *pool)
                                    "' element is malformed; there "
                                    "is a problem with the client.",
                                    SVN_VA_NULL);
-  return dav_svn__new_error_svn(pool, HTTP_BAD_REQUEST, 0, errstr);
+  return dav_svn__new_error_svn(pool, HTTP_BAD_REQUEST, 0, 0, errstr);
 }
 
 
@@ -954,7 +954,7 @@ validate_input_revision(svn_revnum_t revision,
 dav_error *
 dav_svn__update_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
-                       ap_filter_t *output)
+                       dav_svn__output *output)
 {
   svn_delta_editor_t *editor;
   apr_xml_elem *child;
@@ -970,7 +970,7 @@ dav_svn__update_report(const dav_resource *resource,
   dav_error *derr = NULL;
   const char *src_path = NULL;
   const char *dst_path = NULL;
-  const dav_svn_repos *repos = resource->info->repos;
+  dav_svn_repos *repos = resource->info->repos;
   const char *target = "";
   svn_boolean_t text_deltas = TRUE;
   svn_depth_t requested_depth = svn_depth_unknown;
@@ -988,14 +988,14 @@ dav_svn__update_report(const dav_resource *resource,
 
   if ((resource->info->restype != DAV_SVN_RESTYPE_VCC)
       && (resource->info->restype != DAV_SVN_RESTYPE_ME))
-    return dav_svn__new_error_svn(resource->pool, HTTP_CONFLICT, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_CONFLICT, 0, 0,
                                   "This report can only be run against "
                                   "a VCC or root-stub URI");
 
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have an "
                                     "svn:target-revision element. That element "
@@ -1028,7 +1028,7 @@ dav_svn__update_report(const dav_resource *resource,
 
   /* Ask the repository about its youngest revision (which we'll need
      for some input validation later). */
-  if ((serr = svn_fs_youngest_rev(&youngest, repos->fs, resource->pool)))
+  if ((serr = dav_svn__get_youngest_rev(&youngest, repos, resource->pool)))
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                 "Could not determine the youngest "
                                 "revision for the update process.",
@@ -1191,7 +1191,7 @@ dav_svn__update_report(const dav_resource *resource,
   if (! src_path)
     {
       return dav_svn__new_error_svn
-        (resource->pool, HTTP_BAD_REQUEST, 0,
+        (resource->pool, HTTP_BAD_REQUEST, 0, 0,
          "The request did not contain the '<src-path>' element.\n"
          "This may indicate that your client is too old");
     }
@@ -1202,7 +1202,8 @@ dav_svn__update_report(const dav_resource *resource,
   uc.output = output;
   uc.anchor = src_path;
   uc.target = target;
-  uc.bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  uc.bb = apr_brigade_create(resource->pool,
+                             dav_svn__output_get_bucket_alloc(output));
   uc.pathmap = NULL;
   uc.enable_v2_response = ((resource->info->restype == DAV_SVN_RESTYPE_ME)
                            && (resource->info->repos->v2_protocol));

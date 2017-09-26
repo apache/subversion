@@ -189,8 +189,7 @@ def full_rev_update(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1,
+                                        [], True,
                                         '-r', '1', wc_dir)
 
 #----------------------------------------------------------------------
@@ -247,8 +246,7 @@ def update_switched_things(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 0,
+                                        [], False,
                                         B_path,
                                         iota_path)
 
@@ -305,8 +303,7 @@ def rev_update_switched_things(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1,
+                                        [], True,
                                         '-r', '1',
                                         B_path,
                                         iota_path)
@@ -374,8 +371,8 @@ def delete_subdir(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        False, '--ignore-ancestry')
+                                        [], False,
+                                        '--ignore-ancestry')
 
 #----------------------------------------------------------------------
 # Issue 1532: Switch a file to a dir: can't switch it back to the file
@@ -589,8 +586,9 @@ def bad_intermediate_urls(sbox):
   })
 
   actions.run_and_verify_switch(wc_dir, wc_dir, url_A_C, expected_output,
-                                expected_disk, expected_status, None, None,
-                                None, None, None, False, '--ignore-ancestry')
+                                expected_disk, expected_status,
+                                [], False,
+                                '--ignore-ancestry')
 
   # However, the URL for wc/A should now reflect ^/A/C/A, not something else.
   expected_infos = [
@@ -614,7 +612,7 @@ def bad_intermediate_urls(sbox):
   expected_status.tweak('A/Z', treeconflict=None)
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
 
 
@@ -664,8 +662,7 @@ def obstructed_switch(sbox):
   expected_status = actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E/alpha')
 
-  actions.run_and_verify_commit(wc_dir, expected_output, expected_status,
-    None, wc_dir)
+  actions.run_and_verify_commit(wc_dir, expected_output, expected_status)
 
   # echo "hello" >> A/B/E/alpha
   main.file_append(A_B_E_alpha, 'hello')
@@ -686,8 +683,8 @@ def obstructed_switch(sbox):
 
   actions.run_and_verify_switch(wc_dir, A_B_E, url_A_B_Esave,
                                 expected_output, expected_disk,
-                                expected_status, None, None, None, None,
-                                None, False, '--ignore-ancestry')
+                                expected_status,
+                                [], False, '--ignore-ancestry')
 
   # svn status
   expected_status.add({
@@ -743,7 +740,7 @@ def commit_mods_below_switch(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        [],
                                         False, '--ignore-ancestry')
 
   D_path = sbox.ospath('A/D')
@@ -763,7 +760,7 @@ def commit_mods_below_switch(sbox):
   # with "'A/C/E' is missing or not locked"
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, C_path, D_path)
+                                        [], C_path, D_path)
 
 #----------------------------------------------------------------------
 # Issue 2306.
@@ -774,7 +771,7 @@ def refresh_read_only_attribute(sbox):
   # behavior, just skip the test.
   if os.name == 'posix':
     if os.geteuid() == 0:
-      raise svntest.Skip
+      raise svntest.Skip('Test doesn\'t work as uid 0')
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -801,7 +798,7 @@ def refresh_read_only_attribute(sbox):
   expected_status.tweak('A/mu', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
-                                        None, mu_path)
+                                        [], mu_path)
 
   # The file on which svn:needs-lock was set is now expected to be read-only.
   if os.access(mu_path, os.W_OK):
@@ -822,7 +819,7 @@ def refresh_read_only_attribute(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        [],
                                         False, '--ignore-ancestry')
 
   # The file with we set svn:needs-lock on should now be writable, but
@@ -945,8 +942,7 @@ def forced_switch(sbox):
   svntest.actions.run_and_verify_switch(sbox.wc_dir, F_path, AD_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status, None,
-                                        None, None, None, None, False,
+                                        expected_status, [], False,
                                         '--force', '--ignore-ancestry')
 
 #----------------------------------------------------------------------
@@ -1061,8 +1057,8 @@ def forced_switch_failures(sbox):
   expected_status.tweak('A/C', switched='S')
 
   actions.run_and_verify_switch(wc_dir, A_C, url_A_D, expected_output,
-                                expected_disk, expected_status, None, None,
-                                None, None, None, False, '--force',
+                                expected_disk, expected_status, [], False,
+                                '--force',
                                 '--ignore-ancestry')
 
 
@@ -1088,8 +1084,8 @@ def forced_switch_failures(sbox):
   expected_status.tweak('A/B/F', switched='S')
 
   actions.run_and_verify_switch(wc_dir, A_B_F, url_A_D_G, expected_output,
-                                expected_disk, expected_status, None, None,
-                                None, None, None, False, '--force',
+                                expected_disk, expected_status, [], False,
+                                '--force',
                                 '--ignore-ancestry')
 
   # svn info A/B/F/pi
@@ -1142,9 +1138,8 @@ def forced_switch_failures(sbox):
   })
 
   actions.run_and_verify_switch(wc_dir, A_D_G, url_A_D_H, expected_output,
-                                None, None, None,
-                                None, None, None, None,
-                                False, '--force', '--ignore-ancestry')
+                                None, None, [], False,
+                                '--force', '--ignore-ancestry')
 
   # Delete all three obstructions and finish the update.
   # rm -rf A/D/G/I
@@ -1203,7 +1198,7 @@ def forced_switch_failures(sbox):
   svntest.main.run_svn(None, 'revert', '-R', sbox.ospath('A/C/H'))
 
   actions.run_and_verify_update(wc_dir, expected_output, expected_disk,
-    expected_status, None, None, None, None, None, False, wc_dir)
+                                expected_status)
 
 
 def switch_with_obstructing_local_adds(sbox):
@@ -1282,9 +1277,6 @@ def switch_with_obstructing_local_adds(sbox):
     'A/B/F/I'         : Item(status='A ', wc_rev='-', entry_rev='0'),
   })
 
-  # "Extra" files that we expect to result from the conflicts.
-  extra_files = ['pi\.r0', 'pi\.r1', 'pi\.mine']
-
   # Do the switch and check the results in three ways.
   F_path = sbox.ospath('A/B/F')
   D_url = sbox.repo_url + '/A/D'
@@ -1293,9 +1285,7 @@ def switch_with_obstructing_local_adds(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files, None, None, False,
+                                        [], False,
                                         '--ignore-ancestry')
 
 #----------------------------------------------------------------------
@@ -1391,9 +1381,7 @@ def mergeinfo_switch_elision(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Make some changes under A/B
 
@@ -1403,7 +1391,7 @@ def mergeinfo_switch_elision(sbox):
                                      {'A/B/E/beta' : Item(verb='Sending')})
   expected_status.tweak('A/B/E/beta', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # r4 - modify and commit A/B/E/alpha
   svntest.main.file_write(alpha_path, "New content")
@@ -1411,7 +1399,7 @@ def mergeinfo_switch_elision(sbox):
                                      {'A/B/E/alpha' : Item(verb='Sending')})
   expected_status.tweak('A/B/E/alpha', wc_rev=4)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Merge r2:4 into A/B_COPY_1
   expected_output = svntest.wc.State(B_COPY_1_path, {
@@ -1448,8 +1436,7 @@ def mergeinfo_switch_elision(sbox):
                                        expected_merge_disk,
                                        expected_merge_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1)
+                                       check_props=True)
 
   # r5 - Commit the merge into A/B_COPY_1/E
   expected_output = svntest.wc.State(
@@ -1463,7 +1450,7 @@ def mergeinfo_switch_elision(sbox):
   expected_status.tweak('A/B_COPY_1/E/beta',  wc_rev=5)
   expected_status.tweak('A/B_COPY_1/lambda',  wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Merge r2:4 into A/B_COPY_2/E
   expected_output = svntest.wc.State(E_COPY_2_path, {
@@ -1494,8 +1481,7 @@ def mergeinfo_switch_elision(sbox):
                                        expected_merge_disk,
                                        expected_merge_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1)
+                                       check_props=True)
 
   # Switch A/B_COPY_2 to URL of A/B_COPY_1.  The local mergeinfo for r1,3-4
   # on A/B_COPY_2/E is identical to the mergeinfo added to A/B_COPY_2 as a
@@ -1549,7 +1535,7 @@ def mergeinfo_switch_elision(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, True,
+                                        [], True,
                                         '--ignore-ancestry')
 
   # Now check a switch which reverses and earlier switch and leaves
@@ -1571,7 +1557,7 @@ def mergeinfo_switch_elision(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, True,
+                                        [], True,
                                         '--ignore-ancestry')
 
   svntest.actions.run_and_verify_svn(["property '" + SVN_PROP_MERGEINFO +
@@ -1592,7 +1578,7 @@ def mergeinfo_switch_elision(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, True,
+                                        [], True,
                                         '--ignore-ancestry')
 
 #----------------------------------------------------------------------
@@ -1622,8 +1608,8 @@ def switch_with_depth(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, AB_path, AD_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status, None,
-                                        None, None, None, None, False,
+                                        expected_status,
+                                        [], False,
                                         '--depth', 'empty', '--ignore-ancestry')
 
   # Set up expected results for reverting 'switch --depth=empty'
@@ -1634,8 +1620,8 @@ def switch_with_depth(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, AB_path, AB_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status, None,
-                                        None, None, None, None, False,
+                                        expected_status,
+                                        [], False,
                                         '--depth', 'empty', '--ignore-ancestry')
 
   # Set up expected results of 'switch --depth=files'
@@ -1661,8 +1647,8 @@ def switch_with_depth(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, AB_path, AD_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status, None,
-                                        None, None, None, None, False,
+                                        expected_status,
+                                        [], False,
                                         '--depth', 'files', '--ignore-ancestry')
 
   # Set up expected results for reverting 'switch --depth=files'
@@ -1676,8 +1662,8 @@ def switch_with_depth(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, AB_path, AB_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status, None,
-                                        None, None, None, None, False,
+                                        expected_status,
+                                        [], False,
                                         '--depth', 'files', '--ignore-ancestry')
 
   # Putting the depth=immediates stuff in a subroutine, because we're
@@ -1714,8 +1700,8 @@ def switch_with_depth(sbox):
     svntest.actions.run_and_verify_switch(wc_dir, AB_path, AD_url,
                                           expected_output,
                                           expected_disk,
-                                          expected_status, None,
-                                          None, None, None, None, False,
+                                          expected_status,
+                                          [], False,
                                           '--depth', 'immediates',
                                           '--ignore-ancestry')
 
@@ -1739,8 +1725,8 @@ def switch_with_depth(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, AB_path, AB_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status, None,
-                                        None, None, None, None, False,
+                                        expected_status,
+                                        [], False,
                                         '--ignore-ancestry')
 
   # Okay, repeat 'switch --depth=immediates'.  (Afterwards we'll
@@ -1765,8 +1751,8 @@ def switch_with_depth(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, AB_path, AB_url,
                                         expected_output,
                                         expected_disk,
-                                        expected_status, None,
-                                        None, None, None, None, False,
+                                        expected_status,
+                                        [], False,
                                         '--depth', 'infinity',
                                         '--ignore-ancestry')
 
@@ -1826,8 +1812,8 @@ def switch_to_dir_with_peg_rev(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, X_path, ADG_url + '@3',
                                         expected_output,
                                         expected_disk,
-                                        expected_status, None,
-                                        None, None, None, None, False,
+                                        expected_status,
+                                        [], False,
                                         '-r', '2', '--ignore-ancestry')
 
 def switch_urls_with_spaces(sbox):
@@ -1873,7 +1859,7 @@ def switch_urls_with_spaces(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        [],
                                         False, '--ignore-ancestry')
 
   # Test 2: switch file 'bar baz bal' to 'tau pau mau'
@@ -1900,7 +1886,7 @@ def switch_urls_with_spaces(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        [],
                                         False, '--ignore-ancestry')
 
 def switch_to_dir_with_peg_rev2(sbox):
@@ -1963,8 +1949,7 @@ def switch_to_dir_with_peg_rev2(sbox):
   svntest.actions.run_and_verify_switch(wc_dir, X_path, ADY_url + '@HEAD',
                                         expected_output,
                                         expected_disk,
-                                        expected_status, None,
-                                        None, None, None, None, False,
+                                        expected_status, [], False,
                                         '-r', '2', '--ignore-ancestry')
 
 def switch_to_root(sbox):
@@ -2016,7 +2001,7 @@ def switch_to_root(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        [],
                                         False, '--ignore-ancestry')
 
 #----------------------------------------------------------------------
@@ -2069,7 +2054,7 @@ def tolerate_local_mods(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        [],
                                         False, '--ignore-ancestry')
 
 #----------------------------------------------------------------------
@@ -2670,7 +2655,7 @@ def different_node_kind(sbox):
     expected_status.add_state(rel_path, pristine_status.subtree(rel_url))
     svntest.actions.run_and_verify_switch(sbox.wc_dir, full_path, full_url,
                                           None, expected_disk, expected_status,
-                                          None, None, None, None, None, False,
+                                          [], False,
                                           '--ignore-ancestry')
     svntest.actions.run_and_verify_svn(None, [], 'info', full_path)
     if not os.path.isdir(full_path):
@@ -2686,7 +2671,7 @@ def different_node_kind(sbox):
     expected_status.tweak(rel_path, switched='S')
     svntest.actions.run_and_verify_switch(sbox.wc_dir, full_path, full_url,
                                           None, expected_disk, expected_status,
-                                          None, None, None, None, None, False,
+                                          [], False,
                                           '--ignore-ancestry')
     svntest.actions.run_and_verify_svn(None, [], 'info', full_path)
     if not os.path.isfile(full_path):
@@ -2751,15 +2736,15 @@ def switch_across_replacement(sbox):
     })
   svntest.actions.run_and_verify_update(sbox.wc_dir,
                                         expected_output, None, None,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         '-r1')
   svntest.actions.run_and_verify_update(sbox.wc_dir,
                                         expected_output, None, None,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         '-r2')
   svntest.actions.run_and_verify_switch(sbox.wc_dir, sbox.ospath('A'), '^/A',
                                         expected_output, None, None,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         '-r1')
 
 @Issue(1975)
@@ -2782,8 +2767,7 @@ def switch_keywords(sbox):
                       contents="$URL: %s/A/D/H/psi $\n" % sbox.repo_url)
 
   svntest.actions.run_and_verify_update(sbox.wc_dir,
-                                        None, expected_disk,
-                                        None, None, None, None, None, None)
+                                        None, expected_disk, None)
   sbox.simple_copy('A', 'A_copy')
   sbox.simple_commit()
   sbox.simple_update()
@@ -2847,8 +2831,7 @@ def switch_keywords(sbox):
 
   # both gamma and psi should have update URLs after the switch
   svntest.actions.run_and_verify_switch(sbox.wc_dir, sbox.ospath('A'), '^/A_copy',
-                                        None, expected_disk, expected_status,
-                                        None, None, None, None, None)
+                                        None, expected_disk, expected_status)
 
 @Issue(4524)
 def switch_moves(sbox):
@@ -2889,8 +2872,7 @@ def switch_moves(sbox):
   # It would be nice if we could handle the tree conflict more intelligent, as
   # the working copy matches the incomming change.
   svntest.actions.run_and_verify_switch(sbox.wc_dir, sbox.ospath(''), branch_url,
-                                        None, expected_disk, expected_status,
-                                        None, None, None, None, None)
+                                        None, expected_disk, expected_status)
 
 
 ########################################################################

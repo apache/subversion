@@ -709,7 +709,7 @@ def dont_diff_binary_file(sbox):
 
   # Commit the new binary file, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Update the whole working copy to HEAD (rev 2)
   expected_output = svntest.wc.State(wc_dir, {})
@@ -729,8 +729,7 @@ def dont_diff_binary_file(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
-                                        1)  # verify props, too.
+                                        check_props=True)
 
   # Make a local mod to the binary file.
   svntest.main.file_append(theta_path, "some extra junk")
@@ -772,7 +771,7 @@ def dont_diff_binary_file(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Third diff use-case: 'svn diff -r2:3 wc' will compare two
   # repository trees.
@@ -869,7 +868,7 @@ def diff_base_to_repos(sbox):
   expected_status.tweak('iota', wc_rev=2)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
@@ -999,7 +998,7 @@ def diff_base_to_repos(sbox):
     'A/D/newfile' : Item(status='  ', wc_rev=3),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
@@ -1067,7 +1066,7 @@ def diff_deleted_in_head(sbox):
   expected_status.tweak('A/mu', wc_rev=2)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
@@ -1090,7 +1089,7 @@ def diff_deleted_in_head(sbox):
                          'A/C')
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Doing an 'svn diff -r1:2' on the URL of directory A should work,
   # especially over the DAV layer.
@@ -1753,7 +1752,7 @@ def diff_force(sbox):
 
   # Commit iota, creating revision 2.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Add another line, while keeping he file as binary.
   svntest.main.file_append(iota_path, "another line")
@@ -1769,7 +1768,7 @@ def diff_force(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Check that we get diff when the first, the second and both files
   # are marked as binary.  First we'll use --force.  Then we'll use
@@ -2613,7 +2612,7 @@ def diff_weird_author(sbox):
   expected_status.tweak("A/mu", wc_rev=2)
 
   svntest.actions.run_and_verify_commit(sbox.wc_dir, expected_output,
-                                        expected_status, None, sbox.wc_dir)
+                                        expected_status)
 
   svntest.main.run_svn(None,
                        "propset", "--revprop", "-r", "2", "svn:author",
@@ -2652,7 +2651,7 @@ def diff_ignore_whitespace(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None,)
 
   # only whitespace changes, should return no changes
   svntest.main.file_write(file_path,
@@ -2698,7 +2697,7 @@ def diff_ignore_eolstyle(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # commit only eol changes
   svntest.main.file_write(file_path,
@@ -2746,7 +2745,7 @@ def diff_in_renamed_folder(sbox):
   ### child of the A/D/C copy. thus, it appears in the status output as a
   ### (M)odified child.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   expected_output = svntest.wc.State(wc_dir, {
       'A/D/C/kappa' : Item(verb='Sending'),
@@ -2756,7 +2755,7 @@ def diff_in_renamed_folder(sbox):
   for i in range(3, 5):
     svntest.main.file_append(kappa_path, str(i) + "\n")
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                          None, None, wc_dir)
+                                          None)
 
   expected_output = make_diff_header(kappa_path, "revision 3",
                                      "revision 4") + [
@@ -2906,7 +2905,7 @@ def diff_ignore_eolstyle_empty_lines(sbox):
       'iota' : Item(verb='Sending'),
       })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        None, None, wc_dir)
+                                        None)
 
   # sleep to guarantee timestamp change
   time.sleep(1.1)
@@ -3013,7 +3012,7 @@ def diff_summarize_xml(sbox):
     [], wc_dir, paths, items, props, kinds, wc_dir)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # 1) Test --xml without --summarize
   svntest.actions.run_and_verify_svn(
@@ -3402,7 +3401,7 @@ def diff_prop_missing_context(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   prop_val = "".join([
                "line 3\n",
@@ -3459,7 +3458,7 @@ def diff_prop_multiple_hunks(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   prop_val = "".join([
                "line 1\n",
@@ -3523,7 +3522,7 @@ def diff_git_empty_files(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   svntest.main.file_write(new_path, "")
   svntest.main.run_svn(None, 'add', new_path)
@@ -3560,7 +3559,7 @@ def diff_git_with_props(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   svntest.main.file_write(new_path, "")
   svntest.main.run_svn(None, 'add', new_path)
@@ -3602,7 +3601,7 @@ def diff_correct_wc_base_revnum(sbox):
     'iota' : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Child's base is now 2; parent's is still 1.
   # Make a local mod.
@@ -3641,7 +3640,7 @@ def diff_git_with_props_on_dir(sbox):
 
   sbox.simple_propset('k','v', '', 'A')
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   was_cwd = os.getcwd()
   os.chdir(wc_dir)
@@ -4371,7 +4370,7 @@ def diff_repos_empty_file_addition(sbox):
     'newfile' : Item(status='  ', wc_rev=2),
     })
   svntest.actions.run_and_verify_commit(sbox.wc_dir, expected_output,
-                                        expected_status, None, sbox.wc_dir)
+                                        expected_status)
 
   # Now diff the revision that added the empty file.
   expected_output = [
@@ -4418,8 +4417,8 @@ def diff_missing_tree_conflict_victim(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None, None, None,
-                                       False, '--ignore-ancestry', wc_dir)
+                                       [], False, False,
+                                       '--ignore-ancestry', wc_dir)
 
   # 'svn diff' should show no change for the working copy
   # This currently fails because svn errors out with a 'node not found' error
@@ -4827,6 +4826,321 @@ def diff_local_copied_dir(sbox):
     os.chdir(was_cwd)
 
 
+def diff_summarize_ignore_properties(sbox):
+  "diff --summarize --ignore-properties"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a property change and a content change to 'iota'
+  sbox.simple_propset('svn:eol-style', 'native', 'iota')
+  svntest.main.file_append(sbox.ospath('iota'), 'new text')
+
+  # Make a property change to 'A/mu'
+  sbox.simple_propset('svn:eol-style', 'native', 'A/mu')
+
+  # Make a content change to 'A/B/lambda'
+  svntest.main.file_append(sbox.ospath('A/B/lambda'), 'new text')
+
+  # Add a file.
+  svntest.main.file_write(sbox.ospath('new'), 'new text')
+  sbox.simple_add('new')
+
+  # Delete a file
+  sbox.simple_rm('A/B/E/alpha')
+
+  expected_diff = svntest.wc.State(wc_dir, {
+    'iota': Item(status='M '),
+    'new': Item(status='A '),
+    'A/B/lambda': Item(status='M '),
+    'A/B/E/alpha': Item(status='D '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(expected_diff,
+                                                '--ignore-properties',
+                                                sbox.wc_dir)
+
+  # test with --xml, too
+  paths = ['iota', 'new', 'A/B/lambda', 'A/B/E/alpha']
+  items = ['modified', 'added', 'modified', 'deleted' ]
+  kinds = ['file','file', 'file', 'file']
+  props = ['none', 'none', 'none', 'none']
+  svntest.actions.run_and_verify_diff_summarize_xml(
+    [], wc_dir, paths, items, props, kinds, wc_dir, '--ignore-properties')
+
+def diff_incomplete(sbox):
+  "diff incomplete directory"
+
+  sbox.build()
+  svntest.actions.run_and_verify_svn(None, [], 'rm', sbox.repo_url + '/A',
+                                     '-m', '')
+
+  # This works ok
+  _, out1a, _ = svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                                   '-r', 'HEAD',
+                                                   sbox.wc_dir,
+                                                   '--notice-ancestry')
+
+  _, out1b, _ = svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                                   sbox.wc_dir,
+                                                   '--notice-ancestry')
+
+
+  svntest.main.run_wc_incomplete_tester(sbox.ospath('A'), 1)
+
+  # And this used to miss certain changes
+  _, out2a, _ = svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                                  '-r', 'HEAD',
+                                                  sbox.wc_dir,
+                                                  '--notice-ancestry')
+
+  _, out2b, _ = svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                                   sbox.wc_dir,
+                                                   '--notice-ancestry')
+
+  # Ordering may be different, but length should match
+  if len(out1a) != len(out2a):
+    raise svntest.Failure('Different output when incomplete against repos')
+
+  svntest.verify.compare_and_display_lines('local diff', 'local diff', out1b,
+                                           out2b)
+
+  # And add a replacement on top of the incomplete, server side
+  svntest.actions.run_and_verify_svn(None, [], 'cp',
+                                     sbox.repo_url + '/A/D/H@1',
+                                     sbox.repo_url + '/A', '-m', '')
+
+  svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                     '-r', 'HEAD',
+                                     sbox.wc_dir,
+                                     '--notice-ancestry')
+
+  # And client side
+  svntest.actions.run_and_verify_svn(None, [], 'rm', sbox.ospath('A'),
+                                     '--force')
+  sbox.simple_mkdir('A')
+  svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                    '-r', 'HEAD',
+                                    sbox.wc_dir,
+                                    '--notice-ancestry')
+
+  svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                    sbox.wc_dir,
+                                    '--notice-ancestry')
+
+def diff_incomplete_props(sbox):
+  "incomplete set of properties"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset('r2-1', 'r2', 'iota', 'A')
+  sbox.simple_propset('r2-2', 'r2', 'iota', 'A')
+  sbox.simple_propset('r', 'r2', 'iota', 'A')
+  sbox.simple_commit() # r2
+
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', sbox.repo_url,
+                                         'propset', 'r3-1', 'r3', 'iota',
+                                         'propset', 'r3-1', 'r3', 'A',
+                                         'propset', 'r3-2', 'r3', 'iota',
+                                         'propset', 'r3-2', 'r3', 'A',
+                                         'propset', 'r', 'r3', 'iota',
+                                         'propset', 'r', 'r3', 'A',
+                                         'propdel', 'r2-1', 'iota',
+                                         'propdel', 'r2-1', 'A',
+                                         'propdel', 'r2-2', 'iota',
+                                         'propdel', 'r2-2', 'A',
+                                         '-m', 'r3')
+
+  _, out1, _ = svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                                  '-r', 'HEAD', wc_dir,
+                                                  '--notice-ancestry')
+
+  # Now simulate a broken update to r3
+  svntest.actions.set_incomplete(wc_dir, 3)
+  svntest.actions.set_incomplete(sbox.ospath('A'), 3)
+
+  # The properties are still at r2
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', 'A', props={'r2-1':'r2', 'r2-2':'r2', 'r':'r2'})
+  svntest.actions.verify_disk(wc_dir, expected_disk, True)
+
+  # But the working copy is incomplete at r3
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+  expected_status.tweak('', 'A', wc_rev=3, status='! ')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A'    : Item(status=' U'),
+    'iota' : Item(status=' U'),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_disk = svntest.main.greek_state.copy()
+
+  # Expect that iota and A have the expected sets of properties
+  # The r2 set is properly deleted where necessary
+  expected_disk.tweak('iota', 'A', props={'r3-2':'r3', 'r':'r3', 'r3-1':'r3'})
+
+  _, out2, _ = svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                                  '-r', 'HEAD', wc_dir,
+                                                  '--notice-ancestry')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output, expected_disk,
+                                        expected_status, [], True)
+
+  # Ok, we tested that the update worked properly, but we also do this
+  # in the update tests... Let's see, what the diffs said
+
+  _, out3, _ = svntest.actions.run_and_verify_svn(None, [], 'diff',
+                                                  '-r', 'BASE:2', wc_dir,
+                                                  '--notice-ancestry')
+
+  # Filter out all headers (which include revisions, etc.)
+  out1 = [i for i in out1 if i[0].isupper()]
+  out1.sort()
+
+  out2 = [i for i in out2 if i[0].isupper()]
+  out2.sort()
+
+  out3 = [i for i in out3 if i[0].isupper()]
+  out3.sort()
+
+  svntest.verify.compare_and_display_lines('base vs incomplete', 'local diff',
+                                           out1, out2)
+
+  svntest.verify.compare_and_display_lines('base vs after', 'local diff',
+                                           out1, out3)
+
+def diff_symlinks(sbox):
+  "diff some symlinks"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_add_symlink('iota', 'to-iota')
+
+  svntest.actions.run_and_verify_svn([
+    'Index: %s\n' % sbox.path('to-iota'),
+    '===================================================================\n',
+    '--- %s\t(nonexistent)\n' % sbox.path('to-iota'),
+    '+++ %s\t(working copy)\n' % sbox.path('to-iota'),
+    '@@ -0,0 +1 @@\n',
+    '+link iota\n',
+    '\ No newline at end of file\n',
+    '\n',
+    'Property changes on: %s\n' % sbox.path('to-iota'),
+    '___________________________________________________________________\n',
+    'Added: svn:special\n',
+    '## -0,0 +1 ##\n',
+    '+*\n',
+    '\ No newline at end of property\n',
+  ], [], 'diff', wc_dir)
+
+  svntest.actions.run_and_verify_svn([
+    'Index: %s\n' % sbox.path('to-iota'),
+    '===================================================================\n',
+    'diff --git a/to-iota b/to-iota\n',
+    'new file mode 120644\n',
+    '--- /dev/null\t(nonexistent)\n',
+    '+++ b/to-iota\t(working copy)\n',
+    '@@ -0,0 +1 @@\n',
+    '+iota\n',
+    '\ No newline at end of file\n',
+    '\n',
+    'Property changes on: to-iota\n',
+    '___________________________________________________________________\n',
+    'Added: svn:special\n',
+    '## -0,0 +1 ##\n',
+    '+*\n',
+    '\ No newline at end of property\n',
+  ], [], 'diff', wc_dir, '--git')
+
+  sbox.simple_commit()
+  os.remove(sbox.ospath('to-iota'))
+  sbox.simple_symlink('A/B/E/alpha', 'to-iota')
+
+  svntest.actions.run_and_verify_svn([
+    'Index: %s\n' % sbox.path('to-iota'),
+    '===================================================================\n',
+    '--- %s\t(revision 2)\n' % sbox.path('to-iota'),
+    '+++ %s\t(working copy)\n' % sbox.path('to-iota'),
+    '@@ -1 +1 @@\n',
+    '-link iota\n',
+    '\ No newline at end of file\n',
+    '+link A/B/E/alpha\n',
+    '\ No newline at end of file\n',
+  ], [], 'diff', wc_dir)
+
+  svntest.actions.run_and_verify_svn([
+    'Index: %s\n' % sbox.path('to-iota'),
+    '===================================================================\n',
+    'diff --git a/to-iota b/to-iota\n',
+    'index 3ef26e44..9930f9a0 120644\n',
+    '--- a/to-iota\t(revision 2)\n',
+    '+++ b/to-iota\t(working copy)\n',
+    '@@ -1 +1 @@\n',
+    '-iota\n',
+    '\ No newline at end of file\n',
+    '+A/B/E/alpha\n',
+    '\ No newline at end of file\n',
+  ], [], 'diff', wc_dir, '--git')
+
+
+@Issue(4597)
+def diff_peg_resolve(sbox):
+  "peg resolving during diff"
+
+  sbox.build()
+  repo_url = sbox.repo_url
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', repo_url, '-m', 'Q',
+                                         'mkdir', 'branches',
+                                         'cp', 1, 'A', 'branches/A1',
+                                         'cp', 1, 'A', 'branches/A2',
+                                         'rm', 'A')
+
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         '-U', repo_url, '-m', 'Q2',
+                                         'rm', 'branches/A1')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'diff', repo_url + '/branches/A1@2',
+                                             sbox.wc_dir,
+                                     '--notice-ancestry')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'diff',
+                                     '--old=' + repo_url + '/branches/A1@2',
+                                     '--new=' + sbox.wc_dir,
+                                     '--git')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'diff',
+                                     '--old=' + repo_url + '/branches/A1@2',
+                                     '--new=' + repo_url + '/A@1',
+                                     '--git')
+
+  svntest.actions.run_and_verify_svn(None, '.*E160005: Target path.*A1',
+                                     'diff',
+                                     repo_url + '/branches/A1',
+                                     wc_dir,
+                                     '--summarize')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'diff',
+                                     repo_url + '/branches/A2',
+                                     wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, '.*E200009: .*mix.*',
+                                     'diff',
+                                     repo_url + '/branches/A2',
+                                     wc_dir, '-r1:2')
+
+
 ########################################################################
 #Run the tests
 
@@ -4917,6 +5231,11 @@ test_list = [ None,
               diff_deleted_in_move_against_repos,
               diff_replaced_moved,
               diff_local_copied_dir,
+              diff_summarize_ignore_properties,
+              diff_incomplete,
+              diff_incomplete_props,
+              diff_symlinks,
+              diff_peg_resolve,
               ]
 
 if __name__ == '__main__':

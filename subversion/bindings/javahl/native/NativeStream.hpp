@@ -81,6 +81,8 @@ public:
    */
   static NativeInputStream* get_self(::Java::Env env, jobject jthis);
 
+  static NativeInputStream* get_self_unsafe(::Java::Env env, jobject jthis);
+
 public:
   /**
    * Implements @c InputStream.close().
@@ -175,6 +177,8 @@ public:
    * Retrieve the address of the native object from the bound Java object.
    */
   static NativeOutputStream* get_self(::Java::Env env, jobject jthis);
+
+  static NativeOutputStream* get_self_unsafe(::Java::Env env, jobject jthis);
 
 public:
   /**

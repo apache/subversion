@@ -132,6 +132,25 @@ svn__fnv1a_32x4(const void *input, apr_size_t len)
                              len - processed);
 }
 
+void
+svn__fnv1a_32x4_raw(apr_uint32_t hashes[4],
+                    const void *input,
+                    apr_size_t len)
+{
+  apr_size_t processed;
+
+  apr_size_t i;
+  for (i = 0; i < SCALING; ++i)
+    hashes[i] = FNV1_BASE_32;
+
+  /* Process full 16 byte chunks. */
+  processed = fnv1a_32x4(hashes, input, len);
+
+  /* Fold the remainder (if any) into the first hash. */
+  hashes[0] = fnv1a_32(hashes[0], (const char *)input + processed,
+                       len - processed);
+}
+
 struct svn_fnv1a_32__context_t
 {
   apr_uint32_t hash;
@@ -144,6 +163,12 @@ svn_fnv1a_32__context_create(apr_pool_t *pool)
   context->hash = FNV1_BASE_32;
 
   return context;
+}
+
+void
+svn_fnv1a_32__context_reset(svn_fnv1a_32__context_t *context)
+{
+  context->hash = FNV1_BASE_32;
 }
 
 void
@@ -181,6 +206,17 @@ svn_fnv1a_32x4__context_create(apr_pool_t *pool)
   context->buffered = 0;
 
   return context;
+}
+
+void
+svn_fnv1a_32x4__context_reset(svn_fnv1a_32x4__context_t *context)
+{
+  context->hashes[0] = FNV1_BASE_32;
+  context->hashes[1] = FNV1_BASE_32;
+  context->hashes[2] = FNV1_BASE_32;
+  context->hashes[3] = FNV1_BASE_32;
+
+  context->buffered = 0;
 }
 
 void

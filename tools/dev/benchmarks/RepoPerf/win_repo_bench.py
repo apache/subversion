@@ -115,7 +115,7 @@ def run_cs_command(state, config, repository, prefix, args):
 
   # Display the operation
   repo_title = repository.replace('nonpacked', 'nopack')
-  print state, "\t", repo_title, "\t", prefix, "\t", config, "\t",
+  sys.stdout.write(state, "\t", repo_title, "\t", prefix, "\t", config, "\t ")
   sys.stdout.flush()
 
   # Execute the command and show the execution times
@@ -189,8 +189,8 @@ def run_test_cs_configurations(command, args):
       repeatedly with all servers on all repositories. """
 
   print
-  print command
-  print
+  print(command)
+  print("")
 
   for config in configurations:
     set_config(config)
@@ -215,7 +215,7 @@ def run_admin_command(state, config, repository, args):
   else:
     extra = []
 
-  print state, "\t", repository, "\t", config, "\t",
+  sys.stdout.write(state, "\t", repository, "\t", config, "\t ")
   sys.stdout.flush()
   subprocess.call(["TimeWin.exe", exe] + args + extra)
 
@@ -241,9 +241,9 @@ def run_test_admin_configurations(command, args):
   """ Run svnadmin COMMAND with basic arguments ARGS in all configurations
       repeatedly on all repositories. """
 
-  print
-  print command
-  print
+  print("")
+  print(command)
+  print("")
 
   for config in configurations:
     # These two must be the innermost loops and must be in that order.

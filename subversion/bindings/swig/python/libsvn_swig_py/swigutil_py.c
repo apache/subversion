@@ -459,6 +459,14 @@ static PyObject *make_ob_wc_adm_access(void *adm_access)
                                       NULL);
 }
 
+static PyObject *make_ob_error(svn_error_t *err)
+{
+  if (err)
+    return svn_swig_NewPointerObjString(err, "svn_error_t *", NULL);
+  else
+    Py_RETURN_NONE;
+}
+
 
 /***/
 
@@ -1521,8 +1529,9 @@ finished:
 static svn_error_t *callback_bad_return_error(const char *message)
 {
   PyErr_SetString(PyExc_TypeError, message);
-  return svn_error_create(APR_EGENERAL, NULL,
-                          "Python callback returned an invalid object");
+  return svn_error_createf(APR_EGENERAL, NULL,
+                           "Python callback returned an invalid object: %s",
+                           message);
 }
 
 /* Return a generic error about not being able to map types. */
@@ -2852,6 +2861,42 @@ svn_error_t *svn_swig_py_fs_get_locks_func(void *baton,
   svn_swig_py_release_py_lock();
   return err;
 }
+
+svn_error_t *svn_swig_py_fs_lock_callback(
+                    void *baton,
+                    const char *path,
+                    const svn_lock_t *lock,
+                    svn_error_t *fs_err,
+                    apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  PyObject *py_callback = baton, *result;
+
+  if (py_callback == NULL || py_callback == Py_None)
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(py_callback,
+                                      (char *)"sO&O&O&",
+                                      path,
+                                      make_ob_lock, lock,
+                                      make_ob_error, fs_err,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else if (result != Py_None)
+    {
+      err = callback_bad_return_error("Not None");
+    }
+
+  Py_XDECREF(result);
+
+  svn_swig_py_release_py_lock();
+  return err;
+}
+
 
 svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
                                              const char **tmp_file,
@@ -4252,9 +4297,10 @@ svn_error_t *svn_swig_py_ra_lock_callback(
   svn_swig_py_acquire_py_lock();
 
   if ((result = PyObject_CallFunction(py_callback,
-                                     (char *)"sbO&O&",
+                                     (char *)"sbO&O&O&",
                                      path, do_lock,
                                      make_ob_lock, lock,
+                                     make_ob_error, ra_err,
                                      make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();

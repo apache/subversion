@@ -166,6 +166,12 @@ sbox_wc_resolve(svn_test__sandbox_t *b, const char *path, svn_depth_t depth,
 
 /* */
 svn_error_t *
+sbox_wc_resolve_prop(svn_test__sandbox_t *b, const char *path,
+                     const char *propname,
+                     svn_wc_conflict_choice_t conflict_choice);
+
+/* */
+svn_error_t *
 sbox_wc_move(svn_test__sandbox_t *b, const char *src, const char *dst);
 
 /* Set property NAME to VALUE on PATH. If VALUE=NULL, delete the property. */

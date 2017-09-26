@@ -82,6 +82,7 @@ kind_to_word(svn_client_diff_summarize_kind_t kind)
 struct summarize_baton_t
 {
   const char *anchor;
+  svn_boolean_t ignore_properties;
 };
 
 /* Print summary information about a given change as XML, implements the
@@ -98,6 +99,11 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
    * baton, and appending the target's relative path. */
   const char *path = b->anchor;
   svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
+  const char *prop_change;
+
+  if (b->ignore_properties &&
+      summary->summarize_kind == svn_client_diff_summarize_kind_normal)
+    return SVN_NO_ERROR;
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
@@ -114,10 +120,14 @@ summarize_xml(const svn_client_diff_summarize_t *summary,
       path = svn_dirent_local_style(path, pool);
     }
 
+  prop_change = summary->prop_changed ? "modified" : "none";
+  if (b->ignore_properties)
+    prop_change = "none";
+
   svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                         "kind", svn_cl__node_kind_str_xml(summary->node_kind),
                         "item", kind_to_word(summary->summarize_kind),
-                        "props", summary->prop_changed ? "modified" : "none",
+                        "props",  prop_change,
                         SVN_VA_NULL);
 
   svn_xml_escape_cdata_cstring(&sb, path, pool);
@@ -135,6 +145,11 @@ summarize_regular(const svn_client_diff_summarize_t *summary,
 {
   struct summarize_baton_t *b = baton;
   const char *path = b->anchor;
+  char prop_change;
+
+  if (b->ignore_properties &&
+      summary->summarize_kind == svn_client_diff_summarize_kind_normal)
+    return SVN_NO_ERROR;
 
   /* Tack on the target path, so we can differentiate between different parts
    * of the output when we're given multiple targets. */
@@ -155,11 +170,13 @@ summarize_regular(const svn_client_diff_summarize_t *summary,
    *       thus the blank spaces where information that is not relevant to
    *       a diff summary would go. */
 
-  SVN_ERR(svn_cmdline_printf(pool,
-                             "%c%c      %s\n",
+  prop_change = summary->prop_changed ? 'M' : ' ';
+  if (b->ignore_properties)
+    prop_change = ' ';
+
+  SVN_ERR(svn_cmdline_printf(pool, "%c%c      %s\n",
                              kind_to_char(summary->summarize_kind),
-                             summary->prop_changed ? 'M' : ' ',
-                             path));
+                             prop_change, path));
 
   return svn_cmdline_fflush(stdout);
 }
@@ -215,6 +232,43 @@ svn_cl__diff(apr_getopt_t *os,
       sb = svn_stringbuf_create_empty(pool);
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "paths", SVN_VA_NULL);
       SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
+    }
+  if (opt_state->diff.summarize)
+    {
+      if (opt_state->diff.use_git_diff_format)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' not valid with '--summarize' option"),
+                                 "--git");
+      if (opt_state->diff.patch_compatible)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' not valid with '--summarize' option"),
+                                 "--patch-compatible");
+      if (opt_state->diff.show_copies_as_adds)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' not valid with '--summarize' option"),
+                                 "--show-copies-as-adds");
+      if (opt_state->diff.internal_diff)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' not valid with '--summarize' option"),
+                                 "--internal-diff");
+      if (opt_state->diff.diff_cmd)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' not valid with '--summarize' option"),
+                                 "--diff-cmd");
+      if (opt_state->diff.no_diff_added)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' not valid with '--summarize' option"),
+                                 "--no-diff-added");
+      if (opt_state->diff.no_diff_deleted)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' not valid with '--summarize' option"),
+                                 "--no-diff-deleted");
+      if (opt_state->force)
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' not valid with '--summarize' option"),
+                                 "--force");
+      /* Not handling ignore-properties, and properties-only as there should
+         be a patch adding support for these being applied soon */
     }
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
@@ -395,6 +449,7 @@ svn_cl__diff(apr_getopt_t *os,
           if (opt_state->diff.summarize)
             {
               summarize_baton.anchor = target1;
+              summarize_baton.ignore_properties = ignore_properties;
 
               SVN_ERR(svn_client_diff_summarize2(
                                 target1,
@@ -447,6 +502,7 @@ svn_cl__diff(apr_getopt_t *os,
           if (opt_state->diff.summarize)
             {
               summarize_baton.anchor = truepath;
+              summarize_baton.ignore_properties = ignore_properties;
               SVN_ERR(svn_client_diff_summarize_peg2(
                                 truepath,
                                 &peg_revision,

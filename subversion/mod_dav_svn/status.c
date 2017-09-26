@@ -29,8 +29,34 @@
 #include "private/svn_cache.h"
 #include "private/svn_fs_private.h"
 
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>   /* For getpid() */
+#endif
+
+#if APR_HAVE_PROCESS_H
+#include <process.h>
+#endif
+
+/* The apache headers define these and they conflict with our definitions. */
+#ifdef PACKAGE_BUGREPORT
+#undef PACKAGE_BUGREPORT
+#endif
+#ifdef PACKAGE_NAME
+#undef PACKAGE_NAME
+#endif
+#ifdef PACKAGE_STRING
+#undef PACKAGE_STRING
+#endif
+#ifdef PACKAGE_TARNAME
+#undef PACKAGE_TARNAME
+#endif
+#ifdef PACKAGE_VERSION
+#undef PACKAGE_VERSION
+#endif
+#include "svn_private_config.h"
+
 #ifndef DEFAULT_TIME_FORMAT
-#define DEFAULT_TIME_FORMAT "%F %H:%M:%S %z"
+#define DEFAULT_TIME_FORMAT "%Y-%m-%d %H:%M:%S %Z"
 #endif
 
 /* A bit like mod_status: add a location:
@@ -72,13 +98,12 @@ int dav_svn__status(request_rec *r)
             ap_ht_time(r->pool, apr_time_now(), DEFAULT_TIME_FORMAT, 0),
             "</dt>\n", SVN_VA_NULL);
 
-#if !defined(WIN32) && defined(HAVE_UNISTD_H) && defined(HAVE_GETPID)
+#if defined(WIN32) || (defined(HAVE_UNISTD_H) && defined(HAVE_GETPID))
   /* On Unix the server is generally multiple processes and this
      request only shows the status of the single process that handles
      the request. Ideally we would iterate over all processes but that
      would need some MPM support, so we settle for simply showing the
      process ID. */
-#include <unistd.h>
   ap_rprintf(r, "<dt>Server process id: %d</dt>\n", (int)getpid());
 #endif
 

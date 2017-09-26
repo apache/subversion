@@ -23,12 +23,7 @@
 #
 
 import os
-try:
-  # Python >=2.5
-  from hashlib import md5 as hashlib_md5
-except ImportError:
-  # Python <2.5
-  from md5 import md5 as hashlib_md5
+from hashlib import md5 as hashlib_md5
 import sys
 import fnmatch
 import re
@@ -84,14 +79,15 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     # Print list of identified libraries
     printed = []
-    for lib in sorted(self._libraries.values(), key = lambda s: s.name):
+    for lib in sorted(self._libraries.values(),
+                      key = lambda s: (s.internal, s.name)):
       if lib.name in printed:
         continue
       printed.append(lib.name)
-      print('Found %s %s' % (lib.name, lib.version))
-
-    if 'db' not in self._libraries:
-      print('BDB not found, BDB fs will not be built')
+      if lib.internal:
+        print('Using bundled %s %s' % (lib.name, lib.version))
+      else:
+        print('Found %s %s' % (lib.name, lib.version))
 
     #Make some files for the installer so that we don't need to
     #require sed or some other command to do it
@@ -279,6 +275,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                                   'msvc-name' : dep.name + "_dll" },
                                 self)
     target.msvc_export = dep.msvc_export
+    target.msvc_delayload = dep.msvc_delayload
 
     # move the description from the static library target to the dll.
     target.desc = dep.desc
@@ -287,6 +284,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # The dependency should now be static.
     dep.msvc_export = None
     dep.msvc_static = True
+    dep.msvc_delayload = False
 
     # Remove the 'lib' prefix, so that the static library will be called
     # svn_foo.lib
@@ -553,9 +551,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
             and target.external_project):
       return None
 
-    if target.external_project[:5] == 'serf/' and 'serf' in self._libraries:
-      path = self.serf_path + target.external_project[4:]
-    elif target.external_project.find('/') != -1:
+    if target.external_project.find('/') != -1:
       path = target.external_project
     else:
       path = os.path.join(self.projfilesdir, target.external_project)
@@ -608,14 +604,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       for dep, (is_proj, is_lib, is_static) in dep_dict.items():
         if is_proj:
           deps.append(dep)
-    elif mode == FILTER_LIBS:
+    elif mode == FILTER_LIBS or mode == FILTER_EXTERNALLIBS:
       for dep, (is_proj, is_lib, is_static) in dep_dict.items():
         if is_static or (is_lib and not is_proj):
-          deps.append(dep)
-    elif mode == FILTER_EXTERNALLIBS:
-      for dep, (is_proj, is_lib, is_static) in dep_dict.items():
-        if is_static or (is_lib and not is_proj):
-          deps.append(dep)
+          # Filter explicit msvc libraries of optional dependencies
+          if (dep.name in self._libraries
+              or dep.name not in self._optional_libraries):
+            deps.append(dep)
     else:
       raise NotImplementedError
 

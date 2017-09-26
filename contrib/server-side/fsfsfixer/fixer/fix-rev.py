@@ -30,7 +30,7 @@ fixed_ids = {}
 fixed_checksums = {}
 
 # Youngest FSFS format we know how to handle.
-MAX_FSFS_FORMAT = 5
+MAX_FSFS_FORMAT = 6
 
 # ----------------------------------------------------------------------
 # Functions
@@ -38,7 +38,7 @@ MAX_FSFS_FORMAT = 5
 # Print a message, only if 'verbose' mode is enabled.
 def verbose_print(str):
   if VERBOSE:
-    print str
+    print(str)
 
 # Echo the arguments to a log file, and also (if verbose) to standard output.
 def log(str):
@@ -101,7 +101,7 @@ def fix_id(repo_dir, rev, bad_id):
                    "good id '" + good_id + "'")
 
   replace_in_rev_file(repo_dir, rev, bad_id, good_id)
-  print "Fixed id: " + bad_id + " -> " + good_id
+  print("Fixed id: " + bad_id + " -> " + good_id)
   fixed_ids[bad_id] = good_id
 
 def fix_checksum(repo_dir, rev, old_checksum, new_checksum):
@@ -112,7 +112,7 @@ def fix_checksum(repo_dir, rev, old_checksum, new_checksum):
   assert old_checksum != new_checksum
 
   replace_in_rev_file(repo_dir, rev, old_checksum, new_checksum)
-  print "Fixed checksum: " + old_checksum + " -> " + new_checksum
+  print("Fixed checksum: " + old_checksum + " -> " + new_checksum)
   fixed_checksums[old_checksum] = new_checksum
 
 def fix_rep_ref(repo_dir, rev, prefix, rep_rev, bad_offset, rep_size):
@@ -127,7 +127,7 @@ def fix_rep_ref(repo_dir, rev, prefix, rep_rev, bad_offset, rep_size):
   if good_offset == bad_offset:
     raise FixError("Attempting to fix a rep ref that appears to be correct: " + old_line)
   replace_in_rev_file(repo_dir, rev, old_line, new_line)
-  print "Fixed rep ref:", old_line, "->", new_line
+  print("Fixed rep ref:", old_line, "->", new_line)
 
 
 def handle_one_error(repo_dir, rev, error_lines):
@@ -226,8 +226,8 @@ def fix_one_error(repo_dir, rev):
       return True
     else:
       verbose_print("Unrecognized error message; trying 'svnlook' instead.")
-  except FixError, e:
-    print 'warning:', e
+  except FixError as e:
+    print('warning:', e)
     verbose_print("Trying 'svnlook' instead.")
 
   # At this point, we've got an 'svnadmin' error that we don't know how to
@@ -238,7 +238,7 @@ def fix_one_error(repo_dir, rev):
   svnlook_err = grab_stderr([SVNLOOK, 'tree', '-r'+rev, repo_dir])
 
   if svnlook_err == []:
-    print 'warning: svnlook did not find an error'
+    print('warning: svnlook did not find an error')
   else:
     if handle_one_error(repo_dir, rev, svnlook_err):
       return True
@@ -281,13 +281,13 @@ def fix_rev(repo_dir, rev):
   # Keep looking for verification errors in r$REV and fixing them while we can.
   while fix_one_error(repo_dir, rev):
     pass
-  print "Revision " + rev + " verifies OK."
+  print("Revision " + rev + " verifies OK.")
 
 
 if __name__ == '__main__':
 
   if len(sys.argv) != 3:
-    print >>sys.stderr, usage
+    sys.stderr.write(usage + "\n")
     sys.exit(1)
 
   repo_dir = sys.argv[1]
@@ -295,6 +295,6 @@ if __name__ == '__main__':
 
   try:
     fix_rev(repo_dir, rev)
-  except FixError, e:
-    print 'error:', e
+  except FixError as e:
+    print('error:', e)
     sys.exit(1)

@@ -80,7 +80,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t help;            /* print usage message */
   const char *auth_username;     /* auth username */ /* UTF-8! */
   const char *auth_password;     /* auth password */ /* UTF-8! */
-  const char *extensions;        /* subprocess extension args */ /* UTF-8! */
   apr_array_header_t *targets;   /* target list from file */ /* UTF-8! */
   svn_boolean_t no_auth_cache;   /* do not cache authentication information */
   svn_boolean_t stop_on_copy;    /* don't cross copies during processing */
@@ -96,6 +95,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t trust_server_cert_expired;
   svn_boolean_t trust_server_cert_not_yet_valid;
   svn_boolean_t trust_server_cert_other_failure;
+  apr_array_header_t* search_patterns; /* pattern arguments for --search */
 } svn_cl__opt_state_t;
 
 
@@ -109,6 +109,7 @@ typedef struct svn_cl__cmd_baton_t
 /* Declare all the command procedures */
 svn_opt_subcommand_t
   svn_cl__help,
+  svn_cl__null_blame,
   svn_cl__null_export,
   svn_cl__null_list,
   svn_cl__null_log,
@@ -150,8 +151,7 @@ svn_cl__try(svn_error_t *err,
 
 
 /* Our cancellation callback. */
-svn_error_t *
-svn_cl__check_cancel(void *baton);
+extern svn_cancel_func_t svn_cl__check_cancel;
 
 
 

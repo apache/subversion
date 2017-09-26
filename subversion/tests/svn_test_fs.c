@@ -119,7 +119,7 @@ create_fs(svn_fs_t **fs_p,
      runs.  */
   SVN_ERR(svn_io_remove_dir2(name, TRUE, NULL, NULL, pool));
 
-  SVN_ERR(svn_fs_create(fs_p, name, fs_config, pool));
+  SVN_ERR(svn_fs_create2(fs_p, name, fs_config, pool, pool));
   if (! *fs_p)
     return svn_error_create(SVN_ERR_FS_GENERAL, NULL,
                             "Couldn't alloc a new fs object.");
@@ -195,7 +195,7 @@ svn_test__create_fs2(svn_fs_t **fs_p,
   SVN_ERR(maybe_install_fs_conf(*fs_p, opts, &must_reopen, pool));
   if (must_reopen)
     {
-      SVN_ERR(svn_fs_open2(fs_p, name, NULL, pool, pool));
+      SVN_ERR(svn_fs_open2(fs_p, name, fs_config, pool, pool));
       svn_fs_set_warning_func(*fs_p, fs_warning_handler, NULL);
     }
 
@@ -364,15 +364,17 @@ svn_test__set_file_contents(svn_fs_root_t *root,
   svn_txdelta_window_handler_t consumer_func;
   void *consumer_baton;
   svn_string_t string;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   SVN_ERR(svn_fs_apply_textdelta(&consumer_func, &consumer_baton,
-                                 root, path, NULL, NULL, pool));
+                                 root, path, NULL, NULL, subpool));
 
   string.data = contents;
   string.len = strlen(contents);
   SVN_ERR(svn_txdelta_send_string(&string, consumer_func,
-                                  consumer_baton, pool));
+                                  consumer_baton, subpool));
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 
@@ -399,27 +401,30 @@ static svn_error_t *
 get_dir_entries(apr_hash_t *tree_entries,
                 svn_fs_root_t *root,
                 const char *path,
-                apr_pool_t *pool)
+                apr_pool_t *scratch_pool)
 {
   apr_hash_t *entries;
   apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_pool_t *result_pool = apr_hash_pool_get(tree_entries);
 
-  SVN_ERR(svn_fs_dir_entries(&entries, root, path, pool));
+  SVN_ERR(svn_fs_dir_entries(&entries, root, path, scratch_pool));
 
   /* Copy this list to the master list with the path prepended to the
      names */
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
     {
       void *val;
       svn_fs_dirent_t *dirent;
       const char *full_path;
+      svn_pool_clear(iterpool);
 
       apr_hash_this(hi, NULL, NULL, &val);
       dirent = val;
 
       /* Calculate the full path of this entry (by appending the name
          to the path thus far) */
-      full_path = svn_path_join(path, dirent->name, pool);
+      full_path = svn_path_join(path, dirent->name, result_pool);
 
       /* Now, copy this dirent to the master hash, but this time, use
          the full path for the key */
@@ -427,7 +432,7 @@ get_dir_entries(apr_hash_t *tree_entries,
 
       /* If this entry is a directory, recurse into the tree. */
       if (dirent->kind == svn_node_dir)
-        SVN_ERR(get_dir_entries(tree_entries, root, full_path, pool));
+        SVN_ERR(get_dir_entries(tree_entries, root, full_path, iterpool));
     }
 
   return SVN_NO_ERROR;
@@ -500,6 +505,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
 {
   apr_hash_t *tree_entries, *expected_entries;
   apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   svn_stringbuf_t *extra_entries = NULL;
   svn_stringbuf_t *missing_entries = NULL;
   svn_stringbuf_t *corrupt_entries = NULL;
@@ -509,6 +515,13 @@ svn_test__validate_tree(svn_fs_root_t *root,
   /* There should be no entry with this name. */
   const char *na_name = "es-vee-en";
 
+  /* Create our master hash for storing the entries */
+  tree_entries = apr_hash_make(subpool);
+
+  /* Recursively get the whole tree */
+  SVN_ERR(get_dir_entries(tree_entries, root, "", iterpool));
+  svn_pool_clear(iterpool);
+
   /* Create a hash for storing our expected entries */
   expected_entries = apr_hash_make(subpool);
 
@@ -516,12 +529,6 @@ svn_test__validate_tree(svn_fs_root_t *root,
   for (i = 0; i < num_entries; i++)
     apr_hash_set(expected_entries, entries[i].path,
                  APR_HASH_KEY_STRING, &(entries[i]));
-
-  /* Create our master hash for storing the entries */
-  tree_entries = apr_hash_make(pool);
-
-  /* Begin the recursive directory entry dig */
-  SVN_ERR(get_dir_entries(tree_entries, root, "", subpool));
 
   /* For each entry in our EXPECTED_ENTRIES hash, try to find that
      entry in the TREE_ENTRIES hash given us by the FS.  If we find
@@ -536,6 +543,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
       void *val;
       svn_test__tree_entry_t *entry;
 
+      svn_pool_clear(iterpool);
       apr_hash_this(hi, &key, &keylen, &val);
       entry = val;
 
@@ -546,7 +554,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
           svn_error_t *err;
 
           if ((err = validate_tree_entry(root, entry->path,
-                                         entry->contents, subpool)))
+                                         entry->contents, iterpool)))
             {
               /* If we don't have a corrupt entries string, make one. */
               if (! corrupt_entries)
@@ -627,6 +635,7 @@ svn_test__validate_tree(svn_fs_root_t *root,
          extra_entries ? extra_entries->data : "");
     }
 
+  svn_pool_destroy(iterpool);
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
@@ -637,10 +646,27 @@ svn_test__validate_changes(svn_fs_root_t *root,
                            apr_hash_t *expected,
                            apr_pool_t *pool)
 {
+  svn_fs_path_change_iterator_t *iter;
   apr_hash_t *actual;
   apr_hash_index_t *hi;
+  svn_fs_path_change3_t *change;
 
-  SVN_ERR(svn_fs_paths_changed2(&actual, root, pool));
+  SVN_ERR(svn_fs_paths_changed3(&iter, root, pool, pool));
+  SVN_ERR(svn_fs_path_change_get(&change, iter));
+
+  /* We collect all changes b/c this is the easiest way to check for an
+     exact match against EXPECTED. */
+  actual = apr_hash_make(pool);
+  while (change)
+    {
+      const char *path = apr_pstrmemdup(pool, change->path.data,
+                                        change->path.len);
+      /* No duplicates! */
+      SVN_TEST_ASSERT(!apr_hash_get(actual, path, change->path.len));
+      apr_hash_set(actual, path, change->path.len, path);
+
+      SVN_ERR(svn_fs_path_change_get(&change, iter));
+    }
 
 #if 0
   /* Print ACTUAL and EXPECTED. */
@@ -675,6 +701,7 @@ svn_test__txn_script_exec(svn_fs_root_t *txn_root,
                           apr_pool_t *pool)
 {
   int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Run through the list of edits, making the appropriate edit on
      that entry in the TXN_ROOT. */
@@ -685,18 +712,19 @@ svn_test__txn_script_exec(svn_fs_root_t *txn_root,
       int cmd = script[i].cmd;
       svn_boolean_t is_dir = (param1 == 0);
 
+      svn_pool_clear(iterpool);
       switch (cmd)
         {
         case 'a':
           if (is_dir)
             {
-              SVN_ERR(svn_fs_make_dir(txn_root, path, pool));
+              SVN_ERR(svn_fs_make_dir(txn_root, path, iterpool));
             }
           else
             {
-              SVN_ERR(svn_fs_make_file(txn_root, path, pool));
+              SVN_ERR(svn_fs_make_file(txn_root, path, iterpool));
               SVN_ERR(svn_test__set_file_contents(txn_root, path,
-                                                  param1, pool));
+                                                  param1, iterpool));
             }
           break;
 
@@ -706,21 +734,21 @@ svn_test__txn_script_exec(svn_fs_root_t *txn_root,
             svn_fs_root_t *rev_root;
             svn_fs_t *fs = svn_fs_root_fs(txn_root);
 
-            SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
-            SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest, pool));
-            SVN_ERR(svn_fs_copy(rev_root, path, txn_root, param1, pool));
+            SVN_ERR(svn_fs_youngest_rev(&youngest, fs, iterpool));
+            SVN_ERR(svn_fs_revision_root(&rev_root, fs, youngest, iterpool));
+            SVN_ERR(svn_fs_copy(rev_root, path, txn_root, param1, iterpool));
           }
           break;
 
         case 'd':
-          SVN_ERR(svn_fs_delete(txn_root, path, pool));
+          SVN_ERR(svn_fs_delete(txn_root, path, iterpool));
           break;
 
         case 'e':
           if (! is_dir)
             {
               SVN_ERR(svn_test__set_file_contents(txn_root, path,
-                                                  param1, pool));
+                                                  param1, iterpool));
             }
           break;
 
@@ -729,6 +757,7 @@ svn_test__txn_script_exec(svn_fs_root_t *txn_root,
         }
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -765,21 +794,26 @@ svn_test__check_greek_tree(svn_fs_root_t *root,
   svn_stringbuf_t *rstring;
   svn_stringbuf_t *content;
   const struct svn_test__tree_entry_t *node;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Loop through the list of files, checking for matching content. */
   for (node = svn_test__greek_tree_nodes; node->path; node++)
     {
       if (node->contents)
         {
-          SVN_ERR(svn_fs_file_contents(&rstream, root, node->path, pool));
-          SVN_ERR(svn_test__stream_to_string(&rstring, rstream, pool));
-          content = svn_stringbuf_create(node->contents, pool);
+          svn_pool_clear(iterpool);
+
+          SVN_ERR(svn_fs_file_contents(&rstream, root, node->path, iterpool));
+          SVN_ERR(svn_test__stream_to_string(&rstring, rstream, iterpool));
+          content = svn_stringbuf_create(node->contents, iterpool);
           if (! svn_stringbuf_compare(rstring, content))
             return svn_error_createf(SVN_ERR_FS_GENERAL, NULL,
                                      "data read != data written in file '%s'.",
                                      node->path);
         }
     }
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -789,22 +823,28 @@ svn_test__create_greek_tree_at(svn_fs_root_t *txn_root,
                                apr_pool_t *pool)
 {
   const struct svn_test__tree_entry_t *node;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   for (node = svn_test__greek_tree_nodes; node->path; node++)
     {
-      const char *path = svn_relpath_join(root_dir, node->path, pool);
+      const char *path;
+      svn_pool_clear(iterpool);
+
+      path = svn_relpath_join(root_dir, node->path, iterpool);
 
       if (node->contents)
         {
-          SVN_ERR(svn_fs_make_file(txn_root, path, pool));
+          SVN_ERR(svn_fs_make_file(txn_root, path, iterpool));
           SVN_ERR(svn_test__set_file_contents(txn_root, path, node->contents,
-                                              pool));
+                                              iterpool));
         }
       else
         {
-          SVN_ERR(svn_fs_make_dir(txn_root, path, pool));
+          SVN_ERR(svn_fs_make_dir(txn_root, path, iterpool));
         }
     }
+
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
@@ -826,6 +866,7 @@ svn_test__create_blame_repository(svn_repos_t **out_repos,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root, *revision_root;
   svn_revnum_t youngest_rev = 0;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(&repos, test_name,
@@ -836,87 +877,96 @@ svn_test__create_blame_repository(svn_repos_t **out_repos,
 
   /* Revision 1:  Add trunk, tags, branches. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "initial", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_fs_make_dir(txn_root, "trunk", pool));
-  SVN_ERR(svn_fs_make_dir(txn_root, "tags", pool));
-  SVN_ERR(svn_fs_make_dir(txn_root, "branches", pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                                            "initial", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "trunk", subpool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "tags", subpool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "branches", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
 
   /* Revision 2:  Add the Greek tree on the trunk. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "initial", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_test__create_greek_tree_at(txn_root, "trunk", pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                                            "initial", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__create_greek_tree_at(txn_root, "trunk", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
 
   /* Revision 3:  Tweak trunk/A/mu. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "user-trunk", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+                                            "user-trunk", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "trunk/A/mu",
-                                      "A\nB\nC\nD\nE\nF\nG\nH\nI", pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                                      "A\nB\nC\nD\nE\nF\nG\nH\nI", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
 
   /* Revision 4:  Copy trunk to branches/1.0.x. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "copy", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
-  SVN_ERR(svn_fs_revision_root(&revision_root, fs, youngest_rev, pool));
+                                            "copy", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_revision_root(&revision_root, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_copy(revision_root, "trunk",
                       txn_root, "branches/1.0.x",
-                      pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                      subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
 
   /* Revision 5:  Tweak trunk/A/mu. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "user-trunk", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+                                            "user-trunk", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "trunk/A/mu",
                                       "A\nB\nC -- trunk edit\nD\nE\nF\nG\nH\nI",
-                                      pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                                      subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
 
   /* Revision 6:  Tweak branches/1.0.x/A/mu. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "user-branch", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+                                            "user-branch", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "branches/1.0.x/A/mu",
                                       "A\nB\nC\nD -- branch edit\nE\nF\nG\nH\nI",
-                                      pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                                      subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
 
   /* Revision 7:  Merge trunk to branch. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "user-merge1", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+                                            "user-merge1", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "branches/1.0.x/A/mu",
                                       "A\nB\nC -- trunk edit\nD -- branch edit"
-                                      "\nE\nF\nG\nH\nI", pool));
+                                      "\nE\nF\nG\nH\nI", subpool));
   SVN_ERR(svn_fs_change_node_prop(txn_root, "/branches/1.0.x", "svn:mergeinfo",
-                                  svn_string_create("/trunk:4-6", pool),
-                                  pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                                  svn_string_create("/trunk:4-6", subpool),
+                                  subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+  svn_pool_clear(subpool);
 
   /* Revision 8:  Merge branch to trunk. */
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn, repos, youngest_rev,
-                                            "user-merge2", "log msg", pool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+                                            "user-merge2", "log msg", subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
   SVN_ERR(svn_test__set_file_contents(txn_root, "trunk/A/mu",
                                       "A\nB\nC -- trunk edit\nD -- branch edit\n"
-                                      "E\nF\nG\nH\nI", pool));
+                                      "E\nF\nG\nH\nI", subpool));
   SVN_ERR(svn_fs_change_node_prop(txn_root, "/trunk", "svn:mergeinfo",
-                                  svn_string_create("/branches/1.0.x:4-7", pool),
-                                  pool));
-  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, pool));
+                                  svn_string_create("/branches/1.0.x:4-7", subpool),
+                                  subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
   SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(youngest_rev));
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }

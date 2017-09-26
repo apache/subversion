@@ -49,6 +49,7 @@ extern "C" {
 /** Currently-defined capabilities. */
 #define SVN_RA_SVN_CAP_EDIT_PIPELINE "edit-pipeline"
 #define SVN_RA_SVN_CAP_SVNDIFF1 "svndiff1"
+#define SVN_RA_SVN_CAP_SVNDIFF2_ACCEPTED "accepts-svndiff2"
 #define SVN_RA_SVN_CAP_ABSENT_ENTRIES "absent-entries"
 /* maps to SVN_RA_CAPABILITY_COMMIT_REVPROPS: */
 #define SVN_RA_SVN_CAP_COMMIT_REVPROPS "commit-revprops"
@@ -68,6 +69,8 @@ extern "C" {
 #define SVN_RA_SVN_CAP_EPHEMERAL_TXNPROPS "ephemeral-txnprops"
 /* maps to SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE */
 #define SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE "file-revs-reverse"
+/* maps to SVN_RA_CAPABILITY_LIST */
+#define SVN_RA_SVN_CAP_LIST "list"
 
 
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of
@@ -141,16 +144,21 @@ typedef struct svn_ra_svn_cmd_entry_t
   svn_boolean_t terminate;
 } svn_ra_svn_cmd_entry_t;
 
+/** Data types defined by the svn:// protocol. */
+typedef enum
+{
+  SVN_RA_SVN_NUMBER,
+  SVN_RA_SVN_STRING,
+  SVN_RA_SVN_WORD,
+  SVN_RA_SVN_LIST
+} svn_ra_svn_item_kind_t;
+
 /** Memory representation of an on-the-wire data item. */
 typedef struct svn_ra_svn_item_t
 {
   /** Variant indicator. */
-  enum {
-    SVN_RA_SVN_NUMBER,
-    SVN_RA_SVN_STRING,
-    SVN_RA_SVN_WORD,
-    SVN_RA_SVN_LIST
-  } kind;
+  svn_ra_svn_item_kind_t kind;
+
   /** Variant data. */
   union {
     apr_uint64_t number;
@@ -184,13 +192,38 @@ typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
  * It defines the number of bytes that must have been sent since the last
  * check before the next check will be made.
  *
+ * If @a max_in is not 0, error out and close the connection whenever more
+ * than @a max_in bytes are received for a command (e.g. a client request).
+ * If @a max_out is not 0, error out and close the connection whenever more
+ * than @a max_out bytes have been send as response to some command.
+ *
+ * @note The limits enforced may vary slightly by +/- the I/O buffer size. 
+ *
  * @note If @a out_stream is an wrapped apr_file_t* the backing file will be
  * used for some operations.
  *
  * Allocate the result in @a pool.
  *
- * @since New in 1.9
+ * @since New in 1.10
  */
+svn_ra_svn_conn_t *svn_ra_svn_create_conn5(apr_socket_t *sock,
+                                           svn_stream_t *in_stream,
+                                           svn_stream_t *out_stream,
+                                           int compression_level,
+                                           apr_size_t zero_copy_limit,
+                                           apr_size_t error_check_interval,
+                                           apr_uint64_t max_in,
+                                           apr_uint64_t max_out,
+                                           apr_pool_t *result_pool);
+
+
+/** Similar to svn_ra_svn_create_conn5() but with @a max_in and @a max_out
+ * set to 0.
+ *
+ * @since New in 1.9
+ * @deprecated Provided for backward compatibility with the 1.9 API.
+ */
+SVN_DEPRECATED
 svn_ra_svn_conn_t *svn_ra_svn_create_conn4(apr_socket_t *sock,
                                            svn_stream_t *in_stream,
                                            svn_stream_t *out_stream,

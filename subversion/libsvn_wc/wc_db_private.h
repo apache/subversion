@@ -355,6 +355,7 @@ svn_wc__db_fetch_repos_info(const char **repos_root_url,
 svn_error_t *
 svn_wc__db_read_conflict_internal(svn_skel_t **conflict,
                                   svn_node_kind_t *kind,
+                                  apr_hash_t **props,
                                   svn_wc__db_wcroot_t *wcroot,
                                   const char *local_relpath,
                                   apr_pool_t *result_pool,

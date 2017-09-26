@@ -109,6 +109,8 @@ class ExpectedOutput(object):
   def __init__(self, expected, match_all=True):
     """Initialize the expected output to EXPECTED which is a string, or
        a list of strings.
+
+       See also: svntest.verify.createExpectedOutput().
     """
     assert expected is not None
     self.expected = expected
@@ -189,7 +191,7 @@ class RegexOutput(ExpectedOutput):
 
   def __init__(self, expected, match_all=True):
     "EXPECTED is a regular expression string."
-    assert isinstance(expected, str)
+    assert isinstance(expected, str) or isinstance(expected, bytes)
     ExpectedOutput.__init__(self, expected, match_all)
     self.expected_re = re.compile(expected)
 
@@ -416,9 +418,10 @@ def compare_and_display_lines(message, label, expected, actual,
   if not isinstance(expected, ExpectedOutput):
     expected = ExpectedOutput(expected)
 
-  if isinstance(actual, str):
-    actual = [actual]
-  actual = svntest.main.filter_dbg(actual)
+  actual = svntest.main.ensure_list(actual)
+  if len(actual) > 0:
+    is_binary = not isinstance(actual[0], str)
+    actual = svntest.main.filter_dbg(actual, is_binary)
 
   if not expected.matches(actual):
     expected.display_differences(message, label, actual)
@@ -484,7 +487,7 @@ class DumpParser:
     return m.group(1)
 
   def parse_blank(self, required=True):
-    if self.lines[self.current] != '\n':  # Works on Windows
+    if self.lines[self.current] != b'\n':  # Works on Windows
       if required:
         raise SVNDumpParseError("expected blank at line %d\n%s"
                                 % (self.current, self.lines[self.current]))
@@ -494,7 +497,7 @@ class DumpParser:
     return True
 
   def parse_header(self, header):
-    regex = '([^:]*): (.*)$'
+    regex = b'([^:]*): (.*)$'
     m = re.match(regex, self.lines[self.current])
     if not m:
       raise SVNDumpParseError("expected a header at line %d, but found:\n%s"
@@ -504,80 +507,80 @@ class DumpParser:
 
   def parse_headers(self):
     headers = []
-    while self.lines[self.current] != '\n':
+    while self.lines[self.current] != b'\n':
       key, val = self.parse_header(self)
       headers.append((key, val))
     return headers
 
 
   def parse_boolean(self, header, required):
-    return self.parse_line(header + ': (false|true)$', required)
+    return self.parse_line(header + b': (false|true)$', required)
 
   def parse_format(self):
-    return self.parse_line('SVN-fs-dump-format-version: ([0-9]+)$')
+    return self.parse_line(b'SVN-fs-dump-format-version: ([0-9]+)$')
 
   def parse_uuid(self):
-    return self.parse_line('UUID: ([0-9a-z-]+)$')
+    return self.parse_line(b'UUID: ([0-9a-z-]+)$')
 
   def parse_revision(self):
-    return self.parse_line('Revision-number: ([0-9]+)$')
+    return self.parse_line(b'Revision-number: ([0-9]+)$')
 
   def parse_prop_delta(self):
-    return self.parse_line('Prop-delta: (false|true)$', required=False)
+    return self.parse_line(b'Prop-delta: (false|true)$', required=False)
 
   def parse_prop_length(self, required=True):
-    return self.parse_line('Prop-content-length: ([0-9]+)$', required)
+    return self.parse_line(b'Prop-content-length: ([0-9]+)$', required)
 
   def parse_content_length(self, required=True):
-    return self.parse_line('Content-length: ([0-9]+)$', required)
+    return self.parse_line(b'Content-length: ([0-9]+)$', required)
 
   def parse_path(self):
-    path = self.parse_line('Node-path: (.*)$', required=False)
+    path = self.parse_line(b'Node-path: (.*)$', required=False)
     return path
 
   def parse_kind(self):
-    return self.parse_line('Node-kind: (.+)$', required=False)
+    return self.parse_line(b'Node-kind: (.+)$', required=False)
 
   def parse_action(self):
-    return self.parse_line('Node-action: ([0-9a-z-]+)$')
+    return self.parse_line(b'Node-action: ([0-9a-z-]+)$')
 
   def parse_copyfrom_rev(self):
-    return self.parse_line('Node-copyfrom-rev: ([0-9]+)$', required=False)
+    return self.parse_line(b'Node-copyfrom-rev: ([0-9]+)$', required=False)
 
   def parse_copyfrom_path(self):
-    path = self.parse_line('Node-copyfrom-path: (.+)$', required=False)
+    path = self.parse_line(b'Node-copyfrom-path: (.+)$', required=False)
     if not path and self.lines[self.current] == 'Node-copyfrom-path: \n':
       self.current += 1
       path = ''
     return path
 
   def parse_copy_md5(self):
-    return self.parse_line('Text-copy-source-md5: ([0-9a-z]+)$', required=False)
+    return self.parse_line(b'Text-copy-source-md5: ([0-9a-z]+)$', required=False)
 
   def parse_copy_sha1(self):
-    return self.parse_line('Text-copy-source-sha1: ([0-9a-z]+)$', required=False)
+    return self.parse_line(b'Text-copy-source-sha1: ([0-9a-z]+)$', required=False)
 
   def parse_text_md5(self):
-    return self.parse_line('Text-content-md5: ([0-9a-z]+)$', required=False)
+    return self.parse_line(b'Text-content-md5: ([0-9a-z]+)$', required=False)
 
   def parse_text_sha1(self):
-    return self.parse_line('Text-content-sha1: ([0-9a-z]+)$', required=False)
+    return self.parse_line(b'Text-content-sha1: ([0-9a-z]+)$', required=False)
 
   def parse_text_delta(self):
-    return self.parse_line('Text-delta: (false|true)$', required=False)
+    return self.parse_line(b'Text-delta: (false|true)$', required=False)
 
   def parse_text_delta_base_md5(self):
-    return self.parse_line('Text-delta-base-md5: ([0-9a-f]+)$', required=False)
+    return self.parse_line(b'Text-delta-base-md5: ([0-9a-f]+)$', required=False)
 
   def parse_text_delta_base_sha1(self):
-    return self.parse_line('Text-delta-base-sha1: ([0-9a-f]+)$', required=False)
+    return self.parse_line(b'Text-delta-base-sha1: ([0-9a-f]+)$', required=False)
 
   def parse_text_length(self):
-    return self.parse_line('Text-content-length: ([0-9]+)$', required=False)
+    return self.parse_line(b'Text-content-length: ([0-9]+)$', required=False)
 
   def get_props(self):
     props = []
-    while not re.match('PROPS-END$', self.lines[self.current]):
+    while not re.match(b'PROPS-END$', self.lines[self.current]):
       props.append(self.lines[self.current])
       self.current += 1
     self.current += 1
@@ -593,7 +596,7 @@ class DumpParser:
         curprop[0] += 1
 
         # key / value
-        key = ''
+        key = b''
         while len(key) != klen + 1:
           key += props[curprop[0]]
           curprop[0] += 1
@@ -601,10 +604,10 @@ class DumpParser:
 
         return key
 
-      if props[curprop[0]].startswith('K'):
+      if props[curprop[0]].startswith(b'K'):
         key = read_key_or_value(curprop)
         value = read_key_or_value(curprop)
-      elif props[curprop[0]].startswith('D'):
+      elif props[curprop[0]].startswith(b'D'):
         key = read_key_or_value(curprop)
         value = None
       else:
@@ -614,7 +617,7 @@ class DumpParser:
     return prophash
 
   def get_content(self, length):
-    content = ''
+    content = b''
     while len(content) < length:
       content += self.lines[self.current]
       self.current += 1
@@ -637,22 +640,22 @@ class DumpParser:
     headers = dict(headers_list)
 
     # Content-length must be last, if present
-    if 'Content-length' in headers and headers_list[-1][0] != 'Content-length':
+    if b'Content-length' in headers and headers_list[-1][0] != b'Content-length':
       raise SVNDumpParseError("'Content-length' header is not last, "
                               "in header block ending at line %d"
                               % (self.current,))
 
     # parse the remaining optional headers and store in specific keys in NODE
     for key, header, regex in [
-        ('copyfrom_rev',    'Node-copyfrom-rev',    '([0-9]+)$'),
-        ('copyfrom_path',   'Node-copyfrom-path',   '(.*)$'),
-        ('copy_md5',        'Text-copy-source-md5', '([0-9a-z]+)$'),
-        ('copy_sha1',       'Text-copy-source-sha1','([0-9a-z]+)$'),
-        ('prop_length',     'Prop-content-length',  '([0-9]+)$'),
-        ('text_length',     'Text-content-length',  '([0-9]+)$'),
-        ('text_md5',        'Text-content-md5',     '([0-9a-z]+)$'),
-        ('text_sha1',       'Text-content-sha1',    '([0-9a-z]+)$'),
-        ('content_length',  'Content-length',       '([0-9]+)$'),
+        ('copyfrom_rev',    b'Node-copyfrom-rev',    b'([0-9]+)$'),
+        ('copyfrom_path',   b'Node-copyfrom-path',   b'(.*)$'),
+        ('copy_md5',        b'Text-copy-source-md5', b'([0-9a-z]+)$'),
+        ('copy_sha1',       b'Text-copy-source-sha1',b'([0-9a-z]+)$'),
+        ('prop_length',     b'Prop-content-length',  b'([0-9]+)$'),
+        ('text_length',     b'Text-content-length',  b'([0-9]+)$'),
+        ('text_md5',        b'Text-content-md5',     b'([0-9a-z]+)$'),
+        ('text_sha1',       b'Text-content-sha1',    b'([0-9a-z]+)$'),
+        ('content_length',  b'Content-length',       b'([0-9]+)$'),
         ]:
       if not header in headers:
         node[key] = None
@@ -743,7 +746,7 @@ def compare_dump_files(message, label, expected, actual,
   for parsed in [parsed_expected, parsed_actual]:
     for rev_name, rev_record in parsed.items():
       #print "Found %s" % (rev_name,)
-      if 'nodes' in rev_record:
+      if b'nodes' in rev_record:
         #print "Found %s.%s" % (rev_name, 'nodes')
         for path_name, path_record in rev_record['nodes'].items():
           #print "Found %s.%s.%s" % (rev_name, 'nodes', path_name)
@@ -765,8 +768,8 @@ def compare_dump_files(message, label, expected, actual,
               action_record['blanks'] = 0
 
   if parsed_expected != parsed_actual:
-    print 'DIFF of raw dumpfiles (including expected differences)'
-    print ''.join(ndiff(expected, actual))
+    print('DIFF of raw dumpfiles (including expected differences)')
+    print(''.join(ndiff(expected, actual)))
     raise svntest.Failure('DIFF of parsed dumpfiles (ignoring expected differences)\n'
                           + '\n'.join(ndiff(
           pprint.pformat(parsed_expected).splitlines(),
@@ -853,7 +856,7 @@ def make_git_diff_header(target_path, repos_relpath,
   if add:
     output.extend([
       "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
-      "new file mode 10644\n",
+      "new file mode 100644\n",
     ])
     if text_changes:
       output.extend([
@@ -863,7 +866,7 @@ def make_git_diff_header(target_path, repos_relpath,
   elif delete:
     output.extend([
       "diff --git a/" + repos_relpath + " b/" + repos_relpath + "\n",
-      "deleted file mode 10644\n",
+      "deleted file mode 100644\n",
     ])
     if text_changes:
       output.extend([

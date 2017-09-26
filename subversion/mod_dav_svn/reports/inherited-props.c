@@ -47,7 +47,7 @@
 dav_error *
 dav_svn__get_inherited_props_report(const dav_resource *resource,
                                     const apr_xml_doc *doc,
-                                    ap_filter_t *output)
+                                    dav_svn__output *output)
 {
   svn_error_t *serr;
   dav_error *derr = NULL;
@@ -61,15 +61,16 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
   int i;
   svn_revnum_t rev = SVN_INVALID_REVNUM;
   apr_pool_t *iterpool;
+  svn_node_kind_t kind;
 
   /* Sanity check. */
   if (!resource->info->repos_path)
-    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                               "The request does not specify a repository path");
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have "
                                     "certain required elements");
@@ -105,7 +106,8 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
   arb.repos = resource->info->repos;
 
   /* Build inherited property brigade */
-  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  bb = apr_brigade_create(resource->pool,
+                          dav_svn__output_get_bucket_alloc(output));
 
   serr = svn_fs_revision_root(&root, resource->info->repos->fs,
                               rev, resource->pool);
@@ -113,6 +115,20 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
     return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                 "couldn't retrieve revision root",
                                 resource->pool);
+
+  serr = svn_fs_check_path(&kind, root, path, resource->pool);
+  if (!serr && kind == svn_node_none)
+    {
+      serr = svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                               "'%s' path not found", path);
+    }
+
+  if (serr)
+    {
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
+                                  resource->pool);
+      goto cleanup;
+    }
 
   serr = svn_repos_fs_get_inherited_props(&inherited_props, root, path, NULL,
                                           dav_svn__authz_read_func(&arb),

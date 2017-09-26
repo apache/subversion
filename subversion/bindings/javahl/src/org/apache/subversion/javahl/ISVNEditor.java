@@ -94,7 +94,9 @@ public interface ISVNEditor
      * <code>replacesRevision</code> set accordingly <em>must</em> be used.
      * <p>
      * <b>Note:</b> The <code>contents</code> stream's lifetime must not
-     *      extend beyond the scope of this function.
+     *      extend beyond the scope of this function. An
+     *      implementation <b>must</b> close the stream after
+     *      consuming its contents.
      *
      * @throws ClientException
      */
@@ -193,7 +195,9 @@ public interface ISVNEditor
      * #addFile().
      * <p>
      * <b>Note:</b> The <code>contents</code> stream's lifetime must not
-     *      extend beyond the scope of this function.
+     *      extend beyond the scope of this function. An
+     *      implementation <b>must</b> close the stream after
+     *      consuming its contents.
      *
      * @throws ClientException
      */

@@ -42,6 +42,7 @@
 #include <apr_general.h>        /* for apr_initialize/apr_terminate */
 #include <apr_strings.h>        /* for apr_snprintf */
 #include <apr_pools.h>
+#include <apr_signal.h>
 
 #include "svn_cmdline.h"
 #include "svn_ctype.h"
@@ -538,19 +539,20 @@ trust_server_cert_non_interactive(svn_auth_cred_ssl_server_trust_t **cred_p,
                                   apr_pool_t *pool)
 {
   struct trust_server_cert_non_interactive_baton *b = baton;
+  apr_uint32_t non_ignored_failures;
   *cred_p = NULL;
 
-  if (failures == 0 ||
-      (b->trust_server_cert_unknown_ca &&
-       (failures & SVN_AUTH_SSL_UNKNOWNCA)) ||
-      (b->trust_server_cert_cn_mismatch &&
-       (failures & SVN_AUTH_SSL_CNMISMATCH)) ||
-      (b->trust_server_cert_expired &&
-       (failures & SVN_AUTH_SSL_EXPIRED)) ||
-      (b->trust_server_cert_not_yet_valid &&
-        (failures & SVN_AUTH_SSL_NOTYETVALID)) ||
-      (b->trust_server_cert_other_failure &&
-        (failures & SVN_AUTH_SSL_OTHER)))
+  /* Mask away bits we are instructed to ignore. */
+  non_ignored_failures = failures & ~(
+        (b->trust_server_cert_unknown_ca ? SVN_AUTH_SSL_UNKNOWNCA : 0)
+      | (b->trust_server_cert_cn_mismatch ? SVN_AUTH_SSL_CNMISMATCH : 0)
+      | (b->trust_server_cert_expired ? SVN_AUTH_SSL_EXPIRED : 0)
+      | (b->trust_server_cert_not_yet_valid ? SVN_AUTH_SSL_NOTYETVALID : 0)
+      | (b->trust_server_cert_other_failure ? SVN_AUTH_SSL_OTHER : 0)
+  );
+
+  /* If no failures remain, accept the certificate. */
+  if (non_ignored_failures == 0)
     {
       *cred_p = apr_pcalloc(pool, sizeof(**cred_p));
       (*cred_p)->may_save = FALSE;
@@ -810,9 +812,121 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
   return;
 }
 
+/* Return the most similar string to NEEDLE in HAYSTACK, which contains
+ * HAYSTACK_LEN elements.  Return NULL if no string is sufficiently similar.
+ */
+/* See svn_cl__similarity_check() for a more general solution. */
+static const char *
+most_similar(const char *needle_cstr,
+             const char **haystack,
+             apr_size_t haystack_len,
+             apr_pool_t *scratch_pool)
+{
+  const char *max_similar = NULL;
+  apr_size_t max_score = 0;
+  apr_size_t i;
+  svn_membuf_t membuf;
+  svn_string_t *needle_str = svn_string_create(needle_cstr, scratch_pool);
+
+  svn_membuf__create(&membuf, 64, scratch_pool);
+
+  for (i = 0; i < haystack_len; i++)
+    {
+      apr_size_t score;
+      svn_string_t *hay = svn_string_create(haystack[i], scratch_pool);
+
+      score = svn_string__similarity(needle_str, hay, &membuf, NULL);
+
+      /* If you update this factor, consider updating
+       * svn_cl__similarity_check(). */
+      if (score >= (2 * SVN_STRING__SIM_RANGE_MAX + 1) / 3
+          && score > max_score)
+        {
+          max_score = score;
+          max_similar = haystack[i];
+        }
+    }
+
+  return max_similar;
+}
+
+/* Verify that NEEDLE is in HAYSTACK, which contains HAYSTACK_LEN elements. */
+static svn_error_t *
+string_in_array(const char *needle,
+                const char **haystack,
+                apr_size_t haystack_len,
+                apr_pool_t *scratch_pool)
+{
+  const char *next_of_kin;
+  apr_size_t i;
+  for (i = 0; i < haystack_len; i++)
+    {
+      if (!strcmp(needle, haystack[i]))
+        return SVN_NO_ERROR;
+    }
+
+  /* Error. */
+  next_of_kin = most_similar(needle, haystack, haystack_len, scratch_pool);
+  if (next_of_kin)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Ignoring unknown value '%s'; "
+                               "did you mean '%s'?"),
+                             needle, next_of_kin);
+  else
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Ignoring unknown value '%s'"),
+                             needle);
+}
+
+#include "config_keys.inc"
+
+/* Validate the FILE, SECTION, and OPTION components of CONFIG_OPTION are
+ * known.  Return an error if not.  (An unknown value may be either a typo
+ * or added in a newer minor version of Subversion.) */
+static svn_error_t *
+validate_config_option(svn_cmdline__config_argument_t *config_option,
+                       apr_pool_t *scratch_pool)
+{
+  svn_boolean_t arbitrary_keys = FALSE;
+
+  /* TODO: some day, we could also verify that OPTION is valid for SECTION;
+     i.e., forbid invalid combinations such as config:auth:diff-extensions. */
+
+#define ARRAYLEN(x) ( sizeof((x)) / sizeof((x)[0]) )
+
+  SVN_ERR(string_in_array(config_option->file, svn__valid_config_files,
+                          ARRAYLEN(svn__valid_config_files),
+                          scratch_pool));
+  SVN_ERR(string_in_array(config_option->section, svn__valid_config_sections,
+                          ARRAYLEN(svn__valid_config_sections),
+                          scratch_pool));
+
+  /* Don't validate option names for sections such as servers[group],
+   * config[tunnels], and config[auto-props] that permit arbitrary options. */
+    {
+      int i;
+
+      for (i = 0; i < ARRAYLEN(svn__empty_config_sections); i++)
+        {
+        if (!strcmp(config_option->section, svn__empty_config_sections[i]))
+          arbitrary_keys = TRUE;
+        }
+    }
+
+  if (! arbitrary_keys)
+    SVN_ERR(string_in_array(config_option->option, svn__valid_config_options,
+                            ARRAYLEN(svn__valid_config_options),
+                            scratch_pool));
+
+#undef ARRAYLEN
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_cmdline__parse_config_option(apr_array_header_t *config_options,
                                  const char *opt_arg,
+                                 const char *prefix,
                                  apr_pool_t *pool)
 {
   svn_cmdline__config_argument_t *config_option;
@@ -826,6 +940,8 @@ svn_cmdline__parse_config_option(apr_array_header_t *config_options,
           if ((equals_sign = strchr(second_colon + 1, '=')) &&
               (equals_sign != second_colon + 1))
             {
+              svn_error_t *warning;
+
               config_option = apr_pcalloc(pool, sizeof(*config_option));
               config_option->file = apr_pstrndup(pool, opt_arg,
                                                  first_colon - opt_arg);
@@ -833,6 +949,13 @@ svn_cmdline__parse_config_option(apr_array_header_t *config_options,
                                                     second_colon - first_colon - 1);
               config_option->option = apr_pstrndup(pool, second_colon + 1,
                                                    equals_sign - second_colon - 1);
+
+              warning = validate_config_option(config_option, pool);
+              if (warning)
+                {
+                  svn_handle_warning2(stderr, warning, prefix);
+                  svn_error_clear(warning);
+                }
 
               if (! (strchr(config_option->option, ':')))
                 {
@@ -1046,6 +1169,36 @@ svn_cmdline__print_xml_prop_hash(svn_stringbuf_t **outstr,
 }
 
 svn_boolean_t
+svn_cmdline__stdin_is_a_terminal(void)
+{
+#ifdef WIN32
+  return (_isatty(STDIN_FILENO) != 0);
+#else
+  return (isatty(STDIN_FILENO) != 0);
+#endif
+}
+
+svn_boolean_t
+svn_cmdline__stdout_is_a_terminal(void)
+{
+#ifdef WIN32
+  return (_isatty(STDOUT_FILENO) != 0);
+#else
+  return (isatty(STDOUT_FILENO) != 0);
+#endif
+}
+
+svn_boolean_t
+svn_cmdline__stderr_is_a_terminal(void)
+{
+#ifdef WIN32
+  return (_isatty(STDERR_FILENO) != 0);
+#else
+  return (isatty(STDERR_FILENO) != 0);
+#endif
+}
+
+svn_boolean_t
 svn_cmdline__be_interactive(svn_boolean_t non_interactive,
                             svn_boolean_t force_interactive)
 {
@@ -1054,11 +1207,7 @@ svn_cmdline__be_interactive(svn_boolean_t non_interactive,
    * If --force-interactive was passed, always be interactive. */
   if (!force_interactive && !non_interactive)
     {
-#ifdef WIN32
-      return (_isatty(STDIN_FILENO) != 0);
-#else
-      return (isatty(STDIN_FILENO) != 0);
-#endif
+      return svn_cmdline__stdin_is_a_terminal();
     }
   else if (force_interactive)
     return TRUE;
@@ -1200,12 +1349,12 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
   apr_file_t *tmp_file;
   const char *tmpfile_name;
   const char *tmpfile_native;
-  const char *tmpfile_apr, *base_dir_apr;
+  const char *base_dir_apr;
   svn_string_t *translated_contents;
-  apr_status_t apr_err, apr_err2;
+  apr_status_t apr_err;
   apr_size_t written;
   apr_finfo_t finfo_before, finfo_after;
-  svn_error_t *err = SVN_NO_ERROR, *err2;
+  svn_error_t *err = SVN_NO_ERROR;
   char *old_cwd;
   int sys_err;
   svn_boolean_t remove_file = TRUE;
@@ -1288,49 +1437,36 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
        the file we just created!! ***/
 
   /* Dump initial CONTENTS to TMP_FILE. */
-  apr_err = apr_file_write_full(tmp_file, translated_contents->data,
-                                translated_contents->len, &written);
+  err = svn_io_file_write_full(tmp_file, translated_contents->data,
+                               translated_contents->len, &written,
+                               pool);
 
-  apr_err2 = apr_file_close(tmp_file);
-  if (! apr_err)
-    apr_err = apr_err2;
+  err = svn_error_compose_create(err, svn_io_file_close(tmp_file, pool));
 
   /* Make sure the whole CONTENTS were written, else return an error. */
-  if (apr_err)
-    {
-      err = svn_error_wrap_apr(apr_err, _("Can't write to '%s'"),
-                               tmpfile_name);
-      goto cleanup;
-    }
-
-  err = svn_path_cstring_from_utf8(&tmpfile_apr, tmpfile_name, pool);
   if (err)
     goto cleanup;
 
   /* Get information about the temporary file before the user has
      been allowed to edit its contents. */
-  apr_err = apr_stat(&finfo_before, tmpfile_apr,
-                     APR_FINFO_MTIME, pool);
-  if (apr_err)
-    {
-      err = svn_error_wrap_apr(apr_err, _("Can't stat '%s'"), tmpfile_name);
-      goto cleanup;
-    }
+  err = svn_io_stat(&finfo_before, tmpfile_name, APR_FINFO_MTIME, pool);
+  if (err)
+    goto cleanup;
 
   /* Backdate the file a little bit in case the editor is very fast
      and doesn't change the size.  (Use two seconds, since some
      filesystems have coarse granularity.)  It's OK if this call
      fails, so we don't check its return value.*/
-  apr_file_mtime_set(tmpfile_apr, finfo_before.mtime - 2000, pool);
+  err = svn_io_set_file_affected_time(finfo_before.mtime
+                                              - apr_time_from_sec(2),
+                                      tmpfile_name, pool);
+  svn_error_clear(err);
 
   /* Stat it again to get the mtime we actually set. */
-  apr_err = apr_stat(&finfo_before, tmpfile_apr,
-                     APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
-  if (apr_err)
-    {
-      err = svn_error_wrap_apr(apr_err, _("Can't stat '%s'"), tmpfile_name);
-      goto cleanup;
-    }
+  err = svn_io_stat(&finfo_before, tmpfile_name,
+                    APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
+  if (err)
+    goto cleanup;
 
   /* Prepare the editor command line.  */
   err = svn_utf_cstring_from_utf8(&tmpfile_native, tmpfile_name, pool);
@@ -1358,13 +1494,10 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
     }
 
   /* Get information about the temporary file after the assumed editing. */
-  apr_err = apr_stat(&finfo_after, tmpfile_apr,
-                     APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
-  if (apr_err)
-    {
-      err = svn_error_wrap_apr(apr_err, _("Can't stat '%s'"), tmpfile_name);
-      goto cleanup;
-    }
+  err = svn_io_stat(&finfo_after, tmpfile_name,
+                    APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
+  if (err)
+    goto cleanup;
 
   /* If the file looks changed... */
   if ((finfo_before.mtime != finfo_after.mtime) ||
@@ -1402,13 +1535,9 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
   if (remove_file)
     {
       /* Remove the file from disk.  */
-      err2 = svn_io_remove_file2(tmpfile_name, FALSE, pool);
-
-      /* Only report remove error if there was no previous error. */
-      if (! err && err2)
-        err = err2;
-      else
-        svn_error_clear(err2);
+      err = svn_error_compose_create(
+              err,
+              svn_io_remove_file2(tmpfile_name, FALSE, pool));
     }
 
  cleanup2:
@@ -1423,4 +1552,147 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
     }
 
   return svn_error_trace(err);
+}
+
+svn_error_t *
+svn_cmdline__parse_trust_options(
+                        svn_boolean_t *trust_server_cert_unknown_ca,
+                        svn_boolean_t *trust_server_cert_cn_mismatch,
+                        svn_boolean_t *trust_server_cert_expired,
+                        svn_boolean_t *trust_server_cert_not_yet_valid,
+                        svn_boolean_t *trust_server_cert_other_failure,
+                        const char *opt_arg,
+                        apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *failures;
+  int i;
+
+  *trust_server_cert_unknown_ca = FALSE;
+  *trust_server_cert_cn_mismatch = FALSE;
+  *trust_server_cert_expired = FALSE;
+  *trust_server_cert_not_yet_valid = FALSE;
+  *trust_server_cert_other_failure = FALSE;
+
+  failures = svn_cstring_split(opt_arg, ", \n\r\t\v", TRUE, scratch_pool);
+
+  for (i = 0; i < failures->nelts; i++)
+    {
+      const char *value = APR_ARRAY_IDX(failures, i, const char *);
+      if (!strcmp(value, "unknown-ca"))
+        *trust_server_cert_unknown_ca = TRUE;
+      else if (!strcmp(value, "cn-mismatch"))
+        *trust_server_cert_cn_mismatch = TRUE;
+      else if (!strcmp(value, "expired"))
+        *trust_server_cert_expired = TRUE;
+      else if (!strcmp(value, "not-yet-valid"))
+        *trust_server_cert_not_yet_valid = TRUE;
+      else if (!strcmp(value, "other"))
+        *trust_server_cert_other_failure = TRUE;
+      else
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                  _("Unknown value '%s' for %s.\n"
+                                    "Supported values: %s"),
+                                  value,
+                                  "--trust-server-cert-failures",
+                                  "unknown-ca, cn-mismatch, expired, "
+                                  "not-yet-valid, other");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Flags to see if we've been cancelled by the client or not. */
+static volatile sig_atomic_t cancelled = FALSE;
+static volatile sig_atomic_t signum_cancelled = 0;
+
+/* The signals we handle. */
+static int signal_map [] = {
+  SIGINT
+#ifdef SIGBREAK
+  /* SIGBREAK is a Win32 specific signal generated by ctrl-break. */
+  , SIGBREAK
+#endif
+#ifdef SIGHUP
+  , SIGHUP
+#endif
+#ifdef SIGTERM
+  , SIGTERM
+#endif
+};
+
+/* A signal handler to support cancellation. */
+static void
+signal_handler(int signum)
+{
+  int i;
+
+  apr_signal(signum, SIG_IGN);
+  cancelled = TRUE;
+  for (i = 0; i < sizeof(signal_map)/sizeof(signal_map[0]); ++i)
+    if (signal_map[i] == signum)
+      {
+        signum_cancelled = i + 1;
+        break;
+      }
+}
+
+/* An svn_cancel_func_t callback. */
+static svn_error_t *
+check_cancel(void *baton)
+{
+  /* Cancel baton should be always NULL in command line client. */
+  SVN_ERR_ASSERT(baton == NULL);
+  if (cancelled)
+    return svn_error_create(SVN_ERR_CANCELLED, NULL, _("Caught signal"));
+  else
+    return SVN_NO_ERROR;
+}
+
+svn_cancel_func_t
+svn_cmdline__setup_cancellation_handler(void)
+{
+  int i;
+
+  for (i = 0; i < sizeof(signal_map)/sizeof(signal_map[0]); ++i)
+    apr_signal(signal_map[i], signal_handler);
+
+#ifdef SIGPIPE
+  /* Disable SIGPIPE generation for the platforms that have it. */
+  apr_signal(SIGPIPE, SIG_IGN);
+#endif
+
+#ifdef SIGXFSZ
+  /* Disable SIGXFSZ generation for the platforms that have it, otherwise
+   * working with large files when compiled against an APR that doesn't have
+   * large file support will crash the program, which is uncool. */
+  apr_signal(SIGXFSZ, SIG_IGN);
+#endif
+
+  return check_cancel;
+}
+
+void
+svn_cmdline__disable_cancellation_handler(void)
+{
+  int i;
+
+  for (i = 0; i < sizeof(signal_map)/sizeof(signal_map[0]); ++i)
+    apr_signal(signal_map[i], SIG_DFL);
+}
+
+void
+svn_cmdline__cancellation_exit(void)
+{
+  int signum = 0;
+
+  if (cancelled && signum_cancelled)
+    signum = signal_map[signum_cancelled - 1];
+  if (signum)
+    {
+#ifndef WIN32
+      apr_signal(signum, SIG_DFL);
+      /* No APR support for getpid() so cannot use apr_proc_kill(). */
+      kill(getpid(), signum);
+#endif
+    }
 }

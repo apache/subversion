@@ -74,6 +74,7 @@ check_lib_versions(void)
   return svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
 }
 
+/* Implements svn_commit_callback2_t */
 static svn_error_t *
 commit_callback(const svn_commit_info_t *commit_info,
                 void *baton,
@@ -84,6 +85,15 @@ commit_callback(const svn_commit_info_t *commit_info,
                              (commit_info->author
                               ? commit_info->author : "(no author)"),
                              commit_info->date));
+
+  /* Writing to stdout, as there maybe systems that consider the
+   * presence of stderr as an indication of commit failure.
+   * OTOH, this is only of informational nature to the user as
+   * the commit has succeeded. */
+  if (commit_info->post_commit_err)
+    SVN_ERR(svn_cmdline_printf(pool, _("\nWarning: %s\n"),
+                               commit_info->post_commit_err));
+
   return SVN_NO_ERROR;
 }
 
@@ -193,7 +203,7 @@ execute(const apr_array_header_t *actions,
               SVN_ERR(svn_stream_open_readonly(&src, action->path[1],
                                                pool, iterpool));
             else
-              SVN_ERR(svn_stream_for_stdin(&src, pool));
+              SVN_ERR(svn_stream_for_stdin2(&src, TRUE, pool));
 
 
             if (kind == svn_node_file)
@@ -295,18 +305,16 @@ help(FILE *stream, apr_pool_t *pool)
       "                           prompt only if standard input is a terminal)\n"
       "  --force-interactive    : do interactive prompting even if standard\n"
       "                           input is not a terminal\n"
-      "  --trust-server-cert    : deprecated; same as --trust-unknown-ca\n"
-      "  --trust-unknown-ca     : with --non-interactive, accept SSL server\n"
-      "                           certificates from unknown certificate authorities\n"
-      "  --trust-cn-mismatch    : with --non-interactive, accept SSL server\n"
-      "                           certificates even if the server hostname does not\n"
-      "                           match the certificate's common name attribute\n"
-      "  --trust-expired        : with --non-interactive, accept expired SSL server\n"
-      "                           certificates\n"
-      "  --trust-not-yet-valid  : with --non-interactive, accept SSL server\n"
-      "                           certificates from the future\n"
-      "  --trust-other-failure  : with --non-interactive, accept SSL server\n"
-      "                           certificates with failures other than the above\n"
+      "  --trust-server-cert    : deprecated;\n"
+      "                           same as --trust-server-cert-failures=unknown-ca\n"
+      "  --trust-server-cert-failures ARG\n"
+      "                           with --non-interactive, accept SSL server\n"
+      "                           certificates with failures; ARG is comma-separated\n"
+      "                           list of 'unknown-ca' (Unknown Authority),\n"
+      "                           'cn-mismatch' (Hostname mismatch), 'expired'\n"
+      "                           (Expired certificate),'not-yet-valid' (Not yet\n"
+      "                           valid certificate) and 'other' (all other not\n"
+      "                           separately classified certificate errors).\n"
       "  -X [--extra-args] ARG  : append arguments from file ARG (one per line;\n"
       "                           use \"-\" to read from standard input)\n"
       "  --config-dir ARG       : use ARG to override the config directory\n"
@@ -472,11 +480,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     non_interactive_opt,
     force_interactive_opt,
     trust_server_cert_opt,
-    trust_server_cert_unknown_ca_opt,
-    trust_server_cert_cn_mismatch_opt,
-    trust_server_cert_expired_opt,
-    trust_server_cert_not_yet_valid_opt,
-    trust_server_cert_other_failure_opt,
+    trust_server_cert_failures_opt
   };
   static const apr_getopt_option_t options[] = {
     {"message", 'm', 1, ""},
@@ -492,11 +496,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {"non-interactive", non_interactive_opt, 0, ""},
     {"force-interactive", force_interactive_opt, 0, ""},
     {"trust-server-cert", trust_server_cert_opt, 0, ""},
-    {"trust-unknown-ca", trust_server_cert_unknown_ca_opt, 0, ""},
-    {"trust-cn-mismatch", trust_server_cert_cn_mismatch_opt, 0, ""},
-    {"trust-expired", trust_server_cert_expired_opt, 0, ""},
-    {"trust-not-yet-valid", trust_server_cert_not_yet_valid_opt, 0, ""},
-    {"trust-other-failure", trust_server_cert_other_failure_opt, 0, ""},
+    {"trust-server-cert-failures", trust_server_cert_failures_opt, 1, ""},
     {"config-dir", config_dir_opt, 1, ""},
     {"config-option",  config_inline_opt, 1, ""},
     {"no-auth-cache",  no_auth_cache_opt, 0, ""},
@@ -531,6 +531,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* Check library versions */
   SVN_ERR(check_lib_versions());
 
+  /* Initialize the RA library. */
+  SVN_ERR(svn_ra_initialize(pool));
+
   config_options = apr_array_make(pool, 0,
                                   sizeof(svn_cmdline__config_argument_t*));
 
@@ -558,9 +561,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           break;
         case 'F':
           {
-            const char *arg_utf8;
-            SVN_ERR(svn_utf_cstring_to_utf8(&arg_utf8, arg, pool));
-            SVN_ERR(svn_stringbuf_from_file2(&filedata, arg, pool));
+            const char *filename;
+            SVN_ERR(svn_utf_cstring_to_utf8(&filename, arg, pool));
+            SVN_ERR(svn_stringbuf_from_file2(&filedata, filename, pool));
           }
           break;
         case 'u':
@@ -595,7 +598,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           SVN_ERR(svn_opt_parse_revprop(&revprops, arg, pool));
           break;
         case 'X':
-          extra_args_file = apr_pstrdup(pool, arg);
+          SVN_ERR(svn_utf_cstring_to_utf8(&extra_args_file, arg, pool));
           break;
         case non_interactive_opt:
           non_interactive = TRUE;
@@ -604,20 +607,17 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           force_interactive = TRUE;
           break;
         case trust_server_cert_opt: /* backward compat */
-        case trust_server_cert_unknown_ca_opt:
           trust_unknown_ca = TRUE;
           break;
-        case trust_server_cert_cn_mismatch_opt:
-          trust_cn_mismatch = TRUE;
-          break;
-        case trust_server_cert_expired_opt:
-          trust_expired = TRUE;
-          break;
-        case trust_server_cert_not_yet_valid_opt:
-          trust_not_yet_valid = TRUE;
-          break;
-        case trust_server_cert_other_failure_opt:
-          trust_other_failure = TRUE;
+        case trust_server_cert_failures_opt:
+          SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, arg, pool));
+          SVN_ERR(svn_cmdline__parse_trust_options(
+                      &trust_unknown_ca,
+                      &trust_cn_mismatch,
+                      &trust_expired,
+                      &trust_not_yet_valid,
+                      &trust_other_failure,
+                      opt_arg, pool));
           break;
         case config_dir_opt:
           SVN_ERR(svn_utf_cstring_to_utf8(&config_dir, arg, pool));
@@ -625,6 +625,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         case config_inline_opt:
           SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, arg, pool));
           SVN_ERR(svn_cmdline__parse_config_option(config_options, opt_arg,
+                                                   "svnmucc: ", 
                                                    pool));
           break;
         case no_auth_cache_opt:
@@ -664,25 +665,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   if (!non_interactive)
     {
-      if (trust_unknown_ca)
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("--trust-unknown-ca requires "
-                                "--non-interactive"));
-      if (trust_cn_mismatch)
+      if (trust_unknown_ca || trust_cn_mismatch || trust_expired
+          || trust_not_yet_valid || trust_other_failure)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-cn-mismatch requires "
-                                  "--non-interactive"));
-      if (trust_expired)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-expired requires "
-                                  "--non-interactive"));
-      if (trust_not_yet_valid)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-not-yet-valid requires "
-                                  "--non-interactive"));
-      if (trust_other_failure)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("--trust-other-failure requires "
+                                _("--trust-server-cert-failures requires "
                                   "--non-interactive"));
     }
 
@@ -691,22 +677,19 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   action_args = apr_array_make(pool, opts->argc, sizeof(const char *));
   while (opts->ind < opts->argc)
     {
-      const char *arg = opts->argv[opts->ind++];
-      SVN_ERR(svn_utf_cstring_to_utf8(&APR_ARRAY_PUSH(action_args,
-                                                      const char *),
-                                      arg, pool));
+      const char *arg;
+
+      SVN_ERR(svn_utf_cstring_to_utf8(&arg, opts->argv[opts->ind++], pool));
+      APR_ARRAY_PUSH(action_args, const char *) = arg;
     }
 
   /* If there are extra arguments in a supplementary file, tack those
      on, too (again, in UTF8 form). */
   if (extra_args_file)
     {
-      const char *extra_args_file_utf8;
       svn_stringbuf_t *contents, *contents_utf8;
 
-      SVN_ERR(svn_utf_cstring_to_utf8(&extra_args_file_utf8,
-                                      extra_args_file, pool));
-      SVN_ERR(svn_stringbuf_from_file2(&contents, extra_args_file_utf8, pool));
+      SVN_ERR(svn_stringbuf_from_file2(&contents, extra_args_file, pool));
       SVN_ERR(svn_utf_stringbuf_to_utf8(&contents_utf8, contents, pool));
       svn_cstring_split_append(action_args, contents_utf8->data, "\n\r",
                                FALSE, pool);

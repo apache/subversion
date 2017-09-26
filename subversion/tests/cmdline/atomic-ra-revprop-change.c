@@ -58,13 +58,14 @@ construct_auth_baton(svn_auth_baton_t **auth_baton_p,
                      const char *config_dir,
                      apr_pool_t *pool)
 {
-  SVN_ERR(svn_cmdline_create_auth_baton(auth_baton_p,
-                                        TRUE  /* non_interactive */,
-                                        "jrandom", "rayjandom",
-                                        config_dir,
-                                        TRUE  /* no_auth_cache */,
-                                        FALSE /* trust_server_cert */,
-                                        NULL, NULL, NULL, pool));
+  SVN_ERR(svn_cmdline_create_auth_baton2(auth_baton_p,
+                                         TRUE  /* non_interactive */,
+                                         "jrandom", "rayjandom",
+                                         config_dir,
+                                         TRUE  /* no_auth_cache */,
+                                         FALSE /* trust_server_cert */,
+                                         FALSE, FALSE, FALSE, FALSE,
+                                         NULL, NULL, NULL, pool));
   return SVN_NO_ERROR;
 }
 

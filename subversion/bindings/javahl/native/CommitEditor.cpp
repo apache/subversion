@@ -48,7 +48,7 @@ CommitEditor::getCppObject(jobject jthis)
 {
   static jfieldID fid = 0;
   jlong cppAddr = SVNBase::findCppAddrForJObject(
-      jthis, &fid, JAVA_PACKAGE"/remote/CommitEditor");
+      jthis, &fid, JAVAHL_CLASS("/remote/CommitEditor"));
   return (cppAddr == 0 ? NULL : reinterpret_cast<CommitEditor*>(cppAddr));
 }
 
@@ -136,7 +136,7 @@ void CommitEditor::dispose(jobject jthis)
     abort();
 
   static jfieldID fid = 0;
-  SVNBase::dispose(jthis, &fid, JAVA_PACKAGE"/remote/CommitEditor");
+  SVNBase::dispose(jthis, &fid, JAVAHL_CLASS("/remote/CommitEditor"));
 }
 
 namespace {
@@ -184,7 +184,7 @@ build_checksum(jobject jchecksum, SVN::Pool& pool)
 
       if (0 == digest_mid || 0 == kind_mid)
         {
-          jclass cls = env->FindClass(JAVA_PACKAGE"/types/Checksum");
+          jclass cls = env->FindClass(JAVAHL_CLASS("/types/Checksum"));
           if (JNIUtil::isJavaExceptionThrown())
             return checksum;
 
@@ -192,7 +192,7 @@ build_checksum(jobject jchecksum, SVN::Pool& pool)
           if (JNIUtil::isJavaExceptionThrown())
             return checksum;
           kind_mid = env->GetMethodID(cls, "getKind", "()L"
-                                      JAVA_PACKAGE"/types/Checksum$Kind;");
+                                      JAVAHL_CLASS("/types/Checksum$Kind;"));
           if (JNIUtil::isJavaExceptionThrown())
             return checksum;
         }

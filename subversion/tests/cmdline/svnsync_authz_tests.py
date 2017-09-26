@@ -30,7 +30,7 @@
 import sys, os
 
 # Test suite-specific modules
-import locale, re, urllib
+import locale, re
 
 # Our testing module
 import svntest
@@ -383,7 +383,7 @@ def identity_copy(sbox):
     except:
       pass
   if locale.setlocale(locale.LC_ALL) != other_locale:
-    raise svntest.Skip
+    raise svntest.Skip('Setting test locale failed')
 
   try:
     run_test(sbox, "copy-bad-encoding.expected.dump",
@@ -471,8 +471,7 @@ def copy_delete_unreadable_child(sbox):
                        src_authz + ':/A': '* =',
                        })
 
-  dest_url = svntest.main.file_scheme_prefix \
-                    + urllib.pathname2url(os.path.abspath(dest_sbox.repo_dir))
+  dest_url = dest_sbox.file_protocol_repo_url()
   run_init(dest_url, sbox.repo_url)
   run_sync(dest_url)
 

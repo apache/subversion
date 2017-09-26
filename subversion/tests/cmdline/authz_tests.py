@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  authz_tests.py:  testing authentication.
+#  authz_tests.py:  testing authorization.
 #
 #  Subversion is a tool for revision control.
 #  See http://subversion.apache.org for more information.
@@ -83,7 +83,7 @@ def authz_open_root(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         None,
-                                        None,
+                                        [],
                                         mu_path)
 
 #----------------------------------------------------------------------
@@ -119,9 +119,7 @@ def authz_open_directory(sbox):
   # Commit the working copy.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        None,
-                                        None,
-                                        wc_dir)
+                                        None)
 
 @Skip(svntest.main.is_ra_type_file)
 @SkipDumpLoadCrossCheck()
@@ -361,7 +359,7 @@ def authz_write_access(sbox):
 def authz_checkout_test(sbox):
   "test authz for checkout"
 
-  sbox.build(create_wc = False, read_only = True)
+  sbox.build(create_wc = False)
   local_dir = sbox.wc_dir
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
@@ -392,15 +390,15 @@ def authz_checkout_test(sbox):
   expected_wc = svntest.main.greek_state
 
   svntest.actions.run_and_verify_checkout(sbox.repo_url,
-                          local_dir,
-                          expected_output,
-                          expected_wc)
+                                          local_dir,
+                                          expected_output,
+                                          expected_wc)
 
 @Skip(svntest.main.is_ra_type_file)
 def authz_checkout_and_update_test(sbox):
   "test authz for checkout and update"
 
-  sbox.build(create_wc = False, read_only = True)
+  sbox.build(create_wc = False)
   local_dir = sbox.wc_dir
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
@@ -456,15 +454,13 @@ def authz_checkout_and_update_test(sbox):
                                         expected_output,
                                         expected_wc,
                                         expected_status,
-                                        None,
-                                        None, None,
-                                        None, None, 1)
+                                        [], True)
 
 @Skip(svntest.main.is_ra_type_file)
 def authz_partial_export_test(sbox):
   "test authz for export with unreadable subfolder"
 
-  sbox.build(create_wc = False, read_only = True)
+  sbox.build(create_wc = False)
   local_dir = sbox.wc_dir
 
   # cleanup remains of a previous test run.
@@ -591,7 +587,10 @@ def authz_log_and_tracing_test(sbox):
   ## cat
 
   # now see if we can look at the older version of rho
-  svntest.actions.run_and_verify_svn(None, expected_err,
+
+  expected_err2 = ".*svn: E195012: Unable to find repository location.*"
+
+  svntest.actions.run_and_verify_svn(None, expected_err2,
                                      'cat', '-r', '2', D_url+'/rho')
 
   if sbox.repo_url.startswith('http'):
@@ -608,10 +607,11 @@ def authz_log_and_tracing_test(sbox):
   svntest.actions.run_and_verify_svn(None, expected_err,
                                      'diff', '-r', 'HEAD', G_url+'/rho')
 
-  svntest.actions.run_and_verify_svn(None, expected_err,
+  # diff treats the unreadable path as indicating an add so no error
+  svntest.actions.run_and_verify_svn(None, [],
                                      'diff', '-r', '2', D_url+'/rho')
 
-  svntest.actions.run_and_verify_svn(None, expected_err,
+  svntest.actions.run_and_verify_svn(None, [],
                                      'diff', '-r', '2:4', D_url+'/rho')
 
 # test whether read access is correctly granted and denied
@@ -656,7 +656,7 @@ def authz_aliases(sbox):
 def authz_validate(sbox):
   "test the authz validation rules"
 
-  sbox.build(create_wc = False, read_only = True)
+  sbox.build(create_wc = False)
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
@@ -728,10 +728,8 @@ def authz_locking(sbox):
 
   if sbox.repo_url.startswith('http'):
     expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
-    expected_status = 1
   else:
     expected_err = ".*svn: warning: W170001: Authorization failed.*"
-    expected_status = 0
 
   root_url = sbox.repo_url
   wc_dir = sbox.wc_dir
@@ -741,16 +739,16 @@ def authz_locking(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   # lock a file url, target is readonly: should fail
-  svntest.actions.run_and_verify_svn2(None, expected_err, expected_status,
-                                      'lock',
-                                      '-m', 'lock msg',
-                                      iota_url)
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'lock',
+                                     '-m', 'lock msg',
+                                     iota_url)
 
   # lock a file path, target is readonly: should fail
-  svntest.actions.run_and_verify_svn2(None, expected_err, expected_status,
-                                      'lock',
-                                      '-m', 'lock msg',
-                                      iota_path)
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'lock',
+                                     '-m', 'lock msg',
+                                     iota_path)
 
   # Test for issue 2700: we have write access in folder /A, but not in root.
   # Get a lock on /A/mu and try to commit it.
@@ -770,7 +768,7 @@ def authz_locking(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         [],
-                                        None,
+                                        [],
                                         mu_path)
 
   # Lock two paths one of which fails. First add read access to '/' so
@@ -783,16 +781,16 @@ def authz_locking(sbox):
   svntest.actions.run_and_verify_info([{'Lock Token' : None}],
                                       sbox.ospath('A/mu'))
 
-  ### Crazy serf SVN_ERR_FS_LOCK_OWNER_MISMATCH warning! Issue 3801?
   if sbox.repo_url.startswith('http'):
-    expected_err = ".*svn: warning: W160039: Unlock.*[Ff]orbidden.*"
-    expected_status = 0
+    expected_err = ".*svn: warning: W160039: .*([Aa]uth.*perf|[Ff]orbidden).*"
+  else:
+    expected_err = ".*svn: warning: W170001: Authorization failed.*"
 
-  svntest.actions.run_and_verify_svn2(None, expected_err, expected_status,
-                                      'lock',
-                                      '-m', 'lock msg',
-                                      mu_path,
-                                      iota_path)
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'lock',
+                                     '-m', 'lock msg',
+                                     mu_path,
+                                     iota_path)
 
   # One path locked, one still unlocked
   svntest.actions.run_and_verify_info([{'Lock Token' : None}],
@@ -876,7 +874,7 @@ def authz_svnserve_anon_access_read(sbox):
 def authz_switch_to_directory(sbox):
   "switched to directory, no read access on parents"
 
-  sbox.build(read_only = True)
+  sbox.build()
 
   write_authz_file(sbox, {"/": "*=rw", "/A/B": "*=", "/A/B/E": "jrandom = rw"})
 
@@ -1110,7 +1108,9 @@ def authz_recursive_ls(sbox):
     'A/D/gamma',
     'iota',
     ]
-  svntest.actions.run_and_verify_svn(map(lambda x: x + '\n', expected_entries),
+  with_newline = svntest.main.ensure_list(map(lambda x: x + '\n',
+                                              expected_entries))
+  svntest.actions.run_and_verify_svn(with_newline,
                                      [], 'ls', '-R',
                                      sbox.repo_url)
 
@@ -1135,7 +1135,7 @@ def case_sensitive_authz(sbox):
     })
 
   # error messages
-  expected_error_for_commit = "Commit failed"
+  expected_error_for_commit = ".*Commit failed.*"
 
   if sbox.repo_url.startswith("http"):
     expected_error_for_cat = ".*[Ff]orbidden.*"
@@ -1204,7 +1204,7 @@ def case_sensitive_authz(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         None,
-                                        None,
+                                        [],
                                         mu_path)
 
 @Skip(svntest.main.is_ra_type_file)
@@ -1233,7 +1233,7 @@ def authz_tree_conflict(sbox):
                                         expected_output,
                                         None,
                                         expected_status,
-                                        None, None, None, None, None, 0,
+                                        [], False,
                                         '-r', '1', wc_dir)
 
 @Issue(3900)
@@ -1432,9 +1432,7 @@ def remove_subdir_with_authz_and_tc(sbox):
                                         expected_output,
                                         None,
                                         expected_status,
-                                        None,
-                                        None, None,
-                                        None, None, False,
+                                        [], False,
                                         wc_dir, '-r', '1')
 
   # Perform some edit operation to introduce a tree conflict
@@ -1449,11 +1447,7 @@ def remove_subdir_with_authz_and_tc(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         None,
-                                        None,
-                                        None,
-                                        None, None,
-                                        None, None, False,
-                                        wc_dir)
+                                        None)
 
 @SkipUnless(svntest.main.is_ra_type_svn)
 def authz_svnserve_groups(sbox):
@@ -1618,6 +1612,57 @@ def authz_log_censor_revprops(sbox):
     args=['--with-revprop', 'svn:author', '--with-revprop', 's',
           '-r1', sbox.repo_url])
 
+@Skip(svntest.main.is_ra_type_file)
+def remove_access_after_commit(sbox):
+  "remove a subdir with authz file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.write_restrictive_svnserve_conf(sbox.repo_dir)
+  svntest.main.write_authz_file(sbox, { "/"      : "*=rw"})
+
+  # Modification in subtree
+  sbox.simple_append('A/B/E/alpha', 'appended\n')
+  sbox.simple_append('A/D/G/rho', 'appended\n')
+  sbox.simple_commit()
+
+  svntest.main.write_authz_file(sbox, { "/"      : "*=rw",
+                                        "/A/B"   : "*=",
+                                        "/A/D"   : "*="})
+
+  # Local modification
+  sbox.simple_append('A/D/G/pi', 'appended\n')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B'  : Item(status='D '),
+    'A/D'  : Item(status='  ', treeconflict='C'),
+  })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/D/G/rho',
+                      contents="This is the file 'rho'.\nappended\n")
+  expected_disk.tweak('A/D/G/pi',
+                      contents="This is the file 'pi'.\nappended\n")
+  expected_disk.remove('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
+                       'A/B/F', 'A/B/lambda')
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+
+  expected_status.tweak('A/D', status='R ',treeconflict='C', )
+  expected_status.tweak('A/D', 'A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau',
+                        'A/D/H', 'A/D/H/omega', 'A/D/H/chi', 'A/D/H/psi',
+                        'A/D/gamma', copied='+', wc_rev='-')
+  expected_status.tweak('A/D/G/pi', status='M ')
+  expected_status.remove('A/B', 'A/B/E', 'A/B/E/alpha', 'A/B/E/beta', 'A/B/F',
+                         'A/B/lambda')
+
+  # And expect a mixed rev copy
+  expected_status.tweak('A/D/G/rho', status='A ', entry_status='  ')
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        [], True)
+
 
 ########################################################################
 # Run the tests
@@ -1654,6 +1699,7 @@ test_list = [ None,
               log_diff_dontdothat,
               authz_file_external_to_authz,
               authz_log_censor_revprops,
+              remove_access_after_commit,
              ]
 serial_only = True
 

@@ -206,13 +206,13 @@ def console_width():
 
 def error(s):
     """Subroutine to output an error and bail."""
-    print >> sys.stderr, "%s: %s" % (NAME, s)
+    sys.stderr.write("%s: %s\n" % (NAME, s))
     sys.exit(1)
 
 def report(s):
     """Subroutine to output progress message, unless in quiet mode."""
     if opts["verbose"]:
-        print "%s: %s" % (NAME, s)
+        print("%s: %s" % (NAME, s))
 
 def prefix_lines(prefix, lines):
     """Given a string representing one or more lines of text, insert the
@@ -263,7 +263,7 @@ try:
             stdoutAndErr = p.communicate()
             stdout = stdoutAndErr[0]
             stderr = stdoutAndErr[1]
-        except OSError, inst:
+        except OSError as inst:
             # Using 1 as failure code; should get actual number somehow? For
             # examples see svnmerge_test.py's TestCase_launch.test_failure and
             # TestCase_launch.test_failurecode.
@@ -319,7 +319,7 @@ def launchsvn(s, show=False, pretend=False, **kwargs):
     cmd = ' '.join(filter(None, [opts["svn"], "--non-interactive",
                                  username, password, configdir, s]))
     if show or opts["verbose"] >= 2:
-        print cmd
+        print(cmd)
     if pretend:
         return None
     return launch(cmd, **kwargs)
@@ -330,7 +330,7 @@ def svn_command(s):
                     pretend=opts["dry-run"],
                     split_lines=False)
     if not opts["dry-run"]:
-        print out
+        print(out)
 
 def check_dir_clean(dir):
     """Check the current status of dir for local mods."""
@@ -1298,7 +1298,7 @@ def display_revisions(revs, display_style, revisions_msg, source_url):
     if display_style == "revisions":
         if revs:
             report(revisions_msg)
-            print revs
+            print(revs)
     elif display_style == "logs":
         for start,end in revs.normalized():
             svn_command('log --incremental -v -r %d:%d %s' % \
@@ -1312,10 +1312,10 @@ def display_revisions(revs, display_style, revisions_msg, source_url):
         for start, end in revs.normalized():
             print
             if start == end:
-                print "%s: changes in revision %d follow" % (NAME, start)
+                print("%s: changes in revision %d follow" % (NAME, start))
             else:
-                print "%s: changes in revisions %d-%d follow" % (NAME,
-                                                                 start, end)
+                print("%s: changes in revisions %d-%d follow" % (NAME,
+                                                                 start, end))
             print
 
             # Note: the starting revision number to 'svn diff' is
@@ -1412,9 +1412,9 @@ def action_init(target_dir, target_props):
     # Write out commit message if desired
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
-        print >>f, 'Initialized merge tracking via "%s" with revisions "%s" from ' \
-            % (NAME, revs)
-        print >>f, '%s' % source_url
+        f.write('Initialized merge tracking via "%s" with revisions "%s" from \n' \
+            % (NAME, revs))
+        f.write('%s\n' % source_url)
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
 
@@ -1555,15 +1555,15 @@ def action_merge(branch_dir, branch_props):
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
         if record_only:
-            print >>f, 'Recorded merge of revisions %s via %s from ' % \
-                  (revs, NAME)
+            f.write('Recorded merge of revisions %s via %s from \n' % \
+                    (revs, NAME))
         else:
-            print >>f, 'Merged revisions %s via %s from ' % \
-                  (revs, NAME)
-        print >>f, '%s' % opts["source-url"]
+            f.write('Merged revisions %s via %s from \n' % \
+                    (revs, NAME))
+        f.write('%s\n' % opts["source-url"])
         if opts["commit-verbose"]:
-            print >>f
-            print >>f, construct_merged_log_message(opts["source-url"], revs),
+            f.write("\n")
+            f.write(construct_merged_log_message(opts["source-url"], revs))
 
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
@@ -1592,11 +1592,11 @@ def action_block(branch_dir, branch_props):
     # Write out commit message if desired
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
-        print >>f, 'Blocked revisions %s via %s' % (revs_to_block, NAME)
+        f.write('Blocked revisions %s via %s\n' % (revs_to_block, NAME))
         if opts["commit-verbose"]:
-            print >>f
-            print >>f, construct_merged_log_message(opts["source-url"],
-                                                    revs_to_block),
+            f.write("\n")
+            f.write(construct_merged_log_message(opts["source-url"],
+                                                 revs_to_block))
 
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
@@ -1623,11 +1623,11 @@ def action_unblock(branch_dir, branch_props):
     # Write out commit message if desired
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
-        print >>f, 'Unblocked revisions %s via %s' % (revs_to_unblock, NAME)
+        f.write('Unblocked revisions %s via %s\n' % (revs_to_unblock, NAME))
         if opts["commit-verbose"]:
-            print >>f
-            print >>f, construct_merged_log_message(opts["source-url"],
-                                                    revs_to_unblock),
+            f.write("\n")
+            f.write(construct_merged_log_message(opts["source-url"],
+                                                 revs_to_unblock))
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
 
@@ -1694,12 +1694,12 @@ def action_rollback(branch_dir, branch_props):
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
         if record_only:
-            print >>f, 'Recorded rollback of revisions %s via %s from ' % \
-                  (revs , NAME)
+            f.write('Recorded rollback of revisions %s via %s from \n' % \
+                    (revs , NAME))
         else:
-            print >>f, 'Rolled back revisions %s via %s from ' % \
-                  (revs , NAME)
-        print >>f, '%s' % opts["source-url"]
+            f.write('Rolled back revisions %s via %s from \n' % \
+                    (revs , NAME))
+        f.write('%s\n' % opts["source-url"])
 
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
@@ -1732,8 +1732,8 @@ def action_uninit(branch_dir, branch_props):
     # Write out commit message if desired
     if opts["commit-file"]:
         f = open(opts["commit-file"], "w")
-        print >>f, 'Removed merge tracking for "%s" for ' % NAME
-        print >>f, '%s' % opts["source-url"]
+        f.write('Removed merge tracking for "%s" for \n' % NAME)
+        f.write('%s\n' % opts["source-url"])
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
 
@@ -1876,9 +1876,9 @@ class CommandOpts:
 
     def _print_wrapped(self, text, indent=0):
         text = self._paragraphs(text, self.cwidth - indent)
-        print text.pop(0)
+        print(text.pop(0))
         for t in text:
-            print " " * indent + t
+            print(" " * indent + t)
 
     def _find_common(self, fl):
         for o in self.copts:
@@ -1960,7 +1960,7 @@ class CommandOpts:
                 opts.extend(cmd.opts)
                 args.remove(cmd.name)
             state, args = self._fancy_getopt(args, opts)
-        except getopt.GetoptError, e:
+        except getopt.GetoptError as e:
             self.error(e, cmd)
 
         # Handle builtins
@@ -1981,44 +1981,44 @@ class CommandOpts:
         return cmd, args, state
 
     def error(self, s, cmd=None):
-        print >>sys.stderr, "%s: %s" % (self.progname, s)
+        sys.stderr.write("%s: %s\n" % (self.progname, s))
         if cmd is not None:
             self.print_command_help(cmd)
         else:
             self.print_small_help()
         sys.exit(1)
     def print_small_help(self):
-        print "Type '%s help' for usage" % self.progname
+        print("Type '%s help' for usage" % self.progname)
     def print_usage_line(self):
-        print "usage: %s <subcommand> [options...] [args...]\n" % self.progname
+        print("usage: %s <subcommand> [options...] [args...]\n" % self.progname)
     def print_command_list(self):
-        print "Available commands (use '%s help COMMAND' for more details):\n" \
-              % self.progname
+        print("Available commands (use '%s help COMMAND' for more details):\n" \
+              % self.progname)
         cmds = self.ctable.keys()
         cmds.sort()
         indent = max(map(len, cmds))
         for c in cmds:
             h = self.ctable[c].short_help()
-            print "  %-*s   " % (indent, c),
+            sys.stdout.write("  %-*s    " % (indent, c))
             self._print_wrapped(h, indent+6)
     def print_command_help(self, cmd):
         cmd = self.ctable[str(cmd)]
-        print 'usage: %s %s\n' % (self.progname, cmd.usage)
+        print('usage: %s %s\n' % (self.progname, cmd.usage))
         self._print_wrapped(cmd.help)
         def print_opts(opts, self=self):
             if not opts: return
             flags = [o.repr_flags() for o in opts]
             indent = max(map(len, flags))
             for f,o in zip(flags, opts):
-                print "  %-*s :" % (indent, f),
+                sys.stdout.write("  %-*s : " % (indent, f))
                 self._print_wrapped(o.help, indent+5)
-        print '\nCommand options:'
+        print('\nCommand options:')
         print_opts(cmd.opts)
-        print '\nGlobal options:'
+        print('\nGlobal options:')
         print_opts(self.gopts)
 
     def print_version(self):
-        print self.version
+        print(self.version)
 
 ###############################################################################
 # Options and Commands description
@@ -2367,12 +2367,12 @@ def main(args):
 if __name__ == "__main__":
     try:
         main(sys.argv[1:])
-    except LaunchError, (ret, cmd, out):
+    except LaunchError as (ret, cmd, out):
         err_msg = "command execution failed (exit code: %d)\n" % ret
         err_msg += cmd + "\n"
         err_msg += "".join(out)
         error(err_msg)
     except KeyboardInterrupt:
         # Avoid traceback on CTRL+C
-        print "aborted by user"
+        print("aborted by user")
         sys.exit(1)

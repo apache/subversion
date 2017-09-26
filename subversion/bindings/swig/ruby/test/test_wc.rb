@@ -1068,14 +1068,9 @@ EOE
 
   def test_context_create
     assert_nothing_raised do
-      result = Svn::Wc::Context.create do |context|
+      Svn::Wc::Context.create do |context|
         assert_not_nil context
         assert_kind_of Svn::Wc::Context, context
-      end
-      if RUBY_VERSION > '1.9'
-        assert_equal(result,true)
-      else
-        assert_nil result
       end
     end
   end

@@ -1,12 +1,22 @@
+From: ...@apache.org
+To: announce@subversion.apache.org, users@subversion.apache.org, dev@subversion.apache.org, announce@apache.org
+Subject: [[]ANNOUNCE] Apache Subversion [version] released
+
 I'm happy to announce the release of Apache Subversion [version].
 Please choose the mirror closest to you by visiting:
 
-    http://subversion.apache.org/download/#[anchor]
+    http://subversion.apache.org/download.cgi#[anchor]
 
 The SHA1 checksums are:
 
 [for sha1info]    [sha1info.sha1] [sha1info.filename]
 [end]
+SHA-512 checksums are available at:
+
+    https://www.apache.org/dist/subversion/subversion-[version].tar.bz2.sha512
+    https://www.apache.org/dist/subversion/subversion-[version].tar.gz.sha512
+    https://www.apache.org/dist/subversion/subversion-[version].zip.sha512
+
 PGP Signatures are available at:
 
     http://www.apache.org/dist/subversion/subversion-[version].tar.bz2.asc
@@ -16,17 +26,18 @@ PGP Signatures are available at:
 For this release, the following people have provided PGP signatures:
 
 [siginfo]
-This is a pre-release for what will eventually become Apache Subversion
-[major-minor-patch].  It may contain known issues, a complete list of
-[major-minor-patch]-blocking issues can be found here:
+This is a pre-release for what will eventually become version [major-minor-patch] of the
+Apache Subversion open source version control system.  It may contain known
+issues, a complete list of [major-minor-patch]-blocking issues can be found
+here:
 
-    http://subversion.tigris.org/issues/buglist.cgi?component=subversion&issue_status=NEW&issue_status=STARTED&issue_status=REOPENED&target_milestone=[major-minor-patch]
+    https://issues.apache.org/jira/issues/?jql=project%20%3D%20SVN%20AND%20resolution%20%3D%20Unresolved%20AND%20fixVersion%20%3D%20[major-minor-patch]%20ORDER%20BY%20priority%20DESC%2C%20updated%20DESC
 
 A pre-release means the Subversion developers feel that this release
 is ready for widespread testing by the community.  There are known issues
 (and unknown ones!), so please use it at your own risk, though we do
 encourage people to test this release thoroughly.  Of particular note, please
-remember than persistent data, such as the working copy or repository
+remember that persistent data, such as the working copy or repository
 formats may change before the final release, and there may not be an
 upgrade path from the pre-releases to the final.
 

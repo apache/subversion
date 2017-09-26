@@ -316,6 +316,13 @@ svn_error_t *svn_swig_py_fs_get_locks_func(void *baton,
                                            svn_lock_t *lock,
                                            apr_pool_t *pool);
 
+svn_error_t *svn_swig_py_fs_lock_callback(
+                    void *baton,
+                    const char *path,
+                    const svn_lock_t *lock,
+                    svn_error_t *ra_err,
+                    apr_pool_t *pool);
+
 /* thunked commit log fetcher */
 svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
                                              const char **tmp_file,

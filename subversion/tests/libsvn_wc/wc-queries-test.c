@@ -52,7 +52,7 @@ WC_QUERIES_SQL_DECLARE_STATEMENT_INFO(wc_query_info);
 /* The first query after the normal wc queries */
 #define STMT_SCHEMA_FIRST STMT_CREATE_SCHEMA
 
-#define SQLITE_ERR(x)   \
+#define SQLITE_ERR(x) do                                         \
 {                                                                \
   int sqlite_err__temp = (x);                                    \
   if (sqlite_err__temp != SQLITE_OK)                             \
@@ -70,9 +70,6 @@ static const int schema_statements[] =
 {
   /* Usual tables */
   STMT_CREATE_SCHEMA,
-  STMT_CREATE_NODES,
-  STMT_CREATE_NODES_TRIGGERS,
-  STMT_CREATE_EXTERNALS,
   STMT_INSTALL_SCHEMA_STATISTICS,
   /* Memory tables */
   STMT_CREATE_TARGETS_LIST,
@@ -101,6 +98,7 @@ static const int slow_statements[] =
   STMT_SELECT_REVERT_LIST_RECURSIVE,
   STMT_SELECT_DELETE_LIST,
   STMT_SELECT_UPDATE_MOVE_LIST,
+  STMT_FIND_REPOS_PATH_IN_WC,
 
   /* Designed as slow to avoid penalty on other queries */
   STMT_SELECT_UNREFERENCED_PRISTINES,
@@ -108,6 +106,7 @@ static const int slow_statements[] =
   /* Slow, but just if foreign keys are enabled:
    * STMT_DELETE_PRISTINE_IF_UNREFERENCED,
    */
+  STMT_HAVE_STAT1_TABLE, /* Queries sqlite_master which has no index */
 
   -1 /* final marker */
 };
@@ -924,6 +923,15 @@ test_schema_statistics(apr_pool_t *scratch_pool)
       sqlite3_exec(sdb,
                    "INSERT INTO lock (repos_id, repos_relpath, lock_token) "
                    "VALUES (1, '', '')",
+                   NULL, NULL, NULL));
+
+  SQLITE_ERR(
+      sqlite3_exec(sdb,
+                   "INSERT INTO EXTERNALS (wc_id, local_relpath,"
+                   "                       parent_relpath, repos_id,"
+                   "                       presence, kind, def_local_relpath,"
+                   "                       def_repos_relpath) "
+                   "VALUES (1, 'subdir', '', 1, 'normal', 'dir', '', '')",
                    NULL, NULL, NULL));
 
   /* These are currently not necessary for query optimization, but it's better
