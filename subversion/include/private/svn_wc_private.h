@@ -1946,7 +1946,6 @@ svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
                                          const char *victim_abspath,
                                          svn_node_kind_t victim_node_kind,
                                          const char *moved_to_repos_relpath,
-                                         svn_revnum_t rev,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
 

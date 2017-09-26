@@ -472,6 +472,18 @@ x509_get_date(apr_time_t *when,
   /* apr_time_exp_t expects months to be zero indexed, 0=Jan, 11=Dec. */
   xt.tm_mon -= 1;
 
+  /* range checks (as per definition of apr_time_exp_t in apr_time.h) */
+  if (xt.tm_usec < 0 ||
+      xt.tm_sec < 0 || xt.tm_sec > 61 ||
+      xt.tm_min < 0 || xt.tm_min > 59 ||
+      xt.tm_hour < 0 || xt.tm_hour > 23 ||
+      xt.tm_mday < 1 || xt.tm_mday > 31 ||
+      xt.tm_mon < 0 || xt.tm_mon > 11 ||
+      xt.tm_year < 0 ||
+      xt.tm_wday < 0 || xt.tm_wday > 6 ||
+      xt.tm_yday < 0 || xt.tm_yday > 365)
+    return svn_error_create(SVN_ERR_X509_CERT_INVALID_DATE, NULL, NULL);
+
   ret = apr_time_exp_gmt_get(when, &xt);
   if (ret)
     return svn_error_wrap_apr(ret, NULL);

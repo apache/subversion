@@ -94,6 +94,12 @@
 #include "lz4internal.h"
 /* see also "memory routines" below */
 
+/* Silence GCC's -Wmissing-prototypes warning. */
+int LZ4_compress_fast_force(const char*, char*, int, int, int);
+int LZ4_compress_forceExtDict (LZ4_stream_t*, const char*, char*, int);
+int LZ4_decompress_safe_forceExtDict(const char*, char*, int, int, const char*, int);
+int LZ4_uncompress (const char*, char*, int);
+int LZ4_uncompress_unknownOutputSize (const char*, char*, int, int);
 
 /*-************************************
 *  Compiler Options
@@ -397,7 +403,7 @@ typedef enum { full = 0, partial = 1 } earlyEnd_directive;
 int LZ4_versionNumber (void) { return LZ4_VERSION_NUMBER; }
 const char* LZ4_versionString(void) { return LZ4_VERSION_STRING; }
 int LZ4_compressBound(int isize)  { return LZ4_COMPRESSBOUND(isize); }
-int LZ4_sizeofState() { return LZ4_STREAMSIZE; }
+int LZ4_sizeofState(void) { return LZ4_STREAMSIZE; }
 
 
 /*-******************************
@@ -1423,7 +1429,7 @@ int LZ4_uncompress_unknownOutputSize (const char* source, char* dest, int isize,
 
 /* Obsolete Streaming functions */
 
-int LZ4_sizeofStreamState() { return LZ4_STREAMSIZE; }
+int LZ4_sizeofStreamState(void) { return LZ4_STREAMSIZE; }
 
 static void LZ4_init(LZ4_stream_t* lz4ds, BYTE* base)
 {
