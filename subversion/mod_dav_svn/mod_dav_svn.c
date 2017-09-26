@@ -499,30 +499,25 @@ SVNListParentPath_cmd(cmd_parms *cmd, void *config, int arg)
 
 
 static const char *
-SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *arg2)
+handle_path_cmd_arg2(cmd_parms *cmd, dir_conf_t *conf, const char *arg2,
+                     path_expr_t *path, const char *path_cmd_name)
 {
-  dir_conf_t *conf = config;
-
-  if (conf->fs_parent_path != NULL)
-    return "SVNPath cannot be defined at same time as SVNParentPath.";
-
-  conf->fs_path = apr_pcalloc(cmd->pool, sizeof(*conf->fs_path));
-  conf->fs_path->base = svn_dirent_internal_style(arg1, cmd->pool);
-
   if (arg2)
     {
 #ifdef SVN_AP_HAS_EXPRESSIONS
       const char *expr_err = NULL;
 
-      conf->fs_path->expr = ap_expr_parse_cmd(
+      path->expr = ap_expr_parse_cmd(
           cmd, arg2, AP_EXPR_FLAG_STRING_RESULT, &expr_err, NULL);
       if (expr_err)
         {
-          return apr_pstrcat(cmd->temp_pool, "Cannot parse expression '",
-                             arg2, "' in SVNPath: ", expr_err, SVN_VA_NULL);
+          return apr_pstrcat(cmd->temp_pool,
+                             "Cannot parse expression '", arg2,
+                             "' in ", path_cmd_name, ": ", expr_err,
+                             SVN_VA_NULL);
         }
 #else
-      return "Expressions require httpd v2.4.0 or higher"
+      return "Expressions require httpd v2.4.0 or higher";
 #endif /* SVN_AP_HAS_EXPRESSIONS */
     }
 
@@ -537,12 +532,27 @@ SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *arg2)
         {
           return apr_pstrcat(cmd->temp_pool,
                              "Cannot parse Location expression '",
-                             conf->root_dir, "': ", expr_err, SVN_VA_NULL);
+                             conf->root_dir, "': ", expr_err,
+                             SVN_VA_NULL);
         }
     }
 #endif /* SVN_AP_HAS_EXPRESSIONS */
 
   return NULL;
+}
+
+
+static const char *
+SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *arg2)
+{
+  dir_conf_t *conf = config;
+
+  if (conf->fs_parent_path != NULL)
+    return "SVNPath cannot be defined at same time as SVNParentPath.";
+
+  conf->fs_path = apr_pcalloc(cmd->pool, sizeof(*conf->fs_path));
+  conf->fs_path->base = svn_dirent_internal_style(arg1, cmd->pool);
+  return handle_path_cmd_arg2(cmd, conf, arg2, conf->fs_path, "SVNPath");
 }
 
 
@@ -556,42 +566,8 @@ SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *ar
 
   conf->fs_parent_path = apr_pcalloc(cmd->pool, sizeof(*conf->fs_parent_path));
   conf->fs_parent_path->base = svn_dirent_internal_style(arg1, cmd->pool);
-
-  if (arg2)
-    {
-#ifdef SVN_AP_HAS_EXPRESSIONS
-      const char *expr_err = NULL;
-
-      conf->fs_parent_path->expr = ap_expr_parse_cmd(
-          cmd, arg2, AP_EXPR_FLAG_STRING_RESULT, &expr_err, NULL);
-      if (expr_err)
-        {
-          return apr_pstrcat(cmd->temp_pool, "Cannot parse expression '",
-                             arg2, "'in SVNParentPath: ", expr_err,
-                             SVN_VA_NULL);
-        }
-#else
-      return "Expressions require httpd v2.4.0 or higher"
-#endif /* SVN_AP_HAS_EXPRESSIONS */
-    }
-
-#ifdef SVN_AP_HAS_EXPRESSIONS
-  if (!conf->root_expr)
-    {
-      const char *expr_err = NULL;
-
-      conf->root_expr = ap_expr_parse_cmd(
-          cmd, conf->root_dir, AP_EXPR_FLAG_STRING_RESULT, &expr_err, NULL);
-      if (expr_err)
-        {
-          return apr_pstrcat(
-              cmd->temp_pool, "Cannot parse Location expression '",
-              conf->root_dir, "': ", expr_err, SVN_VA_NULL);
-        }
-    }
-#endif /* SVN_AP_HAS_EXPRESSIONS */
-
-  return NULL;
+  return handle_path_cmd_arg2(cmd, conf, arg2,
+                              conf->fs_parent_path, "SVNParentPath");
 }
 
 
@@ -774,40 +750,35 @@ get_conf_flag(enum conf_flag flag, svn_boolean_t default_value)
 
 /** Accessor functions for the module's configuration state **/
 
-const char *
-dav_svn__get_fs_path(request_rec *r)
+static const char *
+get_path_config(request_rec *r, path_expr_t *path, const char *path_cmd_name)
 {
-  dir_conf_t *conf;
-
-  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-
-  if (conf->fs_path)
+  if (path)
     {
-
   #ifdef SVN_AP_HAS_EXPRESSIONS
-      if (conf->fs_path->expr)
+      if (path->expr)
         {
           svn_error_t *serr;
           svn_boolean_t under_root;
           const char *err = NULL, *suffix;
 
-          suffix = ap_expr_str_exec(r, conf->fs_path->expr, &err);
+          suffix = ap_expr_str_exec(r, path->expr, &err);
           if (!err)
             {
               serr = svn_dirent_is_under_root(
-                  &under_root, &suffix, conf->fs_path->base, suffix, r->pool);
+                  &under_root, &suffix, path->base, suffix, r->pool);
               if (!serr && under_root)
                 {
                   return svn_dirent_join(
-                      conf->fs_path->base,
+                      path->base,
                       svn_dirent_internal_style(suffix, r->pool), r->pool);
                 }
               else if (serr)
                 {
                   ap_log_rerror(
                       APLOG_MARK, APLOG_ERR, serr->apr_err, r,
-                      "mod_dav_svn: SVNPath: '%s' not under '%s': '%s'",
-                      suffix, conf->fs_path->base,
+                      "mod_dav_svn: %s: '%s' not under '%s': '%s'",
+                      path_cmd_name, suffix, path->base,
                       serr->message ? serr->message : "(no more info)");
                   return NULL;
                 }
@@ -815,8 +786,8 @@ dav_svn__get_fs_path(request_rec *r)
                 {
                   ap_log_rerror(
                       APLOG_MARK, APLOG_ERR, 0, r,
-                      "mod_dav_svn: SVNPath: '%s' not under '%s'",
-                      suffix, conf->fs_path->base);
+                      "mod_dav_svn: %s: '%s' not under '%s'",
+                      path_cmd_name, suffix, path->base);
                   return NULL;
                 }
             }
@@ -824,15 +795,15 @@ dav_svn__get_fs_path(request_rec *r)
             {
               ap_log_rerror(
                   APLOG_MARK, APLOG_ERR, 0, r,
-                  "mod_dav_svn: SVNPath: can't evaluate expression: %s",
-                  err);
+                  "mod_dav_svn: %s: can't evaluate expression: %s",
+                  path_cmd_name, err);
               return NULL;
             }
 
-        } /* SVN_AP_HAS_EXPRESSIONS */
-  #endif
+        }
+  #endif /* SVN_AP_HAS_EXPRESSIONS */
 
-      return conf->fs_path->base;
+      return path->base;
     }
   else
     {
@@ -842,70 +813,20 @@ dav_svn__get_fs_path(request_rec *r)
 
 
 const char *
+dav_svn__get_fs_path(request_rec *r)
+{
+  dir_conf_t *conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+
+  return get_path_config(r, conf->fs_path, "SVNPath");
+}
+
+
+const char *
 dav_svn__get_fs_parent_path(request_rec *r)
 {
-  dir_conf_t *conf;
+  dir_conf_t *conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
 
-  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-
-  if (conf->fs_parent_path)
-    {
-
-#ifdef SVN_AP_HAS_EXPRESSIONS
-      if (conf->fs_parent_path->expr)
-        {
-          svn_error_t *serr;
-          svn_boolean_t under_root;
-          const char *err = NULL, *suffix;
-
-          suffix = ap_expr_str_exec(r, conf->fs_parent_path->expr, &err);
-          if (!err)
-            {
-              serr = svn_dirent_is_under_root(
-                  &under_root, &suffix, conf->fs_parent_path->base,
-                  suffix, r->pool);
-              if (!serr && under_root)
-                {
-                  return svn_dirent_join(
-                      conf->fs_parent_path->base,
-                      svn_dirent_internal_style(suffix, r->pool), r->pool);
-                }
-              else if (serr)
-                {
-                  ap_log_rerror(
-                      APLOG_MARK, APLOG_ERR, serr->apr_err, r,
-                      "mod_dav_svn: SVNParentPath: '%s' not under '%s': '%s'",
-                      suffix, conf->fs_parent_path->base,
-                      serr->message ? serr->message : "(no more info)");
-                  return NULL;
-                }
-              else
-                {
-                  ap_log_rerror(
-                      APLOG_MARK, APLOG_ERR, 0, r,
-                      "mod_dav_svn: SVNParentPath: '%s' not under '%s'",
-                      suffix, conf->fs_parent_path->base);
-                  return NULL;
-                }
-            }
-          else
-            {
-              ap_log_rerror(
-                  APLOG_MARK, APLOG_ERR, 0, r,
-                  "mod_dav_svn: SVNParentPath: can't evaluate expression: %s",
-                  err);
-              return NULL;
-            }
-
-        }
-#endif /* SVN_AP_HAS_EXPRESSIONS */
-
-      return conf->fs_parent_path->base;
-    }
-  else
-    {
-      return NULL;
-    }
+  return get_path_config(r, conf->fs_parent_path, "SVNParentPath");
 }
 
 
