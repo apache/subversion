@@ -215,7 +215,7 @@ init_dso(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp)
 static void *
 create_server_config(apr_pool_t *p, server_rec *s)
 {
-  server_conf_t *conf = apr_pcalloc(p, sizeof(server_conf_t));
+  server_conf_t *conf = apr_pcalloc(p, sizeof(*conf));
 
   conf->compression_level = -1;
 
@@ -506,7 +506,7 @@ SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *arg2)
   if (conf->fs_parent_path != NULL)
     return "SVNPath cannot be defined at same time as SVNParentPath.";
 
-  conf->fs_path = apr_pcalloc(cmd->pool, sizeof(path_expr_t));
+  conf->fs_path = apr_pcalloc(cmd->pool, sizeof(*conf->fs_path));
   conf->fs_path->base = svn_dirent_internal_style(arg1, cmd->pool);
 
   if (arg2)
@@ -554,7 +554,7 @@ SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1, const char *ar
   if (conf->fs_path != NULL)
     return "SVNParentPath cannot be defined at same time as SVNPath.";
 
-  conf->fs_parent_path = apr_pcalloc(cmd->pool, sizeof(path_expr_t));
+  conf->fs_parent_path = apr_pcalloc(cmd->pool, sizeof(*conf->fs_parent_path));
   conf->fs_parent_path->base = svn_dirent_internal_style(arg1, cmd->pool);
 
   if (arg2)
