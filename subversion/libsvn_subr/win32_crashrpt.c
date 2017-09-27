@@ -795,4 +795,11 @@ svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
   return EXCEPTION_EXECUTE_HANDLER;
 }
 #endif /* SVN_USE_WIN32_CRASHHANDLER */
+#else  /* !WIN32 */
+
+/* Silence OSX ranlib warnings about object files with no symbols. */
+#include <apr.h>
+extern const apr_uint32_t svn__fake__win32_crashrpt;
+const apr_uint32_t svn__fake__win32_crashrpt = 0xdeadbeef;
+
 #endif /* WIN32 */
