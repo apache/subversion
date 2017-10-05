@@ -89,6 +89,16 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1811189
+   Reword warning message to avoid confusion: the word "nested" was interpreted
+   as nested <Location/> blocks in httpd.conf syntax.
+   Thread:
+     https://mail-archives.apache.org/mod_mbox/subversion-users/201710.mbox/%3C34a3a22e-cff1-1958-a109-35c6f925ae84%40cardiov.ox.ac.uk%3E
+   Justification:
+     Prevent user confusion.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
