@@ -6762,8 +6762,21 @@ svn_client_shelves_delete(const char *name,
  *
  * @since New in 1.11.
  */
+typedef struct svn_client_shelved_patch_info_t
+{
+  const char *message;
+  const char *patch_path;
+  svn_io_dirent2_t *dirent;
+  apr_time_t mtime;
+} svn_client_shelved_patch_info_t;
+
+/** Set *shelved_patches to a hash, keyed by patch name, of pointers to
+ * @c svn_client_shelved_patch_info_t structures.
+ *
+ * @since New in 1.11.
+ */
 svn_error_t *
-svn_client_shelves_list(apr_hash_t **dirents,
+svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
                         const char *local_abspath,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *result_pool,

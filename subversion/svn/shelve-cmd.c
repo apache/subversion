@@ -49,58 +49,36 @@ get_name(const char **name,
   return SVN_NO_ERROR;
 }
 
-/* ### Currently just reads the first line.
- */
-static svn_error_t *
-read_logmsg_from_patch(const char **logmsg,
-                       const char *patch_abspath,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
-{
-  apr_file_t *file;
-  svn_stream_t *stream;
-  svn_boolean_t eof;
-  svn_stringbuf_t *line;
-
-  SVN_ERR(svn_io_file_open(&file, patch_abspath,
-                           APR_FOPEN_READ, APR_FPROT_OS_DEFAULT, scratch_pool));
-  stream = svn_stream_from_aprfile2(file, FALSE /*disown*/, scratch_pool);
-  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, scratch_pool));
-  SVN_ERR(svn_stream_close(stream));
-  *logmsg = line->data;
-  return SVN_NO_ERROR;
-}
-
 /*  */
 static int
 compare_dirents_by_mtime(const svn_sort__item_t *a,
                          const svn_sort__item_t *b)
 {
-  svn_io_dirent2_t *a_val = a->value;
-  svn_io_dirent2_t *b_val = b->value;
+  svn_client_shelved_patch_info_t *a_val = a->value;
+  svn_client_shelved_patch_info_t *b_val = b->value;
 
-  return (a_val->mtime < b_val->mtime)
-           ? -1 : (a_val->mtime > b_val->mtime) ? 1 : 0;
+  return (a_val->dirent->mtime < b_val->dirent->mtime)
+           ? -1 : (a_val->dirent->mtime > b_val->dirent->mtime) ? 1 : 0;
 }
 
-/* Return a list of shelves sorted by patch file mtime, oldest first.
+/* Return a list of shelved changes sorted by patch file mtime, oldest first.
  */
 static svn_error_t *
 list_sorted_by_date(apr_array_header_t **list,
                     const char *local_abspath,
-                    svn_boolean_t diffstat,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool)
 {
-  apr_hash_t *dirents;
+  apr_hash_t *shelved_patch_infos;
 
-  SVN_ERR(svn_client_shelves_list(&dirents, local_abspath,
+  SVN_ERR(svn_client_shelves_list(&shelved_patch_infos, local_abspath,
                                   ctx, scratch_pool, scratch_pool));
-  *list = svn_sort__hash(dirents, compare_dirents_by_mtime, scratch_pool);
+  *list = svn_sort__hash(shelved_patch_infos, compare_dirents_by_mtime,
+                         scratch_pool);
   return SVN_NO_ERROR;
 }
 
-/* Display a list of shelves */
+/* Display a list of shelved changes */
 static svn_error_t *
 shelves_list(const char *local_abspath,
              svn_boolean_t diffstat,
@@ -111,37 +89,24 @@ shelves_list(const char *local_abspath,
   int i;
 
   SVN_ERR(list_sorted_by_date(&list,
-                              local_abspath, diffstat, ctx, scratch_pool));
+                              local_abspath, ctx, scratch_pool));
 
   for (i = 0; i < list->nelts; i++)
     {
       const svn_sort__item_t *item = &APR_ARRAY_IDX(list, i, svn_sort__item_t);
       const char *name = item->key;
-      svn_io_dirent2_t *dirent = item->value;
-      int age = (apr_time_now() - dirent->mtime) / 1000000 / 60;
-      const char *patch_abspath;
-      const char *logmsg;
+      svn_client_shelved_patch_info_t *info = item->value;
+      int age = (apr_time_now() - info->mtime) / 1000000 / 60;
 
-      if (! strstr(name, ".patch"))
-        continue;
-
-      patch_abspath = svn_dirent_join_many(scratch_pool,
-                                           local_abspath, ".svn", "shelves", name,
-                                           SVN_VA_NULL);
-      SVN_ERR(read_logmsg_from_patch(&logmsg, patch_abspath,
-                                     scratch_pool, scratch_pool));
       printf("%-30s %6d mins old %10ld bytes\n",
-             name, age, (long)dirent->filesize);
+             name, age, (long)info->dirent->filesize);
       printf(" %.50s\n",
-             logmsg);
+             info->message);
 
       if (diffstat)
         {
-          char *path = svn_path_join_many(scratch_pool,
-                                          local_abspath, ".svn/shelves", name,
-                                          SVN_VA_NULL);
-
-          system(apr_psprintf(scratch_pool, "diffstat %s 2> /dev/null", path));
+          system(apr_psprintf(scratch_pool, "diffstat %s 2> /dev/null",
+                              info->patch_path));
           printf("\n");
         }
     }
