@@ -1023,10 +1023,10 @@ _svn()
 		cmdOpts="$qOpts $pOpts"
 		;;
 	shelve)
-		cmdOpts="$qOpts --delete --list --dry-run $nOpts --targets $cOpts"
+		cmdOpts="$qOpts --keep-local --delete --list $qOpts --dry-run --depth --targets $cOpts"
 		;;
 	unshelve)
-		cmdOpts="$qOpts --keep --dry-run"
+		cmdOpts="$qOpts --keep-shelved --list $qOpts --dry-run"
 		;;
 	shelves)
 		cmdOpts="$qOpts"
