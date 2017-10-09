@@ -1677,7 +1677,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  A shelved change is stored as a patch file, .svn/shelves/NAME.patch\n"
     ),
     {opt_delete, opt_list, 'q', opt_dry_run, opt_keep_local,
-     'N', opt_depth, opt_targets, opt_changelist,
+     opt_depth, opt_targets, opt_changelist,
      /* almost SVN_CL__LOG_MSG_OPTIONS but not currently opt_with_revprop: */
      'm', 'F', opt_force_log, opt_editor_cmd, opt_encoding,
     } },
