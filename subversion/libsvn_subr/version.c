@@ -271,7 +271,7 @@ svn_version__parse_version_string(svn_version_t **version_p,
 
 
 svn_boolean_t
-svn_version__at_least(svn_version_t *version,
+svn_version__at_least(const svn_version_t *version,
                       int major,
                       int minor,
                       int patch)

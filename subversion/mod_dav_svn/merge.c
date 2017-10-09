@@ -171,7 +171,12 @@ do_resources(const dav_svn_repos *repos,
           if (! apr_hash_get(sent, path, change->path.len))
             {
               svn_node_kind_t kind;
-              SVN_ERR(svn_fs_check_path(&kind, root, path, iterpool));
+
+              if (change->node_kind == svn_node_unknown)
+                SVN_ERR(svn_fs_check_path(&kind, root, path, iterpool));
+              else
+                kind = change->node_kind;
+
               SVN_ERR(send_response(repos, root, change->path.data,
                                     kind == svn_node_dir,
                                     output, bb, iterpool));

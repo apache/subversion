@@ -30,6 +30,7 @@
 
 #include "private/svn_repos_private.h"
 #include "private/svn_sorts_private.h"
+#include "private/svn_utf_private.h"
 #include "svn_private_config.h" /* for SVN_TEMPLATE_ROOT_DIR */
 
 #include "repos.h"
@@ -91,23 +92,16 @@ svn_repos_stat(svn_dirent_t **dirent,
 }
 
 /* Return TRUE of DIRNAME matches any of the const char * in PATTERNS.
- * Note that any DIRNAME will match if PATTERNS is empty. */
+ * Note that any DIRNAME will match if PATTERNS is empty.
+ * Use SCRATCH_BUFFER for temporary string contents. */
 static svn_boolean_t
 matches_any(const char *dirname,
-            const apr_array_header_t *patterns)
+            const apr_array_header_t *patterns,
+            svn_membuf_t *scratch_buffer)
 {
-  int i;
-  if (!patterns)
-    return TRUE;
-
-  for (i = 0; i < patterns->nelts; ++i)
-    {
-      const char *pattern = APR_ARRAY_IDX(patterns, i, const char *);
-      if (apr_fnmatch(pattern, dirname, APR_FNM_PERIOD) == APR_SUCCESS)
-        return TRUE;
-    }
-
-  return FALSE;
+  return patterns
+       ? svn_utf__fuzzy_glob_match(dirname, patterns, scratch_buffer)
+       : TRUE;
 }
 
 /* Utility to prevent code duplication.
@@ -166,6 +160,8 @@ compare_filtered_dirent(const void *lhs,
  *
  * However, DEPTH is not svn_depth_empty and PATH has already been reported.
  * Therefore, we can call this recursively.
+ *
+ * Uses SCRATCH_BUFFER for temporary string contents.
  */
 static svn_error_t *
 do_list(svn_fs_root_t *root,
@@ -179,6 +175,7 @@ do_list(svn_fs_root_t *root,
         void *receiver_baton,
         svn_cancel_func_t cancel_func,
         void *cancel_baton,
+        svn_membuf_t *scratch_buffer,
         apr_pool_t *scratch_pool)
 {
   apr_hash_t *entries;
@@ -210,7 +207,8 @@ do_list(svn_fs_root_t *root,
         continue;
 
       /* We can skip files that don't match any of the search patterns. */
-      filtered.is_match = matches_any(filtered.dirent->name, patterns);
+      filtered.is_match = matches_any(filtered.dirent->name, patterns,
+                                      scratch_buffer);
       if (!filtered.is_match && filtered.dirent->kind == svn_node_file)
         continue;
 
@@ -258,7 +256,7 @@ do_list(svn_fs_root_t *root,
         SVN_ERR(do_list(root, sub_path, patterns, svn_depth_infinity,
                         path_info_only, authz_read_func, authz_read_baton,
                         receiver, receiver_baton, cancel_func,
-                        cancel_baton, iterpool));
+                        cancel_baton, scratch_buffer, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -280,6 +278,8 @@ svn_repos_list(svn_fs_root_t *root,
                void *cancel_baton,
                apr_pool_t *scratch_pool)
 {
+  svn_membuf_t scratch_buffer;
+
   /* Parameter check. */
   svn_node_kind_t kind;
   if (depth < svn_depth_empty)
@@ -317,8 +317,13 @@ svn_repos_list(svn_fs_root_t *root,
   if (patterns && patterns->nelts == 0)
     return SVN_NO_ERROR;
 
+  /* We need a scratch buffer for temporary string data.
+   * Create one with a reasonable initial size. */
+  svn_membuf__create(&scratch_buffer, 256, scratch_pool);
+
   /* Actually report PATH, if it passes the filters. */
-  if (matches_any(svn_dirent_dirname(path, scratch_pool), patterns))
+  if (matches_any(svn_dirent_dirname(path, scratch_pool), patterns,
+                  &scratch_buffer))
     SVN_ERR(report_dirent(root, path, kind, path_info_only,
                           receiver, receiver_baton, scratch_pool));
 
@@ -327,7 +332,7 @@ svn_repos_list(svn_fs_root_t *root,
     SVN_ERR(do_list(root, path, patterns, depth,
                     path_info_only, authz_read_func, authz_read_baton,
                     receiver, receiver_baton, cancel_func, cancel_baton,
-                    scratch_pool));
+                    &scratch_buffer, scratch_pool));
 
   return SVN_NO_ERROR;
 }

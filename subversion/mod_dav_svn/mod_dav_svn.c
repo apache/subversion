@@ -288,8 +288,8 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
 
   if (parent->fs_path)
     ap_log_error(APLOG_MARK, APLOG_WARNING, 0, NULL,
-                 "mod_dav_svn: nested Location '%s' hinders access to '%s' "
-                 "in SVNPath Location '%s'",
+                 "mod_dav_svn: Location '%s' hinders access to '%s' "
+                 "in parent SVNPath Location '%s'",
                  child->root_dir,
                  svn_urlpath__skip_ancestor(parent->root_dir, child->root_dir),
                  parent->root_dir);
