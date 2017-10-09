@@ -240,6 +240,11 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 16,
              "Invalid compression method")
 
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_BAD_PROPERTY_VALUE_EOL,
+             SVN_ERR_BAD_CATEGORY_START + 17,
+             "Unexpected line ending in the property value")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,

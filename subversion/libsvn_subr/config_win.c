@@ -273,4 +273,11 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
   return svn_err;
 }
 
+#else  /* !WIN32 */
+
+/* Silence OSX ranlib warnings about object files with no symbols. */
+#include <apr.h>
+extern const apr_uint32_t svn__fake__config_win;
+const apr_uint32_t svn__fake__config_win = 0xdeadbeef;
+
 #endif /* WIN32 */

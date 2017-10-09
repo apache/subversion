@@ -3489,8 +3489,7 @@ svn_wc__required_lock_for_resolve(const char **required_abspath,
 
 /* Return an array of const char * elements, which represent local absolute
  * paths for nodes, within the working copy indicated by WRI_ABSPATH, which
- * correspond to REPOS_RELPATH@REV.
- * If no such nodes exist, return an empty array.
+ * correspond to REPOS_RELPATH. If no such nodes exist, return an empty array.
  *
  * Note that this function returns each and every such node that is known
  * in the WC, including, for example, nodes that were children of a directory
@@ -3501,7 +3500,6 @@ svn_wc__find_repos_node_in_wc(apr_array_header_t **local_abspath_list,
                               svn_wc__db_t *db,
                               const char *wri_abspath,
                               const char *repos_relpath,
-                              svn_revnum_t rev,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 /* @} */

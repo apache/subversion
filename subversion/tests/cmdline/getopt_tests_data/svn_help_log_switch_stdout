@@ -126,7 +126,8 @@ Valid options:
                                --ignore-eol-style: Ignore changes in EOL style
                                -U ARG, --context ARG: Show ARG lines of context
                                -p, --show-c-function: Show C function name
-  --search ARG             : use ARG as search pattern (glob syntax)
+  --search ARG             : use ARG as search pattern (glob syntax, case-
+                             and accent-insensitive)
   --search-and ARG         : combine ARG with the previous search pattern
 
 Global options:
