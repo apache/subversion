@@ -341,30 +341,68 @@ svn_client_shelves_delete(const char *name,
   return SVN_NO_ERROR;
 }
 
+/* ### Currently just reads the first line.
+ */
+static svn_error_t *
+read_logmsg_from_patch(const char **logmsg,
+                       const char *patch_abspath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  apr_file_t *file;
+  svn_stream_t *stream;
+  svn_boolean_t eof;
+  svn_stringbuf_t *line;
+
+  SVN_ERR(svn_io_file_open(&file, patch_abspath,
+                           APR_FOPEN_READ, APR_FPROT_OS_DEFAULT, scratch_pool));
+  stream = svn_stream_from_aprfile2(file, FALSE /*disown*/, scratch_pool);
+  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, result_pool));
+  SVN_ERR(svn_stream_close(stream));
+  *logmsg = line->data;
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
-svn_client_shelves_list(apr_hash_t **dirents,
+svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
                         const char *local_abspath,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
   char *shelves_dir;
+  apr_hash_t *dirents;
   apr_hash_index_t *hi;
 
   SVN_ERR(svn_wc__get_shelves_dir(&shelves_dir, ctx->wc_ctx, local_abspath,
                                   scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_get_dirents3(dirents, shelves_dir, FALSE /*only_check_type*/,
+  SVN_ERR(svn_io_get_dirents3(&dirents, shelves_dir, FALSE /*only_check_type*/,
                               result_pool, scratch_pool));
 
-  /* Remove non-shelves */
-  for (hi = apr_hash_first(scratch_pool, *dirents); hi; hi = apr_hash_next(hi))
-    {
-      const char *name = apr_hash_this_key(hi);
-      int len = strlen(name);
+  *shelved_patch_infos = apr_hash_make(result_pool);
 
-      if (len < 6 || strcmp(name + len - 6, ".patch") != 0)
+  /* Remove non-shelves */
+  for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
+    {
+      const char *filename = apr_hash_this_key(hi);
+      int len = strlen(filename);
+
+      if (len > 6 && strcmp(filename + len - 6, ".patch") == 0)
         {
-          svn_hash_sets(*dirents, name, NULL);
+          const char *name = apr_pstrndup(result_pool, filename, len - 6);
+          svn_client_shelved_patch_info_t *info
+            = apr_palloc(result_pool, sizeof(*info));
+
+          info->dirent = apr_hash_this_val(hi);
+          info->mtime = info->dirent->mtime;
+          info->patch_path
+            = svn_dirent_join_many(result_pool,
+                                   local_abspath, ".svn", "shelves", filename,
+                                   SVN_VA_NULL);
+          SVN_ERR(read_logmsg_from_patch(&info->message, info->patch_path,
+                                         result_pool, scratch_pool));
+
+          svn_hash_sets(*shelved_patch_infos, name, info);
         }
     }
 
