@@ -1255,9 +1255,9 @@ _svndumpfilter ()
 	cmdOpts=
 	case ${COMP_WORDS[1]} in
 	exclude|include)
-		cmdOpts="--drop-empty-revs --renumber-revs
+		cmdOpts="--drop-empty-revs --drop-all-empty-revs --renumber-revs
 		         --skip-missing-merge-sources --targets
-		         --preserve-revprops --quiet"
+		         --preserve-revprops --quiet --pattern"
 		;;
 	help|h|\?)
 		cmdOpts="$cmds"
