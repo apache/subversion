@@ -3531,7 +3531,7 @@ def diff_git_empty_files(sbox):
   expected_output = make_git_diff_header(new_path, "new", "nonexistent",
                                          "working copy",
                                          add=True, text_changes=False) + [
-  ] + make_git_diff_header(iota_path, "iota", "revision 2", "working copy",
+  ] + make_git_diff_header(iota_path, "iota", "revision 2", "nonexistent",
                            delete=True, text_changes=False)
 
   # Two files in diff may be in any order.
@@ -5043,7 +5043,7 @@ def diff_symlinks(sbox):
     '===================================================================\n',
     'diff --git a/to-iota b/to-iota\n',
     'new file mode 120644\n',
-    '--- /dev/null\t(nonexistent)\n',
+    '--- a/to-iota\t(nonexistent)\n',
     '+++ b/to-iota\t(working copy)\n',
     '@@ -0,0 +1 @@\n',
     '+iota\n',
