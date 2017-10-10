@@ -263,7 +263,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         elif val == '2017' or val == '15':
           self.vs_version = '2017'
           self.sln_version = '12.00'
-          self.vcproj_version = '15.0'
+          self.vcproj_version = '14.1'
           self.vcproj_extension = '.vcxproj'
         elif re.match('^20\d+$', val):
           print('WARNING: Unknown VS.NET version "%s",'
