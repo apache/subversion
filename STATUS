@@ -99,6 +99,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1811786
+   When svn_md5_digest_to_cstring() returns NULL, pass an empty string to
+   rb_str_new2().
+   Justification:
+     Prevent a crash if svn_md5_digest_to_cstring returns NULL
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
