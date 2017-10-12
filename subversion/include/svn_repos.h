@@ -375,6 +375,24 @@ typedef void (*svn_repos_notify_func_t)(void *baton,
                                         const svn_repos_notify_t *notify,
                                         apr_pool_t *scratch_pool);
 
+/** Callback for filtering repository contents during dump.
+ *
+ * Set @a *include to TRUE to indicate that node, identified by path
+ * @a path in @a root should be included in dump, or set it to @c FALSE
+ * to indicate that node should be excluded (presumably according to state
+ * stored in @a baton).
+ *
+ * Do not assume @a scratch_pool has any lifetime beyond this call.
+ *
+ * @since New in 1.10.
+ */
+typedef svn_error_t * (*svn_repos_dump_filter_func_t)(
+  svn_boolean_t *include,
+  svn_fs_root_t *root,
+  const char *path,
+  void *baton,
+  apr_pool_t *scratch_pool);
+
 /**
  * Allocate an #svn_repos_notify_t structure in @a result_pool, initialize
  * and return it.
@@ -3310,6 +3328,9 @@ svn_repos_verify_fs(svn_repos_t *repos,
  *            reiterating the existence of previous warnings
  *        ### This is a presentation issue. Caller could do this itself.
  *
+ * If @a filter_func is not @c NULL, it is called for each node being
+ * dumped, allowing the caller to exclude it from dump.
+ *
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the dump.
@@ -3329,13 +3350,16 @@ svn_repos_dump_fs4(svn_repos_t *repos,
                    svn_boolean_t include_changes,
                    svn_repos_notify_func_t notify_func,
                    void *notify_baton,
+                   svn_repos_dump_filter_func_t filter_func,
+                   void *filter_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *pool);
 
 /**
  * Similar to svn_repos_dump_fs4(), but with @a include_revprops and 
- * @a include_changes both set to @c TRUE.
+ * @a include_changes both set to @c TRUE and @a filter_func and
+ * @a filter_baton set to @c NULL.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.9 API.
