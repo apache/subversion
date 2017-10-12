@@ -1115,7 +1115,7 @@ _svnadmin ()
 	# options that require a parameter
 	# note: continued lines must end '|' continuing lines must start '|'
 	optsParam="-r|--revision|--parent-dir|--fs-type|-M|--memory-cache-size"
-	optsParam="$optsParam|-F|--file"
+	optsParam="$optsParam|-F|--file|--exclude|--include"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
@@ -1138,7 +1138,8 @@ _svnadmin ()
 		;;
 	dump)
 		cmdOpts="-r --revision --incremental -q --quiet --deltas \
-		         -M --memory-cache-size -F --file"
+		         -M --memory-cache-size -F --file \
+		         --exclude --include --pattern"
 		;;
 	freeze)
 		cmdOpts="-F --file"

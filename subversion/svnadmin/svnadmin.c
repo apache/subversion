@@ -289,7 +289,10 @@ static const apr_getopt_option_t options_table[] =
      N_("filter out nodes without given prefix(es) from dump")},
 
     {"pattern", svnadmin__glob, 0,
-     N_("treat the path prefixes as file glob patterns")},
+     N_("treat the path prefixes as file glob patterns.\n"
+        "                             Glob special characters are '*' '?' '[]' and '\\'.\n"
+        "                             Character '/' is not treated specially, so\n"
+        "                             pattern /*/foo matches paths /a/foo and /a/b/foo.") },
 
     {NULL}
   };
@@ -347,7 +350,11 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "only the paths changed in that revision; otherwise it will describe\n"
     "every path present in the repository as of that revision.  (In either\n"
     "case, the second and subsequent revisions, if any, describe only paths\n"
-    "changed in those revisions.)\n"),
+    "changed in those revisions.)\n"
+    "\n"
+    "Using --exclude or --include gives results equivalent to authz-based\n"
+    "path exclusions. In particular, when the source of a copy source is\n"
+    "excluded, the copy is transformed into an add (unlike in 'svndumpfilter').\n"),
   {'r', svnadmin__incremental, svnadmin__deltas, 'q', 'M', 'F',
    svnadmin__exclude, svnadmin__include, svnadmin__glob },
   {{'F', N_("write to file ARG instead of stdout")}} },
@@ -1275,6 +1282,7 @@ get_dump_range(svn_revnum_t *lower,
  * Return TRUE if any prefix is a prefix of PATH (matching whole path
  * components); FALSE otherwise.
  * PATH starts with a '/', as do the (const char *) paths in PREFIXES. */
+/* This function is a duplicate of svndumpfilter.c:ary_prefix_match(). */
 static svn_boolean_t
 ary_prefix_match(const apr_array_header_t *pfxlist, const char *path)
 {
