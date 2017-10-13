@@ -353,7 +353,7 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "changed in those revisions.)\n"
     "\n"
     "Using --exclude or --include gives results equivalent to authz-based\n"
-    "path exclusions. In particular, when the source of a copy source is\n"
+    "path exclusions. In particular, when the source of a copy is\n"
     "excluded, the copy is transformed into an add (unlike in 'svndumpfilter').\n"),
   {'r', svnadmin__incremental, svnadmin__deltas, 'q', 'M', 'F',
    svnadmin__exclude, svnadmin__include, svnadmin__glob },
