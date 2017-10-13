@@ -1102,9 +1102,9 @@ _svnadmin ()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
-	cmds='crashtest create delrevprop deltify dump freeze help hotcopy \
-	      info list-dblogs \
-	      list-unused-dblogs load lock lslocks lstxns pack recover rmlocks \
+	cmds='crashtest create delrevprop deltify dump dump-revprops freeze \
+	      help hotcopy info list-dblogs list-unused-dblogs \
+	      load load-revprops lock lslocks lstxns pack recover rmlocks \
 	      rmtxns setlog setrevprop setuuid unlock upgrade verify --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
