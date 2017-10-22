@@ -422,7 +422,8 @@ print_git_diff_header(svn_stream_t *os,
                                             scratch_pool));
       *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", repos_relpath1),
                            rev1, scratch_pool);
-      *label2 = diff_label("/dev/null", rev2, scratch_pool);
+      *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
+                           rev2, scratch_pool);
 
     }
   else if (operation == svn_diff_op_copied)
@@ -447,7 +448,8 @@ print_git_diff_header(svn_stream_t *os,
                                           repos_relpath1, repos_relpath2,
                                           exec_bit2, symlink_bit2,
                                           scratch_pool));
-      *label1 = diff_label("/dev/null", rev1, scratch_pool);
+      *label1 = diff_label(apr_psprintf(scratch_pool, "a/%s", repos_relpath1),
+                           rev1, scratch_pool);
       *label2 = diff_label(apr_psprintf(scratch_pool, "b/%s", repos_relpath2),
                            rev2, scratch_pool);
     }

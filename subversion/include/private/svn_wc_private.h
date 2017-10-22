@@ -1925,7 +1925,7 @@ svn_wc__conflict_tree_update_local_add(svn_wc_context_t *wc_ctx,
                                        apr_pool_t *scratch_pool);
 
 /* Find nodes in the working copy which corresponds to the new location
- * MOVED_TO_REPOS_RELPATH@REV of the tree conflict victim at VICTIM_ABSPATH.
+ * MOVED_TO_REPOS_RELPATH of the tree conflict victim at VICTIM_ABSPATH.
  * The nodes must be of the same node kind as VICTIM_NODE_KIND.
  * If no such node can be found, set *POSSIBLE_TARGETS to an empty array.
  *
@@ -1935,10 +1935,10 @@ svn_wc__conflict_tree_update_local_add(svn_wc_context_t *wc_ctx,
  * to the implementation of this function.
  * Note that this function may not necessarily return a node which was
  * actually moved. The only hard guarantee is that the node corresponds to
- * the repository node MOVED_TO_REPOS_RELPATH@REV specified by the caller.
- * In many cases, this will be a moved node if the caller's parameters are
- * correct. Users should be able to perform a sanity check on the results
- * returned from this function.
+ * the repository relpath MOVED_TO_REPOS_RELPATH specified by the caller.
+ * Users should perform a sanity check on the results returned from this
+ * function, e.g. establish whether the MOVED_TO_REPOS_RELPATH at its
+ * current checked-out revision shares ancestry with the conflict victim.
  */
 svn_error_t *
 svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
