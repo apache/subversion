@@ -271,31 +271,21 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
       APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
         svn_merge_range_dup(new_range, result_pool);
     }
+  else if (combine_ranges(&combined_range, lastrange, new_range,
+                     consider_inheritance))
+    {
+      *lastrange = combined_range;
+    }
   else if (!consider_inheritance)
     {
       /* We are not considering inheritance so we can merge intersecting
          ranges of different inheritability.  Of course if the ranges
          don't intersect at all we simply push NEW_RANGE onto RANGELIST. */
-      if (combine_ranges(&combined_range, lastrange, new_range, FALSE))
-        {
-          *lastrange = combined_range;
-        }
-      else
-        {
-          APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
+      APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) =
             svn_merge_range_dup(new_range, result_pool);
-        }
     }
   else /* Considering inheritance */
     {
-      if (combine_ranges(&combined_range, lastrange, new_range, TRUE))
-        {
-          /* Even when considering inheritance two intersection ranges
-             of the same inheritability can simply be combined. */
-          *lastrange = combined_range;
-        }
-      else
-        {
           /* If we are here then the ranges either don't intersect or do
              intersect but have differing inheritability.  Check for the
              first case as that is easy to handle. */
@@ -461,7 +451,6 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
              order, so re-sort.*/
           if (!sorted)
             svn_sort__array(rangelist, svn_sort_compare_ranges);
-        }
     }
 
   return SVN_NO_ERROR;
