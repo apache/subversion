@@ -1592,3 +1592,12 @@ svn_base64_encode(svn_stream_t *output, apr_pool_t *pool)
 {
   return svn_base64_encode2(output, TRUE, pool);
 }
+
+/*** From string.c ***/
+char *
+svn_cstring_join(const apr_array_header_t *strings,
+                 const char *separator,
+                 apr_pool_t *pool)
+{
+  return svn_cstring_join2(strings, separator, TRUE, pool);
+}

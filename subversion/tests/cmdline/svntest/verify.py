@@ -860,7 +860,7 @@ def make_git_diff_header(target_path, repos_relpath,
     ])
     if text_changes:
       output.extend([
-        "--- /dev/null\t(" + old_tag + ")\n",
+        "--- a/" + repos_relpath + src_label + "\t(" + old_tag + ")\n",
         "+++ b/" + repos_relpath + dst_label + "\t(" + new_tag + ")\n"
       ])
   elif delete:
@@ -871,7 +871,7 @@ def make_git_diff_header(target_path, repos_relpath,
     if text_changes:
       output.extend([
         "--- a/" + repos_relpath + src_label + "\t(" + old_tag + ")\n",
-        "+++ /dev/null\t(" + new_tag + ")\n"
+        "+++ b/" + repos_relpath + dst_label + "\t(" + new_tag + ")\n"
       ])
   elif cp:
     if copyfrom_rev:

@@ -247,6 +247,7 @@ void SVNRepos::dump(File &path, OutputStream &dataOut,
                                     ? ReposNotifyCallback::notify
                                     : NULL,
                                  notifyCallback,
+                                 NULL, NULL,
                                  checkCancel, this, requestPool.getPool()), );
 }
 

@@ -355,7 +355,8 @@ def run_and_verify_svn2(expected_stdout, expected_stderr,
   return exit_code, out, err
 
 def run_and_verify_load(repo_dir, dump_file_content,
-                        bypass_prop_validation = False):
+                        bypass_prop_validation = False,
+                        normalize_props = False):
   "Runs 'svnadmin load' and reports any errors."
   if not isinstance(dump_file_content, list):
     raise TypeError("dump_file_content argument should have list type")
@@ -363,6 +364,8 @@ def run_and_verify_load(repo_dir, dump_file_content,
   args = ()
   if bypass_prop_validation:
     args += ('--bypass-prop-validation',)
+  if normalize_props:
+    args += ('--normalize-props',)
   main.run_command_stdin(
     main.svnadmin_binary, expected_stderr, 0, True, dump_file_content,
     'load', '--force-uuid', '--quiet', repo_dir, *args)
@@ -473,7 +476,8 @@ def run_and_verify_svnsync2(expected_stdout, expected_stderr,
 
 
 def load_repo(sbox, dumpfile_path = None, dump_str = None,
-              bypass_prop_validation = False,create_wc=True):
+              bypass_prop_validation = False, create_wc=True,
+              normalize_props = False):
   "Loads the dumpfile into sbox"
   if not dump_str:
     dump_str = open(dumpfile_path, "rb").read()
@@ -485,7 +489,7 @@ def load_repo(sbox, dumpfile_path = None, dump_str = None,
 
   # Load the mergetracking dumpfile into the repos, and check it out the repo
   run_and_verify_load(sbox.repo_dir, dump_str.splitlines(True),
-                      bypass_prop_validation)
+                      bypass_prop_validation, normalize_props)
   if create_wc:
     run_and_verify_svn(None, [], "co", sbox.repo_url, sbox.wc_dir)
 

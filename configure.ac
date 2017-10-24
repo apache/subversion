@@ -1312,7 +1312,7 @@ AC_PATH_PROG(PERL, perl, none)
 if test -n "$RUBY"; then
   AC_PATH_PROG(RUBY, "$RUBY", none)
 else
-  AC_PATH_PROGS(RUBY, ruby ruby1.8 ruby18 ruby1.9 ruby1 ruby1.9.3 ruby193 ruby2.0 ruby2.1, none)
+  AC_PATH_PROGS(RUBY, ruby ruby1 ruby1.8 ruby18 ruby1.9 ruby19 ruby1.9.3 ruby193 ruby2 ruby2.0 ruby20 ruby2.1 ruby21 ruby2.2 ruby22 ruby2.3 ruby23 ruby2.4 ruby24, none)
 fi
 if test "$RUBY" != "none"; then
   AC_MSG_CHECKING([rb_hash_foreach])
@@ -1321,7 +1321,7 @@ if test "$RUBY" != "none"; then
     if test -n "$RDOC"; then
       AC_PATH_PROG(RDOC, "$RDOC", none)
     else
-      AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18 rdoc1.9 rdoc19 rdoc1.9.3 rdoc193 rdoc2.0 rdoc2.1, none)
+      AC_PATH_PROGS(RUBY, rdoc rdoc1 rdoc1.8 rdoc18 rdoc1.9 rdoc19 rdoc1.9.3 rdoc193 rdoc2 rdoc2.0 rdoc20 rdoc2.1 rdoc21 rdoc2.2 rdoc22 rdoc2.3 rdoc23 rdoc2.4 rdoc24, none)
     fi
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
     svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MAJOR))'`"
@@ -1345,7 +1345,7 @@ if test "$RUBY" != "none"; then
       # Disallow Ruby between 1.8.7 and 1.9.3
       RUBY="none"
       AC_MSG_WARN([The detected Ruby is between 1.9 and 1.9.3])
-      AC_MSG_WARN([Only 1.8.x and 1.9.3 releases are supported at this time])
+      AC_MSG_WARN([Only 1.8.x and 1.9.3 or later are supported at this time])
     fi
   else
     AC_MSG_RESULT([no])

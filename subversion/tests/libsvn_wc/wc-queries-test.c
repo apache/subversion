@@ -70,9 +70,6 @@ static const int schema_statements[] =
 {
   /* Usual tables */
   STMT_CREATE_SCHEMA,
-  STMT_CREATE_NODES,
-  STMT_CREATE_NODES_TRIGGERS,
-  STMT_CREATE_EXTERNALS,
   STMT_INSTALL_SCHEMA_STATISTICS,
   /* Memory tables */
   STMT_CREATE_TARGETS_LIST,
