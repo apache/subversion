@@ -6782,6 +6782,22 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+/* Set @a *any_shelved to indicate if there are any shelved changes in this WC.
+ *
+ * This shall provide the answer fast, regardless of how many changes
+ * are stored, unlike svn_client_shelves_list().
+ *
+ * ### Initial implementation isn't O(1) fast -- it just calls
+ *     svn_client_shelves_list().
+ *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_shelves_any(svn_boolean_t *any_shelved,
+                       const char *local_abspath,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *scratch_pool);
+
 /** Write local changes to a patch file at @a name.
  *
  * @a wc_root_abspath: The WC root dir.
