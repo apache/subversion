@@ -123,20 +123,17 @@ name_of_youngest(const char **name_p,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  apr_hash_t *dirents;
   apr_array_header_t *list;
   const svn_sort__item_t *youngest_item;
 
-  SVN_ERR(svn_client_shelves_list(&dirents, local_abspath,
-                                  ctx, scratch_pool, scratch_pool));
-  if (apr_hash_count(dirents) == 0)
+  SVN_ERR(list_sorted_by_date(&list,
+                              local_abspath, ctx, scratch_pool));
+  if (list->nelts == 0)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
                             _("No shelved changes found"));
 
-  list = svn_sort__hash(dirents, compare_dirents_by_mtime, scratch_pool);
   youngest_item = &APR_ARRAY_IDX(list, list->nelts - 1, svn_sort__item_t);
-  *name_p = apr_pstrndup(result_pool, youngest_item->key,
-                         strlen(youngest_item->key) - 6 /* remove '.patch' */);
+  *name_p = youngest_item->key;
   return SVN_NO_ERROR;
 }
 
