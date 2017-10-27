@@ -396,9 +396,7 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
           info->dirent = apr_hash_this_val(hi);
           info->mtime = info->dirent->mtime;
           info->patch_path
-            = svn_dirent_join_many(result_pool,
-                                   local_abspath, ".svn", "shelves", filename,
-                                   SVN_VA_NULL);
+            = svn_dirent_join(shelves_dir, filename, result_pool);
           SVN_ERR(read_logmsg_from_patch(&info->message, info->patch_path,
                                          result_pool, scratch_pool));
 
