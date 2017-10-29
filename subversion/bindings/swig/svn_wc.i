@@ -34,6 +34,12 @@
 %import svn_delta.i
 %import svn_ra.i
 
+#ifdef SWIGPYTHON
+%{
+#include <py3c.h>
+%}
+#endif
+
 /* -----------------------------------------------------------------------
    ### these functions require a pool, which we don't have immediately
    ### handy. just eliminate these funcs for now.

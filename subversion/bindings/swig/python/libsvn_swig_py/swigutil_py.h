@@ -50,6 +50,12 @@ extern "C" {
 apr_status_t svn_swig_py_initialize(void);
 
 
+/* Returns the provided python object as a FILE *object.
+ * Return the underlying FILE or NULL if the object is not a File instance.
+ */
+FILE *svn_swig_py_as_file(PyObject *pyfile);
+
+
 
 /* Functions to manage python's global interpreter lock */
 void svn_swig_py_release_py_lock(void);
@@ -226,7 +232,10 @@ svn_swig_py_seq_to_array(PyObject *seq,
                          apr_pool_t *pool);
 
 /* An svn_swig_py_object_unwrap_t that extracts a char pointer from a Python
-   string. */
+   string.
+
+   Note the lifetime of the returned string is tied to the provided Python
+   object. */
 int
 svn_swig_py_unwrap_string(PyObject *source,
                           void *destination,

@@ -34,6 +34,11 @@
 %import svn_delta.i
 %import svn_wc.i
 
+#ifdef SWIGPYTHON
+%{
+#include <py3c.h>
+%}
+#endif
 /* Ignore platform-specific auth functions */
 %ignore svn_client_get_windows_simple_provider;
 
@@ -119,7 +124,7 @@
     ppitem = (svn_client_proplist_item_t **)(*$1)->elts;
     for (i = 0; i < nelts; ++i, ++ppitem) {
         PyObject *item = PyTuple_New(2);
-        PyObject *name = PyString_FromStringAndSize((*ppitem)->node_name->data,
+        PyObject *name = PyStr_FromStringAndSize((*ppitem)->node_name->data,
                                                     (*ppitem)->node_name->len);
         PyObject *hash = svn_swig_py_prophash_to_dict((*ppitem)->prop_hash);
 

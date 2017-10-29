@@ -49,6 +49,12 @@
 %}
 #endif
 
+#ifdef SWIGPYTHON
+%{
+#include <py3c.h>
+%}
+#endif
+
 /* ### for now, let's ignore this thing. */
 %ignore svn_prop_t;
 
@@ -418,7 +424,7 @@
 
 #ifdef SWIGPYTHON
 %typemap(argout) (char *buffer, apr_size_t *len) {
-  %append_output(PyString_FromStringAndSize($1, *$2));
+  %append_output(PyStr_FromStringAndSize($1, *$2));
   free($1);
 }
 #endif
@@ -440,13 +446,12 @@
 */
 #ifdef SWIGPYTHON
 %typemap(in) (const char *data, apr_size_t *len) ($*2_type temp) {
-    if (!PyString_Check($input)) {
+    if (!PyStr_Check($input)) {
         PyErr_SetString(PyExc_TypeError,
                         "expecting a string for the buffer");
         SWIG_fail;
     }
-    $1 = PyString_AS_STRING($input);
-    temp = PyString_GET_SIZE($input);
+    $1 = PyStr_AsUTF8AndSize($input, &temp);
     $2 = ($2_ltype)&temp;
 }
 #endif
@@ -499,8 +504,8 @@
        SWIG_fail;
     }
 
-    if (PyString_Check($input)) {
-        char *value = PyString_AS_STRING($input);
+    if (PyStr_Check($input)) {
+        char *value = PyStr_AsString($input);
         $1 = apr_pstrdup(_global_pool, value);
     }
     else if (PyLong_Check($input)) {
@@ -605,7 +610,7 @@
 */
 #ifdef SWIGPYTHON
 %typemap(in) FILE * {
-    $1 = PyFile_AsFile($input);
+    $1 = svn_swig_py_as_file($input);
     if ($1 == NULL) {
         PyErr_SetString(PyExc_ValueError, "Must pass in a valid file object");
         SWIG_fail;

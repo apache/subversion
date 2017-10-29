@@ -26,6 +26,8 @@
 
 #include <Python.h>
 
+#include <py3c.h>
+
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -140,6 +142,30 @@ apr_status_t svn_swig_py_initialize(void)
   if (atexit(apr_terminate) != 0)
     return APR_EGENERAL;
   return APR_SUCCESS;
+}
+
+FILE *svn_swig_py_as_file(PyObject *pyfile)
+{
+#if IS_PY3
+  FILE *fp = NULL;
+  int fd = PyFile_AsFileDescriptor(pyfile);
+  if (fd >= 0)
+    {
+      PyObject *mode_obj = PyObject_GetAttrString(pyfile, "mode");
+      PyObject *mode_byte_obj = PyUnicode_AsUTF8String(mode_obj);
+      char *mode = PyBytes_AsString(mode_byte_obj);
+
+      if (mode)
+        fp = fdopen(fd, mode);
+
+      Py_DECREF(mode_obj);
+      Py_DECREF(mode_byte_obj);
+    }
+
+  return fp;
+#else
+  return PyFile_AsFile(pyfile);
+#endif
 }
 
 int svn_swig_py_get_pool_arg(PyObject *args, swig_type_info *type,
@@ -370,14 +396,14 @@ void svn_swig_py_svn_exception(svn_error_t *error_chain)
           Py_INCREF(Py_None);
           message_ob = Py_None;
         }
-      else if ((message_ob = PyString_FromString(err->message)) == NULL)
+      else if ((message_ob = PyStr_FromString(err->message)) == NULL)
         goto finished;
       if (err->file == NULL)
         {
           Py_INCREF(Py_None);
           file_ob = Py_None;
         }
-      else if ((file_ob = PyString_FromString(err->file)) == NULL)
+      else if ((file_ob = PyStr_FromString(err->file)) == NULL)
         goto finished;
       if ((line_ob = PyInt_FromLong(err->line)) == NULL)
         goto finished;
@@ -476,23 +502,23 @@ static char *make_string_from_ob(PyObject *ob, apr_pool_t *pool)
 {
   if (ob == Py_None)
     return NULL;
-  if (! PyString_Check(ob))
+  if (! PyStr_Check(ob))
     {
       PyErr_SetString(PyExc_TypeError, "not a string");
       return NULL;
     }
-  return apr_pstrdup(pool, PyString_AS_STRING(ob));
+  return apr_pstrdup(pool, PyStr_AsString(ob));
 }
 static svn_string_t *make_svn_string_from_ob(PyObject *ob, apr_pool_t *pool)
 {
   if (ob == Py_None)
     return NULL;
-  if (! PyString_Check(ob))
+  if (! PyStr_Check(ob))
     {
       PyErr_SetString(PyExc_TypeError, "not a string");
       return NULL;
     }
-  return svn_string_create(PyString_AS_STRING(ob), pool);
+  return svn_string_create(PyStr_AsString(ob), pool);
 }
 
 
@@ -552,8 +578,7 @@ static PyObject *convert_svn_string_t(void *value, void *ctx,
 
   const svn_string_t *s = value;
 
-  /* ### gotta cast this thing cuz Python doesn't use "const" */
-  return PyString_FromStringAndSize((void *)s->data, s->len);
+  return PyStr_FromStringAndSize(s->data, s->len);
 }
 
 /* Convert a C string into a Python String object (or a reference to
@@ -566,7 +591,7 @@ static PyObject *cstring_to_pystring(const char *cstring)
       Py_INCREF(Py_None);
       return retval;
     }
-  return PyString_FromString(cstring);
+  return PyStr_FromString(cstring);
 }
 
 static PyObject *convert_svn_client_commit_item3_t(void *value, void *ctx)
@@ -642,8 +667,7 @@ PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash)
 static PyObject *convert_string(void *value, void *ctx,
                                 PyObject *py_pool)
 {
-  /* ### gotta cast this thing cuz Python doesn't use "const" */
-  return PyString_FromString((const char *)value);
+  return PyStr_FromString((const char *)value);
 }
 
 PyObject *svn_swig_py_stringhash_to_dict(apr_hash_t *hash)
@@ -725,7 +749,7 @@ svn_swig_py_propinheriteditemarray_to_dict(const apr_array_header_t *array)
         apr_hash_t *prop_hash = prop_inherited_item->prop_hash;
         PyObject *py_key, *py_value;
 
-        py_key = PyString_FromString(prop_inherited_item->path_or_url);
+        py_key = PyStr_FromString(prop_inherited_item->path_or_url);
         if (py_key == NULL)
           goto error;
 
@@ -769,7 +793,7 @@ PyObject *svn_swig_py_proparray_to_dict(const apr_array_header_t *array)
 
         prop = APR_ARRAY_IDX(array, i, svn_prop_t);
 
-        py_key = PyString_FromString(prop.name);
+        py_key = PyStr_FromString(prop.name);
         if (py_key == NULL)
           goto error;
 
@@ -780,8 +804,8 @@ PyObject *svn_swig_py_proparray_to_dict(const apr_array_header_t *array)
           }
         else
           {
-             py_value = PyString_FromStringAndSize((void *)prop.value->data,
-                                                   prop.value->len);
+             py_value = PyStr_FromStringAndSize(prop.value->data,
+                                                prop.value->len);
              if (py_value == NULL)
                {
                  Py_DECREF(py_key);
@@ -831,7 +855,7 @@ PyObject *svn_swig_py_locationhash_to_dict(apr_hash_t *hash)
             Py_DECREF(dict);
             return NULL;
           }
-        value = PyString_FromString((char *)v);
+        value = PyStr_FromString((const char *)v);
         if (value == NULL)
           {
             Py_DECREF(key);
@@ -895,7 +919,7 @@ PyObject *svn_swig_py_c_strings_to_list(char **strings)
 
     while ((s = *strings++) != NULL)
       {
-        PyObject *ob = PyString_FromString(s);
+        PyObject *ob = PyStr_FromString(s);
 
         if (ob == NULL)
             goto error;
@@ -1252,7 +1276,7 @@ svn_swig_py_unwrap_string(PyObject *source,
                           void *baton)
 {
     const char **ptr_dest = destination;
-    *ptr_dest = PyString_AsString(source);
+    *ptr_dest = PyStr_AsString(source);
 
     if (*ptr_dest != NULL)
         return 0;
@@ -1371,7 +1395,7 @@ PyObject *svn_swig_py_array_to_list(const apr_array_header_t *array)
     for (i = 0; i < array->nelts; ++i)
       {
         PyObject *ob =
-          PyString_FromString(APR_ARRAY_IDX(array, i, const char *));
+          PyStr_FromString(APR_ARRAY_IDX(array, i, const char *));
         if (ob == NULL)
           goto error;
         PyList_SET_ITEM(list, i, ob);
@@ -1446,13 +1470,13 @@ static svn_error_t *exception_to_error(PyObject * exc)
 
     if ((message_ob = PyObject_GetAttrString(exc, "message")) == NULL)
         goto finished;
-    message = PyString_AsString(message_ob);
+    message = PyStr_AsString(message_ob);
     if (PyErr_Occurred()) goto finished;
 
     if ((file_ob = PyObject_GetAttrString(exc, "file")) == NULL)
         goto finished;
     if (file_ob != Py_None)
-        file = PyString_AsString(file_ob);
+        file = PyStr_AsString(file_ob);
     if (PyErr_Occurred()) goto finished;
 
     if ((line_ob = PyObject_GetAttrString(exc, "line")) == NULL)
@@ -2436,10 +2460,10 @@ apr_file_t *svn_swig_py_make_file(PyObject *py_file,
   if (py_file == NULL || py_file == Py_None)
     return NULL;
 
-  if (PyString_Check(py_file))
+  if (PyStr_Check(py_file))
     {
       /* input is a path -- just open an apr_file_t */
-      char* fname = PyString_AS_STRING(py_file);
+      char* fname = PyStr_AsString(py_file);
       apr_err = apr_file_open(&apr_file, fname,
                               APR_CREATE | APR_READ | APR_WRITE,
                               APR_OS_DEFAULT, pool);
@@ -2452,25 +2476,26 @@ apr_file_t *svn_swig_py_make_file(PyObject *py_file,
           return NULL;
         }
     }
-  else if (PyFile_Check(py_file))
+  else
     {
-      FILE *file;
-      apr_os_file_t osfile;
+      FILE *file = svn_swig_py_as_file(py_file);
 
       /* input is a file object -- convert to apr_file_t */
-      file = PyFile_AsFile(py_file);
-#ifdef WIN32
-      osfile = (apr_os_file_t)_get_osfhandle(_fileno(file));
-#else
-      osfile = (apr_os_file_t)fileno(file);
-#endif
-      apr_err = apr_os_file_put(&apr_file, &osfile, O_CREAT | O_WRONLY, pool);
-      if (apr_err)
+      if (file != NULL)
         {
-          char buf[256];
-          apr_strerror(apr_err, buf, sizeof(buf));
-          PyErr_Format(PyExc_IOError, "apr_os_file_put failed: %s", buf);
-          return NULL;
+#ifdef WIN32
+          apr_os_file_t osfile = (apr_os_file_t)_get_osfhandle(_fileno(file));
+#else
+          apr_os_file_t osfile = (apr_os_file_t)fileno(file);
+#endif
+          apr_err = apr_os_file_put(&apr_file, &osfile, O_CREAT | O_WRONLY, pool);
+          if (apr_err)
+            {
+              char buf[256];
+              apr_strerror(apr_err, buf, sizeof(buf));
+              PyErr_Format(PyExc_IOError, "apr_os_file_put failed: %s", buf);
+              return NULL;
+            }
         }
     }
   return apr_file;
@@ -2482,7 +2507,6 @@ read_handler_pyio(void *baton, char *buffer, apr_size_t *len)
 {
   PyObject *result;
   PyObject *py_io = baton;
-  apr_size_t bytes;
   svn_error_t *err = SVN_NO_ERROR;
 
   if (py_io == Py_None)
@@ -2499,10 +2523,16 @@ read_handler_pyio(void *baton, char *buffer, apr_size_t *len)
     {
       err = callback_exception_error();
     }
-  else if (PyString_Check(result))
+  else if (PyStr_Check(result))
     {
-      bytes = PyString_GET_SIZE(result);
-      if (bytes > *len)
+      Py_ssize_t bytes;
+      const char *result_str = PyStr_AsUTF8AndSize(result, &bytes);
+
+      if (result_str == NULL)
+        {
+          err = callback_exception_error();
+        }
+      else if (bytes > *len)
         {
           err = callback_bad_return_error("Too many bytes");
         }
@@ -2510,7 +2540,7 @@ read_handler_pyio(void *baton, char *buffer, apr_size_t *len)
         {
           /* Writeback, in case this was a short read, indicating EOF */
           *len = bytes;
-          memcpy(buffer, PyString_AS_STRING(result), *len);
+          memcpy(buffer, result_str, *len);
         }
     }
   else
@@ -2948,9 +2978,9 @@ svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
       *log_msg = NULL;
       err = SVN_NO_ERROR;
     }
-  else if (PyString_Check(result))
+  else if (PyStr_Check(result))
     {
-      *log_msg = apr_pstrdup(pool, PyString_AS_STRING(result));
+      *log_msg = apr_pstrdup(pool, PyStr_AsString(result));
       Py_DECREF(result);
       err = SVN_NO_ERROR;
     }
@@ -3852,9 +3882,9 @@ ra_callbacks_get_wc_prop(void *baton,
     }
   else if (result != Py_None)
     {
-      char *buf;
       Py_ssize_t len;
-      if (PyString_AsStringAndSize(result, &buf, &len) == -1)
+      const char *buf = PyStr_AsUTF8AndSize(result, &len);
+      if (buf == NULL)
         {
           err = callback_exception_error();
         }
@@ -3897,7 +3927,7 @@ ra_callbacks_push_or_set_wc_prop(const char *callback,
       goto finished;
     }
 
-  if ((py_value = PyString_FromStringAndSize(value->data, value->len)) == NULL)
+  if ((py_value = PyStr_FromStringAndSize(value->data, value->len)) == NULL)
     {
       err = callback_exception_error();
       goto finished;
@@ -4096,7 +4126,7 @@ ra_callbacks_get_client_string(void *baton,
     }
   else if (result != Py_None)
     {
-      if ((*name = PyString_AsString(result)) == NULL)
+      if ((*name = PyStr_AsString(result)) == NULL)
         {
           err = callback_exception_error();
         }

@@ -28,6 +28,10 @@
 %include svn_string.swg
 %include svn_containers.swg
 
+#ifdef SWIGPYTHON
+#include <py3c.h>
+#endif
+
 /* -----------------------------------------------------------------------
    Generic handling for "type **" parameters.  Almost all such parameters
    are OUTPUT parameters.  Handling is as follows:
@@ -463,12 +467,13 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 */
 #ifdef SWIGPYTHON
 %typemap(in) (const char *PTR, apr_size_t LEN) {
-    if (!PyString_Check($input)) {
+    Py_ssize_t pyStrLen;
+    if (!PyStr_Check($input)) {
         PyErr_SetString(PyExc_TypeError, "expecting a string");
         SWIG_fail;
     }
-    $1 = PyString_AS_STRING($input);
-    $2 = PyString_GET_SIZE($input);
+    $1 = PyStr_AsUTF8AndSize($input, &pyStrLen);
+    $2 = pyStrLen;
 }
 #endif
 
@@ -1093,7 +1098,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPYTHON
 %typemap(argout) unsigned char digest[ANY]
 {
-  %append_output(PyString_FromStringAndSize((char *)$1, APR_MD5_DIGESTSIZE));
+  %append_output(PyStr_FromStringAndSize((const char *)$1, APR_MD5_DIGESTSIZE));
 }
 #endif
 
@@ -1166,7 +1171,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     if ($input == Py_None) {
         $1 = NULL;
     } else {
-        $1 = (unsigned char *) PyString_AsString($input);
+        $1 = (unsigned char *) PyStr_AsString($input);
         if ($1 == NULL) SWIG_fail;
     }
 }

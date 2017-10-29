@@ -31,6 +31,9 @@ typedef struct svn_string_t svn_string_t;
    because we only refer to the ->data and ->len values.
 */
 #ifdef SWIGPYTHON
+
+#include <py3c.h>
+
 %typemap(argout) RET_STRING {
     PyObject *s;
     if (*$1 == NULL) {
@@ -38,7 +41,7 @@ typedef struct svn_string_t svn_string_t;
         s = Py_None;
     }
     else {
-        s = PyString_FromStringAndSize((*$1)->data, (*$1)->len);
+        s = PyStr_FromStringAndSize((*$1)->data, (*$1)->len);
         if (s == NULL)
             SWIG_fail;
     }
@@ -75,14 +78,17 @@ typedef struct svn_string_t svn_string_t;
 
 #ifdef SWIGPYTHON
 %typemap(in) svn_stringbuf_t * {
-    if (!PyString_Check($input)) {
+    if (!PyStr_Check($input)) {
         PyErr_SetString(PyExc_TypeError, "not a string");
         SWIG_fail;
     }
-    $1 = svn_stringbuf_ncreate(PyString_AS_STRING($input),
-                               PyString_GET_SIZE($input),
-                               /* ### gah... what pool to use? */
-                               _global_pool);
+    {
+      Py_ssize_t strBufLen;
+      const char *strBufChar = PyStr_AsUTF8AndSize($input, &strBufLen);
+      $1 = svn_stringbuf_ncreate(strBufChar, strBufLen,
+                                 /* ### gah... what pool to use? */
+                                 _global_pool);
+    }
 }
 #endif
 
@@ -139,7 +145,7 @@ typedef struct svn_string_t svn_string_t;
 
 #ifdef SWIGPYTHON
 %typemap(out) svn_stringbuf_t * {
-    $result = PyString_FromStringAndSize($1->data, $1->len);
+    $result = PyStr_FromStringAndSize($1->data, $1->len);
 }
 #endif
 
@@ -174,12 +180,13 @@ typedef struct svn_string_t svn_string_t;
     if ($input == Py_None)
         $1 = NULL;
     else {
-        if (!PyString_Check($input)) {
+        Py_ssize_t pyStrLen;
+        if (!PyStr_Check($input)) {
             PyErr_SetString(PyExc_TypeError, "not a string");
             SWIG_fail;
         }
-        value.data = PyString_AS_STRING($input);
-        value.len = PyString_GET_SIZE($input);
+        value.data = PyStr_AsUTF8AndSize($input, &pyStrLen);
+        value.len = pyStrLen;
         $1 = &value;
     }
 }
@@ -223,7 +230,7 @@ typedef struct svn_string_t svn_string_t;
 
 #ifdef SWIGPYTHON
 %typemap(out) svn_string_t * {
-    $result = PyString_FromStringAndSize($1->data, $1->len);
+    $result = PyStr_FromStringAndSize($1->data, $1->len);
 }
 #endif
 #ifdef SWIGPERL
@@ -253,7 +260,7 @@ typedef struct svn_string_t svn_string_t;
         s = Py_None;
     }
     else {
-        s = PyString_FromString(*$1);
+        s = PyStr_FromString(*$1);
         if (s == NULL)
             SWIG_fail;
     }

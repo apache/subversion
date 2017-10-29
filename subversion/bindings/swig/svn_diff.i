@@ -32,6 +32,12 @@
 %include svn_global.swg
 %import core.i
 
+#ifdef SWIGPYTHON
+%{
+#include <py3c.h>
+%}
+#endif
+
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */

@@ -162,6 +162,8 @@ AC_DEFUN(SVN_FIND_SWIG,
                          ["$svn_cv_pycfmt_apr_int64_t"],
                          [Define to the Python/C API format character suitable]
                          [ for apr_int64_t])
+
+      SVN_PY3C()
     fi
 
     if test "$PERL" != "none"; then
