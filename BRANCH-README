@@ -1,0 +1,21 @@
+This branch is for development towards getting the python bindings working under
+Python 3. [0]
+
+Branch type: dev branch off trunk.
+
+The upstream Python project has previously announced End of Life for Python 2,
+with no updates passed some point in 2020. So the bindings need to be updated to
+support Python 3. In order to not have to maintain different code for the
+difference versions, the py3c [1] was chosen to provide standard compatibility
+features for the C extension interfaces for each version.
+
+TODO
+----
+
+* Ensure Windows builds still work in light of the addition of the py3c library.
+
+
+References:
+  [0] dev@ thread "Python 3 Bindings Query", Troy Curtis.
+      https://svn.haxx.se/dev/archive-2017-10/0067.shtml
+  [1] https://github.com/encukou/py3c
