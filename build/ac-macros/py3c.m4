@@ -22,6 +22,10 @@ dnl
 dnl  Check configure options and assign variables related to
 dnl  the py3c library.
 dnl
+dnl  If configuring via prefix, the ac_cv_python_includes variable needs
+dnl  to be set to the appropriate include configuration to build against
+dnl  the correct Python C interface.
+dnl
 
 AC_DEFUN(SVN_PY3C,
 [
@@ -42,31 +46,42 @@ AC_DEFUN(SVN_PY3C,
   ])
 
   if test "$py3c_skip" = "yes"; then
-    AC_MSG_ERROR([subversion swig python bindings require py3c])
-  fi
-
-  if test -n "$py3c_prefix"; then
-    AC_MSG_NOTICE([py3c library configuration via prefix])
-    save_cppflags="$CPPFLAGS"
-    CPPFLAGS="$CPPFLAGS -I$py3c_prefix/include"
-    AC_CHECK_HEADERS(py3c.h,[
-        py3c_found="yes"
-        SVN_PY3C_INCLUDES="-I$py3c_prefix/include"
-    ])
-    CPPFLAGS="$save_cppflags"
+    AC_MSG_NOTICE([Skipping configure of py3c])
   else
-    SVN_PY3C_PKG_CONFIG()
+    if test -n "$py3c_prefix"; then
+      AC_MSG_NOTICE([py3c library configuration via prefix $py3c_prefix])
 
-    if test "$py3c_found" = "no"; then
-      AC_MSG_NOTICE([py3c library configuration])
-      AC_CHECK_HEADER(py3c.h, [
-        py3c_found="yes"
+      dnl The standard Python headers are required to validate py3c.h
+      if test "$ac_cv_python_includes" = "none"; then
+        AC_MSG_WARN([py3c cannot be used without distutils module])
+      fi
+
+      save_cppflags="$CPPFLAGS"
+      CPPFLAGS="$CPPFLAGS $ac_cv_python_includes -I$py3c_prefix/include"
+      AC_CHECK_HEADERS(py3c.h,[
+          py3c_found="yes"
+          SVN_PY3C_INCLUDES="-I$py3c_prefix/include"
       ])
-    fi
-  fi
+      CPPFLAGS="$save_cppflags"
+    else
+      SVN_PY3C_PKG_CONFIG()
 
-  if test "$py3c_found" = "no"; then
-    AC_MSG_ERROR([subversion swig python bindings require py3c])
+      if test "$py3c_found" = "no"; then
+        AC_MSG_NOTICE([py3c library configuration without pkg-config])
+
+        dnl The standard Python headers are required to validate py3c.h
+        if test "$ac_cv_python_includes" = "none"; then
+          AC_MSG_WARN([py3c cannot be used without distutils module])
+        fi
+
+        save_cppflags="$CPPFLAGS"
+        CPPFLAGS="$CPPFLAGS $ac_cv_python_includes"
+        AC_CHECK_HEADER(py3c.h, [
+          py3c_found="yes"
+        ])
+        CPPFLAGS="$save_cppflags"
+      fi
+    fi
   fi
 
   AC_SUBST(SVN_PY3C_INCLUDES)

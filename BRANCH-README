@@ -13,6 +13,9 @@ TODO
 ----
 
 * Ensure Windows builds still work in light of the addition of the py3c library.
+* Make the error more meaningful if the user attempts to build python swig
+  bindings, even if py3c was disabled or not found. Currently the error on
+  makefile builds is "none: command not found", which isn't very descriptive.
 
 
 References:
