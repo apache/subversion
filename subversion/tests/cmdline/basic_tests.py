@@ -3140,6 +3140,33 @@ def filtered_ls(sbox):
   exit_code, output, error = svntest.actions.run_and_verify_svn(
     [], [], 'ls', path, '--depth=infinity', '--search=*/*')
 
+@XFail()
+def null_update_last_changed_revision(sbox):
+  "null 'update' updates last changed rev"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # r2: Random text change.
+  old_contents = open(sbox.path("iota")).read()
+  sbox.simple_append("iota", "Line 2.\n")
+  sbox.simple_commit(message='r2')
+  sbox.simple_update()
+
+  # r3: Revert r2.
+  sbox.simple_append("iota", old_contents, truncate=True)
+  sbox.simple_commit(message='r3')
+  sbox.simple_update()
+
+  # Perform a null update.
+  #
+  # This used to say '3'; probably because iota@3 and iota@1 were textually
+  # identical.
+  sbox.simple_update(revision='1')
+  svntest.actions.run_and_verify_svn(["1\n"], [],
+                                     'info', sbox.path('iota'),
+                                     '--show-item', 'last-changed-revision')
+
 ########################################################################
 # Run the tests
 
@@ -3211,6 +3238,7 @@ test_list = [ None,
               mkdir_parents_target_exists_on_disk,
               plaintext_password_storage_disabled,
               filtered_ls,
+              null_update_last_changed_revision,
              ]
 
 if __name__ == '__main__':
