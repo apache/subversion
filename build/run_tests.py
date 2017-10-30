@@ -424,7 +424,7 @@ class TestHarness:
           os.write(sys.stdout.fileno(), b'.' * job.test_count())
 
 
-  def _run_global_sheduler(self, testlist, has_py_tests):
+  def _run_global_scheduler(self, testlist, has_py_tests):
     # Collect all tests to execute (separate jobs for each test in python
     # test cases, one job for each c test case).  Do that concurrently to
     # mask latency.  This takes .5s instead of about 3s.
@@ -576,7 +576,7 @@ class TestHarness:
     if self.opts.global_scheduler is None:
       failed = self._run_local_schedulers(testlist)
     else:
-      failed = self._run_global_sheduler(testlist, len(py_tests) > 0)
+      failed = self._run_global_scheduler(testlist, len(py_tests) > 0)
 
     # Open the log again to for filtering.
     if self.logfile:
