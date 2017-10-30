@@ -3140,7 +3140,6 @@ def filtered_ls(sbox):
   exit_code, output, error = svntest.actions.run_and_verify_svn(
     [], [], 'ls', path, '--depth=infinity', '--search=*/*')
 
-@XFail()
 @Issue(4700)
 def null_update_last_changed_revision(sbox):
   "null 'update' updates last changed rev"
