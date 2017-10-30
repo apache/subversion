@@ -107,6 +107,16 @@ Candidate changes:
    Votes:
      +1: jamessan
 
+ * r1813771, r1813783, r1813789, r1813794
+   Issue #4700: null updates don't update last-changed-revision.
+   Justification:
+     Corrects the output of 'svn info --show-item=last-changed-revision'.
+   Notes:
+     The first three revisions add a regression test.
+     The fourth revision fixes the originally reported case.
+   Votes:
+     +0: danielsh
+
 Veto-blocked changes:
 =====================
 
