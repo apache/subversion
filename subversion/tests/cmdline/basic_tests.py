@@ -3161,7 +3161,7 @@ def null_update_last_changed_revision(sbox):
   # Perform a null update.
   #
   # This used to say '3'; probably because iota@3 and iota@1 were textually
-  # identical.
+  # identical. It seems this problem was introduced in r1760570.
   sbox.simple_update(revision='1')
   svntest.actions.run_and_verify_svn(["1\n"], [],
                                      'info', sbox.path('iota'),
