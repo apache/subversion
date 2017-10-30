@@ -3167,6 +3167,35 @@ def null_update_last_changed_revision(sbox):
                                      'info', sbox.path('iota'),
                                      '--show-item', 'last-changed-revision')
 
+@Issue(4700)
+@XFail()
+def null_prop_update_last_changed_revision(sbox):
+  "null 'property update' updates last changed rev"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset("prop", "value", "iota")
+  sbox.simple_commit(message='r2')
+  sbox.simple_update()
+
+  # r3: change the property
+  sbox.simple_propset("prop", "changed", "iota")
+  sbox.simple_commit(message='r3')
+  sbox.simple_update()
+
+  # r4: Revert r3.
+  sbox.simple_propset("prop", "value", "iota")
+  sbox.simple_commit(message='r4')
+  sbox.simple_update()
+
+  # Perform a null update.
+  sbox.simple_update(revision='2')
+  svntest.actions.run_and_verify_svn(["2\n"], [],
+                                     'info', sbox.path('iota'),
+                                     '--show-item', 'last-changed-revision')
+
+
 ########################################################################
 # Run the tests
 
@@ -3239,6 +3268,7 @@ test_list = [ None,
               plaintext_password_storage_disabled,
               filtered_ls,
               null_update_last_changed_revision,
+              null_prop_update_last_changed_revision,
              ]
 
 if __name__ == '__main__':
