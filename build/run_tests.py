@@ -1036,7 +1036,9 @@ def main():
   (opts, args) = create_parser().parse_args(sys.argv[1:])
 
   if len(args) < 3:
-    print(__doc__)
+    print("{}: at least three positional arguments required; got {!r}".format(
+      os.path.basename(sys.argv[0]), args
+    ))
     sys.exit(2)
 
   if opts.log_to_stdout:
