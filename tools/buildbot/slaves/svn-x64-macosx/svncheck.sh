@@ -63,6 +63,7 @@ scripts=$(cd $(dirname "$0") && pwd)
 . ${scripts}/setenv.sh
 
 # Parse arguments to find out which tests we should run
+use_python3=false
 check_local=false
 check_svn=false
 check_dav=false
@@ -74,6 +75,7 @@ check_bdb=false
 
 while [ ! -z "$1" ]; do
     case "$1" in
+        python3) use_python3=true;;
         local)   check_local=true;;
         svn)     check_svn=true;;
         dav)     check_dav=true;;
@@ -86,6 +88,8 @@ while [ ! -z "$1" ]; do
     esac
     shift
 done
+
+${use_python3} && test -n "${SVNBB_PYTHON3ENV}" && . ${SVNBB_PYTHON3ENV}/bin/activate
 
 ${check_local} && check_tests local
 ${check_svn} && check_tests svn

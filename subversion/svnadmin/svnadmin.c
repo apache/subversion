@@ -151,7 +151,11 @@ enum svnadmin__cmdline_options_t
     svnadmin__compatible_version,
     svnadmin__check_normalization,
     svnadmin__metadata_only,
-    svnadmin__no_flush_to_disk
+    svnadmin__no_flush_to_disk,
+    svnadmin__normalize_props,
+    svnadmin__exclude,
+    svnadmin__include,
+    svnadmin__glob
   };
 
 /* Option codes and descriptions.
@@ -274,6 +278,22 @@ static const apr_getopt_option_t options_table[] =
      N_("disable flushing to disk during the operation\n"
         "                             (faster, but unsafe on power off)")},
 
+    {"normalize-props", svnadmin__normalize_props, 0,
+     N_("normalize property values found in the dumpstream\n"
+        "                             (currently, only translates non-LF line endings)")},
+
+    {"exclude", svnadmin__exclude, 1,
+     N_("filter out nodes with given prefix(es) from dump")},
+
+    {"include", svnadmin__include, 1,
+     N_("filter out nodes without given prefix(es) from dump")},
+
+    {"pattern", svnadmin__glob, 0,
+     N_("treat the path prefixes as file glob patterns.\n"
+        "                             Glob special characters are '*' '?' '[]' and '\\'.\n"
+        "                             Character '/' is not treated specially, so\n"
+        "                             pattern /*/foo matches paths /a/foo and /a/b/foo.") },
+
     {NULL}
   };
 
@@ -330,8 +350,13 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "only the paths changed in that revision; otherwise it will describe\n"
     "every path present in the repository as of that revision.  (In either\n"
     "case, the second and subsequent revisions, if any, describe only paths\n"
-    "changed in those revisions.)\n"),
-  {'r', svnadmin__incremental, svnadmin__deltas, 'q', 'M', 'F'},
+    "changed in those revisions.)\n"
+    "\n"
+    "Using --exclude or --include gives results equivalent to authz-based\n"
+    "path exclusions. In particular, when the source of a copy is\n"
+    "excluded, the copy is transformed into an add (unlike in 'svndumpfilter').\n"),
+  {'r', svnadmin__incremental, svnadmin__deltas, 'q', 'M', 'F',
+   svnadmin__exclude, svnadmin__include, svnadmin__glob },
   {{'F', N_("write to file ARG instead of stdout")}} },
 
   {"dump-revprops", subcommand_dump_revprops, {0}, N_
@@ -396,7 +421,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
    {'q', 'r', svnadmin__ignore_uuid, svnadmin__force_uuid,
     svnadmin__ignore_dates,
     svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
-    svnadmin__parent_dir, svnadmin__bypass_prop_validation, 'M',
+    svnadmin__parent_dir, svnadmin__normalize_props,
+    svnadmin__bypass_prop_validation, 'M',
     svnadmin__no_flush_to_disk, 'F'},
    {{'F', N_("read from file ARG instead of stdin")}} },
 
@@ -407,8 +433,8 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "repository will cause an error.  Progress feedback is sent to stdout.\n"
     "If --revision is specified, limit the loaded revisions to only those\n"
     "in the dump stream whose revision numbers match the specified range.\n"),
-   {'q', 'r', svnadmin__force_uuid, svnadmin__bypass_prop_validation,
-    svnadmin__no_flush_to_disk, 'F'},
+   {'q', 'r', svnadmin__force_uuid, svnadmin__normalize_props,
+    svnadmin__bypass_prop_validation, svnadmin__no_flush_to_disk, 'F'},
    {{'F', N_("read from file ARG instead of stdin")}} },
 
   {"lock", subcommand_lock, {0}, N_
@@ -547,11 +573,15 @@ struct svnadmin_opt_state
   svn_boolean_t bypass_prop_validation;             /* --bypass-prop-validation */
   svn_boolean_t ignore_dates;                       /* --ignore-dates */
   svn_boolean_t no_flush_to_disk;                   /* --no-flush-to-disk */
+  svn_boolean_t normalize_props;                    /* --normalize_props */
   enum svn_repos_load_uuid uuid_action;             /* --ignore-uuid,
                                                        --force-uuid */
   apr_uint64_t memory_cache_size;                   /* --memory-cache-size M */
   const char *parent_dir;                           /* --parent-dir */
   const char *file;                                 /* --file */
+  apr_array_header_t *exclude;                      /* --exclude */
+  apr_array_header_t *include;                      /* --include */
+  svn_boolean_t glob;                               /* --pattern */
 
   const char *config_dir;    /* Overriding Configuration Directory */
 };
@@ -1248,6 +1278,58 @@ get_dump_range(svn_revnum_t *lower,
   return SVN_NO_ERROR;
 }
 
+/* Compare the node-path PATH with the (const char *) prefixes in PFXLIST.
+ * Return TRUE if any prefix is a prefix of PATH (matching whole path
+ * components); FALSE otherwise.
+ * PATH starts with a '/', as do the (const char *) paths in PREFIXES. */
+/* This function is a duplicate of svndumpfilter.c:ary_prefix_match(). */
+static svn_boolean_t
+ary_prefix_match(const apr_array_header_t *pfxlist, const char *path)
+{
+  int i;
+  size_t path_len = strlen(path);
+
+  for (i = 0; i < pfxlist->nelts; i++)
+    {
+      const char *pfx = APR_ARRAY_IDX(pfxlist, i, const char *);
+      size_t pfx_len = strlen(pfx);
+
+      if (path_len < pfx_len)
+        continue;
+      if (strncmp(path, pfx, pfx_len) == 0
+          && (pfx_len == 1 || path[pfx_len] == '\0' || path[pfx_len] == '/'))
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
+/* Baton for dump_filter_func(). */
+struct dump_filter_baton_t
+{
+  apr_array_header_t *prefixes;
+  svn_boolean_t glob;
+  svn_boolean_t do_exclude;
+};
+
+/* Implements svn_repos_dump_filter_func_t. */
+static svn_error_t *
+dump_filter_func(svn_boolean_t *include,
+                 svn_fs_root_t *root,
+                 const char *path,
+                 void *baton,
+                 apr_pool_t *scratch_pool)
+{
+  struct dump_filter_baton_t *b = baton;
+  const svn_boolean_t matches =
+    (b->glob
+     ? svn_cstring_match_glob_list(path, b->prefixes)
+     : ary_prefix_match(b->prefixes, path));
+
+  *include = b->do_exclude ? !matches : matches;
+  return SVN_NO_ERROR;
+}
+
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
 subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
@@ -1257,6 +1339,7 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   svn_stream_t *out_stream;
   svn_revnum_t lower, upper;
   svn_stream_t *feedback_stream = NULL;
+  struct dump_filter_baton_t filter_baton = {0};
 
   /* Expect no more arguments. */
   SVN_ERR(parse_args(NULL, os, 0, 0, pool));
@@ -1282,11 +1365,34 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     feedback_stream = recode_stream_create(stderr, pool);
 
+  /* Initialize the filter baton. */
+  filter_baton.glob = opt_state->glob;
+
+  if (opt_state->exclude && !opt_state->include)
+    {
+      filter_baton.prefixes = opt_state->exclude;
+      filter_baton.do_exclude = TRUE;
+    }
+  else if (opt_state->include && !opt_state->exclude)
+    {
+      filter_baton.prefixes = opt_state->include;
+      filter_baton.do_exclude = FALSE;
+    }
+  else if (opt_state->include && opt_state->exclude)
+    {
+      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                               _("'--exclude' and '--include' options "
+                                 "cannot be used simultaneously"));
+    }
+
   SVN_ERR(svn_repos_dump_fs4(repos, out_stream, lower, upper,
                              opt_state->incremental, opt_state->use_deltas,
                              TRUE, TRUE,
                              !opt_state->quiet ? repos_notify_handler : NULL,
-                             feedback_stream, check_cancel, NULL, pool));
+                             feedback_stream,
+                             filter_baton.prefixes ? dump_filter_func : NULL,
+                             &filter_baton,
+                             check_cancel, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1328,7 +1434,8 @@ subcommand_dump_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_repos_dump_fs4(repos, out_stream, lower, upper,
                              FALSE, FALSE, TRUE, FALSE,
                              !opt_state->quiet ? repos_notify_handler : NULL,
-                             feedback_stream, check_cancel, NULL, pool));
+                             feedback_stream, NULL, NULL,
+                             check_cancel, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1534,20 +1641,32 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (! opt_state->quiet)
     feedback_stream = recode_stream_create(stdout, pool);
 
-  err = svn_repos_load_fs5(repos, in_stream, lower, upper,
+  err = svn_repos_load_fs6(repos, in_stream, lower, upper,
                            opt_state->uuid_action, opt_state->parent_dir,
                            opt_state->use_pre_commit_hook,
                            opt_state->use_post_commit_hook,
                            !opt_state->bypass_prop_validation,
+                           opt_state->normalize_props,
                            opt_state->ignore_dates,
                            opt_state->quiet ? NULL : repos_notify_handler,
                            feedback_stream, check_cancel, NULL, pool);
-  if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)
-    return svn_error_quick_wrap(err,
-                                _("Invalid property value found in "
-                                  "dumpstream; consider repairing the source "
-                                  "or using --bypass-prop-validation while "
-                                  "loading."));
+
+  if (svn_error_find_cause(err, SVN_ERR_BAD_PROPERTY_VALUE_EOL))
+    {
+      return svn_error_quick_wrap(err,
+                                  _("A property with invalid line ending "
+                                    "found in dumpstream; consider using "
+                                    "--normalize-props while loading."));
+    }
+  else if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)
+    {
+      return svn_error_quick_wrap(err,
+                                  _("Invalid property value found in "
+                                    "dumpstream; consider repairing the "
+                                    "source or using --bypass-prop-validation "
+                                    "while loading."));
+    }
+
   return err;
 }
 
@@ -1584,16 +1703,28 @@ subcommand_load_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   err = svn_repos_load_fs_revprops(repos, in_stream, lower, upper,
                                    !opt_state->bypass_prop_validation,
+                                   opt_state->normalize_props,
                                    opt_state->ignore_dates,
                                    opt_state->quiet ? NULL
                                                     : repos_notify_handler,
                                    feedback_stream, check_cancel, NULL, pool);
-  if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)
-    return svn_error_quick_wrap(err,
-                                _("Invalid property value found in "
-                                  "dumpstream; consider repairing the source "
-                                  "or using --bypass-prop-validation while "
-                                  "loading."));
+
+  if (svn_error_find_cause(err, SVN_ERR_BAD_PROPERTY_VALUE_EOL))
+    {
+      return svn_error_quick_wrap(err,
+                                  _("A property with invalid line ending "
+                                    "found in dumpstream; consider using "
+                                    "--normalize-props while loading."));
+    }
+  else if (err && err->apr_err == SVN_ERR_BAD_PROPERTY_VALUE)
+    {
+      return svn_error_quick_wrap(err,
+                                  _("Invalid property value found in "
+                                    "dumpstream; consider repairing the "
+                                    "source or using --bypass-prop-validation "
+                                    "while loading."));
+    }
+
   return err;
 }
 
@@ -2883,6 +3014,26 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case svnadmin__no_flush_to_disk:
         opt_state.no_flush_to_disk = TRUE;
+        break;
+      case svnadmin__normalize_props:
+        opt_state.normalize_props = TRUE;
+        break;
+      case svnadmin__exclude:
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+
+        if (! opt_state.exclude)
+          opt_state.exclude = apr_array_make(pool, 1, sizeof(const char *));
+        APR_ARRAY_PUSH(opt_state.exclude, const char *) = utf8_opt_arg;
+        break;
+      case svnadmin__include:
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+
+        if (! opt_state.include)
+          opt_state.include = apr_array_make(pool, 1, sizeof(const char *));
+        APR_ARRAY_PUSH(opt_state.include, const char *) = utf8_opt_arg;
+        break;
+      case svnadmin__glob:
+        opt_state.glob = TRUE;
         break;
       default:
         {
