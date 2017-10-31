@@ -3456,6 +3456,336 @@ def load_from_file(sbox):
                                      'update', sbox.wc_dir)
   svntest.actions.verify_disk(sbox.wc_dir, expected_tree, check_props=True)
 
+def dump_exclude(sbox):
+  "svnadmin dump with excluded paths"
+
+  sbox.build(create_wc=False)
+
+  # Dump repository with /A/D/H and /A/B/E paths excluded.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--exclude', '/A/D/H',
+                                                       '--exclude', '/A/B/E',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r1\ .*\n',
+    # '/A/D/H' and '/A/B/E' is not added.
+    re.escape('Changed paths:\n'),
+    re.escape('   A /A\n'),
+    re.escape('   A /A/B\n'),
+    re.escape('   A /A/B/F\n'),
+    re.escape('   A /A/B/lambda\n'),
+    re.escape('   A /A/C\n'),
+    re.escape('   A /A/D\n'),
+    re.escape('   A /A/D/G\n'),
+    re.escape('   A /A/D/G/pi\n'),
+    re.escape('   A /A/D/G/rho\n'),
+    re.escape('   A /A/D/G/tau\n'),
+    re.escape('   A /A/D/gamma\n'),
+    re.escape('   A /A/mu\n'),
+    re.escape('   A /iota\n'),
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox2.repo_url)
+
+def dump_exclude_copysource(sbox):
+  "svnadmin dump with excluded copysource"
+
+  sbox.build(create_wc=False, empty=True)
+
+  # Create default repository structure.
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/trunk',
+                                     sbox.repo_url + '/branches',
+                                     sbox.repo_url + '/tags',
+                                     "-m", "Create repository structure.")
+
+  # Create a branch.
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "copy",
+                                     sbox.repo_url + '/trunk',
+                                     sbox.repo_url + '/branches/branch1',
+                                     "-m", "Create branch.")
+
+  # Dump repository with /trunk excluded.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--exclude', '/trunk',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r2\ .*\n',
+    re.escape('Changed paths:\n'),
+    # Simple add, not copy.
+    re.escape('   A /branches/branch1\n'),
+    '-+\\n',
+    'r1\ .*\n',
+    # '/trunk' is not added.
+    re.escape('Changed paths:\n'),
+    re.escape('   A /branches\n'),
+    re.escape('   A /tags\n'),
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox2.repo_url)
+
+def dump_include(sbox):
+  "svnadmin dump with included paths"
+
+  sbox.build(create_wc=False, empty=True)
+
+  # Create a couple of directories.
+  # Note that we can't use greek tree as it contains only two top-level
+  # nodes. Including non top-level nodes (e.g. '--include /A/B/E') will
+  # produce unloadable dump for now.
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/A',
+                                     sbox.repo_url + '/B',
+                                     sbox.repo_url + '/C',
+                                     "-m", "Create folder.")
+
+  # Dump repository with /A and /C paths included.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--include', '/A',
+                                                       '--include', '/C',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r1\ .*\n',
+    # '/B' is not added.
+    re.escape('Changed paths:\n'),
+    re.escape('   A /A\n'),
+    re.escape('   A /C\n'),
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox2.repo_url)
+
+def dump_not_include_copysource(sbox):
+  "svnadmin dump with not included copysource"
+
+  sbox.build(create_wc=False, empty=True)
+
+  # Create default repository structure.
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/trunk',
+                                     sbox.repo_url + '/branches',
+                                     sbox.repo_url + '/tags',
+                                     "-m", "Create repository structure.")
+
+  # Create a branch.
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "copy",
+                                     sbox.repo_url + '/trunk',
+                                     sbox.repo_url + '/branches/branch1',
+                                     "-m", "Create branch.")
+
+  # Dump repository with only /branches included.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--include', '/branches',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r2\ .*\n',
+    re.escape('Changed paths:\n'),
+    # Simple add, not copy.
+    re.escape('   A /branches/branch1\n'),
+    '-+\\n',
+    'r1\ .*\n',
+    # Only '/branches' is added in r1.
+    re.escape('Changed paths:\n'),
+    re.escape('   A /branches\n'),
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox2.repo_url)
+
+def dump_exclude_by_pattern(sbox):
+  "svnadmin dump with paths excluded by pattern"
+
+  sbox.build(create_wc=False, empty=True)
+
+  # Create a couple of directories.
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/aaa',
+                                     sbox.repo_url + '/aab',
+                                     sbox.repo_url + '/aac',
+                                     sbox.repo_url + '/bbc',
+                                     "-m", "Create repository structure.")
+
+  # Dump with paths excluded by pattern.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--exclude', '/aa?',
+                                                       '--pattern',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r1\ .*\n',
+    re.escape('Changed paths:\n'),
+    # Only '/bbc' is added in r1.
+    re.escape('   A /bbc\n'),
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox2.repo_url)
+
+def dump_include_by_pattern(sbox):
+  "svnadmin dump with paths included by pattern"
+
+  sbox.build(create_wc=False, empty=True)
+
+  # Create a couple of directories.
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/aaa',
+                                     sbox.repo_url + '/aab',
+                                     sbox.repo_url + '/aac',
+                                     sbox.repo_url + '/bbc',
+                                     "-m", "Create repository structure.")
+
+  # Dump with paths included by pattern.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--include', '/aa?',
+                                                       '--pattern',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r1\ .*\n',
+    # '/bbc' is not added.
+    re.escape('Changed paths:\n'),
+    re.escape('   A /aaa\n'),
+    re.escape('   A /aab\n'),
+    re.escape('   A /aac\n'),
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox2.repo_url)
+
+def dump_exclude_all_rev_changes(sbox):
+  "svnadmin dump with all revision changes excluded"
+
+  sbox.build(create_wc=False, empty=True)
+
+  # Create a couple of directories (r1).
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/r1a',
+                                     sbox.repo_url + '/r1b',
+                                     sbox.repo_url + '/r1c',
+                                     "-m", "Revision 1.")
+
+  # Create a couple of directories (r2).
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/r2a',
+                                     sbox.repo_url + '/r2b',
+                                     sbox.repo_url + '/r2c',
+                                     "-m", "Revision 2.")
+
+  # Create a couple of directories (r3).
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/r3a',
+                                     sbox.repo_url + '/r3b',
+                                     sbox.repo_url + '/r3c',
+                                     "-m", "Revision 3.")
+
+  # Dump with paths excluded by pattern.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--exclude', '/r2?',
+                                                       '--pattern',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log. Revision properties ('svn:log' etc.) should be empty for r2.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r3\ |\ jrandom\ |\ .*\ |\ 1\ line\\n',
+    re.escape('Changed paths:'),
+    re.escape('   A /r3a'),
+    re.escape('   A /r3b'),
+    re.escape('   A /r3c'),
+    '',
+    re.escape('Revision 3.'),
+    '-+\\n',
+    re.escape('r2 | (no author) | (no date) | 1 line'),
+    '',
+    '',
+    '-+\\n',
+    'r1\ |\ jrandom\ |\ .*\ |\ 1\ line\\n',
+    re.escape('Changed paths:'),
+    re.escape('   A /r1a'),
+    re.escape('   A /r1b'),
+    re.escape('   A /r1c'),
+    '',
+    re.escape('Revision 1.'),
+    '-+\\n',
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v',  sbox2.repo_url)
+
+def dump_invalid_filtering_option(sbox):
+  "dump with --include and --exclude simultaneously"
+
+  sbox.build(create_wc=False, empty=False)
+
+  # Attempt to dump repository with '--include' and '--exclude' options
+  # specified simultaneously.
+  expected_error = ".*: '--exclude' and '--include' options cannot be used " \
+                   "simultaneously"
+  svntest.actions.run_and_verify_svnadmin(None, expected_error,
+                                          'dump', '-q',
+                                          '--exclude', '/A/D/H',
+                                          '--include', '/A/B/E',
+                                          sbox.repo_dir)
+
 ########################################################################
 # Run the tests
 
@@ -3520,7 +3850,15 @@ test_list = [ None,
               dump_no_op_prop_change,
               load_no_flush_to_disk,
               dump_to_file,
-              load_from_file
+              load_from_file,
+              dump_exclude,
+              dump_exclude_copysource,
+              dump_include,
+              dump_not_include_copysource,
+              dump_exclude_by_pattern,
+              dump_include_by_pattern,
+              dump_exclude_all_rev_changes,
+              dump_invalid_filtering_option
              ]
 
 if __name__ == '__main__':
