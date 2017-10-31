@@ -761,61 +761,6 @@ def dirs_only_upgrade(sbox):
       })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
-def read_tree_conflict_data(sbox, path):
-  dot_svn = svntest.main.get_admin_name()
-  db = svntest.sqlite3.connect(os.path.join(sbox.wc_dir, dot_svn, 'wc.db'))
-  for row in db.execute("select tree_conflict_data from actual_node "
-                        "where tree_conflict_data is not null "
-                        "and local_relpath = '%s'" % path):
-    return
-  raise svntest.Failure("conflict expected for '%s'" % path)
-
-def no_actual_node(sbox, path):
-  dot_svn = svntest.main.get_admin_name()
-  db = svntest.sqlite3.connect(os.path.join(sbox.wc_dir, dot_svn, 'wc.db'))
-  for row in db.execute("select 1 from actual_node "
-                        "where local_relpath = '%s'" % path):
-    raise svntest.Failure("no actual node expected for '%s'" % path)
-
-def upgrade_tree_conflict_data(sbox):
-  "upgrade tree conflict data (f20->f21)"
-
-  wc_dir = sbox.wc_dir
-  replace_sbox_with_tarfile(sbox, 'upgrade_tc.tar.bz2')
-
-  # Check and see if we can still read our tree conflicts
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak('A/D/G/pi', status='D ', treeconflict='C')
-  expected_status.tweak('A/D/G/tau', status='! ', treeconflict='C',
-                        wc_rev=None)
-  expected_status.tweak('A/D/G/rho', status='A ', copied='+',
-                        treeconflict='C', wc_rev='-')
-
-  # Look inside pre-upgrade database
-  read_tree_conflict_data(sbox, 'A/D/G')
-  no_actual_node(sbox, 'A/D/G/pi')
-  no_actual_node(sbox, 'A/D/G/rho')
-  no_actual_node(sbox, 'A/D/G/tau')
-
-  # While the upgrade from f20 to f21 will work the upgrade from f22
-  # to f23 will not, since working nodes are present.
-  exit_code, output, errput = svntest.main.run_svn('format 22', 'upgrade',
-                                                    wc_dir)
-
-  if not exit_code:
-    run_and_verify_status_no_server(wc_dir, expected_status)
-  else:
-    if not svntest.verify.RegexOutput('.*format 22 with WORKING nodes.*',
-                                      match_all=False).matches(errput):
-      raise svntest.Failure()
-
-  # Look insde post-upgrade database
-  read_tree_conflict_data(sbox, 'A/D/G/pi')
-  read_tree_conflict_data(sbox, 'A/D/G/rho')
-  read_tree_conflict_data(sbox, 'A/D/G/tau')
-  # no_actual_node(sbox, 'A/D/G')  ### not removed but should be?
-
-
 @Issue(3898)
 def delete_in_copy_upgrade(sbox):
   "upgrade a delete within a copy"
@@ -971,27 +916,6 @@ def tree_replace2(sbox):
       'C/E'   : Item(status='D ', wc_rev=12),
     })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
-
-def upgrade_from_format_28(sbox):
-  """upgrade from format 28: rename pristines"""
-
-  # Start with a format-28 WC that is a clean checkout of the Greek tree.
-  replace_sbox_with_tarfile(sbox, 'format_28.tar.bz2')
-
-  # Get the old and new pristine file paths for file 'iota'.
-  checksum = '2c0aa9014a0cd07f01795a333d82485ef6d083e2'
-  old_pristine_path = os.path.join(sbox.wc_dir, svntest.main.get_admin_name(),
-                                   'pristine', checksum[0:2], checksum)
-  new_pristine_path = old_pristine_path + '.svn-base'
-
-  assert os.path.exists(old_pristine_path)
-  assert not os.path.exists(new_pristine_path)
-
-  # Upgrade the WC
-  svntest.actions.run_and_verify_svn(None, [], 'upgrade', sbox.wc_dir)
-
-  assert not os.path.exists(old_pristine_path)
-  assert os.path.exists(new_pristine_path)
 
 @Issue(3901)
 def depth_exclude(sbox):
@@ -1606,13 +1530,11 @@ test_list = [ None,
               missing_dirs2,
               delete_and_keep_local,
               dirs_only_upgrade,
-              upgrade_tree_conflict_data,
               delete_in_copy_upgrade,
               replaced_files,
               upgrade_with_scheduled_change,
               tree_replace1,
               tree_replace2,
-              upgrade_from_format_28,
               depth_exclude,
               depth_exclude_2,
               add_add_del_del_tc,

@@ -42,6 +42,9 @@ Available subcommands:
    resolve
    resolved
    revert
+   shelve
+   unshelve
+   shelves
    status (stat, st)
    switch (sw)
    unlock

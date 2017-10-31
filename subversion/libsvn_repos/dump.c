@@ -1922,14 +1922,17 @@ get_dump_editor(const svn_delta_editor_t **editor,
 
 /* Helper for svn_repos_dump_fs.
 
-   Write a revision record of REV in FS to writable STREAM, using POOL.
+   Write a revision record of REV in REPOS to writable STREAM, using POOL.
    Dump revision properties as well if INCLUDE_REVPROPS has been set.
+   AUTHZ_FUNC and AUTHZ_BATON are passed directly to the repos layer.
  */
 static svn_error_t *
 write_revision_record(svn_stream_t *stream,
-                      svn_fs_t *fs,
+                      svn_repos_t *repos,
                       svn_revnum_t rev,
                       svn_boolean_t include_revprops,
+                      svn_repos_authz_func_t authz_func,
+                      void *authz_baton,
                       apr_pool_t *pool)
 {
   apr_hash_t *props;
@@ -1938,7 +1941,8 @@ write_revision_record(svn_stream_t *stream,
 
   if (include_revprops)
     {
-      SVN_ERR(svn_fs_revision_proplist2(&props, fs, rev, FALSE, pool, pool));
+      SVN_ERR(svn_repos_fs_revision_proplist(&props, repos, rev,
+                                             authz_func, authz_baton, pool));
 
       /* Run revision date properties through the time conversion to
         canonicalize them. */
@@ -1965,6 +1969,27 @@ write_revision_record(svn_stream_t *stream,
   return SVN_NO_ERROR;
 }
 
+/* Baton for dump_filter_authz_func(). */
+typedef struct dump_filter_baton_t
+{
+  svn_repos_dump_filter_func_t filter_func;
+  void *filter_baton;
+} dump_filter_baton_t;
+
+/* Implements svn_repos_authz_func_t. */
+static svn_error_t *
+dump_filter_authz_func(svn_boolean_t *allowed,
+                       svn_fs_root_t *root,
+                       const char *path,
+                       void *baton,
+                       apr_pool_t *pool)
+{
+  dump_filter_baton_t *b = baton;
+
+  return svn_error_trace(b->filter_func(allowed, root, path, b->filter_baton,
+                                        pool));
+}
+
 
 
 /* The main dumper. */
@@ -1979,6 +2004,8 @@ svn_repos_dump_fs4(svn_repos_t *repos,
                    svn_boolean_t include_changes,
                    svn_repos_notify_func_t notify_func,
                    void *notify_baton,
+                   svn_repos_dump_filter_func_t filter_func,
+                   void *filter_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *pool)
@@ -1994,6 +2021,8 @@ svn_repos_dump_fs4(svn_repos_t *repos,
   svn_boolean_t found_old_reference = FALSE;
   svn_boolean_t found_old_mergeinfo = FALSE;
   svn_repos_notify_t *notify;
+  svn_repos_authz_func_t authz_func;
+  dump_filter_baton_t authz_baton = {0};
 
   /* Make sure we catch up on the latest revprop changes.  This is the only
    * time we will refresh the revprop data in this query. */
@@ -2021,6 +2050,20 @@ svn_repos_dump_fs4(svn_repos_t *repos,
                              _("End revision %ld is invalid "
                                "(youngest revision is %ld)"),
                              end_rev, youngest);
+
+  /* We use read authz callback to implement dump filtering. If there is no
+   * read access for some node, it will be excluded from dump as well as
+   * references to it (e.g. copy source). */
+  if (filter_func)
+    {
+      authz_func = dump_filter_authz_func;
+      authz_baton.filter_func = filter_func;
+      authz_baton.filter_baton = filter_baton;
+    }
+  else
+    {
+      authz_func = NULL;
+    }
 
   /* Write out the UUID. */
   SVN_ERR(svn_fs_get_uuid(fs, &uuid, pool));
@@ -2057,8 +2100,8 @@ svn_repos_dump_fs4(svn_repos_t *repos,
         SVN_ERR(cancel_func(cancel_baton));
 
       /* Write the revision record. */
-      SVN_ERR(write_revision_record(stream, fs, rev, include_revprops,
-                                    iterpool));
+      SVN_ERR(write_revision_record(stream, repos, rev, include_revprops,
+                                    authz_func, &authz_baton, iterpool));
 
       /* When dumping revision 0, we just write out the revision record.
          The parser might want to use its properties.
@@ -2091,8 +2134,7 @@ svn_repos_dump_fs4(svn_repos_t *repos,
           SVN_ERR(svn_repos_dir_delta2(from_root, "", "",
                                        to_root, "",
                                        dump_editor, dump_edit_baton,
-                                       NULL,
-                                       NULL,
+                                       authz_func, &authz_baton,
                                        FALSE, /* don't send text-deltas */
                                        svn_depth_infinity,
                                        FALSE, /* don't send entry props */
@@ -2104,7 +2146,7 @@ svn_repos_dump_fs4(svn_repos_t *repos,
           /* The normal case: compare consecutive revs. */
           SVN_ERR(svn_repos_replay2(to_root, "", SVN_INVALID_REVNUM, FALSE,
                                     dump_editor, dump_edit_baton,
-                                    NULL, NULL, iterpool));
+                                    authz_func, &authz_baton, iterpool));
 
           /* While our editor close_edit implementation is a no-op, we still
              do this for completeness. */

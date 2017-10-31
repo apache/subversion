@@ -109,6 +109,7 @@ write_propdel_to_stringbuf(svn_stringbuf_t **strbuf,
  * Return TRUE if any prefix is a prefix of PATH (matching whole path
  * components); FALSE otherwise.
  * PATH starts with a '/', as do the (const char *) paths in PREFIXES. */
+/* This function is a duplicate of svnadmin.c:ary_prefix_match(). */
 static svn_boolean_t
 ary_prefix_match(const apr_array_header_t *pfxlist, const char *path)
 {

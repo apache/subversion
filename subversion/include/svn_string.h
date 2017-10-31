@@ -533,9 +533,25 @@ svn_cstring_count_newlines(const char *msg);
  * of char *) each followed by @a separator (that is, @a separator
  * will also end the resulting string).  Allocate the result in @a pool.
  * If @a strings is empty, then return the empty string.
+ * If @a trailing_separator is non-zero, also append the separator
+ * after the last joined element.
+ *
+ * @since New in 1.10.
+ */
+char *
+svn_cstring_join2(const apr_array_header_t *strings,
+                  const char *separator,
+                  svn_boolean_t trailing_separator,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_cstring_join2(), but always includes the trailing
+ * separator.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backwards compatibility with the 1.9 API.
  */
+SVN_DEPRECATED
 char *
 svn_cstring_join(const apr_array_header_t *strings,
                  const char *separator,

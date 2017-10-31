@@ -375,6 +375,24 @@ typedef void (*svn_repos_notify_func_t)(void *baton,
                                         const svn_repos_notify_t *notify,
                                         apr_pool_t *scratch_pool);
 
+/** Callback for filtering repository contents during dump.
+ *
+ * Set @a *include to TRUE to indicate that node, identified by path
+ * @a path in @a root should be included in dump, or set it to @c FALSE
+ * to indicate that node should be excluded (presumably according to state
+ * stored in @a baton).
+ *
+ * Do not assume @a scratch_pool has any lifetime beyond this call.
+ *
+ * @since New in 1.10.
+ */
+typedef svn_error_t * (*svn_repos_dump_filter_func_t)(
+  svn_boolean_t *include,
+  svn_fs_root_t *root,
+  const char *path,
+  void *baton,
+  apr_pool_t *scratch_pool);
+
 /**
  * Allocate an #svn_repos_notify_t structure in @a result_pool, initialize
  * and return it.
@@ -3310,6 +3328,9 @@ svn_repos_verify_fs(svn_repos_t *repos,
  *            reiterating the existence of previous warnings
  *        ### This is a presentation issue. Caller could do this itself.
  *
+ * If @a filter_func is not @c NULL, it is called for each node being
+ * dumped, allowing the caller to exclude it from dump.
+ *
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the dump.
@@ -3329,13 +3350,16 @@ svn_repos_dump_fs4(svn_repos_t *repos,
                    svn_boolean_t include_changes,
                    svn_repos_notify_func_t notify_func,
                    void *notify_baton,
+                   svn_repos_dump_filter_func_t filter_func,
+                   void *filter_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *pool);
 
 /**
  * Similar to svn_repos_dump_fs4(), but with @a include_revprops and 
- * @a include_changes both set to @c TRUE.
+ * @a include_changes both set to @c TRUE and @a filter_func and
+ * @a filter_baton set to @c NULL.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.9 API.
@@ -3436,6 +3460,15 @@ svn_repos_dump_fs(svn_repos_t *repos,
  * to be stamped as if they were newly created via the normal commit
  * process.
  *
+ * If @a normalize_props is set, attempt to normalize invalid Subversion
+ * revision and node properties (those in the svn: namespace) so that
+ * their values would follow the established rules for them.  For example,
+ * for such properties, typically the value must be in UTF-8 with LF
+ * line endings.
+ *
+ * @note The details or the performed normalizations are deliberately
+ * left unspecified and may change in the future.
+ *
  * If non-NULL, use @a notify_func and @a notify_baton to send notification
  * of events to the caller.
  *
@@ -3443,8 +3476,34 @@ svn_repos_dump_fs(svn_repos_t *repos,
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the load.
  *
- * @since New in 1.9.
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_repos_load_fs6(svn_repos_t *repos,
+                   svn_stream_t *dumpstream,
+                   svn_revnum_t start_rev,
+                   svn_revnum_t end_rev,
+                   enum svn_repos_load_uuid uuid_action,
+                   const char *parent_dir,
+                   svn_boolean_t use_pre_commit_hook,
+                   svn_boolean_t use_post_commit_hook,
+                   svn_boolean_t validate_props,
+                   svn_boolean_t ignore_dates,
+                   svn_boolean_t normalize_props,
+                   svn_repos_notify_func_t notify_func,
+                   void *notify_baton,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_load_fs6(), but with the @a normalize_props
+ * parameter always set to @c FALSE.
+ *
+ * @since New in 1.9.
+ * @deprecated Provided for backward compatibility with the 1.9 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_load_fs5(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
@@ -3567,6 +3626,15 @@ svn_repos_load_fs(svn_repos_t *repos,
  * @a dumpstream, keeping whatever timestamps the revisions currently
  * have.
  *
+ * If @a normalize_props is set, attempt to normalize invalid Subversion
+ * revision and node properties (those in the svn: namespace) so that
+ * their values would follow the established rules for them.  For example,
+ * for such properties, typically the value must be in UTF-8 with LF
+ * line endings.
+ *
+ * @note The details or the performed normalizations are deliberately
+ * left unspecified and may change in the future.
+ *
  * If non-NULL, use @a notify_func and @a notify_baton to send notification
  * of events to the caller.
  *
@@ -3585,6 +3653,7 @@ svn_repos_load_fs_revprops(svn_repos_t *repos,
                            svn_revnum_t end_rev,
                            svn_boolean_t validate_props,
                            svn_boolean_t ignore_dates,
+                           svn_boolean_t normalize_props,
                            svn_repos_notify_func_t notify_func,
                            void *notify_baton,
                            svn_cancel_func_t cancel_func,
@@ -3788,12 +3857,47 @@ svn_repos_parse_dumpstream3(svn_stream_t *stream,
  * to be stamped as if they were newly created via the normal commit
  * process.
  *
+ * If @a normalize_props is set, attempt to normalize invalid Subversion
+ * revision and node properties (those in the svn: namespace) so that
+ * their values would follow the established rules for them.  For example,
+ * for such properties, typically the value must be in UTF-8 with LF
+ * line endings.
+ *
+ * @note The details or the performed normalizations are deliberately
+ * left unspecified and may change in the future.
+ *
  * If @a parent_dir is not NULL, then the parser will reparent all the
  * loaded nodes, from root to @a parent_dir.  The directory @a parent_dir
  * must be an existing directory in the repository.
  *
- * @since New in 1.9.
+ * @since New in 1.10.
  */
+svn_error_t *
+svn_repos_get_fs_build_parser6(const svn_repos_parse_fns3_t **parser,
+                               void **parse_baton,
+                               svn_repos_t *repos,
+                               svn_revnum_t start_rev,
+                               svn_revnum_t end_rev,
+                               svn_boolean_t use_history,
+                               svn_boolean_t validate_props,
+                               enum svn_repos_load_uuid uuid_action,
+                               const char *parent_dir,
+                               svn_boolean_t use_pre_commit_hook,
+                               svn_boolean_t use_post_commit_hook,
+                               svn_boolean_t ignore_dates,
+                               svn_boolean_t normalize_props,
+                               svn_repos_notify_func_t notify_func,
+                               void *notify_baton,
+                               apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_get_fs_build_parser6(), but with the
+ * @a normalize_props parameter always set to @c FALSE.
+ *
+ * @since New in 1.9.
+ * @deprecated Provided for backward compatibility with the 1.9 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_fs_build_parser5(const svn_repos_parse_fns3_t **parser,
                                void **parse_baton,

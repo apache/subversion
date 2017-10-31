@@ -1024,10 +1024,10 @@ _svn()
 		cmdOpts="$qOpts $pOpts"
 		;;
 	shelve)
-		cmdOpts="$qOpts --delete --list --dry-run $nOpts --targets $cOpts"
+		cmdOpts="$qOpts --keep-local --delete --list $qOpts --dry-run --depth --targets $cOpts"
 		;;
 	unshelve)
-		cmdOpts="$qOpts --keep --dry-run"
+		cmdOpts="$qOpts --keep-shelved --list $qOpts --dry-run"
 		;;
 	shelves)
 		cmdOpts="$qOpts"
@@ -1117,9 +1117,9 @@ _svnadmin ()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
-	cmds='crashtest create delrevprop deltify dump freeze help hotcopy \
-	      info list-dblogs \
-	      list-unused-dblogs load lock lslocks lstxns pack recover rmlocks \
+	cmds='crashtest create delrevprop deltify dump dump-revprops freeze \
+	      help hotcopy info list-dblogs list-unused-dblogs \
+	      load load-revprops lock lslocks lstxns pack recover rmlocks \
 	      rmtxns setlog setrevprop setuuid unlock upgrade verify --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
@@ -1130,7 +1130,7 @@ _svnadmin ()
 	# options that require a parameter
 	# note: continued lines must end '|' continuing lines must start '|'
 	optsParam="-r|--revision|--parent-dir|--fs-type|-M|--memory-cache-size"
-	optsParam="$optsParam|-F|--file"
+	optsParam="$optsParam|-F|--file|--exclude|--include"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
@@ -1153,7 +1153,8 @@ _svnadmin ()
 		;;
 	dump)
 		cmdOpts="-r --revision --incremental -q --quiet --deltas \
-		         -M --memory-cache-size -F --file"
+		         -M --memory-cache-size -F --file \
+		         --exclude --include --pattern"
 		;;
 	freeze)
 		cmdOpts="-F --file"
@@ -1168,7 +1169,7 @@ _svnadmin ()
 		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet \
 		         --use-pre-commit-hook --use-post-commit-hook \
 		         --bypass-prop-validation -M --memory-cache-size \
-		         --no-flush-to-disk -F --file"
+		         --no-flush-to-disk --normalize-props -F --file"
 		;;
 	lstxns)
         	cmdOpts="-r --revision"
@@ -1270,9 +1271,9 @@ _svndumpfilter ()
 	cmdOpts=
 	case ${COMP_WORDS[1]} in
 	exclude|include)
-		cmdOpts="--drop-empty-revs --renumber-revs
+		cmdOpts="--drop-empty-revs --drop-all-empty-revs --renumber-revs
 		         --skip-missing-merge-sources --targets
-		         --preserve-revprops --quiet"
+		         --preserve-revprops --quiet --pattern"
 		;;
 	help|h|\?)
 		cmdOpts="$cmds"

@@ -405,7 +405,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"show-inherited-props", opt_show_inherited_props, 0,
                        N_("retrieve properties set on parents of the target")},
   {"search", opt_search, 1,
-                       N_("use ARG as search pattern (glob syntax)")},
+                       N_("use ARG as search pattern (glob syntax, case-\n"
+                       "                             "
+                       "and accent-insensitive)")},
   {"search-and", opt_search_and, 1,
                        N_("combine ARG with the previous search pattern")},
   {"log", opt_mergeinfo_log, 0,
@@ -831,6 +833,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  The default TARGET is '.', meaning the repository URL of the current\n"
      "  working directory.\n"
+     "\n"
+     "  Multiple --search patterns may be specified and the output will be\n"
+     "  reduced to those paths whose last segment - i.e. the file or directory\n"
+     "  name - matches at least one of these patterns.\n"
      "\n"
      "  With --verbose, the following fields will be shown for each item:\n"
      "\n"
@@ -1673,32 +1679,62 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
 
   { "shelve", svn_cl__shelve, {0}, N_
-    ("Shelve changes.\n"
-     "usage: 1. shelve NAME PATH...\n"
+    ("Put a local change aside, as if putting it on a shelf.\n"
+     "usage: 1. shelve [--keep-local] NAME [PATH...]\n"
      "       2. shelve --delete NAME\n"
      "       3. shelve --list\n"
      "\n"
-     "  1. Shelve as NAME the local changes in the given PATHs.\n"
-     "  2. Delete the shelved patch NAME.\n"
-     "  3. List shelved patches.\n"),
-    {opt_delete, opt_list, 'q', opt_dry_run,
-     'N', opt_depth, opt_targets, opt_changelist,
-     SVN_CL__LOG_MSG_OPTIONS} },
+     "  1. Save the local change in the given PATHs to a patch file, and\n"
+     "     revert that change from the WC unless '--keep-local' is given.\n"
+     "     If a log message is given with '-m' or '-F', include it at the\n"
+     "     beginning of the patch file.\n"
+     "\n"
+     "  2. Delete the shelved change NAME.\n"
+     "     (A backup is kept, named with a '.bak' extension.)\n"
+     "\n"
+     "  3. List shelved changes. Include the first line of any log message\n"
+     "     and some details about the contents of the change, unless '-q' is\n"
+     "     given.\n"
+     "\n"
+     "  The kinds of change you can shelve are those supported by 'svn diff'\n"
+     "  and 'svn patch'. The following are currently NOT supported:\n"
+     "     mergeinfo changes, copies, moves, mkdir, rmdir,\n"
+     "     'binary' content, uncommittable states\n"
+     "\n"
+     "  To bring back a shelved change, use 'svn unshelve NAME'.\n"
+     "\n"
+     "  A shelved change is stored as a patch file, .svn/shelves/NAME.patch\n"
+    ),
+    {opt_delete, opt_list, 'q', opt_dry_run, opt_keep_local,
+     opt_depth, opt_targets, opt_changelist,
+     /* almost SVN_CL__LOG_MSG_OPTIONS but not currently opt_with_revprop: */
+     'm', 'F', opt_force_log, opt_editor_cmd, opt_encoding,
+    } },
 
   { "unshelve", svn_cl__unshelve, {0}, N_
-    ("Unshelve changes.\n"
-     "usage: 1. unshelve [--keep-shelved] NAME\n"
+    ("Bring a shelved change back to a local change in the WC.\n"
+     "usage: 1. unshelve [--keep-shelved] [NAME]\n"
      "       2. unshelve --list\n"
      "\n"
-     "  1. Apply the shelved patch NAME to the working copy.\n"
+     "  1. Apply the shelved change NAME to the working copy.\n"
      "     Delete the patch unless the '--keep-shelved' option is given.\n"
-     "  2. List shelved patches.\n"),
+     "     (A backup is kept, named with a '.bak' extension.)\n"
+     "     NAME defaults to the most recent shelved change.\n"
+     "\n"
+     "  2. List shelved changes. Include the first line of any log message\n"
+     "     and some details about the contents of the change, unless '-q' is\n"
+     "     given.\n"
+     "\n"
+     "  Any conflict between the change being unshelved and a change\n"
+     "  already in the WC is handled the same way as by 'svn patch',\n"
+     "  creating a 'reject' file.\n"
+    ),
     {opt_keep_shelved, opt_list, 'q', opt_dry_run} },
 
   { "shelves", svn_cl__shelves, {0}, N_
-    ("List shelved patches.\n"
+    ("List shelved changes.\n"
      "usage: shelves\n"),
-    {} },
+    },
 
   { "status", svn_cl__status, {"stat", "st"}, N_
     ("Print the status of working copy files and directories.\n"

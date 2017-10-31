@@ -693,9 +693,12 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
 /** A structure full of callback functions the delta source will invoke
  * as it produces the delta.
  *
- * @note Don't try to allocate one of these yourself.  Instead, always
- * use svn_delta_default_editor() or some other constructor, to ensure
- * that unused slots are filled in with no-op functions.
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @note It is recommended to use svn_delta_default_editor() or some other
+ * constructor, to ensure that unused slots are filled in with no-op functions.
  *
  * <h3>Function Usage</h3>
  *
@@ -1157,7 +1160,7 @@ typedef struct svn_delta_editor_t
    * be ignored even if not NULL.  If it is not ignored, it must match
    * the checksum of the base text against which svndiff data is being
    * applied; if it does not, @c apply_textdelta_stream call which detects
-   * the mismatch will return the error SVN_ERR_CHECKSUM_MISMATCH
+   * the mismatch will return the error #SVN_ERR_CHECKSUM_MISMATCH
    * (if there is no base text, there may still be an error if
    * @a base_checksum is neither NULL nor the hex MD5 checksum of the
    * empty string).
