@@ -50,6 +50,10 @@ PWD		= $(shell pwd)
 UNAME		= $(shell uname)
 RUBY		= $(shell which ruby 2>/dev/null)
 ifeq ($(RUBY),)
+RUBY		= $(shell which ruby24 2>/dev/null)
+ifeq ($(RUBY),)
+RUBY		= $(shell which ruby23 2>/dev/null)
+ifeq ($(RUBY),)
 RUBY		= $(shell which ruby22 2>/dev/null)
 ifeq ($(RUBY),)
 RUBY		= $(shell which ruby21 2>/dev/null)
@@ -64,6 +68,8 @@ endif # 1.9
 endif # 2.0
 endif # 2.1
 endif # 2.2
+endif # 2.3
+endif # 2.4
 
 TAG		?= none
 ifeq ($(TAG),none)
@@ -95,7 +101,7 @@ SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.25
 SQLITE_VER	= 3160200
 LIBMAGIC_VER	= 5.30
-RUBY_VER	= 2.1.10
+RUBY_VER	= 2.4.2
 BZ2_VER	= 1.0.6
 PYTHON_VER	= 2.7.13
 JUNIT_VER	= 4.10
@@ -125,7 +131,7 @@ SHA256_${NEON_DIST} = db0bd8cdec329b48f53a6f00199c92d5ba40b0f015b153718d1b15d3d9
 SHA256_${CYRUS_SASL_DIST} = 418c16e6240a4f9b637cbe3d62937b9675627bad27c622191d47de8686fe24fe
 SHA256_${SQLITE_DIST} = 65cc0c3e9366f50c0679c5ccd31432cea894bc4a3e8947dabab88c8693263615
 SHA256_${LIBMAGIC_DIST} = 694c2432e5240187524c9e7cf1ec6acc77b47a0e19554d34c14773e43dbbf214
-SHA256_${RUBY_DIST} = fb2e454d7a5e5a39eb54db0ec666f53eeb6edc593d1d2b970ae4d150b831dd20
+SHA256_${RUBY_DIST} = 93b9e75e00b262bc4def6b26b7ae8717efc252c47154abb7392e54357e6c8c9c
 SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
 SHA256_${PYTHON_DIST} = a4f05a0720ce0fd92626f0278b6b433eee9a6173ddf2bced7957dfb599a5ece1
 SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
@@ -174,7 +180,7 @@ SERF_OLD_URL	= https://svn.apache.org/repos/asf/serf/tags/$(SERF_OLD_VER)
 SQLITE_URL	= https://www.sqlite.org/2017/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
-RUBY_URL	= https://cache.ruby-lang.org/pub/ruby/2.1/$(RUBY_DIST)
+RUBY_URL	= https://cache.ruby-lang.org/pub/ruby/2.4/$(RUBY_DIST)
 BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
 PYTHON_URL	= https://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
 JUNIT_URL	= https://downloads.sourceforge.net/project/junit/junit/$(JUNIT_VER)/$(JUNIT_DIST)
@@ -1111,6 +1117,7 @@ $(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST)
 	$(call do_check_sha256,$(RUBY_DIST))
 	[ -d $(RUBY_OBJDIR) ] || mkdir -p $(RUBY_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(RUBY_DIST)
+	-which ghead && sed -i -e "s/head -c/ghead -c/" $(RUBY_SRCDIR)/configure
 	touch $@
 
 ifeq ($(THREADING),yes)

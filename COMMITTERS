@@ -103,6 +103,7 @@ Commit access for specific areas:
        rschupp   Roderich Schupp <roderich.schupp@gmail.com> (Swig bindings)
         stilor   Alexey Neyman <stilor@att.net>              (Python bindings,
                                                              svn-vendor.py)
+  troycurtisjr   Troy Curtis, Jr <troycurtisjr@gmail.com>    (Swig bindings)
 
   Packages:
 
@@ -168,6 +169,7 @@ Commit access for specific areas:
       prabhugs   Prabhu Gnana Sundar <pprabhugs@gmail.com>   (verify-keep-going)
         schabi   Markus Schaber <schabi@apache.org>          (testsuite)
            gbg   Gabriela Gibson <gabriela.gibson@gmail.com> (gtest)
+     lyalyakin   Pavel Lyalyakin <pavel.lyalyakin@visualsvn.com> (site)
 
   Translation of message files:
 

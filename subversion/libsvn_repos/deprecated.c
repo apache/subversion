@@ -822,6 +822,7 @@ svn_repos_dump_fs3(svn_repos_t *repos,
                                             TRUE,
                                             notify_func,
                                             notify_baton,
+                                            NULL, NULL,
                                             cancel_func,
                                             cancel_baton,
                                             pool));
