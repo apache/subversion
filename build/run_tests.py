@@ -1030,7 +1030,7 @@ def create_parser():
                     help='Use memcached server at specified URL (FSFS only)')
   parser.add_option('--fsfs-compression', action='store', type='str',
                     help='Set compression type (for fsfs)')
-  parser.add_option('--foo-dir-deltification', action='store', type='str',
+  parser.add_option('--fsfs-dir-deltification', action='store', type='str',
                     help='Set directory deltification option (for fsfs)')
 
   parser.set_defaults(set_log_level=None)
