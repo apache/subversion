@@ -33,7 +33,7 @@
             [--httpd-version=<version>] [--httpd-whitelist=<version>]
             [--config-file=<file>] [--ssl-cert=<file>]
             [--exclusive-wc-locks] [--memcached-server=<url:port>]
-            [--fsfs-compression=<type>]
+            [--fsfs-compression=<type>] [--fsfs-dir-deltification=<true|false>]
             <abs_srcdir> <abs_builddir>
             <prog ...>
 
@@ -278,6 +278,8 @@ class TestHarness:
       cmdline.append('--memcached-server=%s' % self.opts.memcached_server)
     if self.opts.fsfs_compression is not None:
       cmdline.append('--fsfs-compression=%s' % self.opts.fsfs_compression)
+    if self.opts.fsfs_dir_deltification is not None:
+      cmdline.append('--fsfs-dir-deltification=%s' % self.opts.fsfs_dir_deltification)
 
     self.py_test_cmdline = cmdline
 
@@ -1028,6 +1030,8 @@ def create_parser():
                     help='Use memcached server at specified URL (FSFS only)')
   parser.add_option('--fsfs-compression', action='store', type='str',
                     help='Set compression type (for fsfs)')
+  parser.add_option('--foo-dir-deltification', action='store', type='str',
+                    help='Set directory deltification option (for fsfs)')
 
   parser.set_defaults(set_log_level=None)
   return parser
