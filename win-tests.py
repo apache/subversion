@@ -192,6 +192,7 @@ memcached_dir = None
 skip_c_tests = None
 dump_load_cross_check = None
 fsfs_compression = None
+fsfs_dir_deltification = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -288,6 +289,8 @@ for opt, val in opts:
     run_memcached = 1
   elif opt == '--fsfs-compression':
     fsfs_compression = val
+  elif opt == '--fsfs-dir-deltification':
+    fsfs_dir_deltification = val
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -1114,6 +1117,7 @@ if not test_javahl and not test_swig:
   opts.skip_c_tests = skip_c_tests
   opts.dump_load_cross_check = dump_load_cross_check
   opts.fsfs_compression = fsfs_compression
+  opts.fsfs_dir_deltification = fsfs_dir_deltification
   th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                              log_file, fail_log_file, opts)
   old_cwd = os.getcwd()
