@@ -53,17 +53,19 @@ import shutil
 import sys
 import tempfile
 import unittest
-from urllib import pathname2url
 
 if sys.version_info[0] >= 3:
   # Python >=3.0
   from io import StringIO
+  from urllib.request import pathname2url
 else:
   # Python <3.0
   try:
-    from cStringIO import StringIO
+    from io import StringIO
   except ImportError:
-    from StringIO import StringIO
+    from io import StringIO
+
+  from urllib import pathname2url
 
 from svn import core, repos
 
@@ -156,15 +158,16 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     def test_get_dir_entries(self):
         node = self.repos.get_node('/trunk')
         entries = node.get_entries()
-        self.assertEqual('README2.txt', entries.next().name)
-        self.assertEqual('dir1', entries.next().name)
-        self.assertEqual('README.txt', entries.next().name)
-        self.assertRaises(StopIteration, entries.next)
+        self.assertSequenceEqual([entry.name for entry in entries],
+                                 ['README2.txt',
+                                  'dir1',
+                                  'README.txt'])
 
     def test_get_file_entries(self):
         node = self.repos.get_node('/trunk/README.txt')
         entries = node.get_entries()
-        self.assertRaises(StopIteration, entries.next)
+        self.assertSequenceEqual([entry.name for entry in entries],
+                                 [])
 
     def test_get_dir_content(self):
         node = self.repos.get_node('/trunk')
@@ -194,42 +197,42 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     def test_get_node_history(self):
         node = self.repos.get_node('/trunk/README2.txt')
         history = node.get_history()
-        self.assertEqual(('trunk/README2.txt', 6, 'copy'), history.next())
-        self.assertEqual(('trunk/README.txt', 3, 'edit'), history.next())
-        self.assertEqual(('trunk/README.txt', 2, 'add'), history.next())
-        self.assertRaises(StopIteration, history.next)
+        self.assertSequenceEqual([x for x in history],
+                                 [('trunk/README2.txt', 6, 'copy'),
+                                  ('trunk/README.txt', 3, 'edit'),
+                                  ('trunk/README.txt', 2, 'add')])
 
     def test_get_node_history_follow_copy(self):
         node = self.repos.get_node('/tags/v1/README.txt')
         history = node.get_history()
-        self.assertEqual(('tags/v1/README.txt', 7, 'copy'), history.next())
-        self.assertEqual(('trunk/README.txt', 3, 'edit'), history.next())
-        self.assertEqual(('trunk/README.txt', 2, 'add'), history.next())
-        self.assertRaises(StopIteration, history.next)
+        self.assertSequenceEqual([x for x in history],
+                                 [('tags/v1/README.txt', 7, 'copy'),
+                                  ('trunk/README.txt', 3, 'edit'),
+                                  ('trunk/README.txt', 2, 'add')])
 
     # Revision Log / path history
 
     def test_get_path_history(self):
         history = self.repos.get_path_history('/trunk/README2.txt', None)
-        self.assertEqual(('trunk/README2.txt', 6, 'copy'), history.next())
-        self.assertEqual(('trunk/README.txt', 3, 'unknown'), history.next())
-        self.assertRaises(StopIteration, history.next)
+        self.assertSequenceEqual([x for x in history],
+                                 [('trunk/README2.txt', 6, 'copy'),
+                                  ('trunk/README.txt', 3, 'unknown')])
 
     def test_get_path_history_copied_file(self):
         history = self.repos.get_path_history('/tags/v1/README.txt', None)
-        self.assertEqual(('tags/v1/README.txt', 7, 'copy'), history.next())
-        self.assertEqual(('trunk/README.txt', 3, 'unknown'), history.next())
-        self.assertRaises(StopIteration, history.next)
+        self.assertSequenceEqual([x for x in history],
+                                 [('tags/v1/README.txt', 7, 'copy'),
+                                  ('trunk/README.txt', 3, 'unknown')])
 
     def test_get_path_history_copied_dir(self):
         history = self.repos.get_path_history('/branches/v1x', None)
-        self.assertEqual(('branches/v1x', 12, 'copy'), history.next())
-        self.assertEqual(('tags/v1.1', 10, 'unknown'), history.next())
-        self.assertEqual(('branches/v1x', 11, 'delete'), history.next())
-        self.assertEqual(('branches/v1x', 9, 'edit'), history.next())
-        self.assertEqual(('branches/v1x', 8, 'copy'), history.next())
-        self.assertEqual(('tags/v1', 7, 'unknown'), history.next())
-        self.assertRaises(StopIteration, history.next)
+        self.assertSequenceEqual([x for x in history],
+                                 [('branches/v1x', 12, 'copy'),
+                                  ('tags/v1.1', 10, 'unknown'),
+                                  ('branches/v1x', 11, 'delete'),
+                                  ('branches/v1x', 9, 'edit'),
+                                  ('branches/v1x', 8, 'copy'),
+                                  ('tags/v1', 7, 'unknown')])
 
     # Diffs
 
@@ -246,21 +249,21 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         diffs = self.repos.get_deltas('trunk/README.txt', 2, 'trunk/README.txt', 3)
         self._cmp_diff((('trunk/README.txt', 2),
                         ('trunk/README.txt', 3),
-                        (Node.FILE, Changeset.EDIT)), diffs.next())
-        self.assertRaises(StopIteration, diffs.next)
+                        (Node.FILE, Changeset.EDIT)), next(diffs))
+        self.assertRaises(StopIteration, lambda *args: next(diffs))
 
     def test_diff_file_different_files(self):
         diffs = self.repos.get_deltas('branches/v1x/README.txt', 12,
                                       'branches/v1x/README2.txt', 12)
         self._cmp_diff((('branches/v1x/README.txt', 12),
                         ('branches/v1x/README2.txt', 12),
-                        (Node.FILE, Changeset.EDIT)), diffs.next())
-        self.assertRaises(StopIteration, diffs.next)
+                        (Node.FILE, Changeset.EDIT)), next(diffs))
+        self.assertRaises(StopIteration, lambda *args: next(diffs))
 
     def test_diff_file_no_change(self):
         diffs = self.repos.get_deltas('trunk/README.txt', 7,
                                       'tags/v1/README.txt', 7)
-        self.assertRaises(StopIteration, diffs.next)
+        self.assertRaises(StopIteration, lambda *args: next(diffs))
 
     def test_diff_dir_different_revs(self):
         diffs = self.repos.get_deltas('trunk', 4, 'trunk', 8)
@@ -276,14 +279,14 @@ class SubversionRepositoryTestCase(unittest.TestCase):
           (('trunk/dir3', 4), None,
            (Node.DIRECTORY, Changeset.DELETE)),
         ]
-        actual = [diffs.next() for i in range(5)]
+        actual = [next(diffs) for i in range(5)]
         actual = sorted(actual,
                         key=lambda diff: ((diff[0] or diff[1]).path,
                                           (diff[0] or diff[1]).rev))
         self.assertEqual(len(expected), len(actual))
         for e,a in zip(expected, actual):
           self._cmp_diff(e,a)
-        self.assertRaises(StopIteration, diffs.next)
+        self.assertRaises(StopIteration, lambda *args: next(diffs))
 
     def test_diff_dir_different_dirs(self):
         diffs = self.repos.get_deltas('trunk', 1, 'branches/v1x', 12)
@@ -299,7 +302,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
           (None, ('branches/v1x/dir1/dir3', 12),
            (Node.DIRECTORY, Changeset.ADD)),
         ]
-        actual = [diffs.next() for i in range(5)]
+        actual = [next(diffs) for i in range(5)]
         actual = sorted(actual, key=lambda diff: (diff[1].path, diff[1].rev))
         # for e,a in zip(expected, actual):
         #   t.write("%r\n" % (e,))
@@ -308,12 +311,12 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(len(expected), len(actual))
         for e,a in zip(expected, actual):
           self._cmp_diff(e,a)
-        self.assertRaises(StopIteration, diffs.next)
+        self.assertRaises(StopIteration, lambda *args: next(diffs))
 
     def test_diff_dir_no_change(self):
         diffs = self.repos.get_deltas('trunk', 7,
                                       'tags/v1', 7)
-        self.assertRaises(StopIteration, diffs.next)
+        self.assertRaises(StopIteration, lambda *args: next(diffs))
 
     # Changesets
 
@@ -323,7 +326,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(None, chgset.message)
         self.assertEqual(None, chgset.author)
         self.assertEqual(1112349461, chgset.date)
-        self.assertRaises(StopIteration, chgset.get_changes().next)
+        self.assertRaises(StopIteration, lambda *args: next(chgset.get_changes()))
 
     def test_changeset_added_dirs(self):
         chgset = self.repos.get_changeset(1)
@@ -333,13 +336,10 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(1112349652, chgset.date)
 
         changes = chgset.get_changes()
-        self.assertEqual(('trunk', Node.DIRECTORY, Changeset.ADD, None, -1),
-                         changes.next())
-        self.assertEqual(('branches', Node.DIRECTORY, Changeset.ADD, None, -1),
-                         changes.next())
-        self.assertEqual(('tags', Node.DIRECTORY, Changeset.ADD, None, -1),
-                         changes.next())
-        self.assertRaises(StopIteration, changes.next)
+        self.assertSequenceEqual([x for x in changes],
+          [('trunk', Node.DIRECTORY, Changeset.ADD, None, -1),
+          ('branches', Node.DIRECTORY, Changeset.ADD, None, -1),
+          ('tags', Node.DIRECTORY, Changeset.ADD, None, -1)])
 
     def test_changeset_file_edit(self):
         chgset = self.repos.get_changeset(3)
@@ -349,9 +349,9 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(1112361898, chgset.date)
 
         changes = chgset.get_changes()
-        self.assertEqual(('trunk/README.txt', Node.FILE, Changeset.EDIT,
-                          'trunk/README.txt', 2), changes.next())
-        self.assertRaises(StopIteration, changes.next)
+        self.assertSequenceEqual([x for x in changes],
+                                 [('trunk/README.txt', Node.FILE, Changeset.EDIT,
+                                   'trunk/README.txt', 2)])
 
     def test_changeset_dir_moves(self):
         chgset = self.repos.get_changeset(5)
@@ -361,11 +361,9 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(1112372739, chgset.date)
 
         changes = chgset.get_changes()
-        self.assertEqual(('trunk/dir1/dir2', Node.DIRECTORY, Changeset.MOVE,
-                          'trunk/dir2', 4), changes.next())
-        self.assertEqual(('trunk/dir1/dir3', Node.DIRECTORY, Changeset.MOVE,
-                          'trunk/dir3', 4), changes.next())
-        self.assertRaises(StopIteration, changes.next)
+        self.assertSequenceEqual([x for x in changes],
+          [('trunk/dir1/dir2', Node.DIRECTORY, Changeset.MOVE, 'trunk/dir2', 4),
+           ('trunk/dir1/dir3', Node.DIRECTORY, Changeset.MOVE, 'trunk/dir3', 4)])
 
     def test_changeset_file_copy(self):
         chgset = self.repos.get_changeset(6)
@@ -375,9 +373,9 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(1112381806, chgset.date)
 
         changes = chgset.get_changes()
-        self.assertEqual(('trunk/README2.txt', Node.FILE, Changeset.COPY,
-                          'trunk/README.txt', 3), changes.next())
-        self.assertRaises(StopIteration, changes.next)
+        self.assertSequenceEqual([x for x in changes],
+          [('trunk/README2.txt', Node.FILE, Changeset.COPY,
+            'trunk/README.txt', 3)])
 
 
 def suite():

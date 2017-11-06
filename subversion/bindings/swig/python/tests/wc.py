@@ -78,22 +78,22 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.assertEqual(self.path, wc.adm_access_path(self.wc))
 
   def test_is_adm_dir(self):
-      self.assert_(wc.is_adm_dir(".svn"))
-      self.failIf(wc.is_adm_dir(".foosvn"))
+      self.assertTrue(wc.is_adm_dir(".svn"))
+      self.assertFalse(wc.is_adm_dir(".foosvn"))
 
   def test_get_adm_dir(self):
-      self.assert_(isinstance(wc.get_adm_dir(), basestring))
+      self.assertTrue(isinstance(wc.get_adm_dir(), str))
 
   def test_set_adm_dir(self):
       self.assertRaises(SubversionException, wc.set_adm_dir, ".foobar")
-      self.assert_(wc.is_adm_dir(".svn"))
-      self.failIf(wc.is_adm_dir("_svn"))
-      self.failIf(wc.is_adm_dir(".foobar"))
+      self.assertTrue(wc.is_adm_dir(".svn"))
+      self.assertFalse(wc.is_adm_dir("_svn"))
+      self.assertFalse(wc.is_adm_dir(".foobar"))
       wc.set_adm_dir("_svn")
-      self.assert_(wc.is_adm_dir("_svn"))
+      self.assertTrue(wc.is_adm_dir("_svn"))
       self.assertEqual("_svn", wc.get_adm_dir())
       wc.set_adm_dir(".svn")
-      self.failIf(wc.is_adm_dir("_svn"))
+      self.assertFalse(wc.is_adm_dir("_svn"))
       self.assertEqual(".svn", wc.get_adm_dir())
 
   def test_init_traversal_info(self):
@@ -128,7 +128,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
       # Remove trunk/README.txt
       readme_path = '%s/trunk/README.txt' % self.path
-      self.assert_(os.path.exists(readme_path))
+      self.assertTrue(os.path.exists(readme_path))
       os.remove(readme_path)
 
       # Restore trunk/README.txt using crawl_revision2
@@ -138,7 +138,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
                           True, True, False, notify, info)
 
       # Check that the report finished
-      self.assert_(reporter.finished_report)
+      self.assertTrue(reporter.finished_report)
       self.assertEqual([''], set_paths)
       self.assertEqual(1, len(infos))
 
@@ -152,7 +152,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       wc.create_notify(self.path, wc.notify_add)
 
   def test_check_wc(self):
-      self.assert_(wc.check_wc(self.path) > 0)
+      self.assertTrue(wc.check_wc(self.path) > 0)
 
   def test_get_ancestry(self):
       self.assertEqual([self.repos_uri, 12],
@@ -164,7 +164,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def test_status_editor(self):
       paths = []
       def status_func(target, status):
-        self.assert_(target.startswith(self.path))
+        self.assertTrue(target.startswith(self.path))
         paths.append(target)
 
       (anchor_access, target_access,
@@ -181,29 +181,29 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
                                               None,  # traversal_info
                                               )
       editor.close_edit(edit_baton)
-      self.assert_(len(paths) > 0)
+      self.assertTrue(len(paths) > 0)
 
   def test_is_normal_prop(self):
-      self.failIf(wc.is_normal_prop('svn:wc:foo:bar'))
-      self.failIf(wc.is_normal_prop('svn:entry:foo:bar'))
-      self.assert_(wc.is_normal_prop('svn:foo:bar'))
-      self.assert_(wc.is_normal_prop('foreign:foo:bar'))
+      self.assertFalse(wc.is_normal_prop('svn:wc:foo:bar'))
+      self.assertFalse(wc.is_normal_prop('svn:entry:foo:bar'))
+      self.assertTrue(wc.is_normal_prop('svn:foo:bar'))
+      self.assertTrue(wc.is_normal_prop('foreign:foo:bar'))
 
   def test_is_wc_prop(self):
-      self.assert_(wc.is_wc_prop('svn:wc:foo:bar'))
-      self.failIf(wc.is_wc_prop('svn:entry:foo:bar'))
-      self.failIf(wc.is_wc_prop('svn:foo:bar'))
-      self.failIf(wc.is_wc_prop('foreign:foo:bar'))
+      self.assertTrue(wc.is_wc_prop('svn:wc:foo:bar'))
+      self.assertFalse(wc.is_wc_prop('svn:entry:foo:bar'))
+      self.assertFalse(wc.is_wc_prop('svn:foo:bar'))
+      self.assertFalse(wc.is_wc_prop('foreign:foo:bar'))
 
   def test_is_entry_prop(self):
-      self.assert_(wc.is_entry_prop('svn:entry:foo:bar'))
-      self.failIf(wc.is_entry_prop('svn:wc:foo:bar'))
-      self.failIf(wc.is_entry_prop('svn:foo:bar'))
-      self.failIf(wc.is_entry_prop('foreign:foo:bar'))
+      self.assertTrue(wc.is_entry_prop('svn:entry:foo:bar'))
+      self.assertFalse(wc.is_entry_prop('svn:wc:foo:bar'))
+      self.assertFalse(wc.is_entry_prop('svn:foo:bar'))
+      self.assertFalse(wc.is_entry_prop('foreign:foo:bar'))
 
   def test_get_prop_diffs(self):
       wc.prop_set("foreign:foo", "bla", self.path, self.wc)
-      self.assertEquals([{"foreign:foo": "bla"}, {}],
+      self.assertEqual([{"foreign:foo": "bla"}, {}],
               wc.get_prop_diffs(self.path, self.wc))
 
   def test_get_pristine_copy_path(self):
@@ -221,7 +221,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.assertEqual(['', 'branches', 'tags', 'trunk'], keys)
 
   def test_get_ignores(self):
-      self.assert_(isinstance(wc.get_ignores(None, self.wc), list))
+      self.assertTrue(isinstance(wc.get_ignores(None, self.wc), list))
 
   def test_commit(self):
     # Replace README.txt's contents, using binary mode so we know the
@@ -269,9 +269,9 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     (commit_info,) = commit_info
 
     # Assert the commit.
-    self.assertEquals(binascii.b2a_hex(checksum),
+    self.assertEqual(binascii.b2a_hex(checksum),
                       'b1946ac92492d2347c6235b4d2611184')
-    self.assertEquals(commit_info.revision, 13)
+    self.assertEqual(commit_info.revision, 13)
 
     # Bump working copy state.
     wc.process_committed4(readme_path,
@@ -282,10 +282,10 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
     # Assert bumped state.
     entry = wc.entry(readme_path, self.wc, False)
-    self.assertEquals(entry.revision, commit_info.revision)
-    self.assertEquals(entry.schedule, wc.schedule_normal)
-    self.assertEquals(entry.cmt_rev, commit_info.revision)
-    self.assertEquals(entry.cmt_date,
+    self.assertEqual(entry.revision, commit_info.revision)
+    self.assertEqual(entry.schedule, wc.schedule_normal)
+    self.assertEqual(entry.cmt_rev, commit_info.revision)
+    self.assertEqual(entry.cmt_date,
                       core.svn_time_from_cstring(commit_info.date))
 
   def test_diff_editor4(self):
@@ -331,7 +331,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     # Save prop changes.
     got_prop_changes = []
     def props_changed(path, propchanges):
-      for (name, value) in propchanges.items():
+      for (name, value) in list(propchanges.items()):
         (kind, _) = core.svn_property_kind(name)
         if kind != core.svn_prop_regular_kind:
           continue

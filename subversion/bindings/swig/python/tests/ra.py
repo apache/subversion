@@ -85,14 +85,14 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
   def test_get_dir2(self):
     (dirents, _, props) = ra.get_dir2(self.ra_ctx, '', 1, core.SVN_DIRENT_KIND)
-    self.assert_('trunk' in dirents)
-    self.assert_('branches' in dirents)
-    self.assert_('tags' in dirents)
+    self.assertTrue('trunk' in dirents)
+    self.assertTrue('branches' in dirents)
+    self.assertTrue('tags' in dirents)
     self.assertEqual(dirents['trunk'].kind, core.svn_node_dir)
     self.assertEqual(dirents['branches'].kind, core.svn_node_dir)
     self.assertEqual(dirents['tags'].kind, core.svn_node_dir)
-    self.assert_(core.SVN_PROP_ENTRY_UUID in props)
-    self.assert_(core.SVN_PROP_ENTRY_LAST_AUTHOR in props)
+    self.assertTrue(core.SVN_PROP_ENTRY_UUID in props)
+    self.assertTrue(core.SVN_PROP_ENTRY_LAST_AUTHOR in props)
 
     (dirents, _, _) = ra.get_dir2(self.ra_ctx, 'trunk', 1, core.SVN_DIRENT_KIND)
 
@@ -101,7 +101,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     (dirents, _, _) = ra.get_dir2(self.ra_ctx, 'trunk', 10,
                                   core.SVN_DIRENT_KIND)
 
-    self.assert_('README2.txt' in dirents)
+    self.assertTrue('README2.txt' in dirents)
     self.assertEqual(dirents['README2.txt'].kind, core.svn_node_file)
 
   def test_commit3(self):
@@ -164,7 +164,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
                                                  commit_cb, None, False)
     try:
       def driver_cb(parent, path, pool):
-        self.assert_(path in all_paths)
+        self.assertTrue(path in all_paths)
         dir_baton = file_baton = None
         if path in to_delete:
           # Leave dir_baton alone, as it must be None for delete.
@@ -215,9 +215,9 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
       self.assertEqual(author, info.author)
       self.assertEqual(date, info.date)
       self.assertEqual(message, revprops['svn:log'])
-      for (path, change) in changed_paths.items():
+      for (path, change) in list(changed_paths.items()):
         path = path.lstrip('/')
-        self.assert_(path in all_paths)
+        self.assertTrue(path in all_paths)
         if path in to_delete:
           self.assertEqual(change.action, 'D')
         elif path in to_mkdir or path in to_add:
@@ -229,7 +229,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
                True,                    # discover_changed_paths
                True,                    # strict_node_history
                receiver)
-    self.assert_(receiver_called[0])
+    self.assertTrue(receiver_called[0])
 
   def test_do_diff2(self):
 
@@ -278,7 +278,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
   def test_get_file_revs(self):
     def rev_handler(path, rev, rev_props, prop_diffs, pool):
-        self.assert_(rev == 2 or rev == 3)
+        self.assertTrue(rev == 2 or rev == 3)
         self.assertEqual(path, "/trunk/README.txt")
         if rev == 2:
             self.assertEqual(rev_props, {
@@ -309,7 +309,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
         self.assertEqual(lock.owner, "jrandom")
         self.locks += 1
       if ra_err:
-        self.assert_(ra_err.apr_err == core.SVN_ERR_FS_PATH_ALREADY_LOCKED
+        self.assertTrue(ra_err.apr_err == core.SVN_ERR_FS_PATH_ALREADY_LOCKED
                      or ra_err.apr_err == core.SVN_ERR_FS_NO_SUCH_LOCK)
         self.errors += 1
 
@@ -351,8 +351,8 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.test_commit3()
     rev = fs.youngest_rev(self.fs)
     revprops = ra.rev_proplist(self.ra_ctx, rev)
-    self.assert_("svn:log" in revprops)
-    self.assert_("testprop" in revprops)
+    self.assertTrue("svn:log" in revprops)
+    self.assertTrue("testprop" in revprops)
 
     def receiver(log_entry, pool):
       called[0] = True
@@ -360,7 +360,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
       if discover_changed_paths:
         self.assertEqual(list(log_entry.changed_paths.keys()), ['/bla3'])
         changed_path = log_entry.changed_paths['/bla3']
-        self.assert_(changed_path.action in ['A', 'D', 'R', 'M'])
+        self.assertTrue(changed_path.action in ['A', 'D', 'R', 'M'])
         self.assertEqual(changed_path.copyfrom_path, None)
         self.assertEqual(changed_path.copyfrom_rev, -1)
       else:
@@ -368,7 +368,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
       if log_revprops is None:
         self.assertEqual(log_entry.revprops, revprops)
       elif len(log_revprops) == 0:
-        self.assert_(log_entry.revprops == None or len(log_entry.revprops) == 0)
+        self.assertTrue(log_entry.revprops == None or len(log_entry.revprops) == 0)
       else:
         revprop_names = sorted(log_entry.revprops.keys())
         log_revprops.sort()
@@ -398,7 +398,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
                     True,       # strict_node_history
                     False,      # include_merged_revisions
                     log_revprops, receiver)
-        self.assert_(called[0])
+        self.assertTrue(called[0])
 
   def test_update(self):
     class TestEditor(delta.Editor):
@@ -424,7 +424,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
         return 'namestring_test'
       self.callbacks.get_client_string = cb
       ra.stat(self.ra_ctx, "", 1)
-      self.assert_(called[0])
+      self.assertTrue(called[0])
 
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(

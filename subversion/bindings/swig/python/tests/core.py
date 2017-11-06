@@ -23,6 +23,7 @@ import unittest
 import svn.core, svn.client
 import utils
 
+
 class SubversionCoreTestCase(unittest.TestCase):
   """Test cases for the basic SWIG Subversion core"""
 
@@ -113,7 +114,7 @@ class SubversionCoreTestCase(unittest.TestCase):
       'three': 'three-value'
     }
 
-    for (name, value) in entries.iteritems():
+    for (name, value) in entries.items():
       svn.core.svn_config_set(cfg, "section", name, value)
 
     received_entries = {}
@@ -124,8 +125,8 @@ class SubversionCoreTestCase(unittest.TestCase):
     svn.core.svn_config_enumerate2(cfg, "section", enumerator)
 
     self.assertEqual(len(received_entries), 2)
-    for (name, value) in received_entries.iteritems():
-      self.assert_(name in entries)
+    for (name, value) in received_entries.items():
+      self.assertTrue(name in entries)
       self.assertEqual(value, entries[name])
 
   def test_config_enumerate2_exception(self):
@@ -156,7 +157,7 @@ class SubversionCoreTestCase(unittest.TestCase):
 
     self.assertEqual(len(received_sections), 2)
     for section in received_sections:
-      self.assert_(section in sections)
+      self.assertTrue(section in sections)
 
   def test_config_enumerate_sections2_exception(self):
     cfg = svn.core.svn_config_create(False)

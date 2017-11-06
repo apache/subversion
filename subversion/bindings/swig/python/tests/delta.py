@@ -55,9 +55,9 @@ class DeltaTestCase(unittest.TestCase):
     delta_stream = svn.delta.svn_txdelta(a, b)
     window = svn.delta.svn_txdelta_next_window(delta_stream)
 
-    self.assert_(window.sview_offset + window.sview_len <= len(a.getvalue()))
-    self.assert_(window.tview_len <= len(b.getvalue()))
-    self.assert_(len(window.new_data) > 0)
+    self.assertTrue(window.sview_offset + window.sview_len <= len(a.getvalue()))
+    self.assertTrue(window.tview_len <= len(b.getvalue()))
+    self.assertTrue(len(window.new_data) > 0)
     self.assertEqual(window.num_ops, len(window.ops))
     self.assertEqual(window.src_ops, len([op for op in window.ops
       if op.action_code == svn.delta.svn_txdelta_source]))

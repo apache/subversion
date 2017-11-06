@@ -27,8 +27,19 @@ from libsvn.core import *
 import libsvn.core as _libsvncore
 import atexit as _atexit
 import sys
-# __all__ is defined later, since some svn_* functions are implemented below.
 
+# Many of the subversion modules unprefix their names to make
+# the exported methods more natural.  Several have 'list' which
+# conflicts with the builtin 'list'.  Put all the python 2/3
+# conditional import here to reduce code in the other modules
+try:
+  # Python >= 3.0
+  from builtins import list as _bi_list
+except ImportError:
+  # Python < 3.0
+  from __builtin__ import list as _bi_list
+
+# __all__ is defined later, since some svn_* functions are implemented below.
 
 class SubversionException(Exception):
 
@@ -96,7 +107,7 @@ def _cleanup_application_pool():
 _atexit.register(_cleanup_application_pool)
 
 def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
-  for name, value in symbol_dict.items():
+  for name, value in list(symbol_dict.items()):
     if name.startswith(from_prefix):
       symbol_dict[to_prefix + name[len(from_prefix):]] = value
 
@@ -319,10 +330,10 @@ def run_app(func, *args, **kw):
 # 'run_app'
 # 'svn_relpath__internal_style' 'svn_uri__is_ancestor'
 # 'svn_tristate__from_word' 'svn_tristate__to_word'
-__all__ = filter(lambda s: (s.startswith('svn_')
-                            or s.startswith('SVN_')
-                            or s.startswith('SVNSYNC_')
-                            or s in ('Pool', 'SubversionException'))
-                           and '__' not in s,
-                 locals())
+__all__ = [s for s in _bi_list(locals())
+           if (s.startswith('svn_')
+               or s.startswith('SVN_')
+               or s.startswith('SVNSYNC_')
+               or s in ('Pool', 'SubversionException'))
+           and '__' not in s]
 

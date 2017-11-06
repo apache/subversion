@@ -56,6 +56,7 @@ def output(cmd, strip=None):
   # Run it
   (output, empty_stderr) = subprocess.Popen(cmd, stdout=subprocess.PIPE, \
                              stderr=subprocess.STDOUT).communicate()
+  output = output.decode('utf8')
   if strip:
     return output.strip()
   else:

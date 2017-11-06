@@ -139,9 +139,9 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     dump = dumpstream.getvalue()
     feedback = feedbackstream.getvalue()
     expected_feedback = "* Dumped revision " + str(self.rev)
-    self.assertEquals(dump.count("Node-path: trunk/README.txt"), 2)
-    self.assertEquals(feedback.count(expected_feedback), 1)
-    self.assertEquals(self.callback_calls, 13)
+    self.assertEqual(dump.count("Node-path: trunk/README.txt"), 2)
+    self.assertEqual(feedback.count(expected_feedback), 1)
+    self.assertEqual(self.callback_calls, 13)
 
     # Check that the dump can be cancelled
     self.assertRaises(SubversionException, repos.dump_fs2,
@@ -160,16 +160,16 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     # Check that we can grab the feedback stream, but not the dumpstream
     repos.dump_fs2(self.repos, None, feedbackstream, 0, self.rev, 0, 0, None)
     feedback = feedbackstream.getvalue()
-    self.assertEquals(feedback.count(expected_feedback), 1)
+    self.assertEqual(feedback.count(expected_feedback), 1)
 
     # Check that we can grab the dumpstream, but not the feedbackstream
     repos.dump_fs2(self.repos, dumpstream, None, 0, self.rev, 0, 0, None)
     dump = dumpstream.getvalue()
-    self.assertEquals(dump.count("Node-path: trunk/README.txt"), 2)
+    self.assertEqual(dump.count("Node-path: trunk/README.txt"), 2)
 
     # Check that we can ignore both the dumpstream and the feedbackstream
     repos.dump_fs2(self.repos, dumpstream, None, 0, self.rev, 0, 0, None)
-    self.assertEquals(feedback.count(expected_feedback), 1)
+    self.assertEqual(feedback.count(expected_feedback), 1)
 
     # FIXME: The Python bindings don't check for 'NULL' values for
     #        svn_repos_t objects, so the following call segfaults
@@ -244,7 +244,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     # Count and verify changes
     change_count = 0
     for log in logs:
-      for path_changed in log.values():
+      for path_changed in list(log.values()):
         change_count += 1
         path_changed.assert_valid()
     self.assertEqual(logs[2]["/tags/v1.1"].action, "A")

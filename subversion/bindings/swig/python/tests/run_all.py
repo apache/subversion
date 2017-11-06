@@ -18,6 +18,7 @@
 # under the License.
 #
 #
+import sys
 import unittest, setup_path
 import mergeinfo, core, client, delta, checksum, pool, ra, wc, repository, \
        auth, trac.versioncontrol.tests
@@ -28,7 +29,10 @@ from svn.core import svn_cache_config_get, svn_cache_config_set
 def suite():
   """Run all tests"""
   settings = svn_cache_config_get()
-  settings.cache_size = long(1024*1024*32) ### Need explicit long
+  if sys.hexversion < 0x3000000:
+    settings.cache_size = long(1024*1024*32) ### Need explicit long
+  else:
+    settings.cache_size = 1024*1024*32
   svn_cache_config_set(settings)
   s = unittest.TestSuite()
   s.addTest(core.suite())

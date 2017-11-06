@@ -18,9 +18,16 @@
 # under the License.
 #
 #
-import os.path, sys, tempfile, urllib
+import os.path, sys, tempfile
 from svn import core, repos
-from StringIO import StringIO
+try:
+  # Python >=3.0
+  from io import StringIO
+  from urllib.request import pathname2url
+except ImportError:
+  # Python <3.0
+  from cStringIO import StringIO
+  from urllib import pathname2url
 
 class Temper(object):
   """Class to simplify allocation and cleanup of dummy Subversion
@@ -67,7 +74,7 @@ class Temper(object):
 
 def file_uri_for_path(path):
   """Return the file: URI corresponding to the given path."""
-  uri_path = urllib.pathname2url(path)
+  uri_path = pathname2url(path)
 
   # pathname2url claims to return the path part of the URI, but on Windows
   # it returns both the authority and path parts for no reason, which

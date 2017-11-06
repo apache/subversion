@@ -27,7 +27,7 @@ from libsvn.fs import *
 from svn.core import _unprefix_names, Pool
 _unprefix_names(locals(), 'svn_fs_')
 _unprefix_names(locals(), 'SVN_FS_')
-__all__ = filter(lambda x: x.lower().startswith('svn_'), locals().keys())
+__all__ = [x for x in list(locals()) if x.lower().startswith('svn_')]
 del _unprefix_names
 
 
@@ -45,7 +45,7 @@ import svn.core as _svncore
 def entries(root, path, pool=None):
   "Call dir_entries returning a dictionary mappings names to IDs."
   e = dir_entries(root, path, pool)
-  for name, entry in e.items():
+  for name, entry in list(e.items()):
     e[name] = dirent_t_id_get(entry)
   return e
 
