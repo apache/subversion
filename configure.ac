@@ -1289,7 +1289,7 @@ AS_HELP_STRING([--enable-gprof],
 # Scripting and Bindings languages
 
 # Python: Used for testsuite, and bindings
-
+AC_ARG_VAR([PYTHON], [Python interpreter command])
 
 PYTHON="`$abs_srcdir/build/find_python.sh`"
 if test -z "$PYTHON"; then

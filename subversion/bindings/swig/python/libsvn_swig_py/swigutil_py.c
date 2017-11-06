@@ -26,7 +26,6 @@
 
 #include <Python.h>
 
-#include <py3c.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -52,6 +51,17 @@
 
 #include "swig_python_external_runtime.swg"
 #include "swigutil_py.h"
+
+/* This py3c include needs to be after the swig includes. */
+#if PY_VERSION_HEX >= 0x03000000
+/* SWIG and py3c both define a few compat defines, so need to undef
+   here to give preference to the py3c versions. */
+#undef PyLong_FromSize_t
+#undef PyLong_AsLong
+#undef PyInt_Check
+#endif
+
+#include <py3c.h>
 
 /* Py_ssize_t for old Pythons */
 /* This code is as recommended by: */
@@ -148,7 +158,7 @@ FILE *svn_swig_py_as_file(PyObject *pyfile)
 {
 #if IS_PY3
   FILE *fp = NULL;
-  int fd = PyFile_AsFileDescriptor(pyfile);
+  int fd = PyObject_AsFileDescriptor(pyfile);
   if (fd >= 0)
     {
       PyObject *mode_obj = PyObject_GetAttrString(pyfile, "mode");

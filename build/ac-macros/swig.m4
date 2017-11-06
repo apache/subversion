@@ -101,6 +101,7 @@ AC_DEFUN(SVN_FIND_SWIG,
 
     SWIG_PY_COMPILE="none"
     SWIG_PY_LINK="none"
+    SWIG_PY_OPTS="none"
     if test "$PYTHON" != "none"; then
       AC_MSG_NOTICE([Configuring python swig binding])
 
@@ -132,6 +133,18 @@ AC_DEFUN(SVN_FIND_SWIG,
           ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
         ])
         SWIG_PY_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_python_libs)`"
+
+        AC_CACHE_CHECK([for Python >= 3], [ac_cv_python_is_py3],[
+          ac_cv_python_is_py3="no"
+          $PYTHON -c 'import sys; sys.exit(0x3000000 >= sys.hexversion)' && \
+             ac_cv_python_is_py3="yes"
+        ])
+
+        if test "$ac_cv_python_is_py3" = "yes"; then
+           SWIG_PY_OPTS="-python -py3"
+        else
+           SWIG_PY_OPTS="-python -classic"
+        fi
 
         dnl Sun Forte adds an extra space before substituting APR_INT64_T_FMT
         dnl gcc-2.95 adds an extra space after substituting APR_INT64_T_FMT
@@ -306,6 +319,7 @@ int main()
   AC_SUBST(SWIG_PY_COMPILE)
   AC_SUBST(SWIG_PY_LINK)
   AC_SUBST(SWIG_PY_LIBS)
+  AC_SUBST(SWIG_PY_OPTS)
   AC_SUBST(SWIG_PL_INCLUDES)
   AC_SUBST(SWIG_PL_LINK)
   AC_SUBST(SWIG_RB_LINK)
