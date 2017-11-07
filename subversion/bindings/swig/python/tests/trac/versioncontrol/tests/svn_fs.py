@@ -53,18 +53,13 @@ import shutil
 import sys
 import tempfile
 import unittest
+from io import StringIO
 
 if sys.version_info[0] >= 3:
   # Python >=3.0
-  from io import StringIO
   from urllib.request import pathname2url
 else:
   # Python <3.0
-  try:
-    from io import StringIO
-  except ImportError:
-    from io import StringIO
-
   from urllib import pathname2url
 
 from svn import core, repos
@@ -250,7 +245,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self._cmp_diff((('trunk/README.txt', 2),
                         ('trunk/README.txt', 3),
                         (Node.FILE, Changeset.EDIT)), next(diffs))
-        self.assertRaises(StopIteration, lambda *args: next(diffs))
+        self.assertRaises(StopIteration, lambda: next(diffs))
 
     def test_diff_file_different_files(self):
         diffs = self.repos.get_deltas('branches/v1x/README.txt', 12,
@@ -258,12 +253,12 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self._cmp_diff((('branches/v1x/README.txt', 12),
                         ('branches/v1x/README2.txt', 12),
                         (Node.FILE, Changeset.EDIT)), next(diffs))
-        self.assertRaises(StopIteration, lambda *args: next(diffs))
+        self.assertRaises(StopIteration, lambda: next(diffs))
 
     def test_diff_file_no_change(self):
         diffs = self.repos.get_deltas('trunk/README.txt', 7,
                                       'tags/v1/README.txt', 7)
-        self.assertRaises(StopIteration, lambda *args: next(diffs))
+        self.assertRaises(StopIteration, lambda: next(diffs))
 
     def test_diff_dir_different_revs(self):
         diffs = self.repos.get_deltas('trunk', 4, 'trunk', 8)
@@ -286,7 +281,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(len(expected), len(actual))
         for e,a in zip(expected, actual):
           self._cmp_diff(e,a)
-        self.assertRaises(StopIteration, lambda *args: next(diffs))
+        self.assertRaises(StopIteration, lambda: next(diffs))
 
     def test_diff_dir_different_dirs(self):
         diffs = self.repos.get_deltas('trunk', 1, 'branches/v1x', 12)
@@ -311,12 +306,12 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(len(expected), len(actual))
         for e,a in zip(expected, actual):
           self._cmp_diff(e,a)
-        self.assertRaises(StopIteration, lambda *args: next(diffs))
+        self.assertRaises(StopIteration, lambda: next(diffs))
 
     def test_diff_dir_no_change(self):
         diffs = self.repos.get_deltas('trunk', 7,
                                       'tags/v1', 7)
-        self.assertRaises(StopIteration, lambda *args: next(diffs))
+        self.assertRaises(StopIteration, lambda: next(diffs))
 
     # Changesets
 
@@ -326,7 +321,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(None, chgset.message)
         self.assertEqual(None, chgset.author)
         self.assertEqual(1112349461, chgset.date)
-        self.assertRaises(StopIteration, lambda *args: next(chgset.get_changes()))
+        self.assertRaises(StopIteration, lambda: next(chgset.get_changes()))
 
     def test_changeset_added_dirs(self):
         chgset = self.repos.get_changeset(1)
