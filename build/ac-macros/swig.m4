@@ -136,7 +136,7 @@ AC_DEFUN(SVN_FIND_SWIG,
 
         AC_CACHE_CHECK([for Python >= 3], [ac_cv_python_is_py3],[
           ac_cv_python_is_py3="no"
-          $PYTHON -c 'import sys; sys.exit(0x3000000 >= sys.hexversion)' && \
+          $PYTHON -c 'import sys; sys.exit(0x3000000 > sys.hexversion)' && \
              ac_cv_python_is_py3="yes"
         ])
 
