@@ -880,20 +880,24 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     libcrypto = 'libcrypto'
     libssl = 'libssl'
+    versuffix = '-%d_%d' % version[0:2]
     if version < (1, 1, 0):
       libcrypto = 'libeay32'
       libssl = 'ssleay32'
+      versuffix = ''
 
     self._libraries['openssl'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
                                                   '%s.lib' % (libssl,),
                                                   openssl_version,
-                                                  dll_name='%s.dll' % (libssl,),
+                                                  dll_name='%s%s.dll' %
+                                                      (libssl, versuffix),
                                                   dll_dir=bin_dir)
 
     self._libraries['libcrypto'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
                                                     '%s.lib' % (libcrypto,),
                                                     openssl_version,
-                                                    dll_name='%s.dll' % (libcrypto,),
+                                                    dll_name='%s%s.dll' %
+                                                      (libcrypto, versuffix),
                                                     dll_dir=bin_dir)
 
   def _find_perl(self, show_warnings):
