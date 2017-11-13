@@ -103,6 +103,51 @@ addremove_status_func(void *baton, const char *local_abspath,
 }
 
 static svn_error_t *
+suggest_file_moves(apr_hash_t **moves,
+                   const char *added_abspath,
+                   apr_hash_t *deleted,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *similar_abspaths;
+  int i;
+  apr_pool_t *iterpool;
+  
+  SVN_ERR(svn_wc__find_similar_files(&similar_abspaths, ctx->wc_ctx,
+                                     added_abspath,
+                                     ctx->cancel_func, ctx->cancel_baton,
+                                     result_pool, scratch_pool));
+
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < similar_abspaths->nelts; i++)
+    {
+      apr_array_header_t *move_targets;
+      const char *similar_abspath = APR_ARRAY_IDX(similar_abspaths, i,
+                                                  const char *);
+
+      svn_pool_clear(iterpool);
+
+      if (svn_hash_gets(deleted, similar_abspath) == NULL)
+        continue; /* ### TODO treat as a copy? */
+
+      move_targets = svn_hash_gets(*moves, similar_abspath);
+      if (move_targets == NULL)
+        {
+          move_targets = apr_array_make(result_pool, 1,
+                                        sizeof (const char *));
+          svn_hash_sets(*moves, similar_abspath, move_targets);
+        }
+
+      APR_ARRAY_PUSH(move_targets, const char *) = 
+        apr_pstrdup(result_pool, added_abspath);
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 suggest_moves(apr_hash_t **moves,
               apr_hash_t *deleted,
               apr_hash_t *added,
@@ -121,39 +166,12 @@ suggest_moves(apr_hash_t **moves,
     {
       const char *added_abspath = apr_hash_this_key(hi);
       const svn_wc_status3_t *status = apr_hash_this_val(hi);
-      apr_array_header_t *similar_abspaths;
-      int i;
-
-      if (status->actual_kind != svn_node_file)
-        continue;
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_wc__find_similar_files(&similar_abspaths, ctx->wc_ctx,
-                                         added_abspath,
-                                         ctx->cancel_func, ctx->cancel_baton,
-                                         result_pool, iterpool));
-
-      for (i = 0; i < similar_abspaths->nelts; i++)
-        {
-          apr_array_header_t *move_targets;
-          const char *similar_abspath = APR_ARRAY_IDX(similar_abspaths, i,
-                                                      const char *);
-
-          if (svn_hash_gets(deleted, similar_abspath) == NULL)
-            continue; /* ### TODO treat as a copy? */
-
-          move_targets = svn_hash_gets(*moves, similar_abspath);
-          if (move_targets == NULL)
-            {
-              move_targets = apr_array_make(result_pool, 1,
-                                            sizeof (const char *));
-              svn_hash_sets(*moves, similar_abspath, move_targets);
-            }
-
-          APR_ARRAY_PUSH(move_targets, const char *) = 
-            apr_pstrdup(result_pool, added_abspath);
-        }
+      if (status->actual_kind == svn_node_file)
+        SVN_ERR(suggest_file_moves(moves, added_abspath, deleted, ctx,
+                                   result_pool, iterpool));
     }
 
   svn_pool_destroy(iterpool);
