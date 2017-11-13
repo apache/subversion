@@ -39,6 +39,7 @@
 #include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_magic.h"
+#include "private/svn_sorts_private.h"
 
 #include "svn_private_config.h"
 
@@ -147,6 +148,157 @@ suggest_file_moves(apr_hash_t **moves,
   return SVN_NO_ERROR;
 }
 
+/* Check whether the directories at DELETED_DIR_ABSPATH and ADDED_DIR_ABSPATH
+ * can be considered a match.
+ * Requires that all directory entries match up in terms of name
+ * and node kind, recursively. */
+static svn_error_t *
+match_dirs_recursively(svn_boolean_t *found_match,
+                       const char *deleted_dir_abspath,
+                       const char *added_dir_abspath,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *scratch_pool)
+{
+  const apr_array_header_t *children1, *children2;
+  int i;
+  svn_boolean_t match = TRUE;
+  apr_pool_t *iterpool;
+
+  *found_match = FALSE;
+
+  SVN_ERR(svn_wc__node_get_children_of_working_node(&children1,
+                                                    ctx->wc_ctx,
+                                                    deleted_dir_abspath,
+                                                    scratch_pool,
+                                                    scratch_pool));
+  svn_sort__array((apr_array_header_t *)children1, svn_sort_compare_paths);
+
+  SVN_ERR(svn_wc__node_get_children_of_working_node(&children2,
+                                                    ctx->wc_ctx,
+                                                    added_dir_abspath,
+                                                    scratch_pool,
+                                                    scratch_pool));
+  if (children1->nelts != children2->nelts)
+    return SVN_NO_ERROR;
+
+  svn_sort__array((apr_array_header_t *)children2, svn_sort_compare_paths);
+  iterpool = svn_pool_create(scratch_pool);
+  for (i = 0; i < children1->nelts; i++)
+    {
+      const char *child1_abspath = APR_ARRAY_IDX(children1, i, const char *);
+      const char *child2_abspath = APR_ARRAY_IDX(children2, i, const char *);
+      const char *basename1, *basename2;
+      svn_node_kind_t kind1, kind2;
+
+      svn_pool_clear(iterpool);
+
+      basename1 = svn_dirent_basename(child1_abspath, iterpool);
+      basename2 = svn_dirent_basename(child2_abspath, iterpool);
+
+      /* Verify basename. */
+      if (strcmp(basename1, basename2) != 0)
+        {
+          match = FALSE;
+          break;
+        }
+
+      /* Verify node kind. */
+      SVN_ERR(svn_wc_read_kind2(&kind1, ctx->wc_ctx, child1_abspath,
+                                TRUE, FALSE, iterpool));
+      SVN_ERR(svn_wc_read_kind2(&kind2, ctx->wc_ctx, child2_abspath,
+                                FALSE, FALSE, iterpool));
+      if (kind1 != kind2)
+        {
+          match = FALSE;
+          break;
+        }
+
+      if (kind1 == svn_node_dir && kind2 == svn_node_dir)
+        {
+          SVN_ERR(match_dirs_recursively(&match,
+                                         child1_abspath, child2_abspath,
+                                         ctx, iterpool));
+          if (!match)
+            break;
+        }
+    }
+  svn_pool_destroy(iterpool);
+
+  *found_match = match;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+suggest_dir_moves(apr_hash_t **moves,
+                  const char *added_abspath,
+                  apr_hash_t *deleted,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi; 
+  apr_pool_t *iterpool;
+  
+  iterpool = svn_pool_create(scratch_pool);
+  for (hi = apr_hash_first(scratch_pool, deleted); hi;
+       hi = apr_hash_next(hi))
+    {
+      apr_array_header_t *move_targets;
+      const char *deleted_abspath = apr_hash_this_key(hi);
+      const svn_wc_status3_t *deleted_status = apr_hash_this_val(hi);
+      svn_boolean_t match = FALSE;
+
+      if (deleted_status->kind != svn_node_dir)
+        continue;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(match_dirs_recursively(&match, deleted_abspath, added_abspath,
+                                     ctx, iterpool));
+      if (match)
+        {
+          move_targets = svn_hash_gets(*moves, deleted_abspath);
+          if (move_targets == NULL)
+            {
+              move_targets = apr_array_make(result_pool, 1,
+                                            sizeof (const char *));
+              svn_hash_sets(*moves, deleted_abspath, move_targets);
+            }
+
+          APR_ARRAY_PUSH(move_targets, const char *) = 
+            apr_pstrdup(result_pool, added_abspath);
+        }
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Indicate whether MOVES already covers an ADDED_ABSPATH. */
+static svn_boolean_t
+already_moved(apr_hash_t *moves, const char *added_abspath,
+              apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, moves); hi;
+       hi = apr_hash_next(hi))
+    {
+      apr_array_header_t *move_targets = apr_hash_this_val(hi);
+      int i;
+
+      for (i = 0; i < move_targets->nelts; i++) 
+        {
+          const char *dst_abspath = APR_ARRAY_IDX(move_targets, i,
+                                                  const char *);
+          if (svn_dirent_is_child(dst_abspath, added_abspath, NULL) != NULL)
+            return 1;
+        }
+    }
+
+  return 0;
+}
+
 static svn_error_t *
 suggest_moves(apr_hash_t **moves,
               apr_hash_t *deleted,
@@ -169,7 +321,21 @@ suggest_moves(apr_hash_t **moves,
 
       svn_pool_clear(iterpool);
 
-      if (status->actual_kind == svn_node_file)
+      if (status->actual_kind == svn_node_dir)
+        SVN_ERR(suggest_dir_moves(moves, added_abspath, deleted, ctx,
+                                  result_pool, iterpool));
+    }
+
+  for (hi = apr_hash_first(scratch_pool, added); hi;
+       hi = apr_hash_next(hi))
+    {
+      const char *added_abspath = apr_hash_this_key(hi);
+      const svn_wc_status3_t *status = apr_hash_this_val(hi);
+
+      svn_pool_clear(iterpool);
+
+      if (status->actual_kind == svn_node_file &&
+          !already_moved(*moves, added_abspath, iterpool))
         SVN_ERR(suggest_file_moves(moves, added_abspath, deleted, ctx,
                                    result_pool, iterpool));
     }

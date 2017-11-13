@@ -144,6 +144,30 @@ def addremove_ambiguous_move_file(sbox):
   })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+def addremove_unversioned_move_dir(sbox):
+  "addremove detects unversioned dir moves"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Manually move a versioned directory
+  old_path = sbox.ospath('A/B/E')
+  new_path = sbox.ospath('A/C/E-moved')
+  os.rename(old_path, new_path)
+
+  svntest.actions.run_and_verify_svn(None, [], 'addremove', wc_dir)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/B/E', status='D ', moved_to='A/C/E-moved')
+  expected_status.tweak('A/B/E/alpha', status='D ')
+  expected_status.tweak('A/B/E/beta', status='D ')
+  expected_status.add({
+    'A/C/E-moved' : Item(status='A ', wc_rev='-', moved_from='A/B/E',
+                         copied='+'),
+    'A/C/E-moved/alpha' : Item(status='A ', wc_rev='-'),
+    'A/C/E-moved/beta'  : Item(status='A ', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -154,6 +178,7 @@ test_list = [ None,
               addremove_ignore,
               addremove_unversioned_move_file,
               addremove_ambiguous_move_file,
+              addremove_unversioned_move_dir,
 ]
 
 if __name__ == '__main__':

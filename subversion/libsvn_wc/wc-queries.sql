@@ -415,7 +415,7 @@ WHERE wc_id = ?1 AND parent_relpath = ?2
        OR
        (op_depth = (SELECT MAX(op_depth) FROM nodes
                     WHERE wc_id = ?1 AND local_relpath = ?2)
-        AND presence IN (MAP_NORMAL, MAP_INCOMPLETE)))
+        AND presence IN (MAP_NORMAL, MAP_INCOMPLETE, MAP_BASE_DELETED)))
 ORDER BY local_relpath
 
 -- STMT_SELECT_BASE_NOT_PRESENT_CHILDREN
