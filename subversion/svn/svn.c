@@ -524,14 +524,17 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: addremove PATH...\n"
      "\n"
      "  Recursively walk the specified paths in the working copy, putting\n"
-     "  unversioned files and directories under version control, and removing\n"
-     "  missing files and directories from version control.\n"
+     "  unversioned files and directories under version control (like 'svn add'),\n"
+     "  and removing missing files and directories (like 'svn delete').\n"
      "\n"
-     "  Additions and deletions will be scheduled for the next commit and\n"
+     "  Additionally, compare every removed item with every added item and\n"
+     "  record moves or copies in the working copy where similar items are found.\n"
+     "\n"
+     "  Any additions and deletions will be scheduled for the next commit and\n"
      "  will not take effect in the repository unless they are committed.\n"
+     "  Use 'svn revert' to undo any undesirable additions and deletions.\n"
      "\n"
-     "  The --depth option controls recursion (default: infinity).\n"
-     "  Use 'svn revert' to undo any undesirable additions and deletions.\n"),
+     "  The --depth option controls recursion (default: infinity).\n"),
     {opt_targets, opt_depth, opt_no_autoprops, opt_no_ignore }, },
 
   { "auth", svn_cl__auth, {0}, N_
