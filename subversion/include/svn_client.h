@@ -1679,6 +1679,9 @@ svn_client_add(const char *path,
  * nodes found into added status, and put any missing nodes found into deleted
  * status.
  *
+ * Also, attempt to match up missing nodes with unversioned nodes.
+ * Any matches will be recorded as a move in the working copy.
+ *
  * The level of recursion is specified by @a depth.
  *
  * @since New in 1.10.
@@ -1691,20 +1694,6 @@ svn_client_addremove(const char *local_path,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool);
 
-/**
- * Recurse into the versioned directory @a local_path, and attempt to match
- * up versioned deleted nodes with versioned added (or copied) nodes.
- * Any matches found will be transformed into a move.
- *
- * The level of recursion is specified by @a depth.
- *
- * @since New in 1.10.
- */
-svn_error_t *
-svn_client_match_up_local_deletes_and_adds(const char *local_path,
-                                           svn_depth_t depth,
-                                           svn_client_ctx_t *ctx,
-                                           apr_pool_t *scratch_pool);
 /** @} */
 
 /**

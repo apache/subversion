@@ -104,28 +104,6 @@ svn_cl__addremove(apr_getopt_t *os,
                SVN_ERR_WC_PATH_NOT_FOUND,
                0));
     }
-
-  if (errors->nelts > 0)
-    {
-      svn_error_t *err = wrap_illegal_target_error(errors);
-      svn_handle_warning2(stderr, err, "svn: ");
-    }
-
-  /* Now ask for magic to be performed which will detect moves. */
-  for (i = 0; i < targets->nelts; i++)
-    {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-      svn_pool_clear(iterpool);
-      SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-      SVN_ERR(svn_cl__try(svn_client_match_up_local_deletes_and_adds(
-                            target, opt_state->depth,
-                            ctx, iterpool),
-               errors, opt_state->quiet,
-               SVN_ERR_ENTRY_EXISTS,
-               SVN_ERR_WC_PATH_NOT_FOUND,
-               0));
-    }
   svn_pool_destroy(iterpool);
 
   if (errors->nelts > 0)
