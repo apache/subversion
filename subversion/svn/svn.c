@@ -145,6 +145,9 @@ typedef enum svn_cl__longopt_t {
   opt_show_item,
   opt_adds_as_modification,
   opt_vacuum_pristines,
+  opt_delete,
+  opt_keep_shelved,
+  opt_list
 } svn_cl__longopt_t;
 
 
@@ -464,6 +467,10 @@ const apr_getopt_option_t svn_cl__options[] =
 
   {"vacuum-pristines", opt_vacuum_pristines, 0,
                        N_("remove unreferenced pristines from .svn directory")},
+
+  {"list", opt_list, 0, N_("list shelved patches")},
+  {"keep-shelved", opt_keep_shelved, 0, N_("do not delete the shelved patch")},
+  {"delete", opt_delete, 0, N_("delete the shelved patch")},
 
   /* Long-opt Aliases
    *
@@ -1648,6 +1655,64 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  the output of 'svn help merge' for 'undo'.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
 
+  { "shelve", svn_cl__shelve, {0}, N_
+    ("Put a local change aside, as if putting it on a shelf.\n"
+     "usage: 1. shelve [--keep-local] NAME [PATH...]\n"
+     "       2. shelve --delete NAME\n"
+     "       3. shelve --list\n"
+     "\n"
+     "  1. Save the local change in the given PATHs to a patch file, and\n"
+     "     revert that change from the WC unless '--keep-local' is given.\n"
+     "     If a log message is given with '-m' or '-F', include it at the\n"
+     "     beginning of the patch file.\n"
+     "\n"
+     "  2. Delete the shelved change NAME.\n"
+     "     (A backup is kept, named with a '.bak' extension.)\n"
+     "\n"
+     "  3. List shelved changes. Include the first line of any log message\n"
+     "     and some details about the contents of the change, unless '-q' is\n"
+     "     given.\n"
+     "\n"
+     "  The kinds of change you can shelve are those supported by 'svn diff'\n"
+     "  and 'svn patch'. The following are currently NOT supported:\n"
+     "     mergeinfo changes, copies, moves, mkdir, rmdir,\n"
+     "     'binary' content, uncommittable states\n"
+     "\n"
+     "  To bring back a shelved change, use 'svn unshelve NAME'.\n"
+     "\n"
+     "  A shelved change is stored as a patch file, .svn/shelves/NAME.patch\n"
+    ),
+    {opt_delete, opt_list, 'q', opt_dry_run, opt_keep_local,
+     opt_depth, opt_targets, opt_changelist,
+     /* almost SVN_CL__LOG_MSG_OPTIONS but not currently opt_with_revprop: */
+     'm', 'F', opt_force_log, opt_editor_cmd, opt_encoding,
+    } },
+
+  { "unshelve", svn_cl__unshelve, {0}, N_
+    ("Bring a shelved change back to a local change in the WC.\n"
+     "usage: 1. unshelve [--keep-shelved] [NAME]\n"
+     "       2. unshelve --list\n"
+     "\n"
+     "  1. Apply the shelved change NAME to the working copy.\n"
+     "     Delete the patch unless the '--keep-shelved' option is given.\n"
+     "     (A backup is kept, named with a '.bak' extension.)\n"
+     "     NAME defaults to the most recent shelved change.\n"
+     "\n"
+     "  2. List shelved changes. Include the first line of any log message\n"
+     "     and some details about the contents of the change, unless '-q' is\n"
+     "     given.\n"
+     "\n"
+     "  Any conflict between the change being unshelved and a change\n"
+     "  already in the WC is handled the same way as by 'svn patch',\n"
+     "  creating a 'reject' file.\n"
+    ),
+    {opt_keep_shelved, opt_list, 'q', opt_dry_run} },
+
+  { "shelves", svn_cl__shelves, {0}, N_
+    ("List shelved changes.\n"
+     "usage: shelves\n"),
+    },
+
   { "status", svn_cl__status, {"stat", "st"}, N_
     ("Print the status of working copy files and directories.\n"
      "usage: status [PATH...]\n"
@@ -2197,6 +2262,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_dry_run:
         opt_state.dry_run = TRUE;
         break;
+      case opt_list:
+        opt_state.list = TRUE;
+        break;
       case opt_revprop:
         opt_state.revprop = TRUE;
         break;
@@ -2377,6 +2445,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.diff.summarize = TRUE;
         break;
       case opt_remove:
+      case opt_delete:
         opt_state.remove = TRUE;
         break;
       case opt_changelist:
@@ -2392,6 +2461,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.keep_changelists = TRUE;
         break;
       case opt_keep_local:
+      case opt_keep_shelved:
         opt_state.keep_local = TRUE;
         break;
       case opt_with_all_revprops:
@@ -2896,7 +2966,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           || subcommand->cmd_func == svn_cl__mkdir
           || subcommand->cmd_func == svn_cl__move
           || subcommand->cmd_func == svn_cl__lock
-          || subcommand->cmd_func == svn_cl__propedit))
+          || subcommand->cmd_func == svn_cl__propedit
+          || subcommand->cmd_func == svn_cl__shelve))
     {
       /* If the -F argument is a file that's under revision control,
          that's probably not what the user intended. */

@@ -248,6 +248,7 @@ _svn()
 	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
 	cmds="$cmds plist propset pset relocate resolve resolved revert status"
 	cmds="$cmds switch unlock update upgrade"
+	cmds="$cmds shelve shelves unshelve"
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'
@@ -1019,6 +1020,15 @@ _svn()
 		;;
 	upgrade)
 		cmdOpts="$qOpts $pOpts"
+		;;
+	shelve)
+		cmdOpts="$qOpts --keep-local --delete --list $qOpts --dry-run --depth --targets $cOpts"
+		;;
+	unshelve)
+		cmdOpts="$qOpts --keep-shelved --list $qOpts --dry-run"
+		;;
+	shelves)
+		cmdOpts="$qOpts"
 		;;
 	*)
 		;;
