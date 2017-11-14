@@ -1043,7 +1043,8 @@ def _post_create_repos(path, minor_version = None):
         shutil.copy(options.config_file, confpath)
 
       if options.memcached_server is not None or \
-         options.fsfs_compression is not None and \
+         options.fsfs_compression is not None or \
+         options.fsfs_dir_deltification is not None and \
          os.path.exists(confpath):
         with open(confpath, 'r') as conffile:
           newlines = []
@@ -1051,6 +1052,10 @@ def _post_create_repos(path, minor_version = None):
             if line.startswith('# compression ') and \
                options.fsfs_compression is not None:
               line = 'compression = %s\n' % options.fsfs_compression
+            if line.startswith('# enable-dir-deltification ') and \
+               options.fsfs_dir_deltification is not None:
+              line = 'enable-dir-deltification = %s\n' % \
+                options.fsfs_dir_deltification
             newlines += line
             if options.memcached_server is not None and \
                line == '[memcached-servers]\n':
@@ -1739,6 +1744,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--dump-load-cross-check')
     if options.fsfs_compression:
       args.append('--fsfs-compression=' + options.fsfs_compression)
+    if options.fsfs_dir_deltification:
+      args.append('--fsfs-dir-deltification=' + options.fsfs_dir_deltification)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -2153,6 +2160,8 @@ def _create_parser(usage=None):
                     help='Use memcached server at specified URL (FSFS only)')
   parser.add_option('--fsfs-compression', action='store', type='str',
                     help='Set compression type (for fsfs)')
+  parser.add_option('--fsfs-dir-deltification', action='store', type='str',
+                    help='Set directory deltification option (for fsfs)')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(

@@ -973,8 +973,8 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
           if (s_root == NULL)
             SVN_ERR(get_source_root(b, &s_root, s_rev));
 
-          SVN_ERR(svn_fs_props_different(&changed, s_root, s_path,
-                                         b->t_root, t_path, pool));
+          SVN_ERR(svn_fs_props_changed(&changed, s_root, s_path,
+                                       b->t_root, t_path, pool));
           if (!changed)
             SVN_ERR(svn_fs_contents_changed(&changed, s_root, s_path,
                                             b->t_root, t_path, pool));
