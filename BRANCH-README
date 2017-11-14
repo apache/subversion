@@ -15,9 +15,8 @@ although the actual copy history of the branches is not as shown here.
 
 Both of the Checkpointing branches therefore include Shelving functionality.
 
-Initially this is prototyping, to explore the general shape of the design and
-user interface. As such, it does not take care over details of APIs and error
-handling and so on.
+This branch is now at the point of being ready for user testing, and should
+be up to Subversion coding standards, in preparation for merging to trunk.
 
 References:
    [0] dev@ thread "[RFC] Shelving and Checkpointing", J Foad, 2017-07-10.
