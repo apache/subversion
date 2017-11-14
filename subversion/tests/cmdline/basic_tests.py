@@ -3168,7 +3168,7 @@ def null_update_last_changed_revision(sbox):
                                      '--show-item', 'last-changed-revision')
 
 @Issue(4700)
-@XFail()
+@XFail(svntest.main.is_fs_type_bdb)
 def null_prop_update_last_changed_revision(sbox):
   "null 'property update' updates last changed rev"
 
