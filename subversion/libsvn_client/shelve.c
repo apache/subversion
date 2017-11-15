@@ -23,9 +23,9 @@
 
 /* ==================================================================== */
 
-
-
-/*** Includes. ***/
+/* We define this here to remove any further warnings about the usage of
+   experimental functions in this file. */
+#define SVN_EXPERIMENTAL
 
 #include "svn_client.h"
 #include "svn_wc.h"
