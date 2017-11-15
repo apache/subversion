@@ -6731,6 +6731,7 @@ svn_client_cat(svn_stream_t *out,
  *
  * @since New in 1.11.
  */
+SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelve(const char *name,
                   const apr_array_header_t *paths,
@@ -6750,6 +6751,7 @@ svn_client_shelve(const char *name,
  *
  * @since New in 1.11.
  */
+SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_unshelve(const char *name,
                     const char *local_abspath,
@@ -6766,6 +6768,7 @@ svn_client_unshelve(const char *name,
  *
  * @since New in 1.11.
  */
+SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelves_delete(const char *name,
                           const char *local_abspath,
@@ -6792,6 +6795,7 @@ typedef struct svn_client_shelved_patch_info_t
  *
  * @since New in 1.11.
  */
+SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
                         const char *local_abspath,
@@ -6811,6 +6815,7 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
  *
  * @since New in 1.11.
  */
+SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelves_any(svn_boolean_t *any_shelved,
                        const char *local_abspath,
@@ -6824,6 +6829,7 @@ svn_client_shelves_any(svn_boolean_t *any_shelved,
  * @a overwrite_existing: If a file at @a patch_abspath exists, overwrite it.
  * @a paths, @a depth, @a changelists: The selection of local paths to diff.
  */
+SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelf_write_patch(const char *name,
                              const char *message,
@@ -6841,6 +6847,7 @@ svn_client_shelf_write_patch(const char *name,
  * @a reverse: Apply the patch in reverse.
  * @a dry_run: Don't really apply the changes, just notify what would be done.
  */
+SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelf_apply_patch(const char *name,
                              const char *wc_root_abspath,
@@ -6853,6 +6860,7 @@ svn_client_shelf_apply_patch(const char *name,
  *
  * @a wc_root_abspath: The WC root dir.
  */
+SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelf_delete_patch(const char *name,
                               const char *wc_root_abspath,
