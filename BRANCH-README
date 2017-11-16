@@ -3,24 +3,22 @@ This branch is for development of Checkpointing [0,1].
 Specifically, this branch is for Checkpointing backed by a series of patches
 stored within the WC, referred to as design "option 1" in [1].
 
-Branch type: dev branch off 'shelve' branch; updated by full merges from
-there; not intended to be merged to trunk.
+Branch type: dev branch off trunk; updated by full merges from trunk;
+not yet intended to be merged to trunk.
 
 The following branching hierarching shows the intended propogation of changes,
 although the actual copy history of the branches is not as shown here.
 
-    trunk          ------------------------    .  catch-up
-                       \                       |   merges
-    branches/shelve     +------------------    V   .   .
-                            \ \                    |   |
-    branches/checkpoint      \ +-----------        V   |
-                              \                        |
-    branches/checkpoint3       +-----------            V
+    trunk          ------------------------   catch-up
+                           \ \                 merges
+                            \ \                |   |
+    branches/checkpoint      \ +-----------    V   |
+                              \                    |
+    branches/checkpoint3       +-----------        V
 
-Both of the Checkpointing branches therefore include Shelving functionality.
-
-This branch is now at the point of being ready for user testing, and should
-be up to Subversion coding standards, in preparation for merging to trunk.
+Initially this is prototyping, to explore the general shape of the design and
+user interface. As such, it does not take care over details of APIs and error
+handling and so on.
 
 References:
    [0] dev@ thread "[RFC] Shelving and Checkpointing", J Foad, 2017-07-10.
