@@ -1676,12 +1676,12 @@ def verify_non_utf8_paths(sbox):
     if line == b"A\n":
       # replace 'A' with a latin1 character -- the new path is not valid UTF-8
       fp_new.write(b"\xE6\n")
-    elif line == b"text: 1 279 32 32 d63ecce65d8c428b86f4f8b0920921fe\n":
+    elif line == b"text: 1 340 32 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
       # phys, PLAIN directories: fix up the representation checksum
-      fp_new.write(b"text: 1 279 32 32 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
-    elif line == b"text: 1 292 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
+      fp_new.write(b"text: 1 340 32 32 f2e93e73272cac0f18fccf16f224eb93\n")
+    elif line == b"text: 1 340 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
       # phys, deltified directories: fix up the representation checksum
-      fp_new.write(b"text: 1 292 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
+      fp_new.write(b"text: 1 340 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
     elif line == b"text: 1 6 31 31 90f306aa9bfd72f456072076a2bd94f7\n":
       # log addressing: fix up the representation checksum
       fp_new.write(b"text: 1 6 31 31 db2d4a0bad5dff0aea9a288dec02f1fb\n")
@@ -3350,7 +3350,7 @@ def dump_no_op_change(sbox):
   svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
                                      sbox2.repo_url + '/bar')
 
-@XFail() # This test will XPASS on FSFS if rep-caching is disabled.
+@XFail(svntest.main.is_fs_type_bdb)
 @Issue(4623)
 def dump_no_op_prop_change(sbox):
   "svnadmin dump with no-op property change"

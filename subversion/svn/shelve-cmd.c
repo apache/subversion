@@ -49,10 +49,11 @@ get_name(const char **name,
   return SVN_NO_ERROR;
 }
 
-/*  */
+/* A comparison function for svn_sort__hash(), comparing the mtime of two
+   svn_client_shelved_patch_info_t's. */
 static int
-compare_dirents_by_mtime(const svn_sort__item_t *a,
-                         const svn_sort__item_t *b)
+compare_shelved_patch_infos_by_mtime(const svn_sort__item_t *a,
+                                     const svn_sort__item_t *b)
 {
   svn_client_shelved_patch_info_t *a_val = a->value;
   svn_client_shelved_patch_info_t *b_val = b->value;
@@ -73,7 +74,8 @@ list_sorted_by_date(apr_array_header_t **list,
 
   SVN_ERR(svn_client_shelves_list(&shelved_patch_infos, local_abspath,
                                   ctx, scratch_pool, scratch_pool));
-  *list = svn_sort__hash(shelved_patch_infos, compare_dirents_by_mtime,
+  *list = svn_sort__hash(shelved_patch_infos,
+                         compare_shelved_patch_infos_by_mtime,
                          scratch_pool);
   return SVN_NO_ERROR;
 }

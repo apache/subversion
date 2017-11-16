@@ -40,7 +40,7 @@
 #include "svn_private_config.h"
 
 
-/*  */
+/* Throw an error if NAME does not conform to our naming rules. */
 static svn_error_t *
 validate_name(const char *name,
               apr_pool_t *scratch_pool)
@@ -52,7 +52,9 @@ validate_name(const char *name,
   return SVN_NO_ERROR;
 }
 
-/*  */
+/* Set *PATCH_ABSPATH to the abspath of the patch file for shelved change
+ * NAME, no matter whether it exists.
+ */
 static svn_error_t *
 get_patch_abspath(char **patch_abspath,
                   const char *name,
@@ -341,7 +343,9 @@ svn_client_shelves_delete(const char *name,
   return SVN_NO_ERROR;
 }
 
-/* ### Currently just reads the first line.
+/* Set *LOGMSG to the log message stored in the file PATCH_ABSPATH.
+ *
+ * ### Currently just reads the first line.
  */
 static svn_error_t *
 read_logmsg_from_patch(const char **logmsg,

@@ -266,7 +266,6 @@ _svn()
 	optsParam="$optsParam|--depth|--set-depth|--with-revprop"
 	optsParam="$optsParam|--cl|--changelist|--accept|--show-revs"
 	optsParam="$optsParam|--show-item"
-	optsParam="$optsParam|--name"
 
 	# svn:* and other (env SVN_BASH_*_PROPS) properties
 	local svnProps revProps allProps psCmds propCmds

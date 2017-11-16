@@ -6786,7 +6786,13 @@ svn_client_checkpoint_list(apr_array_header_t **checkpoints,
  * @{
  */
 
-/**
+/** Shelve a change.
+ *
+ * Shelve as @a name the local modifications found by @a paths, @a depth,
+ * @a changelists. Revert the shelved change from the WC unless @a keep_local
+ * is true.
+ *
+ * If @a dry_run is true, don't actually do it.
  *
  * @since New in 1.11.
  */
@@ -6800,7 +6806,12 @@ svn_client_shelve(const char *name,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
-/**
+/** Unshelve the shelved change @a name.
+ *
+ * @a local_abspath is any path in the WC and is used to find the WC root.
+ * Rename the shelved patch to add a '.bak' extension unless @a keep is true.
+ *
+ * If @a dry_run is true, don't actually do it.
  *
  * @since New in 1.11.
  */
@@ -6812,7 +6823,11 @@ svn_client_unshelve(const char *name,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
-/**
+/** Delete the shelved patch @a name.
+ *
+ * @a local_abspath is any path in the WC and is used to find the WC root.
+ *
+ * If @a dry_run is true, don't actually do it.
  *
  * @since New in 1.11.
  */
@@ -6823,20 +6838,22 @@ svn_client_shelves_delete(const char *name,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *pool);
 
-/**
+/** Information about a shelved patch.
  *
  * @since New in 1.11.
  */
 typedef struct svn_client_shelved_patch_info_t
 {
-  const char *message;
-  const char *patch_path;
-  svn_io_dirent2_t *dirent;
-  apr_time_t mtime;
+  const char *message;  /* first line of log message */
+  const char *patch_path;  /* abspath of the patch file */
+  svn_io_dirent2_t *dirent;  /* info about the patch file */
+  apr_time_t mtime;  /* a copy of dirent->mtime */
 } svn_client_shelved_patch_info_t;
 
 /** Set *shelved_patches to a hash, keyed by patch name, of pointers to
  * @c svn_client_shelved_patch_info_t structures.
+ *
+ * @a local_abspath is any path in the WC and is used to find the WC root.
  *
  * @since New in 1.11.
  */
@@ -6855,6 +6872,8 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
  * ### Initial implementation isn't O(1) fast -- it just calls
  *     svn_client_shelves_list().
  *
+ * @a local_abspath is any path in the WC and is used to find the WC root.
+ *
  * @since New in 1.11.
  */
 svn_error_t *
@@ -6863,8 +6882,9 @@ svn_client_shelves_any(svn_boolean_t *any_shelved,
                        svn_client_ctx_t *ctx,
                        apr_pool_t *scratch_pool);
 
-/** Write local changes to a patch file at @a name.
+/** Write local changes to a patch file for shelved change @a name.
  *
+ * @a message: An optional log message.
  * @a wc_root_abspath: The WC root dir.
  * @a overwrite_existing: If a file at @a patch_abspath exists, overwrite it.
  * @a paths, @a depth, @a changelists: The selection of local paths to diff.
@@ -6880,7 +6900,7 @@ svn_client_shelf_write_patch(const char *name,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *scratch_pool);
 
-/** Apply the patch file at @a name to the WC.
+/** Apply the patch file for shelved change @a name to the WC.
  *
  * @a wc_root_abspath: The WC root dir.
  * @a reverse: Apply the patch in reverse.
@@ -6894,7 +6914,7 @@ svn_client_shelf_apply_patch(const char *name,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *scratch_pool);
 
-/** Delete the patch file at @a name.
+/** Delete the patch file for shelved change @a name.
  *
  * @a wc_root_abspath: The WC root dir.
  */
